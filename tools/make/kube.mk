@@ -147,7 +147,7 @@ run-benchmark: install-benchmark-server ## Run benchmark tests
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n benchmark-test deployment/nighthawk-test-server --for=condition=Available
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/benchmark/config/gatewayclass.yaml
-	go test -v -tags benchmark ./test/benchmark
+	go test -v -tags benchmark ./test/benchmark --rps=$RPS --connections $CONNECTIONS --duration $DURATION
 
 .PHONY: install-benchmark-server
 install-benchmark-server: ## Install nighthawk server for benchmark test

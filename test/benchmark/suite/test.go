@@ -18,21 +18,17 @@ type BenchmarkTest struct {
 
 // BenchmarkOptions for nighthawk-client.
 type BenchmarkOptions struct {
-	RPS                 string
-	Connections         string
-	Duration            string
-	Concurrency         string
-	PrefetchConnections bool
+	RPS         string
+	Connections string
+	Duration    string
+	Concurrency string
 }
 
-func NewBenchmarkOptions(
-	rps, connections, duration, concurrency string, prefetchConnections bool,
-) BenchmarkOptions {
+func NewBenchmarkOptions(rps, connections, duration, concurrency string) BenchmarkOptions {
 	return BenchmarkOptions{
-		RPS:                 rps,
-		Connections:         connections,
-		Duration:            duration,
-		Concurrency:         concurrency,
-		PrefetchConnections: prefetchConnections,
+		RPS:         rps,
+		Connections: connections,
+		Duration:    duration,
+		Concurrency: concurrency,
 	}
 }

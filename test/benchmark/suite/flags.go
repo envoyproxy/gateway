@@ -11,9 +11,8 @@ package suite
 import "flag"
 
 var (
-	RPS                 = flag.String("rps", "1000", "RPS of benchmark test client")
-	Connections         = flag.String("connections", "10", "Connections of benchmark test client")
-	Duration            = flag.String("duration", "60", "Duration of benchmark test client")
-	Concurrency         = flag.String("concurrency", "auto", "Concurrency of benchmark test client")
-	PrefetchConnections = flag.Bool("prefetch-connections", true, "PrefetchConnections of benchmark test client")
+	RPS         = flag.String("rps", "1000", "The target requests-per-second rate.")
+	Connections = flag.String("connections", "10", "The maximum allowed number of concurrent connections per event loop. HTTP/1 only.")
+	Duration    = flag.String("duration", "60", "The number of seconds that the test should run.")
+	Concurrency = flag.String("concurrency", "auto", "The number of concurrent event loops that should be used.")
 )

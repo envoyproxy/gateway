@@ -12,10 +12,14 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
 	"testing"
+	"time"
 
 	batchv1 "k8s.io/api/batch/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/config"
@@ -23,8 +27,9 @@ import (
 )
 
 const (
-	ScaledLabelKey        = "benchmark-test/scaled"
-	DefaultControllerName = "gateway.envoyproxy.io/gatewayclass-controller"
+	BenchmarkTestScaledKey = "benchmark-test/scaled"
+	BenchmarkTestClientKey = "benchmark-test/client"
+	DefaultControllerName  = "gateway.envoyproxy.io/gatewayclass-controller"
 )
 
 type BenchmarkTestSuite struct {
@@ -80,9 +85,9 @@ func NewBenchmarkTestSuite(client client.Client, options BenchmarkOptions,
 	config.SetupTimeoutConfig(&timeoutConfig)
 
 	// Prepare static options for benchmark client.
-	srcArgs := prepareBenchmarkClientStaticArgs(options)
-	dstArgs := benchmarkClient.Spec.Template.Spec.Containers[0].Args
-	dstArgs = append(dstArgs, srcArgs...)
+	staticArgs := prepareBenchmarkClientStaticArgs(options)
+	container := &benchmarkClient.Spec.Template.Spec.Containers[0]
+	container.Args = append(container.Args, staticArgs...)
 
 	return &BenchmarkTestSuite{
 		Client:            client,
@@ -93,7 +98,7 @@ func NewBenchmarkTestSuite(client client.Client, options BenchmarkOptions,
 		HTTPRouteTemplate: httproute,
 		BenchmarkClient:   benchmarkClient,
 		scaledLabel: map[string]string{
-			ScaledLabelKey: "true",
+			BenchmarkTestScaledKey: "true",
 		},
 	}, nil
 }
@@ -113,12 +118,64 @@ func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 // TODO: currently running benchmark test via nighthawk-client,
 // consider switching to gRPC nighthawk-service for benchmark test.
 // ref: https://github.com/envoyproxy/nighthawk/blob/main/api/client/service.proto
-func (b *BenchmarkTestSuite) Benchmark() {
-	// TODO:
-	//  1. prepare job
-	//  2. create and run job
-	//  3. wait job complete
-	//  4. scrap job log as report
+func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, name, gatewayHostPort string, requestHeaders ...string) error {
+	t.Helper()
+
+	t.Logf("Running benchmark test: %s", name)
+
+	jobNN, err := b.createBenchmarkClientJob(ctx, name, gatewayHostPort, requestHeaders...)
+	if err != nil {
+		return err
+	}
+
+	duration, err := strconv.ParseInt(b.Options.Duration, 10, 64)
+	if err != nil {
+		return err
+	}
+
+	// Wait from benchmark test job to complete.
+	if err = wait.PollUntilContextTimeout(ctx, 5*time.Second, time.Duration(duration*5)*time.Second, true, func(ctx context.Context) (bool, error) {
+		job := new(batchv1.Job)
+		if err = b.Client.Get(ctx, *jobNN, job); err != nil {
+			return false, err
+		}
+
+		for _, condition := range job.Status.Conditions {
+			if condition.Type == batchv1.JobComplete && condition.Status == "true" {
+				return true, nil
+			}
+
+			// Early return if job already failed.
+			if condition.Type == batchv1.JobFailed && condition.Status == "true" &&
+				condition.Reason == batchv1.JobReasonBackoffLimitExceeded {
+				return false, fmt.Errorf("job alreay failed")
+			}
+		}
+
+		t.Logf("Job %s still not complete", name)
+		return false, nil
+	}); err != nil {
+		t.Errorf("Failed to run benchmark test: %v", err)
+		return err
+	}
+
+	t.Logf("Running benchmark test: %s successfully", name)
+	return nil
+}
+
+func (b *BenchmarkTestSuite) createBenchmarkClientJob(ctx context.Context, name, gatewayHostPort string, requestHeaders ...string) (*types.NamespacedName, error) {
+	job := b.BenchmarkClient.DeepCopy()
+	job.SetName(name)
+
+	runtimeArgs := prepareBenchmarkClientRuntimeArgs(gatewayHostPort, requestHeaders...)
+	container := &job.Spec.Template.Spec.Containers[0]
+	container.Args = append(container.Args, runtimeArgs...)
+
+	if err := b.CreateResource(ctx, job); err != nil {
+		return nil, err
+	}
+
+	return &types.NamespacedName{Name: job.Name, Namespace: job.Namespace}, nil
 }
 
 func prepareBenchmarkClientStaticArgs(options BenchmarkOptions) []string {
@@ -128,33 +185,32 @@ func prepareBenchmarkClientStaticArgs(options BenchmarkOptions) []string {
 		"--duration", options.Duration,
 		"--concurrency", options.Concurrency,
 	}
-	if options.PrefetchConnections {
-		staticArgs = append(staticArgs, "--prefetch-connections")
-	}
 	return staticArgs
 }
 
-func prepareBenchmarkClientArgs(gatewayHost string, requestHeaders ...string) []string {
+func prepareBenchmarkClientRuntimeArgs(gatewayHostPort string, requestHeaders ...string) []string {
 	args := make([]string, 0, len(requestHeaders)*2+1)
 
 	for _, reqHeader := range requestHeaders {
 		args = append(args, "--request-header", reqHeader)
 	}
-	args = append(args, gatewayHost)
+	args = append(args, fmt.Sprintf("http://%s/", gatewayHostPort))
 
 	return args
 }
 
 // ScaleHTTPRoutes scales HTTPRoutes that are all referenced to one Gateway according to
 // the scale range: (begin, end]. The afterCreation is a callback function that only runs
-// everytime after one HTTPRoutes has been created successfully.
+// every time after one HTTPRoutes has been created successfully.
 //
-// All scaled resources will be labeled with ScaledLabelKey.
-func (b *BenchmarkTestSuite) ScaleHTTPRoutes(ctx context.Context, scaleRange [2]uint16, targetName, refGateway string, afterCreation func(route *gwapiv1.HTTPRoute)) error {
-	var (
-		i          uint16
-		begin, end = scaleRange[0], scaleRange[1]
-	)
+// All scaled resources will be labeled with BenchmarkTestScaledKey.
+func (b *BenchmarkTestSuite) ScaleHTTPRoutes(t *testing.T, ctx context.Context, scaleRange [2]uint16, targetName, refGateway string, afterCreation func(route *gwapiv1.HTTPRoute)) error {
+	t.Helper()
+
+	var i, begin, end uint16
+	begin, end = scaleRange[0], scaleRange[1]
+
+	t.Logf("Scaling HTTPRoutes to %d", end)
 
 	for i = begin + 1; i <= end; i++ {
 		routeName := fmt.Sprintf(targetName, i)
@@ -172,6 +228,8 @@ func (b *BenchmarkTestSuite) ScaleHTTPRoutes(ctx context.Context, scaleRange [2]
 		}
 	}
 
+	t.Logf("Finish scaling HTTPRoutes to %d", end)
+
 	return nil
 }
 
@@ -186,6 +244,17 @@ func (b *BenchmarkTestSuite) CreateResource(ctx context.Context, object client.O
 	return nil
 }
 
+// RegisterCleanup registers cleanup functions for all benchmark test resources.
+func (b *BenchmarkTestSuite) RegisterCleanup(t *testing.T, ctx context.Context, object, scaledObject client.Object) {
+	t.Cleanup(func() {
+		t.Logf("Start to cleanup benchmark test resources")
+
+		_ = b.CleanupResource(ctx, object)
+		_ = b.CleanupScaledResources(ctx, scaledObject)
+		_ = b.CleanupBenchmarkClientJobs(ctx)
+	})
+}
+
 func (b *BenchmarkTestSuite) CleanupResource(ctx context.Context, object client.Object) error {
 	if err := b.Client.Delete(ctx, object); err != nil {
 		if !kerrors.IsNotFound(err) {
@@ -197,10 +266,19 @@ func (b *BenchmarkTestSuite) CleanupResource(ctx context.Context, object client.
 	return nil
 }
 
-// CleanupScaledResources only cleanups all the resources with Scaled label under benchmark-test namespace.
+// CleanupScaledResources only cleanups all the resources under benchmark-test namespace.
 func (b *BenchmarkTestSuite) CleanupScaledResources(ctx context.Context, object client.Object) error {
 	if err := b.Client.DeleteAllOf(ctx, object,
-		client.MatchingLabels{ScaledLabelKey: "true"}, client.InNamespace("benchmark-test")); err != nil {
+		client.MatchingLabels{BenchmarkTestScaledKey: "true"}, client.InNamespace("benchmark-test")); err != nil {
+		return err
+	}
+	return nil
+}
+
+// CleanupBenchmarkClientJobs only cleanups all the jobs under benchmark-test namespace.
+func (b *BenchmarkTestSuite) CleanupBenchmarkClientJobs(ctx context.Context) error {
+	if err := b.Client.DeleteAllOf(ctx, &batchv1.Job{},
+		client.MatchingLabels{BenchmarkTestClientKey: "true"}, client.InNamespace("benchmark-test")); err != nil {
 		return err
 	}
 	return nil

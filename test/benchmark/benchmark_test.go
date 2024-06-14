@@ -37,7 +37,6 @@ func TestBenchmark(t *testing.T) {
 		*suite.Connections,
 		*suite.Duration,
 		*suite.Concurrency,
-		*suite.PrefetchConnections,
 	)
 
 	bSuite, err := suite.NewBenchmarkTestSuite(
