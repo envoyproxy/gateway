@@ -82,7 +82,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{}
 			},
 			wantErrors: []string{
-				"spec: Invalid value: \"object\": either targetRef, targetRefs, or targetSelector must be used",
+				"spec: Invalid value: \"object\": either targetRef or targetRefs must be used",
 			},
 		},
 		{
@@ -1131,7 +1131,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				" Invalid value: \"object\": either targetRef, targetRefs, or targetSelector must be used",
+				" Invalid value: \"object\": either targetRef or targetRefs must be used",
 			},
 		},
 	}
