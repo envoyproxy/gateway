@@ -21,7 +21,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -29,14 +29,14 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha3"
+	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	"sigs.k8s.io/gateway-api/conformance/utils/config"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/yaml"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 )
 
@@ -58,7 +58,7 @@ var BackendTLSSettingsTest = suite.ConformanceTest{
 			gwNN := types.NamespacedName{Name: "backend-namespaces", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 			kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{depNS})
-			backendTLSPolicy := &v1alpha3.BackendTLSPolicy{}
+			backendTLSPolicy := &gwapiv1a3.BackendTLSPolicy{}
 			btpNN := types.NamespacedName{Name: "policy-btls", Namespace: ns}
 			err := suite.Client.Get(context.Background(), btpNN, backendTLSPolicy)
 			if err != nil {
@@ -66,15 +66,15 @@ var BackendTLSSettingsTest = suite.ConformanceTest{
 			}
 			proxyNN := types.NamespacedName{Name: "proxy-config", Namespace: "envoy-gateway-system"}
 
-			config := &v1alpha1.BackendTLSConfig{
+			config := &egv1a1.BackendTLSConfig{
 				ClientCertificateRef: &gwapiv1.SecretObjectReference{
 					Kind:      gatewayapi.KindPtr("Secret"),
 					Name:      "client-tls-certificate",
 					Namespace: gatewayapi.NamespacePtr(depNS),
 				},
-				TLSSettings: v1alpha1.TLSSettings{
-					MinVersion: ptr.To(v1alpha1.TLSv13),
-					MaxVersion: ptr.To(v1alpha1.TLSv13),
+				TLSSettings: egv1a1.TLSSettings{
+					MinVersion: ptr.To(egv1a1.TLSv13),
+					MaxVersion: ptr.To(egv1a1.TLSv13),
 				},
 			}
 			err = UpdateProxyConfig(suite.Client, proxyNN, config)
@@ -130,9 +130,9 @@ var BackendTLSSettingsTest = suite.ConformanceTest{
 				t.Error(err)
 			}
 
-			config.TLSSettings = v1alpha1.TLSSettings{
-				MinVersion: ptr.To(v1alpha1.TLSv12),
-				MaxVersion: ptr.To(v1alpha1.TLSv12),
+			config.TLSSettings = egv1a1.TLSSettings{
+				MinVersion: ptr.To(egv1a1.TLSv12),
+				MaxVersion: ptr.To(egv1a1.TLSv12),
 				Ciphers:    []string{"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"},
 			}
 
@@ -155,9 +155,9 @@ var BackendTLSSettingsTest = suite.ConformanceTest{
 			}
 
 			// Cleanup backend tls settings.
-			err = UpdateProxyConfig(suite.Client, proxyNN, &v1alpha1.BackendTLSConfig{
+			err = UpdateProxyConfig(suite.Client, proxyNN, &egv1a1.BackendTLSConfig{
 				ClientCertificateRef: nil,
-				TLSSettings:          v1alpha1.TLSSettings{},
+				TLSSettings:          egv1a1.TLSSettings{},
 			})
 			if err != nil {
 				t.Error(err)
@@ -185,8 +185,8 @@ func confirmEchoBackendRes(httpRes *http.ExpectedResponse, expectedResBody *Resp
 }
 
 // UpdateProxyConfig updates the proxy configuration with BackendTLS settings.
-func UpdateProxyConfig(client client.Client, proxyNN types.NamespacedName, config *v1alpha1.BackendTLSConfig) error {
-	proxyConfig := &v1alpha1.EnvoyProxy{}
+func UpdateProxyConfig(client client.Client, proxyNN types.NamespacedName, config *egv1a1.BackendTLSConfig) error {
+	proxyConfig := &egv1a1.EnvoyProxy{}
 	err := client.Get(context.Background(), proxyNN, proxyConfig)
 	if err != nil {
 		return err
@@ -282,7 +282,7 @@ func restartDeploymentAndWaitForRollout(t *testing.T, timeoutConfig config.Timeo
 
 	return wait.PollUntilContextTimeout(ctx, 1*time.Second, timeoutConfig.CreateTimeout, true, func(ctx context.Context) (bool, error) {
 		// wait for replicaset with the same annotation to reach ready status
-		podList := &v1.PodList{}
+		podList := &corev1.PodList{}
 		listOpts := []client.ListOption{
 			client.InNamespace(dp.Namespace),
 			client.MatchingLabelsSelector{Selector: labels.SelectorFromSet(dp.Spec.Selector.MatchLabels)},

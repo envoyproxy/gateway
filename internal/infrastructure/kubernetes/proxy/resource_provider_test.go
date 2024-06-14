@@ -18,8 +18,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
-	v12 "k8s.io/api/policy/v1"
-	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	policyv1 "k8s.io/api/policy/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -146,7 +146,7 @@ func TestDeployment(t *testing.T) {
 			deploy: &egv1a1.KubernetesDeploymentSpec{
 				Patch: &egv1a1.KubernetesPatchSpec{
 					Type: ptr.To(egv1a1.StrategicMerge),
-					Value: v1.JSON{
+					Value: apiextensionsv1.JSON{
 						Raw: []byte("{\"spec\":{\"template\":{\"spec\":{\"hostNetwork\":true,\"dnsPolicy\":\"ClusterFirstWithHostNet\"}}}}"),
 					},
 				},
@@ -158,7 +158,7 @@ func TestDeployment(t *testing.T) {
 			deploy: &egv1a1.KubernetesDeploymentSpec{
 				Patch: &egv1a1.KubernetesPatchSpec{
 					Type: ptr.To(egv1a1.StrategicMerge),
-					Value: v1.JSON{
+					Value: apiextensionsv1.JSON{
 						Raw: []byte(`{
 							"spec":{
 								"template":{
@@ -662,7 +662,7 @@ func TestDaemonSet(t *testing.T) {
 			daemonset: &egv1a1.KubernetesDaemonSetSpec{
 				Patch: &egv1a1.KubernetesPatchSpec{
 					Type: ptr.To(egv1a1.StrategicMerge),
-					Value: v1.JSON{
+					Value: apiextensionsv1.JSON{
 						Raw: []byte("{\"spec\":{\"template\":{\"spec\":{\"hostNetwork\":true,\"dnsPolicy\":\"ClusterFirstWithHostNet\"}}}}"),
 					},
 				},
@@ -674,7 +674,7 @@ func TestDaemonSet(t *testing.T) {
 			daemonset: &egv1a1.KubernetesDaemonSetSpec{
 				Patch: &egv1a1.KubernetesPatchSpec{
 					Type: ptr.To(egv1a1.StrategicMerge),
-					Value: v1.JSON{
+					Value: apiextensionsv1.JSON{
 						Raw: []byte(`{
 							"spec":{
 								"template":{
@@ -1092,7 +1092,7 @@ func TestService(t *testing.T) {
 			service: &egv1a1.KubernetesServiceSpec{
 				Patch: &egv1a1.KubernetesPatchSpec{
 					Type: ptr.To(egv1a1.StrategicMerge),
-					Value: v1.JSON{
+					Value: apiextensionsv1.JSON{
 						Raw: []byte("{\"metadata\":{\"name\":\"foo\"}}"),
 					},
 				},
@@ -1364,13 +1364,13 @@ func loadHPA(caseName string) (*autoscalingv2.HorizontalPodAutoscaler, error) {
 	return hpa, nil
 }
 
-func loadPDB(caseName string) (*v12.PodDisruptionBudget, error) {
+func loadPDB(caseName string) (*policyv1.PodDisruptionBudget, error) {
 	pdbYAML, err := os.ReadFile(fmt.Sprintf("testdata/pdb/%s.yaml", caseName))
 	if err != nil {
 		return nil, err
 	}
 
-	pdb := &v12.PodDisruptionBudget{}
+	pdb := &policyv1.PodDisruptionBudget{}
 	_ = yaml.Unmarshal(pdbYAML, pdb)
 	return pdb, nil
 }

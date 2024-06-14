@@ -18,7 +18,7 @@ The Envoy Gateway Helm chart is hosted by DockerHub.
 It is published at `oci://docker.io/envoyproxy/gateway-helm`.
 
 {{% alert title="Note" color="primary" %}}
-We use `v1.0.1` as the latest development version.
+We use `v1.0.2` as the latest development version.
 
 You can visit [Envoy Gateway Helm Chart](https://hub.docker.com/r/envoyproxy/gateway-helm/tags) for more releases.
 {{% /alert %}}
@@ -34,7 +34,7 @@ Refer to the [Developer Guide](../../contributions/develop) to learn more.
 Install the Gateway API CRDs and Envoy Gateway:
 
 ```shell
-helm install eg oci://docker.io/envoyproxy/gateway-helm --version v1.0.1 -n envoy-gateway-system --create-namespace
+helm install eg oci://docker.io/envoyproxy/gateway-helm --version v1.0.2 -n envoy-gateway-system --create-namespace
 ```
 
 Wait for Envoy Gateway to become available:
@@ -66,7 +66,7 @@ Some of the quick ways of using the helm install command for envoy gateway insta
 ### Increase the replicas
 
 ```shell
-helm install eg oci://docker.io/envoyproxy/gateway-helm --version v1.0.1 -n envoy-gateway-system --create-namespace --set deployment.replicas=2
+helm install eg oci://docker.io/envoyproxy/gateway-helm --version v1.0.2 -n envoy-gateway-system --create-namespace --set deployment.replicas=2
 ```
 
 ### Change the kubernetesClusterDomain name
@@ -74,7 +74,7 @@ helm install eg oci://docker.io/envoyproxy/gateway-helm --version v1.0.1 -n envo
 If you have installed your cluster with different domain name you can use below command.
 
 ```shell
-helm install eg oci://docker.io/envoyproxy/gateway-helm --version v1.0.1 -n envoy-gateway-system --create-namespace --set kubernetesClusterDomain=<domain name>
+helm install eg oci://docker.io/envoyproxy/gateway-helm --version v1.0.2 -n envoy-gateway-system --create-namespace --set kubernetesClusterDomain=<domain name>
 ```
 
 **Note**: Above are some of the ways we can directly use for customization of our installation. But if you are looking for more complex changes [values.yaml](https://helm.sh/docs/chart_template_guide/values_files/) comes to rescue.
@@ -111,7 +111,7 @@ Here we have made three changes to our values.yaml file. Increase the resources 
 You can use the below command to install the envoy gateway using values.yaml file.
 
 ```shell
-helm install eg oci://docker.io/envoyproxy/gateway-helm --version v1.0.1 -n envoy-gateway-system --create-namespace -f values.yaml
+helm install eg oci://docker.io/envoyproxy/gateway-helm --version v1.0.2 -n envoy-gateway-system --create-namespace -f values.yaml
 ```
 
 {{% alert title="Helm Chart Values" color="primary" %}}

@@ -11,14 +11,14 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
-	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
 func TestExtractTargetRefs(t *testing.T) {
 	tests := []struct {
 		desc          string
 		specInput     map[string]any
-		output        []gwv1a2.LocalPolicyTargetReferenceWithSectionName
+		output        []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName
 		expectedError string
 	}{
 		{
@@ -62,9 +62,9 @@ func TestExtractTargetRefs(t *testing.T) {
 					"name":  "name",
 				},
 			},
-			output: []gwv1a2.LocalPolicyTargetReferenceWithSectionName{
+			output: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
 				{
-					LocalPolicyTargetReference: gwv1a2.LocalPolicyTargetReference{
+					LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 						Group: "some.group",
 						Kind:  "SomeKind",
 						Name:  "name",
@@ -88,16 +88,16 @@ func TestExtractTargetRefs(t *testing.T) {
 					},
 				},
 			},
-			output: []gwv1a2.LocalPolicyTargetReferenceWithSectionName{
+			output: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
 				{
-					LocalPolicyTargetReference: gwv1a2.LocalPolicyTargetReference{
+					LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 						Group: "some.group",
 						Kind:  "SomeKind2",
 						Name:  "othername",
 					},
 				},
 				{
-					LocalPolicyTargetReference: gwv1a2.LocalPolicyTargetReference{
+					LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 						Group: "some.group",
 						Kind:  "SomeKind",
 						Name:  "name",
@@ -127,28 +127,28 @@ func TestExtractTargetRefs(t *testing.T) {
 					"sectionName": "one",
 				},
 			},
-			output: []gwv1a2.LocalPolicyTargetReferenceWithSectionName{
+			output: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
 				{
-					LocalPolicyTargetReference: gwv1a2.LocalPolicyTargetReference{
+					LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 						Group: "some.group",
 						Kind:  "SomeKind2",
 						Name:  "othername",
 					},
 				},
 				{
-					LocalPolicyTargetReference: gwv1a2.LocalPolicyTargetReference{
+					LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 						Group: "some.group",
 						Kind:  "SomeKind",
 						Name:  "name",
 					},
 				},
 				{
-					LocalPolicyTargetReference: gwv1a2.LocalPolicyTargetReference{
+					LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 						Group: "some.group",
 						Kind:  "SomeKind",
 						Name:  "three",
 					},
-					SectionName: ptr.To(gwv1a2.SectionName("one")),
+					SectionName: ptr.To(gwapiv1a2.SectionName("one")),
 				},
 			},
 		},
