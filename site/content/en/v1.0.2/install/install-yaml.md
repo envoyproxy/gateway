@@ -31,7 +31,7 @@ Refer to the [Developer Guide](../../contributions/develop) to learn more.
 1. In your terminal, run the following command:
 
     ```shell
-    kubectl apply --server-side -f https://github.com/envoyproxy/gateway/releases/download/v1.0.1/install.yaml
+    kubectl apply --server-side -f https://github.com/envoyproxy/gateway/releases/download/v1.0.2/install.yaml
     ```
 
 2. Next Steps
