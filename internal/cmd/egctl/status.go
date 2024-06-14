@@ -56,7 +56,7 @@ func newStatusCommand() *cobra.Command {
 	statusCommand := &cobra.Command{
 		Use:   "status",
 		Short: "Show the summary of the status of resources in Envoy Gateway",
-		Example: `  # Show the status of gatewayclass resources under default namespace.
+		Example: `  # Show the status of gatewayclass resources.
   egctl x status gatewayclass
 
   # Show the status of gateway resources with less information under default namespace.
