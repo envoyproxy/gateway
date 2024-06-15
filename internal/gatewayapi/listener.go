@@ -271,7 +271,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 				}
 
 				// TODO: how to get authority from the backendRefs?
-				ds, err := t.processBackendRefs(sink.OpenTelemetry.BackendRefs, envoyproxy.Namespace, resources)
+				ds, err := t.processBackendRefs(sink.OpenTelemetry.BackendRefs, envoyproxy.Namespace, resources, envoyproxy)
 				if err != nil {
 					return nil, err
 				}
@@ -315,7 +315,7 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 	tracing := envoyproxy.Spec.Telemetry.Tracing
 
 	// TODO: how to get authority from the backendRefs?
-	ds, err := t.processBackendRefs(tracing.Provider.BackendRefs, envoyproxy.Namespace, resources)
+	ds, err := t.processBackendRefs(tracing.Provider.BackendRefs, envoyproxy.Namespace, resources, envoyproxy)
 	if err != nil {
 		return nil, err
 	}
@@ -368,7 +368,7 @@ func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy, resources *Re
 			continue
 		}
 
-		_, err := t.processBackendRefs(sink.OpenTelemetry.BackendRefs, envoyproxy.Namespace, resources)
+		_, err := t.processBackendRefs(sink.OpenTelemetry.BackendRefs, envoyproxy.Namespace, resources, envoyproxy)
 		if err != nil {
 			return nil, err
 		}
@@ -380,7 +380,7 @@ func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy, resources *Re
 	}, nil
 }
 
-func (t *Translator) processBackendRefs(backendRefs []egv1a1.BackendRef, namespace string, resources *Resources) ([]*ir.DestinationSetting, error) {
+func (t *Translator) processBackendRefs(backendRefs []egv1a1.BackendRef, namespace string, resources *Resources, envoyProxy *egv1a1.EnvoyProxy) ([]*ir.DestinationSetting, error) {
 	result := make([]*ir.DestinationSetting, 0, len(backendRefs))
 	for _, ref := range backendRefs {
 		ns := NamespaceDerefOr(ref.Namespace, namespace)
@@ -392,7 +392,7 @@ func (t *Translator) processBackendRefs(backendRefs []egv1a1.BackendRef, namespa
 			return nil, err
 		}
 
-		ds := t.processServiceDestinationSetting(ref.BackendObjectReference, ns, ir.GRPC, resources)
+		ds := t.processServiceDestinationSetting(ref.BackendObjectReference, ns, ir.GRPC, resources, envoyProxy)
 		result = append(result, ds)
 	}
 	if len(result) == 0 {

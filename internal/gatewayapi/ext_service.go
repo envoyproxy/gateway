@@ -37,7 +37,7 @@ func (t *Translator) processExtServiceDestination(
 
 	switch KindDerefOr(backendRef.Kind, KindService) {
 	case KindService:
-		ds = t.processServiceDestinationSetting(*backendRef, backendNamespace, protocol, resources)
+		ds = t.processServiceDestinationSetting(*backendRef, backendNamespace, protocol, resources, envoyProxy)
 	case egv1a1.KindBackend:
 		if !t.BackendEnabled {
 			return nil, fmt.Errorf("resource %s of type Backend cannot be used since Backend is disabled in Envoy Gateway configuration", string(backendRef.Name))
