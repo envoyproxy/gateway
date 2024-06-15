@@ -22,15 +22,15 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, HealthCheckTest)
+	ConformanceTests = append(ConformanceTests, ListenerHealthCheckTest)
 }
 
-var HealthCheckTest = suite.ConformanceTest{
-	ShortName:   "HealthCheck",
-	Description: "Resource with HealthCheck enabled",
-	Manifests:   []string{"testdata/health-check.yaml"},
+var ListenerHealthCheckTest = suite.ConformanceTest{
+	ShortName:   "ListenerHealthCheck",
+	Description: "Resource with ListenerHealthCheck enabled",
+	Manifests:   []string{"testdata/listener-health-check.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("health check enabled", func(t *testing.T) {
+		t.Run("listener health check enabled", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "http-with-health-check", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
