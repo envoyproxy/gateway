@@ -1,4 +1,3 @@
-# Create the data directory for eg
 FROM busybox as source
 # Create the data directory for eg
 RUN mkdir -p /var/lib/eg

@@ -637,7 +637,11 @@ func (t *Translator) buildWasm(
 			imageURL += ":latest"
 		}
 
-		// The wasm checksum is different from the OCI image digest
+		// The wasm checksum is different from the OCI image digest.
+		// The original checksum in the EEP is used to match the digest of OCI image.
+		// The returned checksum from the cache is the checksum of the wasm file
+		// extracted from the OCI image, which is used by the envoy to verify the wasm file.
+		// TODO zhaohuabing: don't block the gateway API translation if the wasm module is not in the cache
 		if egServingURL, checksum, err = t.WasmCache.Get(imageURL, wasm.GetOptions{
 			Checksum:        originalChecksum,
 			PullSecret:      pullSecret,
@@ -658,10 +662,14 @@ func (t *Translator) buildWasm(
 		return nil, fmt.Errorf("unsupported Wasm code source type %q", config.Code.Type)
 	}
 
+	wasmName := name
+	if config.Name != nil {
+		wasmName = *config.Name
+	}
 	wasmIR := &ir.Wasm{
 		Name:     name,
 		RootID:   config.RootID,
-		WasmName: config.Name,
+		WasmName: wasmName,
 		Config:   config.Config,
 		FailOpen: failOpen,
 		Code:     code,

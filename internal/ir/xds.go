@@ -2205,7 +2205,7 @@ type ExtProc struct {
 // +k8s:deepcopy-gen=true
 type Wasm struct {
 	// Name is a unique name for an Wasm configuration.
-	// The xds translator only generates one ExtProc filter for each unique name.
+	// The xds translator only generates one Wasm filter for each unique name.
 	Name string `json:"name"`
 
 	// RootID is a unique ID for a set of extensions in a VM which will share a
@@ -2227,6 +2227,9 @@ type Wasm struct {
 	FailOpen bool `json:"failOpen"`
 
 	// Code is the HTTP Wasm code source.
+	// Envoy only supports HTTP Wasm code source. EG downloads the Wasm code from the
+	// original URL(either an HTTP URL or an OCI image) and serves it through the
+	// local HTTP server.
 	Code *HTTPWasmCode `json:"httpWasmCode,omitempty"`
 }
 
@@ -2237,8 +2240,7 @@ type HTTPWasmCode struct {
 	EGServingURL string `json:"egServingURL"`
 
 	// SHA256 checksum that will be used by the Envoy to verify the Wasm code.
-	// It's different from the SHA256 of the Wasm code itself if the original
-	// downloading URL is an OCI image.
+	// It's different from the digest of the OCI image.
 	SHA256 string `json:"sha256"`
 
 	// OriginalDownloadingURL is the original downloading URL of the Wasm code.

@@ -203,7 +203,7 @@ func policyAcceptedByAncestor(ancestors []gwapiv1a2.PolicyAncestorStatus, contro
 	return false
 }
 
-// EnvoyExtensionPolicyMustFail waits for an EnvoyExtensionPolicy to be failed with the specified reason.
+// EnvoyExtensionPolicyMustFail waits for an EnvoyExtensionPolicy to fail with the specified reason.
 func EnvoyExtensionPolicyMustFail(
 	t *testing.T, client client.Client, policyName types.NamespacedName,
 	controllerName string, ancestorRef gwapiv1a2.ParentReference, message string,
@@ -227,7 +227,7 @@ func EnvoyExtensionPolicyMustFail(
 			return false, nil
 		})
 
-	require.NoErrorf(t, waitErr, "error waiting for EnvoyExtensionPolicy to be failed with message: %s policy %v", message, policy)
+	require.NoErrorf(t, waitErr, "error waiting for EnvoyExtensionPolicy to fail with message: %s policy %v", message, policy)
 }
 
 func policyFailAcceptedByAncestor(ancestors []gwapiv1a2.PolicyAncestorStatus, controllerName string, ancestorRef gwapiv1a2.ParentReference, message string) bool {

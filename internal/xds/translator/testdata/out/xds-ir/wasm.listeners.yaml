@@ -62,6 +62,7 @@
                 '@type': type.googleapis.com/google.protobuf.StringValue
                 value: '{"parameter1":"value1","parameter2":"value2"}'
               name: wasm-filter-2
+              rootId: my-root-id
               vmConfig:
                 code:
                   remote:
@@ -80,7 +81,7 @@
               configuration:
                 '@type': type.googleapis.com/google.protobuf.StringValue
                 value: ""
-              name: wasm-filter-3
+              name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/2
               vmConfig:
                 code:
                   remote:

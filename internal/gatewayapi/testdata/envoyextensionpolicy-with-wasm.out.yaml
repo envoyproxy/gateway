@@ -75,12 +75,12 @@ envoyExtensionPolicies:
         parameter1: value1
         parameter2: value2
       name: wasm-filter-2
+      rootID: my-root-id
     - code:
         image:
           url: www.example.com:8080/wasm-filter-3
         sha256: null
         type: Image
-      name: wasm-filter-3
   status:
     ancestors:
     - ancestorRef:
@@ -319,6 +319,7 @@ xdsIR:
             originalDownloadingURL: oci://www.example.com/wasm-filter-2:v1.0.0
             sha256: 314100af781b98a8ca175d5bf90a8bf76576e20a2f397a88223404edc6ebfd46
           name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/1
+          rootID: my-root-id
           wasmName: wasm-filter-2
         - config: null
           failOpen: false
@@ -327,4 +328,4 @@ xdsIR:
             originalDownloadingURL: oci://www.example.com:8080/wasm-filter-3:latest
             sha256: 2a19e4f337e5223d7287e7fccd933fb01905deaff804292e5257f8c681b82bee
           name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/2
-          wasmName: wasm-filter-3
+          wasmName: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/2

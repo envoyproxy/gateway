@@ -18,20 +18,16 @@ type Wasm struct {
 	// Name is a unique name for this Wasm extension. It is used to identify the
 	// Wasm extension if multiple extensions are handled by the same vm_id and root_id.
 	// It's also used for logging/debugging.
-	Name string `json:"name"`
-
-	// VMID is an ID that will be used along with a hash of the wasm code to
-	// determine which VM will be used to load the Wasm extension. All extensions
-	// that have the same vm_id and code will use the same VM.
+	// If not specified, EG will generate a unique name for the Wasm extension.
 	//
-	// Note that sharing a VM between plugins can reduce memory utilization and
-	// make sharing of data easier, but it may have security implications.
-	// VMID *string `json:"vmID,omitempty"`
+	// +optional
+	Name *string `json:"name,omitempty"`
 
 	// RootID is a unique ID for a set of extensions in a VM which will share a
 	// RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog).
 	// If left blank, all extensions with a blank root_id with the same vm_id will share Context(s).
-	// RootID must match the root_id parameter used to register the Context in the Wasm code.
+	//
+	// Note: RootID must match the root_id parameter used to register the Context in the Wasm code.
 	RootID *string `json:"rootID,omitempty"`
 
 	// Code is the wasm code for the extension.
@@ -124,6 +120,7 @@ type HTTPWasmCodeSource struct {
 // ImageWasmCodeSource defines the OCI image containing the wasm code.
 type ImageWasmCodeSource struct {
 	// URL is the URL of the OCI image.
+	// URL can be in the format of `registry/image:tag` or `registry/image@sha256:digest`.
 	URL string `json:"url"`
 
 	// PullSecretRef is a reference to the secret containing the credentials to pull the image.

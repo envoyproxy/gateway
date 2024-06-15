@@ -330,7 +330,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 						},
 						Wasm: []egv1a1.Wasm{
 							{
-								Name:   "wasm-filter",
+								Name:   ptr.To("wasm-filter"),
 								RootID: ptr.To("my_root_id"),
 								Code: egv1a1.WasmCodeSource{
 									Type: egv1a1.ImageWasmCodeSourceType,

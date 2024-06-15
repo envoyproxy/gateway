@@ -334,7 +334,9 @@ spec:
                               - message: only support Secret kind.
                                 rule: self.kind == 'Secret'
                             url:
-                              description: URL is the URL of the OCI image.
+                              description: |-
+                                URL is the URL of the OCI image.
+                                URL can be in the format of `registry/image:tag` or `registry/image@sha256:digest`.
                               type: string
                           required:
                           - url
@@ -404,17 +406,19 @@ spec:
                         Name is a unique name for this Wasm extension. It is used to identify the
                         Wasm extension if multiple extensions are handled by the same vm_id and root_id.
                         It's also used for logging/debugging.
+                        If not specified, EG will generate a unique name for the Wasm extension.
                       type: string
                     rootID:
                       description: |-
                         RootID is a unique ID for a set of extensions in a VM which will share a
                         RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog).
                         If left blank, all extensions with a blank root_id with the same vm_id will share Context(s).
-                        RootID must match the root_id parameter used to register the Context in the Wasm code.
+
+
+                        Note: RootID must match the root_id parameter used to register the Context in the Wasm code.
                       type: string
                   required:
                   - code
-                  - name
                   type: object
                 maxItems: 16
                 type: array

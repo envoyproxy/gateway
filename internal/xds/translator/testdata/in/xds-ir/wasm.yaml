@@ -78,6 +78,7 @@ http:
         sha256: 314100af781b98a8ca175d5bf90a8bf76576e20a2f397a88223404edc6ebfd46
       name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/1
       wasmName: wasm-filter-2
+      rootID: my-root-id
     - config: null
       failOpen: false
       httpWasmCode:
@@ -85,4 +86,4 @@ http:
         originalDownloadingURL: oci://www.example.com:8080/wasm-filter-3:latest
         sha256: 2a19e4f337e5223d7287e7fccd933fb01905deaff804292e5257f8c681b82bee
       name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/2
-      wasmName: wasm-filter-3
+      wasmName: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/2

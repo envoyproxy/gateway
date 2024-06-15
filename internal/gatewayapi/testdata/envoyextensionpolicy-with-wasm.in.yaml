@@ -84,6 +84,7 @@ envoyextensionpolicies:
           key2: value2
         parameter2: value3
     - name: wasm-filter-2
+      rootID: "my-root-id"
       code:
         type: Image
         image:
@@ -94,8 +95,7 @@ envoyextensionpolicies:
       config:
         parameter1: value1
         parameter2: value2
-    - name: wasm-filter-3
-      code:
+    - code:
         type: Image
         image:
           url: www.example.com:8080/wasm-filter-3
