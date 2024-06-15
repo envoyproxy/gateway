@@ -14,7 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
+	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -153,8 +153,8 @@ func validateBackendRef(ref *gwapiv1.BackendRef) error {
 	switch {
 	case ref == nil:
 		return nil
-	case gatewayapi.GroupDerefOr(ref.Group, corev1.GroupName) != corev1.GroupName && gatewayapi.GroupDerefOr(ref.Group, corev1.GroupName) != mcsapi.GroupName && gatewayapi.GroupDerefOr(ref.Group, corev1.GroupName) != egv1a1.GroupName:
-		return fmt.Errorf("invalid group; must be nil, empty string %q or %q", mcsapi.GroupName, egv1a1.GroupName)
+	case gatewayapi.GroupDerefOr(ref.Group, corev1.GroupName) != corev1.GroupName && gatewayapi.GroupDerefOr(ref.Group, corev1.GroupName) != mcsapiv1a1.GroupName && gatewayapi.GroupDerefOr(ref.Group, corev1.GroupName) != egv1a1.GroupName:
+		return fmt.Errorf("invalid group; must be nil, empty string %q or %q", mcsapiv1a1.GroupName, egv1a1.GroupName)
 	case gatewayapi.KindDerefOr(ref.Kind, gatewayapi.KindService) != gatewayapi.KindService && gatewayapi.KindDerefOr(ref.Kind, gatewayapi.KindService) != gatewayapi.KindServiceImport && gatewayapi.KindDerefOr(ref.Kind, gatewayapi.KindService) != egv1a1.KindBackend:
 		return fmt.Errorf("invalid kind %q; must be %q, %q or %q",
 			*ref.BackendObjectReference.Kind, gatewayapi.KindService, gatewayapi.KindServiceImport, egv1a1.KindBackend)

@@ -6,7 +6,7 @@
 package v1alpha1
 
 import (
-	appv1 "k8s.io/api/apps/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -72,7 +72,7 @@ type KubernetesDeploymentSpec struct {
 
 	// The deployment strategy to use to replace existing pods with new ones.
 	// +optional
-	Strategy *appv1.DeploymentStrategy `json:"strategy,omitempty"`
+	Strategy *appsv1.DeploymentStrategy `json:"strategy,omitempty"`
 
 	// Pod defines the desired specification of pod.
 	//
@@ -107,7 +107,7 @@ type KubernetesDaemonSetSpec struct {
 
 	// The daemonset strategy to use to replace existing pods with new ones.
 	// +optional
-	Strategy *appv1.DaemonSetUpdateStrategy `json:"strategy,omitempty"`
+	Strategy *appsv1.DaemonSetUpdateStrategy `json:"strategy,omitempty"`
 
 	// Pod defines the desired specification of pod.
 	//

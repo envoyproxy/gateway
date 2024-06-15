@@ -14,7 +14,7 @@ import (
 
 	"sigs.k8s.io/yaml"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 type Info struct {
@@ -36,7 +36,7 @@ func Get() Info {
 var (
 	envoyGatewayVersion string
 	gatewayAPIVersion   string
-	envoyProxyVersion   = strings.Split(v1alpha1.DefaultEnvoyProxyImage, ":")[1]
+	envoyProxyVersion   = strings.Split(egv1a1.DefaultEnvoyProxyImage, ":")[1]
 	gitCommitID         string
 )
 

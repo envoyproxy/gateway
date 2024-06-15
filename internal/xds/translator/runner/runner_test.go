@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -50,9 +50,11 @@ func TestRunner(t *testing.T) {
 	res := ir.Xds{
 		HTTP: []*ir.HTTPListener{
 			{
-				Name:      "test",
-				Address:   "0.0.0.0",
-				Port:      80,
+				CoreListenerDetails: ir.CoreListenerDetails{
+					Name:    "test",
+					Address: "0.0.0.0",
+					Port:    80,
+				},
 				Hostnames: []string{"example.com"},
 				Routes: []*ir.HTTPRoute{
 					{
@@ -129,9 +131,11 @@ func TestRunner_withExtensionManager(t *testing.T) {
 	res := ir.Xds{
 		HTTP: []*ir.HTTPListener{
 			{
-				Name:      "test",
-				Address:   "0.0.0.0",
-				Port:      80,
+				CoreListenerDetails: ir.CoreListenerDetails{
+					Name:    "test",
+					Address: "0.0.0.0",
+					Port:    80,
+				},
 				Hostnames: []string{"example.com"},
 				Routes: []*ir.HTTPRoute{
 					{
@@ -170,8 +174,8 @@ type extManagerMock struct {
 	types.Manager
 }
 
-func (m *extManagerMock) GetPostXDSHookClient(xdsHookType v1alpha1.XDSTranslatorHook) types.XDSHookClient {
-	if xdsHookType == v1alpha1.XDSHTTPListener {
+func (m *extManagerMock) GetPostXDSHookClient(xdsHookType egv1a1.XDSTranslatorHook) types.XDSHookClient {
+	if xdsHookType == egv1a1.XDSHTTPListener {
 		return &xdsHookClientMock{}
 	}
 
