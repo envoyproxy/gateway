@@ -36,9 +36,9 @@ type Resources struct {
 	// the translator
 
 	// EnvoyProxyForGatewayClass holds EnvoyProxy attached to GatewayClass
-	EnvoyProxyForGatewayClass *egv1a1.EnvoyProxy `json:"classEnvoyProxy,omitempty" yaml:"classEnvoyProxy,omitempty"`
+	EnvoyProxyForGatewayClass *egv1a1.EnvoyProxy `json:"envoyProxyForGatewayClass,omitempty" yaml:"envoyProxyForGatewayClass,omitempty"`
 	// EnvoyProxiesForGateways holds EnvoyProxiesForGateways attached to Gateways
-	EnvoyProxiesForGateways []*egv1a1.EnvoyProxy `json:"EnvoyProxies,omitempty" yaml:"EnvoyProxies,omitempty"`
+	EnvoyProxiesForGateways []*egv1a1.EnvoyProxy `json:"envoyProxiesForGateways,omitempty" yaml:"envoyProxiesForGateways,omitempty"`
 
 	GatewayClass            *gwapiv1.GatewayClass          `json:"gatewayClass,omitempty" yaml:"gatewayClass,omitempty"`
 	Gateways                []*gwapiv1.Gateway             `json:"gateways,omitempty" yaml:"gateways,omitempty"`
