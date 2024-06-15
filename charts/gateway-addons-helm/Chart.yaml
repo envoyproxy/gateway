@@ -57,7 +57,7 @@ dependencies:
       - tracing
   - name: opentelemetry-collector
     repository: https://open-telemetry.github.io/opentelemetry-helm-charts
-    version: 0.60.0
+    version: 0.73.1
     condition: opentelemetry-collector.enabled
     tags:
       - metrics
