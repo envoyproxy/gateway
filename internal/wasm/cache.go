@@ -309,7 +309,7 @@ func (c *localFileCache) prepareFetch(
 
 	// Retry fetching the image for a few times.
 	// This happens in e2e tests with a local registry inside a kind cluster.
-	const imageFetchRetries = 5
+	const imageFetchRetries = 3
 	for i := 0; i < imageFetchRetries; i++ {
 		if binaryFetcher, actualDigest, err = fetcher.PrepareFetch(url.Host + url.Path); err == nil {
 			break

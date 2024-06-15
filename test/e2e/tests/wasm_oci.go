@@ -196,21 +196,23 @@ var OCIWasmTest = suite.ConformanceTest{
 			if err := suite.Client.Create(context.Background(), eep); err != nil {
 				t.Fatalf("failed to create envoy extension policy: %v", err)
 			}
+			defer func() {
+				_ = suite.Client.Delete(context.Background(), eep)
+			}()
+			// Wait for the EnvoyExtensionPolicy to be failed due to missing pull secret
+			ancestorRef := gwapiv1a2.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Kind:      gatewayapi.KindPtr(gatewayapi.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(testNS),
+				Name:      gwapiv1.ObjectName(testGW),
+			}
+
+			EnvoyExtensionPolicyMustFail(
+				t, suite.Client,
+				types.NamespacedName{Name: "oci-wasm-source-test-no-secret", Namespace: testNS},
+				suite.ControllerName,
+				ancestorRef, "failed to login to private registry")
 		})
-
-		// Wait for the EnvoyExtensionPolicy to be failed due to missing pull secret
-		ancestorRef := gwapiv1a2.ParentReference{
-			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-			Kind:      gatewayapi.KindPtr(gatewayapi.KindGateway),
-			Namespace: gatewayapi.NamespacePtr(testNS),
-			Name:      gwapiv1.ObjectName(testGW),
-		}
-
-		EnvoyExtensionPolicyMustFail(
-			t, suite.Client,
-			types.NamespacedName{Name: "oci-wasm-source-test-no-secret", Namespace: testNS},
-			suite.ControllerName,
-			ancestorRef, "failed to login to private registry")
 	},
 }
 
@@ -394,3 +396,4 @@ func createEEPForWasmTest(
 		t.Fatalf("failed to create envoy extension policy: %v", err)
 	}
 }
+
