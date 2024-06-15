@@ -659,6 +659,7 @@ _Appears in:_
 | `http1` | _[HTTP1Settings](#http1settings)_ |  false  | HTTP1 provides HTTP/1 configuration on the listener. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  | HTTP2 provides HTTP/2 configuration on the listener. |
 | `http3` | _[HTTP3Settings](#http3settings)_ |  false  | HTTP3 provides HTTP/3 configuration on the listener. |
+| `healthCheck` | _[HealthCheckSettings](#healthchecksettings)_ |  false  | HealthCheck provides configuration for determining whether the HTTP/HTTPS listener is healthy. |
 
 
 #### ClientValidationContext
