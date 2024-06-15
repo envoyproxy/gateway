@@ -21,7 +21,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
-	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
+	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -326,7 +326,7 @@ func (r *gatewayAPIReconciler) isSecurityPolicyReferencingBackend(nsName *types.
 // if it exists, finds the Gateway's Deployment, and further updates the Gateway
 // status Ready condition. All Services are pushed for reconciliation.
 func (r *gatewayAPIReconciler) validateServiceImportForReconcile(obj client.Object) bool {
-	svcImport, ok := obj.(*mcsapi.ServiceImport)
+	svcImport, ok := obj.(*mcsapiv1a1.ServiceImport)
 	if !ok {
 		r.log.Info("unexpected object type, bypassing reconciliation", "object", obj)
 		return false
@@ -400,7 +400,7 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 	}
 
 	svcName, ok := ep.GetLabels()[discoveryv1.LabelServiceName]
-	multiClusterSvcName, isMCS := ep.GetLabels()[mcsapi.LabelServiceName]
+	multiClusterSvcName, isMCS := ep.GetLabels()[mcsapiv1a1.LabelServiceName]
 	if !ok && !isMCS {
 		r.log.Info("endpointslice is missing kubernetes.io/service-name or multicluster.kubernetes.io/service-name label", "object", obj)
 		return false

@@ -31,7 +31,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
-	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
+	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
@@ -391,7 +391,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 			endpointSliceLabelKey = discoveryv1.LabelServiceName
 
 		case gatewayapi.KindServiceImport:
-			serviceImport := new(mcsapi.ServiceImport)
+			serviceImport := new(mcsapiv1a1.ServiceImport)
 			err := r.client.Get(ctx, types.NamespacedName{Namespace: string(*backendRef.Namespace), Name: string(backendRef.Name)}, serviceImport)
 			if err != nil {
 				r.log.Error(err, "failed to get ServiceImport", "namespace", string(*backendRef.Namespace),
@@ -402,7 +402,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 				r.log.Info("added ServiceImport to resource tree", "namespace", string(*backendRef.Namespace),
 					"name", string(backendRef.Name))
 			}
-			endpointSliceLabelKey = mcsapi.LabelServiceName
+			endpointSliceLabelKey = mcsapiv1a1.LabelServiceName
 
 		case egv1a1.KindBackend:
 			backend := new(egv1a1.Backend)
@@ -1206,12 +1206,12 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	// Watch ServiceImport CRUDs and process affected *Route objects.
 	if serviceImportCRDExists {
 		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &mcsapi.ServiceImport{},
-				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, si *mcsapi.ServiceImport) []reconcile.Request {
+			source.Kind(mgr.GetCache(), &mcsapiv1a1.ServiceImport{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, si *mcsapiv1a1.ServiceImport) []reconcile.Request {
 					return r.enqueueClass(ctx, si)
 				}),
-				predicate.TypedGenerationChangedPredicate[*mcsapi.ServiceImport]{},
-				predicate.NewTypedPredicateFuncs[*mcsapi.ServiceImport](func(si *mcsapi.ServiceImport) bool {
+				predicate.TypedGenerationChangedPredicate[*mcsapiv1a1.ServiceImport]{},
+				predicate.NewTypedPredicateFuncs[*mcsapiv1a1.ServiceImport](func(si *mcsapiv1a1.ServiceImport) bool {
 					return r.validateServiceImportForReconcile(si)
 				}))); err != nil {
 			// ServiceImport is not available in the cluster, skip the watch and not throw error.
@@ -1685,7 +1685,7 @@ func (r *gatewayAPIReconciler) serviceImportCRDExists(mgr manager.Manager) bool 
 	serviceImportFound := false
 	for _, list := range apiResourceList {
 		for _, resource := range list.APIResources {
-			if list.GroupVersion == mcsapi.GroupVersion.String() && resource.Kind == gatewayapi.KindServiceImport {
+			if list.GroupVersion == mcsapiv1a1.GroupVersion.String() && resource.Kind == gatewayapi.KindServiceImport {
 				serviceImportFound = true
 				break
 			}

@@ -68,6 +68,11 @@ type EnvoyProxySpec struct {
 	// +optional
 	Concurrency *int32 `json:"concurrency,omitempty"`
 
+	// RoutingType can be set to "Service" to use the Service Cluster IP for routing to the backend,
+	// or it can be set to "Endpoint" to use Endpoint routing. The default is "Endpoint".
+	// +optional
+	RoutingType *RoutingType `json:"routingType,omitempty"`
+
 	// ExtraArgs defines additional command line options that are provided to Envoy.
 	// More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options
 	// Note: some command line options are used internally(e.g. --log-level) so they cannot be provided here.
@@ -124,6 +129,16 @@ type EnvoyProxySpec struct {
 	// +optional
 	BackendTLS *BackendTLSConfig `json:"backendTLS,omitempty"`
 }
+
+// RoutingType defines the type of routing of this Envoy proxy.
+type RoutingType string
+
+const (
+	// ServiceRoutingType is the RoutingType for Service Cluster IP routing.
+	ServiceRoutingType RoutingType = "Service"
+	// EndpointRoutingType is the RoutingType for Endpoint routing.
+	EndpointRoutingType RoutingType = "Endpoint"
+)
 
 // BackendTLSConfig describes the BackendTLS configuration for Envoy Proxy.
 type BackendTLSConfig struct {
