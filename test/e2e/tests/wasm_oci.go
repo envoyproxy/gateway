@@ -396,4 +396,3 @@ func createEEPForWasmTest(
 		t.Fatalf("failed to create envoy extension policy: %v", err)
 	}
 }
-
