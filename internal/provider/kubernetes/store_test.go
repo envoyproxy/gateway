@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestNodeDetailsAddressStore(t *testing.T) {
@@ -23,7 +23,7 @@ func TestNodeDetailsAddressStore(t *testing.T) {
 		{
 			name: "No node addresses",
 			nodeObject: &corev1.Node{
-				ObjectMeta: v1.ObjectMeta{Name: "node1"},
+				ObjectMeta: metav1.ObjectMeta{Name: "node1"},
 				Status:     corev1.NodeStatus{Addresses: []corev1.NodeAddress{{}}},
 			},
 			expectedAddresses: []string{},
@@ -31,7 +31,7 @@ func TestNodeDetailsAddressStore(t *testing.T) {
 		{
 			name: "only external address",
 			nodeObject: &corev1.Node{
-				ObjectMeta: v1.ObjectMeta{Name: "node1"},
+				ObjectMeta: metav1.ObjectMeta{Name: "node1"},
 				Status: corev1.NodeStatus{Addresses: []corev1.NodeAddress{{
 					Address: "1.1.1.1",
 					Type:    corev1.NodeExternalIP,
@@ -42,7 +42,7 @@ func TestNodeDetailsAddressStore(t *testing.T) {
 		{
 			name: "only internal address",
 			nodeObject: &corev1.Node{
-				ObjectMeta: v1.ObjectMeta{Name: "node1"},
+				ObjectMeta: metav1.ObjectMeta{Name: "node1"},
 				Status: corev1.NodeStatus{Addresses: []corev1.NodeAddress{{
 					Address: "1.1.1.1",
 					Type:    corev1.NodeInternalIP,
@@ -53,7 +53,7 @@ func TestNodeDetailsAddressStore(t *testing.T) {
 		{
 			name: "prefer external address",
 			nodeObject: &corev1.Node{
-				ObjectMeta: v1.ObjectMeta{Name: "node1"},
+				ObjectMeta: metav1.ObjectMeta{Name: "node1"},
 				Status: corev1.NodeStatus{Addresses: []corev1.NodeAddress{
 					{
 						Address: "1.1.1.1",
@@ -84,7 +84,7 @@ func TestRace(t *testing.T) {
 	go func() {
 		for {
 			s.addNode(&corev1.Node{
-				ObjectMeta: v1.ObjectMeta{Name: "node1"},
+				ObjectMeta: metav1.ObjectMeta{Name: "node1"},
 				Status:     corev1.NodeStatus{Addresses: []corev1.NodeAddress{{}}},
 			})
 		}

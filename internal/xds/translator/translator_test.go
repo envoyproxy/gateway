@@ -22,7 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/extension/registry"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -229,28 +229,33 @@ func TestTranslateXdsWithExtension(t *testing.T) {
 					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", "cluster.local"),
 				},
 			}
-			ext := v1alpha1.ExtensionManager{
-				Resources: []v1alpha1.GroupVersionKind{
+			ext := egv1a1.ExtensionManager{
+				Resources: []egv1a1.GroupVersionKind{
 					{
 						Group:   "foo.example.io",
 						Version: "v1alpha1",
 						Kind:    "examplefilter",
 					},
 				},
-				PolicyResources: []v1alpha1.GroupVersionKind{
+				PolicyResources: []egv1a1.GroupVersionKind{
 					{
 						Group:   "bar.example.io",
 						Version: "v1alpha1",
 						Kind:    "ExtensionPolicy",
 					},
+					{
+						Group:   "foo.example.io",
+						Version: "v1alpha1",
+						Kind:    "Bar",
+					},
 				},
-				Hooks: &v1alpha1.ExtensionHooks{
-					XDSTranslator: &v1alpha1.XDSTranslatorHooks{
-						Post: []v1alpha1.XDSTranslatorHook{
-							v1alpha1.XDSRoute,
-							v1alpha1.XDSVirtualHost,
-							v1alpha1.XDSHTTPListener,
-							v1alpha1.XDSTranslation,
+				Hooks: &egv1a1.ExtensionHooks{
+					XDSTranslator: &egv1a1.XDSTranslatorHooks{
+						Post: []egv1a1.XDSTranslatorHook{
+							egv1a1.XDSRoute,
+							egv1a1.XDSVirtualHost,
+							egv1a1.XDSHTTPListener,
+							egv1a1.XDSTranslation,
 						},
 					},
 				},

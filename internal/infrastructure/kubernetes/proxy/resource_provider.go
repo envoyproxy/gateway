@@ -13,6 +13,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
@@ -143,11 +144,17 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   r.Namespace,
-			Name:        r.Name(),
 			Labels:      labels,
 			Annotations: annotations,
 		},
 		Spec: serviceSpec,
+	}
+
+	// set name
+	if envoyServiceConfig.Name != nil {
+		svc.ObjectMeta.Name = *envoyServiceConfig.Name
+	} else {
+		svc.ObjectMeta.Name = r.Name()
 	}
 
 	// apply merge patch to service
@@ -225,7 +232,6 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   r.Namespace,
-			Name:        r.Name(),
 			Labels:      dpLabels,
 			Annotations: dpAnnotations,
 		},
@@ -259,6 +265,13 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 			RevisionHistoryLimit:    ptr.To[int32](10),
 			ProgressDeadlineSeconds: ptr.To[int32](600),
 		},
+	}
+
+	// set name
+	if deploymentConfig.Name != nil {
+		deployment.ObjectMeta.Name = *deploymentConfig.Name
+	} else {
+		deployment.ObjectMeta.Name = r.Name()
 	}
 
 	// omit the deployment replicas if HPA is being set
@@ -314,7 +327,6 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   r.Namespace,
-			Name:        r.Name(),
 			Labels:      dsLabels,
 			Annotations: dsAnnotations,
 		},
@@ -331,12 +343,53 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 		},
 	}
 
+	// set name
+	if daemonSetConfig.Name != nil {
+		daemonSet.ObjectMeta.Name = *daemonSetConfig.Name
+	} else {
+		daemonSet.ObjectMeta.Name = r.Name()
+	}
+
 	// apply merge patch to daemonset
 	if daemonSet, err = daemonSetConfig.ApplyMergePatch(daemonSet); err != nil {
 		return nil, err
 	}
 
 	return daemonSet, nil
+}
+
+func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, error) {
+	provider := r.infra.GetProxyConfig().GetEnvoyProxyProvider()
+	if provider.Type != egv1a1.ProviderTypeKubernetes {
+		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
+	}
+
+	podDisruptionBudget := provider.GetEnvoyProxyKubeProvider().EnvoyPDB
+	if podDisruptionBudget == nil || podDisruptionBudget.MinAvailable == nil {
+		return nil, nil
+	}
+
+	labels, err := r.getLabels()
+	if err != nil {
+		return nil, err
+	}
+
+	return &policyv1.PodDisruptionBudget{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      r.Name(),
+			Namespace: r.Namespace,
+		},
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "policy/v1",
+			Kind:       "PodDisruptionBudget",
+		},
+		Spec: policyv1.PodDisruptionBudgetSpec{
+			MinAvailable: &intstr.IntOrString{IntVal: ptr.Deref(podDisruptionBudget.MinAvailable, 0)},
+			Selector: &metav1.LabelSelector{
+				MatchLabels: labels,
+			},
+		},
+	}, nil
 }
 
 func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPodAutoscaler, error) {
@@ -365,13 +418,20 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
 				APIVersion: "apps/v1",
 				Kind:       "Deployment",
-				Name:       r.Name(),
 			},
 			MinReplicas: hpaConfig.MinReplicas,
 			MaxReplicas: ptr.Deref(hpaConfig.MaxReplicas, 1),
 			Metrics:     hpaConfig.Metrics,
 			Behavior:    hpaConfig.Behavior,
 		},
+	}
+
+	// set deployment target ref name
+	deploymentConfig := provider.GetEnvoyProxyKubeProvider().EnvoyDeployment
+	if deploymentConfig.Name != nil {
+		hpa.Spec.ScaleTargetRef.Name = *deploymentConfig.Name
+	} else {
+		hpa.Spec.ScaleTargetRef.Name = r.Name()
 	}
 
 	return hpa, nil

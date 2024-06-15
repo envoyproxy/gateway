@@ -10,14 +10,14 @@ import (
 	"reflect"
 
 	"golang.org/x/exp/slices"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
-	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
+	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -42,12 +42,12 @@ type Resources struct {
 	TCPRoutes               []*gwapiv1a2.TCPRoute          `json:"tcpRoutes,omitempty" yaml:"tcpRoutes,omitempty"`
 	UDPRoutes               []*gwapiv1a2.UDPRoute          `json:"udpRoutes,omitempty" yaml:"udpRoutes,omitempty"`
 	ReferenceGrants         []*gwapiv1b1.ReferenceGrant    `json:"referenceGrants,omitempty" yaml:"referenceGrants,omitempty"`
-	Namespaces              []*v1.Namespace                `json:"namespaces,omitempty" yaml:"namespaces,omitempty"`
-	Services                []*v1.Service                  `json:"services,omitempty" yaml:"services,omitempty"`
-	ServiceImports          []*mcsapi.ServiceImport        `json:"serviceImports,omitempty" yaml:"serviceImports,omitempty"`
+	Namespaces              []*corev1.Namespace            `json:"namespaces,omitempty" yaml:"namespaces,omitempty"`
+	Services                []*corev1.Service              `json:"services,omitempty" yaml:"services,omitempty"`
+	ServiceImports          []*mcsapiv1a1.ServiceImport    `json:"serviceImports,omitempty" yaml:"serviceImports,omitempty"`
 	EndpointSlices          []*discoveryv1.EndpointSlice   `json:"endpointSlices,omitempty" yaml:"endpointSlices,omitempty"`
-	Secrets                 []*v1.Secret                   `json:"secrets,omitempty" yaml:"secrets,omitempty"`
-	ConfigMaps              []*v1.ConfigMap                `json:"configMaps,omitempty" yaml:"configMaps,omitempty"`
+	Secrets                 []*corev1.Secret               `json:"secrets,omitempty" yaml:"secrets,omitempty"`
+	ConfigMaps              []*corev1.ConfigMap            `json:"configMaps,omitempty" yaml:"configMaps,omitempty"`
 	EnvoyProxy              *egv1a1.EnvoyProxy             `json:"envoyProxy,omitempty" yaml:"envoyProxy,omitempty"`
 	ExtensionRefFilters     []unstructured.Unstructured    `json:"extensionRefFilters,omitempty" yaml:"extensionRefFilters,omitempty"`
 	EnvoyPatchPolicies      []*egv1a1.EnvoyPatchPolicy     `json:"envoyPatchPolicies,omitempty" yaml:"envoyPatchPolicies,omitempty"`
@@ -66,12 +66,12 @@ func NewResources() *Resources {
 		HTTPRoutes:              []*gwapiv1.HTTPRoute{},
 		GRPCRoutes:              []*gwapiv1.GRPCRoute{},
 		TLSRoutes:               []*gwapiv1a2.TLSRoute{},
-		Services:                []*v1.Service{},
+		Services:                []*corev1.Service{},
 		EndpointSlices:          []*discoveryv1.EndpointSlice{},
-		Secrets:                 []*v1.Secret{},
-		ConfigMaps:              []*v1.ConfigMap{},
+		Secrets:                 []*corev1.Secret{},
+		ConfigMaps:              []*corev1.ConfigMap{},
 		ReferenceGrants:         []*gwapiv1b1.ReferenceGrant{},
-		Namespaces:              []*v1.Namespace{},
+		Namespaces:              []*corev1.Namespace{},
 		ExtensionRefFilters:     []unstructured.Unstructured{},
 		EnvoyPatchPolicies:      []*egv1a1.EnvoyPatchPolicy{},
 		ClientTrafficPolicies:   []*egv1a1.ClientTrafficPolicy{},
@@ -84,7 +84,7 @@ func NewResources() *Resources {
 	}
 }
 
-func (r *Resources) GetNamespace(name string) *v1.Namespace {
+func (r *Resources) GetNamespace(name string) *corev1.Namespace {
 	for _, ns := range r.Namespaces {
 		if ns.Name == name {
 			return ns
@@ -94,7 +94,7 @@ func (r *Resources) GetNamespace(name string) *v1.Namespace {
 	return nil
 }
 
-func (r *Resources) GetService(namespace, name string) *v1.Service {
+func (r *Resources) GetService(namespace, name string) *corev1.Service {
 	for _, svc := range r.Services {
 		if svc.Namespace == namespace && svc.Name == name {
 			return svc
@@ -104,7 +104,7 @@ func (r *Resources) GetService(namespace, name string) *v1.Service {
 	return nil
 }
 
-func (r *Resources) GetServiceImport(namespace, name string) *mcsapi.ServiceImport {
+func (r *Resources) GetServiceImport(namespace, name string) *mcsapiv1a1.ServiceImport {
 	for _, svcImp := range r.ServiceImports {
 		if svcImp.Namespace == namespace && svcImp.Name == name {
 			return svcImp
@@ -124,7 +124,7 @@ func (r *Resources) GetBackend(namespace, name string) *egv1a1.Backend {
 	return nil
 }
 
-func (r *Resources) GetSecret(namespace, name string) *v1.Secret {
+func (r *Resources) GetSecret(namespace, name string) *corev1.Secret {
 	for _, secret := range r.Secrets {
 		if secret.Namespace == namespace && secret.Name == name {
 			return secret
@@ -134,7 +134,7 @@ func (r *Resources) GetSecret(namespace, name string) *v1.Secret {
 	return nil
 }
 
-func (r *Resources) GetConfigMap(namespace, name string) *v1.ConfigMap {
+func (r *Resources) GetConfigMap(namespace, name string) *corev1.ConfigMap {
 	for _, configMap := range r.ConfigMaps {
 		if configMap.Namespace == namespace && configMap.Name == name {
 			return configMap
@@ -152,7 +152,7 @@ func (r *Resources) GetEndpointSlicesForBackend(svcNamespace, svcName string, ba
 		case KindService:
 			backendSelectorLabel = discoveryv1.LabelServiceName
 		case KindServiceImport:
-			backendSelectorLabel = mcsapi.LabelServiceName
+			backendSelectorLabel = mcsapiv1a1.LabelServiceName
 		}
 		if svcNamespace == endpointSlice.Namespace &&
 			endpointSlice.GetLabels()[backendSelectorLabel] == svcName {

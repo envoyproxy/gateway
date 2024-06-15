@@ -19,15 +19,15 @@ The Helm chart for Envoy Gateway
 
 ## Usage
 
-[Helm](https://helm.sh) must be installed to use the charts.  Please refer to
-Helm's [documentation](https://helm.sh/docs) to get started.
+[Helm](https://helm.sh) must be installed to use the charts.
+Please refer to Helm's [documentation](https://helm.sh/docs) to get started.
 
 ### Install from DockerHub
 
 Once Helm has been set up correctly, install the chart from dockerhub:
 
 ``` shell
-  helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --create-namespace
+    helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --create-namespace
 ```
 You can find all helm chart release in [Dockerhub](https://hub.docker.com/r/envoyproxy/gateway-helm/tags)
 
@@ -52,7 +52,7 @@ You can install the eg chart along without Gateway API CRDs and Envoy Gateway CR
 To uninstall the chart:
 
 ``` shell
-    helm delete eg
+    helm uninstall eg -n envoy-gateway-system
 ```
 
 ## Values
@@ -80,7 +80,8 @@ To uninstall the chart:
 | deployment.pod.annotations."prometheus.io/port" | string | `"19001"` |  |
 | deployment.pod.annotations."prometheus.io/scrape" | string | `"true"` |  |
 | deployment.pod.labels | object | `{}` |  |
-| deployment.pod.topologySpreadConstraints | object | `{}` |  |
+| deployment.pod.tolerations | list | `[]` |  |
+| deployment.pod.topologySpreadConstraints | list | `[]` |  |
 | deployment.ports[0].name | string | `"grpc"` |  |
 | deployment.ports[0].port | int | `18000` |  |
 | deployment.ports[0].targetPort | int | `18000` |  |
@@ -98,4 +99,5 @@ To uninstall the chart:
 | global.images.ratelimit.pullPolicy | string | `"IfNotPresent"` |  |
 | global.images.ratelimit.pullSecrets | list | `[]` |  |
 | kubernetesClusterDomain | string | `"cluster.local"` |  |
+| podDisruptionBudget.minAvailable | int | `0` |  |
 

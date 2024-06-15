@@ -10,7 +10,7 @@ import (
 	"fmt"
 
 	jsonpatch "github.com/evanphx/json-patch"
-	appv1 "k8s.io/api/apps/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
@@ -18,16 +18,16 @@ import (
 )
 
 // DefaultKubernetesDeploymentStrategy returns the default deployment strategy settings.
-func DefaultKubernetesDeploymentStrategy() *appv1.DeploymentStrategy {
-	return &appv1.DeploymentStrategy{
-		Type: appv1.RollingUpdateDeploymentStrategyType,
+func DefaultKubernetesDeploymentStrategy() *appsv1.DeploymentStrategy {
+	return &appsv1.DeploymentStrategy{
+		Type: appsv1.RollingUpdateDeploymentStrategyType,
 	}
 }
 
 // DefaultKubernetesDaemonSetStrategy returns the default daemonset strategy settings.
-func DefaultKubernetesDaemonSetStrategy() *appv1.DaemonSetUpdateStrategy {
-	return &appv1.DaemonSetUpdateStrategy{
-		Type: appv1.RollingUpdateDaemonSetStrategyType,
+func DefaultKubernetesDaemonSetStrategy() *appsv1.DaemonSetUpdateStrategy {
+	return &appsv1.DaemonSetUpdateStrategy{
+		Type: appsv1.RollingUpdateDaemonSetStrategyType,
 	}
 }
 
@@ -157,7 +157,7 @@ func (hpa *KubernetesHorizontalPodAutoscalerSpec) setDefault() {
 }
 
 // ApplyMergePatch applies a merge patch to a deployment based on the merge type
-func (deployment *KubernetesDeploymentSpec) ApplyMergePatch(old *appv1.Deployment) (*appv1.Deployment, error) {
+func (deployment *KubernetesDeploymentSpec) ApplyMergePatch(old *appsv1.Deployment) (*appsv1.Deployment, error) {
 	if deployment.Patch == nil {
 		return old, nil
 	}
@@ -173,7 +173,7 @@ func (deployment *KubernetesDeploymentSpec) ApplyMergePatch(old *appv1.Deploymen
 
 	switch {
 	case deployment.Patch.Type == nil || *deployment.Patch.Type == StrategicMerge:
-		patchedJSON, err = strategicpatch.StrategicMergePatch(originalJSON, deployment.Patch.Value.Raw, appv1.Deployment{})
+		patchedJSON, err = strategicpatch.StrategicMergePatch(originalJSON, deployment.Patch.Value.Raw, appsv1.Deployment{})
 	case *deployment.Patch.Type == JSONMerge:
 		patchedJSON, err = jsonpatch.MergePatch(originalJSON, deployment.Patch.Value.Raw)
 	default:
@@ -184,7 +184,7 @@ func (deployment *KubernetesDeploymentSpec) ApplyMergePatch(old *appv1.Deploymen
 	}
 
 	// Deserialize the patched JSON into a new deployment object
-	var patchedDeployment appv1.Deployment
+	var patchedDeployment appsv1.Deployment
 	if err := json.Unmarshal(patchedJSON, &patchedDeployment); err != nil {
 		return nil, fmt.Errorf("error unmarshaling patched deployment: %w", err)
 	}
@@ -193,7 +193,7 @@ func (deployment *KubernetesDeploymentSpec) ApplyMergePatch(old *appv1.Deploymen
 }
 
 // ApplyMergePatch applies a merge patch to a daemonset based on the merge type
-func (daemonset *KubernetesDaemonSetSpec) ApplyMergePatch(old *appv1.DaemonSet) (*appv1.DaemonSet, error) {
+func (daemonset *KubernetesDaemonSetSpec) ApplyMergePatch(old *appsv1.DaemonSet) (*appsv1.DaemonSet, error) {
 	if daemonset.Patch == nil {
 		return old, nil
 	}
@@ -209,7 +209,7 @@ func (daemonset *KubernetesDaemonSetSpec) ApplyMergePatch(old *appv1.DaemonSet) 
 
 	switch {
 	case daemonset.Patch.Type == nil || *daemonset.Patch.Type == StrategicMerge:
-		patchedJSON, err = strategicpatch.StrategicMergePatch(originalJSON, daemonset.Patch.Value.Raw, appv1.DaemonSet{})
+		patchedJSON, err = strategicpatch.StrategicMergePatch(originalJSON, daemonset.Patch.Value.Raw, appsv1.DaemonSet{})
 	case *daemonset.Patch.Type == JSONMerge:
 		patchedJSON, err = jsonpatch.MergePatch(originalJSON, daemonset.Patch.Value.Raw)
 	default:
@@ -220,7 +220,7 @@ func (daemonset *KubernetesDaemonSetSpec) ApplyMergePatch(old *appv1.DaemonSet) 
 	}
 
 	// Deserialize the patched JSON into a new daemonset object
-	var patchedDaemonSet appv1.DaemonSet
+	var patchedDaemonSet appsv1.DaemonSet
 	if err := json.Unmarshal(patchedJSON, &patchedDaemonSet); err != nil {
 		return nil, fmt.Errorf("error unmarshaling patched daemonset: %w", err)
 	}
