@@ -13,21 +13,12 @@ Before proceeding, you should be able to query the example backend using HTTP.
 Follow the steps from the [Gateway Observability](../gateway-observability) and [Proxy Observability](../proxy-observability#metrics) to enable Prometheus metrics
 for both Envoy Gateway (Control Plane) and Envoy Proxy (Data Plane).
 
-[Prometheus](https://prometheus.io) is used to scrape metrics from the Envoy Gateway and Envoy Proxy instances. Install Prometheus:
+Envoy Gateway provides an add-ons Helm Chart, which includes all the observability components it needs.
+
+Install the add-ons Helm Chart:
 
 ```shell
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-helm repo update
-helm upgrade --install prometheus prometheus-community/prometheus -n monitoring --create-namespace
-```
-
-[Grafana](https://grafana.com/grafana/) is used to visualise the metrics exposed by the Envoy Gateway and Envoy Proxy instances.
-Install Grafana:
-
-```shell
-helm repo add grafana https://grafana.github.io/helm-charts
-helm repo update
-helm upgrade --install grafana grafana/grafana -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/grafana/helm-values.yaml -n monitoring --create-namespace
+helm install eg-addons oci://docker.io/envoyproxy/gateway-addons-helm --version v0.0.0-latest -n monitoring --create-namespace
 ```
 
 Expose endpoints:

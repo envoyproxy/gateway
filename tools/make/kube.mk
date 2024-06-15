@@ -141,7 +141,9 @@ endif
 .PHONY: install-e2e-telemetry
 install-e2e-telemetry: helm-generate.gateway-addons-helm
 	@$(LOG_TARGET)
-	helm install eg-addons charts/gateway-addons-helm --set tags.metrics=true,tag.logging=true,tags.tracing=true --set grafana.enabled=false,prometheus.enabled=true,fluent-bit.enabled=true,loki.enabled=true,tempo.enabled=true,opentelemetry-collector.enabled=true -n monitoring --create-namespace --debug --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
+	helm install eg-addons charts/gateway-addons-helm --set grafana.enabled=false,opentelemetry-collector.enabled=true -n monitoring --create-namespace --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
+	# Change loki service type from ClusterIP to LoadBalancer
+	kubectl patch service loki -n monitoring -p '{"spec": {"type": "LoadBalancer"}}'
 
 .PHONY: uninstall-e2e-telemetry
 uninstall-e2e-telemetry:

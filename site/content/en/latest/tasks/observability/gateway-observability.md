@@ -10,13 +10,12 @@ This task show you how to config gateway control-plane observability, includes m
 Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
-[OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) offers a vendor-agnostic implementation of how to receive, process and export telemetry data.
-Install OTel-Collector:
+Envoy Gateway provides an add-ons Helm Chart, which includes all the needing observability components.
+
+Install the add-ons Helm Chart:
 
 ```shell
-helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
-helm repo update
-helm upgrade --install otel-collector open-telemetry/opentelemetry-collector -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/otel-collector/helm-values.yaml -n monitoring --create-namespace --version 0.60.0
+helm install eg-addons oci://docker.io/envoyproxy/gateway-addons-helm --version v0.0.0-latest --set opentelemetry-collector.enabled=true -n monitoring --create-namespace
 ```
 
 ## Metrics
