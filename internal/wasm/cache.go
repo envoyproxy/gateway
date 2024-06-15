@@ -306,17 +306,7 @@ func (c *localFileCache) prepareFetch(
 		imgFetcherOps.PullSecret = opts.PullSecret
 	}
 	fetcher := NewImageFetcher(ctx, imgFetcherOps, c.logger)
-
-	// Retry fetching the image for a few times.
-	// This happens in e2e tests with a local registry inside a kind cluster.
-	const imageFetchRetries = 3
-	for i := 0; i < imageFetchRetries; i++ {
-		if binaryFetcher, actualDigest, err = fetcher.PrepareFetch(url.Host + url.Path); err == nil {
-			break
-		}
-		c.logger.Error(err, "failed to prepare fetch", "retries", i)
-	}
-	if err != nil {
+	if binaryFetcher, actualDigest, err = fetcher.PrepareFetch(url.Host + url.Path); err != nil {
 		return nil, "", err
 	}
 	return binaryFetcher, actualDigest, nil
