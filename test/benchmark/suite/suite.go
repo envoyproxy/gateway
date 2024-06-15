@@ -17,6 +17,7 @@ import (
 	"time"
 
 	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -109,44 +110,43 @@ func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 	for _, test := range tests {
 		t.Logf("Running benchmark test: %s", test.ShortName)
 
-		test.Test(t, b)
+		// TODO: generate a benchmark report for human
+		_ = test.Test(t, b)
 	}
 }
 
-// Benchmark prepares and runs benchmark test as a Kubernetes Job.
+// Benchmark runs benchmark test as a Kubernetes Job, and return the benchmark result.
 //
-// TODO: currently running benchmark test via nighthawk-client,
+// TODO: currently running benchmark test via nighthawk_client,
 // consider switching to gRPC nighthawk-service for benchmark test.
 // ref: https://github.com/envoyproxy/nighthawk/blob/main/api/client/service.proto
-func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, name, gatewayHostPort string, requestHeaders ...string) error {
-	t.Helper()
-
+func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, name, gatewayHostPort string, requestHeaders ...string) (*BenchmarkReport, error) {
 	t.Logf("Running benchmark test: %s", name)
 
 	jobNN, err := b.createBenchmarkClientJob(ctx, name, gatewayHostPort, requestHeaders...)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	duration, err := strconv.ParseInt(b.Options.Duration, 10, 64)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Wait from benchmark test job to complete.
-	if err = wait.PollUntilContextTimeout(ctx, 5*time.Second, time.Duration(duration*5)*time.Second, true, func(ctx context.Context) (bool, error) {
+	if err = wait.PollUntilContextTimeout(ctx, 10*time.Second, time.Duration(duration*3)*time.Second, true, func(ctx context.Context) (bool, error) {
 		job := new(batchv1.Job)
 		if err = b.Client.Get(ctx, *jobNN, job); err != nil {
 			return false, err
 		}
 
 		for _, condition := range job.Status.Conditions {
-			if condition.Type == batchv1.JobComplete && condition.Status == "true" {
+			if condition.Type == batchv1.JobComplete && condition.Status == "True" {
 				return true, nil
 			}
 
 			// Early return if job already failed.
-			if condition.Type == batchv1.JobFailed && condition.Status == "true" &&
+			if condition.Type == batchv1.JobFailed && condition.Status == "True" &&
 				condition.Reason == batchv1.JobReasonBackoffLimitExceeded {
 				return false, fmt.Errorf("job already failed")
 			}
@@ -156,11 +156,17 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, name, 
 		return false, nil
 	}); err != nil {
 		t.Errorf("Failed to run benchmark test: %v", err)
-		return err
+		return nil, err
 	}
 
 	t.Logf("Running benchmark test: %s successfully", name)
-	return nil
+
+	report := NewBenchmarkReport()
+	if err = report.GetResultFromJob(t, ctx, jobNN); err != nil {
+		return nil, err
+	}
+
+	return report, nil
 }
 
 func (b *BenchmarkTestSuite) createBenchmarkClientJob(ctx context.Context, name, gatewayHostPort string, requestHeaders ...string) (*types.NamespacedName, error) {
@@ -194,7 +200,7 @@ func prepareBenchmarkClientRuntimeArgs(gatewayHostPort string, requestHeaders ..
 	for _, reqHeader := range requestHeaders {
 		args = append(args, "--request-header", reqHeader)
 	}
-	args = append(args, fmt.Sprintf("http://%s/", gatewayHostPort))
+	args = append(args, "http://"+gatewayHostPort)
 
 	return args
 }
@@ -251,7 +257,8 @@ func (b *BenchmarkTestSuite) RegisterCleanup(t *testing.T, ctx context.Context, 
 
 		_ = b.CleanupResource(ctx, object)
 		_ = b.CleanupScaledResources(ctx, scaledObject)
-		_ = b.CleanupBenchmarkClientJobs(ctx)
+
+		t.Logf("Clean up complete!")
 	})
 }
 
@@ -275,11 +282,17 @@ func (b *BenchmarkTestSuite) CleanupScaledResources(ctx context.Context, object 
 	return nil
 }
 
-// CleanupBenchmarkClientJobs only cleanups all the jobs under benchmark-test namespace.
-func (b *BenchmarkTestSuite) CleanupBenchmarkClientJobs(ctx context.Context) error {
+// CleanupBenchmarkClientJobs only cleanups all the jobs and its associated pods under benchmark-test namespace.
+func (b *BenchmarkTestSuite) CleanupBenchmarkClientJobs(ctx context.Context, name string) error {
 	if err := b.Client.DeleteAllOf(ctx, &batchv1.Job{},
 		client.MatchingLabels{BenchmarkTestClientKey: "true"}, client.InNamespace("benchmark-test")); err != nil {
 		return err
 	}
+
+	if err := b.Client.DeleteAllOf(ctx, &corev1.Pod{},
+		client.MatchingLabels{"job-name": name}, client.InNamespace("benchmark-test")); err != nil {
+		return err
+	}
+
 	return nil
 }

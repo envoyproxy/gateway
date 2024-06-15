@@ -147,13 +147,13 @@ run-benchmark: install-benchmark-server ## Run benchmark tests
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n benchmark-test deployment/nighthawk-test-server --for=condition=Available
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/benchmark/config/gatewayclass.yaml
-	go test -v -tags benchmark ./test/benchmark --rps=$RPS --connections $CONNECTIONS --duration $DURATION
+	go test -v -tags benchmark ./test/benchmark --rps=$(RPS) --connections=$(CONNECTIONS) --duration=$(DURATION)
 
 .PHONY: install-benchmark-server
 install-benchmark-server: ## Install nighthawk server for benchmark test
 	@$(LOG_TARGET)
 	kubectl create namespace benchmark-test
-	kubectl -n benchmark-test create configmap test-server-config --from-file=test/benchmark/config/nighthawk-test-server-config.yaml
+	kubectl -n benchmark-test create configmap test-server-config --from-file=test/benchmark/config/nighthawk-test-server-config.yaml -o yaml
 	kubectl apply -f test/benchmark/config/nighthawk-test-server.yaml
 
 .PHONY: install-e2e-telemetry

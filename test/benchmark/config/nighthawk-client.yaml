@@ -5,7 +5,7 @@ metadata:
   name: "{NIGHTHAWK_CLIENT_NAME}"
   namespace: benchmark-test
   labels:
-    benchmark-test/client: true
+    benchmark-test/client: "true"
 spec:
   template:
     spec:
