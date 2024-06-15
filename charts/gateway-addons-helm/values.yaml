@@ -47,7 +47,7 @@ prometheus:
   prometheus-node-exporter:
     enabled: false
   server:
-    fullnameOverride: prometheus-server
+    fullnameOverride: prometheus
     persistentVolume:
       enabled: false
     readinessProbeInitialDelay: 0
