@@ -14,7 +14,7 @@ grafana:
       datasources:
         - name: Prometheus
           type: prometheus
-          url: http://prometheus-server
+          url: http://prometheus
   adminPassword: admin
   service:
     type: LoadBalancer

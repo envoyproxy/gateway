@@ -58,7 +58,7 @@ An Add-ons Helm chart for Envoy Gateway
 | grafana.datasources."datasources.yaml".apiVersion | int | `1` |  |
 | grafana.datasources."datasources.yaml".datasources[0].name | string | `"Prometheus"` |  |
 | grafana.datasources."datasources.yaml".datasources[0].type | string | `"prometheus"` |  |
-| grafana.datasources."datasources.yaml".datasources[0].url | string | `"http://prometheus-server"` |  |
+| grafana.datasources."datasources.yaml".datasources[0].url | string | `"http://prometheus"` |  |
 | grafana.enabled | bool | `true` |  |
 | grafana.fullnameOverride | string | `"grafana"` |  |
 | grafana.service.type | string | `"LoadBalancer"` |  |

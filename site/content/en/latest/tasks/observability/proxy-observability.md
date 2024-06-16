@@ -10,7 +10,7 @@ This task show you how to config proxy observability, includes metrics, logs, an
 Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
-Envoy Gateway provides an add-ons Helm Chart, which includes all the observability components it needs.
+Envoy Gateway provides an add-ons Helm Chart, which includes all the needing observability components.
 
 Install the add-ons Helm Chart:
 

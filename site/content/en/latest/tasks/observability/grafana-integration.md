@@ -13,7 +13,7 @@ Before proceeding, you should be able to query the example backend using HTTP.
 Follow the steps from the [Gateway Observability](../gateway-observability) and [Proxy Observability](../proxy-observability#metrics) to enable Prometheus metrics
 for both Envoy Gateway (Control Plane) and Envoy Proxy (Data Plane).
 
-Envoy Gateway provides an add-ons Helm Chart, which includes all the observability components it needs.
+Envoy Gateway provides an add-ons Helm Chart, which includes all the needing observability components.
 
 Install the add-ons Helm Chart:
 
