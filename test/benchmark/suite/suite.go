@@ -110,7 +110,7 @@ func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 	for _, test := range tests {
 		t.Logf("Running benchmark test: %s", test.ShortName)
 
-		// TODO: generate a benchmark report for human
+		// TODO: generate a readable benchmark report for human
 		_ = test.Test(t, b)
 	}
 }
@@ -161,8 +161,16 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, name, 
 
 	t.Logf("Running benchmark test: %s successfully", name)
 
-	report := NewBenchmarkReport()
-	if err = report.GetResultFromJob(t, ctx, jobNN); err != nil {
+	report, err := NewBenchmarkReport()
+	if err != nil {
+		return nil, err
+	}
+
+	// Get all the reports from this benchmark test run.
+	if err = report.GetBenchmarkResult(t, ctx, jobNN); err != nil {
+		return nil, err
+	}
+	if err = report.GetControlPlaneMetrics(t, ctx); err != nil {
 		return nil, err
 	}
 
