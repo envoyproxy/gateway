@@ -74,14 +74,14 @@ func TestXdsIRUpdates(t *testing.T) {
 			xx: []*ir.Xds{
 				{
 					HTTP: []*ir.HTTPListener{
-						{Name: "listener-1"},
-						{Name: "listener-2"},
+						{CoreListenerDetails: ir.CoreListenerDetails{Name: "listener-1"}},
+						{CoreListenerDetails: ir.CoreListenerDetails{Name: "listener-2"}},
 					},
 				},
 				{
 					HTTP: []*ir.HTTPListener{
-						{Name: "listener-2"},
-						{Name: "listener-1"},
+						{CoreListenerDetails: ir.CoreListenerDetails{Name: "listener-2"}},
+						{CoreListenerDetails: ir.CoreListenerDetails{Name: "listener-1"}},
 					},
 				},
 			},
@@ -92,13 +92,13 @@ func TestXdsIRUpdates(t *testing.T) {
 			xx: []*ir.Xds{
 				{
 					HTTP: []*ir.HTTPListener{
-						{Name: "listener-1"},
+						{CoreListenerDetails: ir.CoreListenerDetails{Name: "listener-1"}},
 					},
 				},
 				{
 					HTTP: []*ir.HTTPListener{
-						{Name: "listener-1"},
-						{Name: "listener-2"},
+						{CoreListenerDetails: ir.CoreListenerDetails{Name: "listener-1"}},
+						{CoreListenerDetails: ir.CoreListenerDetails{Name: "listener-2"}},
 					},
 				},
 			},

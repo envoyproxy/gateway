@@ -15,7 +15,7 @@ import (
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 var inPath = "./testdata/decoder/in/"
@@ -23,118 +23,118 @@ var inPath = "./testdata/decoder/in/"
 func TestDecode(t *testing.T) {
 	testCases := []struct {
 		in     string
-		out    *v1alpha1.EnvoyGateway
+		out    *egv1a1.EnvoyGateway
 		expect bool
 	}{
 		{
 			in: inPath + "kube-provider.yaml",
-			out: &v1alpha1.EnvoyGateway{
+			out: &egv1a1.EnvoyGateway{
 				TypeMeta: metav1.TypeMeta{
-					Kind:       v1alpha1.KindEnvoyGateway,
-					APIVersion: v1alpha1.GroupVersion.String(),
+					Kind:       egv1a1.KindEnvoyGateway,
+					APIVersion: egv1a1.GroupVersion.String(),
 				},
-				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
-					Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
 				},
 			},
 			expect: true,
 		},
 		{
 			in: inPath + "gateway-controller-name.yaml",
-			out: &v1alpha1.EnvoyGateway{
+			out: &egv1a1.EnvoyGateway{
 				TypeMeta: metav1.TypeMeta{
-					Kind:       v1alpha1.KindEnvoyGateway,
-					APIVersion: v1alpha1.GroupVersion.String(),
+					Kind:       egv1a1.KindEnvoyGateway,
+					APIVersion: egv1a1.GroupVersion.String(),
 				},
-				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
-					Gateway: v1alpha1.DefaultGateway(),
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway: egv1a1.DefaultGateway(),
 				},
 			},
 			expect: true,
 		},
 		{
 			in: inPath + "provider-with-gateway.yaml",
-			out: &v1alpha1.EnvoyGateway{
+			out: &egv1a1.EnvoyGateway{
 				TypeMeta: metav1.TypeMeta{
-					Kind:       v1alpha1.KindEnvoyGateway,
-					APIVersion: v1alpha1.GroupVersion.String(),
+					Kind:       egv1a1.KindEnvoyGateway,
+					APIVersion: egv1a1.GroupVersion.String(),
 				},
-				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
-					Gateway:  v1alpha1.DefaultGateway(),
-					Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
 				},
 			},
 			expect: true,
 		},
 		{
 			in: inPath + "provider-mixing-gateway.yaml",
-			out: &v1alpha1.EnvoyGateway{
+			out: &egv1a1.EnvoyGateway{
 				TypeMeta: metav1.TypeMeta{
-					Kind:       v1alpha1.KindEnvoyGateway,
-					APIVersion: v1alpha1.GroupVersion.String(),
+					Kind:       egv1a1.KindEnvoyGateway,
+					APIVersion: egv1a1.GroupVersion.String(),
 				},
-				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
-					Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
 				},
 			},
 			expect: true,
 		},
 		{
 			in: inPath + "gateway-mixing-provider.yaml",
-			out: &v1alpha1.EnvoyGateway{
+			out: &egv1a1.EnvoyGateway{
 				TypeMeta: metav1.TypeMeta{
-					Kind:       v1alpha1.KindEnvoyGateway,
-					APIVersion: v1alpha1.GroupVersion.String(),
+					Kind:       egv1a1.KindEnvoyGateway,
+					APIVersion: egv1a1.GroupVersion.String(),
 				},
-				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
-					Gateway: v1alpha1.DefaultGateway(),
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway: egv1a1.DefaultGateway(),
 				},
 			},
 			expect: true,
 		},
 		{
 			in: inPath + "provider-mixing-gateway.yaml",
-			out: &v1alpha1.EnvoyGateway{
+			out: &egv1a1.EnvoyGateway{
 				TypeMeta: metav1.TypeMeta{
-					Kind:       v1alpha1.KindEnvoyGateway,
-					APIVersion: v1alpha1.GroupVersion.String(),
+					Kind:       egv1a1.KindEnvoyGateway,
+					APIVersion: egv1a1.GroupVersion.String(),
 				},
-				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
-					Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
-					Gateway:  v1alpha1.DefaultGateway(),
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  egv1a1.DefaultGateway(),
 				},
 			},
 			expect: false,
 		},
 		{
 			in: inPath + "gateway-mixing-provider.yaml",
-			out: &v1alpha1.EnvoyGateway{
+			out: &egv1a1.EnvoyGateway{
 				TypeMeta: metav1.TypeMeta{
-					Kind:       v1alpha1.KindEnvoyGateway,
-					APIVersion: v1alpha1.GroupVersion.String(),
+					Kind:       egv1a1.KindEnvoyGateway,
+					APIVersion: egv1a1.GroupVersion.String(),
 				},
-				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
-					Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
-					Gateway:  v1alpha1.DefaultGateway(),
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  egv1a1.DefaultGateway(),
 				},
 			},
 			expect: false,
 		},
 		{
 			in: inPath + "gateway-ratelimit.yaml",
-			out: &v1alpha1.EnvoyGateway{
+			out: &egv1a1.EnvoyGateway{
 				TypeMeta: metav1.TypeMeta{
-					Kind:       v1alpha1.KindEnvoyGateway,
-					APIVersion: v1alpha1.GroupVersion.String(),
+					Kind:       egv1a1.KindEnvoyGateway,
+					APIVersion: egv1a1.GroupVersion.String(),
 				},
-				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
-					Gateway: v1alpha1.DefaultGateway(),
-					Provider: &v1alpha1.EnvoyGatewayProvider{
-						Type: v1alpha1.ProviderTypeKubernetes,
-						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
-							RateLimitDeployment: &v1alpha1.KubernetesDeploymentSpec{
-								Strategy: v1alpha1.DefaultKubernetesDeploymentStrategy(),
-								Container: &v1alpha1.KubernetesContainerSpec{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway: egv1a1.DefaultGateway(),
+					Provider: &egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+							RateLimitDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
+								Container: &egv1a1.KubernetesContainerSpec{
 									Env: []corev1.EnvVar{
 										{
 											Name:  "env_a",
@@ -146,13 +146,13 @@ func TestDecode(t *testing.T) {
 										},
 									},
 									Image:     ptr.To("envoyproxy/ratelimit:latest"),
-									Resources: v1alpha1.DefaultResourceRequirements(),
+									Resources: egv1a1.DefaultResourceRequirements(),
 									SecurityContext: &corev1.SecurityContext{
 										RunAsUser:                ptr.To[int64](2000),
 										AllowPrivilegeEscalation: ptr.To(false),
 									},
 								},
-								Pod: &v1alpha1.KubernetesPodSpec{
+								Pod: &egv1a1.KubernetesPodSpec{
 									Annotations: map[string]string{
 										"key1": "val1",
 										"key2": "val2",
@@ -167,12 +167,12 @@ func TestDecode(t *testing.T) {
 							},
 						},
 					},
-					RateLimit: &v1alpha1.RateLimit{
-						Backend: v1alpha1.RateLimitDatabaseBackend{
-							Type: v1alpha1.RedisBackendType,
-							Redis: &v1alpha1.RateLimitRedisSettings{
+					RateLimit: &egv1a1.RateLimit{
+						Backend: egv1a1.RateLimitDatabaseBackend{
+							Type: egv1a1.RedisBackendType,
+							Redis: &egv1a1.RateLimitRedisSettings{
 								URL: "localhost:6379",
-								TLS: &v1alpha1.RedisTLSSettings{
+								TLS: &egv1a1.RedisTLSSettings{
 									CertificateRef: &gwapiv1.SecretObjectReference{
 										Name: "ratelimit-cert",
 									},
@@ -186,22 +186,22 @@ func TestDecode(t *testing.T) {
 		},
 		{
 			in: inPath + "gateway-global-ratelimit.yaml",
-			out: &v1alpha1.EnvoyGateway{
+			out: &egv1a1.EnvoyGateway{
 				TypeMeta: metav1.TypeMeta{
-					Kind:       v1alpha1.KindEnvoyGateway,
-					APIVersion: v1alpha1.GroupVersion.String(),
+					Kind:       egv1a1.KindEnvoyGateway,
+					APIVersion: egv1a1.GroupVersion.String(),
 				},
-				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
-					Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
-					Gateway:  v1alpha1.DefaultGateway(),
-					RateLimit: &v1alpha1.RateLimit{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  egv1a1.DefaultGateway(),
+					RateLimit: &egv1a1.RateLimit{
 						Timeout: &metav1.Duration{
 							Duration: 10000000,
 						},
 						FailClosed: true,
-						Backend: v1alpha1.RateLimitDatabaseBackend{
-							Type: v1alpha1.RedisBackendType,
-							Redis: &v1alpha1.RateLimitRedisSettings{
+						Backend: egv1a1.RateLimitDatabaseBackend{
+							Type: egv1a1.RedisBackendType,
+							Redis: &egv1a1.RateLimitRedisSettings{
 								URL: "localhost:6379",
 							},
 						},
@@ -212,19 +212,19 @@ func TestDecode(t *testing.T) {
 		},
 		{
 			in: inPath + "gateway-logging.yaml",
-			out: &v1alpha1.EnvoyGateway{
+			out: &egv1a1.EnvoyGateway{
 				TypeMeta: metav1.TypeMeta{
-					Kind:       v1alpha1.KindEnvoyGateway,
-					APIVersion: v1alpha1.GroupVersion.String(),
+					Kind:       egv1a1.KindEnvoyGateway,
+					APIVersion: egv1a1.GroupVersion.String(),
 				},
-				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
-					Provider: &v1alpha1.EnvoyGatewayProvider{
-						Type: v1alpha1.ProviderTypeKubernetes,
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Provider: &egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
 					},
-					Gateway: v1alpha1.DefaultGateway(),
-					Logging: &v1alpha1.EnvoyGatewayLogging{
-						Level: map[v1alpha1.EnvoyGatewayLogComponent]v1alpha1.LogLevel{
-							v1alpha1.LogComponentGatewayDefault: v1alpha1.LogLevelInfo,
+					Gateway: egv1a1.DefaultGateway(),
+					Logging: &egv1a1.EnvoyGatewayLogging{
+						Level: map[egv1a1.EnvoyGatewayLogComponent]egv1a1.LogLevel{
+							egv1a1.LogComponentGatewayDefault: egv1a1.LogLevelInfo,
 						},
 					},
 				},
@@ -233,17 +233,17 @@ func TestDecode(t *testing.T) {
 		},
 		{
 			in: inPath + "gateway-ns-watch.yaml",
-			out: &v1alpha1.EnvoyGateway{
+			out: &egv1a1.EnvoyGateway{
 				TypeMeta: metav1.TypeMeta{
-					Kind:       v1alpha1.KindEnvoyGateway,
-					APIVersion: v1alpha1.GroupVersion.String(),
+					Kind:       egv1a1.KindEnvoyGateway,
+					APIVersion: egv1a1.GroupVersion.String(),
 				},
-				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
-					Provider: &v1alpha1.EnvoyGatewayProvider{
-						Type: v1alpha1.ProviderTypeKubernetes,
-						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
-							Watch: &v1alpha1.KubernetesWatchMode{
-								Type: v1alpha1.KubernetesWatchModeTypeNamespaces,
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Provider: &egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+							Watch: &egv1a1.KubernetesWatchMode{
+								Type: egv1a1.KubernetesWatchModeTypeNamespaces,
 								Namespaces: []string{
 									"ns-a",
 									"ns-b",
@@ -251,24 +251,24 @@ func TestDecode(t *testing.T) {
 							},
 						},
 					},
-					Gateway: v1alpha1.DefaultGateway(),
+					Gateway: egv1a1.DefaultGateway(),
 				},
 			},
 			expect: true,
 		},
 		{
 			in: inPath + "gateway-nsselector-watch.yaml",
-			out: &v1alpha1.EnvoyGateway{
+			out: &egv1a1.EnvoyGateway{
 				TypeMeta: metav1.TypeMeta{
-					Kind:       v1alpha1.KindEnvoyGateway,
-					APIVersion: v1alpha1.GroupVersion.String(),
+					Kind:       egv1a1.KindEnvoyGateway,
+					APIVersion: egv1a1.GroupVersion.String(),
 				},
-				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
-					Provider: &v1alpha1.EnvoyGatewayProvider{
-						Type: v1alpha1.ProviderTypeKubernetes,
-						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
-							Watch: &v1alpha1.KubernetesWatchMode{
-								Type: v1alpha1.KubernetesWatchModeTypeNamespaceSelector,
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Provider: &egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+							Watch: &egv1a1.KubernetesWatchMode{
+								Type: egv1a1.KubernetesWatchModeTypeNamespaceSelector,
 								NamespaceSelector: &metav1.LabelSelector{
 									MatchLabels: map[string]string{"label-a": "foo"},
 									MatchExpressions: []metav1.LabelSelectorRequirement{
@@ -287,7 +287,7 @@ func TestDecode(t *testing.T) {
 							},
 						},
 					},
-					Gateway: v1alpha1.DefaultGateway(),
+					Gateway: egv1a1.DefaultGateway(),
 				},
 			},
 			expect: true,
@@ -322,17 +322,17 @@ func TestDecode(t *testing.T) {
 		},
 		{
 			in: inPath + "gateway-leaderelection.yaml",
-			out: &v1alpha1.EnvoyGateway{
+			out: &egv1a1.EnvoyGateway{
 				TypeMeta: metav1.TypeMeta{
-					Kind:       v1alpha1.KindEnvoyGateway,
-					APIVersion: v1alpha1.GroupVersion.String(),
+					Kind:       egv1a1.KindEnvoyGateway,
+					APIVersion: egv1a1.GroupVersion.String(),
 				},
-				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
-					Gateway: v1alpha1.DefaultGateway(),
-					Provider: &v1alpha1.EnvoyGatewayProvider{
-						Type: v1alpha1.ProviderTypeKubernetes,
-						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
-							LeaderElection: &v1alpha1.LeaderElection{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway: egv1a1.DefaultGateway(),
+					Provider: &egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+							LeaderElection: &egv1a1.LeaderElection{
 								Disable:       ptr.To(true),
 								LeaseDuration: ptr.To(gwapiv1.Duration("1s")),
 								RenewDeadline: ptr.To(gwapiv1.Duration("2s")),

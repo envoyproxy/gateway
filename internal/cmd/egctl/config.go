@@ -18,7 +18,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/yaml"
 
@@ -120,7 +120,7 @@ func fetchRunningEnvoyPods(c kube.CLIClient, nn types.NamespacedName, labelSelec
 
 	switch {
 	case allNamespaces:
-		namespaces, err := c.Kube().CoreV1().Namespaces().List(context.Background(), v1.ListOptions{})
+		namespaces, err := c.Kube().CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{})
 		if err != nil {
 			return nil, err
 		}

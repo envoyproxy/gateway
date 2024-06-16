@@ -22,4 +22,3 @@ server:
   image:
     repository: prom/prometheus
   securityContext: null
-

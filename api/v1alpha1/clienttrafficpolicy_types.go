@@ -38,7 +38,6 @@ type ClientTrafficPolicy struct {
 type ClientTrafficPolicySpec struct {
 	// +kubebuilder:validation:XValidation:rule="self.group == 'gateway.networking.k8s.io'", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
 	// +kubebuilder:validation:XValidation:rule="self.kind == 'Gateway'", message="this policy can only have a targetRef.kind of Gateway"
-	// +kubebuilder:validation:XValidation:rule="!has(self.sectionName)",message="this policy does not yet support the sectionName field"
 	//
 	// TargetRef is the name of the Gateway resource this policy
 	// is being attached to.
@@ -95,6 +94,10 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	HTTP3 *HTTP3Settings `json:"http3,omitempty"`
+	// HealthCheck provides configuration for determining whether the HTTP/HTTPS listener is healthy.
+	//
+	// +optional
+	HealthCheck *HealthCheckSettings `json:"healthCheck,omitempty"`
 }
 
 // HeaderSettings provides configuration options for headers on the listener.
@@ -103,6 +106,11 @@ type HeaderSettings struct {
 	// and responses.
 	// +optional
 	EnableEnvoyHeaders *bool `json:"enableEnvoyHeaders,omitempty"`
+
+	// DisableRateLimitHeaders configures Envoy Proxy to omit the "X-RateLimit-" response headers
+	// when rate limiting is enabled.
+	// +optional
+	DisableRateLimitHeaders *bool `json:"disableRateLimitHeaders,omitempty"`
 
 	// XForwardedClientCert configures how Envoy Proxy handle the x-forwarded-client-cert (XFCC) HTTP header.
 	//
@@ -303,6 +311,14 @@ type HTTP2Settings struct {
 	// +kubebuilder:validation:Maximum=2147483647
 	// +optional
 	MaxConcurrentStreams *uint32 `json:"maxConcurrentStreams,omitempty"`
+}
+
+// HealthCheckSettings provides HealthCheck configuration on the HTTP/HTTPS listener.
+type HealthCheckSettings struct {
+	// Path specifies the HTTP path to match on for health check requests.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=1024
+	Path string `json:"path"`
 }
 
 const (

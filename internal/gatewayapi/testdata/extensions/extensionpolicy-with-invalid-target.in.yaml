@@ -1,0 +1,60 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http1
+      protocol: HTTP
+      port: 81
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: http2
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+extensionServerPolicies:
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: test1
+    namespace: envoy-gateway
+  spec:
+    data: "not a valid extension because no targetRef"
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: test2
+    namespace: envoy-gateway
+  spec:
+    targetRefs:
+      bad: not an array
+    data: "not a valid extension because targetRefs is not an array"
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: test3
+    namespace: envoy-gateway
+  spec:
+    targetRef:
+      kind: Gateway
+      group: gateway.networking.k8s.io
+      name: no-such-gateway
+    data: "Doesn't target an available gateway"
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: test4
+    namespace: envoy-gateway
+  spec:
+    targetRef:
+      kind: HTTPRoute
+      group: gateway.networking.k8s.io
+      name: gateway-1
+    data: "This is an invalid target"

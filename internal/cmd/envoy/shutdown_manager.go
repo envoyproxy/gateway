@@ -18,12 +18,12 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
-var logger = logging.DefaultLogger(v1alpha1.LogLevelInfo).WithName("shutdown-manager")
+var logger = logging.DefaultLogger(egv1a1.LogLevelInfo).WithName("shutdown-manager")
 
 const (
 	// ShutdownManagerPort is the port Envoy shutdown manager will listen on.
@@ -122,7 +122,7 @@ func Shutdown(drainTimeout time.Duration, minDrainDuration time.Duration, exitAt
 
 	// Reconfigure logger to write to stdout of main process if running in Kubernetes
 	if _, k8s := os.LookupEnv("KUBERNETES_SERVICE_HOST"); k8s && os.Getpid() != 1 {
-		logger = logging.FileLogger("/proc/1/fd/1", "shutdown-manager", v1alpha1.LogLevelInfo)
+		logger = logging.FileLogger("/proc/1/fd/1", "shutdown-manager", egv1a1.LogLevelInfo)
 	}
 
 	logger.Info(fmt.Sprintf("initiating graceful drain with %.0f second minimum drain period and %.0f second timeout",

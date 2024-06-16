@@ -1,0 +1,236 @@
+extensionServerPolicies:
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: test1
+    namespace: envoy-gateway
+  spec:
+    data: attached to all listeners
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: test2
+    namespace: envoy-gateway
+  spec:
+    data: attached only to listener on port 162
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      sectionName: udp1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: udp1
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-1
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: udp1
+      port: 162
+      protocol: UDP
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: udp2
+      port: 163
+      protocol: UDP
+  status:
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: udp1
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: UDPRoute
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: udp2
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: UDPRoute
+infraIR:
+  envoy-gateway/gateway-1:
+    proxy:
+      listeners:
+      - address: null
+        name: envoy-gateway/gateway-1/udp1
+        ports:
+        - containerPort: 10162
+          name: udp-162
+          protocol: UDP
+          servicePort: 162
+      - address: null
+        name: envoy-gateway/gateway-1/udp2
+        ports:
+        - containerPort: 10163
+          name: udp-163
+          protocol: UDP
+          servicePort: 163
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+      name: envoy-gateway/gateway-1
+xdsIR:
+  envoy-gateway/gateway-1:
+    accessLog:
+      text:
+      - path: /dev/stdout
+    udp:
+    - address: 0.0.0.0
+      extensionRefs:
+      - object:
+          apiVersion: foo.example.io/v1alpha1
+          kind: Bar
+          metadata:
+            name: test1
+            namespace: envoy-gateway
+          spec:
+            data: attached to all listeners
+            targetRef:
+              group: gateway.networking.k8s.io
+              kind: Gateway
+              name: gateway-1
+          status:
+            ancestors:
+            - ancestorRef:
+                group: gateway.networking.k8s.io
+                kind: Gateway
+                name: gateway-1
+                namespace: envoy-gateway
+              conditions:
+              - lastTransitionTime: null
+                message: Policy has been accepted.
+                reason: Accepted
+                status: "True"
+                type: Accepted
+              controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      - object:
+          apiVersion: foo.example.io/v1alpha1
+          kind: Bar
+          metadata:
+            name: test2
+            namespace: envoy-gateway
+          spec:
+            data: attached only to listener on port 162
+            targetRef:
+              group: gateway.networking.k8s.io
+              kind: Gateway
+              name: gateway-1
+              sectionName: udp1
+          status:
+            ancestors:
+            - ancestorRef:
+                group: gateway.networking.k8s.io
+                kind: Gateway
+                name: gateway-1
+                namespace: envoy-gateway
+                sectionName: udp1
+              conditions:
+              - lastTransitionTime: null
+                message: Policy has been accepted.
+                reason: Accepted
+                status: "True"
+                type: Accepted
+              controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      name: envoy-gateway/gateway-1/udp1
+      port: 10162
+    - address: 0.0.0.0
+      extensionRefs:
+      - object:
+          apiVersion: foo.example.io/v1alpha1
+          kind: Bar
+          metadata:
+            name: test1
+            namespace: envoy-gateway
+          spec:
+            data: attached to all listeners
+            targetRef:
+              group: gateway.networking.k8s.io
+              kind: Gateway
+              name: gateway-1
+          status:
+            ancestors:
+            - ancestorRef:
+                group: gateway.networking.k8s.io
+                kind: Gateway
+                name: gateway-1
+                namespace: envoy-gateway
+              conditions:
+              - lastTransitionTime: null
+                message: Policy has been accepted.
+                reason: Accepted
+                status: "True"
+                type: Accepted
+              controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      name: envoy-gateway/gateway-1/udp2
+      port: 10163

@@ -18,7 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
-	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -38,6 +38,8 @@ var (
 	ErrDestinationNameEmpty                    = errors.New("field Name must be specified")
 	ErrDestEndpointHostInvalid                 = errors.New("field Address must be a valid IP or FQDN address")
 	ErrDestEndpointPortInvalid                 = errors.New("field Port specified is invalid")
+	ErrDestEndpointUDSPortInvalid              = errors.New("field Port must not be specified for Unix Domain Socket address")
+	ErrDestEndpointUDSHostInvalid              = errors.New("field Host must not be specified for Unix Domain Socket address")
 	ErrStringMatchConditionInvalid             = errors.New("only one of the Exact, Prefix, SafeRegex or Distinct fields must be set")
 	ErrStringMatchNameIsEmpty                  = errors.New("field Name must be specified")
 	ErrDirectResponseStatusInvalid             = errors.New("only HTTP status codes 100 - 599 are supported for DirectResponse")
@@ -190,15 +192,45 @@ func (x Xds) Printable() *Xds {
 	return out
 }
 
-// HTTPListener holds the listener configuration.
+type Listener interface {
+	GetName() string
+	GetAddress() string
+	GetPort() uint32
+	GetExtensionRefs() []*UnstructuredRef
+}
+
 // +k8s:deepcopy-gen=true
-type HTTPListener struct {
+type CoreListenerDetails struct {
 	// Name of the HttpListener
 	Name string `json:"name" yaml:"name"`
 	// Address that the listener should listen on.
 	Address string `json:"address" yaml:"address"`
 	// Port on which the service can be expected to be accessed by clients.
 	Port uint32 `json:"port" yaml:"port"`
+	// ExtensionRefs holds unstructured resources that were introduced by an extension policy
+	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
+}
+
+func (l CoreListenerDetails) GetName() string {
+	return l.Name
+}
+
+func (l CoreListenerDetails) GetAddress() string {
+	return l.Address
+}
+
+func (l CoreListenerDetails) GetPort() uint32 {
+	return l.Port
+}
+
+func (l CoreListenerDetails) GetExtensionRefs() []*UnstructuredRef {
+	return l.ExtensionRefs
+}
+
+// HTTPListener holds the listener configuration.
+// +k8s:deepcopy-gen=true
+type HTTPListener struct {
+	CoreListenerDetails `json:",inline" yaml:",inline"`
 	// Hostnames (Host/Authority header value) with which the service can be expected to be accessed by clients.
 	// This field is required. Wildcard hosts are supported in the suffix or prefix form.
 	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-virtualhost
@@ -230,6 +262,8 @@ type HTTPListener struct {
 	// HTTP3 provides HTTP/3 configuration on the listener.
 	// +optional
 	HTTP3 *HTTP3Settings `json:"http3,omitempty"`
+	// HealthCheck provides configuration for determining whether the HTTP/HTTPS listener is healthy.
+	HealthCheck *HealthCheckSettings `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
 	// ClientTimeout sets the timeout configuration for downstream connections
 	Timeout *ClientTimeout `json:"timeout,omitempty" yaml:"clientTimeout,omitempty"`
 	// Connection settings
@@ -422,6 +456,10 @@ type HTTP2Settings struct {
 	MaxConcurrentStreams *uint32 `json:"maxConcurrentStreams,omitempty" yaml:"maxConcurrentStreams,omitempty"`
 }
 
+// HealthCheckSettings provides HealthCheck configuration on the HTTP/HTTPS listener.
+// +k8s:deepcopy-gen=true
+type HealthCheckSettings egv1a1.HealthCheckSettings
+
 // HeaderSettings provides configuration related to header processing on the listener.
 // +k8s:deepcopy-gen=true
 type HeaderSettings struct {
@@ -429,6 +467,11 @@ type HeaderSettings struct {
 	// The default is to suppress these headers.
 	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/router/v3/router.proto#extensions-filters-http-router-v3-router
 	EnableEnvoyHeaders bool `json:"enableEnvoyHeaders,omitempty" yaml:"enableEnvoyHeaders,omitempty"`
+
+	// DisableRateLimitHeaders controls if "x-ratelimit-" headers are added by the HTTP Router filter.
+	// The default is to emit these headers.
+	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ratelimit/v3/rate_limit.proto#extensions-filters-http-ratelimit-v3-ratelimit
+	DisableRateLimitHeaders bool `json:"disableRateLimitHeaders,omitempty" yaml:"disableRateLimitHeaders,omitempty"`
 
 	// Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.
 	// refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-enum-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-forwardclientcertdetails
@@ -687,6 +730,20 @@ type OIDC struct {
 
 	// The path to log a user out, clearing their credential cookies.
 	LogoutPath string `json:"logoutPath,omitempty"`
+
+	// ForwardAccessToken indicates whether the Envoy should forward the access token
+	// via the Authorization header Bearer scheme to the upstream.
+	ForwardAccessToken bool `json:"forwardAccessToken,omitempty"`
+
+	// DefaultTokenTTL is the default lifetime of the id token and access token.
+	DefaultTokenTTL *metav1.Duration `json:"defaultTokenTTL,omitempty"`
+
+	// RefreshToken indicates whether the Envoy should automatically refresh the
+	// id token and access token when they expire.
+	RefreshToken bool `json:"refreshToken,omitempty"`
+
+	// DefaultRefreshTokenTTL is the default lifetime of the refresh token.
+	DefaultRefreshTokenTTL *metav1.Duration `json:"defaultRefreshTokenTTL,omitempty"`
 
 	// CookieSuffix will be added to the name of the cookies set by the oauth filter.
 	// Adding a suffix avoids multiple oauth filters from overwriting each other's cookies.
@@ -1068,21 +1125,33 @@ type DestinationEndpoint struct {
 	Host string `json:"host" yaml:"host"`
 	// Port on the service to forward the request to.
 	Port uint32 `json:"port" yaml:"port"`
+	// Path refers to the Unix Domain Socket
+	Path *string `json:"path,omitempty" yaml:"path,omitempty"`
 }
 
 // Validate the fields within the DestinationEndpoint structure
 func (d DestinationEndpoint) Validate() error {
 	var errs error
 
-	err := validation.IsDNS1123Subdomain(d.Host)
-	_, pErr := netip.ParseAddr(d.Host)
+	// unix domain socket
+	if d.Path != nil {
+		if d.Port != 0 {
+			errs = errors.Join(errs, ErrDestEndpointUDSPortInvalid)
+		}
+		if d.Host != "" {
+			errs = errors.Join(errs, ErrDestEndpointUDSHostInvalid)
+		}
+	} else { // IP or FQDN
+		err := validation.IsDNS1123Subdomain(d.Host)
+		_, pErr := netip.ParseAddr(d.Host)
 
-	if err != nil && pErr != nil {
-		errs = errors.Join(errs, ErrDestEndpointHostInvalid)
-	}
+		if err != nil && pErr != nil {
+			errs = errors.Join(errs, ErrDestEndpointHostInvalid)
+		}
 
-	if d.Port == 0 {
-		errs = errors.Join(errs, ErrDestEndpointPortInvalid)
+		if d.Port == 0 {
+			errs = errors.Join(errs, ErrDestEndpointPortInvalid)
+		}
 	}
 
 	return errs
@@ -1272,12 +1341,7 @@ func (s StringMatch) Validate() error {
 // TCPListener holds the TCP listener configuration.
 // +k8s:deepcopy-gen=true
 type TCPListener struct {
-	// Name of the TCPListener
-	Name string `json:"name" yaml:"name"`
-	// Address that the listener should listen on.
-	Address string `json:"address" yaml:"address"`
-	// Port on which the service can be expected to be accessed by clients.
-	Port uint32 `json:"port" yaml:"port"`
+	CoreListenerDetails `json:",inline" yaml:",inline"`
 	// TLS holds information for configuring TLS on a listener.
 	TLS *TLSConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
 	// TCPKeepalive configuration for the listener
@@ -1407,12 +1471,7 @@ func (t TLSInspectorConfig) Validate() error {
 // UDPListener holds the UDP listener configuration.
 // +k8s:deepcopy-gen=true
 type UDPListener struct {
-	// Name of the UDPListener
-	Name string `json:"name" yaml:"name"`
-	// Address that the listener should listen on.
-	Address string `json:"address" yaml:"address"`
-	// Port on which the service can be expected to be accessed by clients.
-	Port uint32 `json:"port" yaml:"port"`
+	CoreListenerDetails `json:",inline" yaml:",inline"`
 	// Route associated with UDP traffic to the listener.
 	Route *UDPRoute `json:"route,omitempty" yaml:"route,omitempty"`
 }
@@ -1584,7 +1643,7 @@ type EnvoyPatchPolicyStatus struct {
 	Name      string `json:"name,omitempty" yaml:"name"`
 	Namespace string `json:"namespace,omitempty" yaml:"namespace"`
 	// Status of the EnvoyPatchPolicy
-	Status *gwv1a2.PolicyStatus `json:"status,omitempty" yaml:"status,omitempty"`
+	Status *gwapiv1a2.PolicyStatus `json:"status,omitempty" yaml:"status,omitempty"`
 }
 
 // JSONPatchConfig defines the configuration for patching a Envoy xDS Resource

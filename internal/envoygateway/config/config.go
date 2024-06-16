@@ -8,7 +8,7 @@ package config
 import (
 	"errors"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/utils/env"
@@ -29,7 +29,7 @@ const (
 // used by Envoy Gateway server.
 type Server struct {
 	// EnvoyGateway is the configuration used to startup Envoy Gateway.
-	EnvoyGateway *v1alpha1.EnvoyGateway
+	EnvoyGateway *egv1a1.EnvoyGateway
 	// Namespace is the namespace that Envoy Gateway runs in.
 	Namespace string
 	// DNSDomain is the dns domain used by k8s services. Defaults to "cluster.local".
@@ -43,11 +43,11 @@ type Server struct {
 // New returns a Server with default parameters.
 func New() (*Server, error) {
 	return &Server{
-		EnvoyGateway: v1alpha1.DefaultEnvoyGateway(),
+		EnvoyGateway: egv1a1.DefaultEnvoyGateway(),
 		Namespace:    env.Lookup("ENVOY_GATEWAY_NAMESPACE", DefaultNamespace),
 		DNSDomain:    env.Lookup("KUBERNETES_CLUSTER_DOMAIN", DefaultDNSDomain),
 		// the default logger
-		Logger:  logging.DefaultLogger(v1alpha1.LogLevelInfo),
+		Logger:  logging.DefaultLogger(egv1a1.LogLevelInfo),
 		Elected: make(chan struct{}),
 	}, nil
 }

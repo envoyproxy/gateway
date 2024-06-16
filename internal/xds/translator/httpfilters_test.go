@@ -41,8 +41,10 @@ func Test_sortHTTPFilters(t *testing.T) {
 				httpFilterForTest(localRateLimitFilter),
 				httpFilterForTest(wasmFilter + "/envoyextensionpolicy/default/policy-for-http-route-1/1"),
 				httpFilterForTest(string(egv1a1.EnvoyFilterRBAC) + "/securitypolicy/default/policy-for-http-route-1"),
+				httpFilterForTest(wellknown.HealthCheck),
 			},
 			want: []*hcmv3.HttpFilter{
+				httpFilterForTest(wellknown.HealthCheck),
 				httpFilterForTest(wellknown.Fault),
 				httpFilterForTest(wellknown.CORS),
 				httpFilterForTest(extAuthFilter + "/securitypolicy/default/policy-for-http-route-1"),

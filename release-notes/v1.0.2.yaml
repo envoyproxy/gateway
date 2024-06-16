@@ -1,0 +1,28 @@
+date: June 12, 2024
+
+changes:
+  - area: installation
+    change: |
+      Updated EnvoyProxy to 1.29.5
+      Use Patch API for infra-client
+      Use ServerSideApply instead of CreateOrUpdate for infra-client
+
+  - area: testing
+    change: |
+      Fixed failures due to an expired certificate in one of the translator tests
+
+  - area: translator
+    change: |
+      Use <proto>-<port> for naming service and container ports
+      Added proxy protocol always as first listenerFilter
+      Set ignoreCase for header matchers in extAuth
+      Added backend TLS SAN validation
+      Fixed ReplaceFullPath not working for root path (/)
+
+  - area: providers
+    change: |
+      Fixed duplicated xroutes are added to gatewayapi Resources
+      Fixed security policy reference grant from field type
+      Fixed Route extension filters with different types but the same name and namespace aren't correctly cached
+      Fixed secrets/configmap updates to trigger a controller reconcile by removing the generationChanged predicate
+      Removed namespace restriction for EnvoyProxy parametersRef

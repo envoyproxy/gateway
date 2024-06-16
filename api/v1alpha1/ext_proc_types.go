@@ -51,8 +51,8 @@ type ExtProc struct {
 	//
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=1
-	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Service kind.",rule="self.all(f, f.kind == 'Service')"
-	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core group.",rule="self.all(f, f.group == '')"
+	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Service and Backend kind.",rule="self.all(f, f.kind == 'Service' || f.kind == 'Backend')"
+	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core and gateway.envoyproxy.io group.",rule="self.all(f, f.group == '' || f.group == 'gateway.envoyproxy.io')"
 	BackendRefs []BackendRef `json:"backendRefs"`
 
 	// MessageTimeout is the timeout for a response to be returned from the external processor

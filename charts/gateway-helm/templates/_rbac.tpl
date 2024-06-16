@@ -70,6 +70,7 @@ resources:
 - backendtrafficpolicies
 - securitypolicies
 - envoyextensionpolicies
+- backends
 verbs:
 - get
 - list
@@ -85,6 +86,7 @@ resources:
 - backendtrafficpolicies/status
 - securitypolicies/status
 - envoyextensionpolicies/status
+- backends/status
 verbs:
 - update
 {{- end }}

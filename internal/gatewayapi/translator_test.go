@@ -26,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -44,9 +44,14 @@ func TestTranslate(t *testing.T) {
 	testCasesConfig := []struct {
 		name                    string
 		EnvoyPatchPolicyEnabled bool
+		BackendEnabled          bool
 	}{
 		{
 			name:                    "envoypatchpolicy-invalid-feature-disabled",
+			EnvoyPatchPolicyEnabled: false,
+		},
+		{
+			name:                    "backend-invalid-feature-disabled",
 			EnvoyPatchPolicyEnabled: false,
 		},
 	}
@@ -63,10 +68,12 @@ func TestTranslate(t *testing.T) {
 			resources := &Resources{}
 			mustUnmarshal(t, input, resources)
 			envoyPatchPolicyEnabled := true
+			backendEnabled := true
 
 			for _, config := range testCasesConfig {
 				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
 					envoyPatchPolicyEnabled = config.EnvoyPatchPolicyEnabled
+					backendEnabled = config.BackendEnabled
 				}
 			}
 
@@ -75,6 +82,7 @@ func TestTranslate(t *testing.T) {
 				GatewayClassName:        "envoy-gateway-class",
 				GlobalRateLimitEnabled:  true,
 				EnvoyPatchPolicyEnabled: envoyPatchPolicyEnabled,
+				BackendEnabled:          backendEnabled,
 				Namespace:               "envoy-gateway-system",
 				MergeGateways:           IsMergeGatewaysEnabled(resources),
 			}
@@ -275,7 +283,7 @@ func TestTranslate(t *testing.T) {
 				},
 			})
 
-			got := translator.Translate(resources)
+			got, _ := translator.Translate(resources)
 			require.NoError(t, field.SetValue(got, "LastTransitionTime", metav1.NewTime(time.Time{})))
 			outputFilePath := strings.ReplaceAll(inputFile, ".in.yaml", ".out.yaml")
 			out, err := yaml.Marshal(got)
@@ -318,8 +326,11 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 				GatewayControllerName:  egv1a1.GatewayControllerName,
 				GatewayClassName:       "envoy-gateway-class",
 				GlobalRateLimitEnabled: true,
-				ExtensionGroupKinds:    []schema.GroupKind{{Group: "foo.example.io", Kind: "Foo"}},
-				MergeGateways:          IsMergeGatewaysEnabled(resources),
+				ExtensionGroupKinds: []schema.GroupKind{
+					{Group: "foo.example.io", Kind: "Foo"},
+					{Group: "bar.example.io", Kind: "Bar"},
+				},
+				MergeGateways: IsMergeGatewaysEnabled(resources),
 			}
 
 			// Add common test fixtures
@@ -467,8 +478,12 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 				},
 			})
 
-			got := translator.Translate(resources)
+			got, _ := translator.Translate(resources)
 			require.NoError(t, field.SetValue(got, "LastTransitionTime", metav1.NewTime(time.Time{})))
+			// Also fix lastTransitionTime in unstructured members
+			for i := range got.ExtensionServerPolicies {
+				field.SetMapValues(got.ExtensionServerPolicies[i].Object, "lastTransitionTime", nil)
+			}
 
 			outputFilePath := strings.ReplaceAll(inputFile, ".in.yaml", ".out.yaml")
 			out, err := yaml.Marshal(got)
@@ -610,7 +625,7 @@ func TestIsValidCrossNamespaceRef(t *testing.T) {
 		name           string
 		from           crossNamespaceFrom
 		to             crossNamespaceTo
-		referenceGrant *v1beta1.ReferenceGrant
+		referenceGrant *gwapiv1b1.ReferenceGrant
 		want           bool
 	}
 
@@ -632,20 +647,20 @@ func TestIsValidCrossNamespaceRef(t *testing.T) {
 				namespace: "default",
 				name:      "tls-secret-1",
 			},
-			referenceGrant: &v1beta1.ReferenceGrant{
+			referenceGrant: &gwapiv1b1.ReferenceGrant{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "referencegrant-1",
 					Namespace: "default",
 				},
-				Spec: v1beta1.ReferenceGrantSpec{
-					From: []v1beta1.ReferenceGrantFrom{
+				Spec: gwapiv1b1.ReferenceGrantSpec{
+					From: []gwapiv1b1.ReferenceGrantFrom{
 						{
 							Group:     "gateway.networking.k8s.io",
 							Kind:      "Gateway",
 							Namespace: "envoy-gateway-system",
 						},
 					},
-					To: []v1beta1.ReferenceGrantTo{
+					To: []gwapiv1b1.ReferenceGrantTo{
 						{
 							Group: "",
 							Kind:  "Secret",
@@ -715,7 +730,7 @@ func TestIsValidCrossNamespaceRef(t *testing.T) {
 	for _, tc := range testcases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			var referenceGrants []*v1beta1.ReferenceGrant
+			var referenceGrants []*gwapiv1b1.ReferenceGrant
 			if tc.referenceGrant != nil {
 				referenceGrants = append(referenceGrants, tc.referenceGrant)
 			}

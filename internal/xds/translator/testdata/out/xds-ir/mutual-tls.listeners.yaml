@@ -30,6 +30,7 @@
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: https
         useRemoteAddress: true
+    name: first-listener
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:
@@ -67,6 +68,7 @@
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tls-terminate-dest
         statPrefix: terminate
+    name: tls-route-terminate
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:

@@ -19,7 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/kubernetes"
@@ -179,13 +179,13 @@ func checkEnableGlobalRateLimit(cli kubernetes.CLIClient) (bool, error) {
 		return false, err
 	}
 
-	if gvk.Group != v1alpha1.GroupVersion.Group ||
-		gvk.Version != v1alpha1.GroupVersion.Version ||
-		gvk.Kind != v1alpha1.KindEnvoyGateway {
+	if gvk.Group != egv1a1.GroupVersion.Group ||
+		gvk.Version != egv1a1.GroupVersion.Version ||
+		gvk.Kind != egv1a1.KindEnvoyGateway {
 		return false, errors.New("failed to decode unmatched resource type")
 	}
 
-	eg, ok := obj.(*v1alpha1.EnvoyGateway)
+	eg, ok := obj.(*egv1a1.EnvoyGateway)
 	if !ok {
 		return false, errors.New("failed to convert object to EnvoyGateway type")
 	}

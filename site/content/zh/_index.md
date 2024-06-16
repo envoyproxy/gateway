@@ -3,7 +3,7 @@ title: Envoy Gateway
 ---
 
 {{< blocks/cover title="欢迎访问 Envoy Gateway！" image_anchor="top" height="full" >}}
-<a class="btn btn-lg btn-primary me-3 mb-4" href="/v1.0.1">
+<a class="btn btn-lg btn-primary me-3 mb-4" href="/v1.0.2">
   开始使用 <i class="fas fa-arrow-alt-circle-right ms-2"></i>
 </a>
 <a class="btn btn-lg btn-secondary me-3 mb-4" href="/contributions">

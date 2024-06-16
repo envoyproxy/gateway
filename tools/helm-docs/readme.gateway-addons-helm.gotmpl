@@ -1,0 +1,41 @@
+{{ template "chart.header" . }}
+{{ template "chart.deprecationWarning" . }}
+
+{{ template "chart.badgesSection" . }}
+
+{{ template "chart.description" . }}
+
+{{ template "chart.homepageLine" . }}
+
+{{ template "chart.maintainersSection" . }}
+
+{{ template "chart.sourcesSection" . }}
+
+{{ template "chart.requirementsSection" . }}
+
+## Usage
+
+[Helm](https://helm.sh) must be installed to use the charts.
+Please refer to Helm's [documentation](https://helm.sh/docs) to get started.
+
+The Envoy Gateway must be installed before installing this chart.
+
+### Install from DockerHub
+
+Once Helm has been set up correctly, install the chart from dockerhub:
+
+``` shell
+    helm install eg-addons oci://docker.io/envoyproxy/gateway-addons-helm --version v0.0.0-latest -n monitoring --create-namespace
+```
+
+You can find all helm chart release in [Dockerhub](https://hub.docker.com/r/envoyproxy/gateway-addons-helm/tags)
+
+To uninstall the chart:
+
+``` shell
+    helm uninstall eg-addons -n monitoring
+```
+
+{{ template "chart.valuesSection" . }}
+
+{{ template "helm-docs.versionFooter" . }}

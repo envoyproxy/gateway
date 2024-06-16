@@ -21,7 +21,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
-	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
+	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -154,6 +154,38 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(obj client.Object) boo
 		return true
 	}
 
+	if r.isEnvoyProxyReferencingSecret(&nsName) {
+		return true
+	}
+
+	return false
+}
+
+func (r *gatewayAPIReconciler) isEnvoyProxyReferencingSecret(nsName *types.NamespacedName) bool {
+	epList := &egv1a1.EnvoyProxyList{}
+	if err := r.client.List(context.Background(), epList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(secretEnvoyProxyIndex, nsName.String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated Gateways")
+		return false
+	}
+
+	if len(epList.Items) == 0 {
+		return false
+	}
+
+	for _, ep := range epList.Items {
+		if ep.Spec.BackendTLS != nil {
+			if ep.Spec.BackendTLS.ClientCertificateRef != nil {
+				certRef := ep.Spec.BackendTLS.ClientCertificateRef
+				ns := gatewayapi.NamespaceDerefOr(certRef.Namespace, ep.Namespace)
+				if nsName.Name == string(certRef.Name) && nsName.Namespace == ns {
+					return true
+				}
+				continue
+			}
+		}
+	}
 	return false
 }
 
@@ -256,6 +288,28 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 	return r.isEnvoyExtensionPolicyReferencingBackend(&nsName)
 }
 
+// validateBackendForReconcile tries finding the owning Gateway of the Backend
+// if it exists, finds the Gateway's Deployment, and further updates the Gateway
+// status Ready condition. All Services are pushed for reconciliation.
+func (r *gatewayAPIReconciler) validateBackendForReconcile(obj client.Object) bool {
+	be, ok := obj.(*egv1a1.Backend)
+	if !ok {
+		r.log.Info("unexpected object type, bypassing reconciliation", "object", obj)
+		return false
+	}
+
+	nsName := utils.NamespacedName(be)
+	if r.isRouteReferencingBackend(&nsName) {
+		return true
+	}
+
+	if r.isSecurityPolicyReferencingBackend(&nsName) {
+		return true
+	}
+
+	return r.isEnvoyExtensionPolicyReferencingBackend(&nsName)
+}
+
 func (r *gatewayAPIReconciler) isSecurityPolicyReferencingBackend(nsName *types.NamespacedName) bool {
 	spList := &egv1a1.SecurityPolicyList{}
 	if err := r.client.List(context.Background(), spList, &client.ListOptions{
@@ -272,7 +326,7 @@ func (r *gatewayAPIReconciler) isSecurityPolicyReferencingBackend(nsName *types.
 // if it exists, finds the Gateway's Deployment, and further updates the Gateway
 // status Ready condition. All Services are pushed for reconciliation.
 func (r *gatewayAPIReconciler) validateServiceImportForReconcile(obj client.Object) bool {
-	svcImport, ok := obj.(*mcsapi.ServiceImport)
+	svcImport, ok := obj.(*mcsapiv1a1.ServiceImport)
 	if !ok {
 		r.log.Info("unexpected object type, bypassing reconciliation", "object", obj)
 		return false
@@ -346,7 +400,7 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 	}
 
 	svcName, ok := ep.GetLabels()[discoveryv1.LabelServiceName]
-	multiClusterSvcName, isMCS := ep.GetLabels()[mcsapi.LabelServiceName]
+	multiClusterSvcName, isMCS := ep.GetLabels()[mcsapiv1a1.LabelServiceName]
 	if !ok && !isMCS {
 		r.log.Info("endpointslice is missing kubernetes.io/service-name or multicluster.kubernetes.io/service-name label", "object", obj)
 		return false
@@ -410,34 +464,40 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 
 // envoyDeploymentForGateway returns the Envoy Deployment, returning nil if the Deployment doesn't exist.
 func (r *gatewayAPIReconciler) envoyDeploymentForGateway(ctx context.Context, gateway *gwapiv1.Gateway) (*appsv1.Deployment, error) {
-	key := types.NamespacedName{
-		Namespace: r.namespace,
-		Name:      infraName(gateway, r.mergeGateways.Has(string(gateway.Spec.GatewayClassName))),
-	}
-	deployment := new(appsv1.Deployment)
-	if err := r.client.Get(ctx, key, deployment); err != nil {
+	var deployments appsv1.DeploymentList
+	labelSelector := labels.SelectorFromSet(labels.Set(gatewayapi.OwnerLabels(gateway, r.mergeGateways.Has(string(gateway.Spec.GatewayClassName)))))
+	if err := r.client.List(ctx, &deployments, &client.ListOptions{
+		LabelSelector: labelSelector,
+		Namespace:     r.namespace,
+	}); err != nil {
 		if kerrors.IsNotFound(err) {
 			return nil, nil
 		}
 		return nil, err
 	}
-	return deployment, nil
+	if len(deployments.Items) == 0 {
+		return nil, nil
+	}
+	return &deployments.Items[0], nil
 }
 
 // envoyServiceForGateway returns the Envoy service, returning nil if the service doesn't exist.
 func (r *gatewayAPIReconciler) envoyServiceForGateway(ctx context.Context, gateway *gwapiv1.Gateway) (*corev1.Service, error) {
-	key := types.NamespacedName{
-		Namespace: r.namespace,
-		Name:      infraName(gateway, r.mergeGateways.Has(string(gateway.Spec.GatewayClassName))),
-	}
-	svc := new(corev1.Service)
-	if err := r.client.Get(ctx, key, svc); err != nil {
+	var services corev1.ServiceList
+	labelSelector := labels.SelectorFromSet(labels.Set(gatewayapi.OwnerLabels(gateway, r.mergeGateways.Has(string(gateway.Spec.GatewayClassName)))))
+	if err := r.client.List(ctx, &services, &client.ListOptions{
+		LabelSelector: labelSelector,
+		Namespace:     r.namespace,
+	}); err != nil {
 		if kerrors.IsNotFound(err) {
 			return nil, nil
 		}
 		return nil, err
 	}
-	return svc, nil
+	if len(services.Items) == 0 {
+		return nil, nil
+	}
+	return &services.Items[0], nil
 }
 
 // findOwningGateway attempts finds a Gateway using "labels".

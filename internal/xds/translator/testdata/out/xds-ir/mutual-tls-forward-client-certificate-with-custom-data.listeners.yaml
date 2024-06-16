@@ -30,6 +30,7 @@
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: https
         useRemoteAddress: true
+    name: first-listener
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:
@@ -88,6 +89,7 @@
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: https
         useRemoteAddress: true
+    name: second-listener
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:
@@ -148,6 +150,7 @@
           subject: true
         statPrefix: https
         useRemoteAddress: true
+    name: third-listener
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:
@@ -210,6 +213,7 @@
           uri: true
         statPrefix: https
         useRemoteAddress: true
+    name: fourth-listener
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:
@@ -274,6 +278,7 @@
           uri: true
         statPrefix: https
         useRemoteAddress: true
+    name: fifth-listener
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:

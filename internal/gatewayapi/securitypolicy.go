@@ -17,13 +17,13 @@ import (
 	"strings"
 
 	perr "github.com/pkg/errors"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
@@ -32,9 +32,11 @@ import (
 )
 
 const (
-	defaultRedirectURL  = "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback"
-	defaultRedirectPath = "/oauth2/callback"
-	defaultLogoutPath   = "/logout"
+	defaultRedirectURL        = "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback"
+	defaultRedirectPath       = "/oauth2/callback"
+	defaultLogoutPath         = "/logout"
+	defaultForwardAccessToken = false
+	defaultRefreshToken       = false
 
 	// nolint: gosec
 	oidcHMACSecretName = "envoy-oidc-hmac"
@@ -84,7 +86,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 			var (
 				policy         = policy.DeepCopy()
 				targetedRoute  RouteContext
-				parentGateways []gwv1a2.ParentReference
+				parentGateways []gwapiv1a2.ParentReference
 				resolveErr     *status.PolicyResolveError
 			)
 
@@ -171,7 +173,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 
 			// Find its ancestor reference by resolved gateway, even with resolve error
 			gatewayNN := utils.NamespacedName(targetedGateway)
-			parentGateways := []gwv1a2.ParentReference{
+			parentGateways := []gwapiv1a2.ParentReference{
 				getAncestorRefForPolicy(gatewayNN, nil),
 			}
 
@@ -252,7 +254,7 @@ func resolveSecurityPolicyGatewayTargetRef(
 			policy.Namespace, targetNs)
 
 		return gateway.GatewayContext, &status.PolicyResolveError{
-			Reason:  gwv1a2.PolicyReasonInvalid,
+			Reason:  gwapiv1a2.PolicyReasonInvalid,
 			Message: message,
 		}
 	}
@@ -262,7 +264,7 @@ func resolveSecurityPolicyGatewayTargetRef(
 		message := "Unable to target Gateway, another SecurityPolicy has already attached to it"
 
 		return gateway.GatewayContext, &status.PolicyResolveError{
-			Reason:  gwv1a2.PolicyReasonConflicted,
+			Reason:  gwapiv1a2.PolicyReasonConflicted,
 			Message: message,
 		}
 	}
@@ -303,7 +305,7 @@ func resolveSecurityPolicyRouteTargetRef(
 			policy.Namespace, targetNs)
 
 		return route.RouteContext, &status.PolicyResolveError{
-			Reason:  gwv1a2.PolicyReasonInvalid,
+			Reason:  gwapiv1a2.PolicyReasonInvalid,
 			Message: message,
 		}
 	}
@@ -314,7 +316,7 @@ func resolveSecurityPolicyRouteTargetRef(
 			string(policy.Spec.TargetRef.Kind))
 
 		return route.RouteContext, &status.PolicyResolveError{
-			Reason:  gwv1a2.PolicyReasonConflicted,
+			Reason:  gwapiv1a2.PolicyReasonConflicted,
 			Message: message,
 		}
 	}
@@ -553,7 +555,7 @@ func (t *Translator) buildOIDC(
 ) (*ir.OIDC, error) {
 	var (
 		oidc         = policy.Spec.OIDC
-		clientSecret *v1.Secret
+		clientSecret *corev1.Secret
 		provider     *ir.OIDCProvider
 		err          error
 	)
@@ -587,9 +589,11 @@ func (t *Translator) buildOIDC(
 	scopes := appendOpenidScopeIfNotExist(oidc.Scopes)
 
 	var (
-		redirectURL  = defaultRedirectURL
-		redirectPath = defaultRedirectPath
-		logoutPath   = defaultLogoutPath
+		redirectURL        = defaultRedirectURL
+		redirectPath       = defaultRedirectPath
+		logoutPath         = defaultLogoutPath
+		forwardAccessToken = defaultForwardAccessToken
+		refreshToken       = defaultRefreshToken
 	)
 
 	if oidc.RedirectURL != nil {
@@ -602,6 +606,12 @@ func (t *Translator) buildOIDC(
 	}
 	if oidc.LogoutPath != nil {
 		logoutPath = *oidc.LogoutPath
+	}
+	if oidc.ForwardAccessToken != nil {
+		forwardAccessToken = *oidc.ForwardAccessToken
+	}
+	if oidc.RefreshToken != nil {
+		refreshToken = *oidc.RefreshToken
 	}
 
 	// Generate a unique cookie suffix for oauth filters.
@@ -624,18 +634,22 @@ func (t *Translator) buildOIDC(
 	}
 
 	return &ir.OIDC{
-		Name:                irConfigName(policy),
-		Provider:            *provider,
-		ClientID:            oidc.ClientID,
-		ClientSecret:        clientSecretBytes,
-		Scopes:              scopes,
-		Resources:           oidc.Resources,
-		RedirectURL:         redirectURL,
-		RedirectPath:        redirectPath,
-		LogoutPath:          logoutPath,
-		CookieSuffix:        suffix,
-		CookieNameOverrides: policy.Spec.OIDC.CookieNames,
-		HMACSecret:          hmacData,
+		Name:                   irConfigName(policy),
+		Provider:               *provider,
+		ClientID:               oidc.ClientID,
+		ClientSecret:           clientSecretBytes,
+		Scopes:                 scopes,
+		Resources:              oidc.Resources,
+		RedirectURL:            redirectURL,
+		RedirectPath:           redirectPath,
+		LogoutPath:             logoutPath,
+		ForwardAccessToken:     forwardAccessToken,
+		DefaultTokenTTL:        oidc.DefaultTokenTTL,
+		RefreshToken:           refreshToken,
+		DefaultRefreshTokenTTL: oidc.DefaultRefreshTokenTTL,
+		CookieSuffix:           suffix,
+		CookieNameOverrides:    policy.Spec.OIDC.CookieNames,
+		HMACSecret:             hmacData,
 	}, nil
 }
 
@@ -749,7 +763,7 @@ func (t *Translator) buildBasicAuth(
 ) (*ir.BasicAuth, error) {
 	var (
 		basicAuth   = policy.Spec.BasicAuth
-		usersSecret *v1.Secret
+		usersSecret *corev1.Secret
 		err         error
 	)
 
@@ -810,11 +824,7 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Reso
 		return nil, errors.New("one of grpc or http must be specified")
 	}
 
-	if err = t.validateExtServiceBackendReference(
-		backendRef,
-		policy.Namespace,
-		KindSecurityPolicy,
-		resources); err != nil {
+	if err = t.validateExtServiceBackendReference(backendRef, policy.Namespace, policy.Kind, resources); err != nil {
 		return nil, err
 	}
 	authority = fmt.Sprintf("%s.%s:%d",

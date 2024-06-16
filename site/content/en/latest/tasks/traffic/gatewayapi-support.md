@@ -42,7 +42,7 @@ supported by Envoy Gateway:
 __Notes:__
 - The only [BackendRef][] kind supported by Envoy Gateway is a [Service][]. Routing traffic to other destinations such
   as arbitrary URLs is not possible.
-- The `filters` field within [HTTPBackendRef][] is not supported.
+- Only `requestHeaderModifier` and `responseHeaderModifier` filters are currently supported within [HTTPBackendRef][].
 
 ## TCPRoute
 
@@ -76,7 +76,7 @@ provide additional traffic processing:
 __Notes:__
 - The only [BackendRef][grpc-filter] kind supported by Envoy Gateway is a [Service][]. Routing traffic to other
   destinations such as arbitrary URLs is not currently possible.
-- The `filters` field within [HTTPBackendRef][] is not supported.
+- Only `requestHeaderModifier` and `responseHeaderModifier` filters are currently supported within [GRPCBackendRef][].
 
 ## TLSRoute
 
@@ -106,6 +106,7 @@ these types of cross-namespace references. Envoy Gateway supports the following 
 [TCPRoute]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.TCPRoute
 [UDPRoute]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.UDPRoute
 [GRPCRoute]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.GRPCRoute
+[GRPCBackendRef]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GRPCBackendRef
 [gRPC]: https://grpc.io/
 [TLSRoute]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.TLSRoute
 [ReferenceGrant]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.ReferenceGrant

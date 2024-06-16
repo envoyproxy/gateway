@@ -13,9 +13,9 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gwv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -38,7 +38,7 @@ func TestWriteStatus(t *testing.T) {
 	}{
 		{
 			name:               "egctl x status gc -v, but no resources",
-			resourceList:       &gwv1.GatewayClassList{},
+			resourceList:       &gwapiv1.GatewayClassList{},
 			resourceNamespaced: false,
 			resourceKind:       gatewayapi.KindGatewayClass,
 			quiet:              false,
@@ -50,13 +50,13 @@ func TestWriteStatus(t *testing.T) {
 		},
 		{
 			name: "egctl x status gc",
-			resourceList: &gwv1.GatewayClassList{
-				Items: []gwv1.GatewayClass{
+			resourceList: &gwapiv1.GatewayClassList{
+				Items: []gwapiv1.GatewayClass{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "gc",
 						},
-						Status: gwv1.GatewayClassStatus{
+						Status: gwapiv1.GatewayClassStatus{
 							Conditions: []metav1.Condition{
 								{
 									Type:               "foobar1",
@@ -92,13 +92,13 @@ gc        foobar2   test-status-2   test reason 2
 		},
 		{
 			name: "egctl x status gc -v",
-			resourceList: &gwv1.GatewayClassList{
-				Items: []gwv1.GatewayClass{
+			resourceList: &gwapiv1.GatewayClassList{
+				Items: []gwapiv1.GatewayClass{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "gc",
 						},
-						Status: gwv1.GatewayClassStatus{
+						Status: gwapiv1.GatewayClassStatus{
 							Conditions: []metav1.Condition{
 								{
 									Type:               "foobar1",
@@ -134,13 +134,13 @@ gc        foobar2   test-status-2   test reason 2   test message 2   123457     
 		},
 		{
 			name: "egctl x status gc -v -q",
-			resourceList: &gwv1.GatewayClassList{
-				Items: []gwv1.GatewayClass{
+			resourceList: &gwapiv1.GatewayClassList{
+				Items: []gwapiv1.GatewayClass{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "gc",
 						},
-						Status: gwv1.GatewayClassStatus{
+						Status: gwapiv1.GatewayClassStatus{
 							Conditions: []metav1.Condition{
 								{
 									Type:               "foobar1",
@@ -175,7 +175,7 @@ gc        foobar2   test-status-2   test reason 2   test message 2   123457     
 		},
 		{
 			name:               "egctl x status gtw -v -A, no resources",
-			resourceList:       &gwv1.GatewayList{},
+			resourceList:       &gwapiv1.GatewayList{},
 			resourceNamespaced: true,
 			resourceKind:       gatewayapi.KindGateway,
 			quiet:              false,
@@ -187,14 +187,14 @@ gc        foobar2   test-status-2   test reason 2   test message 2   123457     
 		},
 		{
 			name: "egctl x status gtw -v -A",
-			resourceList: &gwv1.GatewayList{
-				Items: []gwv1.Gateway{
+			resourceList: &gwapiv1.GatewayList{
+				Items: []gwapiv1.Gateway{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "gtw",
 							Namespace: "default",
 						},
-						Status: gwv1.GatewayStatus{
+						Status: gwapiv1.GatewayStatus{
 							Conditions: []metav1.Condition{
 								{
 									Type:               "foobar1",
@@ -230,14 +230,14 @@ default     gtw       foobar2   test-status-2   test reason 2   test message 2  
 		},
 		{
 			name: "egctl x status gtw -v -q -A",
-			resourceList: &gwv1.GatewayList{
-				Items: []gwv1.Gateway{
+			resourceList: &gwapiv1.GatewayList{
+				Items: []gwapiv1.Gateway{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "gtw1",
 							Namespace: "default1",
 						},
-						Status: gwv1.GatewayStatus{
+						Status: gwapiv1.GatewayStatus{
 							Conditions: []metav1.Condition{
 								{
 									Type:               "foobar1",
@@ -263,7 +263,7 @@ default     gtw       foobar2   test-status-2   test reason 2   test message 2  
 							Name:      "gtw2",
 							Namespace: "default2",
 						},
-						Status: gwv1.GatewayStatus{
+						Status: gwapiv1.GatewayStatus{
 							Conditions: []metav1.Condition{
 								{
 									Type:               "foobar3",
@@ -299,20 +299,20 @@ default2    gtw2      foobar4   test-status-4   test reason 4   test message 4  
 		},
 		{
 			name: "egctl x status httproute -A",
-			resourceList: &gwv1.HTTPRouteList{
-				Items: []gwv1.HTTPRoute{
+			resourceList: &gwapiv1.HTTPRouteList{
+				Items: []gwapiv1.HTTPRoute{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "http1",
 							Namespace: "default1",
 						},
-						Status: gwv1.HTTPRouteStatus{
-							RouteStatus: gwv1.RouteStatus{
-								Parents: []gwv1.RouteParentStatus{
+						Status: gwapiv1.HTTPRouteStatus{
+							RouteStatus: gwapiv1.RouteStatus{
+								Parents: []gwapiv1.RouteParentStatus{
 									{
-										ParentRef: gwv1.ParentReference{
+										ParentRef: gwapiv1.ParentReference{
 											Kind: gatewayapi.KindPtr(gatewayapi.KindGateway),
-											Name: gwv1.ObjectName("test-1"),
+											Name: gwapiv1.ObjectName("test-1"),
 										},
 										Conditions: []metav1.Condition{
 											{
@@ -342,13 +342,13 @@ default2    gtw2      foobar4   test-status-4   test reason 4   test message 4  
 							Name:      "http2",
 							Namespace: "default2",
 						},
-						Status: gwv1.HTTPRouteStatus{
-							RouteStatus: gwv1.RouteStatus{
-								Parents: []gwv1.RouteParentStatus{
+						Status: gwapiv1.HTTPRouteStatus{
+							RouteStatus: gwapiv1.RouteStatus{
+								Parents: []gwapiv1.RouteParentStatus{
 									{
-										ParentRef: gwv1.ParentReference{
+										ParentRef: gwapiv1.ParentReference{
 											Kind: gatewayapi.KindPtr(gatewayapi.KindGateway),
-											Name: gwv1.ObjectName("test-2"),
+											Name: gwapiv1.ObjectName("test-2"),
 										},
 										Conditions: []metav1.Condition{
 											{
@@ -390,20 +390,20 @@ default2    http2     gateway/test-2   foobar4   test-status-4   test reason 4
 		},
 		{
 			name: "egctl x status httproute -q -n default1",
-			resourceList: &gwv1.HTTPRouteList{
-				Items: []gwv1.HTTPRoute{
+			resourceList: &gwapiv1.HTTPRouteList{
+				Items: []gwapiv1.HTTPRoute{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "http1",
 							Namespace: "default1",
 						},
-						Status: gwv1.HTTPRouteStatus{
-							RouteStatus: gwv1.RouteStatus{
-								Parents: []gwv1.RouteParentStatus{
+						Status: gwapiv1.HTTPRouteStatus{
+							RouteStatus: gwapiv1.RouteStatus{
+								Parents: []gwapiv1.RouteParentStatus{
 									{
-										ParentRef: gwv1.ParentReference{
+										ParentRef: gwapiv1.ParentReference{
 											Kind: gatewayapi.KindPtr(gatewayapi.KindGateway),
-											Name: gwv1.ObjectName("test-1"),
+											Name: gwapiv1.ObjectName("test-1"),
 										},
 										Conditions: []metav1.Condition{
 											{
@@ -433,13 +433,13 @@ default2    http2     gateway/test-2   foobar4   test-status-4   test reason 4
 							Name:      "http2",
 							Namespace: "default2",
 						},
-						Status: gwv1.HTTPRouteStatus{
-							RouteStatus: gwv1.RouteStatus{
-								Parents: []gwv1.RouteParentStatus{
+						Status: gwapiv1.HTTPRouteStatus{
+							RouteStatus: gwapiv1.RouteStatus{
+								Parents: []gwapiv1.RouteParentStatus{
 									{
-										ParentRef: gwv1.ParentReference{
+										ParentRef: gwapiv1.ParentReference{
 											Kind: gatewayapi.KindPtr(gatewayapi.KindGateway),
-											Name: gwv1.ObjectName("test-2"),
+											Name: gwapiv1.ObjectName("test-2"),
 										},
 										Conditions: []metav1.Condition{
 											{
@@ -480,19 +480,19 @@ http2     gateway/test-2   foobar4   test-status-4   test reason 4
 		},
 		{
 			name: "egctl x status btlspolicy",
-			resourceList: &gwv1a3.BackendTLSPolicyList{
-				Items: []gwv1a3.BackendTLSPolicy{
+			resourceList: &gwapiv1a3.BackendTLSPolicyList{
+				Items: []gwapiv1a3.BackendTLSPolicy{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "btls",
 							Namespace: "default",
 						},
-						Status: gwv1a2.PolicyStatus{
-							Ancestors: []gwv1a2.PolicyAncestorStatus{
+						Status: gwapiv1a2.PolicyStatus{
+							Ancestors: []gwapiv1a2.PolicyAncestorStatus{
 								{
-									AncestorRef: gwv1.ParentReference{
+									AncestorRef: gwapiv1.ParentReference{
 										Kind: gatewayapi.KindPtr(gatewayapi.KindGateway),
-										Name: gwv1.ObjectName("test"),
+										Name: gwapiv1.ObjectName("test"),
 									},
 									Conditions: []metav1.Condition{
 										{
@@ -531,20 +531,20 @@ btls      gateway/test         foobar2   test-status-2   test reason 2
 		},
 		{
 			name: "multiple httproutes with multiple parents",
-			resourceList: &gwv1.HTTPRouteList{
-				Items: []gwv1.HTTPRoute{
+			resourceList: &gwapiv1.HTTPRouteList{
+				Items: []gwapiv1.HTTPRoute{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "http1",
 							Namespace: "default1",
 						},
-						Status: gwv1.HTTPRouteStatus{
-							RouteStatus: gwv1.RouteStatus{
-								Parents: []gwv1.RouteParentStatus{
+						Status: gwapiv1.HTTPRouteStatus{
+							RouteStatus: gwapiv1.RouteStatus{
+								Parents: []gwapiv1.RouteParentStatus{
 									{
-										ParentRef: gwv1.ParentReference{
+										ParentRef: gwapiv1.ParentReference{
 											Kind: gatewayapi.KindPtr(gatewayapi.KindGateway),
-											Name: gwv1.ObjectName("test-1"),
+											Name: gwapiv1.ObjectName("test-1"),
 										},
 										Conditions: []metav1.Condition{
 											{
@@ -566,9 +566,9 @@ btls      gateway/test         foobar2   test-status-2   test reason 2
 										},
 									},
 									{
-										ParentRef: gwv1.ParentReference{
+										ParentRef: gwapiv1.ParentReference{
 											Kind: gatewayapi.KindPtr(gatewayapi.KindGateway),
-											Name: gwv1.ObjectName("test-2"),
+											Name: gwapiv1.ObjectName("test-2"),
 										},
 										Conditions: []metav1.Condition{
 											{
@@ -598,13 +598,13 @@ btls      gateway/test         foobar2   test-status-2   test reason 2
 							Name:      "http2",
 							Namespace: "default2",
 						},
-						Status: gwv1.HTTPRouteStatus{
-							RouteStatus: gwv1.RouteStatus{
-								Parents: []gwv1.RouteParentStatus{
+						Status: gwapiv1.HTTPRouteStatus{
+							RouteStatus: gwapiv1.RouteStatus{
+								Parents: []gwapiv1.RouteParentStatus{
 									{
-										ParentRef: gwv1.ParentReference{
+										ParentRef: gwapiv1.ParentReference{
 											Kind: gatewayapi.KindPtr(gatewayapi.KindGateway),
-											Name: gwv1.ObjectName("test-3"),
+											Name: gwapiv1.ObjectName("test-3"),
 										},
 										Conditions: []metav1.Condition{
 											{
@@ -626,9 +626,9 @@ btls      gateway/test         foobar2   test-status-2   test reason 2
 										},
 									},
 									{
-										ParentRef: gwv1.ParentReference{
+										ParentRef: gwapiv1.ParentReference{
 											Kind: gatewayapi.KindPtr(gatewayapi.KindGateway),
-											Name: gwv1.ObjectName("test-4"),
+											Name: gwapiv1.ObjectName("test-4"),
 										},
 										Conditions: []metav1.Condition{
 											{
@@ -681,12 +681,12 @@ default2    http2     gateway/test-3   foobar6   test-status-6   test reason 6
 							Name:      "btp-1",
 							Namespace: "default",
 						},
-						Status: gwv1a2.PolicyStatus{
-							Ancestors: []gwv1a2.PolicyAncestorStatus{
+						Status: gwapiv1a2.PolicyStatus{
+							Ancestors: []gwapiv1a2.PolicyAncestorStatus{
 								{
-									AncestorRef: gwv1.ParentReference{
+									AncestorRef: gwapiv1.ParentReference{
 										Kind: gatewayapi.KindPtr(gatewayapi.KindGateway),
-										Name: gwv1.ObjectName("test-1"),
+										Name: gwapiv1.ObjectName("test-1"),
 									},
 									Conditions: []metav1.Condition{
 										{
@@ -708,9 +708,9 @@ default2    http2     gateway/test-3   foobar6   test-status-6   test reason 6
 									},
 								},
 								{
-									AncestorRef: gwv1.ParentReference{
+									AncestorRef: gwapiv1.ParentReference{
 										Kind: gatewayapi.KindPtr(gatewayapi.KindHTTPRoute),
-										Name: gwv1.ObjectName("test-2"),
+										Name: gwapiv1.ObjectName("test-2"),
 									},
 									Conditions: []metav1.Condition{
 										{
@@ -739,12 +739,12 @@ default2    http2     gateway/test-3   foobar6   test-status-6   test reason 6
 							Name:      "btp-2",
 							Namespace: "default",
 						},
-						Status: gwv1a2.PolicyStatus{
-							Ancestors: []gwv1a2.PolicyAncestorStatus{
+						Status: gwapiv1a2.PolicyStatus{
+							Ancestors: []gwapiv1a2.PolicyAncestorStatus{
 								{
-									AncestorRef: gwv1.ParentReference{
+									AncestorRef: gwapiv1.ParentReference{
 										Kind: gatewayapi.KindPtr(gatewayapi.KindGateway),
-										Name: gwv1.ObjectName("test-3"),
+										Name: gwapiv1.ObjectName("test-3"),
 									},
 									Conditions: []metav1.Condition{
 										{
@@ -766,9 +766,9 @@ default2    http2     gateway/test-3   foobar6   test-status-6   test reason 6
 									},
 								},
 								{
-									AncestorRef: gwv1.ParentReference{
+									AncestorRef: gwapiv1.ParentReference{
 										Kind: gatewayapi.KindPtr(gatewayapi.KindGRPCRoute),
-										Name: gwv1.ObjectName("test-4"),
+										Name: gwapiv1.ObjectName("test-4"),
 									},
 									Conditions: []metav1.Condition{
 										{

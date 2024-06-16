@@ -1,0 +1,213 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-static
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/1"
+          backendRefs:
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: backend-ip
+            - name: service-ip
+              port: 8080
+            - name: service-import-ip
+              group: multicluster.x-k8s.io
+              kind: ServiceImport
+              port: 8081
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-fqdn
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/2"
+          backendRefs:
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: backend-fqdn
+            - name: service-fqdn
+              port: 8080
+            - name: service-import-fqdn
+              group: multicluster.x-k8s.io
+              kind: ServiceImport
+              port: 8081
+backends:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-uds
+      namespace: default
+    spec:
+      endpoints:
+        - unix:
+            path: /var/run/backend.sock
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-fqdn
+      namespace: default
+    spec:
+      endpoints:
+        - fqdn:
+            hostname: primary.foo.com
+            port: 3000
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-ip
+      namespace: default
+    spec:
+      endpoints:
+        - ip:
+            address: 1.1.1.1
+            port: 3001
+services:
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      namespace: default
+      name: service-fqdn
+    spec:
+      clusterIP: 1.1.1.1
+      ports:
+        - name: http
+          port: 8080
+          protocol: TCP
+          targetPort: 8080
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      namespace: default
+      name: service-ip
+    spec:
+      clusterIP: 2.2.2.2
+      ports:
+        - name: http
+          port: 8080
+          protocol: TCP
+          targetPort: 8080
+serviceImports:
+  - apiVersion: multicluster.x-k8s.io/v1alpha1
+    kind: ServiceImport
+    metadata:
+      namespace: default
+      name: service-import-fqdn
+    spec:
+      ips:
+        - 7.7.7.7
+      ports:
+        - port: 8081
+          name: http
+          protocol: TCP
+  - apiVersion: multicluster.x-k8s.io/v1alpha1
+    kind: ServiceImport
+    metadata:
+      namespace: default
+      name: service-import-ip
+    spec:
+      ips:
+        - 8.8.8.8
+      ports:
+        - port: 8081
+          name: http
+          protocol: TCP
+endpointSlices:
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      name: endpointslice-service-fqdn
+      namespace: default
+      labels:
+        kubernetes.io/service-name: service-fqdn
+    addressType: FQDN
+    ports:
+      - name: http
+        protocol: TCP
+        port: 8080
+    endpoints:
+      - addresses:
+          - "bar.foo"
+        conditions:
+          ready: true
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      name: endpointslice-service-ip
+      namespace: default
+      labels:
+        kubernetes.io/service-name: service-ip
+    addressType: IP
+    ports:
+      - name: http
+        protocol: TCP
+        port: 8080
+    endpoints:
+      - addresses:
+          - "4.3.2.1"
+        conditions:
+          ready: true
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      name: service-import-fqdn
+      namespace: default
+      labels:
+        multicluster.kubernetes.io/service-name: service-import-fqdn
+    addressType: FQDN
+    ports:
+      - name: http
+        protocol: TCP
+        port: 8080
+    endpoints:
+      - addresses:
+          - "foo.bar"
+        conditions:
+          ready: true
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      name: service-import-ip
+      namespace: default
+      labels:
+        multicluster.kubernetes.io/service-name: service-import-ip
+    addressType: IPv4
+    ports:
+      - name: http
+        protocol: TCP
+        port: 8081
+    endpoints:
+      - addresses:
+          - "1.2.3.4"
+        conditions:
+          ready: true

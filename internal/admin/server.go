@@ -12,12 +12,12 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/logging"
 )
 
-var adminLogger = logging.DefaultLogger(v1alpha1.LogLevelInfo).WithName("admin")
+var adminLogger = logging.DefaultLogger(egv1a1.LogLevelInfo).WithName("admin")
 
 func Init(cfg *config.Server) error {
 	if cfg.EnvoyGateway.GetEnvoyGatewayAdmin().EnableDumpConfig {

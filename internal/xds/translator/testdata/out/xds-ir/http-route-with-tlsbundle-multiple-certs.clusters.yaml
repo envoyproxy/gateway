@@ -23,11 +23,17 @@
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
         commonTlsContext:
-          validationContextSdsSecretConfig:
-            name: policy-btls/policies-ca2
-            sdsConfig:
-              ads: {}
-              resourceApiVersion: V3
+          combinedValidationContext:
+            defaultValidationContext:
+              matchTypedSubjectAltNames:
+              - matcher:
+                  exact: bar.example.com
+                sanType: DNS
+            validationContextSdsSecretConfig:
+              name: policy-btls/policies-ca2
+              sdsConfig:
+                ads: {}
+                resourceApiVersion: V3
         sni: bar.example.com
   - match:
       name: httproute/envoy-gateway/httproute-btls/rule/0/tls/1
@@ -37,11 +43,17 @@
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
         commonTlsContext:
-          validationContextSdsSecretConfig:
-            name: policy-btls/policies-ca
-            sdsConfig:
-              ads: {}
-              resourceApiVersion: V3
+          combinedValidationContext:
+            defaultValidationContext:
+              matchTypedSubjectAltNames:
+              - matcher:
+                  exact: example.com
+                sanType: DNS
+            validationContextSdsSecretConfig:
+              name: policy-btls/policies-ca
+              sdsConfig:
+                ads: {}
+                resourceApiVersion: V3
         sni: example.com
   type: EDS
 - circuitBreakers:
@@ -85,10 +97,16 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
             commonTlsContext:
-              validationContextSdsSecretConfig:
-                name: policy-btls-2/policies-ca
-                sdsConfig:
-                  ads: {}
-                  resourceApiVersion: V3
+              combinedValidationContext:
+                defaultValidationContext:
+                  matchTypedSubjectAltNames:
+                  - matcher:
+                      exact: example.com
+                    sanType: DNS
+                validationContextSdsSecretConfig:
+                  name: policy-btls-2/policies-ca
+                  sdsConfig:
+                    ads: {}
+                    resourceApiVersion: V3
             sni: example.com
   type: EDS

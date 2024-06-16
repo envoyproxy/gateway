@@ -12,6 +12,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/envoyproxy/gateway/internal/metrics"
@@ -165,6 +166,42 @@ func (i *Infra) createOrUpdateDaemonSet(ctx context.Context, r ResourceRender) (
 	}()
 
 	return i.Client.ServerSideApply(ctx, daemonSet)
+}
+
+func (i *Infra) createOrUpdatePodDisruptionBudget(ctx context.Context, r ResourceRender) (err error) {
+	var (
+		pdb       *policyv1.PodDisruptionBudget
+		startTime = time.Now()
+		labels    = []metrics.LabelValue{
+			kindLabel.Value("PDB"),
+			nameLabel.Value(r.Name()),
+			namespaceLabel.Value(i.Namespace),
+		}
+	)
+
+	resourceApplyTotal.With(labels...).Increment()
+
+	if pdb, err = r.PodDisruptionBudget(); err != nil {
+		resourceApplyFailed.With(labels...).Increment()
+		return err
+	}
+
+	// when pdb is not set,
+	// then delete the object in the kube api server if got any.
+	if pdb == nil {
+		return i.deletePDB(ctx, r)
+	}
+
+	defer func() {
+		if err == nil {
+			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
+			resourceApplySuccess.With(labels...).Increment()
+		} else {
+			resourceApplyFailed.With(labels...).Increment()
+		}
+	}()
+
+	return i.Client.ServerSideApply(ctx, pdb)
 }
 
 // createOrUpdateHPA creates HorizontalPodAutoscaler object in the kube api server based on
@@ -430,4 +467,36 @@ func (i *Infra) deleteHPA(ctx context.Context, r ResourceRender) (err error) {
 	}()
 
 	return i.Client.Delete(ctx, hpa)
+}
+
+// deletePDB deletes the PodDistribution budget associated to its renderer, if it exists.
+func (i *Infra) deletePDB(ctx context.Context, r ResourceRender) (err error) {
+	var (
+		name, ns = r.Name(), i.Namespace
+		pdb      = &policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: ns,
+				Name:      name,
+			},
+		}
+		startTime = time.Now()
+		labels    = []metrics.LabelValue{
+			kindLabel.Value("PDB"),
+			nameLabel.Value(name),
+			namespaceLabel.Value(ns),
+		}
+	)
+
+	resourceDeleteTotal.With(labels...).Increment()
+
+	defer func() {
+		if err == nil {
+			resourceDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
+			resourceDeleteSuccess.With(labels...).Increment()
+		} else {
+			resourceDeleteFailed.With(labels...).Increment()
+		}
+	}()
+
+	return i.Client.Delete(ctx, pdb)
 }

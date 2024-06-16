@@ -70,8 +70,8 @@ httpRoutes:
         type: Accepted
       - lastTransitionTime: null
         message: Group is invalid, only the core API group (specified by omitting
-          the group field or setting it to an empty string) and multicluster.x-k8s.io
-          are supported
+          the group field or setting it to an empty string), multicluster.x-k8s.io
+          and gateway.envoyproxy.io are supported
         reason: InvalidKind
         status: "False"
         type: ResolvedRefs

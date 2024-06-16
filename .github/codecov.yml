@@ -12,5 +12,6 @@ coverage:
         if_ci_failed: error
 ignore:
   - "cmd"
+  - "test"
   - "**/*.pb.go"
-  - "**/zz_generated.deepcopy.go"
+  - "**/zz_generated.*.go"

@@ -114,6 +114,30 @@ func TestGetSupportedFeatures(t *testing.T) {
 			},
 			expectedResult: []gwapiv1.SupportedFeature{"Gateway"},
 		},
+		{
+			name: "Core features remain supported with skipped extended tests",
+			gatewaySuite: suite.ConformanceOptions{
+				SupportedFeatures: sets.New[features.SupportedFeature]("Gateway", "HTTPRoute", "GatewayHTTPListenerIsolation"),
+			},
+			skippedTests: []suite.ConformanceTest{
+				{
+					Features: []features.SupportedFeature{"Gateway", "GatewayHTTPListenerIsolation", "HTTPRoute"},
+				},
+			},
+			expectedResult: []gwapiv1.SupportedFeature{"Gateway", "HTTPRoute"},
+		},
+		{
+			name: "Core feature removed when skipping core test",
+			gatewaySuite: suite.ConformanceOptions{
+				SupportedFeatures: sets.New[features.SupportedFeature]("Gateway", "HTTPRoute"),
+			},
+			skippedTests: []suite.ConformanceTest{
+				{
+					Features: []features.SupportedFeature{"HTTPRoute"},
+				},
+			},
+			expectedResult: []gwapiv1.SupportedFeature{"Gateway"},
+		},
 	}
 
 	for _, tc := range testCases {
