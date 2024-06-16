@@ -135,6 +135,16 @@ func createExtServiceXDSCluster(rd *ir.RouteDestination, tCtx *types.ResourceVer
 		err          error
 	)
 
+	args := &xdsClusterArgs{
+		name:         rd.Name,
+		settings:     rd.Settings,
+		tSocket:      tSocket,
+		endpointType: endpointType,
+	}
+
+	if rd.Traffic.LoadBalancer != nil {
+		args.loadBalancer = rd.Traffic.LoadBalancer
+	}
 	// Get the address type from the first setting.
 	// This is safe because no mixed address types in the settings.
 	addrTypeState := rd.Settings[0].AddressType
@@ -144,12 +154,7 @@ func createExtServiceXDSCluster(rd *ir.RouteDestination, tCtx *types.ResourceVer
 		endpointType = EndpointTypeStatic
 	}
 
-	if err = addXdsCluster(tCtx, &xdsClusterArgs{
-		name:         rd.Name,
-		settings:     rd.Settings,
-		tSocket:      tSocket,
-		endpointType: endpointType,
-	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+	if err = addXdsCluster(tCtx, args); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 		return err
 	}
 	return nil

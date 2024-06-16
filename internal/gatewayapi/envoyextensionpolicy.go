@@ -422,7 +422,7 @@ func (t *Translator) buildExtProc(
 		}
 
 		ds, err = t.processExtServiceDestination(
-			&extProc.BackendRefs[i].BackendObjectReference,
+			extProc.BackendRefs[i],
 			policyNamespacedName,
 			egv1a1.KindEnvoyExtensionPolicy,
 			ir.GRPC,
@@ -434,9 +434,19 @@ func (t *Translator) buildExtProc(
 		dsl = append(dsl, ds)
 	}
 
+	// todo undertand if it make sense to use the lb settings of the first backend ref.
+	lb, err := t.buildLoadBalancer(extProc.BackendRefs[0].LoadBalancer)
+	if err != nil {
+		return nil, err
+	}
+
+	tf := &ir.TrafficFeatures{}
+	tf.LoadBalancer = lb
+
 	rd := ir.RouteDestination{
 		Name:     irIndexedExtServiceDestinationName(policyNamespacedName, egv1a1.KindEnvoyExtensionPolicy, extProcIdx),
 		Settings: dsl,
+		Traffic:  tf,
 	}
 
 	if extProc.BackendRefs[0].Port != nil {

@@ -794,7 +794,7 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Reso
 	var (
 		http       = policy.Spec.ExtAuth.HTTP
 		grpc       = policy.Spec.ExtAuth.GRPC
-		backendRef *gwapiv1.BackendObjectReference
+		backendRef egv1a1.BackendRef
 		protocol   ir.AppProtocol
 		ds         *ir.DestinationSetting
 		authority  string
@@ -807,15 +807,15 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Reso
 	case http != nil && grpc != nil:
 		return nil, errors.New("only one of grpc or http can be specified")
 	case http != nil:
-		backendRef = http.BackendRef
+		backendRef.BackendObjectReference = ptr.Deref(http.BackendRef, gwapiv1.BackendObjectReference{})
 		if len(http.BackendRefs) != 0 {
-			backendRef = egv1a1.ToBackendObjectReference(http.BackendRefs[0])
+			backendRef.BackendObjectReference = ptr.Deref(egv1a1.ToBackendObjectReference(http.BackendRefs[0]), gwapiv1.BackendObjectReference{})
 		}
 		protocol = ir.HTTP
 	case grpc != nil:
-		backendRef = grpc.BackendRef
+		backendRef.BackendObjectReference = ptr.Deref(grpc.BackendRef, gwapiv1.BackendObjectReference{})
 		if len(grpc.BackendRefs) != 0 {
-			backendRef = egv1a1.ToBackendObjectReference(grpc.BackendRefs[0])
+			backendRef.BackendObjectReference = ptr.Deref(egv1a1.ToBackendObjectReference(grpc.BackendRefs[0]), gwapiv1.BackendObjectReference{})
 		}
 		protocol = ir.GRPC
 	// These are sanity checks, they should never happen because the API server
@@ -824,7 +824,7 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Reso
 		return nil, errors.New("one of grpc or http must be specified")
 	}
 
-	if err = t.validateExtServiceBackendReference(backendRef, policy.Namespace, policy.Kind, resources); err != nil {
+	if err = t.validateExtServiceBackendReference(&backendRef.BackendObjectReference, policy.Namespace, policy.Kind, resources); err != nil {
 		return nil, err
 	}
 	authority = fmt.Sprintf("%s.%s:%d",
@@ -842,7 +842,7 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Reso
 		return nil, err
 	}
 	rd := ir.RouteDestination{
-		Name:     irExtServiceDestinationName(policy, backendRef),
+		Name:     irExtServiceDestinationName(policy, &backendRef.BackendObjectReference),
 		Settings: []*ir.DestinationSetting{ds},
 	}
 

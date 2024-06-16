@@ -472,6 +472,74 @@ type BackendRef struct {
 	// BackendObjectReference references a Kubernetes object that represents the backend.
 	// Only Service kind is supported for now.
 	gwapiv1.BackendObjectReference `json:",inline"`
+
+	ConnectivitySettings `json:",inline"`
+}
+
+type ConnectivitySettings struct {
+	// RateLimit allows the user to limit the number of incoming requests
+	// to a predefined value based on attributes within the traffic flow.
+	// +optional
+	RateLimit *RateLimitSpec `json:"rateLimit,omitempty"`
+
+	// LoadBalancer policy to apply when routing traffic from the gateway to
+	// the backend endpoints
+	// +optional
+	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty"`
+
+	// ProxyProtocol enables the Proxy Protocol when communicating with the backend.
+	// +optional
+	ProxyProtocol *ProxyProtocol `json:"proxyProtocol,omitempty"`
+
+	// TcpKeepalive settings associated with the upstream client connection.
+	// Disabled by default.
+	//
+	// +optional
+	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty"`
+
+	// HealthCheck allows gateway to perform active health checking on backends.
+	//
+	// +optional
+	HealthCheck *HealthCheck `json:"healthCheck,omitempty"`
+
+	// FaultInjection defines the fault injection policy to be applied. This configuration can be used to
+	// inject delays and abort requests to mimic failure scenarios such as service failures and overloads
+	// +optional
+	FaultInjection *FaultInjection `json:"faultInjection,omitempty"`
+
+	// Circuit Breaker settings for the upstream connections and requests.
+	// If not set, circuit breakers will be enabled with the default thresholds
+	//
+	// +optional
+	CircuitBreaker *CircuitBreaker `json:"circuitBreaker,omitempty"`
+
+	// Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
+	// If not set, retry will be disabled.
+	// +optional
+	Retry *Retry `json:"retry,omitempty"`
+
+	// UseClientProtocol configures Envoy to prefer sending requests to backends using
+	// the same HTTP protocol that the incoming request used. Defaults to false, which means
+	// that Envoy will use the protocol indicated by the attached BackendRef.
+	//
+	// +optional
+	UseClientProtocol *bool `json:"useClientProtocol,omitempty"`
+
+	// Timeout settings for the backend connections.
+	//
+	// +optional
+	Timeout *Timeout `json:"timeout,omitempty"`
+
+	// The compression config for the http streams.
+	//
+	// +optional
+	// +notImplementedHide
+	Compression []*Compression `json:"compression,omitempty"`
+
+	// Connection includes backend connection settings.
+	//
+	// +optional
+	Connection *BackendTrafficPolicyConnection `json:"connection,omitempty"`
 }
 
 // CIDR defines a CIDR Address range.

@@ -312,7 +312,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 		}
 	}
 	if policy.Spec.LoadBalancer != nil {
-		if lb, err = t.buildLoadBalancer(policy); err != nil {
+		if lb, err = t.buildLoadBalancer(policy.Spec.LoadBalancer); err != nil {
 			err = perr.WithMessage(err, "LoadBalancer")
 			errs = errors.Join(errs, err)
 		}
@@ -449,7 +449,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		}
 	}
 	if policy.Spec.LoadBalancer != nil {
-		if lb, err = t.buildLoadBalancer(policy); err != nil {
+		if lb, err = t.buildLoadBalancer(policy.Spec.LoadBalancer); err != nil {
 			err = perr.WithMessage(err, "LoadBalancer")
 			errs = errors.Join(errs, err)
 		}
@@ -779,11 +779,13 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 	return irRule, nil
 }
 
-func (t *Translator) buildLoadBalancer(policy *egv1a1.BackendTrafficPolicy) (*ir.LoadBalancer, error) {
+// todo decide a better place as it is used now by multiple places not only in btp
+func (t *Translator) buildLoadBalancer(lbSpec *egv1a1.LoadBalancer) (*ir.LoadBalancer, error) {
 	var lb *ir.LoadBalancer
-	switch policy.Spec.LoadBalancer.Type {
+	switch lbSpec.Type {
+
 	case egv1a1.ConsistentHashLoadBalancerType:
-		consistentHash, err := t.buildConsistentHashLoadBalancer(policy)
+		consistentHash, err := t.buildConsistentHashLoadBalancer(lbSpec)
 		if err != nil {
 			return nil, perr.WithMessage(err, "ConsistentHash")
 		}
@@ -793,11 +795,11 @@ func (t *Translator) buildLoadBalancer(policy *egv1a1.BackendTrafficPolicy) (*ir
 		}
 	case egv1a1.LeastRequestLoadBalancerType:
 		lb = &ir.LoadBalancer{}
-		if policy.Spec.LoadBalancer.SlowStart != nil {
-			if policy.Spec.LoadBalancer.SlowStart.Window != nil {
+		if lbSpec.SlowStart != nil {
+			if lbSpec.SlowStart.Window != nil {
 				lb.LeastRequest = &ir.LeastRequest{
 					SlowStart: &ir.SlowStart{
-						Window: policy.Spec.LoadBalancer.SlowStart.Window,
+						Window: lbSpec.SlowStart.Window,
 					},
 				}
 			}
@@ -812,11 +814,11 @@ func (t *Translator) buildLoadBalancer(policy *egv1a1.BackendTrafficPolicy) (*ir
 				SlowStart: &ir.SlowStart{},
 			},
 		}
-		if policy.Spec.LoadBalancer.SlowStart != nil {
-			if policy.Spec.LoadBalancer.SlowStart.Window != nil {
+		if lbSpec.SlowStart != nil {
+			if lbSpec.SlowStart.Window != nil {
 				lb.RoundRobin = &ir.RoundRobin{
 					SlowStart: &ir.SlowStart{
-						Window: policy.Spec.LoadBalancer.SlowStart.Window,
+						Window: lbSpec.SlowStart.Window,
 					},
 				}
 			}
@@ -826,11 +828,11 @@ func (t *Translator) buildLoadBalancer(policy *egv1a1.BackendTrafficPolicy) (*ir
 	return lb, nil
 }
 
-func (t *Translator) buildConsistentHashLoadBalancer(policy *egv1a1.BackendTrafficPolicy) (*ir.ConsistentHash, error) {
+func (t *Translator) buildConsistentHashLoadBalancer(lb *egv1a1.LoadBalancer) (*ir.ConsistentHash, error) {
 	consistentHash := &ir.ConsistentHash{}
 
-	if policy.Spec.LoadBalancer.ConsistentHash.TableSize != nil {
-		tableSize := policy.Spec.LoadBalancer.ConsistentHash.TableSize
+	if lb.ConsistentHash.TableSize != nil {
+		tableSize := lb.ConsistentHash.TableSize
 
 		if *tableSize > MaxConsistentHashTableSize || !big.NewInt(int64(*tableSize)).ProbablyPrime(0) {
 			return nil, fmt.Errorf("invalid TableSize value %d", *tableSize)
@@ -839,12 +841,12 @@ func (t *Translator) buildConsistentHashLoadBalancer(policy *egv1a1.BackendTraff
 		consistentHash.TableSize = tableSize
 	}
 
-	switch policy.Spec.LoadBalancer.ConsistentHash.Type {
+	switch lb.ConsistentHash.Type {
 	case egv1a1.SourceIPConsistentHashType:
 		consistentHash.SourceIP = ptr.To(true)
 	case egv1a1.HeaderConsistentHashType:
 		consistentHash.Header = &ir.Header{
-			Name: policy.Spec.LoadBalancer.ConsistentHash.Header.Name,
+			Name: lb.ConsistentHash.Header.Name,
 		}
 	}
 

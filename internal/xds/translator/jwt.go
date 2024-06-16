@@ -274,6 +274,7 @@ func (*jwt) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRo
 		for i := range route.Security.JWT.Providers {
 			provider := route.Security.JWT.Providers[i]
 
+			//todo understand how to use backendrf here? sounds it requires custom settings on
 			if err = addClusterFromURL(provider.RemoteJWKS.URI, tCtx); err != nil {
 				errs = errors.Join(errs, err)
 			}

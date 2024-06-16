@@ -1009,6 +1009,8 @@ type RouteDestination struct {
 	// reused
 	Name     string                `json:"name" yaml:"name"`
 	Settings []*DestinationSetting `json:"settings,omitempty" yaml:"settings,omitempty"`
+	// Traffic holds the features associated with the destination traffic features
+	Traffic *TrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
 }
 
 // Validate the fields within the RouteDestination structure
