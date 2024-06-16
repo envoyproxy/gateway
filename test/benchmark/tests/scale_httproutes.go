@@ -47,7 +47,7 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 
 		// Setup and scale httproutes.
 		httpRouteName := "benchmark-route-%d"
-		httpRouteScales := []uint16{5, 10, 20} // TODO: for test, update later
+		httpRouteScales := []uint16{10, 50, 100, 300, 500}
 		httpRouteNNs := make([]types.NamespacedName, 0, httpRouteScales[len(httpRouteScales)-1])
 
 		bSuite.RegisterCleanup(t, ctx, gateway, &gwapiv1.HTTPRoute{})
