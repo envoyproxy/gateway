@@ -659,6 +659,7 @@ _Appears in:_
 | `http1` | _[HTTP1Settings](#http1settings)_ |  false  | HTTP1 provides HTTP/1 configuration on the listener. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  | HTTP2 provides HTTP/2 configuration on the listener. |
 | `http3` | _[HTTP3Settings](#http3settings)_ |  false  | HTTP3 provides HTTP/3 configuration on the listener. |
+| `healthCheck` | _[HealthCheckSettings](#healthchecksettings)_ |  false  | HealthCheck provides configuration for determining whether the HTTP/HTTPS listener is healthy. |
 
 
 #### ClientValidationContext
@@ -1371,6 +1372,7 @@ _Appears in:_
 | `telemetry` | _[ProxyTelemetry](#proxytelemetry)_ |  false  | Telemetry defines telemetry parameters for managed proxies. |
 | `bootstrap` | _[ProxyBootstrap](#proxybootstrap)_ |  false  | Bootstrap defines the Envoy Bootstrap as a YAML string.<br />Visit https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/bootstrap/v3/bootstrap.proto#envoy-v3-api-msg-config-bootstrap-v3-bootstrap<br />to learn more about the syntax.<br />If set, this is the Bootstrap configuration used for the managed Envoy Proxy fleet instead of the default Bootstrap configuration<br />set by Envoy Gateway.<br />Some fields within the Bootstrap that are required to communicate with the xDS Server (Envoy Gateway) and receive xDS resources<br />from it are not configurable and will result in the `EnvoyProxy` resource being rejected.<br />Backward compatibility across minor versions is not guaranteed.<br />We strongly recommend using `egctl x translate` to generate a `EnvoyProxy` resource with the `Bootstrap` field set to the default<br />Bootstrap configuration used. You can edit this configuration, and rerun `egctl x translate` to ensure there are no validation errors. |
 | `concurrency` | _integer_ |  false  | Concurrency defines the number of worker threads to run. If unset, it defaults to<br />the number of cpuset threads on the platform. |
+| `routingType` | _[RoutingType](#routingtype)_ |  false  | RoutingType can be set to "Service" to use the Service Cluster IP for routing to the backend,<br />or it can be set to "Endpoint" to use Endpoint routing. The default is "Endpoint". |
 | `extraArgs` | _string array_ |  false  | ExtraArgs defines additional command line options that are provided to Envoy.<br />More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options<br />Note: some command line options are used internally(e.g. --log-level) so they cannot be provided here. |
 | `mergeGateways` | _boolean_ |  false  | MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.<br />Setting this field to true would merge all Gateway Listeners under the parent Gateway Class.<br />This means that the port, protocol and hostname tuple must be unique for every listener.<br />If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition. |
 | `shutdown` | _[ShutdownConfig](#shutdownconfig)_ |  false  | Shutdown defines configuration for graceful envoy shutdown process. |
@@ -3215,6 +3217,21 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `triggers` | _[TriggerEnum](#triggerenum) array_ |  false  | Triggers specifies the retry trigger condition(Http/Grpc). |
 | `httpStatusCodes` | _[HTTPStatus](#httpstatus) array_ |  false  | HttpStatusCodes specifies the http status codes to be retried.<br />The retriable-status-codes trigger must also be configured for these status codes to trigger a retry. |
+
+
+#### RoutingType
+
+_Underlying type:_ _string_
+
+RoutingType defines the type of routing of this Envoy proxy.
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Value | Description |
+| ----- | ----------- |
+| `Service` | ServiceRoutingType is the RoutingType for Service Cluster IP routing.<br /> | 
+| `Endpoint` | EndpointRoutingType is the RoutingType for Endpoint routing.<br /> | 
 
 
 #### SecurityPolicy

@@ -11,7 +11,7 @@ import (
 	"net/netip"
 	"strings"
 
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -43,9 +43,9 @@ func (t *Translator) validateBackendRef(backendRefContext BackendRefContext, par
 	if !t.validateBackendPort(backendRef, parentRef, route) {
 		return false
 	}
-	protocol := v1.ProtocolTCP
+	protocol := corev1.ProtocolTCP
 	if routeKind == KindUDPRoute {
-		protocol = v1.ProtocolUDP
+		protocol = corev1.ProtocolUDP
 	}
 	backendRefKind := KindDerefOr(backendRef.Kind, KindService)
 	switch backendRefKind {
@@ -197,7 +197,7 @@ func (t *Translator) validateBackendPort(backendRef *gwapiv1a2.BackendRef, paren
 }
 
 func validateBackendService(backendRef gwapiv1a2.BackendObjectReference, resources *Resources,
-	serviceNamespace string, protocol v1.Protocol,
+	serviceNamespace string, protocol corev1.Protocol,
 ) error {
 	service := resources.GetService(serviceNamespace, string(backendRef.Name))
 	if service == nil {
@@ -209,7 +209,7 @@ func validateBackendService(backendRef gwapiv1a2.BackendObjectReference, resourc
 	for _, port := range service.Spec.Ports {
 		portProtocol := port.Protocol
 		if port.Protocol == "" { // Default protocol is TCP
-			portProtocol = v1.ProtocolTCP
+			portProtocol = corev1.ProtocolTCP
 		}
 		if port.Port == int32(*backendRef.Port) && portProtocol == protocol {
 			portFound = true
@@ -224,7 +224,7 @@ func validateBackendService(backendRef gwapiv1a2.BackendObjectReference, resourc
 }
 
 func (t *Translator) validateBackendServiceImport(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, resources *Resources,
-	serviceImportNamespace string, route RouteContext, protocol v1.Protocol,
+	serviceImportNamespace string, route RouteContext, protocol corev1.Protocol,
 ) bool {
 	serviceImport := resources.GetServiceImport(serviceImportNamespace, string(backendRef.Name))
 	if serviceImport == nil {
@@ -244,7 +244,7 @@ func (t *Translator) validateBackendServiceImport(backendRef *gwapiv1a2.BackendR
 	for _, port := range serviceImport.Spec.Ports {
 		portProtocol := port.Protocol
 		if port.Protocol == "" { // Default protocol is TCP
-			portProtocol = v1.ProtocolTCP
+			portProtocol = corev1.ProtocolTCP
 		}
 		if port.Port == int32(*backendRef.Port) && portProtocol == protocol {
 			portFound = true
@@ -415,7 +415,7 @@ func (t *Translator) validateAllowedNamespaces(listener *ListenerContext) {
 	}
 }
 
-func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerContext, resources *Resources) []*v1.Secret {
+func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerContext, resources *Resources) []*corev1.Secret {
 	if len(listener.TLS.CertificateRefs) == 0 {
 		status.SetGatewayListenerStatusCondition(listener.gateway,
 			listener.listenerStatusIdx,
@@ -427,7 +427,7 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerCon
 		return nil
 	}
 
-	secrets := make([]*v1.Secret, 0)
+	secrets := make([]*corev1.Secret, 0)
 	for _, certificateRef := range listener.TLS.CertificateRefs {
 		// TODO zhaohuabing: reuse validateSecretRef
 		if certificateRef.Group != nil && string(*certificateRef.Group) != "" {
@@ -495,24 +495,24 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerCon
 			break
 		}
 
-		if secret.Type != v1.SecretTypeTLS {
+		if secret.Type != corev1.SecretTypeTLS {
 			status.SetGatewayListenerStatusCondition(listener.gateway,
 				listener.listenerStatusIdx,
 				gwapiv1.ListenerConditionResolvedRefs,
 				metav1.ConditionFalse,
 				gwapiv1.ListenerReasonInvalidCertificateRef,
-				fmt.Sprintf("Secret %s/%s must be of type %s.", listener.gateway.Namespace, certificateRef.Name, v1.SecretTypeTLS),
+				fmt.Sprintf("Secret %s/%s must be of type %s.", listener.gateway.Namespace, certificateRef.Name, corev1.SecretTypeTLS),
 			)
 			break
 		}
 
-		if len(secret.Data[v1.TLSCertKey]) == 0 || len(secret.Data[v1.TLSPrivateKeyKey]) == 0 {
+		if len(secret.Data[corev1.TLSCertKey]) == 0 || len(secret.Data[corev1.TLSPrivateKeyKey]) == 0 {
 			status.SetGatewayListenerStatusCondition(listener.gateway,
 				listener.listenerStatusIdx,
 				gwapiv1.ListenerConditionResolvedRefs,
 				metav1.ConditionFalse,
 				gwapiv1.ListenerReasonInvalidCertificateRef,
-				fmt.Sprintf("Secret %s/%s must contain %s and %s.", listener.gateway.Namespace, certificateRef.Name, v1.TLSCertKey, v1.TLSPrivateKeyKey),
+				fmt.Sprintf("Secret %s/%s must contain %s and %s.", listener.gateway.Namespace, certificateRef.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey),
 			)
 			break
 		}
@@ -900,7 +900,7 @@ func (t *Translator) validateSecretRef(
 	from crossNamespaceFrom,
 	secretObjRef gwapiv1b1.SecretObjectReference,
 	resources *Resources,
-) (*v1.Secret, error) {
+) (*corev1.Secret, error) {
 	if err := t.validateSecretObjectRef(allowCrossNamespace, from, secretObjRef, resources); err != nil {
 		return nil, err
 	}
@@ -924,7 +924,7 @@ func (t *Translator) validateConfigMapRef(
 	from crossNamespaceFrom,
 	secretObjRef gwapiv1b1.SecretObjectReference,
 	resources *Resources,
-) (*v1.ConfigMap, error) {
+) (*corev1.ConfigMap, error) {
 	if err := t.validateSecretObjectRef(allowCrossNamespace, from, secretObjRef, resources); err != nil {
 		return nil, err
 	}
@@ -1040,10 +1040,10 @@ func (t *Translator) validateExtServiceBackendReference(
 		for _, port := range service.Spec.Ports {
 			portProtocol := port.Protocol
 			if port.Protocol == "" { // Default protocol is TCP
-				portProtocol = v1.ProtocolTCP
+				portProtocol = corev1.ProtocolTCP
 			}
 			// currently only HTTP and GRPC are supported, both of which are TCP
-			if port.Port == int32(*backendRef.Port) && portProtocol == v1.ProtocolTCP {
+			if port.Port == int32(*backendRef.Port) && portProtocol == corev1.ProtocolTCP {
 				portFound = true
 				break
 			}

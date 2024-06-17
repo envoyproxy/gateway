@@ -101,10 +101,12 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 			switch listener.Protocol {
 			case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
 				irListener := &ir.HTTPListener{
-					Name:    irListenerName(listener),
-					Address: "0.0.0.0",
-					Port:    uint32(containerPort),
-					TLS:     irTLSConfigs(listener.tlsSecrets...),
+					CoreListenerDetails: ir.CoreListenerDetails{
+						Name:    irListenerName(listener),
+						Address: "0.0.0.0",
+						Port:    uint32(containerPort),
+					},
+					TLS: irTLSConfigs(listener.tlsSecrets...),
 					Path: ir.PathSettings{
 						MergeSlashes:         true,
 						EscapedSlashesAction: ir.UnescapeAndRedirect,
@@ -121,9 +123,11 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 				xdsIR[irKey].HTTP = append(xdsIR[irKey].HTTP, irListener)
 			case gwapiv1.TCPProtocolType, gwapiv1.TLSProtocolType:
 				irListener := &ir.TCPListener{
-					Name:    irListenerName(listener),
-					Address: "0.0.0.0",
-					Port:    uint32(containerPort),
+					CoreListenerDetails: ir.CoreListenerDetails{
+						Name:    irListenerName(listener),
+						Address: "0.0.0.0",
+						Port:    uint32(containerPort),
+					},
 
 					// Gateway is processed firstly, then ClientTrafficPolicy, then xRoute.
 					// TLS field should be added to TCPListener as ClientTrafficPolicy will affect
@@ -134,9 +138,11 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 				xdsIR[irKey].TCP = append(xdsIR[irKey].TCP, irListener)
 			case gwapiv1.UDPProtocolType:
 				irListener := &ir.UDPListener{
-					Name:    irListenerName(listener),
-					Address: "0.0.0.0",
-					Port:    uint32(containerPort),
+					CoreListenerDetails: ir.CoreListenerDetails{
+						Name:    irListenerName(listener),
+						Address: "0.0.0.0",
+						Port:    uint32(containerPort),
+					},
 				}
 				xdsIR[irKey].UDP = append(xdsIR[irKey].UDP, irListener)
 			}

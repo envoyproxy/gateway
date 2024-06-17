@@ -11,7 +11,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	gwapischeme "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/scheme"
-	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
+	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -31,7 +31,7 @@ func init() {
 	// Add Gateway API types.
 	utilruntime.Must(gwapischeme.AddToScheme(scheme))
 	// Add mcs api types.
-	utilruntime.Must(mcsapi.AddToScheme(scheme))
+	utilruntime.Must(mcsapiv1a1.AddToScheme(scheme))
 	// Add CRD kind to known types, experimental conformance test requires this.
 	utilruntime.Must(apiextensionsv1.AddToScheme(scheme))
 }

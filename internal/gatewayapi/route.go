@@ -18,9 +18,9 @@ import (
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
+	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/regex"
@@ -192,7 +192,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		for _, backendRef := range rule.BackendRefs {
 			backendRef := backendRef
 			ds := t.processDestination(backendRef, parentRef, httpRoute, resources)
-			if !t.EndpointRoutingDisabled && ds != nil && len(ds.Endpoints) > 0 && ds.AddressType != nil {
+			if !t.IsEnvoyServiceRouting(resources) && ds != nil && len(ds.Endpoints) > 0 && ds.AddressType != nil {
 				dstAddrTypeMap[*ds.AddressType]++
 			}
 			if ds == nil {
@@ -216,7 +216,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		}
 
 		// TODO: support mixed endpointslice address type between backendRefs
-		if !t.EndpointRoutingDisabled && len(dstAddrTypeMap) > 1 {
+		if !t.IsEnvoyServiceRouting(resources) && len(dstAddrTypeMap) > 1 {
 			routeStatus := GetRouteStatus(httpRoute)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
@@ -1178,7 +1178,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 	switch KindDerefOr(backendRef.Kind, KindService) {
 	case KindServiceImport:
 		serviceImport := resources.GetServiceImport(backendNamespace, string(backendRef.Name))
-		var servicePort mcsapi.ServicePort
+		var servicePort mcsapiv1a1.ServicePort
 		for _, port := range serviceImport.Spec.Ports {
 			if port.Port == int32(*backendRef.Port) {
 				servicePort = port
@@ -1186,7 +1186,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 			}
 		}
 
-		if !t.EndpointRoutingDisabled {
+		if !t.IsEnvoyServiceRouting(resources) {
 			endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, KindService))
 			endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
 		} else {
@@ -1220,7 +1220,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 			},
 			resources)
 		ds.Filters = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
-	case v1alpha1.KindBackend:
+	case egv1a1.KindBackend:
 		ds = t.processBackendDestinationSetting(backendRef.BackendObjectReference, backendNamespace, resources)
 		ds.TLS = t.applyBackendTLSSetting(
 			backendRef.BackendObjectReference,
@@ -1237,7 +1237,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 		ds.Filters = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
 	}
 
-	if err := validateDestinationSettings(ds, t.EndpointRoutingDisabled, backendRef.Kind); err != nil {
+	if err := validateDestinationSettings(ds, t.IsEnvoyServiceRouting(resources), backendRef.Kind); err != nil {
 		routeStatus := GetRouteStatus(route)
 		status.SetRouteStatusCondition(routeStatus,
 			parentRef.routeParentStatusIdx,
@@ -1255,7 +1255,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 func validateDestinationSettings(destinationSettings *ir.DestinationSetting, endpointRoutingDisabled bool, kind *gwapiv1.Kind) error {
 	// TODO: support mixed endpointslice address type for the same backendRef
 	switch KindDerefOr(kind, KindService) {
-	case v1alpha1.KindBackend:
+	case egv1a1.KindBackend:
 		if destinationSettings.AddressType != nil && *destinationSettings.AddressType == ir.MIXED {
 			return fmt.Errorf("mixed FQDN and IP or Unix address type for the same backendRef is not supported")
 		}
@@ -1292,7 +1292,7 @@ func (t *Translator) processServiceDestinationSetting(backendRef gwapiv1.Backend
 	}
 
 	// Route to endpoints by default
-	if !t.EndpointRoutingDisabled {
+	if !t.IsEnvoyServiceRouting(resources) {
 		endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, KindService))
 		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
 	} else {
@@ -1601,7 +1601,7 @@ func (t *Translator) processBackendDestinationSetting(backendRef gwapiv1.Backend
 	}
 
 	for _, ap := range backend.Spec.AppProtocols {
-		if ap == v1alpha1.AppProtocolTypeH2C {
+		if ap == egv1a1.AppProtocolTypeH2C {
 			dstProtocol = ir.HTTP2
 			break
 		}

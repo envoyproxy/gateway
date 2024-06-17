@@ -97,7 +97,6 @@ type ClientTrafficPolicySpec struct {
 	// HealthCheck provides configuration for determining whether the HTTP/HTTPS listener is healthy.
 	//
 	// +optional
-	// +notImplementedHide
 	HealthCheck *HealthCheckSettings `json:"healthCheck,omitempty"`
 }
 

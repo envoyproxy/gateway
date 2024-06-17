@@ -19,7 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
-	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
@@ -84,7 +84,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv
 			// gatewayRouteMap and ancestor list, which will be used to check
 			// policy overrides and populate its ancestor status.
 			parentRefs := GetParentReferences(route)
-			ancestorRefs := make([]gwv1a2.ParentReference, 0, len(parentRefs))
+			ancestorRefs := make([]gwapiv1a2.ParentReference, 0, len(parentRefs))
 			for _, p := range parentRefs {
 				if p.Kind == nil || *p.Kind == KindGateway {
 					namespace := route.GetNamespace()
@@ -148,7 +148,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv
 
 			// Find its ancestor reference by resolved gateway, even with resolve error
 			gatewayNN := utils.NamespacedName(gateway)
-			ancestorRefs := []gwv1a2.ParentReference{
+			ancestorRefs := []gwapiv1a2.ParentReference{
 				// Don't need a section name since the policy is targeting to a gateway
 				getAncestorRefForPolicy(gatewayNN, nil),
 			}
@@ -222,7 +222,7 @@ func resolveBTPolicyGatewayTargetRef(policy *egv1a1.BackendTrafficPolicy, gatewa
 			policy.Namespace, targetNs)
 
 		return gateway.GatewayContext, &status.PolicyResolveError{
-			Reason:  gwv1a2.PolicyReasonInvalid,
+			Reason:  gwapiv1a2.PolicyReasonInvalid,
 			Message: message,
 		}
 	}
@@ -232,7 +232,7 @@ func resolveBTPolicyGatewayTargetRef(policy *egv1a1.BackendTrafficPolicy, gatewa
 		message := "Unable to target Gateway, another BackendTrafficPolicy has already attached to it"
 
 		return gateway.GatewayContext, &status.PolicyResolveError{
-			Reason:  gwv1a2.PolicyReasonConflicted,
+			Reason:  gwapiv1a2.PolicyReasonConflicted,
 			Message: message,
 		}
 	}
@@ -266,7 +266,7 @@ func resolveBTPolicyRouteTargetRef(policy *egv1a1.BackendTrafficPolicy, routes m
 			policy.Namespace, targetNs)
 
 		return route.RouteContext, &status.PolicyResolveError{
-			Reason:  gwv1a2.PolicyReasonInvalid,
+			Reason:  gwapiv1a2.PolicyReasonInvalid,
 			Message: message,
 		}
 	}
@@ -277,7 +277,7 @@ func resolveBTPolicyRouteTargetRef(policy *egv1a1.BackendTrafficPolicy, routes m
 			string(policy.Spec.TargetRef.Kind))
 
 		return route.RouteContext, &status.PolicyResolveError{
-			Reason:  gwv1a2.PolicyReasonConflicted,
+			Reason:  gwapiv1a2.PolicyReasonConflicted,
 			Message: message,
 		}
 	}

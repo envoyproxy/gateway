@@ -11,7 +11,7 @@ import (
 
 	ktypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extension "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
@@ -37,7 +37,7 @@ func New(cfg *Config) *Runner {
 }
 
 func (r *Runner) Name() string {
-	return string(v1alpha1.LogComponentXdsTranslatorRunner)
+	return string(egv1a1.LogComponentXdsTranslatorRunner)
 }
 
 // Start starts the xds-translator runner
@@ -50,7 +50,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources
-	message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentXdsTranslatorRunner), Message: "xds-ir"}, r.XdsIR.Subscribe(ctx),
+	message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentXdsTranslatorRunner), Message: "xds-ir"}, r.XdsIR.Subscribe(ctx),
 		func(update message.Update[string, *ir.Xds], errChan chan error) {
 			r.Logger.Info("received an update")
 			key := update.Key

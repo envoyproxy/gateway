@@ -21,7 +21,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 )
 
@@ -77,7 +77,7 @@ func start(address string, handler http.Handler) error {
 
 func newOptions(svr *config.Server) (registerOptions, error) {
 	newOpts := registerOptions{}
-	newOpts.address = net.JoinHostPort(v1alpha1.GatewayMetricsHost, fmt.Sprint(v1alpha1.GatewayMetricsPort))
+	newOpts.address = net.JoinHostPort(egv1a1.GatewayMetricsHost, fmt.Sprint(egv1a1.GatewayMetricsPort))
 
 	if svr.EnvoyGateway.DisablePrometheus() {
 		newOpts.pullOptions.disable = true
@@ -171,7 +171,7 @@ func registerOTELPromExporter(otelOpts *[]metric.Option, opts registerOptions) e
 // registerOTELHTTPexporter registers OTEL HTTP metrics exporter (PUSH mode).
 func registerOTELHTTPexporter(otelOpts *[]metric.Option, opts registerOptions) error {
 	for _, sink := range opts.pushOptions.sinks {
-		if sink.protocol == v1alpha1.HTTPProtocol {
+		if sink.protocol == egv1a1.HTTPProtocol {
 			address := net.JoinHostPort(sink.host, fmt.Sprint(sink.port))
 			httpexporter, err := otlpmetrichttp.New(
 				context.Background(),
@@ -204,7 +204,7 @@ func registerOTELHTTPexporter(otelOpts *[]metric.Option, opts registerOptions) e
 // registerOTELgRPCexporter registers OTEL gRPC metrics exporter (PUSH mode).
 func registerOTELgRPCexporter(otelOpts *[]metric.Option, opts registerOptions) error {
 	for _, sink := range opts.pushOptions.sinks {
-		if sink.protocol == v1alpha1.GRPCProtocol {
+		if sink.protocol == egv1a1.GRPCProtocol {
 			address := net.JoinHostPort(sink.host, fmt.Sprint(sink.port))
 			httpexporter, err := otlpmetricgrpc.New(
 				context.Background(),
