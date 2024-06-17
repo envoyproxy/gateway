@@ -158,6 +158,10 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(obj client.Object) boo
 		return true
 	}
 
+	if r.isExtensionPolicyReferencingSecret(&nsName) {
+		return true
+	}
+
 	return false
 }
 
@@ -186,6 +190,7 @@ func (r *gatewayAPIReconciler) isEnvoyProxyReferencingSecret(nsName *types.Names
 			}
 		}
 	}
+
 	return false
 }
 
@@ -622,4 +627,16 @@ func (r *gatewayAPIReconciler) isEnvoyProxyReferencingBackend(nn *types.Namespac
 	}
 
 	return len(proxyList.Items) > 0
+}
+
+func (r *gatewayAPIReconciler) isExtensionPolicyReferencingSecret(nsName *types.NamespacedName) bool {
+	spList := &egv1a1.EnvoyExtensionPolicyList{}
+	if err := r.client.List(context.Background(), spList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(secretExtensionPolicyIndex, nsName.String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated ExtensionPolicies")
+		return false
+	}
+
+	return len(spList.Items) > 0
 }

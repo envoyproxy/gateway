@@ -2226,17 +2226,24 @@ type Wasm struct {
 	// during the initialization or the execution of the Wasm extension.
 	FailOpen bool `json:"failOpen"`
 
-	// HTTPWasmCode is the HTTP Wasm code source.
-	HTTPWasmCode *HTTPWasmCode `json:"httpWasmCode,omitempty"`
+	// Code is the HTTP Wasm code source.
+	Code *HTTPWasmCode `json:"httpWasmCode,omitempty"`
 }
 
 // HTTPWasmCode holds the information associated with the HTTP Wasm code source.
+// +k8s:deepcopy-gen=true
 type HTTPWasmCode struct {
-	// URL is the URL of the Wasm code.
-	URL string `json:"url"`
+	// EGServingURL is the URL of the Wasm code served by the local EG HTTP server.
+	EGServingURL string `json:"egServingURL"`
 
-	// SHA256 checksum that will be used to verify the wasm code.
+	// SHA256 checksum that will be used by the Envoy to verify the Wasm code.
+	// It's different from the SHA256 of the Wasm code itself if the original
+	// downloading URL is an OCI image.
 	SHA256 string `json:"sha256"`
+
+	// OriginalDownloadingURL is the original downloading URL of the Wasm code.
+	// Note: This field is just used for testing. It's not used to generate the Envoy configuration.
+	OriginalDownloadingURL string `json:"originalDownloadingURL"`
 }
 
 // DestinationFilters contains HTTP filters that will be used with the DestinationSetting.

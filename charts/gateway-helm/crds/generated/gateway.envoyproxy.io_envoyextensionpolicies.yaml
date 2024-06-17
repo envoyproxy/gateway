@@ -272,6 +272,7 @@ spec:
                           properties:
                             url:
                               description: URL is the URL containing the wasm code.
+                              pattern: ^((https?:)(\/\/\/?)([\w]*(?::[\w]*)?@)?([\d\w\.-]+)(?::(\d+))?)?([\/\\\w\.()-]*)?(?:([?][^#]*)?(#.*)?)*
                               type: string
                           required:
                           - url
@@ -283,9 +284,10 @@ spec:
 
                             Note that the image must be accessible from the Envoy Gateway.
                           properties:
-                            pullSecret:
-                              description: PullSecretRef is a reference to the secret
-                                containing the credentials to pull the image.
+                            pullSecretRef:
+                              description: |-
+                                PullSecretRef is a reference to the secret containing the credentials to pull the image.
+                                Only support Kubernetes Secret resource from the same namespace.
                               properties:
                                 group:
                                   default: ""
@@ -328,18 +330,37 @@ spec:
                               required:
                               - name
                               type: object
+                              x-kubernetes-validations:
+                              - message: only support Secret kind.
+                                rule: self.kind == 'Secret'
                             url:
                               description: URL is the URL of the OCI image.
                               type: string
                           required:
-                          - pullSecret
                           - url
                           type: object
+                        pullPolicy:
+                          description: |-
+                            PullPolicy is the policy to use when pulling the Wasm module by either the HTTP or Image source.
+                            This field is only applicable when the SHA256 field is not set.
+
+
+                            If not specified, the default policy is IfNotPresent except for OCI images whose tag is latest.
+
+
+                            Note: EG does not update the Wasm module every time an Envoy proxy requests
+                            the Wasm module even if the pull policy is set to Always.
+                            It only updates the Wasm module when the EnvoyExtension resource version changes.
+                          enum:
+                          - IfNotPresent
+                          - Always
+                          type: string
                         sha256:
                           description: |-
                             SHA256 checksum that will be used to verify the wasm code.
 
 
+                            If not specified, EG will not verify the downloaded wasm code.
                             kubebuilder:validation:Pattern=`^[a-f0-9]{64}$`
                           type: string
                         type:
@@ -356,9 +377,13 @@ spec:
                             Valid WasmCodeSourceType values are "HTTP" or "Image".
                           type: string
                       required:
-                      - sha256
                       - type
                       type: object
+                      x-kubernetes-validations:
+                      - message: If type is HTTP, http field needs to be set.
+                        rule: 'self.type == ''HTTP'' ? has(self.http) : !has(self.http)'
+                      - message: If type is Image, image field needs to be set.
+                        rule: 'self.type == ''Image'' ? has(self.image) : !has(self.image)'
                     config:
                       description: |-
                         Config is the configuration for the Wasm extension.

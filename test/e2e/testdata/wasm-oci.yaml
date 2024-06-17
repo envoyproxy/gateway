@@ -1,0 +1,55 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-oci-wasm-source
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  hostnames: ["www.example.com"]
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /wasm-oci
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-without-wasm
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  hostnames: ["www.example.com"]
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /no-wasm
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: oci-wasm-source-test
+  namespace: gateway-conformance-infra
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-with-oci-wasm-source
+  wasm:
+  - name: wasm-filter
+    rootID: my_root_id
+    code:
+      type: Image
+      image:
+        url: "docker.io/zhaohuabing/testwasm:0.1.0"
+      sha256: cdb37a856ae7dae208cdcb19378022cc81dbcae30859f58b89ae259a9575a49d

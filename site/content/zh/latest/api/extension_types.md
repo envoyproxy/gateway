@@ -1973,6 +1973,21 @@ _Appears in:_
 | `port` | _integer_ |  true  | Port defines the port of the backend endpoint. |
 
 
+#### ImagePullPolicy
+
+_Underlying type:_ _string_
+
+ImagePullPolicy defines the policy to use when pulling an OIC image.
+
+_Appears in:_
+- [WasmCodeSource](#wasmcodesource)
+
+| Value | Description |
+| ----- | ----------- |
+| `IfNotPresent` | ImagePullPolicyIfNotPresent will only pull the image if it does not already exist in the EG cache.<br /> | 
+| `Always` | ImagePullPolicyAlways will pull the image when the EnvoyExtension resource version changes.<br />Note: EG does not update the Wasm module every time an Envoy proxy requests the Wasm module.<br /> | 
+
+
 #### ImageWasmCodeSource
 
 
@@ -1985,7 +2000,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `url` | _string_ |  true  | URL is the URL of the OCI image. |
-| `pullSecret` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  true  | PullSecretRef is a reference to the secret containing the credentials to pull the image. |
+| `pullSecretRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  false  | PullSecretRef is a reference to the secret containing the credentials to pull the image.<br />Only support Kubernetes Secret resource from the same namespace. |
 
 
 #### InfrastructureProviderType
@@ -3640,7 +3655,8 @@ _Appears in:_
 | `type` | _[WasmCodeSourceType](#wasmcodesourcetype)_ |  true  | Type is the type of the source of the wasm code.<br />Valid WasmCodeSourceType values are "HTTP" or "Image". |
 | `http` | _[HTTPWasmCodeSource](#httpwasmcodesource)_ |  false  | HTTP is the HTTP URL containing the wasm code.<br /><br />Note that the HTTP server must be accessible from the Envoy proxy. |
 | `image` | _[ImageWasmCodeSource](#imagewasmcodesource)_ |  false  | Image is the OCI image containing the wasm code.<br /><br />Note that the image must be accessible from the Envoy Gateway. |
-| `sha256` | _string_ |  true  | SHA256 checksum that will be used to verify the wasm code.<br /><br />kubebuilder:validation:Pattern=`^[a-f0-9]{64}$` |
+| `sha256` | _string_ |  false  | SHA256 checksum that will be used to verify the wasm code.<br /><br />If not specified, EG will not verify the downloaded wasm code.<br />kubebuilder:validation:Pattern=`^[a-f0-9]{64}$` |
+| `pullPolicy` | _[ImagePullPolicy](#imagepullpolicy)_ |  false  | PullPolicy is the policy to use when pulling the Wasm module by either the HTTP or Image source.<br />This field is only applicable when the SHA256 field is not set.<br /><br />If not specified, the default policy is IfNotPresent except for OCI images whose tag is latest.<br /><br />Note: EG does not update the Wasm module every time an Envoy proxy requests<br />the Wasm module even if the pull policy is set to Always.<br />It only updates the Wasm module when the EnvoyExtension resource version changes. |
 
 
 #### WasmCodeSourceType

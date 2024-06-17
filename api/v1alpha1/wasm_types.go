@@ -59,6 +59,10 @@ type Wasm struct {
 }
 
 // WasmCodeSource defines the source of the wasm code.
+// +union
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'HTTP' ? has(self.http) : !has(self.http)",message="If type is HTTP, http field needs to be set."
+// +kubebuilder:validation:XValidation:rule="self.type == 'Image' ? has(self.image) : !has(self.image)",message="If type is Image, image field needs to be set."
 type WasmCodeSource struct {
 	// Type is the type of the source of the wasm code.
 	// Valid WasmCodeSourceType values are "HTTP" or "Image".
@@ -81,8 +85,21 @@ type WasmCodeSource struct {
 
 	// SHA256 checksum that will be used to verify the wasm code.
 	//
+	// If not specified, EG will not verify the downloaded wasm code.
 	// kubebuilder:validation:Pattern=`^[a-f0-9]{64}$`
-	SHA256 string `json:"sha256"`
+	// +optional
+	SHA256 *string `json:"sha256"`
+
+	// PullPolicy is the policy to use when pulling the Wasm module by either the HTTP or Image source.
+	// This field is only applicable when the SHA256 field is not set.
+	//
+	// If not specified, the default policy is IfNotPresent except for OCI images whose tag is latest.
+	//
+	// Note: EG does not update the Wasm module every time an Envoy proxy requests
+	// the Wasm module even if the pull policy is set to Always.
+	// It only updates the Wasm module when the EnvoyExtension resource version changes.
+	// +optional
+	PullPolicy *ImagePullPolicy `json:"pullPolicy,omitempty"`
 }
 
 // WasmCodeSourceType specifies the types of sources for the wasm code.
@@ -100,6 +117,7 @@ const (
 // HTTPWasmCodeSource defines the HTTP URL containing the wasm code.
 type HTTPWasmCodeSource struct {
 	// URL is the URL containing the wasm code.
+	// +kubebuilder:validation:Pattern=`^((https?:)(\/\/\/?)([\w]*(?::[\w]*)?@)?([\d\w\.-]+)(?::(\d+))?)?([\/\\\w\.()-]*)?(?:([?][^#]*)?(#.*)?)*`
 	URL string `json:"url"`
 }
 
@@ -109,22 +127,21 @@ type ImageWasmCodeSource struct {
 	URL string `json:"url"`
 
 	// PullSecretRef is a reference to the secret containing the credentials to pull the image.
-	PullSecretRef gwapiv1b1.SecretObjectReference `json:"pullSecret"`
-
-	// PullPolicy is the policy to use when pulling the image.
-	// If not specified, the default policy is IfNotPresent for images whose tag is not latest,
-	// and Always for images whose tag is latest.
+	// Only support Kubernetes Secret resource from the same namespace.
+	// +kubebuilder:validation:XValidation:message="only support Secret kind.",rule="self.kind == 'Secret'"
 	// +optional
-	// PullPolicy *PullPolicy `json:"pullPolicy,omitempty"`
+	PullSecretRef *gwapiv1b1.SecretObjectReference `json:"pullSecretRef,omitempty"`
 }
 
-// PullPolicy defines the policy to use when pulling an OIC image.
-/* type PullPolicy string
+// ImagePullPolicy defines the policy to use when pulling an OIC image.
+// +kubebuilder:validation:Enum=IfNotPresent;Always
+type ImagePullPolicy string
 
 const (
-	// PullPolicyIfNotPresent will only pull the image if it does not already exist.
-	PullPolicyIfNotPresent PullPolicy = "IfNotPresent"
+	// ImagePullPolicyIfNotPresent will only pull the image if it does not already exist in the EG cache.
+	ImagePullPolicyIfNotPresent ImagePullPolicy = "IfNotPresent"
 
-	// PullPolicyAlways will always pull the image.
-	PullPolicyAlways PullPolicy = "Always"
-)*/
+	// ImagePullPolicyAlways will pull the image when the EnvoyExtension resource version changes.
+	// Note: EG does not update the Wasm module every time an Envoy proxy requests the Wasm module.
+	ImagePullPolicyAlways ImagePullPolicy = "Always"
+)
