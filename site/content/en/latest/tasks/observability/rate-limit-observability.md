@@ -7,18 +7,9 @@ This guide show you how to config RateLimit observability, includes traces.
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the HTTPRoute example manifest.
-Before proceeding, you should be able to query the example backend using HTTP. 
+{{% readfile "../../../template/o11y_prerequisites.md" %}}
 
 Follow the steps from the [Global Rate Limit](../traffic/global-rate-limit) to install RateLimit.
-
-Envoy Gateway provides an add-ons Helm Chart, which includes all the needing observability components. 
-
-Install the add-ons Helm Chart:
-
-```shell
-helm install eg-addons oci://docker.io/envoyproxy/gateway-addons-helm --version v0.0.0-latest --set opentelemetry-collector.enabled=true -n monitoring --create-namespace
-```
 
 ## Traces
 

@@ -7,19 +7,10 @@ This task shows you how to visualise the metrics exposed to Prometheus using Gra
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+{{% readfile "../../../template/o11y_prerequisites.md" %}}
 
 Follow the steps from the [Gateway Observability](../gateway-observability) and [Proxy Observability](../proxy-observability#metrics) to enable Prometheus metrics
 for both Envoy Gateway (Control Plane) and Envoy Proxy (Data Plane).
-
-Envoy Gateway provides an add-ons Helm Chart, which includes all the needing observability components.
-
-Install the add-ons Helm Chart:
-
-```shell
-helm install eg-addons oci://docker.io/envoyproxy/gateway-addons-helm --version v0.0.0-latest -n monitoring --create-namespace
-```
 
 Expose endpoints:
 
