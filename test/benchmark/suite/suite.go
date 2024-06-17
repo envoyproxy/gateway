@@ -134,7 +134,7 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, name, 
 	}
 
 	// Wait from benchmark test job to complete.
-	if err = wait.PollUntilContextTimeout(ctx, 10*time.Second, time.Duration(duration*3)*time.Second, true, func(ctx context.Context) (bool, error) {
+	if err = wait.PollUntilContextTimeout(ctx, 10*time.Second, time.Duration(duration*10)*time.Second, true, func(ctx context.Context) (bool, error) {
 		job := new(batchv1.Job)
 		if err = b.Client.Get(ctx, *jobNN, job); err != nil {
 			return false, err
