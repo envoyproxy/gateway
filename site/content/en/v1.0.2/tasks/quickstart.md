@@ -20,7 +20,7 @@ so the `Gateway` resource has an Address associated with it. We recommend using 
 Install the Gateway API CRDs and Envoy Gateway:
 
 ```shell
-helm install eg oci://docker.io/envoyproxy/gateway-helm --version v1.0.1 -n envoy-gateway-system --create-namespace
+helm install eg oci://docker.io/envoyproxy/gateway-helm --version v1.0.2 -n envoy-gateway-system --create-namespace
 ```
 
 Wait for Envoy Gateway to become available:
@@ -32,7 +32,7 @@ kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for
 Install the GatewayClass, Gateway, HTTPRoute and example app:
 
 ```shell
-kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/v1.0.1/quickstart.yaml -n default
+kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/v1.0.2/quickstart.yaml -n default
 ```
 
 **Note**: [`quickstart.yaml`] defines that Envoy Gateway will listen for
@@ -43,7 +43,7 @@ unprivileged port, so that Envoy Gateway doesn't need additional privileges.
 It's important to be aware of this mapping, since you may need to take it into
 consideration when debugging.
 
-[`quickstart.yaml`]: https://github.com/envoyproxy/gateway/releases/download/v1.0.1/quickstart.yaml
+[`quickstart.yaml`]: https://github.com/envoyproxy/gateway/releases/download/v1.0.2/quickstart.yaml
 
 ## Testing the Configuration
 
@@ -107,7 +107,7 @@ Use the steps in this section to uninstall everything from the quickstart.
 Delete the GatewayClass, Gateway, HTTPRoute and Example App:
 
 ```shell
-kubectl delete -f https://github.com/envoyproxy/gateway/releases/download/v1.0.1/quickstart.yaml --ignore-not-found=true
+kubectl delete -f https://github.com/envoyproxy/gateway/releases/download/v1.0.2/quickstart.yaml --ignore-not-found=true
 ```
 
 Delete the Gateway API CRDs and Envoy Gateway:

@@ -10057,6 +10057,18 @@ spec:
                         x-kubernetes-validations:
                         - message: maxReplicas cannot be less than minReplicas
                           rule: '!has(self.minReplicas) || self.maxReplicas >= self.minReplicas'
+                      envoyPDB:
+                        description: EnvoyPDB allows to control the pod disruption
+                          budget of an Envoy Proxy.
+                        properties:
+                          minAvailable:
+                            description: |-
+                              MinAvailable specifies the minimum number of pods that must be available at all times during voluntary disruptions,
+                              such as node drains or updates. This setting ensures that your envoy proxy maintains a certain level of availability
+                              and resilience during maintenance operations.
+                            format: int32
+                            type: integer
+                        type: object
                       envoyService:
                         description: |-
                           EnvoyService defines the desired state of the Envoy service resource.
@@ -10190,6 +10202,11 @@ spec:
                 required:
                 - type
                 type: object
+              routingType:
+                description: |-
+                  RoutingType can be set to "Service" to use the Service Cluster IP for routing to the backend,
+                  or it can be set to "Endpoint" to use Endpoint routing. The default is "Endpoint".
+                type: string
               shutdown:
                 description: Shutdown defines configuration for graceful envoy shutdown
                   process.

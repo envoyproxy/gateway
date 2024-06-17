@@ -12,8 +12,8 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/types"
-	gwv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -38,11 +38,11 @@ var LocalRateLimitSpecificUserTest = suite.ConformanceTest{
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
-			ancestorRef := gwv1a2.ParentReference{
-				Group:     gatewayapi.GroupPtr(gwv1.GroupName),
+			ancestorRef := gwapiv1a2.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 				Kind:      gatewayapi.KindPtr(gatewayapi.KindGateway),
 				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
-				Name:      gwv1.ObjectName(gwNN.Name),
+				Name:      gwapiv1.ObjectName(gwNN.Name),
 			}
 			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-specific-user", Namespace: ns}, suite.ControllerName, ancestorRef)
 
@@ -123,11 +123,11 @@ var LocalRateLimitAllTrafficTest = suite.ConformanceTest{
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
-			ancestorRef := gwv1a2.ParentReference{
-				Group:     gatewayapi.GroupPtr(gwv1.GroupName),
+			ancestorRef := gwapiv1a2.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 				Kind:      gatewayapi.KindPtr(gatewayapi.KindGateway),
 				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
-				Name:      gwv1.ObjectName(gwNN.Name),
+				Name:      gwapiv1.ObjectName(gwNN.Name),
 			}
 			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-all-traffic", Namespace: ns}, suite.ControllerName, ancestorRef)
 

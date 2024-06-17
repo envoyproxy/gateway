@@ -52,7 +52,7 @@ helm install \
 --set config.envoyGateway.provider.kubernetes.watch.type=Namespaces \
 --set config.envoyGateway.provider.kubernetes.watch.namespaces={marketing} \
 eg-marketing oci://docker.io/envoyproxy/gateway-helm \
---version v1.0.1 -n marketing --create-namespace
+--version v1.0.2 -n marketing --create-namespace
 ```
 
 Lets create a `GatewayClass` linked to the marketing team's Envoy Gateway controller, and as well other resources linked to it, so the `backend` application operated by this team can be exposed to external clients.
@@ -230,7 +230,7 @@ helm install \
 --set config.envoyGateway.provider.kubernetes.watch.type=Namespaces \
 --set config.envoyGateway.provider.kubernetes.watch.namespaces={product} \
 eg-product oci://docker.io/envoyproxy/gateway-helm \
---version v1.0.1 -n product --create-namespace
+--version v1.0.2 -n product --create-namespace
 ```
 
 Lets create a `GatewayClass` linked to the product team's Envoy Gateway controller, and as well other resources linked to it, so the `backend` application operated by this team can be exposed to external clients.

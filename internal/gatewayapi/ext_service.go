@@ -51,7 +51,7 @@ func (t *Translator) processExtServiceDestination(
 	}
 
 	// TODO: support mixed endpointslice address type for the same backendRef
-	if !t.EndpointRoutingDisabled && ds.AddressType != nil && *ds.AddressType == ir.MIXED {
+	if !t.IsEnvoyServiceRouting(resources) && ds.AddressType != nil && *ds.AddressType == ir.MIXED {
 		return nil, errors.New(
 			"mixed endpointslice address type for the same backendRef is not supported")
 	}

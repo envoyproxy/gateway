@@ -22,7 +22,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/known/anypb"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -545,9 +545,9 @@ func constructConfigDump(resources *gatewayapi.Resources, tCtx *xds_types.Resour
 	return globalConfigs, nil
 }
 
-func addMissingServices(requiredServices map[string]*v1.Service, obj interface{}) {
+func addMissingServices(requiredServices map[string]*corev1.Service, obj interface{}) {
 	var objNamespace string
-	protocol := v1.Protocol(gatewayapi.TCPProtocol)
+	protocol := corev1.Protocol(gatewayapi.TCPProtocol)
 
 	refs := []gwapiv1.BackendRef{}
 	switch route := obj.(type) {
@@ -576,7 +576,7 @@ func addMissingServices(requiredServices map[string]*v1.Service, obj interface{}
 			refs = append(refs, rule.BackendRefs...)
 		}
 	case *gwapiv1a2.UDPRoute:
-		protocol = v1.Protocol(gatewayapi.UDPProtocol)
+		protocol = corev1.Protocol(gatewayapi.UDPProtocol)
 		objNamespace = route.Namespace
 		for _, rule := range route.Spec.Rules {
 			refs = append(refs, rule.BackendRefs...)
@@ -596,21 +596,21 @@ func addMissingServices(requiredServices map[string]*v1.Service, obj interface{}
 		key := ns + "/" + name
 
 		port := int32(*ref.Port)
-		servicePort := v1.ServicePort{
+		servicePort := corev1.ServicePort{
 			Name:     fmt.Sprintf("%s-%d", protocol, port),
 			Protocol: protocol,
 			Port:     port,
 		}
 		if service, found := requiredServices[key]; !found {
-			service := &v1.Service{
+			service := &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: ns,
 				},
-				Spec: v1.ServiceSpec{
+				Spec: corev1.ServiceSpec{
 					// Just a dummy IP
 					ClusterIP: "127.0.0.1",
-					Ports:     []v1.ServicePort{servicePort},
+					Ports:     []corev1.ServicePort{servicePort},
 				},
 			}
 			requiredServices[key] = service
@@ -776,7 +776,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 			}
 			resources.GRPCRoutes = append(resources.GRPCRoutes, grpcRoute)
 		case gatewayapi.KindNamespace:
-			namespace := &v1.Namespace{
+			namespace := &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: name,
 				},
@@ -785,12 +785,12 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 			providedNamespaceMap.Insert(name)
 		case gatewayapi.KindService:
 			typedSpec := spec.Interface()
-			service := &v1.Service{
+			service := &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
 				},
-				Spec: typedSpec.(v1.ServiceSpec),
+				Spec: typedSpec.(corev1.ServiceSpec),
 			}
 			resources.Services = append(resources.Services, service)
 		case egv1a1.KindEnvoyPatchPolicy:
@@ -854,7 +854,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 
 	if useDefaultNamespace {
 		if !providedNamespaceMap.Has(config.DefaultNamespace) {
-			namespace := &v1.Namespace{
+			namespace := &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: config.DefaultNamespace,
 				},
@@ -867,7 +867,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 	if addMissingResources {
 		for ns := range requiredNamespaceMap {
 			if !providedNamespaceMap.Has(ns) {
-				namespace := &v1.Namespace{
+				namespace := &corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: ns,
 					},
@@ -876,7 +876,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 			}
 		}
 
-		requiredServiceMap := map[string]*v1.Service{}
+		requiredServiceMap := map[string]*corev1.Service{}
 		for _, route := range resources.TCPRoutes {
 			addMissingServices(requiredServiceMap, route)
 		}
@@ -893,7 +893,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 			addMissingServices(requiredServiceMap, route)
 		}
 
-		providedServiceMap := map[string]*v1.Service{}
+		providedServiceMap := map[string]*corev1.Service{}
 		for _, service := range resources.Services {
 			providedServiceMap[service.Namespace+"/"+service.Name] = service
 		}
@@ -911,7 +911,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 				for _, port := range service.Spec.Ports {
 					name := fmt.Sprintf("%s-%d", port.Protocol, port.Port)
 					if !providedPorts.Has(name) {
-						servicePort := v1.ServicePort{
+						servicePort := corev1.ServicePort{
 							Name:     name,
 							Protocol: port.Protocol,
 							Port:     port.Port,
