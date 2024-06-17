@@ -76,7 +76,7 @@ var OCIWasmTest = suite.ConformanceTest{
 		digest := pushWasmImageForTest(t, suite, registryAddr)
 
 		// Create the pull secret for the wasm image
-		createPullSecretForWasmTest(t, suite, registryAddr)
+		secret := createPullSecretForWasmTest(t, suite, registryAddr, dockerPassword)
 
 		// Create the EnvoyExtensionPolicy referencing the wasm image
 		eep := createEEPForWasmTest(t, suite, registryAddr, digest, true)
@@ -182,6 +182,41 @@ var OCIWasmTest = suite.ConformanceTest{
 
 			defer func() {
 				_ = suite.Client.Delete(context.Background(), eep)
+			}()
+
+			// Wait for the EnvoyExtensionPolicy to be failed due to missing pull secret
+			ancestorRef := gwapiv1a2.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Kind:      gatewayapi.KindPtr(gatewayapi.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(testNS),
+				Name:      gwapiv1.ObjectName(testGW),
+			}
+
+			EnvoyExtensionPolicyMustFail(
+				t, suite.Client,
+				types.NamespacedName{Name: testEEP, Namespace: testNS},
+				suite.ControllerName,
+				ancestorRef, "failed to login to private registry")
+		})
+
+		// Verify that the wasm module can't be loaded if the password is incorrect
+		// even if the wasm image is already cached.
+		t.Run("with wrong password", func(t *testing.T) {
+			// Delete the EnvoyExtensionPolicy with pull secret
+			_ = suite.Client.Delete(context.Background(), eep)
+
+			// Delete the pull secret
+			_ = suite.Client.Delete(context.Background(), secret)
+
+			// Create the pull secret with a wrong password
+			secret = createPullSecretForWasmTest(t, suite, registryAddr, "wrongpassword")
+
+			// Create the EnvoyExtensionPolicy without pull secret
+			eep = createEEPForWasmTest(t, suite, registryAddr, digest, true)
+
+			defer func() {
+				_ = suite.Client.Delete(context.Background(), eep)
+				_ = suite.Client.Delete(context.Background(), secret)
 			}()
 
 			// Wait for the EnvoyExtensionPolicy to be failed due to missing pull secret
@@ -316,11 +351,11 @@ func printDockerCLIResponse(rd io.Reader) error {
 	return nil
 }
 
-func createPullSecretForWasmTest(t *testing.T, suite *suite.ConformanceTestSuite, registryAddr string) {
+func createPullSecretForWasmTest(t *testing.T, suite *suite.ConformanceTestSuite, registryAddr string, password string) *corev1.Secret {
 	// Create Docker config JSON
 	dockerConfigJSON := fmt.Sprintf(`{"auths":{"%s":{"username":"%s","password":"%s","email":"%s","auth":"%s"}}}`,
-		registryAddr, dockerUsername, dockerPassword, dockerEmail,
-		base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", dockerUsername, dockerPassword))))
+		registryAddr, dockerUsername, password, dockerEmail,
+		base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", dockerUsername, password))))
 
 	// Create a Secret object
 	secret := &corev1.Secret{
@@ -339,6 +374,7 @@ func createPullSecretForWasmTest(t *testing.T, suite *suite.ConformanceTestSuite
 	if err := suite.Client.Create(context.Background(), secret); err != nil {
 		t.Fatalf("failed to create secret: %v", err)
 	}
+	return secret
 }
 
 func createEEPForWasmTest(
