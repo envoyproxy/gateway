@@ -46,7 +46,6 @@
               defaultExpiresIn: 3600s
               defaultRefreshTokenExpiresIn: 172800s
               forwardBearerToken: true
-              preserveAuthorizationHeader: true
               redirectPathMatcher:
                 path:
                   exact: /foo/oauth2/callback

@@ -115,6 +115,15 @@ func oauth2Config(oidc *ir.OIDC) (*oauth2v3.OAuth2, error) {
 			oidc.Provider.TokenEndpoint)
 	}
 
+	// Envoy OAuth2 filter deletes the HTTP authorization header by default, which surprises users.
+	preserveAuthorizationHeader := true
+
+	// If the user wants to forward the oauth2 access token to the upstream service,
+	// we should not preserve the original authorization header.
+	if oidc.ForwardAccessToken {
+		preserveAuthorizationHeader = false
+	}
+
 	oauth2 := &oauth2v3.OAuth2{
 		Config: &oauth2v3.OAuth2Config{
 			TokenEndpoint: &corev3.HttpUri{
@@ -172,9 +181,8 @@ func oauth2Config(oidc *ir.OIDC) (*oauth2v3.OAuth2, error) {
 			AuthType:   oauth2v3.OAuth2Config_BASIC_AUTH,
 			AuthScopes: oidc.Scopes,
 			Resources:  oidc.Resources,
-			// Envoy OAuth2 filter deletes the HTTP authorization header by default, which surprises users.
-			// This option preserves the authorization header.
-			PreserveAuthorizationHeader: true,
+
+			PreserveAuthorizationHeader: preserveAuthorizationHeader,
 		},
 	}
 
