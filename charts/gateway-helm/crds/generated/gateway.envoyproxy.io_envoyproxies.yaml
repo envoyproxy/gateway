@@ -10057,6 +10057,18 @@ spec:
                         x-kubernetes-validations:
                         - message: maxReplicas cannot be less than minReplicas
                           rule: '!has(self.minReplicas) || self.maxReplicas >= self.minReplicas'
+                      envoyPDB:
+                        description: EnvoyPDB allows to control the pod disruption
+                          budget of an Envoy Proxy.
+                        properties:
+                          minAvailable:
+                            description: |-
+                              MinAvailable specifies the minimum number of pods that must be available at all times during voluntary disruptions,
+                              such as node drains or updates. This setting ensures that your envoy proxy maintains a certain level of availability
+                              and resilience during maintenance operations.
+                            format: int32
+                            type: integer
+                        type: object
                       envoyService:
                         description: |-
                           EnvoyService defines the desired state of the Envoy service resource.
@@ -10190,6 +10202,11 @@ spec:
                 required:
                 - type
                 type: object
+              routingType:
+                description: |-
+                  RoutingType can be set to "Service" to use the Service Cluster IP for routing to the backend,
+                  or it can be set to "Endpoint" to use Endpoint routing. The default is "Endpoint".
+                type: string
               shutdown:
                 description: Shutdown defines configuration for graceful envoy shutdown
                   process.
@@ -10356,6 +10373,9 @@ spec:
                                         - message: BackendRefs only supports Service
                                             kind.
                                           rule: self.all(f, f.kind == 'Service')
+                                        - message: BackendRefs only supports Core
+                                            group.
+                                          rule: self.all(f, f.group == '')
                                       http:
                                         description: HTTP defines additional configuration
                                           specific to HTTP access logs.
@@ -10505,6 +10525,9 @@ spec:
                                         x-kubernetes-validations:
                                         - message: only support Service kind.
                                           rule: self.all(f, f.kind == 'Service')
+                                        - message: BackendRefs only supports Core
+                                            group.
+                                          rule: self.all(f, f.group == '')
                                       host:
                                         description: |-
                                           Host define the extension service hostname.
@@ -10551,12 +10574,15 @@ spec:
                                     openTelemetry field needs to be set.
                                   rule: 'self.type == ''OpenTelemetry'' ? has(self.openTelemetry)
                                     : !has(self.openTelemetry)'
+                              maxItems: 50
                               minItems: 1
                               type: array
                           required:
                           - format
                           - sinks
                           type: object
+                        maxItems: 50
+                        minItems: 1
                         type: array
                     type: object
                   metrics:
@@ -10731,6 +10757,8 @@ spec:
                                   x-kubernetes-validations:
                                   - message: only support Service kind.
                                     rule: self.all(f, f.kind == 'Service')
+                                  - message: BackendRefs only supports Core group.
+                                    rule: self.all(f, f.group == '')
                                 host:
                                   description: |-
                                     Host define the service hostname.
@@ -10927,6 +10955,8 @@ spec:
                             x-kubernetes-validations:
                             - message: only support Service kind.
                               rule: self.all(f, f.kind == 'Service')
+                            - message: BackendRefs only supports Core group.
+                              rule: self.all(f, f.group == '')
                           host:
                             description: |-
                               Host define the provider service hostname.

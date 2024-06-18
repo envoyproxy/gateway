@@ -70,8 +70,8 @@ helm-generate.%:
   		GatewayImage=${IMAGE}:${TAG} GatewayImagePullPolicy=${IMAGE_PULL_POLICY} \
   		envsubst < charts/${CHART_NAME}/values.tmpl.yaml > ./charts/${CHART_NAME}/values.yaml; \
   	fi
-	helm lint charts/${CHART_NAME}
 	helm dependency update charts/${CHART_NAME} # Update dependencies for add-ons chart.
+	helm lint charts/${CHART_NAME}
 
 HELM_VALUES := $(wildcard test/helm/*.in.yaml)
 

@@ -6,7 +6,7 @@
 package v1alpha1
 
 import (
-	appv1 "k8s.io/api/apps/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -72,7 +72,7 @@ type KubernetesDeploymentSpec struct {
 
 	// The deployment strategy to use to replace existing pods with new ones.
 	// +optional
-	Strategy *appv1.DeploymentStrategy `json:"strategy,omitempty"`
+	Strategy *appsv1.DeploymentStrategy `json:"strategy,omitempty"`
 
 	// Pod defines the desired specification of pod.
 	//
@@ -107,7 +107,7 @@ type KubernetesDaemonSetSpec struct {
 
 	// The daemonset strategy to use to replace existing pods with new ones.
 	// +optional
-	Strategy *appv1.DaemonSetUpdateStrategy `json:"strategy,omitempty"`
+	Strategy *appsv1.DaemonSetUpdateStrategy `json:"strategy,omitempty"`
 
 	// Pod defines the desired specification of pod.
 	//
@@ -392,6 +392,15 @@ const (
 	// https://github.com/google/re2/wiki/Syntax.
 	StringMatchRegularExpression StringMatchType = "RegularExpression"
 )
+
+// KubernetesPodDisruptionBudgetSpec defines Kubernetes PodDisruptionBudget settings of Envoy Proxy Deployment.
+type KubernetesPodDisruptionBudgetSpec struct {
+	// MinAvailable specifies the minimum number of pods that must be available at all times during voluntary disruptions,
+	// such as node drains or updates. This setting ensures that your envoy proxy maintains a certain level of availability
+	// and resilience during maintenance operations.
+	// +optional
+	MinAvailable *int32 `json:"minAvailable,omitempty"`
+}
 
 // KubernetesHorizontalPodAutoscalerSpec defines Kubernetes Horizontal Pod Autoscaler settings of Envoy Proxy Deployment.
 // When HPA is enabled, it is recommended that the value in `KubernetesDeploymentSpec.replicas` be removed, otherwise

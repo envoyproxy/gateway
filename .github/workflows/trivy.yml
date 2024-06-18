@@ -18,14 +18,14 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
     - name: Checkout code
-      uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29  # v4.1.6
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
 
     - name: Build an image from Dockerfile
       run: |
         IMAGE=envoy-proxy/gateway-dev TAG=${{ github.sha }} make image
 
     - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@fd25fed6972e341ff0007ddb61f77e88103953c2  # v0.21.0
+      uses: aquasecurity/trivy-action@595be6a0f6560a0a8fc419ddf630567fc623531d  # v0.22.0
       with:
         image-ref: envoy-proxy/gateway-dev:${{ github.sha }}
         exit-code: '1'

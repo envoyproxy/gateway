@@ -11,12 +11,12 @@ import (
 	"net"
 	"strings"
 
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -67,8 +67,8 @@ func PortNumPtr(val int32) *gwapiv1.PortNumber {
 	return &portNum
 }
 
-func ObjectNamePtr(val string) *v1alpha2.ObjectName {
-	objectName := v1alpha2.ObjectName(val)
+func ObjectNamePtr(val string) *gwapiv1a2.ObjectName {
+	objectName := gwapiv1a2.ObjectName(val)
 	return &objectName
 }
 
@@ -390,7 +390,7 @@ func irRouteDestinationName(route RouteContext, ruleIdx int) string {
 	return fmt.Sprintf("%srule/%d", irRoutePrefix(route), ruleIdx)
 }
 
-func irTLSConfigs(tlsSecrets ...*v1.Secret) *ir.TLSConfig {
+func irTLSConfigs(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
 	if len(tlsSecrets) == 0 {
 		return nil
 	}
@@ -401,14 +401,14 @@ func irTLSConfigs(tlsSecrets ...*v1.Secret) *ir.TLSConfig {
 	for i, tlsSecret := range tlsSecrets {
 		tlsListenerConfigs.Certificates[i] = ir.TLSCertificate{
 			Name:        irTLSListenerConfigName(tlsSecret),
-			Certificate: tlsSecret.Data[v1.TLSCertKey],
-			PrivateKey:  tlsSecret.Data[v1.TLSPrivateKeyKey],
+			Certificate: tlsSecret.Data[corev1.TLSCertKey],
+			PrivateKey:  tlsSecret.Data[corev1.TLSPrivateKeyKey],
 		}
 	}
 	return tlsListenerConfigs
 }
 
-func irTLSListenerConfigName(secret *v1.Secret) string {
+func irTLSListenerConfigName(secret *corev1.Secret) string {
 	return fmt.Sprintf("%s/%s", secret.Namespace, secret.Name)
 }
 
@@ -429,8 +429,8 @@ func protocolSliceToStringSlice(protocols []gwapiv1.ProtocolType) []string {
 }
 
 // getAncestorRefForPolicy returns Gateway as an ancestor reference for policy.
-func getAncestorRefForPolicy(gatewayNN types.NamespacedName, sectionName *v1alpha2.SectionName) v1alpha2.ParentReference {
-	return v1alpha2.ParentReference{
+func getAncestorRefForPolicy(gatewayNN types.NamespacedName, sectionName *gwapiv1a2.SectionName) gwapiv1a2.ParentReference {
+	return gwapiv1a2.ParentReference{
 		Group:       GroupPtr(gwapiv1.GroupName),
 		Kind:        KindPtr(KindGateway),
 		Namespace:   NamespacePtr(gatewayNN.Namespace),

@@ -20,11 +20,11 @@ import (
 	cachev3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	serverv3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
-	"github.com/envoyproxy/go-control-plane/pkg/test/v3"
+	testv3 "github.com/envoyproxy/go-control-plane/pkg/test/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -57,7 +57,7 @@ type Runner struct {
 }
 
 func (r *Runner) Name() string {
-	return string(v1alpha1.LogComponentGlobalRateLimitRunner)
+	return string(egv1a1.LogComponentGlobalRateLimitRunner)
 }
 
 func New(cfg *Config) *Runner {
@@ -77,7 +77,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	r.cache = cachev3.NewSnapshotCache(false, cachev3.IDHash{}, r.Logger.Sugar())
 
 	// Register xDS Config server.
-	cb := &test.Callbacks{}
+	cb := &testv3.Callbacks{}
 	discoveryv3.RegisterAggregatedDiscoveryServiceServer(r.grpc, serverv3.NewServer(ctx, r.cache, cb))
 
 	// Start and listen xDS gRPC config Server.
@@ -111,7 +111,7 @@ func (r *Runner) serveXdsConfigServer(ctx context.Context) {
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources.
-	message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentGlobalRateLimitRunner), Message: "xds-ir"}, r.XdsIR.Subscribe(ctx),
+	message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentGlobalRateLimitRunner), Message: "xds-ir"}, r.XdsIR.Subscribe(ctx),
 		func(update message.Update[string, *ir.Xds], errChan chan error) {
 			r.Logger.Info("received a notification")
 

@@ -10,20 +10,20 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 func TestGetExtensionServerAddress(t *testing.T) {
 	tests := []struct {
 		Name     string
-		Service  *v1alpha1.ExtensionService
+		Service  *egv1a1.ExtensionService
 		Expected string
 	}{
 		{
 			Name: "has an FQDN",
-			Service: &v1alpha1.ExtensionService{
-				BackendEndpoint: v1alpha1.BackendEndpoint{
-					FQDN: &v1alpha1.FQDNEndpoint{
+			Service: &egv1a1.ExtensionService{
+				BackendEndpoint: egv1a1.BackendEndpoint{
+					FQDN: &egv1a1.FQDNEndpoint{
 						Hostname: "extserver.svc.cluster.local",
 						Port:     5050,
 					},
@@ -33,9 +33,9 @@ func TestGetExtensionServerAddress(t *testing.T) {
 		},
 		{
 			Name: "has an IP",
-			Service: &v1alpha1.ExtensionService{
-				BackendEndpoint: v1alpha1.BackendEndpoint{
-					IP: &v1alpha1.IPEndpoint{
+			Service: &egv1a1.ExtensionService{
+				BackendEndpoint: egv1a1.BackendEndpoint{
+					IP: &egv1a1.IPEndpoint{
 						Address: "10.10.10.10",
 						Port:    5050,
 					},
@@ -45,9 +45,9 @@ func TestGetExtensionServerAddress(t *testing.T) {
 		},
 		{
 			Name: "has a Unix path",
-			Service: &v1alpha1.ExtensionService{
-				BackendEndpoint: v1alpha1.BackendEndpoint{
-					Unix: &v1alpha1.UnixSocket{
+			Service: &egv1a1.ExtensionService{
+				BackendEndpoint: egv1a1.BackendEndpoint{
+					Unix: &egv1a1.UnixSocket{
 						Path: "/some/path",
 					},
 				},
@@ -56,7 +56,7 @@ func TestGetExtensionServerAddress(t *testing.T) {
 		},
 		{
 			Name: "has a Unix path",
-			Service: &v1alpha1.ExtensionService{
+			Service: &egv1a1.ExtensionService{
 				Host: "foo.bar",
 				Port: 5050,
 			},

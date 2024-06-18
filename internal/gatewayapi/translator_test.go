@@ -26,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -507,7 +507,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 
 func overrideOutputConfig(t *testing.T, data string, filepath string) {
 	t.Helper()
-	file, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o755)
+	file, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
 	require.NoError(t, err)
 	defer file.Close()
 	write := bufio.NewWriter(file)
@@ -625,7 +625,7 @@ func TestIsValidCrossNamespaceRef(t *testing.T) {
 		name           string
 		from           crossNamespaceFrom
 		to             crossNamespaceTo
-		referenceGrant *v1beta1.ReferenceGrant
+		referenceGrant *gwapiv1b1.ReferenceGrant
 		want           bool
 	}
 
@@ -647,20 +647,20 @@ func TestIsValidCrossNamespaceRef(t *testing.T) {
 				namespace: "default",
 				name:      "tls-secret-1",
 			},
-			referenceGrant: &v1beta1.ReferenceGrant{
+			referenceGrant: &gwapiv1b1.ReferenceGrant{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "referencegrant-1",
 					Namespace: "default",
 				},
-				Spec: v1beta1.ReferenceGrantSpec{
-					From: []v1beta1.ReferenceGrantFrom{
+				Spec: gwapiv1b1.ReferenceGrantSpec{
+					From: []gwapiv1b1.ReferenceGrantFrom{
 						{
 							Group:     "gateway.networking.k8s.io",
 							Kind:      "Gateway",
 							Namespace: "envoy-gateway-system",
 						},
 					},
-					To: []v1beta1.ReferenceGrantTo{
+					To: []gwapiv1b1.ReferenceGrantTo{
 						{
 							Group: "",
 							Kind:  "Secret",
@@ -730,7 +730,7 @@ func TestIsValidCrossNamespaceRef(t *testing.T) {
 	for _, tc := range testcases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			var referenceGrants []*v1beta1.ReferenceGrant
+			var referenceGrants []*gwapiv1b1.ReferenceGrant
 			if tc.referenceGrant != nil {
 				referenceGrants = append(referenceGrants, tc.referenceGrant)
 			}

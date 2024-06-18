@@ -16,9 +16,9 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
     - name: Checkout code
-      uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29  # v4.1.6
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
     - name: Run scanner
-      uses: google/osv-scanner-action/osv-scanner-action@75532bf0bf75464b047d80414dbce04449498365  # v1.7.3
+      uses: google/osv-scanner-action/osv-scanner-action@ba0b4d196d231340e0ae94ae00933c8be0984192  # v1.7.4
       with:
         scan-args: |-
           --skip-git

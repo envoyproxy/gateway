@@ -23,7 +23,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
@@ -107,7 +107,7 @@ func TestTLSConfig(t *testing.T) {
 	require.NoError(t, err)
 
 	// Start a dummy server.
-	logger := logging.DefaultLogger(v1alpha1.LogLevelInfo)
+	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
 
 	cfg := &Config{
 		Server: config.Server{
