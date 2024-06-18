@@ -83,7 +83,7 @@ spec:
                         name:
                           description: |-
                             Name is a user-friendly name for the rule.
-                            If not specified, EG will generate a unique name for the rule.
+                            If not specified, Envoy Gateway will generate a unique name for the rule.n
                           type: string
                         principal:
                           description: Principal specifies the client identity of

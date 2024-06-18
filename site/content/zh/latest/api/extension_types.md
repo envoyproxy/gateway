@@ -234,7 +234,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `name` | _string_ |  false  | Name is a user-friendly name for the rule.<br />If not specified, EG will generate a unique name for the rule. |
+| `name` | _string_ |  false  | Name is a user-friendly name for the rule.<br />If not specified, Envoy Gateway will generate a unique name for the rule.n |
 | `action` | _[AuthorizationAction](#authorizationaction)_ |  true  | Action defines the action to be taken if the rule matches. |
 | `principal` | _[Principal](#principal)_ |  true  | Principal specifies the client identity of a request. |
 
@@ -3655,7 +3655,7 @@ _Appears in:_
 | `type` | _[WasmCodeSourceType](#wasmcodesourcetype)_ |  true  | Type is the type of the source of the wasm code.<br />Valid WasmCodeSourceType values are "HTTP" or "Image". |
 | `http` | _[HTTPWasmCodeSource](#httpwasmcodesource)_ |  false  | HTTP is the HTTP URL containing the wasm code.<br /><br />Note that the HTTP server must be accessible from the Envoy proxy. |
 | `image` | _[ImageWasmCodeSource](#imagewasmcodesource)_ |  false  | Image is the OCI image containing the wasm code.<br /><br />Note that the image must be accessible from the Envoy Gateway. |
-| `sha256` | _string_ |  false  | SHA256 checksum that will be used to verify the wasm code.<br /><br />If not specified, EG will not verify the downloaded wasm code.<br />kubebuilder:validation:Pattern=`^[a-f0-9]{64}$` |
+| `sha256` | _string_ |  false  | SHA256 checksum that will be used to verify the wasm code.<br /><br />If not specified, Envoy Gateway will not verify the downloaded wasm code.<br />kubebuilder:validation:Pattern=`^[a-f0-9]{64}$` |
 | `pullPolicy` | _[ImagePullPolicy](#imagepullpolicy)_ |  false  | PullPolicy is the policy to use when pulling the Wasm module by either the HTTP or Image source.<br />This field is only applicable when the SHA256 field is not set.<br /><br />If not specified, the default policy is IfNotPresent except for OCI images whose tag is latest.<br /><br />Note: EG does not update the Wasm module every time an Envoy proxy requests<br />the Wasm module even if the pull policy is set to Always.<br />It only updates the Wasm module when the EnvoyExtension resource version changes. |
 
 
