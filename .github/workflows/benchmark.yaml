@@ -22,13 +22,13 @@ on:
         type: string
         required: false
       cpu_limits:
-        description: "The CPU resource limits for the envoy gateway. Default: 1000m."
-        default: '1000m'
+        description: "The CPU resource limits for the envoy gateway, in unit 'm'. Default: 1000m."
+        default: '1000'
         type: string
         required: false
       memory_limits:
-        description: "The memory resource limits for the envoy gateway. Default: 1024Mi."
-        default: '1024Mi'
+        description: "The memory resource limits for the envoy gateway, in unit 'Mi'. Default: 1024Mi."
+        default: '1024'
         type: string
         required: false
 
@@ -48,6 +48,6 @@ jobs:
           BENCHMARK_RPS: ${{ github.event.inputs.rps || 1000 }}
           BENCHMARK_CONNECTIONS: ${{ github.event.inputs.connections || 100 }}
           BENCHMARK_DURATION: ${{ github.event.inputs.duration || 90 }}
-          BENCHMARK_CPU_LIMITS: ${{ github.event.inputs.cpu_limits || 1000m }}
-          BENCHMARK_MEMORY_LIMITS: ${{ github.event.inputs.memory_limits || 1024Mi }}
+          BENCHMARK_CPU_LIMITS: ${{ github.event.inputs.cpu_limits || 1000 }}
+          BENCHMARK_MEMORY_LIMITS: ${{ github.event.inputs.memory_limits || 1024 }}
         run: make benchmark
