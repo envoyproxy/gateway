@@ -99,7 +99,9 @@ Create a new EnvoyExtensionPolicy resource to configure the external processing 
 processing. 
 
 By default, requests and responses are not sent to the external processor. The `processingMode` struct is used to define what should be sent to the external processor.
-In this example, by specifying empty `request` and `response`, envoy is configured to send request and response headers to the external processor.
+In this example, we configure the following processing modes:
+* The empty `request` field configures envoy to send request headers to the external processor.
+* The `response` field includes configuration for body processing. As a result, response headers are sent to the external processor. Additionally, the response body is streamed to the external processor.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -121,7 +123,8 @@ spec:
       port: 9002
     processingMode:
       request: {}
-      response: {}
+      response: 
+        body: Streamed 
 EOF
 ```
 
@@ -146,13 +149,14 @@ spec:
           port: 9002
       processingMode:
         request: {}
-        response: {}
+        response: 
+          body: Streamed
 ```
 
 {{% /tab %}}
 {{< /tabpane >}}
 
-Verify the SecurityPolicy configuration:
+Verify the Envoy Extension Policy configuration:
 
 ```shell
 kubectl get envoyextensionpolicy/ext-proc-example -o yaml
