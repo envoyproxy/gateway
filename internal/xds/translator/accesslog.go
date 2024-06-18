@@ -203,6 +203,11 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 
 		al.Attributes = convertToKeyValueList(otel.Attributes, true)
 
+		formatters := accessLogOpenTelemetryFormatters(format, otel.Attributes)
+		if len(formatters) != 0 {
+			al.Formatters = formatters
+		}
+
 		accesslogAny, _ := anypb.New(al)
 		accessLogs = append(accessLogs, &accesslog.AccessLog{
 			Name: otelAccessLog,
@@ -257,6 +262,56 @@ func accessLogJSONFormatters(json map[string]string) []*cfgcore.TypedExtensionCo
 		}
 
 		if strings.Contains(value, celCommandOperator) {
+			cel = true
+		}
+	}
+
+	formatters := make([]*cfgcore.TypedExtensionConfig, 0, 3)
+
+	if reqWithoutQuery {
+		formatters = append(formatters, reqWithoutQueryFormatter)
+	}
+
+	if metadata {
+		formatters = append(formatters, metadataFormatter)
+	}
+
+	if cel {
+		formatters = append(formatters, celFormatter)
+	}
+
+	return formatters
+}
+
+func accessLogOpenTelemetryFormatters(body string, attributes map[string]string) []*cfgcore.TypedExtensionConfig {
+	reqWithoutQuery, metadata, cel := false, false, false
+
+	if strings.Contains(body, reqWithoutQueryCommandOperator) {
+		reqWithoutQuery = true
+	}
+
+	if strings.Contains(body, metadataCommandOperator) {
+		metadata = true
+	}
+
+	if strings.Contains(body, celCommandOperator) {
+		cel = true
+	}
+
+	for _, value := range attributes {
+		if reqWithoutQuery && metadata && cel {
+			break
+		}
+
+		if !reqWithoutQuery && strings.Contains(value, reqWithoutQueryCommandOperator) {
+			reqWithoutQuery = true
+		}
+
+		if !metadata && strings.Contains(value, metadataCommandOperator) {
+			metadata = true
+		}
+
+		if !cel && strings.Contains(value, celCommandOperator) {
 			cel = true
 		}
 	}

@@ -35,8 +35,8 @@ const (
 	MaxHTTP2InitialConnectionWindowSize = MaxHTTP2InitialStreamWindowSize
 )
 
-func hasSectionName(policy *egv1a1.ClientTrafficPolicy) bool {
-	return policy.Spec.TargetRef.SectionName != nil
+func hasSectionName(target *gwapiv1a2.LocalPolicyTargetReferenceWithSectionName) bool {
+	return target.SectionName != nil
 }
 
 func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
@@ -60,217 +60,236 @@ func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 		gatewayMap[key] = &policyGatewayTargetContext{GatewayContext: gw}
 	}
 
+	handledPolicies := make(map[types.NamespacedName]*egv1a1.ClientTrafficPolicy)
 	// Translate
 	// 1. First translate Policies with a sectionName set
 	// 2. Then loop again and translate the policies without a sectionName
 	// TODO: Import sort order to ensure policy with same section always appear
 	// before policy with no section so below loops can be flattened into 1.
-
-	for _, policy := range clientTrafficPolicies {
-		if hasSectionName(policy) {
-			policy := policy.DeepCopy()
-			res = append(res, policy)
-
-			gateway, resolveErr := resolveCTPolicyTargetRef(policy, gatewayMap)
-
-			// Negative statuses have already been assigned so its safe to skip
-			if gateway == nil {
-				continue
-			}
-
-			key := utils.NamespacedName(gateway)
-			ancestorRefs := []gwapiv1a2.ParentReference{
-				getAncestorRefForPolicy(key, policy.Spec.TargetRef.SectionName),
-			}
-
-			// Set conditions for resolve error, then skip current gateway
-			if resolveErr != nil {
-				status.SetResolveErrorForPolicyAncestors(&policy.Status,
-					ancestorRefs,
-					t.GatewayControllerName,
-					policy.Generation,
-					resolveErr,
-				)
-
-				continue
-			}
-
-			// Check if another policy targeting the same section exists
-			section := string(*(policy.Spec.TargetRef.SectionName))
-			s, ok := policyMap[key]
-			if ok && s.Has(section) {
-				message := "Unable to target section, another ClientTrafficPolicy has already attached to it"
-
-				resolveErr = &status.PolicyResolveError{
-					Reason:  gwapiv1a2.PolicyReasonConflicted,
-					Message: message,
+	for _, currPolicy := range clientTrafficPolicies {
+		policyName := utils.NamespacedName(currPolicy)
+		targetRefs := currPolicy.Spec.GetTargetRefs()
+		for _, currTarget := range targetRefs {
+			if hasSectionName(&currTarget) {
+				policy, found := handledPolicies[policyName]
+				if !found {
+					policy = currPolicy.DeepCopy()
+					handledPolicies[policyName] = policy
+					res = append(res, policy)
 				}
 
-				status.SetResolveErrorForPolicyAncestors(&policy.Status,
-					ancestorRefs,
-					t.GatewayControllerName,
-					policy.Generation,
-					resolveErr,
-				)
+				gateway, resolveErr := resolveCTPolicyTargetRef(policy, &currTarget, gatewayMap)
 
-				continue
-			}
+				// Negative statuses have already been assigned so its safe to skip
+				if gateway == nil {
+					continue
+				}
+				key := utils.NamespacedName(gateway)
+				ancestorRefs := []gwapiv1a2.ParentReference{
+					getAncestorRefForPolicy(key, currTarget.SectionName),
+				}
 
-			// Add section to policy map
-			if s == nil {
-				policyMap[key] = sets.New[string]()
-			}
-			policyMap[key].Insert(section)
+				// Set conditions for resolve error, then skip current gateway
+				if resolveErr != nil {
+					status.SetResolveErrorForPolicyAncestors(&policy.Status,
+						ancestorRefs,
+						t.GatewayControllerName,
+						policy.Generation,
+						resolveErr,
+					)
 
-			// Translate for listener matching section name
-			var err error
-			for _, l := range gateway.listeners {
-				// Find IR
-				irKey := t.getIRKey(l.gateway)
-				// It must exist since we've already finished processing the gateways
-				gwXdsIR := xdsIR[irKey]
-				if string(l.Name) == section {
-					err = validatePortOverlapForClientTrafficPolicy(l, gwXdsIR, false)
-					if err == nil {
-						err = t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources)
+					continue
+				}
+
+				// Check if another policy targeting the same section exists
+				section := string(*(currTarget.SectionName))
+				s, ok := policyMap[key]
+				if ok && s.Has(section) {
+					message := "Unable to target section, another ClientTrafficPolicy has already attached to it"
+
+					resolveErr = &status.PolicyResolveError{
+						Reason:  gwapiv1a2.PolicyReasonConflicted,
+						Message: message,
 					}
-					break
+
+					status.SetResolveErrorForPolicyAncestors(&policy.Status,
+						ancestorRefs,
+						t.GatewayControllerName,
+						policy.Generation,
+						resolveErr,
+					)
+
+					continue
 				}
-			}
 
-			// Set conditions for translation error if it got any
-			if err != nil {
-				status.SetTranslationErrorForPolicyAncestors(&policy.Status,
-					ancestorRefs,
-					t.GatewayControllerName,
-					policy.Generation,
-					status.Error2ConditionMsg(err),
-				)
-			}
+				// Add section to policy map
+				if s == nil {
+					policyMap[key] = sets.New[string]()
+				}
+				policyMap[key].Insert(section)
 
-			// Set Accepted condition if it is unset
-			status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
+				// Translate for listener matching section name
+				var err error
+				for _, l := range gateway.listeners {
+					// Find IR
+					irKey := t.getIRKey(l.gateway)
+					// It must exist since we've already finished processing the gateways
+					gwXdsIR := xdsIR[irKey]
+					if string(l.Name) == section {
+						err = validatePortOverlapForClientTrafficPolicy(l, gwXdsIR, false)
+						if err == nil {
+							err = t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources)
+						}
+						break
+					}
+				}
+
+				// Set conditions for translation error if it got any
+				if err != nil {
+					status.SetTranslationErrorForPolicyAncestors(&policy.Status,
+						ancestorRefs,
+						t.GatewayControllerName,
+						policy.Generation,
+						status.Error2ConditionMsg(err),
+					)
+				}
+
+				// Set Accepted condition if it is unset
+				status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
+			}
 		}
 	}
 
 	// Policy with no section set (targeting all sections)
-	for _, policy := range clientTrafficPolicies {
-		if !hasSectionName(policy) {
+	for _, currPolicy := range clientTrafficPolicies {
+		policyName := utils.NamespacedName(currPolicy)
+		targetRefs := currPolicy.Spec.GetTargetRefs()
+		for _, currTarget := range targetRefs {
+			if !hasSectionName(&currTarget) {
 
-			policy := policy.DeepCopy()
-			res = append(res, policy)
-
-			gateway, resolveErr := resolveCTPolicyTargetRef(policy, gatewayMap)
-
-			// Negative statuses have already been assigned so its safe to skip
-			if gateway == nil {
-				continue
-			}
-
-			key := utils.NamespacedName(gateway)
-			ancestorRefs := []gwapiv1a2.ParentReference{
-				getAncestorRefForPolicy(key, nil),
-			}
-
-			// Set conditions for resolve error, then skip current gateway
-			if resolveErr != nil {
-				status.SetResolveErrorForPolicyAncestors(&policy.Status,
-					ancestorRefs,
-					t.GatewayControllerName,
-					policy.Generation,
-					resolveErr,
-				)
-
-				continue
-			}
-
-			// Check if another policy targeting the same Gateway exists
-			s, ok := policyMap[key]
-			if ok && s.Has(AllSections) {
-				message := "Unable to target Gateway, another ClientTrafficPolicy has already attached to it"
-
-				resolveErr = &status.PolicyResolveError{
-					Reason:  gwapiv1a2.PolicyReasonConflicted,
-					Message: message,
+				policy, found := handledPolicies[policyName]
+				if !found {
+					policy = currPolicy.DeepCopy()
+					res = append(res, policy)
+					handledPolicies[policyName] = policy
 				}
 
-				status.SetResolveErrorForPolicyAncestors(&policy.Status,
-					ancestorRefs,
-					t.GatewayControllerName,
-					policy.Generation,
-					resolveErr,
-				)
+				gateway, resolveErr := resolveCTPolicyTargetRef(policy, &currTarget, gatewayMap)
 
-				continue
-			}
-
-			// Check if another policy targeting the same Gateway exists
-			if ok && (s.Len() > 0) {
-				// Maintain order here to ensure status/string does not change with same data
-				sections := s.UnsortedList()
-				sort.Strings(sections)
-				message := fmt.Sprintf("There are existing ClientTrafficPolicies that are overriding these sections %v", sections)
-
-				status.SetConditionForPolicyAncestors(&policy.Status,
-					ancestorRefs,
-					t.GatewayControllerName,
-					egv1a1.PolicyConditionOverridden,
-					metav1.ConditionTrue,
-					egv1a1.PolicyReasonOverridden,
-					message,
-					policy.Generation,
-				)
-			}
-
-			// Add section to policy map
-			if s == nil {
-				policyMap[key] = sets.New[string]()
-			}
-			policyMap[key].Insert(AllSections)
-
-			// Translate sections that have not yet been targeted
-			var errs error
-			for _, l := range gateway.listeners {
-				// Skip if section has already been targeted
-				if s != nil && s.Has(string(l.Name)) {
+				// Negative statuses have already been assigned so its safe to skip
+				if gateway == nil {
 					continue
 				}
 
-				// Find IR
-				irKey := t.getIRKey(l.gateway)
-				// It must exist since we've already finished processing the gateways
-				gwXdsIR := xdsIR[irKey]
-				if err := validatePortOverlapForClientTrafficPolicy(l, gwXdsIR, true); err != nil {
-					errs = errors.Join(errs, err)
-				} else if err := t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources); err != nil {
-					errs = errors.Join(errs, err)
+				key := utils.NamespacedName(gateway)
+				ancestorRefs := []gwapiv1a2.ParentReference{
+					getAncestorRefForPolicy(key, nil),
 				}
-			}
 
-			// Set conditions for translation error if it got any
-			if errs != nil {
-				status.SetTranslationErrorForPolicyAncestors(&policy.Status,
-					ancestorRefs,
-					t.GatewayControllerName,
-					policy.Generation,
-					status.Error2ConditionMsg(errs),
-				)
-			}
+				// Set conditions for resolve error, then skip current gateway
+				if resolveErr != nil {
+					status.SetResolveErrorForPolicyAncestors(&policy.Status,
+						ancestorRefs,
+						t.GatewayControllerName,
+						policy.Generation,
+						resolveErr,
+					)
 
-			// Set Accepted condition if it is unset
-			status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
+					continue
+				}
+
+				// Check if another policy targeting the same Gateway exists
+				s, ok := policyMap[key]
+				if ok && s.Has(AllSections) {
+					message := "Unable to target Gateway, another ClientTrafficPolicy has already attached to it"
+
+					resolveErr = &status.PolicyResolveError{
+						Reason:  gwapiv1a2.PolicyReasonConflicted,
+						Message: message,
+					}
+
+					status.SetResolveErrorForPolicyAncestors(&policy.Status,
+						ancestorRefs,
+						t.GatewayControllerName,
+						policy.Generation,
+						resolveErr,
+					)
+
+					continue
+				}
+
+				// Check if another policy targeting the same Gateway exists
+				if ok && (s.Len() > 0) {
+					// Maintain order here to ensure status/string does not change with same data
+					sections := s.UnsortedList()
+					sort.Strings(sections)
+					message := fmt.Sprintf("There are existing ClientTrafficPolicies that are overriding these sections %v", sections)
+
+					status.SetConditionForPolicyAncestors(&policy.Status,
+						ancestorRefs,
+						t.GatewayControllerName,
+						egv1a1.PolicyConditionOverridden,
+						metav1.ConditionTrue,
+						egv1a1.PolicyReasonOverridden,
+						message,
+						policy.Generation,
+					)
+				}
+
+				// Add section to policy map
+				if s == nil {
+					policyMap[key] = sets.New[string]()
+				}
+				policyMap[key].Insert(AllSections)
+
+				// Translate sections that have not yet been targeted
+				var errs error
+				for _, l := range gateway.listeners {
+					// Skip if section has already been targeted
+					if s != nil && s.Has(string(l.Name)) {
+						continue
+					}
+
+					// Find IR
+					irKey := t.getIRKey(l.gateway)
+					// It must exist since we've already finished processing the gateways
+					gwXdsIR := xdsIR[irKey]
+					if err := validatePortOverlapForClientTrafficPolicy(l, gwXdsIR, true); err != nil {
+						errs = errors.Join(errs, err)
+					} else if err := t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources); err != nil {
+						errs = errors.Join(errs, err)
+					}
+				}
+
+				// Set conditions for translation error if it got any
+				if errs != nil {
+					status.SetTranslationErrorForPolicyAncestors(&policy.Status,
+						ancestorRefs,
+						t.GatewayControllerName,
+						policy.Generation,
+						status.Error2ConditionMsg(errs),
+					)
+				}
+
+				// Set Accepted condition if it is unset
+				status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
+			}
 		}
 	}
 
 	return res
 }
 
-func resolveCTPolicyTargetRef(policy *egv1a1.ClientTrafficPolicy, gateways map[types.NamespacedName]*policyGatewayTargetContext) (*GatewayContext, *status.PolicyResolveError) {
+func resolveCTPolicyTargetRef(
+	policy *egv1a1.ClientTrafficPolicy,
+	targetRef *gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
+	gateways map[types.NamespacedName]*policyGatewayTargetContext,
+) (*GatewayContext, *status.PolicyResolveError) {
 	targetNs := policy.Namespace
 
 	// Check if the gateway exists
 	key := types.NamespacedName{
-		Name:      string(policy.Spec.TargetRef.Name),
+		Name:      string(targetRef.Name),
 		Namespace: targetNs,
 	}
 	gateway, ok := gateways[key]
@@ -292,7 +311,7 @@ func resolveCTPolicyTargetRef(policy *egv1a1.ClientTrafficPolicy, gateways map[t
 	}
 
 	// If sectionName is set, make sure its valid
-	sectionName := policy.Spec.TargetRef.SectionName
+	sectionName := targetRef.SectionName
 	if sectionName != nil {
 		found := false
 		for _, l := range gateway.listeners {
@@ -457,6 +476,9 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 				proxyListenerIR.HTTP3 = http3
 			}
 		}
+
+		// Translate Health Check Settings
+		translateHealthCheckSettings(policy.Spec.HealthCheck, httpIR)
 
 		// Translate TLS parameters
 		tlsConfig, err = t.buildListenerTLSParameters(policy, httpIR.TLS, resources)
@@ -708,6 +730,15 @@ func translateHTTP2Settings(http2Settings *egv1a1.HTTP2Settings, httpIR *ir.HTTP
 
 	httpIR.HTTP2 = http2
 	return errs
+}
+
+func translateHealthCheckSettings(healthCheckSettings *egv1a1.HealthCheckSettings, httpIR *ir.HTTPListener) {
+	// Return early if not set
+	if healthCheckSettings == nil {
+		return
+	}
+
+	httpIR.HealthCheck = (*ir.HealthCheckSettings)(healthCheckSettings)
 }
 
 func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPolicy,

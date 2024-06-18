@@ -262,6 +262,8 @@ type HTTPListener struct {
 	// HTTP3 provides HTTP/3 configuration on the listener.
 	// +optional
 	HTTP3 *HTTP3Settings `json:"http3,omitempty"`
+	// HealthCheck provides configuration for determining whether the HTTP/HTTPS listener is healthy.
+	HealthCheck *HealthCheckSettings `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
 	// ClientTimeout sets the timeout configuration for downstream connections
 	Timeout *ClientTimeout `json:"timeout,omitempty" yaml:"clientTimeout,omitempty"`
 	// Connection settings
@@ -453,6 +455,10 @@ type HTTP2Settings struct {
 	// MaxConcurrentStreams is the maximum number of concurrent streams that can be opened on a connection.
 	MaxConcurrentStreams *uint32 `json:"maxConcurrentStreams,omitempty" yaml:"maxConcurrentStreams,omitempty"`
 }
+
+// HealthCheckSettings provides HealthCheck configuration on the HTTP/HTTPS listener.
+// +k8s:deepcopy-gen=true
+type HealthCheckSettings egv1a1.HealthCheckSettings
 
 // HeaderSettings provides configuration related to header processing on the listener.
 // +k8s:deepcopy-gen=true
