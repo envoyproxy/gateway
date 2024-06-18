@@ -425,6 +425,8 @@ spec:
                         x-kubernetes-validations:
                         - message: only support Service kind.
                           rule: self.all(f, f.kind == 'Service')
+                        - message: BackendRefs only supports Core group.
+                          rule: self.all(f, f.group == '')
                     type: object
                     x-kubernetes-validations:
                     - message: backendRef or backendRefs needs to be set
@@ -619,6 +621,8 @@ spec:
                         x-kubernetes-validations:
                         - message: only support Service kind.
                           rule: self.all(f, f.kind == 'Service')
+                        - message: BackendRefs only supports Core group.
+                          rule: self.all(f, f.group == '')
                       headersToBackend:
                         description: |-
                           HeadersToBackend are the authorization response headers that will be added
