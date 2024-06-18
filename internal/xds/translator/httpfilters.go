@@ -77,9 +77,13 @@ type OrderedHTTPFilters []*OrderedHTTPFilter
 
 // newOrderedHTTPFilter gives each HTTP filter a rational order.
 // This is needed because the order of the filters is important.
-// For example, the fault filter should be placed in the first position because
+// For example, the health_check filter should be placed in the first position because external load
+// balancer determines whether envoy should receive traffic based on the health check result which
+// only depending on the current draining state of the envoy, result should not be affected by other
+// filters, or else user traffic discruption may happen.
+// the fault filter should be placed in the second position because
 // it doesn't rely on the functionality of other filters, and rejecting early can save computation costs
-// for the remaining filters, the cors filter should be put at the second to avoid unnecessary
+// for the remaining filters, the cors filter should be put at the third to avoid unnecessary
 // processing of other filters for unauthorized cross-region access.
 // The router filter must be the last one since it's a terminal filter.
 //
@@ -95,6 +99,8 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 	// the remaining filters is skipped when rejected early
 	// TODO (zhaohuabing): remove duplicate filter type constants and replace them with the type constants in the api package
 	switch {
+	case isFilterType(filter, wellknown.HealthCheck):
+		order = 0
 	case isFilterType(filter, wellknown.Fault):
 		order = 1
 	case isFilterType(filter, wellknown.CORS):

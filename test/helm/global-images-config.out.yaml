@@ -223,8 +223,10 @@ rules:
   - patch
 - apiGroups:
   - autoscaling
+  - policy
   resources:
   - horizontalpodautoscalers
+  - poddisruptionbudgets
   verbs:
   - create
   - get

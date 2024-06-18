@@ -6,6 +6,20 @@ metadata:
   labels:
   {{- include "eg.labels" . | nindent 4 }}
 ---
+{{- if and .Values.podDisruptionBudget.minAvailable (ge (int .Values.podDisruptionBudget.minAvailable) 1) }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: envoy-gateway
+  namespace: '{{ .Release.Namespace }}'
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      control-plane: envoy-gateway
+    {{- include "eg.selectorLabels" . | nindent 6 }}
+---
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -39,7 +53,11 @@ spec:
       {{- end }}
       {{- with .Values.deployment.pod.topologySpreadConstraints }}
       topologySpreadConstraints:
-        {{- toYaml . | nindent 8 }}
+        {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- with .Values.deployment.pod.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 6 }}
       {{- end }}
       containers:
       - args:

@@ -18,7 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
-	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
@@ -79,7 +79,7 @@ func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 			}
 
 			key := utils.NamespacedName(gateway)
-			ancestorRefs := []gwv1a2.ParentReference{
+			ancestorRefs := []gwapiv1a2.ParentReference{
 				getAncestorRefForPolicy(key, policy.Spec.TargetRef.SectionName),
 			}
 
@@ -102,7 +102,7 @@ func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 				message := "Unable to target section, another ClientTrafficPolicy has already attached to it"
 
 				resolveErr = &status.PolicyResolveError{
-					Reason:  gwv1a2.PolicyReasonConflicted,
+					Reason:  gwapiv1a2.PolicyReasonConflicted,
 					Message: message,
 				}
 
@@ -168,7 +168,7 @@ func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 			}
 
 			key := utils.NamespacedName(gateway)
-			ancestorRefs := []gwv1a2.ParentReference{
+			ancestorRefs := []gwapiv1a2.ParentReference{
 				getAncestorRefForPolicy(key, nil),
 			}
 
@@ -190,7 +190,7 @@ func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 				message := "Unable to target Gateway, another ClientTrafficPolicy has already attached to it"
 
 				resolveErr = &status.PolicyResolveError{
-					Reason:  gwv1a2.PolicyReasonConflicted,
+					Reason:  gwapiv1a2.PolicyReasonConflicted,
 					Message: message,
 				}
 
@@ -286,7 +286,7 @@ func resolveCTPolicyTargetRef(policy *egv1a1.ClientTrafficPolicy, gateways map[t
 			policy.Namespace, targetNs)
 
 		return gateway.GatewayContext, &status.PolicyResolveError{
-			Reason:  gwv1a2.PolicyReasonInvalid,
+			Reason:  gwapiv1a2.PolicyReasonInvalid,
 			Message: message,
 		}
 	}
@@ -305,7 +305,7 @@ func resolveCTPolicyTargetRef(policy *egv1a1.ClientTrafficPolicy, gateways map[t
 			message := fmt.Sprintf("No section name %s found for %s", *sectionName, key.String())
 
 			return gateway.GatewayContext, &status.PolicyResolveError{
-				Reason:  gwv1a2.PolicyReasonInvalid,
+				Reason:  gwapiv1a2.PolicyReasonInvalid,
 				Message: message,
 			}
 		}
@@ -457,6 +457,9 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 				proxyListenerIR.HTTP3 = http3
 			}
 		}
+
+		// Translate Health Check Settings
+		translateHealthCheckSettings(policy.Spec.HealthCheck, httpIR)
 
 		// Translate TLS parameters
 		tlsConfig, err = t.buildListenerTLSParameters(policy, httpIR.TLS, resources)
@@ -708,6 +711,15 @@ func translateHTTP2Settings(http2Settings *egv1a1.HTTP2Settings, httpIR *ir.HTTP
 
 	httpIR.HTTP2 = http2
 	return errs
+}
+
+func translateHealthCheckSettings(healthCheckSettings *egv1a1.HealthCheckSettings, httpIR *ir.HTTPListener) {
+	// Return early if not set
+	if healthCheckSettings == nil {
+		return
+	}
+
+	httpIR.HealthCheck = (*ir.HealthCheckSettings)(healthCheckSettings)
 }
 
 func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPolicy,

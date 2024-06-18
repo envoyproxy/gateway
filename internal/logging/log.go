@@ -14,17 +14,17 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 type Logger struct {
 	logr.Logger
-	logging       *v1alpha1.EnvoyGatewayLogging
+	logging       *egv1a1.EnvoyGatewayLogging
 	sugaredLogger *zap.SugaredLogger
 }
 
-func NewLogger(logging *v1alpha1.EnvoyGatewayLogging) Logger {
-	logger := initZapLogger(os.Stdout, logging, logging.Level[v1alpha1.LogComponentGatewayDefault])
+func NewLogger(logging *egv1a1.EnvoyGatewayLogging) Logger {
+	logger := initZapLogger(os.Stdout, logging, logging.Level[egv1a1.LogComponentGatewayDefault])
 
 	return Logger{
 		Logger:        zapr.NewLogger(logger),
@@ -33,13 +33,13 @@ func NewLogger(logging *v1alpha1.EnvoyGatewayLogging) Logger {
 	}
 }
 
-func FileLogger(file string, name string, level v1alpha1.LogLevel) Logger {
+func FileLogger(file string, name string, level egv1a1.LogLevel) Logger {
 	writer, err := os.OpenFile(file, os.O_WRONLY, 0o666)
 	if err != nil {
 		panic(err)
 	}
 
-	logging := v1alpha1.DefaultEnvoyGatewayLogging()
+	logging := egv1a1.DefaultEnvoyGatewayLogging()
 	logger := initZapLogger(writer, logging, level)
 
 	return Logger{
@@ -49,8 +49,8 @@ func FileLogger(file string, name string, level v1alpha1.LogLevel) Logger {
 	}
 }
 
-func DefaultLogger(level v1alpha1.LogLevel) Logger {
-	logging := v1alpha1.DefaultEnvoyGatewayLogging()
+func DefaultLogger(level egv1a1.LogLevel) Logger {
+	logging := egv1a1.DefaultEnvoyGatewayLogging()
 	logger := initZapLogger(os.Stdout, logging, level)
 
 	return Logger{
@@ -66,7 +66,7 @@ func DefaultLogger(level v1alpha1.LogLevel) Logger {
 // contain only letters, digits, and hyphens (see the package documentation for
 // more information).
 func (l Logger) WithName(name string) Logger {
-	logLevel := l.logging.Level[v1alpha1.EnvoyGatewayLogComponent(name)]
+	logLevel := l.logging.Level[egv1a1.EnvoyGatewayLogComponent(name)]
 	logger := initZapLogger(os.Stdout, l.logging, logLevel)
 
 	return Logger{
@@ -105,7 +105,7 @@ func (l Logger) Sugar() *zap.SugaredLogger {
 	return l.sugaredLogger
 }
 
-func initZapLogger(w io.Writer, logging *v1alpha1.EnvoyGatewayLogging, level v1alpha1.LogLevel) *zap.Logger {
+func initZapLogger(w io.Writer, logging *egv1a1.EnvoyGatewayLogging, level egv1a1.LogLevel) *zap.Logger {
 	parseLevel, _ := zapcore.ParseLevel(string(logging.DefaultEnvoyGatewayLoggingLevel(level)))
 	core := zapcore.NewCore(zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig()), zapcore.AddSync(w), zap.NewAtomicLevelAt(parseLevel))
 

@@ -12,6 +12,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -269,5 +270,9 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 }
 
 func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPodAutoscaler, error) {
+	return nil, nil
+}
+
+func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, error) {
 	return nil, nil
 }

@@ -10,7 +10,7 @@ import (
 
 	"k8s.io/utils/ptr"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -28,7 +28,7 @@ type Runner struct {
 }
 
 func (r *Runner) Name() string {
-	return string(v1alpha1.LogComponentInfrastructureRunner)
+	return string(egv1a1.LogComponentInfrastructureRunner)
 }
 
 func New(cfg *Config) *Runner {
@@ -73,7 +73,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 
 func (r *Runner) subscribeToProxyInfraIR(ctx context.Context) {
 	// Subscribe to resources
-	message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentInfrastructureRunner), Message: "infra-ir"}, r.InfraIR.Subscribe(ctx),
+	message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentInfrastructureRunner), Message: "infra-ir"}, r.InfraIR.Subscribe(ctx),
 		func(update message.Update[string, *ir.Infra], errChan chan error) {
 			r.Logger.Info("received an update")
 			val := update.Value

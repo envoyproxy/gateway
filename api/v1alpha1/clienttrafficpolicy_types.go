@@ -94,6 +94,10 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	HTTP3 *HTTP3Settings `json:"http3,omitempty"`
+	// HealthCheck provides configuration for determining whether the HTTP/HTTPS listener is healthy.
+	//
+	// +optional
+	HealthCheck *HealthCheckSettings `json:"healthCheck,omitempty"`
 }
 
 // HeaderSettings provides configuration options for headers on the listener.
@@ -307,6 +311,14 @@ type HTTP2Settings struct {
 	// +kubebuilder:validation:Maximum=2147483647
 	// +optional
 	MaxConcurrentStreams *uint32 `json:"maxConcurrentStreams,omitempty"`
+}
+
+// HealthCheckSettings provides HealthCheck configuration on the HTTP/HTTPS listener.
+type HealthCheckSettings struct {
+	// Path specifies the HTTP path to match on for health check requests.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=1024
+	Path string `json:"path"`
 }
 
 const (

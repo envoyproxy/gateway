@@ -3,7 +3,7 @@ ENVTEST_K8S_VERSION ?= 1.28.0
 # Need run cel validation across multiple versions of k8s
 ENVTEST_K8S_VERSIONS ?= 1.27.1 1.28.0 1.29.0
 # GATEWAY_API_VERSION refers to the version of Gateway API CRDs.
-# For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api 
+# For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api
 GATEWAY_API_VERSION ?= $(shell go list -m -f '{{.Version}}' sigs.k8s.io/gateway-api)
 
 GATEWAY_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/experimental-install.yaml
@@ -128,12 +128,15 @@ run-e2e: install-e2e-telemetry
 ifeq ($(E2E_RUN_TEST),)
 	go test -v -tags e2e ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=false
 	go test -v -tags e2e ./test/e2e/merge_gateways --gateway-class=merge-gateways --debug=true --cleanup-base-resources=false
+	go test -v -tags e2e ./test/e2e/multiple_gc --debug=true --cleanup-base-resources=false
 	go test -v -tags e2e ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
 else
 ifeq ($(E2E_RUN_EG_UPGRADE_TESTS),false)
 	go test -v -tags e2e ./test/e2e/merge_gateways --gateway-class=merge-gateways --debug=true --cleanup-base-resources=false \
 		--run-test $(E2E_RUN_TEST)
 	go test -v -tags e2e ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
+		--run-test $(E2E_RUN_TEST)
+	go test -v -tags e2e ./test/e2e/multiple_gc --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
 		--run-test $(E2E_RUN_TEST)
 else
 	go test -v -tags e2e ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
@@ -222,7 +225,7 @@ run-conformance: ## Run Gateway API conformance.
 	kubectl apply -f test/config/gatewayclass.yaml
 	go test -v -tags conformance ./test/conformance --gateway-class=envoy-gateway --debug=true
 
-CONFORMANCE_REPORT_PATH ?= 
+CONFORMANCE_REPORT_PATH ?=
 
 .PHONY: run-experimental-conformance
 run-experimental-conformance: ## Run Experimental Gateway API conformance.
