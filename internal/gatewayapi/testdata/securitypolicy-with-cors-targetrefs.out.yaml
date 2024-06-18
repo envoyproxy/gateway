@@ -357,6 +357,11 @@ xdsIR:
           statusCode: 500
         hostname: '*'
         isHTTP2: true
+        metadata:
+          groupVersion: gateway.networking.k8s.io/v1alpha2
+          kind: GRPCRoute
+          name: grpcroute-1
+          namespace: envoy-gateway
         name: grpcroute/envoy-gateway/grpcroute-1/rule/0/match/-1/*
         security:
           cors:
@@ -403,6 +408,11 @@ xdsIR:
           statusCode: 500
         hostname: gateway.envoyproxy.io
         isHTTP2: false
+        metadata:
+          groupVersion: gateway.networking.k8s.io/v1
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
@@ -431,6 +441,11 @@ xdsIR:
           statusCode: 500
         hostname: gateway.envoyproxy.io
         isHTTP2: false
+        metadata:
+          groupVersion: gateway.networking.k8s.io/v1
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false

@@ -225,6 +225,11 @@ xdsIR:
           statusCode: 500
         hostname: www.example.com
         isHTTP2: false
+        metadata:
+          groupVersion: gateway.networking.k8s.io/v1
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/www_example_com
         pathMatch:
           distinct: false
@@ -259,6 +264,11 @@ xdsIR:
           statusCode: 500
         hostname: www.example.com
         isHTTP2: false
+        metadata:
+          groupVersion: gateway.networking.k8s.io/v1
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/www_example_com
         pathMatch:
           distinct: false
