@@ -81,7 +81,7 @@ type WasmCodeSource struct {
 
 	// SHA256 checksum that will be used to verify the wasm code.
 	//
-	// If not specified, EG will not verify the downloaded wasm code.
+	// If not specified, Envoy Gateway will not verify the downloaded wasm code.
 	// kubebuilder:validation:Pattern=`^[a-f0-9]{64}$`
 	// +optional
 	SHA256 *string `json:"sha256"`
