@@ -217,20 +217,22 @@ func prepareBenchmarkClientRuntimeArgs(gatewayHostPort string, requestHeaders ..
 }
 
 // ScaleUpHTTPRoutes scales up HTTPRoutes that are all referenced to one Gateway according to
-// the scale range: (a, b], which a <= b. The `afterCreation` is a callback function that only
-// runs every time after one HTTPRoutes has been created successfully.
+// the scale range: (a, b], which scales up from a to b with a <= b.
 //
-// All scaled resources will be labeled with BenchmarkTestScaledKey.
-func (b *BenchmarkTestSuite) ScaleUpHTTPRoutes(ctx context.Context, scaleRange [2]uint16, targetNameFormat, refGateway string, afterCreation func(route *gwapiv1.HTTPRoute)) error {
+// The `afterCreation` is a callback function that only runs every time after one HTTPRoutes
+// has been created successfully.
+//
+// All created scaled resources will be labeled with BenchmarkTestScaledKey.
+func (b *BenchmarkTestSuite) ScaleUpHTTPRoutes(ctx context.Context, scaleRange [2]uint16, routeNameFormat, refGateway string, afterCreation func(*gwapiv1.HTTPRoute)) error {
 	var i, begin, end uint16
 	begin, end = scaleRange[0], scaleRange[1]
 
 	if begin > end {
-		return fmt.Errorf("got wrong scale range, %d is less than %d", end, begin)
+		return fmt.Errorf("got wrong scale range, %d is not greater than %d", end, begin)
 	}
 
 	for i = begin + 1; i <= end; i++ {
-		routeName := fmt.Sprintf(targetNameFormat, i)
+		routeName := fmt.Sprintf(routeNameFormat, i)
 		newRoute := b.HTTPRouteTemplate.DeepCopy()
 		newRoute.SetName(routeName)
 		newRoute.SetLabels(b.scaledLabel)
@@ -242,6 +244,42 @@ func (b *BenchmarkTestSuite) ScaleUpHTTPRoutes(ctx context.Context, scaleRange [
 
 		if afterCreation != nil {
 			afterCreation(newRoute)
+		}
+	}
+
+	return nil
+}
+
+// ScaleDownHTTPRoutes scales down HTTPRoutes that are all referenced to one Gateway according to
+// the scale range: [a, b), which scales down from a to b with a > b.
+//
+// The `afterDeletion` is a callback function that only runs every time after one HTTPRoutes has
+// been deleted successfully.
+func (b *BenchmarkTestSuite) ScaleDownHTTPRoutes(ctx context.Context, scaleRange [2]uint16, routeNameFormat, refGateway string, afterDeletion func(*gwapiv1.HTTPRoute)) error {
+	var i, begin, end uint16
+	begin, end = scaleRange[0], scaleRange[1]
+
+	if begin <= end {
+		return fmt.Errorf("got wrong scale range, %d is not less than %d", end, begin)
+	}
+
+	if end == 0 {
+		return fmt.Errorf("cannot scale routes down to zero")
+	}
+
+	for i = begin; i > end; i-- {
+		routeName := fmt.Sprintf(routeNameFormat, i)
+		oldRoute := b.HTTPRouteTemplate.DeepCopy()
+		oldRoute.SetName(routeName)
+		oldRoute.SetLabels(b.scaledLabel)
+		oldRoute.Spec.ParentRefs[0].Name = gwapiv1.ObjectName(refGateway)
+
+		if err := b.CleanupResource(ctx, oldRoute); err != nil {
+			return err
+		}
+
+		if afterDeletion != nil {
+			afterDeletion(oldRoute)
 		}
 	}
 

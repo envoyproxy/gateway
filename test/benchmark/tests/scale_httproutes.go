@@ -36,7 +36,6 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 			requestHeaders = []string{
 				"Host: www.benchmark.com",
 			}
-			routeNameFormat = "benchmark-route-%d"
 		)
 
 		gatewayNN := types.NamespacedName{Name: "benchmark", Namespace: ns}
@@ -45,18 +44,22 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 		err = bSuite.CreateResource(ctx, gateway)
 		require.NoError(t, err)
 
+		routeNameFormat := "benchmark-route-%d"
+		routeScales := []uint16{10, 50, 100, 300, 500}
+		routeScalesN := len(routeScales)
+		routeNNs := make([]types.NamespacedName, 0, routeScales[routeScalesN-1])
+
 		bSuite.RegisterCleanup(t, ctx, gateway, &gwapiv1.HTTPRoute{})
 
 		t.Run("scaling up httproutes", func(t *testing.T) {
-			routeScales := []uint16{10, 20}
-			routeNNs := make([]types.NamespacedName, 0, routeScales[len(routeScales)-1])
-
 			var start uint16 = 0
 			for _, scale := range routeScales {
 				t.Run(fmt.Sprintf("scaling up httproutes to %d", scale), func(t *testing.T) {
 					err = bSuite.ScaleUpHTTPRoutes(ctx, [2]uint16{start, scale}, routeNameFormat, gatewayNN.Name, func(route *gwapiv1.HTTPRoute) {
 						routeNN := types.NamespacedName{Name: route.Name, Namespace: route.Namespace}
 						routeNNs = append(routeNNs, routeNN)
+
+						t.Logf("Create HTTPRoute: %s", routeNN.String())
 					})
 					require.NoError(t, err)
 					start = scale
@@ -72,8 +75,35 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 			}
 		})
 
-		// TODO: implement scaling down httproutes
+		t.Run("scaling down httproutes", func(t *testing.T) {
+			var start = routeScales[routeScalesN-1]
 
-		return
+			for i := routeScalesN - 2; i >= 0; i-- {
+				scale := routeScales[i]
+
+				t.Run(fmt.Sprintf("scaling down httproutes to %d", scale), func(t *testing.T) {
+					err = bSuite.ScaleDownHTTPRoutes(ctx, [2]uint16{start, scale}, routeNameFormat, gatewayNN.Name, func(route *gwapiv1.HTTPRoute) {
+						routeNN := routeNNs[len(routeNNs)-1]
+						routeNNs = routeNNs[:len(routeNNs)-1]
+
+						// Making sure we are deleting the right one route.
+						require.Equal(t, routeNN,
+							types.NamespacedName{Name: route.Name, Namespace: route.Namespace})
+
+						t.Logf("Delete HTTPRoute: %s", routeNN.String())
+					})
+					require.NoError(t, err)
+					start = scale
+
+					gatewayAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, bSuite.Client, bSuite.TimeoutConfig,
+						bSuite.ControllerName, kubernetes.NewGatewayRef(gatewayNN), routeNNs...)
+
+					// Run benchmark test at different scale.
+					name := fmt.Sprintf("scale-down-httproutes-%d", scale)
+					err = bSuite.Benchmark(t, ctx, name, gatewayAddr, requestHeaders...)
+					require.NoError(t, err)
+				})
+			}
+		})
 	},
 }

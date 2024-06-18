@@ -10,7 +10,7 @@ GATEWAY_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/d
 
 WAIT_TIMEOUT ?= 15m
 
-BENCHMARK_TIMEOUT ?= 60
+BENCHMARK_TIMEOUT ?= 60m
 BENCHMARK_CPU_LIMITS ?= 1000 # unit: 'm'
 BENCHMARK_MEMORY_LIMITS ?= 1024 # unit: 'Mi'
 BENCHMARK_RPS ?= 1000
