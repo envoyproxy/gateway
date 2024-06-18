@@ -21,15 +21,13 @@ spec:
     kubernetes:
       envoyDeployment:
         container:
-          volumeMounts:
-            - mountPath: /var/run/ext-proc
-              name: socket-dir
-        pod:
-          volumes:
-            - name: socket-dir
-              hostPath:
-                path: /var/run/ext-proc
-                type: ''
+          resources:
+            limits:
+              memory: "1024Mi"
+              cpu: "1000m"
+            request:
+              memory: "256Mi"
+              cpu: "500m"
   telemetry:
     metrics:
       prometheus: {}
