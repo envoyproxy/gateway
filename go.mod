@@ -2,7 +2,6 @@ module github.com/envoyproxy/gateway
 
 go 1.22.4
 
-// Client-go does not handle different versions of mergo due to some breaking changes - use the matching version
 replace github.com/imdario/mergo => github.com/imdario/mergo v0.3.16
 
 require (
@@ -210,5 +209,3 @@ require (
 	sigs.k8s.io/kustomize/kyaml v0.17.1 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 )
-
-replace dario.cat/mergo => github.com/imdario/mergo v0.3.12
