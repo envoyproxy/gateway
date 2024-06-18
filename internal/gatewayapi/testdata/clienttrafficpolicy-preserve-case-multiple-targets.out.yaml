@@ -1,5 +1,51 @@
+clientTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    creationTimestamp: null
+    name: target-gateway-1
+    namespace: envoy-gateway
+  spec:
+    http1:
+      enableTrailers: true
+      preserveHeaderCase: true
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-2
+      sectionName: http-2
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-2
+        namespace: envoy-gateway
+        sectionName: http-2
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
-- apiVersion: gateway.networking.k8s.io/v1beta1
+- apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
     creationTimestamp: null
@@ -11,12 +57,8 @@ gateways:
     - allowedRoutes:
         namespaces:
           from: Same
-      name: http
+      name: http-1
       port: 80
-      protocol: HTTP
-    - hostname: company.com
-      name: http-2
-      port: 8888
       protocol: HTTP
   status:
     listeners:
@@ -37,36 +79,13 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      name: http
+      name: http-1
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-    - attachedRoutes: 0
-      conditions:
-      - lastTransitionTime: null
-        message: Sending translated listener configuration to the data plane
-        reason: Programmed
-        status: "True"
-        type: Programmed
-      - lastTransitionTime: null
-        message: Listener has been successfully translated
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Listener references have been resolved
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      name: http-2
-      supportedKinds:
-      - group: gateway.networking.k8s.io
-        kind: HTTPRoute
-      - group: gateway.networking.k8s.io
-        kind: GRPCRoute
-- apiVersion: gateway.networking.k8s.io/v1beta1
+- apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
     creationTimestamp: null
@@ -78,12 +97,14 @@ gateways:
     - allowedRoutes:
         namespaces:
           from: Same
-      name: http-3
-      port: 8888
+      name: http-1
+      port: 80
       protocol: HTTP
-    - hostname: example.com
-      name: http-4
-      port: 8888
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http-2
+      port: 8080
       protocol: HTTP
   status:
     listeners:
@@ -104,7 +125,7 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      name: http-3
+      name: http-1
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
@@ -127,47 +148,69 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      name: http-4
+      name: http-2
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
 infraIR:
-  envoy-gateway-class:
+  envoy-gateway/gateway-1:
     proxy:
-      config:
-        apiVersion: gateway.envoyproxy.io/v1alpha1
-        kind: EnvoyProxy
-        metadata:
-          creationTimestamp: null
-          name: test
-          namespace: envoy-gateway-system
-        spec:
-          logging: {}
-          mergeGateways: true
-        status: {}
       listeners:
       - address: null
-        name: envoy-gateway/gateway-1/http
+        name: envoy-gateway/gateway-1/http-1
+        ports:
+        - containerPort: 10080
+          name: http-80
+          protocol: HTTP
+          servicePort: 80
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+      name: envoy-gateway/gateway-1
+  envoy-gateway/gateway-2:
+    proxy:
+      listeners:
+      - address: null
+        name: envoy-gateway/gateway-2/http-1
         ports:
         - containerPort: 10080
           name: http-80
           protocol: HTTP
           servicePort: 80
       - address: null
-        name: envoy-gateway/gateway-1/http-2
+        name: envoy-gateway/gateway-2/http-2
         ports:
-        - containerPort: 8888
-          name: http-8888
+        - containerPort: 8080
+          name: http-8080
           protocol: HTTP
-          servicePort: 8888
+          servicePort: 8080
       metadata:
         labels:
-          gateway.envoyproxy.io/owning-gatewayclass: envoy-gateway-class
-      name: envoy-gateway-class
+          gateway.envoyproxy.io/owning-gateway-name: gateway-2
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+      name: envoy-gateway/gateway-2
 xdsIR:
-  envoy-gateway-class:
+  envoy-gateway/gateway-1:
+    accessLog:
+      text:
+      - path: /dev/stdout
+    http:
+    - address: 0.0.0.0
+      hostnames:
+      - '*'
+      http1:
+        enableTrailers: true
+        preserveHeaderCase: true
+      isHTTP2: false
+      name: envoy-gateway/gateway-1/http-1
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+  envoy-gateway/gateway-2:
     accessLog:
       text:
       - path: /dev/stdout
@@ -176,35 +219,20 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
-      name: envoy-gateway/gateway-1/http
+      name: envoy-gateway/gateway-2/http-1
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
     - address: 0.0.0.0
       hostnames:
-      - company.com
-      isHTTP2: false
-      name: envoy-gateway/gateway-1/http-2
-      path:
-        escapedSlashesAction: UnescapeAndRedirect
-        mergeSlashes: true
-      port: 8888
-    - address: 0.0.0.0
-      hostnames:
       - '*'
+      http1:
+        enableTrailers: true
+        preserveHeaderCase: true
       isHTTP2: false
-      name: envoy-gateway/gateway-2/http-3
+      name: envoy-gateway/gateway-2/http-2
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
-      port: 8888
-    - address: 0.0.0.0
-      hostnames:
-      - example.com
-      isHTTP2: false
-      name: envoy-gateway/gateway-2/http-4
-      path:
-        escapedSlashesAction: UnescapeAndRedirect
-        mergeSlashes: true
-      port: 8888
+      port: 8080

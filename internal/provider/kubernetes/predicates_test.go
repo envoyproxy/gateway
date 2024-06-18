@@ -254,10 +254,12 @@ func TestValidateSecretForReconcile(t *testing.T) {
 						Name: "oidc",
 					},
 					Spec: egv1a1.SecurityPolicySpec{
-						TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Kind: "Gateway",
-								Name: "scheduled-status-test",
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
+								},
 							},
 						},
 						OIDC: &egv1a1.OIDC{
@@ -287,10 +289,12 @@ func TestValidateSecretForReconcile(t *testing.T) {
 						Name: "basic-auth",
 					},
 					Spec: egv1a1.SecurityPolicySpec{
-						TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Kind: "Gateway",
-								Name: "scheduled-status-test",
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
+								},
 							},
 						},
 						BasicAuth: &egv1a1.BasicAuth{
@@ -619,10 +623,12 @@ func TestValidateServiceForReconcile(t *testing.T) {
 						Name: "ext-auth-http",
 					},
 					Spec: egv1a1.SecurityPolicySpec{
-						TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Kind: "Gateway",
-								Name: "scheduled-status-test",
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
+								},
 							},
 						},
 						ExtAuth: &egv1a1.ExtAuth{
@@ -650,10 +656,12 @@ func TestValidateServiceForReconcile(t *testing.T) {
 						Name: "ext-auth-http",
 					},
 					Spec: egv1a1.SecurityPolicySpec{
-						TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Kind: "Gateway",
-								Name: "scheduled-status-test",
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
+								},
 							},
 						},
 						ExtAuth: &egv1a1.ExtAuth{
@@ -681,10 +689,12 @@ func TestValidateServiceForReconcile(t *testing.T) {
 						Name: "ext-proc",
 					},
 					Spec: egv1a1.EnvoyExtensionPolicySpec{
-						TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Kind: "Gateway",
-								Name: "scheduled-status-test",
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
+								},
 							},
 						},
 						ExtProc: []egv1a1.ExtProc{
@@ -712,10 +722,12 @@ func TestValidateServiceForReconcile(t *testing.T) {
 						Name: "ext-proc",
 					},
 					Spec: egv1a1.EnvoyExtensionPolicySpec{
-						TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Kind: "Gateway",
-								Name: "scheduled-status-test",
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
+								},
 							},
 						},
 						ExtProc: []egv1a1.ExtProc{
