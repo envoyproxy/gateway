@@ -15,11 +15,12 @@ xds:
               prefix: /
             metadata:
               filterMetadata:
-                io.envoyproxy.gateway.metadata:
-                  groupVersion: ""
-                  kind: HTTPRoute
-                  name: backend
-                  namespace: default
+                io.envoyproxy.gateway:
+                  resources:
+                  - groupVersion: ""
+                    kind: HTTPRoute
+                    name: backend
+                    namespace: default
             name: httproute/default/backend/rule/0/match/0/www_example_com
             route:
               cluster: httproute/default/backend/rule/0
@@ -38,11 +39,12 @@ xds:
               path: /com.example.Things/DoThing
             metadata:
               filterMetadata:
-                io.envoyproxy.gateway.metadata:
-                  groupVersion: ""
-                  kind: GRPCRoute
-                  name: backend
-                  namespace: default
+                io.envoyproxy.gateway:
+                  resources:
+                  - groupVersion: ""
+                    kind: GRPCRoute
+                    name: backend
+                    namespace: default
             name: grpcroute/default/backend/rule/0/match/0/www_grpc-example_com
             route:
               cluster: grpcroute/default/backend/rule/0

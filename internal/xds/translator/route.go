@@ -26,13 +26,14 @@ const (
 	retryDefaultRetryOn                 = "connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes"
 	retryDefaultRetriableStatusCode     = 503
 	retryDefaultNumRetries              = 2
-	envoyGatewayMetadataNamespace       = "io.envoyproxy.gateway.metadata"
+	envoyGatewayMetadataNamespace       = "io.envoyproxy.gateway"
 	envoyGatewayMetadataKeyGroupVersion = "groupVersion"
 	envoyGatewayMetadataKeyKind         = "kind"
 	envoyGatewayMetadataKeyName         = "name"
 	envoyGatewayMetadataKeyNamespace    = "namespace"
 	envoyGatewayMetadataKeyAnnotations  = "annotations"
 	envoyGatewayMetadataKeySectionName  = "sectionName"
+	envoyGatewayMetadataKeyResources    = "resources"
 )
 
 func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
@@ -642,7 +643,27 @@ func buildXdsRouteMetadata(metadata *ir.ResourceMetadata) *corev3.Metadata {
 		return nil
 	}
 
-	fields := map[string]*structpb.Value{
+	resourcesList := &structpb.ListValue{}
+
+	resourcesList.Values = append(resourcesList.Values, buildResourceMetadata(metadata))
+
+	return &corev3.Metadata{
+		FilterMetadata: map[string]*structpb.Struct{
+			envoyGatewayMetadataNamespace: {
+				Fields: map[string]*structpb.Value{
+					envoyGatewayMetadataKeyResources: {
+						Kind: &structpb.Value_ListValue{
+							ListValue: resourcesList,
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func buildResourceMetadata(metadata *ir.ResourceMetadata) *structpb.Value {
+	routeResourceFields := map[string]*structpb.Value{
 		envoyGatewayMetadataKeyGroupVersion: {
 			Kind: &structpb.Value_StringValue{
 				StringValue: metadata.GroupVersion,
@@ -666,7 +687,7 @@ func buildXdsRouteMetadata(metadata *ir.ResourceMetadata) *corev3.Metadata {
 	}
 
 	if len(metadata.Annotations) > 0 {
-		fields[envoyGatewayMetadataKeyAnnotations] = &structpb.Value{
+		routeResourceFields[envoyGatewayMetadataKeyAnnotations] = &structpb.Value{
 			Kind: &structpb.Value_StructValue{
 				StructValue: mapToStruct(metadata.Annotations),
 			},
@@ -674,20 +695,21 @@ func buildXdsRouteMetadata(metadata *ir.ResourceMetadata) *corev3.Metadata {
 	}
 
 	if metadata.SectionName != "" {
-		fields[envoyGatewayMetadataKeySectionName] = &structpb.Value{
+		routeResourceFields[envoyGatewayMetadataKeySectionName] = &structpb.Value{
 			Kind: &structpb.Value_StringValue{
 				StringValue: metadata.SectionName,
 			},
 		}
 	}
 
-	return &corev3.Metadata{
-		FilterMetadata: map[string]*structpb.Struct{
-			envoyGatewayMetadataNamespace: {
-				Fields: fields,
+	routeResourceValue := &structpb.Value{
+		Kind: &structpb.Value_StructValue{
+			StructValue: &structpb.Struct{
+				Fields: routeResourceFields,
 			},
 		},
 	}
+	return routeResourceValue
 }
 
 func mapToStruct(data map[string]string) *structpb.Struct {

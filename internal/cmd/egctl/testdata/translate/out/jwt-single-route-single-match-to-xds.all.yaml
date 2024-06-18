@@ -300,11 +300,12 @@ xds:
                 pathSeparatedPrefix: /foo
               metadata:
                 filterMetadata:
-                  io.envoyproxy.gateway.metadata:
-                    groupVersion: ""
-                    kind: HTTPRoute
-                    name: backend
-                    namespace: envoy-gateway-system
+                  io.envoyproxy.gateway:
+                    resources:
+                    - groupVersion: ""
+                      kind: HTTPRoute
+                      name: backend
+                      namespace: envoy-gateway-system
               name: httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com
               route:
                 cluster: httproute/envoy-gateway-system/backend/rule/0

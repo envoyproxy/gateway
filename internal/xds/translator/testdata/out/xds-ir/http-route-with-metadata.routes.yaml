@@ -13,14 +13,15 @@
             exact: "yes"
       metadata:
         filterMetadata:
-          io.envoyproxy.gateway.metadata:
-            annotations:
-              foo: bar
-            groupVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            name: first-route-name
-            namespace: first-route-ns
-            sectionName: first-route-rule
+          io.envoyproxy.gateway:
+            resources:
+            - annotations:
+                foo: bar
+              groupVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              name: first-route-name
+              namespace: first-route-ns
+              sectionName: first-route-rule
       name: envoy-gateway/httproute-2/rule/0/match/0/example.com
       route:
         cluster: first-route-dest
