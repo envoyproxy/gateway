@@ -38,13 +38,12 @@ type BenchmarkTestSuite struct {
 	TimeoutConfig  config.TimeoutConfig
 	ControllerName string
 	Options        BenchmarkOptions
+	Reports        []BenchmarkReport
 
 	// Resources template for supported benchmark targets.
-	GatewayTemplate   *gwapiv1.Gateway
-	HTTPRouteTemplate *gwapiv1.HTTPRoute
-
-	// Template for benchmark test client.
-	BenchmarkClient *batchv1.Job
+	GatewayTemplate    *gwapiv1.Gateway
+	HTTPRouteTemplate  *gwapiv1.HTTPRoute
+	BenchmarkClientJob *batchv1.Job
 
 	// Indicates which resources are scaled.
 	scaledLabel map[string]string
@@ -91,13 +90,13 @@ func NewBenchmarkTestSuite(client client.Client, options BenchmarkOptions,
 	container.Args = append(container.Args, staticArgs...)
 
 	return &BenchmarkTestSuite{
-		Client:            client,
-		Options:           options,
-		TimeoutConfig:     timeoutConfig,
-		ControllerName:    DefaultControllerName,
-		GatewayTemplate:   gateway,
-		HTTPRouteTemplate: httproute,
-		BenchmarkClient:   benchmarkClient,
+		Client:             client,
+		Options:            options,
+		TimeoutConfig:      timeoutConfig,
+		ControllerName:     DefaultControllerName,
+		GatewayTemplate:    gateway,
+		HTTPRouteTemplate:  httproute,
+		BenchmarkClientJob: benchmarkClient,
 		scaledLabel: map[string]string{
 			BenchmarkTestScaledKey: "true",
 		},
@@ -110,8 +109,9 @@ func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 	for _, test := range tests {
 		t.Logf("Running benchmark test: %s", test.ShortName)
 
-		// TODO: generate a readable benchmark report for human
-		_ = test.Test(t, b)
+		test.Test(t, b)
+
+		// TODO: generate a human readable benchmark report for each test.
 	}
 }
 
@@ -120,17 +120,17 @@ func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 // TODO: currently running benchmark test via nighthawk_client,
 // consider switching to gRPC nighthawk-service for benchmark test.
 // ref: https://github.com/envoyproxy/nighthawk/blob/main/api/client/service.proto
-func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, name, gatewayHostPort string, requestHeaders ...string) (*BenchmarkReport, error) {
+func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, name, gatewayHostPort string, requestHeaders ...string) error {
 	t.Logf("Running benchmark test: %s", name)
 
 	jobNN, err := b.createBenchmarkClientJob(ctx, name, gatewayHostPort, requestHeaders...)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	duration, err := strconv.ParseInt(b.Options.Duration, 10, 64)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Wait from benchmark test job to complete.
@@ -156,29 +156,32 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, name, 
 		return false, nil
 	}); err != nil {
 		t.Errorf("Failed to run benchmark test: %v", err)
-		return nil, err
+		return err
 	}
 
 	t.Logf("Running benchmark test: %s successfully", name)
 
 	report, err := NewBenchmarkReport()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Get all the reports from this benchmark test run.
 	if err = report.GetBenchmarkResult(t, ctx, jobNN); err != nil {
-		return nil, err
+		return err
 	}
 	if err = report.GetControlPlaneMetrics(t, ctx); err != nil {
-		return nil, err
+		return err
 	}
 
-	return report, nil
+	report.Print(t, name)
+	b.Reports = append(b.Reports, *report)
+
+	return nil
 }
 
 func (b *BenchmarkTestSuite) createBenchmarkClientJob(ctx context.Context, name, gatewayHostPort string, requestHeaders ...string) (*types.NamespacedName, error) {
-	job := b.BenchmarkClient.DeepCopy()
+	job := b.BenchmarkClientJob.DeepCopy()
 	job.SetName(name)
 
 	runtimeArgs := prepareBenchmarkClientRuntimeArgs(gatewayHostPort, requestHeaders...)
@@ -213,21 +216,21 @@ func prepareBenchmarkClientRuntimeArgs(gatewayHostPort string, requestHeaders ..
 	return args
 }
 
-// ScaleHTTPRoutes scales HTTPRoutes that are all referenced to one Gateway according to
-// the scale range: (begin, end]. The afterCreation is a callback function that only runs
-// every time after one HTTPRoutes has been created successfully.
+// ScaleUpHTTPRoutes scales up HTTPRoutes that are all referenced to one Gateway according to
+// the scale range: (a, b], which a <= b. The `afterCreation` is a callback function that only
+// runs every time after one HTTPRoutes has been created successfully.
 //
 // All scaled resources will be labeled with BenchmarkTestScaledKey.
-func (b *BenchmarkTestSuite) ScaleHTTPRoutes(t *testing.T, ctx context.Context, scaleRange [2]uint16, targetName, refGateway string, afterCreation func(route *gwapiv1.HTTPRoute)) error {
-	t.Helper()
-
+func (b *BenchmarkTestSuite) ScaleUpHTTPRoutes(ctx context.Context, scaleRange [2]uint16, targetNameFormat, refGateway string, afterCreation func(route *gwapiv1.HTTPRoute)) error {
 	var i, begin, end uint16
 	begin, end = scaleRange[0], scaleRange[1]
 
-	t.Logf("Scaling HTTPRoutes to %d", end)
+	if begin > end {
+		return fmt.Errorf("got wrong scale range, %d is less than %d", end, begin)
+	}
 
 	for i = begin + 1; i <= end; i++ {
-		routeName := fmt.Sprintf(targetName, i)
+		routeName := fmt.Sprintf(targetNameFormat, i)
 		newRoute := b.HTTPRouteTemplate.DeepCopy()
 		newRoute.SetName(routeName)
 		newRoute.SetLabels(b.scaledLabel)
@@ -241,8 +244,6 @@ func (b *BenchmarkTestSuite) ScaleHTTPRoutes(t *testing.T, ctx context.Context, 
 			afterCreation(newRoute)
 		}
 	}
-
-	t.Logf("Finish scaling HTTPRoutes to %d", end)
 
 	return nil
 }

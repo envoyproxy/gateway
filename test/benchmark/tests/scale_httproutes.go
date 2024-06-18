@@ -27,8 +27,8 @@ func init() {
 
 var ScaleHTTPRoutes = suite.BenchmarkTest{
 	ShortName:   "ScaleHTTPRoute",
-	Description: "Fixed one Gateway and different number of HTTPRoutes on a scale of (10, 50, 100, 300, 500).",
-	Test: func(t *testing.T, bSuite *suite.BenchmarkTestSuite) (reports []suite.BenchmarkReport) {
+	Description: "Fixed one Gateway and different scales of HTTPRoutes.",
+	Test: func(t *testing.T, bSuite *suite.BenchmarkTestSuite) {
 		var (
 			ctx            = context.Background()
 			ns             = "benchmark-test"
@@ -36,41 +36,43 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 			requestHeaders = []string{
 				"Host: www.benchmark.com",
 			}
+			routeNameFormat = "benchmark-route-%d"
 		)
 
-		// Setup and create a gateway.
 		gatewayNN := types.NamespacedName{Name: "benchmark", Namespace: ns}
 		gateway := bSuite.GatewayTemplate.DeepCopy()
 		gateway.SetName(gatewayNN.Name)
 		err = bSuite.CreateResource(ctx, gateway)
 		require.NoError(t, err)
 
-		// Setup and scale httproutes.
-		httpRouteName := "benchmark-route-%d"
-		httpRouteScales := []uint16{10, 50, 100, 300, 500}
-		httpRouteNNs := make([]types.NamespacedName, 0, httpRouteScales[len(httpRouteScales)-1])
-
 		bSuite.RegisterCleanup(t, ctx, gateway, &gwapiv1.HTTPRoute{})
 
-		var start uint16 = 0
-		for _, scale := range httpRouteScales {
-			err = bSuite.ScaleHTTPRoutes(t, ctx, [2]uint16{start, scale}, httpRouteName, gatewayNN.Name, func(route *gwapiv1.HTTPRoute) {
-				routeNN := types.NamespacedName{Name: route.Name, Namespace: route.Namespace}
-				httpRouteNNs = append(httpRouteNNs, routeNN)
-			})
-			require.NoError(t, err)
-			start = scale
+		t.Run("scaling up httproutes", func(t *testing.T) {
+			routeScales := []uint16{10, 20}
+			routeNNs := make([]types.NamespacedName, 0, routeScales[len(routeScales)-1])
 
-			gatewayAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, bSuite.Client, bSuite.TimeoutConfig, bSuite.ControllerName, kubernetes.NewGatewayRef(gatewayNN), httpRouteNNs...)
+			var start uint16 = 0
+			for _, scale := range routeScales {
+				t.Run(fmt.Sprintf("scaling up httproutes to %d", scale), func(t *testing.T) {
+					err = bSuite.ScaleUpHTTPRoutes(ctx, [2]uint16{start, scale}, routeNameFormat, gatewayNN.Name, func(route *gwapiv1.HTTPRoute) {
+						routeNN := types.NamespacedName{Name: route.Name, Namespace: route.Namespace}
+						routeNNs = append(routeNNs, routeNN)
+					})
+					require.NoError(t, err)
+					start = scale
 
-			// Run benchmark test at different scale.
-			name := fmt.Sprintf("scale-httproutes-%d", scale)
-			report, err := bSuite.Benchmark(t, ctx, name, gatewayAddr, requestHeaders...)
-			require.NoError(t, err)
+					gatewayAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, bSuite.Client, bSuite.TimeoutConfig,
+						bSuite.ControllerName, kubernetes.NewGatewayRef(gatewayNN), routeNNs...)
 
-			report.Print(t, name)
-			reports = append(reports, *report)
-		}
+					// Run benchmark test at different scale.
+					name := fmt.Sprintf("scale-up-httproutes-%d", scale)
+					err = bSuite.Benchmark(t, ctx, name, gatewayAddr, requestHeaders...)
+					require.NoError(t, err)
+				})
+			}
+		})
+
+		// TODO: implement scaling down httproutes
 
 		return
 	},

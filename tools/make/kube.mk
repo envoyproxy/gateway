@@ -9,6 +9,7 @@ GATEWAY_API_VERSION ?= $(shell go list -m -f '{{.Version}}' sigs.k8s.io/gateway-
 GATEWAY_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/experimental-install.yaml
 
 WAIT_TIMEOUT ?= 15m
+BENCHMARK_TIMEOUT ?= 60
 
 FLUENT_BIT_CHART_VERSION ?= 0.30.4
 OTEL_COLLECTOR_CHART_VERSION ?= 0.73.1
@@ -150,7 +151,7 @@ run-benchmark: install-benchmark-server ## Run benchmark tests
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n benchmark-test deployment/nighthawk-test-server --for=condition=Available
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/benchmark/config/gatewayclass.yaml
-	go test -v -tags benchmark ./test/benchmark --rps=$(RPS) --connections=$(CONNECTIONS) --duration=$(DURATION)
+	go test -v -tags benchmark -timeout $(BENCHMARK_TIMEOUT) ./test/benchmark --rps=$(RPS) --connections=$(CONNECTIONS) --duration=$(DURATION)
 
 .PHONY: install-benchmark-server
 install-benchmark-server: ## Install nighthawk server for benchmark test
