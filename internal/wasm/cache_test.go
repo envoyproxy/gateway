@@ -44,10 +44,10 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/logging"
-	"github.com/envoyproxy/gateway/internal/utils/sets"
 )
 
 const wasmTestData = "this is wasm plugin"
@@ -591,7 +591,7 @@ func TestWasmCache(t *testing.T) {
 			initialCachedModules: map[moduleKey]cacheEntry{
 				{name: moduleNameFromURL(ociURLWithTag) + "-purged", checksum: dockerImageDigest}: {
 					modulePath:      ociWasmFile,
-					referencingURLs: sets.New(ociURLWithTag),
+					referencingURLs: sets.New[string](ociURLWithTag),
 				},
 			},
 			initialCachedChecksums: map[string]*checksumEntry{
@@ -710,7 +710,7 @@ func TestWasmCache(t *testing.T) {
 
 				cache.modules[mkey] = &cacheEntry{modulePath: filePath, last: initTime, size: m.size}
 				if m.referencingURLs != nil {
-					cache.modules[mkey].referencingURLs = m.referencingURLs.Copy()
+					cache.modules[mkey].referencingURLs = m.referencingURLs.Clone()
 				} else {
 					cache.modules[mkey].referencingURLs = sets.New[string]()
 				}
@@ -943,7 +943,7 @@ func TestAllInsecureServer(t *testing.T) {
 	tmpDir := t.TempDir()
 	options := defaultCacheOptions()
 	options.CacheDir = tmpDir
-	options.InsecureRegistries = sets.New("*")
+	options.InsecureRegistries = sets.New[string]("*")
 	cache := newLocalFileCache(options, logging.DefaultLogger(egv1a1.LogLevelInfo))
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
 	cache.Start(ctx)

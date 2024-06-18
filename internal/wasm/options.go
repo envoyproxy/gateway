@@ -22,7 +22,7 @@ package wasm
 import (
 	"time"
 
-	"github.com/envoyproxy/gateway/internal/utils/sets"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 const (
@@ -39,7 +39,7 @@ type CacheOptions struct {
 	PurgeInterval time.Duration
 	ModuleExpiry  time.Duration
 	// InsecureRegistries is a set of registries that are allowed to be accessed without TLS.
-	InsecureRegistries    sets.String
+	InsecureRegistries    sets.Set[string]
 	HTTPRequestTimeout    time.Duration
 	HTTPRequestMaxRetries int
 	MaxCacheSize          int
@@ -48,7 +48,7 @@ type CacheOptions struct {
 
 // allowInsecure returns true if the host is allowed to be accessed without TLS.
 func (o *CacheOptions) allowInsecure(host string) bool {
-	return o.InsecureRegistries.Contains(host) || o.InsecureRegistries.Contains("*")
+	return o.InsecureRegistries.Has(host) || o.InsecureRegistries.Has("*")
 }
 
 func (o *CacheOptions) sanitize() CacheOptions {

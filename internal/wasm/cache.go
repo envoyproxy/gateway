@@ -34,9 +34,9 @@ import (
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	"github.com/envoyproxy/gateway/internal/logging"
-	"github.com/envoyproxy/gateway/internal/utils/sets"
 )
 
 const (
@@ -117,7 +117,7 @@ type cacheEntry struct {
 	// Last time that this local Wasm module is referenced.
 	last time.Time
 	// set of URLs referencing this entry
-	referencingURLs sets.String
+	referencingURLs sets.Set[string]
 	// isPrivate is true if the module is from a private registry.
 	isPrivate bool
 	// checksum is the sha256 checksum of the module.
