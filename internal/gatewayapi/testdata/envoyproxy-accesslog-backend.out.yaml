@@ -137,7 +137,7 @@ xdsIR:
     accessLog:
       openTelemetry:
       - destination:
-          name: accesslog-0
+          name: accesslog_otel_0_1
           settings:
           - addressType: IP
             endpoints:

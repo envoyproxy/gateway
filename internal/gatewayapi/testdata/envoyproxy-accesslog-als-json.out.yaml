@@ -152,7 +152,7 @@ xdsIR:
           attr1: val1
           attr2: val2
         destination:
-          name: accesslog-0
+          name: accesslog_als_0_0
           settings:
           - addressType: IP
             endpoints:
@@ -172,7 +172,7 @@ xdsIR:
           attr1: val1
           attr2: val2
         destination:
-          name: accesslog-0
+          name: accesslog_als_0_1
           settings:
           - addressType: IP
             endpoints:

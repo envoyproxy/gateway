@@ -233,8 +233,8 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 
 	irAccessLog := &ir.AccessLog{}
 	// translate the access log configuration to the IR
-	for idx, accessLog := range envoyproxy.Spec.Telemetry.AccessLog.Settings {
-		for _, sink := range accessLog.Sinks {
+	for i, accessLog := range envoyproxy.Spec.Telemetry.AccessLog.Settings {
+		for j, sink := range accessLog.Sinks {
 			switch sink.Type {
 			case egv1a1.ProxyAccessLogSinkTypeFile:
 				if sink.File == nil {
@@ -281,7 +281,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 				al := &ir.ALSAccessLog{
 					LogName: logName,
 					Destination: ir.RouteDestination{
-						Name:     fmt.Sprintf("accesslog-%d", idx), // TODO: rename this, so that we can share backend with tracing?
+						Name:     fmt.Sprintf("accesslog_als_%d_%d", i, j), // TODO: rename this, so that we can share backend with tracing?
 						Settings: ds,
 					},
 					Type: sink.ALS.Type,
@@ -320,7 +320,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					return nil, err
 				}
 				al.Destination = ir.RouteDestination{
-					Name:     fmt.Sprintf("accesslog-%d", idx), // TODO: rename this, so that we can share backend with tracing?
+					Name:     fmt.Sprintf("accesslog_otel_%d_%d", i, j), // TODO: rename this, so that we can share backend with tracing?
 					Settings: ds,
 				}
 
