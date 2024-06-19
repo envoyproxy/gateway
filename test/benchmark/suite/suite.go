@@ -17,7 +17,6 @@ import (
 	"time"
 
 	batchv1 "k8s.io/api/batch/v1"
-	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -82,7 +81,9 @@ func NewBenchmarkTestSuite(client client.Client, options BenchmarkOptions,
 		return nil, err
 	}
 
+	// Reset some timeout config for the benchmark test.
 	config.SetupTimeoutConfig(&timeoutConfig)
+	timeoutConfig.RouteMustHaveParents = 180 * time.Second
 
 	// Prepare static options for benchmark client.
 	staticArgs := prepareBenchmarkClientStaticArgs(options)
@@ -111,7 +112,7 @@ func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 
 		test.Test(t, b)
 
-		// TODO: generate a human readable benchmark report for each test.
+		// TODO: generate a human-readable benchmark report for each test.
 	}
 }
 
@@ -153,9 +154,11 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, name, 
 		}
 
 		t.Logf("Job %s still not complete", name)
+
 		return false, nil
 	}); err != nil {
 		t.Errorf("Failed to run benchmark test: %v", err)
+
 		return err
 	}
 
@@ -274,7 +277,7 @@ func (b *BenchmarkTestSuite) ScaleDownHTTPRoutes(ctx context.Context, scaleRange
 		oldRoute.SetLabels(b.scaledLabel)
 		oldRoute.Spec.ParentRefs[0].Name = gwapiv1.ObjectName(refGateway)
 
-		if err := b.CleanupResource(ctx, oldRoute); err != nil {
+		if err := b.DeleteResource(ctx, oldRoute); err != nil {
 			return err
 		}
 
@@ -297,19 +300,7 @@ func (b *BenchmarkTestSuite) CreateResource(ctx context.Context, object client.O
 	return nil
 }
 
-// RegisterCleanup registers cleanup functions for all benchmark test resources.
-func (b *BenchmarkTestSuite) RegisterCleanup(t *testing.T, ctx context.Context, object, scaledObject client.Object) {
-	t.Cleanup(func() {
-		t.Logf("Start to cleanup benchmark test resources")
-
-		_ = b.CleanupResource(ctx, object)
-		_ = b.CleanupScaledResources(ctx, scaledObject)
-
-		t.Logf("Clean up complete!")
-	})
-}
-
-func (b *BenchmarkTestSuite) CleanupResource(ctx context.Context, object client.Object) error {
+func (b *BenchmarkTestSuite) DeleteResource(ctx context.Context, object client.Object) error {
 	if err := b.Client.Delete(ctx, object); err != nil {
 		if !kerrors.IsNotFound(err) {
 			return err
@@ -320,8 +311,8 @@ func (b *BenchmarkTestSuite) CleanupResource(ctx context.Context, object client.
 	return nil
 }
 
-// CleanupScaledResources only cleanups all the resources under benchmark-test namespace.
-func (b *BenchmarkTestSuite) CleanupScaledResources(ctx context.Context, object client.Object) error {
+// DeleteScaledResources only cleanups all the resources under benchmark-test namespace.
+func (b *BenchmarkTestSuite) DeleteScaledResources(ctx context.Context, object client.Object) error {
 	if err := b.Client.DeleteAllOf(ctx, object,
 		client.MatchingLabels{BenchmarkTestScaledKey: "true"}, client.InNamespace("benchmark-test")); err != nil {
 		return err
@@ -329,17 +320,14 @@ func (b *BenchmarkTestSuite) CleanupScaledResources(ctx context.Context, object 
 	return nil
 }
 
-// CleanupBenchmarkClientJobs only cleanups all the jobs and its associated pods under benchmark-test namespace.
-func (b *BenchmarkTestSuite) CleanupBenchmarkClientJobs(ctx context.Context, name string) error {
-	if err := b.Client.DeleteAllOf(ctx, &batchv1.Job{},
-		client.MatchingLabels{BenchmarkTestClientKey: "true"}, client.InNamespace("benchmark-test")); err != nil {
-		return err
-	}
+// RegisterCleanup registers cleanup functions for all benchmark test resources.
+func (b *BenchmarkTestSuite) RegisterCleanup(t *testing.T, ctx context.Context, object, scaledObject client.Object) {
+	t.Cleanup(func() {
+		t.Logf("Start to cleanup benchmark test resources")
 
-	if err := b.Client.DeleteAllOf(ctx, &corev1.Pod{},
-		client.MatchingLabels{"job-name": name}, client.InNamespace("benchmark-test")); err != nil {
-		return err
-	}
+		_ = b.DeleteResource(ctx, object)
+		_ = b.DeleteScaledResources(ctx, scaledObject)
 
-	return nil
+		t.Logf("Clean up complete!")
+	})
 }

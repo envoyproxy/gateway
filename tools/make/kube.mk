@@ -174,6 +174,14 @@ install-benchmark-server: ## Install nighthawk server for benchmark test
 	kubectl -n benchmark-test create configmap test-server-config --from-file=test/benchmark/config/nighthawk-test-server-config.yaml -o yaml
 	kubectl apply -f test/benchmark/config/nighthawk-test-server.yaml
 
+.PHONY: uninstall-benchmark-server
+uninstall-benchmark-server: ## Uninstall nighthawk server for benchmark test
+	@$(LOG_TARGET)
+	kubectl delete job -n benchmark-test -l benchmark-test/client=true
+	kubectl delete -f test/benchmark/config/nighthawk-test-server.yaml
+	kubectl delete configmap test-server-config -n benchmark-test
+	kubectl delete namespace benchmark-test
+
 .PHONY: install-e2e-telemetry
 install-e2e-telemetry: prepare-helm-repo install-fluent-bit install-loki install-tempo install-otel-collector install-prometheus
 	@$(LOG_TARGET)

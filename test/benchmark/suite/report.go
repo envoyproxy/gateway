@@ -25,6 +25,7 @@ import (
 )
 
 const (
+	localMetricsPort        = 0
 	controlPlaneMetricsPort = 19001
 )
 
@@ -123,7 +124,7 @@ func (r *BenchmarkReport) getBenchmarkResultFromPodLogs(ctx context.Context, pod
 }
 
 func (r *BenchmarkReport) getMetricsFromPodPortForwarder(t *testing.T, pod *types.NamespacedName) error {
-	fw, err := kube.NewLocalPortForwarder(r.kubeClient, *pod, controlPlaneMetricsPort, controlPlaneMetricsPort)
+	fw, err := kube.NewLocalPortForwarder(r.kubeClient, *pod, localMetricsPort, controlPlaneMetricsPort)
 	if err != nil {
 		return fmt.Errorf("failed to build port forwarder for pod %s: %v", pod.String(), err)
 	}
