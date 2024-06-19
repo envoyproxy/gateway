@@ -3568,7 +3568,7 @@ _Appears in:_
 | `host` | _string_ |  false  | Host define the provider service hostname.<br />Deprecated: Use BackendRefs instead. |
 | `port` | _integer_ |  false  | Port defines the port the provider service is exposed on.<br />Deprecated: Use BackendRefs instead. |
 | `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the trace will be sent.<br />Only Service kind is supported for now. |
-| `zipkin` | _[ZipkinConfiguration](#zipkinconfiguration)_ |  false  | Zipkin defines optional configuration for the Zipkin tracing provider. |
+| `zipkin` | _[ZipkinTracingProvider](#zipkintracingprovider)_ |  false  | Zipkin defines the Zipkin tracing provider configuration |
 
 
 #### TracingProviderType
@@ -3797,11 +3797,11 @@ _Appears in:_
 | `numTrustedHops` | _integer_ |  false  | NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP<br />headers to trust when determining the origin client's IP address.<br />Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for<br />for more details. |
 
 
-#### ZipkinConfiguration
+#### ZipkinTracingProvider
 
 
 
-ZipkinConfiguration defines optional configuration for the Zipkin tracing provider.
+ZipkinTracingProvider defines the Zipkin tracing provider configuration.
 
 _Appears in:_
 - [TracingProvider](#tracingprovider)

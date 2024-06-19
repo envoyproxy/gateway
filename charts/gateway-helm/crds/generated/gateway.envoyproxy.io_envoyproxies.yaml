@@ -10976,8 +10976,8 @@ spec:
                             - Zipkin
                             type: string
                           zipkin:
-                            description: Zipkin defines optional configuration for
-                              the Zipkin tracing provider.
+                            description: Zipkin defines the Zipkin tracing provider
+                              configuration
                             properties:
                               sharedSpanContext:
                                 default: true
@@ -10991,9 +10991,6 @@ spec:
                                   when creating a new trace instance.
                                 type: boolean
                             type: object
-                            x-kubernetes-validations:
-                            - message: only supports Zipkin provider type.
-                              rule: self.type == 'Zipkin'
                         required:
                         - type
                         type: object

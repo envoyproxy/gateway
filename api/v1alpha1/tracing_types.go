@@ -57,10 +57,9 @@ type TracingProvider struct {
 	// +kubebuilder:validation:XValidation:message="only support Service kind.",rule="self.all(f, f.kind == 'Service')"
 	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core group.",rule="self.all(f, f.group == '')"
 	BackendRefs []BackendRef `json:"backendRefs,omitempty"`
-	// Zipkin defines optional configuration for the Zipkin tracing provider.
+	// Zipkin defines the Zipkin tracing provider configuration
 	// +optional
-	// +kubebuilder:validation:XValidation:message="only supports Zipkin provider type.",rule="self.type == 'Zipkin'"
-	Zipkin *ZipkinConfiguration `json:"zipkin,omitempty"`
+	Zipkin *ZipkinTracingProvider `json:"zipkin,omitempty"`
 }
 
 type CustomTagType string
@@ -118,8 +117,8 @@ type RequestHeaderCustomTag struct {
 	DefaultValue *string `json:"defaultValue,omitempty"`
 }
 
-// ZipkinConfiguration defines optional configuration for the Zipkin tracing provider.
-type ZipkinConfiguration struct {
+// ZipkinTracingProvider defines the Zipkin tracing provider configuration.
+type ZipkinTracingProvider struct {
 	// TraceId128Bit determines whether a 128bit trace id will be used
 	// when creating a new trace instance.
 	// +optional
