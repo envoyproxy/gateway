@@ -10962,6 +10962,20 @@ spec:
                               Host define the provider service hostname.
                               Deprecated: Use BackendRefs instead.
                             type: string
+                          openTelemetry:
+                            description: OpenTelemetry defines the OpenTelemetry tracing
+                              provider configuration.
+                            properties:
+                              resourceDetectors:
+                                description: ResourceDetectors defines the resource
+                                  detectors to use.
+                                properties:
+                                  environment:
+                                    description: Environment defines the environment
+                                      resource detector configuration.
+                                    type: object
+                                type: object
+                            type: object
                           port:
                             default: 4317
                             description: |-

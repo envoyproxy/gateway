@@ -58,6 +58,28 @@ type TracingProvider struct {
 	// +kubebuilder:validation:XValidation:message="only support Service kind.",rule="self.all(f, f.kind == 'Service')"
 	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core group.",rule="self.all(f, f.group == '')"
 	BackendRefs []BackendRef `json:"backendRefs,omitempty"`
+	// OpenTelemetry defines the OpenTelemetry tracing provider configuration.
+	// +optional
+	// +notImplementedHide
+	OpenTelemetry *OpenTelemetryTracingProvider `json:"openTelemetry,omitempty"`
+}
+
+type OpenTelemetryTracingProvider struct {
+	// ResourceDetectors defines the resource detectors to use.
+	// +optional
+	ResourceDetectors *OpenTelemetryTracingResourceDetectors `json:"resourceDetectors,omitempty"`
+	// TODO: add support for OpenTelemetry Samplers
+}
+
+type OpenTelemetryTracingResourceDetectors struct {
+	// Environment defines the environment resource detector configuration.
+	// +optional
+	Environment *OpenTelemetryTracingResourceDetectorEnvironment `json:"environment,omitempty"`
+}
+
+// OpenTelemetryTracingResourceDetectorEnvironment defines the environment resource detector configuration.
+type OpenTelemetryTracingResourceDetectorEnvironment struct {
+	// add more configuration options in the future.
 }
 
 type CustomTagType string

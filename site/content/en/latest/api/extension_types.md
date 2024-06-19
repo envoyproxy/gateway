@@ -2481,6 +2481,33 @@ _Appears in:_
 | `resources` | _object (keys:string, values:string)_ |  false  | Resources is a set of labels that describe the source of a log entry, including envoy node info.<br />It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/). |
 
 
+#### OpenTelemetryTracingProvider
+
+
+
+
+
+_Appears in:_
+- [TracingProvider](#tracingprovider)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `resourceDetectors` | _[OpenTelemetryTracingResourceDetectors](#opentelemetrytracingresourcedetectors)_ |  false  | ResourceDetectors defines the resource detectors to use. |
+
+
+
+
+#### OpenTelemetryTracingResourceDetectors
+
+_Underlying type:_ _[struct{Environment *OpenTelemetryTracingResourceDetectorEnvironment "json:\"environment,omitempty\""}](#struct{environment-*opentelemetrytracingresourcedetectorenvironment-"json:\"environment,omitempty\""})_
+
+
+
+_Appears in:_
+- [OpenTelemetryTracingProvider](#opentelemetrytracingprovider)
+
+
+
 #### Origin
 
 _Underlying type:_ _string_
