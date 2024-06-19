@@ -55,9 +55,9 @@ http:
     destination:
       name: "redirect-route-dest"
       settings:
-        - endpoints:
-            - host: "1.2.3.4"
-              port: 50000
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
     redirect:
       scheme: https
       statusCode: 302
@@ -69,9 +69,9 @@ http:
     destination:
       name: "redirect-route-dest"
       settings:
-        - endpoints:
-            - host: "1.2.3.4"
-              port: 50000
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
     redirect:
       scheme: https
       statusCode: 302
