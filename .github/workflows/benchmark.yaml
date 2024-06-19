@@ -28,7 +28,7 @@ on:
         required: false
       memory_limits:
         description: "The memory resource limits for the envoy gateway, in unit 'Mi'. Default: 1024Mi."
-        default: '1024'
+        default: '2048'
         type: string
         required: false
 
