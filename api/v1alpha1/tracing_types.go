@@ -120,7 +120,7 @@ type RequestHeaderCustomTag struct {
 
 // ZipkinConfiguration defines optional configuration for the Zipkin tracing provider.
 type ZipkinConfiguration struct {
-	// TraceId_128Bit determines whether a 128bit trace id will be used
+	// TraceId128Bit determines whether a 128bit trace id will be used
 	// when creating a new trace instance.
 	// +optional
 	TraceId128Bit bool `json:"traceId128Bit,omitempty"`

@@ -10987,7 +10987,7 @@ spec:
                                 type: boolean
                               traceId128Bit:
                                 description: |-
-                                  TraceId_128Bit determines whether a 128bit trace id will be used
+                                  TraceId128Bit determines whether a 128bit trace id will be used
                                   when creating a new trace instance.
                                 type: boolean
                             type: object
