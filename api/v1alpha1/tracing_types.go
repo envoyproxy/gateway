@@ -60,7 +60,7 @@ type TracingProvider struct {
 	// Zipkin defines optional configuration for the Zipkin tracing provider.
 	// +optional
 	// +kubebuilder:validation:XValidation:message="only supports Zipkin provider type.",rule="self.type == 'Zipkin'"
-	Zipkin ZipkinConfiguration `json:"zipkin,omitempty"`
+	Zipkin *ZipkinConfiguration `json:"zipkin,omitempty"`
 }
 
 type CustomTagType string
