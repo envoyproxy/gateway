@@ -194,9 +194,9 @@ var OpenTelemetryTest = suite.ConformanceTest{
 var ALSTest = suite.ConformanceTest{
 	ShortName:   "ALS",
 	Description: "Make sure ALS access log is working",
-	Manifests:   []string{"testdata/accesslog-otel.yaml"},
+	Manifests:   []string{"testdata/accesslog-als.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("OTel", func(t *testing.T) {
+		t.Run("HTTP", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "accesslog-als", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
