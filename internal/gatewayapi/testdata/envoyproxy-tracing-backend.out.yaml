@@ -107,7 +107,6 @@ infraIR:
                   namespace: monitoring
                   port: 4317
                 type: OpenTelemetry
-                zipkin: {}
               samplingRate: 100
         status: {}
       listeners:

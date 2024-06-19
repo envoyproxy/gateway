@@ -202,7 +202,6 @@ infraIR:
                 host: otel-collector.monitoring.svc.cluster.local
                 port: 4317
                 type: OpenTelemetry
-                zipkin: {}
               samplingRate: 100
         status: {}
       listeners:
@@ -235,7 +234,6 @@ infraIR:
                 host: otel-collector.monitoring.svc.cluster.local
                 port: 4317
                 type: OpenTelemetry
-                zipkin: {}
               samplingRate: 100
         status: {}
       listeners:
