@@ -202,8 +202,8 @@ infraIR:
                 host: otel-collector.monitoring.svc.cluster.local
                 port: 4317
                 type: OpenTelemetry
+                zipkin: {}
               samplingRate: 100
-              settings: {}
         status: {}
       listeners:
       - address: null
@@ -235,8 +235,8 @@ infraIR:
                 host: otel-collector.monitoring.svc.cluster.local
                 port: 4317
                 type: OpenTelemetry
+                zipkin: {}
               samplingRate: 100
-              settings: {}
         status: {}
       listeners:
       - address: null
@@ -293,11 +293,8 @@ xdsIR:
             port: 4317
           protocol: GRPC
           weight: 1
-      provider:
-        type: ""
       samplingRate: 100
       serviceName: gateway-1.envoy-gateway
-      settings: {}
   envoy-gateway/gateway-2:
     accessLog:
       text:
@@ -348,8 +345,5 @@ xdsIR:
             port: 4317
           protocol: GRPC
           weight: 1
-      provider:
-        type: ""
       samplingRate: 100
       serviceName: gateway-2.envoy-gateway
-      settings: {}
