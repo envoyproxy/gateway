@@ -1088,6 +1088,7 @@ metadata:
 spec:
   selector:
     app: envoy-als
+  type: LoadBalancer
   ports:
   - name: grpc-als
     protocol: TCP
