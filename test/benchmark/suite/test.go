@@ -13,7 +13,7 @@ import "testing"
 type BenchmarkTest struct {
 	ShortName   string
 	Description string
-	Test        func(*testing.T, *BenchmarkTestSuite)
+	Test        func(*testing.T, *BenchmarkTestSuite) []*BenchmarkReport
 }
 
 // BenchmarkOptions for nighthawk-client.

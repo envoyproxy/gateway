@@ -37,7 +37,6 @@ type BenchmarkTestSuite struct {
 	TimeoutConfig  config.TimeoutConfig
 	ControllerName string
 	Options        BenchmarkOptions
-	Reports        []BenchmarkReport
 
 	// Resources template for supported benchmark targets.
 	GatewayTemplate    *gwapiv1.Gateway
@@ -110,9 +109,13 @@ func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 	for _, test := range tests {
 		t.Logf("Running benchmark test: %s", test.ShortName)
 
-		test.Test(t, b)
+		reports := test.Test(t, b)
+		if len(reports) == 0 {
+			continue
+		}
 
-		// TODO: generate a human-readable benchmark report for each test.
+		// TODO: Generate a human-readable benchmark report for each test.
+		t.Logf("Got %d reports for test: %s", len(reports), test.ShortName)
 	}
 }
 
@@ -121,17 +124,17 @@ func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 // TODO: currently running benchmark test via nighthawk_client,
 // consider switching to gRPC nighthawk-service for benchmark test.
 // ref: https://github.com/envoyproxy/nighthawk/blob/main/api/client/service.proto
-func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, name, gatewayHostPort string, requestHeaders ...string) error {
+func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, name, gatewayHostPort string, requestHeaders ...string) (*BenchmarkReport, error) {
 	t.Logf("Running benchmark test: %s", name)
 
 	jobNN, err := b.createBenchmarkClientJob(ctx, name, gatewayHostPort, requestHeaders...)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	duration, err := strconv.ParseInt(b.Options.Duration, 10, 64)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Wait from benchmark test job to complete.
@@ -159,28 +162,27 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, name, 
 	}); err != nil {
 		t.Errorf("Failed to run benchmark test: %v", err)
 
-		return err
+		return nil, err
 	}
 
 	t.Logf("Running benchmark test: %s successfully", name)
 
-	report, err := NewBenchmarkReport()
+	report, err := NewBenchmarkReport(name)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Get all the reports from this benchmark test run.
 	if err = report.GetBenchmarkResult(t, ctx, jobNN); err != nil {
-		return err
+		return nil, err
 	}
 	if err = report.GetControlPlaneMetrics(t, ctx); err != nil {
-		return err
+		return nil, err
 	}
 
 	report.Print(t, name)
-	b.Reports = append(b.Reports, *report)
 
-	return nil
+	return report, nil
 }
 
 func (b *BenchmarkTestSuite) createBenchmarkClientJob(ctx context.Context, name, gatewayHostPort string, requestHeaders ...string) (*types.NamespacedName, error) {

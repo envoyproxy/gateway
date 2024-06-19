@@ -28,7 +28,7 @@ func init() {
 var ScaleHTTPRoutes = suite.BenchmarkTest{
 	ShortName:   "ScaleHTTPRoute",
 	Description: "Fixed one Gateway and different scales of HTTPRoutes.",
-	Test: func(t *testing.T, bSuite *suite.BenchmarkTestSuite) {
+	Test: func(t *testing.T, bSuite *suite.BenchmarkTestSuite) (reports []*suite.BenchmarkReport) {
 		var (
 			ctx            = context.Background()
 			ns             = "benchmark-test"
@@ -69,8 +69,10 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 
 					// Run benchmark test at different scale.
 					name := fmt.Sprintf("scale-up-httproutes-%d", scale)
-					err = bSuite.Benchmark(t, ctx, name, gatewayAddr, requestHeaders...)
+					report, err := bSuite.Benchmark(t, ctx, name, gatewayAddr, requestHeaders...)
 					require.NoError(t, err)
+
+					reports = append(reports, report)
 				})
 			}
 		})
@@ -100,10 +102,14 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 
 					// Run benchmark test at different scale.
 					name := fmt.Sprintf("scale-down-httproutes-%d", scale)
-					err = bSuite.Benchmark(t, ctx, name, gatewayAddr, requestHeaders...)
+					report, err := bSuite.Benchmark(t, ctx, name, gatewayAddr, requestHeaders...)
 					require.NoError(t, err)
+
+					reports = append(reports, report)
 				})
 			}
 		})
+
+		return
 	},
 }

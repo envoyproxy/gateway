@@ -30,25 +30,28 @@ const (
 )
 
 type BenchmarkReport struct {
+	Name       string
 	RawResult  []byte
 	RawMetrics []byte
 
 	kubeClient kube.CLIClient
 }
 
-func NewBenchmarkReport() (*BenchmarkReport, error) {
+func NewBenchmarkReport(name string) (*BenchmarkReport, error) {
 	kubeClient, err := kube.NewCLIClient(options.DefaultConfigFlags.ToRawKubeConfigLoader())
 	if err != nil {
 		return nil, err
 	}
 
 	return &BenchmarkReport{
+		Name:       name,
 		kubeClient: kubeClient,
 	}, nil
 }
 
+// Print prints the raw report of one benchmark test.
 func (r *BenchmarkReport) Print(t *testing.T, name string) {
-	t.Logf("The report of benchmark test: %s", name)
+	t.Logf("The raw report of benchmark test: %s", name)
 
 	t.Logf("=== Benchmark Result: \n\n %s \n\n", r.RawResult)
 	t.Logf("=== Control-Plane Metrics: \n\n %s \n\n", r.RawMetrics)
