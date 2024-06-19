@@ -56,6 +56,8 @@ const (
 	reqWithoutQueryCommandOperator = "%REQ_WITHOUT_QUERY"
 	metadataCommandOperator        = "%METADATA"
 	celCommandOperator             = "%CEL"
+
+	tcpGRPCAccessLog = "envoy.access_loggers.tcp_grpc"
 )
 
 // for the case when a route does not exist to upstream, hcm logs will not be present
@@ -209,31 +211,31 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 
 		switch als.Type {
 		case egv1a1.ALSEnvoyProxyAccessLogTypeHTTP:
-			al := &grpcaccesslog.HttpGrpcAccessLogConfig{
+			alCfg := &grpcaccesslog.HttpGrpcAccessLogConfig{
 				CommonConfig: cc,
 			}
 
 			if als.HTTP != nil {
-				al.AdditionalRequestHeadersToLog = als.HTTP.RequestHeaders
-				al.AdditionalResponseHeadersToLog = als.HTTP.ResponseHeaders
-				al.AdditionalResponseTrailersToLog = als.HTTP.ResponseTrailers
+				alCfg.AdditionalRequestHeadersToLog = als.HTTP.RequestHeaders
+				alCfg.AdditionalResponseHeadersToLog = als.HTTP.ResponseHeaders
+				alCfg.AdditionalResponseTrailersToLog = als.HTTP.ResponseTrailers
 			}
 
-			accesslogAny, _ := anypb.New(al)
+			accesslogAny, _ := anypb.New(alCfg)
 			accessLogs = append(accessLogs, &accesslog.AccessLog{
-				Name: "envoy.access_loggers.http_grpc",
+				Name: wellknown.HTTPGRPCAccessLog,
 				ConfigType: &accesslog.AccessLog_TypedConfig{
 					TypedConfig: accesslogAny,
 				},
 			})
 		case egv1a1.ALSEnvoyProxyAccessLogTypeTCP:
-			al := &grpcaccesslog.TcpGrpcAccessLogConfig{
+			alCfg := &grpcaccesslog.TcpGrpcAccessLogConfig{
 				CommonConfig: cc,
 			}
 
-			accesslogAny, _ := anypb.New(al)
+			accesslogAny, _ := anypb.New(alCfg)
 			accessLogs = append(accessLogs, &accesslog.AccessLog{
-				Name: "envoy.access_loggers.tcp_grpc",
+				Name: tcpGRPCAccessLog,
 				ConfigType: &accesslog.AccessLog_TypedConfig{
 					TypedConfig: accesslogAny,
 				},
