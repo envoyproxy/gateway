@@ -16,8 +16,8 @@ xds:
             metadata:
               filterMetadata:
                 io.envoyproxy.gateway:
-                  resources:
-                  - groupVersion: ""
+                  route:
+                    groupVersion: ""
                     kind: HTTPRoute
                     name: backend
                     namespace: envoy-gateway-system

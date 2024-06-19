@@ -14,8 +14,8 @@
       metadata:
         filterMetadata:
           io.envoyproxy.gateway:
-            resources:
-            - annotations:
+            route:
+              annotations:
                 foo: bar
               groupVersion: gateway.networking.k8s.io/v1
               kind: HTTPRoute

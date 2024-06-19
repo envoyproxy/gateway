@@ -509,14 +509,12 @@
                         "metadata": {
                           "filterMetadata": {
                             "io.envoyproxy.gateway": {
-                              "resources": [
-                                {
-                                  "groupVersion": "",
-                                  "kind": "HTTPRoute",
-                                  "name": "backend",
-                                  "namespace": "envoy-gateway-system"
-                                }
-                              ]
+                              "route": {
+                                "groupVersion": "",
+                                "kind": "HTTPRoute",
+                                "name": "backend",
+                                "namespace": "envoy-gateway-system"
+                              }
                             }
                           }
                         },

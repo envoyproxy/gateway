@@ -22,14 +22,12 @@
                     "metadata": {
                       "filterMetadata": {
                         "io.envoyproxy.gateway": {
-                          "resources": [
-                            {
-                              "groupVersion": "",
-                              "kind": "HTTPRoute",
-                              "name": "backend",
-                              "namespace": "default"
-                            }
-                          ]
+                          "route": {
+                            "groupVersion": "",
+                            "kind": "HTTPRoute",
+                            "name": "backend",
+                            "namespace": "default"
+                          }
                         }
                       }
                     },
@@ -72,14 +70,12 @@
                     "metadata": {
                       "filterMetadata": {
                         "io.envoyproxy.gateway": {
-                          "resources": [
-                            {
-                              "groupVersion": "",
-                              "kind": "HTTPRoute",
-                              "name": "backend",
-                              "namespace": "default"
-                            }
-                          ]
+                          "route": {
+                            "groupVersion": "",
+                            "kind": "HTTPRoute",
+                            "name": "backend",
+                            "namespace": "default"
+                          }
                         }
                       }
                     },

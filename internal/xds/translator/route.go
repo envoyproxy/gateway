@@ -33,7 +33,7 @@ const (
 	envoyGatewayMetadataKeyNamespace    = "namespace"
 	envoyGatewayMetadataKeyAnnotations  = "annotations"
 	envoyGatewayMetadataKeySectionName  = "sectionName"
-	envoyGatewayMetadataKeyResources    = "resources"
+	envoyGatewayMetadataKeyRoute        = "route"
 )
 
 func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
@@ -643,19 +643,11 @@ func buildXdsRouteMetadata(metadata *ir.ResourceMetadata) *corev3.Metadata {
 		return nil
 	}
 
-	resourcesList := &structpb.ListValue{}
-
-	resourcesList.Values = append(resourcesList.Values, buildResourceMetadata(metadata))
-
 	return &corev3.Metadata{
 		FilterMetadata: map[string]*structpb.Struct{
 			envoyGatewayMetadataNamespace: {
 				Fields: map[string]*structpb.Value{
-					envoyGatewayMetadataKeyResources: {
-						Kind: &structpb.Value_ListValue{
-							ListValue: resourcesList,
-						},
-					},
+					envoyGatewayMetadataKeyRoute: buildResourceMetadata(metadata),
 				},
 			},
 		},

@@ -16,8 +16,8 @@ xds:
             metadata:
               filterMetadata:
                 io.envoyproxy.gateway:
-                  resources:
-                  - groupVersion: ""
+                  route:
+                    groupVersion: ""
                     kind: HTTPRoute
                     name: backend
                     namespace: default
@@ -40,8 +40,8 @@ xds:
             metadata:
               filterMetadata:
                 io.envoyproxy.gateway:
-                  resources:
-                  - groupVersion: ""
+                  route:
+                    groupVersion: ""
                     kind: GRPCRoute
                     name: backend
                     namespace: default
