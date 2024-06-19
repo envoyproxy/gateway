@@ -226,7 +226,10 @@ var ALSTest = suite.ConformanceTest{
 }
 
 func ALSLogCount(t *testing.T, suite *suite.ConformanceTestSuite) int {
-	metricPath, err := RetrieveURL(suite.Client, types.NamespacedName{}, 19001, "/metrics")
+	metricPath, err := RetrieveURL(suite.Client, types.NamespacedName{
+		Namespace: "monitoring",
+		Name:      "envoy-als",
+	}, 19001, "/metrics")
 	if err != nil {
 		t.Fatalf("failed to get metric url: %v", err)
 	}
