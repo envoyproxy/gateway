@@ -182,7 +182,7 @@ delete-cluster: $(tools/kind) ## Delete kind cluster.
 	$(tools/kind) delete cluster --name envoy-gateway
 
 .PHONY: generate-manifests
-generate-manifests: helm-generate ## Generate Kubernetes release manifests.
+generate-manifests: helm-generate.gateway-helm ## Generate Kubernetes release manifests.
 	@$(LOG_TARGET)
 	@$(call log, "Generating kubernetes manifests")
 	mkdir -p $(OUTPUT_DIR)/
