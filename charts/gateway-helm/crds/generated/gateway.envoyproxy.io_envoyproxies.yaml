@@ -10864,9 +10864,7 @@ spec:
                           If provider is kubernetes, pod name and namespace are added by default.
                         type: object
                       provider:
-                        description: |-
-                          Provider defines the tracing provider.
-                          Only OpenTelemetry is supported currently.
+                        description: Provider defines the tracing provider.
                         properties:
                           backendRefs:
                             description: |-
@@ -10972,11 +10970,10 @@ spec:
                             type: integer
                           type:
                             default: OpenTelemetry
-                            description: |-
-                              Type defines the tracing provider type.
-                              EG currently only supports OpenTelemetry.
+                            description: Type defines the tracing provider type.
                             enum:
                             - OpenTelemetry
+                            - Zipkin
                             type: string
                         required:
                         - type

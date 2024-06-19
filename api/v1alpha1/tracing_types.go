@@ -18,7 +18,6 @@ type ProxyTracing struct {
 	// If provider is kubernetes, pod name and namespace are added by default.
 	CustomTags map[string]CustomTag `json:"customTags,omitempty"`
 	// Provider defines the tracing provider.
-	// Only OpenTelemetry is supported currently.
 	Provider TracingProvider `json:"provider"`
 }
 
@@ -26,6 +25,7 @@ type TracingProviderType string
 
 const (
 	TracingProviderTypeOpenTelemetry TracingProviderType = "OpenTelemetry"
+	TracingProviderTypeZipkin        TracingProviderType = "Zipkin"
 )
 
 // TracingProvider defines the tracing provider configuration.
@@ -33,8 +33,7 @@ const (
 // +kubebuilder:validation:XValidation:message="host or backendRefs needs to be set",rule="has(self.host) || self.backendRefs.size() > 0"
 type TracingProvider struct {
 	// Type defines the tracing provider type.
-	// EG currently only supports OpenTelemetry.
-	// +kubebuilder:validation:Enum=OpenTelemetry
+	// +kubebuilder:validation:Enum=OpenTelemetry;Zipkin
 	// +kubebuilder:default=OpenTelemetry
 	Type TracingProviderType `json:"type"`
 	// Host define the provider service hostname.

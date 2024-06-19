@@ -1,5 +1,7 @@
 name: "tracing"
 tracing:
+  provider:
+    type: OpenTelemetry
   serviceName: "fake-name.fake-ns"
   samplingRate: 90
   customTags:

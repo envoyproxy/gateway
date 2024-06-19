@@ -15,6 +15,7 @@ import (
 	hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tracingtype "github.com/envoyproxy/go-control-plane/envoy/type/tracing/v3"
 	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
+	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -23,26 +24,61 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
+const (
+	envoyOpenTelemetry = "envoy.tracers.opentelemetry"
+	envoyZipkin        = "envoy.tracers.zipkin"
+)
+
+type typedConfigGenFn func() (*anypb.Any, error)
+
 func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, error) {
+	var providerName string
+	var providerConfig typedConfigGenFn
+
 	if tracing == nil {
 		return nil, nil
 	}
 
-	oc := &tracecfg.OpenTelemetryConfig{
-		GrpcService: &corev3.GrpcService{
-			TargetSpecifier: &corev3.GrpcService_EnvoyGrpc_{
-				EnvoyGrpc: &corev3.GrpcService_EnvoyGrpc{
-					ClusterName: tracing.Destination.Name,
-					Authority:   tracing.Authority,
+	switch tracing.Provider.Type {
+	case egv1a1.TracingProviderTypeOpenTelemetry:
+		providerName = envoyOpenTelemetry
+
+		providerConfig = func() (*anypb.Any, error) {
+			config := &tracecfg.OpenTelemetryConfig{
+				GrpcService: &corev3.GrpcService{
+					TargetSpecifier: &corev3.GrpcService_EnvoyGrpc_{
+						EnvoyGrpc: &corev3.GrpcService_EnvoyGrpc{
+							ClusterName: tracing.Destination.Name,
+							Authority:   tracing.Authority,
+						},
+					},
 				},
-			},
-		},
-		ServiceName: tracing.ServiceName,
+				ServiceName: tracing.ServiceName,
+			}
+
+			return protocov.ToAnyWithError(config)
+		}
+	case egv1a1.TracingProviderTypeZipkin:
+		providerName = envoyZipkin
+
+		providerConfig = func() (*anypb.Any, error) {
+			config := &tracecfg.ZipkinConfig{
+				CollectorCluster:         tracing.Destination.Name,
+				CollectorEndpoint:        "/api/v2/spans",
+				TraceId_128Bit:           true,
+				SharedSpanContext:        wrapperspb.Bool(false),
+				CollectorEndpointVersion: tracecfg.ZipkinConfig_HTTP_JSON,
+			}
+
+			return protocov.ToAnyWithError(config)
+		}
+	default:
+		return nil, fmt.Errorf("unknown tracing provider: %s", tracing.Provider.Type)
 	}
 
-	ocAny, err := protocov.ToAnyWithError(oc)
+	ocAny, err := providerConfig()
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal OpenTelemetryConfig: %w", err)
+		return nil, fmt.Errorf("failed to marshal telemetry config: %w", err)
 	}
 
 	tags := make([]*tracingtype.CustomTag, 0, len(tracing.CustomTags))
@@ -108,7 +144,7 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 			Value: tracing.SamplingRate,
 		},
 		Provider: &tracecfg.Tracing_Http{
-			Name: "envoy.tracers.opentelemetry",
+			Name: providerName,
 			ConfigType: &tracecfg.Tracing_Http_TypedConfig{
 				TypedConfig: ocAny,
 			},

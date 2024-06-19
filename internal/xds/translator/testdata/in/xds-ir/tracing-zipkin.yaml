@@ -1,9 +1,7 @@
 name: "tracing"
-metrics:
-  enablePerEndpointStats: true
 tracing:
   provider:
-    type: OpenTelemetry
+    type: Zipkin
   serviceName: "fake-name.fake-ns"
   samplingRate: 90
   customTags:
@@ -21,14 +19,13 @@ tracing:
       requestHeader:
         name: "X-Request-Id"
         defaultValue: "-"
+  authority: "zipkin-collector.default.svc.cluster.local"
   destination:
     name: "tracing-0"
-    authority: "otel-collector.default.svc.cluster.local"
     settings:
       - endpoints:
-          - host: "otel-collector.default.svc.cluster.local"
-            port: 4317
-        protocol: "GRPC"
+          - host: "zipkin-collector.default.svc.cluster.local"
+            port: 9411
 http:
   - name: "first-listener"
     address: "0.0.0.0"
