@@ -25,7 +25,7 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/structpb"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/protocov"
 	"github.com/envoyproxy/gateway/internal/xds/types"
@@ -208,7 +208,7 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 		cc.GrpcService.InitialMetadata = md
 
 		switch als.Type {
-		case v1alpha1.ALSEnvoyProxyAccessLogTypeHTTP:
+		case egv1a1.ALSEnvoyProxyAccessLogTypeHTTP:
 			al := &grpcaccesslog.HttpGrpcAccessLogConfig{
 				CommonConfig: cc,
 			}
@@ -226,7 +226,7 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 					TypedConfig: accesslogAny,
 				},
 			})
-		case v1alpha1.ALSEnvoyProxyAccessLogTypeTCP:
+		case egv1a1.ALSEnvoyProxyAccessLogTypeTCP:
 			al := &grpcaccesslog.TcpGrpcAccessLogConfig{
 				CommonConfig: cc,
 			}
