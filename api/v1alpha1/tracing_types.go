@@ -19,9 +19,6 @@ type ProxyTracing struct {
 	CustomTags map[string]CustomTag `json:"customTags,omitempty"`
 	// Provider defines the tracing provider.
 	Provider TracingProvider `json:"provider"`
-	// Settings defines optional configuration for tracing providers.
-	// +optional
-	Settings TracingProviderSettings `json:"settings,omitempty"`
 }
 
 type TracingProviderType string
@@ -60,6 +57,10 @@ type TracingProvider struct {
 	// +kubebuilder:validation:XValidation:message="only support Service kind.",rule="self.all(f, f.kind == 'Service')"
 	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core group.",rule="self.all(f, f.group == '')"
 	BackendRefs []BackendRef `json:"backendRefs,omitempty"`
+	// Zipkin defines optional configuration for the Zipkin tracing provider.
+	// +optional
+	// +kubebuilder:validation:XValidation:message="only supports Zipkin provider type.",rule="self.type == 'Zipkin'"
+	Zipkin ZipkinConfiguration `json:"zipkin,omitempty"`
 }
 
 type CustomTagType string
@@ -117,17 +118,15 @@ type RequestHeaderCustomTag struct {
 	DefaultValue *string `json:"defaultValue,omitempty"`
 }
 
-// TracingProviderSettings defines optional configuration for tracing providers.
-type TracingProviderSettings struct {
+// ZipkinConfiguration defines optional configuration for the Zipkin tracing provider.
+type ZipkinConfiguration struct {
 	// TraceId_128Bit determines whether a 128bit trace id will be used
 	// when creating a new trace instance.
-	// +kubebuilder:validation:XValidation:rule="self == false || self.parent.provider.type == 'Zipkin'",message="TraceId128Bit can only be set if the provider type is Zipkin"
 	// +optional
 	TraceId128Bit bool `json:"traceId128Bit,omitempty"`
 	// SharedSpanContext determines whether client and server spans will
 	// share the same span context. Defaults to true.
 	// +kubebuilder:default=true
-	// +kubebuilder:validation:XValidation:rule="self == false || self.parent.provider.type == 'Zipkin'",message="SharedSpanContext can only be set if the provider type is Zipkin"
 	// +optional
 	SharedSpanContext bool `json:"sharedSpanContext,omitempty"`
 }

@@ -10975,6 +10975,25 @@ spec:
                             - OpenTelemetry
                             - Zipkin
                             type: string
+                          zipkin:
+                            description: Zipkin defines optional configuration for
+                              the Zipkin tracing provider.
+                            properties:
+                              sharedSpanContext:
+                                default: true
+                                description: |-
+                                  SharedSpanContext determines whether client and server spans will
+                                  share the same span context. Defaults to true.
+                                type: boolean
+                              traceId128Bit:
+                                description: |-
+                                  TraceId_128Bit determines whether a 128bit trace id will be used
+                                  when creating a new trace instance.
+                                type: boolean
+                            type: object
+                            x-kubernetes-validations:
+                            - message: only supports Zipkin provider type.
+                              rule: self.type == 'Zipkin'
                         required:
                         - type
                         type: object
@@ -10991,32 +11010,6 @@ spec:
                         maximum: 100
                         minimum: 0
                         type: integer
-                      settings:
-                        description: Settings defines optional configuration for tracing
-                          providers.
-                        properties:
-                          sharedSpanContext:
-                            default: true
-                            description: |-
-                              SharedSpanContext determines whether client and server spans will
-                              share the same span context. Defaults to true.
-                            type: boolean
-                            x-kubernetes-validations:
-                            - message: SharedSpanContext can only be set if the provider
-                                type is Zipkin
-                              rule: self == false || self.parent.provider.type ==
-                                'Zipkin'
-                          traceId128Bit:
-                            description: |-
-                              TraceId_128Bit determines whether a 128bit trace id will be used
-                              when creating a new trace instance.
-                            type: boolean
-                            x-kubernetes-validations:
-                            - message: TraceId128Bit can only be set if the provider
-                                type is Zipkin
-                              rule: self == false || self.parent.provider.type ==
-                                'Zipkin'
-                        type: object
                     required:
                     - provider
                     type: object
