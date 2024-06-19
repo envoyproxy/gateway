@@ -115,6 +115,7 @@ infraIR:
                   port: 4317
                 type: OpenTelemetry
               samplingRate: 100
+              settings: {}
         status: {}
       listeners:
       - address: null

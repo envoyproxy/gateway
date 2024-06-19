@@ -108,6 +108,7 @@ infraIR:
                   port: 4317
                 type: OpenTelemetry
               samplingRate: 100
+              settings: {}
         status: {}
       listeners:
       - address: null
@@ -146,5 +147,8 @@ xdsIR:
           - host: 8.7.6.5
             port: 4317
           protocol: GRPC
+      provider:
+        type: ""
       samplingRate: 100
       serviceName: gateway-1.envoy-gateway
+      settings: {}

@@ -18,14 +18,17 @@ type ProxyTracing struct {
 	// If provider is kubernetes, pod name and namespace are added by default.
 	CustomTags map[string]CustomTag `json:"customTags,omitempty"`
 	// Provider defines the tracing provider.
-	// Only OpenTelemetry is supported currently.
 	Provider TracingProvider `json:"provider"`
+	// Settings defines optional configuration for tracing providers.
+	// +optional
+	Settings TracingProviderSettings `json:"settings,omitempty"`
 }
 
 type TracingProviderType string
 
 const (
 	TracingProviderTypeOpenTelemetry TracingProviderType = "OpenTelemetry"
+	TracingProviderTypeZipkin        TracingProviderType = "Zipkin"
 )
 
 // TracingProvider defines the tracing provider configuration.
@@ -33,8 +36,7 @@ const (
 // +kubebuilder:validation:XValidation:message="host or backendRefs needs to be set",rule="has(self.host) || self.backendRefs.size() > 0"
 type TracingProvider struct {
 	// Type defines the tracing provider type.
-	// EG currently only supports OpenTelemetry.
-	// +kubebuilder:validation:Enum=OpenTelemetry
+	// +kubebuilder:validation:Enum=OpenTelemetry;Zipkin
 	// +kubebuilder:default=OpenTelemetry
 	Type TracingProviderType `json:"type"`
 	// Host define the provider service hostname.
@@ -113,4 +115,19 @@ type RequestHeaderCustomTag struct {
 	// DefaultValue defines the default value to use if the request header is not set.
 	// +optional
 	DefaultValue *string `json:"defaultValue,omitempty"`
+}
+
+// TracingProviderSettings defines optional configuration for tracing providers.
+type TracingProviderSettings struct {
+	// TraceId_128Bit determines whether a 128bit trace id will be used
+	// when creating a new trace instance.
+	// +kubebuilder:validation:XValidation:rule="self == false || self.parent.provider.type == 'Zipkin'",message="TraceId128Bit can only be set if the provider type is Zipkin"
+	// +optional
+	TraceId128Bit bool `json:"traceId128Bit,omitempty"`
+	// SharedSpanContext determines whether client and server spans will
+	// share the same span context. Defaults to true.
+	// +kubebuilder:default=true
+	// +kubebuilder:validation:XValidation:rule="self == false || self.parent.provider.type == 'Zipkin'",message="SharedSpanContext can only be set if the provider type is Zipkin"
+	// +optional
+	SharedSpanContext bool `json:"sharedSpanContext,omitempty"`
 }

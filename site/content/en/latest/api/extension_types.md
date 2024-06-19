@@ -2910,7 +2910,8 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `samplingRate` | _integer_ |  false  | SamplingRate controls the rate at which traffic will be<br />selected for tracing if no prior sampling decision has been made.<br />Defaults to 100, valid values [0-100]. 100 indicates 100% sampling. |
 | `customTags` | _object (keys:string, values:[CustomTag](#customtag))_ |  true  | CustomTags defines the custom tags to add to each span.<br />If provider is kubernetes, pod name and namespace are added by default. |
-| `provider` | _[TracingProvider](#tracingprovider)_ |  true  | Provider defines the tracing provider.<br />Only OpenTelemetry is supported currently. |
+| `provider` | _[TracingProvider](#tracingprovider)_ |  true  | Provider defines the tracing provider. |
+| `settings` | _[TracingProviderSettings](#tracingprovidersettings)_ |  false  | Settings defines optional configuration for tracing providers. |
 
 
 #### RateLimit
@@ -3564,10 +3565,25 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `type` | _[TracingProviderType](#tracingprovidertype)_ |  true  | Type defines the tracing provider type.<br />EG currently only supports OpenTelemetry. |
+| `type` | _[TracingProviderType](#tracingprovidertype)_ |  true  | Type defines the tracing provider type. |
 | `host` | _string_ |  false  | Host define the provider service hostname.<br />Deprecated: Use BackendRefs instead. |
 | `port` | _integer_ |  false  | Port defines the port the provider service is exposed on.<br />Deprecated: Use BackendRefs instead. |
 | `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the trace will be sent.<br />Only Service kind is supported for now. |
+
+
+#### TracingProviderSettings
+
+
+
+TracingProviderSettings defines optional configuration for tracing providers.
+
+_Appears in:_
+- [ProxyTracing](#proxytracing)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `traceId128Bit` | _boolean_ |  false  | TraceId_128Bit determines whether a 128bit trace id will be used<br />when creating a new trace instance. |
+| `sharedSpanContext` | _boolean_ |  false  | SharedSpanContext determines whether client and server spans will<br />share the same span context. Defaults to true. |
 
 
 #### TracingProviderType
@@ -3583,6 +3599,7 @@ _Appears in:_
 | ----- | ----------- |
 | `OpenTelemetry` |  | 
 | `OpenTelemetry` |  | 
+| `Zipkin` |  | 
 
 
 #### TriggerEnum
