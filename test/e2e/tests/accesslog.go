@@ -29,7 +29,7 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, FileAccessLogTest, OpenTelemetryTest)
+	ConformanceTests = append(ConformanceTests, FileAccessLogTest, OpenTelemetryTest, ALSTest)
 }
 
 var FileAccessLogTest = suite.ConformanceTest{
@@ -189,6 +189,61 @@ var OpenTelemetryTest = suite.ConformanceTest{
 			}
 		})
 	},
+}
+
+var ALSTest = suite.ConformanceTest{
+	ShortName:   "ALS",
+	Description: "Make sure ALS access log is working",
+	Manifests:   []string{"testdata/accesslog-otel.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		t.Run("OTel", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "accesslog-als", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			preCount := ALSLogCount(t, suite)
+			expectedResponse := httputils.ExpectedResponse{
+				Request: httputils.Request{
+					Path: "/als",
+				},
+				Response: httputils.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+			// make sure listener is ready
+			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+
+			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
+				func(ctx context.Context) (bool, error) {
+					curCount := ALSLogCount(t, suite)
+					return preCount < curCount, nil
+				}); err != nil {
+				t.Errorf("failed to get log count from loki: %v", err)
+			}
+		})
+	},
+}
+
+func ALSLogCount(t *testing.T, suite *suite.ConformanceTestSuite) int {
+	metricPath, err := RetrieveURL(suite.Client, types.NamespacedName{}, 19001, "/metrics")
+	if err != nil {
+		t.Fatalf("failed to get metric url: %v", err)
+	}
+
+	countMetric, err := RetrieveMetric(metricPath, "log_count", time.Second)
+	if err != nil {
+		t.Fatalf("failed to get metric: %v", err)
+	}
+
+	total := 0
+	for _, m := range countMetric.Metric {
+		if m.Counter != nil && m.Counter.Value != nil {
+			total += int(*m.Counter.Value)
+		}
+	}
+
+	return total
 }
 
 // QueryLogCountFromLoki queries log count from loki

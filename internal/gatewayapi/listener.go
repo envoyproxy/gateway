@@ -287,7 +287,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					Type: sink.ALS.Type,
 				}
 
-				if al.Type == egv1a1.ALSEnvoyProxyAccessLogTypeHTTP {
+				if al.Type == egv1a1.ALSEnvoyProxyAccessLogTypeHTTP && sink.ALS.HTTP != nil {
 					http := &ir.ALSAccessLogHTTP{
 						RequestHeaders:   sink.ALS.HTTP.RequestHeaders,
 						ResponseHeaders:  sink.ALS.HTTP.ResponseHeaders,

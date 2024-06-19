@@ -7,8 +7,10 @@ package tests
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"testing"
 	"time"
 
@@ -16,6 +18,8 @@ import (
 	"fortio.org/fortio/periodic"
 	flog "fortio.org/log"
 	"github.com/google/go-cmp/cmp"
+	dto "github.com/prometheus/client_model/go"
+	"github.com/prometheus/common/expfmt"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -221,4 +225,76 @@ func EnvoyExtensionPolicyMustBeAccepted(t *testing.T, client client.Client, poli
 	})
 
 	require.NoErrorf(t, waitErr, "error waiting for EnvoyExtensionPolicy to be accepted")
+}
+
+func ScrapeMetrics(t *testing.T, c client.Client, nn types.NamespacedName, port int32, path string) error {
+	url, err := RetrieveURL(c, nn, port, path)
+	if err != nil {
+		return err
+	}
+
+	t.Logf("scraping metrics from %s", url)
+
+	metrics, err := RetrieveMetrics(url, time.Second)
+	if err != nil {
+		return err
+	}
+
+	// TODO: support metric matching
+	// for now, just check metric exists
+	if len(metrics) > 0 {
+		return nil
+	}
+
+	return errors.New("no metrics found")
+}
+
+func RetrieveURL(c client.Client, nn types.NamespacedName, port int32, path string) (string, error) {
+	svc := corev1.Service{}
+	if err := c.Get(context.Background(), nn, &svc); err != nil {
+		return "", err
+	}
+	host := ""
+	switch svc.Spec.Type {
+	case corev1.ServiceTypeLoadBalancer:
+		for _, ing := range svc.Status.LoadBalancer.Ingress {
+			if ing.IP != "" {
+				host = ing.IP
+				break
+			}
+		}
+	default:
+		host = fmt.Sprintf("%s.%s.svc", nn.Name, nn.Namespace)
+	}
+	return fmt.Sprintf("http://%s:%d%s", host, port, path), nil
+}
+
+var metricParser = &expfmt.TextParser{}
+
+func RetrieveMetrics(url string, timeout time.Duration) (map[string]*dto.MetricFamily, error) {
+	httpClient := http.Client{
+		Timeout: timeout,
+	}
+	res, err := httpClient.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to scrape metrics: %w", err)
+	}
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to scrape metrics: %s", res.Status)
+	}
+
+	return metricParser.TextToMetricFamilies(res.Body)
+}
+
+func RetrieveMetric(url string, name string, timeout time.Duration) (*dto.MetricFamily, error) {
+	metrics, err := RetrieveMetrics(url, timeout)
+	if err != nil {
+		return nil, err
+	}
+
+	if mf, ok := metrics[name]; ok {
+		return mf, nil
+	}
+
+	return nil, fmt.Errorf("metric %s not found", name)
 }
