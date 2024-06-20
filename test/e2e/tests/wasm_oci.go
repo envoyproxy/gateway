@@ -388,14 +388,16 @@ func createEEPForWasmTest(
 		},
 		Spec: egv1a1.EnvoyExtensionPolicySpec{
 			PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-				TargetRefs: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{{
-					LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-						Group: "gateway.networking.k8s.io",
-						Kind:  "HTTPRoute",
-						Name:  httpRouteWithWasm,
+				TargetRefs: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+					{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "HTTPRoute",
+							Name:  httpRouteWithWasm,
+						},
 					},
 				},
-				}},
+			},
 
 			Wasm: []egv1a1.Wasm{
 				{

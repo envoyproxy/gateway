@@ -121,9 +121,9 @@ type HTTPWasmCodeSource struct {
 type ImageWasmCodeSource struct {
 	// URL is the URL of the OCI image.
 	// URL can be in the format of `registry/image:tag` or `registry/image@sha256:digest`.
-	// The image format must follow the Wasm Artifact Image Specification or the Compat Spec.
+	// The image format must follow the Wasm Artifact Image Specification or the Compat Specification.
 	// - Wasm Artifact Image Specification: https://github.com/solo-io/wasm/blob/master/spec/spec.md
-	// - Compat spec image: https://github.com/solo-io/wasm/blob/master/spec/spec-compat.md
+	// - Compat Specification: https://github.com/solo-io/wasm/blob/master/spec/spec-compat.md
 	URL string `json:"url"`
 
 	// PullSecretRef is a reference to the secret containing the credentials to pull the image.

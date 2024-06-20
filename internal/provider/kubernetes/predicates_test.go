@@ -326,10 +326,14 @@ func TestValidateSecretForReconcile(t *testing.T) {
 						Name: "wasm-oci",
 					},
 					Spec: egv1a1.EnvoyExtensionPolicySpec{
-						TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Kind: "Gateway",
-								Name: "scheduled-status-test",
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRefs: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+								{
+									LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+										Kind: "Gateway",
+										Name: "scheduled-status-test",
+									},
+								},
 							},
 						},
 						Wasm: []egv1a1.Wasm{
