@@ -1,11 +1,11 @@
-envoyProxyForGatewayClass:
-  apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: EnvoyProxy
-  metadata:
-    namespace: envoy-gateway-system
-    name: test
-  spec:
-    routingType: Service
+envoyProxiesForGateways:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: EnvoyProxy
+    metadata:
+      namespace: envoy-gateway
+      name: test
+    spec:
+      routingType: Service
 gateways:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: Gateway
@@ -14,6 +14,11 @@ gateways:
       name: gateway-1
     spec:
       gatewayClassName: envoy-gateway-class
+      infrastructure:
+        parametersRef:
+          group: gateway.envoyproxy.io
+          kind: EnvoyProxy
+          name: test
       listeners:
         - name: http
           protocol: HTTP

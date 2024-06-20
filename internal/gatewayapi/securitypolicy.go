@@ -357,7 +357,6 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		jwt           *ir.JWT
 		oidc          *ir.OIDC
 		basicAuth     *ir.BasicAuth
-		extAuth       *ir.ExtAuth
 		authorization *ir.Authorization
 		err, errs     error
 	)
@@ -388,15 +387,6 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		}
 	}
 
-	if policy.Spec.ExtAuth != nil {
-		if extAuth, err = t.buildExtAuth(
-			policy,
-			resources); err != nil {
-			err = perr.WithMessage(err, "ExtAuth")
-			errs = errors.Join(errs, err)
-		}
-	}
-
 	if policy.Spec.Authorization != nil {
 		if authorization, err = t.buildAuthorization(policy); err != nil {
 			errs = errors.Join(errs, err)
@@ -407,21 +397,39 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	// Note: there are multiple features in a security policy, even if some of them
 	// are invalid, we still want to apply the valid ones.
 	prefix := irRoutePrefix(route)
-	for _, x := range xdsIR {
-		for _, h := range x.HTTP {
-			for _, r := range h.Routes {
-				// Apply if there is a match
-				// route is associated with a Gateway API xRoute
-				if strings.HasPrefix(r.Name, prefix) {
-					// This security policy matches the current route.
-					// It should only be accepted if it doesn't match any other route
-					r.Security = &ir.SecurityFeatures{
-						CORS:          cors,
-						JWT:           jwt,
-						OIDC:          oidc,
-						BasicAuth:     basicAuth,
-						ExtAuth:       extAuth,
-						Authorization: authorization,
+	parentRefs := GetParentReferences(route)
+	for _, p := range parentRefs {
+		parentRefCtx := GetRouteParentContext(route, p)
+		gtwCtx := parentRefCtx.GetGateway()
+		if gtwCtx == nil {
+			continue
+		}
+
+		var extAuth *ir.ExtAuth
+		if policy.Spec.ExtAuth != nil {
+			if extAuth, err = t.buildExtAuth(
+				policy,
+				resources,
+				gtwCtx.envoyProxy,
+			); err != nil {
+				err = perr.WithMessage(err, "ExtAuth")
+				errs = errors.Join(errs, err)
+			}
+		}
+		irKey := t.getIRKey(gtwCtx.Gateway)
+		for _, listener := range parentRefCtx.listeners {
+			irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
+			if irListener != nil {
+				for _, r := range irListener.Routes {
+					if strings.HasPrefix(r.Name, prefix) {
+						r.Security = &ir.SecurityFeatures{
+							CORS:          cors,
+							JWT:           jwt,
+							OIDC:          oidc,
+							BasicAuth:     basicAuth,
+							ExtAuth:       extAuth,
+							Authorization: authorization,
+						}
 					}
 				}
 			}
@@ -477,7 +485,9 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	if policy.Spec.ExtAuth != nil {
 		if extAuth, err = t.buildExtAuth(
 			policy,
-			resources); err != nil {
+			resources,
+			gateway.envoyProxy,
+		); err != nil {
 			err = perr.WithMessage(err, "ExtAuth")
 			errs = errors.Join(errs, err)
 		}
@@ -812,7 +822,7 @@ func (t *Translator) buildBasicAuth(
 	}, nil
 }
 
-func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Resources) (*ir.ExtAuth, error) {
+func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Resources, envoyProxy *egv1a1.EnvoyProxy) (*ir.ExtAuth, error) {
 	var (
 		http       = policy.Spec.ExtAuth.HTTP
 		grpc       = policy.Spec.ExtAuth.GRPC
@@ -860,7 +870,9 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Reso
 		pnn,
 		KindSecurityPolicy,
 		protocol,
-		resources); err != nil {
+		resources,
+		envoyProxy,
+	); err != nil {
 		return nil, err
 	}
 	rd := ir.RouteDestination{
