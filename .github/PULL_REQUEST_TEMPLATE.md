@@ -9,6 +9,11 @@ Examples:
 * "chore: change ci & build tools etc"
 -->
 
+<!--
+NOTE: If your PR contains any API changes (changes under `/api`), we recommend you to separate these API changes into
+a new PR, and we will review the API part first. It will save you lots of implementation time if the API get accepted.
+-->
+
 **What this PR does / why we need it**:
 
 **Which issue(s) this PR fixes**:
