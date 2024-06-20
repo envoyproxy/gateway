@@ -119,13 +119,17 @@ type RequestHeaderCustomTag struct {
 
 // ZipkinTracingProvider defines the Zipkin tracing provider configuration.
 type ZipkinTracingProvider struct {
-	// TraceId128Bit determines whether a 128bit trace id will be used
-	// when creating a new trace instance.
+	// CollectorHostname defines the hostname to use when sending spans
+	// to the Zipkin collector endpoint.
 	// +optional
-	TraceId128Bit bool `json:"traceId128Bit,omitempty"`
-	// SharedSpanContext determines whether client and server spans will
-	// share the same span context. Defaults to true.
-	// +kubebuilder:default=true
+	CollectorHostname *string `json:"collectorHostname,omitempty"`
+	// TraceID128Bit determines whether a 128bit trace id will be used
+	// when creating a new trace instance. If set to false, a 64bit trace
+	// id will be used.
 	// +optional
-	SharedSpanContext bool `json:"sharedSpanContext,omitempty"`
+	TraceID128Bit bool `json:"traceId128Bit,omitempty"`
+	// DisableSharedSpanContext determines whether the default Envoy behaviour of
+	// client and server spans sharing the same span context should be disabled.
+	// +optional
+	DisableSharedSpanContext bool `json:"disableSharedSpanContext,omitempty"`
 }
