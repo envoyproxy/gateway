@@ -174,6 +174,12 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 
 func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRef *RouteParentContext, resources *Resources) ([]*ir.HTTPRoute, error) {
 	var routeRoutes []*ir.HTTPRoute
+	var envoyProxy *egv1a1.EnvoyProxy
+
+	gatewayCtx := httpRoute.ParentRefs[*parentRef.ParentReference].GetGateway()
+	if gatewayCtx != nil {
+		envoyProxy = gatewayCtx.envoyProxy
+	}
 
 	// compute matches, filters, backends
 	for ruleIdx, rule := range httpRoute.Spec.Rules {
@@ -192,7 +198,8 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		for _, backendRef := range rule.BackendRefs {
 			backendRef := backendRef
 			ds := t.processDestination(backendRef, parentRef, httpRoute, resources)
-			if !t.IsEnvoyServiceRouting(resources) && ds != nil && len(ds.Endpoints) > 0 && ds.AddressType != nil {
+
+			if !t.IsEnvoyServiceRouting(envoyProxy) && ds != nil && len(ds.Endpoints) > 0 && ds.AddressType != nil {
 				dstAddrTypeMap[*ds.AddressType]++
 			}
 			if ds == nil {
@@ -216,7 +223,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		}
 
 		// TODO: support mixed endpointslice address type between backendRefs
-		if !t.IsEnvoyServiceRouting(resources) && len(dstAddrTypeMap) > 1 {
+		if !t.IsEnvoyServiceRouting(envoyProxy) && len(dstAddrTypeMap) > 1 {
 			routeStatus := GetRouteStatus(httpRoute)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
@@ -702,7 +709,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 				perHostRoutes = append(perHostRoutes, hostRoute)
 			}
 		}
-		irKey := t.getIRKey(listener.gateway)
+		irKey := t.getIRKey(listener.gateway.Gateway)
 		irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
 
 		if irListener != nil {
@@ -819,7 +826,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 
 			hasHostnameIntersection = true
 
-			irKey := t.getIRKey(listener.gateway)
+			irKey := t.getIRKey(listener.gateway.Gateway)
 
 			gwXdsIR := xdsIR[irKey]
 			irListener := gwXdsIR.GetTCPListener(irListenerName(listener))
@@ -956,7 +963,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			}
 			accepted = true
 
-			irKey := t.getIRKey(listener.gateway)
+			irKey := t.getIRKey(listener.gateway.Gateway)
 
 			gwXdsIR := xdsIR[irKey]
 			irListener := gwXdsIR.GetUDPListener(irListenerName(listener))
@@ -1089,7 +1096,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 				continue
 			}
 			accepted = true
-			irKey := t.getIRKey(listener.gateway)
+			irKey := t.getIRKey(listener.gateway.Gateway)
 
 			gwXdsIR := xdsIR[irKey]
 			irListener := gwXdsIR.GetTCPListener(irListenerName(listener))
@@ -1170,6 +1177,12 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 		return nil
 	}
 
+	var envoyProxy *egv1a1.EnvoyProxy
+	gatewayCtx := GetRouteParentContext(route, *parentRef.ParentReference).GetGateway()
+	if gatewayCtx != nil {
+		envoyProxy = gatewayCtx.envoyProxy
+	}
+
 	var (
 		endpoints []*ir.DestinationEndpoint
 		addrType  *ir.DestinationAddressType
@@ -1186,7 +1199,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 			}
 		}
 
-		if !t.IsEnvoyServiceRouting(resources) {
+		if !t.IsEnvoyServiceRouting(envoyProxy) {
 			endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, KindService))
 			endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
 		} else {
@@ -1206,7 +1219,8 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 			AddressType: addrType,
 		}
 	case KindService:
-		ds = t.processServiceDestinationSetting(backendRef.BackendObjectReference, backendNamespace, protocol, resources)
+		ds = t.processServiceDestinationSetting(backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
+
 		ds.TLS = t.applyBackendTLSSetting(
 			backendRef.BackendObjectReference,
 			backendNamespace,
@@ -1218,10 +1232,13 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 				SectionName: parentRef.SectionName,
 				Port:        parentRef.Port,
 			},
-			resources)
+			resources,
+			envoyProxy,
+		)
 		ds.Filters = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
 	case egv1a1.KindBackend:
 		ds = t.processBackendDestinationSetting(backendRef.BackendObjectReference, backendNamespace, resources)
+
 		ds.TLS = t.applyBackendTLSSetting(
 			backendRef.BackendObjectReference,
 			backendNamespace,
@@ -1233,11 +1250,13 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 				SectionName: parentRef.SectionName,
 				Port:        parentRef.Port,
 			},
-			resources)
+			resources,
+			envoyProxy,
+		)
 		ds.Filters = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
 	}
 
-	if err := validateDestinationSettings(ds, t.IsEnvoyServiceRouting(resources), backendRef.Kind); err != nil {
+	if err := validateDestinationSettings(ds, t.IsEnvoyServiceRouting(envoyProxy), backendRef.Kind); err != nil {
 		routeStatus := GetRouteStatus(route)
 		status.SetRouteStatusCondition(routeStatus,
 			parentRef.routeParentStatusIdx,
@@ -1268,8 +1287,12 @@ func validateDestinationSettings(destinationSettings *ir.DestinationSetting, end
 	return nil
 }
 
-func (t *Translator) processServiceDestinationSetting(backendRef gwapiv1.BackendObjectReference, backendNamespace string,
-	protocol ir.AppProtocol, resources *Resources,
+func (t *Translator) processServiceDestinationSetting(
+	backendRef gwapiv1.BackendObjectReference,
+	backendNamespace string,
+	protocol ir.AppProtocol,
+	resources *Resources,
+	envoyProxy *egv1a1.EnvoyProxy,
 ) *ir.DestinationSetting {
 	var (
 		endpoints []*ir.DestinationEndpoint
@@ -1292,7 +1315,7 @@ func (t *Translator) processServiceDestinationSetting(backendRef gwapiv1.Backend
 	}
 
 	// Route to endpoints by default
-	if !t.IsEnvoyServiceRouting(resources) {
+	if !t.IsEnvoyServiceRouting(envoyProxy) {
 		endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, KindService))
 		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
 	} else {

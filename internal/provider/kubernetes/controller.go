@@ -123,6 +123,8 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su Updater
 type resourceMappings struct {
 	// Map for storing namespaces for Route, Service and Gateway objects.
 	allAssociatedNamespaces sets.Set[string]
+	// Map for storing EnvoyProxies' NamespacedNames attaching to Gateway or GatewayClass.
+	allAssociatedEnvoyProxies sets.Set[string]
 	// Map for storing TLSRoutes' NamespacedNames attaching to various Gateway objects.
 	allAssociatedTLSRoutes sets.Set[string]
 	// Map for storing HTTPRoutes' NamespacedNames attaching to various Gateway objects.
@@ -143,14 +145,15 @@ type resourceMappings struct {
 
 func newResourceMapping() *resourceMappings {
 	return &resourceMappings{
-		allAssociatedNamespaces:  sets.New[string](),
-		allAssociatedTLSRoutes:   sets.New[string](),
-		allAssociatedHTTPRoutes:  sets.New[string](),
-		allAssociatedGRPCRoutes:  sets.New[string](),
-		allAssociatedTCPRoutes:   sets.New[string](),
-		allAssociatedUDPRoutes:   sets.New[string](),
-		allAssociatedBackendRefs: sets.New[gwapiv1.BackendObjectReference](),
-		extensionRefFilters:      map[utils.NamespacedNameWithGroupKind]unstructured.Unstructured{},
+		allAssociatedNamespaces:   sets.New[string](),
+		allAssociatedEnvoyProxies: sets.New[string](),
+		allAssociatedTLSRoutes:    sets.New[string](),
+		allAssociatedHTTPRoutes:   sets.New[string](),
+		allAssociatedGRPCRoutes:   sets.New[string](),
+		allAssociatedTCPRoutes:    sets.New[string](),
+		allAssociatedUDPRoutes:    sets.New[string](),
+		allAssociatedBackendRefs:  sets.New[gwapiv1.BackendObjectReference](),
+		extensionRefFilters:       map[utils.NamespacedNameWithGroupKind]unstructured.Unstructured{},
 	}
 }
 
@@ -193,6 +196,19 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		gwcResources = append(gwcResources, gwcResource)
 		resourceMappings := newResourceMapping()
 
+		// Process the parametersRef of the accepted GatewayClass.
+		// This should run before processGateways and processBackendRefs
+		if managedGC.Spec.ParametersRef != nil && managedGC.DeletionTimestamp == nil {
+			if err := r.processGatewayClassParamsRef(ctx, managedGC, resourceMappings, gwcResource); err != nil {
+				msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
+				if err := r.updateStatusForGatewayClass(ctx, managedGC, false, string(gwapiv1.GatewayClassReasonInvalidParameters), msg); err != nil {
+					r.log.Error(err, "unable to update GatewayClass status")
+				}
+				r.log.Error(err, "failed to process parametersRef for gatewayclass", "name", managedGC.Name)
+				return reconcile.Result{}, err
+			}
+		}
+
 		// Add all Gateways, their associated Routes, and referenced resources to the resourceTree
 		if err = r.processGateways(ctx, managedGC, resourceMappings, gwcResource); err != nil {
 			return reconcile.Result{}, err
@@ -232,19 +248,6 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			return reconcile.Result{}, err
 		}
 
-		// Process the parametersRef of the accepted GatewayClass.
-		// This should run before processBackendRefs
-		if managedGC.Spec.ParametersRef != nil && managedGC.DeletionTimestamp == nil {
-			if err := r.processParamsRef(ctx, managedGC, resourceMappings, gwcResource); err != nil {
-				msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
-				if err := r.updateStatusForGatewayClass(ctx, managedGC, false, string(gwapiv1.GatewayClassReasonInvalidParameters), msg); err != nil {
-					r.log.Error(err, "unable to update GatewayClass status")
-				}
-				r.log.Error(err, "failed to process parametersRef for gatewayclass", "name", managedGC.Name)
-				return reconcile.Result{}, err
-			}
-		}
-
 		if err = r.processBackends(ctx, gwcResource); err != nil {
 			return reconcile.Result{}, err
 		}
@@ -269,8 +272,8 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			gwcResource.Namespaces = append(gwcResource.Namespaces, namespace)
 		}
 
-		if gwcResource.EnvoyProxy != nil && gwcResource.EnvoyProxy.Spec.MergeGateways != nil {
-			if *gwcResource.EnvoyProxy.Spec.MergeGateways {
+		if gwcResource.EnvoyProxyForGatewayClass != nil && gwcResource.EnvoyProxyForGatewayClass.Spec.MergeGateways != nil {
+			if *gwcResource.EnvoyProxyForGatewayClass.Spec.MergeGateways {
 				r.mergeGateways.Insert(managedGC.Name)
 			} else {
 				r.mergeGateways.Delete(managedGC.Name)
@@ -315,17 +318,17 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 }
 
 func (r *gatewayAPIReconciler) processEnvoyProxySecretRef(ctx context.Context, gwcResource *gatewayapi.Resources) {
-	if gwcResource.EnvoyProxy == nil || gwcResource.EnvoyProxy.Spec.BackendTLS == nil || gwcResource.EnvoyProxy.Spec.BackendTLS.ClientCertificateRef == nil {
+	if gwcResource.EnvoyProxyForGatewayClass == nil || gwcResource.EnvoyProxyForGatewayClass.Spec.BackendTLS == nil || gwcResource.EnvoyProxyForGatewayClass.Spec.BackendTLS.ClientCertificateRef == nil {
 		return
 	}
-	certRef := gwcResource.EnvoyProxy.Spec.BackendTLS.ClientCertificateRef
+	certRef := gwcResource.EnvoyProxyForGatewayClass.Spec.BackendTLS.ClientCertificateRef
 	if refsSecret(certRef) {
 		if err := r.processSecretRef(
 			ctx,
 			newResourceMapping(),
 			gwcResource,
 			gatewayapi.KindGateway,
-			gwcResource.EnvoyProxy.Namespace,
+			gwcResource.EnvoyProxyForGatewayClass.Namespace,
 			gatewayapi.KindEnvoyProxy,
 			*certRef); err != nil {
 			r.log.Error(err,
@@ -803,6 +806,10 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 		r.log.Info("processing Gateway", "namespace", gtw.Namespace, "name", gtw.Name)
 		resourceMap.allAssociatedNamespaces.Insert(gtw.Namespace)
 
+		if err := r.processGatewayParamsRef(ctx, &gtw, resourceMap, resourceTree); err != nil {
+			r.log.Error(err, "failed to process infrastructure.parametersRef for gateway", "namespace", gtw.Namespace, "name", gtw.Name)
+		}
+
 		for _, listener := range gtw.Spec.Listeners {
 			listener := listener
 			// Get Secret for gateway if it exists.
@@ -1027,10 +1034,8 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
-	// Only enqueue EnvoyProxy objects that match this Envoy Gateway's GatewayClass.
 	epPredicates := []predicate.TypedPredicate[*egv1a1.EnvoyProxy]{
 		&predicate.TypedGenerationChangedPredicate[*egv1a1.EnvoyProxy]{},
-		predicate.NewTypedPredicateFuncs[*egv1a1.EnvoyProxy](r.hasManagedClass),
 	}
 	if r.namespaceLabel != nil {
 		epPredicates = append(epPredicates, predicate.NewTypedPredicateFuncs(func(ep *egv1a1.EnvoyProxy) bool {
@@ -1543,106 +1548,99 @@ func (r *gatewayAPIReconciler) enqueueClass(_ context.Context, _ client.Object) 
 	}}}
 }
 
-func (r *gatewayAPIReconciler) hasManagedClass(ep *egv1a1.EnvoyProxy) bool {
-	// The EnvoyProxy must be in the same namespace as EG.
-	if ep.Namespace != r.namespace {
-		r.log.Info("envoyproxy namespace does not match Envoy Gateway's namespace",
-			"namespace", ep.Namespace, "name", ep.Name)
-		return false
+// processGatewayParamsRef processes the infrastructure.parametersRef of the provided Gateway.
+func (r *gatewayAPIReconciler) processGatewayParamsRef(ctx context.Context, gtw *gwapiv1.Gateway, resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
+	if gtw == nil || gtw.Spec.Infrastructure == nil || gtw.Spec.Infrastructure.ParametersRef == nil {
+		return nil
 	}
 
-	gcList := new(gwapiv1.GatewayClassList)
-	err := r.client.List(context.TODO(), gcList)
-	if err != nil {
-		r.log.Error(err, "failed to list gatewayclasses")
-		return false
+	if resourceTree.EnvoyProxyForGatewayClass != nil && resourceTree.EnvoyProxyForGatewayClass.Spec.MergeGateways != nil && *resourceTree.EnvoyProxyForGatewayClass.Spec.MergeGateways {
+		return fmt.Errorf("infrastructure.parametersref must be nil when MergeGateways feature is enabled by gatewayclass")
 	}
 
-	for i := range gcList.Items {
-		gc := gcList.Items[i]
-		// Reconcile the managed GatewayClass if it's referenced by the EnvoyProxy.
-		if r.hasMatchingController(&gc) &&
-			classAccepted(&gc) &&
-			classRefsEnvoyProxy(&gc, ep) {
-			return true
+	ref := gtw.Spec.Infrastructure.ParametersRef
+	if !(string(ref.Group) == egv1a1.GroupVersion.Group &&
+		ref.Kind == egv1a1.KindEnvoyProxy &&
+		len(ref.Name) > 0) {
+		return fmt.Errorf("unsupported parametersRef for gateway %s/%s", gtw.Namespace, gtw.Name)
+	}
+
+	ep := new(egv1a1.EnvoyProxy)
+	if err := r.client.Get(ctx, types.NamespacedName{Namespace: gtw.Namespace, Name: ref.Name}, ep); err != nil {
+		return fmt.Errorf("failed to find envoyproxy %s/%s: %w", gtw.Namespace, ref.Name, err)
+	}
+
+	if err := r.processEnvoyProxy(ep, resourceMap); err != nil {
+		return err
+	}
+
+	if ep.Spec.BackendTLS != nil && ep.Spec.BackendTLS.ClientCertificateRef != nil {
+		certRef := ep.Spec.BackendTLS.ClientCertificateRef
+		if refsSecret(certRef) {
+			if err := r.processSecretRef(
+				ctx,
+				resourceMap,
+				resourceTree,
+				gatewayapi.KindGateway,
+				gtw.Namespace,
+				gtw.Name,
+				*certRef); err != nil {
+				r.log.Error(err,
+					"failed to process TLS SecretRef for gateway",
+					"gateway", utils.NamespacedName(gtw).String(), "secretRef", certRef)
+			}
 		}
 	}
 
-	return false
+	resourceTree.EnvoyProxiesForGateways = append(resourceTree.EnvoyProxiesForGateways, ep)
+	return nil
 }
 
-// processParamsRef processes the parametersRef of the provided GatewayClass.
-func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1.GatewayClass, resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
+// processGatewayClassParamsRef processes the parametersRef of the provided GatewayClass.
+func (r *gatewayAPIReconciler) processGatewayClassParamsRef(ctx context.Context, gc *gwapiv1.GatewayClass, resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
 	if !refsEnvoyProxy(gc) {
 		return fmt.Errorf("unsupported parametersRef for gatewayclass %s", gc.Name)
 	}
 
-	epList := new(egv1a1.EnvoyProxyList)
-	gcParametersRefNamespace := string(*gc.Spec.ParametersRef.Namespace)
-
-	if err := r.client.List(ctx, epList, &client.ListOptions{Namespace: gcParametersRefNamespace}); err != nil {
-		return fmt.Errorf("failed to list envoyproxies in namespace %s: %w", gcParametersRefNamespace, err)
+	ep := new(egv1a1.EnvoyProxy)
+	if err := r.client.Get(ctx, types.NamespacedName{Namespace: string(*gc.Spec.ParametersRef.Namespace), Name: gc.Spec.ParametersRef.Name}, ep); err != nil {
+		if kerrors.IsNotFound(err) {
+			return fmt.Errorf("envoyproxy referenced by gatewayclass is not found: %w", err)
+		}
+		return fmt.Errorf("failed to find envoyproxy %s/%s: %w", r.namespace, gc.Spec.ParametersRef.Name, err)
 	}
 
-	if len(epList.Items) == 0 {
-		r.log.Info("no envoyproxies exist in", "namespace", gcParametersRefNamespace)
+	if err := r.processEnvoyProxy(ep, resourceMap); err != nil {
+		return err
+	}
+	resourceTree.EnvoyProxyForGatewayClass = ep
+	return nil
+}
+
+// processEnvoyProxy processes the parametersRef of the provided GatewayClass.
+func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resourceMap *resourceMappings) error {
+	key := utils.NamespacedName(ep).String()
+	if resourceMap.allAssociatedEnvoyProxies.Has(key) {
+		r.log.Info("current EnvoyProxy has been processed already", "namespace", ep.Namespace, "name", ep.Name)
 		return nil
 	}
 
-	found := false
-	valid := false
-	var validationErr error
-	for i := range epList.Items {
-		ep := epList.Items[i]
-		r.log.Info("processing envoyproxy", "namespace", ep.Namespace, "name", ep.Name)
-		if classRefsEnvoyProxy(gc, &ep) {
-			found = true
-			if err := validation.ValidateEnvoyProxy(&ep); err != nil {
-				validationErr = fmt.Errorf("invalid envoyproxy: %w", err)
-				continue
-			}
+	r.log.Info("processing envoyproxy", "namespace", ep.Namespace, "name", ep.Name)
 
-			if ep.Spec.Telemetry != nil {
-				telemetry := ep.Spec.Telemetry
+	if err := validation.ValidateEnvoyProxy(ep); err != nil {
+		return fmt.Errorf("invalid envoyproxy: %w", err)
+	}
 
-				if telemetry.AccessLog != nil {
-					for _, setting := range telemetry.AccessLog.Settings {
-						for _, sink := range setting.Sinks {
-							if sink.OpenTelemetry == nil {
-								continue
-							}
-							for _, backendRef := range sink.OpenTelemetry.BackendRefs {
-								backendNamespace := gatewayapi.NamespaceDerefOrAlpha(backendRef.Namespace, ep.Namespace)
-								resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
-									Group:     backendRef.BackendObjectReference.Group,
-									Kind:      backendRef.BackendObjectReference.Kind,
-									Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
-									Name:      backendRef.Name,
-								})
-							}
-						}
+	if ep.Spec.Telemetry != nil {
+		telemetry := ep.Spec.Telemetry
+
+		if telemetry.AccessLog != nil {
+			for _, setting := range telemetry.AccessLog.Settings {
+				for _, sink := range setting.Sinks {
+					if sink.OpenTelemetry == nil {
+						continue
 					}
-				}
-
-				if telemetry.Metrics != nil {
-					for _, sink := range telemetry.Metrics.Sinks {
-						if sink.OpenTelemetry == nil {
-							continue
-						}
-						for _, backendRef := range sink.OpenTelemetry.BackendRefs {
-							backendNamespace := gatewayapi.NamespaceDerefOrAlpha(backendRef.Namespace, ep.Namespace)
-							resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
-								Group:     backendRef.BackendObjectReference.Group,
-								Kind:      backendRef.BackendObjectReference.Kind,
-								Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
-								Name:      backendRef.Name,
-							})
-						}
-					}
-				}
-
-				if telemetry.Tracing != nil {
-					for _, backendRef := range telemetry.Tracing.Provider.BackendRefs {
+					for _, backendRef := range sink.OpenTelemetry.BackendRefs {
 						backendNamespace := gatewayapi.NamespaceDerefOrAlpha(backendRef.Namespace, ep.Namespace)
 						resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
 							Group:     backendRef.BackendObjectReference.Group,
@@ -1650,25 +1648,43 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 							Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
 							Name:      backendRef.Name,
 						})
-
 					}
 				}
 			}
+		}
 
-			valid = true
-			resourceTree.EnvoyProxy = &ep
-			break
+		if telemetry.Metrics != nil {
+			for _, sink := range telemetry.Metrics.Sinks {
+				if sink.OpenTelemetry == nil {
+					continue
+				}
+				for _, backendRef := range sink.OpenTelemetry.BackendRefs {
+					backendNamespace := gatewayapi.NamespaceDerefOrAlpha(backendRef.Namespace, ep.Namespace)
+					resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
+						Group:     backendRef.BackendObjectReference.Group,
+						Kind:      backendRef.BackendObjectReference.Kind,
+						Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
+						Name:      backendRef.Name,
+					})
+				}
+			}
+		}
+
+		if telemetry.Tracing != nil {
+			for _, backendRef := range telemetry.Tracing.Provider.BackendRefs {
+				backendNamespace := gatewayapi.NamespaceDerefOrAlpha(backendRef.Namespace, ep.Namespace)
+				resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
+					Group:     backendRef.BackendObjectReference.Group,
+					Kind:      backendRef.BackendObjectReference.Kind,
+					Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
+					Name:      backendRef.Name,
+				})
+
+			}
 		}
 	}
 
-	if !found {
-		return fmt.Errorf("failed to find envoyproxy referenced by gatewayclass: %s", gc.Name)
-	}
-
-	if !valid {
-		return fmt.Errorf("invalid gatewayclass %s: %w", gc.Name, validationErr)
-	}
-
+	resourceMap.allAssociatedEnvoyProxies.Insert(key)
 	return nil
 }
 
