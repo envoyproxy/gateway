@@ -127,9 +127,9 @@ type ZipkinTracingProvider struct {
 	// when creating a new trace instance. If set to false, a 64bit trace
 	// id will be used.
 	// +optional
-	TraceID128Bit bool `json:"traceId128Bit,omitempty"`
+	TraceID128Bit *bool `json:"traceId128Bit,omitempty"`
 	// DisableSharedSpanContext determines whether the default Envoy behaviour of
 	// client and server spans sharing the same span context should be disabled.
 	// +optional
-	DisableSharedSpanContext bool `json:"disableSharedSpanContext,omitempty"`
+	DisableSharedSpanContext *bool `json:"disableSharedSpanContext,omitempty"`
 }
