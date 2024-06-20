@@ -1,9 +1,3 @@
-tags:
-  metrics: true
-  logging: false
-  tracing: false
-
-
 # Values for Grafana dependency
 grafana:
   enabled: true
