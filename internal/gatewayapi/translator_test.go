@@ -512,7 +512,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 
 func overrideOutputConfig(t *testing.T, data string, filepath string) {
 	t.Helper()
-	file, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o755)
+	file, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
 	require.NoError(t, err)
 	defer file.Close()
 	write := bufio.NewWriter(file)
