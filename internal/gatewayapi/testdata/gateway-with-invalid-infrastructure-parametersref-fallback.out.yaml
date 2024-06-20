@@ -144,6 +144,11 @@ xdsIR:
             weight: 1
         hostname: gateway.envoyproxy.io
         isHTTP2: false
+        metadata:
+          groupVersion: gateway.networking.k8s.io/v1beta1
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
