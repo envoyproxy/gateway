@@ -119,10 +119,6 @@ type RequestHeaderCustomTag struct {
 
 // ZipkinTracingProvider defines the Zipkin tracing provider configuration.
 type ZipkinTracingProvider struct {
-	// CollectorHostname defines the hostname to use when sending spans
-	// to the Zipkin collector endpoint.
-	// +optional
-	CollectorHostname *string `json:"collectorHostname,omitempty"`
 	// TraceID128Bit determines whether a 128bit trace id will be used
 	// when creating a new trace instance. If set to false, a 64bit trace
 	// id will be used.

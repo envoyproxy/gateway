@@ -10979,11 +10979,6 @@ spec:
                             description: Zipkin defines the Zipkin tracing provider
                               configuration
                             properties:
-                              collectorHostname:
-                                description: |-
-                                  CollectorHostname defines the hostname to use when sending spans
-                                  to the Zipkin collector endpoint.
-                                type: string
                               disableSharedSpanContext:
                                 description: |-
                                   DisableSharedSpanContext determines whether the default Envoy behaviour of

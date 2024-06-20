@@ -3808,7 +3808,6 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `collectorHostname` | _string_ |  false  | CollectorHostname defines the hostname to use when sending spans<br />to the Zipkin collector endpoint. |
 | `traceId128Bit` | _boolean_ |  false  | TraceID128Bit determines whether a 128bit trace id will be used<br />when creating a new trace instance. If set to false, a 64bit trace<br />id will be used. |
 | `disableSharedSpanContext` | _boolean_ |  false  | DisableSharedSpanContext determines whether the default Envoy behaviour of<br />client and server spans sharing the same span context should be disabled. |
 
