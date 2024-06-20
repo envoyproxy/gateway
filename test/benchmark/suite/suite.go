@@ -9,6 +9,7 @@
 package suite
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -37,6 +38,7 @@ type BenchmarkTestSuite struct {
 	TimeoutConfig  config.TimeoutConfig
 	ControllerName string
 	Options        BenchmarkOptions
+	ReportSavePath string
 
 	// Resources template for supported benchmark targets.
 	GatewayTemplate    *gwapiv1.Gateway
@@ -48,7 +50,7 @@ type BenchmarkTestSuite struct {
 }
 
 func NewBenchmarkTestSuite(client client.Client, options BenchmarkOptions,
-	gatewayManifest, httpRouteManifest, benchmarkClientManifest string) (*BenchmarkTestSuite, error) {
+	gatewayManifest, httpRouteManifest, benchmarkClientManifest, reportPath string) (*BenchmarkTestSuite, error) {
 	var (
 		gateway         = new(gwapiv1.Gateway)
 		httproute       = new(gwapiv1.HTTPRoute)
@@ -94,6 +96,7 @@ func NewBenchmarkTestSuite(client client.Client, options BenchmarkOptions,
 		Options:            options,
 		TimeoutConfig:      timeoutConfig,
 		ControllerName:     DefaultControllerName,
+		ReportSavePath:     reportPath,
 		GatewayTemplate:    gateway,
 		HTTPRouteTemplate:  httproute,
 		BenchmarkClientJob: benchmarkClient,
@@ -106,6 +109,12 @@ func NewBenchmarkTestSuite(client client.Client, options BenchmarkOptions,
 func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 	t.Logf("Running %d benchmark test", len(tests))
 
+	buf := make([]byte, 0)
+	writer := bytes.NewBuffer(buf)
+
+	writeSection(writer, "Benchmark Report", 1, "")
+	renderEnvSettingsTable(writer)
+
 	for _, test := range tests {
 		t.Logf("Running benchmark test: %s", test.ShortName)
 
@@ -114,8 +123,22 @@ func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 			continue
 		}
 
-		// TODO: Generate a human-readable benchmark report for each test.
+		// Generate a human-readable benchmark report for each test.
 		t.Logf("Got %d reports for test: %s", len(reports), test.ShortName)
+
+		if err := RenderReport(writer, "Test: "+test.ShortName, test.Description, reports, 2); err != nil {
+			t.Errorf("Error generating report for %s: %v", test.ShortName, err)
+		}
+	}
+
+	if len(b.ReportSavePath) > 0 {
+		if err := os.WriteFile(b.ReportSavePath, writer.Bytes(), 0644); err != nil {
+			t.Errorf("Error writing report to path %s: %v", b.ReportSavePath, err)
+		} else {
+			t.Logf("Writing report to path %s successfully", b.ReportSavePath)
+		}
+	} else {
+		t.Log(fmt.Sprintf("%s", writer.Bytes()))
 	}
 }
 

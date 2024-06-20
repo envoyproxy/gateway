@@ -45,6 +45,7 @@ func TestBenchmark(t *testing.T) {
 		"config/gateway.yaml",
 		"config/httproute.yaml",
 		"config/nighthawk-client.yaml",
+		*suite.ReportSavePath,
 	)
 	if err != nil {
 		t.Fatalf("Failed to create BenchmarkTestSuite: %v", err)
