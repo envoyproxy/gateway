@@ -62,18 +62,23 @@ func Test_httpServerWithOCIImage(t *testing.T) {
 			servingURL string
 		)
 
-		if server, err = startLocalHTTPServer(ctx, t.TempDir()); err != nil {
+		if server, err = startLocalHTTPServer(
+			ctx,
+			t.TempDir(),
+			defaultMaxFailedAttempts,
+			defaultAttemptResetDelay,
+			defaultAttemptsResetInterval); err != nil {
 			t.Fatal(err)
 		}
 		defer server.close()
 
-		getOptions := GetOptions{
-			ResourceName:   resourceName,
-			RequestTimeout: time.Second * 1000,
-		}
-
 		// Call server.Get() to initialize the local file cache.
-		servingURL, _, err = server.Get(fmt.Sprintf("oci://%s/%s", registryURL.Host, validWasmModule), getOptions)
+		servingURL, _, err = server.Get(
+			fmt.Sprintf("oci://%s/%s", registryURL.Host, validWasmModule),
+			GetOptions{
+				ResourceName:   resourceName,
+				RequestTimeout: time.Second * 1000,
+			})
 		require.NoError(t, err)
 
 		// Get wasm module from the EG HTTP server.
@@ -84,7 +89,12 @@ func Test_httpServerWithOCIImage(t *testing.T) {
 
 		// Call server.Get() again to get the serving URL for the same wasm module.
 		// The serving URL should be the same as the previous one.
-		servingURL1, _, err := server.Get(fmt.Sprintf("oci://%s/%s", registryURL.Host, validWasmModule), getOptions)
+		servingURL1, _, err := server.Get(
+			fmt.Sprintf("oci://%s/%s", registryURL.Host, validWasmModule),
+			GetOptions{
+				ResourceName:   resourceName,
+				RequestTimeout: time.Second * 1000,
+			})
 		require.NoError(t, err)
 		require.Equal(t, servingURL, servingURL1)
 
@@ -102,16 +112,22 @@ func Test_httpServerWithOCIImage(t *testing.T) {
 
 		var server *HTTPServer
 
-		if server, err = startLocalHTTPServer(ctx, t.TempDir()); err != nil {
+		if server, err = startLocalHTTPServer(
+			ctx,
+			t.TempDir(),
+			defaultMaxFailedAttempts,
+			defaultAttemptResetDelay,
+			defaultAttemptsResetInterval); err != nil {
 			t.Fatal(err)
 		}
 		defer server.close()
 
 		// Initialize the local cache.
-		_, _, err = server.Get(fmt.Sprintf("oci://%s/%s", registryURL.Host, nonExistingWasmModule), GetOptions{
-			ResourceName:   resourceName,
-			RequestTimeout: time.Second * 10,
-		})
+		_, _, err = server.Get(fmt.Sprintf("oci://%s/%s", registryURL.Host, nonExistingWasmModule),
+			GetOptions{
+				ResourceName:   resourceName,
+				RequestTimeout: time.Second * 10,
+			})
 		if err == nil || !strings.Contains(err.Error(), "Unknown name") {
 			t.Errorf("Get() error = %v, expect error contains 'Unknown name'", err)
 		}
@@ -148,7 +164,12 @@ func Test_httpServerWithHTTP(t *testing.T) {
 			servingURL string
 		)
 
-		if server, err = startLocalHTTPServer(ctx, t.TempDir()); err != nil {
+		if server, err = startLocalHTTPServer(
+			ctx,
+			t.TempDir(),
+			defaultMaxFailedAttempts,
+			defaultAttemptResetDelay,
+			defaultAttemptsResetInterval); err != nil {
 			t.Fatal(err)
 		}
 		defer server.close()
@@ -188,7 +209,12 @@ func Test_httpServerWithHTTP(t *testing.T) {
 
 		var server *HTTPServer
 
-		if server, err = startLocalHTTPServer(ctx, t.TempDir()); err != nil {
+		if server, err = startLocalHTTPServer(
+			ctx,
+			t.TempDir(),
+			defaultMaxFailedAttempts,
+			defaultAttemptResetDelay,
+			defaultAttemptsResetInterval); err != nil {
 			t.Fatal(err)
 		}
 		defer server.close()
@@ -201,6 +227,67 @@ func Test_httpServerWithHTTP(t *testing.T) {
 		if err == nil || !strings.Contains(err.Error(), "404") {
 			t.Errorf("Get() error = %v, expect error contains 'Unknown name'", err)
 		}
+	})
+}
+
+func Test_httpServerFailedAttempt(t *testing.T) {
+	var (
+		registryURL *url.URL
+		err         error
+	)
+
+	// Set up a fake registry.
+	r := httptest.NewServer(registry.New())
+	defer r.Close()
+
+	if registryURL, err = url.Parse(r.URL); err != nil {
+		t.Fatal(err)
+	}
+	if err = setupFakeRegistry(registryURL.Host); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("failed attempts exceed the max", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		var (
+			server                *HTTPServer
+			maxFailedAttempts     = 5
+			attemptResetDelay     = time.Millisecond * 500
+			attemptsResetInterval = time.Millisecond * 100
+		)
+
+		if server, err = startLocalHTTPServer(
+			ctx,
+			t.TempDir(),
+			maxFailedAttempts,
+			attemptResetDelay,
+			attemptsResetInterval); err != nil {
+			t.Fatal(err)
+		}
+		defer server.close()
+
+		// The 6th Get() should return an error immediately because the max failed attempts is 5.
+		for i := 0; i <= 6; i++ {
+			_, _, err = server.Get(
+				fmt.Sprintf("oci://%s/%s", registryURL.Host, nonExistingWasmModule),
+				GetOptions{
+					ResourceName:   resourceName,
+					RequestTimeout: time.Second * 1000,
+				})
+		}
+		require.ErrorContains(t, err, "after 5 attempts")
+
+		// The 7th Get() should return a normal error because the failed attempts have been reset.
+		time.Sleep(1 * time.Second)
+		_, _, err = server.Get(
+			fmt.Sprintf("oci://%s/%s", registryURL.Host, nonExistingWasmModule),
+			GetOptions{
+				ResourceName:   resourceName,
+				RequestTimeout: time.Second * 1000,
+			})
+		require.ErrorContains(t, err, "Unknown name")
 	})
 }
 
@@ -233,11 +320,15 @@ func setupFakeRegistry(host string) error {
 	return nil
 }
 
-func startLocalHTTPServer(ctx context.Context, cacheDir string) (*HTTPServer, error) {
+func startLocalHTTPServer(ctx context.Context, cacheDir string, maxFailedAttempts int, failedAttemptResetDelay, failedAttemptsResetInterval time.Duration) (*HTTPServer, error) {
 	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
 	s := NewHTTPServerWithFileCache(
-		[]byte("salt"),
-		nil,
+		SeverOptions{
+			Salt:                        []byte("salt"),
+			MaxFailedAttempts:           maxFailedAttempts,
+			FailedAttemptResetDelay:     failedAttemptResetDelay,
+			FailedAttemptsResetInterval: failedAttemptsResetInterval,
+		},
 		CacheOptions{
 			CacheDir: cacheDir,
 		}, logger)

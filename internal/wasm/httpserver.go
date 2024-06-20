@@ -20,18 +20,41 @@ import (
 )
 
 const (
-	serverHost        = "envoy-gateway"
-	serverPort        = 18002
-	maxFailedAttempts = 10
-	// TODO: zhaohuabing make this configurable
-	attemptsResetInterval = 5 * time.Minute
-	attemptResetDelay     = 1 * time.Hour
+	serverHost                   = "envoy-gateway"
+	serverPort                   = 18002
+	defaultMaxFailedAttempts     = 10
+	defaultAttemptsResetInterval = 5 * time.Minute
+	defaultAttemptResetDelay     = 1 * time.Hour
 )
 
 var _ Cache = &HTTPServer{}
 
+type SeverOptions struct {
+	// Salt is used as a hash salt to generate an unguessable path for the Wasm module.
+	Salt []byte
+	// TLSConfig is the TLS configuration for the HTTP server.
+	TLSConfig                   *tls.Config
+	MaxFailedAttempts           int
+	FailedAttemptsResetInterval time.Duration
+	FailedAttemptResetDelay     time.Duration
+}
+
+// setDefault sets the default values for the server options if they are not set.
+func (o *SeverOptions) setDefault() {
+	if o.MaxFailedAttempts == 0 {
+		o.MaxFailedAttempts = defaultMaxFailedAttempts
+	}
+	if o.FailedAttemptsResetInterval == 0 {
+		o.FailedAttemptsResetInterval = defaultAttemptsResetInterval
+	}
+	if o.FailedAttemptResetDelay == 0 {
+		o.FailedAttemptResetDelay = defaultAttemptResetDelay
+	}
+}
+
 // HTTPServer wraps a local file cache and serves the Wasm modules over HTTP.
 type HTTPServer struct {
+	SeverOptions
 	sync.Mutex
 	// map from the mapping path to the wasm file path in the local cache.
 	// The mapping path is a generated unguessable path to prevent unauthorized users
@@ -48,10 +71,6 @@ type HTTPServer struct {
 	cache Cache
 	// HTTP server to serve the Wasm modules to the Envoy Proxies.
 	server *http.Server
-	// Salt is used as a hash salt to generate an unguessable path for the Wasm module.
-	salt []byte
-	// TLSConfig is the TLS configuration for the HTTP server.
-	tlsConfig *tls.Config
 	// logger
 	logger logging.Logger
 }
@@ -59,10 +78,11 @@ type HTTPServer struct {
 type attemptEntry struct {
 	fails int
 	last  time.Time
+	delay time.Duration
 }
 
 func (a *attemptEntry) expired() bool {
-	return time.Since(a.last) > attemptResetDelay
+	return time.Since(a.last) > a.delay
 }
 
 type wasmModuleEntry struct {
@@ -74,15 +94,14 @@ type wasmModuleEntry struct {
 // NewHTTPServerWithFileCache creates a HTTP server with a local file cache for Wasm modules.
 // The local file cache is used to store the Wasm modules downloaded from the original URL.
 // The HTTP server serves the cached Wasm modules over HTTP to the Envoy Proxies.
-func NewHTTPServerWithFileCache(salt []byte, tlsConfig *tls.Config, options CacheOptions, logger logging.Logger) *HTTPServer {
+func NewHTTPServerWithFileCache(serverOptions SeverOptions, cacheOptions CacheOptions, logger logging.Logger) *HTTPServer {
 	logger = logger.WithName("wasm-cache")
-
+	serverOptions.setDefault()
 	return &HTTPServer{
+		SeverOptions:      serverOptions,
 		mappingPath2Cache: make(map[string]wasmModuleEntry),
 		failedAttempts:    make(map[string]attemptEntry),
-		cache:             newLocalFileCache(options, logger),
-		salt:              salt,
-		tlsConfig:         tlsConfig,
+		cache:             newLocalFileCache(cacheOptions, logger),
 		logger:            logger,
 	}
 }
@@ -96,7 +115,7 @@ func (s *HTTPServer) Start(ctx context.Context) {
 	s.server = &http.Server{
 		Addr:              fmt.Sprintf(":%d", serverPort),
 		Handler:           handler,
-		TLSConfig:         s.tlsConfig,
+		TLSConfig:         s.TLSConfig,
 		ReadHeaderTimeout: 15 * time.Second,
 	}
 
@@ -141,8 +160,8 @@ func (s *HTTPServer) Get(originalURL string, opts GetOptions) (servingURL string
 	defer s.Unlock()
 	attempt, attempted := s.failedAttempts[originalURL]
 
-	if attempted && attempt.fails >= maxFailedAttempts {
-		err = fmt.Errorf("failed to get Wasm module %s after %d attempts", originalURL, maxFailedAttempts)
+	if attempted && attempt.fails > s.MaxFailedAttempts {
+		err = fmt.Errorf("failed to get Wasm module %s after %d attempts", originalURL, s.MaxFailedAttempts)
 		s.logger.Error(err, "")
 		return "", "", err
 	}
@@ -154,7 +173,7 @@ func (s *HTTPServer) Get(originalURL string, opts GetOptions) (servingURL string
 		s.logger.Error(err, "Failed to get Wasm module", "URL", originalURL)
 		attempt, attempted = s.failedAttempts[originalURL]
 		if !attempted {
-			attempt = attemptEntry{fails: 0, last: time.Now()}
+			attempt = attemptEntry{fails: 0, last: time.Now(), delay: s.FailedAttemptResetDelay}
 		}
 		attempt.fails++
 		attempt.last = time.Now()
@@ -167,7 +186,7 @@ func (s *HTTPServer) Get(originalURL string, opts GetOptions) (servingURL string
 	// make the URL unpredictable.
 	// The unguessable path is used to prevent unauthorized users from accessing
 	// an unauthorized private Wasm module.
-	mappingPath = generateUnguessablePath(originalURL, s.salt)
+	mappingPath = generateUnguessablePath(originalURL, s.Salt)
 	s.mappingPath2Cache[mappingPath] = wasmModuleEntry{
 		name:        opts.ResourceName,
 		originalURL: originalURL,
@@ -201,14 +220,14 @@ func (s *HTTPServer) close() {
 }
 
 func (s *HTTPServer) enableTLS() bool {
-	return s.tlsConfig != nil
+	return s.TLSConfig != nil
 }
 
 // resetFailedAttempts resets the failed attempts.
 // After reset, the cache will try to download the failed Wasm module again the
 // next time it is requested.
 func (s *HTTPServer) resetFailedAttempts(ctx context.Context) {
-	ticker := time.NewTicker(attemptsResetInterval)
+	ticker := time.NewTicker(s.FailedAttemptsResetInterval)
 	defer ticker.Stop()
 	for {
 		select {

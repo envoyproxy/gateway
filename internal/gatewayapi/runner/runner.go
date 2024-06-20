@@ -101,9 +101,13 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 		return
 	}
 	r.wasmCache = wasm.NewHTTPServerWithFileCache(
-		salt,
-		tlsConfig,
-		wasm.CacheOptions{ // CacheOptions can be exposed as API in the future if needed
+		// HTTP server options
+		wasm.SeverOptions{
+			Salt:      salt,
+			TLSConfig: tlsConfig,
+		},
+		// Wasm cache options
+		wasm.CacheOptions{
 			CacheDir: wasmCacheDir,
 		}, r.Logger)
 	r.wasmCache.Start(ctx)
