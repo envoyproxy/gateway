@@ -30,9 +30,9 @@ const (
 )
 
 type BenchmarkReport struct {
-	Name       string
-	RawResult  []byte
-	RawMetrics []byte
+	Name         string
+	RawResult    []byte
+	RawCPMetrics []byte
 
 	kubeClient kube.CLIClient
 }
@@ -54,7 +54,7 @@ func (r *BenchmarkReport) Print(t *testing.T, name string) {
 	t.Logf("The raw report of benchmark test: %s", name)
 
 	t.Logf("=== Benchmark Result: \n\n %s \n\n", r.RawResult)
-	t.Logf("=== Control-Plane Metrics: \n\n %s \n\n", r.RawMetrics)
+	t.Logf("=== Control-Plane Metrics: \n\n %s \n\n", r.RawCPMetrics)
 }
 
 func (r *BenchmarkReport) GetBenchmarkResult(t *testing.T, ctx context.Context, job *types.NamespacedName) error {
@@ -70,17 +70,21 @@ func (r *BenchmarkReport) GetBenchmarkResult(t *testing.T, ctx context.Context, 
 	}
 
 	pod := &pods.Items[0]
-	if err = r.getBenchmarkResultFromPodLogs(
+	logs, err := r.getLogsFromPod(
 		ctx, &types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace},
-	); err != nil {
+	)
+	if err != nil {
 		return err
 	}
+
+	r.RawResult = logs
 
 	return nil
 }
 
 func (r *BenchmarkReport) GetControlPlaneMetrics(t *testing.T, ctx context.Context) error {
-	egPods, err := r.kubeClient.Kube().CoreV1().Pods("envoy-gateway-system").List(ctx, metav1.ListOptions{LabelSelector: "control-plane=envoy-gateway"})
+	egPods, err := r.kubeClient.Kube().CoreV1().Pods("envoy-gateway-system").
+		List(ctx, metav1.ListOptions{LabelSelector: "control-plane=envoy-gateway"})
 	if err != nil {
 		return err
 	}
@@ -94,24 +98,26 @@ func (r *BenchmarkReport) GetControlPlaneMetrics(t *testing.T, ctx context.Conte
 	}
 
 	egPod := &egPods.Items[0]
-	if err = r.getMetricsFromPodPortForwarder(
+	metrics, err := r.getMetricsFromPortForwarder(
 		t, &types.NamespacedName{Name: egPod.Name, Namespace: egPod.Namespace},
-	); err != nil {
+	)
+	if err != nil {
 		return err
 	}
+
+	r.RawCPMetrics = metrics
 
 	return nil
 }
 
-// getBenchmarkResultFromPodLogs scrapes the logs directly from the pod (default container)
-// and save it as the raw result in benchmark report.
-func (r *BenchmarkReport) getBenchmarkResultFromPodLogs(ctx context.Context, pod *types.NamespacedName) error {
+// getLogsFromPod scrapes the logs directly from the pod (default container).
+func (r *BenchmarkReport) getLogsFromPod(ctx context.Context, pod *types.NamespacedName) ([]byte, error) {
 	podLogOpts := corev1.PodLogOptions{}
 
 	req := r.kubeClient.Kube().CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &podLogOpts)
 	podLogs, err := req.Stream(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	defer podLogs.Close()
@@ -119,24 +125,26 @@ func (r *BenchmarkReport) getBenchmarkResultFromPodLogs(ctx context.Context, pod
 	buf := new(bytes.Buffer)
 	_, err = io.Copy(buf, podLogs)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	r.RawResult = buf.Bytes()
-	return nil
+	return buf.Bytes(), nil
 }
 
-func (r *BenchmarkReport) getMetricsFromPodPortForwarder(t *testing.T, pod *types.NamespacedName) error {
+// getMetricsFromPortForwarder retrieves metrics from pod by request url `/metrics`.
+func (r *BenchmarkReport) getMetricsFromPortForwarder(t *testing.T, pod *types.NamespacedName) ([]byte, error) {
 	fw, err := kube.NewLocalPortForwarder(r.kubeClient, *pod, localMetricsPort, controlPlaneMetricsPort)
 	if err != nil {
-		return fmt.Errorf("failed to build port forwarder for pod %s: %v", pod.String(), err)
+		return nil, fmt.Errorf("failed to build port forwarder for pod %s: %v", pod.String(), err)
 	}
 
 	if err = fw.Start(); err != nil {
 		fw.Stop()
-		return fmt.Errorf("failed to start port forwarder for pod %s: %v", pod.String(), err)
+
+		return nil, fmt.Errorf("failed to start port forwarder for pod %s: %v", pod.String(), err)
 	}
 
+	var out []byte
 	// Retrieving metrics from Pod.
 	go func() {
 		defer fw.Stop()
@@ -154,10 +162,10 @@ func (r *BenchmarkReport) getMetricsFromPodPortForwarder(t *testing.T, pod *type
 			return
 		}
 
-		r.RawMetrics = metrics
+		out = metrics
 	}()
 
 	fw.WaitForStop()
 
-	return nil
+	return out, nil
 }
