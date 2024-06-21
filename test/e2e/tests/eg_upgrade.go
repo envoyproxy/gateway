@@ -38,7 +38,7 @@ var EGUpgradeTest = suite.ConformanceTest{
 			depNS := "envoy-gateway-system"
 			lastVersionTag := os.Getenv("last_version_tag")
 			if lastVersionTag == "" {
-				lastVersionTag = "v1.0.0" // Default version tag if not specified
+				lastVersionTag = "v1.0.2" // Default version tag if not specified
 			}
 
 			ns := "gateway-upgrade-infra"
@@ -153,10 +153,19 @@ func helmInstall(relName, relNamespace string, tag string, timeout time.Duration
 	}
 	install.SetRegistryClient(registryClient)
 	// todo we need to explicitly reinstall the CRDs
-	chartPath, err := install.LocateChart("oci://docker.io/envoyproxy/gateway-helm", cli.New())
+	chartPath := ""
+	for i := 0; i < 3; i++ {
+		chartPath, err = install.LocateChart("oci://docker.io/envoyproxy/gateway-helm", cli.New())
+		time.Sleep(1 * time.Second)
+		if err == nil {
+			break
+		}
+	}
+
 	if err != nil {
 		return err
 	}
+
 	// Load the chart from a local directory.
 	chart, err := loader.Load(chartPath)
 	if err != nil {

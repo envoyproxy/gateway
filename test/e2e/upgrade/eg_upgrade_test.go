@@ -57,7 +57,6 @@ func TestEGUpgrade(t *testing.T) {
 		SupportedFeatures: sets.New[features.SupportedFeature](features.SupportGateway),
 		SkipTests: []string{
 			tests.EnvoyShutdownTest.ShortName, // https://github.com/envoyproxy/gateway/issues/3262
-			tests.EGUpgradeTest.ShortName,     // https://github.com/envoyproxy/gateway/issues/3311
 		},
 	})
 	if err != nil {
