@@ -30,7 +30,7 @@ const (
 	metricTypeGauge   = "gauge"
 	metricTypeCounter = "counter"
 
-	// Supported metric unit. TODO: associate them with func map
+	// Supported metric unit.
 	metricUnitMiB     = "MiB"
 	metricUnitSeconds = "Seconds"
 )
@@ -38,7 +38,6 @@ const (
 type ReportTableHeader struct {
 	Name   string       `json:"name"`
 	Metric *MetricEntry `json:"metric,omitempty"`
-	Result *ResultEntry `json:"result,omitempty"`
 }
 
 type MetricEntry struct {
@@ -46,10 +45,6 @@ type MetricEntry struct {
 	Type string `json:"type"`
 	Unit string `json:"unit"`
 	Help string `json:"help,omitempty"`
-}
-
-type ResultEntry struct {
-	//
 }
 
 var (

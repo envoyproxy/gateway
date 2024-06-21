@@ -58,4 +58,4 @@ jobs:
       - name: Comment Benchmark results
         uses: thollander/actions-comment-pull-request@v2
         with:
-          path: ./bin/benchmark/report.md
+          filePath: ./bin/benchmark/report.md

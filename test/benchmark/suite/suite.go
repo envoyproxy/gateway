@@ -133,9 +133,9 @@ func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 
 	if len(b.ReportSavePath) > 0 {
 		if err := os.WriteFile(b.ReportSavePath, writer.Bytes(), 0644); err != nil {
-			t.Errorf("Error writing report to path %s: %v", b.ReportSavePath, err)
+			t.Errorf("Error writing report to path '%s': %v", b.ReportSavePath, err)
 		} else {
-			t.Logf("Writing report to path %s successfully", b.ReportSavePath)
+			t.Logf("Writing report to path '%s' successfully", b.ReportSavePath)
 		}
 	} else {
 		t.Log(fmt.Sprintf("%s", writer.Bytes()))
