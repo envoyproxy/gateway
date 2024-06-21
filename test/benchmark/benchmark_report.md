@@ -1,8 +1,8 @@
 # Benchmark Report
 
-|RPS ()|Connections ()|Duration (Seconds)|CPU Limits (m)|Memory Limits (MiB)|
-|-     |-             |-                 |-             |-                  |
-|1000  |100           |90                |1000          |2048               |
+| RPS  | Connections | Duration (Seconds) | CPU Limits (m) | Memory Limits (MiB) |
+|------|-------------|--------------------|----------------|---------------------|
+| 1000 | 100         | 90                 | 1000           | 2048                |
 
 ## Test: ScaleHTTPRoute
 
@@ -18,17 +18,6 @@ Click to see the full results.
 <summary>scale-up-httproutes-10</summary>
 
 ```plaintext
-[2024-06-21 09:22:45.839][1][warning][misc] [external/envoy/source/common/protobuf/message_validator_impl.cc:21] Deprecated field: type envoy.config.core.v3.HeaderValueOption Using deprecated option 'envoy.config.core.v3.HeaderValueOption.append' from file base.proto. This configuration will be removed from Envoy soon. Please see https://www.envoyproxy.io/docs/envoy/latest/version_history/version_history for details. If continued use of this field is absolutely necessary, see https://www.envoyproxy.io/docs/envoy/latest/configuration/operations/runtime#using-runtime-overrides-for-deprecated-features for how to apply a temporary and highly discouraged override.
-[09:22:45.840239][1][I] Detected 4 (v)CPUs with affinity..
-[09:22:45.840252][1][I] Starting 4 threads / event loops. Time limit: 90 seconds.
-[09:22:45.840255][1][I] Global targets: 400 connections and 4000 calls per second.
-[09:22:45.840257][1][I]    (Per-worker targets: 100 connections and 1000 calls per second)
-[09:24:16.542128][18][I] Stopping after 90000 ms. Initiated: 90000 / Completed: 90000. (Completion rate was 1000 per second.)
-[09:24:16.542378][19][I] Stopping after 90000 ms. Initiated: 90000 / Completed: 90000. (Completion rate was 999.9999888888891 per second.)
-[09:24:16.542725][22][I] Stopping after 90000 ms. Initiated: 90000 / Completed: 89999. (Completion rate was 999.987788902321 per second.)
-[09:24:16.542877][23][I] Stopping after 90000 ms. Initiated: 90000 / Completed: 90000. (Completion rate was 999.9999888888891 per second.)
-[09:24:22.099712][22][I] Wait for the connection pool drain timed out, proceeding to hard shutdown.
-Nighthawk - A layer 7 protocol benchmarking tool.
 
 benchmark_http_client.latency_2xx (359873 samples)
   min: 0s 000ms 313us | mean: 0s 000ms 519us | max: 0s 072ms 552us | pstdev: 0s 000ms 793us
@@ -113,17 +102,6 @@ upstream_rq_total                       359874      3998.60
 <summary>scale-up-httproutes-50</summary>
 
 ```plaintext
-[2024-06-21 09:24:37.286][1][warning][misc] [external/envoy/source/common/protobuf/message_validator_impl.cc:21] Deprecated field: type envoy.config.core.v3.HeaderValueOption Using deprecated option 'envoy.config.core.v3.HeaderValueOption.append' from file base.proto. This configuration will be removed from Envoy soon. Please see https://www.envoyproxy.io/docs/envoy/latest/version_history/version_history for details. If continued use of this field is absolutely necessary, see https://www.envoyproxy.io/docs/envoy/latest/configuration/operations/runtime#using-runtime-overrides-for-deprecated-features for how to apply a temporary and highly discouraged override.
-[09:24:37.287391][1][I] Detected 4 (v)CPUs with affinity..
-[09:24:37.287403][1][I] Starting 4 threads / event loops. Time limit: 90 seconds.
-[09:24:37.287405][1][I] Global targets: 400 connections and 4000 calls per second.
-[09:24:37.287406][1][I]    (Per-worker targets: 100 connections and 1000 calls per second)
-[09:26:07.989333][18][I] Stopping after 89999 ms. Initiated: 90000 / Completed: 90000. (Completion rate was 1000.0000222222228 per second.)
-[09:26:07.989702][19][I] Stopping after 90000 ms. Initiated: 90000 / Completed: 90000. (Completion rate was 999.9986555573631 per second.)
-[09:26:07.989935][21][I] Stopping after 90000 ms. Initiated: 90000 / Completed: 90000. (Completion rate was 999.9988666679511 per second.)
-[09:26:07.990125][23][I] Stopping after 90000 ms. Initiated: 90000 / Completed: 89999. (Completion rate was 999.988411116648 per second.)
-[09:26:13.507511][23][I] Wait for the connection pool drain timed out, proceeding to hard shutdown.
-Nighthawk - A layer 7 protocol benchmarking tool.
 
 benchmark_http_client.latency_2xx (359812 samples)
   min: 0s 000ms 309us | mean: 0s 000ms 509us | max: 0s 038ms 768us | pstdev: 0s 000ms 426us
@@ -205,16 +183,6 @@ upstream_rq_total                       359813      3997.92
 <summary>scale-up-httproutes-100</summary>
 
 ```plaintext
-[2024-06-21 09:26:25.949][1][warning][misc] [external/envoy/source/common/protobuf/message_validator_impl.cc:21] Deprecated field: type envoy.config.core.v3.HeaderValueOption Using deprecated option 'envoy.config.core.v3.HeaderValueOption.append' from file base.proto. This configuration will be removed from Envoy soon. Please see https://www.envoyproxy.io/docs/envoy/latest/version_history/version_history for details. If continued use of this field is absolutely necessary, see https://www.envoyproxy.io/docs/envoy/latest/configuration/operations/runtime#using-runtime-overrides-for-deprecated-features for how to apply a temporary and highly discouraged override.
-[09:26:25.950098][1][I] Detected 4 (v)CPUs with affinity..
-[09:26:25.950110][1][I] Starting 4 threads / event loops. Time limit: 90 seconds.
-[09:26:25.950112][1][I] Global targets: 400 connections and 4000 calls per second.
-[09:26:25.950114][1][I]    (Per-worker targets: 100 connections and 1000 calls per second)
-[09:27:56.651854][18][I] Stopping after 89999 ms. Initiated: 90000 / Completed: 90000. (Completion rate was 1000.0000222222228 per second.)
-[09:27:56.652350][21][I] Stopping after 89999 ms. Initiated: 90000 / Completed: 90000. (Completion rate was 1000.0000222222228 per second.)
-[09:27:56.652601][23][I] Stopping after 89999 ms. Initiated: 90000 / Completed: 90000. (Completion rate was 1000.0000111111112 per second.)
-[09:27:56.652103][19][I] Stopping after 89999 ms. Initiated: 90000 / Completed: 90000. (Completion rate was 1000.0000222222228 per second.)
-Nighthawk - A layer 7 protocol benchmarking tool.
 
 benchmark_http_client.latency_2xx (359853 samples)
   min: 0s 000ms 314us | mean: 0s 000ms 516us | max: 0s 035ms 172us | pstdev: 0s 000ms 430us
@@ -296,17 +264,6 @@ upstream_rq_total                       359853      3998.37
 <summary>scale-up-httproutes-300</summary>
 
 ```plaintext
-[2024-06-21 09:31:33.254][1][warning][misc] [external/envoy/source/common/protobuf/message_validator_impl.cc:21] Deprecated field: type envoy.config.core.v3.HeaderValueOption Using deprecated option 'envoy.config.core.v3.HeaderValueOption.append' from file base.proto. This configuration will be removed from Envoy soon. Please see https://www.envoyproxy.io/docs/envoy/latest/version_history/version_history for details. If continued use of this field is absolutely necessary, see https://www.envoyproxy.io/docs/envoy/latest/configuration/operations/runtime#using-runtime-overrides-for-deprecated-features for how to apply a temporary and highly discouraged override.
-[09:31:33.254741][1][I] Detected 4 (v)CPUs with affinity..
-[09:31:33.254754][1][I] Starting 4 threads / event loops. Time limit: 90 seconds.
-[09:31:33.254758][1][I] Global targets: 400 connections and 4000 calls per second.
-[09:31:33.254760][1][I]    (Per-worker targets: 100 connections and 1000 calls per second)
-[09:33:03.956592][19][I] Stopping after 89999 ms. Initiated: 90000 / Completed: 90000. (Completion rate was 1000.0000222222228 per second.)
-[09:33:03.956838][20][I] Stopping after 90000 ms. Initiated: 90000 / Completed: 90000. (Completion rate was 999.9999888888891 per second.)
-[09:33:03.957205][22][I] Stopping after 90000 ms. Initiated: 90000 / Completed: 89999. (Completion rate was 999.9876000159821 per second.)
-[09:33:03.957340][25][I] Stopping after 90000 ms. Initiated: 90000 / Completed: 90000. (Completion rate was 999.9999777777783 per second.)
-[09:33:09.465480][22][I] Wait for the connection pool drain timed out, proceeding to hard shutdown.
-Nighthawk - A layer 7 protocol benchmarking tool.
 
 benchmark_http_client.latency_2xx (359847 samples)
   min: 0s 000ms 304us | mean: 0s 000ms 521us | max: 0s 024ms 524us | pstdev: 0s 000ms 424us
@@ -388,17 +345,6 @@ upstream_rq_total                       359848      3998.31
 <summary>scale-up-httproutes-500</summary>
 
 ```plaintext
-[2024-06-21 09:38:56.778][1][warning][misc] [external/envoy/source/common/protobuf/message_validator_impl.cc:21] Deprecated field: type envoy.config.core.v3.HeaderValueOption Using deprecated option 'envoy.config.core.v3.HeaderValueOption.append' from file base.proto. This configuration will be removed from Envoy soon. Please see https://www.envoyproxy.io/docs/envoy/latest/version_history/version_history for details. If continued use of this field is absolutely necessary, see https://www.envoyproxy.io/docs/envoy/latest/configuration/operations/runtime#using-runtime-overrides-for-deprecated-features for how to apply a temporary and highly discouraged override.
-[09:38:56.779188][1][I] Detected 4 (v)CPUs with affinity..
-[09:38:56.779200][1][I] Starting 4 threads / event loops. Time limit: 90 seconds.
-[09:38:56.779202][1][I] Global targets: 400 connections and 4000 calls per second.
-[09:38:56.779203][1][I]    (Per-worker targets: 100 connections and 1000 calls per second)
-[09:40:27.480937][18][I] Stopping after 90000 ms. Initiated: 90000 / Completed: 90000. (Completion rate was 999.9999777777783 per second.)
-[09:40:27.481183][19][I] Stopping after 90000 ms. Initiated: 90000 / Completed: 90000. (Completion rate was 999.9999888888891 per second.)
-[09:40:27.481532][21][I] Stopping after 90000 ms. Initiated: 90000 / Completed: 90000. (Completion rate was 999.99890000121 per second.)
-[09:40:27.481728][23][I] Stopping after 90000 ms. Initiated: 90000 / Completed: 89999. (Completion rate was 999.988411116648 per second.)
-[09:40:33.043298][23][I] Wait for the connection pool drain timed out, proceeding to hard shutdown.
-Nighthawk - A layer 7 protocol benchmarking tool.
 
 benchmark_http_client.latency_2xx (359807 samples)
   min: 0s 000ms 310us | mean: 0s 000ms 560us | max: 0s 060ms 688us | pstdev: 0s 000ms 942us
@@ -488,17 +434,6 @@ upstream_rq_total                       359808      3997.87
 <summary>scale-down-httproutes-300</summary>
 
 ```plaintext
-[2024-06-21 09:41:00.346][1][warning][misc] [external/envoy/source/common/protobuf/message_validator_impl.cc:21] Deprecated field: type envoy.config.core.v3.HeaderValueOption Using deprecated option 'envoy.config.core.v3.HeaderValueOption.append' from file base.proto. This configuration will be removed from Envoy soon. Please see https://www.envoyproxy.io/docs/envoy/latest/version_history/version_history for details. If continued use of this field is absolutely necessary, see https://www.envoyproxy.io/docs/envoy/latest/configuration/operations/runtime#using-runtime-overrides-for-deprecated-features for how to apply a temporary and highly discouraged override.
-[09:41:00.347325][1][I] Detected 4 (v)CPUs with affinity..
-[09:41:00.347337][1][I] Starting 4 threads / event loops. Time limit: 90 seconds.
-[09:41:00.347339][1][I] Global targets: 400 connections and 4000 calls per second.
-[09:41:00.347341][1][I]    (Per-worker targets: 100 connections and 1000 calls per second)
-[09:42:31.049165][18][I] Stopping after 90000 ms. Initiated: 90000 / Completed: 90000. (Completion rate was 999.999088889719 per second.)
-[09:42:31.049603][21][I] Stopping after 90000 ms. Initiated: 90000 / Completed: 90000. (Completion rate was 999.9997222222994 per second.)
-[09:42:31.049727][19][I] Stopping after 90000 ms. Initiated: 90000 / Completed: 90000. (Completion rate was 999.9981111146791 per second.)
-[09:42:31.049828][23][I] Stopping after 90000 ms. Initiated: 90000 / Completed: 90000. (Completion rate was 999.9999888888891 per second.)
-[09:42:31.683723][1][I] Done.
-Nighthawk - A layer 7 protocol benchmarking tool.
 
 benchmark_http_client.latency_2xx (359812 samples)
   min: 0s 000ms 302us | mean: 0s 001ms 445us | max: 0s 183ms 287us | pstdev: 0s 007ms 612us
@@ -590,17 +525,6 @@ upstream_rq_total                       359812      3997.91
 <summary>scale-down-httproutes-100</summary>
 
 ```plaintext
-[2024-06-21 09:42:53.953][1][warning][misc] [external/envoy/source/common/protobuf/message_validator_impl.cc:21] Deprecated field: type envoy.config.core.v3.HeaderValueOption Using deprecated option 'envoy.config.core.v3.HeaderValueOption.append' from file base.proto. This configuration will be removed from Envoy soon. Please see https://www.envoyproxy.io/docs/envoy/latest/version_history/version_history for details. If continued use of this field is absolutely necessary, see https://www.envoyproxy.io/docs/envoy/latest/configuration/operations/runtime#using-runtime-overrides-for-deprecated-features for how to apply a temporary and highly discouraged override.
-[09:42:53.954421][1][I] Detected 4 (v)CPUs with affinity..
-[09:42:53.954432][1][I] Starting 4 threads / event loops. Time limit: 90 seconds.
-[09:42:53.954435][1][I] Global targets: 400 connections and 4000 calls per second.
-[09:42:53.954436][1][I]    (Per-worker targets: 100 connections and 1000 calls per second)
-[09:44:24.656476][18][I] Stopping after 90000 ms. Initiated: 90000 / Completed: 89998. (Completion rate was 999.9750111802468 per second.)
-[09:44:24.656602][19][I] Stopping after 90000 ms. Initiated: 90000 / Completed: 89997. (Completion rate was 999.9653000474233 per second.)
-[09:44:24.656822][21][I] Stopping after 90000 ms. Initiated: 89986 / Completed: 89977. (Completion rate was 999.7434335927504 per second.)
-[09:44:24.657318][23][I] Stopping after 89999 ms. Initiated: 89997 / Completed: 89997. (Completion rate was 999.9674777513986 per second.)
-[09:44:30.521193][18][I] Wait for the connection pool drain timed out, proceeding to hard shutdown.
-Nighthawk - A layer 7 protocol benchmarking tool.
 
 benchmark_http_client.latency_2xx (359688 samples)
   min: 0s 000ms 308us | mean: 0s 009ms 727us | max: 0s 186ms 793us | pstdev: 0s 019ms 123us
@@ -696,17 +620,6 @@ upstream_rq_total                       359702      3996.68
 <summary>scale-down-httproutes-50</summary>
 
 ```plaintext
-[2024-06-21 09:46:15.538][1][warning][misc] [external/envoy/source/common/protobuf/message_validator_impl.cc:21] Deprecated field: type envoy.config.core.v3.HeaderValueOption Using deprecated option 'envoy.config.core.v3.HeaderValueOption.append' from file base.proto. This configuration will be removed from Envoy soon. Please see https://www.envoyproxy.io/docs/envoy/latest/version_history/version_history for details. If continued use of this field is absolutely necessary, see https://www.envoyproxy.io/docs/envoy/latest/configuration/operations/runtime#using-runtime-overrides-for-deprecated-features for how to apply a temporary and highly discouraged override.
-[09:46:15.538712][1][I] Detected 4 (v)CPUs with affinity..
-[09:46:15.538725][1][I] Starting 4 threads / event loops. Time limit: 90 seconds.
-[09:46:15.538727][1][I] Global targets: 400 connections and 4000 calls per second.
-[09:46:15.538729][1][I]    (Per-worker targets: 100 connections and 1000 calls per second)
-[09:47:46.240483][18][I] Stopping after 90000 ms. Initiated: 90000 / Completed: 90000. (Completion rate was 999.9999888888891 per second.)
-[09:47:46.240994][21][I] Stopping after 90000 ms. Initiated: 90000 / Completed: 89999. (Completion rate was 999.988677780168 per second.)
-[09:47:46.241223][23][I] Stopping after 90000 ms. Initiated: 90000 / Completed: 90000. (Completion rate was 1000 per second.)
-[09:47:46.240809][19][I] Stopping after 90000 ms. Initiated: 90000 / Completed: 89999. (Completion rate was 999.987966677764 per second.)
-[09:47:51.788782][19][I] Wait for the connection pool drain timed out, proceeding to hard shutdown.
-Nighthawk - A layer 7 protocol benchmarking tool.
 
 benchmark_http_client.latency_2xx (359809 samples)
   min: 0s 000ms 298us | mean: 0s 000ms 544us | max: 0s 082ms 124us | pstdev: 0s 000ms 771us
@@ -797,17 +710,6 @@ upstream_rq_total                       359811      3997.90
 <summary>scale-down-httproutes-10</summary>
 
 ```plaintext
-[2024-06-21 09:48:08.535][1][warning][misc] [external/envoy/source/common/protobuf/message_validator_impl.cc:21] Deprecated field: type envoy.config.core.v3.HeaderValueOption Using deprecated option 'envoy.config.core.v3.HeaderValueOption.append' from file base.proto. This configuration will be removed from Envoy soon. Please see https://www.envoyproxy.io/docs/envoy/latest/version_history/version_history for details. If continued use of this field is absolutely necessary, see https://www.envoyproxy.io/docs/envoy/latest/configuration/operations/runtime#using-runtime-overrides-for-deprecated-features for how to apply a temporary and highly discouraged override.
-[09:48:08.536097][1][I] Detected 4 (v)CPUs with affinity..
-[09:48:08.536111][1][I] Starting 4 threads / event loops. Time limit: 90 seconds.
-[09:48:08.536114][1][I] Global targets: 400 connections and 4000 calls per second.
-[09:48:08.536116][1][I]    (Per-worker targets: 100 connections and 1000 calls per second)
-[09:49:39.238939][19][I] Stopping after 89999 ms. Initiated: 90000 / Completed: 90000. (Completion rate was 1000.0000333333344 per second.)
-[09:49:39.239235][21][I] Stopping after 90000 ms. Initiated: 90000 / Completed: 89999. (Completion rate was 999.988377783718 per second.)
-[09:49:39.239520][23][I] Stopping after 90000 ms. Initiated: 90000 / Completed: 89999. (Completion rate was 999.987966677764 per second.)
-[09:49:39.239658][18][I] Stopping after 90000 ms. Initiated: 90000 / Completed: 90000. (Completion rate was 999.9892556709973 per second.)
-[09:49:44.786959][21][I] Wait for the connection pool drain timed out, proceeding to hard shutdown.
-Nighthawk - A layer 7 protocol benchmarking tool.
 
 benchmark_http_client.latency_2xx (359744 samples)
   min: 0s 000ms 300us | mean: 0s 000ms 552us | max: 0s 062ms 459us | pstdev: 0s 000ms 650us
