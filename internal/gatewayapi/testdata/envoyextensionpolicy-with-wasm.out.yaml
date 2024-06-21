@@ -13,8 +13,8 @@ envoyExtensionPolicies:
     wasm:
     - code:
         http:
+          sha256: a1f0b78b8c1320690327800e3a5de10e7dbba7b6c752e702193a395a52c727b6
           url: https://www.test.com/wasm-filter-4.wasm
-        sha256: a1f0b78b8c1320690327800e3a5de10e7dbba7b6c752e702193a395a52c727b6
         type: HTTP
       config:
         parameter1:
@@ -53,8 +53,8 @@ envoyExtensionPolicies:
     wasm:
     - code:
         http:
+          sha256: 746df05c8f3a0b07a46c0967cfbc5cbe5b9d48d0f79b6177eeedf8be6c8b34b5
           url: https://www.example.com/wasm-filter-1.wasm
-        sha256: 746df05c8f3a0b07a46c0967cfbc5cbe5b9d48d0f79b6177eeedf8be6c8b34b5
         type: HTTP
       config:
         parameter1:
@@ -68,8 +68,8 @@ envoyExtensionPolicies:
             group: null
             kind: null
             name: my-pull-secret
+          sha256: a1efca12ea51069abb123bf9c77889fcc2a31cc5483fc14d115e44fdf07c7980
           url: oci://www.example.com/wasm-filter-2:v1.0.0
-        sha256: a1efca12ea51069abb123bf9c77889fcc2a31cc5483fc14d115e44fdf07c7980
         type: Image
       config:
         parameter1: value1
@@ -78,8 +78,8 @@ envoyExtensionPolicies:
       rootID: my-root-id
     - code:
         image:
+          sha256: null
           url: www.example.com:8080/wasm-filter-3
-        sha256: null
         type: Image
   status:
     ancestors:

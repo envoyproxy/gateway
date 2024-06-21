@@ -10,7 +10,7 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
-// Wasm defines a wasm extension.
+// Wasm defines a Wasm extension.
 //
 // Note: at the moment, Envoy Gateway does not support configuring Wasm runtime.
 // v8 is used as the VM runtime for the Wasm extensions.
@@ -30,7 +30,7 @@ type Wasm struct {
 	// Note: RootID must match the root_id parameter used to register the Context in the Wasm code.
 	RootID *string `json:"rootID,omitempty"`
 
-	// Code is the wasm code for the extension.
+	// Code is the Wasm code for the extension.
 	Code WasmCodeSource `json:"code"`
 
 	// Config is the configuration for the Wasm extension.
@@ -54,37 +54,30 @@ type Wasm struct {
 	// Priority *uint32 `json:"priority,omitempty"`
 }
 
-// WasmCodeSource defines the source of the wasm code.
+// WasmCodeSource defines the source of the Wasm code.
 // +union
 //
 // +kubebuilder:validation:XValidation:rule="self.type == 'HTTP' ? has(self.http) : !has(self.http)",message="If type is HTTP, http field needs to be set."
 // +kubebuilder:validation:XValidation:rule="self.type == 'Image' ? has(self.image) : !has(self.image)",message="If type is Image, image field needs to be set."
 type WasmCodeSource struct {
-	// Type is the type of the source of the wasm code.
+	// Type is the type of the source of the Wasm code.
 	// Valid WasmCodeSourceType values are "HTTP" or "Image".
 	//
 	// +kubebuilder:validation:Enum=HTTP;Image;ConfigMap
 	// +unionDiscriminator
 	Type WasmCodeSourceType `json:"type"`
 
-	// HTTP is the HTTP URL containing the wasm code.
+	// HTTP is the HTTP URL containing the Wasm code.
 	//
 	// Note that the HTTP server must be accessible from the Envoy proxy.
 	// +optional
 	HTTP *HTTPWasmCodeSource `json:"http,omitempty"`
 
-	// Image is the OCI image containing the wasm code.
+	// Image is the OCI image containing the Wasm code.
 	//
 	// Note that the image must be accessible from the Envoy Gateway.
 	// +optional
 	Image *ImageWasmCodeSource `json:"image,omitempty"`
-
-	// SHA256 checksum that will be used to verify the wasm code.
-	//
-	// If not specified, Envoy Gateway will not verify the downloaded wasm code.
-	// kubebuilder:validation:Pattern=`^[a-f0-9]{64}$`
-	// +optional
-	SHA256 *string `json:"sha256"`
 
 	// PullPolicy is the policy to use when pulling the Wasm module by either the HTTP or Image source.
 	// This field is only applicable when the SHA256 field is not set.
@@ -98,26 +91,33 @@ type WasmCodeSource struct {
 	PullPolicy *ImagePullPolicy `json:"pullPolicy,omitempty"`
 }
 
-// WasmCodeSourceType specifies the types of sources for the wasm code.
+// WasmCodeSourceType specifies the types of sources for the Wasm code.
 // +kubebuilder:validation:Enum=HTTP;Image
 type WasmCodeSourceType string
 
 const (
-	// HTTPWasmCodeSourceType allows the user to specify the wasm code in an HTTP URL.
+	// HTTPWasmCodeSourceType allows the user to specify the Wasm code in an HTTP URL.
 	HTTPWasmCodeSourceType WasmCodeSourceType = "HTTP"
 
-	// ImageWasmCodeSourceType allows the user to specify the wasm code in an OCI image.
+	// ImageWasmCodeSourceType allows the user to specify the Wasm code in an OCI image.
 	ImageWasmCodeSourceType WasmCodeSourceType = "Image"
 )
 
-// HTTPWasmCodeSource defines the HTTP URL containing the wasm code.
+// HTTPWasmCodeSource defines the HTTP URL containing the Wasm code.
 type HTTPWasmCodeSource struct {
-	// URL is the URL containing the wasm code.
+	// URL is the URL containing the Wasm code.
 	// +kubebuilder:validation:Pattern=`^((https?:)(\/\/\/?)([\w]*(?::[\w]*)?@)?([\d\w\.-]+)(?::(\d+))?)?([\/\\\w\.()-]*)?(?:([?][^#]*)?(#.*)?)*`
 	URL string `json:"url"`
+
+	// SHA256 checksum that will be used to verify the Wasm code.
+	//
+	// If not specified, Envoy Gateway will not verify the downloaded Wasm code.
+	// kubebuilder:validation:Pattern=`^[a-f0-9]{64}$`
+	// +optional
+	SHA256 *string `json:"sha256"`
 }
 
-// ImageWasmCodeSource defines the OCI image containing the wasm code.
+// ImageWasmCodeSource defines the OCI image containing the Wasm code.
 type ImageWasmCodeSource struct {
 	// URL is the URL of the OCI image.
 	// URL can be in the format of `registry/image:tag` or `registry/image@sha256:digest`.
@@ -125,6 +125,15 @@ type ImageWasmCodeSource struct {
 	// - Wasm Artifact Image Specification: https://github.com/solo-io/wasm/blob/master/spec/spec.md
 	// - Compat Specification: https://github.com/solo-io/wasm/blob/master/spec/spec-compat.md
 	URL string `json:"url"`
+
+	// SHA256 checksum that will be used to verify the OCI image.
+	//
+	// It must match the digest of the OCI image.
+	//
+	// If not specified, Envoy Gateway will not verify the downloaded OCI image.
+	// kubebuilder:validation:Pattern=`^[a-f0-9]{64}$`
+	// +optional
+	SHA256 *string `json:"sha256"`
 
 	// PullSecretRef is a reference to the secret containing the credentials to pull the image.
 	// Only support Kubernetes Secret resource from the same namespace.

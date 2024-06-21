@@ -585,10 +585,6 @@ func (t *Translator) buildWasm(
 		failOpen = *config.FailOpen
 	}
 
-	if config.Code.SHA256 != nil {
-		originalChecksum = *config.Code.SHA256
-	}
-
 	if config.Code.PullPolicy != nil {
 		switch *config.Code.PullPolicy {
 		case egv1a1.ImagePullPolicyAlways:
@@ -605,6 +601,10 @@ func (t *Translator) buildWasm(
 		// This is a sanity check, the validation should have caught this
 		if config.Code.HTTP == nil {
 			return nil, fmt.Errorf("missing HTTP field in Wasm code source")
+		}
+
+		if config.Code.HTTP.SHA256 != nil {
+			originalChecksum = *config.Code.HTTP.SHA256
 		}
 
 		http := config.Code.HTTP
@@ -667,6 +667,10 @@ func (t *Translator) buildWasm(
 		// If the url is an OCI image, and neither digest nor tag is provided, use the latest tag.
 		if !hasDigest(imageURL) && !hasTag(imageURL) {
 			imageURL += ":latest"
+		}
+
+		if config.Code.Image.SHA256 != nil {
+			originalChecksum = *config.Code.Image.SHA256
 		}
 
 		// The wasm checksum is different from the OCI image digest.
