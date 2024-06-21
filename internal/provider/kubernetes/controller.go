@@ -1657,9 +1657,7 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 		}
 
 		if telemetry.Tracing != nil {
-			for _, backendRef := range telemetry.Tracing.Provider.BackendRefs {
-				backendRefs = append(backendRefs, backendRef)
-			}
+			backendRefs = append(backendRefs, telemetry.Tracing.Provider.BackendRefs...)
 		}
 
 		for _, backendRef := range backendRefs {
