@@ -101,14 +101,16 @@ func renderEnvSettingsTable(writer io.Writer) {
 	table := newMarkdownStyleTableWriter(writer)
 
 	headers := []string{"RPS", "Connections", "Duration", "CPU Limits", "Memory Limits"}
-	writeTableRow(table, headers, func(h string) string {
-		return h
+	units := []string{"", "", "Seconds", "m", "MiB"}
+	writeTableRow(table, headers, func(i int, h string) string {
+		return fmt.Sprintf("%s (%s)", h, units[i])
 	})
 
 	writeTableDelimiter(table, len(headers))
 
-	writeTableRow(table, headers, func(h string) string {
-		if v, ok := os.LookupEnv(benchmarkEnvPrefix + strings.ToUpper(h)); ok {
+	writeTableRow(table, headers, func(_ int, h string) string {
+		env := strings.Replace(strings.ToUpper(h), " ", "_", -1)
+		if v, ok := os.LookupEnv(benchmarkEnvPrefix + env); ok {
 			return v
 		}
 		return omitEmptyValue
@@ -128,7 +130,7 @@ func renderMetricsTable(writer io.Writer, headers []*ReportTableHeader, reports 
 	table := newMarkdownStyleTableWriter(writer)
 
 	// Write metrics table header.
-	writeTableRow(table, headers, func(h *ReportTableHeader) string { // TODO: add footnote support
+	writeTableRow(table, headers, func(_ int, h *ReportTableHeader) string { // TODO: add footnote support
 		if h.Metric != nil && len(h.Metric.Unit) > 0 {
 			return fmt.Sprintf("%s (%s)", h.Name, h.Metric.Unit)
 		}
@@ -145,7 +147,7 @@ func renderMetricsTable(writer io.Writer, headers []*ReportTableHeader, reports 
 			return err
 		}
 
-		writeTableRow(table, headers, func(h *ReportTableHeader) string {
+		writeTableRow(table, headers, func(_ int, h *ReportTableHeader) string {
 			if h.Metric != nil {
 				if mv, ok := mf[h.Metric.Name]; ok {
 					// Store the help of metric for later usage.
@@ -196,10 +198,10 @@ func writeCollapsibleSection(writer io.Writer, title string, content []byte) {
 }
 
 // writeTableRow writes one row in Markdown table style.
-func writeTableRow[T any](table *tabwriter.Writer, values []T, get func(T) string) {
+func writeTableRow[T any](table *tabwriter.Writer, values []T, get func(int, T) string) {
 	row := "|"
-	for _, v := range values {
-		row += get(v) + "\t"
+	for i, v := range values {
+		row += get(i, v) + "\t"
 	}
 
 	_, _ = fmt.Fprintln(table, row)
