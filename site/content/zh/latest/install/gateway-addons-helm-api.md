@@ -111,9 +111,6 @@ An Add-ons Helm chart for Envoy Gateway
 | prometheus.server.readinessProbeInitialDelay | int | `0` |  |
 | prometheus.server.securityContext | object | `{}` |  |
 | prometheus.server.service.type | string | `"LoadBalancer"` |  |
-| tags.logging | bool | `false` |  |
-| tags.metrics | bool | `true` |  |
-| tags.tracing | bool | `false` |  |
 | tempo.enabled | bool | `true` |  |
 | tempo.fullnameOverride | string | `"tempo"` |  |
 | tempo.service.type | string | `"LoadBalancer"` |  |
