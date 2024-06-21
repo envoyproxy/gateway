@@ -292,7 +292,7 @@ func addTLSRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 				// lookup the provided Gateway Name.
 				gateways = append(gateways,
 					types.NamespacedName{
-						Namespace: gatewayapi.NamespaceDerefOrAlpha(parent.Namespace, tlsRoute.Namespace),
+						Namespace: gatewayapi.NamespaceDerefOr(parent.Namespace, tlsRoute.Namespace),
 						Name:      string(parent.Name),
 					}.String(),
 				)
@@ -319,7 +319,7 @@ func backendTLSRouteIndexFunc(rawObj client.Object) []string {
 				// lookup the provided Gateway Name.
 				backendRefs = append(backendRefs,
 					types.NamespacedName{
-						Namespace: gatewayapi.NamespaceDerefOrAlpha(backend.Namespace, tlsroute.Namespace),
+						Namespace: gatewayapi.NamespaceDerefOr(backend.Namespace, tlsroute.Namespace),
 						Name:      string(backend.Name),
 					}.String(),
 				)
@@ -342,7 +342,7 @@ func addTCPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 				// lookup the provided Gateway Name.
 				gateways = append(gateways,
 					types.NamespacedName{
-						Namespace: gatewayapi.NamespaceDerefOrAlpha(parent.Namespace, tcpRoute.Namespace),
+						Namespace: gatewayapi.NamespaceDerefOr(parent.Namespace, tcpRoute.Namespace),
 						Name:      string(parent.Name),
 					}.String(),
 				)
@@ -369,7 +369,7 @@ func backendTCPRouteIndexFunc(rawObj client.Object) []string {
 				// lookup the provided Gateway Name.
 				backendRefs = append(backendRefs,
 					types.NamespacedName{
-						Namespace: gatewayapi.NamespaceDerefOrAlpha(backend.Namespace, tcpRoute.Namespace),
+						Namespace: gatewayapi.NamespaceDerefOr(backend.Namespace, tcpRoute.Namespace),
 						Name:      string(backend.Name),
 					}.String(),
 				)
@@ -394,7 +394,7 @@ func addUDPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 				// lookup the provided Gateway Name.
 				gateways = append(gateways,
 					types.NamespacedName{
-						Namespace: gatewayapi.NamespaceDerefOrAlpha(parent.Namespace, udpRoute.Namespace),
+						Namespace: gatewayapi.NamespaceDerefOr(parent.Namespace, udpRoute.Namespace),
 						Name:      string(parent.Name),
 					}.String(),
 				)
@@ -421,7 +421,7 @@ func backendUDPRouteIndexFunc(rawObj client.Object) []string {
 				// lookup the provided Gateway Name.
 				backendRefs = append(backendRefs,
 					types.NamespacedName{
-						Namespace: gatewayapi.NamespaceDerefOrAlpha(backend.Namespace, udproute.Namespace),
+						Namespace: gatewayapi.NamespaceDerefOr(backend.Namespace, udproute.Namespace),
 						Name:      string(backend.Name),
 					}.String(),
 				)

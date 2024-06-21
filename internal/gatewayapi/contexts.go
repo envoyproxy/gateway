@@ -206,9 +206,6 @@ func GetRouteType(route RouteContext) gwapiv1.Kind {
 	return gwapiv1.Kind(rv.FieldByName("Kind").String())
 }
 
-// TODO: [v1alpha2-gwapiv1] This should not be required once all Route
-// objects being implemented are of type gwapiv1.
-
 // GetHostnames returns the hosts targeted by the Route object.
 func GetHostnames(route RouteContext) []string {
 	rv := reflect.ValueOf(route).Elem()
@@ -225,8 +222,6 @@ func GetHostnames(route RouteContext) []string {
 	return hostnames
 }
 
-// TODO: [v1alpha2-gwapiv1] This should not be required once all Route
-// objects being implemented are of type gwapiv1.
 // GetParentReferences returns the ParentReference of the Route object.
 func GetParentReferences(route RouteContext) []gwapiv1.ParentReference {
 	rv := reflect.ValueOf(route).Elem()
@@ -256,9 +251,12 @@ func GetRouteParentContext(route RouteContext, forParentRef gwapiv1.ParentRefere
 		return ctx
 	}
 
-	isHTTPRoute := false
-	if rv.FieldByName("Kind").String() == KindHTTPRoute {
-		isHTTPRoute = true
+	// TODO: [v1alpha2-gwapiv1]
+	// can remove this check once all routes graduates to gwapiv1.
+	isV1Route := false
+	kind := rv.FieldByName("Kind").String()
+	if kind == KindHTTPRoute || kind == KindGRPCRoute {
+		isV1Route = true
 	}
 
 	var parentRef *gwapiv1.ParentReference
@@ -275,27 +273,27 @@ func GetRouteParentContext(route RouteContext, forParentRef gwapiv1.ParentRefere
 	}
 
 	routeParentStatusIdx := -1
+	defaultNamespace := gwapiv1.Namespace(metav1.NamespaceDefault)
 	statusParents := rv.FieldByName("Status").FieldByName("Parents")
 	for i := 0; i < statusParents.Len(); i++ {
 		p := statusParents.Index(i).FieldByName("ParentRef").Interface().(gwapiv1.ParentReference)
-		if !isHTTPRoute {
-			p = UpgradeParentReference(p)
-			defaultNamespace := gwapiv1.Namespace(metav1.NamespaceDefault)
-			if forParentRef.Namespace == nil {
-				forParentRef.Namespace = &defaultNamespace
-			}
-			if p.Namespace == nil {
-				p.Namespace = &defaultNamespace
-			}
+		// For those non-v1 routes, their underlying type of `ParentReference` is v1 as well.
+		// So we can skip upgrading these routes for simplicity.
+		if forParentRef.Namespace == nil {
+			forParentRef.Namespace = &defaultNamespace
+		}
+		if p.Namespace == nil {
+			p.Namespace = &defaultNamespace
 		}
 		if reflect.DeepEqual(p, forParentRef) {
 			routeParentStatusIdx = i
 			break
 		}
 	}
+
 	if routeParentStatusIdx == -1 {
 		tmpPR := forParentRef
-		if !isHTTPRoute {
+		if !isV1Route {
 			tmpPR = DowngradeParentReference(tmpPR)
 		}
 		rParentStatus := gwapiv1a2.RouteParentStatus{
@@ -372,8 +370,8 @@ func GetBackendRef(b BackendRefContext) *gwapiv1.BackendRef {
 	if br.IsValid() {
 		backendRef := br.Interface().(gwapiv1.BackendRef)
 		return &backendRef
-
 	}
+
 	backendRef := b.(gwapiv1.BackendRef)
 	return &backendRef
 }
