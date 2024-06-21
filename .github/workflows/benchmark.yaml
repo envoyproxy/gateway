@@ -32,6 +32,9 @@ on:
         type: string
         required: false
 
+permissions:
+  pull-requests: write
+
 jobs:
   benchmark-test:
     name: Benchmark Test
@@ -50,21 +53,9 @@ jobs:
           BENCHMARK_DURATION: ${{ github.event.inputs.duration || 90 }}
           BENCHMARK_CPU_LIMITS: ${{ github.event.inputs.cpu_limits || 1000 }}
           BENCHMARK_MEMORY_LIMITS: ${{ github.event.inputs.memory_limits || 2048 }}
-          BENCHMARK_REPORT_PATH: benchmark_report.md
         run: make benchmark
 
-      - name: Read Benchmark results
-        id: result
-        uses: juliangruber/read-file-action@v1
+      - name: Comment Benchmark results
+        uses: thollander/actions-comment-pull-request@v2
         with:
-          path: ./benchmark_report.md
-
-      - name: Comment
-        run: |
-          # Use GitHub API to create a comment on the PR
-          PR_NUMBER=${{ github.event.pull_request.number }}
-          COMMENT=${{ steps.result.outputs.content }}
-          GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
-          COMMENT_URL="https://api.github.com/repos/${{ github.repository }}/issues/${PR_NUMBER}/comments"
-          
-          curl -s -H "Authorization: token ${GITHUB_TOKEN}" -X POST $COMMENT_URL -d "{\"body\":\"$COMMENT\"}"
+          path: ./bin/benchmark/report.md
