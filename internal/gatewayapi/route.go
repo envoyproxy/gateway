@@ -700,7 +700,6 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 		}
 		irKey := t.getIRKey(listener.gateway)
 		irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
-
 		if irListener != nil {
 			if GetRouteType(route) == KindGRPCRoute {
 				irListener.IsHTTP2 = true

@@ -265,7 +265,6 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 		ForwardClientCertDetails:  buildForwardClientCertDetailsAction(irListener.Headers),
 		PreserveExternalRequestId: ptr.Deref(irListener.Headers, ir.HeaderSettings{}).PreserveXRequestID,
 	}
-
 	if mgr.ForwardClientCertDetails == hcmv3.HttpConnectionManager_APPEND_FORWARD || mgr.ForwardClientCertDetails == hcmv3.HttpConnectionManager_SANITIZE_SET {
 		mgr.SetCurrentClientCertDetails = buildSetCurrentClientCertDetails(irListener.Headers)
 	}
@@ -277,6 +276,9 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 
 		if irListener.Timeout.HTTP.IdleTimeout != nil {
 			mgr.CommonHttpProtocolOptions.IdleTimeout = durationpb.New(irListener.Timeout.HTTP.IdleTimeout.Duration)
+		}
+		if irListener.Timeout.HTTP.StreamIdleTimeout != nil {
+			mgr.StreamIdleTimeout = durationpb.New(irListener.Timeout.HTTP.StreamIdleTimeout.Duration)
 		}
 	}
 
