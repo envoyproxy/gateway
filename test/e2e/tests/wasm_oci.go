@@ -406,9 +406,9 @@ func createEEPForWasmTest(
 					Code: egv1a1.WasmCodeSource{
 						Type: egv1a1.ImageWasmCodeSourceType,
 						Image: &egv1a1.ImageWasmCodeSource{
-							URL: fmt.Sprintf("%s/testwasm:v1.0.0", registryAddr),
+							URL:    fmt.Sprintf("%s/testwasm:v1.0.0", registryAddr),
+							SHA256: &digest,
 						},
-						SHA256: &digest,
 					},
 				},
 			},

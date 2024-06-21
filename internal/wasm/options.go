@@ -31,7 +31,7 @@ const (
 	DefaultHTTPRequestTimeout    = 15 * time.Second
 	DefaultHTTPRequestMaxRetries = 5
 	DefaultPullTimeout           = 5 * time.Minute
-	DefaultMaxCacheSize          = 1024 * 1024 * 1024 * 10 // 10GB
+	DefaultMaxCacheSize          = 1024 * 1024 * 1024 // 1GB
 )
 
 // CacheOptions contains configurations to create a Cache instance.
