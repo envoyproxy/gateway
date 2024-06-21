@@ -54,8 +54,3 @@ jobs:
           BENCHMARK_CPU_LIMITS: ${{ github.event.inputs.cpu_limits || 1000 }}
           BENCHMARK_MEMORY_LIMITS: ${{ github.event.inputs.memory_limits || 2048 }}
         run: make benchmark
-
-      - name: Comment Benchmark results
-        uses: thollander/actions-comment-pull-request@v2
-        with:
-          filePath: ./bin/benchmark/report.md

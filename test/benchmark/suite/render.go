@@ -98,7 +98,10 @@ func renderEnvSettingsTable(writer io.Writer) {
 	headers := []string{"RPS", "Connections", "Duration", "CPU Limits", "Memory Limits"}
 	units := []string{"", "", "Seconds", "m", "MiB"}
 	writeTableRow(table, headers, func(i int, h string) string {
-		return fmt.Sprintf("%s (%s)", h, units[i])
+		if len(units[i]) > 0 {
+			return fmt.Sprintf("%s (%s)", h, units[i])
+		}
+		return h
 	})
 
 	writeTableDelimiter(table, len(headers))
