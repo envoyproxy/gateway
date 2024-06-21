@@ -52,4 +52,4 @@ spec:
       type: HTTP
       http:
         url: https://raw.githubusercontent.com/envoyproxy/envoy/main/examples/wasm-cc/lib/envoy_filter_http_wasm_example.wasm
-      sha256: 79c9f85128bb0177b6511afa85d587224efded376ac0ef76df56595f1e6315c0
+        sha256: 79c9f85128bb0177b6511afa85d587224efded376ac0ef76df56595f1e6315c0
