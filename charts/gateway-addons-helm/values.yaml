@@ -142,6 +142,8 @@ loki:
     rulerConfig:
       storage:
         type: "local"
+  test:
+    enabled: false
   singleBinary:
     replicas: 1
   read:
@@ -151,9 +153,11 @@ loki:
   write:
     replicas: 0
   monitoring:
+    lokiCanary:
+      enabled: false
     selfMonitoring:
       grafanaAgent:
-        installOperator: true
+        installOperator: false
   # Disable gateway.
   gateway:
     enabled: false
