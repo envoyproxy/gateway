@@ -393,7 +393,8 @@ func findXdsHTTPRouteConfigName(xdsListener *listenerv3.Listener) string {
 
 func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute,
 	clusterName string, accesslog *ir.AccessLog, timeout *ir.ClientTimeout,
-	connection *ir.ClientConnection) error {
+	connection *ir.ClientConnection,
+) error {
 	if irRoute == nil {
 		return errors.New("tcp listener is nil")
 	}
