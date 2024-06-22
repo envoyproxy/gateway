@@ -1638,7 +1638,7 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 		if telemetry.AccessLog != nil {
 			for _, setting := range telemetry.AccessLog.Settings {
 				for _, sink := range setting.Sinks {
-					if sink.OpenTelemetry == nil {
+					if sink.OpenTelemetry != nil {
 						backendRefs = append(backendRefs, sink.OpenTelemetry.BackendRefs...)
 					}
 					if sink.ALS != nil {
@@ -1650,7 +1650,7 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 
 		if telemetry.Metrics != nil {
 			for _, sink := range telemetry.Metrics.Sinks {
-				if sink.OpenTelemetry == nil {
+				if sink.OpenTelemetry != nil {
 					backendRefs = append(backendRefs, sink.OpenTelemetry.BackendRefs...)
 				}
 			}
