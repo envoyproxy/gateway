@@ -41,20 +41,6 @@ helm-push.%: helm-package.%
 	$(eval CHART_NAME := $(COMMAND))
 	helm push ${OUTPUT_DIR}/charts/${CHART_NAME}-${CHART_VERSION}.tgz ${OCI_REGISTRY}
 
-.PHONY: helm-install
-helm-install: ## Install envoy gateway relevant helm charts from OCI registry.
-helm-install:
-	@for chart in $(CHARTS); do \
-		$(LOG_TARGET); \
-		$(MAKE) $(addprefix helm-install., $$(basename $${chart})); \
-	done
-
-.PHONY: helm-install.%
-helm-install.%: helm-generate.%
-	$(eval COMMAND := $(word 1,$(subst ., ,$*)))
-	$(eval CHART_NAME := $(COMMAND))
-	helm install eg ${OCI_REGISTRY}/${CHART_NAME} --version ${CHART_VERSION} -n ${RELEASE_NAMESPACE} --create-namespace
-
 .PHONY: helm-generate
 helm-generate:
 	@for chart in $(CHARTS); do \
@@ -72,19 +58,7 @@ helm-generate.%:
   	fi
 	helm dependency update charts/${CHART_NAME} # Update dependencies for add-ons chart.
 	helm lint charts/${CHART_NAME}
-
-
-.PHONY: helm-template
-helm-template:
-	@for chart in $(CHARTS); do \
-  		$(LOG_TARGET); \
-  		$(MAKE) $(addprefix helm-template., $$(basename $${chart})); \
-  	done
-
-helm-template.%: ## Template envoy gateway helm chart.z
-	@$(LOG_TARGET)
-	$(eval COMMAND := $(word 1,$(subst ., ,$*)))
-	$(eval CHART_NAME := $(COMMAND))
+	$(call log, "Run helm template for chart: ${CHART_NAME}!");
 	@for file in $(wildcard test/helm/${CHART_NAME}/*.in.yaml); do \
   		filename=$$(basename $${file}); \
   		output="$${filename%.in.*}.out.yaml"; \
