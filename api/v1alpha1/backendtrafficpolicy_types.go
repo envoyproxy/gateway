@@ -109,7 +109,7 @@ type BackendTrafficPolicySpec struct {
 	// Connection includes backend connection settings.
 	//
 	// +optional
-	Connection *BackendTrafficPolicyConnection `json:"connection,omitempty"`
+	Connection *BackendConnection `json:"connection,omitempty"`
 }
 
 // +kubebuilder:object:root=true
