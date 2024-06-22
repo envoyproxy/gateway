@@ -74,6 +74,7 @@ An Add-ons Helm chart for Envoy Gateway
 | loki.loki.rulerConfig.storage.type | string | `"local"` |  |
 | loki.loki.storage.type | string | `"filesystem"` |  |
 | loki.monitoring.lokiCanary.enabled | bool | `false` |  |
+| loki.monitoring.selfMonitoring.enabled | bool | `false` |  |
 | loki.monitoring.selfMonitoring.grafanaAgent.installOperator | bool | `false` |  |
 | loki.read.replicas | int | `0` |  |
 | loki.singleBinary.replicas | int | `1` |  |

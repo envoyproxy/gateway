@@ -73,12 +73,20 @@ helm-generate.%:
 	helm dependency update charts/${CHART_NAME} # Update dependencies for add-ons chart.
 	helm lint charts/${CHART_NAME}
 
-HELM_VALUES := $(wildcard test/helm/*.in.yaml)
 
-helm-template: ## Template envoy gateway helm chart.z
+.PHONY: helm-template
+helm-template:
+	@for chart in $(CHARTS); do \
+  		$(LOG_TARGET); \
+  		$(MAKE) $(addprefix helm-template., $$(basename $${chart})); \
+  	done
+
+helm-template.%: ## Template envoy gateway helm chart.z
 	@$(LOG_TARGET)
-	@for file in $(HELM_VALUES); do \
+	$(eval COMMAND := $(word 1,$(subst ., ,$*)))
+	$(eval CHART_NAME := $(COMMAND))
+	@for file in $(wildcard test/helm/${CHART_NAME}/*.in.yaml); do \
   		filename=$$(basename $${file}); \
   		output="$${filename%.in.*}.out.yaml"; \
-		helm template eg charts/${CHART_NAME} -f $${file} > test/helm/$$output --namespace=${RELEASE_NAMESPACE}; \
+		helm template ${CHART_NAME} charts/${CHART_NAME} -f $${file} > test/helm/${CHART_NAME}/$$output --namespace=${RELEASE_NAMESPACE}; \
 	done
