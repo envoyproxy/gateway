@@ -254,7 +254,7 @@ func Test_httpServerFailedAttempt(t *testing.T) {
 		var (
 			server                *HTTPServer
 			maxFailedAttempts     = 5
-			attemptResetDelay     = time.Millisecond * 500
+			attemptResetDelay     = time.Millisecond * 200
 			attemptsResetInterval = time.Millisecond * 100
 		)
 
@@ -280,13 +280,19 @@ func Test_httpServerFailedAttempt(t *testing.T) {
 		require.ErrorContains(t, err, "after 5 attempts")
 
 		// The 7th Get() should return a normal error because the failed attempts have been reset.
-		time.Sleep(1 * time.Second)
-		_, _, err = server.Get(
-			fmt.Sprintf("oci://%s/%s", registryURL.Host, nonExistingWasmModule),
-			GetOptions{
-				ResourceName:   resourceName,
-				RequestTimeout: time.Second * 1000,
-			})
+		err = nil
+		for i := 0; i < 3; i++ {
+			time.Sleep(300 * time.Millisecond)
+			_, _, err = server.Get(
+				fmt.Sprintf("oci://%s/%s", registryURL.Host, nonExistingWasmModule),
+				GetOptions{
+					ResourceName:   resourceName,
+					RequestTimeout: time.Second * 1000,
+				})
+			if err != nil {
+				break
+			}
+		}
 		require.ErrorContains(t, err, "Unknown name")
 	})
 }
