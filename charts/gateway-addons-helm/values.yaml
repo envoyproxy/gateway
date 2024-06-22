@@ -156,6 +156,7 @@ loki:
     lokiCanary:
       enabled: false
     selfMonitoring:
+      enabled: false
       grafanaAgent:
         installOperator: false
   # Disable gateway.
