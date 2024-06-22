@@ -10,7 +10,6 @@ IMAGE_PULL_POLICY ?= IfNotPresent
 OCI_REGISTRY ?= oci://docker.io/envoyproxy
 CHART_NAME ?= gateway-helm
 CHART_VERSION ?= ${RELEASE_VERSION}
-RELEASE_NAMESPACE ?= envoy-gateway-system
 
 ##@ Helm
 .PHONY: helm-package
@@ -56,11 +55,15 @@ helm-generate.%:
   		GatewayImage=${IMAGE}:${TAG} GatewayImagePullPolicy=${IMAGE_PULL_POLICY} \
   		envsubst < charts/${CHART_NAME}/values.tmpl.yaml > ./charts/${CHART_NAME}/values.yaml; \
   	fi
-	helm dependency update charts/${CHART_NAME} # Update dependencies for add-ons chart.
+	helm dependency update charts/${CHART_NAME}
 	helm lint charts/${CHART_NAME}
 	$(call log, "Run helm template for chart: ${CHART_NAME}!");
 	@for file in $(wildcard test/helm/${CHART_NAME}/*.in.yaml); do \
   		filename=$$(basename $${file}); \
   		output="$${filename%.in.*}.out.yaml"; \
-		helm template ${CHART_NAME} charts/${CHART_NAME} -f $${file} > test/helm/${CHART_NAME}/$$output --namespace=${RELEASE_NAMESPACE}; \
+  	  	if [ ${CHART_NAME} == "gateway-addons-helm" ]; then \
+  	  		helm template ${CHART_NAME} charts/${CHART_NAME} -f $${file} > test/helm/${CHART_NAME}/$$output --namespace=monitoring; \
+  	  	else \
+			helm template ${CHART_NAME} charts/${CHART_NAME} -f $${file} > test/helm/${CHART_NAME}/$$output --namespace=envoy-gateway-system; \
+  	  	fi; \
 	done

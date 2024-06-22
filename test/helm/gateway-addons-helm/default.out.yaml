@@ -4,7 +4,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: fluent-bit
-  namespace: envoy-gateway-system
+  namespace: monitoring
   labels:
     helm.sh/chart: fluent-bit-0.30.4
     app.kubernetes.io/name: fluent-bit
@@ -24,7 +24,7 @@ metadata:
     app.kubernetes.io/version: "11.0.0"
     app.kubernetes.io/managed-by: Helm
   name: grafana
-  namespace: envoy-gateway-system
+  namespace: monitoring
 ---
 # Source: gateway-addons-helm/charts/loki/templates/serviceaccount.yaml
 apiVersion: v1
@@ -52,7 +52,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: prometheus
   name: prometheus
-  namespace: envoy-gateway-system
+  namespace: monitoring
   annotations:
     {}
 ---
@@ -61,7 +61,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: tempo
-  namespace: envoy-gateway-system
+  namespace: monitoring
   labels:
     helm.sh/chart: tempo-1.3.1
     app.kubernetes.io/name: tempo
@@ -75,7 +75,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: grafana
-  namespace: envoy-gateway-system
+  namespace: monitoring
   labels:
     helm.sh/chart: grafana-8.0.0
     app.kubernetes.io/name: grafana
@@ -94,7 +94,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: fluent-bit
-  namespace: envoy-gateway-system
+  namespace: monitoring
   labels:
     helm.sh/chart: fluent-bit-0.30.4
     app.kubernetes.io/name: fluent-bit
@@ -162,7 +162,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: grafana
-  namespace: envoy-gateway-system
+  namespace: monitoring
   labels:
     helm.sh/chart: grafana-8.0.0
     app.kubernetes.io/name: grafana
@@ -291,7 +291,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: prometheus
   name: prometheus
-  namespace: envoy-gateway-system
+  namespace: monitoring
 data:
   allow-snippet-annotations: "false"
   alerting_rules.yml: |
@@ -618,7 +618,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: tempo
-  namespace: envoy-gateway-system
+  namespace: monitoring
   labels:
     helm.sh/chart: tempo-1.3.1
     app.kubernetes.io/name: tempo
@@ -677,7 +677,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: grafana-dashboards
-  namespace: 'envoy-gateway-system'
+  namespace: 'monitoring'
 data:
   envoy-clusters.json: |-
       {
@@ -9310,7 +9310,7 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: fluent-bit
-    namespace: envoy-gateway-system
+    namespace: monitoring
 ---
 # Source: gateway-addons-helm/charts/grafana/templates/clusterrolebinding.yaml
 kind: ClusterRoleBinding
@@ -9326,7 +9326,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: grafana
-    namespace: envoy-gateway-system
+    namespace: monitoring
 roleRef:
   kind: ClusterRole
   name: grafana-clusterrole
@@ -9348,7 +9348,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: prometheus
-    namespace: envoy-gateway-system
+    namespace: monitoring
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -9359,7 +9359,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: grafana
-  namespace: envoy-gateway-system
+  namespace: monitoring
   labels:
     helm.sh/chart: grafana-8.0.0
     app.kubernetes.io/name: grafana
@@ -9373,7 +9373,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: grafana
-  namespace: envoy-gateway-system
+  namespace: monitoring
   labels:
     helm.sh/chart: grafana-8.0.0
     app.kubernetes.io/name: grafana
@@ -9387,14 +9387,14 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: grafana
-  namespace: envoy-gateway-system
+  namespace: monitoring
 ---
 # Source: gateway-addons-helm/charts/fluent-bit/templates/service.yaml
 apiVersion: v1
 kind: Service
 metadata:
   name: fluent-bit
-  namespace: envoy-gateway-system
+  namespace: monitoring
   labels:
     helm.sh/chart: fluent-bit-0.30.4
     app.kubernetes.io/name: fluent-bit
@@ -9417,7 +9417,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: grafana
-  namespace: envoy-gateway-system
+  namespace: monitoring
   labels:
     helm.sh/chart: grafana-8.0.0
     app.kubernetes.io/name: grafana
@@ -9464,7 +9464,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: loki-headless
-  namespace: envoy-gateway-system
+  namespace: monitoring
   labels:
     helm.sh/chart: loki-4.8.0
     app.kubernetes.io/name: loki
@@ -9524,7 +9524,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: prometheus
   name: prometheus
-  namespace: envoy-gateway-system
+  namespace: monitoring
 spec:
   ports:
     - name: http
@@ -9543,7 +9543,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: tempo
-  namespace: envoy-gateway-system
+  namespace: monitoring
   labels:
     helm.sh/chart: tempo-1.3.1
     app.kubernetes.io/name: tempo
@@ -9605,7 +9605,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: fluent-bit
-  namespace: envoy-gateway-system
+  namespace: monitoring
   labels:
     helm.sh/chart: fluent-bit-0.30.4
     app.kubernetes.io/name: fluent-bit
@@ -9620,7 +9620,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: 256b9a98c6da5734b7dcc118b7d4144547c594c2e2ad57558b06e5e2184a34a5
+        checksum/config: 03d122555879033ccf6443369f73463490b100f195550b1483d337f497c749e3
         checksum/luascripts: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
         fluentbit.io/exclude: "true"
         prometheus.io/path: /api/v1/metrics/prometheus
@@ -9684,7 +9684,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: grafana
-  namespace: envoy-gateway-system
+  namespace: monitoring
   labels:
     helm.sh/chart: grafana-8.0.0
     app.kubernetes.io/name: grafana
@@ -9812,7 +9812,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: prometheus
   name: prometheus
-  namespace: envoy-gateway-system
+  namespace: monitoring
 spec:
   selector:
     matchLabels:
@@ -10026,7 +10026,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: tempo
-  namespace: envoy-gateway-system
+  namespace: monitoring
   labels:
     helm.sh/chart: tempo-1.3.1
     app.kubernetes.io/name: tempo
@@ -10046,7 +10046,7 @@ spec:
         app.kubernetes.io/name: tempo
         app.kubernetes.io/instance: gateway-addons-helm
       annotations:
-        checksum/config: 7bca831fc6f501ad9f9f1f34ae216f123abc95914f087b2fccbf254dc08ba0e7
+        checksum/config: 0898f7ca87563d700c35d7ea1824cd042cf93fb2f05e254d12a854aa97a5c5e5
     spec:
       serviceAccountName: tempo
       automountServiceAccountToken: true
@@ -10107,7 +10107,7 @@ metadata:
     app.kubernetes.io/version: "11.0.0"
     app.kubernetes.io/managed-by: Helm
   name: grafana-test
-  namespace: envoy-gateway-system
+  namespace: monitoring
   annotations:
     "helm.sh/hook": test-success
     "helm.sh/hook-delete-policy": "before-hook-creation,hook-succeeded"
@@ -10117,7 +10117,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: grafana-test
-  namespace: envoy-gateway-system
+  namespace: monitoring
   annotations:
     "helm.sh/hook": test-success
     "helm.sh/hook-delete-policy": "before-hook-creation,hook-succeeded"
@@ -10150,7 +10150,7 @@ metadata:
   annotations:
     "helm.sh/hook": test-success
     "helm.sh/hook-delete-policy": "before-hook-creation,hook-succeeded"
-  namespace: envoy-gateway-system
+  namespace: monitoring
 spec:
   serviceAccountName: grafana-test
   containers:
