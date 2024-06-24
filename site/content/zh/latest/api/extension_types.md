@@ -2741,7 +2741,6 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `format` | _[ProxyAccessLogFormat](#proxyaccesslogformat)_ |  true  | Format defines the format of accesslog. |
-| `filters` | _[ProxyAccessLogFilter](#proxyaccesslogfilter) array_ |  true  | Filters defines the extensions filters of accesslog. |
 | `sinks` | _[ProxyAccessLogSink](#proxyaccesslogsink) array_ |  true  | Sinks defines the sinks of accesslog. |
 
 

@@ -20,6 +20,7 @@ type ProxyAccessLogSetting struct {
 	// Format defines the format of accesslog.
 	Format ProxyAccessLogFormat `json:"format"`
 	// Filters defines the extensions filters of accesslog.
+	// +notImplementedHide
 	Filters []ProxyAccessLogFilter `json:"filters,omitempty"`
 	// Sinks defines the sinks of accesslog.
 	// +kubebuilder:validation:MinItems=1
