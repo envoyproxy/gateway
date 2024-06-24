@@ -14,6 +14,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 // GatewayContext wraps a Gateway and provides helper methods for
@@ -21,12 +23,13 @@ import (
 type GatewayContext struct {
 	*gwapiv1.Gateway
 
-	listeners []*ListenerContext
+	listeners  []*ListenerContext
+	envoyProxy *egv1a1.EnvoyProxy
 }
 
 // ResetListeners resets the listener statuses and re-generates the GatewayContext
 // ListenerContexts from the Gateway spec.
-func (g *GatewayContext) ResetListeners() {
+func (g *GatewayContext) ResetListeners(resource *Resources) {
 	numListeners := len(g.Spec.Listeners)
 	g.Status.Listeners = make([]gwapiv1.ListenerStatus, numListeners)
 	g.listeners = make([]*ListenerContext, numListeners)
@@ -35,10 +38,28 @@ func (g *GatewayContext) ResetListeners() {
 		g.Status.Listeners[i] = gwapiv1.ListenerStatus{Name: listener.Name}
 		g.listeners[i] = &ListenerContext{
 			Listener:          listener,
-			gateway:           g.Gateway,
+			gateway:           g,
 			listenerStatusIdx: i,
 		}
 	}
+
+	g.attachEnvoyProxy(resource)
+}
+
+func (g *GatewayContext) attachEnvoyProxy(resources *Resources) {
+	if g.Spec.Infrastructure != nil && g.Spec.Infrastructure.ParametersRef != nil && !IsMergeGatewaysEnabled(resources) {
+		ref := g.Spec.Infrastructure.ParametersRef
+		if string(ref.Group) == egv1a1.GroupVersion.Group && ref.Kind == egv1a1.KindEnvoyProxy {
+			ep := resources.GetEnvoyProxy(g.Namespace, ref.Name)
+			if ep != nil {
+				g.envoyProxy = ep
+				return
+			}
+		}
+		// not found, fallthrough to use envoyProxy attached to gatewayclass
+	}
+
+	g.envoyProxy = resources.EnvoyProxyForGatewayClass
 }
 
 // ListenerContext wraps a Listener and provides helper methods for
@@ -47,7 +68,7 @@ func (g *GatewayContext) ResetListeners() {
 type ListenerContext struct {
 	*gwapiv1.Listener
 
-	gateway           *gwapiv1.Gateway
+	gateway           *GatewayContext
 	listenerStatusIdx int
 	namespaceSelector labels.Selector
 	tlsSecrets        []*corev1.Secret
@@ -209,18 +230,8 @@ func GetHostnames(route RouteContext) []string {
 // GetParentReferences returns the ParentReference of the Route object.
 func GetParentReferences(route RouteContext) []gwapiv1.ParentReference {
 	rv := reflect.ValueOf(route).Elem()
-	kind := rv.FieldByName("Kind").String()
 	pr := rv.FieldByName("Spec").FieldByName("ParentRefs")
-	if kind == KindHTTPRoute || kind == KindGRPCRoute {
-		return pr.Interface().([]gwapiv1.ParentReference)
-	}
-
-	parentReferences := make([]gwapiv1.ParentReference, pr.Len())
-	for i := 0; i < len(parentReferences); i++ {
-		p := pr.Index(i).Interface().(gwapiv1.ParentReference)
-		parentReferences[i] = UpgradeParentReference(p)
-	}
-	return parentReferences
+	return pr.Interface().([]gwapiv1.ParentReference)
 }
 
 // GetRouteStatus returns the RouteStatus object associated with the Route.
@@ -254,17 +265,8 @@ func GetRouteParentContext(route RouteContext, forParentRef gwapiv1.ParentRefere
 	specParentRefs := rv.FieldByName("Spec").FieldByName("ParentRefs")
 	for i := 0; i < specParentRefs.Len(); i++ {
 		p := specParentRefs.Index(i).Interface().(gwapiv1.ParentReference)
-		up := p
-		if !isHTTPRoute {
-			up = UpgradeParentReference(p)
-		}
-		if reflect.DeepEqual(up, forParentRef) {
-			if isHTTPRoute {
-				parentRef = &p
-			} else {
-				upgraded := UpgradeParentReference(p)
-				parentRef = &upgraded
-			}
+		if reflect.DeepEqual(p, forParentRef) {
+			parentRef = &p
 			break
 		}
 	}
@@ -330,6 +332,14 @@ type RouteParentContext struct {
 
 	routeParentStatusIdx int
 	listeners            []*ListenerContext
+}
+
+// GetGateway returns the GatewayContext if parent resource is a gateway.
+func (r *RouteParentContext) GetGateway() *GatewayContext {
+	if r == nil || len(r.listeners) == 0 {
+		return nil
+	}
+	return r.listeners[0].gateway
 }
 
 func (r *RouteParentContext) SetListeners(listeners ...*ListenerContext) {
