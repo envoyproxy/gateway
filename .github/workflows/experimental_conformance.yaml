@@ -20,7 +20,7 @@ jobs:
       matrix:
         version: [ v1.27.13, v1.28.9, v1.29.4, v1.30.0 ]
     steps:
-    - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29  # v4.1.6
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
     - uses: ./tools/github-actions/setup-deps
 
     # gateway api experimental conformance

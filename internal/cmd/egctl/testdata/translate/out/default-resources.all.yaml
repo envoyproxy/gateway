@@ -1,4 +1,4 @@
-envoyProxy:
+envoyProxyForGatewayClass:
   metadata:
     creationTimestamp: null
     name: default-envoy-proxy

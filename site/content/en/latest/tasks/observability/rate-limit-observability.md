@@ -7,18 +7,9 @@ This guide show you how to config RateLimit observability, includes traces.
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the HTTPRoute example manifest.
-Before proceeding, you should be able to query the example backend using HTTP. Follow the steps from the [Global Rate Limit](../traffic/global-rate-limit) to install RateLimit.
+{{% readfile "../../../template/o11y_prerequisites.md" %}}
 
-[OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) offers a vendor-agnostic implementation of how to receive, process and export telemetry data.
-
-Install OTel-Collector:
-
-```shell
-helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
-helm repo update
-helm upgrade --install otel-collector open-telemetry/opentelemetry-collector -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/otel-collector/helm-values.yaml -n monitoring --create-namespace --version 0.60.0
-```
+Follow the steps from the [Global Rate Limit](../traffic/global-rate-limit) to install RateLimit.
 
 ## Traces
 
