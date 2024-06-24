@@ -481,6 +481,12 @@ spec:
                           initiation and stops when either the last byte of the request is sent upstream or when the response begins.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                      streamIdleTimeout:
+                        description: |-
+                          Duration is a string value representing a duration in time. The format is as specified
+                          in GEP-2257, a strict subset of the syntax parsed by Golang time.ParseDuration.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
                     type: object
                   tcp:
                     description: Timeout settings for TCP.
