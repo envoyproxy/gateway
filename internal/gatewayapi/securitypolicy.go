@@ -582,10 +582,11 @@ func wildcard2regex(wildcard string) string {
 
 func (t *Translator) buildJWT(
 	policy *egv1a1.SecurityPolicy,
-	resources *Resources) (*ir.JWT, error) {
+	resources *Resources,
+) (*ir.JWT, error) {
 	var (
 		jwt          = policy.Spec.JWT
-		clientSecret *v1.Secret
+		clientSecret *corev1.Secret
 		err          error
 	)
 	var m map[string]string

@@ -203,13 +203,13 @@ spec:
     name: foo
   jwt:
     providers:
-    - name: example
-      remoteJWKS:
-        uri: https://jwks.default.svc.cluster.local
-        caCertificateRefs:
-        - group: ""
-          kind: Secret
-          name: "jwks-tls"
+      - name: example
+        remoteJWKS:
+          uri: https://jwks.default.svc.cluster.local
+          caCertificateRefs:
+            - group: ""
+              kind: Secret
+              name: "jwks-tls"
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -217,20 +217,20 @@ metadata:
   name: foo
 spec:
   parentRefs:
-  - name: eg
+    - name: eg
   hostnames:
-  - "www.example.com"
+    - "www.example.com"
   rules:
-  - backendRefs:
-    - group: ""
-      kind: Service
-      name: backend
-      port: 3000
-      weight: 1
-    matches:
-    - path:
-        type: PathPrefix
-        value: /foo
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: backend
+          port: 3000
+          weight: 1
+      matches:
+        - path:
+            type: PathPrefix
+            value: /foo
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -238,17 +238,17 @@ metadata:
   name: bar
 spec:
   parentRefs:
-  - name: eg
+    - name: eg
   hostnames:
-  - "www.example.com"
+    - "www.example.com"
   rules:
-  - backendRefs:
-    - group: ""
-      kind: Service
-      name: backend
-      port: 3000
-      weight: 1
-    matches:
-    - path:
-        type: PathPrefix
-        value: /bar
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: backend
+          port: 3000
+          weight: 1
+      matches:
+        - path:
+            type: PathPrefix
+            value: /bar

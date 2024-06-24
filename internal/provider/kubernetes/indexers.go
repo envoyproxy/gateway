@@ -514,7 +514,6 @@ func secretSecurityPolicyIndexFunc(rawObj client.Object) []string {
 		for _, provider := range securityPolicy.Spec.JWT.Providers {
 			secretReferences = append(secretReferences, provider.RemoteJWKS.CACertificateRefs...)
 		}
-
 	}
 
 	for _, reference := range secretReferences {
