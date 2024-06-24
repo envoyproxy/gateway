@@ -2911,7 +2911,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `samplingRate` | _integer_ |  false  | SamplingRate controls the rate at which traffic will be<br />selected for tracing if no prior sampling decision has been made.<br />Defaults to 100, valid values [0-100]. 100 indicates 100% sampling. |
 | `customTags` | _object (keys:string, values:[CustomTag](#customtag))_ |  true  | CustomTags defines the custom tags to add to each span.<br />If provider is kubernetes, pod name and namespace are added by default. |
-| `provider` | _[TracingProvider](#tracingprovider)_ |  true  | Provider defines the tracing provider.<br />Only OpenTelemetry is supported currently. |
+| `provider` | _[TracingProvider](#tracingprovider)_ |  true  | Provider defines the tracing provider. |
 
 
 #### RateLimit
@@ -3565,10 +3565,11 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `type` | _[TracingProviderType](#tracingprovidertype)_ |  true  | Type defines the tracing provider type.<br />EG currently only supports OpenTelemetry. |
+| `type` | _[TracingProviderType](#tracingprovidertype)_ |  true  | Type defines the tracing provider type. |
 | `host` | _string_ |  false  | Host define the provider service hostname.<br />Deprecated: Use BackendRefs instead. |
 | `port` | _integer_ |  false  | Port defines the port the provider service is exposed on.<br />Deprecated: Use BackendRefs instead. |
 | `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the trace will be sent.<br />Only Service kind is supported for now. |
+| `zipkin` | _[ZipkinTracingProvider](#zipkintracingprovider)_ |  false  | Zipkin defines the Zipkin tracing provider configuration |
 
 
 #### TracingProviderType
@@ -3584,6 +3585,7 @@ _Appears in:_
 | ----- | ----------- |
 | `OpenTelemetry` |  | 
 | `OpenTelemetry` |  | 
+| `Zipkin` |  | 
 
 
 #### TriggerEnum
@@ -3794,5 +3796,20 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `numTrustedHops` | _integer_ |  false  | NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP<br />headers to trust when determining the origin client's IP address.<br />Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for<br />for more details. |
+
+
+#### ZipkinTracingProvider
+
+
+
+ZipkinTracingProvider defines the Zipkin tracing provider configuration.
+
+_Appears in:_
+- [TracingProvider](#tracingprovider)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `enable128BitTraceId` | _boolean_ |  false  | Enable128BitTraceID determines whether a 128bit trace id will be used<br />when creating a new trace instance. If set to false, a 64bit trace<br />id will be used. |
+| `disableSharedSpanContext` | _boolean_ |  false  | DisableSharedSpanContext determines whether the default Envoy behaviour of<br />client and server spans sharing the same span context should be disabled. |
 
 
