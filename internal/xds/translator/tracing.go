@@ -10,13 +10,12 @@ import (
 	"fmt"
 	"sort"
 
-	"google.golang.org/protobuf/types/known/anypb"
-
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	tracecfg "github.com/envoyproxy/go-control-plane/envoy/config/trace/v3"
 	hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tracingtype "github.com/envoyproxy/go-control-plane/envoy/type/tracing/v3"
 	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
+	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
