@@ -5,5 +5,17 @@ dependencies:
 - name: grafana
   repository: https://grafana.github.io/helm-charts
   version: 8.0.0
-digest: sha256:8a6c8be4d27ed894d9eceb03a1bbdd9d065e9327a1615c055e66f2b392989ba3
-generated: "2024-06-06T16:24:32.010988+08:00"
+- name: fluent-bit
+  repository: https://fluent.github.io/helm-charts
+  version: 0.30.4
+- name: loki
+  repository: https://grafana.github.io/helm-charts
+  version: 4.8.0
+- name: tempo
+  repository: https://grafana.github.io/helm-charts
+  version: 1.3.1
+- name: opentelemetry-collector
+  repository: https://open-telemetry.github.io/opentelemetry-helm-charts
+  version: 0.73.1
+digest: sha256:4c16df8d7efc27aff566fa5dfd2eba6527adbf3fc8e94e7e3ccfc0cee7836f1c
+generated: "2024-06-20T11:46:59.148579+08:00"

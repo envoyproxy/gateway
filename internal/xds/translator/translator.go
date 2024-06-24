@@ -26,9 +26,10 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/utils/ptr"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/protocov"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
@@ -51,7 +52,7 @@ type Translator struct {
 	ExtensionManager *extensionTypes.Manager
 
 	// FilterOrder holds the custom order of the HTTP filters
-	FilterOrder []v1alpha1.FilterPosition
+	FilterOrder []egv1a1.FilterPosition
 }
 
 type GlobalRateLimitSettings struct {
@@ -69,8 +70,8 @@ type GlobalRateLimitSettings struct {
 }
 
 // Translate translates the XDS IR into xDS resources
-func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
-	if ir == nil {
+func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, error) {
+	if xdsIR == nil {
 		return nil, errors.New("ir is nil")
 	}
 
@@ -86,28 +87,33 @@ func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) 
 	// to fail the entire xDS translation to panic users, but instead, we want
 	// to collect all errors and reflect them in the status of the CRDs.
 	var errs error
+
 	if err := t.processHTTPListenerXdsTranslation(
-		tCtx, ir.HTTP, ir.AccessLog, ir.Tracing, ir.Metrics); err != nil {
+		tCtx, xdsIR.HTTP, xdsIR.AccessLog, xdsIR.Tracing, xdsIR.Metrics); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
-	if err := processTCPListenerXdsTranslation(tCtx, ir.TCP, ir.AccessLog, ir.Metrics); err != nil {
+	if err := t.processTCPListenerXdsTranslation(tCtx, xdsIR.TCP, xdsIR.AccessLog, xdsIR.Metrics); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
-	if err := processUDPListenerXdsTranslation(tCtx, ir.UDP, ir.AccessLog, ir.Metrics); err != nil {
+	if err := processUDPListenerXdsTranslation(tCtx, xdsIR.UDP, xdsIR.AccessLog, xdsIR.Metrics); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
-	if err := processJSONPatches(tCtx, ir.EnvoyPatchPolicies); err != nil {
+	if err := t.notifyExtensionServerAboutListeners(tCtx, xdsIR); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
-	if err := processClusterForAccessLog(tCtx, ir.AccessLog, ir.Metrics); err != nil {
+	if err := processJSONPatches(tCtx, xdsIR.EnvoyPatchPolicies); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
-	if err := processClusterForTracing(tCtx, ir.Tracing, ir.Metrics); err != nil {
+	if err := processClusterForAccessLog(tCtx, xdsIR.AccessLog, xdsIR.Metrics); err != nil {
+		errs = errors.Join(errs, err)
+	}
+
+	if err := processClusterForTracing(tCtx, xdsIR.Tracing, xdsIR.Metrics); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
@@ -118,6 +124,65 @@ func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) 
 	}
 
 	return tCtx, errs
+}
+
+func findIRListenersByXDSListener(xdsIR *ir.Xds, listener *listenerv3.Listener) []ir.Listener {
+	ret := []ir.Listener{}
+
+	addr := listener.Address.GetSocketAddress()
+	if addr == nil {
+		return ret
+	}
+	for _, l := range xdsIR.HTTP {
+		if l.GetAddress() == addr.GetAddress() && l.GetPort() == addr.GetPortValue() {
+			ret = append(ret, l)
+		}
+	}
+	for _, l := range xdsIR.TCP {
+		if l.GetAddress() == addr.GetAddress() && l.GetPort() == addr.GetPortValue() {
+			ret = append(ret, l)
+		}
+	}
+	for _, l := range xdsIR.UDP {
+		if l.GetAddress() == addr.GetAddress() && l.GetPort() == addr.GetPortValue() {
+			ret = append(ret, l)
+		}
+	}
+	return ret
+}
+
+// notifyExtensionServerAboutListeners calls the extension server about all the translated listeners.
+func (t *Translator) notifyExtensionServerAboutListeners(
+	tCtx *types.ResourceVersionTable,
+	xdsIR *ir.Xds,
+) error {
+	// Return quickly if there is no extension manager or the Listener hook is not being used.
+	if t.ExtensionManager == nil {
+		return nil
+	}
+	if (*t.ExtensionManager).GetPostXDSHookClient(egv1a1.XDSHTTPListener) == nil {
+		return nil
+	}
+
+	var errs error
+	for _, l := range tCtx.XdsResources[resourcev3.ListenerType] {
+		listener := l.(*listenerv3.Listener)
+		policies := []*ir.UnstructuredRef{}
+		alreadyIncludedPolicies := map[utils.NamespacedNameWithGroupKind]bool{}
+		for _, irListener := range findIRListenersByXDSListener(xdsIR, listener) {
+			for _, pol := range irListener.GetExtensionRefs() {
+				key := utils.GetNamespacedNameWithGroupKind(pol.Object)
+				if _, found := alreadyIncludedPolicies[key]; !found {
+					policies = append(policies, pol)
+					alreadyIncludedPolicies[key] = true
+				}
+			}
+		}
+		if err := processExtensionPostListenerHook(tCtx, listener, policies, t.ExtensionManager); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+	return errs
 }
 
 func (t *Translator) processHTTPListenerXdsTranslation(
@@ -302,13 +367,6 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		if err = t.createRateLimitServiceCluster(tCtx, httpListener, metrics); err != nil {
 			errs = errors.Join(errs, err)
 		}
-
-		// Check if an extension want to modify the listener that was just configured/created
-		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op
-		// TODO zhaohuabing should we also process the quicXDSListener?
-		if err = processExtensionPostListenerHook(tCtx, tcpXDSListener, httpListener.ExtensionRefs, t.ExtensionManager); err != nil {
-			errs = errors.Join(errs, err)
-		}
 	}
 
 	return errs
@@ -484,7 +542,12 @@ func buildHTTP3AltSvcHeader(port int) *corev3.HeaderValueOption {
 	}
 }
 
-func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListeners []*ir.TCPListener, accesslog *ir.AccessLog, metrics *ir.Metrics) error {
+func (t *Translator) processTCPListenerXdsTranslation(
+	tCtx *types.ResourceVersionTable,
+	tcpListeners []*ir.TCPListener,
+	accesslog *ir.AccessLog,
+	metrics *ir.Metrics,
+) error {
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
 	var errs error
@@ -553,7 +616,12 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 	return errs
 }
 
-func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListeners []*ir.UDPListener, accesslog *ir.AccessLog, metrics *ir.Metrics) error {
+func processUDPListenerXdsTranslation(
+	tCtx *types.ResourceVersionTable,
+	udpListeners []*ir.UDPListener,
+	accesslog *ir.AccessLog,
+	metrics *ir.Metrics,
+) error {
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
 	var errs error

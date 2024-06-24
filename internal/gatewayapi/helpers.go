@@ -11,12 +11,12 @@ import (
 	"net"
 	"strings"
 
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -67,8 +67,8 @@ func PortNumPtr(val int32) *gwapiv1.PortNumber {
 	return &portNum
 }
 
-func ObjectNamePtr(val string) *v1alpha2.ObjectName {
-	objectName := v1alpha2.ObjectName(val)
+func ObjectNamePtr(val string) *gwapiv1a2.ObjectName {
+	objectName := gwapiv1a2.ObjectName(val)
 	return &objectName
 }
 
@@ -125,25 +125,21 @@ func IsRefToGateway(parentRef gwapiv1.ParentReference, gateway types.NamespacedN
 // are included by the parent ref (either one specific Listener, or all Listeners
 // in the Gateway, depending on whether section name is specified or not).
 func GetReferencedListeners(parentRef gwapiv1.ParentReference, gateways []*GatewayContext) (bool, []*ListenerContext) {
-	var selectsGateway bool
 	var referencedListeners []*ListenerContext
 
 	for _, gateway := range gateways {
-		if !IsRefToGateway(parentRef, utils.NamespacedName(gateway)) {
-			continue
-		}
-
-		selectsGateway = true
-
-		// The parentRef may be to the entire Gateway, or to a specific listener.
-		for _, listener := range gateway.listeners {
-			if (parentRef.SectionName == nil || *parentRef.SectionName == listener.Name) && (parentRef.Port == nil || *parentRef.Port == listener.Port) {
-				referencedListeners = append(referencedListeners, listener)
+		if IsRefToGateway(parentRef, utils.NamespacedName(gateway)) {
+			// The parentRef may be to the entire Gateway, or to a specific listener.
+			for _, listener := range gateway.listeners {
+				if (parentRef.SectionName == nil || *parentRef.SectionName == listener.Name) && (parentRef.Port == nil || *parentRef.Port == listener.Port) {
+					referencedListeners = append(referencedListeners, listener)
+				}
 			}
+			return true, referencedListeners
 		}
 	}
 
-	return selectsGateway, referencedListeners
+	return false, referencedListeners
 }
 
 // HasReadyListener returns true if at least one Listener in the
@@ -390,7 +386,7 @@ func irRouteDestinationName(route RouteContext, ruleIdx int) string {
 	return fmt.Sprintf("%srule/%d", irRoutePrefix(route), ruleIdx)
 }
 
-func irTLSConfigs(tlsSecrets ...*v1.Secret) *ir.TLSConfig {
+func irTLSConfigs(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
 	if len(tlsSecrets) == 0 {
 		return nil
 	}
@@ -401,14 +397,14 @@ func irTLSConfigs(tlsSecrets ...*v1.Secret) *ir.TLSConfig {
 	for i, tlsSecret := range tlsSecrets {
 		tlsListenerConfigs.Certificates[i] = ir.TLSCertificate{
 			Name:        irTLSListenerConfigName(tlsSecret),
-			Certificate: tlsSecret.Data[v1.TLSCertKey],
-			PrivateKey:  tlsSecret.Data[v1.TLSPrivateKeyKey],
+			Certificate: tlsSecret.Data[corev1.TLSCertKey],
+			PrivateKey:  tlsSecret.Data[corev1.TLSPrivateKeyKey],
 		}
 	}
 	return tlsListenerConfigs
 }
 
-func irTLSListenerConfigName(secret *v1.Secret) string {
+func irTLSListenerConfigName(secret *corev1.Secret) string {
 	return fmt.Sprintf("%s/%s", secret.Namespace, secret.Name)
 }
 
@@ -417,7 +413,7 @@ func irTLSCACertName(namespace, name string) string {
 }
 
 func IsMergeGatewaysEnabled(resources *Resources) bool {
-	return resources.EnvoyProxy != nil && resources.EnvoyProxy.Spec.MergeGateways != nil && *resources.EnvoyProxy.Spec.MergeGateways
+	return resources.EnvoyProxyForGatewayClass != nil && resources.EnvoyProxyForGatewayClass.Spec.MergeGateways != nil && *resources.EnvoyProxyForGatewayClass.Spec.MergeGateways
 }
 
 func protocolSliceToStringSlice(protocols []gwapiv1.ProtocolType) []string {
@@ -429,8 +425,8 @@ func protocolSliceToStringSlice(protocols []gwapiv1.ProtocolType) []string {
 }
 
 // getAncestorRefForPolicy returns Gateway as an ancestor reference for policy.
-func getAncestorRefForPolicy(gatewayNN types.NamespacedName, sectionName *v1alpha2.SectionName) v1alpha2.ParentReference {
-	return v1alpha2.ParentReference{
+func getAncestorRefForPolicy(gatewayNN types.NamespacedName, sectionName *gwapiv1a2.SectionName) gwapiv1a2.ParentReference {
+	return gwapiv1a2.ParentReference{
 		Group:       GroupPtr(gwapiv1.GroupName),
 		Kind:        KindPtr(KindGateway),
 		Namespace:   NamespacePtr(gatewayNN.Namespace),

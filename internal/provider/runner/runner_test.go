@@ -12,14 +12,14 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
 )
 
 func TestStart(t *testing.T) {
-	logger := logging.DefaultLogger(v1alpha1.LogLevelInfo)
+	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
 
 	testCases := []struct {
 		name   string
@@ -29,14 +29,14 @@ func TestStart(t *testing.T) {
 		{
 			name: "file provider",
 			cfg: &config.Server{
-				EnvoyGateway: &v1alpha1.EnvoyGateway{
+				EnvoyGateway: &egv1a1.EnvoyGateway{
 					TypeMeta: metav1.TypeMeta{
-						APIVersion: v1alpha1.GroupVersion.String(),
-						Kind:       v1alpha1.KindEnvoyGateway,
+						APIVersion: egv1a1.GroupVersion.String(),
+						Kind:       egv1a1.KindEnvoyGateway,
 					},
-					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
-						Provider: &v1alpha1.EnvoyGatewayProvider{
-							Type: v1alpha1.ProviderTypeFile,
+					EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+						Provider: &egv1a1.EnvoyGatewayProvider{
+							Type: egv1a1.ProviderTypeFile,
 						},
 					},
 				},

@@ -59,11 +59,7 @@ To uninstall the chart:
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| certgen.job.annotations | object | `{}` |  |
-| certgen.job.resources | object | `{}` |  |
-| certgen.job.ttlSecondsAfterFinished | int | `30` |  |
-| certgen.rbac.annotations | object | `{}` |  |
-| certgen.rbac.labels | object | `{}` |  |
+| certgen | object | `{"job":{"annotations":{},"resources":{},"ttlSecondsAfterFinished":30},"rbac":{"annotations":{},"labels":{}}}` | Certgen is used to generate the certificates required by EnvoyGateway. If you want to construct a custom certificate, you can generate a custom certificate through Cert-Manager before installing EnvoyGateway. Certgen will not overwrite the custom certificate. Please do not manually modify `values.yaml` to disable certgen, it may cause EnvoyGateway OIDC,OAuth2,etc. to not work as expected. |
 | config.envoyGateway.gateway.controllerName | string | `"gateway.envoyproxy.io/gatewayclass-controller"` |  |
 | config.envoyGateway.logging.level.default | string | `"info"` |  |
 | config.envoyGateway.provider.type | string | `"Kubernetes"` |  |
@@ -80,7 +76,8 @@ To uninstall the chart:
 | deployment.pod.annotations."prometheus.io/port" | string | `"19001"` |  |
 | deployment.pod.annotations."prometheus.io/scrape" | string | `"true"` |  |
 | deployment.pod.labels | object | `{}` |  |
-| deployment.pod.topologySpreadConstraints | object | `{}` |  |
+| deployment.pod.tolerations | list | `[]` |  |
+| deployment.pod.topologySpreadConstraints | list | `[]` |  |
 | deployment.ports[0].name | string | `"grpc"` |  |
 | deployment.ports[0].port | int | `18000` |  |
 | deployment.ports[0].targetPort | int | `18000` |  |
@@ -98,4 +95,5 @@ To uninstall the chart:
 | global.images.ratelimit.pullPolicy | string | `"IfNotPresent"` |  |
 | global.images.ratelimit.pullSecrets | list | `[]` |  |
 | kubernetesClusterDomain | string | `"cluster.local"` |  |
+| podDisruptionBudget.minAvailable | int | `0` |  |
 

@@ -10,8 +10,8 @@ import (
 	"sort"
 
 	"k8s.io/apimachinery/pkg/types"
-	gwv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
@@ -27,7 +27,7 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 	for _, policy := range envoyPatchPolicies {
 		var (
 			policy       = policy.DeepCopy()
-			ancestorRefs []gwv1a2.ParentReference
+			ancestorRefs []gwapiv1a2.ParentReference
 			resolveErr   *status.PolicyResolveError
 			targetKind   string
 			irKey        string
@@ -39,9 +39,9 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 			targetKind = KindGatewayClass
 			irKey = string(t.GatewayClassName)
 
-			ancestorRefs = []gwv1a2.ParentReference{
+			ancestorRefs = []gwapiv1a2.ParentReference{
 				{
-					Group: GroupPtr(gwv1.GroupName),
+					Group: GroupPtr(gwapiv1.GroupName),
 					Kind:  KindPtr(targetKind),
 					Name:  policy.Spec.TargetRef.Name,
 				},
@@ -55,7 +55,7 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 			// It must exist since the gateways have already been processed
 			irKey = irStringKey(gatewayNN.Namespace, gatewayNN.Name)
 
-			ancestorRefs = []gwv1a2.ParentReference{
+			ancestorRefs = []gwapiv1a2.ParentReference{
 				getAncestorRefForPolicy(gatewayNN, nil),
 			}
 		}
@@ -91,12 +91,12 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 		}
 
 		// Ensure EnvoyPatchPolicy is targeting to a support type
-		if policy.Spec.TargetRef.Group != gwv1.GroupName || string(policy.Spec.TargetRef.Kind) != targetKind {
+		if policy.Spec.TargetRef.Group != gwapiv1.GroupName || string(policy.Spec.TargetRef.Kind) != targetKind {
 			message := fmt.Sprintf("TargetRef.Group:%s TargetRef.Kind:%s, only TargetRef.Group:%s and TargetRef.Kind:%s is supported.",
-				policy.Spec.TargetRef.Group, policy.Spec.TargetRef.Kind, gwv1.GroupName, targetKind)
+				policy.Spec.TargetRef.Group, policy.Spec.TargetRef.Kind, gwapiv1.GroupName, targetKind)
 
 			resolveErr = &status.PolicyResolveError{
-				Reason:  gwv1a2.PolicyReasonInvalid,
+				Reason:  gwapiv1a2.PolicyReasonInvalid,
 				Message: message,
 			}
 			status.SetResolveErrorForPolicyAncestors(&policy.Status,
@@ -115,7 +115,7 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 				policy.Namespace, targetNs, targetKind)
 
 			resolveErr = &status.PolicyResolveError{
-				Reason:  gwv1a2.PolicyReasonInvalid,
+				Reason:  gwapiv1a2.PolicyReasonInvalid,
 				Message: message,
 			}
 			status.SetResolveErrorForPolicyAncestors(&policy.Status,

@@ -3,16 +3,13 @@ ENVTEST_K8S_VERSION ?= 1.28.0
 # Need run cel validation across multiple versions of k8s
 ENVTEST_K8S_VERSIONS ?= 1.27.1 1.28.0 1.29.0
 # GATEWAY_API_VERSION refers to the version of Gateway API CRDs.
-# For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api 
+# For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api
 GATEWAY_API_VERSION ?= $(shell go list -m -f '{{.Version}}' sigs.k8s.io/gateway-api)
 
 GATEWAY_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/experimental-install.yaml
 
 WAIT_TIMEOUT ?= 15m
 
-FLUENT_BIT_CHART_VERSION ?= 0.30.4
-OTEL_COLLECTOR_CHART_VERSION ?= 0.73.1
-TEMPO_CHART_VERSION ?= 1.3.1
 E2E_RUN_TEST ?=
 E2E_RUN_EG_UPGRADE_TESTS ?= false
 E2E_CLEANUP ?= true
@@ -34,9 +31,9 @@ CONTROLLERGEN_OBJECT_FLAGS :=  object:headerFile="$(ROOT_DIR)/tools/boilerplate/
 
 .PHONY: manifests
 manifests: $(tools/controller-gen) generate-gwapi-manifests ## Generate WebhookConfiguration and CustomResourceDefinition objects.
-
 	@$(LOG_TARGET)
 	$(tools/controller-gen) crd:allowDangerousTypes=true paths="./..." output:crd:artifacts:config=charts/gateway-helm/crds/generated
+
 .PHONY: generate-gwapi-manifests
 generate-gwapi-manifests:
 generate-gwapi-manifests: ## Generate GWAPI manifests and make it consistent with the go mod version.
@@ -63,7 +60,7 @@ ifndef ignore-not-found
 endif
 
 .PHONY: kube-deploy
-kube-deploy: manifests helm-generate ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
+kube-deploy: manifests helm-generate.gateway-helm ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
 	@$(LOG_TARGET)
 	helm install eg charts/gateway-helm --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) -n envoy-gateway-system --create-namespace --debug --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
 
@@ -125,12 +122,15 @@ run-e2e: install-e2e-telemetry
 ifeq ($(E2E_RUN_TEST),)
 	go test -v -tags e2e ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=false
 	go test -v -tags e2e ./test/e2e/merge_gateways --gateway-class=merge-gateways --debug=true --cleanup-base-resources=false
+	go test -v -tags e2e ./test/e2e/multiple_gc --debug=true --cleanup-base-resources=false
 	go test -v -tags e2e ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
 else
 ifeq ($(E2E_RUN_EG_UPGRADE_TESTS),false)
 	go test -v -tags e2e ./test/e2e/merge_gateways --gateway-class=merge-gateways --debug=true --cleanup-base-resources=false \
 		--run-test $(E2E_RUN_TEST)
 	go test -v -tags e2e ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
+		--run-test $(E2E_RUN_TEST)
+	go test -v -tags e2e ./test/e2e/multiple_gc --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
 		--run-test $(E2E_RUN_TEST)
 else
 	go test -v -tags e2e ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
@@ -139,53 +139,16 @@ endif
 endif
 
 .PHONY: install-e2e-telemetry
-install-e2e-telemetry: prepare-helm-repo install-fluent-bit install-loki install-tempo install-otel-collector install-prometheus
+install-e2e-telemetry: helm-generate.gateway-addons-helm
 	@$(LOG_TARGET)
-	kubectl rollout status daemonset fluent-bit -n monitoring --timeout 5m
-	kubectl rollout status statefulset loki -n monitoring --timeout 5m
-	kubectl rollout status statefulset tempo -n monitoring --timeout 5m
-	kubectl rollout status deployment otel-collector -n monitoring --timeout 5m
-	kubectl rollout status deployment prometheus -n monitoring --timeout 5m
+	helm install eg-addons charts/gateway-addons-helm --set grafana.enabled=false,opentelemetry-collector.enabled=true -n monitoring --create-namespace --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
+	# Change loki service type from ClusterIP to LoadBalancer
+	kubectl patch service loki -n monitoring -p '{"spec": {"type": "LoadBalancer"}}'
 
 .PHONY: uninstall-e2e-telemetry
 uninstall-e2e-telemetry:
 	@$(LOG_TARGET)
-	kubectl delete -f examples/loki/loki.yaml -n monitoring --ignore-not-found
 	helm delete $(shell helm list -n monitoring -q) -n monitoring
-
-.PHONY: prepare-helm-repo
-prepare-helm-repo:
-	@$(LOG_TARGET)
-	helm repo add fluent https://fluent.github.io/helm-charts
-	helm repo add grafana https://grafana.github.io/helm-charts
-	helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
-	helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-	helm repo update
-
-.PHONY: install-fluent-bit
-install-fluent-bit:
-	@$(LOG_TARGET)
-	helm upgrade --install fluent-bit fluent/fluent-bit -f examples/fluent-bit/helm-values.yaml -n monitoring --create-namespace --version $(FLUENT_BIT_CHART_VERSION)
-
-.PHONY: install-loki
-install-loki:
-	@$(LOG_TARGET)
-	kubectl apply -f examples/loki/loki.yaml -n monitoring
-
-.PHONY: install-tempo
-install-tempo:
-	@$(LOG_TARGET)
-	helm upgrade --install tempo grafana/tempo -f examples/tempo/helm-values.yaml -n monitoring --create-namespace --version $(TEMPO_CHART_VERSION)
-
-.PHONY: install-prometheus
-install-prometheus:
-	@$(LOG_TARGET)
-	helm upgrade --install prometheus prometheus-community/prometheus -f examples/prometheus/helm-values.yaml -n monitoring --create-namespace
-
-.PHONY: install-otel-collector
-install-otel-collector:
-	@$(LOG_TARGET)
-	helm upgrade --install otel-collector open-telemetry/opentelemetry-collector -f examples/otel-collector/helm-values.yaml -n monitoring --create-namespace --version $(OTEL_COLLECTOR_CHART_VERSION)
 
 .PHONY: create-cluster
 create-cluster: $(tools/kind) ## Create a kind cluster suitable for running Gateway API conformance.
@@ -204,7 +167,7 @@ run-conformance: ## Run Gateway API conformance.
 	kubectl apply -f test/config/gatewayclass.yaml
 	go test -v -tags conformance ./test/conformance --gateway-class=envoy-gateway --debug=true
 
-CONFORMANCE_REPORT_PATH ?= 
+CONFORMANCE_REPORT_PATH ?=
 
 .PHONY: run-experimental-conformance
 run-experimental-conformance: ## Run Experimental Gateway API conformance.
@@ -219,7 +182,7 @@ delete-cluster: $(tools/kind) ## Delete kind cluster.
 	$(tools/kind) delete cluster --name envoy-gateway
 
 .PHONY: generate-manifests
-generate-manifests: helm-generate ## Generate Kubernetes release manifests.
+generate-manifests: helm-generate.gateway-helm ## Generate Kubernetes release manifests.
 	@$(LOG_TARGET)
 	@$(call log, "Generating kubernetes manifests")
 	mkdir -p $(OUTPUT_DIR)/

@@ -1,5 +1,6 @@
 # Values for Grafana dependency
 grafana:
+  enabled: true
   fullnameOverride: grafana
   datasources:
     datasources.yaml:
@@ -7,7 +8,7 @@ grafana:
       datasources:
         - name: Prometheus
           type: prometheus
-          url: http://prometheus-server
+          url: http://prometheus
   adminPassword: admin
   service:
     type: LoadBalancer
@@ -29,6 +30,7 @@ grafana:
 
 # Values for Prometheus dependency
 prometheus:
+  enabled: true
   # To simplify the deployment, disable non-essential components
   alertmanager:
     enabled: false
@@ -39,7 +41,7 @@ prometheus:
   prometheus-node-exporter:
     enabled: false
   server:
-    fullnameOverride: prometheus-server
+    fullnameOverride: prometheus
     persistentVolume:
       enabled: false
     readinessProbeInitialDelay: 0
@@ -53,3 +55,173 @@ prometheus:
     image:
       repository: prom/prometheus
     securityContext: {}
+
+
+# Values for Fluent-bit dependency
+fluent-bit:
+  enabled: true
+  fullnameOverride: fluent-bit
+  testFramework:
+    enabled: false
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "2020"
+    prometheus.io/path: /api/v1/metrics/prometheus
+    fluentbit.io/exclude: "true"
+  ## https://docs.fluentbit.io/manual/administration/configuring-fluent-bit/classic-mode/configuration-file
+  config:
+    service: |
+      [SERVICE]
+          Daemon Off
+          Flush {{ .Values.flush }}
+          Log_Level {{ .Values.logLevel }}
+          Parsers_File parsers.conf
+          Parsers_File custom_parsers.conf
+          HTTP_Server On
+          HTTP_Listen 0.0.0.0
+          HTTP_Port {{ .Values.metricsPort }}
+          Health_Check On
+
+    ## https://docs.fluentbit.io/manual/pipeline/inputs
+    inputs: |
+      [INPUT]
+          Name tail
+          Path /var/log/containers/*.log
+          multiline.parser docker, cri
+          Tag kube.*
+          Mem_Buf_Limit 5MB
+          Skip_Long_Lines On
+
+    ## https://docs.fluentbit.io/manual/pipeline/filters
+    filters: |
+      [FILTER]
+          Name kubernetes
+          Match kube.*
+          Merge_Log On
+          Keep_Log Off
+          K8S-Logging.Parser On
+          K8S-Logging.Exclude On
+  
+      [FILTER]
+          Name grep
+          Match kube.*
+          Regex $kubernetes['container_name'] ^envoy$
+  
+      [FILTER]
+          Name parser
+          Match kube.*
+          Key_Name log
+          Parser envoy
+          Reserve_Data True
+
+    ## https://docs.fluentbit.io/manual/pipeline/outputs
+    outputs: |
+      [OUTPUT]
+          Name                   loki
+          Match                  kube.*
+          Host                   loki.monitoring.svc.cluster.local
+          Port                   3100
+          Labels                 job=fluentbit, app=$kubernetes['labels']['app'], k8s_namespace_name=$kubernetes['namespace_name'], k8s_pod_name=$kubernetes['pod_name'], k8s_container_name=$kubernetes['container_name']
+
+
+# Values for Loki dependency
+loki:
+  enabled: true
+  # Running a single replica of Loki
+  ## https://grafana.com/docs/loki/latest/setup/install/helm/install-monolithic/
+  deploymentMode: SingleBinary
+  fullnameOverride: loki
+  loki:
+    auth_enabled: false
+    compactorAddress: "loki"
+    memberlist: "loki-memberlist"
+    commonConfig:
+      replication_factor: 1
+    storage:
+      type: 'filesystem'
+    rulerConfig:
+      storage:
+        type: "local"
+  singleBinary:
+    replicas: 1
+  read:
+    replicas: 0
+  backend:
+    replicas: 0
+  write:
+    replicas: 0
+  monitoring:
+    selfMonitoring:
+      grafanaAgent:
+        installOperator: true
+  # Disable gateway.
+  gateway:
+    enabled: false
+
+
+# Values for Tempo dependency
+tempo:
+  enabled: true
+  fullnameOverride: tempo
+  service:
+    type: LoadBalancer
+
+
+# Values for OpenTelemetry-Collector dependency
+opentelemetry-collector:
+  enabled: false
+  fullnameOverride: otel-collector
+  mode: deployment
+  config:
+    exporters:
+      prometheus:
+        endpoint: 0.0.0.0:19001
+      logging:
+        verbosity: detailed
+      loki:
+        endpoint: "http://loki.monitoring.svc:3100/loki/api/v1/push"
+      otlp:
+        endpoint: tempo.monitoring.svc:4317
+        tls:
+          insecure: true
+    extensions:
+      # The health_check extension is mandatory for this chart.
+      # Without the health_check extension the collector will fail the readiness and liveliness probes.
+      # The health_check extension can be modified, but should never be removed.
+      health_check: {}
+    processors:
+      attributes:
+        actions:
+          - action: insert
+            key: loki.attribute.labels
+            # k8s.pod.name is OpenTelemetry format for Kubernetes Pod name,
+            # Loki will convert this to k8s_pod_name label.
+            value: k8s.pod.name, k8s.namespace.name
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: ${env:MY_POD_IP}:4317
+          http:
+            endpoint: ${env:MY_POD_IP}:4318
+    service:
+      extensions:
+        - health_check
+      pipelines:
+        metrics:
+          exporters:
+            - prometheus
+          receivers:
+            - otlp
+        logs:
+          exporters:
+            - loki
+          processors:
+            - attributes
+          receivers:
+            - otlp
+        traces:
+          exporters:
+            - otlp
+          receivers:
+            - otlp

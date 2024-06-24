@@ -22,16 +22,20 @@ import (
 var (
 	// HTTPListener
 	happyHTTPListener = HTTPListener{
-		Name:      "happy",
-		Address:   "0.0.0.0",
-		Port:      80,
+		CoreListenerDetails: CoreListenerDetails{
+			Name:    "happy",
+			Address: "0.0.0.0",
+			Port:    80,
+		},
 		Hostnames: []string{"example.com"},
 		Routes:    []*HTTPRoute{&happyHTTPRoute},
 	}
 	happyHTTPSListener = HTTPListener{
-		Name:      "happy",
-		Address:   "0.0.0.0",
-		Port:      80,
+		CoreListenerDetails: CoreListenerDetails{
+			Name:    "happy",
+			Address: "0.0.0.0",
+			Port:    80,
+		},
 		Hostnames: []string{"example.com"},
 		TLS: &TLSConfig{
 			Certificates: []TLSCertificate{{
@@ -43,9 +47,11 @@ var (
 		Routes: []*HTTPRoute{&happyHTTPRoute},
 	}
 	redactedHappyHTTPSListener = HTTPListener{
-		Name:      "happy",
-		Address:   "0.0.0.0",
-		Port:      80,
+		CoreListenerDetails: CoreListenerDetails{
+			Name:    "happy",
+			Address: "0.0.0.0",
+			Port:    80,
+		},
 		Hostnames: []string{"example.com"},
 		TLS: &TLSConfig{
 			Certificates: []TLSCertificate{{
@@ -57,63 +63,81 @@ var (
 		Routes: []*HTTPRoute{&happyHTTPRoute},
 	}
 	invalidAddrHTTPListener = HTTPListener{
-		Name:      "invalid-addr",
-		Address:   "1.0.0",
-		Port:      80,
+		CoreListenerDetails: CoreListenerDetails{
+			Name:    "invalid-addr",
+			Address: "1.0.0",
+			Port:    80,
+		},
 		Hostnames: []string{"example.com"},
 		Routes:    []*HTTPRoute{&happyHTTPRoute},
 	}
 	invalidBackendHTTPListener = HTTPListener{
-		Name:      "invalid-backend-match",
-		Address:   "0.0.0.0",
-		Port:      80,
+		CoreListenerDetails: CoreListenerDetails{
+			Name:    "invalid-backend-match",
+			Address: "0.0.0.0",
+			Port:    80,
+		},
 		Hostnames: []string{"example.com"},
 		Routes:    []*HTTPRoute{&invalidBackendHTTPRoute},
 	}
 	weightedInvalidBackendsHTTPListener = HTTPListener{
-		Name:      "weighted-invalid-backends-match",
-		Address:   "0.0.0.0",
-		Port:      80,
+		CoreListenerDetails: CoreListenerDetails{
+			Name:    "weighted-invalid-backends-match",
+			Address: "0.0.0.0",
+			Port:    80,
+		},
 		Hostnames: []string{"example.com"},
 		Routes:    []*HTTPRoute{&weightedInvalidBackendsHTTPRoute},
 	}
 
 	// TCPListener
 	happyTCPListenerTLSPassthrough = TCPListener{
-		Name:    "happy",
-		Address: "0.0.0.0",
-		Port:    80,
-		Routes:  []*TCPRoute{&happyTCPRouteTLSPassthrough},
+		CoreListenerDetails: CoreListenerDetails{
+			Name:    "happy",
+			Address: "0.0.0.0",
+			Port:    80,
+		},
+		Routes: []*TCPRoute{&happyTCPRouteTLSPassthrough},
 	}
 
 	happyTCPListenerTLSTerminate = TCPListener{
-		Name:    "happy",
-		Address: "0.0.0.0",
-		Port:    80,
-		Routes:  []*TCPRoute{&happyTCPRouteTLSTermination},
+		CoreListenerDetails: CoreListenerDetails{
+			Name:    "happy",
+			Address: "0.0.0.0",
+			Port:    80,
+		},
+		Routes: []*TCPRoute{&happyTCPRouteTLSTermination},
 	}
 
 	emptySNITCPListenerTLSPassthrough = TCPListener{
-		Name:    "empty-sni",
-		Address: "0.0.0.0",
-		Port:    80,
-		Routes:  []*TCPRoute{&emptySNITCPRoute},
+		CoreListenerDetails: CoreListenerDetails{
+			Name:    "empty-sni",
+			Address: "0.0.0.0",
+			Port:    80,
+		},
+		Routes: []*TCPRoute{&emptySNITCPRoute},
 	}
 	invalidNameTCPListenerTLSPassthrough = TCPListener{
-		Address: "0.0.0.0",
-		Port:    80,
-		Routes:  []*TCPRoute{&happyTCPRouteTLSPassthrough},
+		CoreListenerDetails: CoreListenerDetails{
+			Address: "0.0.0.0",
+			Port:    80,
+		},
+		Routes: []*TCPRoute{&happyTCPRouteTLSPassthrough},
 	}
 	invalidAddrTCPListenerTLSPassthrough = TCPListener{
-		Name:    "invalid-addr",
-		Address: "1.0.0",
-		Port:    80,
-		Routes:  []*TCPRoute{&happyTCPRouteTLSPassthrough},
+		CoreListenerDetails: CoreListenerDetails{
+			Name:    "invalid-addr",
+			Address: "1.0.0",
+			Port:    80,
+		},
+		Routes: []*TCPRoute{&happyTCPRouteTLSPassthrough},
 	}
 	invalidSNITCPListenerTLSPassthrough = TCPListener{
-		Address: "0.0.0.0",
-		Port:    80,
-		Routes:  []*TCPRoute{&invalidSNITCPRoute},
+		CoreListenerDetails: CoreListenerDetails{
+			Address: "0.0.0.0",
+			Port:    80,
+		},
+		Routes: []*TCPRoute{&invalidSNITCPRoute},
 	}
 
 	// TCPRoute
@@ -144,27 +168,35 @@ var (
 
 	// UDPListener
 	happyUDPListener = UDPListener{
-		Name:    "happy",
-		Address: "0.0.0.0",
-		Port:    80,
-		Route:   &happyUDPRoute,
+		CoreListenerDetails: CoreListenerDetails{
+			Name:    "happy",
+			Address: "0.0.0.0",
+			Port:    80,
+		},
+		Route: &happyUDPRoute,
 	}
 	invalidNameUDPListener = UDPListener{
-		Address: "0.0.0.0",
-		Port:    80,
-		Route:   &happyUDPRoute,
+		CoreListenerDetails: CoreListenerDetails{
+			Address: "0.0.0.0",
+			Port:    80,
+		},
+		Route: &happyUDPRoute,
 	}
 	invalidAddrUDPListener = UDPListener{
-		Name:    "invalid-addr",
-		Address: "1.0.0",
-		Port:    80,
-		Route:   &happyUDPRoute,
+		CoreListenerDetails: CoreListenerDetails{
+			Name:    "invalid-addr",
+			Address: "1.0.0",
+			Port:    80,
+		},
+		Route: &happyUDPRoute,
 	}
 	invalidPortUDPListenerT = UDPListener{
-		Name:    "invalid-port",
-		Address: "0.0.0.0",
-		Port:    0,
-		Route:   &happyUDPRoute,
+		CoreListenerDetails: CoreListenerDetails{
+			Name:    "invalid-port",
+			Address: "0.0.0.0",
+			Port:    0,
+		},
+		Route: &happyUDPRoute,
 	}
 
 	// UDPRoute
@@ -578,8 +610,10 @@ func TestValidateHTTPListener(t *testing.T) {
 		{
 			name: "invalid name",
 			input: HTTPListener{
-				Address:   "0.0.0.0",
-				Port:      80,
+				CoreListenerDetails: CoreListenerDetails{
+					Address: "0.0.0.0",
+					Port:    80,
+				},
 				Hostnames: []string{"example.com"},
 				Routes:    []*HTTPRoute{&happyHTTPRoute},
 			},
@@ -593,9 +627,11 @@ func TestValidateHTTPListener(t *testing.T) {
 		{
 			name: "invalid port and hostnames",
 			input: HTTPListener{
-				Name:    "invalid-port-and-hostnames",
-				Address: "1.0.0",
-				Routes:  []*HTTPRoute{&happyHTTPRoute},
+				CoreListenerDetails: CoreListenerDetails{
+					Name:    "invalid-port-and-hostnames",
+					Address: "1.0.0",
+				},
+				Routes: []*HTTPRoute{&happyHTTPRoute},
 			},
 			want: []error{ErrListenerPortInvalid, ErrHTTPListenerHostnamesEmpty},
 		},
@@ -725,14 +761,14 @@ func TestEqualXds(t *testing.T) {
 			desc: "out of order tcp listeners are equal",
 			a: &Xds{
 				TCP: []*TCPListener{
-					{Name: "listener-1"},
-					{Name: "listener-2"},
+					{CoreListenerDetails: CoreListenerDetails{Name: "listener-1"}},
+					{CoreListenerDetails: CoreListenerDetails{Name: "listener-2"}},
 				},
 			},
 			b: &Xds{
 				TCP: []*TCPListener{
-					{Name: "listener-2"},
-					{Name: "listener-1"},
+					{CoreListenerDetails: CoreListenerDetails{Name: "listener-2"}},
+					{CoreListenerDetails: CoreListenerDetails{Name: "listener-1"}},
 				},
 			},
 			equal: true,
@@ -742,7 +778,7 @@ func TestEqualXds(t *testing.T) {
 			a: &Xds{
 				HTTP: []*HTTPListener{
 					{
-						Name: "listener-1",
+						CoreListenerDetails: CoreListenerDetails{Name: "listener-1"},
 						Routes: []*HTTPRoute{
 							{Name: "route-1"},
 							{Name: "route-2"},
@@ -753,7 +789,7 @@ func TestEqualXds(t *testing.T) {
 			b: &Xds{
 				HTTP: []*HTTPListener{
 					{
-						Name: "listener-1",
+						CoreListenerDetails: CoreListenerDetails{Name: "listener-1"},
 						Routes: []*HTTPRoute{
 							{Name: "route-2"},
 							{Name: "route-1"},
@@ -767,14 +803,14 @@ func TestEqualXds(t *testing.T) {
 			desc: "out of order udp listeners are equal",
 			a: &Xds{
 				UDP: []*UDPListener{
-					{Name: "listener-1"},
-					{Name: "listener-2"},
+					{CoreListenerDetails: CoreListenerDetails{Name: "listener-1"}},
+					{CoreListenerDetails: CoreListenerDetails{Name: "listener-2"}},
 				},
 			},
 			b: &Xds{
 				UDP: []*UDPListener{
-					{Name: "listener-2"},
-					{Name: "listener-1"},
+					{CoreListenerDetails: CoreListenerDetails{Name: "listener-2"}},
+					{CoreListenerDetails: CoreListenerDetails{Name: "listener-1"}},
 				},
 			},
 			equal: true,

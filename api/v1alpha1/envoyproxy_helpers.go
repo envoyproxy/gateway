@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
 )
@@ -46,7 +46,7 @@ func DefaultEnvoyProxyHpaMetrics() []autoscalingv2.MetricSpec {
 	return []autoscalingv2.MetricSpec{
 		{
 			Resource: &autoscalingv2.ResourceMetricSource{
-				Name: v1.ResourceCPU,
+				Name: corev1.ResourceCPU,
 				Target: autoscalingv2.MetricTarget{
 					Type:               autoscalingv2.UtilizationMetricType,
 					AverageUtilization: ptr.To[int32](80),
@@ -149,11 +149,11 @@ func (logging *ProxyLogging) GetEnvoyProxyComponentLevel() string {
 }
 
 // DefaultShutdownManagerContainerResourceRequirements returns a new ResourceRequirements with default settings.
-func DefaultShutdownManagerContainerResourceRequirements() *v1.ResourceRequirements {
-	return &v1.ResourceRequirements{
-		Requests: v1.ResourceList{
-			v1.ResourceCPU:    resource.MustParse(DefaultShutdownManagerCPUResourceRequests),
-			v1.ResourceMemory: resource.MustParse(DefaultShutdownManagerMemoryResourceRequests),
+func DefaultShutdownManagerContainerResourceRequirements() *corev1.ResourceRequirements {
+	return &corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse(DefaultShutdownManagerCPUResourceRequests),
+			corev1.ResourceMemory: resource.MustParse(DefaultShutdownManagerMemoryResourceRequests),
 		},
 	}
 }

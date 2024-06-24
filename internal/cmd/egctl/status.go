@@ -18,9 +18,9 @@ import (
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gwv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -56,7 +56,7 @@ func newStatusCommand() *cobra.Command {
 	statusCommand := &cobra.Command{
 		Use:   "status",
 		Short: "Show the summary of the status of resources in Envoy Gateway",
-		Example: `  # Show the status of gatewayclass resources under default namespace.
+		Example: `  # Show the status of gatewayclass resources.
   egctl x status gatewayclass
 
   # Show the status of gateway resources with less information under default namespace.
@@ -151,7 +151,7 @@ func runStatus(ctx context.Context, cli client.Client, inputResourceType, namesp
 
 	switch strings.ToLower(inputResourceType) {
 	case "gc", "gatewayclass":
-		gc := gwv1.GatewayClassList{}
+		gc := gwapiv1.GatewayClassList{}
 		if err := cli.List(ctx, &gc, client.InNamespace(namespace)); err != nil {
 			return err
 		}
@@ -159,7 +159,7 @@ func runStatus(ctx context.Context, cli client.Client, inputResourceType, namesp
 		resourceKind = gatewayapi.KindGatewayClass
 
 	case "gtw", "gateway":
-		gtw := gwv1.GatewayList{}
+		gtw := gwapiv1.GatewayList{}
 		if err := cli.List(ctx, &gtw, client.InNamespace(namespace)); err != nil {
 			return err
 		}
@@ -167,7 +167,7 @@ func runStatus(ctx context.Context, cli client.Client, inputResourceType, namesp
 		resourceKind = gatewayapi.KindGateway
 
 	case "httproute":
-		httproute := gwv1.HTTPRouteList{}
+		httproute := gwapiv1.HTTPRouteList{}
 		if err := cli.List(ctx, &httproute, client.InNamespace(namespace)); err != nil {
 			return err
 		}
@@ -175,7 +175,7 @@ func runStatus(ctx context.Context, cli client.Client, inputResourceType, namesp
 		resourceKind = gatewayapi.KindHTTPRoute
 
 	case "grpcroute":
-		grpcroute := gwv1.GRPCRouteList{}
+		grpcroute := gwapiv1.GRPCRouteList{}
 		if err := cli.List(ctx, &grpcroute, client.InNamespace(namespace)); err != nil {
 			return err
 		}
@@ -183,7 +183,7 @@ func runStatus(ctx context.Context, cli client.Client, inputResourceType, namesp
 		resourceKind = gatewayapi.KindGRPCRoute
 
 	case "tcproute":
-		tcproute := gwv1a2.TCPRouteList{}
+		tcproute := gwapiv1a2.TCPRouteList{}
 		if err := cli.List(ctx, &tcproute, client.InNamespace(namespace)); err != nil {
 			return err
 		}
@@ -191,7 +191,7 @@ func runStatus(ctx context.Context, cli client.Client, inputResourceType, namesp
 		resourceKind = gatewayapi.KindTCPRoute
 
 	case "udproute":
-		udproute := gwv1a2.UDPRouteList{}
+		udproute := gwapiv1a2.UDPRouteList{}
 		if err := cli.List(ctx, &udproute, client.InNamespace(namespace)); err != nil {
 			return err
 		}
@@ -199,7 +199,7 @@ func runStatus(ctx context.Context, cli client.Client, inputResourceType, namesp
 		resourceKind = gatewayapi.KindUDPRoute
 
 	case "tlsroute":
-		tlsroute := gwv1a2.TLSRouteList{}
+		tlsroute := gwapiv1a2.TLSRouteList{}
 		if err := cli.List(ctx, &tlsroute, client.InNamespace(namespace)); err != nil {
 			return err
 		}
@@ -207,7 +207,7 @@ func runStatus(ctx context.Context, cli client.Client, inputResourceType, namesp
 		resourceKind = gatewayapi.KindTLSRoute
 
 	case "btlspolicy", "backendtlspolicy":
-		btlspolicy := gwv1a3.BackendTLSPolicyList{}
+		btlspolicy := gwapiv1a3.BackendTLSPolicyList{}
 		if err := cli.List(ctx, &btlspolicy, client.InNamespace(namespace)); err != nil {
 			return err
 		}
