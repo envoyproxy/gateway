@@ -483,8 +483,8 @@ spec:
                         type: string
                       streamIdleTimeout:
                         description: |-
-                          Duration is a string value representing a duration in time. The format is as specified
-                          in GEP-2257, a strict subset of the syntax parsed by Golang time.ParseDuration.
+                          The StreamIdleTimeout refers to a configuration setting in Envoy, an open-source edge and service proxy designed for cloud-native applications. Envoy is often used in service mesh architectures to handle traffic management, load balancing, and observability.
+                          Default: 1 hour.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                     type: object
