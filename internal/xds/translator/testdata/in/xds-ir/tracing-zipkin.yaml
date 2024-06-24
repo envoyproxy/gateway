@@ -26,6 +26,8 @@ tracing:
         port: 9411
       protocol: "GRPC"
   provider:
+    host: zipkin.default.svc.cluster.local
+    port: 9411
     type: Zipkin
     zipkin:
       enable128BitTraceId: true
