@@ -137,7 +137,7 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 
 // buildXdsTCPListener creates a xds Listener resource
 // TODO: Improve function parameters
-func buildXdsTCPListener(name, address string, port uint32, keepalive *ir.TCPKeepalive, connection *ir.Connection, accesslog *ir.AccessLog) *listenerv3.Listener {
+func buildXdsTCPListener(name, address string, port uint32, keepalive *ir.TCPKeepalive, connection *ir.ClientConnection, accesslog *ir.AccessLog) *listenerv3.Listener {
 	socketOptions := buildTCPSocketOptions(keepalive)
 	al := buildXdsAccessLog(accesslog, true)
 	bufferLimitBytes := buildPerConnectionBufferLimitBytes(connection)
@@ -163,7 +163,7 @@ func buildXdsTCPListener(name, address string, port uint32, keepalive *ir.TCPKee
 	}
 }
 
-func buildPerConnectionBufferLimitBytes(connection *ir.Connection) *wrapperspb.UInt32Value {
+func buildPerConnectionBufferLimitBytes(connection *ir.ClientConnection) *wrapperspb.UInt32Value {
 	if connection != nil && connection.BufferLimitBytes != nil {
 		return wrapperspb.UInt32(*connection.BufferLimitBytes)
 	}
@@ -209,7 +209,7 @@ func buildXdsQuicListener(name, address string, port uint32, accesslog *ir.Acces
 //     The newly created TCP filter chain is configured with a filter chain match to
 //     match the server names(SNI) based on the listener's hostnames.
 func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irListener *ir.HTTPListener,
-	accesslog *ir.AccessLog, tracing *ir.Tracing, http3Listener bool, connection *ir.Connection,
+	accesslog *ir.AccessLog, tracing *ir.Tracing, http3Listener bool, connection *ir.ClientConnection,
 ) error {
 	al := buildXdsAccessLog(accesslog, false)
 
@@ -394,7 +394,10 @@ func findXdsHTTPRouteConfigName(xdsListener *listenerv3.Listener) string {
 	return ""
 }
 
-func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute, clusterName string, accesslog *ir.AccessLog, timeout *ir.ClientTimeout, connection *ir.Connection) error {
+func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute,
+	clusterName string, accesslog *ir.AccessLog, timeout *ir.ClientTimeout,
+	connection *ir.ClientConnection,
+) error {
 	if irRoute == nil {
 		return errors.New("tcp listener is nil")
 	}
@@ -473,7 +476,7 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute
 	return nil
 }
 
-func buildConnectionLimitFilter(statPrefix string, connection *ir.Connection) *connection_limitv3.ConnectionLimit {
+func buildConnectionLimitFilter(statPrefix string, connection *ir.ClientConnection) *connection_limitv3.ConnectionLimit {
 	cl := &connection_limitv3.ConnectionLimit{
 		StatPrefix:     statPrefix,
 		MaxConnections: wrapperspb.UInt64(*connection.ConnectionLimit.Value),

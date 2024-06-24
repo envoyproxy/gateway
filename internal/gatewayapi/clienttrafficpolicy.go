@@ -406,7 +406,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 	// HTTP and TCP listeners can both be configured by common fields below.
 	var (
 		keepalive           *ir.TCPKeepalive
-		connection          *ir.Connection
+		connection          *ir.ClientConnection
 		tlsConfig           *ir.TLSConfig
 		enableProxyProtocol bool
 		timeout             *ir.ClientTimeout
@@ -861,12 +861,12 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 	return irTLSConfig, nil
 }
 
-func buildConnection(connection *egv1a1.Connection) (*ir.Connection, error) {
+func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection, error) {
 	if connection == nil {
 		return nil, nil
 	}
 
-	irConnection := &ir.Connection{}
+	irConnection := &ir.ClientConnection{}
 
 	if connection.ConnectionLimit != nil {
 		irConnectionLimit := &ir.ConnectionLimit{}

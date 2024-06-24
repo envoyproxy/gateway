@@ -277,6 +277,20 @@ _Appears in:_
 
 
 
+#### BackendConnection
+
+
+
+BackendConnection allows users to configure connection-level settings of backend
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `bufferLimit` | _[Quantity](#quantity)_ |  false  | BufferLimit Soft limit on size of the cluster’s connections read and write buffers.<br />If unspecified, an implementation defined default is applied (32768 bytes).<br />For example, 20Mi, 1Gi, 256Ki etc.<br />Note: that when the suffix is not provided, the value is interpreted as bytes. |
+
+
 #### BackendEndpoint
 
 
@@ -403,18 +417,6 @@ _Appears in:_
 | `status` | _[PolicyStatus](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyStatus)_ |  true  | status defines the current status of BackendTrafficPolicy. |
 
 
-#### BackendTrafficPolicyConnection
-
-
-
-BackendTrafficPolicyConnection allows users to configure connection-level settings of backend
-
-_Appears in:_
-- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `bufferLimit` | _[Quantity](#quantity)_ |  false  | BufferLimit Soft limit on size of the cluster’s connections read and write buffers.<br />If unspecified, an implementation defined default is applied (32768 bytes).<br />For example, 20Mi, 1Gi, 256Ki etc.<br />Note: that when the suffix is not provided, the value is interpreted as bytes. |
 
 
 #### BackendTrafficPolicyList
@@ -456,7 +458,7 @@ _Appears in:_
 | `retry` | _[Retry](#retry)_ |  false  | Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.<br />If not set, retry will be disabled. |
 | `useClientProtocol` | _boolean_ |  false  | UseClientProtocol configures Envoy to prefer sending requests to backends using<br />the same HTTP protocol that the incoming request used. Defaults to false, which means<br />that Envoy will use the protocol indicated by the attached BackendRef. |
 | `timeout` | _[Timeout](#timeout)_ |  false  | Timeout settings for the backend connections. |
-| `connection` | _[BackendTrafficPolicyConnection](#backendtrafficpolicyconnection)_ |  false  | Connection includes backend connection settings. |
+| `connection` | _[BackendConnection](#backendconnection)_ |  false  | Connection includes backend connection settings. |
 
 
 #### BasicAuth
@@ -550,6 +552,21 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `header` | _string_ |  true  | Header defines the name of the HTTP request header that the JWT Claim will be saved into. |
 | `claim` | _string_ |  true  | Claim is the JWT Claim that should be saved into the header : it can be a nested claim of type<br />(eg. "claim.nested.key", "sub"). The nested claim name must use dot "."<br />to separate the JSON name path. |
+
+
+#### ClientConnection
+
+
+
+ClientConnection allows users to configure connection-level settings of client
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `connectionLimit` | _[ConnectionLimit](#connectionlimit)_ |  false  | ConnectionLimit defines limits related to connections |
+| `bufferLimit` | _[Quantity](#quantity)_ |  false  | BufferLimit provides configuration for the maximum buffer size in bytes for each incoming connection.<br />For example, 20Mi, 1Gi, 256Ki etc.<br />Note that when the suffix is not provided, the value is interpreted as bytes.<br />Default: 32768 bytes. |
 
 
 #### ClientIPDetectionSettings
@@ -657,7 +674,7 @@ _Appears in:_
 | `path` | _[PathSettings](#pathsettings)_ |  false  | Path enables managing how the incoming path set by clients can be normalized. |
 | `headers` | _[HeaderSettings](#headersettings)_ |  false  | HeaderSettings provides configuration for header management. |
 | `timeout` | _[ClientTimeout](#clienttimeout)_ |  false  | Timeout settings for the client connections. |
-| `connection` | _[Connection](#connection)_ |  false  | Connection includes client connection settings. |
+| `connection` | _[ClientConnection](#clientconnection)_ |  false  | Connection includes client connection settings. |
 | `http1` | _[HTTP1Settings](#http1settings)_ |  false  | HTTP1 provides HTTP/1 configuration on the listener. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  | HTTP2 provides HTTP/2 configuration on the listener. |
 | `http3` | _[HTTP3Settings](#http3settings)_ |  false  | HTTP3 provides HTTP/3 configuration on the listener. |
@@ -709,21 +726,6 @@ _Appears in:_
 
 
 
-#### Connection
-
-
-
-Connection allows users to configure connection-level settings
-
-_Appears in:_
-- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `connectionLimit` | _[ConnectionLimit](#connectionlimit)_ |  false  | ConnectionLimit defines limits related to connections |
-| `bufferLimit` | _[Quantity](#quantity)_ |  false  | BufferLimit provides configuration for the maximum buffer size in bytes for each incoming connection.<br />For example, 20Mi, 1Gi, 256Ki etc.<br />Note that when the suffix is not provided, the value is interpreted as bytes.<br />Default: 32768 bytes. |
-
-
 #### ConnectionLimit
 
 
@@ -731,7 +733,7 @@ _Appears in:_
 
 
 _Appears in:_
-- [Connection](#connection)
+- [ClientConnection](#clientconnection)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |

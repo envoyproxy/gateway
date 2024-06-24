@@ -10,8 +10,8 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
-// Connection allows users to configure connection-level settings
-type Connection struct {
+// ClientConnection allows users to configure connection-level settings of client
+type ClientConnection struct {
 	// ConnectionLimit defines limits related to connections
 	//
 	// +optional
@@ -22,6 +22,18 @@ type Connection struct {
 	// Default: 32768 bytes.
 	//
 	// +kubebuilder:validation:XValidation:rule="type(self) == string ? self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\") : type(self) == int",message="bufferLimit must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
+	// +optional
+	BufferLimit *resource.Quantity `json:"bufferLimit,omitempty"`
+}
+
+// BackendConnection allows users to configure connection-level settings of backend
+type BackendConnection struct {
+	// BufferLimit Soft limit on size of the cluster’s connections read and write buffers.
+	// If unspecified, an implementation defined default is applied (32768 bytes).
+	// For example, 20Mi, 1Gi, 256Ki etc.
+	// Note: that when the suffix is not provided, the value is interpreted as bytes.
+	//
+	// +kubebuilder:validation:XValidation:rule="type(self) == string ? self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\") : type(self) == int",message="BufferLimit must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
 	// +optional
 	BufferLimit *resource.Quantity `json:"bufferLimit,omitempty"`
 }
