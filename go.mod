@@ -42,7 +42,7 @@ require (
 	google.golang.org/grpc v1.64.0
 	google.golang.org/protobuf v1.34.2
 	gopkg.in/yaml.v3 v3.0.1
-	helm.sh/helm/v3 v3.15.1
+	helm.sh/helm/v3 v3.15.2
 	k8s.io/api v0.30.2
 	k8s.io/apiextensions-apiserver v0.30.2
 	k8s.io/apimachinery v0.30.2
@@ -74,13 +74,13 @@ require (
 	github.com/containerd/containerd v1.7.12 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.4 // indirect
-	github.com/docker/cli v24.0.6+incompatible // indirect
-	github.com/docker/distribution v2.8.2+incompatible // indirect
-	github.com/docker/docker v24.0.9+incompatible // indirect
+	github.com/distribution/reference v0.5.0 // indirect
+	github.com/docker/cli v25.0.1+incompatible // indirect
+	github.com/docker/distribution v2.8.3+incompatible // indirect
+	github.com/docker/docker v25.0.5+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
-	github.com/docker/go-connections v0.4.0 // indirect
+	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-metrics v0.0.1 // indirect
-	github.com/docker/go-units v0.5.0 // indirect
 	github.com/felixge/httpsnoop v1.0.3 // indirect
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
@@ -100,9 +100,8 @@ require (
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/moby/locker v1.0.1 // indirect
-	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/opencontainers/image-spec v1.1.0-rc5 // indirect
+	github.com/opencontainers/image-spec v1.1.0-rc6 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/rubenv/sql-migrate v1.5.2 // indirect
@@ -115,7 +114,7 @@ require (
 	golang.org/x/crypto v0.24.0 // indirect
 	golang.org/x/crypto/x509roots/fallback v0.0.0-20240604170348-d4e7c9cb6cb8 // indirect
 	k8s.io/apiserver v0.30.2 // indirect
-	oras.land/oras-go v1.2.4 // indirect
+	oras.land/oras-go v1.2.5 // indirect
 )
 
 require (
