@@ -2654,6 +2654,49 @@ _Appears in:_
 | `settings` | _[ProxyAccessLogSetting](#proxyaccesslogsetting) array_ |  false  | Settings defines accesslog settings for managed proxies.<br />If unspecified, will send default format to stdout. |
 
 
+#### ProxyAccessLogFilter
+
+
+
+ProxyAccessLogFilter defines the extension filter of accesslog.
+
+_Appears in:_
+- [ProxyAccessLogSetting](#proxyaccesslogsetting)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `type` | _[ProxyAccessLogFilterType](#proxyaccesslogfiltertype)_ |  true  | Type defines the type of accesslog filter. |
+| `cel` | _[ProxyAccessLogFilterCEL](#proxyaccesslogfiltercel)_ |  false  | CEL defines the CEL accesslog filter. |
+
+
+#### ProxyAccessLogFilterCEL
+
+
+
+
+
+_Appears in:_
+- [ProxyAccessLogFilter](#proxyaccesslogfilter)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `expression` | _string_ |  true  | Expression defines the CEL expression to filter accesslog.<br />Warning: Invalid CEL will be ignored and not applied to the access log. |
+
+
+#### ProxyAccessLogFilterType
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [ProxyAccessLogFilter](#proxyaccesslogfilter)
+
+| Value | Description |
+| ----- | ----------- |
+| `CEL` | ProxyAccessLogFilterTypeCEL defines the CEL accesslog filter.<br /> | 
+
+
 #### ProxyAccessLogFormat
 
 
@@ -2698,6 +2741,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `format` | _[ProxyAccessLogFormat](#proxyaccesslogformat)_ |  true  | Format defines the format of accesslog. |
+| `filters` | _[ProxyAccessLogFilter](#proxyaccesslogfilter) array_ |  true  | Filters defines the extensions filters of accesslog. |
 | `sinks` | _[ProxyAccessLogSink](#proxyaccesslogsink) array_ |  true  | Sinks defines the sinks of accesslog. |
 
 

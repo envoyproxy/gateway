@@ -19,10 +19,36 @@ type ProxyAccessLog struct {
 type ProxyAccessLogSetting struct {
 	// Format defines the format of accesslog.
 	Format ProxyAccessLogFormat `json:"format"`
+	// Filters defines the extensions filters of accesslog.
+	Filters []ProxyAccessLogFilter `json:"filters,omitempty"`
 	// Sinks defines the sinks of accesslog.
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=50
 	Sinks []ProxyAccessLogSink `json:"sinks"`
+}
+
+type ProxyAccessLogFilterType string
+
+const (
+	// ProxyAccessLogFilterTypeCEL defines the CEL accesslog filter.
+	ProxyAccessLogFilterTypeCEL ProxyAccessLogFilterType = "CEL"
+)
+
+// ProxyAccessLogFilter defines the extension filter of accesslog.
+type ProxyAccessLogFilter struct {
+	// Type defines the type of accesslog filter.
+	// +kubebuilder:validation:Enum=CEL
+	Type ProxyAccessLogFilterType `json:"type"`
+	// CEL defines the CEL accesslog filter.
+	// +optional
+	CEL *ProxyAccessLogFilterCEL `json:"cel,omitempty"`
+}
+
+type ProxyAccessLogFilterCEL struct {
+	// Expression defines the CEL expression to filter accesslog.
+	// Warning: Invalid CEL will be ignored and not applied to the access log.
+	// +kubebuilder:validation:MinLength=1
+	Expression string `json:"expression"`
 }
 
 type ProxyAccessLogFormatType string

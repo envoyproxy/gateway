@@ -10240,6 +10240,35 @@ spec:
                           If unspecified, will send default format to stdout.
                         items:
                           properties:
+                            filters:
+                              description: Filters defines the extensions filters
+                                of accesslog.
+                              items:
+                                description: ProxyAccessLogFilter defines the extension
+                                  filter of accesslog.
+                                properties:
+                                  cel:
+                                    description: CEL defines the CEL accesslog filter.
+                                    properties:
+                                      expression:
+                                        description: |-
+                                          Expression defines the CEL expression to filter accesslog.
+                                          Warning: Invalid CEL will be ignored and not applied to the access log.
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - expression
+                                    type: object
+                                  type:
+                                    description: Type defines the type of accesslog
+                                      filter.
+                                    enum:
+                                    - CEL
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                              type: array
                             format:
                               description: Format defines the format of accesslog.
                               properties:
