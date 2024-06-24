@@ -3,7 +3,7 @@ module github.com/envoyproxy/gateway
 go 1.22.4
 
 require (
-	fortio.org/fortio v1.63.10
+	fortio.org/fortio v1.65.0
 	fortio.org/log v1.12.2
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/cncf/xds/go v0.0.0-20240423153145-555b57ec207b
@@ -37,7 +37,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.27.0
 	go.opentelemetry.io/proto/otlp v1.3.1
 	go.uber.org/zap v1.27.0
-	golang.org/x/exp v0.0.0-20240604190554-fc45aab8b7f8
+	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
 	golang.org/x/sys v0.21.0
 	google.golang.org/grpc v1.64.0
 	google.golang.org/protobuf v1.34.2
@@ -58,11 +58,11 @@ require (
 
 require (
 	cel.dev/expr v0.15.0 // indirect
-	fortio.org/cli v1.5.2 // indirect
+	fortio.org/cli v1.6.0 // indirect
 	fortio.org/dflag v1.7.2 // indirect
-	fortio.org/scli v1.14.3 // indirect
+	fortio.org/scli v1.15.0 // indirect
 	fortio.org/sets v1.1.1 // indirect
-	fortio.org/struct2env v0.4.0 // indirect
+	fortio.org/struct2env v0.4.1 // indirect
 	fortio.org/version v1.0.4 // indirect
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230811130428-ced1acdcaa24 // indirect
 	github.com/BurntSushi/toml v1.3.2 // indirect
@@ -113,6 +113,7 @@ require (
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.45.0 // indirect
 	golang.org/x/crypto v0.24.0 // indirect
+	golang.org/x/crypto/x509roots/fallback v0.0.0-20240604170348-d4e7c9cb6cb8 // indirect
 	k8s.io/apiserver v0.30.2 // indirect
 	oras.land/oras-go v1.2.4 // indirect
 )
@@ -184,7 +185,7 @@ require (
 	golang.org/x/tools v0.22.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240520151616-dc85e6b867a5 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240521202816-d264139d666e // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240617180043-68d350f18fd4 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	k8s.io/component-base v0.30.2 // indirect
