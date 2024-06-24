@@ -1,0 +1,254 @@
+apiVersion: v1
+data:
+  envoy.yaml: |
+    static_resources:
+      listeners:
+      - name: listener_0
+        address:
+          socket_address:
+            address: 0.0.0.0
+            port_value: 8443
+        filter_chains:
+        - filters:
+          - name: envoy.filters.network.http_connection_manager
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+              stat_prefix: envoy-fixed-response-1
+              http_filters:
+              - name: envoy.filters.http.router
+                typed_config:
+                  "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+              route_config:
+                name: route-1
+                virtual_hosts:
+                - name: direct_response_service
+                  domains: ["*"]
+                  routes:
+                  - match:
+                      prefix: "/"
+                    direct_response:
+                      status: 200
+                      body:
+                        inline_string: "{\"keys\": [{ 		\"kty\": \"RSA\", 		\"n\": \"u1SU1LfVLPHCozMxH2Mo4lgOEePzNm0tRgeLezV6ffAt0gunVTLw7onLRnrq0_IzW7yWR7QkrmBL7jTKEn5u-qKhbwKfBstIs-bMY2Zkp18gnTxKLxoS2tFczGkPLPgizskuemMghRniWaoLcyehkd3qqGElvW_VDL5AaWTg0nLVkjRo9z-40RQzuVaE8AkAFmxZzow3x-VJYKdjykkJ0iT9wCS0DRTXu269V264Vf_3jvredZiKRkgwlL9xNAwxXFg0x_XFw005UWVRIkdgcKWTjpBP2dPwVZ4WWC-9aGVd-Gyn1o0CLelf4rEjGoXbAAEgAqeGUxrcIlbjXfbcmw\", 		\"e\": \"AQAB\", 		\"alg\": \"RS256\", 		\"use\": \"sig\" 	}] }"
+          transport_socket:
+            name: envoy.transport_sockets.tls
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+              common_tls_context:
+                tls_certificates:
+                - certificate_chain:
+                    inline_string: |
+                      -----BEGIN CERTIFICATE-----
+                      MIIGGjCCBAKgAwIBAgIUUjN3nbcvxjblV/R2BJpnhtwebSQwDQYJKoZIhvcNAQEN
+                      BQAwazELMAkGA1UEBhMCQ04xETAPBgNVBAgMCFNoYW5naGFpMREwDwYDVQQHDAhT
+                      aGFuZ2hhaTELMAkGA1UECgwCRXoxETAPBgNVBAsMCFBlcnNvbmFsMRYwFAYDVQQD
+                      DA0qLmRlZmF1bHQuc3ZjMB4XDTI0MDYxNTA4MDQzMFoXDTM0MDYxMzA4MDQzMFow
+                      bjELMAkGA1UEBhMCQ04xETAPBgNVBAgMCFNoYW5naGFpMREwDwYDVQQHDAhTaGFu
+                      Z2hhaTEOMAwGA1UECgwFRXpzdWIxETAPBgNVBAsMCFBlcnNvbmFsMRYwFAYDVQQD
+                      DA0qLmRlZmF1bHQuc3ZjMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA
+                      p6iXtYtZ4mYi9fbAqIgBWzH+hgIfiR/nf3s0FhWDzNc1K2e1oizuU3NNmCOFoW/3
+                      FOaRp0m6eT21tpIftMPygHHJn0zqOzMdkMvvD1NrbSApQNF7ZdzySfJi6uc97L12
+                      9Y37Tdo6Zh9JcIhhWZ0YNHdHStGBQsjRggwr54cGsHTin3t/D/qMBqmiozjTTa0q
+                      ZNhl34fgbMUqPMK8qCclw6IqDDHV6yeJxYgqMlchL6xy8l0GycfT0XzQqu8vYarG
+                      YvK2jmYipQJ9NUsF+B776xmERhTLmp+AkFo5satEuxKeExcgXhjuk+e5eF9zb9sg
+                      NdXeC9x6WR72oGHmbiEjzVrhskcxjQoBBSlaWuck1rtJ9mZPSbuc8Rcxuqhvdhyj
+                      PdI7vqSB1qk/BeWxXflrboTYTCQpI6fmbz8heX1wgIt3lAyC5Wgmg61V2xGyDtIM
+                      AfiJV6SIw3F4Ai+j+YfE3m2kgcU74XWyIN8TqC7b8SgxqMCvDmG0MCrR6+lHRWF6
+                      A/h2JR+1B1+WoajQJUwakvCBR0Wbp1T+m2tuUIgjOFiHa6oRC2DDSyZ4SM2x/Uap
+                      OM8egoFcrcnEjRdNQmQwDrQ28cTRyQkFhDSIwV06P57FVwuqV2JSH5OjXFsQLZkG
+                      n/8yMlf+wolRApzpx+F7Vgxpwq5F5uQBFSbS41+2VFcCAwEAAaOBsjCBrzAfBgNV
+                      HSMEGDAWgBTr7CJWsUzZOmY4PRrxUgR9A7NBATAJBgNVHRMEAjAAMAsGA1UdDwQE
+                      AwIE8DATBgNVHSUEDDAKBggrBgEFBQcDATBABgNVHREEOTA3ggkqLmRlZmF1bHSC
+                      DSouZGVmYXVsdC5zdmOCGyouZGVmYXVsdC5zdmMuY2x1c3Rlci5sb2NhbDAdBgNV
+                      HQ4EFgQUf1iepiNcw4QVC1kjSs3Y6CNPN3QwDQYJKoZIhvcNAQENBQADggIBAGKS
+                      gjY888NOFUqxDEp3U8aNXUFSIplr/lvTbgM202TNfjr9pG5tmqc1ckSEEQIboPcU
+                      VUxq2SrqMOEoKDD+2NAQvy1VUE2hXKTMTPa+77UfxGeSsAq8KAo+EqIcF8Ujx8sN
+                      bbqhARRnco4YJuLXcuMyb5MA5voCNU2r08shKw1igrBN2i1aN+kOewr9yyeD+nBH
+                      i4zJVKnmzzOT+FWW/7Om1TJ2oZk5/33YZw3MVk1226K1ZbUVDWxYZaDpqtDFagVo
+                      vw5EEPMWsPco5Z/AffxzotKdjOLymGZ/47/k9Bbuj98YvikJ0G1gObQwnR2qI4nN
+                      QpN4Am1aBzSm1W35CWm7aFz73noEoigiY+1VJuiGfbQzBPffg0dPL2Lq/3cPuBQt
+                      zJm9vPnEVu4HIsu3sK8qwjI79+PiRhIJaGy5ntJxQQzX91kMN9WJcJwH4fpojHsy
+                      /afiL4qUlmhcs0EaDEbxGewT79lPnJMkLIMDtguryFdJuGW2+e0AKwvCxKQ790mn
+                      wb8b98uwxxQbzVz0c8qALAUqtO9moSzYJAPrfz9amZw6OyN5Uxvjz1TeWSUrjYcC
+                      R+mzr3MeyTf2SJZQNKdKEaEAdmEuXSP2TWc6BjXgu3wOnSGzEF8XMAxGa/DXQUsK
+                      ON4wM+AupJ1cTvytY/urdFd3T6e7suW9WGNH71VI
+                      -----END CERTIFICATE-----
+                  private_key:
+                    inline_string: |
+                      -----BEGIN PRIVATE KEY-----
+                      MIIJQwIBADANBgkqhkiG9w0BAQEFAASCCS0wggkpAgEAAoICAQCnqJe1i1niZiL1
+                      9sCoiAFbMf6GAh+JH+d/ezQWFYPM1zUrZ7WiLO5Tc02YI4Whb/cU5pGnSbp5PbW2
+                      kh+0w/KAccmfTOo7Mx2Qy+8PU2ttIClA0Xtl3PJJ8mLq5z3svXb1jftN2jpmH0lw
+                      iGFZnRg0d0dK0YFCyNGCDCvnhwawdOKfe38P+owGqaKjONNNrSpk2GXfh+BsxSo8
+                      wryoJyXDoioMMdXrJ4nFiCoyVyEvrHLyXQbJx9PRfNCq7y9hqsZi8raOZiKlAn01
+                      SwX4HvvrGYRGFMuan4CQWjmxq0S7Ep4TFyBeGO6T57l4X3Nv2yA11d4L3HpZHvag
+                      YeZuISPNWuGyRzGNCgEFKVpa5yTWu0n2Zk9Ju5zxFzG6qG92HKM90ju+pIHWqT8F
+                      5bFd+WtuhNhMJCkjp+ZvPyF5fXCAi3eUDILlaCaDrVXbEbIO0gwB+IlXpIjDcXgC
+                      L6P5h8TebaSBxTvhdbIg3xOoLtvxKDGowK8OYbQwKtHr6UdFYXoD+HYlH7UHX5ah
+                      qNAlTBqS8IFHRZunVP6ba25QiCM4WIdrqhELYMNLJnhIzbH9Rqk4zx6CgVytycSN
+                      F01CZDAOtDbxxNHJCQWENIjBXTo/nsVXC6pXYlIfk6NcWxAtmQaf/zIyV/7CiVEC
+                      nOnH4XtWDGnCrkXm5AEVJtLjX7ZUVwIDAQABAoICABCCkZH70ezYCjHp5Y+TEq/q
+                      0yAm/fkDm2Kz4yCyAX0lMjCyJH8YaQDuj7t48zqL3pGzbn0O5x4nJAmBbgrfthxm
+                      i1ubEbPYgd0ihmOeRavRqQ5SsqtvLKx4giIuUsXisHmLTK4eQw/C0MYUQAkfNBhM
+                      KK9m9/fEjWqx84urG2ig0gV95IWe/0852qPmv1qP82bj4nODm2eXd0qgq9hS2cas
+                      /1jQRyF1jsnupNnsastMvzMIhlfnf2XkbyrUcl665PdiF461SX/k9PSDDOiIQ8S8
+                      8G6NGX6CarQl/M/de3kaliNvuXnBGPlkR9QUcWplJZ2RKa3fijk6S3OzjSM9ZmhO
+                      CoXdkv8M1H+zYJxHQtSiOBAveuYv72Yhs5Sk/u12xMhdXbq72Mwiu7qD+O2iHukz
+                      ayH+a0OZbto56Cc4Lu8MMaPCHBbmalwvEkfV7tBdPD+qGYwfNPolfL/TNWhael5J
+                      CtaQlRXAYlFngsRb5IW6XdJ+x+neyfsp868YU/xU4r/vWuVJ6KSbLPFXe4g+GK3P
+                      SB3lzfwsIphFOPZyaBdr9v+pHd16WNpQ/i6/42Gkxu0uBG2EZWUD4r2tPFY83cKZ
+                      CgfIjL+4fxb9rriNLXrybiwYy/yiyqxNUHJDQZUD+IFVZ3pYNC93k5Cpn8B+w2Ne
+                      3fXz1d/XVu/2VxddUsjdAoIBAQDPj+7W2lRVpVwOIRg1/eDLantlJJxulEvy9jL4
+                      eq4AtkZH8w4DLhtZkGTA72mV8U8hRLuYNrXNB6A43jgG1Kjh0UhsnfMGn/8BlcCB
+                      Tx8jjfKtC8OgzsUC6jyChE8daMenSF1tzzjxFJqTWG4sZosj3/Hi6nlmspgScHCY
+                      p59CRIKaviE4BbtFgZAbLHpGDeyMFDX6YmIQnJwsJT+mszvpmHORlVvh6Lcx3PEN
+                      YmC/T01H+kTrHSHYBO7pFMSIc8ztgzotM0pqnHZtsrOHfgPtzJ2au9Zhzulu6SsD
+                      C3sEJw4rhwtGZYKsKKDmLwjhLkJsi0KWiG/eFfsvEsMghH2NAoIBAQDOyMG5rs9C
+                      nU32yvvLxsSc5bZHCX0dp+XvEfL20pslgOBmfxfur0vNOecl7heSSFTe/NIrg4js
+                      iDaBfVXYyW9E/qHSxwiM/Ygb2eo3leifdD8AK4ihw7jca40CaSiW4Jg5aN7xZwk9
+                      Xcq0ZfWRyOSiiaJ4I+h2wwRekuvGXEqsopXTg2IUI3Q8g/MTdB43SJAh9Gil5Ua4
+                      29q4kwviPsEHjlnNnkeMFuvM85rBEkTUiWxVWNmKmPbEz7JM+FnTFohsZgo+WdDo
+                      EmbBVnqnZhhNxWrz8/T0Nh5dDoar+N2xlWZY5vX5Mbcg851oynUe12woz5StGg6V
+                      N4QlUWkmiyZzAoIBAGiWTzQF+Z7aXuNju65hCeeV9S2G4Cg8I3T+p7pbHtiPACT7
+                      DSF/FxrvTkWFnb+HQ2cxGhHd54ezgwGEv9h5ScvXx9WrVS0Oa9FhownFU5x3x0N4
+                      /Q9HgTAx1WGyx6a7CHd7WFCfrUKVLjp2wbUvyoa+LkU3/wpHjack7yeMtwwON30/
+                      tr9i6/VfDr0SkV5BX+NJv9U1w9I5B9yavFMEV3kib4F5MD5KJB1FBlXHL5bWn8tY
+                      CWgrWsVd3wCljU5wg19e0265PJMx2d72v83TKqmlg/jXE3RfbXKMnTbAjzENeO9n
+                      8b98IPcc1c6G/sNwqtnE5j2x7CSNEO+sVZRKDnUCggEBAIYQztkOJz4vMq8BJ4MU
+                      mcCHhkhENKQXiRIY9wdjwEbuaY7Kc7/CU0j5c4258fpbfvsbuz+PBiUkowINOq1U
+                      3BlFZbF8bWTLs4UrIZlsTeejvHzlvK30cVQnPsMDXteDQe5mubSVcv4gYx3WxQIB
+                      14ox5e4yibMF+T0/0DFJAPkwaCc8FUitO91IRz6jmDuLhjcdeQOlxNZxZDsqyxei
+                      TBAUENEo/4YqDjNQ9VKb/5g0iNJEyrX7OnKbniQdGE+tWkG9XoLSRIlR9OEAqoEB
+                      xlwV1KPZ1UTIGaOHmXTB4yoRjMuy4mLwAqUQjUu1h325eVx0SRZ5wF6qIbj4MU5W
+                      BVUCggEBALesn9QA6/v2A/jmcSRCmVYstspsklaI47rE9SmV9IMI/muG43Wm5B3J
+                      gjlOergIYCfWKCveFghHmfovGDcmn43CqORlpl9/CShXpGAyF6g33b4Q6aV4QXWd
+                      BI1FB0hCA9l11p6JOJopAFHm1K2sppjZ+60U0VJUljn2Wrf7N75qoHQKia6C4u+V
+                      qVPULkcDZbo1xCVti/Zm5UIvNlseRZQYK5Vqw6lF3taTYT9WOsSoqwuHHVEZij1W
+                      jDs05Wx9d9uF2ZWgqs5IO4+j8KtuHa5ovj6E1e2VJeQXUkW8ArxD0LrukA9wqqwV
+                      tJp2pt7RHGct4OyRVNgRsFbnVDUdQbc=
+                      -----END PRIVATE KEY-----
+kind: ConfigMap
+metadata:
+  name: jwks
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jwks
+  labels:
+    app: jwks
+    service: jwks
+spec:
+  ports:
+    - name: http
+      port: 443
+      targetPort: 8443
+  selector:
+    app: jwks
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jwks
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jwks
+      service: jwks
+  template:
+    metadata:
+      labels:
+        app: jwks
+        service: jwks
+    spec:
+      containers:
+        - image: envoyproxy/envoy:v1.30-latest
+          imagePullPolicy: IfNotPresent
+          name: envoy
+          ports:
+            - containerPort: 8000
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          volumeMounts:
+            - name: jwks
+              mountPath: /etc/envoy
+      volumes:
+        - name: jwks
+          configMap:
+            name: jwks
+---
+apiVersion: "v1"
+kind: "Secret"
+metadata:
+  name: "jwks-tls"
+data:
+  ca.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tIApNSUlGdHpDQ0E1K2dBd0lCQWdJVWNDR0tUQkxkajFmOE0rVkdyd3E4ODdBNXovNHdEUVlKS29aSWh2Y05BUUVOCkJRQXdhekVMTUFrR0ExVUVCaE1DUTA0eEVUQVBCZ05WQkFnTUNGTm9ZVzVuYUdGcE1SRXdEd1lEVlFRSERBaFQKYUdGdVoyaGhhVEVMTUFrR0ExVUVDZ3dDUlhveEVUQVBCZ05WQkFzTUNGQmxjbk52Ym1Gc01SWXdGQVlEVlFRRApEQTBxTG1SbFptRjFiSFF1YzNaak1CNFhEVEkwTURZeE5UQTRNREV4TVZvWERUTTBNRFl4TXpBNE1ERXhNVm93CmF6RUxNQWtHQTFVRUJoTUNRMDR4RVRBUEJnTlZCQWdNQ0ZOb1lXNW5hR0ZwTVJFd0R3WURWUVFIREFoVGFHRnUKWjJoaGFURUxNQWtHQTFVRUNnd0NSWG94RVRBUEJnTlZCQXNNQ0ZCbGNuTnZibUZzTVJZd0ZBWURWUVFEREEwcQpMbVJsWm1GMWJIUXVjM1pqTUlJQ0lqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FnOEFNSUlDQ2dLQ0FnRUF0eHBECk83R0N5b3IxdFJscE5iWW9VQjBJQWRqbld5YkdoMHIzeE1wZHg5UHBkd3hzY1BCWkZzQm43bDEzLzNnS2hhc2gKdEhtMjBpRHJpRDM5TzFnWkFrTmY5aHpSaWxDUE5aRWFzZWlNbktjTmY2TEh2K1JEUUJmaVpUL1p1MnVPMDBLcgpnbGs5SnlYSXBBZjR0WnhHYnJHdXdDODhqZFBKRFllRnB4bVNLNWpOWHozOWZ2Kzc0SDREVEh2TVl6aFFneDVWCkpwSTBQdUVZSDQxem1QUnBNZ0lTTjNXNjZyaTRCM3FoZlJxQVgwcTU3VmhZTXBZSFJrUEhYWS9ob1VGdnI3a1QKT2VIbXBUNTgxUUdJMTdnTnE1OFUwUDJTY0xtZ09wSExaWGhnMEN2VXJsQi9DQi9KUkRWYTN6Q0wrYWVEOW4zUApnMW53eHlUeWtiUFRMMWFYUFJFWHF4Y0Zmczhrb3pjV2llZXZoSjJkTlJ6bTRXeXk4VGw3TmxrVnNNK090ZnJ2CjBjSkthNmRtc1VSZjhXc01ydWRYbUs1Z1RmR2pETnBzQjR1a0x4Z09GT3Nxc0JDSm1tWllzbGRmSlV4MFF1VHMKMkVJUEJqaXJ6b2JsT3N2c1dRWXZ4SGdGMVFPRzAyYkVMU1ZSVzZwdHlZK3ZzcUhxaXNFNDBLZVJsbVdJUHphTwp1Qm9md1dsb0RXemdaa2xRcUcycmtLQVJqdHIyRy9UdkdMVlhqNFJma3BwZEVVUUFLRjNadkFlWXpqV1R5ZFlaCnV5d0VRZk1qcTJjcnJ0RXhCcFR6UjVwZVVreWo1OVV4dGkzLys1N2lCVGh1QzA0M0ZITHdMVWpGQVl4M1l1QisKdUg5MXNjRDhYaWh0NkZ6WlRRR1BSbmYzQytvSjBwVXlvekdXRWI4Q0F3RUFBYU5UTUZFd0hRWURWUjBPQkJZRQpGT3ZzSWxheFROazZaamc5R3ZGU0JIMERzMEVCTUI4R0ExVWRJd1FZTUJhQUZPdnNJbGF4VE5rNlpqZzlHdkZTCkJIMERzMEVCTUE4R0ExVWRFd0VCL3dRRk1BTUJBZjh3RFFZSktvWklodmNOQVFFTkJRQURnZ0lCQUhzMUVMU1oKZTMvUGdrTGIwK0FHOXF1Y2xhei9XSlU0VGlYR01KSmhQaE42NzY5RkVRSHNQQW1vbDV0YnVkZTJmbEdONVV6VQo0SUhrd2dTQmJ6cHJqb3E0bXNtOEVOc1F5ZjR4aTgzb2pDSHlsSXd5UU56ZFZRbmp4Y200bG1UZkRvNmhZZHJXCm14SXR0QUZNMGk4c2E2a0orVXk4bzY0eDZ0dVVLZHAxMlhJeWkwdTlMaVNldlFsOWxrQkdwVHB5VmcxUnJSMjQKK1ZNS0xJMDgyRlcyUUVlU25TTUlKYlo3eXhBYkt4ZlhaSXlrZFpnV01HMkY1dEZ1VHpIRlJrY09WQW9YUDlJLwpiQXVldFlmUzdyS3BSWjl5ekt4SlJSTzczdXJGOU5aV2h6dGZOR1JRTG1aSnpYTHJnTmIwbEgyUEd0dmRWTzF5Cm5yZHBXR2FCUmRTVWtFL3JEeUN1Vjc0elBFcUdzZkpHelk3VDk2bGJhUVZvTmZ5eTBVVWgvU2hySm5GSXI4cSsKRENpbW1KNUJkRGF2OC9OUVJERWpZRGhWNFY3NHlWV1A0VUF0TS8vekJPc1E4Z3FaVDQ0OTQvUUo3dTFtS3JxMQp5MzVsakx3ZWhGd29oM3cxOVhpaEF3OGRsL2RyTkhBVUxXdExodkdoWG5zUElnUzl6akNwYkJPcmxVSy9uTUVTCmEwSWFtTy9aSkZsbDV3dm9RUjIxS013TzdkVW44N0NhUENLRS9ybWk2NVFnRjFsazFsekw5blFkK0tQSS9xN2oKbFA1OXlDZERvb1B1anJxeW1IZkVYbUNvTDVtNTFuRVNjdXJKeHlmUW9uc3RtQjBBWHNUb0hoYW15c29RWnp5ZQplVDVwR1pSejhWcGhmTFhHeTFDQzE2aFQxUkdneEpsVVNrY3EKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: jwt-example
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: foo
+  jwt:
+    providers:
+    - name: example
+      remoteJWKS:
+        uri: https://jwks.default.svc.cluster.local
+        caCertificateRefs:
+        - group: ""
+          kind: Secret
+          name: "jwks-tls"
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: foo
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - "www.example.com"
+  rules:
+  - backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+      weight: 1
+    matches:
+    - path:
+        type: PathPrefix
+        value: /foo
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: bar
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - "www.example.com"
+  rules:
+  - backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+      weight: 1
+    matches:
+    - path:
+        type: PathPrefix
+        value: /bar

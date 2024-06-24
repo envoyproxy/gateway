@@ -5,6 +5,10 @@
 
 package v1alpha1
 
+import (
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+)
+
 // JWT defines the configuration for JSON Web Token (JWT) authentication.
 type JWT struct {
 	// Optional determines whether a missing JWT is acceptable, defaulting to false if not specified.
@@ -86,6 +90,22 @@ type RemoteJWKS struct {
 	URI string `json:"uri"`
 
 	// TODO: Add TBD remote JWKS fields based on defined use cases.
+
+	// CACertificateRefs contains one or more references to
+	// Kubernetes objects that contain TLS certificates of
+	// the Certificate Authorities that can be used
+	// as a trust anchor to validate the certificates presented by the client.
+	//
+	// A single reference to a Kubernetes ConfigMap or a Kubernetes Secret,
+	// with the CA certificate in a key named `ca.crt` is currently supported.
+	//
+	// References to a resource in different namespace are invalid UNLESS there
+	// is a ReferenceGrant in the target namespace that allows the certificate
+	// to be attached.
+	//
+	// +kubebuilder:validation:MaxItems=8
+	// +optional
+	CACertificateRefs []gwapiv1.SecretObjectReference `json:"caCertificateRefs,omitempty"`
 }
 
 // ClaimToHeader defines a configuration to convert JWT claims into HTTP headers

@@ -491,7 +491,35 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 					"policy", policy, "secretRef", basicAuth.Users)
 			}
 		}
-
+		// Add the referenced Secrets in JWT to the resourceTree
+		jwt := policy.Spec.JWT
+		if jwt != nil {
+			for _, provider := range jwt.Providers {
+				remoteJWKS := provider.RemoteJWKS
+				if remoteJWKS.CACertificateRefs != nil {
+					for _, caCertRef := range remoteJWKS.CACertificateRefs {
+						caRefNew := gwapiv1b1.SecretObjectReference{
+							Group:     gatewayapi.GroupPtr(string(*caCertRef.Group)),
+							Kind:      gatewayapi.KindPtr(string(*caCertRef.Kind)),
+							Name:      caCertRef.Name,
+							Namespace: gatewayapi.NamespacePtr(policy.Namespace),
+						}
+						if err := r.processSecretRef(
+							ctx,
+							resourceMap,
+							resourceTree,
+							gatewayapi.KindSecurityPolicy,
+							policy.Namespace,
+							policy.Name,
+							caRefNew); err != nil {
+							r.log.Error(err,
+								"failed to process JWT SecretRef for SecurityPolicy",
+								"policy", policy, "secretRef", caCertRef.Name)
+						}
+					}
+				}
+			}
+		}
 		// Add the referenced BackendRefs and ReferenceGrants in ExtAuth to Maps for later processing
 		extAuth := policy.Spec.ExtAuth
 		if extAuth != nil {

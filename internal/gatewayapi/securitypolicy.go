@@ -348,7 +348,10 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	}
 
 	if policy.Spec.JWT != nil {
-		jwt = t.buildJWT(policy.Spec.JWT)
+		if jwt, err = t.buildJWT(policy, resources); err != nil {
+			err = perr.WithMessage(err, "JWT")
+			errs = errors.Join(errs, err)
+		}
 	}
 
 	if policy.Spec.OIDC != nil {
@@ -431,7 +434,10 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	}
 
 	if policy.Spec.JWT != nil {
-		jwt = t.buildJWT(policy.Spec.JWT)
+		if jwt, err = t.buildJWT(policy, resources); err != nil {
+			err = perr.WithMessage(err, "JWT")
+			errs = errors.Join(errs, err)
+		}
 	}
 
 	if policy.Spec.OIDC != nil {
@@ -542,11 +548,56 @@ func wildcard2regex(wildcard string) string {
 	return regexStr
 }
 
-func (t *Translator) buildJWT(jwt *egv1a1.JWT) *ir.JWT {
-	return &ir.JWT{
-		AllowMissing: ptr.Deref(jwt.Optional, false),
-		Providers:    jwt.Providers,
+func (t *Translator) buildJWT(
+	policy *egv1a1.SecurityPolicy,
+	resources *Resources) (*ir.JWT, error) {
+	var (
+		jwt          = policy.Spec.JWT
+		clientSecret *v1.Secret
+		err          error
+	)
+	var m map[string]string
+	for _, provider := range jwt.Providers {
+		if provider.RemoteJWKS.URI != "" {
+			// Validate the URI
+			var u *url.URL
+			if u, err = url.Parse(provider.RemoteJWKS.URI); err != nil {
+				return nil, fmt.Errorf("invalid URI %s for remote JWKS", provider.RemoteJWKS.URI)
+			}
+			hostname := u.Hostname()
+			CACertificates := ""
+			for _, CACertificateRef := range provider.RemoteJWKS.CACertificateRefs {
+				from := crossNamespaceFrom{
+					group:     egv1a1.GroupName,
+					kind:      KindClientTrafficPolicy,
+					namespace: policy.Namespace,
+				}
+				if clientSecret, err = t.validateSecretRef(
+					false, from, CACertificateRef, resources); err != nil {
+					return nil, err
+				}
+				SecretBytes, ok := clientSecret.Data[caCertKey]
+				if !ok || len(SecretBytes) == 0 {
+					return nil, fmt.Errorf(
+						"client secret not found in secret %s/%s",
+						clientSecret.Namespace, clientSecret.Name)
+				}
+				CACertificates += string(SecretBytes)
+			}
+			if CACertificates != "" {
+				if m == nil {
+					m = make(map[string]string)
+				}
+				m[hostname] = CACertificates
+			}
+		}
 	}
+
+	return &ir.JWT{
+		AllowMissing:      ptr.Deref(jwt.Optional, false),
+		Providers:         jwt.Providers,
+		CACertificateMaps: m,
+	}, nil
 }
 
 func (t *Translator) buildOIDC(

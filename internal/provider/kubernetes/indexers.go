@@ -510,6 +510,12 @@ func secretSecurityPolicyIndexFunc(rawObj client.Object) []string {
 	if securityPolicy.Spec.BasicAuth != nil {
 		secretReferences = append(secretReferences, securityPolicy.Spec.BasicAuth.Users)
 	}
+	if securityPolicy.Spec.JWT != nil {
+		for _, provider := range securityPolicy.Spec.JWT.Providers {
+			secretReferences = append(secretReferences, provider.RemoteJWKS.CACertificateRefs...)
+		}
+
+	}
 
 	for _, reference := range secretReferences {
 		values = append(values,

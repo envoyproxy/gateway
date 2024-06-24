@@ -652,6 +652,10 @@ type JWT struct {
 
 	// Providers defines a list of JSON Web Token (JWT) authentication providers.
 	Providers []egv1a1.JWTProvider `json:"providers,omitempty" yaml:"providers,omitempty"`
+
+	// CA certificate maps for the JWT providers.
+	// The key is the provider remoteJKMS SNI and the value is the CA certificate bytes.
+	CACertificateMaps map[string]string `json:"caCertificateMaps,omitempty" yaml:"caCertificateMaps,omitempty"`
 }
 
 // OIDC defines the schema for authenticating HTTP requests using

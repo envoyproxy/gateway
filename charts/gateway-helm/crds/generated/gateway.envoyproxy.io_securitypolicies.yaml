@@ -782,6 +782,78 @@ spec:
                             RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote
                             HTTP/HTTPS endpoint.
                           properties:
+                            caCertificateRefs:
+                              description: |-
+                                CACertificateRefs contains one or more references to
+                                Kubernetes objects that contain TLS certificates of
+                                the Certificate Authorities that can be used
+                                as a trust anchor to validate the certificates presented by the client.
+
+
+                                A single reference to a Kubernetes ConfigMap or a Kubernetes Secret,
+                                with the CA certificate in a key named `ca.crt` is currently supported.
+
+
+                                References to a resource in different namespace are invalid UNLESS there
+                                is a ReferenceGrant in the target namespace that allows the certificate
+                                to be attached.
+                              items:
+                                description: |-
+                                  SecretObjectReference identifies an API object including its namespace,
+                                  defaulting to Secret.
+
+
+                                  The API object must be valid in the cluster; the Group and Kind must
+                                  be registered in the cluster for this reference to be valid.
+
+
+                                  References to objects with invalid Group and Kind are not valid, and must
+                                  be rejected by the implementation, with appropriate Conditions set
+                                  on the containing object.
+                                properties:
+                                  group:
+                                    default: ""
+                                    description: |-
+                                      Group is the group of the referent. For example, "gateway.networking.k8s.io".
+                                      When unspecified or empty string, core API group is inferred.
+                                    maxLength: 253
+                                    pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                    type: string
+                                  kind:
+                                    default: Secret
+                                    description: Kind is kind of the referent. For
+                                      example "Secret".
+                                    maxLength: 63
+                                    minLength: 1
+                                    pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                                    type: string
+                                  name:
+                                    description: Name is the name of the referent.
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the namespace of the referenced object. When unspecified, the local
+                                      namespace is inferred.
+
+
+                                      Note that when a namespace different than the local namespace is specified,
+                                      a ReferenceGrant object is required in the referent namespace to allow that
+                                      namespace's owner to accept the reference. See the ReferenceGrant
+                                      documentation for details.
+
+
+                                      Support: Core
+                                    maxLength: 63
+                                    minLength: 1
+                                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                                    type: string
+                                required:
+                                - name
+                                type: object
+                              maxItems: 8
+                              type: array
                             uri:
                               description: |-
                                 URI is the HTTPS URI to fetch the JWKS. Envoy's system trust bundle is used to

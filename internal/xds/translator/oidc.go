@@ -276,7 +276,7 @@ func createOAuth2TokenEndpointClusters(tCtx *types.ResourceVersionTable,
 			endpointType: cluster.endpointType,
 		}
 		if cluster.tls {
-			tSocket, err = buildXdsUpstreamTLSSocket(cluster.hostname)
+			tSocket, err = buildXdsUpstreamTLSSocket(cluster.hostname, "")
 			if err != nil {
 				errs = errors.Join(errs, err)
 				continue
