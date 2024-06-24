@@ -119,11 +119,11 @@ type RequestHeaderCustomTag struct {
 
 // ZipkinTracingProvider defines the Zipkin tracing provider configuration.
 type ZipkinTracingProvider struct {
-	// TraceID128Bit determines whether a 128bit trace id will be used
+	// Enable128BitTraceID determines whether a 128bit trace id will be used
 	// when creating a new trace instance. If set to false, a 64bit trace
 	// id will be used.
 	// +optional
-	TraceID128Bit *bool `json:"traceId128Bit,omitempty"`
+	Enable128BitTraceID *bool `json:"enable128BitTraceId,omitempty"`
 	// DisableSharedSpanContext determines whether the default Envoy behaviour of
 	// client and server spans sharing the same span context should be disabled.
 	// +optional
