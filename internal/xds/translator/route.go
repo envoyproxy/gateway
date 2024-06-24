@@ -355,7 +355,9 @@ func buildXdsRedirectAction(httpRoute *ir.HTTPRoute) *routev3.RedirectAction {
 	if redirection.Hostname != nil {
 		routeAction.HostRedirect = *redirection.Hostname
 	}
-	if redirection.Port != nil {
+	// Ignore the redirect port if it is a well-known port number, in order to
+	// prevent the port be added in the response's location header.
+	if redirection.Port != nil && *redirection.Port != 80 && *redirection.Port != 443 {
 		routeAction.PortRedirect = *redirection.Port
 	}
 	if redirection.StatusCode != nil {
