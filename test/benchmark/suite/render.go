@@ -20,6 +20,7 @@ import (
 
 	prom "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 const (
@@ -31,55 +32,71 @@ const (
 	metricTypeCounter = "counter"
 
 	// Supported metric unit.
-	metricUnitMiB     = "MiB"
-	metricUnitSeconds = "Seconds"
+	metricUnitMiB      = "MiB"
+	metricUnitSeconds  = "Seconds"
+	metricUnitMilliCPU = "m"
 )
 
 type ReportTableHeader struct {
-	Name   string       `json:"name"`
-	Metric *MetricEntry `json:"metric,omitempty"`
+	Name   string
+	Metric *MetricEntry
+
+	// Underlying name of one envoy-proxy, used by data-plane metrics.
+	ProxyName string
 }
 
 type MetricEntry struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
-	Unit string `json:"unit"`
-	Help string `json:"help,omitempty"`
+	Name             string
+	Type             string
+	FromControlPlane bool
+	DisplayUnit      string
+	ConvertUnit      func(float64) float64
 }
 
-var (
-	controlPlaneMetricHeaders = []*ReportTableHeader{ // TODO: convert and save this config with json
+// RenderReport renders a report out of given list of benchmark report in Markdown format.
+func RenderReport(writer io.Writer, name, description string, reports []*BenchmarkReport, titleLevel int) error {
+	headerSettings := []ReportTableHeader{
 		{
 			Name: "Benchmark Name",
 		},
 		{
 			Name: "Envoy Gateway Memory",
 			Metric: &MetricEntry{
-				Name: "process_resident_memory_bytes",
-				Type: metricTypeGauge,
-				Unit: metricUnitMiB,
+				Name:             "process_resident_memory_bytes",
+				Type:             metricTypeGauge,
+				DisplayUnit:      metricUnitMiB,
+				FromControlPlane: true,
+				ConvertUnit:      byteToMiB,
 			},
 		},
 		{
 			Name: "Envoy Gateway Total CPU",
 			Metric: &MetricEntry{
-				Name: "process_cpu_seconds_total",
-				Type: metricTypeCounter,
-				Unit: metricUnitSeconds,
+				Name:             "process_cpu_seconds_total",
+				Type:             metricTypeCounter,
+				DisplayUnit:      metricUnitSeconds,
+				FromControlPlane: true,
+			},
+		},
+		{
+			Name: "Envoy Proxy Memory",
+			Metric: &MetricEntry{
+				Name:             "envoy_server_memory_allocated",
+				Type:             metricTypeGauge,
+				DisplayUnit:      metricUnitMiB,
+				FromControlPlane: false,
+				ConvertUnit:      byteToMiB,
 			},
 		},
 	}
-)
 
-// RenderReport renders a report out of given list of benchmark report in Markdown format.
-func RenderReport(writer io.Writer, name, description string, reports []*BenchmarkReport, titleLevel int) error {
 	writeSection(writer, name, titleLevel, description)
 
 	writeSection(writer, "Results", titleLevel+1, "Click to see the full results.")
 	renderResultsTable(writer, reports)
 
 	writeSection(writer, "Metrics", titleLevel+1, "")
-	err := renderMetricsTable(writer, controlPlaneMetricHeaders, reports)
+	err := renderMetricsTable(writer, headerSettings, reports)
 	if err != nil {
 		return err
 	}
@@ -93,21 +110,41 @@ func newMarkdownStyleTableWriter(writer io.Writer) *tabwriter.Writer {
 }
 
 func renderEnvSettingsTable(writer io.Writer) {
+	_, _ = fmt.Fprintln(writer, "Benchmark test settings:", "\n")
+
 	table := newMarkdownStyleTableWriter(writer)
 
-	headers := []string{"RPS", "Connections", "Duration", "CPU Limits", "Memory Limits"}
-	units := []string{"", "", "Seconds", "m", "MiB"}
-	writeTableRow(table, headers, func(i int, h string) string {
-		if len(units[i]) > 0 {
-			return fmt.Sprintf("%s (%s)", h, units[i])
-		}
-		return h
-	})
+	headers := []ReportTableHeader{
+		{
+			Name: "RPS",
+		},
+		{
+			Name: "Connections",
+		},
+		{
+			Name: "Duration",
+			Metric: &MetricEntry{
+				DisplayUnit: metricUnitSeconds,
+			},
+		},
+		{
+			Name: "CPU Limits",
+			Metric: &MetricEntry{
+				DisplayUnit: metricUnitMilliCPU,
+			},
+		},
+		{
+			Name: "Memory Limits",
+			Metric: &MetricEntry{
+				DisplayUnit: metricUnitMiB,
+			},
+		},
+	}
 
-	writeTableDelimiter(table, len(headers))
+	renderMetricsTableHeader(table, headers)
 
-	writeTableRow(table, headers, func(_ int, h string) string {
-		env := strings.Replace(strings.ToUpper(h), " ", "_", -1)
+	writeTableRow(table, headers, func(_ int, h ReportTableHeader) string {
+		env := strings.Replace(strings.ToUpper(h.Name), " ", "_", -1)
 		if v, ok := os.LookupEnv(benchmarkEnvPrefix + env); ok {
 			return v
 		}
@@ -124,51 +161,88 @@ func renderResultsTable(writer io.Writer, reports []*BenchmarkReport) {
 	}
 }
 
-func renderMetricsTable(writer io.Writer, headers []*ReportTableHeader, reports []*BenchmarkReport) error {
+func renderMetricsTable(writer io.Writer, headerSettings []ReportTableHeader, reports []*BenchmarkReport) error {
 	table := newMarkdownStyleTableWriter(writer)
 
-	// Write metrics table header.
-	writeTableRow(table, headers, func(_ int, h *ReportTableHeader) string { // TODO: add footnote support
-		if h.Metric != nil && len(h.Metric.Unit) > 0 {
-			return fmt.Sprintf("%s (%s)", h.Name, h.Metric.Unit)
-		}
-		return h.Name
-	})
-
-	// Write metrics table delimiter.
-	writeTableDelimiter(table, len(headers))
-
-	// Write metrics table body.
+	// Preprocess the table header for metrics table.
+	var headers []ReportTableHeader
+	// 1. Collect all the possible proxy names.
+	proxyNames := sets.NewString()
 	for _, report := range reports {
-		mf, err := parseMetrics(report.RawCPMetrics) // TODO: move metrics outside, and add envoyproxy metrics support
+		for name := range report.RawDPMetrics {
+			proxyNames.Insert(name)
+		}
+	}
+	// 2. Generate header names for data-plane proxies.
+	for _, hs := range headerSettings {
+		if hs.Metric != nil && !hs.Metric.FromControlPlane {
+			for i, proxyName := range proxyNames.List() {
+				names := strings.Split(proxyName, "-")
+				headers = append(headers, ReportTableHeader{
+					Name:      fmt.Sprintf("%s: %s<sup>[%d]</sup>", hs.Name, names[len(names)-1], i+1),
+					Metric:    hs.Metric,
+					ProxyName: proxyName,
+				})
+			}
+		} else {
+			// For control-plane metrics or plain header.
+			headers = append(headers, hs)
+		}
+	}
+
+	renderMetricsTableHeader(table, headers)
+
+	for _, report := range reports {
+		mfCP, err := parseMetrics(report.RawCPMetrics)
 		if err != nil {
 			return err
 		}
 
-		writeTableRow(table, headers, func(_ int, h *ReportTableHeader) string {
-			if h.Metric != nil {
-				if mv, ok := mf[h.Metric.Name]; ok {
-					// Store the help of metric for later usage.
-					h.Metric.Help = *mv.Help
+		mfDPs := make(map[string]map[string]*prom.MetricFamily, len(report.RawDPMetrics))
+		for dpName, dpMetrics := range report.RawDPMetrics {
+			mfDP, err := parseMetrics(dpMetrics)
+			if err != nil {
+				return err
+			}
+			mfDPs[dpName] = mfDP
+		}
 
-					switch *mv.Type {
-					case prom.MetricType_GAUGE:
-						return strconv.FormatFloat(byteToMiB(*mv.Metric[0].Gauge.Value), 'f', -1, 64)
-					case prom.MetricType_COUNTER:
-						return strconv.FormatFloat(*mv.Metric[0].Counter.Value, 'f', -1, 64)
-					}
-				}
-				return omitEmptyValue
+		writeTableRow(table, headers, func(_ int, h ReportTableHeader) string {
+			if h.Metric == nil {
+				return report.Name
 			}
 
-			// Despite metrics, we still got benchmark test name.
-			return report.Name
+			if h.Metric.FromControlPlane {
+				return processMetricValue(mfCP, h)
+			} else {
+				if mfDP, ok := mfDPs[h.ProxyName]; ok {
+					return processMetricValue(mfDP, h)
+				}
+			}
+
+			return omitEmptyValue
 		})
 	}
 
 	_ = table.Flush()
 
+	// Generate footnotes for envoy-proxy headers.
+	for i, proxyName := range proxyNames.List() {
+		_, _ = fmt.Fprintln(writer, fmt.Sprintf("%d.", i+1), proxyName)
+	}
+
 	return nil
+}
+
+func renderMetricsTableHeader(table *tabwriter.Writer, headers []ReportTableHeader) {
+	writeTableRow(table, headers, func(_ int, h ReportTableHeader) string {
+		if h.Metric != nil && len(h.Metric.DisplayUnit) > 0 {
+			return fmt.Sprintf("%s (%s)", h.Name, h.Metric.DisplayUnit)
+		}
+		return h.Name
+	})
+
+	writeTableDelimiter(table, len(headers))
 }
 
 func byteToMiB(x float64) float64 {
@@ -228,4 +302,28 @@ func parseMetrics(metrics []byte) (map[string]*prom.MetricFamily, error) {
 	}
 
 	return mf, nil
+}
+
+// processMetricValue process one metric value according to the given header and metric families.
+func processMetricValue(metricFamilies map[string]*prom.MetricFamily, header ReportTableHeader) string {
+	if mf, ok := metricFamilies[header.Metric.Name]; ok {
+		var value float64
+
+		switch header.Metric.Type {
+		case metricTypeGauge:
+			value = *mf.Metric[0].Gauge.Value
+		case metricTypeCounter:
+			value = *mf.Metric[0].Counter.Value
+		default:
+			return omitEmptyValue
+		}
+
+		if header.Metric.ConvertUnit != nil {
+			value = header.Metric.ConvertUnit(value)
+		}
+
+		return strconv.FormatFloat(value, 'f', -1, 64)
+	}
+
+	return omitEmptyValue
 }

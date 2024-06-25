@@ -196,10 +196,7 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, name, 
 	}
 
 	// Get all the reports from this benchmark test run.
-	if err = report.GetBenchmarkResult(t, ctx, jobNN); err != nil {
-		return nil, err
-	}
-	if err = report.GetControlPlaneMetrics(t, ctx); err != nil {
+	if err = report.Collect(t, ctx, jobNN); err != nil {
 		return nil, err
 	}
 
