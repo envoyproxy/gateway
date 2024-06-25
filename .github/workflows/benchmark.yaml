@@ -36,13 +36,12 @@ on:
         type: string
         required: false
 
-permissions:
-  pull-requests: write
-
 jobs:
   benchmark-test:
     name: Benchmark Test
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
     steps:
       - uses: actions/checkout@v2
 
