@@ -10864,9 +10864,7 @@ spec:
                           If provider is kubernetes, pod name and namespace are added by default.
                         type: object
                       provider:
-                        description: |-
-                          Provider defines the tracing provider.
-                          Only OpenTelemetry is supported currently.
+                        description: Provider defines the tracing provider.
                         properties:
                           backendRefs:
                             description: |-
@@ -10972,12 +10970,27 @@ spec:
                             type: integer
                           type:
                             default: OpenTelemetry
-                            description: |-
-                              Type defines the tracing provider type.
-                              EG currently only supports OpenTelemetry.
+                            description: Type defines the tracing provider type.
                             enum:
                             - OpenTelemetry
+                            - Zipkin
                             type: string
+                          zipkin:
+                            description: Zipkin defines the Zipkin tracing provider
+                              configuration
+                            properties:
+                              disableSharedSpanContext:
+                                description: |-
+                                  DisableSharedSpanContext determines whether the default Envoy behaviour of
+                                  client and server spans sharing the same span context should be disabled.
+                                type: boolean
+                              enable128BitTraceId:
+                                description: |-
+                                  Enable128BitTraceID determines whether a 128bit trace id will be used
+                                  when creating a new trace instance. If set to false, a 64bit trace
+                                  id will be used.
+                                type: boolean
+                            type: object
                         required:
                         - type
                         type: object

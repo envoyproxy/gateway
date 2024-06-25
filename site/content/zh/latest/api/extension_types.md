@@ -277,6 +277,20 @@ _Appears in:_
 
 
 
+#### BackendConnection
+
+
+
+BackendConnection allows users to configure connection-level settings of backend
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `bufferLimit` | _[Quantity](#quantity)_ |  false  | BufferLimit Soft limit on size of the cluster’s connections read and write buffers.<br />If unspecified, an implementation defined default is applied (32768 bytes).<br />For example, 20Mi, 1Gi, 256Ki etc.<br />Note: that when the suffix is not provided, the value is interpreted as bytes. |
+
+
 #### BackendEndpoint
 
 
@@ -403,18 +417,6 @@ _Appears in:_
 | `status` | _[PolicyStatus](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyStatus)_ |  true  | status defines the current status of BackendTrafficPolicy. |
 
 
-#### BackendTrafficPolicyConnection
-
-
-
-BackendTrafficPolicyConnection allows users to configure connection-level settings of backend
-
-_Appears in:_
-- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `bufferLimit` | _[Quantity](#quantity)_ |  false  | BufferLimit Soft limit on size of the cluster’s connections read and write buffers.<br />If unspecified, an implementation defined default is applied (32768 bytes).<br />For example, 20Mi, 1Gi, 256Ki etc.<br />Note: that when the suffix is not provided, the value is interpreted as bytes. |
 
 
 #### BackendTrafficPolicyList
@@ -444,7 +446,8 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `targetRef` | _[LocalPolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName)_ |  true  | targetRef is the name of the resource this policy<br />is being attached to.<br />This Policy and the TargetRef MUST be in the same namespace<br />for this Policy to have effect and be applied to the Gateway. |
+| `targetRef` | _[LocalPolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName)_ |  true  | TargetRef is the name of the Gateway resource this policy<br />is being attached to.<br />This Policy and the TargetRef MUST be in the same namespace<br />for this Policy to have effect and be applied to the Gateway.<br />TargetRef<br /><br />Deprecated: use targetRefs instead |
+| `targetRefs` | _[LocalPolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName) array_ |  true  | TargetRefs are the names of the Gateway resources this policy<br />is being attached to. |
 | `rateLimit` | _[RateLimitSpec](#ratelimitspec)_ |  false  | RateLimit allows the user to limit the number of incoming requests<br />to a predefined value based on attributes within the traffic flow. |
 | `loadBalancer` | _[LoadBalancer](#loadbalancer)_ |  false  | LoadBalancer policy to apply when routing traffic from the gateway to<br />the backend endpoints |
 | `proxyProtocol` | _[ProxyProtocol](#proxyprotocol)_ |  false  | ProxyProtocol enables the Proxy Protocol when communicating with the backend. |
@@ -455,7 +458,7 @@ _Appears in:_
 | `retry` | _[Retry](#retry)_ |  false  | Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.<br />If not set, retry will be disabled. |
 | `useClientProtocol` | _boolean_ |  false  | UseClientProtocol configures Envoy to prefer sending requests to backends using<br />the same HTTP protocol that the incoming request used. Defaults to false, which means<br />that Envoy will use the protocol indicated by the attached BackendRef. |
 | `timeout` | _[Timeout](#timeout)_ |  false  | Timeout settings for the backend connections. |
-| `connection` | _[BackendTrafficPolicyConnection](#backendtrafficpolicyconnection)_ |  false  | Connection includes backend connection settings. |
+| `connection` | _[BackendConnection](#backendconnection)_ |  false  | Connection includes backend connection settings. |
 
 
 #### BasicAuth
@@ -549,6 +552,21 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `header` | _string_ |  true  | Header defines the name of the HTTP request header that the JWT Claim will be saved into. |
 | `claim` | _string_ |  true  | Claim is the JWT Claim that should be saved into the header : it can be a nested claim of type<br />(eg. "claim.nested.key", "sub"). The nested claim name must use dot "."<br />to separate the JSON name path. |
+
+
+#### ClientConnection
+
+
+
+ClientConnection allows users to configure connection-level settings of client
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `connectionLimit` | _[ConnectionLimit](#connectionlimit)_ |  false  | ConnectionLimit defines limits related to connections |
+| `bufferLimit` | _[Quantity](#quantity)_ |  false  | BufferLimit provides configuration for the maximum buffer size in bytes for each incoming connection.<br />For example, 20Mi, 1Gi, 256Ki etc.<br />Note that when the suffix is not provided, the value is interpreted as bytes.<br />Default: 32768 bytes. |
 
 
 #### ClientIPDetectionSettings
@@ -647,7 +665,8 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `targetRef` | _[LocalPolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName)_ |  true  | TargetRef is the name of the Gateway resource this policy<br />is being attached to.<br />This Policy and the TargetRef MUST be in the same namespace<br />for this Policy to have effect and be applied to the Gateway.<br />TargetRef |
+| `targetRef` | _[LocalPolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName)_ |  true  | TargetRef is the name of the Gateway resource this policy<br />is being attached to.<br />This Policy and the TargetRef MUST be in the same namespace<br />for this Policy to have effect and be applied to the Gateway.<br />TargetRef<br /><br />Deprecated: use targetRefs instead |
+| `targetRefs` | _[LocalPolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName) array_ |  true  | TargetRefs are the names of the Gateway resources this policy<br />is being attached to. |
 | `tcpKeepalive` | _[TCPKeepalive](#tcpkeepalive)_ |  false  | TcpKeepalive settings associated with the downstream client connection.<br />If defined, sets SO_KEEPALIVE on the listener socket to enable TCP Keepalives.<br />Disabled by default. |
 | `enableProxyProtocol` | _boolean_ |  false  | EnableProxyProtocol interprets the ProxyProtocol header and adds the<br />Client Address into the X-Forwarded-For header.<br />Note Proxy Protocol must be present when this field is set, else the connection<br />is closed. |
 | `clientIPDetection` | _[ClientIPDetectionSettings](#clientipdetectionsettings)_ |  false  | ClientIPDetectionSettings provides configuration for determining the original client IP address for requests. |
@@ -655,7 +674,7 @@ _Appears in:_
 | `path` | _[PathSettings](#pathsettings)_ |  false  | Path enables managing how the incoming path set by clients can be normalized. |
 | `headers` | _[HeaderSettings](#headersettings)_ |  false  | HeaderSettings provides configuration for header management. |
 | `timeout` | _[ClientTimeout](#clienttimeout)_ |  false  | Timeout settings for the client connections. |
-| `connection` | _[Connection](#connection)_ |  false  | Connection includes client connection settings. |
+| `connection` | _[ClientConnection](#clientconnection)_ |  false  | Connection includes client connection settings. |
 | `http1` | _[HTTP1Settings](#http1settings)_ |  false  | HTTP1 provides HTTP/1 configuration on the listener. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  | HTTP2 provides HTTP/2 configuration on the listener. |
 | `http3` | _[HTTP3Settings](#http3settings)_ |  false  | HTTP3 provides HTTP/3 configuration on the listener. |
@@ -707,21 +726,6 @@ _Appears in:_
 
 
 
-#### Connection
-
-
-
-Connection allows users to configure connection-level settings
-
-_Appears in:_
-- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `connectionLimit` | _[ConnectionLimit](#connectionlimit)_ |  false  | ConnectionLimit defines limits related to connections |
-| `bufferLimit` | _[Quantity](#quantity)_ |  false  | BufferLimit provides configuration for the maximum buffer size in bytes for each incoming connection.<br />For example, 20Mi, 1Gi, 256Ki etc.<br />Note that when the suffix is not provided, the value is interpreted as bytes.<br />Default: 32768 bytes. |
-
-
 #### ConnectionLimit
 
 
@@ -729,7 +733,7 @@ _Appears in:_
 
 
 _Appears in:_
-- [Connection](#connection)
+- [ClientConnection](#clientconnection)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -896,7 +900,8 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `targetRef` | _[LocalPolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName)_ |  true  | TargetRef is the name of the resource this policy<br />is being attached to.<br />This Policy and the TargetRef MUST be in the same namespace<br />for this Policy to have effect and be applied to the Gateway or xRoute. |
+| `targetRef` | _[LocalPolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName)_ |  true  | TargetRef is the name of the Gateway resource this policy<br />is being attached to.<br />This Policy and the TargetRef MUST be in the same namespace<br />for this Policy to have effect and be applied to the Gateway.<br />TargetRef<br /><br />Deprecated: use targetRefs instead |
+| `targetRefs` | _[LocalPolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName) array_ |  true  | TargetRefs are the names of the Gateway resources this policy<br />is being attached to. |
 | `wasm` | _[Wasm](#wasm) array_ |  false  | Wasm is a list of Wasm extensions to be loaded by the Gateway.<br />Order matters, as the extensions will be loaded in the order they are<br />defined in this list. |
 | `extProc` | _[ExtProc](#extproc) array_ |  false  | ExtProc is an ordered list of external processing filters<br />that should added to the envoy filter chain |
 
@@ -2571,6 +2576,24 @@ _Appears in:_
 | `backOff` | _[BackOffPolicy](#backoffpolicy)_ |  false  | Backoff is the backoff policy to be applied per retry attempt. gateway uses a fully jittered exponential<br />back-off algorithm for retries. For additional details,<br />see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#config-http-filters-router-x-envoy-max-retries |
 
 
+#### PolicyTargetReferences
+
+
+
+
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+- [EnvoyExtensionPolicySpec](#envoyextensionpolicyspec)
+- [SecurityPolicySpec](#securitypolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `targetRef` | _[LocalPolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName)_ |  true  | TargetRef is the name of the Gateway resource this policy<br />is being attached to.<br />This Policy and the TargetRef MUST be in the same namespace<br />for this Policy to have effect and be applied to the Gateway.<br />TargetRef<br /><br />Deprecated: use targetRefs instead |
+| `targetRefs` | _[LocalPolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName) array_ |  true  | TargetRefs are the names of the Gateway resources this policy<br />is being attached to. |
+
+
 #### Principal
 
 
@@ -2889,7 +2912,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `samplingRate` | _integer_ |  false  | SamplingRate controls the rate at which traffic will be<br />selected for tracing if no prior sampling decision has been made.<br />Defaults to 100, valid values [0-100]. 100 indicates 100% sampling. |
 | `customTags` | _object (keys:string, values:[CustomTag](#customtag))_ |  true  | CustomTags defines the custom tags to add to each span.<br />If provider is kubernetes, pod name and namespace are added by default. |
-| `provider` | _[TracingProvider](#tracingprovider)_ |  true  | Provider defines the tracing provider.<br />Only OpenTelemetry is supported currently. |
+| `provider` | _[TracingProvider](#tracingprovider)_ |  true  | Provider defines the tracing provider. |
 
 
 #### RateLimit
@@ -3280,7 +3303,8 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `targetRef` | _[LocalPolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName)_ |  true  | TargetRef is the name of the Gateway resource this policy<br />is being attached to.<br />This Policy and the TargetRef MUST be in the same namespace<br />for this Policy to have effect and be applied to the Gateway. |
+| `targetRef` | _[LocalPolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName)_ |  true  | TargetRef is the name of the Gateway resource this policy<br />is being attached to.<br />This Policy and the TargetRef MUST be in the same namespace<br />for this Policy to have effect and be applied to the Gateway.<br />TargetRef<br /><br />Deprecated: use targetRefs instead |
+| `targetRefs` | _[LocalPolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName) array_ |  true  | TargetRefs are the names of the Gateway resources this policy<br />is being attached to. |
 | `cors` | _[CORS](#cors)_ |  false  | CORS defines the configuration for Cross-Origin Resource Sharing (CORS). |
 | `basicAuth` | _[BasicAuth](#basicauth)_ |  false  | BasicAuth defines the configuration for the HTTP Basic Authentication. |
 | `jwt` | _[JWT](#jwt)_ |  false  | JWT defines the configuration for JSON Web Token (JWT) authentication. |
@@ -3542,10 +3566,11 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `type` | _[TracingProviderType](#tracingprovidertype)_ |  true  | Type defines the tracing provider type.<br />EG currently only supports OpenTelemetry. |
+| `type` | _[TracingProviderType](#tracingprovidertype)_ |  true  | Type defines the tracing provider type. |
 | `host` | _string_ |  false  | Host define the provider service hostname.<br />Deprecated: Use BackendRefs instead. |
 | `port` | _integer_ |  false  | Port defines the port the provider service is exposed on.<br />Deprecated: Use BackendRefs instead. |
 | `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the trace will be sent.<br />Only Service kind is supported for now. |
+| `zipkin` | _[ZipkinTracingProvider](#zipkintracingprovider)_ |  false  | Zipkin defines the Zipkin tracing provider configuration |
 
 
 #### TracingProviderType
@@ -3561,6 +3586,7 @@ _Appears in:_
 | ----- | ----------- |
 | `OpenTelemetry` |  | 
 | `OpenTelemetry` |  | 
+| `Zipkin` |  | 
 
 
 #### TriggerEnum
@@ -3771,5 +3797,20 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `numTrustedHops` | _integer_ |  false  | NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP<br />headers to trust when determining the origin client's IP address.<br />Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for<br />for more details. |
+
+
+#### ZipkinTracingProvider
+
+
+
+ZipkinTracingProvider defines the Zipkin tracing provider configuration.
+
+_Appears in:_
+- [TracingProvider](#tracingprovider)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `enable128BitTraceId` | _boolean_ |  false  | Enable128BitTraceID determines whether a 128bit trace id will be used<br />when creating a new trace instance. If set to false, a 64bit trace<br />id will be used. |
+| `disableSharedSpanContext` | _boolean_ |  false  | DisableSharedSpanContext determines whether the default Envoy behaviour of<br />client and server spans sharing the same span context should be disabled. |
 
 
