@@ -138,6 +138,11 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-2
+        namespace: envoy-gateway
+        sectionName: http
       name: envoy-gateway/gateway-2/http
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -156,7 +161,6 @@ xdsIR:
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
-          groupVersion: gateway.networking.k8s.io/v1
           kind: HTTPRoute
           name: httproute-1
           namespace: default

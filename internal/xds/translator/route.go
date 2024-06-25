@@ -15,7 +15,6 @@ import (
 	previoushost "github.com/envoyproxy/go-control-plane/envoy/extensions/retry/host/previous_hosts/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"google.golang.org/protobuf/types/known/durationpb"
-	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -23,17 +22,9 @@ import (
 )
 
 const (
-	retryDefaultRetryOn                 = "connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes"
-	retryDefaultRetriableStatusCode     = 503
-	retryDefaultNumRetries              = 2
-	envoyGatewayMetadataNamespace       = "io.envoyproxy.gateway"
-	envoyGatewayMetadataKeyGroupVersion = "groupVersion"
-	envoyGatewayMetadataKeyKind         = "kind"
-	envoyGatewayMetadataKeyName         = "name"
-	envoyGatewayMetadataKeyNamespace    = "namespace"
-	envoyGatewayMetadataKeyAnnotations  = "annotations"
-	envoyGatewayMetadataKeySectionName  = "sectionName"
-	envoyGatewayMetadataKeyRoute        = "route"
+	retryDefaultRetryOn             = "connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes"
+	retryDefaultRetriableStatusCode = 503
+	retryDefaultNumRetries          = 2
 )
 
 func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
@@ -638,85 +629,4 @@ func hasFiltersInSettings(settings []*ir.DestinationSetting) bool {
 		}
 	}
 	return false
-}
-
-func buildXdsRouteMetadata(metadata *ir.ResourceMetadata) *corev3.Metadata {
-	if metadata == nil {
-		return nil
-	}
-
-	return &corev3.Metadata{
-		FilterMetadata: map[string]*structpb.Struct{
-			envoyGatewayMetadataNamespace: {
-				Fields: map[string]*structpb.Value{
-					envoyGatewayMetadataKeyRoute: buildResourceMetadata(metadata),
-				},
-			},
-		},
-	}
-}
-
-func buildResourceMetadata(metadata *ir.ResourceMetadata) *structpb.Value {
-	routeResourceFields := map[string]*structpb.Value{
-		envoyGatewayMetadataKeyGroupVersion: {
-			Kind: &structpb.Value_StringValue{
-				StringValue: metadata.GroupVersion,
-			},
-		},
-		envoyGatewayMetadataKeyKind: {
-			Kind: &structpb.Value_StringValue{
-				StringValue: metadata.Kind,
-			},
-		},
-		envoyGatewayMetadataKeyName: {
-			Kind: &structpb.Value_StringValue{
-				StringValue: metadata.Name,
-			},
-		},
-		envoyGatewayMetadataKeyNamespace: {
-			Kind: &structpb.Value_StringValue{
-				StringValue: metadata.Namespace,
-			},
-		},
-	}
-
-	if len(metadata.Annotations) > 0 {
-		routeResourceFields[envoyGatewayMetadataKeyAnnotations] = &structpb.Value{
-			Kind: &structpb.Value_StructValue{
-				StructValue: mapToStruct(metadata.Annotations),
-			},
-		}
-	}
-
-	if metadata.SectionName != "" {
-		routeResourceFields[envoyGatewayMetadataKeySectionName] = &structpb.Value{
-			Kind: &structpb.Value_StringValue{
-				StringValue: metadata.SectionName,
-			},
-		}
-	}
-
-	routeResourceValue := &structpb.Value{
-		Kind: &structpb.Value_StructValue{
-			StructValue: &structpb.Struct{
-				Fields: routeResourceFields,
-			},
-		},
-	}
-	return routeResourceValue
-}
-
-func mapToStruct(data map[string]string) *structpb.Struct {
-	fields := make(map[string]*structpb.Value)
-	for key, value := range data {
-		fields[key] = &structpb.Value{
-			Kind: &structpb.Value_StringValue{
-				StringValue: value,
-			},
-		}
-	}
-
-	return &structpb.Struct{
-		Fields: fields,
-	}
 }

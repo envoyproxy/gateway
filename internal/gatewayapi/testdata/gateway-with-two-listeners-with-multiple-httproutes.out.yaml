@@ -172,6 +172,11 @@ xdsIR:
       hostnames:
       - foo.com
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-1
       name: envoy-gateway/gateway-1/http-1
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -190,7 +195,6 @@ xdsIR:
         hostname: foo.com
         isHTTP2: false
         metadata:
-          groupVersion: gateway.networking.k8s.io/v1
           kind: HTTPRoute
           name: httproute-2
           namespace: default
@@ -211,7 +215,6 @@ xdsIR:
         hostname: foo.com
         isHTTP2: false
         metadata:
-          groupVersion: gateway.networking.k8s.io/v1
           kind: HTTPRoute
           name: httproute-1
           namespace: default
@@ -224,6 +227,11 @@ xdsIR:
       hostnames:
       - bar.com
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-2
       name: envoy-gateway/gateway-1/http-2
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -242,7 +250,6 @@ xdsIR:
         hostname: bar.com
         isHTTP2: false
         metadata:
-          groupVersion: gateway.networking.k8s.io/v1
           kind: HTTPRoute
           name: httproute-2
           namespace: default
@@ -263,7 +270,6 @@ xdsIR:
         hostname: bar.com
         isHTTP2: false
         metadata:
-          groupVersion: gateway.networking.k8s.io/v1
           kind: HTTPRoute
           name: httproute-1
           namespace: default

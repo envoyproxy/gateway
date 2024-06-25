@@ -287,6 +287,11 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
       name: envoy-gateway/gateway-1/http
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -305,7 +310,6 @@ xdsIR:
         hostname: example.com
         isHTTP2: false
         metadata:
-          groupVersion: gateway.networking.k8s.io/v1
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
@@ -330,7 +334,6 @@ xdsIR:
         hostname: example.com
         isHTTP2: false
         metadata:
-          groupVersion: gateway.networking.k8s.io/v1
           kind: HTTPRoute
           name: httproute-3
           namespace: envoy-gateway
@@ -355,7 +358,6 @@ xdsIR:
         hostname: example.net
         isHTTP2: false
         metadata:
-          groupVersion: gateway.networking.k8s.io/v1
           kind: HTTPRoute
           name: httproute-4
           namespace: envoy-gateway
@@ -376,7 +378,6 @@ xdsIR:
         hostname: example.net
         isHTTP2: false
         metadata:
-          groupVersion: gateway.networking.k8s.io/v1
           kind: HTTPRoute
           name: httproute-5
           namespace: envoy-gateway
@@ -397,7 +398,6 @@ xdsIR:
         hostname: '*.com'
         isHTTP2: false
         metadata:
-          groupVersion: gateway.networking.k8s.io/v1
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
@@ -418,7 +418,6 @@ xdsIR:
         hostname: '*.net'
         isHTTP2: false
         metadata:
-          groupVersion: gateway.networking.k8s.io/v1
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
@@ -439,7 +438,6 @@ xdsIR:
         hostname: '*'
         isHTTP2: false
         metadata:
-          groupVersion: gateway.networking.k8s.io/v1
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway

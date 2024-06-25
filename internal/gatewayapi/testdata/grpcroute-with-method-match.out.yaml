@@ -106,6 +106,11 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: true
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
       name: envoy-gateway/gateway-1/http
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -124,7 +129,6 @@ xdsIR:
         hostname: '*'
         isHTTP2: true
         metadata:
-          groupVersion: gateway.networking.k8s.io/v1alpha2
           kind: GRPCRoute
           name: grpcroute-1
           namespace: default
@@ -149,7 +153,6 @@ xdsIR:
         hostname: '*'
         isHTTP2: true
         metadata:
-          groupVersion: gateway.networking.k8s.io/v1alpha2
           kind: GRPCRoute
           name: grpcroute-1
           namespace: default

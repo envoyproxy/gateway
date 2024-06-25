@@ -137,6 +137,11 @@ xdsIR:
       http3:
         quicPort: 443
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: tls
       name: envoy-gateway/gateway-1/tls
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -155,7 +160,6 @@ xdsIR:
         hostname: '*'
         isHTTP2: false
         metadata:
-          groupVersion: gateway.networking.k8s.io/v1
           kind: HTTPRoute
           name: httproute-1
           namespace: default

@@ -102,9 +102,10 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 			case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
 				irListener := &ir.HTTPListener{
 					CoreListenerDetails: ir.CoreListenerDetails{
-						Name:    irListenerName(listener),
-						Address: "0.0.0.0",
-						Port:    uint32(containerPort),
+						Name:     irListenerName(listener),
+						Address:  "0.0.0.0",
+						Port:     uint32(containerPort),
+						Metadata: buildListenerMetadata(listener, gateway),
 					},
 					TLS: irTLSConfigs(listener.tlsSecrets...),
 					Path: ir.PathSettings{
@@ -154,6 +155,16 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 				foundPorts[irKey] = append(foundPorts[irKey], servicePort)
 			}
 		}
+	}
+}
+
+func buildListenerMetadata(listener *ListenerContext, gateway *GatewayContext) *ir.ResourceMetadata {
+	return &ir.ResourceMetadata{
+		Kind:        gateway.GetObjectKind().GroupVersionKind().Kind,
+		Name:        gateway.GetName(),
+		Namespace:   gateway.GetNamespace(),
+		Annotations: filterEGPrefix(gateway.GetAnnotations()),
+		SectionName: string(listener.Name),
 	}
 }
 

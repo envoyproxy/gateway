@@ -98,6 +98,10 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        name: eg
+        namespace: envoy-gateway-system
+        sectionName: http
       name: envoy-gateway-system/eg/http
       path:
         escapedSlashesAction: UnescapeAndRedirect

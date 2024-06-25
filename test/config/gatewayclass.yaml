@@ -45,7 +45,7 @@ spec:
         - format:
             type: Text
             text: |
-              [%START_TIME%] %METADATA(ROUTE:io.envoyproxy.gateway:route:namespace)%/%METADATA(ROUTE:io.envoyproxy.gateway:route:name)% "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
+              [%START_TIME%] %METADATA(ROUTE:envoy-gateway:route:namespace)%/%METADATA(ROUTE:envoy-gateway:route:name)% "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
           sinks:
             - type: File
               file:

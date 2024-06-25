@@ -232,6 +232,10 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-tls
+        namespace: envoy-gateway
       name: envoy-gateway/gateway-tls/
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -267,7 +271,6 @@ xdsIR:
         hostname: '*'
         isHTTP2: false
         metadata:
-          groupVersion: gateway.networking.k8s.io/v1
           kind: HTTPRoute
           name: httproute-tls
           namespace: envoy-gateway

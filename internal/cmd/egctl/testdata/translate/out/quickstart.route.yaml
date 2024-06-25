@@ -9,15 +9,22 @@ xds:
         virtualHosts:
         - domains:
           - www.example.com
+          metadata:
+            filterMetadata:
+              envoy-gateway:
+                gateway:
+                  kind: ""
+                  name: eg
+                  namespace: envoy-gateway-system
+                  sectionName: http
           name: envoy-gateway-system/eg/http/www_example_com
           routes:
           - match:
               prefix: /
             metadata:
               filterMetadata:
-                io.envoyproxy.gateway:
+                envoy-gateway:
                   route:
-                    groupVersion: ""
                     kind: HTTPRoute
                     name: backend
                     namespace: envoy-gateway-system

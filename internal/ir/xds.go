@@ -209,6 +209,8 @@ type CoreListenerDetails struct {
 	Port uint32 `json:"port" yaml:"port"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension policy
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
+	// Metadata is used to enrich envoy resource metadata with user and provider-specific information
+	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 }
 
 func (l CoreListenerDetails) GetName() string {
@@ -2259,8 +2261,6 @@ type DestinationFilters struct {
 type ResourceMetadata struct {
 	// Kind is the kind of the resource
 	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
-	// GroupVersion is the group/version of the resource
-	GroupVersion string `json:"groupVersion,omitempty" yaml:"groupVersion,omitempty"`
 	// Name is the name of the resource
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 	// Namespace is the namespace of the resource

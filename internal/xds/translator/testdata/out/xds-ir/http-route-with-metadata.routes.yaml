@@ -3,6 +3,16 @@
   virtualHosts:
   - domains:
     - example.com
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          gateway:
+            annotations:
+              foo: bar
+            kind: Gateway
+            name: first-gateway
+            namespace: first-gateway
+            sectionName: first-listener
     name: first-listener/example_com
     routes:
     - match:
@@ -13,11 +23,10 @@
             exact: "yes"
       metadata:
         filterMetadata:
-          io.envoyproxy.gateway:
+          envoy-gateway:
             route:
               annotations:
                 foo: bar
-              groupVersion: gateway.networking.k8s.io/v1
               kind: HTTPRoute
               name: first-route-name
               namespace: first-route-ns

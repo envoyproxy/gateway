@@ -2,6 +2,14 @@ http:
 - name: first-listener
   address: 0.0.0.0
   port: 10080
+  metadata:
+    groupVersion: "gateway.networking.k8s.io/v1"
+    kind: "Gateway"
+    name: "first-gateway"
+    namespace: "first-gateway"
+    sectionName: "first-listener"
+    annotations:
+      foo: bar
   hostnames:
   - "*"
   path:

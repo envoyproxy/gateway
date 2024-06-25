@@ -1078,15 +1078,22 @@ xds:
           virtualHosts:
           - domains:
             - www.example.com
+            metadata:
+              filterMetadata:
+                envoy-gateway:
+                  gateway:
+                    kind: ""
+                    name: eg
+                    namespace: default
+                    sectionName: http
             name: default/eg/http/www_example_com
             routes:
             - match:
                 prefix: /
               metadata:
                 filterMetadata:
-                  io.envoyproxy.gateway:
+                  envoy-gateway:
                     route:
-                      groupVersion: ""
                       kind: HTTPRoute
                       name: backend
                       namespace: default
@@ -1102,15 +1109,22 @@ xds:
           virtualHosts:
           - domains:
             - www.grpc-example.com
+            metadata:
+              filterMetadata:
+                envoy-gateway:
+                  gateway:
+                    kind: ""
+                    name: eg
+                    namespace: default
+                    sectionName: grpc
             name: default/eg/grpc/www_grpc-example_com
             routes:
             - match:
                 path: /com.example.Things/DoThing
               metadata:
                 filterMetadata:
-                  io.envoyproxy.gateway:
+                  envoy-gateway:
                     route:
-                      groupVersion: ""
                       kind: GRPCRoute
                       name: backend
                       namespace: default

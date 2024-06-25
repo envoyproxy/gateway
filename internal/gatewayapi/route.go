@@ -725,11 +725,10 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 
 func buildRouteMetadata(route RouteContext) *ir.ResourceMetadata {
 	return &ir.ResourceMetadata{
-		Kind:         route.GetObjectKind().GroupVersionKind().Kind,
-		GroupVersion: route.GetObjectKind().GroupVersionKind().GroupVersion().String(),
-		Name:         route.GetName(),
-		Namespace:    route.GetNamespace(),
-		Annotations:  filterEGPrefix(route.GetAnnotations()),
+		Kind:        route.GetObjectKind().GroupVersionKind().Kind,
+		Name:        route.GetName(),
+		Namespace:   route.GetNamespace(),
+		Annotations: filterEGPrefix(route.GetAnnotations()),
 	}
 }
 
