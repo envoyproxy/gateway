@@ -514,6 +514,8 @@ type HTTPClientTimeout struct {
 	RequestReceivedTimeout *metav1.Duration `json:"requestReceivedTimeout,omitempty" yaml:"requestReceivedTimeout,omitempty"`
 	// IdleTimeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.
 	IdleTimeout *metav1.Duration `json:"idleTimeout,omitempty" yaml:"idleTimeout,omitempty"`
+	//The term "StreamIdleTimeout" refers to a configuration option in Envoy that manages the idle timeout for data streams. It represents the duration of time after which Envoy will close a data stream if there is no data transmission within that period.
+	StreamIdleTimeout *metav1.Duration `json:"streamIdleTimeout,omitempty" yaml:"idleTimeout,omitempty"`
 }
 
 // HTTPRoute holds the route information associated with the HTTP Route

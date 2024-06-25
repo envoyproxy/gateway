@@ -481,6 +481,12 @@ spec:
                           initiation and stops when either the last byte of the request is sent upstream or when the response begins.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                      streamIdleTimeout:
+                        description: |-
+                          The StreamIdleTimeout refers to a configuration setting in Envoy, an open-source edge and service proxy designed for cloud-native applications. Envoy is often used in service mesh architectures to handle traffic management, load balancing, and observability.
+                          Default: 1 hour.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
                     type: object
                   tcp:
                     description: Timeout settings for TCP.
