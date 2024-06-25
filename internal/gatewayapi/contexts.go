@@ -251,14 +251,6 @@ func GetRouteParentContext(route RouteContext, forParentRef gwapiv1.ParentRefere
 		return ctx
 	}
 
-	// TODO: [v1alpha2-gwapiv1]
-	// can remove this check once all routes graduates to gwapiv1.
-	isV1Route := false
-	kind := rv.FieldByName("Kind").String()
-	if kind == KindHTTPRoute || kind == KindGRPCRoute {
-		isV1Route = true
-	}
-
 	var parentRef *gwapiv1.ParentReference
 	specParentRefs := rv.FieldByName("Spec").FieldByName("ParentRefs")
 	for i := 0; i < specParentRefs.Len(); i++ {
@@ -292,13 +284,9 @@ func GetRouteParentContext(route RouteContext, forParentRef gwapiv1.ParentRefere
 	}
 
 	if routeParentStatusIdx == -1 {
-		tmpPR := forParentRef
-		if !isV1Route {
-			tmpPR = DowngradeParentReference(tmpPR)
-		}
 		rParentStatus := gwapiv1a2.RouteParentStatus{
 			ControllerName: gwapiv1a2.GatewayController(rv.FieldByName("GatewayControllerName").String()),
-			ParentRef:      tmpPR,
+			ParentRef:      forParentRef,
 		}
 		statusParents.Set(reflect.Append(statusParents, reflect.ValueOf(rParentStatus)))
 		routeParentStatusIdx = statusParents.Len() - 1
