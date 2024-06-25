@@ -17,6 +17,7 @@ import (
 	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -65,8 +66,8 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 			config := &tracecfg.ZipkinConfig{
 				CollectorCluster:         tracing.Destination.Name,
 				CollectorEndpoint:        "/api/v2/spans",
-				TraceId_128Bit:           *tracing.Provider.Zipkin.Enable128BitTraceID,
-				SharedSpanContext:        wrapperspb.Bool(!*tracing.Provider.Zipkin.DisableSharedSpanContext),
+				TraceId_128Bit:           ptr.Deref(tracing.Provider.Zipkin.Enable128BitTraceID, false),
+				SharedSpanContext:        wrapperspb.Bool(!ptr.Deref(tracing.Provider.Zipkin.DisableSharedSpanContext, false)),
 				CollectorEndpointVersion: tracecfg.ZipkinConfig_HTTP_JSON,
 			}
 
