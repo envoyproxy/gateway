@@ -267,7 +267,7 @@ type HTTPListener struct {
 	// ClientTimeout sets the timeout configuration for downstream connections
 	Timeout *ClientTimeout `json:"timeout,omitempty" yaml:"clientTimeout,omitempty"`
 	// Connection settings
-	Connection *Connection `json:"connection,omitempty" yaml:"connection,omitempty"`
+	Connection *ClientConnection `json:"connection,omitempty" yaml:"connection,omitempty"`
 }
 
 // Validate the fields within the HTTPListener structure
@@ -1351,7 +1351,7 @@ type TCPListener struct {
 	// ClientTimeout sets the timeout configuration for downstream connections.
 	Timeout *ClientTimeout `json:"timeout,omitempty" yaml:"clientTimeout,omitempty"`
 	// Connection settings for clients
-	Connection *Connection `json:"connection,omitempty" yaml:"connection,omitempty"`
+	Connection *ClientConnection `json:"connection,omitempty" yaml:"connection,omitempty"`
 	// Routes associated with TCP traffic to the listener.
 	Routes []*TCPRoute `json:"routes,omitempty" yaml:"routes,omitempty"`
 }
@@ -2137,9 +2137,9 @@ type BackendConnection struct {
 	BufferLimitBytes *uint32 `json:"bufferLimit,omitempty" yaml:"bufferLimit,omitempty"`
 }
 
-// Connection settings for downstream connections
+// ClientConnection settings for downstream connections
 // +k8s:deepcopy-gen=true
-type Connection struct {
+type ClientConnection struct {
 	// ConnectionLimit is the limit of number of connections
 	ConnectionLimit *ConnectionLimit `json:"limit,omitempty" yaml:"limit,omitempty"`
 	// BufferLimitBytes is the maximum number of bytes that can be buffered for a connection.
