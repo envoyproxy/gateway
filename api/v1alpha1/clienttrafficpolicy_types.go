@@ -221,6 +221,10 @@ type ClientIPDetectionSettings struct {
 	//
 	// +optional
 	XForwardedFor *XForwardedForSettings `json:"xForwardedFor,omitempty"`
+	// InternalAddressConfigSettings provides configuration for which connections that should be considered internal for stats and header sanitation
+	//
+	// +optional
+	InternalAddressConfig *InternalAddressConfigSettings `json:"internalAddressConfig,omitempty"`
 	// CustomHeader provides configuration for determining the client IP address for a request based on
 	// a trusted custom HTTP header. This uses the custom_header original IP detection extension.
 	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto
@@ -239,6 +243,31 @@ type XForwardedForSettings struct {
 	//
 	// +optional
 	NumTrustedHops *uint32 `json:"numTrustedHops,omitempty"`
+}
+
+// InternalAddressConfigSettings provides configuration for what network
+// addresses are considered internal for stats and header sanitation
+// purposes. If unspecified, only RFC1918 IP addresses will be considered
+// internal.
+type InternalAddressConfigSettings struct {
+	// UnixSockets: Whether unix socket addresses should be considered internal.
+	//
+	// +optional
+	UnixSockets bool `json:"unix_sockets,omitempty"`
+	// CidrRanges: List of CIDR ranges that are treated as internal.
+	// If unset, then RFC1918 / RFC4193 IP addresses will be considered internal.
+	//
+	// + optional
+	CidrRanges []*CidrRange `json:"cidr_ranges,omitempty"`
+}
+
+// CidrRange specifies an IP Address and a prefix length to construct
+// the subnet mask for a `CIDR <https://tools.ietf.org/html/rfc4632>`_ range.
+type CidrRange struct {
+	// IPv4 or IPv6 address, e.g. “192.0.0.0“ or “2001:db8::“.
+	AddressPrefix string `json:"address_prefix,omitempty"`
+	// Length of prefix, e.g. 0, 32. Defaults to 0 when unset.
+	PrefixLen *uint32 `json:"prefix_len,omitempty"`
 }
 
 // CustomHeaderExtensionSettings provides configuration for determining the client IP address for a request based on

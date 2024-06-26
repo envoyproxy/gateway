@@ -104,6 +104,21 @@ func xffNumTrustedHops(clientIPDetection *ir.ClientIPDetectionSettings) uint32 {
 	return 0
 }
 
+func internalAddressConfig(clientIPDetection *ir.ClientIPDetectionSettings) *hcmv3.HttpConnectionManager_InternalAddressConfig {
+	// Return early if settings are nil
+	if clientIPDetection == nil || clientIPDetection.InternalAddressConfig == nil {
+		return nil
+	}
+
+	var cidrRanges []*corev3.CidrRange
+
+	for _, cidrRange := range clientIPDetection.InternalAddressConfig.CidrRanges {
+		cidrRanges = append(cidrRanges, &corev3.CidrRange{AddressPrefix: cidrRange.AddressPrefix, PrefixLen: &wrapperspb.UInt32Value{Value: *cidrRange.PrefixLen}})
+	}
+
+	return &hcmv3.HttpConnectionManager_InternalAddressConfig{UnixSockets: clientIPDetection.InternalAddressConfig.UnixSockets, CidrRanges: cidrRanges}
+}
+
 func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettings) []*corev3.TypedExtensionConfig {
 	// Return early if settings are nil
 	if clientIPDetection == nil {
@@ -253,6 +268,7 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 		// https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
 		UseRemoteAddress:              &wrapperspb.BoolValue{Value: useRemoteAddress},
 		XffNumTrustedHops:             xffNumTrustedHops(irListener.ClientIPDetection),
+		InternalAddressConfig:         internalAddressConfig(irListener.ClientIPDetection),
 		OriginalIpDetectionExtensions: originalIPDetectionExtensions,
 		// normalize paths according to RFC 3986
 		NormalizePath:                &wrapperspb.BoolValue{Value: true},

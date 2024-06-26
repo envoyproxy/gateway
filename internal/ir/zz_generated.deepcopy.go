@@ -350,6 +350,11 @@ func (in *ClientIPDetectionSettings) DeepCopyInto(out *ClientIPDetectionSettings
 		*out = new(v1alpha1.XForwardedForSettings)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.InternalAddressConfig != nil {
+		in, out := &in.InternalAddressConfig, &out.InternalAddressConfig
+		*out = new(v1alpha1.InternalAddressConfigSettings)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.CustomHeader != nil {
 		in, out := &in.CustomHeader, &out.CustomHeader
 		*out = new(v1alpha1.CustomHeaderExtensionSettings)

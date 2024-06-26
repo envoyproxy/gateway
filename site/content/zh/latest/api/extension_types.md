@@ -521,6 +521,22 @@ _Appears in:_
 | `allowCredentials` | _boolean_ |  true  | AllowCredentials indicates whether a request can include user credentials<br />like cookies, authentication headers, or TLS client certificates. |
 
 
+#### CidrRange
+
+
+
+CidrRange specifies an IP Address and a prefix length to construct
+the subnet mask for a `CIDR <https://tools.ietf.org/html/rfc4632>`_ range.
+
+_Appears in:_
+- [InternalAddressConfigSettings](#internaladdressconfigsettings)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `address_prefix` | _string_ |  true  | IPv4 or IPv6 address, e.g. “192.0.0.0“ or “2001:db8::“. |
+| `prefix_len` | _integer_ |  true  | Length of prefix, e.g. 0, 32. Defaults to 0 when unset. |
+
+
 #### CircuitBreaker
 
 
@@ -581,6 +597,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `xForwardedFor` | _[XForwardedForSettings](#xforwardedforsettings)_ |  false  | XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address. |
+| `internalAddressConfig` | _[InternalAddressConfigSettings](#internaladdressconfigsettings)_ |  false  | InternalAddressConfigSettings provides configuration for which connections that should be considered internal for stats and header sanitation |
 | `customHeader` | _[CustomHeaderExtensionSettings](#customheaderextensionsettings)_ |  false  | CustomHeader provides configuration for determining the client IP address for a request based on<br />a trusted custom HTTP header. This uses the custom_header original IP detection extension.<br />Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto<br />for more details. |
 
 
@@ -2005,6 +2022,24 @@ _Appears in:_
 | Value | Description |
 | ----- | ----------- |
 | `Host` | InfrastructureProviderTypeHost defines the "Host" provider.<br /> | 
+
+
+#### InternalAddressConfigSettings
+
+
+
+InternalAddressConfigSettings provides configuration for what network
+addresses are considered internal for stats and header sanitation
+purposes. If unspecified, only RFC1918 IP addresses will be considered
+internal.
+
+_Appears in:_
+- [ClientIPDetectionSettings](#clientipdetectionsettings)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `unix_sockets` | _boolean_ |  false  | UnixSockets: Whether unix socket addresses should be considered internal. |
+| `cidr_ranges` | _[CidrRange](#cidrrange) array_ |  true  | CidrRanges: List of CIDR ranges that are treated as internal.<br />If unset, then RFC1918 / RFC4193 IP addresses will be considered internal. |
 
 
 #### JSONPatchOperation
