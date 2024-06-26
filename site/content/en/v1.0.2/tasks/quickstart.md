@@ -4,7 +4,7 @@ weight: 1
 description: Get started with Envoy Gateway in a few simple steps.
 ---
 
-This guide will help you get started with Envoy Gateway in a few simple steps.
+This "quick start" will help you get started with Envoy Gateway in a few simple steps.
 
 ## Prerequisites
 
@@ -47,6 +47,28 @@ consideration when debugging.
 
 ## Testing the Configuration
 
+{{< tabpane text=true >}}
+{{% tab header="With External LoadBalancer Support" %}}
+
+You can also test the same functionality by sending traffic to the External IP. To get the external IP of the
+Envoy service, run:
+
+```shell
+export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
+```
+
+In certain environments, the load balancer may be exposed using a hostname, instead of an IP address. If so, replace
+`ip` in the above command with `hostname`.
+
+Curl the example app through Envoy proxy:
+
+```shell
+curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST/get
+```
+
+{{% /tab %}}
+{{% tab header="Without LoadBalancer Support" %}}
+
 Get the name of the Envoy service created the by the example Gateway:
 
 ```shell
@@ -65,23 +87,8 @@ Curl the example app through Envoy proxy:
 curl --verbose --header "Host: www.example.com" http://localhost:8888/get
 ```
 
-### External LoadBalancer Support
-
-You can also test the same functionality by sending traffic to the External IP. To get the external IP of the
-Envoy service, run:
-
-```shell
-export GATEWAY_HOST=$(kubectl get svc/${ENVOY_SERVICE} -n envoy-gateway-system -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-```
-
-In certain environments, the load balancer may be exposed using a hostname, instead of an IP address. If so, replace
-`ip` in the above command with `hostname`.
-
-Curl the example app through Envoy proxy:
-
-```shell
-curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST/get
-```
+{{% /tab %}}
+{{< /tabpane >}}
 
 ## What to explore next?
 
