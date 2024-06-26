@@ -1183,7 +1183,7 @@ func int64ToUint32(in int64) (uint32, bool) {
 func (t *Translator) buildBackendConnection(policy *egv1a1.BackendTrafficPolicy) (*ir.BackendConnection, error) {
 	var (
 		bcIR = &ir.BackendConnection{}
-		bc   = &egv1a1.BackendTrafficPolicyConnection{}
+		bc   = &egv1a1.BackendConnection{}
 	)
 
 	if policy.Spec.Connection != nil {

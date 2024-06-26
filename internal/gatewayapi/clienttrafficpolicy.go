@@ -39,9 +39,11 @@ func hasSectionName(target *gwapiv1a2.LocalPolicyTargetReferenceWithSectionName)
 	return target.SectionName != nil
 }
 
-func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
+func (t *Translator) ProcessClientTrafficPolicies(
+	resources *Resources,
 	gateways []*GatewayContext,
-	xdsIR XdsIRMap, infraIR InfraIRMap,
+	xdsIR XdsIRMap,
+	infraIR InfraIRMap,
 ) []*egv1a1.ClientTrafficPolicy {
 	var res []*egv1a1.ClientTrafficPolicy
 
@@ -132,7 +134,7 @@ func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 				var err error
 				for _, l := range gateway.listeners {
 					// Find IR
-					irKey := t.getIRKey(l.gateway)
+					irKey := t.getIRKey(l.gateway.Gateway)
 					// It must exist since we've already finished processing the gateways
 					gwXdsIR := xdsIR[irKey]
 					if string(l.Name) == section {
@@ -251,7 +253,7 @@ func (t *Translator) ProcessClientTrafficPolicies(resources *Resources,
 					}
 
 					// Find IR
-					irKey := t.getIRKey(l.gateway)
+					irKey := t.getIRKey(l.gateway.Gateway)
 					// It must exist since we've already finished processing the gateways
 					gwXdsIR := xdsIR[irKey]
 					if err := validatePortOverlapForClientTrafficPolicy(l, gwXdsIR, true); err != nil {
@@ -378,7 +380,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 	xdsIR XdsIRMap, infraIR InfraIRMap, resources *Resources,
 ) error {
 	// Find IR
-	irKey := t.getIRKey(l.gateway)
+	irKey := t.getIRKey(l.gateway.Gateway)
 	// It must exist since we've already finished processing the gateways
 	gwXdsIR := xdsIR[irKey]
 
@@ -404,7 +406,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 	// HTTP and TCP listeners can both be configured by common fields below.
 	var (
 		keepalive           *ir.TCPKeepalive
-		connection          *ir.Connection
+		connection          *ir.ClientConnection
 		tlsConfig           *ir.TLSConfig
 		enableProxyProtocol bool
 		timeout             *ir.ClientTimeout
@@ -850,12 +852,12 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 	return irTLSConfig, nil
 }
 
-func buildConnection(connection *egv1a1.Connection) (*ir.Connection, error) {
+func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection, error) {
 	if connection == nil {
 		return nil, nil
 	}
 
-	irConnection := &ir.Connection{}
+	irConnection := &ir.ClientConnection{}
 
 	if connection.ConnectionLimit != nil {
 		irConnectionLimit := &ir.ConnectionLimit{}

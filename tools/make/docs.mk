@@ -4,7 +4,7 @@ RELEASE_VERSIONS ?= $(foreach v,$(wildcard ${ROOT_DIR}/docs/*),$(notdir ${v}))
 ##@ Docs
 
 .PHONY: docs
-docs: docs.clean helm-readme-gen docs-api docs-api-headings ## Generate Envoy Gateway Docs Sources
+docs: docs.clean helm-readme-gen docs-api ## Generate Envoy Gateway Docs Sources
 	@$(LOG_TARGET)
 	cd $(ROOT_DIR)/site && npm install
 	cd $(ROOT_DIR)/site && npm run build:production
@@ -32,7 +32,7 @@ docs.clean:
 	rm -f site/.hugo_build.lock
 
 .PHONY: docs-api
-docs-api: docs-api-gen helm-readme-gen docs-api-headings
+docs-api: docs-api-gen helm-readme-gen
 
 .PHONY: helm-readme-gen
 helm-readme-gen:
@@ -76,12 +76,6 @@ docs-api-gen: $(tools/crd-ref-docs)
 	--renderer=markdown
 	# below line copy command for sync English api doc into Chinese
 	cp site/content/en/latest/api/extension_types.md site/content/zh/latest/api/extension_types.md
-
-.PHONY: docs-api-headings # Required since sphinx mst does not link to h4 headings.
-docs-api-headings:
-	@$(LOG_TARGET)
-	tools/hack/docs-headings.sh site/content/en/latest/api/extension_types.md
-	tools/hack/docs-headings.sh site/content/zh/latest/api/extension_types.md
 
 .PHONY: docs-release-prepare
 docs-release-prepare:
