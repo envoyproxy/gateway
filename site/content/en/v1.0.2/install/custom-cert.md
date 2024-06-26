@@ -59,7 +59,7 @@ We use Cert-Manager to manage the certificates. You can install it by following 
    EOF
    ```
 
-2. Create a cert for envoy gateway controller, the cert will be stored in secret `envoy-gatewy`.
+2. Create a cert for envoy gateway controller, the cert will be stored in secret `envoy-gateway`.
 
    ```shell
    cat<<EOF | kubectl apply -f -
