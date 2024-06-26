@@ -1,5 +1,6 @@
 ---
 title: "External Authorization"
+aliases: "/tasks/security/ext-auth"
 ---
 
 This guide provides instructions for configuring external authentication.

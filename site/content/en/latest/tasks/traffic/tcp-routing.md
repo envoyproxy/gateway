@@ -1,5 +1,6 @@
 ---
 title: "TCP Routing"
+aliases: "/tasks/traffic/tcp-routing"
 ---
 
 [TCPRoute][] provides a way to route TCP requests. When combined with a Gateway listener, it can be used to forward

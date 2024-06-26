@@ -1,5 +1,6 @@
 ---
 title: "Visualising metrics using Grafana"
+aliases: "/tasks/observability/grafana-integration"
 ---
 
 Envoy Gateway provides support for exposing Envoy Gateway and Envoy Proxy metrics to a Prometheus instance.

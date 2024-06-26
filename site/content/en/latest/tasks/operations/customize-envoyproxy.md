@@ -1,5 +1,6 @@
 ---
 title: "Customize EnvoyProxy"
+aliases: "/tasks/operations/customize-envoyproxy"
 ---
 
 Envoy Gateway provides an [EnvoyProxy][] CRD that can be linked to the ParametersRef

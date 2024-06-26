@@ -1,5 +1,6 @@
 ---
 title: "Connection Limit"
+aliases: "/tasks/traffic/connection-limit"
 ---
 
 The connection limit features allows users to limit the number of concurrently active TCP connections on a [Gateway][] or a [Listener][].

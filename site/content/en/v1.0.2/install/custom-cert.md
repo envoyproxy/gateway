@@ -1,5 +1,6 @@
 ---
 title: Control Plane Authentication using custom certs
+aliases: "/install/custom-cert"
 weight: -70
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: "HTTP Response Headers"
+aliases: "/tasks/traffic/http-response-headers"
 ---
 
 The [HTTPRoute][] resource can modify the headers of a response before responding it to the downstream service. To learn

@@ -1,5 +1,6 @@
 ---
 title: "Global Rate Limit"
+aliases: "/tasks/traffic/global-rate-limit"
 ---
 
 Rate limit is a feature that allows the user to limit the number of incoming requests to a predefined value based on attributes within the traffic flow.

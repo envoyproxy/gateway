@@ -1,5 +1,6 @@
 ---
 title: "Fault Injection"
+aliases: "/tasks/traffic/fault-injection"
 ---
 
 [Envoy fault injection] can be used to inject delays and abort requests to mimic failure scenarios such as service failures and overloads.

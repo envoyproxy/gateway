@@ -1,5 +1,6 @@
 ---
 title: "GRPC Routing"
+aliases: "/tasks/traffic/grpc-routing"
 ---
 
 The [GRPCRoute][] resource allows users to configure gRPC routing by matching HTTP/2 traffic and forwarding it to backend gRPC servers.

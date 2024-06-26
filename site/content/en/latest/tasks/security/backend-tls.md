@@ -1,5 +1,6 @@
 ---
 title: "Backend TLS: Gateway to Backend"
+aliases: "/tasks/security/backend-tls"
 ---
 
 This task demonstrates how TLS can be achieved between the Gateway and a backend.

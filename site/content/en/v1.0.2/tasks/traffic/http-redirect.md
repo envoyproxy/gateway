@@ -1,5 +1,6 @@
 ---
 title: "HTTP Redirects"
+aliases: "/tasks/traffic/http-redirect"
 ---
 
 The [HTTPRoute][] resource can issue redirects to clients or rewrite paths sent upstream using filters. Note that

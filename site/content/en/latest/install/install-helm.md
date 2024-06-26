@@ -1,5 +1,6 @@
 ---
 title: "Install with Helm"
+aliases: "/install/install-helm"
 weight: -100
 ---
 

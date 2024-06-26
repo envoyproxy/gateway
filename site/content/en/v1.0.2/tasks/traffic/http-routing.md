@@ -1,5 +1,6 @@
 ---
 title: "HTTP Routing"
+aliases: "/tasks/traffic/http-routing"
 ---
 
 The [HTTPRoute][] resource allows users to configure HTTP routing by matching HTTP traffic and forwarding it to

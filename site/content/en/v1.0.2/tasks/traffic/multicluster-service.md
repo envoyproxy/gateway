@@ -1,5 +1,6 @@
 ---
 title: "Multicluster Service Routing"
+aliases: "/tasks/traffic/multicluster-service"
 ---
 
 The Multicluster Service API ServiceImport object can be used as part of the GatewayAPI backendRef for configuring routes. For more information about multicluster service API follow [sig documentation](https://multicluster.sigs.k8s.io/concepts/multicluster-services-api/).

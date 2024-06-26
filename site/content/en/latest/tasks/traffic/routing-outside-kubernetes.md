@@ -1,5 +1,6 @@
 ---
 title: "Routing outside Kubernetes"
+aliases: "/tasks/traffic/routing-outside-kubernetes"
 ---
 
 Routing to endpoints outside the Kubernetes cluster where Envoy Gateway and its corresponding Envoy Proxy fleet is

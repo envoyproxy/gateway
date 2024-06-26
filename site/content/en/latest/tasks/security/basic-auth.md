@@ -1,5 +1,6 @@
 ---
 title: "Basic Authentication"
+aliases: "/tasks/security/basic-auth"
 ---
 
 This task provides instructions for configuring [HTTP Basic authentication][http Basic authentication]. 

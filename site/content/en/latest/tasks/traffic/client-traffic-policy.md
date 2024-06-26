@@ -1,5 +1,6 @@
 ---
 title: "Client Traffic Policy"
+aliases: "/tasks/traffic/client-traffic-policy"
 ---
 
 This task explains the usage of the [ClientTrafficPolicy][] API.

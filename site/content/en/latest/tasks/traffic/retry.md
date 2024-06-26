@@ -1,5 +1,6 @@
 ---
 title: Retry
+aliases: "/tasks/traffic/retry"
 ---
 
 A retry setting specifies the maximum number of times an Envoy proxy attempts to connect to a service if the initial call fails. Retries can enhance service availability and application performance by making sure that calls don’t fail permanently because of transient problems such as a temporarily overloaded service or network. The interval between retries prevents the called service from being overwhelmed with requests.

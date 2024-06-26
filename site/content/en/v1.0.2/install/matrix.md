@@ -1,5 +1,6 @@
 ---
 title: Compatibility Matrix
+aliases: "/install/matrix"
 description: This section includes Compatibility Matrix of Envoy Gateway.
 ---
 

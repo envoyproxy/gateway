@@ -1,5 +1,6 @@
 ---
 title: "Backend Routing"
+aliases: "/tasks/traffic/backend"
 ---
 
 Envoy Gateway supports routing to native K8s resources such as `Service` and `ServiceImport`. The `Backend` API is a custom Envoy Gateway [extension resource][] that can used in Gateway-API [BackendObjectReference][].

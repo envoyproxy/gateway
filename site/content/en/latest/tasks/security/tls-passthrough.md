@@ -1,5 +1,6 @@
 ---
 title: "TLS Passthrough"
+aliases: "/tasks/security/tls-passthrough"
 ---
 
 This task will walk through the steps required to configure TLS Passthrough via Envoy Gateway. Unlike configuring

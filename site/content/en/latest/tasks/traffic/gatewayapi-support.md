@@ -1,5 +1,6 @@
 ---
 title: "Gateway API Support"
+aliases: "/tasks/traffic/gatewayapi-support"
 ---
 
 As mentioned in the [system design][] document, Envoy Gateway's managed data plane is configured dynamically through

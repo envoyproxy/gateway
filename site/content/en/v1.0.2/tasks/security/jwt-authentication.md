@@ -1,5 +1,6 @@
 ---
 title: "JWT Authentication"
+aliases: "/tasks/security/jwt-authentication"
 ---
 
 This guide provides instructions for configuring [JSON Web Token (JWT)][jwt] authentication. JWT authentication checks

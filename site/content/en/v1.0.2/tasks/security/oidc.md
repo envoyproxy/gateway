@@ -1,5 +1,6 @@
 ---
 title: "OIDC Authentication"
+aliases: "/tasks/security/oidc"
 ---
 
 This task provides instructions for configuring [OpenID Connect (OIDC)][oidc] authentication.

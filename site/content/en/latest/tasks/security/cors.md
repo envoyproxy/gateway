@@ -1,5 +1,6 @@
 ---
 title: "CORS"
+aliases: "/tasks/security/cors"
 ---
 
 This task provides instructions for configuring [Cross-Origin Resource Sharing (CORS)][cors] on Envoy Gateway.

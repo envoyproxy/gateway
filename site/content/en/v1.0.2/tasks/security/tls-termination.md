@@ -1,5 +1,6 @@
 ---
 title: "TLS Termination for TCP"
+aliases: "/tasks/security/tls-termination"
 ---
 
 This guide will walk through the steps required to configure TLS Terminate mode for TCP traffic via Envoy Gateway. The guide uses a self-signed CA, so it should be used for testing and demonstration purposes only.

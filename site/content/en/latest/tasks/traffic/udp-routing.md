@@ -1,5 +1,6 @@
 ---
 title: "UDP Routing"
+aliases: "/tasks/traffic/udp-routing"
 ---
 
 The [UDPRoute][] resource allows users to configure UDP routing by matching UDP traffic and forwarding it to Kubernetes

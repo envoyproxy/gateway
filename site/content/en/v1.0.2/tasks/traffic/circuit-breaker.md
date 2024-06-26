@@ -1,5 +1,6 @@
 ---
 title: "Circuit Breakers"
+aliases: "/tasks/traffic/circuit-breaker"
 ---
 
 [Envoy circuit breakers] can be used to fail quickly and apply back-pressure in response to upstream service degradation. 

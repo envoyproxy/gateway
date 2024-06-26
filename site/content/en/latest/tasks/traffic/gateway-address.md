@@ -1,5 +1,6 @@
 ---
 title: "Gateway Address"
+aliases: "/tasks/traffic/gateway-address"
 ---
 
 The Gateway API provides an optional [Addresses][] field through which Envoy Gateway can set addresses for Envoy Proxy Service.

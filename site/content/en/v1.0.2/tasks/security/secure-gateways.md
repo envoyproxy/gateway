@@ -1,5 +1,6 @@
 ---
 title: "Secure Gateways"
+aliases: "/tasks/security/secure-gateways"
 ---
 
 This task will help you get started using secure Gateways.

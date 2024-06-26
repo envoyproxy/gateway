@@ -1,5 +1,6 @@
 ---
 title: "RateLimit Observability"
+aliases: "/tasks/observability/rate-limit-observability"
 ---
 
 Envoy Gateway provides observability for the RateLimit instances.

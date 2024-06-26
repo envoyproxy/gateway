@@ -1,5 +1,6 @@
 ---
 title: "HTTP Request Headers"
+aliases: "/tasks/traffic/http-request-headers"
 ---
 
 The [HTTPRoute][] resource can modify the headers of a request before forwarding it to the upstream service. HTTPRoute

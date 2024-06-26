@@ -1,5 +1,6 @@
 ---
 title: "HTTP URL Rewrite"
+aliases: "/tasks/traffic/http-urlrewrite"
 ---
 
 [HTTPURLRewriteFilter][] defines a filter that modifies a request during forwarding. At most one of these filters may be

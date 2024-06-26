@@ -1,5 +1,6 @@
 ---
 title: "Install with Kubernetes YAML"
+aliases: "/install/install-yaml"
 weight: -99
 ---
 

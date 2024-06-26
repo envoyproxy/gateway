@@ -1,5 +1,6 @@
 ---
 title: "External Processing"
+aliases: "/tasks/extensibility/ext-proc"
 ---
 
 This task provides instructions for configuring external processing.

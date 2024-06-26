@@ -1,5 +1,6 @@
 ---
 title: "HTTPRoute Request Mirroring"
+aliases: "/tasks/traffic/http-request-mirroring"
 ---
 
 The [HTTPRoute][] resource allows one or more [backendRefs][] to be provided. Requests will be routed to these upstreams. It is possible to divide the traffic between these backends using [Traffic Splitting][], but it is also possible to mirror requests to another Service instead. Request mirroring is accomplished using Gateway API's [HTTPRequestMirrorFilter][] on the `HTTPRoute`.

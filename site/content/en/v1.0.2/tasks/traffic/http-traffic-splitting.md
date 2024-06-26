@@ -1,5 +1,6 @@
 ---
 title: "HTTPRoute Traffic Splitting"
+aliases: "/tasks/traffic/http-traffic-splitting"
 ---
 
 The [HTTPRoute][] resource allows one or more [backendRefs][] to be provided. Requests will be routed to these upstreams

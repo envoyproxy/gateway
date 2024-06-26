@@ -1,5 +1,6 @@
 ---
 title: "Deployment Mode"
+aliases: "/tasks/operations/deployment-mode"
 ---
 ## Deployment modes
 

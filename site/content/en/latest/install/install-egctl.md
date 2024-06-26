@@ -1,5 +1,6 @@
 ---
 title: "Install egctl"
+aliases: "/install/install-egctl"
 weight: -80
 ---
 

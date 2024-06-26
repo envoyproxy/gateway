@@ -1,5 +1,6 @@
 ---
 title: "Threat Model"
+aliases: "/tasks/security/threat-model"
 ---
 
 # Envoy Gateway Threat Model and End User Recommendations

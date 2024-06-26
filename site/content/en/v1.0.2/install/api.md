@@ -1,5 +1,6 @@
 ---
 title: "gateway-helm"
+aliases: "/install/api"
 ---
 
 

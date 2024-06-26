@@ -1,5 +1,6 @@
 ---
 title: "Envoy Patch Policy"
+aliases: "/tasks/extensibility/envoy-patch-policy"
 ---
 
 This task explains the usage of the [EnvoyPatchPolicy][] API.

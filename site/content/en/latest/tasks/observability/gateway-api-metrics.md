@@ -1,5 +1,6 @@
 ---
 title: "Gateway API Metrics"
+aliases: "/tasks/observability/gateway-api-metrics"
 ---
 
 Resource metrics for Gateway API objects are available using the [Gateway API State Metrics][gasm] project.

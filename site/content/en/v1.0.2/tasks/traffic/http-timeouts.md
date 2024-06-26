@@ -1,5 +1,6 @@
 ---
 title: "HTTP Timeouts"
+aliases: "/tasks/traffic/http-timeouts"
 ---
 
 The default request timeout is set to 15 seconds in Envoy Proxy.

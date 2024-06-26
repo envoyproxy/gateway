@@ -1,5 +1,6 @@
 ---
 title: "TLS Termination for TCP"
+aliases: "/tasks/security/tls-termination"
 ---
 
 This task will walk through the steps required to configure TLS Terminate mode for TCP traffic via Envoy Gateway.
