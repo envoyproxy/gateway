@@ -17,18 +17,21 @@ tracing:
       requestHeader:
         name: "X-Request-Id"
         defaultValue: "-"
-  authority: "otel-collector.default.svc.cluster.local"
+  authority: "zipkin.default.svc.cluster.local"
   destination:
     name: "tracing-0"
     settings:
     - endpoints:
-      - host: "otel-collector.default.svc.cluster.local"
-        port: 4317
+      - host: "zipkin.default.svc.cluster.local"
+        port: 9411
       protocol: "GRPC"
   provider:
-    host: otel-collector.monitoring.svc.cluster.local
-    port: 4317
-    type: OpenTelemetry
+    host: zipkin.default.svc.cluster.local
+    port: 9411
+    type: Zipkin
+    zipkin:
+      enable128BitTraceId: true
+      disableSharedSpanContext: true
 http:
 - name: "first-listener"
   address: "0.0.0.0"

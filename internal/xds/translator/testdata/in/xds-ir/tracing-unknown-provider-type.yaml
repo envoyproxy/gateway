@@ -1,6 +1,4 @@
 name: "tracing"
-metrics:
-  enablePerEndpointStats: true
 tracing:
   serviceName: "fake-name.fake-ns"
   samplingRate: 90
@@ -19,18 +17,17 @@ tracing:
       requestHeader:
         name: "X-Request-Id"
         defaultValue: "-"
+  authority: "datadog-agent.default.svc.cluster.local"
   destination:
     name: "tracing-0"
-    authority: "otel-collector.default.svc.cluster.local"
     settings:
       - endpoints:
-          - host: "otel-collector.default.svc.cluster.local"
-            port: 4317
-        protocol: "GRPC"
+          - host: "datadog-agent.default.svc.cluster.local"
+            port: 8126
   provider:
-    host: otel-collector.monitoring.svc.cluster.local
-    port: 4317
-    type: OpenTelemetry
+    host: datadog-agent.monitoring.svc.cluster.local
+    port: 8126
+    type: Datadog
 http:
   - name: "first-listener"
     address: "0.0.0.0"

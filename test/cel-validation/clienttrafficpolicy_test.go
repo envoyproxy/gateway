@@ -306,7 +306,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					Connection: &egv1a1.Connection{
+					Connection: &egv1a1.ClientConnection{
 						BufferLimit: ptr.To(resource.MustParse("15m")),
 					},
 				}
