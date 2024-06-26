@@ -39,7 +39,7 @@ jobs:
       run: npm install -g linkinator@6.0.4
 
     - name: Check links
-      run: make docs docs-check-links
+      run: make docs docs-check
       continue-on-error: true
 
   docs-build:

@@ -10,6 +10,9 @@ docs: docs.clean helm-readme-gen docs-api ## Generate Envoy Gateway Docs Sources
 	cd $(ROOT_DIR)/site && npm run build:production
 	cp tools/hack/get-egctl.sh $(DOCS_OUTPUT_DIR)
 
+.PHONY: docs-check
+docs-check: docs-check-aliases docs-check-links
+
 .PHONY: docs-release
 docs-release: docs-release-prepare release-notes-docs docs-release-gen docs  ## Generate Envoy Gateway Release Docs
 
@@ -110,6 +113,16 @@ docs-check-links:
 	# TODO: example.com is not a valid domain, we should remove it from ignore list
 	linkinator site/public/ -r --concurrency 25 --skip "github.com example.com github.io _print v0.6.0 v0.5.0 v0.4.0 v0.3.0 v0.2.0"
 
+.PHONY: docs-check-aliases
+docs-check-aliases: # Check for site page without aliases
+	@$(LOG_TARGET)
+	@tools/hack/check-docs-aliases.sh
+	$(eval LAST_VERSION := $(shell cat VERSION))
+	@CONTENT_DIR="site/content/en/$(LAST_VERSION)" tools/hack/check-docs-aliases.sh
+
 release-notes-docs: $(tools/release-notes-docs)
 	@$(LOG_TARGET)
 	$(tools/release-notes-docs) release-notes/$(TAG).yaml site/content/en/latest/releases/; \
+
+.PHONY: docs-check
+docs-check: docs-check-aliases docs-check-links
