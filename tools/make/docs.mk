@@ -59,7 +59,9 @@ helm-readme-gen.%: $(tools/helm-docs)
 
 	# change the placeholder to title before api helm docs generated: split by '-' and capitalize the first letters
 	$(eval CHART_TITLE := $(shell echo "$(CHART_NAME)" | sed -E 's/\<./\U&/g; s/-/ /g' | awk '{for(i=1;i<=NF;i++){ $$i=toupper(substr($$i,1,1)) substr($$i,2) }}1'))
-	sed 's/{CHART-NAME}/$(CHART_TITLE)/g' tools/helm-docs/api.gotmpl > tools/helm-docs/api.${CHART_NAME}.gotmpl
+	cp tools/helm-docs/api.gotmpl tools/helm-docs/api.${CHART_NAME}.gotmpl
+	sed -i 's/{CHART-TITLE}/$(CHART_TITLE)/g' tools/helm-docs/api.${CHART_NAME}.gotmpl
+	sed -i 's/{CHART-NAME}/$(CHART_NAME)/g' tools/helm-docs/api.${CHART_NAME}.gotmpl
 	$(tools/helm-docs) --template-files=tools/helm-docs/api.${CHART_NAME}.gotmpl -g charts/${CHART_NAME} -f values.yaml -o api.md
 	mv charts/${CHART_NAME}/api.md site/content/en/latest/install/${CHART_NAME}-api.md
 	rm tools/helm-docs/api.${CHART_NAME}.gotmpl
@@ -124,5 +126,3 @@ release-notes-docs: $(tools/release-notes-docs)
 	@$(LOG_TARGET)
 	$(tools/release-notes-docs) release-notes/$(TAG).yaml site/content/en/latest/releases/; \
 
-.PHONY: docs-check
-docs-check: docs-check-aliases docs-check-links

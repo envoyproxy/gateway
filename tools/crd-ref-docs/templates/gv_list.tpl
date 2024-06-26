@@ -3,6 +3,7 @@
 
 ---
 title: "API Reference"
+aliases: "/api/extension_types"
 ---
 
 
