@@ -26,3 +26,6 @@ changes:
       Fixed Route extension filters with different types but the same name and namespace aren't correctly cached
       Fixed secrets/configmap updates to trigger a controller reconcile by removing the generationChanged predicate
       Removed namespace restriction for EnvoyProxy parametersRef
+  - area: translator
+    change: |
+      Support setting idle timeout time function based on data flow
