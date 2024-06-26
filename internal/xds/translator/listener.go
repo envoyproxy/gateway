@@ -12,6 +12,7 @@ import (
 	matcher "github.com/cncf/xds/go/xds/type/matcher/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+	originalsrcv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/original_src/v3"
 	tls_inspectorv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/tls_inspector/v3"
 	connection_limitv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/connection_limit/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
@@ -47,6 +48,7 @@ const (
 	http2InitialConnectionWindowSize = 1048576 // 1 MiB
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/connection_limit/v3/connection_limit.proto
 	networkConnectionLimit = "envoy.filters.network.connection_limit"
+	networkOriginalSrc     = "envoy.filters.network.original_src"
 )
 
 func http1ProtocolOptions(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
@@ -406,7 +408,9 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute
 	if isTLSTerminate {
 		statPrefix = "terminate"
 	}
-
+	srcMgr := &originalsrcv3.OriginalSrc{}
+	srcMgr.BindPort = irRoute.OriginalSrc.BindPort
+	srcMgr.Mark = uint32(irRoute.OriginalSrc.Mark)
 	mgr := &tcpv3.TcpProxy{
 		AccessLog:  buildXdsAccessLog(accesslog, false),
 		StatPrefix: statPrefix,
@@ -431,6 +435,12 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute
 		} else {
 			return err
 		}
+	}
+
+	if mgrf, err := toNetworkFilter(networkOriginalSrc, srcMgr); err == nil {
+		filters = append(filters, mgrf)
+	} else {
+		return err
 	}
 
 	if mgrf, err := toNetworkFilter(wellknown.TCPProxy, mgr); err == nil {

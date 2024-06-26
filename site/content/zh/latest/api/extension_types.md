@@ -449,6 +449,7 @@ _Appears in:_
 | `rateLimit` | _[RateLimitSpec](#ratelimitspec)_ |  false  | RateLimit allows the user to limit the number of incoming requests<br />to a predefined value based on attributes within the traffic flow. |
 | `loadBalancer` | _[LoadBalancer](#loadbalancer)_ |  false  | LoadBalancer policy to apply when routing traffic from the gateway to<br />the backend endpoints |
 | `proxyProtocol` | _[ProxyProtocol](#proxyprotocol)_ |  false  | ProxyProtocol enables the Proxy Protocol when communicating with the backend. |
+| `originalSrc` | _[OriginalSrc](#originalsrc)_ |  false  | The Original Src filter binds upstream connections to the original source address determined<br />for the connection. This address could come from something like the Proxy Protocol filter, or it<br />could come from trusted http headers. |
 | `tcpKeepalive` | _[TCPKeepalive](#tcpkeepalive)_ |  false  | TcpKeepalive settings associated with the upstream client connection.<br />Disabled by default. |
 | `healthCheck` | _[HealthCheck](#healthcheck)_ |  false  | HealthCheck allows gateway to perform active health checking on backends. |
 | `faultInjection` | _[FaultInjection](#faultinjection)_ |  false  | FaultInjection defines the fault injection policy to be applied. This configuration can be used to<br />inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
@@ -2503,6 +2504,23 @@ For example, the following are valid origins:
 _Appears in:_
 - [CORS](#cors)
 
+
+
+#### OriginalSrc
+
+
+
+The Original Src filter binds upstream connections to the original source address determined
+for the connection. This address could come from something like the Proxy Protocol filter, or it
+could come from trusted http headers.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `bindPort` | _boolean_ |  true  | Whether to bind the port to the one used in the original downstream connection. |
+| `mark` | _integer_ |  true  | Sets the SO_MARK option on the upstream connection's socket to the provided value. Used to<br />ensure that non-local addresses may be routed back through envoy when binding to the original<br />source address. The option will not be applied if the mark is 0. |
 
 
 #### PassiveHealthCheck
