@@ -14,7 +14,7 @@ This instantiated resource can be linked to a [Gateway][], [HTTPRoute][] or [GRP
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) guide to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) guide to install Envoy Gateway and the example manifest.
 For GRPC - follow the steps from the [GRPC Routing](../grpc-routing) example.
 Before proceeding, you should be able to query the example backend using HTTP or GRPC.
 
@@ -171,7 +171,7 @@ kubectl get backendtrafficpolicy/fault-injection-abort -o yaml
 
 ## Testing
 
-Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../../quickstart) guide is set. If not, follow the
+Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../quickstart) guide is set. If not, follow the
 Quickstart instructions to set the variable.
 
 ```shell
@@ -239,7 +239,7 @@ Error invoking method "yages.Echo/Ping": rpc error: code = Unavailable desc = fa
 
 ## Clean-Up
 
-Follow the steps from the [Quickstart](../../quickstart) guide to uninstall Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) guide to uninstall Envoy Gateway and the example manifest.
 
 Delete the BackendTrafficPolicy:
 

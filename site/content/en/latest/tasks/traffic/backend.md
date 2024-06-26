@@ -37,7 +37,7 @@ Envoy Gateway does not manage the lifecycle of unix domain sockets referenced by
 
 ### Prerequisites
 
-* Follow the steps from the [Quickstart](../../quickstart) task to install Envoy Gateway and the example manifest.
+* Follow the steps from the [Quickstart](../quickstart) task to install Envoy Gateway and the example manifest.
   Before proceeding, you should be able to query the example backend using HTTP.
 
 ### Enable Backend

@@ -21,7 +21,7 @@ This instantiated resource can be linked to a [Gateway][], [HTTPRoute][] or [GRP
 
 ### Install Envoy Gateway
 
-* Follow the installation step from the [Quickstart](../../quickstart) to install Envoy Gateway and sample resources.
+* Follow the installation step from the [Quickstart](../quickstart) to install Envoy Gateway and sample resources.
 
 ### Install the hey load testing tool
 * The `hey` CLI will be used to generate load and measure response times. Follow the installation instruction from the [Hey project] docs.   

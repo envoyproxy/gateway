@@ -12,7 +12,7 @@ This task uses a self-signed CA, so it should be used for testing and demonstrat
 
 ## Installation
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway.
+Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway.
 
 ## TLS Certificates
 Generate the certificates and keys used by the Gateway to terminate client TLS connections.

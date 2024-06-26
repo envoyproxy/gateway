@@ -13,7 +13,7 @@ This instantiated resource can be linked to a [Gateway][Gateway] and [HTTPRoute]
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 Verify the Gateway status:
@@ -226,7 +226,7 @@ kubectl get backendtlspolicy/grpc-ext-proc-btls -o yaml
 
 ### Testing
 
-Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../../quickstart) is set. If not, follow the
+Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../quickstart) is set. If not, follow the
 Quickstart instructions to set the variable.
 
 ```shell
@@ -270,7 +270,7 @@ curl -v -H "Host: www.example.com"  http://localhost:10080/myapp
 
 ## Clean-Up
 
-Follow the steps from the [Quickstart](../../quickstart) to uninstall Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) to uninstall Envoy Gateway and the example manifest.
 
 Delete the demo auth services, HTTPRoute, EnvoyExtensionPolicy and BackendTLSPolicy:
 

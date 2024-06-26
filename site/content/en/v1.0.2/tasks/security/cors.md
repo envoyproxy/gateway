@@ -12,7 +12,7 @@ This instantiated resource can be linked to a [Gateway][Gateway], [HTTPRoute][HT
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) guide to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) guide to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Configuration
@@ -58,7 +58,7 @@ kubectl get securitypolicy/cors-example -o yaml
 
 ## Testing
 
-Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../../quickstart) guide is set. If not, follow the
+Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../quickstart) guide is set. If not, follow the
 Quickstart instructions to set the variable.
 
 ```shell
@@ -123,7 +123,7 @@ filter to work. Otherwise, the OPTIONS request won't match the routes and the CO
 
 ## Clean-Up
 
-Follow the steps from the [Quickstart](../../quickstart) guide to uninstall Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) guide to uninstall Envoy Gateway and the example manifest.
 
 Delete the SecurityPolicy:
 

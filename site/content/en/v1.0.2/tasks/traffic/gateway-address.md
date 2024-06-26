@@ -11,7 +11,7 @@ Depending on the Service Type, the addresses of gateway can be used as:
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest.
 
 ## External IPs
 

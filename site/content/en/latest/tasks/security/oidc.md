@@ -14,7 +14,7 @@ This instantiated resource can be linked to a [Gateway][Gateway] and [HTTPRoute]
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 EG OIDC authentication requires the redirect URL to be HTTPS. Follow the [Secure Gateways](../secure-gateways) guide
@@ -302,7 +302,7 @@ path `/myapp` is protected by the same OIDC policy.
 
 ## Clean-Up
 
-Follow the steps from the [Quickstart](../../quickstart) to uninstall Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) to uninstall Envoy Gateway and the example manifest.
 
 Delete the SecurityPolicy, the secret and the HTTPRoute:
 

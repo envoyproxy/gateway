@@ -11,7 +11,7 @@ This guide will walk through the steps required to configure TLS Terminate mode 
 
 ## Installation
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway.
+Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway.
 
 ## TLS Certificates
 Generate the certificates and keys used by the Gateway to terminate client TLS connections.

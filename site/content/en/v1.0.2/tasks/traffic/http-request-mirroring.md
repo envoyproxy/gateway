@@ -245,8 +245,8 @@ EOF
 Error from server: error when creating "STDIN": admission webhook "validate.gateway.networking.k8s.io" denied the request: spec.rules[0].filters: Invalid value: "RequestMirror": cannot be used multiple times in the same rule
 ```
 
-[Quickstart]: ../../quickstart/
-[Traffic Splitting]: ../http-traffic-splitting/
+[Quickstart]: ../quickstart
+[Traffic Splitting]: ./http-traffic-splitting
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
 [backendRefs]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.BackendRef
 [HTTPRequestMirrorFilter]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRequestMirrorFilter

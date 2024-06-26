@@ -14,7 +14,7 @@ Envoy Gateway supports the Gateway-API defined [BackendTLSPolicy][].
 
 ## Installation
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest.
 
 ## TLS Certificates
 

@@ -28,7 +28,7 @@ has its own 100r/s rate limit bucket.
 
 ### Install Envoy Gateway
 
-* Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the HTTPRoute example manifest.
+* Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the HTTPRoute example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 ### Install Redis

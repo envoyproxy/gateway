@@ -16,7 +16,7 @@ Envoy Gateway introduces a new CRD called [BackendTrafficPolicy](../../../api/ex
 
 ## Prerequisites
 
-Follow the installation step from the [Quickstart](../../quickstart) to install Envoy Gateway and sample resources.
+Follow the installation step from the [Quickstart](../quickstart) to install Envoy Gateway and sample resources.
 
 ## Test and customize retry settings
 

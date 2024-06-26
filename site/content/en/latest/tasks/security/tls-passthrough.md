@@ -13,7 +13,7 @@ to terminate the TLS connection, while the Gateway routes the requests to the ap
 
 ## Installation
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 ## TLS Certificates
@@ -112,7 +112,7 @@ curl -v --resolve "passthrough.example.com:6043:127.0.0.1" https://passthrough.e
 
 ## Clean-Up
 
-Follow the steps from the [Quickstart](../../quickstart) to uninstall Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) to uninstall Envoy Gateway and the example manifest.
 
 Delete the Secret:
 
