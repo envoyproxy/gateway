@@ -10,6 +10,7 @@ clientTrafficPolicies:
       initialConnectionWindowSize: 32Mi
       initialStreamWindowSize: 64Ki
       maxConcurrentStreams: 200
+      resetStreamOnError: false
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -170,6 +171,7 @@ xdsIR:
         initialConnectionWindowSize: 65536
         initialStreamWindowSize: 33554432
         maxConcurrentStreams: 200
+        resetStreamOnError: false
       isHTTP2: false
       name: envoy-gateway/gateway-1/http-1
       path:

@@ -9,6 +9,7 @@ clientTrafficPolicies:
       initialStreamWindowSize: 64Ki
       initialConnectionWindowSize: 32Mi
       maxConcurrentStreams: 200
+      resetStreamOnError: false
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
