@@ -29,4 +29,4 @@ changes:
 
   - area: translator
     change: |
-      Support setting idle timeout time function based on data flow
+      feat: Support setting idle timeout time function based on data flow
