@@ -1,6 +1,6 @@
-+++
-title = "API Reference"
-+++
+---
+title: "API Reference"
+---
 
 
 ## Packages

@@ -1,6 +1,6 @@
-+++
-title = "Gateway Addons Helm Chart"
-+++
+---
+title: "Gateway Addons Helm Chart"
+---
 
 ![Version: v0.0.0-latest](https://img.shields.io/badge/Version-v0.0.0--latest-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: latest](https://img.shields.io/badge/AppVersion-latest-informational?style=flat-square)
 

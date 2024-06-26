@@ -1,9 +1,9 @@
 {{- define "gvList" -}}
 {{- $groupVersions := . -}}
 
-+++
-title = "API Reference"
-+++
+---
+title: "API Reference"
+---
 
 
 ## Packages
