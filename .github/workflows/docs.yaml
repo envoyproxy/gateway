@@ -40,7 +40,6 @@ jobs:
 
     - name: Check links
       run: make docs docs-check
-      continue-on-error: true
 
   docs-build:
     runs-on: ubuntu-latest
