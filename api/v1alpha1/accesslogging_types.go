@@ -20,6 +20,7 @@ type ProxyAccessLogSetting struct {
 	// Format defines the format of accesslog.
 	Format ProxyAccessLogFormat `json:"format"`
 	// Matches defines the match conditions for accesslog in CEL expression.
+	// An accesslog will be emitted only when one or more match conditions are evaluated to true.
 	// Invalid [CEL](https://www.envoyproxy.io/docs/envoy/latest/xds/type/v3/cel.proto.html#common-expression-language-cel-proto) expressions will be ignored.
 	// +notImplementedHide
 	Matches []string `json:"matches,omitempty"`
