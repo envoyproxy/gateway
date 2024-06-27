@@ -19,6 +19,9 @@ Redirects return HTTP 3XX responses to a client, instructing it to retrieve a di
 For example, to issue a permanent redirect (301) from HTTP to HTTPS, configure `requestRedirect.statusCode=301` and
 `requestRedirect.scheme="https"`:
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -37,12 +40,35 @@ spec:
           scheme: https
           statusCode: 301
           hostname: www.example.com
-          port: 443
-      backendRefs:
-      - name: backend
-        port: 3000
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-to-https-filter-redirect
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - redirect.example
+  rules:
+    - filters:
+      - type: RequestRedirect
+        requestRedirect:
+          scheme: https
+          statusCode: 301
+          hostname: www.example.com
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 __Note:__ `301` (default) and `302` are the only supported statusCodes.
 
@@ -69,7 +95,7 @@ $ curl -L -vvv --header "Host: redirect.example" "http://${GATEWAY_HOST}/get"
 ...
 ```
 
-If you followed the steps in the [Secure Gateways](../security/secure-gateways) guide, you should be able to curl the redirect
+If you followed the steps in the [Secure Gateways](../security/secure-gateways) task, you should be able to curl the redirect
 location.
 
 ## HTTP --> HTTPS
@@ -107,8 +133,11 @@ kubectl create secret tls example-com --key=tls.key --cert=tls.crt
 
 Define a https listener on the existing gateway
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
-cat <<EOF | kubectl apply -n default -f -
+cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
@@ -132,6 +161,37 @@ spec:
 EOF
 ```
 
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: eg
+spec:
+  gatewayClassName: eg
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+    # hostname: "*.example.com"
+  - name: https
+    port: 443
+    protocol: HTTPS
+    # hostname: "*.example.com"
+    tls:
+      mode: Terminate
+      certificateRefs:
+      - kind: Secret
+        name: example-com
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 Check for any TLS certificate issues on the gateway.
 
 ```bash
@@ -140,9 +200,11 @@ kubectl -n default describe gateway eg
 
 Create two HTTPRoutes and attach them to the HTTP and HTTPS listeners using the [sectionName][] field.
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
-cat <<EOF | kubectl apply -n default -f -
+cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -184,6 +246,55 @@ spec:
 EOF
 ```
 
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resources to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: tls-redirect
+spec:
+  parentRefs:
+    - name: eg
+      sectionName: http
+  hostnames:
+    # - "*.example.com" # catch all hostnames
+    - "www.example.com"
+  rules:
+    - filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: backend
+spec:
+  parentRefs:
+    - name: eg
+      sectionName: https
+  hostnames:
+    - "www.example.com"
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: backend
+          port: 3000
+          weight: 1
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 Curl the example app through http listener:
 
 ```bash
@@ -202,6 +313,9 @@ curl -v -H 'Host:www.example.com' --resolve "www.example.com:443:$GATEWAY_HOST" 
 
 Path redirects use an HTTP Path Modifier to replace either entire paths or path prefixes. For example, the HTTPRoute
 below will issue a 302 redirect to all `path.redirect.example` requests whose path begins with `/get` to `/status/200`.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -226,11 +340,40 @@ spec:
             type: ReplaceFullPath
             replaceFullPath: /status/200
           statusCode: 302
-      backendRefs:
-      - name: backend
-        port: 3000
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-filter-path-redirect
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - path.redirect.example
+  rules:
+    - matches:
+      - path:
+          type: PathPrefix
+          value: /get
+      filters:
+      - type: RequestRedirect
+        requestRedirect:
+          path:
+            type: ReplaceFullPath
+            replaceFullPath: /status/200
+          statusCode: 302
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 The HTTPRoute status should indicate that it has been accepted and is bound to the example Gateway.
 
