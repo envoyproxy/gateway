@@ -13,6 +13,7 @@ import (
 	accesslog "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v3"
 	cfgcore "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	fileaccesslog "github.com/envoyproxy/go-control-plane/envoy/extensions/access_loggers/file/v3"
+	cel "github.com/envoyproxy/go-control-plane/envoy/extensions/access_loggers/filters/cel/v3"
 	grpcaccesslog "github.com/envoyproxy/go-control-plane/envoy/extensions/access_loggers/grpc/v3"
 	otelaccesslog "github.com/envoyproxy/go-control-plane/envoy/extensions/access_loggers/open_telemetry/v3"
 	celformatter "github.com/envoyproxy/go-control-plane/envoy/extensions/formatter/cel/v3"
@@ -54,6 +55,8 @@ const (
 	reqWithoutQueryCommandOperator = "%REQ_WITHOUT_QUERY"
 	metadataCommandOperator        = "%METADATA"
 	celCommandOperator             = "%CEL"
+
+	celFilter = "envoy.access_loggers.extension_filters.cel"
 )
 
 // for the case when a route does not exist to upstream, hcm logs will not be present
@@ -217,14 +220,55 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 		})
 	}
 
-	// add filter for listener access logs
+	// add filter for access logs
+	filters := make([]*accesslog.AccessLogFilter, 0)
+	for _, expr := range al.CELExpression {
+		filters = append(filters, celAccessLogFilter(expr))
+	}
 	if forListener {
-		for _, al := range accessLogs {
-			al.Filter = listenerAccessLogFilter
-		}
+		filters = append(filters, listenerAccessLogFilter)
+	}
+
+	f := buildAccessLogFilter(filters...)
+
+	for _, log := range accessLogs {
+		log.Filter = f
 	}
 
 	return accessLogs
+}
+
+func celAccessLogFilter(expr string) *accesslog.AccessLogFilter {
+	fl := &cel.ExpressionFilter{
+		Expression: expr,
+	}
+
+	return &accesslog.AccessLogFilter{
+		FilterSpecifier: &accesslog.AccessLogFilter_ExtensionFilter{
+			ExtensionFilter: &accesslog.ExtensionFilter{
+				Name:       celFilter,
+				ConfigType: &accesslog.ExtensionFilter_TypedConfig{TypedConfig: protocov.ToAny(fl)},
+			},
+		},
+	}
+}
+
+func buildAccessLogFilter(f ...*accesslog.AccessLogFilter) *accesslog.AccessLogFilter {
+	if len(f) == 0 {
+		return nil
+	}
+
+	if len(f) == 1 {
+		return f[0]
+	}
+
+	return &accesslog.AccessLogFilter{
+		FilterSpecifier: &accesslog.AccessLogFilter_AndFilter{
+			AndFilter: &accesslog.AndFilter{
+				Filters: f,
+			},
+		},
+	}
 }
 
 func accessLogTextFormatters(text string) []*cfgcore.TypedExtensionConfig {

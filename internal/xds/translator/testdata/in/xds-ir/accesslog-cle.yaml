@@ -1,0 +1,52 @@
+name: "accesslog"
+accesslog:
+  celExpression:
+  - response.code >= 400
+  text:
+  - path: "/dev/stdout"
+    format: |
+      [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
+  json:
+  - path: "/dev/stdout"
+    json:
+      start_time: "%START_TIME%"
+      method: "%REQ(:METHOD)%"
+      path: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
+      protocol: "%PROTOCOL%"
+      response_code: "%RESPONSE_CODE%"
+  openTelemetry:
+  - text: |
+      [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
+    attributes:
+      "response_code": "%RESPONSE_CODE%"
+    resources:
+      "cluster_name": "cluster1"
+    authority: "otel-collector.default.svc.cluster.local"
+    destination:
+      name: "accesslog-0"
+      settings:
+      - endpoints:
+        - host: "otel-collector.default.svc.cluster.local"
+          port: 4317
+        protocol: "GRPC"
+http:
+- name: "first-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "direct-route"
+    hostname: "*"
+    destination:
+      name: "direct-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+    directResponse:
+      body: "Unknown custom filter type: UnsupportedType"
+      statusCode: 500
