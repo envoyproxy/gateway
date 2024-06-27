@@ -7,8 +7,8 @@ on:
   workflow_dispatch:
     inputs:
       rps:
-        description: "The target requests-per-second rate. Default: 1000"
-        default: '1000'
+        description: "The target requests-per-second rate. Default: 10000"
+        default: '10000'
         type: string
         required: false
       connections:
@@ -45,9 +45,12 @@ jobs:
         env:
           KIND_NODE_TAG: v1.28.0
           IMAGE_PULL_POLICY: IfNotPresent
-          BENCHMARK_RPS: ${{ github.event.inputs.rps || 1000 }}
+          BENCHMARK_RPS: ${{ github.event.inputs.rps || 10000 }}
           BENCHMARK_CONNECTIONS: ${{ github.event.inputs.connections || 100 }}
           BENCHMARK_DURATION: ${{ github.event.inputs.duration || 90 }}
           BENCHMARK_CPU_LIMITS: ${{ github.event.inputs.cpu_limits || 1000 }}
           BENCHMARK_MEMORY_LIMITS: ${{ github.event.inputs.memory_limits || 2048 }}
         run: make benchmark
+
+      - name: Read Benchmark report
+        run: cat test/benchmark/benchmark_report.md

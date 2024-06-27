@@ -811,7 +811,7 @@ upstream_rq_total                       298836      3996.69
 [14:46:01.842997][19][I] Wait for the connection pool drain timed out, proceeding to hard shutdown.
 [14:46:06.845068][20][I] Wait for the connection pool drain timed out, proceeding to hard shutdown.
 [14:46:11.847277][21][I] Wait for the connection pool drain timed out, proceeding to hard shutdown.
-[14:46:11.850206][1][E] An error ocurred.
+[14:46:11.850206][1][E] An error occurred.
 
 ```
 
