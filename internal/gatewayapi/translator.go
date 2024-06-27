@@ -17,6 +17,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/logging"
 )
 
 const (
@@ -106,6 +107,8 @@ type Translator struct {
 
 	// Namespace is the namespace that Envoy Gateway runs in.
 	Namespace string
+
+	Logger logging.Logger
 }
 
 type TranslateResult struct {

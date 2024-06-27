@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/google/cel-go/cel"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -301,6 +302,16 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 				irAccessLog.OpenTelemetry = append(irAccessLog.OpenTelemetry, al)
 			}
 		}
+
+		var validExprs []string
+		for _, expr := range accessLog.Matches {
+			if !validCELExpression(expr) {
+				t.Logger.Info("invalid CEL expression", "expression", expr)
+				continue
+			}
+			validExprs = append(validExprs, expr)
+		}
+		irAccessLog.CELExpression = validExprs
 	}
 
 	return irAccessLog, nil
@@ -410,4 +421,10 @@ func destinationSettingFromHostAndPort(host string, port uint32) []*ir.Destinati
 			Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(host, port)},
 		},
 	}
+}
+
+func validCELExpression(expr string) bool {
+	env, _ := cel.NewEnv()
+	_, issue := env.Parse(expr)
+	return issue.Err() == nil
 }

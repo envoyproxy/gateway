@@ -88,6 +88,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					BackendEnabled:          r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
 					Namespace:               r.Namespace,
 					MergeGateways:           gatewayapi.IsMergeGatewaysEnabled(resources),
+					Logger:                  r.Logger.WithName("translator"),
 				}
 
 				// If an extension is loaded, pass its supported groups/kinds to the translator
