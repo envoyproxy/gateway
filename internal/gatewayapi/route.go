@@ -228,7 +228,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				httpRoute.GetGeneration(),
 				gwapiv1.RouteConditionResolvedRefs,
 				metav1.ConditionFalse,
-				gwapiv1a2.RouteReasonResolvedRefs,
+				gwapiv1.RouteReasonResolvedRefs,
 				"Mixed endpointslice address type between backendRefs is not supported")
 		}
 
@@ -1236,7 +1236,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 			route.GetGeneration(),
 			gwapiv1.RouteConditionResolvedRefs,
 			metav1.ConditionFalse,
-			gwapiv1a2.RouteReasonResolvedRefs,
+			gwapiv1.RouteReasonResolvedRefs,
 			err.Error())
 	}
 
