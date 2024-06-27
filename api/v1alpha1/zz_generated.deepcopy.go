@@ -3719,6 +3719,11 @@ func (in *ProxyAccessLogFormat) DeepCopy() *ProxyAccessLogFormat {
 func (in *ProxyAccessLogSetting) DeepCopyInto(out *ProxyAccessLogSetting) {
 	*out = *in
 	in.Format.DeepCopyInto(&out.Format)
+	if in.Matches != nil {
+		in, out := &in.Matches, &out.Matches
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.Sinks != nil {
 		in, out := &in.Sinks, &out.Sinks
 		*out = make([]ProxyAccessLogSink, len(*in))
