@@ -546,6 +546,10 @@ func (t *Translator) buildWasms(
 	policy *egv1a1.EnvoyExtensionPolicy,
 	resources *Resources,
 ) ([]ir.Wasm, error) {
+	if t.WasmCache == nil {
+		return nil, fmt.Errorf("wasm cache is not initialized")
+	}
+
 	var wasmIRList []ir.Wasm
 
 	if policy == nil {
