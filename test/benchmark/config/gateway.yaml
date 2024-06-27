@@ -1,0 +1,14 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: "{GATEWAY_NAME}"
+  namespace: benchmark-test
+spec:
+  gatewayClassName: envoy-gateway
+  listeners:
+    - name: http
+      port: 8081
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: Same
