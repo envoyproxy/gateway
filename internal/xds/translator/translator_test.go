@@ -94,6 +94,9 @@ func TestTranslateXds(t *testing.T) {
 		"tracing-invalid": {
 			errMsg: "validation failed for xds resource",
 		},
+		"tracing-unknown-provider-type": {
+			errMsg: "unknown tracing provider type: Datadog",
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "xds-ir", "*.yaml"))

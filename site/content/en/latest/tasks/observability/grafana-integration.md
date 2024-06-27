@@ -7,28 +7,10 @@ This task shows you how to visualise the metrics exposed to Prometheus using Gra
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+{{< boilerplate o11y_prerequisites >}}
 
 Follow the steps from the [Gateway Observability](../gateway-observability) and [Proxy Observability](../proxy-observability#metrics) to enable Prometheus metrics
 for both Envoy Gateway (Control Plane) and Envoy Proxy (Data Plane).
-
-[Prometheus](https://prometheus.io) is used to scrape metrics from the Envoy Gateway and Envoy Proxy instances. Install Prometheus:
-
-```shell
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-helm repo update
-helm upgrade --install prometheus prometheus-community/prometheus -n monitoring --create-namespace
-```
-
-[Grafana](https://grafana.com/grafana/) is used to visualise the metrics exposed by the Envoy Gateway and Envoy Proxy instances.
-Install Grafana:
-
-```shell
-helm repo add grafana https://grafana.github.io/helm-charts
-helm repo update
-helm upgrade --install grafana grafana/grafana -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/grafana/helm-values.yaml -n monitoring --create-namespace
-```
 
 Expose endpoints:
 

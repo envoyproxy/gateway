@@ -353,6 +353,7 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 			Name:     "tracing", // TODO: rename this, so that we can share backend with accesslog?
 			Settings: ds,
 		},
+		Provider: tracing.Provider,
 	}, nil
 }
 
