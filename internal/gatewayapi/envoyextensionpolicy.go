@@ -619,9 +619,9 @@ func (t *Translator) buildWasm(
 		}
 
 		code = &ir.HTTPWasmCode{
-			ServingURL:             servingURL,
-			OriginalDownloadingURL: http.URL,
-			SHA256:                 originalChecksum,
+			ServingURL:  servingURL,
+			OriginalURL: http.URL,
+			SHA256:      originalChecksum,
 		}
 
 	case egv1a1.ImageWasmCodeSourceType:
@@ -688,9 +688,9 @@ func (t *Translator) buildWasm(
 		}
 
 		code = &ir.HTTPWasmCode{
-			ServingURL:             servingURL,
-			SHA256:                 checksum,
-			OriginalDownloadingURL: imageURL,
+			ServingURL:  servingURL,
+			SHA256:      checksum,
+			OriginalURL: imageURL,
 		}
 	default:
 		// should never happen because of kubebuilder validation, just a sanity check

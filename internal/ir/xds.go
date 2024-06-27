@@ -2244,9 +2244,9 @@ type HTTPWasmCode struct {
 	// It's different from the digest of the OCI image.
 	SHA256 string `json:"sha256"`
 
-	// OriginalDownloadingURL is the original downloading URL of the Wasm code.
+	// OriginalURL is the original downloading URL of the Wasm code.
 	// Note: This field is just used for testing. It's not used to generate the Envoy configuration.
-	OriginalDownloadingURL string `json:"originalDownloadingURL"`
+	OriginalURL string `json:"originalDownloadingURL"`
 }
 
 // DestinationFilters contains HTTP filters that will be used with the DestinationSetting.
