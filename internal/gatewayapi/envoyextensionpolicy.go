@@ -577,7 +577,7 @@ func (t *Translator) buildWasm(
 		// the checksum provided by the user, it's used to validate the wasm module
 		// downloaded from the original HTTP server or the OCI registry
 		originalChecksum string
-		egServingURL     string // the wasm module download URL from the EG HTTP server
+		servingURL       string // the wasm module download URL from the EG HTTP server
 		err              error
 	)
 
@@ -609,7 +609,7 @@ func (t *Translator) buildWasm(
 
 		http := config.Code.HTTP
 
-		if egServingURL, _, err = t.WasmCache.Get(http.URL, wasm.GetOptions{
+		if servingURL, _, err = t.WasmCache.Get(http.URL, wasm.GetOptions{
 			Checksum:        originalChecksum,
 			PullPolicy:      pullPolicy,
 			ResourceName:    irConfigNameForWasm(policy, idx),
@@ -619,7 +619,7 @@ func (t *Translator) buildWasm(
 		}
 
 		code = &ir.HTTPWasmCode{
-			EGServingURL:           egServingURL,
+			ServingURL:             servingURL,
 			OriginalDownloadingURL: http.URL,
 			SHA256:                 originalChecksum,
 		}
@@ -677,7 +677,7 @@ func (t *Translator) buildWasm(
 		// The original checksum in the EEP is used to match the digest of OCI image.
 		// The returned checksum from the cache is the checksum of the wasm file
 		// extracted from the OCI image, which is used by the envoy to verify the wasm file.
-		if egServingURL, checksum, err = t.WasmCache.Get(imageURL, wasm.GetOptions{
+		if servingURL, checksum, err = t.WasmCache.Get(imageURL, wasm.GetOptions{
 			Checksum:        originalChecksum,
 			PullSecret:      pullSecret,
 			PullPolicy:      pullPolicy,
@@ -688,7 +688,7 @@ func (t *Translator) buildWasm(
 		}
 
 		code = &ir.HTTPWasmCode{
-			EGServingURL:           egServingURL,
+			ServingURL:             servingURL,
 			SHA256:                 checksum,
 			OriginalDownloadingURL: imageURL,
 		}

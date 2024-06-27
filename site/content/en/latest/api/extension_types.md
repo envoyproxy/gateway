@@ -2003,7 +2003,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `url` | _string_ |  true  | URL is the URL of the OCI image.<br />URL can be in the format of `registry/image:tag` or `registry/image@sha256:digest`.<br />The image format must follow the Wasm Artifact Image Specification or the Compat Specification.<br />- Wasm Artifact Image Specification: https://github.com/solo-io/wasm/blob/master/spec/spec.md<br />- Compat Specification: https://github.com/solo-io/wasm/blob/master/spec/spec-compat.md |
+| `url` | _string_ |  true  | URL is the URL of the OCI image.<br />URL can be in the format of `registry/image:tag` or `registry/image@sha256:digest`. |
 | `sha256` | _string_ |  false  | SHA256 checksum that will be used to verify the OCI image.<br /><br />It must match the digest of the OCI image.<br /><br />If not specified, Envoy Gateway will not verify the downloaded OCI image.<br />kubebuilder:validation:Pattern=`^[a-f0-9]{64}$` |
 | `pullSecretRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  false  | PullSecretRef is a reference to the secret containing the credentials to pull the image.<br />Only support Kubernetes Secret resource from the same namespace. |
 

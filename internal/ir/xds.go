@@ -2236,8 +2236,8 @@ type Wasm struct {
 // HTTPWasmCode holds the information associated with the HTTP Wasm code source.
 // +k8s:deepcopy-gen=true
 type HTTPWasmCode struct {
-	// EGServingURL is the URL of the Wasm code served by the local EG HTTP server.
-	EGServingURL string `json:"egServingURL"`
+	// ServingURL is the URL of the Wasm code served by the local EG HTTP server.
+	ServingURL string `json:"servingURL"`
 
 	// SHA256 checksum that will be used by the Envoy to verify the Wasm code.
 	// It's different from the digest of the OCI image.

@@ -129,7 +129,7 @@ func wasmConfig(wasm ir.Wasm) (*wasmfilterv3.Wasm, error) {
 						Specifier: &corev3.AsyncDataSource_Remote{
 							Remote: &corev3.RemoteDataSource{
 								HttpUri: &corev3.HttpUri{
-									Uri: wasm.Code.EGServingURL,
+									Uri: wasm.Code.ServingURL,
 									HttpUpstreamType: &corev3.HttpUri_Cluster{
 										Cluster: wasmHTTPServerCluster,
 									},
