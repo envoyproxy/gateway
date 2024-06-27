@@ -864,6 +864,8 @@ func (t *Translator) buildConsistentHashLoadBalancer(policy *egv1a1.BackendTraff
 		consistentHash.Header = &ir.Header{
 			Name: policy.Spec.LoadBalancer.ConsistentHash.Header.Name,
 		}
+	case egv1a1.CookieConsistentHashType:
+		consistentHash.Cookie = policy.Spec.LoadBalancer.ConsistentHash.Cookie
 	}
 
 	return consistentHash, nil
