@@ -423,8 +423,9 @@ func destinationSettingFromHostAndPort(host string, port uint32) []*ir.Destinati
 	}
 }
 
+var celEnv, _ = cel.NewEnv()
+
 func validCELExpression(expr string) bool {
-	env, _ := cel.NewEnv()
-	_, issue := env.Parse(expr)
+	_, issue := celEnv.Parse(expr)
 	return issue.Err() == nil
 }
