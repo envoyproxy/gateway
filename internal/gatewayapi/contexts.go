@@ -8,12 +8,14 @@ package gatewayapi
 import (
 	"reflect"
 
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 // GatewayContext wraps a Gateway and provides helper methods for
@@ -21,12 +23,13 @@ import (
 type GatewayContext struct {
 	*gwapiv1.Gateway
 
-	listeners []*ListenerContext
+	listeners  []*ListenerContext
+	envoyProxy *egv1a1.EnvoyProxy
 }
 
 // ResetListeners resets the listener statuses and re-generates the GatewayContext
 // ListenerContexts from the Gateway spec.
-func (g *GatewayContext) ResetListeners() {
+func (g *GatewayContext) ResetListeners(resource *Resources) {
 	numListeners := len(g.Spec.Listeners)
 	g.Status.Listeners = make([]gwapiv1.ListenerStatus, numListeners)
 	g.listeners = make([]*ListenerContext, numListeners)
@@ -35,10 +38,28 @@ func (g *GatewayContext) ResetListeners() {
 		g.Status.Listeners[i] = gwapiv1.ListenerStatus{Name: listener.Name}
 		g.listeners[i] = &ListenerContext{
 			Listener:          listener,
-			gateway:           g.Gateway,
+			gateway:           g,
 			listenerStatusIdx: i,
 		}
 	}
+
+	g.attachEnvoyProxy(resource)
+}
+
+func (g *GatewayContext) attachEnvoyProxy(resources *Resources) {
+	if g.Spec.Infrastructure != nil && g.Spec.Infrastructure.ParametersRef != nil && !IsMergeGatewaysEnabled(resources) {
+		ref := g.Spec.Infrastructure.ParametersRef
+		if string(ref.Group) == egv1a1.GroupVersion.Group && ref.Kind == egv1a1.KindEnvoyProxy {
+			ep := resources.GetEnvoyProxy(g.Namespace, ref.Name)
+			if ep != nil {
+				g.envoyProxy = ep
+				return
+			}
+		}
+		// not found, fallthrough to use envoyProxy attached to gatewayclass
+	}
+
+	g.envoyProxy = resources.EnvoyProxyForGatewayClass
 }
 
 // ListenerContext wraps a Listener and provides helper methods for
@@ -47,11 +68,11 @@ func (g *GatewayContext) ResetListeners() {
 type ListenerContext struct {
 	*gwapiv1.Listener
 
-	gateway                   *gwapiv1.Gateway
-	listenerStatusIdx         int
-	namespaceSelector         labels.Selector
-	tlsSecrets                []*v1.Secret
-	frontendValidationSecrets []*v1.Secret
+	gateway           *GatewayContext
+	listenerStatusIdx int
+	namespaceSelector labels.Selector
+	tlsSecrets        []*corev1.Secret
+	frontendValidationSecrets []*corev1.Secret
 }
 
 func (l *ListenerContext) SetSupportedKinds(kinds ...gwapiv1.RouteGroupKind) {
@@ -77,7 +98,7 @@ func (l *ListenerContext) AllowsKind(kind gwapiv1.RouteGroupKind) bool {
 	return false
 }
 
-func (l *ListenerContext) AllowsNamespace(namespace *v1.Namespace) bool {
+func (l *ListenerContext) AllowsNamespace(namespace *corev1.Namespace) bool {
 	if namespace == nil {
 		return false
 	}
@@ -114,7 +135,7 @@ func (l *ListenerContext) GetConditions() []metav1.Condition {
 	return l.gateway.Status.Listeners[l.listenerStatusIdx].Conditions
 }
 
-func (l *ListenerContext) SetTLSSecrets(tlsSecrets []*v1.Secret) {
+func (l *ListenerContext) SetTLSSecrets(tlsSecrets []*corev1.Secret) {
 	l.tlsSecrets = tlsSecrets
 }
 
@@ -156,7 +177,7 @@ type TLSRouteContext struct {
 	// GatewayControllerName is the name of the Gateway API controller.
 	GatewayControllerName string
 
-	*v1alpha2.TLSRoute
+	*gwapiv1a2.TLSRoute
 
 	ParentRefs map[gwapiv1.ParentReference]*RouteParentContext
 }
@@ -167,7 +188,7 @@ type UDPRouteContext struct {
 	// GatewayControllerName is the name of the Gateway API controller.
 	GatewayControllerName string
 
-	*v1alpha2.UDPRoute
+	*gwapiv1a2.UDPRoute
 
 	ParentRefs map[gwapiv1.ParentReference]*RouteParentContext
 }
@@ -178,7 +199,7 @@ type TCPRouteContext struct {
 	// GatewayControllerName is the name of the Gateway API controller.
 	GatewayControllerName string
 
-	*v1alpha2.TCPRoute
+	*gwapiv1a2.TCPRoute
 
 	ParentRefs map[gwapiv1.ParentReference]*RouteParentContext
 }
@@ -189,9 +210,6 @@ func GetRouteType(route RouteContext) gwapiv1.Kind {
 	rv := reflect.ValueOf(route).Elem()
 	return gwapiv1.Kind(rv.FieldByName("Kind").String())
 }
-
-// TODO: [v1alpha2-gwapiv1] This should not be required once all Route
-// objects being implemented are of type gwapiv1.
 
 // GetHostnames returns the hosts targeted by the Route object.
 func GetHostnames(route RouteContext) []string {
@@ -209,23 +227,11 @@ func GetHostnames(route RouteContext) []string {
 	return hostnames
 }
 
-// TODO: [v1alpha2-gwapiv1] This should not be required once all Route
-// objects being implemented are of type gwapiv1.
 // GetParentReferences returns the ParentReference of the Route object.
 func GetParentReferences(route RouteContext) []gwapiv1.ParentReference {
 	rv := reflect.ValueOf(route).Elem()
-	kind := rv.FieldByName("Kind").String()
 	pr := rv.FieldByName("Spec").FieldByName("ParentRefs")
-	if kind == KindHTTPRoute || kind == KindGRPCRoute {
-		return pr.Interface().([]gwapiv1.ParentReference)
-	}
-
-	parentReferences := make([]gwapiv1.ParentReference, pr.Len())
-	for i := 0; i < len(parentReferences); i++ {
-		p := pr.Index(i).Interface().(gwapiv1.ParentReference)
-		parentReferences[i] = UpgradeParentReference(p)
-	}
-	return parentReferences
+	return pr.Interface().([]gwapiv1.ParentReference)
 }
 
 // GetRouteStatus returns the RouteStatus object associated with the Route.
@@ -250,26 +256,12 @@ func GetRouteParentContext(route RouteContext, forParentRef gwapiv1.ParentRefere
 		return ctx
 	}
 
-	isHTTPRoute := false
-	if rv.FieldByName("Kind").String() == KindHTTPRoute {
-		isHTTPRoute = true
-	}
-
 	var parentRef *gwapiv1.ParentReference
 	specParentRefs := rv.FieldByName("Spec").FieldByName("ParentRefs")
 	for i := 0; i < specParentRefs.Len(); i++ {
 		p := specParentRefs.Index(i).Interface().(gwapiv1.ParentReference)
-		up := p
-		if !isHTTPRoute {
-			up = UpgradeParentReference(p)
-		}
-		if reflect.DeepEqual(up, forParentRef) {
-			if isHTTPRoute {
-				parentRef = &p
-			} else {
-				upgraded := UpgradeParentReference(p)
-				parentRef = &upgraded
-			}
+		if reflect.DeepEqual(p, forParentRef) {
+			parentRef = &p
 			break
 		}
 	}
@@ -278,32 +270,28 @@ func GetRouteParentContext(route RouteContext, forParentRef gwapiv1.ParentRefere
 	}
 
 	routeParentStatusIdx := -1
+	defaultNamespace := gwapiv1.Namespace(metav1.NamespaceDefault)
 	statusParents := rv.FieldByName("Status").FieldByName("Parents")
 	for i := 0; i < statusParents.Len(); i++ {
 		p := statusParents.Index(i).FieldByName("ParentRef").Interface().(gwapiv1.ParentReference)
-		if !isHTTPRoute {
-			p = UpgradeParentReference(p)
-			defaultNamespace := gwapiv1.Namespace(metav1.NamespaceDefault)
-			if forParentRef.Namespace == nil {
-				forParentRef.Namespace = &defaultNamespace
-			}
-			if p.Namespace == nil {
-				p.Namespace = &defaultNamespace
-			}
+		// For those non-v1 routes, their underlying type of `ParentReference` is v1 as well.
+		// So we can skip upgrading these routes for simplicity.
+		if forParentRef.Namespace == nil {
+			forParentRef.Namespace = &defaultNamespace
+		}
+		if p.Namespace == nil {
+			p.Namespace = &defaultNamespace
 		}
 		if reflect.DeepEqual(p, forParentRef) {
 			routeParentStatusIdx = i
 			break
 		}
 	}
+
 	if routeParentStatusIdx == -1 {
-		tmpPR := forParentRef
-		if !isHTTPRoute {
-			tmpPR = DowngradeParentReference(tmpPR)
-		}
-		rParentStatus := v1alpha2.RouteParentStatus{
-			ControllerName: v1alpha2.GatewayController(rv.FieldByName("GatewayControllerName").String()),
-			ParentRef:      tmpPR,
+		rParentStatus := gwapiv1a2.RouteParentStatus{
+			ControllerName: gwapiv1a2.GatewayController(rv.FieldByName("GatewayControllerName").String()),
+			ParentRef:      forParentRef,
 		}
 		statusParents.Set(reflect.Append(statusParents, reflect.ValueOf(rParentStatus)))
 		routeParentStatusIdx = statusParents.Len() - 1
@@ -329,12 +317,20 @@ type RouteParentContext struct {
 	// a single field pointing to *gwapiv1.RouteStatus.
 	HTTPRoute *gwapiv1.HTTPRoute
 	GRPCRoute *gwapiv1.GRPCRoute
-	TLSRoute  *v1alpha2.TLSRoute
-	TCPRoute  *v1alpha2.TCPRoute
-	UDPRoute  *v1alpha2.UDPRoute
+	TLSRoute  *gwapiv1a2.TLSRoute
+	TCPRoute  *gwapiv1a2.TCPRoute
+	UDPRoute  *gwapiv1a2.UDPRoute
 
 	routeParentStatusIdx int
 	listeners            []*ListenerContext
+}
+
+// GetGateway returns the GatewayContext if parent resource is a gateway.
+func (r *RouteParentContext) GetGateway() *GatewayContext {
+	if r == nil || len(r.listeners) == 0 {
+		return nil
+	}
+	return r.listeners[0].gateway
 }
 
 func (r *RouteParentContext) SetListeners(listeners ...*ListenerContext) {
@@ -367,8 +363,8 @@ func GetBackendRef(b BackendRefContext) *gwapiv1.BackendRef {
 	if br.IsValid() {
 		backendRef := br.Interface().(gwapiv1.BackendRef)
 		return &backendRef
-
 	}
+
 	backendRef := b.(gwapiv1.BackendRef)
 	return &backendRef
 }

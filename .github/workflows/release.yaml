@@ -15,7 +15,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29  # v4.1.6
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
 
       - name: Extract Release Tag and Commit SHA
         id: vars
@@ -40,7 +40,7 @@ jobs:
         run: IMAGE_PULL_POLICY=IfNotPresent OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=${{ env.release_tag }} IMAGE=docker.io/envoyproxy/gateway TAG=${{ env.release_tag }} make helm-package helm-push
 
       - name: Upload Release Manifests
-        uses: softprops/action-gh-release@69320dbe05506a9a39fc8ae11030b214ec2d1f87  # v0.1.15
+        uses: softprops/action-gh-release@a74c6b72af54cfa997e81df42d94703d6313a2d0  # v0.1.15
         with:
           files: |
             release-artifacts/install.yaml

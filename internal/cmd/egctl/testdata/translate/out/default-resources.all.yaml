@@ -1,4 +1,4 @@
-envoyProxy:
+envoyProxyForGatewayClass:
   metadata:
     creationTimestamp: null
     name: default-envoy-proxy
@@ -160,7 +160,9 @@ gatewayClass:
       type: Accepted
     supportedFeatures:
     - GRPCRoute
+    - Gateway
     - GatewayPort8080
+    - HTTPRoute
     - HTTPRouteBackendProtocolH2C
     - HTTPRouteBackendProtocolWebSocket
     - HTTPRouteBackendTimeout

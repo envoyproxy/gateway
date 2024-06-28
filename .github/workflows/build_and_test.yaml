@@ -20,7 +20,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29  # v4.1.6
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
     - uses: ./tools/github-actions/setup-deps
     # Generate the installation manifests first, so it can check
     # for errors while running `make -k lint`
@@ -31,14 +31,14 @@ jobs:
   gen-check:
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29  # v4.1.6
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
     - uses: ./tools/github-actions/setup-deps
     - run: make -k gen-check
 
   license-check:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29  # v4.1.6
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
     - uses: ./tools/github-actions/setup-deps
     - run: make -k licensecheck
 
@@ -48,14 +48,14 @@ jobs:
       contents: read   #  for actions/checkout
       id-token: write  #  for fetching OIDC token
     steps:
-    - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29  # v4.1.6
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
     - uses: ./tools/github-actions/setup-deps
 
     # test
     - name: Run Coverage Tests
       run: make go.test.coverage
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@125fc84a9a348dbcf27191600683ec096ec9021c  # v4.4.1
+      uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673  # v4.5.0
       with:
         fail_ci_if_error: true
         files: ./coverage.xml
@@ -67,7 +67,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [lint, gen-check, license-check, coverage-test]
     steps:
-    - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29  # v4.1.6
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
     - uses: ./tools/github-actions/setup-deps
 
     - name: Build EG Multiarch Binaries
@@ -86,7 +86,7 @@ jobs:
       matrix:
         version: [ v1.27.13, v1.28.9, v1.29.4, v1.30.0 ]
     steps:
-    - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29  # v4.1.6
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
@@ -114,7 +114,7 @@ jobs:
       matrix:
         version: [ v1.27.13, v1.28.9, v1.29.4, v1.30.0 ]
     steps:
-    - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29  # v4.1.6
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
@@ -139,7 +139,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [conformance-test, e2e-test]
     steps:
-    - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29  # v4.1.6
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
@@ -179,4 +179,4 @@ jobs:
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       # use `0.0.0` as the default latest version.
       # use `Always` image pull policy for latest version.
-      run: IMAGE_PULL_POLICY=Always OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=v0.0.0-latest TAG=latest make helm-package helm-push
+      run: IMAGE_PULL_POLICY=Always OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=v0.0.0-latest TAG=latest make helm-push

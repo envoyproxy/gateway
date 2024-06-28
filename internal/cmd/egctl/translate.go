@@ -22,7 +22,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/known/anypb"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -315,13 +315,13 @@ func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) (gatewayap
 	gRes, _ := gTranslator.Translate(resources)
 	// Update the status of the GatewayClass based on EnvoyProxy validation
 	epInvalid := false
-	if resources.EnvoyProxy != nil {
-		if err := validation.ValidateEnvoyProxy(resources.EnvoyProxy); err != nil {
+	if resources.EnvoyProxyForGatewayClass != nil {
+		if err := validation.ValidateEnvoyProxy(resources.EnvoyProxyForGatewayClass); err != nil {
 			epInvalid = true
 			msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
 			status.SetGatewayClassAccepted(resources.GatewayClass, false, string(gwapiv1.GatewayClassReasonInvalidParameters), msg)
 		}
-		gRes.EnvoyProxy = resources.EnvoyProxy
+		gRes.EnvoyProxyForGatewayClass = resources.EnvoyProxyForGatewayClass
 	}
 	if !epInvalid {
 		status.SetGatewayClassAccepted(resources.GatewayClass, true, string(gwapiv1.GatewayClassReasonAccepted), status.MsgValidGatewayClass)
@@ -364,8 +364,8 @@ func translateGatewayAPIToXds(dnsDomain string, resourceType string, resources *
 				ServiceURL: ratelimit.GetServiceURL("envoy-gateway", dnsDomain),
 			},
 		}
-		if resources.EnvoyProxy != nil {
-			xTranslator.FilterOrder = resources.EnvoyProxy.Spec.FilterOrder
+		if resources.EnvoyProxyForGatewayClass != nil {
+			xTranslator.FilterOrder = resources.EnvoyProxyForGatewayClass.Spec.FilterOrder
 		}
 		xRes, err := xTranslator.Translate(val)
 		if err != nil {
@@ -445,8 +445,8 @@ func constructConfigDump(resources *gatewayapi.Resources, tCtx *xds_types.Resour
 
 	// Apply Bootstrap from EnvoyProxy API if set by the user
 	// The config should have been validated already
-	if resources.EnvoyProxy != nil && resources.EnvoyProxy.Spec.Bootstrap != nil {
-		bootstrapConfigurations, err = bootstrap.ApplyBootstrapConfig(resources.EnvoyProxy.Spec.Bootstrap, bootstrapConfigurations)
+	if resources.EnvoyProxyForGatewayClass != nil && resources.EnvoyProxyForGatewayClass.Spec.Bootstrap != nil {
+		bootstrapConfigurations, err = bootstrap.ApplyBootstrapConfig(resources.EnvoyProxyForGatewayClass.Spec.Bootstrap, bootstrapConfigurations)
 		if err != nil {
 			return nil, err
 		}
@@ -545,9 +545,9 @@ func constructConfigDump(resources *gatewayapi.Resources, tCtx *xds_types.Resour
 	return globalConfigs, nil
 }
 
-func addMissingServices(requiredServices map[string]*v1.Service, obj interface{}) {
+func addMissingServices(requiredServices map[string]*corev1.Service, obj interface{}) {
 	var objNamespace string
-	protocol := v1.Protocol(gatewayapi.TCPProtocol)
+	protocol := corev1.Protocol(gatewayapi.TCPProtocol)
 
 	refs := []gwapiv1.BackendRef{}
 	switch route := obj.(type) {
@@ -576,7 +576,7 @@ func addMissingServices(requiredServices map[string]*v1.Service, obj interface{}
 			refs = append(refs, rule.BackendRefs...)
 		}
 	case *gwapiv1a2.UDPRoute:
-		protocol = v1.Protocol(gatewayapi.UDPProtocol)
+		protocol = corev1.Protocol(gatewayapi.UDPProtocol)
 		objNamespace = route.Namespace
 		for _, rule := range route.Spec.Rules {
 			refs = append(refs, rule.BackendRefs...)
@@ -596,21 +596,21 @@ func addMissingServices(requiredServices map[string]*v1.Service, obj interface{}
 		key := ns + "/" + name
 
 		port := int32(*ref.Port)
-		servicePort := v1.ServicePort{
+		servicePort := corev1.ServicePort{
 			Name:     fmt.Sprintf("%s-%d", protocol, port),
 			Protocol: protocol,
 			Port:     port,
 		}
 		if service, found := requiredServices[key]; !found {
-			service := &v1.Service{
+			service := &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: ns,
 				},
-				Spec: v1.ServiceSpec{
+				Spec: corev1.ServiceSpec{
 					// Just a dummy IP
 					ClusterIP: "127.0.0.1",
-					Ports:     []v1.ServicePort{servicePort},
+					Ports:     []corev1.ServicePort{servicePort},
 				},
 			}
 			requiredServices[key] = service
@@ -685,7 +685,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 				},
 				Spec: typedSpec.(egv1a1.EnvoyProxySpec),
 			}
-			resources.EnvoyProxy = envoyProxy
+			resources.EnvoyProxyForGatewayClass = envoyProxy
 		case gatewayapi.KindGatewayClass:
 			typedSpec := spec.Interface()
 			gatewayClass := &gwapiv1.GatewayClass{
@@ -776,7 +776,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 			}
 			resources.GRPCRoutes = append(resources.GRPCRoutes, grpcRoute)
 		case gatewayapi.KindNamespace:
-			namespace := &v1.Namespace{
+			namespace := &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: name,
 				},
@@ -785,12 +785,12 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 			providedNamespaceMap.Insert(name)
 		case gatewayapi.KindService:
 			typedSpec := spec.Interface()
-			service := &v1.Service{
+			service := &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
 				},
-				Spec: typedSpec.(v1.ServiceSpec),
+				Spec: typedSpec.(corev1.ServiceSpec),
 			}
 			resources.Services = append(resources.Services, service)
 		case egv1a1.KindEnvoyPatchPolicy:
@@ -854,7 +854,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 
 	if useDefaultNamespace {
 		if !providedNamespaceMap.Has(config.DefaultNamespace) {
-			namespace := &v1.Namespace{
+			namespace := &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: config.DefaultNamespace,
 				},
@@ -867,7 +867,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 	if addMissingResources {
 		for ns := range requiredNamespaceMap {
 			if !providedNamespaceMap.Has(ns) {
-				namespace := &v1.Namespace{
+				namespace := &corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: ns,
 					},
@@ -876,7 +876,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 			}
 		}
 
-		requiredServiceMap := map[string]*v1.Service{}
+		requiredServiceMap := map[string]*corev1.Service{}
 		for _, route := range resources.TCPRoutes {
 			addMissingServices(requiredServiceMap, route)
 		}
@@ -893,7 +893,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 			addMissingServices(requiredServiceMap, route)
 		}
 
-		providedServiceMap := map[string]*v1.Service{}
+		providedServiceMap := map[string]*corev1.Service{}
 		for _, service := range resources.Services {
 			providedServiceMap[service.Namespace+"/"+service.Name] = service
 		}
@@ -911,7 +911,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 				for _, port := range service.Spec.Ports {
 					name := fmt.Sprintf("%s-%d", port.Protocol, port.Port)
 					if !providedPorts.Has(name) {
-						servicePort := v1.ServicePort{
+						servicePort := corev1.ServicePort{
 							Name:     name,
 							Protocol: port.Protocol,
 							Port:     port.Port,
@@ -923,7 +923,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 		}
 
 		// Add EnvoyProxy if it does not exist
-		if resources.EnvoyProxy == nil {
+		if resources.EnvoyProxyForGatewayClass == nil {
 			if err := addDefaultEnvoyProxy(resources); err != nil {
 				return nil, err
 			}
@@ -955,7 +955,7 @@ func addDefaultEnvoyProxy(resources *gatewayapi.Resources) error {
 			},
 		},
 	}
-	resources.EnvoyProxy = ep
+	resources.EnvoyProxyForGatewayClass = ep
 	ns := gwapiv1.Namespace(namespace)
 	resources.GatewayClass.Spec.ParametersRef = &gwapiv1.ParametersReference{
 		Group:     gwapiv1.Group(egv1a1.GroupVersion.Group),

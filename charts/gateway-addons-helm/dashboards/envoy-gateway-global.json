@@ -1,65 +1,4 @@
 {
-  "__inputs": [
-    {
-      "name": "DS_PROMETHEUS",
-      "label": "Prometheus",
-      "description": "",
-      "type": "datasource",
-      "pluginId": "prometheus",
-      "pluginName": "Prometheus"
-    },
-    {
-      "name": "DS_EXPRESSION",
-      "label": "Expression",
-      "description": "",
-      "type": "datasource",
-      "pluginId": "__expr__"
-    }
-  ],
-  "__elements": {},
-  "__requires": [
-    {
-      "type": "datasource",
-      "id": "__expr__",
-      "version": "1.0.0"
-    },
-    {
-      "type": "panel",
-      "id": "bargauge",
-      "name": "Bar gauge",
-      "version": ""
-    },
-    {
-      "type": "panel",
-      "id": "gauge",
-      "name": "Gauge",
-      "version": ""
-    },
-    {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "10.4.1"
-    },
-    {
-      "type": "datasource",
-      "id": "prometheus",
-      "name": "Prometheus",
-      "version": "1.0.0"
-    },
-    {
-      "type": "panel",
-      "id": "stat",
-      "name": "Stat",
-      "version": ""
-    },
-    {
-      "type": "panel",
-      "id": "timeseries",
-      "name": "Time series",
-      "version": ""
-    }
-  ],
   "annotations": {
     "list": [
       {
@@ -80,7 +19,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": null,
+  "id": 1,
   "links": [],
   "panels": [
     {
@@ -99,7 +38,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "How long in seconds a subscribed watchable is handled.",
       "fieldConfig": {
@@ -151,14 +90,14 @@
         "sizing": "auto",
         "valueMode": "color"
       },
-      "pluginVersion": "10.4.1",
+      "pluginVersion": "11.0.0",
       "repeat": "Runner",
       "repeatDirection": "v",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -179,7 +118,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "",
       "fieldConfig": {
@@ -228,14 +167,14 @@
         "textMode": "value_and_name",
         "wideLayout": false
       },
-      "pluginVersion": "10.4.1",
+      "pluginVersion": "11.0.0",
       "repeat": "Runner",
       "repeatDirection": "v",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -254,7 +193,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -275,7 +214,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "Current depth of watchable map.",
       "fieldConfig": {
@@ -325,14 +264,14 @@
         "textMode": "value",
         "wideLayout": false
       },
-      "pluginVersion": "10.4.1",
+      "pluginVersion": "11.0.0",
       "repeat": "Runner",
       "repeatDirection": "v",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -352,7 +291,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "fieldConfig": {
         "defaults": {
@@ -410,14 +349,14 @@
         "textMode": "value_and_name",
         "wideLayout": true
       },
-      "pluginVersion": "10.4.1",
+      "pluginVersion": "11.0.0",
       "repeat": "Runner",
       "repeatDirection": "v",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -433,7 +372,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "code",
@@ -450,7 +389,7 @@
         {
           "datasource": {
             "type": "__expr__",
-            "uid": "${DS_EXPRESSION}"
+            "uid": "__expr__"
           },
           "expression": "$A-$B",
           "hide": false,
@@ -464,7 +403,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "fieldConfig": {
         "defaults": {
@@ -517,14 +456,14 @@
         "showThresholdMarkers": true,
         "sizing": "auto"
       },
-      "pluginVersion": "10.4.1",
+      "pluginVersion": "11.0.0",
       "repeat": "Runner",
       "repeatDirection": "v",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -541,7 +480,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "code",
@@ -558,7 +497,7 @@
         {
           "datasource": {
             "type": "__expr__",
-            "uid": "${DS_EXPRESSION}"
+            "uid": "__expr__"
           },
           "expression": "(($A-$B) / $A) * 100",
           "hide": false,
@@ -585,7 +524,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "How long a status update takes to finish for all Kind.",
       "fieldConfig": {
@@ -638,7 +577,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -659,7 +598,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "",
       "fieldConfig": {
@@ -719,7 +658,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -740,7 +679,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "",
       "fieldConfig": {
@@ -800,7 +739,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -821,7 +760,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "",
       "fieldConfig": {
@@ -881,7 +820,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -902,7 +841,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "Total number of status updates by object kind.",
       "fieldConfig": {
@@ -984,7 +923,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -1004,7 +943,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "",
       "fieldConfig": {
@@ -1062,7 +1001,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -1079,7 +1018,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -1096,7 +1035,7 @@
         {
           "datasource": {
             "type": "__expr__",
-            "uid": "${DS_EXPRESSION}"
+            "uid": "__expr__"
           },
           "expression": "($B / $A) * 100",
           "hide": false,
@@ -1110,7 +1049,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "Number of status updates that succeeded by object kind.",
       "fieldConfig": {
@@ -1191,7 +1130,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -1211,7 +1150,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "Number of status updates that are no-ops by object kind. This is a subset of successful status updates.",
       "fieldConfig": {
@@ -1292,7 +1231,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -1312,7 +1251,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "Number of status updates that failed by object kind.",
       "fieldConfig": {
@@ -1392,7 +1331,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "code",
@@ -1412,7 +1351,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "Number of status update conflicts encountered by object kind.",
       "fieldConfig": {
@@ -1492,7 +1431,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "code",
@@ -1525,7 +1464,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "",
       "fieldConfig": {
@@ -1576,7 +1515,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -1592,7 +1531,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -1609,7 +1548,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "editorMode": "code",
           "expr": "xds_snapshot_creation_failed{namespace=\"$Namespace\"} OR on() vector(0)",
@@ -1626,7 +1565,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "fieldConfig": {
         "defaults": {
@@ -1683,7 +1622,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -1700,7 +1639,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -1717,7 +1656,7 @@
         {
           "datasource": {
             "type": "__expr__",
-            "uid": "${DS_EXPRESSION}"
+            "uid": "__expr__"
           },
           "expression": "($B / $A) * 100",
           "hide": false,
@@ -1731,7 +1670,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "fieldConfig": {
         "defaults": {
@@ -1783,7 +1722,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -1804,7 +1743,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "Maximum duration seconds for finished xDS delta stream connection.",
       "fieldConfig": {
@@ -1853,7 +1792,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -1873,7 +1812,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "Minimum duration seconds for finished xDS delta stream connection.",
       "fieldConfig": {
@@ -1922,7 +1861,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -1942,7 +1881,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "Total number of xds snapshot cache updates by node id.",
       "fieldConfig": {
@@ -2019,7 +1958,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -2039,7 +1978,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "",
       "fieldConfig": {
@@ -2097,7 +2036,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "code",
@@ -2114,7 +2053,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "code",
@@ -2131,7 +2070,7 @@
         {
           "datasource": {
             "type": "__expr__",
-            "uid": "${DS_EXPRESSION}"
+            "uid": "__expr__"
           },
           "expression": "($B / $A) * 100",
           "hide": false,
@@ -2145,7 +2084,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "Number of xds snapshot cache updates that succeed by node id.",
       "fieldConfig": {
@@ -2222,7 +2161,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -2242,7 +2181,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "Number of xds snapshot cache updates that failed by node id.",
       "fieldConfig": {
@@ -2319,7 +2258,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "code",
@@ -2352,7 +2291,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "fieldConfig": {
         "defaults": {
@@ -2402,7 +2341,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -2423,7 +2362,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "fieldConfig": {
         "defaults": {
@@ -2481,7 +2420,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -2501,7 +2440,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "fieldConfig": {
         "defaults": {
@@ -2559,7 +2498,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -2579,7 +2518,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "fieldConfig": {
         "defaults": {
@@ -2637,7 +2576,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -2657,7 +2596,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "Total number of applied resources sumed by kind (include No-ops).",
       "fieldConfig": {
@@ -2706,7 +2645,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -2726,7 +2665,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "Total number of applied resources sumed by infra name.",
       "fieldConfig": {
@@ -2803,7 +2742,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -2823,7 +2762,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "Total number of applied resources that succeed sumed by kind (include No-ops).",
       "fieldConfig": {
@@ -2872,7 +2811,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "code",
@@ -2892,7 +2831,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "Total number of applied resources that failed sumed by kind (include No-ops).",
       "fieldConfig": {
@@ -2941,7 +2880,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "code",
@@ -2961,7 +2900,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "fieldConfig": {
         "defaults": {
@@ -3011,7 +2950,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "code",
@@ -3032,7 +2971,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "fieldConfig": {
         "defaults": {
@@ -3090,7 +3029,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "code",
@@ -3110,7 +3049,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "fieldConfig": {
         "defaults": {
@@ -3168,7 +3107,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "code",
@@ -3188,7 +3127,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "fieldConfig": {
         "defaults": {
@@ -3246,7 +3185,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "code",
@@ -3266,7 +3205,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "Total number of deleted resources sumed by kind (include No-ops).",
       "fieldConfig": {
@@ -3315,7 +3254,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "code",
@@ -3335,7 +3274,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "Total number of deleted resources sumed by infra name.",
       "fieldConfig": {
@@ -3412,7 +3351,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "code",
@@ -3432,7 +3371,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "Total number of deleted resources that succeed sumed by kind (include No-ops).",
       "fieldConfig": {
@@ -3481,7 +3420,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "code",
@@ -3501,7 +3440,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "$datasource"
       },
       "description": "Total number of deleted resources that failed sumed by kind (include No-ops).",
       "fieldConfig": {
@@ -3550,7 +3489,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "$datasource"
           },
           "disableTextWrap": false,
           "editorMode": "code",
@@ -3570,7 +3509,9 @@
   ],
   "refresh": "5s",
   "schemaVersion": 39,
-  "tags": [],
+  "tags": [
+    "Control Plane"
+  ],
   "templating": {
     "list": [
       {
@@ -3592,10 +3533,14 @@
       },
       {
         "allValue": ".*",
-        "current": {},
+        "current": {
+          "selected": false,
+          "text": "envoy-gateway-system",
+          "value": "envoy-gateway-system"
+        },
         "datasource": {
           "type": "prometheus",
-          "uid": "${DS_PROMETHEUS}"
+          "uid": "$datasource"
         },
         "definition": "label_values(watchable_depth,namespace)",
         "hide": 0,
@@ -3616,10 +3561,14 @@
       },
       {
         "allValue": ".*",
-        "current": {},
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        },
         "datasource": {
           "type": "prometheus",
-          "uid": "${DS_PROMETHEUS}"
+          "uid": "$datasource"
         },
         "definition": "label_values(watchable_depth,runner)",
         "hide": 0,
@@ -3644,10 +3593,11 @@
     "from": "now-6h",
     "to": "now"
   },
+  "timeRangeUpdatedDuringEditOrView": false,
   "timepicker": {},
   "timezone": "browser",
   "title": "Envoy Gateway Global",
   "uid": "bdn8lriao7myoa",
-  "version": 8,
+  "version": 1,
   "weekStart": ""
 }

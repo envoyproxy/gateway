@@ -15,10 +15,11 @@
       }
     ]
   },
+  "description": "Envoy Pod Memory and CPU Usage",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 6,
+  "id": 4,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -33,6 +34,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -46,6 +48,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -94,6 +97,7 @@
           "showLegend": true
         },
         "tooltip": {
+          "maxHeight": 600,
           "mode": "single",
           "sort": "none"
         }
@@ -113,7 +117,6 @@
         }
       ],
       "title": "Memory Working Set Envoy Pods(mb)",
-      "transformations": [],
       "type": "timeseries"
     },
     {
@@ -127,6 +130,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -140,6 +144,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -188,6 +193,7 @@
           "showLegend": true
         },
         "tooltip": {
+          "maxHeight": 600,
           "mode": "single",
           "sort": "none"
         }
@@ -210,16 +216,17 @@
     }
   ],
   "refresh": "",
-  "schemaVersion": 38,
-  "style": "dark",
-  "tags": [],
+  "schemaVersion": 39,
+  "tags": [
+    "Data Plane"
+  ],
   "templating": {
     "list": [
       {
         "current": {
           "selected": false,
           "text": "Prometheus",
-          "value": "prometheus"
+          "value": "PBFA97CFB590B2093"
         },
         "hide": 0,
         "includeAll": false,
@@ -238,10 +245,11 @@
     "from": "now-5m",
     "to": "now"
   },
+  "timeRangeUpdatedDuringEditOrView": false,
   "timepicker": {},
   "timezone": "",
-  "title": "Envoy Pod Memory and CPU Usage",
+  "title": "Envoy Pod Resources",
   "uid": "f2279235-80b7-4c85-84f4-f25a3bf3eac0",
-  "version": 2,
+  "version": 1,
   "weekStart": ""
 }

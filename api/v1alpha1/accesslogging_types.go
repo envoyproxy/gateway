@@ -11,14 +11,22 @@ type ProxyAccessLog struct {
 	// Settings defines accesslog settings for managed proxies.
 	// If unspecified, will send default format to stdout.
 	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=50
 	Settings []ProxyAccessLogSetting `json:"settings,omitempty"`
 }
 
 type ProxyAccessLogSetting struct {
 	// Format defines the format of accesslog.
 	Format ProxyAccessLogFormat `json:"format"`
+	// Matches defines the match conditions for accesslog in CEL expression.
+	// An accesslog will be emitted only when one or more match conditions are evaluated to true.
+	// Invalid [CEL](https://www.envoyproxy.io/docs/envoy/latest/xds/type/v3/cel.proto.html#common-expression-language-cel-proto) expressions will be ignored.
+	// +notImplementedHide
+	Matches []string `json:"matches,omitempty"`
 	// Sinks defines the sinks of accesslog.
 	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=50
 	Sinks []ProxyAccessLogSink `json:"sinks"`
 }
 
@@ -120,6 +128,7 @@ type ALSEnvoyProxyAccessLog struct {
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=1
 	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Service kind.",rule="self.all(f, f.kind == 'Service')"
+	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core group.",rule="self.all(f, f.group == '')"
 	BackendRefs []BackendRef `json:"backendRefs"`
 	// LogName defines the friendly name of the access log to be returned in
 	// StreamAccessLogsMessage.Identifier. This allows the access log server
@@ -176,6 +185,7 @@ type OpenTelemetryEnvoyProxyAccessLog struct {
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
 	// +kubebuilder:validation:XValidation:message="only support Service kind.",rule="self.all(f, f.kind == 'Service')"
+	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core group.",rule="self.all(f, f.group == '')"
 	BackendRefs []BackendRef `json:"backendRefs,omitempty"`
 	// Resources is a set of labels that describe the source of a log entry, including envoy node info.
 	// It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).

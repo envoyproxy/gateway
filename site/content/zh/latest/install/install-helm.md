@@ -50,7 +50,7 @@ kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for
 kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/latest/quickstart.yaml -n default
 ```
 
-**注意**：[`quickstart.yaml`] 定义 Envoy Gateway 将侦听 80 端口及其全局可路由 IP 地址的流量，
+**注意：**[`quickstart.yaml`] 定义 Envoy Gateway 将侦听 80 端口及其全局可路由 IP 地址的流量，
 以便轻松使用浏览器测试 Envoy Gateway。当 Envoy Gateway 发现其侦听器正在使用特权端口（<1024）时，
 它会在内部将其映射到非特权端口，以便 Envoy Gateway 不需要额外的特权。了解此映射很重要，因为您在调试时可能需要考虑它。
 
@@ -74,7 +74,7 @@ helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest 
 helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --create-namespace --set kubernetesClusterDomain=<domain name>
 ```
 
-**注意**：以上是我们可以直接用于自定义安装的一些方法。但如果您正在寻找更复杂的更改，
+**注意：**以上是我们可以直接用于自定义安装的一些方法。但如果您正在寻找更复杂的更改，
 [values.yaml](https://helm.sh/docs/chart_template_guide/values_files/) 可以帮助您。
 
 ### 使用 values.yaml 文件进行复杂安装 {#using-values-yaml-file-for-complex-installation}

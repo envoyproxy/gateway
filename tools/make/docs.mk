@@ -4,7 +4,7 @@ RELEASE_VERSIONS ?= $(foreach v,$(wildcard ${ROOT_DIR}/docs/*),$(notdir ${v}))
 ##@ Docs
 
 .PHONY: docs
-docs: docs.clean helm-readme-gen docs-api docs-api-headings ## Generate Envoy Gateway Docs Sources
+docs: docs.clean helm-readme-gen docs-api ## Generate Envoy Gateway Docs Sources
 	@$(LOG_TARGET)
 	cd $(ROOT_DIR)/site && npm install
 	cd $(ROOT_DIR)/site && npm run build:production
@@ -32,17 +32,37 @@ docs.clean:
 	rm -f site/.hugo_build.lock
 
 .PHONY: docs-api
-docs-api: docs-api-gen helm-readme-gen docs-api-headings
+docs-api: docs-api-gen helm-readme-gen
 
 .PHONY: helm-readme-gen
-helm-readme-gen: $(tools/helm-docs)
-	@$(LOG_TARGET)
-	@ImageRepository=docker.io/envoyproxy/gateway ImageTag=latest ImagePullPolicy=IfNotPresent envsubst < charts/gateway-helm/values.tmpl.yaml > ./charts/gateway-helm/values.yaml # use production ENV to generate helm api doc
-	$(tools/helm-docs) --template-files=tools/helm-docs/readme.gotmpl charts/gateway-helm/ -f values.yaml -o README.md
-	$(tools/helm-docs) --template-files=tools/helm-docs/api.gotmpl charts/gateway-helm/ -f values.yaml -o api.md
-	mv charts/gateway-helm/api.md site/content/en/latest/install/gateway-helm-api.md
+helm-readme-gen:
+	@for chart in $(CHARTS); do \
+		$(LOG_TARGET); \
+		$(MAKE) $(addprefix helm-readme-gen., $$(basename $${chart})); \
+	done
+
+.PHONY: helm-readme-gen.%
+helm-readme-gen.%: $(tools/helm-docs)
+	$(eval COMMAND := $(word 1,$(subst ., ,$*)))
+	$(eval CHART_NAME := $(COMMAND))
+	# use production ENV to generate helm api doc
+	@if test -f "charts/${CHART_NAME}/values.tmpl.yaml"; then \
+		ImageRepository=docker.io/envoyproxy/gateway ImageTag=latest ImagePullPolicy=IfNotPresent \
+		envsubst < charts/${CHART_NAME}/values.tmpl.yaml > ./charts/${CHART_NAME}/values.yaml; \
+	fi
+
+	# generate helm readme doc
+	$(tools/helm-docs) --template-files=tools/helm-docs/readme.${CHART_NAME}.gotmpl -g charts/${CHART_NAME} -f values.yaml -o README.md
+
+	# change the placeholder to title before api helm docs generated: split by '-' and capitalize the first letters
+	$(eval CHART_TITLE := $(shell echo "$(CHART_NAME)" | sed -E 's/\<./\U&/g; s/-/ /g' | awk '{for(i=1;i<=NF;i++){ $$i=toupper(substr($$i,1,1)) substr($$i,2) }}1'))
+	sed 's/{CHART-NAME}/$(CHART_TITLE)/g' tools/helm-docs/api.gotmpl > tools/helm-docs/api.${CHART_NAME}.gotmpl
+	$(tools/helm-docs) --template-files=tools/helm-docs/api.${CHART_NAME}.gotmpl -g charts/${CHART_NAME} -f values.yaml -o api.md
+	mv charts/${CHART_NAME}/api.md site/content/en/latest/install/${CHART_NAME}-api.md
+	rm tools/helm-docs/api.${CHART_NAME}.gotmpl
+
 	# below line copy command for sync English api doc into Chinese
-	cp site/content/en/latest/install/gateway-helm-api.md site/content/zh/latest/install/gateway-helm-api.md
+	cp site/content/en/latest/install/${CHART_NAME}-api.md site/content/zh/latest/install/${CHART_NAME}-api.md
 
 .PHONY: docs-api-gen
 docs-api-gen: $(tools/crd-ref-docs)
@@ -56,12 +76,6 @@ docs-api-gen: $(tools/crd-ref-docs)
 	--renderer=markdown
 	# below line copy command for sync English api doc into Chinese
 	cp site/content/en/latest/api/extension_types.md site/content/zh/latest/api/extension_types.md
-
-.PHONY: docs-api-headings # Required since sphinx mst does not link to h4 headings.
-docs-api-headings:
-	@$(LOG_TARGET)
-	tools/hack/docs-headings.sh site/content/en/latest/api/extension_types.md
-	tools/hack/docs-headings.sh site/content/zh/latest/api/extension_types.md
 
 .PHONY: docs-release-prepare
 docs-release-prepare:
@@ -91,10 +105,10 @@ docs-release-gen:
 docs-check-links:
 	@$(LOG_TARGET)
 	# Check for broken links, right now we are focusing on the v1.0.0
-	# github.com does not allow access too often, there're a lot of 429 errors
+	# github.com does not allow access too often, there are a lot of 429 errors
 	# TODO: find a way to remove github.com from ignore list
 	# TODO: example.com is not a valid domain, we should remove it from ignore list
-	linkinator site/public/ -r --concurrency 25 -s "github.com example.com _print v0.6.0 v0.5.0 v0.4.0 v0.3.0 v0.2.0"
+	linkinator site/public/ -r --concurrency 25 --skip "github.com example.com github.io _print v0.6.0 v0.5.0 v0.4.0 v0.3.0 v0.2.0"
 
 release-notes-docs: $(tools/release-notes-docs)
 	@$(LOG_TARGET)

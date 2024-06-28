@@ -15,8 +15,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
-	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -48,7 +48,7 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 	// A policy is considered accepted if at least one targetRef contained inside matched a listener.
 	for _, policy := range policies {
 		policy := policy.DeepCopy()
-		var policyStatus gwv1a2.PolicyStatus
+		var policyStatus gwapiv1a2.PolicyStatus
 		accepted := false
 		targetRefs, err := extractTargetRefs(policy)
 		if err != nil {
@@ -80,7 +80,7 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 				// Only add a status condition if the policy was added into the IR
 				// Find its ancestor reference by resolved gateway, even with resolve error
 				gatewayNN := utils.NamespacedName(gateway)
-				ancestorRefs := []gwv1a2.ParentReference{
+				ancestorRefs := []gwapiv1a2.ParentReference{
 					getAncestorRefForPolicy(gatewayNN, currTarget.SectionName),
 				}
 				status.SetAcceptedForPolicyAncestors(&policyStatus, ancestorRefs, t.GatewayControllerName)
@@ -96,8 +96,8 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 	return res, errs
 }
 
-func extractTargetRefs(policy *unstructured.Unstructured) ([]gwv1a2.LocalPolicyTargetReferenceWithSectionName, error) {
-	ret := []gwv1a2.LocalPolicyTargetReferenceWithSectionName{}
+func extractTargetRefs(policy *unstructured.Unstructured) ([]gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, error) {
+	ret := []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{}
 	spec, found := policy.Object["spec"].(map[string]any)
 	if !found {
 		return nil, fmt.Errorf("no targets found for the policy")
@@ -130,8 +130,8 @@ func extractTargetRefs(policy *unstructured.Unstructured) ([]gwv1a2.LocalPolicyT
 	return ret, nil
 }
 
-func extractSingleTargetRef(data any) (gwv1a2.LocalPolicyTargetReferenceWithSectionName, error) {
-	var currRef gwv1a2.LocalPolicyTargetReferenceWithSectionName
+func extractSingleTargetRef(data any) (gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, error) {
+	var currRef gwapiv1a2.LocalPolicyTargetReferenceWithSectionName
 	d, err := json.Marshal(data)
 	if err != nil {
 		return currRef, err
@@ -145,7 +145,7 @@ func extractSingleTargetRef(data any) (gwv1a2.LocalPolicyTargetReferenceWithSect
 	return currRef, nil
 }
 
-func policyStatusToUnstructured(policyStatus gwv1a2.PolicyStatus) map[string]any {
+func policyStatusToUnstructured(policyStatus gwapiv1a2.PolicyStatus) map[string]any {
 	ret := map[string]any{}
 	// No need to check the marshal/unmarshal error here
 	d, _ := json.Marshal(policyStatus)
@@ -153,8 +153,8 @@ func policyStatusToUnstructured(policyStatus gwv1a2.PolicyStatus) map[string]any
 	return ret
 }
 
-func resolveExtServerPolicyGatewayTargetRef(policy *unstructured.Unstructured, target gwv1a2.LocalPolicyTargetReferenceWithSectionName, gateways map[types.NamespacedName]*policyGatewayTargetContext) (*GatewayContext, *status.PolicyResolveError) {
-	targetNs := ptr.To(gwv1b1.Namespace(policy.GetNamespace()))
+func resolveExtServerPolicyGatewayTargetRef(policy *unstructured.Unstructured, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, gateways map[types.NamespacedName]*policyGatewayTargetContext) (*GatewayContext, *status.PolicyResolveError) {
+	targetNs := ptr.To(gwapiv1b1.Namespace(policy.GetNamespace()))
 
 	// Check if the gateway exists
 	key := types.NamespacedName{
@@ -174,7 +174,7 @@ func resolveExtServerPolicyGatewayTargetRef(policy *unstructured.Unstructured, t
 			policy.GetNamespace(), *targetNs)
 
 		return gateway.GatewayContext, &status.PolicyResolveError{
-			Reason:  gwv1a2.PolicyReasonInvalid,
+			Reason:  gwapiv1a2.PolicyReasonInvalid,
 			Message: message,
 		}
 	}
@@ -185,13 +185,33 @@ func resolveExtServerPolicyGatewayTargetRef(policy *unstructured.Unstructured, t
 func (t *Translator) translateExtServerPolicyForGateway(
 	policy *unstructured.Unstructured,
 	gateway *GatewayContext,
-	target gwv1a2.LocalPolicyTargetReferenceWithSectionName,
+	target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
 	xdsIR XdsIRMap,
 ) bool {
 	irKey := t.getIRKey(gateway.Gateway)
 	gwIR := xdsIR[irKey]
 	found := false
 	for _, currListener := range gwIR.HTTP {
+		listenerName := currListener.Name[strings.LastIndex(currListener.Name, "/")+1:]
+		if target.SectionName != nil && string(*target.SectionName) != listenerName {
+			continue
+		}
+		currListener.ExtensionRefs = append(currListener.ExtensionRefs, &ir.UnstructuredRef{
+			Object: policy,
+		})
+		found = true
+	}
+	for _, currListener := range gwIR.TCP {
+		listenerName := currListener.Name[strings.LastIndex(currListener.Name, "/")+1:]
+		if target.SectionName != nil && string(*target.SectionName) != listenerName {
+			continue
+		}
+		currListener.ExtensionRefs = append(currListener.ExtensionRefs, &ir.UnstructuredRef{
+			Object: policy,
+		})
+		found = true
+	}
+	for _, currListener := range gwIR.UDP {
 		listenerName := currListener.Name[strings.LastIndex(currListener.Name, "/")+1:]
 		if target.SectionName != nil && string(*target.SectionName) != listenerName {
 			continue

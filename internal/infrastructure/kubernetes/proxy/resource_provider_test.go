@@ -18,7 +18,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	policyv1 "k8s.io/api/policy/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -145,7 +146,7 @@ func TestDeployment(t *testing.T) {
 			deploy: &egv1a1.KubernetesDeploymentSpec{
 				Patch: &egv1a1.KubernetesPatchSpec{
 					Type: ptr.To(egv1a1.StrategicMerge),
-					Value: v1.JSON{
+					Value: apiextensionsv1.JSON{
 						Raw: []byte("{\"spec\":{\"template\":{\"spec\":{\"hostNetwork\":true,\"dnsPolicy\":\"ClusterFirstWithHostNet\"}}}}"),
 					},
 				},
@@ -157,7 +158,7 @@ func TestDeployment(t *testing.T) {
 			deploy: &egv1a1.KubernetesDeploymentSpec{
 				Patch: &egv1a1.KubernetesPatchSpec{
 					Type: ptr.To(egv1a1.StrategicMerge),
-					Value: v1.JSON{
+					Value: apiextensionsv1.JSON{
 						Raw: []byte(`{
 							"spec":{
 								"template":{
@@ -511,6 +512,13 @@ func TestDeployment(t *testing.T) {
 				},
 			},
 		},
+		{
+			caseName: "with-name",
+			infra:    newTestInfra(),
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Name: ptr.To("custom-deployment-name"),
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
@@ -654,7 +662,7 @@ func TestDaemonSet(t *testing.T) {
 			daemonset: &egv1a1.KubernetesDaemonSetSpec{
 				Patch: &egv1a1.KubernetesPatchSpec{
 					Type: ptr.To(egv1a1.StrategicMerge),
-					Value: v1.JSON{
+					Value: apiextensionsv1.JSON{
 						Raw: []byte("{\"spec\":{\"template\":{\"spec\":{\"hostNetwork\":true,\"dnsPolicy\":\"ClusterFirstWithHostNet\"}}}}"),
 					},
 				},
@@ -666,7 +674,7 @@ func TestDaemonSet(t *testing.T) {
 			daemonset: &egv1a1.KubernetesDaemonSetSpec{
 				Patch: &egv1a1.KubernetesPatchSpec{
 					Type: ptr.To(egv1a1.StrategicMerge),
-					Value: v1.JSON{
+					Value: apiextensionsv1.JSON{
 						Raw: []byte(`{
 							"spec":{
 								"template":{
@@ -933,6 +941,13 @@ func TestDaemonSet(t *testing.T) {
 			infra:     newTestInfra(),
 			extraArgs: []string{"--key1 val1", "--key2 val2"},
 		},
+		{
+			caseName: "with-name",
+			infra:    newTestInfra(),
+			daemonset: &egv1a1.KubernetesDaemonSetSpec{
+				Name: ptr.To("custom-daemonset-name"),
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
@@ -1077,10 +1092,17 @@ func TestService(t *testing.T) {
 			service: &egv1a1.KubernetesServiceSpec{
 				Patch: &egv1a1.KubernetesPatchSpec{
 					Type: ptr.To(egv1a1.StrategicMerge),
-					Value: v1.JSON{
+					Value: apiextensionsv1.JSON{
 						Raw: []byte("{\"metadata\":{\"name\":\"foo\"}}"),
 					},
 				},
+			},
+		},
+		{
+			caseName: "with-name",
+			infra:    newTestInfra(),
+			service: &egv1a1.KubernetesServiceSpec{
+				Name: ptr.To("custom-service-name"),
 			},
 		},
 	}
@@ -1199,6 +1221,53 @@ func loadServiceAccount(tc string) (*corev1.ServiceAccount, error) {
 	return sa, nil
 }
 
+func TestPDB(t *testing.T) {
+	cfg, err := config.New()
+	require.NoError(t, err)
+
+	cases := []struct {
+		caseName string
+		infra    *ir.Infra
+		pdb      *egv1a1.KubernetesPodDisruptionBudgetSpec
+		deploy   *egv1a1.KubernetesDeploymentSpec
+	}{
+		{
+			caseName: "default",
+			infra:    newTestInfra(),
+			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
+				MinAvailable: ptr.To(int32(1)),
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.caseName, func(t *testing.T) {
+			provider := tc.infra.GetProxyInfra().GetProxyConfig().GetEnvoyProxyProvider()
+			provider.Kubernetes = egv1a1.DefaultEnvoyProxyKubeProvider()
+
+			if tc.deploy != nil {
+				provider.Kubernetes.EnvoyDeployment = tc.deploy
+			}
+
+			if tc.pdb != nil {
+				provider.Kubernetes.EnvoyPDB = tc.pdb
+			}
+
+			provider.GetEnvoyProxyKubeProvider()
+
+			r := NewResourceRender(cfg.Namespace, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
+
+			pdb, err := r.PodDisruptionBudget()
+			require.NoError(t, err)
+
+			podPDBExpected, err := loadPDB(tc.caseName)
+			require.NoError(t, err)
+
+			assert.Equal(t, podPDBExpected, pdb)
+		})
+	}
+}
+
 func TestHorizontalPodAutoscaler(t *testing.T) {
 	cfg, err := config.New()
 	require.NoError(t, err)
@@ -1207,6 +1276,7 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 		caseName string
 		infra    *ir.Infra
 		hpa      *egv1a1.KubernetesHorizontalPodAutoscalerSpec
+		deploy   *egv1a1.KubernetesDeploymentSpec
 	}{
 		{
 			caseName: "default",
@@ -1245,6 +1315,17 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 				},
 			},
 		},
+		{
+			caseName: "with-deployment-name",
+			infra:    newTestInfra(),
+			hpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+				MinReplicas: ptr.To[int32](5),
+				MaxReplicas: ptr.To[int32](10),
+			},
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Name: ptr.To("custom-deployment-name"),
+			},
+		},
 	}
 
 	for _, tc := range cases {
@@ -1255,7 +1336,9 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 			if tc.hpa != nil {
 				provider.Kubernetes.EnvoyHpa = tc.hpa
 			}
-
+			if tc.deploy != nil {
+				provider.Kubernetes.EnvoyDeployment = tc.deploy
+			}
 			provider.GetEnvoyProxyKubeProvider()
 
 			r := NewResourceRender(cfg.Namespace, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
@@ -1279,6 +1362,17 @@ func loadHPA(caseName string) (*autoscalingv2.HorizontalPodAutoscaler, error) {
 	hpa := &autoscalingv2.HorizontalPodAutoscaler{}
 	_ = yaml.Unmarshal(hpaYAML, hpa)
 	return hpa, nil
+}
+
+func loadPDB(caseName string) (*policyv1.PodDisruptionBudget, error) {
+	pdbYAML, err := os.ReadFile(fmt.Sprintf("testdata/pdb/%s.yaml", caseName))
+	if err != nil {
+		return nil, err
+	}
+
+	pdb := &policyv1.PodDisruptionBudget{}
+	_ = yaml.Unmarshal(pdbYAML, pdb)
+	return pdb, nil
 }
 
 func TestOwningGatewayLabelsAbsent(t *testing.T) {

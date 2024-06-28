@@ -7,38 +7,12 @@ This task show you how to config proxy observability, includes metrics, logs, an
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+{{< boilerplate o11y_prerequisites >}}
 
-[FluentBit](https://fluentbit.io/) is used to collect logs from the EnvoyProxy instances and forward them to Loki. Install FluentBit:
-
-```shell
-helm repo add fluent https://fluent.github.io/helm-charts
-helm repo update
-helm upgrade --install fluent-bit fluent/fluent-bit -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/fluent-bit/helm-values.yaml -n monitoring --create-namespace --version 0.30.4
-```
-
-[Loki](https://grafana.com/oss/loki/) is used to store logs. Install Loki:
+By default, the Service type of `loki` is ClusterIP, you can change it to LoadBalancer type for further usage:
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/loki/loki.yaml -n monitoring 
-```
-
-[Tempo](https://grafana.com/oss/tempo/) is used to store traces. Install Tempo:
-
-```shell
-helm repo add grafana https://grafana.github.io/helm-charts
-helm repo update
-helm upgrade --install tempo grafana/tempo -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/tempo/helm-values.yaml -n monitoring --create-namespace --version 1.3.1
-```
-
-[OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) offers a vendor-agnostic implementation of how to receive, process and export telemetry data. 
-Install OTel-Collector:
-
-```shell
-helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
-helm repo update
-helm upgrade --install otel-collector open-telemetry/opentelemetry-collector -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/otel-collector/helm-values.yaml -n monitoring --create-namespace --version 0.60.0
+kubectl patch service loki -n monitoring -p '{"spec": {"type": "LoadBalancer"}}'
 ```
 
 Expose endpoints:

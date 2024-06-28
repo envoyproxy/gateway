@@ -10,7 +10,6 @@ IMAGE_PULL_POLICY ?= IfNotPresent
 OCI_REGISTRY ?= oci://docker.io/envoyproxy
 CHART_NAME ?= gateway-helm
 CHART_VERSION ?= ${RELEASE_VERSION}
-RELEASE_NAMESPACE ?= envoy-gateway-system
 
 ##@ Helm
 .PHONY: helm-package
@@ -41,20 +40,6 @@ helm-push.%: helm-package.%
 	$(eval CHART_NAME := $(COMMAND))
 	helm push ${OUTPUT_DIR}/charts/${CHART_NAME}-${CHART_VERSION}.tgz ${OCI_REGISTRY}
 
-.PHONY: helm-install
-helm-install: ## Install envoy gateway relevant helm charts from OCI registry.
-helm-install:
-	@for chart in $(CHARTS); do \
-		$(LOG_TARGET); \
-		$(MAKE) $(addprefix helm-install., $$(basename $${chart})); \
-	done
-
-.PHONY: helm-install.%
-helm-install.%: helm-generate.%
-	$(eval COMMAND := $(word 1,$(subst ., ,$*)))
-	$(eval CHART_NAME := $(COMMAND))
-	helm install eg ${OCI_REGISTRY}/${CHART_NAME} --version ${CHART_VERSION} -n ${RELEASE_NAMESPACE} --create-namespace
-
 .PHONY: helm-generate
 helm-generate:
 	@for chart in $(CHARTS); do \
@@ -70,15 +55,15 @@ helm-generate.%:
   		GatewayImage=${IMAGE}:${TAG} GatewayImagePullPolicy=${IMAGE_PULL_POLICY} \
   		envsubst < charts/${CHART_NAME}/values.tmpl.yaml > ./charts/${CHART_NAME}/values.yaml; \
   	fi
+	helm dependency update charts/${CHART_NAME}
 	helm lint charts/${CHART_NAME}
-	helm dependency update charts/${CHART_NAME} # Update dependencies for add-ons chart.
-
-HELM_VALUES := $(wildcard test/helm/*.in.yaml)
-
-helm-template: ## Template envoy gateway helm chart.z
-	@$(LOG_TARGET)
-	@for file in $(HELM_VALUES); do \
+	$(call log, "Run helm template for chart: ${CHART_NAME}!");
+	@for file in $(wildcard test/helm/${CHART_NAME}/*.in.yaml); do \
   		filename=$$(basename $${file}); \
   		output="$${filename%.in.*}.out.yaml"; \
-		helm template eg charts/${CHART_NAME} -f $${file} > test/helm/$$output --namespace=${RELEASE_NAMESPACE}; \
+  	  	if [ ${CHART_NAME} == "gateway-addons-helm" ]; then \
+  	  		helm template ${CHART_NAME} charts/${CHART_NAME} -f $${file} > test/helm/${CHART_NAME}/$$output --namespace=monitoring; \
+  	  	else \
+			helm template ${CHART_NAME} charts/${CHART_NAME} -f $${file} > test/helm/${CHART_NAME}/$$output --namespace=envoy-gateway-system; \
+  	  	fi; \
 	done

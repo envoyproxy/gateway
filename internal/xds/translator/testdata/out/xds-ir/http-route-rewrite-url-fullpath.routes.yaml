@@ -12,7 +12,7 @@
         cluster: rewrite-route
         regexRewrite:
           pattern:
-            regex: /.+
+            regex: ^/.*$
           substitution: /rewrite
         upgradeConfigs:
         - upgradeType: websocket

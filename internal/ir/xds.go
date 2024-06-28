@@ -18,7 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
-	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -192,15 +192,45 @@ func (x Xds) Printable() *Xds {
 	return out
 }
 
-// HTTPListener holds the listener configuration.
+type Listener interface {
+	GetName() string
+	GetAddress() string
+	GetPort() uint32
+	GetExtensionRefs() []*UnstructuredRef
+}
+
 // +k8s:deepcopy-gen=true
-type HTTPListener struct {
+type CoreListenerDetails struct {
 	// Name of the HttpListener
 	Name string `json:"name" yaml:"name"`
 	// Address that the listener should listen on.
 	Address string `json:"address" yaml:"address"`
 	// Port on which the service can be expected to be accessed by clients.
 	Port uint32 `json:"port" yaml:"port"`
+	// ExtensionRefs holds unstructured resources that were introduced by an extension policy
+	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
+}
+
+func (l CoreListenerDetails) GetName() string {
+	return l.Name
+}
+
+func (l CoreListenerDetails) GetAddress() string {
+	return l.Address
+}
+
+func (l CoreListenerDetails) GetPort() uint32 {
+	return l.Port
+}
+
+func (l CoreListenerDetails) GetExtensionRefs() []*UnstructuredRef {
+	return l.ExtensionRefs
+}
+
+// HTTPListener holds the listener configuration.
+// +k8s:deepcopy-gen=true
+type HTTPListener struct {
+	CoreListenerDetails `json:",inline" yaml:",inline"`
 	// Hostnames (Host/Authority header value) with which the service can be expected to be accessed by clients.
 	// This field is required. Wildcard hosts are supported in the suffix or prefix form.
 	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-virtualhost
@@ -232,12 +262,12 @@ type HTTPListener struct {
 	// HTTP3 provides HTTP/3 configuration on the listener.
 	// +optional
 	HTTP3 *HTTP3Settings `json:"http3,omitempty"`
+	// HealthCheck provides configuration for determining whether the HTTP/HTTPS listener is healthy.
+	HealthCheck *HealthCheckSettings `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
 	// ClientTimeout sets the timeout configuration for downstream connections
 	Timeout *ClientTimeout `json:"timeout,omitempty" yaml:"clientTimeout,omitempty"`
 	// Connection settings
-	Connection *Connection `json:"connection,omitempty" yaml:"connection,omitempty"`
-	// ExtensionRefs holds unstructured resources that were introduced by an extension policy
-	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
+	Connection *ClientConnection `json:"connection,omitempty" yaml:"connection,omitempty"`
 }
 
 // Validate the fields within the HTTPListener structure
@@ -425,6 +455,10 @@ type HTTP2Settings struct {
 	// MaxConcurrentStreams is the maximum number of concurrent streams that can be opened on a connection.
 	MaxConcurrentStreams *uint32 `json:"maxConcurrentStreams,omitempty" yaml:"maxConcurrentStreams,omitempty"`
 }
+
+// HealthCheckSettings provides HealthCheck configuration on the HTTP/HTTPS listener.
+// +k8s:deepcopy-gen=true
+type HealthCheckSettings egv1a1.HealthCheckSettings
 
 // HeaderSettings provides configuration related to header processing on the listener.
 // +k8s:deepcopy-gen=true
@@ -1307,12 +1341,7 @@ func (s StringMatch) Validate() error {
 // TCPListener holds the TCP listener configuration.
 // +k8s:deepcopy-gen=true
 type TCPListener struct {
-	// Name of the TCPListener
-	Name string `json:"name" yaml:"name"`
-	// Address that the listener should listen on.
-	Address string `json:"address" yaml:"address"`
-	// Port on which the service can be expected to be accessed by clients.
-	Port uint32 `json:"port" yaml:"port"`
+	CoreListenerDetails `json:",inline" yaml:",inline"`
 	// TLS holds information for configuring TLS on a listener.
 	TLS *TLSConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
 	// TCPKeepalive configuration for the listener
@@ -1322,7 +1351,7 @@ type TCPListener struct {
 	// ClientTimeout sets the timeout configuration for downstream connections.
 	Timeout *ClientTimeout `json:"timeout,omitempty" yaml:"clientTimeout,omitempty"`
 	// Connection settings for clients
-	Connection *Connection `json:"connection,omitempty" yaml:"connection,omitempty"`
+	Connection *ClientConnection `json:"connection,omitempty" yaml:"connection,omitempty"`
 	// Routes associated with TCP traffic to the listener.
 	Routes []*TCPRoute `json:"routes,omitempty" yaml:"routes,omitempty"`
 }
@@ -1442,12 +1471,7 @@ func (t TLSInspectorConfig) Validate() error {
 // UDPListener holds the UDP listener configuration.
 // +k8s:deepcopy-gen=true
 type UDPListener struct {
-	// Name of the UDPListener
-	Name string `json:"name" yaml:"name"`
-	// Address that the listener should listen on.
-	Address string `json:"address" yaml:"address"`
-	// Port on which the service can be expected to be accessed by clients.
-	Port uint32 `json:"port" yaml:"port"`
+	CoreListenerDetails `json:",inline" yaml:",inline"`
 	// Route associated with UDP traffic to the listener.
 	Route *UDPRoute `json:"route,omitempty" yaml:"route,omitempty"`
 }
@@ -1619,7 +1643,7 @@ type EnvoyPatchPolicyStatus struct {
 	Name      string `json:"name,omitempty" yaml:"name"`
 	Namespace string `json:"namespace,omitempty" yaml:"namespace"`
 	// Status of the EnvoyPatchPolicy
-	Status *gwv1a2.PolicyStatus `json:"status,omitempty" yaml:"status,omitempty"`
+	Status *gwapiv1a2.PolicyStatus `json:"status,omitempty" yaml:"status,omitempty"`
 }
 
 // JSONPatchConfig defines the configuration for patching a Envoy xDS Resource
@@ -1660,6 +1684,7 @@ type Tracing struct {
 	SamplingRate float64                     `json:"samplingRate,omitempty"`
 	CustomTags   map[string]egv1a1.CustomTag `json:"customTags,omitempty"`
 	Destination  RouteDestination            `json:"destination,omitempty"`
+	Provider     egv1a1.TracingProvider      `json:"provider"`
 }
 
 // Metrics defines the configuration for metrics generated by Envoy
@@ -2112,9 +2137,9 @@ type BackendConnection struct {
 	BufferLimitBytes *uint32 `json:"bufferLimit,omitempty" yaml:"bufferLimit,omitempty"`
 }
 
-// Connection settings for downstream connections
+// ClientConnection settings for downstream connections
 // +k8s:deepcopy-gen=true
-type Connection struct {
+type ClientConnection struct {
 	// ConnectionLimit is the limit of number of connections
 	ConnectionLimit *ConnectionLimit `json:"limit,omitempty" yaml:"limit,omitempty"`
 	// BufferLimitBytes is the maximum number of bytes that can be buffered for a connection.

@@ -43,8 +43,8 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 	for _, gateway := range gateways {
 		irKey := t.getIRKey(gateway.Gateway)
 
-		if resources.EnvoyProxy != nil {
-			infraIR[irKey].Proxy.Config = resources.EnvoyProxy
+		if gateway.envoyProxy != nil {
+			infraIR[irKey].Proxy.Config = gateway.envoyProxy
 		}
 		t.processProxyObservability(gateway, xdsIR[irKey], infraIR[irKey].Proxy.Config, resources)
 
@@ -71,7 +71,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 			case gwapiv1.UDPProtocolType:
 				t.validateAllowedRoutes(listener, KindUDPRoute)
 			default:
-				status.SetGatewayListenerStatusCondition(listener.gateway,
+				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
 					listener.listenerStatusIdx,
 					gwapiv1.ListenerConditionAccepted,
 					metav1.ConditionFalse,
@@ -97,14 +97,16 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 			}
 			// Add the listener to the Xds IR
 			servicePort := &protocolPort{protocol: listener.Protocol, port: int32(listener.Port)}
-			containerPort := servicePortToContainerPort(int32(listener.Port), resources.EnvoyProxy)
+			containerPort := servicePortToContainerPort(int32(listener.Port), gateway.envoyProxy)
 			switch listener.Protocol {
 			case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
 				irListener := &ir.HTTPListener{
-					Name:    irListenerName(listener),
-					Address: "0.0.0.0",
-					Port:    uint32(containerPort),
-					TLS:     irTLSConfigs(listener.tlsSecrets...),
+					CoreListenerDetails: ir.CoreListenerDetails{
+						Name:    irListenerName(listener),
+						Address: "0.0.0.0",
+						Port:    uint32(containerPort),
+					},
+					TLS: irTLSConfigs(listener.tlsSecrets...),
 					Path: ir.PathSettings{
 						MergeSlashes:         true,
 						EscapedSlashesAction: ir.UnescapeAndRedirect,
@@ -121,9 +123,11 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 				xdsIR[irKey].HTTP = append(xdsIR[irKey].HTTP, irListener)
 			case gwapiv1.TCPProtocolType, gwapiv1.TLSProtocolType:
 				irListener := &ir.TCPListener{
-					Name:    irListenerName(listener),
-					Address: "0.0.0.0",
-					Port:    uint32(containerPort),
+					CoreListenerDetails: ir.CoreListenerDetails{
+						Name:    irListenerName(listener),
+						Address: "0.0.0.0",
+						Port:    uint32(containerPort),
+					},
 
 					// Gateway is processed firstly, then ClientTrafficPolicy, then xRoute.
 					// TLS field should be added to TCPListener as ClientTrafficPolicy will affect
@@ -134,9 +138,11 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 				xdsIR[irKey].TCP = append(xdsIR[irKey].TCP, irListener)
 			case gwapiv1.UDPProtocolType:
 				irListener := &ir.UDPListener{
-					Name:    irListenerName(listener),
-					Address: "0.0.0.0",
-					Port:    uint32(containerPort),
+					CoreListenerDetails: ir.CoreListenerDetails{
+						Name:    irListenerName(listener),
+						Address: "0.0.0.0",
+						Port:    uint32(containerPort),
+					},
 				}
 				xdsIR[irKey].UDP = append(xdsIR[irKey].UDP, irListener)
 			}
@@ -265,7 +271,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 				}
 
 				// TODO: how to get authority from the backendRefs?
-				ds, err := t.processBackendRefs(sink.OpenTelemetry.BackendRefs, envoyproxy.Namespace, resources)
+				ds, err := t.processBackendRefs(sink.OpenTelemetry.BackendRefs, envoyproxy.Namespace, resources, envoyproxy)
 				if err != nil {
 					return nil, err
 				}
@@ -309,7 +315,7 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 	tracing := envoyproxy.Spec.Telemetry.Tracing
 
 	// TODO: how to get authority from the backendRefs?
-	ds, err := t.processBackendRefs(tracing.Provider.BackendRefs, envoyproxy.Namespace, resources)
+	ds, err := t.processBackendRefs(tracing.Provider.BackendRefs, envoyproxy.Namespace, resources, envoyproxy)
 	if err != nil {
 		return nil, err
 	}
@@ -347,6 +353,7 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 			Name:     "tracing", // TODO: rename this, so that we can share backend with accesslog?
 			Settings: ds,
 		},
+		Provider: tracing.Provider,
 	}, nil
 }
 
@@ -362,7 +369,7 @@ func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy, resources *Re
 			continue
 		}
 
-		_, err := t.processBackendRefs(sink.OpenTelemetry.BackendRefs, envoyproxy.Namespace, resources)
+		_, err := t.processBackendRefs(sink.OpenTelemetry.BackendRefs, envoyproxy.Namespace, resources, envoyproxy)
 		if err != nil {
 			return nil, err
 		}
@@ -374,7 +381,7 @@ func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy, resources *Re
 	}, nil
 }
 
-func (t *Translator) processBackendRefs(backendRefs []egv1a1.BackendRef, namespace string, resources *Resources) ([]*ir.DestinationSetting, error) {
+func (t *Translator) processBackendRefs(backendRefs []egv1a1.BackendRef, namespace string, resources *Resources, envoyProxy *egv1a1.EnvoyProxy) ([]*ir.DestinationSetting, error) {
 	result := make([]*ir.DestinationSetting, 0, len(backendRefs))
 	for _, ref := range backendRefs {
 		ns := NamespaceDerefOr(ref.Namespace, namespace)
@@ -386,7 +393,7 @@ func (t *Translator) processBackendRefs(backendRefs []egv1a1.BackendRef, namespa
 			return nil, err
 		}
 
-		ds := t.processServiceDestinationSetting(ref.BackendObjectReference, ns, ir.GRPC, resources)
+		ds := t.processServiceDestinationSetting(ref.BackendObjectReference, ns, ir.GRPC, resources, envoyProxy)
 		result = append(result, ds)
 	}
 	if len(result) == 0 {

@@ -17,7 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
-	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
@@ -58,137 +58,155 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 	// Map of Gateway to the routes attached to it
 	gatewayRouteMap := make(map[string]sets.Set[string])
 
+	handledPolicies := make(map[types.NamespacedName]*egv1a1.EnvoyExtensionPolicy)
+
 	// Translate
 	// 1. First translate Policies targeting xRoutes
 	// 2. Finally, the policies targeting Gateways
 
 	// Process the policies targeting xRoutes
-	for _, policy := range envoyExtensionPolicies {
-		if policy.Spec.TargetRef.Kind != KindGateway {
-			policy := policy.DeepCopy()
-			res = append(res, policy)
-
-			// Negative statuses have already been assigned so its safe to skip
-			route, resolveErr := resolveEEPolicyRouteTargetRef(policy, routeMap)
-			if route == nil {
-				continue
-			}
-
-			// Find the Gateway that the route belongs to and add it to the
-			// gatewayRouteMap and ancestor list, which will be used to check
-			// policy overrides and populate its ancestor status.
-			parentRefs := GetParentReferences(route)
-			ancestorRefs := make([]gwv1a2.ParentReference, 0, len(parentRefs))
-			for _, p := range parentRefs {
-				if p.Kind == nil || *p.Kind == KindGateway {
-					namespace := route.GetNamespace()
-					if p.Namespace != nil {
-						namespace = string(*p.Namespace)
-					}
-					gwNN := types.NamespacedName{
-						Namespace: namespace,
-						Name:      string(p.Name),
-					}
-
-					key := gwNN.String()
-					if _, ok := gatewayRouteMap[key]; !ok {
-						gatewayRouteMap[key] = make(sets.Set[string])
-					}
-					gatewayRouteMap[key].Insert(utils.NamespacedName(route).String())
-
-					// Do need a section name since the policy is targeting to a route
-					ancestorRefs = append(ancestorRefs, getAncestorRefForPolicy(gwNN, p.SectionName))
+	for _, currPolicy := range envoyExtensionPolicies {
+		policyName := utils.NamespacedName(currPolicy)
+		targetRefs := currPolicy.Spec.GetTargetRefs()
+		for _, currTarget := range targetRefs {
+			if currTarget.Kind != KindGateway {
+				policy, found := handledPolicies[policyName]
+				if !found {
+					policy = currPolicy.DeepCopy()
+					res = append(res, policy)
+					handledPolicies[policyName] = policy
 				}
+
+				// Negative statuses have already been assigned so its safe to skip
+				route, resolveErr := resolveEEPolicyRouteTargetRef(policy, currTarget, routeMap)
+				if route == nil {
+					continue
+				}
+
+				// Find the Gateway that the route belongs to and add it to the
+				// gatewayRouteMap and ancestor list, which will be used to check
+				// policy overrides and populate its ancestor status.
+				parentRefs := GetParentReferences(route)
+				ancestorRefs := make([]gwapiv1a2.ParentReference, 0, len(parentRefs))
+				for _, p := range parentRefs {
+					if p.Kind == nil || *p.Kind == KindGateway {
+						namespace := route.GetNamespace()
+						if p.Namespace != nil {
+							namespace = string(*p.Namespace)
+						}
+						gwNN := types.NamespacedName{
+							Namespace: namespace,
+							Name:      string(p.Name),
+						}
+
+						key := gwNN.String()
+						if _, ok := gatewayRouteMap[key]; !ok {
+							gatewayRouteMap[key] = make(sets.Set[string])
+						}
+						gatewayRouteMap[key].Insert(utils.NamespacedName(route).String())
+
+						// Do need a section name since the policy is targeting to a route
+						ancestorRefs = append(ancestorRefs, getAncestorRefForPolicy(gwNN, p.SectionName))
+					}
+				}
+
+				// Set conditions for resolve error, then skip current xroute
+				if resolveErr != nil {
+					status.SetResolveErrorForPolicyAncestors(&policy.Status,
+						ancestorRefs,
+						t.GatewayControllerName,
+						policy.Generation,
+						resolveErr,
+					)
+
+					continue
+				}
+
+				// Set conditions for translation error if it got any
+				if err := t.translateEnvoyExtensionPolicyForRoute(policy, route, xdsIR, resources); err != nil {
+					status.SetTranslationErrorForPolicyAncestors(&policy.Status,
+						ancestorRefs,
+						t.GatewayControllerName,
+						policy.Generation,
+						status.Error2ConditionMsg(err),
+					)
+				}
+
+				// Set Accepted condition if it is unset
+				status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
 			}
-
-			// Set conditions for resolve error, then skip current xroute
-			if resolveErr != nil {
-				status.SetResolveErrorForPolicyAncestors(&policy.Status,
-					ancestorRefs,
-					t.GatewayControllerName,
-					policy.Generation,
-					resolveErr,
-				)
-
-				continue
-			}
-
-			// Set conditions for translation error if it got any
-			if err := t.translateEnvoyExtensionPolicyForRoute(policy, route, xdsIR, resources); err != nil {
-				status.SetTranslationErrorForPolicyAncestors(&policy.Status,
-					ancestorRefs,
-					t.GatewayControllerName,
-					policy.Generation,
-					status.Error2ConditionMsg(err),
-				)
-			}
-
-			// Set Accepted condition if it is unset
-			status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
 		}
 	}
 
 	// Process the policies targeting Gateways
-	for _, policy := range envoyExtensionPolicies {
-		if policy.Spec.TargetRef.Kind == KindGateway {
-			policy := policy.DeepCopy()
-			res = append(res, policy)
+	for _, currPolicy := range envoyExtensionPolicies {
+		policyName := utils.NamespacedName(currPolicy)
+		targetRefs := currPolicy.Spec.GetTargetRefs()
+		for _, currTarget := range targetRefs {
+			if currTarget.Kind == KindGateway {
+				policy, found := handledPolicies[policyName]
+				if !found {
+					policy = currPolicy.DeepCopy()
+					res = append(res, policy)
+					handledPolicies[policyName] = policy
+				}
 
-			// Negative statuses have already been assigned so its safe to skip
-			gateway, resolveErr := resolveEEPolicyGatewayTargetRef(policy, gatewayMap)
-			if gateway == nil {
-				continue
-			}
+				// Negative statuses have already been assigned so its safe to skip
+				gateway, resolveErr := resolveEEPolicyGatewayTargetRef(policy, currTarget, gatewayMap)
+				if gateway == nil {
+					continue
+				}
 
-			// Find its ancestor reference by resolved gateway, even with resolve error
-			gatewayNN := utils.NamespacedName(gateway)
-			ancestorRefs := []gwv1a2.ParentReference{
-				// Don't need a section name since the policy is targeting to a gateway
-				getAncestorRefForPolicy(gatewayNN, nil),
-			}
+				// Find its ancestor reference by resolved gateway, even with resolve error
+				gatewayNN := utils.NamespacedName(gateway)
+				ancestorRefs := []gwapiv1a2.ParentReference{
+					// Don't need a section name since the policy is targeting to a gateway
+					getAncestorRefForPolicy(gatewayNN, nil),
+				}
 
-			// Set conditions for resolve error, then skip current gateway
-			if resolveErr != nil {
-				status.SetResolveErrorForPolicyAncestors(&policy.Status,
-					ancestorRefs,
-					t.GatewayControllerName,
-					policy.Generation,
-					resolveErr,
-				)
+				// Set conditions for resolve error, then skip current gateway
+				if resolveErr != nil {
+					status.SetResolveErrorForPolicyAncestors(&policy.Status,
+						ancestorRefs,
+						t.GatewayControllerName,
+						policy.Generation,
+						resolveErr,
+					)
 
-				continue
-			}
+					continue
+				}
 
-			// Set conditions for translation error if it got any
-			if err := t.translateEnvoyExtensionPolicyForGateway(policy, gateway, xdsIR, resources); err != nil {
-				status.SetTranslationErrorForPolicyAncestors(&policy.Status,
-					ancestorRefs,
-					t.GatewayControllerName,
-					policy.Generation,
-					status.Error2ConditionMsg(err),
-				)
-			}
+				// Set conditions for translation error if it got any
+				if err := t.translateEnvoyExtensionPolicyForGateway(policy, currTarget, gateway, xdsIR, resources); err != nil {
+					status.SetTranslationErrorForPolicyAncestors(&policy.Status,
+						ancestorRefs,
+						t.GatewayControllerName,
+						policy.Generation,
+						status.Error2ConditionMsg(err),
+					)
+				}
 
-			// Set Accepted condition if it is unset
-			status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
+				// Set Accepted condition if it is unset
+				status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
 
-			// Check if this policy is overridden by other policies targeting at
-			// route level
-			if r, ok := gatewayRouteMap[gatewayNN.String()]; ok {
-				// Maintain order here to ensure status/string does not change with the same data
-				routes := r.UnsortedList()
-				sort.Strings(routes)
-				message := fmt.Sprintf("This policy is being overridden by other envoyExtensionPolicies for these routes: %v", routes)
+				// Check if this policy is overridden by other policies targeting at
+				// route level
+				if r, ok := gatewayRouteMap[gatewayNN.String()]; ok {
+					// Maintain order here to ensure status/string does not change with the same data
+					routes := r.UnsortedList()
+					sort.Strings(routes)
+					message := fmt.Sprintf("This policy is being overridden by other envoyExtensionPolicies for these routes: %v", routes)
 
-				status.SetConditionForPolicyAncestors(&policy.Status,
-					ancestorRefs,
-					t.GatewayControllerName,
-					egv1a1.PolicyConditionOverridden,
-					metav1.ConditionTrue,
-					egv1a1.PolicyReasonOverridden,
-					message,
-					policy.Generation,
-				)
+					status.SetConditionForPolicyAncestors(&policy.Status,
+						ancestorRefs,
+						t.GatewayControllerName,
+						egv1a1.PolicyConditionOverridden,
+						metav1.ConditionTrue,
+						egv1a1.PolicyReasonOverridden,
+						message,
+						policy.Generation,
+					)
+				}
 			}
 		}
 	}
@@ -196,12 +214,12 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 	return res
 }
 
-func resolveEEPolicyGatewayTargetRef(policy *egv1a1.EnvoyExtensionPolicy, gateways map[types.NamespacedName]*policyGatewayTargetContext) (*GatewayContext, *status.PolicyResolveError) {
+func resolveEEPolicyGatewayTargetRef(policy *egv1a1.EnvoyExtensionPolicy, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, gateways map[types.NamespacedName]*policyGatewayTargetContext) (*GatewayContext, *status.PolicyResolveError) {
 	targetNs := policy.Namespace
 
 	// Check if the gateway exists
 	key := types.NamespacedName{
-		Name:      string(policy.Spec.TargetRef.Name),
+		Name:      string(target.Name),
 		Namespace: targetNs,
 	}
 	gateway, ok := gateways[key]
@@ -217,7 +235,7 @@ func resolveEEPolicyGatewayTargetRef(policy *egv1a1.EnvoyExtensionPolicy, gatewa
 			policy.Namespace, targetNs)
 
 		return gateway.GatewayContext, &status.PolicyResolveError{
-			Reason:  gwv1a2.PolicyReasonInvalid,
+			Reason:  gwapiv1a2.PolicyReasonInvalid,
 			Message: message,
 		}
 	}
@@ -227,7 +245,7 @@ func resolveEEPolicyGatewayTargetRef(policy *egv1a1.EnvoyExtensionPolicy, gatewa
 		message := "Unable to target Gateway, another EnvoyExtensionPolicy has already attached to it"
 
 		return gateway.GatewayContext, &status.PolicyResolveError{
-			Reason:  gwv1a2.PolicyReasonConflicted,
+			Reason:  gwapiv1a2.PolicyReasonConflicted,
 			Message: message,
 		}
 	}
@@ -239,13 +257,13 @@ func resolveEEPolicyGatewayTargetRef(policy *egv1a1.EnvoyExtensionPolicy, gatewa
 	return gateway.GatewayContext, nil
 }
 
-func resolveEEPolicyRouteTargetRef(policy *egv1a1.EnvoyExtensionPolicy, routes map[policyTargetRouteKey]*policyRouteTargetContext) (RouteContext, *status.PolicyResolveError) {
+func resolveEEPolicyRouteTargetRef(policy *egv1a1.EnvoyExtensionPolicy, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, routes map[policyTargetRouteKey]*policyRouteTargetContext) (RouteContext, *status.PolicyResolveError) {
 	targetNs := policy.Namespace
 
 	// Check if the route exists
 	key := policyTargetRouteKey{
-		Kind:      string(policy.Spec.TargetRef.Kind),
-		Name:      string(policy.Spec.TargetRef.Name),
+		Kind:      string(target.Kind),
+		Name:      string(target.Name),
 		Namespace: targetNs,
 	}
 
@@ -261,7 +279,7 @@ func resolveEEPolicyRouteTargetRef(policy *egv1a1.EnvoyExtensionPolicy, routes m
 			policy.Namespace, targetNs)
 
 		return route.RouteContext, &status.PolicyResolveError{
-			Reason:  gwv1a2.PolicyReasonInvalid,
+			Reason:  gwapiv1a2.PolicyReasonInvalid,
 			Message: message,
 		}
 	}
@@ -269,10 +287,10 @@ func resolveEEPolicyRouteTargetRef(policy *egv1a1.EnvoyExtensionPolicy, routes m
 	// Check if another policy targeting the same xRoute exists
 	if route.attached {
 		message := fmt.Sprintf("Unable to target %s, another EnvoyExtensionPolicy has already attached to it",
-			string(policy.Spec.TargetRef.Kind))
+			string(target.Kind))
 
 		return route.RouteContext, &status.PolicyResolveError{
-			Reason:  gwv1a2.PolicyReasonConflicted,
+			Reason:  gwapiv1a2.PolicyReasonConflicted,
 			Message: message,
 		}
 	}
@@ -288,15 +306,10 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(policy *egv1a1.EnvoyE
 	xdsIR XdsIRMap, resources *Resources,
 ) error {
 	var (
-		extProcs  []ir.ExtProc
 		wasms     []ir.Wasm
 		err, errs error
 	)
 
-	if extProcs, err = t.buildExtProcs(policy, resources); err != nil {
-		err = perr.WithMessage(err, "ExtProcs")
-		errs = errors.Join(errs, err)
-	}
 	if wasms, err = t.buildWasms(policy); err != nil {
 		err = perr.WithMessage(err, "WASMs")
 		errs = errors.Join(errs, err)
@@ -309,23 +322,42 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(policy *egv1a1.EnvoyE
 
 	// Apply IR to all relevant routes
 	prefix := irRoutePrefix(route)
-	for _, x := range xdsIR {
-		for _, http := range x.HTTP {
-			for _, r := range http.Routes {
-				// Apply if there is a match
-				if strings.HasPrefix(r.Name, prefix) {
-					r.ExtProcs = extProcs
-					r.Wasms = wasms
+	parentRefs := GetParentReferences(route)
+	for _, p := range parentRefs {
+		parentRefCtx := GetRouteParentContext(route, p)
+		gtwCtx := parentRefCtx.GetGateway()
+		if gtwCtx == nil {
+			continue
+		}
+
+		var extProcs []ir.ExtProc
+		if extProcs, err = t.buildExtProcs(policy, resources, gtwCtx.envoyProxy); err != nil {
+			err = perr.WithMessage(err, "ExtProcs")
+			errs = errors.Join(errs, err)
+		}
+		irKey := t.getIRKey(gtwCtx.Gateway)
+		for _, listener := range parentRefCtx.listeners {
+			irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
+			if irListener != nil {
+				for _, r := range irListener.Routes {
+					if strings.HasPrefix(r.Name, prefix) {
+						r.ExtProcs = extProcs
+						r.Wasms = wasms
+					}
 				}
 			}
 		}
 	}
 
-	return nil
+	return errs
 }
 
-func (t *Translator) translateEnvoyExtensionPolicyForGateway(policy *egv1a1.EnvoyExtensionPolicy,
-	gateway *GatewayContext, xdsIR XdsIRMap, resources *Resources,
+func (t *Translator) translateEnvoyExtensionPolicyForGateway(
+	policy *egv1a1.EnvoyExtensionPolicy,
+	target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
+	gateway *GatewayContext,
+	xdsIR XdsIRMap,
+	resources *Resources,
 ) error {
 	var (
 		extProcs  []ir.ExtProc
@@ -333,7 +365,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(policy *egv1a1.Envo
 		err, errs error
 	)
 
-	if extProcs, err = t.buildExtProcs(policy, resources); err != nil {
+	if extProcs, err = t.buildExtProcs(policy, resources, gateway.envoyProxy); err != nil {
 		err = perr.WithMessage(err, "ExtProcs")
 		errs = errors.Join(errs, err)
 	}
@@ -351,7 +383,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(policy *egv1a1.Envo
 	// Should exist since we've validated this
 	x := xdsIR[irKey]
 
-	policyTarget := irStringKey(policy.Namespace, string(policy.Spec.TargetRef.Name))
+	policyTarget := irStringKey(policy.Namespace, string(target.Name))
 
 	for _, http := range x.HTTP {
 		gatewayName := http.Name[0:strings.LastIndex(http.Name, "/")]
@@ -380,7 +412,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(policy *egv1a1.Envo
 	return nil
 }
 
-func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resources *Resources) ([]ir.ExtProc, error) {
+func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resources *Resources, envoyProxy *egv1a1.EnvoyProxy) ([]ir.ExtProc, error) {
 	var extProcIRList []ir.ExtProc
 
 	if policy == nil {
@@ -389,7 +421,7 @@ func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resource
 
 	for idx, ep := range policy.Spec.ExtProc {
 		name := irConfigNameForEEP(policy, idx)
-		extProcIR, err := t.buildExtProc(name, utils.NamespacedName(policy), ep, idx, resources)
+		extProcIR, err := t.buildExtProc(name, utils.NamespacedName(policy), ep, idx, resources, envoyProxy)
 		if err != nil {
 			return nil, err
 		}
@@ -404,6 +436,7 @@ func (t *Translator) buildExtProc(
 	extProc egv1a1.ExtProc,
 	extProcIdx int,
 	resources *Resources,
+	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.ExtProc, error) {
 	var (
 		ds        *ir.DestinationSetting
@@ -426,7 +459,9 @@ func (t *Translator) buildExtProc(
 			policyNamespacedName,
 			egv1a1.KindEnvoyExtensionPolicy,
 			ir.GRPC,
-			resources)
+			resources,
+			envoyProxy,
+		)
 		if err != nil {
 			return nil, err
 		}
