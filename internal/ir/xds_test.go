@@ -503,6 +503,7 @@ var (
 						},
 					},
 				},
+				CACertificateMaps: map[string]string{},
 			},
 		},
 	}
@@ -1248,6 +1249,7 @@ func TestValidateJWT(t *testing.T) {
 						},
 					},
 				},
+				CACertificateMaps: map[string]string{},
 			},
 			want: nil,
 		},

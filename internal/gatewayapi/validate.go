@@ -896,6 +896,7 @@ func (t *Translator) validateHostname(hostname string) error {
 //     is it permitted by any ReferenceGrant
 //  3. Does the secret exist
 func (t *Translator) validateSecretRef(
+	//nolint:unparam
 	allowCrossNamespace bool,
 	from crossNamespaceFrom,
 	secretObjRef gwapiv1b1.SecretObjectReference,

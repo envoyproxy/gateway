@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"net/url"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -34,7 +35,9 @@ func init() {
 	registerHTTPFilter(&jwt{})
 }
 
-type jwt struct{}
+type jwt struct {
+	CACertificateMaps map[string][]byte
+}
 
 var _ httpFilter = &jwt{}
 
@@ -194,18 +197,26 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 
 // buildXdsUpstreamTLSSocket returns an xDS TransportSocket that uses envoyTrustBundle
 // as the CA to authenticate server certificates.
-// TODO huabing: add support for custom CA and client certificate.
-func buildXdsUpstreamTLSSocket(sni string) (*corev3.TransportSocket, error) {
+// TODO huabing: add support for client certificate.
+func buildXdsUpstreamTLSSocket(sni string, cert string) (*corev3.TransportSocket, error) {
+	ds := &corev3.DataSource{
+		Specifier: &corev3.DataSource_Filename{
+			Filename: envoyTrustBundle,
+		},
+	}
+	if cert != "" {
+		ds = &corev3.DataSource{
+			Specifier: &corev3.DataSource_InlineString{
+				InlineString: cert,
+			},
+		}
+	}
 	tlsCtxProto := &tlsv3.UpstreamTlsContext{
 		Sni: sni,
 		CommonTlsContext: &tlsv3.CommonTlsContext{
 			ValidationContextType: &tlsv3.CommonTlsContext_ValidationContext{
 				ValidationContext: &tlsv3.CertificateValidationContext{
-					TrustedCa: &corev3.DataSource{
-						Specifier: &corev3.DataSource_Filename{
-							Filename: envoyTrustBundle,
-						},
-					},
+					TrustedCa: ds,
 				},
 			},
 		},
@@ -270,16 +281,23 @@ func (*jwt) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRo
 		if !routeContainsJWTAuthn(route) {
 			continue
 		}
-
+		m := route.Security.JWT.CACertificateMaps
 		for i := range route.Security.JWT.Providers {
 			provider := route.Security.JWT.Providers[i]
-
-			if err = addClusterFromURL(provider.RemoteJWKS.URI, tCtx); err != nil {
+			var cert string
+			if m != nil {
+				var u *url.URL
+				if u, err = url.Parse(provider.RemoteJWKS.URI); err != nil {
+					errs = errors.Join(errs, err)
+				}
+				hostname := u.Hostname()
+				cert = m[hostname]
+			}
+			if err = addClusterFromURL(provider.RemoteJWKS.URI, tCtx, cert); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
 	}
-
 	return errs
 }
 

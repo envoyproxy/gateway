@@ -184,7 +184,7 @@ func (*wasm) patchResources(tCtx *types.ResourceVersionTable,
 		}
 
 		for _, w := range route.Wasms {
-			if err = addClusterFromURL(w.HTTPWasmCode.URL, tCtx); err != nil {
+			if err = addClusterFromURL(w.HTTPWasmCode.URL, tCtx, ""); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
