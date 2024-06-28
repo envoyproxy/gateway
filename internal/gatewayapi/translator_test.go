@@ -7,6 +7,9 @@ package gatewayapi
 
 import (
 	"bufio"
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"os"
@@ -32,6 +35,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/utils/field"
 	"github.com/envoyproxy/gateway/internal/utils/file"
+	"github.com/envoyproxy/gateway/internal/wasm"
 )
 
 var overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
@@ -85,6 +89,7 @@ func TestTranslate(t *testing.T) {
 				BackendEnabled:          backendEnabled,
 				Namespace:               "envoy-gateway-system",
 				MergeGateways:           IsMergeGatewaysEnabled(resources),
+				WasmCache:               &mockWasmCache{},
 			}
 
 			// Add common test fixtures
@@ -812,3 +817,22 @@ func TestServicePortToContainerPort(t *testing.T) {
 		assert.Equal(t, tc.containerPort, got)
 	}
 }
+
+var _ wasm.Cache = &mockWasmCache{}
+
+type mockWasmCache struct{}
+
+func (m *mockWasmCache) Start(_ context.Context) {}
+
+func (m *mockWasmCache) Get(downloadURL string, _ wasm.GetOptions) (url string, checksum string, err error) {
+	// This is a mock implementation of the wasm.Cache.Get method.
+	sha := sha256.Sum256([]byte(downloadURL))
+	hashedName := hex.EncodeToString(sha[:])
+	salt := []byte("salt")
+	salt = append(salt, hashedName...)
+	sha = sha256.Sum256(salt)
+	checksum = hex.EncodeToString(sha[:])
+	return fmt.Sprintf("https://envoy-gateway:18002/%s.wasm", hashedName), checksum, nil
+}
+
+func (m *mockWasmCache) Cleanup() {}

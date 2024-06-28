@@ -914,13 +914,6 @@ func irExtServiceDestinationName(policy *egv1a1.SecurityPolicy, backendRef *gwap
 		nn.String()))
 }
 
-func irConfigName(policy *egv1a1.SecurityPolicy) string {
-	return fmt.Sprintf(
-		"%s/%s",
-		strings.ToLower(KindSecurityPolicy),
-		utils.NamespacedName(policy).String())
-}
-
 func (t *Translator) buildAuthorization(policy *egv1a1.SecurityPolicy) (*ir.Authorization, error) {
 	var (
 		authorization = policy.Spec.Authorization
