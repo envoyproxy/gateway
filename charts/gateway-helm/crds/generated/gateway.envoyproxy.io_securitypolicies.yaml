@@ -49,6 +49,73 @@ spec:
           spec:
             description: Spec defines the desired state of SecurityPolicy.
             properties:
+              authorization:
+                description: Authorization defines the authorization configuration.
+                properties:
+                  defaultAction:
+                    description: |-
+                      DefaultAction defines the default action to be taken if no rules match.
+                      If not specified, the default action is Deny.
+                    enum:
+                    - Allow
+                    - Deny
+                    type: string
+                  rules:
+                    description: |-
+                      Rules defines a list of authorization rules.
+                      These rules are evaluated in order, the first matching rule will be applied,
+                      and the rest will be skipped.
+
+
+                      For example, if there are two rules: the first rule allows the request
+                      and the second rule denies it, when a request matches both rules, it will be allowed.
+                    items:
+                      description: AuthorizationRule defines a single authorization
+                        rule.
+                      properties:
+                        action:
+                          description: Action defines the action to be taken if the
+                            rule matches.
+                          enum:
+                          - Allow
+                          - Deny
+                          type: string
+                        name:
+                          description: |-
+                            Name is a user-friendly name for the rule.
+                            If not specified, Envoy Gateway will generate a unique name for the rule.n
+                          type: string
+                        principal:
+                          description: Principal specifies the client identity of
+                            a request.
+                          properties:
+                            clientCIDRs:
+                              description: |-
+                                ClientCIDRs are the IP CIDR ranges of the client.
+                                Valid examples are "192.168.1.0/24" or "2001:db8::/64"
+
+
+                                The client IP is inferred from the X-Forwarded-For header, a custom header,
+                                or the proxy protocol.
+                                You can use the `ClientIPDetection` or the `EnableProxyProtocol` field in
+                                the `ClientTrafficPolicy` to configure how the client IP is detected.
+                              items:
+                                description: |-
+                                  CIDR defines a CIDR Address range.
+                                  A CIDR can be an IPv4 address range such as "192.168.1.0/24" or an IPv6 address range such as "2001:0db8:11a3:09d7::/64".
+                                pattern: ((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/([0-9]+))|((([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))\/([0-9]+))
+                                type: string
+                              minItems: 1
+                              type: array
+                          required:
+                          - clientCIDRs
+                          type: object
+                      required:
+                      - action
+                      - principal
+                      type: object
+                    type: array
+                type: object
               basicAuth:
                 description: BasicAuth defines the configuration for the HTTP Basic
                   Authentication.
@@ -193,7 +260,10 @@ spec:
                         description: |-
                           BackendRef references a Kubernetes object that represents the
                           backend server to which the authorization request will be sent.
-                          Only service Kind is supported for now.
+                          Only Service kind is supported for now.
+
+
+                          Deprecated: Use BackendRefs instead.
                         properties:
                           group:
                             default: ""
@@ -268,9 +338,99 @@ spec:
                         - message: Must have port for Service reference
                           rule: '(size(self.group) == 0 && self.kind == ''Service'')
                             ? has(self.port) : true'
-                    required:
-                    - backendRef
+                      backendRefs:
+                        description: |-
+                          BackendRefs references a Kubernetes object that represents the
+                          backend server to which the authorization request will be sent.
+                          Only Service kind is supported for now.
+                        items:
+                          description: BackendRef defines how an ObjectReference that
+                            is specific to BackendRef.
+                          properties:
+                            group:
+                              default: ""
+                              description: |-
+                                Group is the group of the referent. For example, "gateway.networking.k8s.io".
+                                When unspecified or empty string, core API group is inferred.
+                              maxLength: 253
+                              pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                              type: string
+                            kind:
+                              default: Service
+                              description: |-
+                                Kind is the Kubernetes resource kind of the referent. For example
+                                "Service".
+
+
+                                Defaults to "Service" when not specified.
+
+
+                                ExternalName services can refer to CNAME DNS records that may live
+                                outside of the cluster and as such are difficult to reason about in
+                                terms of conformance. They also may not be safe to forward to (see
+                                CVE-2021-25740 for more information). Implementations SHOULD NOT
+                                support ExternalName Services.
+
+
+                                Support: Core (Services with a type other than ExternalName)
+
+
+                                Support: Implementation-specific (Services with type ExternalName)
+                              maxLength: 63
+                              minLength: 1
+                              pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                              type: string
+                            name:
+                              description: Name is the name of the referent.
+                              maxLength: 253
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace is the namespace of the backend. When unspecified, the local
+                                namespace is inferred.
+
+
+                                Note that when a namespace different than the local namespace is specified,
+                                a ReferenceGrant object is required in the referent namespace to allow that
+                                namespace's owner to accept the reference. See the ReferenceGrant
+                                documentation for details.
+
+
+                                Support: Core
+                              maxLength: 63
+                              minLength: 1
+                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                              type: string
+                            port:
+                              description: |-
+                                Port specifies the destination port number to use for this resource.
+                                Port is required when the referent is a Kubernetes Service. In this
+                                case, the port number is the service port number, not the target port.
+                                For other resources, destination port might be derived from the referent
+                                resource or this field.
+                              format: int32
+                              maximum: 65535
+                              minimum: 1
+                              type: integer
+                          required:
+                          - name
+                          type: object
+                          x-kubernetes-validations:
+                          - message: Must have port for Service reference
+                            rule: '(size(self.group) == 0 && self.kind == ''Service'')
+                              ? has(self.port) : true'
+                        maxItems: 1
+                        type: array
+                        x-kubernetes-validations:
+                        - message: only support Service kind.
+                          rule: self.all(f, f.kind == 'Service')
+                        - message: BackendRefs only supports Core group.
+                          rule: self.all(f, f.group == '')
                     type: object
+                    x-kubernetes-validations:
+                    - message: backendRef or backendRefs needs to be set
+                      rule: has(self.backendRef) || self.backendRefs.size() > 0
                   headersToExtAuth:
                     description: |-
                       HeadersToExtAuth defines the client request headers that will be included
@@ -296,7 +456,10 @@ spec:
                         description: |-
                           BackendRef references a Kubernetes object that represents the
                           backend server to which the authorization request will be sent.
-                          Only service Kind is supported for now.
+                          Only Service kind is supported for now.
+
+
+                          Deprecated: Use BackendRefs instead.
                         properties:
                           group:
                             default: ""
@@ -371,6 +534,95 @@ spec:
                         - message: Must have port for Service reference
                           rule: '(size(self.group) == 0 && self.kind == ''Service'')
                             ? has(self.port) : true'
+                      backendRefs:
+                        description: |-
+                          BackendRefs references a Kubernetes object that represents the
+                          backend server to which the authorization request will be sent.
+                          Only Service kind is supported for now.
+                        items:
+                          description: BackendRef defines how an ObjectReference that
+                            is specific to BackendRef.
+                          properties:
+                            group:
+                              default: ""
+                              description: |-
+                                Group is the group of the referent. For example, "gateway.networking.k8s.io".
+                                When unspecified or empty string, core API group is inferred.
+                              maxLength: 253
+                              pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                              type: string
+                            kind:
+                              default: Service
+                              description: |-
+                                Kind is the Kubernetes resource kind of the referent. For example
+                                "Service".
+
+
+                                Defaults to "Service" when not specified.
+
+
+                                ExternalName services can refer to CNAME DNS records that may live
+                                outside of the cluster and as such are difficult to reason about in
+                                terms of conformance. They also may not be safe to forward to (see
+                                CVE-2021-25740 for more information). Implementations SHOULD NOT
+                                support ExternalName Services.
+
+
+                                Support: Core (Services with a type other than ExternalName)
+
+
+                                Support: Implementation-specific (Services with type ExternalName)
+                              maxLength: 63
+                              minLength: 1
+                              pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                              type: string
+                            name:
+                              description: Name is the name of the referent.
+                              maxLength: 253
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace is the namespace of the backend. When unspecified, the local
+                                namespace is inferred.
+
+
+                                Note that when a namespace different than the local namespace is specified,
+                                a ReferenceGrant object is required in the referent namespace to allow that
+                                namespace's owner to accept the reference. See the ReferenceGrant
+                                documentation for details.
+
+
+                                Support: Core
+                              maxLength: 63
+                              minLength: 1
+                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                              type: string
+                            port:
+                              description: |-
+                                Port specifies the destination port number to use for this resource.
+                                Port is required when the referent is a Kubernetes Service. In this
+                                case, the port number is the service port number, not the target port.
+                                For other resources, destination port might be derived from the referent
+                                resource or this field.
+                              format: int32
+                              maximum: 65535
+                              minimum: 1
+                              type: integer
+                          required:
+                          - name
+                          type: object
+                          x-kubernetes-validations:
+                          - message: Must have port for Service reference
+                            rule: '(size(self.group) == 0 && self.kind == ''Service'')
+                              ? has(self.port) : true'
+                        maxItems: 1
+                        type: array
+                        x-kubernetes-validations:
+                        - message: only support Service kind.
+                          rule: self.all(f, f.kind == 'Service')
+                        - message: BackendRefs only supports Core group.
+                          rule: self.all(f, f.group == '')
                       headersToBackend:
                         description: |-
                           HeadersToBackend are the authorization response headers that will be added
@@ -387,9 +639,10 @@ spec:
                           If path is specified, the authorization request will be sent to that path,
                           or else the authorization request will be sent to the root path.
                         type: string
-                    required:
-                    - backendRef
                     type: object
+                    x-kubernetes-validations:
+                    - message: backendRef or backendRefs needs to be set
+                      rule: has(self.backendRef) || self.backendRefs.size() > 0
                 type: object
                 x-kubernetes-validations:
                 - message: one of grpc or http must be specified
@@ -400,21 +653,21 @@ spec:
                 - message: group is invalid, only the core API group (specified by
                     omitting the group field or setting it to an empty string) is
                     supported
-                  rule: 'has(self.grpc) ? (!has(self.grpc.backendRef.group) || self.grpc.backendRef.group
-                    == "") : true'
+                  rule: 'has(self.grpc) ? (!has(self.grpc.backendRef) || !has(self.grpc.backendRef.group)
+                    || self.grpc.backendRef.group == "") : true'
                 - message: kind is invalid, only Service (specified by omitting the
                     kind field or setting it to 'Service') is supported
-                  rule: 'has(self.grpc) ? (!has(self.grpc.backendRef.kind) || self.grpc.backendRef.kind
-                    == ''Service'') : true'
+                  rule: 'has(self.grpc) ? (!has(self.grpc.backendRef) || !has(self.grpc.backendRef.kind)
+                    || self.grpc.backendRef.kind == ''Service'') : true'
                 - message: group is invalid, only the core API group (specified by
                     omitting the group field or setting it to an empty string) is
                     supported
-                  rule: 'has(self.http) ? (!has(self.http.backendRef.group) || self.http.backendRef.group
-                    == "") : true'
+                  rule: 'has(self.http) ? (!has(self.http.backendRef) || !has(self.http.backendRef.group)
+                    || self.http.backendRef.group == "") : true'
                 - message: kind is invalid, only Service (specified by omitting the
                     kind field or setting it to 'Service') is supported
-                  rule: 'has(self.http) ? (!has(self.http.backendRef.kind) || self.http.backendRef.kind
-                    == ''Service'') : true'
+                  rule: 'has(self.http) ? (!has(self.http.backendRef) || !has(self.http.backendRef.kind)
+                    || self.http.backendRef.kind == ''Service'') : true'
               jwt:
                 description: JWT defines the configuration for JSON Web Token (JWT)
                   authentication.
@@ -618,9 +871,58 @@ spec:
                     required:
                     - name
                     type: object
+                  cookieNames:
+                    description: |-
+                      The optional cookie name overrides to be used for Bearer and IdToken cookies in the
+                      [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+                      If not specified, uses a randomly generated suffix
+                    properties:
+                      accessToken:
+                        description: |-
+                          The name of the cookie used to store the AccessToken in the
+                          [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+                          If not specified, defaults to "AccessToken-(randomly generated uid)"
+                        type: string
+                      idToken:
+                        description: |-
+                          The name of the cookie used to store the IdToken in the
+                          [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+                          If not specified, defaults to "IdToken-(randomly generated uid)"
+                        type: string
+                    type: object
+                  defaultRefreshTokenTTL:
+                    description: |-
+                      DefaultRefreshTokenTTL is the default lifetime of the refresh token.
+                      This field is only used when the exp (expiration time) claim is omitted in
+                      the refresh token or the refresh token is not JWT.
+
+
+                      If not specified, defaults to 604800s (one week).
+                      Note: this field is only applicable when the "refreshToken" field is set to true.
+                    type: string
+                  defaultTokenTTL:
+                    description: |-
+                      DefaultTokenTTL is the default lifetime of the id token and access token.
+                      Please note that Envoy will always use the expiry time from the response
+                      of the authorization server if it is provided. This field is only used when
+                      the expiry time is not provided by the authorization.
+
+
+                      If not specified, defaults to 0. In this case, the "expires_in" field in
+                      the authorization response must be set by the authorization server, or the
+                      OAuth flow will fail.
+                    type: string
+                  forwardAccessToken:
+                    description: |-
+                      ForwardAccessToken indicates whether the Envoy should forward the access token
+                      via the Authorization header Bearer scheme to the upstream.
+                      If not specified, defaults to false.
+                    type: boolean
                   logoutPath:
                     description: |-
                       The path to log a user out, clearing their credential cookies.
+
+
                       If not specified, uses a default logout path "/logout"
                     type: string
                   provider:
@@ -653,6 +955,16 @@ spec:
                       [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
                       If not specified, uses the default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback"
                     type: string
+                  refreshToken:
+                    description: |-
+                      RefreshToken indicates whether the Envoy should automatically refresh the
+                      id token and access token when they expire.
+                      When set to true, the Envoy will use the refresh token to get a new id token
+                      and access token when they expire.
+
+
+                      If not specified, defaults to false.
+                    type: boolean
                   resources:
                     description: |-
                       The OIDC resources to be used in the
@@ -680,6 +992,10 @@ spec:
                   is being attached to.
                   This Policy and the TargetRef MUST be in the same namespace
                   for this Policy to have effect and be applied to the Gateway.
+                  TargetRef
+
+
+                  Deprecated: use targetRefs instead
                 properties:
                   group:
                     description: Group is the group of the target resource.
@@ -697,16 +1013,6 @@ spec:
                     maxLength: 253
                     minLength: 1
                     type: string
-                  namespace:
-                    description: |-
-                      Namespace is the namespace of the referent. When unspecified, the local
-                      namespace is inferred. Even when policy targets a resource in a different
-                      namespace, it MUST only apply to traffic originating from the same
-                      namespace as the policy.
-                    maxLength: 63
-                    minLength: 1
-                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-                    type: string
                   sectionName:
                     description: |-
                       SectionName is the name of a section within the target resource. When
@@ -714,8 +1020,9 @@ spec:
                       resources, SectionName is interpreted as the following:
 
 
-                      * Gateway: Listener Name
-                      * Service: Port Name
+                      * Gateway: Listener name
+                      * HTTPRoute: HTTPRouteRule name
+                      * Service: Port name
 
 
                       If a SectionName is specified, but does not exist on the targeted object,
@@ -730,16 +1037,86 @@ spec:
                 - kind
                 - name
                 type: object
-                x-kubernetes-validations:
-                - message: this policy can only have a targetRef.group of gateway.networking.k8s.io
-                  rule: self.group == 'gateway.networking.k8s.io'
-                - message: this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute
-                  rule: self.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute']
-                - message: this policy does not yet support the sectionName field
-                  rule: '!has(self.sectionName)'
-            required:
-            - targetRef
+              targetRefs:
+                description: |-
+                  TargetRefs are the names of the Gateway resources this policy
+                  is being attached to.
+                items:
+                  description: |-
+                    LocalPolicyTargetReferenceWithSectionName identifies an API object to apply a
+                    direct policy to. This should be used as part of Policy resources that can
+                    target single resources. For more information on how this policy attachment
+                    mode works, and a sample Policy resource, refer to the policy attachment
+                    documentation for Gateway API.
+
+
+                    Note: This should only be used for direct policy attachment when references
+                    to SectionName are actually needed. In all other cases,
+                    LocalPolicyTargetReference should be used.
+                  properties:
+                    group:
+                      description: Group is the group of the target resource.
+                      maxLength: 253
+                      pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
+                    kind:
+                      description: Kind is kind of the target resource.
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                      type: string
+                    name:
+                      description: Name is the name of the target resource.
+                      maxLength: 253
+                      minLength: 1
+                      type: string
+                    sectionName:
+                      description: |-
+                        SectionName is the name of a section within the target resource. When
+                        unspecified, this targetRef targets the entire resource. In the following
+                        resources, SectionName is interpreted as the following:
+
+
+                        * Gateway: Listener name
+                        * HTTPRoute: HTTPRouteRule name
+                        * Service: Port name
+
+
+                        If a SectionName is specified, but does not exist on the targeted object,
+                        the Policy must fail to attach, and the policy implementation should record
+                        a `ResolvedRefs` or similar Condition in the Policy's status.
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
+                  required:
+                  - group
+                  - kind
+                  - name
+                  type: object
+                type: array
             type: object
+            x-kubernetes-validations:
+            - message: either targetRef or targetRefs must be used
+              rule: (has(self.targetRef) && !has(self.targetRefs)) || (!has(self.targetRef)
+                && has(self.targetRefs))
+            - message: this policy can only have a targetRef.group of gateway.networking.k8s.io
+              rule: 'has(self.targetRef) ? self.targetRef.group == ''gateway.networking.k8s.io''
+                : true'
+            - message: this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute
+              rule: 'has(self.targetRef) ? self.targetRef.kind in [''Gateway'', ''HTTPRoute'',
+                ''GRPCRoute''] : true'
+            - message: this policy does not yet support the sectionName field
+              rule: 'has(self.targetRef) ? !has(self.targetRef.sectionName) : true'
+            - message: this policy can only have a targetRefs[*].group of gateway.networking.k8s.io
+              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.group ==
+                ''gateway.networking.k8s.io'') : true '
+            - message: this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute
+              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in [''Gateway'',
+                ''HTTPRoute'', ''GRPCRoute'']) : true '
+            - message: this policy does not yet support the sectionName field
+              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, !has(ref.sectionName))
+                : true'
           status:
             description: Status defines the current status of SecurityPolicy.
             properties:
@@ -846,7 +1223,7 @@ spec:
 
 
                             * Gateway (Gateway conformance profile)
-                            * Service (Mesh conformance profile, experimental, ClusterIP Services only)
+                            * Service (Mesh conformance profile, ClusterIP Services only)
 
 
                             Support for other resources is Implementation-Specific.
@@ -932,9 +1309,6 @@ spec:
 
 
                             Support: Extended
-
-
-                            <gateway:experimental>
                           format: int32
                           maximum: 65535
                           minimum: 1
@@ -945,14 +1319,12 @@ spec:
                             following resources, SectionName is interpreted as the following:
 
 
-                            * Gateway: Listener Name. When both Port (experimental) and SectionName
+                            * Gateway: Listener name. When both Port (experimental) and SectionName
                             are specified, the name and port of the selected listener must match
                             both specified values.
-                            * Service: Port Name. When both Port (experimental) and SectionName
+                            * Service: Port name. When both Port (experimental) and SectionName
                             are specified, the name and port of the selected listener must match
-                            both specified values. Note that attaching Routes to Services as Parents
-                            is part of experimental Mesh support and is not supported for any other
-                            purpose.
+                            both specified values.
 
 
                             Implementations MAY choose to support attaching Routes to other resources.

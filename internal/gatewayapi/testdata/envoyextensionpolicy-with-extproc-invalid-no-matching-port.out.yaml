@@ -14,7 +14,6 @@ envoyExtensionPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: default
   status:
     ancestors:
     - ancestorRef:
@@ -24,7 +23,7 @@ envoyExtensionPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: TCP Port 4000 not found on service default/grpc-backend
+        message: 'ExtProc: TCP Port 4000 not found on service default/grpc-backend.'
         reason: Invalid
         status: "False"
         type: Accepted
@@ -141,10 +140,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP

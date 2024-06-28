@@ -24,6 +24,10 @@
         '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
         commonTlsContext:
           validationContext:
+            matchTypedSubjectAltNames:
+            - matcher:
+                exact: example.com
+              sanType: DNS
             trustedCa:
               filename: /etc/ssl/certs/ca-certificates.crt
         sni: example.com

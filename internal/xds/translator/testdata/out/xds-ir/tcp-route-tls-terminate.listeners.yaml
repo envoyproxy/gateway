@@ -10,6 +10,7 @@
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tls-terminate-dest
         statPrefix: terminate
+    name: tls-route-terminate
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:
@@ -23,5 +24,33 @@
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
-  name: tls-terminate
+  - filterChainMatch:
+      serverNames:
+      - '*.envoyproxy.io'
+      - example.com
+    filters:
+    - name: envoy.filters.network.tcp_proxy
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        cluster: tls-terminate-hostname-dest
+        statPrefix: terminate
+    name: tls-terminate-hostname
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+        commonTlsContext:
+          alpnProtocols:
+          - h2
+          - http/1.1
+          tlsCertificateSdsSecretConfigs:
+          - name: envoy-gateway-tls-secret-1
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+  listenerFilters:
+  - name: envoy.filters.listener.tls_inspector
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+  name: tls-listener-terminate
   perConnectionBufferLimitBytes: 32768

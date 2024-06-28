@@ -22,7 +22,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	ec "github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
-	"github.com/envoyproxy/gateway/internal/status"
 )
 
 // Provider is the scaffolding for the Kubernetes provider. It sets up dependencies
@@ -84,7 +83,7 @@ func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources)
 		return nil, fmt.Errorf("failed to create manager: %w", err)
 	}
 
-	updateHandler := status.NewUpdateHandler(mgr.GetLogger(), mgr.GetClient())
+	updateHandler := NewUpdateHandler(mgr.GetLogger(), mgr.GetClient())
 	if err := mgr.Add(updateHandler); err != nil {
 		return nil, fmt.Errorf("failed to add status update handler %w", err)
 	}

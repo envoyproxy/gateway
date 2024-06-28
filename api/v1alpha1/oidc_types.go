@@ -6,6 +6,7 @@
 package v1alpha1
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
@@ -30,6 +31,12 @@ type OIDC struct {
 	// +kubebuilder:validation:Required
 	ClientSecret gwapiv1b1.SecretObjectReference `json:"clientSecret"`
 
+	// The optional cookie name overrides to be used for Bearer and IdToken cookies in the
+	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+	// If not specified, uses a randomly generated suffix
+	// +optional
+	CookieNames *OIDCCookieNames `json:"cookieNames,omitempty"`
+
 	// The OIDC scopes to be used in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	// The "openid" scope is always added to the list of scopes if not already
@@ -48,8 +55,45 @@ type OIDC struct {
 	RedirectURL *string `json:"redirectURL,omitempty"`
 
 	// The path to log a user out, clearing their credential cookies.
+	//
 	// If not specified, uses a default logout path "/logout"
 	LogoutPath *string `json:"logoutPath,omitempty"`
+
+	// ForwardAccessToken indicates whether the Envoy should forward the access token
+	// via the Authorization header Bearer scheme to the upstream.
+	// If not specified, defaults to false.
+	// +optional
+	ForwardAccessToken *bool `json:"forwardAccessToken,omitempty"`
+
+	// DefaultTokenTTL is the default lifetime of the id token and access token.
+	// Please note that Envoy will always use the expiry time from the response
+	// of the authorization server if it is provided. This field is only used when
+	// the expiry time is not provided by the authorization.
+	//
+	// If not specified, defaults to 0. In this case, the "expires_in" field in
+	// the authorization response must be set by the authorization server, or the
+	// OAuth flow will fail.
+	//
+	// +optional
+	DefaultTokenTTL *metav1.Duration `json:"defaultTokenTTL,omitempty"`
+
+	// RefreshToken indicates whether the Envoy should automatically refresh the
+	// id token and access token when they expire.
+	// When set to true, the Envoy will use the refresh token to get a new id token
+	// and access token when they expire.
+	//
+	// If not specified, defaults to false.
+	// +optional
+	RefreshToken *bool `json:"refreshToken,omitempty"`
+
+	// DefaultRefreshTokenTTL is the default lifetime of the refresh token.
+	// This field is only used when the exp (expiration time) claim is omitted in
+	// the refresh token or the refresh token is not JWT.
+	//
+	// If not specified, defaults to 604800s (one week).
+	// Note: this field is only applicable when the "refreshToken" field is set to true.
+	// +optional
+	DefaultRefreshTokenTTL *metav1.Duration `json:"defaultRefreshTokenTTL,omitempty"`
 }
 
 // OIDCProvider defines the OIDC Provider configuration.
@@ -74,4 +118,18 @@ type OIDCProvider struct {
 	//
 	// +optional
 	TokenEndpoint *string `json:"tokenEndpoint,omitempty"`
+}
+
+// OIDCCookieNames defines the names of cookies to use in the Envoy OIDC filter.
+type OIDCCookieNames struct {
+	// The name of the cookie used to store the AccessToken in the
+	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+	// If not specified, defaults to "AccessToken-(randomly generated uid)"
+	// +optional
+	AccessToken *string `json:"accessToken,omitempty"`
+	// The name of the cookie used to store the IdToken in the
+	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+	// If not specified, defaults to "IdToken-(randomly generated uid)"
+	// +optional
+	IDToken *string `json:"idToken,omitempty"`
 }

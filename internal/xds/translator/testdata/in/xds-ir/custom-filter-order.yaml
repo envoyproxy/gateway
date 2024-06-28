@@ -1,0 +1,84 @@
+filterOrder:
+- before: envoy.filters.http.jwt_authn
+  name: envoy.filters.http.wasm
+- after: envoy.filters.http.basic_authn
+  name: envoy.filters.http.cors
+http:
+- address: 0.0.0.0
+  hostnames:
+  - '*'
+  isHTTP2: false
+  name: envoy-gateway/gateway-1/http
+  path:
+    escapedSlashesAction: UnescapeAndRedirect
+    mergeSlashes: true
+  port: 10080
+  routes:
+  - backendWeights:
+      invalid: 1
+      valid: 0
+    directResponse:
+      statusCode: 500
+    hostname: www.example.com
+    isHTTP2: false
+    name: httproute/envoy-gateway/httproute-1/rule/0/match/0/www_example_com
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /foo
+    security:
+      basicAuth:
+        name: securitypolicy/envoy-gateway/policy-for-gateway
+        users: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
+      cors:
+        allowMethods:
+        - GET
+        - POST
+        allowOrigins:
+        - distinct: false
+          name: ""
+          safeRegex: https://.*\.test\.com:8080
+        - distinct: false
+          exact: https://www.test.org:8080
+          name: ""
+      jwt:
+        providers:
+        - audiences:
+          - one.foo.com
+          claimToHeaders:
+          - claim: claim1
+            header: one-route-example-key
+          issuer: https://one.example.com
+          name: example1
+          remoteJWKS:
+            uri: https://one.example.com/jwt/public-key/jwks.json
+        - audiences:
+          - two.foo.com
+          claimToHeaders:
+          - claim: claim2
+            header: two-route-example-key
+          issuer: http://two.example.com
+          name: example2
+          remoteJWKS:
+            uri: http://two.example.com/jwt/public-key/jwks.json
+    wasm:
+    - config:
+        parameter1:
+          key1: value1
+          key2: value2
+        parameter2: value3
+      failOpen: false
+      httpWasmCode:
+        sha256: 746df05c8f3a0b07a46c0967cfbc5cbe5b9d48d0f79b6177eeedf8be6c8b34b5
+        servingURL: https://envoy-gateway:18002/42d30b4a4cc631415e6e48c02d244700da327201eb273f752cacf745715b31d9.wasm
+      name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/0
+      wasmName: wasm-filter-1
+    - config:
+        parameter1: value1
+        parameter2: value2
+      failOpen: false
+      httpWasmCode:
+        sha256: a1efca12ea51069abb123bf9c77889fcc2a31cc5483fc14d115e44fdf07c7980
+        servingURL: https://envoy-gateway:18002/7abf116e5cd5a20389604a5ba0f3bd04fdf76f92181fe67506b42c2ee596d3fd.wasm
+      name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/1
+      wasmName: wasm-filter-2

@@ -37,7 +37,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:
@@ -48,7 +47,7 @@ backendTrafficPolicies:
       conditions:
       - lastTransitionTime: null
         message: 'RateLimit: local rateLimit rule limit unit must be a multiple of
-          the default limit unit'
+          the default limit unit.'
         reason: Invalid
         status: "False"
         type: Accepted
@@ -165,10 +164,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP

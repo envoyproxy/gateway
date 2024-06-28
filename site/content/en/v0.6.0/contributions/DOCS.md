@@ -7,7 +7,7 @@ description: "This section tells the development of
 {{% alert title="Note" color="warning" %}}
 We migrated from ***Sphinx*** to ***Hugo*** for Envoy Gateway Documents.
 
-Read blog: [Welcome to new website!](/blog/2023/10/08/welcome-to-new-website/)
+Read blog: [Welcome to new website!](/news/blogs/new-website/new-website)
 {{% /alert %}}
 
 The documentation for the Envoy Gateway lives in the `site/content/en` directory. Any

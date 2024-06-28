@@ -73,7 +73,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
     tcpKeepalive:
       probes: 3
       idleTime: 20m
@@ -88,7 +87,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
     tcpKeepalive:
       probes: 6
       idleTime: 10s

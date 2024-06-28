@@ -68,6 +68,11 @@ type EnvoyProxySpec struct {
 	// +optional
 	Concurrency *int32 `json:"concurrency,omitempty"`
 
+	// RoutingType can be set to "Service" to use the Service Cluster IP for routing to the backend,
+	// or it can be set to "Endpoint" to use Endpoint routing. The default is "Endpoint".
+	// +optional
+	RoutingType *RoutingType `json:"routingType,omitempty"`
+
 	// ExtraArgs defines additional command line options that are provided to Envoy.
 	// More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options
 	// Note: some command line options are used internally(e.g. --log-level) so they cannot be provided here.
@@ -89,6 +94,7 @@ type EnvoyProxySpec struct {
 	Shutdown *ShutdownConfig `json:"shutdown,omitempty"`
 
 	// FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.
+	// The FilterPosition in the list will be applied in the order they are defined.
 	// If unspecified, the default filter order is applied.
 	// Default filter order is:
 	//
@@ -108,6 +114,8 @@ type EnvoyProxySpec struct {
 	//
 	// - envoy.filters.http.wasm
 	//
+	// - envoy.filters.http.rbac
+	//
 	// - envoy.filters.http.local_ratelimit
 	//
 	// - envoy.filters.http.ratelimit
@@ -115,7 +123,6 @@ type EnvoyProxySpec struct {
 	// - envoy.filters.http.router
 	//
 	// +optional
-	// +notImplementedHide
 	FilterOrder []FilterPosition `json:"filterOrder,omitempty"`
 	// BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.
 	// These settings are applied on backends for which TLS policies are specified.
@@ -123,11 +130,22 @@ type EnvoyProxySpec struct {
 	BackendTLS *BackendTLSConfig `json:"backendTLS,omitempty"`
 }
 
+// RoutingType defines the type of routing of this Envoy proxy.
+type RoutingType string
+
+const (
+	// ServiceRoutingType is the RoutingType for Service Cluster IP routing.
+	ServiceRoutingType RoutingType = "Service"
+	// EndpointRoutingType is the RoutingType for Endpoint routing.
+	EndpointRoutingType RoutingType = "Endpoint"
+)
+
 // BackendTLSConfig describes the BackendTLS configuration for Envoy Proxy.
 type BackendTLSConfig struct {
 	// ClientCertificateRef defines the reference to a Kubernetes Secret that contains
 	// the client certificate and private key for Envoy to use when connecting to
 	// backend services and external services, such as ExtAuth, ALS, OpenTelemetry, etc.
+	// This secret should be located within the same namespace as the Envoy proxy resource that references it.
 	// +optional
 	ClientCertificateRef *gwapiv1.SecretObjectReference `json:"clientCertificateRef,omitempty"`
 	TLSSettings          `json:",inline"`
@@ -138,7 +156,7 @@ type BackendTLSConfig struct {
 // +kubebuilder:validation:XValidation:rule="(has(self.before) && !has(self.after)) || (!has(self.before) && has(self.after))",message="only one of before or after can be specified"
 type FilterPosition struct {
 	// Name of the filter.
-	Name EnvoyFilter `json:"filter"`
+	Name EnvoyFilter `json:"name"`
 
 	// Before defines the filter that should come before the filter.
 	// Only one of Before or After must be set.
@@ -150,7 +168,7 @@ type FilterPosition struct {
 }
 
 // EnvoyFilter defines the type of Envoy HTTP filter.
-// +kubebuilder:validation:Enum=envoy.filters.http.cors;envoy.filters.http.ext_authz;envoy.filters.http.basic_authn;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.fault;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.wasm;envoy.filters.http.ext_proc
+// +kubebuilder:validation:Enum=envoy.filters.http.cors;envoy.filters.http.ext_authz;envoy.filters.http.basic_authn;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.fault;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.wasm;envoy.filters.http.ext_proc;envoy.filters.http.rbac
 type EnvoyFilter string
 
 const (
@@ -182,6 +200,9 @@ const (
 
 	// EnvoyFilterRateLimit defines the Envoy HTTP rate limit filter.
 	EnvoyFilterRateLimit EnvoyFilter = "envoy.filters.http.ratelimit"
+
+	// EnvoyFilterRBAC defines the Envoy RBAC filter.
+	EnvoyFilterRBAC EnvoyFilter = "envoy.filters.http.rbac"
 
 	// EnvoyFilterRouter defines the Envoy HTTP router filter.
 	EnvoyFilterRouter EnvoyFilter = "envoy.filters.http.router"
@@ -264,6 +285,17 @@ type EnvoyProxyKubernetesProvider struct {
 	//
 	// +optional
 	EnvoyHpa *KubernetesHorizontalPodAutoscalerSpec `json:"envoyHpa,omitempty"`
+
+	// UseListenerPortAsContainerPort disables the port shifting feature in the Envoy Proxy.
+	// When set to false (default value), if the service port is a privileged port (1-1023), add a constant to the value converting it into an ephemeral port.
+	// This allows the container to bind to the port without needing a CAP_NET_BIND_SERVICE capability.
+	//
+	// +optional
+	UseListenerPortAsContainerPort *bool `json:"useListenerPortAsContainerPort,omitempty"`
+
+	// EnvoyPDB allows to control the pod disruption budget of an Envoy Proxy.
+	// +optional
+	EnvoyPDB *KubernetesPodDisruptionBudgetSpec `json:"envoyPDB,omitempty"`
 }
 
 // ProxyLogging defines logging parameters for managed proxies.

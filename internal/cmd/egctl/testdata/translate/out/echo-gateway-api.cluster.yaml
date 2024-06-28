@@ -12,6 +12,29 @@ gatewayClass:
       reason: Accepted
       status: "True"
       type: Accepted
+    supportedFeatures:
+    - GRPCRoute
+    - Gateway
+    - GatewayPort8080
+    - HTTPRoute
+    - HTTPRouteBackendProtocolH2C
+    - HTTPRouteBackendProtocolWebSocket
+    - HTTPRouteBackendTimeout
+    - HTTPRouteDestinationPortMatching
+    - HTTPRouteHostRewrite
+    - HTTPRouteMethodMatching
+    - HTTPRouteParentRefPort
+    - HTTPRoutePathRedirect
+    - HTTPRoutePathRewrite
+    - HTTPRoutePortRedirect
+    - HTTPRouteQueryParamMatching
+    - HTTPRouteRequestMirror
+    - HTTPRouteRequestMultipleMirrors
+    - HTTPRouteRequestTimeout
+    - HTTPRouteResponseHeaderModification
+    - HTTPRouteSchemeRedirect
+    - ReferenceGrant
+    - TLSRoute
 gateways:
 - metadata:
     creationTimestamp: null

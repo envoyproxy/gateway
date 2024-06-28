@@ -23,8 +23,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/config"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -69,19 +69,19 @@ var UDPRouteTest = suite.ConformanceTest{
 // relying on a specific api version.
 type GatewayRef struct {
 	types.NamespacedName
-	listenerNames []*gatewayv1.SectionName
+	listenerNames []*gwapiv1.SectionName
 }
 
 // NewGatewayRef creates a GatewayRef resource.  ListenerNames are optional.
 func NewGatewayRef(nn types.NamespacedName, listenerNames ...string) GatewayRef {
-	var listeners []*gatewayv1.SectionName
+	var listeners []*gwapiv1.SectionName
 
 	if len(listenerNames) == 0 {
 		listenerNames = append(listenerNames, "")
 	}
 
 	for _, listener := range listenerNames {
-		sectionName := gatewayv1.SectionName(listener)
+		sectionName := gwapiv1.SectionName(listener)
 		listeners = append(listeners, &sectionName)
 	}
 	return GatewayRef{
@@ -97,11 +97,13 @@ func NewGatewayRef(nn types.NamespacedName, listenerNames ...string) GatewayRef 
 func GatewayAndUDPRoutesMustBeAccepted(t *testing.T, c client.Client, timeoutConfig config.TimeoutConfig, controllerName string, gw GatewayRef, routeNNs ...types.NamespacedName) string {
 	t.Helper()
 
-	gwAddr, err := kubernetes.WaitForGatewayAddress(t, c, timeoutConfig, gw.NamespacedName)
+	gwAddr, err := kubernetes.WaitForGatewayAddress(t, c, timeoutConfig, kubernetes.GatewayRef{
+		NamespacedName: gw.NamespacedName,
+	})
 	require.NoErrorf(t, err, "timed out waiting for Gateway address to be assigned")
 
-	ns := gatewayv1.Namespace(gw.Namespace)
-	kind := gatewayv1.Kind("Gateway")
+	ns := gwapiv1.Namespace(gw.Namespace)
+	kind := gwapiv1.Kind("Gateway")
 
 	for _, routeNN := range routeNNs {
 		namespaceRequired := true
@@ -109,22 +111,22 @@ func GatewayAndUDPRoutesMustBeAccepted(t *testing.T, c client.Client, timeoutCon
 			namespaceRequired = false
 		}
 
-		var parents []gatewayv1.RouteParentStatus
+		var parents []gwapiv1.RouteParentStatus
 		for _, listener := range gw.listenerNames {
-			parents = append(parents, gatewayv1.RouteParentStatus{
-				ParentRef: gatewayv1.ParentReference{
-					Group:       (*gatewayv1.Group)(&gatewayv1.GroupVersion.Group),
+			parents = append(parents, gwapiv1.RouteParentStatus{
+				ParentRef: gwapiv1.ParentReference{
+					Group:       (*gwapiv1.Group)(&gwapiv1.GroupVersion.Group),
 					Kind:        &kind,
-					Name:        gatewayv1.ObjectName(gw.Name),
+					Name:        gwapiv1.ObjectName(gw.Name),
 					Namespace:   &ns,
 					SectionName: listener,
 				},
-				ControllerName: gatewayv1.GatewayController(controllerName),
+				ControllerName: gwapiv1.GatewayController(controllerName),
 				Conditions: []metav1.Condition{
 					{
-						Type:   string(gatewayv1.RouteConditionAccepted),
+						Type:   string(gwapiv1.RouteConditionAccepted),
 						Status: metav1.ConditionTrue,
-						Reason: string(gatewayv1.RouteReasonAccepted),
+						Reason: string(gwapiv1.RouteReasonAccepted),
 					},
 				},
 			})
@@ -135,12 +137,12 @@ func GatewayAndUDPRoutesMustBeAccepted(t *testing.T, c client.Client, timeoutCon
 	return gwAddr
 }
 
-func UDPRouteMustHaveParents(t *testing.T, client client.Client, timeoutConfig config.TimeoutConfig, routeName types.NamespacedName, parents []gatewayv1.RouteParentStatus, namespaceRequired bool) {
+func UDPRouteMustHaveParents(t *testing.T, client client.Client, timeoutConfig config.TimeoutConfig, routeName types.NamespacedName, parents []gwapiv1.RouteParentStatus, namespaceRequired bool) {
 	t.Helper()
 
-	var actual []gatewayv1.RouteParentStatus
+	var actual []gwapiv1.RouteParentStatus
 	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, timeoutConfig.RouteMustHaveParents, true, func(ctx context.Context) (bool, error) {
-		route := &v1alpha2.UDPRoute{}
+		route := &gwapiv1a2.UDPRoute{}
 		err := client.Get(ctx, routeName, route)
 		if err != nil {
 			return false, fmt.Errorf("error fetching UDPRoute: %w", err)
@@ -152,7 +154,7 @@ func UDPRouteMustHaveParents(t *testing.T, client client.Client, timeoutConfig c
 	require.NoErrorf(t, waitErr, "error waiting for UDPRoute to have parents matching expectations")
 }
 
-func parentsForRouteMatch(t *testing.T, routeName types.NamespacedName, expected, actual []gatewayv1.RouteParentStatus, namespaceRequired bool) bool {
+func parentsForRouteMatch(t *testing.T, routeName types.NamespacedName, expected, actual []gwapiv1.RouteParentStatus, namespaceRequired bool) bool {
 	t.Helper()
 
 	if len(expected) != len(actual) {

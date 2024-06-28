@@ -9,10 +9,7 @@ http:
       mergeSlashes: true
     port: 10080
     routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
             - addressType: IP
@@ -52,10 +49,7 @@ http:
           distinct: false
           name: ""
           prefix: /foo
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-2/rule/0
           settings:
             - addressType: IP

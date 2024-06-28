@@ -10,8 +10,9 @@ http:
   routes:
   - name: "first-route"
     hostname: "*"
-    proxyProtocol:
-      version: "V2"
+    traffic:
+      proxyProtocol:
+        version: "V2"
     destination:
       name: "first-route-dest"
       settings:

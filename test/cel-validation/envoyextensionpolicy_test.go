@@ -15,13 +15,12 @@ import (
 	"testing"
 	"time"
 
-	"k8s.io/utils/ptr"
-
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 func TestEnvoyExtensionPolicyTarget(t *testing.T) {
@@ -46,11 +45,13 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			desc: "valid gateway targetRef",
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-							Kind:  gwapiv1a2.Kind("Gateway"),
-							Name:  gwapiv1a2.ObjectName("eg"),
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
 						},
 					},
 				}
@@ -61,11 +62,13 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			desc: "valid httproute targetRef",
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-							Kind:  gwapiv1a2.Kind("HTTPRoute"),
-							Name:  gwapiv1a2.ObjectName("httpbin-route"),
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("HTTPRoute"),
+								Name:  gwapiv1a2.ObjectName("httpbin-route"),
+							},
 						},
 					},
 				}
@@ -73,85 +76,204 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "both targetRef and targetRefs",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("foo"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
+						},
+						TargetRefs: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1a2.Kind("foo"),
+									Name:  gwapiv1a2.ObjectName("eg"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec: Invalid value: \"object\": either targetRef or targetRefs must be used",
+			},
+		},
+		{
 			desc: "no targetRef",
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{}
 			},
 			wantErrors: []string{
-				"spec.targetRef.kind: Invalid value: \"\": spec.targetRef.kind in body should be at least 1 chars long",
-				"spec.targetRef.name: Invalid value: \"\": spec.targetRef.name in body should be at least 1 chars long",
-				"spec.targetRef: Invalid value: \"object\": this policy can only have a targetRef.group of gateway.networking.k8s.io",
-				"spec.targetRef: Invalid value: \"object\": this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
+				"spec: Invalid value: \"object\": either targetRef or targetRefs must be used",
 			},
 		},
 		{
-			desc: "targetRef unsupported kind",
+			desc: "targetRef unsupported kind - targetRef",
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-							Kind:  gwapiv1a2.Kind("foo"),
-							Name:  gwapiv1a2.ObjectName("eg"),
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("foo"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
 						},
 					},
 				}
 			},
 			wantErrors: []string{
-				"spec.targetRef: Invalid value: \"object\": this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
+				"spec: Invalid value: \"object\": this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
 			},
 		},
 		{
-			desc: "targetRef unsupported group",
+			desc: "targetRef unsupported kind - targetRefs",
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: gwapiv1a2.Group("foo"),
-							Kind:  gwapiv1a2.Kind("Gateway"),
-							Name:  gwapiv1a2.ObjectName("eg"),
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1a2.Kind("foo"),
+									Name:  gwapiv1a2.ObjectName("eg"),
+								},
+							},
 						},
 					},
 				}
 			},
 			wantErrors: []string{
-				"spec.targetRef: Invalid value: \"object\": this policy can only have a targetRef.group of gateway.networking.k8s.io",
+				"spec: Invalid value: \"object\": this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
 			},
 		},
 		{
-			desc: "targetRef unsupported group and kind",
+			desc: "targetRef unsupported group - targetRef",
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: gwapiv1a2.Group("foo"),
-							Kind:  gwapiv1a2.Kind("bar"),
-							Name:  gwapiv1a2.ObjectName("eg"),
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("foo"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
 						},
 					},
 				}
 			},
 			wantErrors: []string{
-				"spec.targetRef: Invalid value: \"object\": this policy can only have a targetRef.group of gateway.networking.k8s.io",
-				"spec.targetRef: Invalid value: \"object\": this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
+				"spec: Invalid value: \"object\": this policy can only have a targetRef.group of gateway.networking.k8s.io",
 			},
 		},
 		{
-			desc: "sectionName disabled until supported",
+			desc: "targetRef unsupported group - targetRefs",
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-							Kind:  gwapiv1a2.Kind("Gateway"),
-							Name:  gwapiv1a2.ObjectName("eg"),
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Group: gwapiv1a2.Group("foo"),
+									Kind:  gwapiv1a2.Kind("Gateway"),
+									Name:  gwapiv1a2.ObjectName("eg"),
+								},
+							},
 						},
-						SectionName: &sectionName,
 					},
 				}
 			},
 			wantErrors: []string{
-				"spec.targetRef: Invalid value: \"object\": this policy does not yet support the sectionName field",
+				"spec: Invalid value: \"object\": this policy can only have a targetRefs[*].group of gateway.networking.k8s.io",
+			},
+		},
+		{
+			desc: "targetRef unsupported group and kind - targetRef",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("foo"),
+								Kind:  gwapiv1a2.Kind("bar"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec: Invalid value: \"object\": this policy can only have a targetRef.group of gateway.networking.k8s.io",
+				"spec: Invalid value: \"object\": this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
+			},
+		},
+		{
+			desc: "targetRef unsupported group and kind - targetRefs",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Group: gwapiv1a2.Group("foo"),
+									Kind:  gwapiv1a2.Kind("bar"),
+									Name:  gwapiv1a2.ObjectName("eg"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec: Invalid value: \"object\": this policy can only have a targetRefs[*].group of gateway.networking.k8s.io",
+				"spec: Invalid value: \"object\": this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
+			},
+		},
+		{
+			desc: "sectionName disabled until supported -targetRef",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
+							SectionName: &sectionName,
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec: Invalid value: \"object\": this policy does not yet support the sectionName field",
+			},
+		},
+		{
+			desc: "sectionName disabled until supported - targetRefs",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1a2.Kind("Gateway"),
+									Name:  gwapiv1a2.ObjectName("eg"),
+								},
+								SectionName: &sectionName,
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec: Invalid value: \"object\": this policy does not yet support the sectionName field",
 			},
 		},
 
@@ -172,11 +294,13 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: "gateway.networking.k8s.io",
-							Kind:  "Gateway",
-							Name:  "eg",
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
 						},
 					},
 				}
@@ -200,16 +324,18 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: "gateway.networking.k8s.io",
-							Kind:  "Gateway",
-							Name:  "eg",
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
 						},
 					},
 				}
 			},
-			wantErrors: []string{" spec.extProc[0].backendRefs: Invalid value: \"array\": BackendRefs only supports Core group."},
+			wantErrors: []string{"spec.extProc[0].backendRefs: Invalid value: \"array\": BackendRefs only supports Core and gateway.envoyproxy.io group"},
 		},
 		{
 			desc: "ExtProc with invalid BackendRef Kind",
@@ -228,16 +354,18 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: "gateway.networking.k8s.io",
-							Kind:  "Gateway",
-							Name:  "eg",
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
 						},
 					},
 				}
 			},
-			wantErrors: []string{"spec.extProc[0].backendRefs: Invalid value: \"array\": BackendRefs only supports Service kind."},
+			wantErrors: []string{"spec.extProc[0].backendRefs: Invalid value: \"array\": BackendRefs only supports Service and Backend kind"},
 		},
 		{
 			desc: "ExtProc with invalid fields",
@@ -263,11 +391,13 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: "gateway.networking.k8s.io",
-							Kind:  "Gateway",
-							Name:  "eg",
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
 						},
 					},
 				}

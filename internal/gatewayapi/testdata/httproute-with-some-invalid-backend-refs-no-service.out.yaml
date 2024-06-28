@@ -111,12 +111,11 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 2
-          valid: 1
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
+          - weight: 1
+          - weight: 1
           - addressType: IP
             endpoints:
             - host: 7.7.7.7

@@ -3,16 +3,20 @@ ENVTEST_K8S_VERSION ?= 1.28.0
 # Need run cel validation across multiple versions of k8s
 ENVTEST_K8S_VERSIONS ?= 1.27.1 1.28.0 1.29.0
 # GATEWAY_API_VERSION refers to the version of Gateway API CRDs.
-# For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api 
+# For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api
 GATEWAY_API_VERSION ?= $(shell go list -m -f '{{.Version}}' sigs.k8s.io/gateway-api)
 
 GATEWAY_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/experimental-install.yaml
 
 WAIT_TIMEOUT ?= 15m
 
-FLUENT_BIT_CHART_VERSION ?= 0.30.4
-OTEL_COLLECTOR_CHART_VERSION ?= 0.73.1
-TEMPO_CHART_VERSION ?= 1.3.1
+BENCHMARK_TIMEOUT ?= 60m
+BENCHMARK_CPU_LIMITS ?= 1000 # unit: 'm'
+BENCHMARK_MEMORY_LIMITS ?= 1024 # unit: 'Mi'
+BENCHMARK_RPS ?= 10000
+BENCHMARK_CONNECTIONS ?= 100
+BENCHMARK_DURATION ?= 60
+
 E2E_RUN_TEST ?=
 E2E_RUN_EG_UPGRADE_TESTS ?= false
 E2E_CLEANUP ?= true
@@ -34,9 +38,9 @@ CONTROLLERGEN_OBJECT_FLAGS :=  object:headerFile="$(ROOT_DIR)/tools/boilerplate/
 
 .PHONY: manifests
 manifests: $(tools/controller-gen) generate-gwapi-manifests ## Generate WebhookConfiguration and CustomResourceDefinition objects.
-
 	@$(LOG_TARGET)
 	$(tools/controller-gen) crd:allowDangerousTypes=true paths="./..." output:crd:artifacts:config=charts/gateway-helm/crds/generated
+
 .PHONY: generate-gwapi-manifests
 generate-gwapi-manifests:
 generate-gwapi-manifests: ## Generate GWAPI manifests and make it consistent with the go mod version.
@@ -62,12 +66,18 @@ ifndef ignore-not-found
   ignore-not-found = true
 endif
 
-IMAGE_PULL_POLICY ?= Always
-
 .PHONY: kube-deploy
-kube-deploy: manifests helm-generate ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
+kube-deploy: manifests helm-generate.gateway-helm ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
 	@$(LOG_TARGET)
 	helm install eg charts/gateway-helm --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) -n envoy-gateway-system --create-namespace --debug --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
+
+.PHONY: kube-deploy-for-benchmark-test
+kube-deploy-for-benchmark-test: manifests helm-generate ## Install Envoy Gateway for benchmark test purpose only.
+	@$(LOG_TARGET)
+	helm install eg charts/gateway-helm --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) \
+		--set deployment.envoyGateway.resources.limits.cpu=$(BENCHMARK_CPU_LIMITS)m \
+		--set deployment.envoyGateway.resources.limits.memory=$(BENCHMARK_MEMORY_LIMITS)Mi \
+		-n envoy-gateway-system --create-namespace --debug --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
 
 .PHONY: kube-undeploy
 kube-undeploy: manifests ## Uninstall the Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
@@ -105,6 +115,9 @@ conformance: create-cluster kube-install-image kube-deploy run-conformance delet
 .PHONY: experimental-conformance ## Create a kind cluster, deploy EG into it, run Gateway API experimental conformance, and clean up.
 experimental-conformance: create-cluster kube-install-image kube-deploy run-experimental-conformance delete-cluster ## Create a kind cluster, deploy EG into it, run Gateway API conformance, and clean up.
 
+.PHONY: benchmark
+benchmark: create-cluster kube-install-image kube-deploy-for-benchmark-test run-benchmark delete-cluster ## Create a kind cluster, deploy EG into it, run Envoy Gateway benchmark test, and clean up.
+
 .PHONY: e2e
 e2e: create-cluster kube-install-image kube-deploy install-ratelimit run-e2e delete-cluster
 
@@ -127,6 +140,7 @@ run-e2e: install-e2e-telemetry
 ifeq ($(E2E_RUN_TEST),)
 	go test -v -tags e2e ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=false
 	go test -v -tags e2e ./test/e2e/merge_gateways --gateway-class=merge-gateways --debug=true --cleanup-base-resources=false
+	go test -v -tags e2e ./test/e2e/multiple_gc --debug=true --cleanup-base-resources=false
 	go test -v -tags e2e ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
 else
 ifeq ($(E2E_RUN_EG_UPGRADE_TESTS),false)
@@ -134,60 +148,49 @@ ifeq ($(E2E_RUN_EG_UPGRADE_TESTS),false)
 		--run-test $(E2E_RUN_TEST)
 	go test -v -tags e2e ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
 		--run-test $(E2E_RUN_TEST)
+	go test -v -tags e2e ./test/e2e/multiple_gc --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
+		--run-test $(E2E_RUN_TEST)
 else
 	go test -v -tags e2e ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
 		--run-test $(E2E_RUN_TEST)
 endif
 endif
 
-.PHONY: install-e2e-telemetry
-install-e2e-telemetry: prepare-helm-repo install-fluent-bit install-loki install-tempo install-otel-collector install-prometheus
+.PHONY: run-benchmark
+run-benchmark: install-benchmark-server ## Run benchmark tests
 	@$(LOG_TARGET)
-	kubectl rollout status daemonset fluent-bit -n monitoring --timeout 5m
-	kubectl rollout status statefulset loki -n monitoring --timeout 5m
-	kubectl rollout status statefulset tempo -n monitoring --timeout 5m
-	kubectl rollout status deployment otel-collector -n monitoring --timeout 5m
-	kubectl rollout status deployment prometheus -n monitoring --timeout 5m
+	mkdir -p $(OUTPUT_DIR)/benchmark
+	kubectl wait --timeout=$(WAIT_TIMEOUT) -n benchmark-test deployment/nighthawk-test-server --for=condition=Available
+	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
+	kubectl apply -f test/benchmark/config/gatewayclass.yaml
+	go test -v -tags benchmark -timeout $(BENCHMARK_TIMEOUT) ./test/benchmark --rps=$(BENCHMARK_RPS) --connections=$(BENCHMARK_CONNECTIONS) --duration=$(BENCHMARK_DURATION) --report-save-path=benchmark_report.md
+
+.PHONY: install-benchmark-server
+install-benchmark-server: ## Install nighthawk server for benchmark test
+	@$(LOG_TARGET)
+	kubectl create namespace benchmark-test
+	kubectl -n benchmark-test create configmap test-server-config --from-file=test/benchmark/config/nighthawk-test-server-config.yaml -o yaml
+	kubectl apply -f test/benchmark/config/nighthawk-test-server.yaml
+
+.PHONY: uninstall-benchmark-server
+uninstall-benchmark-server: ## Uninstall nighthawk server for benchmark test
+	@$(LOG_TARGET)
+	kubectl delete job -n benchmark-test -l benchmark-test/client=true
+	kubectl delete -f test/benchmark/config/nighthawk-test-server.yaml
+	kubectl delete configmap test-server-config -n benchmark-test
+	kubectl delete namespace benchmark-test
+
+.PHONY: install-e2e-telemetry
+install-e2e-telemetry: helm-generate.gateway-addons-helm
+	@$(LOG_TARGET)
+	helm upgrade -i eg-addons charts/gateway-addons-helm --set grafana.enabled=false,opentelemetry-collector.enabled=true -n monitoring --create-namespace --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
+	# Change loki service type from ClusterIP to LoadBalancer
+	kubectl patch service loki -n monitoring -p '{"spec": {"type": "LoadBalancer"}}'
 
 .PHONY: uninstall-e2e-telemetry
 uninstall-e2e-telemetry:
 	@$(LOG_TARGET)
-	kubectl delete -f examples/loki/loki.yaml -n monitoring --ignore-not-found
 	helm delete $(shell helm list -n monitoring -q) -n monitoring
-
-.PHONY: prepare-helm-repo
-prepare-helm-repo:
-	@$(LOG_TARGET)
-	helm repo add fluent https://fluent.github.io/helm-charts
-	helm repo add grafana https://grafana.github.io/helm-charts
-	helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
-	helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-	helm repo update
-
-.PHONY: install-fluent-bit
-install-fluent-bit:
-	@$(LOG_TARGET)
-	helm upgrade --install fluent-bit fluent/fluent-bit -f examples/fluent-bit/helm-values.yaml -n monitoring --create-namespace --version $(FLUENT_BIT_CHART_VERSION)
-
-.PHONY: install-loki
-install-loki:
-	@$(LOG_TARGET)
-	kubectl apply -f examples/loki/loki.yaml -n monitoring
-
-.PHONY: install-tempo
-install-tempo:
-	@$(LOG_TARGET)
-	helm upgrade --install tempo grafana/tempo -f examples/tempo/helm-values.yaml -n monitoring --create-namespace --version $(TEMPO_CHART_VERSION)
-
-.PHONY: install-prometheus
-install-prometheus:
-	@$(LOG_TARGET)
-	helm upgrade --install prometheus prometheus-community/prometheus -f examples/prometheus/helm-values.yaml -n monitoring --create-namespace
-
-.PHONY: install-otel-collector
-install-otel-collector:
-	@$(LOG_TARGET)
-	helm upgrade --install otel-collector open-telemetry/opentelemetry-collector -f examples/otel-collector/helm-values.yaml -n monitoring --create-namespace --version $(OTEL_COLLECTOR_CHART_VERSION)
 
 .PHONY: create-cluster
 create-cluster: $(tools/kind) ## Create a kind cluster suitable for running Gateway API conformance.
@@ -206,7 +209,7 @@ run-conformance: ## Run Gateway API conformance.
 	kubectl apply -f test/config/gatewayclass.yaml
 	go test -v -tags conformance ./test/conformance --gateway-class=envoy-gateway --debug=true
 
-CONFORMANCE_REPORT_PATH ?= 
+CONFORMANCE_REPORT_PATH ?=
 
 .PHONY: run-experimental-conformance
 run-experimental-conformance: ## Run Experimental Gateway API conformance.
@@ -221,11 +224,11 @@ delete-cluster: $(tools/kind) ## Delete kind cluster.
 	$(tools/kind) delete cluster --name envoy-gateway
 
 .PHONY: generate-manifests
-generate-manifests: helm-generate ## Generate Kubernetes release manifests.
+generate-manifests: helm-generate.gateway-helm ## Generate Kubernetes release manifests.
 	@$(LOG_TARGET)
 	@$(call log, "Generating kubernetes manifests")
 	mkdir -p $(OUTPUT_DIR)/
-	helm template --set createNamespace=true eg charts/gateway-helm --include-crds --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) --namespace envoy-gateway-system > $(OUTPUT_DIR)/install.yaml
+	helm template --set createNamespace=true eg charts/gateway-helm --include-crds --namespace envoy-gateway-system > $(OUTPUT_DIR)/install.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/install.yaml")
 	cp examples/kubernetes/quickstart.yaml $(OUTPUT_DIR)/quickstart.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/quickstart.yaml")

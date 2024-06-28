@@ -147,12 +147,16 @@ securityPolicies:
         group: null
         kind: null
         name: client2-secret
+      defaultRefreshTokenTTL: 48h0m0s
+      defaultTokenTTL: 1h0m0s
+      forwardAccessToken: true
       logoutPath: /foo/logout
       provider:
         authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
         issuer: https://oauth.foo.com
         tokenEndpoint: https://oauth.foo.com/token
       redirectURL: https://www.example.com/foo/oauth2/callback
+      refreshToken: true
       resources:
       - api
       scopes:
@@ -163,7 +167,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
   status:
     ancestors:
     - ancestorRef:
@@ -193,15 +196,18 @@ securityPolicies:
         group: null
         kind: null
         name: client1-secret
+      defaultRefreshTokenTTL: 24h0m0s
+      defaultTokenTTL: 30m0s
+      forwardAccessToken: true
       logoutPath: /bar/logout
       provider:
         issuer: https://accounts.google.com
       redirectURL: https://www.example.com/bar/oauth2/callback
+      refreshToken: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:
@@ -238,10 +244,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -262,6 +265,9 @@ xdsIR:
             clientID: client2.oauth.foo.com
             clientSecret: Y2xpZW50MTpzZWNyZXQK
             cookieSuffix: 5f93c2e4
+            defaultRefreshTokenTTL: 48h0m0s
+            defaultTokenTTL: 1h0m0s
+            forwardAccessToken: true
             hmacSecret: qrOYACHXoe7UEDI/raOjNSx+Z9ufXSc/22C3T6X/zPY=
             logoutPath: /foo/logout
             name: securitypolicy/default/policy-for-http-route
@@ -270,16 +276,14 @@ xdsIR:
               tokenEndpoint: https://oauth.foo.com/token
             redirectPath: /foo/oauth2/callback
             redirectURL: https://www.example.com/foo/oauth2/callback
+            refreshToken: true
             resources:
             - api
             scopes:
             - openid
             - email
             - profile
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP
@@ -300,6 +304,9 @@ xdsIR:
             clientID: client1.apps.googleusercontent.com
             clientSecret: Y2xpZW50MTpzZWNyZXQK
             cookieSuffix: b0a1b740
+            defaultRefreshTokenTTL: 24h0m0s
+            defaultTokenTTL: 30m0s
+            forwardAccessToken: true
             hmacSecret: qrOYACHXoe7UEDI/raOjNSx+Z9ufXSc/22C3T6X/zPY=
             logoutPath: /bar/logout
             name: securitypolicy/envoy-gateway/policy-for-gateway
@@ -308,5 +315,6 @@ xdsIR:
               tokenEndpoint: https://oauth2.googleapis.com/token
             redirectPath: /bar/oauth2/callback
             redirectURL: https://www.example.com/bar/oauth2/callback
+            refreshToken: true
             scopes:
             - openid

@@ -292,7 +292,7 @@ service EnvoyGatewayExtension {
   - This decision was made to solve the problem about how resources introduced by an extension get watched. If an extension server watches its own resources then it would need some way to trigger an Envoy Gateway reconfigure when a resource that Envoy Gateway is not watching gets updated. Having Envoy Gateway watch all resources removes any concern about creating race confitions or reconcile loops that would result from Envoy Gateway and the extension server both having so much separate state that needs to be synchronized.
 - The Extension Server takes ownership of producing the correct xDS configuration in the hook responses
 - The Extension Server will be responsible for ensuring the performance of the hook processing time
-- The Post xDS level gRPC hooks all currently send a context field even though it contains nothing for several hooks. These fields exist so that they can be updadated in the future to pass
+- The Post xDS level gRPC hooks all currently send a context field even though it contains nothing for several hooks. These fields exist so that they can be updated in the future to pass
 additional information to extensions as new use-cases and needs are discovered.
 - The initial design supplies the scaffolding for both "pre xDS" and "post xDS" hooks. Only the post hooks are currently implemented which operate on xDS resources after they have been generated.
 The pre hooks will be implemented at a later date along with one or more hooks in the infra manager. The infra manager level hook(s) will exist to power use-cases such as dynamically creating Deployments/Services for the extension the

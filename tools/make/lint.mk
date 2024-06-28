@@ -20,7 +20,7 @@ lint: lint.golint
 lint-deps: $(tools/golangci-lint)
 lint.golint: $(tools/golangci-lint)
 	@$(LOG_TARGET)
-	$(tools/golangci-lint) run $(GOLANGCI_LINT_FLAGS) --build-tags=e2e,celvalidation --config=tools/linter/golangci-lint/.golangci.yml
+	$(tools/golangci-lint) run $(GOLANGCI_LINT_FLAGS) --build-tags=e2e,celvalidation,conformance,experimental --config=tools/linter/golangci-lint/.golangci.yml
 
 .PHONY: lint.yamllint
 lint: lint.yamllint

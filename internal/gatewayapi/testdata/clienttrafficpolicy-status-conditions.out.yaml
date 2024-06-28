@@ -10,7 +10,6 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-2
-      namespace: envoy-gateway
       sectionName: http
   status:
     ancestors:
@@ -38,7 +37,6 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-2
-      namespace: envoy-gateway
       sectionName: https
   status:
     ancestors:
@@ -66,7 +64,6 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-2
-      namespace: envoy-gateway
       sectionName: https
   status:
     ancestors:
@@ -95,7 +92,6 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-3
-      namespace: envoy-gateway
       sectionName: foo-bar
   status:
     ancestors:
@@ -123,7 +119,6 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:
@@ -149,7 +144,6 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:
@@ -176,7 +170,6 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-2
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:
@@ -208,7 +201,6 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: unknown-gateway
-      namespace: envoy-gateway
   status:
     ancestors: null
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -222,22 +214,8 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: not-same-namespace-gateway
-      namespace: not-same-namespace
   status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: not-same-namespace-gateway
-        namespace: not-same-namespace
-      conditions:
-      - lastTransitionTime: null
-        message: Namespace:envoy-gateway TargetRef.Namespace:not-same-namespace, ClientTrafficPolicy
-          can only target a Gateway in the same namespace.
-        reason: Invalid
-        status: "False"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    ancestors: null
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -547,6 +525,10 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
+    tcp:
+    - address: 0.0.0.0
+      name: envoy-gateway/gateway-2/tcp
+      port: 10053
   envoy-gateway/gateway-3:
     accessLog:
       text:

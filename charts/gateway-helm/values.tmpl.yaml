@@ -1,9 +1,31 @@
+# The global settings for the Envoy Gateway Helm chart.
+# These values will be used if the values are not overridden in the other sections.
+global:
+  images:
+    envoyGateway:
+      # This is the full image name including the hub, repo, and tag.
+      image: ${GatewayImage}
+      # Specify image pull policy if default behavior isn't desired.
+      # Default behavior: latest images will be Always else IfNotPresent.
+      pullPolicy: ${GatewayImagePullPolicy}
+      # List of secrets in the same namespace of the component that can be used to pull images from private repositories.
+      pullSecrets: []
+    ratelimit:
+      # This is the full image name including the hub, repo, and tag.
+      image: "docker.io/envoyproxy/ratelimit:master"
+      # Specify image pull policy if default behavior isn't desired.
+      # Default behavior: latest images will be Always else IfNotPresent.
+      pullPolicy: IfNotPresent
+      # List of secrets in the same namespace of the component that can be used to pull images from private repositories.
+      pullSecrets: []
+podDisruptionBudget:
+  minAvailable: 0
 deployment:
   envoyGateway:
     image:
-      repository: ${ImageRepository}
-      tag: '${ImageTag}'
-    imagePullPolicy: IfNotPresent
+      repository: ""
+      tag: ""
+    imagePullPolicy: ""
     imagePullSecrets: []
     resources:
       limits:
@@ -19,16 +41,21 @@ deployment:
     - name: ratelimit
       port: 18001
       targetPort: 18001
+    - name: wasm
+      port: 18002
+      targetPort: 18002
     - name: metrics
       port: 19001
       targetPort: 19001
   replicas: 1
   pod:
     affinity: {}
-    annotations: 
+    annotations:
       prometheus.io/scrape: 'true'
       prometheus.io/port: '19001'
     labels: {}
+    topologySpreadConstraints: []
+    tolerations: []
 
 config:
   envoyGateway:
@@ -44,6 +71,7 @@ createNamespace: false
 
 kubernetesClusterDomain: cluster.local
 
+# -- Certgen is used to generate the certificates required by EnvoyGateway. If you want to construct a custom certificate, you can generate a custom certificate through Cert-Manager before installing EnvoyGateway. Certgen will not overwrite the custom certificate. Please do not manually modify `values.yaml` to disable certgen, it may cause EnvoyGateway OIDC,OAuth2,etc. to not work as expected.
 certgen:
   job:
     annotations: {}

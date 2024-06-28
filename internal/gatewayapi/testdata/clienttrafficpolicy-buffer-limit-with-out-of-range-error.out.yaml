@@ -12,7 +12,6 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
       sectionName: http-1
   status:
     ancestors:
@@ -24,7 +23,8 @@ clientTrafficPolicies:
         sectionName: http-1
       conditions:
       - lastTransitionTime: null
-        message: BufferLimit value 100G is out of range, must be between 0 and 4294967295
+        message: 'Connection: BufferLimit value 100G is out of range, must be between
+          0 and 4294967295.'
         reason: Invalid
         status: "False"
         type: Accepted
@@ -41,7 +41,6 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:

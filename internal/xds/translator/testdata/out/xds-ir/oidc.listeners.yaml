@@ -28,7 +28,7 @@
               credentials:
                 clientId: client.oauth.foo.com
                 cookieNames:
-                  bearerToken: BearerToken-5F93C2E4
+                  bearerToken: AccessToken-5F93C2E4
                   idToken: IdToken-5F93C2E4
                   oauthExpires: OauthExpires-5F93C2E4
                   oauthHmac: OauthHMAC-5F93C2E4
@@ -43,6 +43,8 @@
                   sdsConfig:
                     ads: {}
                     resourceApiVersion: V3
+              defaultExpiresIn: 3600s
+              defaultRefreshTokenExpiresIn: 172800s
               forwardBearerToken: true
               redirectPathMatcher:
                 path:
@@ -57,6 +59,7 @@
                 cluster: oauth_foo_com_443
                 timeout: 10s
                 uri: https://oauth.foo.com/token
+              useRefreshToken: true
         - disabled: true
           name: envoy.filters.http.oauth2/securitypolicy/default/policy-for-second-route
           typedConfig:
@@ -71,8 +74,8 @@
               credentials:
                 clientId: client.oauth.bar.com
                 cookieNames:
-                  bearerToken: BearerToken-5f93c2e4
-                  idToken: IdToken-5f93c2e4
+                  bearerToken: CustomAccessTokenOverride
+                  idToken: CustomIdTokenOverride
                   oauthExpires: OauthExpires-5f93c2e4
                   oauthHmac: OauthHMAC-5f93c2e4
                   refreshToken: RefreshToken-5f93c2e4
@@ -86,7 +89,7 @@
                   sdsConfig:
                     ads: {}
                     resourceApiVersion: V3
-              forwardBearerToken: true
+              preserveAuthorizationHeader: true
               redirectPathMatcher:
                 path:
                   exact: /bar/oauth2/callback
@@ -100,6 +103,7 @@
                 cluster: oauth_bar_com_443
                 timeout: 10s
                 uri: https://oauth.bar.com/token
+              useRefreshToken: false
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -115,6 +119,7 @@
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
         useRemoteAddress: true
+    name: first-listener
   drainType: MODIFY_ONLY
   name: first-listener
   perConnectionBufferLimitBytes: 32768

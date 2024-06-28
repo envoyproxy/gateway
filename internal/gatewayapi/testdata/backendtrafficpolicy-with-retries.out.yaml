@@ -24,7 +24,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
   status:
     ancestors:
     - ancestorRef:
@@ -60,7 +59,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:
@@ -276,10 +274,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: grpcroute/default/grpcroute-1/rule/0
           settings:
           - addressType: IP
@@ -291,15 +286,16 @@ xdsIR:
         hostname: '*'
         isHTTP2: true
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
-        retry:
-          perRetry:
-            backOff:
-              baseInterval: 100ms
-              maxInterval: 10s
-            timeout: 250ms
-          retryOn:
-            triggers:
-            - cancelled
+        traffic:
+          retry:
+            perRetry:
+              backOff:
+                baseInterval: 100ms
+                maxInterval: 10s
+              timeout: 250ms
+            retryOn:
+              triggers:
+              - cancelled
   envoy-gateway/gateway-2:
     accessLog:
       text:
@@ -315,10 +311,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -334,17 +327,18 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        retry:
-          numRetries: 5
-          perRetry:
-            backOff:
-              baseInterval: 100ms
-              maxInterval: 10s
-            timeout: 250ms
-          retryOn:
-            httpStatusCodes:
-            - 429
-            - 503
-            triggers:
-            - connect-failure
-            - retriable-status-codes
+        traffic:
+          retry:
+            numRetries: 5
+            perRetry:
+              backOff:
+                baseInterval: 100ms
+                maxInterval: 10s
+              timeout: 250ms
+            retryOn:
+              httpStatusCodes:
+              - 429
+              - 503
+              triggers:
+              - connect-failure
+              - retriable-status-codes

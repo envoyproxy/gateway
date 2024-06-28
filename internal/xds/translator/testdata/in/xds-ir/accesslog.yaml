@@ -19,8 +19,14 @@ accesslog:
       "response_code": "%RESPONSE_CODE%"
     resources:
       "cluster_name": "cluster1"
-    host: otel-collector.default.svc.cluster.local
-    port: 4317
+    authority: "otel-collector.default.svc.cluster.local"
+    destination:
+      name: "accesslog-0"
+      settings:
+      - endpoints:
+        - host: "otel-collector.default.svc.cluster.local"
+          port: 4317
+        protocol: "GRPC"
 http:
 - name: "first-listener"
   address: "0.0.0.0"

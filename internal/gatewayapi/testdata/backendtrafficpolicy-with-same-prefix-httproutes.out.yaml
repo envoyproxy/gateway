@@ -14,7 +14,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
   status:
     ancestors:
     - ancestorRef:
@@ -180,14 +179,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        circuitBreaker:
-          maxConnections: 2048
-          maxParallelRequests: 4294967295
-          maxPendingRequests: 1
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -203,10 +195,12 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+        traffic:
+          circuitBreaker:
+            maxConnections: 2048
+            maxParallelRequests: 4294967295
+            maxPendingRequests: 1
+      - destination:
           name: httproute/default/httproute-1-1/rule/0
           settings:
           - addressType: IP

@@ -12,7 +12,6 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
       sectionName: http-1
   status:
     ancestors:
@@ -24,7 +23,7 @@ clientTrafficPolicies:
         sectionName: http-1
       conditions:
       - lastTransitionTime: null
-        message: Invalid BufferLimit value 500m
+        message: 'Connection: invalid BufferLimit value 500m.'
         reason: Invalid
         status: "False"
         type: Accepted
@@ -41,7 +40,6 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:

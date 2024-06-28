@@ -73,7 +73,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
     jwt:
       providers:
       - name: example1
@@ -104,7 +103,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
     jwt:
       providers:
       - name: example3

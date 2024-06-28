@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
@@ -507,7 +507,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Patch: &egv1a1.KubernetesPatchSpec{
-									Value: v1.JSON{
+									Value: apiextensionsv1.JSON{
 										Raw: []byte{},
 									},
 								},
@@ -531,7 +531,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
 								Patch: &egv1a1.KubernetesPatchSpec{
-									Value: v1.JSON{
+									Value: apiextensionsv1.JSON{
 										Raw: []byte{},
 									},
 								},
@@ -578,7 +578,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
 								Patch: &egv1a1.KubernetesPatchSpec{
 									Type: ptr.To(egv1a1.StrategicMerge),
-									Value: v1.JSON{
+									Value: apiextensionsv1.JSON{
 										Raw: []byte("{}"),
 									},
 								},
@@ -602,7 +602,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
 								Patch: &egv1a1.KubernetesPatchSpec{
-									Value: v1.JSON{
+									Value: apiextensionsv1.JSON{
 										Raw: []byte("{}"),
 									},
 								},
@@ -612,6 +612,54 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 			},
 			expected: true,
+		},
+		{
+			name: "valid filter order",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					FilterOrder: []egv1a1.FilterPosition{
+						{
+							Name:   egv1a1.EnvoyFilterOAuth2,
+							Before: ptr.To(egv1a1.EnvoyFilterJWTAuthn),
+						},
+						{
+							Name:  egv1a1.EnvoyFilterExtProc,
+							After: ptr.To(egv1a1.EnvoyFilterJWTAuthn),
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "invalid filter order with circular dependency",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					FilterOrder: []egv1a1.FilterPosition{
+						{
+							Name:   egv1a1.EnvoyFilterOAuth2,
+							Before: ptr.To(egv1a1.EnvoyFilterJWTAuthn),
+						},
+						{
+							Name:   egv1a1.EnvoyFilterJWTAuthn,
+							Before: ptr.To(egv1a1.EnvoyFilterExtProc),
+						},
+						{
+							Name:   egv1a1.EnvoyFilterExtProc,
+							Before: ptr.To(egv1a1.EnvoyFilterOAuth2),
+						},
+					},
+				},
+			},
+			expected: false,
 		},
 	}
 

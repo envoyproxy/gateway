@@ -14,7 +14,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
   status:
     ancestors:
     - ancestorRef:
@@ -43,7 +42,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
     timeout:
       http:
         connectionIdleTimeout: 21s
@@ -220,10 +218,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -234,18 +229,16 @@ xdsIR:
             weight: 1
         hostname: gateway.envoyproxy.io
         isHTTP2: false
-        loadBalancer:
-          consistentHash:
-            sourceIP: true
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
           prefix: /foo
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+        traffic:
+          loadBalancer:
+            consistentHash:
+              sourceIP: true
+      - destination:
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP
@@ -256,16 +249,17 @@ xdsIR:
             weight: 1
         hostname: gateway.envoyproxy.io
         isHTTP2: false
-        loadBalancer:
-          random: {}
         name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
           prefix: /bar
-        timeout:
-          http:
-            connectionIdleTimeout: 21s
-            maxConnectionDuration: 22s
-          tcp:
-            connectTimeout: 20s
+        traffic:
+          loadBalancer:
+            random: {}
+          timeout:
+            http:
+              connectionIdleTimeout: 21s
+              maxConnectionDuration: 22s
+            tcp:
+              connectTimeout: 20s

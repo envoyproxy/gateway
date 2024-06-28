@@ -103,7 +103,7 @@ httpRoutes:
     - conditions:
       - lastTransitionTime: null
         message: 'Regex "*.foo.bar.com" is invalid: error parsing regexp: missing
-          argument to repetition operator: `*`'
+          argument to repetition operator: `*`.'
         reason: UnsupportedValue
         status: "False"
         type: Accepted

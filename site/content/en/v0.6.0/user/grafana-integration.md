@@ -50,15 +50,15 @@ To log in to Grafana, use the credentials `admin:admin`.
 
 Envoy Gateway has examples of dashboard for you to get started:
 
-### [Envoy Global](https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/grafana/dashboards/envoy-global.json)
+### [Envoy Global](https://raw.githubusercontent.com/envoyproxy/gateway/main/charts/gateway-addons-helm/dashboards/envoy-global.json)
 
 ![Envoy Global](/img/envoy-global-dashboard.png)
 
-### [Envoy Clusters](https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/grafana/dashboards/envoy-clusters.json)
+### [Envoy Clusters](https://raw.githubusercontent.com/envoyproxy/gateway/main/charts/gateway-addons-helm/dashboards/envoy-clusters.json)
 
 ![Envoy Clusters](/img/envoy-clusters-dashboard.png)
 
-### [Envoy Pod Resources](https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/grafana/dashboards/envoy-pod-resource.json)
+### [Envoy Pod Resources](https://raw.githubusercontent.com/envoyproxy/gateway/main/charts/gateway-addons-helm/dashboards/envoy-pod-resource.json)
 
 ![Envoy Pod Resources](/img/envoy-pod-resources-dashboard.png)
 

@@ -16,8 +16,8 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
-	"github.com/golang/protobuf/ptypes/wrappers"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
@@ -61,7 +61,6 @@ func (*cors) patchHCM(
 		return err
 	}
 
-	// Ensure the CORS filter is the first one in the filter chain.
 	mgr.HttpFilters = append([]*hcmv3.HttpFilter{corsFilter}, mgr.HttpFilters...)
 
 	return nil
@@ -125,7 +124,7 @@ func (*cors) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 		allowHeaders     string
 		exposeHeaders    string
 		maxAge           string
-		allowCredentials *wrappers.BoolValue
+		allowCredentials *wrapperspb.BoolValue
 		c                = irRoute.Security.CORS
 	)
 
@@ -141,7 +140,7 @@ func (*cors) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	if c.MaxAge != nil {
 		maxAge = strconv.Itoa(int(c.MaxAge.Seconds()))
 	}
-	allowCredentials = &wrappers.BoolValue{Value: c.AllowCredentials}
+	allowCredentials = &wrapperspb.BoolValue{Value: c.AllowCredentials}
 
 	routeCfgProto := &corsv3.CorsPolicy{
 		AllowOriginStringMatch:       allowOrigins,
@@ -150,7 +149,7 @@ func (*cors) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 		ExposeHeaders:                exposeHeaders,
 		MaxAge:                       maxAge,
 		AllowCredentials:             allowCredentials,
-		ForwardNotMatchingPreflights: &wrappers.BoolValue{Value: false},
+		ForwardNotMatchingPreflights: &wrapperspb.BoolValue{Value: false},
 	}
 
 	routeCfgAny, err := anypb.New(routeCfgProto)

@@ -10,7 +10,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
     timeout:
       http:
         maxConnectionDuration: 22s
@@ -26,7 +25,7 @@ backendTrafficPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: 'Timeout: invalid ConnectTimeout value 20kib'
+        message: 'Timeout: invalid ConnectTimeout value 20kib.'
         reason: Invalid
         status: "False"
         type: Accepted
@@ -145,10 +144,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -164,6 +160,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        timeout:
-          http:
-            requestTimeout: 1s
+        traffic:
+          timeout:
+            http:
+              requestTimeout: 1s

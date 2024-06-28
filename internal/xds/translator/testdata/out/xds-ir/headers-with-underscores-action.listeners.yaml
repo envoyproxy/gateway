@@ -27,6 +27,7 @@
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
         useRemoteAddress: true
+    name: first-listener
   drainType: MODIFY_ONLY
   name: first-listener
   perConnectionBufferLimitBytes: 32768
@@ -58,6 +59,7 @@
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
         useRemoteAddress: true
+    name: second-listener
   drainType: MODIFY_ONLY
   name: second-listener
   perConnectionBufferLimitBytes: 32768
@@ -90,6 +92,7 @@
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
         useRemoteAddress: true
+    name: third-listener
   drainType: MODIFY_ONLY
   name: third-listener
   perConnectionBufferLimitBytes: 32768
@@ -122,6 +125,7 @@
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
         useRemoteAddress: true
+    name: fourth-listener
   drainType: MODIFY_ONLY
   name: fourth-listener
   perConnectionBufferLimitBytes: 32768

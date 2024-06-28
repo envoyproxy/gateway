@@ -10,7 +10,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
     timeout:
       http:
         connectionIdleTimeout: 21s
@@ -26,7 +25,7 @@ backendTrafficPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: 'Timeout: invalid MaxConnectionDuration value 22mib'
+        message: 'Timeout: invalid MaxConnectionDuration value 22mib.'
         reason: Invalid
         status: "False"
         type: Accepted
@@ -138,10 +137,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: grpcroute/default/grpcroute-1/rule/0
           settings:
           - addressType: IP

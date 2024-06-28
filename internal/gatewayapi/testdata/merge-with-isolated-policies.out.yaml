@@ -10,7 +10,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: default
     tcpKeepalive:
       idleTime: 20m
       interval: 60s
@@ -41,7 +40,6 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-2
-      namespace: default
     timeout:
       http:
         requestReceivedTimeout: 5s
@@ -275,7 +273,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: default
   status:
     ancestors:
     - ancestorRef:
@@ -306,10 +303,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -341,10 +335,11 @@ xdsIR:
             - x-header-7
             - x-header-8
             maxAge: 33m20s
-        tcpKeepalive:
-          idleTime: 1200
-          interval: 60
-          probes: 3
+        traffic:
+          tcpKeepalive:
+            idleTime: 1200
+            interval: 60
+            probes: 3
     - address: 0.0.0.0
       hostnames:
       - '*'
@@ -355,10 +350,7 @@ xdsIR:
         mergeSlashes: true
       port: 8888
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP

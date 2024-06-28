@@ -9,25 +9,24 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 	"testing"
 	"time"
 
 	"fortio.org/fortio/fhttp"
 	"fortio.org/fortio/periodic"
 	flog "fortio.org/log"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/config"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -67,6 +66,7 @@ func WaitForPods(t *testing.T, cl client.Client, namespace string, selectors map
 				}
 			}
 
+			t.Logf("pod %s/%s status: %v", p.Namespace, p.Name, p.Status)
 			return false
 		}
 
@@ -75,7 +75,7 @@ func WaitForPods(t *testing.T, cl client.Client, namespace string, selectors map
 }
 
 // SecurityPolicyMustBeAccepted waits for the specified SecurityPolicy to be accepted.
-func SecurityPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwv1a2.ParentReference) {
+func SecurityPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1a2.ParentReference) {
 	t.Helper()
 
 	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
@@ -97,7 +97,7 @@ func SecurityPolicyMustBeAccepted(t *testing.T, client client.Client, policyName
 }
 
 // BackendTrafficPolicyMustBeAccepted waits for the specified BackendTrafficPolicy to be accepted.
-func BackendTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwv1a2.ParentReference) {
+func BackendTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1a2.ParentReference) {
 	t.Helper()
 
 	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
@@ -119,7 +119,7 @@ func BackendTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, poli
 }
 
 // ClientTrafficPolicyMustBeAccepted waits for the specified ClientTrafficPolicy to be accepted.
-func ClientTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwv1a2.ParentReference) {
+func ClientTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1a2.ParentReference) {
 	t.Helper()
 
 	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
@@ -190,11 +190,53 @@ func runLoadAndWait(t *testing.T, timeoutConfig config.TimeoutConfig, done chan 
 	done <- false
 }
 
-func policyAcceptedByAncestor(ancestors []gwv1a2.PolicyAncestorStatus, controllerName string, ancestorRef gwv1a2.ParentReference) bool {
+func policyAcceptedByAncestor(ancestors []gwapiv1a2.PolicyAncestorStatus, controllerName string, ancestorRef gwapiv1a2.ParentReference) bool {
 	for _, ancestor := range ancestors {
 		if string(ancestor.ControllerName) == controllerName && cmp.Equal(ancestor.AncestorRef, ancestorRef) {
 			for _, condition := range ancestor.Conditions {
-				if condition.Type == string(gwv1a2.PolicyConditionAccepted) && condition.Status == metav1.ConditionTrue {
+				if condition.Type == string(gwapiv1a2.PolicyConditionAccepted) && condition.Status == metav1.ConditionTrue {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+// EnvoyExtensionPolicyMustFail waits for an EnvoyExtensionPolicy to fail with the specified reason.
+func EnvoyExtensionPolicyMustFail(
+	t *testing.T, client client.Client, policyName types.NamespacedName,
+	controllerName string, ancestorRef gwapiv1a2.ParentReference, message string,
+) {
+	t.Helper()
+
+	policy := &egv1a1.EnvoyExtensionPolicy{}
+	waitErr := wait.PollUntilContextTimeout(
+		context.Background(), 1*time.Second, 60*time.Second,
+		true, func(ctx context.Context) (bool, error) {
+			err := client.Get(ctx, policyName, policy)
+			if err != nil {
+				return false, fmt.Errorf("error fetching EnvoyExtensionPolicy: %w", err)
+			}
+
+			if policyFailAcceptedByAncestor(policy.Status.Ancestors, controllerName, ancestorRef, message) {
+				t.Logf("EnvoyExtensionPolicy has been failed: %v", policy)
+				return true, nil
+			}
+
+			return false, nil
+		})
+
+	require.NoErrorf(t, waitErr, "error waiting for EnvoyExtensionPolicy to fail with message: %s policy %v", message, policy)
+}
+
+func policyFailAcceptedByAncestor(ancestors []gwapiv1a2.PolicyAncestorStatus, controllerName string, ancestorRef gwapiv1a2.ParentReference, message string) bool {
+	for _, ancestor := range ancestors {
+		if string(ancestor.ControllerName) == controllerName && cmp.Equal(ancestor.AncestorRef, ancestorRef) {
+			for _, condition := range ancestor.Conditions {
+				if condition.Type == string(gwapiv1a2.PolicyConditionAccepted) &&
+					condition.Status == metav1.ConditionFalse &&
+					strings.Contains(condition.Message, message) {
 					return true
 				}
 			}
@@ -204,7 +246,7 @@ func policyAcceptedByAncestor(ancestors []gwv1a2.PolicyAncestorStatus, controlle
 }
 
 // EnvoyExtensionPolicyMustBeAccepted waits for the specified EnvoyExtensionPolicy to be accepted.
-func EnvoyExtensionPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwv1a2.ParentReference) {
+func EnvoyExtensionPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1a2.ParentReference) {
 	t.Helper()
 
 	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
@@ -224,4 +266,26 @@ func EnvoyExtensionPolicyMustBeAccepted(t *testing.T, client client.Client, poli
 	})
 
 	require.NoErrorf(t, waitErr, "error waiting for EnvoyExtensionPolicy to be accepted")
+}
+
+func WaitForLoadBalancerAddress(t *testing.T, client client.Client, timeout time.Duration, nn types.NamespacedName) (string, error) {
+	t.Helper()
+
+	var ipAddr string
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, timeout, true, func(ctx context.Context) (bool, error) {
+		s := &corev1.Service{}
+		err := client.Get(ctx, nn, s)
+		if err != nil {
+			tlog.Logf(t, "error fetching Service: %v", err)
+			return false, fmt.Errorf("error fetching Service: %w", err)
+		}
+
+		if len(s.Status.LoadBalancer.Ingress) > 0 {
+			ipAddr = s.Status.LoadBalancer.Ingress[0].IP
+			return true, nil
+		}
+		return false, nil
+	})
+	require.NoErrorf(t, waitErr, "error waiting for Service to have at least one load balancer IP address in status")
+	return ipAddr, nil
 }

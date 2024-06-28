@@ -69,7 +69,7 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Mixed endpointslice address type for the same backendRef is not supported
+        message: mixed endpointslice address type for the same backendRef is not supported
         reason: ResolvedRefs
         status: "False"
         type: ResolvedRefs
@@ -110,10 +110,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: Mixed

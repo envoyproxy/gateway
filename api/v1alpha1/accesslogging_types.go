@@ -11,14 +11,22 @@ type ProxyAccessLog struct {
 	// Settings defines accesslog settings for managed proxies.
 	// If unspecified, will send default format to stdout.
 	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=50
 	Settings []ProxyAccessLogSetting `json:"settings,omitempty"`
 }
 
 type ProxyAccessLogSetting struct {
 	// Format defines the format of accesslog.
 	Format ProxyAccessLogFormat `json:"format"`
+	// Matches defines the match conditions for accesslog in CEL expression.
+	// An accesslog will be emitted only when one or more match conditions are evaluated to true.
+	// Invalid [CEL](https://www.envoyproxy.io/docs/envoy/latest/xds/type/v3/cel.proto.html#common-expression-language-cel-proto) expressions will be ignored.
+	// +notImplementedHide
+	Matches []string `json:"matches,omitempty"`
 	// Sinks defines the sinks of accesslog.
 	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=50
 	Sinks []ProxyAccessLogSink `json:"sinks"`
 }
 
@@ -120,6 +128,7 @@ type ALSEnvoyProxyAccessLog struct {
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=1
 	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Service kind.",rule="self.all(f, f.kind == 'Service')"
+	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core group.",rule="self.all(f, f.group == '')"
 	BackendRefs []BackendRef `json:"backendRefs"`
 	// LogName defines the friendly name of the access log to be returned in
 	// StreamAccessLogsMessage.Identifier. This allows the access log server
@@ -158,24 +167,25 @@ type FileEnvoyProxyAccessLog struct {
 // +kubebuilder:validation:XValidation:message="host or backendRefs needs to be set",rule="has(self.host) || self.backendRefs.size() > 0"
 type OpenTelemetryEnvoyProxyAccessLog struct {
 	// Host define the extension service hostname.
-	// Deprecated: Use BackendRef instead.
+	// Deprecated: Use BackendRefs instead.
 	//
 	// +optional
 	Host *string `json:"host,omitempty"`
 	// Port defines the port the extension service is exposed on.
-	// Deprecated: Use BackendRef instead.
+	// Deprecated: Use BackendRefs instead.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:default=4317
 	Port int32 `json:"port,omitempty"`
 	// BackendRefs references a Kubernetes object that represents the
-	// backend server to which the accesslog will be sent.
-	// Only service Kind is supported for now.
+	// backend server to which the access log will be sent.
+	// Only Service kind is supported for now.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
 	// +kubebuilder:validation:XValidation:message="only support Service kind.",rule="self.all(f, f.kind == 'Service')"
+	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core group.",rule="self.all(f, f.group == '')"
 	BackendRefs []BackendRef `json:"backendRefs,omitempty"`
 	// Resources is a set of labels that describe the source of a log entry, including envoy node info.
 	// It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).

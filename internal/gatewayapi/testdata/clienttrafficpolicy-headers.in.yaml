@@ -8,11 +8,11 @@ clientTrafficPolicies:
     headers:
       enableEnvoyHeaders: true
       withUnderscoresAction: Allow
+      preserveXRequestID: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway

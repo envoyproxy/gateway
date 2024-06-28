@@ -10,7 +10,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
     useClientProtocol: true
   status:
     ancestors:
@@ -138,10 +137,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -157,4 +153,5 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
+        traffic: {}
         useClientProtocol: true

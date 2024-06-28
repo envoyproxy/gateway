@@ -50,6 +50,7 @@
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http
         useRemoteAddress: true
+    name: first-listener
   drainType: MODIFY_ONLY
   name: first-listener
   perConnectionBufferLimitBytes: 32768

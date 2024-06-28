@@ -22,8 +22,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/extension/testutils"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/extension/registry"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/field"
@@ -94,6 +94,9 @@ func TestTranslateXds(t *testing.T) {
 		"tracing-invalid": {
 			errMsg: "validation failed for xds resource",
 		},
+		"tracing-unknown-provider-type": {
+			errMsg: "unknown tracing provider type: Datadog",
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "xds-ir", "*.yaml"))
@@ -122,10 +125,12 @@ func TestTranslateXds(t *testing.T) {
 				GlobalRateLimit: &GlobalRateLimitSettings{
 					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", dnsDomain),
 				},
+				FilterOrder: x.FilterOrder,
 			}
 
 			tCtx, err := tr.Translate(x)
 			if !strings.HasSuffix(inputFileName, "partial-invalid") && len(cfg.errMsg) == 0 {
+				t.Logf(inputFileName)
 				require.NoError(t, err)
 			} else if len(cfg.errMsg) > 0 {
 				require.Error(t, err)
@@ -198,13 +203,13 @@ func TestTranslateRateLimitConfig(t *testing.T) {
 func TestTranslateXdsWithExtension(t *testing.T) {
 	testConfigs := map[string]testFileConfig{
 		"http-route-extension-route-error": {
-			errMsg: "route hook resource error",
+			errMsg: "rpc error: code = Unknown desc = route hook resource error",
 		},
 		"http-route-extension-virtualhost-error": {
-			errMsg: "extension post xds virtual host hook error",
+			errMsg: "rpc error: code = Unknown desc = extension post xds virtual host hook error",
 		},
 		"http-route-extension-listener-error": {
-			errMsg: "extension post xds listener hook error",
+			errMsg: "rpc error: code = Unknown desc = extension post xds listener hook error",
 		},
 	}
 
@@ -228,26 +233,41 @@ func TestTranslateXdsWithExtension(t *testing.T) {
 					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", "cluster.local"),
 				},
 			}
-			ext := v1alpha1.ExtensionManager{
-				Resources: []v1alpha1.GroupVersionKind{
+			ext := egv1a1.ExtensionManager{
+				Resources: []egv1a1.GroupVersionKind{
 					{
 						Group:   "foo.example.io",
 						Version: "v1alpha1",
 						Kind:    "examplefilter",
 					},
 				},
-				Hooks: &v1alpha1.ExtensionHooks{
-					XDSTranslator: &v1alpha1.XDSTranslatorHooks{
-						Post: []v1alpha1.XDSTranslatorHook{
-							v1alpha1.XDSRoute,
-							v1alpha1.XDSVirtualHost,
-							v1alpha1.XDSHTTPListener,
-							v1alpha1.XDSTranslation,
+				PolicyResources: []egv1a1.GroupVersionKind{
+					{
+						Group:   "bar.example.io",
+						Version: "v1alpha1",
+						Kind:    "ExtensionPolicy",
+					},
+					{
+						Group:   "foo.example.io",
+						Version: "v1alpha1",
+						Kind:    "Bar",
+					},
+				},
+				Hooks: &egv1a1.ExtensionHooks{
+					XDSTranslator: &egv1a1.XDSTranslatorHooks{
+						Post: []egv1a1.XDSTranslatorHook{
+							egv1a1.XDSRoute,
+							egv1a1.XDSVirtualHost,
+							egv1a1.XDSHTTPListener,
+							egv1a1.XDSTranslation,
 						},
 					},
 				},
 			}
-			extMgr := testutils.NewManager(ext)
+
+			extMgr, closeFunc, err := registry.NewInMemoryManager(ext, &testingExtensionServer{})
+			require.NoError(t, err)
+			defer closeFunc()
 			tr.ExtensionManager = &extMgr
 
 			tCtx, err := tr.Translate(x)

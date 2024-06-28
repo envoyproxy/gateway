@@ -16,8 +16,6 @@ import (
 	"strconv"
 	"time"
 
-	"google.golang.org/grpc/keepalive"
-
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/service/cluster/v3"
 	discoveryv3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/service/endpoint/v3"
@@ -28,8 +26,9 @@ import (
 	serverv3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/keepalive"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
@@ -67,7 +66,7 @@ func New(cfg *Config) *Runner {
 }
 
 func (r *Runner) Name() string {
-	return string(v1alpha1.LogComponentXdsServerRunner)
+	return string(egv1a1.LogComponentXdsServerRunner)
 }
 
 // Start starts the xds-server runner
@@ -133,7 +132,7 @@ func registerServer(srv serverv3.Server, g *grpc.Server) {
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources
-	message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentXdsServerRunner), Message: "xds"}, r.Xds.Subscribe(ctx),
+	message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentXdsServerRunner), Message: "xds"}, r.Xds.Subscribe(ctx),
 		func(update message.Update[string, *xdstypes.ResourceVersionTable], errChan chan error) {
 			key := update.Key
 			val := update.Value

@@ -7,6 +7,9 @@ package gatewayapi
 
 import (
 	"bufio"
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"os"
@@ -26,12 +29,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/utils/field"
 	"github.com/envoyproxy/gateway/internal/utils/file"
+	"github.com/envoyproxy/gateway/internal/wasm"
 )
 
 var overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
@@ -44,9 +48,14 @@ func TestTranslate(t *testing.T) {
 	testCasesConfig := []struct {
 		name                    string
 		EnvoyPatchPolicyEnabled bool
+		BackendEnabled          bool
 	}{
 		{
 			name:                    "envoypatchpolicy-invalid-feature-disabled",
+			EnvoyPatchPolicyEnabled: false,
+		},
+		{
+			name:                    "backend-invalid-feature-disabled",
 			EnvoyPatchPolicyEnabled: false,
 		},
 	}
@@ -63,10 +72,12 @@ func TestTranslate(t *testing.T) {
 			resources := &Resources{}
 			mustUnmarshal(t, input, resources)
 			envoyPatchPolicyEnabled := true
+			backendEnabled := true
 
 			for _, config := range testCasesConfig {
 				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
 					envoyPatchPolicyEnabled = config.EnvoyPatchPolicyEnabled
+					backendEnabled = config.BackendEnabled
 				}
 			}
 
@@ -75,8 +86,10 @@ func TestTranslate(t *testing.T) {
 				GatewayClassName:        "envoy-gateway-class",
 				GlobalRateLimitEnabled:  true,
 				EnvoyPatchPolicyEnabled: envoyPatchPolicyEnabled,
+				BackendEnabled:          backendEnabled,
 				Namespace:               "envoy-gateway-system",
 				MergeGateways:           IsMergeGatewaysEnabled(resources),
+				WasmCache:               &mockWasmCache{},
 			}
 
 			// Add common test fixtures
@@ -215,6 +228,56 @@ func TestTranslate(t *testing.T) {
 				},
 			)
 
+			// add otel-collector service
+			resources.Services = append(resources.Services,
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "monitoring",
+						Name:      "otel-collector",
+					},
+					Spec: corev1.ServiceSpec{
+						ClusterIP: "3.3.3.3",
+						Ports: []corev1.ServicePort{
+							{
+								Name:       "grpc",
+								Port:       4317,
+								TargetPort: intstr.IntOrString{IntVal: 4317},
+								Protocol:   corev1.ProtocolTCP,
+							},
+						},
+					},
+				},
+			)
+			resources.EndpointSlices = append(resources.EndpointSlices,
+				&discoveryv1.EndpointSlice{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "otel-collector-endpointslice",
+						Namespace: "monitoring",
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: "otel-collector",
+						},
+					},
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Ports: []discoveryv1.EndpointPort{
+						{
+							Name:     ptr.To("grpc"),
+							Port:     ptr.To[int32](4317),
+							Protocol: ptr.To(corev1.ProtocolTCP),
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses: []string{
+								"8.7.6.5",
+							},
+							Conditions: discoveryv1.EndpointConditions{
+								Ready: ptr.To(true),
+							},
+						},
+					},
+				},
+			)
+
 			resources.Namespaces = append(resources.Namespaces, &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "envoy-gateway",
@@ -225,7 +288,7 @@ func TestTranslate(t *testing.T) {
 				},
 			})
 
-			got := translator.Translate(resources)
+			got, _ := translator.Translate(resources)
 			require.NoError(t, field.SetValue(got, "LastTransitionTime", metav1.NewTime(time.Time{})))
 			outputFilePath := strings.ReplaceAll(inputFile, ".in.yaml", ".out.yaml")
 			out, err := yaml.Marshal(got)
@@ -268,8 +331,11 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 				GatewayControllerName:  egv1a1.GatewayControllerName,
 				GatewayClassName:       "envoy-gateway-class",
 				GlobalRateLimitEnabled: true,
-				ExtensionGroupKinds:    []schema.GroupKind{{Group: "foo.example.io", Kind: "Foo"}},
-				MergeGateways:          IsMergeGatewaysEnabled(resources),
+				ExtensionGroupKinds: []schema.GroupKind{
+					{Group: "foo.example.io", Kind: "Foo"},
+					{Group: "bar.example.io", Kind: "Bar"},
+				},
+				MergeGateways: IsMergeGatewaysEnabled(resources),
 			}
 
 			// Add common test fixtures
@@ -417,8 +483,12 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 				},
 			})
 
-			got := translator.Translate(resources)
+			got, _ := translator.Translate(resources)
 			require.NoError(t, field.SetValue(got, "LastTransitionTime", metav1.NewTime(time.Time{})))
+			// Also fix lastTransitionTime in unstructured members
+			for i := range got.ExtensionServerPolicies {
+				field.SetMapValues(got.ExtensionServerPolicies[i].Object, "lastTransitionTime", nil)
+			}
 
 			outputFilePath := strings.ReplaceAll(inputFile, ".in.yaml", ".out.yaml")
 			out, err := yaml.Marshal(got)
@@ -442,7 +512,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 
 func overrideOutputConfig(t *testing.T, data string, filepath string) {
 	t.Helper()
-	file, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o755)
+	file, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
 	require.NoError(t, err)
 	defer file.Close()
 	write := bufio.NewWriter(file)
@@ -560,7 +630,7 @@ func TestIsValidCrossNamespaceRef(t *testing.T) {
 		name           string
 		from           crossNamespaceFrom
 		to             crossNamespaceTo
-		referenceGrant *v1beta1.ReferenceGrant
+		referenceGrant *gwapiv1b1.ReferenceGrant
 		want           bool
 	}
 
@@ -582,20 +652,20 @@ func TestIsValidCrossNamespaceRef(t *testing.T) {
 				namespace: "default",
 				name:      "tls-secret-1",
 			},
-			referenceGrant: &v1beta1.ReferenceGrant{
+			referenceGrant: &gwapiv1b1.ReferenceGrant{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "referencegrant-1",
 					Namespace: "default",
 				},
-				Spec: v1beta1.ReferenceGrantSpec{
-					From: []v1beta1.ReferenceGrantFrom{
+				Spec: gwapiv1b1.ReferenceGrantSpec{
+					From: []gwapiv1b1.ReferenceGrantFrom{
 						{
 							Group:     "gateway.networking.k8s.io",
 							Kind:      "Gateway",
 							Namespace: "envoy-gateway-system",
 						},
 					},
-					To: []v1beta1.ReferenceGrantTo{
+					To: []gwapiv1b1.ReferenceGrantTo{
 						{
 							Group: "",
 							Kind:  "Secret",
@@ -665,7 +735,7 @@ func TestIsValidCrossNamespaceRef(t *testing.T) {
 	for _, tc := range testcases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			var referenceGrants []*v1beta1.ReferenceGrant
+			var referenceGrants []*gwapiv1b1.ReferenceGrant
 			if tc.referenceGrant != nil {
 				referenceGrants = append(referenceGrants, tc.referenceGrant)
 			}
@@ -679,27 +749,90 @@ func TestServicePortToContainerPort(t *testing.T) {
 	testCases := []struct {
 		servicePort   int32
 		containerPort int32
+		envoyProxy    *egv1a1.EnvoyProxy
 	}{
 		{
 			servicePort:   99,
 			containerPort: 10099,
+			envoyProxy:    nil,
 		},
 		{
 			servicePort:   1023,
 			containerPort: 11023,
+			envoyProxy:    nil,
 		},
 		{
 			servicePort:   1024,
 			containerPort: 1024,
+			envoyProxy:    nil,
 		},
 		{
 			servicePort:   8080,
 			containerPort: 8080,
+			envoyProxy:    nil,
+		},
+		{
+			servicePort:   99,
+			containerPort: 10099,
+			envoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+					},
+				},
+			},
+		},
+		{
+			servicePort:   99,
+			containerPort: 10099,
+			envoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							UseListenerPortAsContainerPort: ptr.To(false),
+						},
+					},
+				},
+			},
+		},
+		{
+			servicePort:   99,
+			containerPort: 99,
+			envoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							UseListenerPortAsContainerPort: ptr.To(true),
+						},
+					},
+				},
+			},
 		},
 	}
 
 	for _, tc := range testCases {
-		got := servicePortToContainerPort(tc.servicePort)
+		got := servicePortToContainerPort(tc.servicePort, tc.envoyProxy)
 		assert.Equal(t, tc.containerPort, got)
 	}
 }
+
+var _ wasm.Cache = &mockWasmCache{}
+
+type mockWasmCache struct{}
+
+func (m *mockWasmCache) Start(_ context.Context) {}
+
+func (m *mockWasmCache) Get(downloadURL string, _ wasm.GetOptions) (url string, checksum string, err error) {
+	// This is a mock implementation of the wasm.Cache.Get method.
+	sha := sha256.Sum256([]byte(downloadURL))
+	hashedName := hex.EncodeToString(sha[:])
+	salt := []byte("salt")
+	salt = append(salt, hashedName...)
+	sha = sha256.Sum256(salt)
+	checksum = hex.EncodeToString(sha[:])
+	return fmt.Sprintf("https://envoy-gateway:18002/%s.wasm", hashedName), checksum, nil
+}
+
+func (m *mockWasmCache) Cleanup() {}

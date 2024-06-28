@@ -10,17 +10,17 @@ package e2e
 
 import (
 	"flag"
+	"io/fs"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/pkg/features"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/test/e2e/tests"
 )
 
@@ -32,9 +32,9 @@ func TestE2E(t *testing.T) {
 
 	c, err := client.New(cfg, client.Options{})
 	require.NoError(t, err)
-	require.NoError(t, gwapiv1a2.AddToScheme(c.Scheme()))
-	require.NoError(t, gwapiv1.AddToScheme(c.Scheme()))
-	require.NoError(t, egv1a1.AddToScheme(c.Scheme()))
+
+	// Install all the scheme for kubernetes client.
+	CheckInstallScheme(t, c)
 
 	if flags.RunTest != nil && *flags.RunTest != "" {
 		t.Logf("Running E2E test %s with %s GatewayClass\n cleanup: %t\n debug: %t",
@@ -44,19 +44,30 @@ func TestE2E(t *testing.T) {
 			*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug)
 	}
 
-	cSuite := suite.New(suite.Options{
+	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 		Client:               c,
 		GatewayClassName:     *flags.GatewayClassName,
 		Debug:                *flags.ShowDebug,
 		CleanupBaseResources: *flags.CleanupBaseResources,
-		FS:                   &Manifests,
+		ManifestFS:           []fs.FS{Manifests},
 		RunTest:              *flags.RunTest,
+		// SupportedFeatures cannot be empty, so we set it to SupportGateway
+		// All e2e tests should leave Features empty.
+		SupportedFeatures: sets.New[features.SupportedFeature](features.SupportGateway),
 		SkipTests: []string{
-			tests.ClientTimeoutTest.ShortName, // https://github.com/envoyproxy/gateway/issues/2720
+			tests.ClientTimeoutTest.ShortName,        // https://github.com/envoyproxy/gateway/issues/2720
+			tests.GatewayInfraResourceTest.ShortName, // https://github.com/envoyproxy/gateway/issues/3191
+			tests.UseClientProtocolTest.ShortName,    // https://github.com/envoyproxy/gateway/issues/3473
 		},
 	})
+	if err != nil {
+		t.Fatalf("Failed to create ConformanceTestSuite: %v", err)
+	}
 
-	cSuite.Setup(t)
+	cSuite.Setup(t, tests.ConformanceTests)
 	t.Logf("Running %d E2E tests", len(tests.ConformanceTests))
-	cSuite.Run(t, tests.ConformanceTests)
+	err = cSuite.Run(t, tests.ConformanceTests)
+	if err != nil {
+		t.Fatalf("Failed to run E2E tests: %v", err)
+	}
 }

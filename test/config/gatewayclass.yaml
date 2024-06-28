@@ -16,6 +16,20 @@ metadata:
   name: proxy-config
   namespace: envoy-gateway-system
 spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        container:
+          volumeMounts:
+            - mountPath: /var/run/ext-proc
+              name: socket-dir
+        pod:
+          volumes:
+            - name: socket-dir
+              hostPath:
+                path: /var/run/ext-proc
+                type: ''
   telemetry:
     metrics:
       prometheus: {}
@@ -92,6 +106,16 @@ spec:
     kubernetes:
       envoyDeployment:
         replicas: 2
+        patch:
+          type: StrategicMerge
+          value:
+            spec:
+              template:
+                spec:
+                  containers:
+                    - name: envoy
+                      readinessProbe:
+                        initialDelaySeconds: 5
 ---
 kind: GatewayClass
 apiVersion: gateway.networking.k8s.io/v1
@@ -112,3 +136,18 @@ metadata:
   namespace: envoy-gateway-system
 spec:
   mergeGateways: true
+---
+kind: GatewayClass
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: internet
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+kind: GatewayClass
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: private
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---

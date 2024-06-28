@@ -68,7 +68,8 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Kind is invalid, only Service and MCS ServiceImport are supported
+        message: Kind is invalid, only Service, MCS ServiceImport and Envoy Gateway
+          Backend are supported
         reason: InvalidKind
         status: "False"
         type: ResolvedRefs
@@ -108,9 +109,10 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 1
-          valid: 0
+      - destination:
+          name: httproute/default/httproute-1/rule/0
+          settings:
+          - weight: 1
         directResponse:
           statusCode: 500
         hostname: '*'

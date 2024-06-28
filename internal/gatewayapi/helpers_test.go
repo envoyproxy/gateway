@@ -17,40 +17,39 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
 func TestValidateGRPCFilterRef(t *testing.T) {
 	testCases := []struct {
 		name     string
-		filter   *gwapiv1a2.GRPCRouteFilter
+		filter   *gwapiv1.GRPCRouteFilter
 		expected bool
 	}{
 		{
 			name: "request mirror filter",
-			filter: &gwapiv1a2.GRPCRouteFilter{
-				Type: gwapiv1a2.GRPCRouteFilterRequestMirror,
+			filter: &gwapiv1.GRPCRouteFilter{
+				Type: gwapiv1.GRPCRouteFilterRequestMirror,
 			},
 			expected: true,
 		},
 		{
 			name: "request header modifier filter",
-			filter: &gwapiv1a2.GRPCRouteFilter{
-				Type: gwapiv1a2.GRPCRouteFilterRequestHeaderModifier,
+			filter: &gwapiv1.GRPCRouteFilter{
+				Type: gwapiv1.GRPCRouteFilterRequestHeaderModifier,
 			},
 			expected: true,
 		},
 		{
 			name: "response header modifier filter",
-			filter: &gwapiv1a2.GRPCRouteFilter{
-				Type: gwapiv1a2.GRPCRouteFilterResponseHeaderModifier,
+			filter: &gwapiv1.GRPCRouteFilter{
+				Type: gwapiv1.GRPCRouteFilterResponseHeaderModifier,
 			},
 			expected: true,
 		},
 		{
 			name: "valid extension resource",
-			filter: &gwapiv1a2.GRPCRouteFilter{
-				Type: gwapiv1a2.GRPCRouteFilterExtensionRef,
+			filter: &gwapiv1.GRPCRouteFilter{
+				Type: gwapiv1.GRPCRouteFilterExtensionRef,
 				ExtensionRef: &gwapiv1.LocalObjectReference{
 					Group: "example.io",
 					Kind:  "Foo",
@@ -61,8 +60,8 @@ func TestValidateGRPCFilterRef(t *testing.T) {
 		},
 		{
 			name: "unsupported extended filter",
-			filter: &gwapiv1a2.GRPCRouteFilter{
-				Type: gwapiv1a2.GRPCRouteFilterExtensionRef,
+			filter: &gwapiv1.GRPCRouteFilter{
+				Type: gwapiv1.GRPCRouteFilterExtensionRef,
 				ExtensionRef: &gwapiv1.LocalObjectReference{
 					Group: "UnsupportedGroup",
 					Kind:  "UnsupportedKind",
@@ -73,14 +72,14 @@ func TestValidateGRPCFilterRef(t *testing.T) {
 		},
 		{
 			name: "empty extended filter",
-			filter: &gwapiv1a2.GRPCRouteFilter{
-				Type: gwapiv1a2.GRPCRouteFilterExtensionRef,
+			filter: &gwapiv1.GRPCRouteFilter{
+				Type: gwapiv1.GRPCRouteFilterExtensionRef,
 			},
 			expected: false,
 		},
 		{
 			name: "invalid filter type",
-			filter: &gwapiv1a2.GRPCRouteFilter{
+			filter: &gwapiv1.GRPCRouteFilter{
 				Type: "Invalid",
 				ExtensionRef: &gwapiv1.LocalObjectReference{
 					Group: "example.io",

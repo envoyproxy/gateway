@@ -20,7 +20,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 	"k8s.io/utils/ptr"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
@@ -65,7 +65,6 @@ func (*jwt) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListen
 		return err
 	}
 
-	// Ensure the authn filter is the first and the terminal filter is the last in the chain.
 	mgr.HttpFilters = append([]*hcmv3.HttpFilter{jwtFilter}, mgr.HttpFilters...)
 
 	return nil
@@ -314,7 +313,7 @@ func routeContainsJWTAuthn(irRoute *ir.HTTPRoute) bool {
 }
 
 // buildJwtFromHeaders returns a list of JwtHeader transformed from JWTFromHeader struct
-func buildJwtFromHeaders(headers []v1alpha1.JWTHeaderExtractor) []*jwtauthnv3.JwtHeader {
+func buildJwtFromHeaders(headers []egv1a1.JWTHeaderExtractor) []*jwtauthnv3.JwtHeader {
 	jwtHeaders := make([]*jwtauthnv3.JwtHeader, 0, len(headers))
 
 	for _, header := range headers {

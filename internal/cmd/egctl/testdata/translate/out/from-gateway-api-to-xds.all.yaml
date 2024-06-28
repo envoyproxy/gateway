@@ -96,6 +96,44 @@ xds:
                     connectionKeepalive:
                       interval: 30s
                       timeout: 5s
+          - connectTimeout: 10s
+            loadAssignment:
+              clusterName: wasm_cluster
+              endpoints:
+              - lbEndpoints:
+                - endpoint:
+                    address:
+                      socketAddress:
+                        address: envoy-gateway
+                        portValue: 18002
+                  loadBalancingWeight: 1
+                loadBalancingWeight: 1
+            name: wasm_cluster
+            transportSocket:
+              name: envoy.transport_sockets.tls
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+                commonTlsContext:
+                  tlsCertificateSdsSecretConfigs:
+                  - name: xds_certificate
+                    sdsConfig:
+                      pathConfigSource:
+                        path: /sds/xds-certificate.json
+                      resourceApiVersion: V3
+                  tlsParams:
+                    tlsMaximumProtocolVersion: TLSv1_3
+                  validationContextSdsSecretConfig:
+                    name: xds_trusted_ca
+                    sdsConfig:
+                      pathConfigSource:
+                        path: /sds/xds-trusted-ca.json
+                      resourceApiVersion: V3
+            type: STRICT_DNS
+            typedExtensionProtocolOptions:
+              envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+                '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+                explicitHttpConfig:
+                  http2ProtocolOptions: {}
           listeners:
           - address:
               socketAddress:
@@ -163,20 +201,6 @@ xds:
               region: grpcroute/default/backend/rule/0/backend/0
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-          clusterName: tlsroute/default/backend/rule/-1
-          endpoints:
-          - lbEndpoints:
-            - endpoint:
-                address:
-                  socketAddress:
-                    address: 1.1.1.1
-                    portValue: 3000
-              loadBalancingWeight: 1
-            loadBalancingWeight: 1
-            locality:
-              region: tlsroute/default/backend/rule/-1/backend/0
-      - endpointConfig:
-          '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
           clusterName: tcproute/default/backend/rule/-1
           endpoints:
           - lbEndpoints:
@@ -189,6 +213,20 @@ xds:
             loadBalancingWeight: 1
             locality:
               region: tcproute/default/backend/rule/-1/backend/0
+      - endpointConfig:
+          '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
+          clusterName: tlsroute/default/backend/rule/-1
+          endpoints:
+          - lbEndpoints:
+            - endpoint:
+                address:
+                  socketAddress:
+                    address: 1.1.1.1
+                    portValue: 3000
+              loadBalancingWeight: 1
+            loadBalancingWeight: 1
+            locality:
+              region: tlsroute/default/backend/rule/-1/backend/0
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
           clusterName: udproute/default/backend/rule/-1
@@ -261,9 +299,9 @@ xds:
             edsConfig:
               ads: {}
               resourceApiVersion: V3
-            serviceName: tlsroute/default/backend/rule/-1
+            serviceName: tcproute/default/backend/rule/-1
           lbPolicy: LEAST_REQUEST
-          name: tlsroute/default/backend/rule/-1
+          name: tcproute/default/backend/rule/-1
           outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
           type: EDS
@@ -280,9 +318,9 @@ xds:
             edsConfig:
               ads: {}
               resourceApiVersion: V3
-            serviceName: tcproute/default/backend/rule/-1
+            serviceName: tlsroute/default/backend/rule/-1
           lbPolicy: LEAST_REQUEST
-          name: tcproute/default/backend/rule/-1
+          name: tlsroute/default/backend/rule/-1
           outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
           type: EDS
@@ -363,6 +401,7 @@ xds:
                   serverHeaderTransformation: PASS_THROUGH
                   statPrefix: http
                   useRemoteAddress: true
+              name: default/eg/http
             drainType: MODIFY_ONLY
             name: default/eg/http
             perConnectionBufferLimitBytes: 32768
@@ -430,8 +469,49 @@ xds:
                   serverHeaderTransformation: PASS_THROUGH
                   statPrefix: http
                   useRemoteAddress: true
+              name: default/eg/grpc
             drainType: MODIFY_ONLY
             name: default/eg/grpc
+            perConnectionBufferLimitBytes: 32768
+      - activeState:
+          listener:
+            '@type': type.googleapis.com/envoy.config.listener.v3.Listener
+            accessLog:
+            - filter:
+                responseFlagFilter:
+                  flags:
+                  - NR
+              name: envoy.access_loggers.file
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                logFormat:
+                  textFormatSource:
+                    inlineString: |
+                      {"start_time":"%START_TIME%","method":"%REQ(:METHOD)%","x-envoy-origin-path":"%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%","protocol":"%PROTOCOL%","response_code":"%RESPONSE_CODE%","response_flags":"%RESPONSE_FLAGS%","response_code_details":"%RESPONSE_CODE_DETAILS%","connection_termination_details":"%CONNECTION_TERMINATION_DETAILS%","upstream_transport_failure_reason":"%UPSTREAM_TRANSPORT_FAILURE_REASON%","bytes_received":"%BYTES_RECEIVED%","bytes_sent":"%BYTES_SENT%","duration":"%DURATION%","x-envoy-upstream-service-time":"%RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)%","x-forwarded-for":"%REQ(X-FORWARDED-FOR)%","user-agent":"%REQ(USER-AGENT)%","x-request-id":"%REQ(X-REQUEST-ID)%",":authority":"%REQ(:AUTHORITY)%","upstream_host":"%UPSTREAM_HOST%","upstream_cluster":"%UPSTREAM_CLUSTER%","upstream_local_address":"%UPSTREAM_LOCAL_ADDRESS%","downstream_local_address":"%DOWNSTREAM_LOCAL_ADDRESS%","downstream_remote_address":"%DOWNSTREAM_REMOTE_ADDRESS%","requested_server_name":"%REQUESTED_SERVER_NAME%","route_name":"%ROUTE_NAME%"}
+                path: /dev/stdout
+            address:
+              socketAddress:
+                address: 0.0.0.0
+                portValue: 1234
+            drainType: MODIFY_ONLY
+            filterChains:
+            - filters:
+              - name: envoy.filters.network.tcp_proxy
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+                  accessLog:
+                  - name: envoy.access_loggers.file
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                      logFormat:
+                        textFormatSource:
+                          inlineString: |
+                            {"start_time":"%START_TIME%","method":"%REQ(:METHOD)%","x-envoy-origin-path":"%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%","protocol":"%PROTOCOL%","response_code":"%RESPONSE_CODE%","response_flags":"%RESPONSE_FLAGS%","response_code_details":"%RESPONSE_CODE_DETAILS%","connection_termination_details":"%CONNECTION_TERMINATION_DETAILS%","upstream_transport_failure_reason":"%UPSTREAM_TRANSPORT_FAILURE_REASON%","bytes_received":"%BYTES_RECEIVED%","bytes_sent":"%BYTES_SENT%","duration":"%DURATION%","x-envoy-upstream-service-time":"%RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)%","x-forwarded-for":"%REQ(X-FORWARDED-FOR)%","user-agent":"%REQ(USER-AGENT)%","x-request-id":"%REQ(X-REQUEST-ID)%",":authority":"%REQ(:AUTHORITY)%","upstream_host":"%UPSTREAM_HOST%","upstream_cluster":"%UPSTREAM_CLUSTER%","upstream_local_address":"%UPSTREAM_LOCAL_ADDRESS%","downstream_local_address":"%DOWNSTREAM_LOCAL_ADDRESS%","downstream_remote_address":"%DOWNSTREAM_REMOTE_ADDRESS%","requested_server_name":"%REQUESTED_SERVER_NAME%","route_name":"%ROUTE_NAME%"}
+                      path: /dev/stdout
+                  cluster: tcproute/default/backend/rule/-1
+                  statPrefix: tcp
+              name: tcproute/default/backend
+            name: default/eg/tcp
             perConnectionBufferLimitBytes: 32768
       - activeState:
           listener:
@@ -473,50 +553,12 @@ xds:
                       path: /dev/stdout
                   cluster: tlsroute/default/backend/rule/-1
                   statPrefix: passthrough
+              name: tlsroute/default/backend
             listenerFilters:
             - name: envoy.filters.listener.tls_inspector
               typedConfig:
                 '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
-            name: default/eg/tls-passthrough/backend
-            perConnectionBufferLimitBytes: 32768
-      - activeState:
-          listener:
-            '@type': type.googleapis.com/envoy.config.listener.v3.Listener
-            accessLog:
-            - filter:
-                responseFlagFilter:
-                  flags:
-                  - NR
-              name: envoy.access_loggers.file
-              typedConfig:
-                '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
-                logFormat:
-                  textFormatSource:
-                    inlineString: |
-                      {"start_time":"%START_TIME%","method":"%REQ(:METHOD)%","x-envoy-origin-path":"%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%","protocol":"%PROTOCOL%","response_code":"%RESPONSE_CODE%","response_flags":"%RESPONSE_FLAGS%","response_code_details":"%RESPONSE_CODE_DETAILS%","connection_termination_details":"%CONNECTION_TERMINATION_DETAILS%","upstream_transport_failure_reason":"%UPSTREAM_TRANSPORT_FAILURE_REASON%","bytes_received":"%BYTES_RECEIVED%","bytes_sent":"%BYTES_SENT%","duration":"%DURATION%","x-envoy-upstream-service-time":"%RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)%","x-forwarded-for":"%REQ(X-FORWARDED-FOR)%","user-agent":"%REQ(USER-AGENT)%","x-request-id":"%REQ(X-REQUEST-ID)%",":authority":"%REQ(:AUTHORITY)%","upstream_host":"%UPSTREAM_HOST%","upstream_cluster":"%UPSTREAM_CLUSTER%","upstream_local_address":"%UPSTREAM_LOCAL_ADDRESS%","downstream_local_address":"%DOWNSTREAM_LOCAL_ADDRESS%","downstream_remote_address":"%DOWNSTREAM_REMOTE_ADDRESS%","requested_server_name":"%REQUESTED_SERVER_NAME%","route_name":"%ROUTE_NAME%"}
-                path: /dev/stdout
-            address:
-              socketAddress:
-                address: 0.0.0.0
-                portValue: 1234
-            drainType: MODIFY_ONLY
-            filterChains:
-            - filters:
-              - name: envoy.filters.network.tcp_proxy
-                typedConfig:
-                  '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
-                  accessLog:
-                  - name: envoy.access_loggers.file
-                    typedConfig:
-                      '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
-                      logFormat:
-                        textFormatSource:
-                          inlineString: |
-                            {"start_time":"%START_TIME%","method":"%REQ(:METHOD)%","x-envoy-origin-path":"%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%","protocol":"%PROTOCOL%","response_code":"%RESPONSE_CODE%","response_flags":"%RESPONSE_FLAGS%","response_code_details":"%RESPONSE_CODE_DETAILS%","connection_termination_details":"%CONNECTION_TERMINATION_DETAILS%","upstream_transport_failure_reason":"%UPSTREAM_TRANSPORT_FAILURE_REASON%","bytes_received":"%BYTES_RECEIVED%","bytes_sent":"%BYTES_SENT%","duration":"%DURATION%","x-envoy-upstream-service-time":"%RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)%","x-forwarded-for":"%REQ(X-FORWARDED-FOR)%","user-agent":"%REQ(USER-AGENT)%","x-request-id":"%REQ(X-REQUEST-ID)%",":authority":"%REQ(:AUTHORITY)%","upstream_host":"%UPSTREAM_HOST%","upstream_cluster":"%UPSTREAM_CLUSTER%","upstream_local_address":"%UPSTREAM_LOCAL_ADDRESS%","downstream_local_address":"%DOWNSTREAM_LOCAL_ADDRESS%","downstream_remote_address":"%DOWNSTREAM_REMOTE_ADDRESS%","requested_server_name":"%REQUESTED_SERVER_NAME%","route_name":"%ROUTE_NAME%"}
-                      path: /dev/stdout
-                  cluster: tcproute/default/backend/rule/-1
-                  statPrefix: tcp
-            name: default/eg/tcp/backend
+            name: default/eg/tls-passthrough
             perConnectionBufferLimitBytes: 32768
       - activeState:
           listener:
@@ -560,7 +602,7 @@ xds:
                         '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.Route
                         cluster: udproute/default/backend/rule/-1
                 statPrefix: service
-            name: default/eg/udp/backend
+            name: default/eg/udp
     - '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
       dynamicRouteConfigs:
       - routeConfig:

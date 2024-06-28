@@ -23,10 +23,16 @@
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
         commonTlsContext:
-          validationContextSdsSecretConfig:
-            name: policy-btls/policies-ca
-            sdsConfig:
-              ads: {}
-              resourceApiVersion: V3
+          combinedValidationContext:
+            defaultValidationContext:
+              matchTypedSubjectAltNames:
+              - matcher:
+                  exact: example.com
+                sanType: DNS
+            validationContextSdsSecretConfig:
+              name: policy-btls/policies-ca
+              sdsConfig:
+                ads: {}
+                resourceApiVersion: V3
         sni: example.com
   type: EDS

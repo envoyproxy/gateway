@@ -240,10 +240,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -278,10 +275,7 @@ xdsIR:
         mergeSlashes: true
       port: 8888
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP
@@ -298,7 +292,18 @@ xdsIR:
           name: ""
           prefix: /
     tracing:
-      host: otel-collector.monitoring.svc.cluster.local
-      port: 4317
+      authority: otel-collector.monitoring.svc.cluster.local
+      destination:
+        name: tracing
+        settings:
+        - endpoints:
+          - host: otel-collector.monitoring.svc.cluster.local
+            port: 4317
+          protocol: GRPC
+          weight: 1
+      provider:
+        host: otel-collector.monitoring.svc.cluster.local
+        port: 4317
+        type: OpenTelemetry
       samplingRate: 100
       serviceName: envoy-gateway-class

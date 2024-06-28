@@ -12,7 +12,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
   status:
     ancestors:
     - ancestorRef:
@@ -23,7 +22,7 @@ backendTrafficPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: 'CircuitBreaker: invalid MaxRequestsPerConnection value -1'
+        message: 'CircuitBreaker: invalid MaxRequestsPerConnection value -1.'
         reason: Invalid
         status: "False"
         type: Accepted
@@ -41,7 +40,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-2
-      namespace: default
   status:
     ancestors:
     - ancestorRef:
@@ -52,7 +50,7 @@ backendTrafficPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: 'CircuitBreaker: invalid MaxParallelRetries value -1'
+        message: 'CircuitBreaker: invalid MaxParallelRetries value -1.'
         reason: Invalid
         status: "False"
         type: Accepted
@@ -70,7 +68,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:
@@ -80,7 +77,7 @@ backendTrafficPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: 'CircuitBreaker: invalid MaxConnections value -1'
+        message: 'CircuitBreaker: invalid MaxConnections value -1.'
         reason: Invalid
         status: "False"
         type: Accepted
@@ -324,10 +321,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: grpcroute/default/grpcroute-1/rule/0
           settings:
           - addressType: IP
@@ -354,10 +348,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP
@@ -373,10 +364,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /foo
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP

@@ -6,14 +6,14 @@ backendTLSPolicies:
     name: policy-btls
     namespace: default
   spec:
-    targetRef:
-      group: ""
+    targetRefs:
+    - group: ""
       kind: Service
       name: http-backend
       sectionName: "8080"
-    tls:
+    validation:
       hostname: example.com
-      wellKnownCACerts: System
+      wellKnownCACertificates: System
   status:
     ancestors:
     - ancestorRef:
@@ -139,10 +139,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/envoy-gateway/httproute-btls/rule/0
           settings:
           - addressType: IP

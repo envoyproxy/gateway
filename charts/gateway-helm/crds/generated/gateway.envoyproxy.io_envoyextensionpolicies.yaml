@@ -138,10 +138,11 @@ spec:
                       minItems: 1
                       type: array
                       x-kubernetes-validations:
-                      - message: BackendRefs only supports Service kind.
-                        rule: self.all(f, f.kind == 'Service')
-                      - message: BackendRefs only supports Core group.
-                        rule: self.all(f, f.group == '')
+                      - message: BackendRefs only supports Service and Backend kind.
+                        rule: self.all(f, f.kind == 'Service' || f.kind == 'Backend')
+                      - message: BackendRefs only supports Core and gateway.envoyproxy.io
+                          group.
+                        rule: self.all(f, f.group == '' || f.group == 'gateway.envoyproxy.io')
                     failOpen:
                       description: |-
                         FailOpen defines if requests or responses that cannot be processed due to connectivity to the
@@ -189,13 +190,18 @@ spec:
                   required:
                   - backendRefs
                   type: object
+                maxItems: 16
                 type: array
               targetRef:
                 description: |-
-                  TargetRef is the name of the resource this policy
+                  TargetRef is the name of the Gateway resource this policy
                   is being attached to.
                   This Policy and the TargetRef MUST be in the same namespace
-                  for this Policy to have effect and be applied to the Gateway or xRoute.
+                  for this Policy to have effect and be applied to the Gateway.
+                  TargetRef
+
+
+                  Deprecated: use targetRefs instead
                 properties:
                   group:
                     description: Group is the group of the target resource.
@@ -213,16 +219,6 @@ spec:
                     maxLength: 253
                     minLength: 1
                     type: string
-                  namespace:
-                    description: |-
-                      Namespace is the namespace of the referent. When unspecified, the local
-                      namespace is inferred. Even when policy targets a resource in a different
-                      namespace, it MUST only apply to traffic originating from the same
-                      namespace as the policy.
-                    maxLength: 63
-                    minLength: 1
-                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-                    type: string
                   sectionName:
                     description: |-
                       SectionName is the name of a section within the target resource. When
@@ -230,8 +226,9 @@ spec:
                       resources, SectionName is interpreted as the following:
 
 
-                      * Gateway: Listener Name
-                      * Service: Port Name
+                      * Gateway: Listener name
+                      * HTTPRoute: HTTPRouteRule name
+                      * Service: Port name
 
 
                       If a SectionName is specified, but does not exist on the targeted object,
@@ -246,14 +243,64 @@ spec:
                 - kind
                 - name
                 type: object
-                x-kubernetes-validations:
-                - message: this policy can only have a targetRef.group of gateway.networking.k8s.io
-                  rule: self.group == 'gateway.networking.k8s.io'
-                - message: this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute
-                  rule: self.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute', 'UDPRoute',
-                    'TCPRoute', 'TLSRoute']
-                - message: this policy does not yet support the sectionName field
-                  rule: '!has(self.sectionName)'
+              targetRefs:
+                description: |-
+                  TargetRefs are the names of the Gateway resources this policy
+                  is being attached to.
+                items:
+                  description: |-
+                    LocalPolicyTargetReferenceWithSectionName identifies an API object to apply a
+                    direct policy to. This should be used as part of Policy resources that can
+                    target single resources. For more information on how this policy attachment
+                    mode works, and a sample Policy resource, refer to the policy attachment
+                    documentation for Gateway API.
+
+
+                    Note: This should only be used for direct policy attachment when references
+                    to SectionName are actually needed. In all other cases,
+                    LocalPolicyTargetReference should be used.
+                  properties:
+                    group:
+                      description: Group is the group of the target resource.
+                      maxLength: 253
+                      pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
+                    kind:
+                      description: Kind is kind of the target resource.
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                      type: string
+                    name:
+                      description: Name is the name of the target resource.
+                      maxLength: 253
+                      minLength: 1
+                      type: string
+                    sectionName:
+                      description: |-
+                        SectionName is the name of a section within the target resource. When
+                        unspecified, this targetRef targets the entire resource. In the following
+                        resources, SectionName is interpreted as the following:
+
+
+                        * Gateway: Listener name
+                        * HTTPRoute: HTTPRouteRule name
+                        * Service: Port name
+
+
+                        If a SectionName is specified, but does not exist on the targeted object,
+                        the Policy must fail to attach, and the policy implementation should record
+                        a `ResolvedRefs` or similar Condition in the Policy's status.
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
+                  required:
+                  - group
+                  - kind
+                  - name
+                  type: object
+                type: array
               wasm:
                 description: |-
                   Wasm is a list of Wasm extensions to be loaded by the Gateway.
@@ -261,38 +308,48 @@ spec:
                   defined in this list.
                 items:
                   description: |-
-                    Wasm defines a wasm extension.
+                    Wasm defines a Wasm extension.
 
 
                     Note: at the moment, Envoy Gateway does not support configuring Wasm runtime.
                     v8 is used as the VM runtime for the Wasm extensions.
                   properties:
                     code:
-                      description: Code is the wasm code for the extension.
+                      description: Code is the Wasm code for the extension.
                       properties:
                         http:
                           description: |-
-                            HTTP is the HTTP URL containing the wasm code.
+                            HTTP is the HTTP URL containing the Wasm code.
 
 
                             Note that the HTTP server must be accessible from the Envoy proxy.
                           properties:
+                            sha256:
+                              description: |-
+                                SHA256 checksum that will be used to verify the Wasm code.
+
+
+                                If not specified, Envoy Gateway will not verify the downloaded Wasm code.
+                                kubebuilder:validation:Pattern=`^[a-f0-9]{64}$`
+                              type: string
                             url:
-                              description: URL is the URL containing the wasm code.
+                              description: URL is the URL containing the Wasm code.
+                              pattern: ^((https?:)(\/\/\/?)([\w]*(?::[\w]*)?@)?([\d\w\.-]+)(?::(\d+))?)?([\/\\\w\.()-]*)?(?:([?][^#]*)?(#.*)?)*
                               type: string
                           required:
                           - url
                           type: object
                         image:
                           description: |-
-                            Image is the OCI image containing the wasm code.
+                            Image is the OCI image containing the Wasm code.
 
 
                             Note that the image must be accessible from the Envoy Gateway.
                           properties:
-                            pullSecret:
-                              description: PullSecretRef is a reference to the secret
-                                containing the credentials to pull the image.
+                            pullSecretRef:
+                              description: |-
+                                PullSecretRef is a reference to the secret containing the credentials to pull the image.
+                                Only support Kubernetes Secret resource from the same namespace.
                               properties:
                                 group:
                                   default: ""
@@ -335,19 +392,43 @@ spec:
                               required:
                               - name
                               type: object
+                              x-kubernetes-validations:
+                              - message: only support Secret kind.
+                                rule: self.kind == 'Secret'
+                            sha256:
+                              description: |-
+                                SHA256 checksum that will be used to verify the OCI image.
+
+
+                                It must match the digest of the OCI image.
+
+
+                                If not specified, Envoy Gateway will not verify the downloaded OCI image.
+                                kubebuilder:validation:Pattern=`^[a-f0-9]{64}$`
+                              type: string
                             url:
-                              description: URL is the URL of the OCI image.
+                              description: |-
+                                URL is the URL of the OCI image.
+                                URL can be in the format of `registry/image:tag` or `registry/image@sha256:digest`.
                               type: string
                           required:
-                          - pullSecret
                           - url
                           type: object
-                        sha256:
+                        pullPolicy:
                           description: |-
-                            SHA256 checksum that will be used to verify the wasm code.
+                            PullPolicy is the policy to use when pulling the Wasm module by either the HTTP or Image source.
+                            This field is only applicable when the SHA256 field is not set.
 
 
-                            kubebuilder:validation:Pattern=`^[a-f0-9]{64}$`
+                            If not specified, the default policy is IfNotPresent except for OCI images whose tag is latest.
+
+
+                            Note: EG does not update the Wasm module every time an Envoy proxy requests
+                            the Wasm module even if the pull policy is set to Always.
+                            It only updates the Wasm module when the EnvoyExtension resource version changes.
+                          enum:
+                          - IfNotPresent
+                          - Always
                           type: string
                         type:
                           allOf:
@@ -359,13 +440,17 @@ spec:
                             - Image
                             - ConfigMap
                           description: |-
-                            Type is the type of the source of the wasm code.
+                            Type is the type of the source of the Wasm code.
                             Valid WasmCodeSourceType values are "HTTP" or "Image".
                           type: string
                       required:
-                      - sha256
                       - type
                       type: object
+                      x-kubernetes-validations:
+                      - message: If type is HTTP, http field needs to be set.
+                        rule: 'self.type == ''HTTP'' ? has(self.http) : !has(self.http)'
+                      - message: If type is Image, image field needs to be set.
+                        rule: 'self.type == ''Image'' ? has(self.image) : !has(self.image)'
                     config:
                       description: |-
                         Config is the configuration for the Wasm extension.
@@ -386,22 +471,45 @@ spec:
                         Name is a unique name for this Wasm extension. It is used to identify the
                         Wasm extension if multiple extensions are handled by the same vm_id and root_id.
                         It's also used for logging/debugging.
+                        If not specified, EG will generate a unique name for the Wasm extension.
                       type: string
                     rootID:
                       description: |-
                         RootID is a unique ID for a set of extensions in a VM which will share a
                         RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog).
                         If left blank, all extensions with a blank root_id with the same vm_id will share Context(s).
-                        RootID must match the root_id parameter used to register the Context in the Wasm code.
+
+
+                        Note: RootID must match the root_id parameter used to register the Context in the Wasm code.
                       type: string
                   required:
                   - code
-                  - name
                   type: object
+                maxItems: 16
                 type: array
-            required:
-            - targetRef
             type: object
+            x-kubernetes-validations:
+            - message: either targetRef or targetRefs must be used
+              rule: (has(self.targetRef) && !has(self.targetRefs)) || (!has(self.targetRef)
+                && has(self.targetRefs))
+            - message: this policy can only have a targetRef.group of gateway.networking.k8s.io
+              rule: 'has(self.targetRef) ? self.targetRef.group == ''gateway.networking.k8s.io''
+                : true'
+            - message: this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute
+              rule: 'has(self.targetRef) ? self.targetRef.kind in [''Gateway'', ''HTTPRoute'',
+                ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute''] : true'
+            - message: this policy does not yet support the sectionName field
+              rule: 'has(self.targetRef) ? !has(self.targetRef.sectionName) : true'
+            - message: this policy can only have a targetRefs[*].group of gateway.networking.k8s.io
+              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.group ==
+                ''gateway.networking.k8s.io'') : true '
+            - message: this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute
+              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in [''Gateway'',
+                ''HTTPRoute'', ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute''])
+                : true '
+            - message: this policy does not yet support the sectionName field
+              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, !has(ref.sectionName))
+                : true'
           status:
             description: Status defines the current status of EnvoyExtensionPolicy.
             properties:
@@ -508,7 +616,7 @@ spec:
 
 
                             * Gateway (Gateway conformance profile)
-                            * Service (Mesh conformance profile, experimental, ClusterIP Services only)
+                            * Service (Mesh conformance profile, ClusterIP Services only)
 
 
                             Support for other resources is Implementation-Specific.
@@ -594,9 +702,6 @@ spec:
 
 
                             Support: Extended
-
-
-                            <gateway:experimental>
                           format: int32
                           maximum: 65535
                           minimum: 1
@@ -607,14 +712,12 @@ spec:
                             following resources, SectionName is interpreted as the following:
 
 
-                            * Gateway: Listener Name. When both Port (experimental) and SectionName
+                            * Gateway: Listener name. When both Port (experimental) and SectionName
                             are specified, the name and port of the selected listener must match
                             both specified values.
-                            * Service: Port Name. When both Port (experimental) and SectionName
+                            * Service: Port name. When both Port (experimental) and SectionName
                             are specified, the name and port of the selected listener must match
-                            both specified values. Note that attaching Routes to Services as Parents
-                            is part of experimental Mesh support and is not supported for any other
-                            purpose.
+                            both specified values.
 
 
                             Implementations MAY choose to support attaching Routes to other resources.

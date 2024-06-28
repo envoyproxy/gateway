@@ -252,7 +252,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:
@@ -278,7 +277,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:
@@ -305,7 +303,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: GRPCRoute
       name: grpcroute-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:
@@ -331,7 +328,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: unknown-httproute
-      namespace: envoy-gateway
   status:
     ancestors: null
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -345,7 +341,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:
@@ -377,7 +372,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:
@@ -404,7 +398,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: unknown-gateway
-      namespace: envoy-gateway
   status:
     ancestors: null
 xdsIR:
@@ -423,9 +416,10 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 1
-          valid: 0
+      - destination:
+          name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - weight: 1
         directResponse:
           statusCode: 500
         hostname: '*'
@@ -451,9 +445,10 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 1
-          valid: 0
+      - destination:
+          name: grpcroute/envoy-gateway/grpcroute-1/rule/0
+          settings:
+          - weight: 1
         directResponse:
           statusCode: 500
         headerMatches:
@@ -464,3 +459,7 @@ xdsIR:
         isHTTP2: true
         name: grpcroute/envoy-gateway/grpcroute-1/rule/0/match/0/*
         security: {}
+    tcp:
+    - address: 0.0.0.0
+      name: envoy-gateway/gateway-2/tcp
+      port: 10053

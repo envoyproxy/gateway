@@ -243,21 +243,17 @@ enable = true
     weight = -98
     url = "/contributions"
   [[menu.main]]
-    name = "Blog"
-    weight = -99
-    url = "/blog"
-  [[menu.main]]
     name = "About"
     weight = -100
     url = "/about"
   [[menu.main]]
-    name = "Announcements"
+    name = "News"
     weight = -101
-    url = "/announcements"
+    url = "/news"
   [[menu.main]]
     name = "Documentation"
     weight = -102
-    url = "/v1.0.1"
+    url = "/v1.0.2"
 
   # i18n for Chinese
   [[languages.zh.menu.main]]
@@ -265,17 +261,13 @@ enable = true
     weight = -98
     url = "/contributions"
   [[languages.zh.menu.main]]
-    name = "博客"
-    weight = -99
-    url = "/blog"
-  [[languages.zh.menu.main]]
     name = "关于"
     weight = -100
     url = "/about"
   [[languages.zh.menu.main]]
-    name = "公告"
+    name = "新闻"
     weight = -101
-    url = "/announcements"
+    url = "/news"
   [[languages.zh.menu.main]]
     name = "文档"
     weight = -102
@@ -286,8 +278,8 @@ enable = true
   url = "/latest"
 
 [[params.versions]]
-  version = "v1.0.1"
-  url = "/v1.0.1"
+  version = "v1.0.2"
+  url = "/v1.0.2"
 
 [[params.versions]]
   version = "v0.6.0"

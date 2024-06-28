@@ -34,7 +34,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:
@@ -161,10 +160,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -180,34 +176,36 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        rateLimit:
-          local:
-            default:
-              requests: 4294967295
-              unit: Second
-            rules:
-            - headerMatches:
-              - distinct: false
-                exact: one
-                name: x-user-id
-              - distinct: false
-                exact: foo
-                name: x-org-id
-              limit:
-                requests: 10
-                unit: Hour
-            - cidrMatch:
-                cidr: 192.168.0.0/16
-                distinct: false
-                ipv6: false
-                maskLen: 16
-              headerMatches:
-              - distinct: false
-                exact: two
-                name: x-user-id
-              - distinct: false
-                exact: bar
-                name: x-org-id
-              limit:
-                requests: 10
-                unit: Minute
+        traffic:
+          rateLimit:
+            local:
+              default:
+                requests: 4294967295
+                unit: Second
+              rules:
+              - headerMatches:
+                - distinct: false
+                  exact: one
+                  name: x-user-id
+                - distinct: false
+                  exact: foo
+                  name: x-org-id
+                limit:
+                  requests: 10
+                  unit: Hour
+              - cidrMatch:
+                  cidr: 192.168.0.0/16
+                  distinct: false
+                  ip: 192.168.0.0
+                  isIPv6: false
+                  maskLen: 16
+                headerMatches:
+                - distinct: false
+                  exact: two
+                  name: x-user-id
+                - distinct: false
+                  exact: bar
+                  name: x-org-id
+                limit:
+                  requests: 10
+                  unit: Minute

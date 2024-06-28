@@ -105,8 +105,8 @@ securityPolicies:
     extAuth:
       failOpen: false
       http:
-        backendRef:
-          name: http-backend
+        backendRefs:
+        - name: http-backend
           namespace: default
           port: 80
         headersToBackend:
@@ -116,7 +116,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: default
   status:
     ancestors:
     - ancestorRef:
@@ -126,7 +125,7 @@ securityPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: Service default/http-backend not found
+        message: 'ExtAuth: service default/http-backend not found.'
         reason: Invalid
         status: "False"
         type: Accepted
@@ -147,10 +146,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP

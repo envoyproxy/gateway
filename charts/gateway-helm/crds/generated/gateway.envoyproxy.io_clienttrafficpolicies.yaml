@@ -56,7 +56,7 @@ spec:
                   customHeader:
                     description: |-
                       CustomHeader provides configuration for determining the client IP address for a request based on
-                      a trusted custom HTTP header. This uses the the custom_header original IP detection extension.
+                      a trusted custom HTTP header. This uses the custom_header original IP detection extension.
                       Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto
                       for more details.
                     properties:
@@ -142,10 +142,21 @@ spec:
               headers:
                 description: HeaderSettings provides configuration for header management.
                 properties:
+                  disableRateLimitHeaders:
+                    description: |-
+                      DisableRateLimitHeaders configures Envoy Proxy to omit the "X-RateLimit-" response headers
+                      when rate limiting is enabled.
+                    type: boolean
                   enableEnvoyHeaders:
                     description: |-
                       EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests
                       and responses.
+                    type: boolean
+                  preserveXRequestID:
+                    description: |-
+                      PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge
+                      (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
+                      It defaults to false.
                     type: boolean
                   withUnderscoresAction:
                     description: |-
@@ -156,6 +167,75 @@ spec:
                     - RejectRequest
                     - DropHeader
                     type: string
+                  xForwardedClientCert:
+                    description: |-
+                      XForwardedClientCert configures how Envoy Proxy handle the x-forwarded-client-cert (XFCC) HTTP header.
+
+
+                      x-forwarded-client-cert (XFCC) is an HTTP header used to forward the certificate
+                      information of part or all of the clients or proxies that a request has flowed through,
+                      on its way from the client to the server.
+
+
+                      Envoy proxy may choose to sanitize/append/forward the XFCC header before proxying the request.
+
+
+                      If not set, the default behavior is sanitizing the XFCC header.
+                    properties:
+                      certDetailsToAdd:
+                        description: |-
+                          CertDetailsToAdd specifies the fields in the client certificate to be forwarded in the XFCC header.
+
+
+                          Hash(the SHA 256 digest of the current client certificate) and By(the Subject Alternative Name)
+                          are always included if the client certificate is forwarded.
+
+
+                          This field is only applicable when the mode is set to `AppendForward` or
+                          `SanitizeSet` and the client connection is mTLS.
+                        items:
+                          description: XFCCCertData specifies the fields in the client
+                            certificate to be forwarded in the XFCC header.
+                          enum:
+                          - Subject
+                          - Cert
+                          - Chain
+                          - DNS
+                          - URI
+                          type: string
+                        maxItems: 5
+                        type: array
+                      mode:
+                        description: |-
+                          Mode defines how XFCC header is handled by Envoy Proxy.
+                          If not set, the default mode is `Sanitize`.
+                        enum:
+                        - Sanitize
+                        - ForwardOnly
+                        - AppendForward
+                        - SanitizeSet
+                        - AlwaysForwardOnly
+                        type: string
+                    type: object
+                    x-kubernetes-validations:
+                    - message: certDetailsToAdd can only be set when mode is AppendForward
+                        or SanitizeSet
+                      rule: '(has(self.certDetailsToAdd) && self.certDetailsToAdd.size()
+                        > 0) ? (self.mode == ''AppendForward'' || self.mode == ''SanitizeSet'')
+                        : true'
+                type: object
+              healthCheck:
+                description: HealthCheck provides configuration for determining whether
+                  the HTTP/HTTPS listener is healthy.
+                properties:
+                  path:
+                    description: Path specifies the HTTP path to match on for health
+                      check requests.
+                    maxLength: 1024
+                    minLength: 1
+                    type: string
+                required:
+                - path
                 type: object
               http1:
                 description: HTTP1 provides HTTP/1 configuration on the listener.
@@ -253,6 +333,9 @@ spec:
                   This Policy and the TargetRef MUST be in the same namespace
                   for this Policy to have effect and be applied to the Gateway.
                   TargetRef
+
+
+                  Deprecated: use targetRefs instead
                 properties:
                   group:
                     description: Group is the group of the target resource.
@@ -270,16 +353,6 @@ spec:
                     maxLength: 253
                     minLength: 1
                     type: string
-                  namespace:
-                    description: |-
-                      Namespace is the namespace of the referent. When unspecified, the local
-                      namespace is inferred. Even when policy targets a resource in a different
-                      namespace, it MUST only apply to traffic originating from the same
-                      namespace as the policy.
-                    maxLength: 63
-                    minLength: 1
-                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-                    type: string
                   sectionName:
                     description: |-
                       SectionName is the name of a section within the target resource. When
@@ -287,8 +360,9 @@ spec:
                       resources, SectionName is interpreted as the following:
 
 
-                      * Gateway: Listener Name
-                      * Service: Port Name
+                      * Gateway: Listener name
+                      * HTTPRoute: HTTPRouteRule name
+                      * Service: Port name
 
 
                       If a SectionName is specified, but does not exist on the targeted object,
@@ -303,13 +377,64 @@ spec:
                 - kind
                 - name
                 type: object
-                x-kubernetes-validations:
-                - message: this policy can only have a targetRef.group of gateway.networking.k8s.io
-                  rule: self.group == 'gateway.networking.k8s.io'
-                - message: this policy can only have a targetRef.kind of Gateway
-                  rule: self.kind == 'Gateway'
-                - message: this policy does not yet support the sectionName field
-                  rule: '!has(self.sectionName)'
+              targetRefs:
+                description: |-
+                  TargetRefs are the names of the Gateway resources this policy
+                  is being attached to.
+                items:
+                  description: |-
+                    LocalPolicyTargetReferenceWithSectionName identifies an API object to apply a
+                    direct policy to. This should be used as part of Policy resources that can
+                    target single resources. For more information on how this policy attachment
+                    mode works, and a sample Policy resource, refer to the policy attachment
+                    documentation for Gateway API.
+
+
+                    Note: This should only be used for direct policy attachment when references
+                    to SectionName are actually needed. In all other cases,
+                    LocalPolicyTargetReference should be used.
+                  properties:
+                    group:
+                      description: Group is the group of the target resource.
+                      maxLength: 253
+                      pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
+                    kind:
+                      description: Kind is kind of the target resource.
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                      type: string
+                    name:
+                      description: Name is the name of the target resource.
+                      maxLength: 253
+                      minLength: 1
+                      type: string
+                    sectionName:
+                      description: |-
+                        SectionName is the name of a section within the target resource. When
+                        unspecified, this targetRef targets the entire resource. In the following
+                        resources, SectionName is interpreted as the following:
+
+
+                        * Gateway: Listener name
+                        * HTTPRoute: HTTPRouteRule name
+                        * Service: Port name
+
+
+                        If a SectionName is specified, but does not exist on the targeted object,
+                        the Policy must fail to attach, and the policy implementation should record
+                        a `ResolvedRefs` or similar Condition in the Policy's status.
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
+                  required:
+                  - group
+                  - kind
+                  - name
+                  type: object
+                type: array
               tcpKeepalive:
                 description: |-
                   TcpKeepalive settings associated with the downstream client connection.
@@ -354,6 +479,17 @@ spec:
                         description: |-
                           RequestReceivedTimeout is the duration envoy waits for the complete request reception. This timer starts upon request
                           initiation and stops when either the last byte of the request is sent upstream or when the response begins.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                    type: object
+                  tcp:
+                    description: Timeout settings for TCP.
+                    properties:
+                      idleTimeout:
+                        description: |-
+                          IdleTimeout for a TCP connection. Idle time is defined as a period in which there are no
+                          bytes sent or received on either the upstream or downstream connection.
+                          Default: 1 hour.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                     type: object
@@ -530,9 +666,22 @@ spec:
                     <= {"1.0":1,"1.1":2,"1.2":3,"1.3":4,"Auto":5}[self.maxVersion]
                     : !has(self.minVersion) && has(self.maxVersion) ? 3 <= {"1.0":1,"1.1":2,"1.2":3,"1.3":4,"Auto":5}[self.maxVersion]
                     : true'
-            required:
-            - targetRef
             type: object
+            x-kubernetes-validations:
+            - message: either targetRef or targetRefs must be used
+              rule: (has(self.targetRef) && !has(self.targetRefs)) || (!has(self.targetRef)
+                && has(self.targetRefs))
+            - message: this policy can only have a targetRef.group of gateway.networking.k8s.io
+              rule: 'has(self.targetRef) ? self.targetRef.group == ''gateway.networking.k8s.io''
+                : true'
+            - message: this policy can only have a targetRef.kind of Gateway
+              rule: 'has(self.targetRef) ? self.targetRef.kind == ''Gateway'' : true'
+            - message: this policy can only have a targetRefs[*].group of gateway.networking.k8s.io
+              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.group ==
+                ''gateway.networking.k8s.io'') : true'
+            - message: this policy can only have a targetRefs[*].kind of Gateway
+              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind == ''Gateway'')
+                : true'
           status:
             description: Status defines the current status of ClientTrafficPolicy.
             properties:
@@ -639,7 +788,7 @@ spec:
 
 
                             * Gateway (Gateway conformance profile)
-                            * Service (Mesh conformance profile, experimental, ClusterIP Services only)
+                            * Service (Mesh conformance profile, ClusterIP Services only)
 
 
                             Support for other resources is Implementation-Specific.
@@ -725,9 +874,6 @@ spec:
 
 
                             Support: Extended
-
-
-                            <gateway:experimental>
                           format: int32
                           maximum: 65535
                           minimum: 1
@@ -738,14 +884,12 @@ spec:
                             following resources, SectionName is interpreted as the following:
 
 
-                            * Gateway: Listener Name. When both Port (experimental) and SectionName
+                            * Gateway: Listener name. When both Port (experimental) and SectionName
                             are specified, the name and port of the selected listener must match
                             both specified values.
-                            * Service: Port Name. When both Port (experimental) and SectionName
+                            * Service: Port name. When both Port (experimental) and SectionName
                             are specified, the name and port of the selected listener must match
-                            both specified values. Note that attaching Routes to Services as Parents
-                            is part of experimental Mesh support and is not supported for any other
-                            purpose.
+                            both specified values.
 
 
                             Implementations MAY choose to support attaching Routes to other resources.

@@ -7,6 +7,7 @@ package message
 
 import (
 	"github.com/telepresenceio/watchable"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -72,7 +73,7 @@ func (p *ProviderResources) Close() {
 type GatewayAPIStatuses struct {
 	GatewayStatuses   watchable.Map[types.NamespacedName, *gwapiv1.GatewayStatus]
 	HTTPRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1.HTTPRouteStatus]
-	GRPCRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1a2.GRPCRouteStatus]
+	GRPCRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1.GRPCRouteStatus]
 	TLSRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.TLSRouteStatus]
 	TCPRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.TCPRouteStatus]
 	UDPRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.UDPRouteStatus]
@@ -87,6 +88,11 @@ func (s *GatewayAPIStatuses) Close() {
 	s.UDPRouteStatuses.Close()
 }
 
+type NamespacedNameAndGVK struct {
+	types.NamespacedName
+	schema.GroupVersionKind
+}
+
 // PolicyStatuses contains policy related resources statuses
 type PolicyStatuses struct {
 	ClientTrafficPolicyStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
@@ -95,6 +101,7 @@ type PolicyStatuses struct {
 	SecurityPolicyStatuses       watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
 	BackendTLSPolicyStatuses     watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
 	EnvoyExtensionPolicyStatuses watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
+	ExtensionPolicyStatuses      watchable.Map[NamespacedNameAndGVK, *gwapiv1a2.PolicyStatus]
 }
 
 func (p *PolicyStatuses) Close() {
@@ -103,6 +110,7 @@ func (p *PolicyStatuses) Close() {
 	p.EnvoyPatchPolicyStatuses.Close()
 	p.BackendTLSPolicyStatuses.Close()
 	p.EnvoyExtensionPolicyStatuses.Close()
+	p.ExtensionPolicyStatuses.Close()
 }
 
 // XdsIR message

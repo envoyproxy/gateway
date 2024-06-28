@@ -347,18 +347,18 @@ the communication between the Envoy proxy and the gRPC auth service.
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1alpha2
+apiVersion: gateway.networking.k8s.io/v1alpha3
 kind: BackendTLSPolicy
 metadata:
   name: grpc-ext-auth-btls
 spec:
-  targetRef:
-    group: ''
+  targetRefs:
+  - group: ''
     kind: Service
     name: grpc-ext-auth
     sectionName: "9002"
-  tls:
-    caCertRefs:
+  validation:
+    caCertificateRefs:
     - name: grpc-ext-auth-ca
       group: ''
       kind: ConfigMap
@@ -372,18 +372,18 @@ Save and apply the following resource to your cluster:
 
 ```yaml
 ---
-apiVersion: gateway.networking.k8s.io/v1alpha2
+apiVersion: gateway.networking.k8s.io/v1alpha3
 kind: BackendTLSPolicy
 metadata:
   name: grpc-ext-auth-btls
 spec:
-  targetRef:
-    group: ''
+  targetRefs:
+  - group: ''
     kind: Service
     name: grpc-ext-auth
     sectionName: "9002"
-  tls:
-    caCertRefs:
+  validation:
+    caCertificateRefs:
     - name: grpc-ext-auth-ca
       group: ''
       kind: ConfigMap

@@ -34,8 +34,6 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 		Spec: egv1a1.ClientTrafficPolicySpec{},
 	}
 
-	sectionName := gwapiv1a2.SectionName("foo")
-
 	cases := []struct {
 		desc         string
 		mutate       func(ctp *egv1a1.ClientTrafficPolicy)
@@ -46,11 +44,13 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			desc: "valid targetRef",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-							Kind:  gwapiv1a2.Kind("Gateway"),
-							Name:  gwapiv1a2.ObjectName("eg"),
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
 						},
 					},
 				}
@@ -63,90 +63,100 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{}
 			},
 			wantErrors: []string{
-				"spec.targetRef.kind: Invalid value: \"\": spec.targetRef.kind in body should be at least 1 chars long",
-				"spec.targetRef.name: Invalid value: \"\": spec.targetRef.name in body should be at least 1 chars long",
-				"spec.targetRef: Invalid value: \"object\": this policy can only have a targetRef.group of gateway.networking.k8s.io",
-				"spec.targetRef: Invalid value: \"object\": this policy can only have a targetRef.kind of Gateway",
+				"spec: Invalid value: \"object\": either targetRef or targetRefs must be used",
 			},
 		},
 		{
 			desc: "targetRef unsupported kind",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-							Kind:  gwapiv1a2.Kind("foo"),
-							Name:  gwapiv1a2.ObjectName("eg"),
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("foo"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
 						},
 					},
 				}
 			},
 			wantErrors: []string{
-				"spec.targetRef: Invalid value: \"object\": this policy can only have a targetRef.kind of Gateway",
+				"spec: Invalid value: \"object\": this policy can only have a targetRef.kind of Gateway",
 			},
 		},
 		{
 			desc: "targetRef unsupported group",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: gwapiv1a2.Group("foo"),
-							Kind:  gwapiv1a2.Kind("Gateway"),
-							Name:  gwapiv1a2.ObjectName("eg"),
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("foo"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
 						},
 					},
 				}
 			},
 			wantErrors: []string{
-				"spec.targetRef: Invalid value: \"object\": this policy can only have a targetRef.group of gateway.networking.k8s.io",
+				"spec: Invalid value: \"object\": this policy can only have a targetRef.group of gateway.networking.k8s.io",
+			},
+		},
+		{
+			desc: "targetRefs unsupported group and kind",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Group: gwapiv1a2.Group("foo"),
+									Kind:  gwapiv1a2.Kind("bar"),
+									Name:  gwapiv1a2.ObjectName("eg"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec: Invalid value: \"object\": this policy can only have a targetRefs[*].group of gateway.networking.k8s.io",
+				"spec: Invalid value: \"object\": this policy can only have a targetRefs[*].kind of Gateway",
 			},
 		},
 		{
 			desc: "targetRef unsupported group and kind",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: gwapiv1a2.Group("foo"),
-							Kind:  gwapiv1a2.Kind("bar"),
-							Name:  gwapiv1a2.ObjectName("eg"),
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("foo"),
+								Kind:  gwapiv1a2.Kind("bar"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
 						},
 					},
 				}
 			},
 			wantErrors: []string{
-				"spec.targetRef: Invalid value: \"object\": this policy can only have a targetRef.group of gateway.networking.k8s.io",
-				"spec.targetRef: Invalid value: \"object\": this policy can only have a targetRef.kind of Gateway",
-			},
-		},
-		{
-			desc: "sectionName disabled until supported",
-			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
-				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-							Kind:  gwapiv1a2.Kind("Gateway"),
-						},
-						SectionName: &sectionName,
-					},
-				}
-			},
-			wantErrors: []string{
-				"spec.targetRef: Invalid value: \"object\": this policy does not yet support the sectionName field",
+				"spec: Invalid value: \"object\": this policy can only have a targetRef.group of gateway.networking.k8s.io",
+				"spec: Invalid value: \"object\": this policy can only have a targetRef.kind of Gateway",
 			},
 		},
 		{
 			desc: "tls minimal version greater than tls maximal version",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-							Kind:  gwapiv1a2.Kind("Gateway"),
-							Name:  gwapiv1a2.ObjectName("eg"),
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
 						},
 					},
 					TLS: &egv1a1.ClientTLSSettings{
@@ -165,11 +175,13 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			desc: "tls maximal version lesser than default tls minimal version",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-							Kind:  gwapiv1a2.Kind("Gateway"),
-							Name:  gwapiv1a2.ObjectName("eg"),
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
 						},
 					},
 					TLS: &egv1a1.ClientTLSSettings{
@@ -187,11 +199,13 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			desc: "clientIPDetection xForwardedFor and customHeader set",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-							Kind:  gwapiv1a2.Kind("Gateway"),
-							Name:  gwapiv1a2.ObjectName("eg"),
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
 						},
 					},
 					ClientIPDetection: &egv1a1.ClientIPDetectionSettings{
@@ -212,11 +226,13 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			desc: "http3 enabled and ALPN protocols not set with other TLS parameters set",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-							Kind:  gwapiv1a2.Kind("Gateway"),
-							Name:  gwapiv1a2.ObjectName("eg"),
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
 						},
 					},
 					HTTP3: &egv1a1.HTTP3Settings{},
@@ -233,11 +249,13 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			desc: "setting ciphers with minimum TLS version set to 1.3",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-							Kind:  gwapiv1a2.Kind("Gateway"),
-							Name:  gwapiv1a2.ObjectName("eg"),
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
 						},
 					},
 					TLS: &egv1a1.ClientTLSSettings{
@@ -257,11 +275,13 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				d := gwapiv1.Duration("300s")
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-							Kind:  gwapiv1a2.Kind("Gateway"),
-							Name:  gwapiv1a2.ObjectName("eg"),
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
 						},
 					},
 					Timeout: &egv1a1.ClientTimeout{
@@ -277,14 +297,16 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			desc: "invalid bufferLimit format",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-							Kind:  gwapiv1a2.Kind("Gateway"),
-							Name:  gwapiv1a2.ObjectName("eg"),
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
 						},
 					},
-					Connection: &egv1a1.Connection{
+					Connection: &egv1a1.ClientConnection{
 						BufferLimit: ptr.To(resource.MustParse("15m")),
 					},
 				}
@@ -297,11 +319,13 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			desc: "invalid InitialStreamWindowSize format",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-							Kind:  gwapiv1a2.Kind("Gateway"),
-							Name:  gwapiv1a2.ObjectName("eg"),
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
 						},
 					},
 					HTTP2: &egv1a1.HTTP2Settings{
@@ -317,11 +341,13 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			desc: "invalid InitialConnectionWindowSize format",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-							Kind:  gwapiv1a2.Kind("Gateway"),
-							Name:  gwapiv1a2.ObjectName("eg"),
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
 						},
 					},
 					HTTP2: &egv1a1.HTTP2Settings{
@@ -332,6 +358,92 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{
 				"spec.http2.InitialConnectionWindowSize: Invalid value: \"\": initialConnectionWindowSize must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\"",
 			},
+		},
+		{
+			desc: "invalid xffc setting",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
+						},
+					},
+					Headers: &egv1a1.HeaderSettings{
+						XForwardedClientCert: &egv1a1.XForwardedClientCert{
+							Mode: ptr.To(egv1a1.XFCCForwardModeSanitize),
+							CertDetailsToAdd: []egv1a1.XFCCCertData{
+								egv1a1.XFCCCertDataChain,
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				" spec.headers.xForwardedClientCert: Invalid value: \"object\": certDetailsToAdd can only be set when mode is AppendForward or SanitizeSet",
+			},
+		},
+		{
+			desc: "both targetref and targetrefs specified",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				d := gwapiv1.Duration("300s")
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
+						},
+						TargetRefs: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1a2.Kind("Gateway"),
+									Name:  gwapiv1a2.ObjectName("eg"),
+								},
+							},
+						},
+					},
+					Timeout: &egv1a1.ClientTimeout{
+						HTTP: &egv1a1.HTTPClientTimeout{
+							RequestReceivedTimeout: &d,
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec: Invalid value: \"object\": either targetRef or targetRefs must be used",
+			},
+		},
+		{
+			desc: "valid timeout using targetrefs",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				d := gwapiv1.Duration("300s")
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1a2.Kind("Gateway"),
+									Name:  gwapiv1a2.ObjectName("eg"),
+								},
+							},
+						},
+					},
+					Timeout: &egv1a1.ClientTimeout{
+						HTTP: &egv1a1.HTTPClientTimeout{
+							RequestReceivedTimeout: &d,
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
 		},
 	}
 

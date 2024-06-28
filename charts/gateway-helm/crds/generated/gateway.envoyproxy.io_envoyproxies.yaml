@@ -87,6 +87,7 @@ spec:
                       ClientCertificateRef defines the reference to a Kubernetes Secret that contains
                       the client certificate and private key for Envoy to use when connecting to
                       backend services and external services, such as ExtAuth, ALS, OpenTelemetry, etc.
+                      This secret should be located within the same namespace as the Envoy proxy resource that references it.
                     properties:
                       group:
                         default: ""
@@ -224,6 +225,7 @@ spec:
               filterOrder:
                 description: |-
                   FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.
+                  The FilterPosition in the list will be applied in the order they are defined.
                   If unspecified, the default filter order is applied.
                   Default filter order is:
 
@@ -252,6 +254,9 @@ spec:
                   - envoy.filters.http.wasm
 
 
+                  - envoy.filters.http.rbac
+
+
                   - envoy.filters.http.local_ratelimit
 
 
@@ -278,6 +283,7 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.wasm
                       - envoy.filters.http.ext_proc
+                      - envoy.filters.http.rbac
                       type: string
                     before:
                       description: |-
@@ -294,8 +300,9 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.wasm
                       - envoy.filters.http.ext_proc
+                      - envoy.filters.http.rbac
                       type: string
-                    filter:
+                    name:
                       description: Name of the filter.
                       enum:
                       - envoy.filters.http.cors
@@ -308,9 +315,10 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.wasm
                       - envoy.filters.http.ext_proc
+                      - envoy.filters.http.rbac
                       type: string
                   required:
-                  - filter
+                  - name
                   type: object
                   x-kubernetes-validations:
                   - message: one of before or after must be specified
@@ -405,10 +413,15 @@ spec:
                                               description: The key to select.
                                               type: string
                                             name:
+                                              default: ""
                                               description: |-
                                                 Name of the referent.
-                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                This field is effectively required, but due to backwards compatibility is
+                                                allowed to be empty. Instances of this type with an empty value here are
+                                                almost certainly wrong.
                                                 TODO: Add other useful fields. apiVersion, kind, uid?
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                               type: string
                                             optional:
                                               description: Specify whether the ConfigMap
@@ -472,10 +485,15 @@ spec:
                                                 key.
                                               type: string
                                             name:
+                                              default: ""
                                               description: |-
                                                 Name of the referent.
-                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                This field is effectively required, but due to backwards compatibility is
+                                                allowed to be empty. Instances of this type with an empty value here are
+                                                almost certainly wrong.
                                                 TODO: Add other useful fields. apiVersion, kind, uid?
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                               type: string
                                             optional:
                                               description: Specify whether the Secret
@@ -819,6 +837,11 @@ spec:
                                   type: object
                                 type: array
                             type: object
+                          name:
+                            description: |-
+                              Name of the daemonSet.
+                              When unset, this defaults to an autogenerated name.
+                            type: string
                           patch:
                             description: Patch defines how to perform the patch operation
                               to daemonset
@@ -1806,10 +1829,15 @@ spec:
                                     referenced object inside the same namespace.
                                   properties:
                                     name:
+                                      default: ""
                                       description: |-
                                         Name of the referent.
-                                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                        This field is effectively required, but due to backwards compatibility is
+                                        allowed to be empty. Instances of this type with an empty value here are
+                                        almost certainly wrong.
                                         TODO: Add other useful fields. apiVersion, kind, uid?
+                                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                        TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                       type: string
                                   type: object
                                   x-kubernetes-map-type: atomic
@@ -2394,10 +2422,15 @@ spec:
                                             More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
                                           properties:
                                             name:
+                                              default: ""
                                               description: |-
                                                 Name of the referent.
-                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                This field is effectively required, but due to backwards compatibility is
+                                                allowed to be empty. Instances of this type with an empty value here are
+                                                almost certainly wrong.
                                                 TODO: Add other useful fields. apiVersion, kind, uid?
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                               type: string
                                           type: object
                                           x-kubernetes-map-type: atomic
@@ -2433,10 +2466,15 @@ spec:
                                             to OpenStack.
                                           properties:
                                             name:
+                                              default: ""
                                               description: |-
                                                 Name of the referent.
-                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                This field is effectively required, but due to backwards compatibility is
+                                                allowed to be empty. Instances of this type with an empty value here are
+                                                almost certainly wrong.
                                                 TODO: Add other useful fields. apiVersion, kind, uid?
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                               type: string
                                           type: object
                                           x-kubernetes-map-type: atomic
@@ -2503,10 +2541,15 @@ spec:
                                           type: array
                                           x-kubernetes-list-type: atomic
                                         name:
+                                          default: ""
                                           description: |-
                                             Name of the referent.
-                                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                            This field is effectively required, but due to backwards compatibility is
+                                            allowed to be empty. Instances of this type with an empty value here are
+                                            almost certainly wrong.
                                             TODO: Add other useful fields. apiVersion, kind, uid?
+                                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                            TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                           type: string
                                         optional:
                                           description: optional specify whether the
@@ -2539,10 +2582,15 @@ spec:
                                             secret object contains more than one secret, all secret references are passed.
                                           properties:
                                             name:
+                                              default: ""
                                               description: |-
                                                 Name of the referent.
-                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                This field is effectively required, but due to backwards compatibility is
+                                                allowed to be empty. Instances of this type with an empty value here are
+                                                almost certainly wrong.
                                                 TODO: Add other useful fields. apiVersion, kind, uid?
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                               type: string
                                           type: object
                                           x-kubernetes-map-type: atomic
@@ -3035,10 +3083,15 @@ spec:
                                             scripts.
                                           properties:
                                             name:
+                                              default: ""
                                               description: |-
                                                 Name of the referent.
-                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                This field is effectively required, but due to backwards compatibility is
+                                                allowed to be empty. Instances of this type with an empty value here are
+                                                almost certainly wrong.
                                                 TODO: Add other useful fields. apiVersion, kind, uid?
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                               type: string
                                           type: object
                                           x-kubernetes-map-type: atomic
@@ -3234,10 +3287,15 @@ spec:
                                             for iSCSI target and initiator authentication
                                           properties:
                                             name:
+                                              default: ""
                                               description: |-
                                                 Name of the referent.
-                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                This field is effectively required, but due to backwards compatibility is
+                                                allowed to be empty. Instances of this type with an empty value here are
+                                                almost certainly wrong.
                                                 TODO: Add other useful fields. apiVersion, kind, uid?
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                               type: string
                                           type: object
                                           x-kubernetes-map-type: atomic
@@ -3509,10 +3567,15 @@ spec:
                                                     type: array
                                                     x-kubernetes-list-type: atomic
                                                   name:
+                                                    default: ""
                                                     description: |-
                                                       Name of the referent.
-                                                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                      This field is effectively required, but due to backwards compatibility is
+                                                      allowed to be empty. Instances of this type with an empty value here are
+                                                      almost certainly wrong.
                                                       TODO: Add other useful fields. apiVersion, kind, uid?
+                                                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                      TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                                     type: string
                                                   optional:
                                                     description: optional specify
@@ -3660,10 +3723,15 @@ spec:
                                                     type: array
                                                     x-kubernetes-list-type: atomic
                                                   name:
+                                                    default: ""
                                                     description: |-
                                                       Name of the referent.
-                                                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                      This field is effectively required, but due to backwards compatibility is
+                                                      allowed to be empty. Instances of this type with an empty value here are
+                                                      almost certainly wrong.
                                                       TODO: Add other useful fields. apiVersion, kind, uid?
+                                                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                      TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                                     type: string
                                                   optional:
                                                     description: optional field specify
@@ -3796,10 +3864,15 @@ spec:
                                             More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
                                           properties:
                                             name:
+                                              default: ""
                                               description: |-
                                                 Name of the referent.
-                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                This field is effectively required, but due to backwards compatibility is
+                                                allowed to be empty. Instances of this type with an empty value here are
+                                                almost certainly wrong.
                                                 TODO: Add other useful fields. apiVersion, kind, uid?
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                               type: string
                                           type: object
                                           x-kubernetes-map-type: atomic
@@ -3845,10 +3918,15 @@ spec:
                                             sensitive information. If this is not provided, Login operation will fail.
                                           properties:
                                             name:
+                                              default: ""
                                               description: |-
                                                 Name of the referent.
-                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                This field is effectively required, but due to backwards compatibility is
+                                                allowed to be empty. Instances of this type with an empty value here are
+                                                almost certainly wrong.
                                                 TODO: Add other useful fields. apiVersion, kind, uid?
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                               type: string
                                           type: object
                                           x-kubernetes-map-type: atomic
@@ -3968,10 +4046,15 @@ spec:
                                             credentials.  If not specified, default values will be attempted.
                                           properties:
                                             name:
+                                              default: ""
                                               description: |-
                                                 Name of the referent.
-                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                This field is effectively required, but due to backwards compatibility is
+                                                allowed to be empty. Instances of this type with an empty value here are
+                                                almost certainly wrong.
                                                 TODO: Add other useful fields. apiVersion, kind, uid?
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                               type: string
                                           type: object
                                           x-kubernetes-map-type: atomic
@@ -4130,10 +4213,15 @@ spec:
                                               description: The key to select.
                                               type: string
                                             name:
+                                              default: ""
                                               description: |-
                                                 Name of the referent.
-                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                This field is effectively required, but due to backwards compatibility is
+                                                allowed to be empty. Instances of this type with an empty value here are
+                                                almost certainly wrong.
                                                 TODO: Add other useful fields. apiVersion, kind, uid?
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                               type: string
                                             optional:
                                               description: Specify whether the ConfigMap
@@ -4197,10 +4285,15 @@ spec:
                                                 key.
                                               type: string
                                             name:
+                                              default: ""
                                               description: |-
                                                 Name of the referent.
-                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                This field is effectively required, but due to backwards compatibility is
+                                                allowed to be empty. Instances of this type with an empty value here are
+                                                almost certainly wrong.
                                                 TODO: Add other useful fields. apiVersion, kind, uid?
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                               type: string
                                             optional:
                                               description: Specify whether the Secret
@@ -4615,10 +4708,15 @@ spec:
                                                 description: The key to select.
                                                 type: string
                                               name:
+                                                default: ""
                                                 description: |-
                                                   Name of the referent.
-                                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                  This field is effectively required, but due to backwards compatibility is
+                                                  allowed to be empty. Instances of this type with an empty value here are
+                                                  almost certainly wrong.
                                                   TODO: Add other useful fields. apiVersion, kind, uid?
+                                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                  TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                                 type: string
                                               optional:
                                                 description: Specify whether the ConfigMap
@@ -4682,10 +4780,15 @@ spec:
                                                   secret key.
                                                 type: string
                                               name:
+                                                default: ""
                                                 description: |-
                                                   Name of the referent.
-                                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                  This field is effectively required, but due to backwards compatibility is
+                                                  allowed to be empty. Instances of this type with an empty value here are
+                                                  almost certainly wrong.
                                                   TODO: Add other useful fields. apiVersion, kind, uid?
+                                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                  TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                                 type: string
                                               optional:
                                                 description: Specify whether the Secret
@@ -4719,10 +4822,15 @@ spec:
                                         description: The ConfigMap to select from
                                         properties:
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
-                                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               TODO: Add other useful fields. apiVersion, kind, uid?
+                                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                              TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -4739,10 +4847,15 @@ spec:
                                         description: The Secret to select from
                                         properties:
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
-                                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               TODO: Add other useful fields. apiVersion, kind, uid?
+                                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                              TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -5987,6 +6100,11 @@ spec:
                               - name
                               type: object
                             type: array
+                          name:
+                            description: |-
+                              Name of the deployment.
+                              When unset, this defaults to an autogenerated name.
+                            type: string
                           patch:
                             description: Patch defines how to perform the patch operation
                               to deployment
@@ -6974,10 +7092,15 @@ spec:
                                     referenced object inside the same namespace.
                                   properties:
                                     name:
+                                      default: ""
                                       description: |-
                                         Name of the referent.
-                                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                        This field is effectively required, but due to backwards compatibility is
+                                        allowed to be empty. Instances of this type with an empty value here are
+                                        almost certainly wrong.
                                         TODO: Add other useful fields. apiVersion, kind, uid?
+                                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                        TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                       type: string
                                   type: object
                                   x-kubernetes-map-type: atomic
@@ -7562,10 +7685,15 @@ spec:
                                             More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
                                           properties:
                                             name:
+                                              default: ""
                                               description: |-
                                                 Name of the referent.
-                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                This field is effectively required, but due to backwards compatibility is
+                                                allowed to be empty. Instances of this type with an empty value here are
+                                                almost certainly wrong.
                                                 TODO: Add other useful fields. apiVersion, kind, uid?
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                               type: string
                                           type: object
                                           x-kubernetes-map-type: atomic
@@ -7601,10 +7729,15 @@ spec:
                                             to OpenStack.
                                           properties:
                                             name:
+                                              default: ""
                                               description: |-
                                                 Name of the referent.
-                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                This field is effectively required, but due to backwards compatibility is
+                                                allowed to be empty. Instances of this type with an empty value here are
+                                                almost certainly wrong.
                                                 TODO: Add other useful fields. apiVersion, kind, uid?
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                               type: string
                                           type: object
                                           x-kubernetes-map-type: atomic
@@ -7671,10 +7804,15 @@ spec:
                                           type: array
                                           x-kubernetes-list-type: atomic
                                         name:
+                                          default: ""
                                           description: |-
                                             Name of the referent.
-                                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                            This field is effectively required, but due to backwards compatibility is
+                                            allowed to be empty. Instances of this type with an empty value here are
+                                            almost certainly wrong.
                                             TODO: Add other useful fields. apiVersion, kind, uid?
+                                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                            TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                           type: string
                                         optional:
                                           description: optional specify whether the
@@ -7707,10 +7845,15 @@ spec:
                                             secret object contains more than one secret, all secret references are passed.
                                           properties:
                                             name:
+                                              default: ""
                                               description: |-
                                                 Name of the referent.
-                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                This field is effectively required, but due to backwards compatibility is
+                                                allowed to be empty. Instances of this type with an empty value here are
+                                                almost certainly wrong.
                                                 TODO: Add other useful fields. apiVersion, kind, uid?
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                               type: string
                                           type: object
                                           x-kubernetes-map-type: atomic
@@ -8203,10 +8346,15 @@ spec:
                                             scripts.
                                           properties:
                                             name:
+                                              default: ""
                                               description: |-
                                                 Name of the referent.
-                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                This field is effectively required, but due to backwards compatibility is
+                                                allowed to be empty. Instances of this type with an empty value here are
+                                                almost certainly wrong.
                                                 TODO: Add other useful fields. apiVersion, kind, uid?
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                               type: string
                                           type: object
                                           x-kubernetes-map-type: atomic
@@ -8402,10 +8550,15 @@ spec:
                                             for iSCSI target and initiator authentication
                                           properties:
                                             name:
+                                              default: ""
                                               description: |-
                                                 Name of the referent.
-                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                This field is effectively required, but due to backwards compatibility is
+                                                allowed to be empty. Instances of this type with an empty value here are
+                                                almost certainly wrong.
                                                 TODO: Add other useful fields. apiVersion, kind, uid?
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                               type: string
                                           type: object
                                           x-kubernetes-map-type: atomic
@@ -8677,10 +8830,15 @@ spec:
                                                     type: array
                                                     x-kubernetes-list-type: atomic
                                                   name:
+                                                    default: ""
                                                     description: |-
                                                       Name of the referent.
-                                                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                      This field is effectively required, but due to backwards compatibility is
+                                                      allowed to be empty. Instances of this type with an empty value here are
+                                                      almost certainly wrong.
                                                       TODO: Add other useful fields. apiVersion, kind, uid?
+                                                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                      TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                                     type: string
                                                   optional:
                                                     description: optional specify
@@ -8828,10 +8986,15 @@ spec:
                                                     type: array
                                                     x-kubernetes-list-type: atomic
                                                   name:
+                                                    default: ""
                                                     description: |-
                                                       Name of the referent.
-                                                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                      This field is effectively required, but due to backwards compatibility is
+                                                      allowed to be empty. Instances of this type with an empty value here are
+                                                      almost certainly wrong.
                                                       TODO: Add other useful fields. apiVersion, kind, uid?
+                                                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                      TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                                     type: string
                                                   optional:
                                                     description: optional field specify
@@ -8964,10 +9127,15 @@ spec:
                                             More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
                                           properties:
                                             name:
+                                              default: ""
                                               description: |-
                                                 Name of the referent.
-                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                This field is effectively required, but due to backwards compatibility is
+                                                allowed to be empty. Instances of this type with an empty value here are
+                                                almost certainly wrong.
                                                 TODO: Add other useful fields. apiVersion, kind, uid?
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                               type: string
                                           type: object
                                           x-kubernetes-map-type: atomic
@@ -9013,10 +9181,15 @@ spec:
                                             sensitive information. If this is not provided, Login operation will fail.
                                           properties:
                                             name:
+                                              default: ""
                                               description: |-
                                                 Name of the referent.
-                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                This field is effectively required, but due to backwards compatibility is
+                                                allowed to be empty. Instances of this type with an empty value here are
+                                                almost certainly wrong.
                                                 TODO: Add other useful fields. apiVersion, kind, uid?
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                               type: string
                                           type: object
                                           x-kubernetes-map-type: atomic
@@ -9136,10 +9309,15 @@ spec:
                                             credentials.  If not specified, default values will be attempted.
                                           properties:
                                             name:
+                                              default: ""
                                               description: |-
                                                 Name of the referent.
-                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                This field is effectively required, but due to backwards compatibility is
+                                                allowed to be empty. Instances of this type with an empty value here are
+                                                almost certainly wrong.
                                                 TODO: Add other useful fields. apiVersion, kind, uid?
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                               type: string
                                           type: object
                                           x-kubernetes-map-type: atomic
@@ -9879,6 +10057,18 @@ spec:
                         x-kubernetes-validations:
                         - message: maxReplicas cannot be less than minReplicas
                           rule: '!has(self.minReplicas) || self.maxReplicas >= self.minReplicas'
+                      envoyPDB:
+                        description: EnvoyPDB allows to control the pod disruption
+                          budget of an Envoy Proxy.
+                        properties:
+                          minAvailable:
+                            description: |-
+                              MinAvailable specifies the minimum number of pods that must be available at all times during voluntary disruptions,
+                              such as node drains or updates. This setting ensures that your envoy proxy maintains a certain level of availability
+                              and resilience during maintenance operations.
+                            format: int32
+                            type: integer
+                        type: object
                       envoyService:
                         description: |-
                           EnvoyService defines the desired state of the Envoy service resource.
@@ -9935,6 +10125,11 @@ spec:
                             items:
                               type: string
                             type: array
+                          name:
+                            description: |-
+                              Name of the service.
+                              When unset, this defaults to an autogenerated name.
+                            type: string
                           patch:
                             description: Patch defines how to perform the patch operation
                               to the service
@@ -9979,6 +10174,12 @@ spec:
                         - message: loadBalancerIP can only be set for LoadBalancer
                             type
                           rule: '!has(self.loadBalancerIP) || self.type == ''LoadBalancer'''
+                      useListenerPortAsContainerPort:
+                        description: |-
+                          UseListenerPortAsContainerPort disables the port shifting feature in the Envoy Proxy.
+                          When set to false (default value), if the service port is a privileged port (1-1023), add a constant to the value converting it into an ephemeral port.
+                          This allows the container to bind to the port without needing a CAP_NET_BIND_SERVICE capability.
+                        type: boolean
                     type: object
                     x-kubernetes-validations:
                     - message: only one of envoyDeployment or envoyDaemonSet can be
@@ -10001,6 +10202,11 @@ spec:
                 required:
                 - type
                 type: object
+              routingType:
+                description: |-
+                  RoutingType can be set to "Service" to use the Service Cluster IP for routing to the backend,
+                  or it can be set to "Endpoint" to use Endpoint routing. The default is "Endpoint".
+                type: string
               shutdown:
                 description: Shutdown defines configuration for graceful envoy shutdown
                   process.
@@ -10068,6 +10274,14 @@ spec:
                               - message: If AccessLogFormat type is JSON, json field
                                   needs to be set.
                                 rule: 'self.type == ''JSON'' ? has(self.json) : !has(self.json)'
+                            matches:
+                              description: |-
+                                Matches defines the match conditions for accesslog in CEL expression.
+                                An accesslog will be emitted only when one or more match conditions are evaluated to true.
+                                Invalid [CEL](https://www.envoyproxy.io/docs/envoy/latest/xds/type/v3/cel.proto.html#common-expression-language-cel-proto) expressions will be ignored.
+                              items:
+                                type: string
+                              type: array
                             sinks:
                               description: Sinks defines the sinks of accesslog.
                               items:
@@ -10167,6 +10381,9 @@ spec:
                                         - message: BackendRefs only supports Service
                                             kind.
                                           rule: self.all(f, f.kind == 'Service')
+                                        - message: BackendRefs only supports Core
+                                            group.
+                                          rule: self.all(f, f.group == '')
                                       http:
                                         description: HTTP defines additional configuration
                                           specific to HTTP access logs.
@@ -10231,8 +10448,8 @@ spec:
                                       backendRefs:
                                         description: |-
                                           BackendRefs references a Kubernetes object that represents the
-                                          backend server to which the accesslog will be sent.
-                                          Only service Kind is supported for now.
+                                          backend server to which the access log will be sent.
+                                          Only Service kind is supported for now.
                                         items:
                                           description: BackendRef defines how an ObjectReference
                                             that is specific to BackendRef.
@@ -10316,16 +10533,19 @@ spec:
                                         x-kubernetes-validations:
                                         - message: only support Service kind.
                                           rule: self.all(f, f.kind == 'Service')
+                                        - message: BackendRefs only supports Core
+                                            group.
+                                          rule: self.all(f, f.group == '')
                                       host:
                                         description: |-
                                           Host define the extension service hostname.
-                                          Deprecated: Use BackendRef instead.
+                                          Deprecated: Use BackendRefs instead.
                                         type: string
                                       port:
                                         default: 4317
                                         description: |-
                                           Port defines the port the extension service is exposed on.
-                                          Deprecated: Use BackendRef instead.
+                                          Deprecated: Use BackendRefs instead.
                                         format: int32
                                         minimum: 0
                                         type: integer
@@ -10362,12 +10582,15 @@ spec:
                                     openTelemetry field needs to be set.
                                   rule: 'self.type == ''OpenTelemetry'' ? has(self.openTelemetry)
                                     : !has(self.openTelemetry)'
+                              maxItems: 50
                               minItems: 1
                               type: array
                           required:
                           - format
                           - sinks
                           type: object
+                        maxItems: 50
+                        minItems: 1
                         type: array
                     type: object
                   metrics:
@@ -10459,7 +10682,7 @@ spec:
                                   description: |-
                                     BackendRefs references a Kubernetes object that represents the
                                     backend server to which the metric will be sent.
-                                    Only service Kind is supported for now.
+                                    Only Service kind is supported for now.
                                   items:
                                     description: BackendRef defines how an ObjectReference
                                       that is specific to BackendRef.
@@ -10542,16 +10765,18 @@ spec:
                                   x-kubernetes-validations:
                                   - message: only support Service kind.
                                     rule: self.all(f, f.kind == 'Service')
+                                  - message: BackendRefs only supports Core group.
+                                    rule: self.all(f, f.group == '')
                                 host:
                                   description: |-
                                     Host define the service hostname.
-                                    Deprecated: Use BackendRef instead.
+                                    Deprecated: Use BackendRefs instead.
                                   type: string
                                 port:
                                   default: 4317
                                   description: |-
                                     Port defines the port the service is exposed on.
-                                    Deprecated: Use BackendRef instead.
+                                    Deprecated: Use BackendRefs instead.
                                   format: int32
                                   maximum: 65535
                                   minimum: 0
@@ -10647,15 +10872,13 @@ spec:
                           If provider is kubernetes, pod name and namespace are added by default.
                         type: object
                       provider:
-                        description: |-
-                          Provider defines the tracing provider.
-                          Only OpenTelemetry is supported currently.
+                        description: Provider defines the tracing provider.
                         properties:
                           backendRefs:
                             description: |-
                               BackendRefs references a Kubernetes object that represents the
-                              backend server to which the accesslog will be sent.
-                              Only service Kind is supported for now.
+                              backend server to which the trace will be sent.
+                              Only Service kind is supported for now.
                             items:
                               description: BackendRef defines how an ObjectReference
                                 that is specific to BackendRef.
@@ -10738,27 +10961,44 @@ spec:
                             x-kubernetes-validations:
                             - message: only support Service kind.
                               rule: self.all(f, f.kind == 'Service')
+                            - message: BackendRefs only supports Core group.
+                              rule: self.all(f, f.group == '')
                           host:
                             description: |-
                               Host define the provider service hostname.
-                              Deprecated: Use BackendRef instead.
+                              Deprecated: Use BackendRefs instead.
                             type: string
                           port:
                             default: 4317
                             description: |-
                               Port defines the port the provider service is exposed on.
-                              Deprecated: Use BackendRef instead.
+                              Deprecated: Use BackendRefs instead.
                             format: int32
                             minimum: 0
                             type: integer
                           type:
                             default: OpenTelemetry
-                            description: |-
-                              Type defines the tracing provider type.
-                              EG currently only supports OpenTelemetry.
+                            description: Type defines the tracing provider type.
                             enum:
                             - OpenTelemetry
+                            - Zipkin
                             type: string
+                          zipkin:
+                            description: Zipkin defines the Zipkin tracing provider
+                              configuration
+                            properties:
+                              disableSharedSpanContext:
+                                description: |-
+                                  DisableSharedSpanContext determines whether the default Envoy behaviour of
+                                  client and server spans sharing the same span context should be disabled.
+                                type: boolean
+                              enable128BitTraceId:
+                                description: |-
+                                  Enable128BitTraceID determines whether a 128bit trace id will be used
+                                  when creating a new trace instance. If set to false, a 64bit trace
+                                  id will be used.
+                                type: boolean
+                            type: object
                         required:
                         - type
                         type: object

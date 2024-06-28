@@ -51,13 +51,14 @@
               '@type': type.googleapis.com/envoy.config.trace.v3.OpenTelemetryConfig
               grpcService:
                 envoyGrpc:
-                  authority: otel-collector.monitoring.svc.cluster.local
-                  clusterName: tracing|otel-collector.monitoring.svc.cluster.local|4317
+                  authority: otel-collector.default.svc.cluster.local
+                  clusterName: tracing-0
               serviceName: fake-name.fake-ns
           randomSampling:
             value: 90
           spawnUpstreamSpan: true
         useRemoteAddress: true
+    name: first-listener
   drainType: MODIFY_ONLY
   name: first-listener
   perConnectionBufferLimitBytes: 32768

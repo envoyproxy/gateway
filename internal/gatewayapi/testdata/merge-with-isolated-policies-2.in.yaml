@@ -1,4 +1,4 @@
-envoyproxy:
+envoyProxyForGatewayClass:
   apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyProxy
   metadata:
@@ -139,7 +139,6 @@ securityPolicies:
         group: gateway.networking.k8s.io
         kind: Gateway
         name: gateway-1
-        namespace: default
       cors:
         allowOrigins:
           - "*"
@@ -163,7 +162,6 @@ securityPolicies:
         group: gateway.networking.k8s.io
         kind: HTTPRoute
         name: httproute-3
-        namespace: default
       cors:
         allowOrigins:
           - "*"
@@ -189,7 +187,6 @@ clientTrafficPolicies:
         kind: Gateway
         name: gateway-2
         sectionName: http
-        namespace: default
       timeout:
         http:
           requestReceivedTimeout: "5s"
@@ -203,7 +200,6 @@ clientTrafficPolicies:
         group: gateway.networking.k8s.io
         kind: Gateway
         name: gateway-1
-        namespace: default
       timeout:
         http:
           requestReceivedTimeout: "5s"
@@ -218,7 +214,6 @@ backendTrafficPolicies:
         group: gateway.networking.k8s.io
         kind: Gateway
         name: gateway-1
-        namespace: default
       tcpKeepalive:
         probes: 3
         idleTime: 20m

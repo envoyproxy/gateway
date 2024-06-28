@@ -7,6 +7,8 @@ linters:
     - depguard
     - errorlint
     - exportloopref
+    - importas
+    - gci
     - gofmt
     - gofumpt
     - goimports
@@ -36,6 +38,32 @@ linters-settings:
             desc: "use k8s.io/utils/ptr instead"
           - pkg: github.com/tetratelabs/multierror
             desc: "use errors instead"
+  importas:
+    # Do not allow unaliased imports of aliased packages.
+    no-unaliased: true
+    # Do not allow non-required aliases.
+    no-extra-aliases: false
+    alias:
+      # gateway-api
+      - pkg: sigs.k8s.io/gateway-api/apis/v1
+        alias: gwapiv1
+      - pkg: sigs.k8s.io/gateway-api/apis/v1alpha2
+        alias: gwapiv1a2
+      - pkg: sigs.k8s.io/gateway-api/apis/v1alpha3
+        alias: gwapiv1a3
+      - pkg: sigs.k8s.io/gateway-api/apis/v1beta1
+        alias: gwapiv1b1
+      - pkg: github.com/envoyproxy/gateway/api/v1alpha1
+        alias: egv1a1
+      # kubernetes api
+      - pkg: k8s.io/apimachinery/pkg/apis/meta/v1
+        alias: metav1
+      - pkg: k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1
+        alias: apiextensionsv1
+      - pkg: sigs.k8s.io/mcs-api/pkg/apis/v1alpha1
+        alias: mcsapiv1a1
+      - pkg: k8s.io/api/(\w+)/(v[\w\d]+)
+        alias: $1$2
   gci:
     sections:
       # Captures all standard packages if they do not match another section.

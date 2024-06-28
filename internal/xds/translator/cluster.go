@@ -21,6 +21,7 @@ import (
 	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
+	"github.com/golang/protobuf/ptypes/wrappers"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -50,6 +51,7 @@ type xdsClusterArgs struct {
 	timeout           *ir.Timeout
 	tcpkeepalive      *ir.TCPKeepalive
 	metrics           *ir.Metrics
+	backendConnection *ir.BackendConnection
 	useClientProtocol bool
 }
 
@@ -86,11 +88,10 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 			},
 		},
 		OutlierDetection:              &clusterv3.OutlierDetection{},
-		PerConnectionBufferLimitBytes: wrapperspb.UInt32(tcpClusterPerConnectionBufferLimitBytes),
+		PerConnectionBufferLimitBytes: buildBackandConnectionBufferLimitBytes(args.backendConnection),
 	}
 
 	cluster.ConnectTimeout = buildConnectTimeout(args.timeout)
-
 	// set peer endpoint stats
 	if args.metrics != nil && args.metrics.EnablePerEndpointStats {
 		cluster.TrackClusterStats = &clusterv3.TrackClusterStats{
@@ -185,6 +186,14 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		cluster.LbPolicy = clusterv3.Cluster_RANDOM
 	} else if args.loadBalancer.ConsistentHash != nil {
 		cluster.LbPolicy = clusterv3.Cluster_MAGLEV
+
+		if args.loadBalancer.ConsistentHash.TableSize != nil {
+			cluster.LbConfig = &clusterv3.Cluster_MaglevLbConfig_{
+				MaglevLbConfig: &clusterv3.Cluster_MaglevLbConfig{
+					TableSize: &wrapperspb.UInt64Value{Value: *args.loadBalancer.ConsistentHash.TableSize},
+				},
+			}
+		}
 	}
 
 	if args.healthCheck != nil && args.healthCheck.Active != nil {
@@ -389,17 +398,7 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 				Metadata: metadata,
 				HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
 					Endpoint: &endpointv3.Endpoint{
-						Address: &corev3.Address{
-							Address: &corev3.Address_SocketAddress{
-								SocketAddress: &corev3.SocketAddress{
-									Protocol: corev3.SocketAddress_TCP,
-									Address:  irEp.Host,
-									PortSpecifier: &corev3.SocketAddress_PortValue{
-										PortValue: irEp.Port,
-									},
-								},
-							},
-						},
+						Address: buildAddress(irEp),
 					},
 				},
 			}
@@ -539,13 +538,6 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) map[string]*anypb.
 	return extensionOptions
 }
 
-// buildClusterName returns a cluster name for the given `host` and `port`.
-// The format is: <type>|<host>|<port>, where type is "accesslog" for access logs.
-// It's easy to distinguish when debugging.
-func buildClusterName(prefix string, host string, port uint32) string {
-	return fmt.Sprintf("%s|%s|%d", prefix, host, port)
-}
-
 // buildProxyProtocolSocket builds the ProxyProtocol transport socket.
 func buildProxyProtocolSocket(proxyProtocol *ir.ProxyProtocol, tSocket *corev3.TransportSocket) *corev3.TransportSocket {
 	if proxyProtocol == nil {
@@ -625,4 +617,35 @@ func buildXdsClusterUpstreamOptions(tcpkeepalive *ir.TCPKeepalive) *clusterv3.Up
 	}
 
 	return ka
+}
+
+func buildAddress(irEp *ir.DestinationEndpoint) *corev3.Address {
+	if irEp.Path != nil {
+		return &corev3.Address{
+			Address: &corev3.Address_Pipe{
+				Pipe: &corev3.Pipe{
+					Path: *irEp.Path,
+				},
+			},
+		}
+	}
+	return &corev3.Address{
+		Address: &corev3.Address_SocketAddress{
+			SocketAddress: &corev3.SocketAddress{
+				Protocol: corev3.SocketAddress_TCP,
+				Address:  irEp.Host,
+				PortSpecifier: &corev3.SocketAddress_PortValue{
+					PortValue: irEp.Port,
+				},
+			},
+		},
+	}
+}
+
+func buildBackandConnectionBufferLimitBytes(bc *ir.BackendConnection) *wrappers.UInt32Value {
+	if bc != nil && bc.BufferLimitBytes != nil {
+		return wrapperspb.UInt32(*bc.BufferLimitBytes)
+	}
+
+	return wrapperspb.UInt32(tcpClusterPerConnectionBufferLimitBytes)
 }

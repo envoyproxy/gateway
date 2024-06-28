@@ -126,7 +126,7 @@ referenceGrants:
           kind: SecurityPolicy
           namespace: default
       to:
-        - group: ''
+        - group: ""
           kind: Service
 securityPolicies:
   - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -139,34 +139,33 @@ securityPolicies:
         group: gateway.networking.k8s.io
         kind: HTTPRoute
         name: httproute-1
-        namespace: default
       extAuth:
         failOpen: true
         headersToExtAuth:
           - header1
           - header2
         grpc:
-          backendRef:
-            name: grpc-backend
-            port: 9000
+          backendRefs:
+            - name: grpc-backend
+              port: 9000
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: SecurityPolicy
     metadata:
       namespace: default
-      name: policy-for-gateway-1          # This will only apply to the httproute-2
+      # This will only apply to the httproute-2
+      name: policy-for-gateway-1
     spec:
       targetRef:
         group: gateway.networking.k8s.io
         kind: Gateway
         name: gateway-1
-        namespace: default
       extAuth:
         failOpen: false
         http:
-          backendRef:
-            Name: http-backend
-            Namespace: envoy-gateway
-            Port: 80
+          backendRefs:
+            - Name: http-backend
+              Namespace: envoy-gateway
+              Port: 80
           Path: /auth
           headersToBackend:
             - header1

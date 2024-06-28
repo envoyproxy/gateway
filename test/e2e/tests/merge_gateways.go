@@ -9,11 +9,13 @@
 package tests
 
 import (
+	"context"
 	"net"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
@@ -31,6 +33,7 @@ var MergeGatewaysTest = suite.ConformanceTest{
 	Description: "Basic test for MergeGateways feature",
 	Manifests:   []string{"testdata/basic-merge-gateways.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ctx := context.Background()
 		ns := "gateway-conformance-infra"
 
 		route1NN := types.NamespacedName{Name: "merged-gateway-route-1", Namespace: ns}
@@ -44,6 +47,10 @@ var MergeGatewaysTest = suite.ConformanceTest{
 		route3NN := types.NamespacedName{Name: "merged-gateway-route-3", Namespace: ns}
 		gw3NN := types.NamespacedName{Name: "merged-gateway-3", Namespace: ns}
 		gw3HostPort := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gw3NN), route3NN)
+
+		// Conflicted Gateway and HTTPRoute name
+		route4NN := types.NamespacedName{Name: "merged-gateway-route-4", Namespace: ns}
+		gw4NN := types.NamespacedName{Name: "merged-gateway-4", Namespace: ns}
 
 		gw1Addr, _, err := net.SplitHostPort(gw1HostPort)
 		if err != nil {
@@ -89,11 +96,97 @@ var MergeGatewaysTest = suite.ConformanceTest{
 			})
 		})
 
-		t.Run("gateway with conflicted listener cannot be merged", func(t *testing.T) {
-			route4NN := types.NamespacedName{Name: "merged-gateway-route-4", Namespace: ns}
-			gw4NN := types.NamespacedName{Name: "merged-gateway-4", Namespace: ns}
+		t.Run("apply a gateway with conflicted listener", func(t *testing.T) {
+			// Manually create the conflicted Gateway and HTTPRoute resources,
+			// in order to make sure the conflicted status will certainly surface for them.
 
-			gw4HostPort, err := kubernetes.WaitForGatewayAddress(t, suite.Client, suite.TimeoutConfig, gw4NN)
+			conflictedGateway := gwapiv1.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       gatewayapi.KindGateway,
+					APIVersion: gwapiv1.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      gw4NN.Name,
+					Namespace: gw4NN.Namespace,
+				},
+				Spec: gwapiv1.GatewaySpec{
+					GatewayClassName: gwapiv1.ObjectName(suite.GatewayClassName),
+					Listeners: []gwapiv1.Listener{
+						{
+							AllowedRoutes: &gwapiv1.AllowedRoutes{
+								Namespaces: &gwapiv1.RouteNamespaces{
+									From: gatewayapi.FromNamespacesPtr(gwapiv1.NamespacesFromSame),
+								},
+							},
+							Name:     "http3",
+							Port:     8082,
+							Protocol: gwapiv1.HTTPProtocolType,
+						},
+					},
+				},
+			}
+
+			conflictedHTTPRoute := gwapiv1.HTTPRoute{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       gatewayapi.KindHTTPRoute,
+					APIVersion: gwapiv1.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      route4NN.Name,
+					Namespace: route4NN.Namespace,
+				},
+				Spec: gwapiv1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1.CommonRouteSpec{
+						ParentRefs: []gwapiv1.ParentReference{
+							{
+								Name: gwapiv1.ObjectName(gw4NN.Name),
+							},
+						},
+					},
+					Hostnames: []gwapiv1.Hostname{
+						"www.example4.com",
+					},
+					Rules: []gwapiv1.HTTPRouteRule{
+						{
+							BackendRefs: []gwapiv1.HTTPBackendRef{
+								{
+									BackendRef: gwapiv1.BackendRef{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Group: gatewayapi.GroupPtr(""),
+											Kind:  gatewayapi.KindPtr(gatewayapi.KindService),
+											Name:  "infra-backend-v3",
+											Port:  gatewayapi.PortNumPtr(8080),
+										},
+										Weight: ptr.To[int32](1),
+									},
+								},
+							},
+							Matches: []gwapiv1.HTTPRouteMatch{
+								{
+									Path: &gwapiv1.HTTPPathMatch{
+										Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
+										Value: ptr.To("/merge4"),
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			if err := suite.Client.Create(ctx, &conflictedGateway); err != nil {
+				t.Errorf("failed to create conflicted gateway: %v", err)
+				t.FailNow()
+			}
+
+			if err := suite.Client.Create(ctx, &conflictedHTTPRoute); err != nil {
+				t.Errorf("failed to create conflicted httproute: %v", err)
+				t.FailNow()
+			}
+		})
+
+		t.Run("gateway with conflicted listener cannot be merged", func(t *testing.T) {
+			gw4HostPort, err := kubernetes.WaitForGatewayAddress(t, suite.Client, suite.TimeoutConfig, kubernetes.GatewayRef{NamespacedName: gw4NN})
 			if err != nil {
 				t.Errorf("failed to get the address of gateway %s", gw4NN.String())
 			}
@@ -145,6 +238,26 @@ var MergeGatewaysTest = suite.ConformanceTest{
 				Response:  http.Response{StatusCode: 404},
 				Namespace: ns,
 			})
+		})
+
+		// Clean-up the conflicted gateway and route resources.
+		t.Cleanup(func() {
+			conflictedGateway := new(gwapiv1.Gateway)
+			conflictedHTTPRoute := new(gwapiv1.HTTPRoute)
+
+			if err := suite.Client.Get(ctx, gw4NN, conflictedGateway); err != nil {
+				t.Errorf("failed to get conflicted gateway: %v", err)
+			}
+			if err := suite.Client.Delete(ctx, conflictedGateway); err != nil {
+				t.Errorf("failed to delete conflicted gateway: %v", err)
+			}
+
+			if err := suite.Client.Get(ctx, route4NN, conflictedHTTPRoute); err != nil {
+				t.Errorf("failed to get conflicted httproute: %v", err)
+			}
+			if err := suite.Client.Delete(ctx, conflictedHTTPRoute); err != nil {
+				t.Errorf("failed to delete conflicted httproute: %v", err)
+			}
 		})
 	},
 }

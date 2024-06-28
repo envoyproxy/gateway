@@ -18,9 +18,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        version: [ v1.26.14, v1.27.11, v1.28.7, v1.29.2 ]
+        version: [ v1.27.13, v1.28.9, v1.29.4, v1.30.0 ]
     steps:
-    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b  # v4.1.4
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
     - uses: ./tools/github-actions/setup-deps
 
     # gateway api experimental conformance

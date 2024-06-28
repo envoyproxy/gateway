@@ -53,13 +53,12 @@ securityPolicies:
         group: gateway.networking.k8s.io
         kind: Gateway
         name: gateway-1
-        namespace: default
       extAuth:
         http:
-          backendRef:
-            name: http-backend
-            namespace: envoy-gateway
-            port: 80
+          backendRefs:
+            - name: http-backend
+              namespace: envoy-gateway
+              port: 80
           headersToBackend:
             - header1
             - header2

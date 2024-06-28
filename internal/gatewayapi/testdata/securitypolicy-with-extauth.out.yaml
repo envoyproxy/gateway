@@ -149,8 +149,8 @@ securityPolicies:
     extAuth:
       failOpen: true
       grpc:
-        backendRef:
-          name: grpc-backend
+        backendRefs:
+        - name: grpc-backend
           port: 9000
       headersToExtAuth:
       - header1
@@ -159,7 +159,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
   status:
     ancestors:
     - ancestorRef:
@@ -185,8 +184,8 @@ securityPolicies:
     extAuth:
       failOpen: false
       http:
-        backendRef:
-          name: http-backend
+        backendRefs:
+        - name: http-backend
           namespace: envoy-gateway
           port: 80
         headersToBackend:
@@ -197,7 +196,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: default
   status:
     ancestors:
     - ancestorRef:
@@ -234,10 +232,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -271,10 +266,7 @@ xdsIR:
             - header1
             - header2
             name: securitypolicy/default/policy-for-http-route-1
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/1
           settings:
           - addressType: IP
@@ -308,10 +300,7 @@ xdsIR:
             - header1
             - header2
             name: securitypolicy/default/policy-for-http-route-1
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP

@@ -14,7 +14,6 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
       sectionName: http-1
   status:
     ancestors:
@@ -46,7 +45,6 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
       sectionName: http-2
   status:
     ancestors:
@@ -59,8 +57,8 @@ clientTrafficPolicies:
       conditions:
       - lastTransitionTime: null
         message: |-
-          InitialStreamWindowSize value 1Ki is out of range, must be between 65535 and 2147483647
-          InitialConnectionWindowSize value 1Ti is out of range, must be between 65535 and 2147483647
+          HTTP2: InitialStreamWindowSize value 1Ki is out of range, must be between 65535 and 2147483647
+          InitialConnectionWindowSize value 1Ti is out of range, must be between 65535 and 2147483647.
         reason: Invalid
         status: "False"
         type: Accepted

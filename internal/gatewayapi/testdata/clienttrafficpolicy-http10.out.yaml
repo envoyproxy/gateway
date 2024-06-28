@@ -12,7 +12,6 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
       sectionName: http-1
   status:
     ancestors:
@@ -43,7 +42,6 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
       sectionName: http-2
   status:
     ancestors:
@@ -74,7 +72,6 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
       sectionName: http-3
   status:
     ancestors:
@@ -86,7 +83,8 @@ clientTrafficPolicies:
         sectionName: http-3
       conditions:
       - lastTransitionTime: null
-        message: Can't set http10 default host on listener with only wildcard hostnames
+        message: 'HTTP1: cannot set http10 default host on listener with only wildcard
+          hostnames.'
         reason: Invalid
         status: "False"
         type: Accepted

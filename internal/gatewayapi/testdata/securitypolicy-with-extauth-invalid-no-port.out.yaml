@@ -105,8 +105,8 @@ securityPolicies:
     extAuth:
       failOpen: false
       http:
-        backendRef:
-          name: http-backend
+        backendRefs:
+        - name: http-backend
           namespace: default
         headersToBackend:
         - header1
@@ -115,7 +115,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: default
   status:
     ancestors:
     - ancestorRef:
@@ -125,8 +124,8 @@ securityPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: A valid port number corresponding to a port on the Service must be
-          specified
+        message: 'ExtAuth: a valid port number corresponding to a port on the Service
+          must be specified.'
         reason: Invalid
         status: "False"
         type: Accepted
@@ -147,10 +146,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP

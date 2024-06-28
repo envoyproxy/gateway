@@ -15,9 +15,10 @@
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tcp-route-complex-dest
         statPrefix: passthrough
+    name: tcp-route-complex
   listenerFilters:
   - name: envoy.filters.listener.tls_inspector
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
-  name: tcp-route-complex
+  name: tcp-listener-complex
   perConnectionBufferLimitBytes: 32768

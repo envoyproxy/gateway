@@ -22,11 +22,12 @@ jobs:
     permissions:
       contents: write
     steps:
-    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b  # v4.1.4
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
     - uses: ./tools/github-actions/setup-deps
 
     - name: Generate Release Manifests
-      run: make generate-manifests IMAGE=envoyproxy/gateway-dev TAG=latest OUTPUT_DIR=release-artifacts
+      # Use `Always` image pull policy for latest version.
+      run: IMAGE_PULL_POLICY=Always make generate-manifests IMAGE=envoyproxy/gateway-dev TAG=latest OUTPUT_DIR=release-artifacts
 
     - name: Build egctl latest multiarch binaries
       run: |
@@ -61,7 +62,7 @@ jobs:
         GITHUB_REPOSITORY: ${{ github.repository_owner }}/${{ github.event.repository.name }}
 
     - name: Recreate the Latest Release and Tag
-      uses: softprops/action-gh-release@9d7c94cfd0a1f3ed45544c887983e9fa900f0564  # v0.1.15
+      uses: softprops/action-gh-release@a74c6b72af54cfa997e81df42d94703d6313a2d0  # v0.1.15
       with:
         draft: false
         prerelease: true

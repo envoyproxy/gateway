@@ -6,12 +6,12 @@
 package envoygateway
 
 import (
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
-	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
+	gwapischeme "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/scheme"
+	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -25,27 +25,15 @@ import (
 var scheme = runtime.NewScheme()
 
 func init() {
-	if err := clientgoscheme.AddToScheme(scheme); err != nil {
-		panic(err)
-	}
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	// Add Envoy Gateway types.
-	if err := egv1a1.AddToScheme(scheme); err != nil {
-		panic(err)
-	}
+	utilruntime.Must(egv1a1.AddToScheme(scheme))
 	// Add Gateway API types.
-	if err := gwapiv1.AddToScheme(scheme); err != nil {
-		panic(err)
-	}
-	if err := gwapiv1b1.AddToScheme(scheme); err != nil {
-		panic(err)
-	}
-	if err := gwapiv1a2.AddToScheme(scheme); err != nil {
-		panic(err)
-	}
+	utilruntime.Must(gwapischeme.AddToScheme(scheme))
 	// Add mcs api types.
-	if err := mcsapi.AddToScheme(scheme); err != nil {
-		panic(err)
-	}
+	utilruntime.Must(mcsapiv1a1.AddToScheme(scheme))
+	// Add CRD kind to known types, experimental conformance test requires this.
+	utilruntime.Must(apiextensionsv1.AddToScheme(scheme))
 }
 
 // GetScheme returns a scheme with types supported by the Kubernetes provider.

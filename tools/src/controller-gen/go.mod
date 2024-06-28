@@ -1,6 +1,6 @@
 module local
 
-go 1.22.2
+go 1.22.4
 
 require sigs.k8s.io/controller-tools v0.15.0
 

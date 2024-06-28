@@ -10,7 +10,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
     tcpKeepalive:
       idleTime: 10s
       interval: 30m
@@ -41,7 +40,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
     tcpKeepalive:
       idleTime: 20m
       interval: 60s
@@ -261,10 +259,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: grpcroute/default/grpcroute-1/rule/0
           settings:
           - addressType: IP
@@ -276,10 +271,11 @@ xdsIR:
         hostname: '*'
         isHTTP2: true
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
-        tcpKeepalive:
-          idleTime: 1200
-          interval: 60
-          probes: 3
+        traffic:
+          tcpKeepalive:
+            idleTime: 1200
+            interval: 60
+            probes: 3
   envoy-gateway/gateway-2:
     accessLog:
       text:
@@ -295,10 +291,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -314,7 +307,8 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        tcpKeepalive:
-          idleTime: 10
-          interval: 1800
-          probes: 6
+        traffic:
+          tcpKeepalive:
+            idleTime: 10
+            interval: 1800
+            probes: 6
