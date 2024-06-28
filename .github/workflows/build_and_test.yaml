@@ -135,6 +135,29 @@ jobs:
         IMAGE_PULL_POLICY: IfNotPresent
       run: make e2e
 
+  benchmark-test:
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
+      - uses: ./tools/github-actions/setup-deps
+
+      # Benchmark
+      - name: Run Benchmark tests
+        env:
+          KIND_NODE_TAG: v1.28.9
+          IMAGE_PULL_POLICY: IfNotPresent
+          # Args for benchmark test
+          BENCHMARK_RPS: 10000
+          BENCHMARK_CONNECTIONS: 100
+          BENCHMARK_DURATION: 90
+          BENCHMARK_CPU_LIMITS: 1000
+          BENCHMARK_MEMORY_LIMITS: 2000
+        run: make benchmark
+
+      - name: Read Benchmark report
+        run: cat test/benchmark/benchmark_report.md
+
   publish:
     runs-on: ubuntu-latest
     needs: [conformance-test, e2e-test]
