@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -486,4 +487,11 @@ func parseCIDR(cidr string) (*ir.CIDRMatch, error) {
 		MaskLen: uint32(mask),
 		IsIPv6:  ip.To4() == nil,
 	}, nil
+}
+
+func irConfigName(policy client.Object) string {
+	return fmt.Sprintf(
+		"%s/%s",
+		strings.ToLower(policy.GetObjectKind().GroupVersionKind().Kind),
+		utils.NamespacedName(policy).String())
 }
