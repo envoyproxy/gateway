@@ -150,7 +150,7 @@ jobs:
         # Args for benchmark test
         BENCHMARK_RPS: 10000
         BENCHMARK_CONNECTIONS: 100
-        BENCHMARK_DURATION: 90
+        BENCHMARK_DURATION: 30
         BENCHMARK_CPU_LIMITS: 1000
         BENCHMARK_MEMORY_LIMITS: 2000
       run: make benchmark
