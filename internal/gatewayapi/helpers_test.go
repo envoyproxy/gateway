@@ -15,8 +15,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 func TestValidateGRPCFilterRef(t *testing.T) {
@@ -191,6 +195,235 @@ func TestValidateHTTPFilterRef(t *testing.T) {
 			} else {
 				require.Error(t, err)
 			}
+		})
+	}
+}
+
+func TestGetPolicyTargetRefs(t *testing.T) {
+	testCases := []struct {
+		name    string
+		policy  egv1a1.PolicyTargetReferences
+		targets []*unstructured.Unstructured
+		results []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName
+	}{
+		{
+			name: "simple",
+			policy: egv1a1.PolicyTargetReferences{
+				TargetSelectors: []egv1a1.TargetSelector{
+					{
+						Kind: "Gateway",
+						MatchLabels: map[string]string{
+							"pick": "me",
+						},
+					},
+				},
+			},
+			targets: []*unstructured.Unstructured{
+				{
+					Object: map[string]any{
+						"apiVersion": "gateway.networking.k8s.io/v1",
+						"kind":       "Gateway",
+						"metadata": map[string]any{
+							"name":      "first",
+							"namespace": "default",
+							"labels": map[string]any{
+								"some": "random label",
+							},
+						},
+					},
+				},
+				{
+					Object: map[string]any{
+						"apiVersion": "gateway.networking.k8s.io/v1",
+						"kind":       "Gateway",
+						"metadata": map[string]any{
+							"name":      "second",
+							"namespace": "default",
+							"labels": map[string]any{
+								"pick": "me",
+							},
+						},
+					},
+				},
+				{
+					Object: map[string]any{
+						"apiVersion": "gateway.networking.k8s.io/v1",
+						"kind":       "TLSRoute",
+						"metadata": map[string]any{
+							"name":      "third",
+							"namespace": "default",
+							"labels": map[string]any{
+								"pick": "me",
+							},
+						},
+					},
+				},
+			},
+			results: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+				{
+					LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+						Group: "gateway.networking.k8s.io",
+						Kind:  "Gateway",
+						Name:  "second",
+					},
+				},
+			},
+		},
+		{
+			name: "multiple selectors",
+			policy: egv1a1.PolicyTargetReferences{
+				TargetSelectors: []egv1a1.TargetSelector{
+					{
+						Kind: "TLSRoute",
+						MatchLabels: map[string]string{
+							"pick": "me",
+						},
+					},
+					{
+						Kind: "Gateway",
+						MatchLabels: map[string]string{
+							"pick": "me",
+						},
+					},
+				},
+			},
+			targets: []*unstructured.Unstructured{
+				{
+					Object: map[string]any{
+						"apiVersion": "gateway.networking.k8s.io/v1",
+						"kind":       "Gateway",
+						"metadata": map[string]any{
+							"name":      "first",
+							"namespace": "default",
+							"labels": map[string]any{
+								"some": "random label",
+							},
+						},
+					},
+				},
+				{
+					Object: map[string]any{
+						"apiVersion": "gateway.networking.k8s.io/v1",
+						"kind":       "Gateway",
+						"metadata": map[string]any{
+							"name":      "second",
+							"namespace": "default",
+							"labels": map[string]any{
+								"pick": "me",
+							},
+						},
+					},
+				},
+				{
+					Object: map[string]any{
+						"apiVersion": "gateway.networking.k8s.io/v1",
+						"kind":       "TLSRoute",
+						"metadata": map[string]any{
+							"name":      "third",
+							"namespace": "default",
+							"labels": map[string]any{
+								"pick": "me",
+							},
+						},
+					},
+				},
+			},
+			results: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+				{
+					LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+						Group: "gateway.networking.k8s.io",
+						Kind:  "TLSRoute",
+						Name:  "third",
+					},
+				},
+				{
+					LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+						Group: "gateway.networking.k8s.io",
+						Kind:  "Gateway",
+						Name:  "second",
+					},
+				},
+			},
+		},
+		{
+			name: "deduplicated",
+			policy: egv1a1.PolicyTargetReferences{
+				TargetRefs: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+					{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "TLSRoute",
+							Name:  "third",
+						},
+					},
+				},
+				TargetSelectors: []egv1a1.TargetSelector{
+					{
+						Kind: "TLSRoute",
+						MatchLabels: map[string]string{
+							"pick": "me",
+						},
+					},
+				},
+			},
+			targets: []*unstructured.Unstructured{
+				{
+					Object: map[string]any{
+						"apiVersion": "gateway.networking.k8s.io/v1",
+						"kind":       "Gateway",
+						"metadata": map[string]any{
+							"name":      "first",
+							"namespace": "default",
+							"labels": map[string]any{
+								"some": "random label",
+							},
+						},
+					},
+				},
+				{
+					Object: map[string]any{
+						"apiVersion": "gateway.networking.k8s.io/v1",
+						"kind":       "Gateway",
+						"metadata": map[string]any{
+							"name":      "second",
+							"namespace": "default",
+							"labels": map[string]any{
+								"pick": "me",
+							},
+						},
+					},
+				},
+				{
+					Object: map[string]any{
+						"apiVersion": "gateway.networking.k8s.io/v1",
+						"kind":       "TLSRoute",
+						"metadata": map[string]any{
+							"name":      "third",
+							"namespace": "default",
+							"labels": map[string]any{
+								"pick": "me",
+							},
+						},
+					},
+				},
+			},
+			results: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+				{
+					LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+						Group: "gateway.networking.k8s.io",
+						Kind:  "TLSRoute",
+						Name:  "third",
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			results := getPolicyTargetRefs(tc.policy, tc.targets)
+			require.ElementsMatch(t, results, tc.results)
 		})
 	}
 }

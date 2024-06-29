@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
@@ -494,4 +495,37 @@ func irConfigName(policy client.Object) string {
 		"%s/%s",
 		strings.ToLower(policy.GetObjectKind().GroupVersionKind().Kind),
 		utils.NamespacedName(policy).String())
+}
+
+func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, potentialTargets []T) []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {
+	dedup := map[gwapiv1a2.LocalPolicyTargetReferenceWithSectionName]byte{}
+	for _, ref := range policy.GetTargetRefs() {
+		dedup[ref] = byte(0)
+	}
+
+	for _, currSelector := range policy.TargetSelectors {
+		labelSelector := labels.SelectorFromSet(currSelector.MatchLabels)
+		for _, obj := range potentialTargets {
+			gvk := obj.GetObjectKind().GroupVersionKind()
+			if gvk.Kind != string(currSelector.Kind) {
+				continue
+			}
+
+			if labelSelector.Matches(labels.Set(obj.GetLabels())) {
+				dedup[gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+					LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+						Group: gwapiv1a2.Group(gvk.Group),
+						Kind:  gwapiv1a2.Kind(gvk.Kind),
+						Name:  gwapiv1a2.ObjectName(obj.GetName()),
+					},
+				}] = byte(0)
+			}
+		}
+	}
+
+	ret := []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{}
+	for key := range dedup {
+		ret = append(ret, key)
+	}
+	return ret
 }

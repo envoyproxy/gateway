@@ -73,7 +73,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv
 	// Process the policies targeting xRoutes
 	for _, currPolicy := range backendTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := currPolicy.Spec.GetTargetRefs()
+		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, routes)
 		for _, currTarget := range targetRefs {
 			if currTarget.Kind != KindGateway {
 				policy, found := handledPolicies[policyName]
@@ -147,7 +147,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv
 	// Process the policies targeting Gateways
 	for _, currPolicy := range backendTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := currPolicy.Spec.GetTargetRefs()
+		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways)
 		for _, currTarget := range targetRefs {
 			if currTarget.Kind == KindGateway {
 				policy, found := handledPolicies[policyName]
