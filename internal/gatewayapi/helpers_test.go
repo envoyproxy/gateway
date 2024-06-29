@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -211,7 +212,8 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 			policy: egv1a1.PolicyTargetReferences{
 				TargetSelectors: []egv1a1.TargetSelector{
 					{
-						Kind: "Gateway",
+						Kind:  "Gateway",
+						Group: ptr.To(gwapiv1.Group("gateway.networking.k8s.io")),
 						MatchLabels: map[string]string{
 							"pick": "me",
 						},
@@ -416,6 +418,62 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 					},
 				},
 			},
+		},
+		{
+			name: "bad-group-is-ignored",
+			policy: egv1a1.PolicyTargetReferences{
+				TargetSelectors: []egv1a1.TargetSelector{
+					{
+						Kind:  "Gateway",
+						Group: ptr.To(gwapiv1.Group("bad-group")),
+						MatchLabels: map[string]string{
+							"pick": "me",
+						},
+					},
+				},
+			},
+			targets: []*unstructured.Unstructured{
+				{
+					Object: map[string]any{
+						"apiVersion": "gateway.networking.k8s.io/v1",
+						"kind":       "Gateway",
+						"metadata": map[string]any{
+							"name":      "first",
+							"namespace": "default",
+							"labels": map[string]any{
+								"some": "random label",
+							},
+						},
+					},
+				},
+				{
+					Object: map[string]any{
+						"apiVersion": "gateway.networking.k8s.io/v1",
+						"kind":       "Gateway",
+						"metadata": map[string]any{
+							"name":      "second",
+							"namespace": "default",
+							"labels": map[string]any{
+								"pick": "me",
+							},
+						},
+					},
+				},
+				{
+					Object: map[string]any{
+						"apiVersion": "gateway.networking.k8s.io/v1",
+						"kind":       "TLSRoute",
+						"metadata": map[string]any{
+							"name":      "third",
+							"namespace": "default",
+							"labels": map[string]any{
+								"pick": "me",
+							},
+						},
+					},
+				},
+			},
+			results: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{},
 		},
 	}
 

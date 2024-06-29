@@ -507,7 +507,8 @@ func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, 
 		labelSelector := labels.SelectorFromSet(currSelector.MatchLabels)
 		for _, obj := range potentialTargets {
 			gvk := obj.GetObjectKind().GroupVersionKind()
-			if gvk.Kind != string(currSelector.Kind) {
+			if gvk.Kind != string(currSelector.Kind) ||
+				gvk.Group != string(ptr.Deref(currSelector.Group, "gateway.networking.k8s.io")) {
 				continue
 			}
 
