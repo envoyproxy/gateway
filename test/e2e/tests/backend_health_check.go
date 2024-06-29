@@ -61,8 +61,8 @@ var BackendHealthCheckActiveHTTPTest = suite.ConformanceTest{
 
 			// health check requests will be distributed to the cluster with configured path.
 			// we can use membership_healthy stats to check whether health check works as expected.
-			passPromQL := fmt.Sprintf(`envoy_cluster_membership_healthy{envoy_cluster_name="%s",gateway_envoyproxy_io_owning_gateway_name="%s"}`, passClusterName, gtwName)
-			failPromQL := fmt.Sprintf(`envoy_cluster_membership_healthy{envoy_cluster_name="%s",gateway_envoyproxy_io_owning_gateway_name="%s"}`, failClusterName, gtwName)
+			passPromQL := fmt.Sprintf(`envoy_cluster_health_check_success{envoy_cluster_name="%s",gateway_envoyproxy_io_owning_gateway_name="%s"}`, passClusterName, gtwName)
+			failPromQL := fmt.Sprintf(`envoy_cluster_health_check_failure{envoy_cluster_name="%s",gateway_envoyproxy_io_owning_gateway_name="%s"}`, failClusterName, gtwName)
 
 			http.AwaitConvergence(
 				t,
@@ -75,12 +75,12 @@ var BackendHealthCheckActiveHTTPTest = suite.ConformanceTest{
 						// wait until Prometheus sync stats
 						return false
 					}
-					t.Logf("cluster pass health check: membership_healthy stats query count: %v", v)
+					t.Logf("cluster pass health check: success stats query count: %v", v)
 
 					if v == 0 {
-						t.Error("healthy membership is not the same as expected")
+						t.Error("success is not the same as expected")
 					} else {
-						t.Log("healthy membership is the same as expected")
+						t.Log("success is the same as expected")
 					}
 
 					return true
@@ -98,12 +98,12 @@ var BackendHealthCheckActiveHTTPTest = suite.ConformanceTest{
 						// wait until Prometheus sync stats
 						return false
 					}
-					t.Logf("cluster fail health check: membership_healthy stats query count: %v", v)
+					t.Logf("cluster fail health check: failure stats query count: %v", v)
 
 					if v == 0 {
-						t.Log("healthy membership is same as expected")
+						t.Error("failure is not same as expected")
 					} else {
-						t.Error("healthy membership is not same as expected")
+						t.Log("failure is same as expected")
 					}
 
 					return true

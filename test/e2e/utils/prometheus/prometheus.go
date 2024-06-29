@@ -85,6 +85,8 @@ func sum(val model.Value) (float64, error) {
 		valueCount += float64(sample.Value)
 	}
 
-	// the actual sum maybe 0.0, it's not error
-	return valueCount, nil
+	if valueCount > 0.0 {
+		return valueCount, nil
+	}
+	return 0, fmt.Errorf("value not found")
 }
