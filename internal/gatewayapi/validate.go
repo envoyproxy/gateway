@@ -534,13 +534,70 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerCon
 	return secrets
 }
 
-func (t *Translator) validateAndGetFrontendValidationCACerts(listener *ListenerContext, resources *Resources) []string {
-	for _, _ = range listener.TLS.FrontendValidation.CACertificateRefs {
-		// TODO zhaohuabing: reuse validateSecretRef
-		// t.validateSecretRef()
+func (t *Translator) validateAndGetFrontendValidationCACerts(listener *ListenerContext, resources *Resources) []byte {
+	var cacerts []byte
+	for _, ref := range listener.TLS.FrontendValidation.CACertificateRefs {
+		if ref.Kind == KindSecret {
+			from := crossNamespaceFrom{
+				group:     string(ref.Group),
+				kind:      string(ref.Kind),
+				namespace: string(*ref.Namespace),
+			}
+
+			secretRef := gwapiv1.SecretObjectReference{
+				Name:      ref.Name,
+				Group:     &ref.Group,
+				Kind:      &ref.Kind,
+				Namespace: ref.Namespace,
+			}
+
+			secret, err := t.validateSecretRef(false, from, secretRef, resources)
+			if err != nil {
+				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
+					listener.listenerStatusIdx,
+					gwapiv1.ListenerConditionResolvedRefs,
+					metav1.ConditionFalse,
+					gwapiv1.ListenerReasonInvalidCertificateRef,
+					fmt.Sprintf("Secret %s.", err.Error()))
+				break
+			}
+
+			if secret.Type != corev1.SecretTypeTLS {
+				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
+					listener.listenerStatusIdx,
+					gwapiv1.ListenerConditionResolvedRefs,
+					metav1.ConditionFalse,
+					gwapiv1.ListenerReasonInvalidCertificateRef,
+					fmt.Sprintf("Secret %s/%s must be of type %s.", listener.gateway.Namespace, secretRef.Name, corev1.SecretTypeTLS))
+				break
+			}
+
+			cacertBytes, ok := secret.Data[caCertKey]
+			if !ok || len(cacertBytes) == 0 {
+				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
+					listener.listenerStatusIdx,
+					gwapiv1.ListenerConditionResolvedRefs,
+					metav1.ConditionFalse,
+					gwapiv1.ListenerReasonInvalidCertificateRef,
+					fmt.Sprintf("caCertificateRef not found in secret %s/%s.", listener.gateway.Namespace, secretRef.Name))
+				break
+
+			}
+
+			if err := validateCertificate(cacertBytes); err != nil {
+				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
+					listener.listenerStatusIdx,
+					gwapiv1.ListenerConditionResolvedRefs,
+					metav1.ConditionFalse,
+					gwapiv1.ListenerReasonInvalidCertificateRef,
+					fmt.Sprintf("invalid certificate in secret %s/%s.", listener.gateway.Namespace, secretRef.Name))
+				break
+			}
+			cacerts = append(cacerts, cacertBytes...)
+		}
 	}
 
-	return []string{}
+	return cacerts
 }
 
 func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resources *Resources) {
@@ -922,7 +979,7 @@ func (t *Translator) validateHostname(hostname string) error {
 func (t *Translator) validateSecretRef(
 	allowCrossNamespace bool,
 	from crossNamespaceFrom,
-	secretObjRef gwapiv1b1.SecretObjectReference,
+	secretObjRef gwapiv1.SecretObjectReference,
 	resources *Resources,
 ) (*corev1.Secret, error) {
 	if err := t.validateSecretObjectRef(allowCrossNamespace, from, secretObjRef, resources); err != nil {
@@ -946,7 +1003,7 @@ func (t *Translator) validateSecretRef(
 func (t *Translator) validateConfigMapRef(
 	allowCrossNamespace bool,
 	from crossNamespaceFrom,
-	secretObjRef gwapiv1b1.SecretObjectReference,
+	secretObjRef gwapiv1.SecretObjectReference,
 	resources *Resources,
 ) (*corev1.ConfigMap, error) {
 	if err := t.validateSecretObjectRef(allowCrossNamespace, from, secretObjRef, resources); err != nil {
@@ -970,7 +1027,7 @@ func (t *Translator) validateConfigMapRef(
 func (t *Translator) validateSecretObjectRef(
 	allowCrossNamespace bool,
 	from crossNamespaceFrom,
-	secretRef gwapiv1b1.SecretObjectReference,
+	secretRef gwapiv1.SecretObjectReference,
 	resources *Resources,
 ) error {
 	var kind string

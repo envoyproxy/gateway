@@ -72,7 +72,7 @@ type ListenerContext struct {
 	listenerStatusIdx         int
 	namespaceSelector         labels.Selector
 	tlsSecrets                []*corev1.Secret
-	frontendValidationCACerts []string
+	frontendValidationCACerts []byte
 }
 
 func (l *ListenerContext) SetSupportedKinds(kinds ...gwapiv1.RouteGroupKind) {
@@ -139,7 +139,7 @@ func (l *ListenerContext) SetTLSSecrets(tlsSecrets []*corev1.Secret) {
 	l.tlsSecrets = tlsSecrets
 }
 
-func (l *ListenerContext) SetFrontendValidationCACerts(frontendValidationCACerts []string) {
+func (l *ListenerContext) SetFrontendValidationCACerts(frontendValidationCACerts []byte) {
 	l.frontendValidationCACerts = frontendValidationCACerts
 }
 
