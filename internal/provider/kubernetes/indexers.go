@@ -43,6 +43,7 @@ const (
 	backendEnvoyExtensionPolicyIndex = "backendEnvoyExtensionPolicyIndex"
 	backendEnvoyProxyTelemetryIndex  = "backendEnvoyProxyTelemetryIndex"
 	secretEnvoyProxyIndex            = "secretEnvoyProxyIndex"
+	secretEnvoyExtensionPolicyIndex  = "secretEnvoyExtensionPolicyIndex"
 )
 
 func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
@@ -652,6 +653,12 @@ func addEnvoyExtensionPolicyIndexers(ctx context.Context, mgr manager.Manager) e
 		return err
 	}
 
+	if err = mgr.GetFieldIndexer().IndexField(
+		ctx, &egv1a1.EnvoyExtensionPolicy{}, secretEnvoyExtensionPolicyIndex,
+		secretEnvoyExtensionPolicyIndexFunc); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -667,6 +674,25 @@ func backendEnvoyExtensionPolicyIndexFunc(rawObj client.Object) []string {
 				types.NamespacedName{
 					Namespace: gatewayapi.NamespaceDerefOr(backendRef.Namespace, envoyExtensionPolicy.Namespace),
 					Name:      string(backendRef.Name),
+				}.String())
+		}
+	}
+
+	return ret
+}
+
+func secretEnvoyExtensionPolicyIndexFunc(rawObj client.Object) []string {
+	envoyExtensionPolicy := rawObj.(*egv1a1.EnvoyExtensionPolicy)
+
+	var ret []string
+
+	for _, wasm := range envoyExtensionPolicy.Spec.Wasm {
+		if wasm.Code.Image != nil && wasm.Code.Image.PullSecretRef != nil {
+			secretRef := wasm.Code.Image.PullSecretRef
+			ret = append(ret,
+				types.NamespacedName{
+					Namespace: gatewayapi.NamespaceDerefOr(secretRef.Namespace, envoyExtensionPolicy.Namespace),
+					Name:      string(secretRef.Name),
 				}.String())
 		}
 	}
