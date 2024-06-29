@@ -81,7 +81,7 @@ type ClientTrafficPolicySpec struct {
 	// Connection includes client connection settings.
 	//
 	// +optional
-	Connection *Connection `json:"connection,omitempty"`
+	Connection *ClientConnection `json:"connection,omitempty"`
 	// HTTP1 provides HTTP/1 configuration on the listener.
 	//
 	// +optional

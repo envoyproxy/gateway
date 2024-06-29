@@ -1,0 +1,21 @@
+{{- /* This will try to find a resource in the "boilerplates"  top-level content directory */ -}}
+{{- $name := .Get 0 -}}
+{{- $position := .Position }}
+
+{{- if $name -}}
+    {{- $bundle := .Page.GetPage "/boilerplates" -}}
+    {{- with $bundle -}}
+        {{- $name := printf "%s.md" $name -}}
+        {{- $pattern := printf "%s*" $name -}}
+        {{- $resource := $bundle.Resources.GetMatch $pattern -}}
+        {{- with $resource -}}
+            {{- .Content | markdownify -}}
+        {{- else -}}
+            {{- errorf "Could not find boilerplate '%s' (%s)" $name $position -}}
+        {{- end -}}
+    {{- else -}}
+        {{- errorf "'boilerplates' directory was not found (%s)" $position -}}
+    {{- end -}}
+{{- else -}}
+    {{- errorf "Missing name in boilerplate (%s)" $position -}}
+{{- end -}}

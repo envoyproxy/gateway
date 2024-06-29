@@ -519,7 +519,7 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 			resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
 				Group:     backendRef.Group,
 				Kind:      backendRef.Kind,
-				Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
+				Namespace: gatewayapi.NamespacePtr(backendNamespace),
 				Name:      backendRef.Name,
 			})
 
@@ -1661,11 +1661,11 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 		}
 
 		for _, backendRef := range backendRefs {
-			backendNamespace := gatewayapi.NamespaceDerefOrAlpha(backendRef.Namespace, ep.Namespace)
+			backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, ep.Namespace)
 			resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
 				Group:     backendRef.BackendObjectReference.Group,
 				Kind:      backendRef.BackendObjectReference.Kind,
-				Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
+				Namespace: gatewayapi.NamespacePtr(backendNamespace),
 				Name:      backendRef.Name,
 			})
 		}
@@ -1818,6 +1818,7 @@ func (r *gatewayAPIReconciler) processExtensionServerPolicies(
 // processEnvoyExtensionPolicyObjectRefs adds the referenced resources in EnvoyExtensionPolicies
 // to the resourceTree
 // - BackendRefs for ExtProcs
+// - SecretRefs for Wasms
 func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
 	ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings,
 ) {
@@ -1838,7 +1839,7 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
 				resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
 					Group:     backendRef.Group,
 					Kind:      backendRef.Kind,
-					Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
+					Namespace: gatewayapi.NamespacePtr(backendNamespace),
 					Name:      backendRef.Name,
 				})
 
@@ -1865,6 +1866,24 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
 						r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
 							"name", refGrant.Name)
 					}
+				}
+			}
+		}
+
+		// Add the referenced SecretRefs in EnvoyExtensionPolicies to the resourceTree
+		for _, wasm := range policy.Spec.Wasm {
+			if wasm.Code.Image != nil && wasm.Code.Image.PullSecretRef != nil {
+				if err := r.processSecretRef(
+					ctx,
+					resourceMap,
+					resourceTree,
+					gatewayapi.KindSecurityPolicy,
+					policy.Namespace,
+					policy.Name,
+					*wasm.Code.Image.PullSecretRef); err != nil {
+					r.log.Error(err,
+						"failed to process Wasm Image PullSecretRef for EnvoyExtensionPolicy",
+						"policy", policy, "secretRef", wasm.Code.Image.PullSecretRef)
 				}
 			}
 		}
