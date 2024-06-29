@@ -37,3 +37,6 @@ charts/gateway-addons-helm/charts/
 
 # VIM
 .*.swp
+
+# Benchmark test profiles
+test/benchmark/profiles/

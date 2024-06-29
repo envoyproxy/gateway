@@ -92,7 +92,7 @@ func RenderReport(writer io.Writer, name, description string, reports []*Benchma
 
 	writeSection(writer, name, titleLevel, description)
 
-	writeSection(writer, "Results", titleLevel+1, "Click to see the full results.")
+	writeSection(writer, "Results", titleLevel+1, "Expand to see the full results.")
 	renderResultsTable(writer, reports)
 
 	writeSection(writer, "Metrics", titleLevel+1, "")
@@ -100,6 +100,9 @@ func RenderReport(writer io.Writer, name, description string, reports []*Benchma
 	if err != nil {
 		return err
 	}
+
+	writeSection(writer, "Profiles", titleLevel+1, "")
+	renderProfilesTable(writer, "Memory", "heap", titleLevel+2, reports)
 
 	return nil
 }
@@ -141,7 +144,7 @@ func renderEnvSettingsTable(writer io.Writer) {
 		},
 	}
 
-	renderMetricsTableHeader(table, headers)
+	renderTableHeader(table, headers)
 
 	writeTableRow(table, headers, func(_ int, h ReportTableHeader) string {
 		env := strings.Replace(strings.ToUpper(h.Name), " ", "_", -1)
@@ -190,7 +193,7 @@ func renderMetricsTable(writer io.Writer, headerSettings []ReportTableHeader, re
 		}
 	}
 
-	renderMetricsTableHeader(table, headers)
+	renderTableHeader(table, headers)
 
 	for _, report := range reports {
 		mfCP, err := parseMetrics(report.RawCPMetrics)
@@ -234,7 +237,18 @@ func renderMetricsTable(writer io.Writer, headerSettings []ReportTableHeader, re
 	return nil
 }
 
-func renderMetricsTableHeader(table *tabwriter.Writer, headers []ReportTableHeader) {
+func renderProfilesTable(writer io.Writer, target, key string, titleLevel int, reports []*BenchmarkReport) {
+	writeSection(writer, target, titleLevel, "")
+
+	for _, report := range reports {
+		// The image is not be rendered yet, so it is a placeholder for path.
+		// The image will be rendered after the test has finished.
+		writeSection(writer, report.Name, titleLevel+1,
+			fmt.Sprintf("![%s-%s](%s.png)", key, report.Name, report.ProfilesPath[key]))
+	}
+}
+
+func renderTableHeader(table *tabwriter.Writer, headers []ReportTableHeader) {
 	writeTableRow(table, headers, func(_ int, h ReportTableHeader) string {
 		if h.Metric != nil && len(h.Metric.DisplayUnit) > 0 {
 			return fmt.Sprintf("%s (%s)", h.Name, h.Metric.DisplayUnit)
