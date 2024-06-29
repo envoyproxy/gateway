@@ -25,11 +25,11 @@ type PolicyTargetReferences struct {
 	TargetSelectors []TargetSelector `json:"targetSelectors,omitempty"`
 }
 
+// +kubebuilder:validation:XValidation:rule="has(self.group) ? self.group == 'gateway.networking.k8s.io' : true ", message="group must be gateway.networking.k8s.io"
 type TargetSelector struct {
 	// Group is the group that this selector targets. Defaults to gateway.networking.k8s.io
 	//
 	// +kubebuilder:default:="gateway.networking.k8s.io"
-	// +kubebuilder:validation:XValidation:rule="has(self) ? self == 'gateway.networking.k8s.io' : true ", message="group must be gateway.networking.k8s.io"
 	Group *gwapiv1a2.Group `json:"group,omitempty"`
 
 	// Kind is the resource kind that this selector targets.

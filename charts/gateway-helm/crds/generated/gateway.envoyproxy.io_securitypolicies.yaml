@@ -1105,10 +1105,6 @@ spec:
                       maxLength: 253
                       pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                       type: string
-                      x-kubernetes-validations:
-                      - message: group must be gateway.networking.k8s.io
-                        rule: 'has(self) ? self == ''gateway.networking.k8s.io'' :
-                          true '
                     kind:
                       description: Kind is the resource kind that this selector targets.
                       maxLength: 63
@@ -1125,6 +1121,10 @@ spec:
                   - kind
                   - matchLabels
                   type: object
+                  x-kubernetes-validations:
+                  - message: group must be gateway.networking.k8s.io
+                    rule: 'has(self.group) ? self.group == ''gateway.networking.k8s.io''
+                      : true '
                 type: array
             type: object
             x-kubernetes-validations:
