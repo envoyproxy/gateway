@@ -281,6 +281,12 @@ func TestTranslate(t *testing.T) {
 			to:     "gateway-api",
 			expect: false,
 		},
+		{
+			name:   "no-service-cluster-ip",
+			from:   "gateway-api",
+			to:     "xds",
+			expect: true,
+		},
 	}
 
 	flag.Parse()
