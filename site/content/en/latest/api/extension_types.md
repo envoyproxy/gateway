@@ -235,7 +235,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `name` | _string_ |  false  | Name is a user-friendly name for the rule. It's just for display purposes. |
+| `name` | _string_ |  false  | Name is a user-friendly name for the rule.<br />If not specified, Envoy Gateway will generate a unique name for the rule.n |
 | `action` | _[AuthorizationAction](#authorizationaction)_ |  true  | Action defines the action to be taken if the rule matches. |
 | `principal` | _[Principal](#principal)_ |  true  | Principal specifies the client identity of a request. |
 
@@ -1870,14 +1870,15 @@ _Appears in:_
 
 
 
-HTTPWasmCodeSource defines the HTTP URL containing the wasm code.
+HTTPWasmCodeSource defines the HTTP URL containing the Wasm code.
 
 _Appears in:_
 - [WasmCodeSource](#wasmcodesource)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `url` | _string_ |  true  | URL is the URL containing the wasm code. |
+| `url` | _string_ |  true  | URL is the URL containing the Wasm code. |
+| `sha256` | _string_ |  false  | SHA256 checksum that will be used to verify the Wasm code.<br /><br />If not specified, Envoy Gateway will not verify the downloaded Wasm code.<br />kubebuilder:validation:Pattern=`^[a-f0-9]{64}$` |
 
 
 #### Header
@@ -1979,19 +1980,35 @@ _Appears in:_
 | `port` | _integer_ |  true  | Port defines the port of the backend endpoint. |
 
 
+#### ImagePullPolicy
+
+_Underlying type:_ _string_
+
+ImagePullPolicy defines the policy to use when pulling an OIC image.
+
+_Appears in:_
+- [WasmCodeSource](#wasmcodesource)
+
+| Value | Description |
+| ----- | ----------- |
+| `IfNotPresent` | ImagePullPolicyIfNotPresent will only pull the image if it does not already exist in the EG cache.<br /> | 
+| `Always` | ImagePullPolicyAlways will pull the image when the EnvoyExtension resource version changes.<br />Note: EG does not update the Wasm module every time an Envoy proxy requests the Wasm module.<br /> | 
+
+
 #### ImageWasmCodeSource
 
 
 
-ImageWasmCodeSource defines the OCI image containing the wasm code.
+ImageWasmCodeSource defines the OCI image containing the Wasm code.
 
 _Appears in:_
 - [WasmCodeSource](#wasmcodesource)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `url` | _string_ |  true  | URL is the URL of the OCI image. |
-| `pullSecret` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  true  | PullSecretRef is a reference to the secret containing the credentials to pull the image. |
+| `url` | _string_ |  true  | URL is the URL of the OCI image.<br />URL can be in the format of `registry/image:tag` or `registry/image@sha256:digest`. |
+| `sha256` | _string_ |  false  | SHA256 checksum that will be used to verify the OCI image.<br /><br />It must match the digest of the OCI image.<br /><br />If not specified, Envoy Gateway will not verify the downloaded OCI image.<br />kubebuilder:validation:Pattern=`^[a-f0-9]{64}$` |
+| `pullSecretRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  false  | PullSecretRef is a reference to the secret containing the credentials to pull the image.<br />Only support Kubernetes Secret resource from the same namespace. |
 
 
 #### InfrastructureProviderType
@@ -3635,7 +3652,7 @@ _Appears in:_
 
 
 
-Wasm defines a wasm extension.
+Wasm defines a Wasm extension.
 
 
 Note: at the moment, Envoy Gateway does not support configuring Wasm runtime.
@@ -3646,9 +3663,9 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `name` | _string_ |  true  | Name is a unique name for this Wasm extension. It is used to identify the<br />Wasm extension if multiple extensions are handled by the same vm_id and root_id.<br />It's also used for logging/debugging. |
-| `rootID` | _string_ |  true  | RootID is a unique ID for a set of extensions in a VM which will share a<br />RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog).<br />If left blank, all extensions with a blank root_id with the same vm_id will share Context(s).<br />RootID must match the root_id parameter used to register the Context in the Wasm code. |
-| `code` | _[WasmCodeSource](#wasmcodesource)_ |  true  | Code is the wasm code for the extension. |
+| `name` | _string_ |  false  | Name is a unique name for this Wasm extension. It is used to identify the<br />Wasm extension if multiple extensions are handled by the same vm_id and root_id.<br />It's also used for logging/debugging.<br />If not specified, EG will generate a unique name for the Wasm extension. |
+| `rootID` | _string_ |  true  | RootID is a unique ID for a set of extensions in a VM which will share a<br />RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog).<br />If left blank, all extensions with a blank root_id with the same vm_id will share Context(s).<br /><br />Note: RootID must match the root_id parameter used to register the Context in the Wasm code. |
+| `code` | _[WasmCodeSource](#wasmcodesource)_ |  true  | Code is the Wasm code for the extension. |
 | `config` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#json-v1-apiextensions-k8s-io)_ |  false  | Config is the configuration for the Wasm extension.<br />This configuration will be passed as a JSON string to the Wasm extension. |
 | `failOpen` | _boolean_ |  false  | FailOpen is a switch used to control the behavior when a fatal error occurs<br />during the initialization or the execution of the Wasm extension.<br />If FailOpen is set to true, the system bypasses the Wasm extension and<br />allows the traffic to pass through. Otherwise, if it is set to false or<br />not set (defaulting to false), the system blocks the traffic and returns<br />an HTTP 5xx error. |
 
@@ -3657,32 +3674,32 @@ _Appears in:_
 
 
 
-WasmCodeSource defines the source of the wasm code.
+WasmCodeSource defines the source of the Wasm code.
 
 _Appears in:_
 - [Wasm](#wasm)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `type` | _[WasmCodeSourceType](#wasmcodesourcetype)_ |  true  | Type is the type of the source of the wasm code.<br />Valid WasmCodeSourceType values are "HTTP" or "Image". |
-| `http` | _[HTTPWasmCodeSource](#httpwasmcodesource)_ |  false  | HTTP is the HTTP URL containing the wasm code.<br /><br />Note that the HTTP server must be accessible from the Envoy proxy. |
-| `image` | _[ImageWasmCodeSource](#imagewasmcodesource)_ |  false  | Image is the OCI image containing the wasm code.<br /><br />Note that the image must be accessible from the Envoy Gateway. |
-| `sha256` | _string_ |  true  | SHA256 checksum that will be used to verify the wasm code.<br /><br />kubebuilder:validation:Pattern=`^[a-f0-9]{64}$` |
+| `type` | _[WasmCodeSourceType](#wasmcodesourcetype)_ |  true  | Type is the type of the source of the Wasm code.<br />Valid WasmCodeSourceType values are "HTTP" or "Image". |
+| `http` | _[HTTPWasmCodeSource](#httpwasmcodesource)_ |  false  | HTTP is the HTTP URL containing the Wasm code.<br /><br />Note that the HTTP server must be accessible from the Envoy proxy. |
+| `image` | _[ImageWasmCodeSource](#imagewasmcodesource)_ |  false  | Image is the OCI image containing the Wasm code.<br /><br />Note that the image must be accessible from the Envoy Gateway. |
+| `pullPolicy` | _[ImagePullPolicy](#imagepullpolicy)_ |  false  | PullPolicy is the policy to use when pulling the Wasm module by either the HTTP or Image source.<br />This field is only applicable when the SHA256 field is not set.<br /><br />If not specified, the default policy is IfNotPresent except for OCI images whose tag is latest.<br /><br />Note: EG does not update the Wasm module every time an Envoy proxy requests<br />the Wasm module even if the pull policy is set to Always.<br />It only updates the Wasm module when the EnvoyExtension resource version changes. |
 
 
 #### WasmCodeSourceType
 
 _Underlying type:_ _string_
 
-WasmCodeSourceType specifies the types of sources for the wasm code.
+WasmCodeSourceType specifies the types of sources for the Wasm code.
 
 _Appears in:_
 - [WasmCodeSource](#wasmcodesource)
 
 | Value | Description |
 | ----- | ----------- |
-| `HTTP` | HTTPWasmCodeSourceType allows the user to specify the wasm code in an HTTP URL.<br /> | 
-| `Image` | ImageWasmCodeSourceType allows the user to specify the wasm code in an OCI image.<br /> | 
+| `HTTP` | HTTPWasmCodeSourceType allows the user to specify the Wasm code in an HTTP URL.<br /> | 
+| `Image` | ImageWasmCodeSourceType allows the user to specify the Wasm code in an OCI image.<br /> | 
 
 
 #### WithUnderscoresAction
