@@ -1599,7 +1599,7 @@ type RateLimitValue struct {
 // AccessLog holds the access logging configuration.
 // +k8s:deepcopy-gen=true
 type AccessLog struct {
-	CELExpression []string                  `json:"celExpression,omitempty" yaml:"celExpression,omitempty"`
+	CELMatches    []string                  `json:"celMatches,omitempty" yaml:"celMatches,omitempty"`
 	Text          []*TextAccessLog          `json:"text,omitempty" yaml:"text,omitempty"`
 	JSON          []*JSONAccessLog          `json:"json,omitempty" yaml:"json,omitempty"`
 	OpenTelemetry []*OpenTelemetryAccessLog `json:"openTelemetry,omitempty" yaml:"openTelemetry,omitempty"`

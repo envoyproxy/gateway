@@ -222,7 +222,7 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 
 	// add filter for access logs
 	filters := make([]*accesslog.AccessLogFilter, 0)
-	for _, expr := range al.CELExpression {
+	for _, expr := range al.CELMatches {
 		filters = append(filters, celAccessLogFilter(expr))
 	}
 	if forListener {

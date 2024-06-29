@@ -1,6 +1,6 @@
 name: "accesslog"
 accesslog:
-  celExpression:
+  celMatches:
   - response.code >= 400
   text:
   - path: "/dev/stdout"

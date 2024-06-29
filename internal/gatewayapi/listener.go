@@ -12,6 +12,7 @@ import (
 	"github.com/google/cel-go/cel"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -303,15 +304,21 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 			}
 		}
 
-		var validExprs []string
+		var (
+			validExprs []string
+			errs       []error
+		)
 		for _, expr := range accessLog.Matches {
 			if !validCELExpression(expr) {
-				t.Logger.Info("invalid CEL expression", "expression", expr)
+				errs = append(errs, fmt.Errorf("invalid CEL expression: %s", expr))
 				continue
 			}
 			validExprs = append(validExprs, expr)
 		}
-		irAccessLog.CELExpression = validExprs
+		if len(errs) > 0 {
+			return nil, utilerrors.NewAggregate(errs)
+		}
+		irAccessLog.CELMatches = validExprs
 	}
 
 	return irAccessLog, nil

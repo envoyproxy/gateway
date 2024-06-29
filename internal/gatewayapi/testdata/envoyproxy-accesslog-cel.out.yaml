@@ -135,7 +135,7 @@ infraIR:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      celExpression:
+      celMatches:
       - response.code >= 400
       openTelemetry:
       - authority: otel-collector.monitoring.svc.cluster.local

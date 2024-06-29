@@ -1,6 +1,6 @@
 name: "accesslog"
 accesslog:
-  celExpression:
+  celMatches:
   - response.code >= 400
   - request.url_path.contains('v1beta3')
   text:

@@ -15,6 +15,12 @@ gateways:
       port: 80
       protocol: HTTP
   status:
+    conditions:
+    - lastTransitionTime: null
+      message: 'Invalid access log backendRefs: invalid CEL expression: )++++'
+      reason: Invalid
+      status: "False"
+      type: ListenersNotValid
     listeners:
     - attachedRoutes: 0
       conditions:
@@ -135,27 +141,6 @@ infraIR:
       name: envoy-gateway/gateway-1
 xdsIR:
   envoy-gateway/gateway-1:
-    accessLog:
-      celExpression:
-      - response.code >= 400
-      openTelemetry:
-      - authority: otel-collector.monitoring.svc.cluster.local
-        destination:
-          name: accesslog-0
-          settings:
-          - endpoints:
-            - host: otel-collector.monitoring.svc.cluster.local
-              port: 4317
-            protocol: GRPC
-            weight: 1
-        resources:
-          k8s.cluster.name: cluster-1
-        text: |
-          [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
-      text:
-      - format: |
-          [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
-        path: /dev/stdout
     http:
     - address: 0.0.0.0
       hostnames:
