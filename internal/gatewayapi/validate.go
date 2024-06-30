@@ -595,6 +595,54 @@ func (t *Translator) validateAndGetFrontendValidationCACerts(listener *ListenerC
 			}
 			cacerts = append(cacerts, cacertBytes...)
 		}
+
+		if ref.Kind == KindConfigMap {
+			from := crossNamespaceFrom{
+				group:     string(ref.Group),
+				kind:      string(ref.Kind),
+				namespace: string(*ref.Namespace),
+			}
+
+			secretRef := gwapiv1.SecretObjectReference{
+				Name:      ref.Name,
+				Group:     &ref.Group,
+				Kind:      &ref.Kind,
+				Namespace: ref.Namespace,
+			}
+
+			configMap, err := t.validateConfigMapRef(false, from, secretRef, resources)
+			if err != nil {
+				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
+					listener.listenerStatusIdx,
+					gwapiv1.ListenerConditionResolvedRefs,
+					metav1.ConditionFalse,
+					gwapiv1.ListenerReasonInvalidCertificateRef,
+					fmt.Sprintf("ConfigMap %s.", err.Error()))
+				break
+			}
+
+			cacertBytes, ok := configMap.Data[caCertKey]
+			if !ok || len(cacertBytes) == 0 {
+				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
+					listener.listenerStatusIdx,
+					gwapiv1.ListenerConditionResolvedRefs,
+					metav1.ConditionFalse,
+					gwapiv1.ListenerReasonInvalidCertificateRef,
+					fmt.Sprintf("caCertificateRef not found in configmap %s/%s.", listener.gateway.Namespace, secretRef.Name))
+				break
+			}
+
+			if err := validateCertificate([]byte(cacertBytes)); err != nil {
+				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
+					listener.listenerStatusIdx,
+					gwapiv1.ListenerConditionResolvedRefs,
+					metav1.ConditionFalse,
+					gwapiv1.ListenerReasonInvalidCertificateRef,
+					fmt.Sprintf("invalid certificate in secret %s/%s.", listener.gateway.Namespace, secretRef.Name))
+				break
+			}
+			cacerts = append(cacerts, cacertBytes...)
+		}
 	}
 
 	return cacerts
