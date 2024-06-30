@@ -137,6 +137,13 @@ func computeGatewayProgrammedCondition(gw *gwapiv1.Gateway, deployment *appsv1.D
 			"No addresses have been assigned to the Gateway", time.Now(), gw.Generation)
 	}
 
+	if len(gw.Status.Addresses) > 16 {
+		return newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionFalse,
+			string(gwapiv1.GatewayReasonInvalid),
+			fmt.Sprintf("Too many addresses (%d) have been assigned to the Gateway, the maximum number of addresses is 16",
+				len(gw.Status.Addresses)), time.Now(), gw.Generation)
+	}
+
 	// If there are no available replicas for the Envoy Deployment, don't
 	// mark the Gateway as ready yet.
 

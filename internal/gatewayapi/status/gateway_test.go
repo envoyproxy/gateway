@@ -7,6 +7,7 @@ package status
 
 import (
 	"reflect"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -129,33 +130,43 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 
 func TestGatewayReadyCondition(t *testing.T) {
 	testCases := []struct {
-		name             string
-		serviceAddress   bool
-		deploymentStatus appsv1.DeploymentStatus
-		expect           metav1.Condition
+		name string
+		// serviceAddressNum indicates how many addresses are set in the Gateway status.
+		serviceAddressNum int
+		deploymentStatus  appsv1.DeploymentStatus
+		expect            metav1.Condition
 	}{
 		{
-			name:             "ready gateway",
-			serviceAddress:   true,
-			deploymentStatus: appsv1.DeploymentStatus{AvailableReplicas: 1},
+			name:              "ready gateway",
+			serviceAddressNum: 1,
+			deploymentStatus:  appsv1.DeploymentStatus{AvailableReplicas: 1},
 			expect: metav1.Condition{
 				Status: metav1.ConditionTrue,
 				Reason: string(gwapiv1.GatewayConditionProgrammed),
 			},
 		},
 		{
-			name:             "not ready gateway without address",
-			serviceAddress:   false,
-			deploymentStatus: appsv1.DeploymentStatus{AvailableReplicas: 1},
+			name:              "not ready gateway without address",
+			serviceAddressNum: 0,
+			deploymentStatus:  appsv1.DeploymentStatus{AvailableReplicas: 1},
 			expect: metav1.Condition{
 				Status: metav1.ConditionFalse,
 				Reason: string(gwapiv1.GatewayReasonAddressNotAssigned),
 			},
 		},
 		{
-			name:             "not ready gateway with address unavailable pods",
-			serviceAddress:   true,
-			deploymentStatus: appsv1.DeploymentStatus{AvailableReplicas: 0},
+			name:              "not ready gateway with too many addresses",
+			serviceAddressNum: 17,
+			deploymentStatus:  appsv1.DeploymentStatus{AvailableReplicas: 1},
+			expect: metav1.Condition{
+				Status: metav1.ConditionFalse,
+				Reason: string(gwapiv1.GatewayReasonInvalid),
+			},
+		},
+		{
+			name:              "not ready gateway with address unavailable pods",
+			serviceAddressNum: 1,
+			deploymentStatus:  appsv1.DeploymentStatus{AvailableReplicas: 0},
 			expect: metav1.Condition{
 				Status: metav1.ConditionFalse,
 				Reason: string(gwapiv1.GatewayReasonNoResources),
@@ -168,14 +179,11 @@ func TestGatewayReadyCondition(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			gtw := &gwapiv1.Gateway{}
-			if tc.serviceAddress {
-				gtw.Status = gwapiv1.GatewayStatus{
-					Addresses: []gwapiv1.GatewayStatusAddress{
-						{
-							Type:  ptr.To(gwapiv1.IPAddressType),
-							Value: "1.1.1.1",
-						},
-					},
+			gtw.Status.Addresses = make([]gwapiv1.GatewayStatusAddress, tc.serviceAddressNum)
+			for i := 0; i < tc.serviceAddressNum; i++ {
+				gtw.Status.Addresses[i] = gwapiv1.GatewayStatusAddress{
+					Type:  ptr.To(gwapiv1.IPAddressType),
+					Value: strconv.Itoa(i),
 				}
 			}
 
