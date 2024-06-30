@@ -19,7 +19,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 
-	"github.com/envoyproxy/gateway/test/e2e/utils/prometheus"
+	"github.com/envoyproxy/gateway/test/utils/prometheus"
 )
 
 func init() {
