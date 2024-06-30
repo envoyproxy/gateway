@@ -113,10 +113,8 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 					},
 				}
 				if len(listener.frontendValidationCACerts) > 0 {
-					caCert := ir.TLSCACertificate{}
-
-					for _, ca := range listener.frontendValidationCACerts {
-						caCert.Certificate = append(caCert.Certificate, ca)
+					caCert := ir.TLSCACertificate{
+						Certificate: listener.frontendValidationCACerts,
 					}
 					irListener.TLS.CACertificate = &caCert
 				}

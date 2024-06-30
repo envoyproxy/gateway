@@ -537,21 +537,21 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerCon
 func (t *Translator) validateAndGetFrontendValidationCACerts(listener *ListenerContext, resources *Resources) []byte {
 	var cacerts []byte
 	for _, ref := range listener.TLS.FrontendValidation.CACertificateRefs {
+		from := crossNamespaceFrom{
+			group:     egv1a1.GroupName,
+			kind:      listener.gateway.Kind,
+			namespace: listener.gateway.Namespace,
+		}
+
+		secretRef := gwapiv1.SecretObjectReference{
+			Name:      ref.Name,
+			Group:     &ref.Group,
+			Kind:      &ref.Kind,
+			Namespace: ref.Namespace,
+		}
+
 		if ref.Kind == KindSecret {
-			from := crossNamespaceFrom{
-				group:     string(ref.Group),
-				kind:      string(ref.Kind),
-				namespace: string(*ref.Namespace),
-			}
-
-			secretRef := gwapiv1.SecretObjectReference{
-				Name:      ref.Name,
-				Group:     &ref.Group,
-				Kind:      &ref.Kind,
-				Namespace: ref.Namespace,
-			}
-
-			secret, err := t.validateSecretRef(false, from, secretRef, resources)
+			secret, err := t.validateSecretRef(true, from, secretRef, resources)
 			if err != nil {
 				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
 					listener.listenerStatusIdx,
@@ -581,7 +581,6 @@ func (t *Translator) validateAndGetFrontendValidationCACerts(listener *ListenerC
 					gwapiv1.ListenerReasonInvalidCertificateRef,
 					fmt.Sprintf("caCertificateRef not found in secret %s/%s.", listener.gateway.Namespace, secretRef.Name))
 				break
-
 			}
 
 			if err := validateCertificate(cacertBytes); err != nil {
@@ -593,24 +592,12 @@ func (t *Translator) validateAndGetFrontendValidationCACerts(listener *ListenerC
 					fmt.Sprintf("invalid certificate in secret %s/%s.", listener.gateway.Namespace, secretRef.Name))
 				break
 			}
+
 			cacerts = append(cacerts, cacertBytes...)
 		}
 
 		if ref.Kind == KindConfigMap {
-			from := crossNamespaceFrom{
-				group:     string(ref.Group),
-				kind:      string(ref.Kind),
-				namespace: string(*ref.Namespace),
-			}
-
-			secretRef := gwapiv1.SecretObjectReference{
-				Name:      ref.Name,
-				Group:     &ref.Group,
-				Kind:      &ref.Kind,
-				Namespace: ref.Namespace,
-			}
-
-			configMap, err := t.validateConfigMapRef(false, from, secretRef, resources)
+			configMap, err := t.validateConfigMapRef(true, from, secretRef, resources)
 			if err != nil {
 				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
 					listener.listenerStatusIdx,
@@ -641,6 +628,7 @@ func (t *Translator) validateAndGetFrontendValidationCACerts(listener *ListenerC
 					fmt.Sprintf("invalid certificate in secret %s/%s.", listener.gateway.Namespace, secretRef.Name))
 				break
 			}
+
 			cacerts = append(cacerts, cacertBytes...)
 		}
 	}
