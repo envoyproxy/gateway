@@ -13,7 +13,7 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.wasm/envoyextensionpolicy/default/policy-for-http-route/0:
+        envoy.filters.http.wasm/envoyextensionpolicy/default/policy-for-http-route/wasm/0:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
           config: {}
     - match:
@@ -24,9 +24,12 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.wasm/envoyextensionpolicy/envoy-gateway/policy-for-gateway/0:
+        envoy.filters.http.wasm/envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/0:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
           config: {}
-        envoy.filters.http.wasm/envoyextensionpolicy/envoy-gateway/policy-for-gateway/1:
+        envoy.filters.http.wasm/envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/1:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config: {}
+        envoy.filters.http.wasm/envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/2:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
           config: {}

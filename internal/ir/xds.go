@@ -1601,6 +1601,7 @@ type RateLimitValue struct {
 // AccessLog holds the access logging configuration.
 // +k8s:deepcopy-gen=true
 type AccessLog struct {
+	CELMatches    []string                  `json:"celMatches,omitempty" yaml:"celMatches,omitempty"`
 	Text          []*TextAccessLog          `json:"text,omitempty" yaml:"text,omitempty"`
 	JSON          []*JSONAccessLog          `json:"json,omitempty" yaml:"json,omitempty"`
 	OpenTelemetry []*OpenTelemetryAccessLog `json:"openTelemetry,omitempty" yaml:"openTelemetry,omitempty"`
@@ -2208,7 +2209,7 @@ type ExtProc struct {
 // +k8s:deepcopy-gen=true
 type Wasm struct {
 	// Name is a unique name for an Wasm configuration.
-	// The xds translator only generates one ExtProc filter for each unique name.
+	// The xds translator only generates one Wasm filter for each unique name.
 	Name string `json:"name"`
 
 	// RootID is a unique ID for a set of extensions in a VM which will share a
@@ -2229,17 +2230,26 @@ type Wasm struct {
 	// during the initialization or the execution of the Wasm extension.
 	FailOpen bool `json:"failOpen"`
 
-	// HTTPWasmCode is the HTTP Wasm code source.
-	HTTPWasmCode *HTTPWasmCode `json:"httpWasmCode,omitempty"`
+	// Code is the HTTP Wasm code source.
+	// Envoy only supports HTTP Wasm code source. EG downloads the Wasm code from the
+	// original URL(either an HTTP URL or an OCI image) and serves it through the
+	// local HTTP server.
+	Code *HTTPWasmCode `json:"httpWasmCode,omitempty"`
 }
 
 // HTTPWasmCode holds the information associated with the HTTP Wasm code source.
+// +k8s:deepcopy-gen=true
 type HTTPWasmCode struct {
-	// URL is the URL of the Wasm code.
-	URL string `json:"url"`
+	// ServingURL is the URL of the Wasm code served by the local EG HTTP server.
+	ServingURL string `json:"servingURL"`
 
-	// SHA256 checksum that will be used to verify the wasm code.
+	// SHA256 checksum that will be used by the Envoy to verify the Wasm code.
+	// It's different from the digest of the OCI image.
 	SHA256 string `json:"sha256"`
+
+	// OriginalURL is the original downloading URL of the Wasm code.
+	// Note: This field is just used for testing. It's not used to generate the Envoy configuration.
+	OriginalURL string `json:"originalDownloadingURL"`
 }
 
 // DestinationFilters contains HTTP filters that will be used with the DestinationSetting.
