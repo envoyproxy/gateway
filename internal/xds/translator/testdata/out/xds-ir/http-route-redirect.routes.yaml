@@ -30,3 +30,19 @@
           pattern:
             regex: ^/redirect/\/*
           substitution: /
+    - match:
+        prefix: /
+      name: redirect-route-4
+      redirect:
+        hostRedirect: redirected.com
+        prefixRewrite: /redirected
+        responseCode: FOUND
+        schemeRedirect: https
+    - match:
+        prefix: /
+      name: redirect-route-5
+      redirect:
+        hostRedirect: redirected.com
+        prefixRewrite: /redirected
+        responseCode: FOUND
+        schemeRedirect: https

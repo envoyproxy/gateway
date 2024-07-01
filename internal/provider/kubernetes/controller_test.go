@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -20,7 +19,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
-	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/logging"
 )
 
@@ -152,196 +150,7 @@ func TestRemoveGatewayClassFinalizer(t *testing.T) {
 	}
 }
 
-func TestHasManagedClass(t *testing.T) {
-	gcCtrlName := gwapiv1.GatewayController(egv1a1.GatewayControllerName)
-
-	testCases := []struct {
-		name     string
-		ep       *egv1a1.EnvoyProxy
-		classes  []*gwapiv1.GatewayClass
-		expected bool
-	}{
-		{
-			name: "no matching gatewayclasses",
-			ep: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: config.DefaultNamespace,
-					Name:      "test-envoyproxy",
-				},
-			},
-			classes: []*gwapiv1.GatewayClass{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-gc",
-					},
-					Spec: gwapiv1.GatewayClassSpec{
-						ControllerName: "SomeOtherController",
-						ParametersRef: &gwapiv1.ParametersReference{
-							Group:     gwapiv1.Group(egv1a1.GroupVersion.Group),
-							Kind:      gwapiv1.Kind(egv1a1.KindEnvoyProxy),
-							Name:      "test-envoyproxy",
-							Namespace: gatewayapi.NamespacePtr(config.DefaultNamespace),
-						},
-					},
-					Status: gwapiv1.GatewayClassStatus{
-						Conditions: []metav1.Condition{
-							{
-								Type:   string(gwapiv1.GatewayClassConditionStatusAccepted),
-								Status: metav1.ConditionTrue,
-							},
-						},
-						SupportedFeatures: status.GatewaySupportedFeatures,
-					},
-				},
-			},
-			expected: false,
-		},
-		{
-			name: "match one gatewayclass",
-			ep: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: config.DefaultNamespace,
-					Name:      "test-envoyproxy",
-				},
-			},
-			classes: []*gwapiv1.GatewayClass{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-gc",
-					},
-					Spec: gwapiv1.GatewayClassSpec{
-						ControllerName: gcCtrlName,
-						ParametersRef: &gwapiv1.ParametersReference{
-							Group:     gwapiv1.Group(egv1a1.GroupVersion.Group),
-							Kind:      gwapiv1.Kind(egv1a1.KindEnvoyProxy),
-							Name:      "test-envoyproxy",
-							Namespace: gatewayapi.NamespacePtr(config.DefaultNamespace),
-						},
-					},
-					Status: gwapiv1.GatewayClassStatus{
-						Conditions: []metav1.Condition{
-							{
-								Type:   string(gwapiv1.GatewayClassConditionStatusAccepted),
-								Status: metav1.ConditionTrue,
-							},
-						},
-						SupportedFeatures: status.GatewaySupportedFeatures,
-					},
-				},
-			},
-			expected: true,
-		},
-		{
-			name: "envoyproxy in different namespace as eg",
-			ep: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "not-eg-ns",
-					Name:      "test-envoyproxy",
-				},
-			},
-			classes: []*gwapiv1.GatewayClass{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-gc",
-					},
-					Spec: gwapiv1.GatewayClassSpec{ControllerName: gcCtrlName},
-				},
-			},
-			expected: false,
-		},
-		{
-			name: "multiple gatewayclasses one with accepted status",
-			ep: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: config.DefaultNamespace,
-					Name:      "test-envoyproxy",
-				},
-			},
-			classes: []*gwapiv1.GatewayClass{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-gc1",
-					},
-					Spec: gwapiv1.GatewayClassSpec{
-						ControllerName: gcCtrlName,
-						ParametersRef: &gwapiv1.ParametersReference{
-							Group:     gwapiv1.Group(egv1a1.GroupVersion.Group),
-							Kind:      gwapiv1.Kind(egv1a1.KindEnvoyProxy),
-							Name:      "test-envoyproxy",
-							Namespace: gatewayapi.NamespacePtr(config.DefaultNamespace),
-						},
-					},
-					Status: gwapiv1.GatewayClassStatus{
-						Conditions: []metav1.Condition{
-							{
-								Type:   string(gwapiv1.GatewayClassConditionStatusAccepted),
-								Status: metav1.ConditionTrue,
-							},
-						},
-						SupportedFeatures: status.GatewaySupportedFeatures,
-					},
-				},
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-gc2",
-					},
-					Spec: gwapiv1.GatewayClassSpec{
-						ControllerName: gcCtrlName,
-						ParametersRef: &gwapiv1.ParametersReference{
-							Group:     gwapiv1.Group(egv1a1.GroupVersion.Group),
-							Kind:      gwapiv1.Kind(egv1a1.KindEnvoyProxy),
-							Name:      "test-envoyproxy",
-							Namespace: gatewayapi.NamespacePtr(config.DefaultNamespace),
-						},
-					},
-					Status: gwapiv1.GatewayClassStatus{
-						Conditions: []metav1.Condition{
-							{
-								Type:   string(gwapiv1.GatewayClassConditionStatusAccepted),
-								Status: metav1.ConditionFalse,
-							},
-						},
-						SupportedFeatures: status.GatewaySupportedFeatures,
-					},
-				},
-			},
-			expected: true,
-		},
-	}
-
-	for i := range testCases {
-		tc := testCases[i]
-
-		// Create the reconciler.
-		logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
-		r := &gatewayAPIReconciler{
-			log:             logger,
-			classController: gcCtrlName,
-			namespace:       config.DefaultNamespace,
-		}
-
-		// Run the test cases.
-		t.Run(tc.name, func(t *testing.T) {
-			// Add the test case objects to the reconciler client.
-			objs := []client.Object{tc.ep}
-			for _, gc := range tc.classes {
-				objs = append(objs, gc)
-			}
-
-			// Create the client.
-			r.client = fakeclient.NewClientBuilder().
-				WithScheme(envoygateway.GetScheme()).
-				WithObjects(objs...).
-				Build()
-
-			// Process the test case gatewayclasses.
-			results := r.hasManagedClass(tc.ep)
-			require.Equal(t, tc.expected, results)
-		})
-	}
-}
-
-func TestProcessParamsRef(t *testing.T) {
+func TestProcessGatewayClassParamsRef(t *testing.T) {
 	gcCtrlName := gwapiv1.GatewayController(egv1a1.GatewayControllerName)
 
 	testCases := []struct {
@@ -451,6 +260,7 @@ func TestProcessParamsRef(t *testing.T) {
 		r := &gatewayAPIReconciler{
 			log:             logger,
 			classController: gcCtrlName,
+			namespace:       config.DefaultNamespace,
 		}
 
 		// Run the test cases.
@@ -468,11 +278,11 @@ func TestProcessParamsRef(t *testing.T) {
 			// Process the test case gatewayclasses.
 			resourceTree := gatewayapi.NewResources()
 			resourceMap := newResourceMapping()
-			err := r.processParamsRef(context.Background(), tc.gc, resourceMap, resourceTree)
+			err := r.processGatewayClassParamsRef(context.Background(), tc.gc, resourceMap, resourceTree)
 			if tc.expected {
 				require.NoError(t, err)
 				// Ensure the resource tree and map are as expected.
-				require.Equal(t, tc.ep, resourceTree.EnvoyProxy)
+				require.Equal(t, tc.ep, resourceTree.EnvoyProxyForGatewayClass)
 			} else {
 				require.Error(t, err)
 			}

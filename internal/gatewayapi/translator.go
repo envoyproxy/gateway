@@ -17,6 +17,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/wasm"
 )
 
 const (
@@ -61,7 +62,7 @@ var _ TranslatorManager = (*Translator)(nil)
 
 type TranslatorManager interface {
 	Translate(resources *Resources) (*TranslateResult, error)
-	GetRelevantGateways(gateways []*gwapiv1.Gateway) []*GatewayContext
+	GetRelevantGateways(resources *Resources) []*GatewayContext
 
 	RoutesTranslator
 	ListenersTranslator
@@ -106,6 +107,9 @@ type Translator struct {
 
 	// Namespace is the namespace that Envoy Gateway runs in.
 	Namespace string
+
+	// WasmCache is the cache for Wasm modules.
+	WasmCache wasm.Cache
 }
 
 type TranslateResult struct {
@@ -166,7 +170,7 @@ func newTranslateResult(gateways []*GatewayContext,
 
 func (t *Translator) Translate(resources *Resources) (*TranslateResult, error) {
 	// Get Gateways belonging to our GatewayClass.
-	gateways := t.GetRelevantGateways(resources.Gateways)
+	gateways := t.GetRelevantGateways(resources)
 
 	// Sort gateways based on timestamp.
 	sort.Slice(gateways, func(i, j int) bool {
@@ -244,10 +248,10 @@ func (t *Translator) Translate(resources *Resources) (*TranslateResult, error) {
 
 	// Set custom filter order if EnvoyProxy is set
 	// The custom filter order will be applied when generating the HTTP filter chain.
-	if resources.EnvoyProxy != nil {
-		for _, gateway := range gateways {
+	for _, gateway := range gateways {
+		if gateway.envoyProxy != nil {
 			irKey := t.getIRKey(gateway.Gateway)
-			xdsIR[irKey].FilterOrder = resources.EnvoyProxy.Spec.FilterOrder
+			xdsIR[irKey].FilterOrder = gateway.envoyProxy.Spec.FilterOrder
 		}
 	}
 
@@ -259,10 +263,10 @@ func (t *Translator) Translate(resources *Resources) (*TranslateResult, error) {
 
 // GetRelevantGateways returns GatewayContexts, containing a copy of the original
 // Gateway with the Listener statuses reset.
-func (t *Translator) GetRelevantGateways(gateways []*gwapiv1.Gateway) []*GatewayContext {
+func (t *Translator) GetRelevantGateways(resources *Resources) []*GatewayContext {
 	var relevant []*GatewayContext
 
-	for _, gateway := range gateways {
+	for _, gateway := range resources.Gateways {
 		if gateway == nil {
 			panic("received nil gateway")
 		}
@@ -271,7 +275,7 @@ func (t *Translator) GetRelevantGateways(gateways []*gwapiv1.Gateway) []*Gateway
 			gc := &GatewayContext{
 				Gateway: gateway.DeepCopy(),
 			}
-			gc.ResetListeners()
+			gc.ResetListeners(resources)
 
 			relevant = append(relevant, gc)
 		}
@@ -317,14 +321,14 @@ func (t *Translator) InitIRs(gateways []*GatewayContext, resources *Resources) (
 // IsEnvoyServiceRouting returns true if EnvoyProxy.Spec.RoutingType == ServiceRoutingType
 // or, alternatively, if Translator.EndpointRoutingDisabled has been explicitly set to true;
 // otherwise, it returns false.
-func (t *Translator) IsEnvoyServiceRouting(r *Resources) bool {
+func (t *Translator) IsEnvoyServiceRouting(r *egv1a1.EnvoyProxy) bool {
 	if t.EndpointRoutingDisabled {
 		return true
 	}
-	if r.EnvoyProxy == nil {
+	if r == nil {
 		return false
 	}
-	switch ptr.Deref(r.EnvoyProxy.Spec.RoutingType, egv1a1.EndpointRoutingType) {
+	switch ptr.Deref(r.Spec.RoutingType, egv1a1.EndpointRoutingType) {
 	case egv1a1.ServiceRoutingType:
 		return true
 	case egv1a1.EndpointRoutingType:

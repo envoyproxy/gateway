@@ -146,5 +146,11 @@ xdsIR:
           - host: 8.7.6.5
             port: 4317
           protocol: GRPC
+      provider:
+        backendRefs:
+        - name: otel-collector
+          namespace: monitoring
+          port: 4317
+        type: OpenTelemetry
       samplingRate: 100
       serviceName: gateway-1.envoy-gateway

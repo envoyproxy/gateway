@@ -35,6 +35,10 @@ const (
 	// DefaultXdsServerPort is the default listening port of the xds-server.
 	DefaultXdsServerPort = 18000
 
+	wasmServerHost = envoyGatewayXdsServerHost
+	// DefaultWasmServerPort is the default listening port of the wasm HTTP server.
+	wasmServerPort = 18002
+
 	envoyReadinessAddress = "0.0.0.0"
 	EnvoyReadinessPort    = 19001
 	EnvoyReadinessPath    = "/ready"
@@ -56,7 +60,9 @@ type bootstrapConfig struct {
 // bootstrapParameters defines the envoy Bootstrap configuration.
 type bootstrapParameters struct {
 	// XdsServer defines the configuration of the XDS server.
-	XdsServer xdsServerParameters
+	XdsServer serverParameters
+	// WasmServer defines the configuration of the Wasm HTTP server.
+	WasmServer serverParameters
 	// AdminServer defines the configuration of the Envoy admin interface.
 	AdminServer adminServerParameters
 	// ReadyServer defines the configuration for health check ready listener
@@ -79,7 +85,7 @@ type bootstrapParameters struct {
 	OverloadManager overloadManagerParameters
 }
 
-type xdsServerParameters struct {
+type serverParameters struct {
 	// Address is the address of the XDS Server that Envoy is managed by.
 	Address string
 	// Port is the port of the XDS Server that Envoy is managed by.
@@ -214,9 +220,13 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 
 	cfg := &bootstrapConfig{
 		parameters: bootstrapParameters{
-			XdsServer: xdsServerParameters{
+			XdsServer: serverParameters{
 				Address: envoyGatewayXdsServerHost,
 				Port:    DefaultXdsServerPort,
+			},
+			WasmServer: serverParameters{
+				Address: wasmServerHost,
+				Port:    wasmServerPort,
 			},
 			AdminServer: adminServerParameters{
 				Address:       EnvoyAdminAddress,

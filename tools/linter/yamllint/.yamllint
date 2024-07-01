@@ -8,6 +8,7 @@ ignore: |
   charts/gateway-helm/
   charts/gateway-addons-helm/
   bin/install.yaml
+  test/helm/
 
 rules:
   braces:

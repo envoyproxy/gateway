@@ -54,7 +54,7 @@ You can also test the same functionality by sending traffic to the External IP. 
 Envoy service, run:
 
 ```shell
-export GATEWAY_HOST=$(kubectl get svc/${ENVOY_SERVICE} -n envoy-gateway-system -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
 ```
 
 In certain environments, the load balancer may be exposed using a hostname, instead of an IP address. If so, replace

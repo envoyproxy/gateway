@@ -24,7 +24,7 @@ envoyExtensionPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: 'ExtProcs: service envoy-gateway/grpc-backend not found.'
+        message: 'ExtProc: service envoy-gateway/grpc-backend not found.'
         reason: Invalid
         status: "False"
         type: Accepted

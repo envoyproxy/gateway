@@ -41,7 +41,7 @@ metadata:
   namespace: monitoring
 spec:
   selector:
-    app.kubernetes.io/instance: otel-collector
+    app.kubernetes.io/instance: eg-addons
     app.kubernetes.io/name: opentelemetry-collector
     component: standalone-collector
   ports:

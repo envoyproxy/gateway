@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -125,25 +126,21 @@ func IsRefToGateway(parentRef gwapiv1.ParentReference, gateway types.NamespacedN
 // are included by the parent ref (either one specific Listener, or all Listeners
 // in the Gateway, depending on whether section name is specified or not).
 func GetReferencedListeners(parentRef gwapiv1.ParentReference, gateways []*GatewayContext) (bool, []*ListenerContext) {
-	var selectsGateway bool
 	var referencedListeners []*ListenerContext
 
 	for _, gateway := range gateways {
-		if !IsRefToGateway(parentRef, utils.NamespacedName(gateway)) {
-			continue
-		}
-
-		selectsGateway = true
-
-		// The parentRef may be to the entire Gateway, or to a specific listener.
-		for _, listener := range gateway.listeners {
-			if (parentRef.SectionName == nil || *parentRef.SectionName == listener.Name) && (parentRef.Port == nil || *parentRef.Port == listener.Port) {
-				referencedListeners = append(referencedListeners, listener)
+		if IsRefToGateway(parentRef, utils.NamespacedName(gateway)) {
+			// The parentRef may be to the entire Gateway, or to a specific listener.
+			for _, listener := range gateway.listeners {
+				if (parentRef.SectionName == nil || *parentRef.SectionName == listener.Name) && (parentRef.Port == nil || *parentRef.Port == listener.Port) {
+					referencedListeners = append(referencedListeners, listener)
+				}
 			}
+			return true, referencedListeners
 		}
 	}
 
-	return selectsGateway, referencedListeners
+	return false, referencedListeners
 }
 
 // HasReadyListener returns true if at least one Listener in the
@@ -417,7 +414,7 @@ func irTLSCACertName(namespace, name string) string {
 }
 
 func IsMergeGatewaysEnabled(resources *Resources) bool {
-	return resources.EnvoyProxy != nil && resources.EnvoyProxy.Spec.MergeGateways != nil && *resources.EnvoyProxy.Spec.MergeGateways
+	return resources.EnvoyProxyForGatewayClass != nil && resources.EnvoyProxyForGatewayClass.Spec.MergeGateways != nil && *resources.EnvoyProxyForGatewayClass.Spec.MergeGateways
 }
 
 func protocolSliceToStringSlice(protocols []gwapiv1.ProtocolType) []string {
@@ -490,4 +487,11 @@ func parseCIDR(cidr string) (*ir.CIDRMatch, error) {
 		MaskLen: uint32(mask),
 		IsIPv6:  ip.To4() == nil,
 	}, nil
+}
+
+func irConfigName(policy client.Object) string {
+	return fmt.Sprintf(
+		"%s/%s",
+		strings.ToLower(policy.GetObjectKind().GroupVersionKind().Kind),
+		utils.NamespacedName(policy).String())
 }

@@ -588,6 +588,42 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{"BackendRefs only supports Service Kind."},
 		},
 		{
+			desc: "invalid-accesslog-ALS-backendrefs-group",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: egv1a1.ProxyAccessLogFormat{
+										Type: "Text",
+										Text: ptr.To("[%START_TIME%]"),
+									},
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeALS,
+											ALS: &egv1a1.ALSEnvoyProxyAccessLog{
+												BackendRefs: []egv1a1.BackendRef{
+													{
+														BackendObjectReference: gwapiv1.BackendObjectReference{
+															Name:  "fake-service",
+															Group: ptr.To(gwapiv1.Group("foo")),
+														},
+													},
+												},
+												Type: egv1a1.ALSEnvoyProxyAccessLogTypeHTTP,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"BackendRefs only supports Core group."},
+		},
+		{
 			desc: "invalid-accesslog-ALS-no-backendrefs",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
@@ -748,6 +784,41 @@ func TestEnvoyProxyProvider(t *testing.T) {
 				}
 			},
 			wantErrors: []string{"only support Service Kind."},
+		},
+		{
+			desc: "invalid-accesslog-backendref-group",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: egv1a1.ProxyAccessLogFormat{
+										Type: "Text",
+										Text: ptr.To("[%START_TIME%]"),
+									},
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
+											OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
+												BackendRefs: []egv1a1.BackendRef{
+													{
+														BackendObjectReference: gwapiv1.BackendObjectReference{
+															Name:  "fake-service",
+															Group: ptr.To(gwapiv1.Group("foo")),
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"BackendRefs only supports Core group."},
 		},
 		{
 			desc: "accesslog-backendref",
@@ -1057,6 +1128,34 @@ func TestEnvoyProxyProvider(t *testing.T) {
 				}
 			},
 			wantErrors: []string{"only support Service Kind."},
+		},
+		{
+			desc: "ProxyMetrics-sinks-invalid-backendref-group",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Sinks: []egv1a1.ProxyMetricSink{
+								{
+									Type: egv1a1.MetricSinkTypeOpenTelemetry,
+									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+										BackendRefs: []egv1a1.BackendRef{
+											{
+												BackendObjectReference: gwapiv1.BackendObjectReference{
+													Name:  "fake-service",
+													Group: ptr.To(gwapiv1.Group("foo")),
+													Port:  ptr.To(gwapiv1.PortNumber(8080)),
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"BackendRefs only supports Core group."},
 		},
 		{
 			desc: "invalid-tracing-backendref-invalid-kind",

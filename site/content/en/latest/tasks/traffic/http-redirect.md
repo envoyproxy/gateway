@@ -40,7 +40,6 @@ spec:
           scheme: https
           statusCode: 301
           hostname: www.example.com
-          port: 443
 EOF
 ```
 
@@ -66,7 +65,6 @@ spec:
           scheme: https
           statusCode: 301
           hostname: www.example.com
-          port: 443
 ```
 
 {{% /tab %}}
@@ -342,9 +340,6 @@ spec:
             type: ReplaceFullPath
             replaceFullPath: /status/200
           statusCode: 302
-      backendRefs:
-      - name: backend
-        port: 3000
 EOF
 ```
 
@@ -375,9 +370,6 @@ spec:
             type: ReplaceFullPath
             replaceFullPath: /status/200
           statusCode: 302
-      backendRefs:
-      - name: backend
-        port: 3000
 ```
 
 {{% /tab %}}

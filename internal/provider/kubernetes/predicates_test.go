@@ -254,10 +254,12 @@ func TestValidateSecretForReconcile(t *testing.T) {
 						Name: "oidc",
 					},
 					Spec: egv1a1.SecurityPolicySpec{
-						TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Kind: "Gateway",
-								Name: "scheduled-status-test",
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
+								},
 							},
 						},
 						OIDC: &egv1a1.OIDC{
@@ -287,10 +289,12 @@ func TestValidateSecretForReconcile(t *testing.T) {
 						Name: "basic-auth",
 					},
 					Spec: egv1a1.SecurityPolicySpec{
-						TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Kind: "Gateway",
-								Name: "scheduled-status-test",
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
+								},
 							},
 						},
 						BasicAuth: &egv1a1.BasicAuth{
@@ -312,6 +316,47 @@ func TestValidateSecretForReconcile(t *testing.T) {
 			secret: test.GetSecret(types.NamespacedName{Name: "secret"}),
 			expect: false,
 		},
+		{
+			name: "references EnvoyExtensionPolicy Wasm OCI Image",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				test.GetGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc", 8080),
+				&egv1a1.EnvoyExtensionPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "wasm-oci",
+					},
+					Spec: egv1a1.EnvoyExtensionPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRefs: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+								{
+									LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+										Kind: "Gateway",
+										Name: "scheduled-status-test",
+									},
+								},
+							},
+						},
+						Wasm: []egv1a1.Wasm{
+							{
+								Name:   ptr.To("wasm-filter"),
+								RootID: ptr.To("my_root_id"),
+								Code: egv1a1.WasmCodeSource{
+									Type: egv1a1.ImageWasmCodeSourceType,
+									Image: &egv1a1.ImageWasmCodeSource{
+										URL: "https://example.com/testwasm:v1.0.0",
+										PullSecretRef: &gwapiv1b1.SecretObjectReference{
+											Name: "secret",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			secret: test.GetSecret(types.NamespacedName{Name: "secret"}),
+			expect: true,
+		},
 	}
 
 	// Create the reconciler.
@@ -330,6 +375,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 			WithIndex(&gwapiv1.Gateway{}, secretGatewayIndex, secretGatewayIndexFunc).
 			WithIndex(&egv1a1.SecurityPolicy{}, secretSecurityPolicyIndex, secretSecurityPolicyIndexFunc).
 			WithIndex(&egv1a1.EnvoyProxy{}, secretEnvoyProxyIndex, secretEnvoyProxyIndexFunc).
+			WithIndex(&egv1a1.EnvoyExtensionPolicy{}, secretEnvoyExtensionPolicyIndex, secretEnvoyExtensionPolicyIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateSecretForReconcile(tc.secret)
@@ -619,10 +665,12 @@ func TestValidateServiceForReconcile(t *testing.T) {
 						Name: "ext-auth-http",
 					},
 					Spec: egv1a1.SecurityPolicySpec{
-						TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Kind: "Gateway",
-								Name: "scheduled-status-test",
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
+								},
 							},
 						},
 						ExtAuth: &egv1a1.ExtAuth{
@@ -650,10 +698,12 @@ func TestValidateServiceForReconcile(t *testing.T) {
 						Name: "ext-auth-http",
 					},
 					Spec: egv1a1.SecurityPolicySpec{
-						TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Kind: "Gateway",
-								Name: "scheduled-status-test",
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
+								},
 							},
 						},
 						ExtAuth: &egv1a1.ExtAuth{
@@ -681,10 +731,12 @@ func TestValidateServiceForReconcile(t *testing.T) {
 						Name: "ext-proc",
 					},
 					Spec: egv1a1.EnvoyExtensionPolicySpec{
-						TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Kind: "Gateway",
-								Name: "scheduled-status-test",
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
+								},
 							},
 						},
 						ExtProc: []egv1a1.ExtProc{
@@ -712,10 +764,12 @@ func TestValidateServiceForReconcile(t *testing.T) {
 						Name: "ext-proc",
 					},
 					Spec: egv1a1.EnvoyExtensionPolicySpec{
-						TargetRef: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Kind: "Gateway",
-								Name: "scheduled-status-test",
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
+								},
 							},
 						},
 						ExtProc: []egv1a1.ExtProc{

@@ -70,7 +70,7 @@ http:
       failOpen: false
       httpWasmCode:
         sha256: 746df05c8f3a0b07a46c0967cfbc5cbe5b9d48d0f79b6177eeedf8be6c8b34b5
-        url: https://www.example.com/wasm-filter-1.wasm
+        servingURL: https://envoy-gateway:18002/42d30b4a4cc631415e6e48c02d244700da327201eb273f752cacf745715b31d9.wasm
       name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/0
       wasmName: wasm-filter-1
     - config:
@@ -79,6 +79,6 @@ http:
       failOpen: false
       httpWasmCode:
         sha256: a1efca12ea51069abb123bf9c77889fcc2a31cc5483fc14d115e44fdf07c7980
-        url: https://www.example.com/wasm-filter-2.wasm
+        servingURL: https://envoy-gateway:18002/7abf116e5cd5a20389604a5ba0f3bd04fdf76f92181fe67506b42c2ee596d3fd.wasm
       name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/1
       wasmName: wasm-filter-2

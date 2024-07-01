@@ -18,7 +18,6 @@ type ProxyTracing struct {
 	// If provider is kubernetes, pod name and namespace are added by default.
 	CustomTags map[string]CustomTag `json:"customTags,omitempty"`
 	// Provider defines the tracing provider.
-	// Only OpenTelemetry is supported currently.
 	Provider TracingProvider `json:"provider"`
 }
 
@@ -26,6 +25,7 @@ type TracingProviderType string
 
 const (
 	TracingProviderTypeOpenTelemetry TracingProviderType = "OpenTelemetry"
+	TracingProviderTypeZipkin        TracingProviderType = "Zipkin"
 )
 
 // TracingProvider defines the tracing provider configuration.
@@ -33,8 +33,7 @@ const (
 // +kubebuilder:validation:XValidation:message="host or backendRefs needs to be set",rule="has(self.host) || self.backendRefs.size() > 0"
 type TracingProvider struct {
 	// Type defines the tracing provider type.
-	// EG currently only supports OpenTelemetry.
-	// +kubebuilder:validation:Enum=OpenTelemetry
+	// +kubebuilder:validation:Enum=OpenTelemetry;Zipkin
 	// +kubebuilder:default=OpenTelemetry
 	Type TracingProviderType `json:"type"`
 	// Host define the provider service hostname.
@@ -56,7 +55,11 @@ type TracingProvider struct {
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
 	// +kubebuilder:validation:XValidation:message="only support Service kind.",rule="self.all(f, f.kind == 'Service')"
+	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core group.",rule="self.all(f, f.group == '')"
 	BackendRefs []BackendRef `json:"backendRefs,omitempty"`
+	// Zipkin defines the Zipkin tracing provider configuration
+	// +optional
+	Zipkin *ZipkinTracingProvider `json:"zipkin,omitempty"`
 }
 
 type CustomTagType string
@@ -112,4 +115,17 @@ type RequestHeaderCustomTag struct {
 	// DefaultValue defines the default value to use if the request header is not set.
 	// +optional
 	DefaultValue *string `json:"defaultValue,omitempty"`
+}
+
+// ZipkinTracingProvider defines the Zipkin tracing provider configuration.
+type ZipkinTracingProvider struct {
+	// Enable128BitTraceID determines whether a 128bit trace id will be used
+	// when creating a new trace instance. If set to false, a 64bit trace
+	// id will be used.
+	// +optional
+	Enable128BitTraceID *bool `json:"enable128BitTraceId,omitempty"`
+	// DisableSharedSpanContext determines whether the default Envoy behaviour of
+	// client and server spans sharing the same span context should be disabled.
+	// +optional
+	DisableSharedSpanContext *bool `json:"disableSharedSpanContext,omitempty"`
 }

@@ -71,6 +71,7 @@ type GRPCExtAuthService struct {
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
 	// +kubebuilder:validation:XValidation:message="only support Service kind.",rule="self.all(f, f.kind == 'Service')"
+	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core group.",rule="self.all(f, f.group == '')"
 	BackendRefs []BackendRef `json:"backendRefs,omitempty"`
 }
 
@@ -92,6 +93,7 @@ type HTTPExtAuthService struct {
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
 	// +kubebuilder:validation:XValidation:message="only support Service kind.",rule="self.all(f, f.kind == 'Service')"
+	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core group.",rule="self.all(f, f.group == '')"
 	BackendRefs []BackendRef `json:"backendRefs,omitempty"`
 
 	// Path is the path of the HTTP External Authorization service.

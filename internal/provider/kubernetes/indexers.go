@@ -43,6 +43,7 @@ const (
 	backendEnvoyExtensionPolicyIndex = "backendEnvoyExtensionPolicyIndex"
 	backendEnvoyProxyTelemetryIndex  = "backendEnvoyProxyTelemetryIndex"
 	secretEnvoyProxyIndex            = "secretEnvoyProxyIndex"
+	secretEnvoyExtensionPolicyIndex  = "secretEnvoyExtensionPolicyIndex"
 )
 
 func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
@@ -292,7 +293,7 @@ func addTLSRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 				// lookup the provided Gateway Name.
 				gateways = append(gateways,
 					types.NamespacedName{
-						Namespace: gatewayapi.NamespaceDerefOrAlpha(parent.Namespace, tlsRoute.Namespace),
+						Namespace: gatewayapi.NamespaceDerefOr(parent.Namespace, tlsRoute.Namespace),
 						Name:      string(parent.Name),
 					}.String(),
 				)
@@ -319,7 +320,7 @@ func backendTLSRouteIndexFunc(rawObj client.Object) []string {
 				// lookup the provided Gateway Name.
 				backendRefs = append(backendRefs,
 					types.NamespacedName{
-						Namespace: gatewayapi.NamespaceDerefOrAlpha(backend.Namespace, tlsroute.Namespace),
+						Namespace: gatewayapi.NamespaceDerefOr(backend.Namespace, tlsroute.Namespace),
 						Name:      string(backend.Name),
 					}.String(),
 				)
@@ -342,7 +343,7 @@ func addTCPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 				// lookup the provided Gateway Name.
 				gateways = append(gateways,
 					types.NamespacedName{
-						Namespace: gatewayapi.NamespaceDerefOrAlpha(parent.Namespace, tcpRoute.Namespace),
+						Namespace: gatewayapi.NamespaceDerefOr(parent.Namespace, tcpRoute.Namespace),
 						Name:      string(parent.Name),
 					}.String(),
 				)
@@ -369,7 +370,7 @@ func backendTCPRouteIndexFunc(rawObj client.Object) []string {
 				// lookup the provided Gateway Name.
 				backendRefs = append(backendRefs,
 					types.NamespacedName{
-						Namespace: gatewayapi.NamespaceDerefOrAlpha(backend.Namespace, tcpRoute.Namespace),
+						Namespace: gatewayapi.NamespaceDerefOr(backend.Namespace, tcpRoute.Namespace),
 						Name:      string(backend.Name),
 					}.String(),
 				)
@@ -394,7 +395,7 @@ func addUDPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 				// lookup the provided Gateway Name.
 				gateways = append(gateways,
 					types.NamespacedName{
-						Namespace: gatewayapi.NamespaceDerefOrAlpha(parent.Namespace, udpRoute.Namespace),
+						Namespace: gatewayapi.NamespaceDerefOr(parent.Namespace, udpRoute.Namespace),
 						Name:      string(parent.Name),
 					}.String(),
 				)
@@ -421,7 +422,7 @@ func backendUDPRouteIndexFunc(rawObj client.Object) []string {
 				// lookup the provided Gateway Name.
 				backendRefs = append(backendRefs,
 					types.NamespacedName{
-						Namespace: gatewayapi.NamespaceDerefOrAlpha(backend.Namespace, udproute.Namespace),
+						Namespace: gatewayapi.NamespaceDerefOr(backend.Namespace, udproute.Namespace),
 						Name:      string(backend.Name),
 					}.String(),
 				)
@@ -652,6 +653,12 @@ func addEnvoyExtensionPolicyIndexers(ctx context.Context, mgr manager.Manager) e
 		return err
 	}
 
+	if err = mgr.GetFieldIndexer().IndexField(
+		ctx, &egv1a1.EnvoyExtensionPolicy{}, secretEnvoyExtensionPolicyIndex,
+		secretEnvoyExtensionPolicyIndexFunc); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -667,6 +674,25 @@ func backendEnvoyExtensionPolicyIndexFunc(rawObj client.Object) []string {
 				types.NamespacedName{
 					Namespace: gatewayapi.NamespaceDerefOr(backendRef.Namespace, envoyExtensionPolicy.Namespace),
 					Name:      string(backendRef.Name),
+				}.String())
+		}
+	}
+
+	return ret
+}
+
+func secretEnvoyExtensionPolicyIndexFunc(rawObj client.Object) []string {
+	envoyExtensionPolicy := rawObj.(*egv1a1.EnvoyExtensionPolicy)
+
+	var ret []string
+
+	for _, wasm := range envoyExtensionPolicy.Spec.Wasm {
+		if wasm.Code.Image != nil && wasm.Code.Image.PullSecretRef != nil {
+			secretRef := wasm.Code.Image.PullSecretRef
+			ret = append(ret,
+				types.NamespacedName{
+					Namespace: gatewayapi.NamespaceDerefOr(secretRef.Namespace, envoyExtensionPolicy.Namespace),
+					Name:      string(secretRef.Name),
 				}.String())
 		}
 	}

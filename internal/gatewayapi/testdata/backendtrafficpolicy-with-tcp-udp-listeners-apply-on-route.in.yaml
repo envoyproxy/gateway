@@ -57,7 +57,7 @@ backendTrafficPolicies:
     kind: BackendTrafficPolicy
     metadata:
       namespace: default
-      name: policy-for-gateway
+      name: policy-for-gateway-1
     spec:
       targetRef:
         group: gateway.networking.k8s.io
@@ -113,7 +113,7 @@ backendTrafficPolicies:
     kind: BackendTrafficPolicy
     metadata:
       namespace: default
-      name: policy-for-gateway
+      name: policy-for-gateway-2
     spec:
       targetRef:
         group: gateway.networking.k8s.io

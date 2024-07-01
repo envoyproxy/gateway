@@ -1,0 +1,51 @@
+name: "tracing"
+tracing:
+  serviceName: "fake-name.fake-ns"
+  samplingRate: 90
+  customTags:
+    "literal1":
+      type: Literal
+      literal:
+        value: "value1"
+    "env1":
+      type: Environment
+      environment:
+        name: "env1"
+        defaultValue: "-"
+    "req1":
+      type: RequestHeader
+      requestHeader:
+        name: "X-Request-Id"
+        defaultValue: "-"
+  authority: "datadog-agent.default.svc.cluster.local"
+  destination:
+    name: "tracing-0"
+    settings:
+      - endpoints:
+          - host: "datadog-agent.default.svc.cluster.local"
+            port: 8126
+  provider:
+    host: datadog-agent.monitoring.svc.cluster.local
+    port: 8126
+    type: Datadog
+http:
+  - name: "first-listener"
+    address: "0.0.0.0"
+    port: 10080
+    hostnames:
+      - "*"
+    path:
+      mergeSlashes: true
+      escapedSlashesAction: UnescapeAndRedirect
+    routes:
+      - name: "direct-route"
+        hostname: "*"
+        destination:
+          name: "direct-route-dest"
+          settings:
+            - endpoints:
+                - host: "1.2.3.4"
+                  port: 50000
+        directResponse:
+          body: "Unknown custom filter type: UnsupportedType"
+          statusCode: 500

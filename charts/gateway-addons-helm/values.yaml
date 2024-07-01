@@ -1,9 +1,3 @@
-tags:
-  metrics: true
-  logging: false
-  tracing: false
-
-
 # Values for Grafana dependency
 grafana:
   enabled: true
@@ -14,7 +8,7 @@ grafana:
       datasources:
         - name: Prometheus
           type: prometheus
-          url: http://prometheus-server
+          url: http://prometheus
   adminPassword: admin
   service:
     type: LoadBalancer
@@ -47,7 +41,7 @@ prometheus:
   prometheus-node-exporter:
     enabled: false
   server:
-    fullnameOverride: prometheus-server
+    fullnameOverride: prometheus
     persistentVolume:
       enabled: false
     readinessProbeInitialDelay: 0
@@ -148,6 +142,8 @@ loki:
     rulerConfig:
       storage:
         type: "local"
+  test:
+    enabled: false
   singleBinary:
     replicas: 1
   read:
@@ -157,9 +153,12 @@ loki:
   write:
     replicas: 0
   monitoring:
+    lokiCanary:
+      enabled: false
     selfMonitoring:
+      enabled: false
       grafanaAgent:
-        installOperator: true
+        installOperator: false
   # Disable gateway.
   gateway:
     enabled: false

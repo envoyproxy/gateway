@@ -56,9 +56,17 @@ var ExtProcTest = suite.ConformanceTest{
 					Host: "www.example.com",
 					Path: "/processor",
 					Headers: map[string]string{
-						"x-request-ext-processed":          "true",     // header added by ext-processor to backend-bound request
-						"x-request-client-header-received": "original", // this is the original client header preserved by ext-proc in a new header
-						"x-request-client-header":          "mutated",  // this is the mutated value expected to reach upstream
+						"x-request-client-header": "original", // add a request header that will be mutated by ext-proc
+					},
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Path: "/processor",
+						Headers: map[string]string{
+							"x-request-ext-processed":          "true",     // header added by ext-processor to backend-bound request
+							"x-request-client-header-received": "original", // this is the original client header preserved by ext-proc in a new header
+							"x-request-client-header":          "mutated",  // this is the mutated value expected to reach upstream
+						},
 					},
 				},
 				Response: http.Response{
@@ -70,19 +78,7 @@ var ExtProcTest = suite.ConformanceTest{
 				Namespace: ns,
 			}
 
-			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
-
-			// add a request header that will be mutated by ext-proc
-			req.Headers["x-request-client-header"] = []string{"original"}
-
-			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
-			if err != nil {
-				t.Errorf("failed to get expected response: %v", err)
-			}
-
-			if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
-				t.Errorf("failed to compare request and response: %v", err)
-			}
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
 
 		t.Run("http route without proc mode", func(t *testing.T) {
@@ -109,7 +105,15 @@ var ExtProcTest = suite.ConformanceTest{
 					Host: "www.example.com",
 					Path: "/no-processor",
 					Headers: map[string]string{
-						"x-request-client-header": "original",
+						"x-request-client-header": "original", // add a request header that will be mutated by ext-proc
+					},
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Path: "/no-processor",
+						Headers: map[string]string{
+							"x-request-client-header": "original", // this is the original value expected to reach upstream
+						},
 					},
 				},
 				Response: http.Response{
@@ -119,19 +123,7 @@ var ExtProcTest = suite.ConformanceTest{
 				Namespace: ns,
 			}
 
-			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
-
-			// add a request header that will be mutated by ext-proc if the request headers are sent
-			req.Headers["x-request-client-header"] = []string{"original"}
-
-			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
-			if err != nil {
-				t.Errorf("failed to get expected response: %v", err)
-			}
-
-			if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
-				t.Errorf("failed to compare request and response: %v", err)
-			}
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
 
 		t.Run("http route with uds ext proc", func(t *testing.T) {
@@ -158,9 +150,17 @@ var ExtProcTest = suite.ConformanceTest{
 					Host: "www.example.com",
 					Path: "/uds-processor",
 					Headers: map[string]string{
-						"x-request-ext-processed":          "true",     // header added by ext-processor to backend-bound request
-						"x-request-client-header-received": "original", // this is the original client header preserved by ext-proc in a new header
-						"x-request-client-header":          "mutated",  // this is the mutated value expected to reach upstream
+						"x-request-client-header": "original", // add a request header that will be mutated by ext-proc
+					},
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Path: "/uds-processor",
+						Headers: map[string]string{
+							"x-request-ext-processed":          "true",     // header added by ext-processor to backend-bound request
+							"x-request-client-header-received": "original", // this is the original client header preserved by ext-proc in a new header
+							"x-request-client-header":          "mutated",  // this is the mutated value expected to reach upstream
+						},
 					},
 				},
 				Response: http.Response{
@@ -172,19 +172,7 @@ var ExtProcTest = suite.ConformanceTest{
 				Namespace: ns,
 			}
 
-			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
-
-			// add a request header that will be mutated by ext-proc
-			req.Headers["x-request-client-header"] = []string{"original"}
-
-			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
-			if err != nil {
-				t.Errorf("failed to get expected response: %v", err)
-			}
-
-			if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
-				t.Errorf("failed to compare request and response: %v", err)
-			}
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
 	},
 }

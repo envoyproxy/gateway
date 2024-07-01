@@ -69,12 +69,18 @@
         - key: k8s.pod.name
           value:
             stringValue: '%ENVIRONMENT(ENVOY_POD_NAME)%'
+        - key: request_method
+          value:
+            stringValue: '%CEL(request.method)%'
         - key: response_code
           value:
             stringValue: '%RESPONSE_CODE%'
+        - key: test_key
+          value:
+            stringValue: '%METADATA(DYNAMIC:com.test.my_filter:test_key)%'
       body:
         stringValue: |
-          [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
+          [%START_TIME%] "%REQ(:METHOD)% %REQ_WITHOUT_QUERY(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
       commonConfig:
         grpcService:
           envoyGrpc:
@@ -82,6 +88,16 @@
             clusterName: accesslog-0
         logName: otel_envoy_accesslog
         transportApiVersion: V3
+      formatters:
+      - name: envoy.formatter.req_without_query
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.formatter.req_without_query.v3.ReqWithoutQuery
+      - name: envoy.formatter.metadata
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.formatter.metadata.v3.Metadata
+      - name: envoy.formatter.cel
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.formatter.cel.v3.Cel
       resourceAttributes:
         values:
         - key: cluster_name
@@ -151,12 +167,18 @@
               - key: k8s.pod.name
                 value:
                   stringValue: '%ENVIRONMENT(ENVOY_POD_NAME)%'
+              - key: request_method
+                value:
+                  stringValue: '%CEL(request.method)%'
               - key: response_code
                 value:
                   stringValue: '%RESPONSE_CODE%'
+              - key: test_key
+                value:
+                  stringValue: '%METADATA(DYNAMIC:com.test.my_filter:test_key)%'
             body:
               stringValue: |
-                [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
+                [%START_TIME%] "%REQ(:METHOD)% %REQ_WITHOUT_QUERY(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
             commonConfig:
               grpcService:
                 envoyGrpc:
@@ -164,6 +186,16 @@
                   clusterName: accesslog-0
               logName: otel_envoy_accesslog
               transportApiVersion: V3
+            formatters:
+            - name: envoy.formatter.req_without_query
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.formatter.req_without_query.v3.ReqWithoutQuery
+            - name: envoy.formatter.metadata
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.formatter.metadata.v3.Metadata
+            - name: envoy.formatter.cel
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.formatter.cel.v3.Cel
             resourceAttributes:
               values:
               - key: cluster_name

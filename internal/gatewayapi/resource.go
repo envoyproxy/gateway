@@ -34,6 +34,12 @@ type (
 type Resources struct {
 	// This field is only used for marshalling/unmarshalling purposes and is not used by
 	// the translator
+
+	// EnvoyProxyForGatewayClass holds EnvoyProxy attached to GatewayClass
+	EnvoyProxyForGatewayClass *egv1a1.EnvoyProxy `json:"envoyProxyForGatewayClass,omitempty" yaml:"envoyProxyForGatewayClass,omitempty"`
+	// EnvoyProxiesForGateways holds EnvoyProxiesForGateways attached to Gateways
+	EnvoyProxiesForGateways []*egv1a1.EnvoyProxy `json:"envoyProxiesForGateways,omitempty" yaml:"envoyProxiesForGateways,omitempty"`
+
 	GatewayClass            *gwapiv1.GatewayClass          `json:"gatewayClass,omitempty" yaml:"gatewayClass,omitempty"`
 	Gateways                []*gwapiv1.Gateway             `json:"gateways,omitempty" yaml:"gateways,omitempty"`
 	HTTPRoutes              []*gwapiv1.HTTPRoute           `json:"httpRoutes,omitempty" yaml:"httpRoutes,omitempty"`
@@ -48,7 +54,6 @@ type Resources struct {
 	EndpointSlices          []*discoveryv1.EndpointSlice   `json:"endpointSlices,omitempty" yaml:"endpointSlices,omitempty"`
 	Secrets                 []*corev1.Secret               `json:"secrets,omitempty" yaml:"secrets,omitempty"`
 	ConfigMaps              []*corev1.ConfigMap            `json:"configMaps,omitempty" yaml:"configMaps,omitempty"`
-	EnvoyProxy              *egv1a1.EnvoyProxy             `json:"envoyProxy,omitempty" yaml:"envoyProxy,omitempty"`
 	ExtensionRefFilters     []unstructured.Unstructured    `json:"extensionRefFilters,omitempty" yaml:"extensionRefFilters,omitempty"`
 	EnvoyPatchPolicies      []*egv1a1.EnvoyPatchPolicy     `json:"envoyPatchPolicies,omitempty" yaml:"envoyPatchPolicies,omitempty"`
 	ClientTrafficPolicies   []*egv1a1.ClientTrafficPolicy  `json:"clientTrafficPolicies,omitempty" yaml:"clientTrafficPolicies,omitempty"`
@@ -88,6 +93,16 @@ func (r *Resources) GetNamespace(name string) *corev1.Namespace {
 	for _, ns := range r.Namespaces {
 		if ns.Name == name {
 			return ns
+		}
+	}
+
+	return nil
+}
+
+func (r *Resources) GetEnvoyProxy(namespace, name string) *egv1a1.EnvoyProxy {
+	for _, ep := range r.EnvoyProxiesForGateways {
+		if ep.Namespace == namespace && ep.Name == name {
+			return ep
 		}
 	}
 

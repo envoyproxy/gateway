@@ -27,7 +27,7 @@ An Add-ons Helm chart for Envoy Gateway
 | https://grafana.github.io/helm-charts | grafana | 8.0.0 |
 | https://grafana.github.io/helm-charts | loki | 4.8.0 |
 | https://grafana.github.io/helm-charts | tempo | 1.3.1 |
-| https://open-telemetry.github.io/opentelemetry-helm-charts | opentelemetry-collector | 0.60.0 |
+| https://open-telemetry.github.io/opentelemetry-helm-charts | opentelemetry-collector | 0.73.1 |
 | https://prometheus-community.github.io/helm-charts | prometheus | 25.21.0 |
 
 ## Values
@@ -58,7 +58,7 @@ An Add-ons Helm chart for Envoy Gateway
 | grafana.datasources."datasources.yaml".apiVersion | int | `1` |  |
 | grafana.datasources."datasources.yaml".datasources[0].name | string | `"Prometheus"` |  |
 | grafana.datasources."datasources.yaml".datasources[0].type | string | `"prometheus"` |  |
-| grafana.datasources."datasources.yaml".datasources[0].url | string | `"http://prometheus-server"` |  |
+| grafana.datasources."datasources.yaml".datasources[0].url | string | `"http://prometheus"` |  |
 | grafana.enabled | bool | `true` |  |
 | grafana.fullnameOverride | string | `"grafana"` |  |
 | grafana.service.type | string | `"LoadBalancer"` |  |
@@ -73,9 +73,12 @@ An Add-ons Helm chart for Envoy Gateway
 | loki.loki.memberlist | string | `"loki-memberlist"` |  |
 | loki.loki.rulerConfig.storage.type | string | `"local"` |  |
 | loki.loki.storage.type | string | `"filesystem"` |  |
-| loki.monitoring.selfMonitoring.grafanaAgent.installOperator | bool | `true` |  |
+| loki.monitoring.lokiCanary.enabled | bool | `false` |  |
+| loki.monitoring.selfMonitoring.enabled | bool | `false` |  |
+| loki.monitoring.selfMonitoring.grafanaAgent.installOperator | bool | `false` |  |
 | loki.read.replicas | int | `0` |  |
 | loki.singleBinary.replicas | int | `1` |  |
+| loki.test.enabled | bool | `false` |  |
 | loki.write.replicas | int | `0` |  |
 | opentelemetry-collector.config.exporters.logging.verbosity | string | `"detailed"` |  |
 | opentelemetry-collector.config.exporters.loki.endpoint | string | `"http://loki.monitoring.svc:3100/loki/api/v1/push"` |  |
@@ -104,16 +107,13 @@ An Add-ons Helm chart for Envoy Gateway
 | prometheus.kube-state-metrics.enabled | bool | `false` |  |
 | prometheus.prometheus-node-exporter.enabled | bool | `false` |  |
 | prometheus.prometheus-pushgateway.enabled | bool | `false` |  |
-| prometheus.server.fullnameOverride | string | `"prometheus-server"` |  |
+| prometheus.server.fullnameOverride | string | `"prometheus"` |  |
 | prometheus.server.global.scrape_interval | string | `"15s"` |  |
 | prometheus.server.image.repository | string | `"prom/prometheus"` |  |
 | prometheus.server.persistentVolume.enabled | bool | `false` |  |
 | prometheus.server.readinessProbeInitialDelay | int | `0` |  |
 | prometheus.server.securityContext | object | `{}` |  |
 | prometheus.server.service.type | string | `"LoadBalancer"` |  |
-| tags.logging | bool | `false` |  |
-| tags.metrics | bool | `true` |  |
-| tags.tracing | bool | `false` |  |
 | tempo.enabled | bool | `true` |  |
 | tempo.fullnameOverride | string | `"tempo"` |  |
 | tempo.service.type | string | `"LoadBalancer"` |  |
