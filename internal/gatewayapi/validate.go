@@ -895,6 +895,8 @@ func (t *Translator) validateHostname(hostname string) error {
 //  2. If the secret reference is a cross-namespace reference,
 //     is it permitted by any ReferenceGrant
 //  3. Does the secret exist
+//
+// nolint:unparam
 func (t *Translator) validateSecretRef(
 	allowCrossNamespace bool,
 	from crossNamespaceFrom,

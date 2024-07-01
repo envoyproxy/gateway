@@ -24,8 +24,8 @@ envoyExtensionPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: 'ExtProcs: backend ref to Service envoy-gateway/grpc-backend not
-          permitted by any ReferenceGrant.'
+        message: 'ExtProc: backend ref to Service envoy-gateway/grpc-backend not permitted
+          by any ReferenceGrant.'
         reason: Invalid
         status: "False"
         type: Accepted

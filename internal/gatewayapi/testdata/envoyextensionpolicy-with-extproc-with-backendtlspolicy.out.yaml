@@ -315,7 +315,7 @@ xdsIR:
                   name: policy-btls-grpc-2/default-ca
                 sni: grpc-backend-2
               weight: 1
-          name: envoyextensionpolicy/default/policy-for-http-route/0
+          name: envoyextensionpolicy/default/policy-for-http-route/extproc/0
           requestHeaderProcessing: true
           responseHeaderProcessing: true
         hostname: www.foo.com
@@ -349,7 +349,7 @@ xdsIR:
               weight: 1
           failOpen: true
           messageTimeout: 5s
-          name: envoyextensionpolicy/default/policy-for-gateway/0
+          name: envoyextensionpolicy/default/policy-for-gateway/extproc/0
           requestBodyProcessingMode: Buffered
           requestHeaderProcessing: true
           responseBodyProcessingMode: Streamed

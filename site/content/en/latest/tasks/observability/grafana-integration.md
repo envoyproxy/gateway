@@ -65,6 +65,12 @@ This dashboard example shows the overall stats exported by Envoy Gateway fleet.
 
 ![Envoy Gateway Global: Infrastructure Manager](/img/envoy-gateway-global-infra-manager.png)
 
+### [Envoy Gateway Resources](https://raw.githubusercontent.com/envoyproxy/gateway/main/charts/gateway-addons-helm/dashboards/envoy-gateway-resource.json)
+
+This dashboard example shows the overall resources stats for each Envoy Gateway fleet.
+
+![Envoy Gateway Resources](/img/envoy-gateway-resources-dashboard.png)
+
 ## Update Dashboards
 
 The example dashboards cannot be updated in-place by default, if you are trying to

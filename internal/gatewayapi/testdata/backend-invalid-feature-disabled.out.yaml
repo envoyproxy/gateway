@@ -45,7 +45,7 @@ envoyExtensionPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: 'ExtProcs: resource backend-ip of type Backend cannot be used since
+        message: 'ExtProc: resource backend-ip of type Backend cannot be used since
           Backend is disabled in Envoy Gateway configuration.'
         reason: Invalid
         status: "False"

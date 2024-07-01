@@ -9,21 +9,28 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
 	perr "github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
+	"github.com/envoyproxy/gateway/internal/wasm"
 )
+
+// oci URL prefix
+const ociURLPrefix = "oci://"
 
 func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv1a1.EnvoyExtensionPolicy,
 	gateways []*GatewayContext,
@@ -302,16 +309,19 @@ func resolveEEPolicyRouteTargetRef(policy *egv1a1.EnvoyExtensionPolicy, target g
 	return route.RouteContext, nil
 }
 
-func (t *Translator) translateEnvoyExtensionPolicyForRoute(policy *egv1a1.EnvoyExtensionPolicy, route RouteContext,
-	xdsIR XdsIRMap, resources *Resources,
+func (t *Translator) translateEnvoyExtensionPolicyForRoute(
+	policy *egv1a1.EnvoyExtensionPolicy,
+	route RouteContext,
+	xdsIR XdsIRMap,
+	resources *Resources,
 ) error {
 	var (
 		wasms     []ir.Wasm
 		err, errs error
 	)
 
-	if wasms, err = t.buildWasms(policy); err != nil {
-		err = perr.WithMessage(err, "WASMs")
+	if wasms, err = t.buildWasms(policy, resources); err != nil {
+		err = perr.WithMessage(err, "WASM")
 		errs = errors.Join(errs, err)
 	}
 
@@ -332,7 +342,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(policy *egv1a1.EnvoyE
 
 		var extProcs []ir.ExtProc
 		if extProcs, err = t.buildExtProcs(policy, resources, gtwCtx.envoyProxy); err != nil {
-			err = perr.WithMessage(err, "ExtProcs")
+			err = perr.WithMessage(err, "ExtProc")
 			errs = errors.Join(errs, err)
 		}
 		irKey := t.getIRKey(gtwCtx.Gateway)
@@ -366,11 +376,11 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 	)
 
 	if extProcs, err = t.buildExtProcs(policy, resources, gateway.envoyProxy); err != nil {
-		err = perr.WithMessage(err, "ExtProcs")
+		err = perr.WithMessage(err, "ExtProc")
 		errs = errors.Join(errs, err)
 	}
-	if wasms, err = t.buildWasms(policy); err != nil {
-		err = perr.WithMessage(err, "WASMs")
+	if wasms, err = t.buildWasms(policy, resources); err != nil {
+		err = perr.WithMessage(err, "WASM")
 		errs = errors.Join(errs, err)
 	}
 
@@ -420,7 +430,7 @@ func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resource
 	}
 
 	for idx, ep := range policy.Spec.ExtProc {
-		name := irConfigNameForEEP(policy, idx)
+		name := irConfigNameForExtProc(policy, idx)
 		extProcIR, err := t.buildExtProc(name, utils.NamespacedName(policy), ep, idx, resources, envoyProxy)
 		if err != nil {
 			return nil, err
@@ -524,15 +534,21 @@ func (t *Translator) buildExtProc(
 	return extProcIR, err
 }
 
-func irConfigNameForEEP(policy *egv1a1.EnvoyExtensionPolicy, idx int) string {
+func irConfigNameForExtProc(policy *egv1a1.EnvoyExtensionPolicy, index int) string {
 	return fmt.Sprintf(
-		"%s/%s/%d",
-		strings.ToLower(egv1a1.KindEnvoyExtensionPolicy),
-		utils.NamespacedName(policy).String(),
-		idx)
+		"%s/extproc/%s",
+		irConfigName(policy),
+		strconv.Itoa(index))
 }
 
-func (t *Translator) buildWasms(policy *egv1a1.EnvoyExtensionPolicy) ([]ir.Wasm, error) {
+func (t *Translator) buildWasms(
+	policy *egv1a1.EnvoyExtensionPolicy,
+	resources *Resources,
+) ([]ir.Wasm, error) {
+	if t.WasmCache == nil {
+		return nil, fmt.Errorf("wasm cache is not initialized")
+	}
+
 	var wasmIRList []ir.Wasm
 
 	if policy == nil {
@@ -540,8 +556,8 @@ func (t *Translator) buildWasms(policy *egv1a1.EnvoyExtensionPolicy) ([]ir.Wasm,
 	}
 
 	for idx, wasm := range policy.Spec.Wasm {
-		name := irConfigNameForEEP(policy, idx)
-		wasmIR, err := t.buildWasm(name, wasm)
+		name := irConfigNameForWasm(policy, idx)
+		wasmIR, err := t.buildWasm(name, wasm, policy, idx, resources)
 		if err != nil {
 			return nil, err
 		}
@@ -550,37 +566,169 @@ func (t *Translator) buildWasms(policy *egv1a1.EnvoyExtensionPolicy) ([]ir.Wasm,
 	return wasmIRList, nil
 }
 
-func (t *Translator) buildWasm(name string, wasm egv1a1.Wasm) (*ir.Wasm, error) {
+func (t *Translator) buildWasm(
+	name string,
+	config egv1a1.Wasm,
+	policy *egv1a1.EnvoyExtensionPolicy,
+	idx int,
+	resources *Resources,
+) (*ir.Wasm, error) {
 	var (
-		failOpen     = false
-		httpWasmCode *ir.HTTPWasmCode
+		failOpen   = false
+		code       *ir.HTTPWasmCode
+		pullPolicy wasm.PullPolicy
+		// the checksum provided by the user, it's used to validate the wasm module
+		// downloaded from the original HTTP server or the OCI registry
+		originalChecksum string
+		servingURL       string // the wasm module download URL from the EG HTTP server
+		err              error
 	)
 
-	if wasm.FailOpen != nil {
-		failOpen = *wasm.FailOpen
+	if config.FailOpen != nil {
+		failOpen = *config.FailOpen
 	}
 
-	switch wasm.Code.Type {
-	case egv1a1.HTTPWasmCodeSourceType:
-		httpWasmCode = &ir.HTTPWasmCode{
-			URL:    wasm.Code.HTTP.URL,
-			SHA256: wasm.Code.SHA256,
+	if config.Code.PullPolicy != nil {
+		switch *config.Code.PullPolicy {
+		case egv1a1.ImagePullPolicyAlways:
+			pullPolicy = wasm.Always
+		case egv1a1.ImagePullPolicyIfNotPresent:
+			pullPolicy = wasm.IfNotPresent
+		default:
+			pullPolicy = wasm.Unspecified
 		}
+	}
+
+	switch config.Code.Type {
+	case egv1a1.HTTPWasmCodeSourceType:
+		// This is a sanity check, the validation should have caught this
+		if config.Code.HTTP == nil {
+			return nil, fmt.Errorf("missing HTTP field in Wasm code source")
+		}
+
+		if config.Code.HTTP.SHA256 != nil {
+			originalChecksum = *config.Code.HTTP.SHA256
+		}
+
+		http := config.Code.HTTP
+
+		if servingURL, _, err = t.WasmCache.Get(http.URL, wasm.GetOptions{
+			Checksum:        originalChecksum,
+			PullPolicy:      pullPolicy,
+			ResourceName:    irConfigNameForWasm(policy, idx),
+			ResourceVersion: policy.ResourceVersion,
+		}); err != nil {
+			return nil, err
+		}
+
+		code = &ir.HTTPWasmCode{
+			ServingURL:  servingURL,
+			OriginalURL: http.URL,
+			SHA256:      originalChecksum,
+		}
+
 	case egv1a1.ImageWasmCodeSourceType:
-		return nil, fmt.Errorf("OCI image Wasm code source is not supported yet")
+		var (
+			image      = config.Code.Image
+			secret     *corev1.Secret
+			pullSecret []byte
+			// the checksum of the wasm module extracted from the OCI image
+			// it's different from the checksum for the OCI image
+			checksum string
+		)
+
+		// This is a sanity check, the validation should have caught this
+		if image == nil {
+			return nil, fmt.Errorf("missing Image field in Wasm code source")
+		}
+
+		if image.PullSecretRef != nil {
+			from := crossNamespaceFrom{
+				group:     egv1a1.GroupName,
+				kind:      KindEnvoyExtensionPolicy,
+				namespace: policy.Namespace,
+			}
+
+			if secret, err = t.validateSecretRef(
+				false, from, *image.PullSecretRef, resources); err != nil {
+				return nil, err
+			}
+
+			if data, ok := secret.Data[corev1.DockerConfigJsonKey]; ok {
+				pullSecret = data
+			} else {
+				return nil, fmt.Errorf("missing %s key in secret %s/%s", corev1.DockerConfigJsonKey, secret.Namespace, secret.Name)
+			}
+		}
+
+		// Wasm Cache requires the URL to be in the format "scheme://<URL>"
+		imageURL := image.URL
+		if !strings.HasPrefix(image.URL, ociURLPrefix) {
+			imageURL = fmt.Sprintf("%s%s", ociURLPrefix, image.URL)
+		}
+
+		// If the url is an OCI image, and neither digest nor tag is provided, use the latest tag.
+		if !hasDigest(imageURL) && !hasTag(imageURL) {
+			imageURL += ":latest"
+		}
+
+		if config.Code.Image.SHA256 != nil {
+			originalChecksum = *config.Code.Image.SHA256
+		}
+
+		// The wasm checksum is different from the OCI image digest.
+		// The original checksum in the EEP is used to match the digest of OCI image.
+		// The returned checksum from the cache is the checksum of the wasm file
+		// extracted from the OCI image, which is used by the envoy to verify the wasm file.
+		if servingURL, checksum, err = t.WasmCache.Get(imageURL, wasm.GetOptions{
+			Checksum:        originalChecksum,
+			PullSecret:      pullSecret,
+			PullPolicy:      pullPolicy,
+			ResourceName:    irConfigNameForWasm(policy, idx),
+			ResourceVersion: policy.ResourceVersion,
+		}); err != nil {
+			return nil, err
+		}
+
+		code = &ir.HTTPWasmCode{
+			ServingURL:  servingURL,
+			SHA256:      checksum,
+			OriginalURL: imageURL,
+		}
 	default:
 		// should never happen because of kubebuilder validation, just a sanity check
-		return nil, fmt.Errorf("unsupported Wasm code source type %q", wasm.Code.Type)
+		return nil, fmt.Errorf("unsupported Wasm code source type %q", config.Code.Type)
 	}
 
+	wasmName := name
+	if config.Name != nil {
+		wasmName = *config.Name
+	}
 	wasmIR := &ir.Wasm{
-		Name:         name,
-		RootID:       wasm.RootID,
-		WasmName:     wasm.Name,
-		Config:       wasm.Config,
-		FailOpen:     failOpen,
-		HTTPWasmCode: httpWasmCode,
+		Name:     name,
+		RootID:   config.RootID,
+		WasmName: wasmName,
+		Config:   config.Config,
+		FailOpen: failOpen,
+		Code:     code,
 	}
 
 	return wasmIR, nil
+}
+
+func hasDigest(imageURL string) bool {
+	return strings.Contains(imageURL, "@")
+}
+
+func hasTag(imageURL string) bool {
+	parts := strings.Split(imageURL[len(ociURLPrefix):], ":")
+	// Verify that we aren't confusing a tag for a hostname with port.
+	return len(parts) > 1 && !strings.Contains(parts[len(parts)-1], "/")
+}
+
+func irConfigNameForWasm(policy client.Object, index int) string {
+	return fmt.Sprintf(
+		"%s/wasm/%s",
+		irConfigName(policy),
+		strconv.Itoa(index))
 }

@@ -2,7 +2,7 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: http-with-http-wasm-source
+  name: http-with-oci-wasm-source
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
@@ -12,7 +12,7 @@ spec:
   - matches:
     - path:
         type: PathPrefix
-        value: /wasm-http
+        value: /wasm-oci
     backendRefs:
     - name: infra-backend-v1
       port: 8080
@@ -35,21 +35,5 @@ spec:
     - name: infra-backend-v1
       port: 8080
 ---
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: EnvoyExtensionPolicy
-metadata:
-  name: http-wasm-source-test
-  namespace: gateway-conformance-infra
-spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: http-with-http-wasm-source
-  wasm:
-  - name: wasm-filter
-    rootID: my_root_id
-    code:
-      type: HTTP
-      http:
-        url: https://raw.githubusercontent.com/envoyproxy/envoy/main/examples/wasm-cc/lib/envoy_filter_http_wasm_example.wasm
-      sha256: 79c9f85128bb0177b6511afa85d587224efded376ac0ef76df56595f1e6315c0
+# EnvoyExtensionPolicy for OCI Wasm source test is created in the test code because we can't get the OCI registry's LB
+# address in advance.

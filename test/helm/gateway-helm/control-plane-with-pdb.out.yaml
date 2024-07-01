@@ -355,6 +355,9 @@ spec:
   - name: ratelimit
     port: 18001
     targetPort: 18001
+  - name: wasm
+    port: 18002
+    targetPort: 18002
   - name: metrics
     port: 19001
     targetPort: 19001
@@ -415,6 +418,8 @@ spec:
           name: grpc
         - containerPort: 18001
           name: ratelimit
+        - containerPort: 18002
+          name: wasm
         - containerPort: 19001
           name: metrics
         readinessProbe:
