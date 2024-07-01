@@ -7,7 +7,7 @@ This task show you how to config gateway control-plane observability, includes m
 
 ## Prerequisites
 
-{{% readfile "../../../template/o11y_prerequisites.md" %}}
+{{< boilerplate o11y_prerequisites >}}
 
 ## Metrics
 

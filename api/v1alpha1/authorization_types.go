@@ -27,7 +27,8 @@ type Authorization struct {
 
 // AuthorizationRule defines a single authorization rule.
 type AuthorizationRule struct {
-	// Name is a user-friendly name for the rule. It's just for display purposes.
+	// Name is a user-friendly name for the rule.
+	// If not specified, Envoy Gateway will generate a unique name for the rule.n
 	// +optional
 	Name *string `json:"name,omitempty"`
 

@@ -1,0 +1,4 @@
+grafana:
+  enabled: false
+opentelemetry-collector:
+  enabled: true

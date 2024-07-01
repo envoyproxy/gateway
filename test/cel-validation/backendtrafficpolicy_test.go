@@ -1078,7 +1078,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					Connection: &egv1a1.BackendTrafficPolicyConnection{
+					Connection: &egv1a1.BackendConnection{
 						BufferLimit: ptr.To(resource.MustParse("1Mi")),
 					},
 				}
@@ -1097,7 +1097,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					Connection: &egv1a1.BackendTrafficPolicyConnection{
+					Connection: &egv1a1.BackendConnection{
 						BufferLimit: ptr.To(resource.MustParse("1m")),
 					},
 				}

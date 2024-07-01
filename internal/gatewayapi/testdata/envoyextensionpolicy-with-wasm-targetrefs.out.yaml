@@ -16,8 +16,8 @@ envoyExtensionPolicies:
     wasm:
     - code:
         http:
+          sha256: 746df05c8f3a0b07a46c0967cfbc5cbe5b9d48d0f79b6177eeedf8be6c8b34b5
           url: https://www.example.com/wasm-filter-1.wasm
-        sha256: 746df05c8f3a0b07a46c0967cfbc5cbe5b9d48d0f79b6177eeedf8be6c8b34b5
         type: HTTP
       config:
         parameter1:
@@ -27,8 +27,8 @@ envoyExtensionPolicies:
       name: wasm-filter-1
     - code:
         http:
+          sha256: a1efca12ea51069abb123bf9c77889fcc2a31cc5483fc14d115e44fdf07c7980
           url: https://www.example.com/wasm-filter-2.wasm
-        sha256: a1efca12ea51069abb123bf9c77889fcc2a31cc5483fc14d115e44fdf07c7980
         type: HTTP
       config:
         parameter1: value1
@@ -247,18 +247,20 @@ xdsIR:
             parameter2: value3
           failOpen: false
           httpWasmCode:
+            originalDownloadingURL: https://www.example.com/wasm-filter-1.wasm
+            servingURL: https://envoy-gateway:18002/5c90b9a82642ce00a7753923fabead306b9d9a54a7c0bd2463a1af3efcfb110b.wasm
             sha256: 746df05c8f3a0b07a46c0967cfbc5cbe5b9d48d0f79b6177eeedf8be6c8b34b5
-            url: https://www.example.com/wasm-filter-1.wasm
-          name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/0
+          name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/0
           wasmName: wasm-filter-1
         - config:
             parameter1: value1
             parameter2: value2
           failOpen: false
           httpWasmCode:
+            originalDownloadingURL: https://www.example.com/wasm-filter-2.wasm
+            servingURL: https://envoy-gateway:18002/593e4cc60a7e0fa4d4f86531a5e20e785213a52000f056a7a8b5c5afcb908052.wasm
             sha256: a1efca12ea51069abb123bf9c77889fcc2a31cc5483fc14d115e44fdf07c7980
-            url: https://www.example.com/wasm-filter-2.wasm
-          name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/1
+          name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/1
           wasmName: wasm-filter-2
       - destination:
           name: httproute/envoy-gateway/httproute-2/rule/0
@@ -285,16 +287,18 @@ xdsIR:
             parameter2: value3
           failOpen: false
           httpWasmCode:
+            originalDownloadingURL: https://www.example.com/wasm-filter-1.wasm
+            servingURL: https://envoy-gateway:18002/5c90b9a82642ce00a7753923fabead306b9d9a54a7c0bd2463a1af3efcfb110b.wasm
             sha256: 746df05c8f3a0b07a46c0967cfbc5cbe5b9d48d0f79b6177eeedf8be6c8b34b5
-            url: https://www.example.com/wasm-filter-1.wasm
-          name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/0
+          name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/0
           wasmName: wasm-filter-1
         - config:
             parameter1: value1
             parameter2: value2
           failOpen: false
           httpWasmCode:
+            originalDownloadingURL: https://www.example.com/wasm-filter-2.wasm
+            servingURL: https://envoy-gateway:18002/593e4cc60a7e0fa4d4f86531a5e20e785213a52000f056a7a8b5c5afcb908052.wasm
             sha256: a1efca12ea51069abb123bf9c77889fcc2a31cc5483fc14d115e44fdf07c7980
-            url: https://www.example.com/wasm-filter-2.wasm
-          name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/1
+          name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/1
           wasmName: wasm-filter-2

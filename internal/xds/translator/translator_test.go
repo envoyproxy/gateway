@@ -94,6 +94,9 @@ func TestTranslateXds(t *testing.T) {
 		"tracing-invalid": {
 			errMsg: "validation failed for xds resource",
 		},
+		"tracing-unknown-provider-type": {
+			errMsg: "unknown tracing provider type: Datadog",
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "xds-ir", "*.yaml"))
@@ -127,6 +130,7 @@ func TestTranslateXds(t *testing.T) {
 
 			tCtx, err := tr.Translate(x)
 			if !strings.HasSuffix(inputFileName, "partial-invalid") && len(cfg.errMsg) == 0 {
+				t.Logf(inputFileName)
 				require.NoError(t, err)
 			} else if len(cfg.errMsg) > 0 {
 				require.Error(t, err)

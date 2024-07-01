@@ -7,7 +7,7 @@ This task shows you how to visualise the metrics exposed to Prometheus using Gra
 
 ## Prerequisites
 
-{{% readfile "../../../template/o11y_prerequisites.md" %}}
+{{< boilerplate o11y_prerequisites >}}
 
 Follow the steps from the [Gateway Observability](../gateway-observability) and [Proxy Observability](../proxy-observability#metrics) to enable Prometheus metrics
 for both Envoy Gateway (Control Plane) and Envoy Proxy (Data Plane).
@@ -64,6 +64,12 @@ This dashboard example shows the overall stats exported by Envoy Gateway fleet.
 ![Envoy Gateway Global: xDS Server](/img/envoy-gateway-global-xds-server.png)
 
 ![Envoy Gateway Global: Infrastructure Manager](/img/envoy-gateway-global-infra-manager.png)
+
+### [Envoy Gateway Resources](https://raw.githubusercontent.com/envoyproxy/gateway/main/charts/gateway-addons-helm/dashboards/envoy-gateway-resource.json)
+
+This dashboard example shows the overall resources stats for each Envoy Gateway fleet.
+
+![Envoy Gateway Resources](/img/envoy-gateway-resources-dashboard.png)
 
 ## Update Dashboards
 

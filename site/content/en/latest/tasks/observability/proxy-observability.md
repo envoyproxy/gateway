@@ -7,7 +7,7 @@ This task show you how to config proxy observability, includes metrics, logs, an
 
 ## Prerequisites
 
-{{% readfile "../../../template/o11y_prerequisites.md" %}}
+{{< boilerplate o11y_prerequisites >}}
 
 By default, the Service type of `loki` is ClusterIP, you can change it to LoadBalancer type for further usage:
 
