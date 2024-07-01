@@ -31,7 +31,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 	router := &routev3.Route{
 		Name:     httpRoute.Name,
 		Match:    buildXdsRouteMatch(httpRoute.PathMatch, httpRoute.HeaderMatches, httpRoute.QueryParamMatches),
-		Metadata: buildXdsRouteMetadata(httpRoute.Metadata),
+		Metadata: buildXdsMetadata(httpRoute.Metadata),
 	}
 
 	if len(httpRoute.AddRequestHeaders) > 0 {

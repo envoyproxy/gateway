@@ -1081,8 +1081,8 @@ xds:
             metadata:
               filterMetadata:
                 envoy-gateway:
-                  gateway:
-                    kind: ""
+                  resources:
+                  - kind: ""
                     name: eg
                     namespace: default
                     sectionName: http
@@ -1093,8 +1093,8 @@ xds:
               metadata:
                 filterMetadata:
                   envoy-gateway:
-                    route:
-                      kind: HTTPRoute
+                    resources:
+                    - kind: HTTPRoute
                       name: backend
                       namespace: default
               name: httproute/default/backend/rule/0/match/0/www_example_com
@@ -1112,8 +1112,8 @@ xds:
             metadata:
               filterMetadata:
                 envoy-gateway:
-                  gateway:
-                    kind: ""
+                  resources:
+                  - kind: ""
                     name: eg
                     namespace: default
                     sectionName: grpc
@@ -1124,8 +1124,8 @@ xds:
               metadata:
                 filterMetadata:
                   envoy-gateway:
-                    route:
-                      kind: GRPCRoute
+                    resources:
+                    - kind: GRPCRoute
                       name: backend
                       namespace: default
               name: grpcroute/default/backend/rule/0/match/0/www_grpc-example_com

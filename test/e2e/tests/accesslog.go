@@ -98,7 +98,7 @@ var FileAccessLogTest = suite.ConformanceTest{
 					if err := wait.PollUntilContextTimeout(ctx, 500*time.Millisecond, 15*time.Second, true, func(_ context.Context) (bool, error) {
 						count, err := QueryLogCountFromLoki(t, suite.Client, types.NamespacedName{
 							Namespace: "envoy-gateway-system",
-						}, labels, "gateway-conformance-infra/accesslog-file")
+						}, labels, "test-annotation-value")
 						if err != nil {
 							t.Logf("failed to get log count from loki: %v", err)
 							return false, nil

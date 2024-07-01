@@ -3,6 +3,8 @@ kind: HTTPRoute
 metadata:
   name: accesslog-file
   namespace: gateway-conformance-infra
+  annotations:
+    gateway.envoyproxy.io/test-annotation: test-annotation-value
 spec:
   parentRefs:
     - name: same-namespace

@@ -400,7 +400,7 @@ func (t *Translator) addRouteToRouteConfig(
 			vHost = &routev3.VirtualHost{
 				Name:     fmt.Sprintf("%s/%s", httpListener.Name, underscoredHostname),
 				Domains:  []string{httpRoute.Hostname},
-				Metadata: buildXdsVirtualHostMetadata(httpListener.Metadata),
+				Metadata: buildXdsMetadata(httpListener.Metadata),
 			}
 			if metrics != nil && metrics.EnableVirtualHostStats {
 				vHost.VirtualClusters = []*routev3.VirtualCluster{

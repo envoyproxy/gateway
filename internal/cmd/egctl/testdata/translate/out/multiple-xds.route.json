@@ -16,12 +16,14 @@
                 "metadata": {
                   "filterMetadata": {
                     "envoy-gateway": {
-                      "gateway": {
-                        "kind": "",
-                        "name": "eg",
-                        "namespace": "default",
-                        "sectionName": "http"
-                      }
+                      "resources": [
+                        {
+                          "kind": "",
+                          "name": "eg",
+                          "namespace": "default",
+                          "sectionName": "http"
+                        }
+                      ]
                     }
                   }
                 },
@@ -34,11 +36,13 @@
                     "metadata": {
                       "filterMetadata": {
                         "envoy-gateway": {
-                          "route": {
-                            "kind": "HTTPRoute",
-                            "name": "backend",
-                            "namespace": "default"
-                          }
+                          "resources": [
+                            {
+                              "kind": "HTTPRoute",
+                              "name": "backend",
+                              "namespace": "default"
+                            }
+                          ]
                         }
                       }
                     },
@@ -75,12 +79,14 @@
                 "metadata": {
                   "filterMetadata": {
                     "envoy-gateway": {
-                      "gateway": {
-                        "kind": "",
-                        "name": "eg2",
-                        "namespace": "default",
-                        "sectionName": "http"
-                      }
+                      "resources": [
+                        {
+                          "kind": "",
+                          "name": "eg2",
+                          "namespace": "default",
+                          "sectionName": "http"
+                        }
+                      ]
                     }
                   }
                 },
@@ -93,11 +99,13 @@
                     "metadata": {
                       "filterMetadata": {
                         "envoy-gateway": {
-                          "route": {
-                            "kind": "HTTPRoute",
-                            "name": "backend",
-                            "namespace": "default"
-                          }
+                          "resources": [
+                            {
+                              "kind": "HTTPRoute",
+                              "name": "backend",
+                              "namespace": "default"
+                            }
+                          ]
                         }
                       }
                     },

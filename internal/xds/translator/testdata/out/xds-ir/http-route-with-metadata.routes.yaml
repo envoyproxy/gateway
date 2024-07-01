@@ -6,8 +6,8 @@
     metadata:
       filterMetadata:
         envoy-gateway:
-          gateway:
-            annotations:
+          resources:
+          - annotations:
               foo: bar
             kind: Gateway
             name: first-gateway
@@ -24,8 +24,8 @@
       metadata:
         filterMetadata:
           envoy-gateway:
-            route:
-              annotations:
+            resources:
+            - annotations:
                 foo: bar
               kind: HTTPRoute
               name: first-route-name

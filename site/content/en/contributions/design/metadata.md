@@ -35,13 +35,14 @@ route:
   cluster: httproute/gateway-conformance-infra/myroute/rule/0
 metadata:
   filter_metadata:
-    io.envoyproxy.gateway.metadata:
-      namespace: gateway-conformance-infra
-      groupVersion: gateway.networking.k8s.io/v1
-      kind: HTTPRoute
-      annotations: 
-        foo: bar
-      name: myroute
+    envoy-gateway:
+      resources:
+        - namespace: gateway-conformance-infra
+          groupVersion: gateway.networking.k8s.io/v1
+          kind: HTTPRoute
+          annotations:
+            foo: bar
+          name: myroute
 ```
 
 Envoy Gateway translates [Gateway-API][gw_api] in the following manner:
@@ -54,7 +55,7 @@ Envoy Gateway translates [Gateway-API][gw_api] in the following manner:
 ## Usage
 
 Users can consume metadata in various ways:
-- Adding metadata to access logs using the metadata operator, e.g. `%METADATA(ROUTE:io.envoyproxy.gateway.metadata:namespace)`
+- Adding metadata to access logs using the metadata operator, e.g. `%METADATA(ROUTE:envoy-gateway:resources)`
 - Accessing metadata in CEL expressions through the `xds.*_metadata` attribute
 
 [static metadata]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/base.proto#envoy-v3-api-msg-config-core-v3-metadata

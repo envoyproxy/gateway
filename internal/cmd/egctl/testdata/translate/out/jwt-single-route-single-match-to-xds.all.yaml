@@ -297,8 +297,8 @@ xds:
             metadata:
               filterMetadata:
                 envoy-gateway:
-                  gateway:
-                    kind: ""
+                  resources:
+                  - kind: ""
                     name: eg
                     namespace: envoy-gateway-system
                     sectionName: http
@@ -309,8 +309,8 @@ xds:
               metadata:
                 filterMetadata:
                   envoy-gateway:
-                    route:
-                      kind: HTTPRoute
+                    resources:
+                    - kind: HTTPRoute
                       name: backend
                       namespace: envoy-gateway-system
               name: httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com

@@ -97,7 +97,7 @@ curl -s "http://$LOKI_IP:3100/loki/api/v1/query_range" --data-urlencode "query={
 Envoy Gateway provides additional metadata about the K8s resources that were translated to  certain envoy resources. 
 For example, details about the `HTTPRoute` and `GRPCRoute` (kind, group, name, namespace and annotations) are available 
 for access log formatter using the `METADATA` operator. To enrich logs, users can add log operator such as: 
-`%METADATA(ROUTE:io.envoyproxy.gateway:route:name)%` to their access log format. 
+`%METADATA(ROUTE:envoy-gateway:resources)%` to their access log format. 
 
 
 ## Traces

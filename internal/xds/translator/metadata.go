@@ -19,36 +19,26 @@ const (
 	envoyGatewayXdsMetadataKeyNamespace   = "namespace"
 	envoyGatewayXdsMetadataKeyAnnotations = "annotations"
 	envoyGatewayXdsMetadataKeySectionName = "sectionName"
-	envoyGatewayXdsMetadataKeyRoute       = "route"
-	envoyGatewayXdsMetadataKeyGateway     = "gateway"
+	envoyGatewayMetadataKeyResources      = "resources"
 )
 
-func buildXdsVirtualHostMetadata(metadata *ir.ResourceMetadata) *corev3.Metadata {
+func buildXdsMetadata(metadata *ir.ResourceMetadata) *corev3.Metadata {
 	if metadata == nil {
 		return nil
 	}
+
+	resourcesList := &structpb.ListValue{}
+	resourcesList.Values = append(resourcesList.Values, buildResourceMetadata(metadata))
 
 	return &corev3.Metadata{
 		FilterMetadata: map[string]*structpb.Struct{
 			envoyGatewayXdsMetadataNamespace: {
 				Fields: map[string]*structpb.Value{
-					envoyGatewayXdsMetadataKeyGateway: buildResourceMetadata(metadata),
-				},
-			},
-		},
-	}
-}
-
-func buildXdsRouteMetadata(metadata *ir.ResourceMetadata) *corev3.Metadata {
-	if metadata == nil {
-		return nil
-	}
-
-	return &corev3.Metadata{
-		FilterMetadata: map[string]*structpb.Struct{
-			envoyGatewayXdsMetadataNamespace: {
-				Fields: map[string]*structpb.Value{
-					envoyGatewayXdsMetadataKeyRoute: buildResourceMetadata(metadata),
+					envoyGatewayMetadataKeyResources: {
+						Kind: &structpb.Value_ListValue{
+							ListValue: resourcesList,
+						},
+					},
 				},
 			},
 		},
