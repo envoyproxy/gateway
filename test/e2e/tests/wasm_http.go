@@ -22,14 +22,14 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, WasmTest)
+	ConformanceTests = append(ConformanceTests, HTTPWasmTest)
 }
 
-// WasmTest tests Wasm extension for an http route with HTTP Wasm configured.
-var WasmTest = suite.ConformanceTest{
-	ShortName:   "Wasm",
+// HTTPWasmTest tests Wasm extension for an http route with HTTP Wasm configured.
+var HTTPWasmTest = suite.ConformanceTest{
+	ShortName:   "Wasm HTTP Code Source",
 	Description: "Test Wasm extension that adds response headers",
-	Manifests:   []string{"testdata/wasm.yaml"},
+	Manifests:   []string{"testdata/wasm-http.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("http route with http wasm source", func(t *testing.T) {
 			ns := "gateway-conformance-infra"

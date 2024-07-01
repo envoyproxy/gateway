@@ -9,8 +9,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/google/cel-go/cel"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -301,6 +303,22 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 				irAccessLog.OpenTelemetry = append(irAccessLog.OpenTelemetry, al)
 			}
 		}
+
+		var (
+			validExprs []string
+			errs       []error
+		)
+		for _, expr := range accessLog.Matches {
+			if !validCELExpression(expr) {
+				errs = append(errs, fmt.Errorf("invalid CEL expression: %s", expr))
+				continue
+			}
+			validExprs = append(validExprs, expr)
+		}
+		if len(errs) > 0 {
+			return nil, utilerrors.NewAggregate(errs)
+		}
+		irAccessLog.CELMatches = validExprs
 	}
 
 	return irAccessLog, nil
@@ -353,6 +371,7 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 			Name:     "tracing", // TODO: rename this, so that we can share backend with accesslog?
 			Settings: ds,
 		},
+		Provider: tracing.Provider,
 	}, nil
 }
 
@@ -409,4 +428,11 @@ func destinationSettingFromHostAndPort(host string, port uint32) []*ir.Destinati
 			Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(host, port)},
 		},
 	}
+}
+
+var celEnv, _ = cel.NewEnv()
+
+func validCELExpression(expr string) bool {
+	_, issue := celEnv.Parse(expr)
+	return issue.Err() == nil
 }

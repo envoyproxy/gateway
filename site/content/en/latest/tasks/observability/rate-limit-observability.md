@@ -7,7 +7,7 @@ This guide show you how to config RateLimit observability, includes traces.
 
 ## Prerequisites
 
-{{% readfile "../../../template/o11y_prerequisites.md" %}}
+{{< boilerplate o11y_prerequisites >}}
 
 Follow the steps from the [Global Rate Limit](../traffic/global-rate-limit) to install RateLimit.
 
