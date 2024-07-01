@@ -72,12 +72,21 @@ kube-deploy: manifests helm-generate.gateway-helm ## Install Envoy Gateway into 
 	helm install eg charts/gateway-helm --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) -n envoy-gateway-system --create-namespace --debug --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
 
 .PHONY: kube-deploy-for-benchmark-test
-kube-deploy-for-benchmark-test: manifests helm-generate ## Install Envoy Gateway for benchmark test purpose only.
+kube-deploy-for-benchmark-test: manifests helm-generate ## Install Envoy Gateway and prometheus-server for benchmark test purpose only.
 	@$(LOG_TARGET)
+	# Install Envoy Gateway
 	helm install eg charts/gateway-helm --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) \
 		--set deployment.envoyGateway.resources.limits.cpu=$(BENCHMARK_CPU_LIMITS)m \
 		--set deployment.envoyGateway.resources.limits.memory=$(BENCHMARK_MEMORY_LIMITS)Mi \
 		-n envoy-gateway-system --create-namespace --debug --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
+	# Install Prometheus-server only
+	helm install eg-addons charts/gateway-addons-helm --set loki.enabled=false \
+		--set tempo.enabled=false \
+		--set grafana.enabled=false \
+		--set fluent-bit.enabled=false \
+ 		--set opentelemetry-collector.enabled=false \
+ 		--set prometheus.enabled=true \
+ 		-n monitoring --create-namespace --debug --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
 
 .PHONY: kube-undeploy
 kube-undeploy: manifests ## Uninstall the Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
