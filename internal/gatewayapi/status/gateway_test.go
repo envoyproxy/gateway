@@ -18,24 +18,26 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
+// TestUpdateGatewayStatusProgrammedCondition tests whether UpdateGatewayStatusProgrammedCondition correctly updates the addresses in the Gateway status.
 func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 	type args struct {
-		gw         *gwapiv1.Gateway
-		svc        *corev1.Service
-		deployment *appsv1.Deployment
-		addresses  []gwapiv1.GatewayStatusAddress
+		gw            *gwapiv1.Gateway
+		svc           *corev1.Service
+		deployment    *appsv1.Deployment
+		nodeAddresses []string
 	}
 	tests := []struct {
-		name string
-		args args
+		name          string
+		args          args
+		wantAddresses []gwapiv1.GatewayStatusAddress
 	}{
 		{
 			name: "nil svc",
 			args: args{
-				gw:        &gwapiv1.Gateway{},
-				svc:       nil,
-				addresses: nil,
+				gw:  &gwapiv1.Gateway{},
+				svc: nil,
 			},
+			wantAddresses: nil,
 		},
 		{
 			name: "LoadBalancer svc with ingress ip",
@@ -58,11 +60,11 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 						},
 					},
 				},
-				addresses: []gwapiv1.GatewayStatusAddress{
-					{
-						Type:  ptr.To(gwapiv1.IPAddressType),
-						Value: "127.0.0.1",
-					},
+			},
+			wantAddresses: []gwapiv1.GatewayStatusAddress{
+				{
+					Type:  ptr.To(gwapiv1.IPAddressType),
+					Value: "127.0.0.1",
 				},
 			},
 		},
@@ -87,15 +89,15 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 						},
 					},
 				},
-				addresses: []gwapiv1.GatewayStatusAddress{
-					{
-						Type:  ptr.To(gwapiv1.IPAddressType),
-						Value: "127.0.0.1",
-					},
-					{
-						Type:  ptr.To(gwapiv1.HostnameAddressType),
-						Value: "localhost",
-					},
+			},
+			wantAddresses: []gwapiv1.GatewayStatusAddress{
+				{
+					Type:  ptr.To(gwapiv1.IPAddressType),
+					Value: "127.0.0.1",
+				},
+				{
+					Type:  ptr.To(gwapiv1.HostnameAddressType),
+					Value: "localhost",
 				},
 			},
 		},
@@ -111,19 +113,73 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 						Type:       corev1.ServiceTypeClusterIP,
 					},
 				},
-				addresses: []gwapiv1.GatewayStatusAddress{
-					{
-						Type:  ptr.To(gwapiv1.IPAddressType),
-						Value: "127.0.0.1",
+			},
+			wantAddresses: []gwapiv1.GatewayStatusAddress{
+				{
+					Type:  ptr.To(gwapiv1.IPAddressType),
+					Value: "127.0.0.1",
+				},
+			},
+		},
+		{
+			name: "Nodeport svc",
+			args: args{
+				gw:            &gwapiv1.Gateway{},
+				nodeAddresses: []string{"1", "2"},
+				svc: &corev1.Service{
+					TypeMeta:   metav1.TypeMeta{},
+					ObjectMeta: metav1.ObjectMeta{},
+					Spec: corev1.ServiceSpec{
+						Type: corev1.ServiceTypeNodePort,
 					},
 				},
 			},
+			wantAddresses: []gwapiv1.GatewayStatusAddress{
+				{
+					Type:  ptr.To(gwapiv1.IPAddressType),
+					Value: "1",
+				},
+				{
+					Type:  ptr.To(gwapiv1.IPAddressType),
+					Value: "2",
+				},
+			},
+		},
+		{
+			name: "Nodeport svc with too many node addresses",
+			args: args{
+				gw: &gwapiv1.Gateway{},
+				// 20 node addresses
+				nodeAddresses: func() (addr []string) {
+					for i := 0; i < 20; i++ {
+						addr = append(addr, strconv.Itoa(i))
+					}
+					return
+				}(),
+				svc: &corev1.Service{
+					TypeMeta:   metav1.TypeMeta{},
+					ObjectMeta: metav1.ObjectMeta{},
+					Spec: corev1.ServiceSpec{
+						Type: corev1.ServiceTypeNodePort,
+					},
+				},
+			},
+			// Only the first 16 addresses should be set.
+			wantAddresses: func() (addr []gwapiv1.GatewayStatusAddress) {
+				for i := 0; i < 16; i++ {
+					addr = append(addr, gwapiv1.GatewayStatusAddress{
+						Type:  ptr.To(gwapiv1.IPAddressType),
+						Value: strconv.Itoa(i),
+					})
+				}
+				return
+			}(),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			UpdateGatewayStatusProgrammedCondition(tt.args.gw, tt.args.svc, tt.args.deployment)
-			assert.True(t, reflect.DeepEqual(tt.args.addresses, tt.args.gw.Status.Addresses))
+			UpdateGatewayStatusProgrammedCondition(tt.args.gw, tt.args.svc, tt.args.deployment, tt.args.nodeAddresses...)
+			assert.True(t, reflect.DeepEqual(tt.wantAddresses, tt.args.gw.Status.Addresses))
 		})
 	}
 }

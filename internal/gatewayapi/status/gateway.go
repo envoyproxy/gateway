@@ -96,8 +96,15 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1.Gateway, svc *corev1.Ser
 	} else {
 		gw.Status.Addresses = nil
 	}
+
 	// Update the programmed condition.
 	gw.Status.Conditions = MergeConditions(gw.Status.Conditions, computeGatewayProgrammedCondition(gw, deployment))
+
+	if len(gw.Status.Addresses) > 16 {
+		// Truncate the addresses to 16
+		// so that the status can be updated successfully.
+		gw.Status.Addresses = gw.Status.Addresses[:16]
+	}
 }
 
 func SetGatewayListenerStatusCondition(gateway *gwapiv1.Gateway, listenerStatusIdx int,
