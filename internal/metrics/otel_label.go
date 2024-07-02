@@ -18,11 +18,11 @@ var (
 )
 
 const (
-	StatusSuccess = "Success"
-	StatusFailure = "Failure"
+	StatusSuccess = "success"
+	StatusFailure = "failure"
 
-	ReasonError    = "Error"
-	ReasonConflict = "Conflict"
+	ReasonError    = "error"
+	ReasonConflict = "conflict"
 )
 
 // A Label provides a named dimension for a Metric.

@@ -81,4 +81,17 @@ Each metric includes the `kind` label to identify the corresponding resources be
 
 Metrics may also include `name` and `namespace` label to identify the name and namespace of corresponding Infrastructure Manager.
 
+## Wasm
+
+Envoy Gateway monitors the status of Wasm remote fetch cache.
+
+| Name                      | Description                                      |
+|---------------------------|--------------------------------------------------|
+| `wasm_cache_entries`      | Number of Wasm remote fetch cache entries.       | 
+| `wasm_cache_lookup_total` | Total number of Wasm remote fetch cache lookups. |
+| `wasm_remote_fetch_total` | Total number of Wasm remote fetches and results. |
+
+For metric `wasm_cache_lookup_total`, we are using `hit` label (boolean) to indicate whether the Wasm cache has been hit.
+
+
 [prom-format]: https://prometheus.io/docs/instrumenting/exposition_formats/#text-based-format
