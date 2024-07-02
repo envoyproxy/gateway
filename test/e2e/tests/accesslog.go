@@ -46,6 +46,9 @@ var FileAccessLogTest = suite.ConformanceTest{
 			expectedResponse := httputils.ExpectedResponse{
 				Request: httputils.Request{
 					Path: "/file",
+					Headers: map[string]string{
+						"x-envoy-logged": "1",
+					},
 				},
 				Response: httputils.Response{
 					StatusCode: 200,
@@ -137,6 +140,9 @@ var OpenTelemetryTest = suite.ConformanceTest{
 			expectedResponse := httputils.ExpectedResponse{
 				Request: httputils.Request{
 					Path: "/otel",
+					Headers: map[string]string{
+						"x-envoy-logged": "1",
+					},
 				},
 				Response: httputils.Response{
 					StatusCode: 200,
