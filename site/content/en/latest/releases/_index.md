@@ -1,5 +1,5 @@
 ---
 title: "Releases"
-weight: 100
+weight: 90
 description: This section includes Releases of Envoy Gateway.
 ---
