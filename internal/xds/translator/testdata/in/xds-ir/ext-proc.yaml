@@ -19,7 +19,7 @@ http:
               protocol: HTTP
               weight: 1
         extProc:
-          - name: envoyextensionpolicy/default/policy-for-route-2/0
+          - name: envoyextensionpolicy/default/policy-for-route-2/extproc/0
             failOpen: true
             messageTimeout: 5s
             requestHeaderProcessing: true
@@ -31,7 +31,7 @@ http:
               settings:
                 - protocol: GRPC
                   weight: 1
-          - name: envoyextensionpolicy/default/policy-for-route-1/0
+          - name: envoyextensionpolicy/default/policy-for-route-1/extproc/0
             failOpen: true
             messageTimeout: 5s
             responseHeaderProcessing: true
@@ -59,14 +59,14 @@ http:
               protocol: HTTP
               weight: 1
         extProc:
-          - name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-2/0
+          - name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-2/extproc/0
             authority: grpc-backend-3.envoy-gateway:3000
             destination:
               name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-2/0/grpc-backend-3
               settings:
                 - protocol: GRPC
                   weight: 1
-          - name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/0
+          - name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/extproc/0
             failOpen: false
             messageTimeout: 15s
             authority: grpc-backend.envoy-gateway:9000

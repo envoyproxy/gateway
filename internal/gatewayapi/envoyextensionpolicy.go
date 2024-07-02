@@ -430,7 +430,7 @@ func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resource
 	}
 
 	for idx, ep := range policy.Spec.ExtProc {
-		name := irConfigNameForEEP(policy, idx)
+		name := irConfigNameForExtProc(policy, idx)
 		extProcIR, err := t.buildExtProc(name, utils.NamespacedName(policy), ep, idx, resources, envoyProxy)
 		if err != nil {
 			return nil, err
@@ -534,12 +534,11 @@ func (t *Translator) buildExtProc(
 	return extProcIR, err
 }
 
-func irConfigNameForEEP(policy *egv1a1.EnvoyExtensionPolicy, idx int) string {
+func irConfigNameForExtProc(policy *egv1a1.EnvoyExtensionPolicy, index int) string {
 	return fmt.Sprintf(
-		"%s/%s/%d",
-		strings.ToLower(egv1a1.KindEnvoyExtensionPolicy),
-		utils.NamespacedName(policy).String(),
-		idx)
+		"%s/extproc/%s",
+		irConfigName(policy),
+		strconv.Itoa(index))
 }
 
 func (t *Translator) buildWasms(

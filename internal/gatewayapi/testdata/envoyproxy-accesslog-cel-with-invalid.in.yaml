@@ -10,7 +10,7 @@ envoyProxyForGatewayClass:
         settings:
         - matches:
           - "response.code >= 400"
-          - ")++++" # invalid CEL expression will be ignored
+          - ")++++"
           format:
             type: Text
             text: |
