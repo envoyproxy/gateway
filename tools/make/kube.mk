@@ -77,6 +77,7 @@ kube-deploy-for-benchmark-test: manifests helm-generate ## Install Envoy Gateway
 	helm install eg charts/gateway-helm --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) \
 		--set deployment.envoyGateway.resources.limits.cpu=$(BENCHMARK_CPU_LIMITS)m \
 		--set deployment.envoyGateway.resources.limits.memory=$(BENCHMARK_MEMORY_LIMITS)Mi \
+		--set config.envoyGateway.admin.enablePprof=true \
 		-n envoy-gateway-system --create-namespace --debug --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
 
 .PHONY: kube-undeploy
@@ -164,6 +165,12 @@ run-benchmark: install-benchmark-server ## Run benchmark tests
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/benchmark/config/gatewayclass.yaml
 	go test -v -tags benchmark -timeout $(BENCHMARK_TIMEOUT) ./test/benchmark --rps=$(BENCHMARK_RPS) --connections=$(BENCHMARK_CONNECTIONS) --duration=$(BENCHMARK_DURATION) --report-save-path=benchmark_report.md
+	# render benchmark profiles into image
+	dot -V
+	@for profile in $(wildcard test/benchmark/profiles/*.pprof); do \
+  		$(call log, "Render profile image for: $${profile}..."); \
+		go tool pprof -png $${profile} > $${profile}.png; \
+	done
 
 .PHONY: install-benchmark-server
 install-benchmark-server: ## Install nighthawk server for benchmark test

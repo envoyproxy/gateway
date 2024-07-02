@@ -34,11 +34,12 @@ const (
 )
 
 type BenchmarkTestSuite struct {
-	Client         client.Client
-	TimeoutConfig  config.TimeoutConfig
-	ControllerName string
-	Options        BenchmarkOptions
-	ReportSavePath string
+	Client          client.Client
+	TimeoutConfig   config.TimeoutConfig
+	ControllerName  string
+	Options         BenchmarkOptions
+	ReportSavePath  string
+	ProfilesSaveDir string
 
 	// Resources template for supported benchmark targets.
 	GatewayTemplate    *gwapiv1.Gateway
@@ -50,7 +51,7 @@ type BenchmarkTestSuite struct {
 }
 
 func NewBenchmarkTestSuite(client client.Client, options BenchmarkOptions,
-	gatewayManifest, httpRouteManifest, benchmarkClientManifest, reportPath string) (*BenchmarkTestSuite, error) {
+	gatewayManifest, httpRouteManifest, benchmarkClientManifest, reportPath, profilesDir string) (*BenchmarkTestSuite, error) {
 	var (
 		gateway         = new(gwapiv1.Gateway)
 		httproute       = new(gwapiv1.HTTPRoute)
@@ -91,12 +92,24 @@ func NewBenchmarkTestSuite(client client.Client, options BenchmarkOptions,
 	container := &benchmarkClient.Spec.Template.Spec.Containers[0]
 	container.Args = append(container.Args, staticArgs...)
 
+	// Ensure the profile output directory.
+	if _, err = os.Stat(profilesDir); err != nil {
+		if os.IsNotExist(err) {
+			if err = os.MkdirAll(profilesDir, os.ModePerm); err != nil {
+				return nil, fmt.Errorf("failed to create dir %s: %v", profilesDir, err)
+			}
+		} else {
+			return nil, fmt.Errorf("failed to get stat of dir %s: %v", profilesDir, err)
+		}
+	}
+
 	return &BenchmarkTestSuite{
 		Client:             client,
 		Options:            options,
 		TimeoutConfig:      timeoutConfig,
 		ControllerName:     DefaultControllerName,
 		ReportSavePath:     reportPath,
+		ProfilesSaveDir:    profilesDir,
 		GatewayTemplate:    gateway,
 		HTTPRouteTemplate:  httproute,
 		BenchmarkClientJob: benchmarkClient,
@@ -190,7 +203,7 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, name, 
 
 	t.Logf("Running benchmark test: %s successfully", name)
 
-	report, err := NewBenchmarkReport(name)
+	report, err := NewBenchmarkReport(name, b.ProfilesSaveDir)
 	if err != nil {
 		return nil, err
 	}
