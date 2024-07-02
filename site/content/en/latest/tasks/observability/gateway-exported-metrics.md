@@ -34,7 +34,7 @@ the relationship between label values and components is as follows:
 | `xds-translator`   | xDS Translator                  |
 | `global-ratelimit` | Global RateLimit xDS Translator |
 
-Metrics may include one or more additional labels, such as `message` etc.
+Metrics may include one or more additional labels, such as `message`, `status` and `reason` etc.
 
 ## Status Updater
 
@@ -42,14 +42,10 @@ Envoy Gateway monitors the status updates of various resources (like `GatewayCla
 
 Envoy Gateway collects the following metrics in Status Updater:
 
-| Name                             | Description                                                                                             |
-|----------------------------------|---------------------------------------------------------------------------------------------------------|
-| `status_update_total`            | Total number of status updates by object kind.                                                          |
-| `status_update_failed_total`     | Number of status updates that failed by object kind.                                                    |
-| `status_update_conflict_total`   | Number of status update conflicts encountered by object kind.                                           |
-| `status_update_success_total`    | Number of status updates that succeeded by object kind.                                                 |
-| `status_update_noop_total`       | Number of status updates that are no-ops by object kind. This is a subset of successful status updates. |
-| `status_update_duration_seconds` | How long a status update takes to finish.                                                               |
+| Name                             | Description                                    |
+|----------------------------------|------------------------------------------------|
+| `status_update_total`            | Total number of status update by object kind.  |
+| `status_update_duration_seconds` | How long a status update takes to finish.      |
 
 Each metric includes `kind` label to identify the corresponding resources.
 
