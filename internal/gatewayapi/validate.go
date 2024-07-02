@@ -534,6 +534,108 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerCon
 	return secrets
 }
 
+func (t *Translator) validateAndGetFrontendValidationCACerts(listener *ListenerContext, resources *Resources) []byte {
+	var cacerts []byte
+	for _, ref := range listener.TLS.FrontendValidation.CACertificateRefs {
+		from := crossNamespaceFrom{
+			group:     egv1a1.GroupName,
+			kind:      listener.gateway.Kind,
+			namespace: listener.gateway.Namespace,
+		}
+
+		secretRef := gwapiv1.SecretObjectReference{
+			Name:      ref.Name,
+			Group:     &ref.Group,
+			Kind:      &ref.Kind,
+			Namespace: ref.Namespace,
+		}
+
+		if ref.Kind == KindSecret {
+			secret, err := t.validateSecretRef(true, from, secretRef, resources)
+			if err != nil {
+				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
+					listener.listenerStatusIdx,
+					gwapiv1.ListenerConditionResolvedRefs,
+					metav1.ConditionFalse,
+					gwapiv1.ListenerReasonInvalidCertificateRef,
+					fmt.Sprintf("Secret %s.", err.Error()))
+				break
+			}
+
+			if secret.Type != corev1.SecretTypeTLS {
+				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
+					listener.listenerStatusIdx,
+					gwapiv1.ListenerConditionResolvedRefs,
+					metav1.ConditionFalse,
+					gwapiv1.ListenerReasonInvalidCertificateRef,
+					fmt.Sprintf("Secret %s/%s must be of type %s.", listener.gateway.Namespace, secretRef.Name, corev1.SecretTypeTLS))
+				break
+			}
+
+			cacertBytes, ok := secret.Data[caCertKey]
+			if !ok || len(cacertBytes) == 0 {
+				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
+					listener.listenerStatusIdx,
+					gwapiv1.ListenerConditionResolvedRefs,
+					metav1.ConditionFalse,
+					gwapiv1.ListenerReasonInvalidCertificateRef,
+					fmt.Sprintf("caCertificateRef not found in secret %s/%s.", listener.gateway.Namespace, secretRef.Name))
+				break
+			}
+
+			if err := validateCertificate(cacertBytes); err != nil {
+				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
+					listener.listenerStatusIdx,
+					gwapiv1.ListenerConditionResolvedRefs,
+					metav1.ConditionFalse,
+					gwapiv1.ListenerReasonInvalidCertificateRef,
+					fmt.Sprintf("invalid certificate in secret %s/%s.", listener.gateway.Namespace, secretRef.Name))
+				break
+			}
+
+			cacerts = append(cacerts, cacertBytes...)
+		}
+
+		if ref.Kind == KindConfigMap {
+			configMap, err := t.validateConfigMapRef(true, from, secretRef, resources)
+			if err != nil {
+				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
+					listener.listenerStatusIdx,
+					gwapiv1.ListenerConditionResolvedRefs,
+					metav1.ConditionFalse,
+					gwapiv1.ListenerReasonInvalidCertificateRef,
+					fmt.Sprintf("ConfigMap %s.", err.Error()))
+				break
+			}
+
+			cacertBytes, ok := configMap.Data[caCertKey]
+			if !ok || len(cacertBytes) == 0 {
+				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
+					listener.listenerStatusIdx,
+					gwapiv1.ListenerConditionResolvedRefs,
+					metav1.ConditionFalse,
+					gwapiv1.ListenerReasonInvalidCertificateRef,
+					fmt.Sprintf("caCertificateRef not found in configmap %s/%s.", listener.gateway.Namespace, secretRef.Name))
+				break
+			}
+
+			if err := validateCertificate([]byte(cacertBytes)); err != nil {
+				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
+					listener.listenerStatusIdx,
+					gwapiv1.ListenerConditionResolvedRefs,
+					metav1.ConditionFalse,
+					gwapiv1.ListenerReasonInvalidCertificateRef,
+					fmt.Sprintf("invalid certificate in secret %s/%s.", listener.gateway.Namespace, secretRef.Name))
+				break
+			}
+
+			cacerts = append(cacerts, cacertBytes...)
+		}
+	}
+
+	return cacerts
+}
+
 func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resources *Resources) {
 	switch listener.Protocol {
 	case gwapiv1.HTTPProtocolType, gwapiv1.UDPProtocolType, gwapiv1.TCPProtocolType:
@@ -572,6 +674,13 @@ func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resourc
 		secrets := t.validateTerminateModeAndGetTLSSecrets(listener, resources)
 		listener.SetTLSSecrets(secrets)
 
+		if listener.TLS.FrontendValidation != nil {
+			if len(listener.TLS.FrontendValidation.CACertificateRefs) > 0 {
+				CACerts := t.validateAndGetFrontendValidationCACerts(listener, resources)
+				listener.SetFrontendValidationCACerts(CACerts)
+			}
+		}
+
 	case gwapiv1.TLSProtocolType:
 		if listener.TLS == nil {
 			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
@@ -608,8 +717,16 @@ func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resourc
 				)
 				break
 			}
+
 			secrets := t.validateTerminateModeAndGetTLSSecrets(listener, resources)
 			listener.SetTLSSecrets(secrets)
+
+			if listener.TLS.FrontendValidation != nil {
+				if len(listener.TLS.FrontendValidation.CACertificateRefs) > 0 {
+					CACerts := t.validateAndGetFrontendValidationCACerts(listener, resources)
+					listener.SetFrontendValidationCACerts(CACerts)
+				}
+			}
 		}
 	}
 }
@@ -900,7 +1017,7 @@ func (t *Translator) validateHostname(hostname string) error {
 func (t *Translator) validateSecretRef(
 	allowCrossNamespace bool,
 	from crossNamespaceFrom,
-	secretObjRef gwapiv1b1.SecretObjectReference,
+	secretObjRef gwapiv1.SecretObjectReference,
 	resources *Resources,
 ) (*corev1.Secret, error) {
 	if err := t.validateSecretObjectRef(allowCrossNamespace, from, secretObjRef, resources); err != nil {
@@ -924,7 +1041,7 @@ func (t *Translator) validateSecretRef(
 func (t *Translator) validateConfigMapRef(
 	allowCrossNamespace bool,
 	from crossNamespaceFrom,
-	secretObjRef gwapiv1b1.SecretObjectReference,
+	secretObjRef gwapiv1.SecretObjectReference,
 	resources *Resources,
 ) (*corev1.ConfigMap, error) {
 	if err := t.validateSecretObjectRef(allowCrossNamespace, from, secretObjRef, resources); err != nil {
@@ -948,7 +1065,7 @@ func (t *Translator) validateConfigMapRef(
 func (t *Translator) validateSecretObjectRef(
 	allowCrossNamespace bool,
 	from crossNamespaceFrom,
-	secretRef gwapiv1b1.SecretObjectReference,
+	secretRef gwapiv1.SecretObjectReference,
 	resources *Resources,
 ) error {
 	var kind string

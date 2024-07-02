@@ -114,6 +114,12 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 						EscapedSlashesAction: ir.UnescapeAndRedirect,
 					},
 				}
+				if len(listener.frontendValidationCACerts) > 0 {
+					caCert := ir.TLSCACertificate{
+						Certificate: listener.frontendValidationCACerts,
+					}
+					irListener.TLS.CACertificate = &caCert
+				}
 				if listener.Hostname != nil {
 					irListener.Hostnames = append(irListener.Hostnames, string(*listener.Hostname))
 				} else {
