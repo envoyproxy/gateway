@@ -6,7 +6,7 @@
 //go:build e2e
 // +build e2e
 
-package upgrade
+package packagemanage
 
 import (
 	"flag"
@@ -25,7 +25,7 @@ import (
 	"github.com/envoyproxy/gateway/test/e2e/tests"
 )
 
-func TestEGUpgrade(t *testing.T) {
+func TestEGPackageManage(t *testing.T) {
 	flag.Parse()
 
 	cfg, err := config.GetConfig()
@@ -63,10 +63,10 @@ func TestEGUpgrade(t *testing.T) {
 		t.Fatalf("Failed to create test suite: %v", err)
 	}
 
-	t.Logf("Running %d Upgrade tests", len(tests.UpgradeTests))
-	cSuite.Setup(t, tests.UpgradeTests)
+	t.Logf("Running %d package tests", len(tests.PackageManageTests))
+	cSuite.Setup(t, tests.PackageManageTests)
 
-	err = cSuite.Run(t, tests.UpgradeTests)
+	err = cSuite.Run(t, tests.PackageManageTests)
 	if err != nil {
 		t.Fatalf("Failed to run tests: %v", err)
 	}

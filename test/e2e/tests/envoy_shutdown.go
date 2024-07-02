@@ -35,7 +35,7 @@ import (
 )
 
 func init() {
-	UpgradeTests = append(UpgradeTests, EnvoyShutdownTest)
+	PackageManageTests = append(PackageManageTests, EnvoyShutdownTest)
 }
 
 var EnvoyShutdownTest = suite.ConformanceTest{
@@ -44,13 +44,13 @@ var EnvoyShutdownTest = suite.ConformanceTest{
 	Manifests:   []string{"testdata/envoy-shutdown.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("All requests must succeed", func(t *testing.T) {
-			ns := "gateway-upgrade-infra"
-			name := "ha-gateway"
+			ns := "gateway-package-infra"
+			name := "package-gateway"
 			routeNN := types.NamespacedName{Name: "http-envoy-shutdown", Namespace: ns}
 			gwNN := types.NamespacedName{Name: name, Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 			reqURL := url.URL{Scheme: "http", Host: http.CalculateHost(t, gwAddr, "http"), Path: "/envoy-shutdown"}
-			epNN := types.NamespacedName{Name: "upgrade-config", Namespace: "envoy-gateway-system"}
+			epNN := types.NamespacedName{Name: "package-config", Namespace: "envoy-gateway-system"}
 			dp, err := getDeploymentForGateway(ns, name, suite.Client)
 			if err != nil {
 				t.Errorf("Failed to get proxy deployment")
