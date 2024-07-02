@@ -239,7 +239,7 @@ func (c *localFileCache) getOrFetch(key cacheKey, opts GetOptions) (*cacheEntry,
 		// Download the Wasm module with http fetcher.
 		b, err = c.httpFetcher.Fetch(ctx, key.downloadURL, insecure)
 		if err != nil {
-			wasmRemoteFetchCount.With(resultTag.Value(downloadFailure)).Increment()
+			wasmRemoteFetchTotal.WithFailure(reasonDownloadError).Increment()
 			return nil, err
 		}
 
@@ -251,7 +251,7 @@ func (c *localFileCache) getOrFetch(key cacheKey, opts GetOptions) (*cacheEntry,
 			isPrivate = true
 		}
 		if imageBinaryFetcher, dChecksum, err = c.prepareFetch(ctx, u, insecure, opts); err != nil {
-			wasmRemoteFetchCount.With(resultTag.Value(manifestFailure)).Increment()
+			wasmRemoteFetchTotal.WithFailure(reasonManifestError).Increment()
 			return nil, fmt.Errorf("could not fetch Wasm OCI image: %w", err)
 		}
 	default:
@@ -261,7 +261,7 @@ func (c *localFileCache) getOrFetch(key cacheKey, opts GetOptions) (*cacheEntry,
 	// If the checksum is provided, check if it matches the downloaded binary.
 	if key.checksum != "" {
 		if dChecksum != key.checksum {
-			wasmRemoteFetchCount.With(resultTag.Value(checksumMismatch)).Increment()
+			wasmRemoteFetchTotal.WithFailure(reasonChecksumMismatch).Increment()
 			return nil, fmt.Errorf("module downloaded from %v has checksum %v, which does not match: %v", key.downloadURL, dChecksum, key.checksum)
 		}
 	} else {
@@ -272,17 +272,18 @@ func (c *localFileCache) getOrFetch(key cacheKey, opts GetOptions) (*cacheEntry,
 	if imageBinaryFetcher != nil {
 		b, err = imageBinaryFetcher()
 		if err != nil {
-			wasmRemoteFetchCount.With(resultTag.Value(downloadFailure)).Increment()
+			wasmRemoteFetchTotal.WithFailure(reasonDownloadError).Increment()
 			return nil, fmt.Errorf("could not fetch Wasm binary: %w", err)
 		}
 	}
 
 	if !isValidWasmBinary(b) {
-		wasmRemoteFetchCount.With(resultTag.Value(fetchFailure)).Increment()
+		wasmRemoteFetchTotal.WithFailure(reasonFetchError).Increment()
 		return nil, fmt.Errorf("fetched Wasm binary from %s is invalid", key.downloadURL)
 	}
 
-	wasmRemoteFetchCount.With(resultTag.Value(fetchSuccess)).Increment()
+	wasmRemoteFetchTotal.WithSuccess().Increment()
+
 	return c.addEntry(key, b, isPrivate)
 }
 
@@ -365,7 +366,9 @@ func (c *localFileCache) addEntry(key cacheKey, wasmModule []byte, isPrivate boo
 	}
 	ce.referencingURLs.Insert(key.downloadURL)
 	c.modules[key.moduleKey] = &ce
+
 	wasmCacheEntries.Record(float64(len(c.modules)))
+
 	return &ce, nil
 }
 
@@ -378,7 +381,7 @@ func (c *localFileCache) getEntry(key cacheKey, pullPolicy PullPolicy, u *url.UR
 	c.mux.Lock()
 	defer func() {
 		c.mux.Unlock()
-		wasmCacheLookupCount.With(hitTag.Value(strconv.FormatBool(cacheHit))).Increment()
+		wasmCacheLookupTotal.With(hitTag.Value(strconv.FormatBool(cacheHit))).Increment()
 	}()
 
 	// If no checksum is provided, check if a wasm module with the same downloading URL has been pulled before.

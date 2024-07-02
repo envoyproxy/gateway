@@ -21,33 +21,29 @@ package wasm
 
 import "github.com/envoyproxy/gateway/internal/metrics"
 
-// Const strings for label value.
 const (
-	// For remote fetch metric.
-	fetchSuccess     = "success"
-	fetchFailure     = "fetch_failure"
-	downloadFailure  = "download_failure"
-	manifestFailure  = "manifest_failure"
-	checksumMismatch = "checksum_mismatched"
+	reasonFetchError       = "fetch_error"
+	reasonDownloadError    = "download_error"
+	reasonManifestError    = "manifest_error"
+	reasonChecksumMismatch = "checksum_mismatched"
 )
 
 var (
-	hitTag    = metrics.NewLabel("hit")
-	resultTag = metrics.NewLabel("result")
+	hitTag = metrics.NewLabel("hit")
 
 	wasmCacheEntries = metrics.NewGauge(
 		"wasm_cache_entries",
-		"number of Wasm remote fetch cache entries.",
+		"Number of Wasm remote fetch cache entries.",
 	)
 
-	wasmCacheLookupCount = metrics.NewCounter(
-		"wasm_cache_lookup_count",
-		"number of Wasm remote fetch cache lookups.",
+	wasmCacheLookupTotal = metrics.NewCounter(
+		"wasm_cache_lookup_total",
+		"Total number of Wasm remote fetch cache lookups.",
 	)
 
-	wasmRemoteFetchCount = metrics.NewCounter(
-		"wasm_remote_fetch_count",
-		"number of Wasm remote fetches and results, including success, download failure, and checksum mismatch.",
+	wasmRemoteFetchTotal = metrics.NewCounter(
+		"wasm_remote_fetch_total",
+		"Total number of Wasm remote fetches and results.",
 	)
 )
 

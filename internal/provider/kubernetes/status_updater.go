@@ -24,6 +24,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/metrics"
 )
 
 // Update contains an all the information needed to update an object's status.
@@ -75,8 +76,6 @@ func (u *UpdateHandler) apply(update Update) {
 		objKind   = kindOf(obj)
 	)
 
-	statusUpdateTotal.With(kindLabel.Value(objKind)).Increment()
-
 	defer func() {
 		updateDuration := time.Since(startTime)
 		statusUpdateDurationSeconds.With(kindLabel.Value(objKind)).Record(updateDuration.Seconds())
@@ -84,7 +83,7 @@ func (u *UpdateHandler) apply(update Update) {
 
 	if err := retry.OnError(retry.DefaultBackoff, func(err error) bool {
 		if kerrors.IsConflict(err) {
-			statusUpdateConflict.With(kindLabel.Value(objKind)).Increment()
+			statusUpdateTotal.WithFailure(metrics.ReasonConflict, kindLabel.Value(objKind)).Increment()
 			return true
 		}
 		return false
@@ -104,7 +103,7 @@ func (u *UpdateHandler) apply(update Update) {
 				WithName(update.NamespacedName.Namespace).
 				Info("status unchanged, bypassing update")
 
-			statusUpdateNoop.With(kindLabel.Value(objKind)).Increment()
+			statusUpdateTotal.WithStatus(statusNoAction, kindLabel.Value(objKind)).Increment()
 			return nil
 		}
 
@@ -115,9 +114,9 @@ func (u *UpdateHandler) apply(update Update) {
 		u.log.Error(err, "unable to update status", "name", update.NamespacedName.Name,
 			"namespace", update.NamespacedName.Namespace)
 
-		statusUpdateFailed.With(kindLabel.Value(objKind)).Increment()
+		statusUpdateTotal.WithFailure(metrics.ReasonError, kindLabel.Value(objKind)).Increment()
 	} else {
-		statusUpdateSuccess.With(kindLabel.Value(objKind)).Increment()
+		statusUpdateTotal.WithSuccess(kindLabel.Value(objKind)).Increment()
 	}
 }
 

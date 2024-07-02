@@ -54,7 +54,7 @@ func HandleSubscription[K comparable, V any](
 	go func() {
 		for err := range errChans {
 			logger.WithValues("runner", meta.Runner).Error(err, "observed an error")
-			watchableSubscribedErrorsTotal.With(meta.LabelValues()...).Increment()
+			watchableSubscribeTotal.WithFailure(metrics.ReasonError, meta.LabelValues()...).Increment()
 		}
 	}()
 
@@ -65,8 +65,8 @@ func HandleSubscription[K comparable, V any](
 				Key:   k,
 				Value: v,
 			}, errChans)
-			watchableSubscribedTotal.With(meta.LabelValues()...).Increment()
-			watchableSubscribedDurationSeconds.With(meta.LabelValues()...).Record(time.Since(startHandleTime).Seconds())
+			watchableSubscribeTotal.WithSuccess(meta.LabelValues()...).Increment()
+			watchableSubscribeDurationSeconds.With(meta.LabelValues()...).Record(time.Since(startHandleTime).Seconds())
 		}
 	}
 	for snapshot := range subscription {
@@ -74,8 +74,8 @@ func HandleSubscription[K comparable, V any](
 		for _, update := range snapshot.Updates {
 			startHandleTime := time.Now()
 			handle(Update[K, V](update), errChans)
-			watchableSubscribedTotal.With(meta.LabelValues()...).Increment()
-			watchableSubscribedDurationSeconds.With(meta.LabelValues()...).Record(time.Since(startHandleTime).Seconds())
+			watchableSubscribeTotal.WithSuccess(meta.LabelValues()...).Increment()
+			watchableSubscribeDurationSeconds.With(meta.LabelValues()...).Record(time.Since(startHandleTime).Seconds())
 		}
 	}
 }
