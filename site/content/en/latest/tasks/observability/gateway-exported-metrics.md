@@ -55,19 +55,14 @@ Envoy Gateway monitors the cache and xDS connection status in xDS Server.
 
 Envoy Gateway collects the following metrics in xDS Server:
 
-| Name                                | Description                                                   |
-|-------------------------------------|---------------------------------------------------------------|
-| `xds_snapshot_creation_total`       | Total number of xds snapshot cache creation.                  |
-| `xds_snapshot_creation_failed`      | Number of xds snapshot cache creation that failed.            |
-| `xds_snapshot_creation_success`     | Number of xds snapshot cache creation that succeed.           |
-| `xds_snapshot_update_total`         | Total number of xds snapshot cache updates by node id.        |
-| `xds_snapshot_update_failed`        | Number of xds snapshot cache updates that failed by node id.  |
-| `xds_snapshot_update_success`       | Number of xds snapshot cache updates that succeed by node id. |
-| `xds_stream_duration_seconds`       | How long a xds stream takes to finish.                        |
-| `xds_delta_stream_duration_seconds` | How long a xds delta stream takes to finish.                  |
+| Name                          | Description                                            |
+|-------------------------------|--------------------------------------------------------|
+| `xds_snapshot_create_total`   | Total number of xds snapshot cache creates.            |
+| `xds_snapshot_update_total`   | Total number of xds snapshot cache updates by node id. |
+| `xds_stream_duration_seconds` | How long a xds stream takes to finish.                 |
 
 - For xDS snapshot cache update and xDS stream connection status, each metric includes `nodeID` label to identify the connection peer.
-- For xDS stream connection status, each metric also includes `streamID` label to identify the connection stream.
+- For xDS stream connection status, each metric also includes `streamID` label to identify the connection stream, and `isDeltaStream` label to identify the delta connection stream.
 
 ## Infrastructure Manager
 

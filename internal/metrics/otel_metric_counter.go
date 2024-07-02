@@ -53,11 +53,19 @@ func (f *Counter) WithStatus(status string, labelValues ...LabelValue) *Counter 
 }
 
 func (f *Counter) WithSuccess(labelValues ...LabelValue) *Counter {
-	labelValues = append(labelValues, statusLabel.Value(StatusSuccess))
+	if len(labelValues) > 0 {
+		labelValues = append(labelValues, statusLabel.Value(StatusSuccess))
+	} else {
+		labelValues = []LabelValue{statusLabel.Value(StatusSuccess)}
+	}
 	return f.With(labelValues...)
 }
 
 func (f *Counter) WithFailure(reason string, labelValues ...LabelValue) *Counter {
-	labelValues = append(labelValues, statusLabel.Value(StatusFailure), reasonLabel.Value(reason))
+	if len(labelValues) > 0 {
+		labelValues = append(labelValues, statusLabel.Value(StatusFailure), reasonLabel.Value(reason))
+	} else {
+		labelValues = []LabelValue{statusLabel.Value(StatusFailure), reasonLabel.Value(reason)}
+	}
 	return f.With(labelValues...)
 }
