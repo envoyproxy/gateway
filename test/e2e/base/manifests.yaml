@@ -1067,7 +1067,7 @@ spec:
         command:
         - sh
         - "-c"
-        - "cp -a /app /app-live && cd /app-live && go  run . "
+        - "cp -a /app /app-live && cd /app-live && go run . "
         image: golang:1.22.3-alpine
         ports:
         - containerPort: 8080
