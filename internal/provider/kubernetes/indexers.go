@@ -156,23 +156,29 @@ func backendEnvoyProxyTelemetryIndexFunc(rawObj client.Object) []string {
 func accessLogRefs(ep *egv1a1.EnvoyProxy) []string {
 	var refs []string
 
-	if ep.Spec.Telemetry == nil || ep.Spec.Telemetry.Metrics == nil {
+	if ep.Spec.Telemetry == nil || ep.Spec.Telemetry.AccessLog == nil {
 		return refs
 	}
 
-	for _, sink := range ep.Spec.Telemetry.Metrics.Sinks {
-		if sink.OpenTelemetry != nil {
-			otel := sink.OpenTelemetry
-			if otel.BackendRefs != nil {
-				for _, ref := range otel.BackendRefs {
-					if ref.Kind == nil || string(*ref.Kind) == gatewayapi.KindService {
-						refs = append(refs,
-							types.NamespacedName{
-								Namespace: gatewayapi.NamespaceDerefOr(ref.Namespace, ep.Namespace),
-								Name:      string(ref.Name),
-							}.String(),
-						)
-					}
+	for _, setting := range ep.Spec.Telemetry.AccessLog.Settings {
+		for _, sink := range setting.Sinks {
+			var backendRefs []egv1a1.BackendRef
+			if sink.OpenTelemetry != nil {
+				backendRefs = append(backendRefs, sink.OpenTelemetry.BackendRefs...)
+			}
+
+			if sink.ALS != nil {
+				backendRefs = append(backendRefs, sink.ALS.BackendRefs...)
+			}
+
+			for _, ref := range backendRefs {
+				if ref.Kind == nil || string(*ref.Kind) == gatewayapi.KindService {
+					refs = append(refs,
+						types.NamespacedName{
+							Namespace: gatewayapi.NamespaceDerefOr(ref.Namespace, ep.Namespace),
+							Name:      string(ref.Name),
+						}.String(),
+					)
 				}
 			}
 		}

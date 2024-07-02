@@ -140,7 +140,7 @@ xdsIR:
       openTelemetry:
       - authority: otel-collector.monitoring.svc.cluster.local
         destination:
-          name: accesslog-0
+          name: accesslog_otel_0_1
           settings:
           - endpoints:
             - host: otel-collector.monitoring.svc.cluster.local
