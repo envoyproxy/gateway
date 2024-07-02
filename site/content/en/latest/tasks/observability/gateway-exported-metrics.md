@@ -73,12 +73,8 @@ Envoy Gateway collects the following metrics in Infrastructure Manager:
 | Name                               | Description                                             |
 |------------------------------------|---------------------------------------------------------|
 | `resource_apply_total`             | Total number of applied resources.                      |
-| `resource_apply_failed`            | Number of applied resources that failed.                |
-| `resource_apply_success`           | Number of applied resources that succeed.               |
 | `resource_apply_duration_seconds`  | How long in seconds a resource be applied successfully. |
 | `resource_delete_total`            | Total number of deleted resources.                      |
-| `resource_delete_failed`           | Number of deleted resources that failed.                |
-| `resource_delete_success`          | Number of deleted resources that succeed.               |
 | `resource_delete_duration_seconds` | How long in seconds a resource be deleted successfully. |
 
 Each metric includes the `kind` label to identify the corresponding resources being applied or deleted by Infrastructure Manager.
