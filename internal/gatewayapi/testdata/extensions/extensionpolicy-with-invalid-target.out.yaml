@@ -101,6 +101,11 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http1
       name: envoy-gateway/gateway-1/http1
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -110,6 +115,11 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http2
       name: envoy-gateway/gateway-1/http2
       path:
         escapedSlashesAction: UnescapeAndRedirect

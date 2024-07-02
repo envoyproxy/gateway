@@ -410,6 +410,11 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
       name: envoy-gateway/gateway-1/http
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -424,6 +429,10 @@ xdsIR:
           statusCode: 500
         hostname: '*'
         isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -439,6 +448,11 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: true
+      metadata:
+        kind: Gateway
+        name: gateway-2
+        namespace: envoy-gateway
+        sectionName: http
       name: envoy-gateway/gateway-2/http
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -457,6 +471,10 @@ xdsIR:
           name: magic
         hostname: '*'
         isHTTP2: true
+        metadata:
+          kind: GRPCRoute
+          name: grpcroute-1
+          namespace: envoy-gateway
         name: grpcroute/envoy-gateway/grpcroute-1/rule/0/match/0/*
         security: {}
     tcp:

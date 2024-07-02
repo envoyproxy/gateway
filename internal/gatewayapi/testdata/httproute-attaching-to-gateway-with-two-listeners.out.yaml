@@ -131,6 +131,11 @@ xdsIR:
       hostnames:
       - foo.com
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-1
       name: envoy-gateway/gateway-1/http-1
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -148,6 +153,10 @@ xdsIR:
             weight: 1
         hostname: foo.com
         isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
         name: httproute/default/httproute-1/rule/0/match/0/foo_com
         pathMatch:
           distinct: false
@@ -157,6 +166,11 @@ xdsIR:
       hostnames:
       - bar.com
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-2
       name: envoy-gateway/gateway-1/http-2
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -174,6 +188,10 @@ xdsIR:
             weight: 1
         hostname: bar.com
         isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
         name: httproute/default/httproute-1/rule/0/match/0/bar_com
         pathMatch:
           distinct: false

@@ -94,6 +94,11 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway
+        namespace: envoy-gateway
+        sectionName: http
       name: envoy-gateway/gateway/http
       path:
         escapedSlashesAction: UnescapeAndRedirect

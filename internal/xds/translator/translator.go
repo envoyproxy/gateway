@@ -398,8 +398,9 @@ func (t *Translator) addRouteToRouteConfig(
 			underscoredHostname := strings.ReplaceAll(httpRoute.Hostname, ".", "_")
 			// Allocate virtual host for this httpRoute.
 			vHost = &routev3.VirtualHost{
-				Name:    fmt.Sprintf("%s/%s", httpListener.Name, underscoredHostname),
-				Domains: []string{httpRoute.Hostname},
+				Name:     fmt.Sprintf("%s/%s", httpListener.Name, underscoredHostname),
+				Domains:  []string{httpRoute.Hostname},
+				Metadata: buildXdsMetadata(httpListener.Metadata),
 			}
 			if metrics != nil && metrics.EnableVirtualHostStats {
 				vHost.VirtualClusters = []*routev3.VirtualCluster{

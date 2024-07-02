@@ -1,0 +1,49 @@
+http:
+- name: first-listener
+  address: 0.0.0.0
+  port: 10080
+  metadata:
+    groupVersion: "gateway.networking.k8s.io/v1"
+    kind: "Gateway"
+    name: "first-gateway"
+    namespace: "first-gateway"
+    sectionName: "first-listener"
+    annotations:
+      foo: bar
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: 7.7.7.7
+          port: 8080
+    hostname: example.com
+    metadata:
+      groupVersion: "gateway.networking.k8s.io/v1"
+      kind: "HTTPRoute"
+      name: "first-route-name"
+      namespace: "first-route-ns"
+      sectionName: "first-route-rule"
+      annotations:
+        foo: bar
+    name: envoy-gateway/httproute-2/rule/0/match/0/example.com
+    pathMatch:
+      prefix: /v1/example
+    queryParamMatches:
+    - exact: "yes"
+      name: debug
+  - destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: 8.8.8.8
+          port: 8080
+    hostname: example.com
+    name: envoy-gateway/httproute-3/rule/0/match/0/example.com
+    pathMatch:
+      prefix: /v1/example

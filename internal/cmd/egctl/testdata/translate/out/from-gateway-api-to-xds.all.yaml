@@ -612,10 +612,25 @@ xds:
           virtualHosts:
           - domains:
             - www.example.com
+            metadata:
+              filterMetadata:
+                envoy-gateway:
+                  resources:
+                  - kind: ""
+                    name: eg
+                    namespace: default
+                    sectionName: http
             name: default/eg/http/www_example_com
             routes:
             - match:
                 prefix: /
+              metadata:
+                filterMetadata:
+                  envoy-gateway:
+                    resources:
+                    - kind: HTTPRoute
+                      name: backend
+                      namespace: default
               name: httproute/default/backend/rule/0/match/0/www_example_com
               route:
                 cluster: httproute/default/backend/rule/0
@@ -628,10 +643,25 @@ xds:
           virtualHosts:
           - domains:
             - www.grpc-example.com
+            metadata:
+              filterMetadata:
+                envoy-gateway:
+                  resources:
+                  - kind: ""
+                    name: eg
+                    namespace: default
+                    sectionName: grpc
             name: default/eg/grpc/www_grpc-example_com
             routes:
             - match:
                 path: /com.example.Things/DoThing
+              metadata:
+                filterMetadata:
+                  envoy-gateway:
+                    resources:
+                    - kind: GRPCRoute
+                      name: backend
+                      namespace: default
               name: grpcroute/default/backend/rule/0/match/0/www_grpc-example_com
               route:
                 cluster: grpcroute/default/backend/rule/0
