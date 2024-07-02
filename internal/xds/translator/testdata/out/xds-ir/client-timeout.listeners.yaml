@@ -29,7 +29,7 @@
           routeConfigName: first-listener
         requestTimeout: 5s
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: http-10080
         useRemoteAddress: true
     name: first-listener
   drainType: MODIFY_ONLY
@@ -47,7 +47,7 @@
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: second-route-dest
         idleTimeout: 1200s
-        statPrefix: tcp
+        statPrefix: tcp-10081
     name: second-route
   name: second-listener
   perConnectionBufferLimitBytes: 32768

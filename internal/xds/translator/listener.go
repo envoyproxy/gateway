@@ -7,6 +7,8 @@ package translator
 
 import (
 	"errors"
+	"strconv"
+	"strings"
 
 	xdscore "github.com/cncf/xds/go/xds/core/v3"
 	matcher "github.com/cncf/xds/go/xds/type/matcher/v3"
@@ -222,9 +224,21 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 	var statPrefix string
 	if irListener.TLS != nil {
 		statPrefix = "https"
+
+		// Set non-* hostnames as part of the statPrefix, there is only one hostname actually.
+		if len(irListener.Hostnames) > 0 && irListener.Hostnames[0] != "*" {
+			statPrefix = strings.Join([]string{statPrefix, strings.Join(irListener.Hostnames, Dash)}, Dash)
+		}
 	} else {
+		// Plain HTTP listener may handle multiple hostnames, skip setting hostnames as part of
+		// statPrefix to avoid it's too long.
 		statPrefix = "http"
 	}
+
+	// Append port to the statPrefix
+	statPrefix = strings.Join([]string{statPrefix, strconv.Itoa(int(irListener.Port))}, Dash)
+
+	statPrefix = sanitizeStatPrefix(statPrefix)
 
 	// Client IP detection
 	useRemoteAddress := true
@@ -403,12 +417,24 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute
 	isTLSTerminate := irRoute.TLS != nil && irRoute.TLS.Terminate != nil
 	statPrefix := "tcp"
 	if isTLSPassthrough {
+		// Passthrough TLS listener may contain multiple SNIs, skip setting hostnames as part of
+		// statPrefix to avoid it's too long.
 		statPrefix = "passthrough"
 	}
 
 	if isTLSTerminate {
 		statPrefix = "terminate"
+
+		// Set non-* hostnames as part of the statPrefix, there is at most one hostname actually.
+		if irRoute.TLS.TLSInspectorConfig != nil && len(irRoute.TLS.TLSInspectorConfig.SNIs) > 0 && irRoute.TLS.TLSInspectorConfig.SNIs[0] != "*" {
+			statPrefix = strings.Join([]string{statPrefix, strings.Join(irRoute.TLS.TLSInspectorConfig.SNIs, Dash)}, Dash)
+		}
 	}
+
+	// Append port to the statPrefix.
+	statPrefix = strings.Join([]string{statPrefix, strconv.Itoa(int(xdsListener.Address.GetSocketAddress().GetPortValue()))}, Dash)
+
+	statPrefix = sanitizeStatPrefix(statPrefix)
 
 	mgr := &tcpv3.TcpProxy{
 		AccessLog:  buildXdsAccessLog(accesslog, false),

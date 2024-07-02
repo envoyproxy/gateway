@@ -537,7 +537,7 @@
                             "routeConfigName": "envoy-gateway-system/eg/http"
                           },
                           "serverHeaderTransformation": "PASS_THROUGH",
-                          "statPrefix": "http",
+                          "statPrefix": "http-10080",
                           "useRemoteAddress": true
                         }
                       }

@@ -31,7 +31,7 @@
             resourceApiVersion: V3
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: https
+        statPrefix: https-foo_com-10080
         useRemoteAddress: true
     name: first-listener
     transportSocket:
@@ -71,7 +71,7 @@
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tls-route-dest
-        statPrefix: tcp
+        statPrefix: tcp-10081
     name: tcp-route-dest
   listenerFilters:
   - name: envoy.filters.listener.proxy_protocol

@@ -27,7 +27,7 @@
             resourceApiVersion: V3
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: http-10080
         useRemoteAddress: true
     name: first-listener
   drainType: MODIFY_ONLY
@@ -44,7 +44,7 @@
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tcp-route-dest
-        statPrefix: tcp
+        statPrefix: tcp-10081
     name: tcp-route-dest
   name: second-listener
   perConnectionBufferLimitBytes: 1500

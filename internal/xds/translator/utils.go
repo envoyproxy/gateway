@@ -29,6 +29,12 @@ const (
 	defaultExtServiceRequestTimeout        = 10 // 10 seconds
 )
 
+const (
+	Dot        = "."
+	Dash       = "-"
+	Underscore = "_"
+)
+
 // urlCluster is a cluster that is created from a URL.
 type urlCluster struct {
 	name         string
@@ -189,4 +195,13 @@ func addClusterFromURL(url string, tCtx *types.ResourceVersionTable) error {
 		return err
 	}
 	return nil
+}
+
+// sanitizeStatPrefix replaces all dots with underscores in the prefix since prefix is tokenized by
+// dots in https://github.com/envoyproxy/envoy/blob/main/source/common/config/well_known_names.cc
+// otherwise, the metric tag will be leading part before first dot instead of the statPrefix set in
+// the xds configuration, and rest part after first dot will be placed in the original metric name,
+// leading to observability issue.
+func sanitizeStatPrefix(prefix string) string {
+	return strings.ReplaceAll(prefix, Dot, Underscore)
 }
