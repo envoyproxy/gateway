@@ -79,7 +79,6 @@ func (s *snapshotCache) GenerateNewSnapshot(irKey string, resources types.XdsRes
 		version,
 		resources,
 	)
-
 	if err != nil {
 		xdsSnapshotCreateTotal.WithFailure(metrics.ReasonError).Increment()
 		return err
