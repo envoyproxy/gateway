@@ -70,6 +70,9 @@ func (t *Translator) ProcessClientTrafficPolicies(
 	// before policy with no section so below loops can be flattened into 1.
 	for _, currPolicy := range clientTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
+		// This loop only handles policies that target a specific section. When
+		// targeting a policy with a selector, it's not possible to specify a SectionName
+		// so there's no need to try to match targets with selectors
 		targetRefs := currPolicy.Spec.GetTargetRefs()
 		for _, currTarget := range targetRefs {
 			if hasSectionName(&currTarget) {
@@ -165,7 +168,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 	// Policy with no section set (targeting all sections)
 	for _, currPolicy := range clientTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := currPolicy.Spec.GetTargetRefs()
+		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways)
 		for _, currTarget := range targetRefs {
 			if !hasSectionName(&currTarget) {
 

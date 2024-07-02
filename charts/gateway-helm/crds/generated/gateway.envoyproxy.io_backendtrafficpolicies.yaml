@@ -917,14 +917,12 @@ spec:
                 type: object
               targetRef:
                 description: |-
-                  TargetRef is the name of the Gateway resource this policy
-                  is being attached to.
-                  This Policy and the TargetRef MUST be in the same namespace
-                  for this Policy to have effect and be applied to the Gateway.
-                  TargetRef
+                  TargetRef is the name of the resource this policy is being attached to.
+                  This policy and the TargetRef MUST be in the same namespace for this
+                  Policy to have effect
 
 
-                  Deprecated: use targetRefs instead
+                  Deprecated: use targetRefs/targetSelectors instead
                 properties:
                   group:
                     description: Group is the group of the target resource.
@@ -1023,6 +1021,39 @@ spec:
                   - kind
                   - name
                   type: object
+                type: array
+              targetSelectors:
+                description: TargetSelectors allow targeting resources for this policy
+                  based on labels
+                items:
+                  properties:
+                    group:
+                      default: gateway.networking.k8s.io
+                      description: Group is the group that this selector targets.
+                        Defaults to gateway.networking.k8s.io
+                      maxLength: 253
+                      pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
+                    kind:
+                      description: Kind is the resource kind that this selector targets.
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                      type: string
+                    matchLabels:
+                      additionalProperties:
+                        type: string
+                      description: MatchLabels are the set of label selectors for
+                        identifying the targeted resource
+                      type: object
+                  required:
+                  - kind
+                  - matchLabels
+                  type: object
+                  x-kubernetes-validations:
+                  - message: group must be gateway.networking.k8s.io
+                    rule: 'has(self.group) ? self.group == ''gateway.networking.k8s.io''
+                      : true '
                 type: array
               tcpKeepalive:
                 description: |-
