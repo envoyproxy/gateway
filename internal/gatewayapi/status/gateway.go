@@ -96,8 +96,15 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1.Gateway, svc *corev1.Ser
 	} else {
 		gw.Status.Addresses = nil
 	}
+
 	// Update the programmed condition.
 	gw.Status.Conditions = MergeConditions(gw.Status.Conditions, computeGatewayProgrammedCondition(gw, deployment))
+
+	if len(gw.Status.Addresses) > 16 {
+		// Truncate the addresses to 16
+		// so that the status can be updated successfully.
+		gw.Status.Addresses = gw.Status.Addresses[:16]
+	}
 }
 
 func SetGatewayListenerStatusCondition(gateway *gwapiv1.Gateway, listenerStatusIdx int,
@@ -135,6 +142,13 @@ func computeGatewayProgrammedCondition(gw *gwapiv1.Gateway, deployment *appsv1.D
 		return newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionFalse,
 			string(gwapiv1.GatewayReasonAddressNotAssigned),
 			"No addresses have been assigned to the Gateway", time.Now(), gw.Generation)
+	}
+
+	if len(gw.Status.Addresses) > 16 {
+		return newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionFalse,
+			string(gwapiv1.GatewayReasonInvalid),
+			fmt.Sprintf("Too many addresses (%d) have been assigned to the Gateway, the maximum number of addresses is 16",
+				len(gw.Status.Addresses)), time.Now(), gw.Generation)
 	}
 
 	// If there are no available replicas for the Envoy Deployment, don't
