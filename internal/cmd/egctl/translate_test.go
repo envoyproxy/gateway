@@ -282,10 +282,11 @@ func TestTranslate(t *testing.T) {
 			expect: false,
 		},
 		{
-			name:   "no-service-cluster-ip",
-			from:   "gateway-api",
-			to:     "xds",
-			expect: true,
+			name:      "no-service-cluster-ip",
+			from:      "gateway-api",
+			to:        "xds",
+			expect:    true,
+			extraArgs: []string{"--add-missing-resources"},
 		},
 	}
 

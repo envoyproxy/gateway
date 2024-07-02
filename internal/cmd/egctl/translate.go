@@ -793,8 +793,8 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 				},
 				Spec: typedSpec.(corev1.ServiceSpec),
 			}
-			// fill with dummy IP when service clusterIP is empty
-			if len(service.Spec.ClusterIP) == 0 {
+			if addMissingResources && len(service.Spec.ClusterIP) == 0 {
+				// fill with dummy IP when service clusterIP is empty
 				service.Spec.ClusterIP = dummyClusterIP
 			}
 			resources.Services = append(resources.Services, service)
