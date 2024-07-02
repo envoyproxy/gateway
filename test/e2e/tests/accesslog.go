@@ -42,7 +42,7 @@ var FileAccessLogTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "accesslog-file", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-			gwAddr = "127.0.0.1:10080"
+
 			expectedResponse := httputils.ExpectedResponse{
 				Request: httputils.Request{
 					Path: "/file",
