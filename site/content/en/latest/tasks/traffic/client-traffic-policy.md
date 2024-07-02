@@ -1,5 +1,6 @@
 ---
 title: "Client Traffic Policy"
+aliases: "/tasks/traffic/client-traffic-policy"
 ---
 
 This task explains the usage of the [ClientTrafficPolicy][] API.
@@ -18,7 +19,7 @@ This API was added as a new policy attachment resource that can be applied to Ga
 
 ### Prerequisites
 
-* Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
+* Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 ### Support TCP keepalive for downstream client

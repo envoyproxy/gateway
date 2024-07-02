@@ -10,6 +10,9 @@ docs: docs.clean helm-readme-gen docs-api ## Generate Envoy Gateway Docs Sources
 	cd $(ROOT_DIR)/site && npm run build:production
 	cp tools/hack/get-egctl.sh $(DOCS_OUTPUT_DIR)
 
+.PHONY: docs-check
+docs-check: docs-check-aliases docs-check-links
+
 .PHONY: docs-release
 docs-release: docs-release-prepare release-notes-docs docs-release-gen docs  ## Generate Envoy Gateway Release Docs
 
@@ -56,7 +59,9 @@ helm-readme-gen.%: $(tools/helm-docs)
 
 	# change the placeholder to title before api helm docs generated: split by '-' and capitalize the first letters
 	$(eval CHART_TITLE := $(shell echo "$(CHART_NAME)" | sed -E 's/\<./\U&/g; s/-/ /g' | awk '{for(i=1;i<=NF;i++){ $$i=toupper(substr($$i,1,1)) substr($$i,2) }}1'))
-	sed 's/{CHART-NAME}/$(CHART_TITLE)/g' tools/helm-docs/api.gotmpl > tools/helm-docs/api.${CHART_NAME}.gotmpl
+	cp tools/helm-docs/api.gotmpl tools/helm-docs/api.${CHART_NAME}.gotmpl
+	sed -i 's/{CHART-TITLE}/$(CHART_TITLE)/g' tools/helm-docs/api.${CHART_NAME}.gotmpl
+	sed -i 's/{CHART-NAME}/$(CHART_NAME)/g' tools/helm-docs/api.${CHART_NAME}.gotmpl
 	$(tools/helm-docs) --template-files=tools/helm-docs/api.${CHART_NAME}.gotmpl -g charts/${CHART_NAME} -f values.yaml -o api.md
 	mv charts/${CHART_NAME}/api.md site/content/en/latest/install/${CHART_NAME}-api.md
 	rm tools/helm-docs/api.${CHART_NAME}.gotmpl
@@ -110,6 +115,14 @@ docs-check-links:
 	# TODO: example.com is not a valid domain, we should remove it from ignore list
 	linkinator site/public/ -r --concurrency 25 --skip "github.com example.com github.io _print v0.6.0 v0.5.0 v0.4.0 v0.3.0 v0.2.0"
 
+.PHONY: docs-check-aliases
+docs-check-aliases: # Check for site page without aliases
+	@$(LOG_TARGET)
+	@tools/hack/check-docs-aliases.sh
+	$(eval LAST_VERSION := $(shell cat VERSION))
+	@CONTENT_DIR="site/content/en/$(LAST_VERSION)" tools/hack/check-docs-aliases.sh
+
 release-notes-docs: $(tools/release-notes-docs)
 	@$(LOG_TARGET)
 	$(tools/release-notes-docs) release-notes/$(TAG).yaml site/content/en/latest/releases/; \
+

@@ -1,5 +1,6 @@
 ---
 title: "Using cert-manager For TLS Termination"
+aliases: "/tasks/security/tls-cert-manager"
 ---
 
 This guide shows how to set up [cert-manager](https://cert-manager.io/) to automatically create certificates and secrets for use by Envoy Gateway.
@@ -18,7 +19,7 @@ Changing to the Let's Encrypt production environment is straight-forward after t
 
 ## Installation
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Deploying cert-manager

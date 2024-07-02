@@ -1,5 +1,6 @@
 ---
 title: "TLS Passthrough"
+aliases: "/tasks/security/tls-passthrough"
 ---
 
 This task will walk through the steps required to configure TLS Passthrough via Envoy Gateway. Unlike configuring
@@ -12,7 +13,7 @@ to terminate the TLS connection, while the Gateway routes the requests to the ap
 
 ## Installation
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 ## TLS Certificates
@@ -106,7 +107,7 @@ curl -v -HHost:passthrough.example.com --resolve "passthrough.example.com:6443:$
 
 ## Clean-Up
 
-Follow the steps from the [Quickstart](../../quickstart) to uninstall Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) to uninstall Envoy Gateway and the example manifest.
 
 Delete the Secret:
 

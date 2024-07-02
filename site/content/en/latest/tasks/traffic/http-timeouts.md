@@ -1,5 +1,6 @@
 ---
 title: "HTTP Timeouts"
+aliases: "/tasks/traffic/http-timeouts"
 ---
 
 The default request timeout is set to 15 seconds in Envoy Proxy.
@@ -14,7 +15,7 @@ __Note:__  The Request duration must be >= BackendRequest duration
 
 ## Installation
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Verification

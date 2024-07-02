@@ -1,5 +1,6 @@
 ---
 title: "Local Rate Limit"
+aliases: "/tasks/traffic/local-rate-limit"
 ---
 
 Rate limit is a feature that allows the user to limit the number of incoming requests to a predefined value based on attributes within the traffic flow.
@@ -28,7 +29,7 @@ has its own 100r/s rate limit bucket.
 
 ### Install Envoy Gateway
 
-* Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the HTTPRoute example manifest.
+* Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the HTTPRoute example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Rate Limit Specific User 

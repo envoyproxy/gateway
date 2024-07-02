@@ -1,5 +1,6 @@
 ---
 title: "Customize EnvoyProxy"
+aliases: "/tasks/operations/customize-envoyproxy"
 ---
 
 Envoy Gateway provides an [EnvoyProxy][] CRD that can be linked to the ParametersRef
@@ -8,7 +9,7 @@ Service. To learn more about GatewayClass and ParametersRef, please refer to [Ga
 
 ## Installation
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Add GatewayClass ParametersRef

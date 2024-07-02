@@ -1,0 +1,12 @@
+{{- if (strings.Contains .Permalink "v1.0.2") -}}
+<!DOCTYPE html>
+<html lang="{{ site.Language.LanguageCode }}">
+  <head>
+    <title>{{ .Permalink }}</title>
+    <link rel="canonical" href="{{ .Permalink }}">
+    <meta name="robots" content="noindex">
+    <meta charset="utf-8">
+    <meta http-equiv="refresh" content="0; url={{ .Permalink }}">
+  </head>
+</html>
+{{- end -}}

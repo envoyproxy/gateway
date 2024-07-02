@@ -1,5 +1,6 @@
 ---
 title: "Mutual TLS: External Clients to the Gateway"
+aliases: "/tasks/security/mutual-tls"
 ---
 
 This task demonstrates how mutual TLS can be achieved between external clients and the Gateway.

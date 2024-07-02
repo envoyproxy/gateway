@@ -1,9 +1,10 @@
 {{- define "gvList" -}}
 {{- $groupVersions := . -}}
 
-+++
-title = "API Reference"
-+++
+---
+title: "API Reference"
+aliases: "/api/extension_types"
+---
 
 
 ## Packages

@@ -1,5 +1,6 @@
 ---
 title: "Use egctl"
+aliases: "/tasks/operations/egctl"
 ---
 
 `egctl` is a command line tool to provide additional functionality for Envoy Gateway users.

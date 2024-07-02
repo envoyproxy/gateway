@@ -1,7 +1,8 @@
-+++
-title = "Install with Kubernetes YAML"
-weight = -99
-+++
+---
+title: "Install with Kubernetes YAML"
+aliases: "/install/install-yaml"
+weight: -99
+---
 
 This task walks you through installing Envoy Gateway in your Kubernetes cluster.
 

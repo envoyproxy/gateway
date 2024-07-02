@@ -1,5 +1,6 @@
 ---
 title: "Accelerating TLS Handshakes using Private Key Provider in Envoy"
+aliases: "/tasks/security/private-key-provider"
 ---
 
 TLS operations can be accelerated or the private key can be protected using specialized hardware. This can be leveraged in Envoy using [Envoy Private Key Provider](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-privatekeyprovider) is added to Envoy.

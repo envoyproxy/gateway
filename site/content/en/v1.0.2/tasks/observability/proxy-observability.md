@@ -1,5 +1,6 @@
 ---
 title: "Proxy Observability"
+aliases: "/tasks/observability/proxy-observability"
 ---
 
 Envoy Gateway provides observability for the ControlPlane and the underlying EnvoyProxy instances.

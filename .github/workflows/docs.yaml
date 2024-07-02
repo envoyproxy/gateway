@@ -39,8 +39,7 @@ jobs:
       run: npm install -g linkinator@6.0.4
 
     - name: Check links
-      run: make docs docs-check-links
-      continue-on-error: true
+      run: make docs docs-check
 
   docs-build:
     runs-on: ubuntu-latest

@@ -1,5 +1,6 @@
 ---
 title: "Connection Limit"
+aliases: "/tasks/traffic/connection-limit"
 ---
 
 The connection limit features allows users to limit the number of concurrently active TCP connections on a [Gateway][] or a [Listener][].
@@ -25,7 +26,7 @@ When a [Client Traffic Policy][] is attached to a gateway, the connection limit 
 
 ### Install Envoy Gateway
 
-* Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the HTTPRoute example manifest.
+* Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the HTTPRoute example manifest.
   Before proceeding, you should be able to query the example backend using HTTP.
 
 ### Install the hey load testing tool

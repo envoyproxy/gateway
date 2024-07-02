@@ -1,7 +1,8 @@
-+++
-title = "Install with Helm"
-weight = -100
-+++
+---
+title: "Install with Helm"
+aliases: "/install/install-helm"
+weight: -100
+---
 
 [Helm](https://helm.sh) is a package manager for Kubernetes that automates the release and management of software on Kubernetes. 
 

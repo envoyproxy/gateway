@@ -1,5 +1,6 @@
 ---
 title: "Backend TLS: Gateway to Backend"
+aliases: "/tasks/security/backend-tls"
 ---
 
 This task demonstrates how TLS can be achieved between the Gateway and a backend.
@@ -13,7 +14,7 @@ Envoy Gateway supports the Gateway-API defined [BackendTLSPolicy][].
 
 ## Installation
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest.
 
 ## TLS Certificates
 

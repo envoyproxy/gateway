@@ -1,5 +1,6 @@
 ---
 title: "TCP Routing"
+aliases: "/tasks/traffic/tcp-routing"
 ---
 
 [TCPRoute][] provides a way to route TCP requests. When combined with a Gateway listener, it can be used to forward
@@ -8,7 +9,7 @@ HTTP routing, refer to the [Gateway API documentation][].
 
 ## Installation
 
-Follow the steps from the [Quickstart](../../quickstart) guide to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) guide to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Configuration

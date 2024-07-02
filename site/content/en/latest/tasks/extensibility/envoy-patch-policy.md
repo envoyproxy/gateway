@@ -1,5 +1,6 @@
 ---
 title: "Envoy Patch Policy"
+aliases: "/tasks/extensibility/envoy-patch-policy"
 ---
 
 This task explains the usage of the [EnvoyPatchPolicy][] API.
@@ -22,7 +23,7 @@ not exposed by Envoy Gateway APIs today.
 
 ### Prerequisites
 
-* Follow the steps from the [Quickstart](../../quickstart) task to install Envoy Gateway and the example manifest.
+* Follow the steps from the [Quickstart](../quickstart) task to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 ### Enable EnvoyPatchPolicy

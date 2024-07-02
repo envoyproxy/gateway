@@ -1,5 +1,6 @@
 ---
 title: "Gateway Exported Metrics"
+aliases: "/tasks/observability/gateway-exported-metrics"
 ---
 
 The Envoy Gateway provides a collection of self-monitoring metrics in [Prometheus format][prom-format]. 

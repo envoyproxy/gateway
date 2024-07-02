@@ -1,5 +1,6 @@
 ---
 title: "Gateway Address"
+aliases: "/tasks/traffic/gateway-address"
 ---
 
 The Gateway API provides an optional [Addresses][] field through which Envoy Gateway can set addresses for Envoy Proxy Service.
@@ -10,7 +11,7 @@ Depending on the Service Type, the addresses of gateway can be used as:
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest.
 
 ## External IPs
 

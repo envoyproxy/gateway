@@ -1,5 +1,6 @@
 ---
 title: "HTTP3"
+aliases: "/tasks/traffic/http3"
 ---
 
 This task will help you get started using HTTP3 using EG.

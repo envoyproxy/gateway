@@ -1,5 +1,6 @@
 ---
 title: "Routing outside Kubernetes"
+aliases: "/tasks/traffic/routing-outside-kubernetes"
 ---
 
 Routing to endpoints outside the Kubernetes cluster where Envoy Gateway and its corresponding Envoy Proxy fleet is
@@ -7,7 +8,7 @@ running is a common use case. This can be achieved by defining FQDN addresses in
 
 ## Installation
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Configuration

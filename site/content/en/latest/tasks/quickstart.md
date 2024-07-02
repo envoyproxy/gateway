@@ -2,6 +2,7 @@
 title: "Quickstart"
 weight: 1
 description: Get started with Envoy Gateway in a few simple steps.
+aliases: "/tasks/quickstart"
 ---
 
 This "quick start" will help you get started with Envoy Gateway in a few simple steps.
