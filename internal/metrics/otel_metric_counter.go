@@ -46,3 +46,13 @@ func (f *Counter) With(labelValues ...LabelValue) *Counter {
 
 	return m
 }
+
+func (f *Counter) WithSuccess(labelValues ...LabelValue) *Counter {
+	labelValues = append(labelValues, statusLabel.Value(StatusSuccess))
+	return f.With(labelValues...)
+}
+
+func (f *Counter) WithFailure(reason string, labelValues ...LabelValue) *Counter {
+	labelValues = append(labelValues, statusLabel.Value(StatusFailure), reasonLabel.Value(reason))
+	return f.With(labelValues...)
+}

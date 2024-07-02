@@ -17,12 +17,11 @@ they all follow the design of [Watching Components](../../../contributions/desig
 
 Envoy Gateway collects the following metrics in Watching Components:
 
-| Name                                    | Description                                            |
-|-----------------------------------------|--------------------------------------------------------|
-| `watchable_depth`                       | Current depth of watchable map.                        |
-| `watchable_subscribed_duration_seconds` | How long in seconds a subscribed watchable is handled. |
-| `watchable_subscribed_total`            | Total number of subscribed watchable.                  |
-| `watchable_subscribed_errors_total`     | Total number of subscribed watchable errors.           |
+| Name                                   | Description                                                  |
+|----------------------------------------|--------------------------------------------------------------|
+| `watchable_depth`                      | Current depth of watchable map.                              |
+| `watchable_subscribe_duration_seconds` | How long in seconds a subscribed watchable queue is handled. |
+| `watchable_subscribe_total`            | Total number of subscribed watchable queue.                  |
 
 Each metric includes the `runner` label to identify the corresponding components,
 the relationship between label values and components is as follows:
