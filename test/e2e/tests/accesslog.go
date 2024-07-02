@@ -42,7 +42,7 @@ var FileAccessLogTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "accesslog-file", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-
+			gwAddr = "127.0.0.1:10080"
 			expectedResponse := httputils.ExpectedResponse{
 				Request: httputils.Request{
 					Path: "/file",
@@ -66,7 +66,7 @@ var FileAccessLogTest = suite.ConformanceTest{
 					// query log count from loki
 					count, err := QueryLogCountFromLoki(t, suite.Client, types.NamespacedName{
 						Namespace: "envoy-gateway-system",
-					}, labels, "gateway-conformance-infra/accesslog-file")
+					}, labels, "test-annotation-value")
 					if err != nil {
 						t.Logf("failed to get log count from loki: %v", err)
 						return false, nil
@@ -85,7 +85,7 @@ var FileAccessLogTest = suite.ConformanceTest{
 					// query log count from loki
 					preCount, err := QueryLogCountFromLoki(t, suite.Client, types.NamespacedName{
 						Namespace: "envoy-gateway-system",
-					}, labels, "gateway-conformance-infra/accesslog-file")
+					}, labels, "test-annotation-value")
 					if err != nil {
 						t.Logf("failed to get log count from loki: %v", err)
 						return false, nil
