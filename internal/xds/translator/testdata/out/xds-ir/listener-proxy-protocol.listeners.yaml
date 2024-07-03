@@ -31,7 +31,7 @@
             resourceApiVersion: V3
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: https-foo_com-10080
+        statPrefix: https-10080
         useRemoteAddress: true
     name: first-listener
     transportSocket:
