@@ -29,7 +29,7 @@ spec:
             - name: socket-dir
               hostPath:
                 path: /var/run/ext-proc
-                type: ''
+                type: ""
   telemetry:
     metrics:
       prometheus: {}
@@ -58,6 +58,11 @@ spec:
                     port: 4317
                 resources:
                   k8s.cluster.name: "envoy-gateway"
+        - format:
+            type: Text
+            text: |
+              [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
+          sinks:
             - type: ALS
               als:
                 backendRefs:
@@ -158,3 +163,4 @@ metadata:
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
 ---
+
