@@ -510,7 +510,7 @@ xds:
                       path: /dev/stdout
                   cluster: tcproute/default/backend/rule/-1
                   statPrefix: tcp
-              name: tcproute/default/backend
+              name: default/eg/tcp/tcproute/default/backend
             name: default/eg/tcp
             perConnectionBufferLimitBytes: 32768
       - activeState:
@@ -553,7 +553,7 @@ xds:
                       path: /dev/stdout
                   cluster: tlsroute/default/backend/rule/-1
                   statPrefix: passthrough
-              name: tlsroute/default/backend
+              name: default/eg/tls-passthrough/tlsroute/default/backend
             listenerFilters:
             - name: envoy.filters.listener.tls_inspector
               typedConfig:

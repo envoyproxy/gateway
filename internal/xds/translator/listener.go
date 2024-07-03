@@ -7,6 +7,7 @@ package translator
 
 import (
 	"errors"
+	"fmt"
 
 	xdscore "github.com/cncf/xds/go/xds/core/v3"
 	matcher "github.com/cncf/xds/go/xds/type/matcher/v3"
@@ -391,7 +392,7 @@ func findXdsHTTPRouteConfigName(xdsListener *listenerv3.Listener) string {
 	return ""
 }
 
-func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute,
+func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.TCPListener, irRoute *ir.TCPRoute,
 	clusterName string, accesslog *ir.AccessLog, timeout *ir.ClientTimeout,
 	connection *ir.ClientConnection,
 ) error {
@@ -444,7 +445,7 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute
 
 	filterChain := &listenerv3.FilterChain{
 		Filters: filters,
-		Name:    irRoute.Name,
+		Name:    fmt.Sprintf("%s/%s", irListener.Name, irRoute.Name),
 	}
 
 	if isTLSPassthrough {
