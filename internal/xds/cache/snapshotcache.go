@@ -28,6 +28,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/metrics"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -78,26 +79,22 @@ func (s *snapshotCache) GenerateNewSnapshot(irKey string, resources types.XdsRes
 		version,
 		resources,
 	)
-
-	xdsSnapshotCreationTotal.Increment()
 	if err != nil {
-		xdsSnapshotCreationFailed.Increment()
+		xdsSnapshotCreateTotal.WithFailure(metrics.ReasonError).Increment()
 		return err
-	} else {
-		xdsSnapshotCreationSuccess.Increment()
 	}
+	xdsSnapshotCreateTotal.WithSuccess().Increment()
 
 	s.lastSnapshot[irKey] = snapshot
 
 	for _, node := range s.getNodeIDs(irKey) {
 		s.log.Debugf("Generating a snapshot with Node %s", node)
-		xdsSnapshotUpdateTotal.With(nodeIDLabel.Value(node)).Increment()
 
 		if err = s.SetSnapshot(context.TODO(), node, snapshot); err != nil {
-			xdsSnapshotUpdateFailed.With(nodeIDLabel.Value(node)).Increment()
+			xdsSnapshotUpdateTotal.WithFailure(metrics.ReasonError, nodeIDLabel.Value(node)).Increment()
 			return err
 		} else {
-			xdsSnapshotUpdateSuccess.With(nodeIDLabel.Value(node)).Increment()
+			xdsSnapshotUpdateTotal.WithSuccess(nodeIDLabel.Value(node)).Increment()
 		}
 	}
 
@@ -168,6 +165,7 @@ func (s *snapshotCache) OnStreamClosed(streamID int64, node *corev3.Node) {
 		xdsStreamDurationSeconds.With(
 			streamIDLabel.Value(strconv.FormatInt(streamID, 10)),
 			nodeIDLabel.Value(node.Id),
+			isDeltaStreamLabel.Value("false"),
 		).Record(streamDuration.Seconds())
 	}
 
@@ -267,9 +265,10 @@ func (s *snapshotCache) OnDeltaStreamClosed(streamID int64, node *corev3.Node) {
 
 	if startTime, ok := s.deltaStreamDuration[streamID]; ok {
 		deltaStreamDuration := time.Since(startTime)
-		xdsDeltaStreamDurationSeconds.With(
+		xdsStreamDurationSeconds.With(
 			streamIDLabel.Value(strconv.FormatInt(streamID, 10)),
 			nodeIDLabel.Value(node.Id),
+			isDeltaStreamLabel.Value("true"),
 		).Record(deltaStreamDuration.Seconds())
 	}
 
