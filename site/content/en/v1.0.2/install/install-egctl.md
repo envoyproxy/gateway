@@ -10,13 +10,14 @@ weight: -80
 {{% /alert %}}
 
 
-This guide shows how to install the egctl CLI. egctl can be installed either from source, or from pre-built binary releases.
+This task shows how to install the egctl CLI. egctl can be installed either from source, or from pre-built binary releases.
 
 ### From The Envoy Gateway Project
 
 The Envoy Gateway project provides two ways to fetch and install egctl. These are the official methods to get egctl releases. Installation through those methods can be found below the official methods.
 
-### From the Binary Releases
+{{< tabpane text=true >}}
+{{% tab header="From the Binary Releases" %}}
 
 Every [release](https://github.com/envoyproxy/gateway/releases) of egctl provides binary releases for a variety of OSes. These binary versions can be manually downloaded and installed.
 
@@ -26,7 +27,8 @@ Every [release](https://github.com/envoyproxy/gateway/releases) of egctl provide
 
 From there, you should be able to run: `egctl help`.
 
-### From Script
+{{% /tab %}}
+{{% tab header="From Script" %}}
 
 `egctl` now has an installer script that will automatically grab the latest release version of egctl and install it locally.
 
@@ -50,8 +52,21 @@ Yes, you can just use the below command if you want to live on the edge.
 curl -fsSL https://gateway.envoyproxy.io/get-egctl.sh | VERSION=latest bash 
 ```
 
+{{% /tab %}}
+
+{{% tab header="From Homebrew" %}}
+
+You can also install egctl using homebrew:
+
+```shell
+brew install egctl
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 {{% alert title="Next Steps" color="warning" %}}
 
-You can refer to [Tasks](../tasks/operations/egctl) for more details about egctl.
+You can refer to the [Use egctl task](../tasks/operations/egctl) for more details about egctl.
 
 {{% /alert %}}
