@@ -27,6 +27,13 @@ spec:
             - type: File
               file:
                 path: /dev/stdout
+            - type: ALS
+              als:
+                backendRefs:
+                  - name: envoy-als
+                    namespace: monitoring
+                    port: 9000
+                type: HTTP
             - type: OpenTelemetry
               openTelemetry:
                 host: otel-collector.monitoring.svc.cluster.local

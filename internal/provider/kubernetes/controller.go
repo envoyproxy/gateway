@@ -1632,22 +1632,17 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 	}
 
 	if ep.Spec.Telemetry != nil {
+		var backendRefs []egv1a1.BackendRef
 		telemetry := ep.Spec.Telemetry
 
 		if telemetry.AccessLog != nil {
 			for _, setting := range telemetry.AccessLog.Settings {
 				for _, sink := range setting.Sinks {
-					if sink.OpenTelemetry == nil {
-						continue
+					if sink.OpenTelemetry != nil {
+						backendRefs = append(backendRefs, sink.OpenTelemetry.BackendRefs...)
 					}
-					for _, backendRef := range sink.OpenTelemetry.BackendRefs {
-						backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, ep.Namespace)
-						resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
-							Group:     backendRef.BackendObjectReference.Group,
-							Kind:      backendRef.BackendObjectReference.Kind,
-							Namespace: gatewayapi.NamespacePtr(backendNamespace),
-							Name:      backendRef.Name,
-						})
+					if sink.ALS != nil {
+						backendRefs = append(backendRefs, sink.ALS.BackendRefs...)
 					}
 				}
 			}
@@ -1655,32 +1650,24 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 
 		if telemetry.Metrics != nil {
 			for _, sink := range telemetry.Metrics.Sinks {
-				if sink.OpenTelemetry == nil {
-					continue
-				}
-				for _, backendRef := range sink.OpenTelemetry.BackendRefs {
-					backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, ep.Namespace)
-					resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
-						Group:     backendRef.BackendObjectReference.Group,
-						Kind:      backendRef.BackendObjectReference.Kind,
-						Namespace: gatewayapi.NamespacePtr(backendNamespace),
-						Name:      backendRef.Name,
-					})
+				if sink.OpenTelemetry != nil {
+					backendRefs = append(backendRefs, sink.OpenTelemetry.BackendRefs...)
 				}
 			}
 		}
 
 		if telemetry.Tracing != nil {
-			for _, backendRef := range telemetry.Tracing.Provider.BackendRefs {
-				backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, ep.Namespace)
-				resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
-					Group:     backendRef.BackendObjectReference.Group,
-					Kind:      backendRef.BackendObjectReference.Kind,
-					Namespace: gatewayapi.NamespacePtr(backendNamespace),
-					Name:      backendRef.Name,
-				})
+			backendRefs = append(backendRefs, telemetry.Tracing.Provider.BackendRefs...)
+		}
 
-			}
+		for _, backendRef := range backendRefs {
+			backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, ep.Namespace)
+			resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
+				Group:     backendRef.BackendObjectReference.Group,
+				Kind:      backendRef.BackendObjectReference.Kind,
+				Namespace: gatewayapi.NamespacePtr(backendNamespace),
+				Name:      backendRef.Name,
+			})
 		}
 	}
 
