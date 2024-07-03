@@ -110,6 +110,28 @@ infraIR:
                 - file:
                     path: /dev/stdout
                   type: File
+                - als:
+                    backendRefs:
+                    - name: envoy-als
+                      namespace: monitoring
+                      port: 9000
+                    http:
+                      requestHeaders:
+                      - x-client-ip-address
+                      responseHeaders:
+                      - cache-control
+                      responseTrailers:
+                      - expires
+                    logName: accesslog
+                    type: HTTP
+                  type: ALS
+                - als:
+                    backendRefs:
+                    - name: envoy-als
+                      namespace: monitoring
+                      port: 9000
+                    type: TCP
+                  type: ALS
                 - openTelemetry:
                     host: otel-collector.monitoring.svc.cluster.local
                     port: 4317
@@ -133,10 +155,42 @@ infraIR:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
+      als:
+      - destination:
+          name: accesslog_als_0_1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 10.240.0.10
+              port: 9090
+            protocol: GRPC
+        http:
+          requestHeaders:
+          - x-client-ip-address
+          responseHeaders:
+          - cache-control
+          responseTrailers:
+          - expires
+        name: accesslog
+        text: |
+          [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
+        type: HTTP
+      - destination:
+          name: accesslog_als_0_2
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 10.240.0.10
+              port: 9090
+            protocol: GRPC
+        name: envoy-gateway-system/test
+        text: |
+          [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
+        type: TCP
       openTelemetry:
       - authority: otel-collector.monitoring.svc.cluster.local
         destination:
-          name: accesslog-0
+          name: accesslog_otel_0_3
           settings:
           - endpoints:
             - host: otel-collector.monitoring.svc.cluster.local
