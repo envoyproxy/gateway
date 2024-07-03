@@ -46,6 +46,8 @@ spec:
             type: Text
             text: |
               [%START_TIME%] %METADATA(ROUTE:envoy-gateway:resources)% "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
+          matches:
+            - "'x-envoy-logged' in request.headers"
           sinks:
             - type: File
               file:
