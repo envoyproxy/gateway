@@ -34,6 +34,7 @@ var FileAccessLogTest = suite.ConformanceTest{
 			"k8s_namespace_name": "envoy-gateway-system",
 			"k8s_container_name": "envoy",
 		}
+		match := "test-annotation-value"
 
 		t.Run("Positive", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
@@ -56,7 +57,7 @@ var FileAccessLogTest = suite.ConformanceTest{
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, expectedResponse, labels, 1)
+			runLogTest(t, suite, gwAddr, expectedResponse, labels, match, 1)
 		})
 
 		t.Run("Negative", func(t *testing.T) {
@@ -78,7 +79,7 @@ var FileAccessLogTest = suite.ConformanceTest{
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, expectedResponse, labels, 0)
+			runLogTest(t, suite, gwAddr, expectedResponse, labels, match, 0)
 		})
 	},
 }
@@ -114,7 +115,7 @@ var OpenTelemetryTest = suite.ConformanceTest{
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, expectedResponse, labels, 1)
+			runLogTest(t, suite, gwAddr, expectedResponse, labels, "", 1)
 		})
 
 		t.Run("Negative", func(t *testing.T) {
@@ -136,7 +137,7 @@ var OpenTelemetryTest = suite.ConformanceTest{
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, expectedResponse, labels, 0)
+			runLogTest(t, suite, gwAddr, expectedResponse, labels, "", 0)
 		})
 	},
 }
@@ -179,12 +180,12 @@ var ALSTest = suite.ConformanceTest{
 }
 
 func runLogTest(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string,
-	expectedResponse httputils.ExpectedResponse, expectedLabels map[string]string, expectedDelta int,
+	expectedResponse httputils.ExpectedResponse, expectedLabels map[string]string, expectedMatch string, expectedDelta int,
 ) {
 	if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
 		func(ctx context.Context) (bool, error) {
 			// query log count from loki
-			preCount, err := QueryLogCountFromLoki(t, suite.Client, expectedLabels, "test-annotation-value")
+			preCount, err := QueryLogCountFromLoki(t, suite.Client, expectedLabels, expectedMatch)
 			if err != nil {
 				t.Logf("failed to get log count from loki: %v", err)
 				return false, nil
@@ -195,7 +196,7 @@ func runLogTest(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string,
 			// it will take some time for fluent-bit to collect the log and send to loki
 			// let's wait for a while
 			if err := wait.PollUntilContextTimeout(ctx, 500*time.Millisecond, 15*time.Second, true, func(_ context.Context) (bool, error) {
-				count, err := QueryLogCountFromLoki(t, suite.Client, expectedLabels, "test-annotation-value")
+				count, err := QueryLogCountFromLoki(t, suite.Client, expectedLabels, expectedMatch)
 				if err != nil {
 					t.Logf("failed to get log count from loki: %v", err)
 					return false, nil
