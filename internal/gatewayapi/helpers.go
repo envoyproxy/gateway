@@ -9,12 +9,15 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"slices"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -497,36 +500,53 @@ func irConfigName(policy client.Object) string {
 		utils.NamespacedName(policy).String())
 }
 
-func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, potentialTargets []T) []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {
-	dedup := map[gwapiv1a2.LocalPolicyTargetReferenceWithSectionName]byte{}
-	for _, ref := range policy.GetTargetRefs() {
-		dedup[ref] = byte(0)
-	}
+type targetRefWithTimestamp struct {
+	gwapiv1a2.LocalPolicyTargetReferenceWithSectionName
+	CreationTimestamp metav1.Time
+}
 
+func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, potentialTargets []T) []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {
+	dedup := sets.New[targetRefWithTimestamp]()
 	for _, currSelector := range policy.TargetSelectors {
 		labelSelector := labels.SelectorFromSet(currSelector.MatchLabels)
 		for _, obj := range potentialTargets {
 			gvk := obj.GetObjectKind().GroupVersionKind()
 			if gvk.Kind != string(currSelector.Kind) ||
-				gvk.Group != string(ptr.Deref(currSelector.Group, "gateway.networking.k8s.io")) {
+				gvk.Group != string(ptr.Deref(currSelector.Group, gwapiv1a2.GroupName)) {
 				continue
 			}
 
 			if labelSelector.Matches(labels.Set(obj.GetLabels())) {
-				dedup[gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-					LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-						Group: gwapiv1a2.Group(gvk.Group),
-						Kind:  gwapiv1a2.Kind(gvk.Kind),
-						Name:  gwapiv1a2.ObjectName(obj.GetName()),
+				dedup.Insert(targetRefWithTimestamp{
+					CreationTimestamp: obj.GetCreationTimestamp(),
+					LocalPolicyTargetReferenceWithSectionName: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+							Group: gwapiv1a2.Group(gvk.Group),
+							Kind:  gwapiv1a2.Kind(gvk.Kind),
+							Name:  gwapiv1a2.ObjectName(obj.GetName()),
+						},
 					},
-				}] = byte(0)
+				})
 			}
 		}
 	}
-
+	selectorsList := dedup.UnsortedList()
+	slices.SortFunc(selectorsList, func(i, j targetRefWithTimestamp) int {
+		return i.CreationTimestamp.Compare(j.CreationTimestamp.Time)
+	})
 	ret := []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{}
-	for key := range dedup {
-		ret = append(ret, key)
+	for _, v := range selectorsList {
+		ret = append(ret, v.LocalPolicyTargetReferenceWithSectionName)
 	}
+	// Plain targetRefs in the policy don't have an associated creation timestamp, but can still refer
+	// to targets that were already found via the selectors. Only add them to the returned list if
+	// they are not yet there. Always add them at the end.
+	fastLookup := sets.New(ret...)
+	for _, v := range policy.GetTargetRefs() {
+		if !fastLookup.Has(v) {
+			ret = append(ret, v)
+		}
+	}
+
 	return ret
 }
