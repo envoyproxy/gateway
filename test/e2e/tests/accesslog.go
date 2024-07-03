@@ -29,7 +29,7 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, FileAccessLogTest, OpenTelemetryTest)
+	ConformanceTests = append(ConformanceTests, FileAccessLogTest, OpenTelemetryTest, ALSTest)
 }
 
 var FileAccessLogTest = suite.ConformanceTest{
@@ -66,7 +66,7 @@ var FileAccessLogTest = suite.ConformanceTest{
 					// query log count from loki
 					count, err := QueryLogCountFromLoki(t, suite.Client, types.NamespacedName{
 						Namespace: "envoy-gateway-system",
-					}, labels)
+					}, labels, "test-annotation-value")
 					if err != nil {
 						t.Logf("failed to get log count from loki: %v", err)
 						return false, nil
@@ -85,7 +85,7 @@ var FileAccessLogTest = suite.ConformanceTest{
 					// query log count from loki
 					preCount, err := QueryLogCountFromLoki(t, suite.Client, types.NamespacedName{
 						Namespace: "envoy-gateway-system",
-					}, labels)
+					}, labels, "test-annotation-value")
 					if err != nil {
 						t.Logf("failed to get log count from loki: %v", err)
 						return false, nil
@@ -98,7 +98,7 @@ var FileAccessLogTest = suite.ConformanceTest{
 					if err := wait.PollUntilContextTimeout(ctx, 500*time.Millisecond, 15*time.Second, true, func(_ context.Context) (bool, error) {
 						count, err := QueryLogCountFromLoki(t, suite.Client, types.NamespacedName{
 							Namespace: "envoy-gateway-system",
-						}, labels)
+						}, labels, "test-annotation-value")
 						if err != nil {
 							t.Logf("failed to get log count from loki: %v", err)
 							return false, nil
@@ -155,7 +155,7 @@ var OpenTelemetryTest = suite.ConformanceTest{
 					// query log count from loki
 					preCount, err := QueryLogCountFromLoki(t, suite.Client, types.NamespacedName{
 						Namespace: "envoy-gateway-system",
-					}, labels)
+					}, labels, "")
 					if err != nil {
 						t.Logf("failed to get log count from loki: %v", err)
 						return false, nil
@@ -166,7 +166,7 @@ var OpenTelemetryTest = suite.ConformanceTest{
 					if err := wait.PollUntilContextTimeout(ctx, 500*time.Millisecond, 10*time.Second, true, func(_ context.Context) (bool, error) {
 						count, err := QueryLogCountFromLoki(t, suite.Client, types.NamespacedName{
 							Namespace: "envoy-gateway-system",
-						}, labels)
+						}, labels, "")
 						if err != nil {
 							t.Logf("failed to get log count from loki: %v", err)
 							return false, nil
@@ -191,9 +191,67 @@ var OpenTelemetryTest = suite.ConformanceTest{
 	},
 }
 
+var ALSTest = suite.ConformanceTest{
+	ShortName:   "ALS",
+	Description: "Make sure ALS access log is working",
+	Manifests:   []string{"testdata/accesslog-als.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		t.Run("HTTP", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "accesslog-als", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			preCount := ALSLogCount(t, suite)
+			expectedResponse := httputils.ExpectedResponse{
+				Request: httputils.Request{
+					Path: "/als",
+				},
+				Response: httputils.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+			// make sure listener is ready
+			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+
+			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
+				func(ctx context.Context) (bool, error) {
+					curCount := ALSLogCount(t, suite)
+					return preCount < curCount, nil
+				}); err != nil {
+				t.Errorf("failed to get log count from loki: %v", err)
+			}
+		})
+	},
+}
+
+func ALSLogCount(t *testing.T, suite *suite.ConformanceTestSuite) int {
+	metricPath, err := RetrieveURL(suite.Client, types.NamespacedName{
+		Namespace: "monitoring",
+		Name:      "envoy-als",
+	}, 19001, "/metrics")
+	if err != nil {
+		t.Fatalf("failed to get metric url: %v", err)
+	}
+
+	countMetric, err := RetrieveMetric(metricPath, "log_count", time.Second)
+	if err != nil {
+		t.Fatalf("failed to get metric: %v", err)
+	}
+
+	total := 0
+	for _, m := range countMetric.Metric {
+		if m.Counter != nil && m.Counter.Value != nil {
+			total += int(*m.Counter.Value)
+		}
+	}
+
+	return total
+}
+
 // QueryLogCountFromLoki queries log count from loki
 // TODO: move to utils package if needed
-func QueryLogCountFromLoki(t *testing.T, c client.Client, nn types.NamespacedName, keyValues map[string]string) (int, error) {
+func QueryLogCountFromLoki(t *testing.T, c client.Client, nn types.NamespacedName, keyValues map[string]string, match string) (int, error) {
 	svc := corev1.Service{}
 	if err := c.Get(context.Background(), types.NamespacedName{
 		Namespace: "monitoring",
@@ -215,6 +273,9 @@ func QueryLogCountFromLoki(t *testing.T, c client.Client, nn types.NamespacedNam
 	}
 
 	q := "{" + strings.Join(qParams, ",") + "}"
+	if match != "" {
+		q = q + "|~\"" + match + "\""
+	}
 	params := url.Values{}
 	params.Add("query", q)
 	params.Add("start", fmt.Sprintf("%d", time.Now().Add(-10*time.Minute).Unix())) // query logs from last 10 minutes
