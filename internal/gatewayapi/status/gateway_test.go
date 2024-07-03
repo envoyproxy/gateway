@@ -6,10 +6,13 @@
 package status
 
 import (
+	"fmt"
 	"reflect"
 	"strconv"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -190,42 +193,58 @@ func TestGatewayReadyCondition(t *testing.T) {
 		// serviceAddressNum indicates how many addresses are set in the Gateway status.
 		serviceAddressNum int
 		deploymentStatus  appsv1.DeploymentStatus
-		expect            metav1.Condition
+		expectCondition   []metav1.Condition
 	}{
 		{
 			name:              "ready gateway",
 			serviceAddressNum: 1,
-			deploymentStatus:  appsv1.DeploymentStatus{AvailableReplicas: 1},
-			expect: metav1.Condition{
-				Status: metav1.ConditionTrue,
-				Reason: string(gwapiv1.GatewayConditionProgrammed),
+			deploymentStatus:  appsv1.DeploymentStatus{AvailableReplicas: 1, Replicas: 1},
+			expectCondition: []metav1.Condition{
+				{
+					Type:    string(gwapiv1.GatewayConditionProgrammed),
+					Status:  metav1.ConditionTrue,
+					Reason:  string(gwapiv1.GatewayConditionProgrammed),
+					Message: fmt.Sprintf(messageFmtProgrammed, 1, 1),
+				},
 			},
 		},
 		{
 			name:              "not ready gateway without address",
 			serviceAddressNum: 0,
 			deploymentStatus:  appsv1.DeploymentStatus{AvailableReplicas: 1},
-			expect: metav1.Condition{
-				Status: metav1.ConditionFalse,
-				Reason: string(gwapiv1.GatewayReasonAddressNotAssigned),
+			expectCondition: []metav1.Condition{
+				{
+					Type:    string(gwapiv1.GatewayConditionProgrammed),
+					Status:  metav1.ConditionFalse,
+					Reason:  string(gwapiv1.GatewayReasonAddressNotAssigned),
+					Message: messageAddressNotAssigned,
+				},
 			},
 		},
 		{
 			name:              "not ready gateway with too many addresses",
 			serviceAddressNum: 17,
 			deploymentStatus:  appsv1.DeploymentStatus{AvailableReplicas: 1},
-			expect: metav1.Condition{
-				Status: metav1.ConditionFalse,
-				Reason: string(gwapiv1.GatewayReasonInvalid),
+			expectCondition: []metav1.Condition{
+				{
+					Type:    string(gwapiv1.GatewayConditionProgrammed),
+					Status:  metav1.ConditionFalse,
+					Reason:  string(gwapiv1.GatewayReasonInvalid),
+					Message: fmt.Sprintf(messageFmtTooManyAddresses, 17),
+				},
 			},
 		},
 		{
 			name:              "not ready gateway with address unavailable pods",
 			serviceAddressNum: 1,
 			deploymentStatus:  appsv1.DeploymentStatus{AvailableReplicas: 0},
-			expect: metav1.Condition{
-				Status: metav1.ConditionFalse,
-				Reason: string(gwapiv1.GatewayReasonNoResources),
+			expectCondition: []metav1.Condition{
+				{
+					Type:    string(gwapiv1.GatewayConditionProgrammed),
+					Status:  metav1.ConditionFalse,
+					Reason:  string(gwapiv1.GatewayReasonNoResources),
+					Message: messageNoResources,
+				},
 			},
 		},
 	}
@@ -244,11 +263,11 @@ func TestGatewayReadyCondition(t *testing.T) {
 			}
 
 			deployment := &appsv1.Deployment{Status: tc.deploymentStatus}
-			got := computeGatewayProgrammedCondition(gtw, deployment)
+			computeGatewayProgrammedCondition(gtw, deployment)
 
-			assert.Equal(t, string(gwapiv1.GatewayConditionProgrammed), got.Type)
-			assert.Equal(t, tc.expect.Status, got.Status)
-			assert.Equal(t, tc.expect.Reason, got.Reason)
+			if d := cmp.Diff(tc.expectCondition, gtw.Status.Conditions, cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")); d != "" {
+				t.Errorf("unexpected condition diff: %s", d)
+			}
 		})
 	}
 }

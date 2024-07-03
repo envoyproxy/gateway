@@ -98,13 +98,7 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1.Gateway, svc *corev1.Ser
 	}
 
 	// Update the programmed condition.
-	gw.Status.Conditions = MergeConditions(gw.Status.Conditions, computeGatewayProgrammedCondition(gw, deployment))
-
-	if len(gw.Status.Addresses) > 16 {
-		// Truncate the addresses to 16
-		// so that the status can be updated successfully.
-		gw.Status.Addresses = gw.Status.Addresses[:16]
-	}
+	computeGatewayProgrammedCondition(gw, deployment)
 }
 
 func SetGatewayListenerStatusCondition(gateway *gwapiv1.Gateway, listenerStatusIdx int,
@@ -135,33 +129,45 @@ func computeGatewayAcceptedCondition(gw *gwapiv1.Gateway, accepted bool) metav1.
 	}
 }
 
+const (
+	messageAddressNotAssigned  = "No addresses have been assigned to the Gateway"
+	messageFmtTooManyAddresses = "Too many addresses (%d) have been assigned to the Gateway, the maximum number of addresses is 16"
+	messageNoResources         = "Deployment replicas unavailable"
+	messageFmtProgrammed       = "Address assigned to the Gateway, %d/%d envoy Deployment replicas available"
+)
+
 // computeGatewayProgrammedCondition computes the Gateway Programmed status condition.
 // Programmed condition surfaces true when the Envoy Deployment status is ready.
-func computeGatewayProgrammedCondition(gw *gwapiv1.Gateway, deployment *appsv1.Deployment) metav1.Condition {
+func computeGatewayProgrammedCondition(gw *gwapiv1.Gateway, deployment *appsv1.Deployment) {
 	if len(gw.Status.Addresses) == 0 {
-		return newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionFalse,
-			string(gwapiv1.GatewayReasonAddressNotAssigned),
-			"No addresses have been assigned to the Gateway", time.Now(), gw.Generation)
+		gw.Status.Conditions = MergeConditions(gw.Status.Conditions,
+			newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionFalse, string(gwapiv1.GatewayReasonAddressNotAssigned),
+				messageAddressNotAssigned, time.Now(), gw.Generation))
+		return
 	}
 
 	if len(gw.Status.Addresses) > 16 {
-		return newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionFalse,
-			string(gwapiv1.GatewayReasonInvalid),
-			fmt.Sprintf("Too many addresses (%d) have been assigned to the Gateway, the maximum number of addresses is 16",
-				len(gw.Status.Addresses)), time.Now(), gw.Generation)
+		gw.Status.Conditions = MergeConditions(gw.Status.Conditions,
+			newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionFalse, string(gwapiv1.GatewayReasonInvalid),
+				fmt.Sprintf(messageFmtTooManyAddresses, len(gw.Status.Addresses)), time.Now(), gw.Generation))
+
+		// Truncate the addresses to 16
+		// so that the status can be updated successfully.
+		gw.Status.Addresses = gw.Status.Addresses[:16]
+		return
 	}
 
 	// If there are no available replicas for the Envoy Deployment, don't
 	// mark the Gateway as ready yet.
 
 	if deployment == nil || deployment.Status.AvailableReplicas == 0 {
-		return newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionFalse,
-			string(gwapiv1.GatewayReasonNoResources),
-			"Deployment replicas unavailable", time.Now(), gw.Generation)
+		gw.Status.Conditions = MergeConditions(gw.Status.Conditions,
+			newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionFalse, string(gwapiv1.GatewayReasonNoResources),
+				messageNoResources, time.Now(), gw.Generation))
+		return
 	}
 
-	message := fmt.Sprintf("Address assigned to the Gateway, %d/%d envoy Deployment replicas available",
-		deployment.Status.AvailableReplicas, deployment.Status.Replicas)
-	return newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionTrue,
-		string(gwapiv1.GatewayConditionProgrammed), message, time.Now(), gw.Generation)
+	gw.Status.Conditions = MergeConditions(gw.Status.Conditions,
+		newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionTrue, string(gwapiv1.GatewayConditionProgrammed),
+			fmt.Sprintf(messageFmtProgrammed, deployment.Status.AvailableReplicas, deployment.Status.Replicas), time.Now(), gw.Generation))
 }
