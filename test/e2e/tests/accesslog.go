@@ -29,7 +29,7 @@ var FileAccessLogTest = suite.ConformanceTest{
 	Description: "Make sure file access log is working",
 	Manifests:   []string{"testdata/accesslog-file.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("Stdout", func(t *testing.T) {
+		t.Run("Positive", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "accesslog-file", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
@@ -55,59 +55,8 @@ var FileAccessLogTest = suite.ConformanceTest{
 				"k8s_namespace_name": "envoy-gateway-system",
 				"k8s_container_name": "envoy",
 			}
-			// let's wait for the log to be sent to stdout
-			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
-				func(ctx context.Context) (bool, error) {
-					// query log count from loki
-					count, err := QueryLogCountFromLoki(t, suite.Client, labels, "test-annotation-value")
-					if err != nil {
-						t.Logf("failed to get log count from loki: %v", err)
-						return false, nil
-					}
 
-					if count > 0 {
-						return true, nil
-					}
-					return false, nil
-				}); err != nil {
-				t.Errorf("failed to wait log flush to loki: %v", err)
-			}
-
-			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
-				func(ctx context.Context) (bool, error) {
-					// query log count from loki
-					preCount, err := QueryLogCountFromLoki(t, suite.Client, labels, "test-annotation-value")
-					if err != nil {
-						t.Logf("failed to get log count from loki: %v", err)
-						return false, nil
-					}
-
-					httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
-
-					// it will take some time for fluent-bit to collect the log and send to loki
-					// let's wait for a while
-					if err := wait.PollUntilContextTimeout(ctx, 500*time.Millisecond, 15*time.Second, true, func(_ context.Context) (bool, error) {
-						count, err := QueryLogCountFromLoki(t, suite.Client, labels, "test-annotation-value")
-						if err != nil {
-							t.Logf("failed to get log count from loki: %v", err)
-							return false, nil
-						}
-
-						delta := count - preCount
-						if delta == 1 {
-							return true, nil
-						}
-
-						t.Logf("preCount=%d, count=%d", preCount, count)
-						return false, nil
-					}); err != nil {
-						return false, nil
-					}
-
-					return true, nil
-				}); err != nil {
-				t.Errorf("failed to get log count from loki: %v", err)
-			}
+			runLogTest(t, suite, gwAddr, expectedResponse, labels, 1)
 		})
 	},
 }
@@ -117,7 +66,7 @@ var OpenTelemetryTest = suite.ConformanceTest{
 	Description: "Make sure OpenTelemetry access log is working",
 	Manifests:   []string{"testdata/accesslog-otel.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("OTel", func(t *testing.T) {
+		t.Run("Positive", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "accesslog-otel", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
@@ -142,39 +91,7 @@ var OpenTelemetryTest = suite.ConformanceTest{
 				"k8s_namespace_name": "envoy-gateway-system",
 				"exporter":           "OTLP",
 			}
-			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
-				func(ctx context.Context) (bool, error) {
-					// query log count from loki
-					preCount, err := QueryLogCountFromLoki(t, suite.Client, labels, "")
-					if err != nil {
-						t.Logf("failed to get log count from loki: %v", err)
-						return false, nil
-					}
-
-					httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
-
-					if err := wait.PollUntilContextTimeout(ctx, 500*time.Millisecond, 10*time.Second, true, func(_ context.Context) (bool, error) {
-						count, err := QueryLogCountFromLoki(t, suite.Client, labels, "")
-						if err != nil {
-							t.Logf("failed to get log count from loki: %v", err)
-							return false, nil
-						}
-
-						delta := count - preCount
-						if delta == 1 {
-							return true, nil
-						}
-
-						t.Logf("preCount=%d, count=%d", preCount, count)
-						return false, nil
-					}); err != nil {
-						return false, nil
-					}
-
-					return true, nil
-				}); err != nil {
-				t.Errorf("failed to get log count from loki: %v", err)
-			}
+			runLogTest(t, suite, gwAddr, expectedResponse, labels, 1)
 		})
 	},
 }
@@ -214,4 +131,43 @@ var ALSTest = suite.ConformanceTest{
 			}
 		})
 	},
+}
+
+func runLogTest(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string,
+	expectedResponse httputils.ExpectedResponse, expectedLabels map[string]string, expectedDelta int) {
+	if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
+		func(ctx context.Context) (bool, error) {
+			// query log count from loki
+			preCount, err := QueryLogCountFromLoki(t, suite.Client, expectedLabels, "test-annotation-value")
+			if err != nil {
+				t.Logf("failed to get log count from loki: %v", err)
+				return false, nil
+			}
+
+			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+
+			// it will take some time for fluent-bit to collect the log and send to loki
+			// let's wait for a while
+			if err := wait.PollUntilContextTimeout(ctx, 500*time.Millisecond, 15*time.Second, true, func(_ context.Context) (bool, error) {
+				count, err := QueryLogCountFromLoki(t, suite.Client, expectedLabels, "test-annotation-value")
+				if err != nil {
+					t.Logf("failed to get log count from loki: %v", err)
+					return false, nil
+				}
+
+				delta := count - preCount
+				if delta == expectedDelta {
+					return true, nil
+				}
+
+				t.Logf("preCount=%d, count=%d", preCount, count)
+				return false, nil
+			}); err != nil {
+				return false, nil
+			}
+
+			return true, nil
+		}); err != nil {
+		t.Errorf("failed to get log count from loki: %v", err)
+	}
 }
