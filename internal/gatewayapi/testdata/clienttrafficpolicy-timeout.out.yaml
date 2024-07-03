@@ -132,6 +132,11 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway
+        namespace: envoy-gateway
+        sectionName: http-1
       name: envoy-gateway/gateway/http-1
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -144,6 +149,11 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway
+        namespace: envoy-gateway
+        sectionName: http-2
       name: envoy-gateway/gateway/http-2
       path:
         escapedSlashesAction: UnescapeAndRedirect
