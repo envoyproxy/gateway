@@ -67,3 +67,13 @@
         cluster: eighth-route-dest
         upgradeConfigs:
         - upgradeType: websocket
+    - match:
+        prefix: /
+      name: ninth-route
+      route:
+        cluster: ninth-route-dest
+        hashPolicy:
+        - cookie:
+            name: test
+        upgradeConfigs:
+        - upgradeType: websocket
