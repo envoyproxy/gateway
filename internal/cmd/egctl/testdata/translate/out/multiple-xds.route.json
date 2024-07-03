@@ -13,11 +13,38 @@
                 "domains": [
                   "www.example.com"
                 ],
+                "metadata": {
+                  "filterMetadata": {
+                    "envoy-gateway": {
+                      "resources": [
+                        {
+                          "kind": "",
+                          "name": "eg",
+                          "namespace": "default",
+                          "sectionName": "http"
+                        }
+                      ]
+                    }
+                  }
+                },
                 "name": "default/eg/http/www_example_com",
                 "routes": [
                   {
                     "match": {
                       "prefix": "/"
+                    },
+                    "metadata": {
+                      "filterMetadata": {
+                        "envoy-gateway": {
+                          "resources": [
+                            {
+                              "kind": "HTTPRoute",
+                              "name": "backend",
+                              "namespace": "default"
+                            }
+                          ]
+                        }
+                      }
                     },
                     "name": "httproute/default/backend/rule/0/match/0/www_example_com",
                     "route": {
@@ -49,11 +76,38 @@
                 "domains": [
                   "www.example2.com"
                 ],
+                "metadata": {
+                  "filterMetadata": {
+                    "envoy-gateway": {
+                      "resources": [
+                        {
+                          "kind": "",
+                          "name": "eg2",
+                          "namespace": "default",
+                          "sectionName": "http"
+                        }
+                      ]
+                    }
+                  }
+                },
                 "name": "default/eg2/http/www_example2_com",
                 "routes": [
                   {
                     "match": {
                       "pathSeparatedPrefix": "/v2"
+                    },
+                    "metadata": {
+                      "filterMetadata": {
+                        "envoy-gateway": {
+                          "resources": [
+                            {
+                              "kind": "HTTPRoute",
+                              "name": "backend",
+                              "namespace": "default"
+                            }
+                          ]
+                        }
+                      }
                     },
                     "name": "httproute/default/backend/rule/0/match/0/www_example2_com",
                     "route": {
