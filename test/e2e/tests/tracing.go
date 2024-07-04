@@ -11,6 +11,7 @@ package tests
 import (
 	"context"
 	"fmt"
+	"github.com/envoyproxy/gateway/internal/utils/naming"
 	"net"
 	"net/http"
 	"net/url"
@@ -28,8 +29,6 @@ import (
 	httputils "sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
-
-	"github.com/envoyproxy/gateway/internal/utils/naming"
 )
 
 func init() {
@@ -108,9 +107,11 @@ var ZipkinTracingTest = suite.ConformanceTest{
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
 			tags := map[string]string{
-				"component":    "proxy",
-				"provider":     "zipkin",
-				"service.name": naming.ServiceName(gwNN),
+				"component": "proxy",
+				"provider":  "zipkin",
+				// TODO: this came from --service-cluster, which is different from OTel,
+				// should make them kept consistent
+				"service.name": fmt.Sprintf("%s/%s", gwNN.Namespace, gwNN.Name),
 			}
 			// let's wait for the log to be sent to stdout
 			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
