@@ -84,9 +84,9 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				}
 			}
 
-			// If Path is "" and op is "add", unmarshal and add the patch as a complete
+			// If Path and JSONPath is "" and op is "add", unmarshal and add the patch as a complete
 			// resource
-			if p.Operation.Op == AddOperation && p.Operation.Path == EmptyPath {
+			if p.Operation.Op == AddOperation && p.Operation.IsPathNilOrEmpty() && p.Operation.IsJSONPathNilOrEmpty() {
 				// Convert patch to JSON
 				// The patch library expects an array so convert it into one
 				y, err := yaml.Marshal(p.Operation.Value)
@@ -240,125 +240,150 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				}
 			}
 
-			// Convert patch to JSON
-			// The patch library expects an array so convert it into one
-			y, err := yaml.Marshal([]ir.JSONPatchOperation{p.Operation})
-			if err != nil {
-				tErr := fmt.Errorf("unable to marshal patch %+v, err: %s", p.Operation, err.Error())
-				tErrs = errors.Join(tErrs, tErr)
-				continue
-			}
-			jsonBytes, err := yaml.YAMLToJSON(y)
-			if err != nil {
-				tErr := fmt.Errorf("unable to convert patch to json %s, err: %s", string(y), err.Error())
-				tErrs = errors.Join(tErrs, tErr)
-				continue
-			}
-			patchObj, err := jsonpatchv5.DecodePatch(jsonBytes)
-			if err != nil {
-				tErr := fmt.Errorf("unable to decode patch %s, err: %s", string(jsonBytes), err.Error())
-				tErrs = errors.Join(tErrs, tErr)
-				continue
+			var jsonPointers []string
+			if p.Operation.JSONPath != nil {
+				path := ""
+				if p.Operation.Path != nil {
+					path = *p.Operation.Path
+				}
+				jsonPointers, err = ConvertPathToPointers(resourceJSON, *p.Operation.JSONPath, path)
+				if err != nil {
+					tErr := fmt.Errorf("unable to convert jsonPath: '%s' into jsonPointers, err: %s", *p.Operation.JSONPath, err.Error())
+					tErrs = errors.Join(tErrs, tErr)
+					continue
+				}
+			} else {
+				jsonPointers = []string{*p.Operation.Path}
 			}
 
-			// Apply patch
-			opts := jsonpatchv5.NewApplyOptions()
-			opts.EnsurePathExistsOnAdd = true
-			modifiedJSON, err := patchObj.ApplyWithOptions(resourceJSON, opts)
-			if err != nil {
-				tErr := fmt.Errorf("unable to apply patch:\n%s on resource:\n%s, err: %s", string(jsonBytes), string(resourceJSON), err.Error())
-				tErrs = errors.Join(tErrs, tErr)
-				continue
-			}
+			for _, path := range jsonPointers {
+				op := ir.JSONPatchOperation{
+					Path:  &path,
+					Op:    p.Operation.Op,
+					Value: p.Operation.Value,
+					From:  p.Operation.From,
+				}
 
-			// Unmarshal back to typed resource
-			// Use a temp staging variable that can be marshalled
-			// into and validated before saving it into the xds output resource
-			switch p.Type {
-			case resourcev3.ListenerType:
-				temp := &listenerv3.Listener{}
-				if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
-					tErr := fmt.Errorf(unmarshalErrorMessage(err, string(modifiedJSON)))
+				// Convert patch to JSON
+				// The patch library expects an array so convert it into one
+				y, err := yaml.Marshal([]ir.JSONPatchOperation{op})
+				if err != nil {
+					tErr := fmt.Errorf("unable to marshal patch %+v, err: %s", op, err.Error())
 					tErrs = errors.Join(tErrs, tErr)
 					continue
 				}
-				if err = temp.Validate(); err != nil {
-					tErr := fmt.Errorf("validation failed for xds resource %s, err:%s", string(modifiedJSON), err.Error())
+				jsonBytes, err := yaml.YAMLToJSON(y)
+				if err != nil {
+					tErr := fmt.Errorf("unable to convert patch to json %s, err: %s", string(y), err.Error())
 					tErrs = errors.Join(tErrs, tErr)
 					continue
 				}
-				if err = deepCopyPtr(temp, listener); err != nil {
-					tErr := fmt.Errorf("unable to copy xds resource %s, err: %w", string(modifiedJSON), err)
+				patchObj, err := jsonpatchv5.DecodePatch(jsonBytes)
+				if err != nil {
+					tErr := fmt.Errorf("unable to decode patch %s, err: %s", string(jsonBytes), err.Error())
 					tErrs = errors.Join(tErrs, tErr)
 					continue
 				}
-			case resourcev3.RouteType:
-				temp := &routev3.RouteConfiguration{}
-				if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
-					tErr := fmt.Errorf(unmarshalErrorMessage(err, string(modifiedJSON)))
+
+				// Apply patch
+				opts := jsonpatchv5.NewApplyOptions()
+				opts.EnsurePathExistsOnAdd = true
+				modifiedJSON, err := patchObj.ApplyWithOptions(resourceJSON, opts)
+				if err != nil {
+					tErr := fmt.Errorf("unable to apply patch:\n%s on resource:\n%s, err: %s", string(jsonBytes), string(resourceJSON), err.Error())
 					tErrs = errors.Join(tErrs, tErr)
 					continue
 				}
-				if err = temp.Validate(); err != nil {
-					tErr := fmt.Errorf("validation failed for xds resource %s, err:%s", string(modifiedJSON), err.Error())
-					tErrs = errors.Join(tErrs, tErr)
-					continue
-				}
-				if err = deepCopyPtr(temp, routeConfig); err != nil {
-					tErr := fmt.Errorf("unable to copy xds resource %s, err: %w", string(modifiedJSON), err)
-					tErrs = errors.Join(tErrs, tErr)
-					continue
-				}
-			case resourcev3.ClusterType:
-				temp := &clusterv3.Cluster{}
-				if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
-					tErr := fmt.Errorf(unmarshalErrorMessage(err, string(modifiedJSON)))
-					tErrs = errors.Join(tErrs, tErr)
-					continue
-				}
-				if err = temp.Validate(); err != nil {
-					tErr := fmt.Errorf("validation failed for xds resource %s, err:%s", string(modifiedJSON), err.Error())
-					tErrs = errors.Join(tErrs, tErr)
-					continue
-				}
-				if err = deepCopyPtr(temp, cluster); err != nil {
-					tErr := fmt.Errorf("unable to copy xds resource %s, err: %w", string(modifiedJSON), err)
-					tErrs = errors.Join(tErrs, tErr)
-					continue
-				}
-			case resourcev3.EndpointType:
-				temp := &endpointv3.ClusterLoadAssignment{}
-				if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
-					tErr := fmt.Errorf(unmarshalErrorMessage(err, string(modifiedJSON)))
-					tErrs = errors.Join(tErrs, tErr)
-					continue
-				}
-				if err = temp.Validate(); err != nil {
-					tErr := fmt.Errorf("validation failed for xds resource %s, err:%s", string(modifiedJSON), err.Error())
-					tErrs = errors.Join(tErrs, tErr)
-					continue
-				}
-				if err = deepCopyPtr(temp, endpoint); err != nil {
-					tErr := fmt.Errorf("unable to copy xds resource %s, err: %w", string(modifiedJSON), err)
-					tErrs = errors.Join(tErrs, tErr)
-					continue
-				}
-			case resourcev3.SecretType:
-				temp := &tlsv3.Secret{}
-				if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
-					tErr := fmt.Errorf(unmarshalErrorMessage(err, string(modifiedJSON)))
-					tErrs = errors.Join(tErrs, tErr)
-					continue
-				}
-				if err = temp.Validate(); err != nil {
-					tErr := fmt.Errorf("validation failed for xds resource %s, err:%s", string(modifiedJSON), err.Error())
-					tErrs = errors.Join(tErrs, tErr)
-					continue
-				}
-				if err = deepCopyPtr(temp, secret); err != nil {
-					tErr := fmt.Errorf("unable to copy xds resource %s, err: %w", string(modifiedJSON), err)
-					tErrs = errors.Join(tErrs, tErr)
-					continue
+
+				// Unmarshal back to typed resource
+				// Use a temp staging variable that can be marshalled
+				// into and validated before saving it into the xds output resource
+				switch p.Type {
+				case resourcev3.ListenerType:
+					temp := &listenerv3.Listener{}
+					if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
+						tErr := fmt.Errorf(unmarshalErrorMessage(err, string(modifiedJSON)))
+						tErrs = errors.Join(tErrs, tErr)
+						continue
+					}
+					if err = temp.Validate(); err != nil {
+						tErr := fmt.Errorf("validation failed for xds resource %s, err:%s", string(modifiedJSON), err.Error())
+						tErrs = errors.Join(tErrs, tErr)
+						continue
+					}
+					if err = deepCopyPtr(temp, listener); err != nil {
+						tErr := fmt.Errorf("unable to copy xds resource %s, err: %w", string(modifiedJSON), err)
+						tErrs = errors.Join(tErrs, tErr)
+						continue
+					}
+				case resourcev3.RouteType:
+					temp := &routev3.RouteConfiguration{}
+					if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
+						tErr := fmt.Errorf(unmarshalErrorMessage(err, string(modifiedJSON)))
+						tErrs = errors.Join(tErrs, tErr)
+						continue
+					}
+					if err = temp.Validate(); err != nil {
+						tErr := fmt.Errorf("validation failed for xds resource %s, err:%s", string(modifiedJSON), err.Error())
+						tErrs = errors.Join(tErrs, tErr)
+						continue
+					}
+					if err = deepCopyPtr(temp, routeConfig); err != nil {
+						tErr := fmt.Errorf("unable to copy xds resource %s, err: %w", string(modifiedJSON), err)
+						tErrs = errors.Join(tErrs, tErr)
+						continue
+					}
+				case resourcev3.ClusterType:
+					temp := &clusterv3.Cluster{}
+					if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
+						tErr := fmt.Errorf(unmarshalErrorMessage(err, string(modifiedJSON)))
+						tErrs = errors.Join(tErrs, tErr)
+						continue
+					}
+					if err = temp.Validate(); err != nil {
+						tErr := fmt.Errorf("validation failed for xds resource %s, err:%s", string(modifiedJSON), err.Error())
+						tErrs = errors.Join(tErrs, tErr)
+						continue
+					}
+					if err = deepCopyPtr(temp, cluster); err != nil {
+						tErr := fmt.Errorf("unable to copy xds resource %s, err: %w", string(modifiedJSON), err)
+						tErrs = errors.Join(tErrs, tErr)
+						continue
+					}
+				case resourcev3.EndpointType:
+					temp := &endpointv3.ClusterLoadAssignment{}
+					if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
+						tErr := fmt.Errorf(unmarshalErrorMessage(err, string(modifiedJSON)))
+						tErrs = errors.Join(tErrs, tErr)
+						continue
+					}
+					if err = temp.Validate(); err != nil {
+						tErr := fmt.Errorf("validation failed for xds resource %s, err:%s", string(modifiedJSON), err.Error())
+						tErrs = errors.Join(tErrs, tErr)
+						continue
+					}
+					if err = deepCopyPtr(temp, endpoint); err != nil {
+						tErr := fmt.Errorf("unable to copy xds resource %s, err: %w", string(modifiedJSON), err)
+						tErrs = errors.Join(tErrs, tErr)
+						continue
+					}
+				case resourcev3.SecretType:
+					temp := &tlsv3.Secret{}
+					if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
+						tErr := fmt.Errorf(unmarshalErrorMessage(err, string(modifiedJSON)))
+						tErrs = errors.Join(tErrs, tErr)
+						continue
+					}
+					if err = temp.Validate(); err != nil {
+						tErr := fmt.Errorf("validation failed for xds resource %s, err:%s", string(modifiedJSON), err.Error())
+						tErrs = errors.Join(tErrs, tErr)
+						continue
+					}
+					if err = deepCopyPtr(temp, secret); err != nil {
+						tErr := fmt.Errorf("unable to copy xds resource %s, err: %w", string(modifiedJSON), err)
+						tErrs = errors.Join(tErrs, tErr)
+						continue
+					}
 				}
 			}
 		}

@@ -55,6 +55,12 @@ func TestTranslateXds(t *testing.T) {
 		"jsonpatch": {
 			requireEnvoyPatchPolicies: true,
 		},
+		"jsonpatch-with-jsonpath": {
+			requireEnvoyPatchPolicies: true,
+		},
+		"jsonpatch-add-op-empty-jsonpath": {
+			requireEnvoyPatchPolicies: true,
+		},
 		"jsonpatch-missing-resource": {
 			requireEnvoyPatchPolicies: true,
 		},

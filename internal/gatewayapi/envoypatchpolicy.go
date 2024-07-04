@@ -114,6 +114,7 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 			irPatch.Name = patch.Name
 			irPatch.Operation.Op = string(patch.Operation.Op)
 			irPatch.Operation.Path = patch.Operation.Path
+			irPatch.Operation.JSONPath = patch.Operation.JSONPath
 			irPatch.Operation.From = patch.Operation.From
 			irPatch.Operation.Value = patch.Operation.Value
 

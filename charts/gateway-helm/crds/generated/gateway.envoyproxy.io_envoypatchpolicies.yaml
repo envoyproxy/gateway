@@ -71,6 +71,11 @@ spec:
                             for move or copy operations
                             Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details.
                           type: string
+                        jsonPath:
+                          description: |-
+                            JSONPath specifies the locations of the target document/field where the operation will be performed
+                            Refer to https://datatracker.ietf.org/doc/rfc9535/ for more details.
+                          type: string
                         op:
                           description: Op is the type of operation to perform
                           enum:
@@ -93,7 +98,6 @@ spec:
                           x-kubernetes-preserve-unknown-fields: true
                       required:
                       - op
-                      - path
                       type: object
                     type:
                       description: Type is the typed URL of the Envoy xDS Resource
