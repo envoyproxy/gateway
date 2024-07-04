@@ -493,6 +493,28 @@ func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy 
 			},
 		}
 		return []*routev3.RouteAction_HashPolicy{hashPolicy}
+	case ch.Cookie != nil:
+		hashPolicy := &routev3.RouteAction_HashPolicy{
+			PolicySpecifier: &routev3.RouteAction_HashPolicy_Cookie_{
+				Cookie: &routev3.RouteAction_HashPolicy_Cookie{
+					Name: ch.Cookie.Name,
+				},
+			},
+		}
+		if ch.Cookie.TTL != nil {
+			hashPolicy.GetCookie().Ttl = durationpb.New(ch.Cookie.TTL.Duration)
+		}
+		if ch.Cookie.Attributes != nil {
+			attributes := make([]*routev3.RouteAction_HashPolicy_CookieAttribute, len(ch.Cookie.Attributes))
+			i := 0
+			for name, value := range ch.Cookie.Attributes {
+				attributes[i].Name = name
+				attributes[i].Value = value
+				i++
+			}
+			hashPolicy.GetCookie().Attributes = attributes
+		}
+		return []*routev3.RouteAction_HashPolicy{hashPolicy}
 	case ch.SourceIP != nil:
 		if !*ch.SourceIP {
 			return nil
