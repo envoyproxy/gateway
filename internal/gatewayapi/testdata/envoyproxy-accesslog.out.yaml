@@ -163,7 +163,7 @@ xdsIR:
             endpoints:
             - host: 10.240.0.10
               port: 9090
-            protocol: TCP
+            protocol: GRPC
         http:
           requestHeaders:
           - x-client-ip-address
@@ -182,7 +182,7 @@ xdsIR:
             endpoints:
             - host: 10.240.0.10
               port: 9090
-            protocol: TCP
+            protocol: GRPC
         name: envoy-gateway-system/test
         text: |
           [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n

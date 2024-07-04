@@ -150,7 +150,7 @@ xdsIR:
           endpoints:
           - host: 8.7.6.5
             port: 4317
-          protocol: TCP
+          protocol: GRPC
       provider:
         backendRefs:
         - name: otel-collector
