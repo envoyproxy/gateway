@@ -137,6 +137,8 @@ jobs:
 
   benchmark-test:
     runs-on: ubuntu-latest
+    # There's a different workflow for benchmark-test on push.
+    if: ${{ ! startsWith(github.event_name, 'push') }}
     needs: [build]
     steps:
     - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
@@ -155,15 +157,6 @@ jobs:
         BENCHMARK_MEMORY_LIMITS: 2000
         BENCHMARK_REPORT_DIR: benchmark_report
       run: make benchmark
-
-    - name: Package benchmark report
-      run: zip -r test/benchmark/benchmark_report.zip test/benchmark/benchmark_report
-
-    - name: Upload Benchmark Report
-      uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808  # v4.3.3
-      with:
-        name: benchmark_report
-        path: test/benchmark/benchmark_report.zip
 
     - name: Read Benchmark report
       run: cat test/benchmark/benchmark_report/benchmark_report.md

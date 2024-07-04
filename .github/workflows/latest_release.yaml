@@ -17,6 +17,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # For push event, we run benchmark test here because we need to
+  # include benchmark report in the latest release.
+  benchmark-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
+      - uses: ./tools/github-actions/setup-deps
+
+      # Benchmark
+      - name: Run Benchmark tests
+        env:
+          KIND_NODE_TAG: v1.28.9
+          IMAGE_PULL_POLICY: IfNotPresent
+          # Args for benchmark test
+          BENCHMARK_RPS: 10000
+          BENCHMARK_CONNECTIONS: 100
+          BENCHMARK_DURATION: 30
+          BENCHMARK_CPU_LIMITS: 1000
+          BENCHMARK_MEMORY_LIMITS: 2000
+          BENCHMARK_REPORT_DIR: benchmark_report
+        run: make benchmark
+
+      - name: Package benchmark report
+        run: cd test/benchmark && zip -r benchmark_report.zip benchmark_report
+
+      - name: Upload Benchmark Report
+        uses: actions/upload-artifact@v4  # version is better be consistent with actions/download-artifact
+        with:
+          name: benchmark_report
+          path: test/benchmark/benchmark_report.zip
+
   latest-release:
     runs-on: ubuntu-22.04
     permissions:
@@ -30,7 +61,7 @@ jobs:
       run: IMAGE_PULL_POLICY=Always make generate-manifests IMAGE=envoyproxy/gateway-dev TAG=latest OUTPUT_DIR=release-artifacts
 
     - name: Download Benchmark Report
-      uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e  # v4.1.7
+      uses: actions/download-artifact@v4
       with:
         name: benchmark_report
         path: release-artifacts
