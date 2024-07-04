@@ -11,7 +11,6 @@ package tests
 import (
 	"context"
 	"fmt"
-	"github.com/envoyproxy/gateway/internal/utils/naming"
 	"net"
 	"net/http"
 	"net/url"
@@ -29,6 +28,8 @@ import (
 	httputils "sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+
+	"github.com/envoyproxy/gateway/internal/utils/naming"
 )
 
 func init() {
