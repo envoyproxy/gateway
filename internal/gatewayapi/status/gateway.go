@@ -98,7 +98,7 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1.Gateway, svc *corev1.Ser
 	}
 
 	// Update the programmed condition.
-	computeGatewayProgrammedCondition(gw, deployment)
+	updateGatewayProgrammedCondition(gw, deployment)
 }
 
 func SetGatewayListenerStatusCondition(gateway *gwapiv1.Gateway, listenerStatusIdx int,
@@ -136,9 +136,9 @@ const (
 	messageFmtProgrammed       = "Address assigned to the Gateway, %d/%d envoy Deployment replicas available"
 )
 
-// computeGatewayProgrammedCondition computes the Gateway Programmed status condition.
+// updateGatewayProgrammedCondition computes the Gateway Programmed status condition.
 // Programmed condition surfaces true when the Envoy Deployment status is ready.
-func computeGatewayProgrammedCondition(gw *gwapiv1.Gateway, deployment *appsv1.Deployment) {
+func updateGatewayProgrammedCondition(gw *gwapiv1.Gateway, deployment *appsv1.Deployment) {
 	if len(gw.Status.Addresses) == 0 {
 		gw.Status.Conditions = MergeConditions(gw.Status.Conditions,
 			newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionFalse, string(gwapiv1.GatewayReasonAddressNotAssigned),

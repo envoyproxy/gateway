@@ -187,7 +187,7 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 	}
 }
 
-func TestGatewayReadyCondition(t *testing.T) {
+func TestUpdateGatewayProgrammedCondition(t *testing.T) {
 	testCases := []struct {
 		name string
 		// serviceAddressNum indicates how many addresses are set in the Gateway status.
@@ -263,7 +263,7 @@ func TestGatewayReadyCondition(t *testing.T) {
 			}
 
 			deployment := &appsv1.Deployment{Status: tc.deploymentStatus}
-			computeGatewayProgrammedCondition(gtw, deployment)
+			updateGatewayProgrammedCondition(gtw, deployment)
 
 			if d := cmp.Diff(tc.expectCondition, gtw.Status.Conditions, cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")); d != "" {
 				t.Errorf("unexpected condition diff: %s", d)
