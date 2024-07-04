@@ -29,6 +29,12 @@ jobs:
       # Use `Always` image pull policy for latest version.
       run: IMAGE_PULL_POLICY=Always make generate-manifests IMAGE=envoyproxy/gateway-dev TAG=latest OUTPUT_DIR=release-artifacts
 
+    - name: Download Benchmark Report
+      uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e  # v4.1.7
+      with:
+        name: benchmark_report
+        path: release-artifacts
+
     - name: Build egctl latest multiarch binaries
       run: |
         make build-multiarch BINS="egctl"
@@ -70,6 +76,7 @@ jobs:
         files: |
           release-artifacts/install.yaml
           release-artifacts/quickstart.yaml
+          release-artifacts/benchmark_report.zip
           egctl_latest_linux_amd64.tar.gz
           egctl_latest_linux_arm64.tar.gz
           egctl_latest_darwin_amd64.tar.gz

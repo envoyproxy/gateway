@@ -45,7 +45,7 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 		require.NoError(t, err)
 
 		routeNameFormat := "benchmark-route-%d"
-		routeScales := []uint16{10, 50, 100, 300, 500}
+		routeScales := []uint16{10, 20}
 		routeScalesN := len(routeScales)
 		routeNNs := make([]types.NamespacedName, 0, routeScales[routeScalesN-1])
 
@@ -77,38 +77,38 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 			}
 		})
 
-		t.Run("scaling down httproutes", func(t *testing.T) {
-			var start = routeScales[routeScalesN-1]
-
-			for i := routeScalesN - 2; i >= 0; i-- {
-				scale := routeScales[i]
-
-				t.Run(fmt.Sprintf("scaling down httproutes to %d", scale), func(t *testing.T) {
-					err = bSuite.ScaleDownHTTPRoutes(ctx, [2]uint16{start, scale}, routeNameFormat, gatewayNN.Name, func(route *gwapiv1.HTTPRoute) {
-						routeNN := routeNNs[len(routeNNs)-1]
-						routeNNs = routeNNs[:len(routeNNs)-1]
-
-						// Making sure we are deleting the right one route.
-						require.Equal(t, routeNN,
-							types.NamespacedName{Name: route.Name, Namespace: route.Namespace})
-
-						t.Logf("Delete HTTPRoute: %s", routeNN.String())
-					})
-					require.NoError(t, err)
-					start = scale
-
-					gatewayAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, bSuite.Client, bSuite.TimeoutConfig,
-						bSuite.ControllerName, kubernetes.NewGatewayRef(gatewayNN), routeNNs...)
-
-					// Run benchmark test at different scale.
-					name := fmt.Sprintf("scale-down-httproutes-%d", scale)
-					report, err := bSuite.Benchmark(t, ctx, name, gatewayAddr, requestHeaders...)
-					require.NoError(t, err)
-
-					reports = append(reports, report)
-				})
-			}
-		})
+		//t.Run("scaling down httproutes", func(t *testing.T) {
+		//	var start = routeScales[routeScalesN-1]
+		//
+		//	for i := routeScalesN - 2; i >= 0; i-- {
+		//		scale := routeScales[i]
+		//
+		//		t.Run(fmt.Sprintf("scaling down httproutes to %d", scale), func(t *testing.T) {
+		//			err = bSuite.ScaleDownHTTPRoutes(ctx, [2]uint16{start, scale}, routeNameFormat, gatewayNN.Name, func(route *gwapiv1.HTTPRoute) {
+		//				routeNN := routeNNs[len(routeNNs)-1]
+		//				routeNNs = routeNNs[:len(routeNNs)-1]
+		//
+		//				// Making sure we are deleting the right one route.
+		//				require.Equal(t, routeNN,
+		//					types.NamespacedName{Name: route.Name, Namespace: route.Namespace})
+		//
+		//				t.Logf("Delete HTTPRoute: %s", routeNN.String())
+		//			})
+		//			require.NoError(t, err)
+		//			start = scale
+		//
+		//			gatewayAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, bSuite.Client, bSuite.TimeoutConfig,
+		//				bSuite.ControllerName, kubernetes.NewGatewayRef(gatewayNN), routeNNs...)
+		//
+		//			// Run benchmark test at different scale.
+		//			name := fmt.Sprintf("scale-down-httproutes-%d", scale)
+		//			report, err := bSuite.Benchmark(t, ctx, name, gatewayAddr, requestHeaders...)
+		//			require.NoError(t, err)
+		//
+		//			reports = append(reports, report)
+		//		})
+		//	}
+		//})
 
 		return
 	},

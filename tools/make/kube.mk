@@ -16,6 +16,7 @@ BENCHMARK_MEMORY_LIMITS ?= 1024 # unit: 'Mi'
 BENCHMARK_RPS ?= 10000
 BENCHMARK_CONNECTIONS ?= 100
 BENCHMARK_DURATION ?= 60
+BENCHMARK_REPORT_DIR ?= benchmark_report
 
 E2E_RUN_TEST ?=
 E2E_RUN_EG_UPGRADE_TESTS ?= false
@@ -163,7 +164,7 @@ run-benchmark: install-benchmark-server ## Run benchmark tests
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n benchmark-test deployment/nighthawk-test-server --for=condition=Available
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/benchmark/config/gatewayclass.yaml
-	go test -v -tags benchmark -timeout $(BENCHMARK_TIMEOUT) ./test/benchmark --rps=$(BENCHMARK_RPS) --connections=$(BENCHMARK_CONNECTIONS) --duration=$(BENCHMARK_DURATION) --report-save-path=benchmark_report.md
+	go test -v -tags benchmark -timeout $(BENCHMARK_TIMEOUT) ./test/benchmark --rps=$(BENCHMARK_RPS) --connections=$(BENCHMARK_CONNECTIONS) --duration=$(BENCHMARK_DURATION) --report-save-dir=$(BENCHMARK_REPORT_DIR)
 
 .PHONY: install-benchmark-server
 install-benchmark-server: ## Install nighthawk server for benchmark test
