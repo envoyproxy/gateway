@@ -110,7 +110,7 @@ func newMarkdownStyleTableWriter(writer io.Writer) *tabwriter.Writer {
 }
 
 func renderEnvSettingsTable(writer io.Writer) {
-	_, _ = fmt.Fprintln(writer, "Benchmark test settings:", "\n")
+	_, _ = fmt.Fprintln(writer, "Benchmark test settings:")
 
 	table := newMarkdownStyleTableWriter(writer)
 
@@ -144,7 +144,7 @@ func renderEnvSettingsTable(writer io.Writer) {
 	renderMetricsTableHeader(table, headers)
 
 	writeTableRow(table, headers, func(_ int, h ReportTableHeader) string {
-		env := strings.Replace(strings.ToUpper(h.Name), " ", "_", -1)
+		env := strings.ReplaceAll(strings.ToUpper(h.Name), " ", "_")
 		if v, ok := os.LookupEnv(benchmarkEnvPrefix + env); ok {
 			return v
 		}
@@ -260,13 +260,14 @@ func writeSection(writer io.Writer, title string, level int, content string) {
 
 // writeCollapsibleSection writes one collapsible section in Markdown style.
 func writeCollapsibleSection(writer io.Writer, title string, content []byte) {
-	_, _ = fmt.Fprintln(writer, fmt.Sprintf(`
+	summary := fmt.Sprintf("```plaintext\n%s\n```", content)
+	_, _ = fmt.Fprintf(writer, `
 <details>
 <summary>%s</summary>
 
 %s
 
-</details>`, title, fmt.Sprintf("```plaintext\n%s\n```", content)))
+</details>\n`, title, summary)
 }
 
 // writeTableRow writes one row in Markdown table style.
