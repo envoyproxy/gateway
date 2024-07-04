@@ -1307,10 +1307,14 @@ func (t *Translator) processServiceDestinationSetting(
 		}
 	}
 
-	// support HTTPRouteBackendProtocolH2C
-	if servicePort.AppProtocol != nil &&
-		*servicePort.AppProtocol == "kubernetes.io/h2c" {
-		protocol = ir.HTTP2
+	// support HTTPRouteBackendProtocolH2C/GRPC
+	if servicePort.AppProtocol != nil {
+		switch *servicePort.AppProtocol {
+		case "kubernetes.io/h2c":
+			protocol = ir.HTTP2
+		case "grpc":
+			protocol = ir.GRPC
+		}
 	}
 
 	// Route to endpoints by default

@@ -118,6 +118,7 @@ services:
     ports:
     - name: grpc
       port: 9000
+      appProtocol: grpc
       protocol: TCP
       targetPort: 9000
 endpointSlices:
@@ -132,6 +133,7 @@ endpointSlices:
   ports:
   - name: grpc
     protocol: TCP
+    appProtocol: grpc
     port: 9090
   endpoints:
   - addresses:

@@ -1092,6 +1092,7 @@ spec:
   ports:
   - name: grpc-als
     protocol: TCP
+    appProtocol: grpc
     port: 8080
     targetPort: 8080
   - name: http-monitoring
