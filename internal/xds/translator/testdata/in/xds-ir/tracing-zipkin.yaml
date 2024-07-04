@@ -24,7 +24,7 @@ tracing:
     - endpoints:
       - host: "zipkin.default.svc.cluster.local"
         port: 9411
-      protocol: "GRPC"
+      protocol: "TCP"
   provider:
     host: zipkin.default.svc.cluster.local
     port: 9411
