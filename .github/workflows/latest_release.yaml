@@ -50,6 +50,7 @@ jobs:
 
   latest-release:
     runs-on: ubuntu-22.04
+    needs: [benchmark-test]
     permissions:
       contents: write
     steps:
