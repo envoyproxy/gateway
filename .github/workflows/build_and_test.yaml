@@ -160,7 +160,7 @@ jobs:
       run: zip -r test/benchmark/benchmark_report.zip test/benchmark/benchmark_report
 
     - name: Upload Benchmark Report
-      uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808  # v4.3.3
+      uses: actions/upload-artifact@v4
       with:
         name: benchmark_report
         path: test/benchmark/benchmark_report.zip
