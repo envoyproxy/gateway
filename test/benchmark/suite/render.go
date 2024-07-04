@@ -267,7 +267,8 @@ func writeCollapsibleSection(writer io.Writer, title string, content []byte) {
 
 %s
 
-</details>\n`, title, summary)
+</details>
+`, title, summary)
 }
 
 // writeTableRow writes one row in Markdown table style.
