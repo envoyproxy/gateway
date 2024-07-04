@@ -27,6 +27,7 @@ require (
 	github.com/grafana/tempo v1.5.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/miekg/dns v1.1.61
+	github.com/ohler55/ojg v1.22.1
 	github.com/prometheus/client_golang v1.19.1
 	github.com/prometheus/common v0.55.0
 	github.com/spf13/cobra v1.8.1
