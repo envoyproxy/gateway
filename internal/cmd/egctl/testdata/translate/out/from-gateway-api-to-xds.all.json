@@ -925,7 +925,7 @@
                               }
                             ],
                             "cluster": "tlsroute/default/backend/rule/-1",
-                            "statPrefix": "passthrough-8443"
+                            "statPrefix": "tls-passthrough-8443"
                           }
                         }
                       ],

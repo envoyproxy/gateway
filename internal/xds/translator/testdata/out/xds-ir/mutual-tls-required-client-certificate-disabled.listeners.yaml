@@ -67,7 +67,7 @@
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tls-terminate-dest
-        statPrefix: terminate-10081
+        statPrefix: tls-terminate-10081
     name: tls-route-terminate
     transportSocket:
       name: envoy.transport_sockets.tls

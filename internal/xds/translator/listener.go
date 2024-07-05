@@ -408,11 +408,11 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute
 	isTLSTerminate := irRoute.TLS != nil && irRoute.TLS.Terminate != nil
 	statPrefix := "tcp"
 	if isTLSPassthrough {
-		statPrefix = "passthrough"
+		statPrefix = "tls-passthrough"
 	}
 
 	if isTLSTerminate {
-		statPrefix = "terminate"
+		statPrefix = "tls-terminate"
 	}
 
 	// Append port to the statPrefix.

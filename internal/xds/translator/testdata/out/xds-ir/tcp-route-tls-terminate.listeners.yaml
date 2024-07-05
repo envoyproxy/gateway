@@ -9,7 +9,7 @@
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tls-terminate-dest
-        statPrefix: terminate-10080
+        statPrefix: tls-terminate-10080
     name: tls-route-terminate
     transportSocket:
       name: envoy.transport_sockets.tls
@@ -33,7 +33,7 @@
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tls-terminate-hostname-dest
-        statPrefix: terminate-10080
+        statPrefix: tls-terminate-10080
     name: tls-terminate-hostname
     transportSocket:
       name: envoy.transport_sockets.tls
