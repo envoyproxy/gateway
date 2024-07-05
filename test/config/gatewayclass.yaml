@@ -79,6 +79,10 @@ spec:
             namespace: monitoring
             port: 4317
       customTags:
+        "provider":
+          type: Literal
+          literal:
+            value: "otel"
         "k8s.cluster.name":
           type: Literal
           literal:
@@ -165,4 +169,3 @@ metadata:
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
 ---
-
