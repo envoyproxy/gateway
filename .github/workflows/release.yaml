@@ -11,7 +11,7 @@ on:
 
 jobs:
   # For push event, we run benchmark test here because we need to
-  # include benchmark report in the latest release.
+  # include benchmark report in the release.
   benchmark-test:
     runs-on: ubuntu-latest
     steps:

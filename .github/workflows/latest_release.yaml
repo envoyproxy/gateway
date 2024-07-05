@@ -22,31 +22,31 @@ jobs:
   benchmark-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
-      - uses: ./tools/github-actions/setup-deps
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
+    - uses: ./tools/github-actions/setup-deps
 
-      # Benchmark
-      - name: Run Benchmark tests
-        env:
-          KIND_NODE_TAG: v1.28.9
-          IMAGE_PULL_POLICY: IfNotPresent
-          # Args for benchmark test
-          BENCHMARK_RPS: 10000
-          BENCHMARK_CONNECTIONS: 100
-          BENCHMARK_DURATION: 30
-          BENCHMARK_CPU_LIMITS: 1000
-          BENCHMARK_MEMORY_LIMITS: 2000
-          BENCHMARK_REPORT_DIR: benchmark_report
-        run: make benchmark
+    # Benchmark
+    - name: Run Benchmark tests
+      env:
+        KIND_NODE_TAG: v1.28.9
+        IMAGE_PULL_POLICY: IfNotPresent
+        # Args for benchmark test
+        BENCHMARK_RPS: 10000
+        BENCHMARK_CONNECTIONS: 100
+        BENCHMARK_DURATION: 30
+        BENCHMARK_CPU_LIMITS: 1000
+        BENCHMARK_MEMORY_LIMITS: 2000
+        BENCHMARK_REPORT_DIR: benchmark_report
+      run: make benchmark
 
-      - name: Package benchmark report
-        run: cd test/benchmark && zip -r benchmark_report.zip benchmark_report
+    - name: Package benchmark report
+      run: cd test/benchmark && zip -r benchmark_report.zip benchmark_report
 
-      - name: Upload Benchmark Report
-        uses: actions/upload-artifact@v4  # version is better be consistent with actions/download-artifact
-        with:
-          name: benchmark_report
-          path: test/benchmark/benchmark_report.zip
+    - name: Upload Benchmark Report
+      uses: actions/upload-artifact@v4  # version is better be consistent with actions/download-artifact
+      with:
+        name: benchmark_report
+        path: test/benchmark/benchmark_report.zip
 
   latest-release:
     runs-on: ubuntu-22.04
