@@ -305,6 +305,7 @@ data:
           - batch
           receivers:
           - otlp
+          - zipkin
       telemetry:
         metrics:
           address: ${env:MY_POD_IP}:8888
@@ -9385,7 +9386,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: 077be33cb293f9c37d065397da8156bf9f33a42ad56a3d5876f39de72c874023
+        checksum/config: 4eb06aca6ff4da4de927cb9ba7d8ceb883d2484011fbd670683037b8ea4d996c
         
       labels:
         app.kubernetes.io/name: opentelemetry-collector

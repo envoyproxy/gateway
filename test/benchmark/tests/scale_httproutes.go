@@ -78,7 +78,7 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 		})
 
 		t.Run("scaling down httproutes", func(t *testing.T) {
-			var start = routeScales[routeScalesN-1]
+			start := routeScales[routeScalesN-1]
 
 			for i := routeScalesN - 2; i >= 0; i-- {
 				scale := routeScales[i]
@@ -89,8 +89,7 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 						routeNNs = routeNNs[:len(routeNNs)-1]
 
 						// Making sure we are deleting the right one route.
-						require.Equal(t, routeNN,
-							types.NamespacedName{Name: route.Name, Namespace: route.Namespace})
+						require.Equal(t, types.NamespacedName{Name: route.Name, Namespace: route.Namespace}, routeNN)
 
 						t.Logf("Delete HTTPRoute: %s", routeNN.String())
 					})

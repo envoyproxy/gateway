@@ -91,6 +91,7 @@ An Add-ons Helm chart for Envoy Gateway
 | opentelemetry-collector.config.processors.attributes.actions[0].value | string | `"k8s.pod.name, k8s.namespace.name"` |  |
 | opentelemetry-collector.config.receivers.otlp.protocols.grpc.endpoint | string | `"${env:MY_POD_IP}:4317"` |  |
 | opentelemetry-collector.config.receivers.otlp.protocols.http.endpoint | string | `"${env:MY_POD_IP}:4318"` |  |
+| opentelemetry-collector.config.receivers.zipkin.endpoint | string | `"${env:MY_POD_IP}:9411"` |  |
 | opentelemetry-collector.config.service.extensions[0] | string | `"health_check"` |  |
 | opentelemetry-collector.config.service.pipelines.logs.exporters[0] | string | `"loki"` |  |
 | opentelemetry-collector.config.service.pipelines.logs.processors[0] | string | `"attributes"` |  |
@@ -99,6 +100,7 @@ An Add-ons Helm chart for Envoy Gateway
 | opentelemetry-collector.config.service.pipelines.metrics.receivers[0] | string | `"otlp"` |  |
 | opentelemetry-collector.config.service.pipelines.traces.exporters[0] | string | `"otlp"` |  |
 | opentelemetry-collector.config.service.pipelines.traces.receivers[0] | string | `"otlp"` |  |
+| opentelemetry-collector.config.service.pipelines.traces.receivers[1] | string | `"zipkin"` |  |
 | opentelemetry-collector.enabled | bool | `false` |  |
 | opentelemetry-collector.fullnameOverride | string | `"otel-collector"` |  |
 | opentelemetry-collector.mode | string | `"deployment"` |  |
