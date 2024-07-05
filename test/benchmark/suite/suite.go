@@ -50,7 +50,8 @@ type BenchmarkTestSuite struct {
 }
 
 func NewBenchmarkTestSuite(client client.Client, options BenchmarkOptions,
-	gatewayManifest, httpRouteManifest, benchmarkClientManifest, reportPath string) (*BenchmarkTestSuite, error) {
+	gatewayManifest, httpRouteManifest, benchmarkClientManifest, reportPath string,
+) (*BenchmarkTestSuite, error) {
 	var (
 		gateway         = new(gwapiv1.Gateway)
 		httproute       = new(gwapiv1.HTTPRoute)
@@ -132,13 +133,13 @@ func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 	}
 
 	if len(b.ReportSavePath) > 0 {
-		if err := os.WriteFile(b.ReportSavePath, writer.Bytes(), 0644); err != nil {
+		if err := os.WriteFile(b.ReportSavePath, writer.Bytes(), 0o600); err != nil {
 			t.Errorf("Error writing report to path '%s': %v", b.ReportSavePath, err)
 		} else {
 			t.Logf("Writing report to path '%s' successfully", b.ReportSavePath)
 		}
 	} else {
-		t.Log(fmt.Sprintf("%s", writer.Bytes()))
+		t.Logf("%s", writer.Bytes())
 	}
 }
 

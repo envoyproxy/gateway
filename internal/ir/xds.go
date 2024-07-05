@@ -209,6 +209,8 @@ type CoreListenerDetails struct {
 	Port uint32 `json:"port" yaml:"port"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension policy
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
+	// Metadata is used to enrich envoy resource metadata with user and provider-specific information
+	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 }
 
 func (l CoreListenerDetails) GetName() string {
@@ -562,6 +564,8 @@ type HTTPRoute struct {
 	Security *SecurityFeatures `json:"security,omitempty" yaml:"security,omitempty"`
 	// UseClientProtocol enables using the same protocol upstream that was used downstream
 	UseClientProtocol *bool `json:"useClientProtocol,omitempty" yaml:"useClientProtocol,omitempty"`
+	// Metadata is used to enrich envoy route metadata with user and provider-specific information
+	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 }
 
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.
@@ -1602,6 +1606,7 @@ type AccessLog struct {
 	CELMatches    []string                  `json:"celMatches,omitempty" yaml:"celMatches,omitempty"`
 	Text          []*TextAccessLog          `json:"text,omitempty" yaml:"text,omitempty"`
 	JSON          []*JSONAccessLog          `json:"json,omitempty" yaml:"json,omitempty"`
+	ALS           []*ALSAccessLog           `json:"als,omitempty" yaml:"als,omitempty"`
 	OpenTelemetry []*OpenTelemetryAccessLog `json:"openTelemetry,omitempty" yaml:"openTelemetry,omitempty"`
 }
 
@@ -1617,6 +1622,25 @@ type TextAccessLog struct {
 type JSONAccessLog struct {
 	JSON map[string]string `json:"json,omitempty" yaml:"json,omitempty"`
 	Path string            `json:"path" yaml:"path"`
+}
+
+// ALSAccessLog holds the configuration for gRPC ALS access logging.
+// +k8s:deepcopy-gen=true
+type ALSAccessLog struct {
+	LogName     string                            `json:"name" yaml:"name"`
+	Destination RouteDestination                  `json:"destination,omitempty" yaml:"destination,omitempty"`
+	Type        egv1a1.ALSEnvoyProxyAccessLogType `json:"type" yaml:"type"`
+	Text        *string                           `json:"text,omitempty" yaml:"text,omitempty"`
+	Attributes  map[string]string                 `json:"attributes,omitempty" yaml:"attributes,omitempty"`
+	HTTP        *ALSAccessLogHTTP                 `json:"http,omitempty" yaml:"http,omitempty"`
+}
+
+// ALSAccessLogHTTP holds the configuration for HTTP ALS access logging.
+// +k8s:deepcopy-gen=true
+type ALSAccessLogHTTP struct {
+	RequestHeaders   []string `json:"requestHeaders,omitempty" yaml:"requestHeaders,omitempty"`
+	ResponseHeaders  []string `json:"responseHeaders,omitempty" yaml:"responseHeaders,omitempty"`
+	ResponseTrailers []string `json:"responseTrailers,omitempty" yaml:"responseTrailers,omitempty"`
 }
 
 // OpenTelemetryAccessLog holds the configuration for OpenTelemetry access logging.
@@ -1771,9 +1795,10 @@ type Random struct{}
 // +k8s:deepcopy-gen=true
 type ConsistentHash struct {
 	// Hash based on the Source IP Address
-	SourceIP  *bool   `json:"sourceIP,omitempty" yaml:"sourceIP,omitempty"`
-	Header    *Header `json:"header,omitempty" yaml:"header,omitempty"`
-	TableSize *uint64 `json:"tableSize,omitempty" yaml:"tableSize,omitempty"`
+	SourceIP  *bool          `json:"sourceIP,omitempty" yaml:"sourceIP,omitempty"`
+	Header    *Header        `json:"header,omitempty" yaml:"header,omitempty"`
+	Cookie    *egv1a1.Cookie `json:"cookie,omitempty" yaml:"cookie,omitempty"`
+	TableSize *uint64        `json:"tableSize,omitempty" yaml:"tableSize,omitempty"`
 }
 
 // Header consistent hash type settings
@@ -2261,4 +2286,19 @@ type DestinationFilters struct {
 	AddResponseHeaders []AddHeader `json:"addResponseHeaders,omitempty" yaml:"addResponseHeaders,omitempty"`
 	// RemoveResponseHeaders defines a list of headers to be removed from response.
 	RemoveResponseHeaders []string `json:"removeResponseHeaders,omitempty" yaml:"removeResponseHeaders,omitempty"`
+}
+
+// ResourceMetadata is metadata from the provider resource that is translated to an envoy resource
+// +k8s:deepcopy-gen=true
+type ResourceMetadata struct {
+	// Kind is the kind of the resource
+	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
+	// Name is the name of the resource
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+	// Namespace is the namespace of the resource
+	Namespace string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	// Annotations are the annotations of the resource
+	Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	// SectionName is the name of a section of a resource
+	SectionName string `json:"sectionName,omitempty" yaml:"sectionName,omitempty"`
 }

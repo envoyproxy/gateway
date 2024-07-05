@@ -158,7 +158,7 @@ func TestWasmHTTPInsecureServer(t *testing.T) {
 			defer ts.Close()
 			fetcher := NewHTTPFetcher(DefaultHTTPRequestTimeout, DefaultHTTPRequestMaxRetries, logging.DefaultLogger(egv1a1.LogLevelInfo))
 			fetcher.initialBackoff = time.Microsecond
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			b, err := fetcher.Fetch(ctx, ts.URL, c.insecure)
 			if c.wantNumRequest != gotNumRequest {

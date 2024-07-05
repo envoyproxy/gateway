@@ -176,6 +176,11 @@ xdsIR:
       hostnames:
       - foo.bar.com
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: tls-terminate
       name: envoy-gateway/gateway-1/tls-terminate
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -193,6 +198,10 @@ xdsIR:
             weight: 1
         hostname: foo.bar.com
         isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
         name: httproute/default/httproute-1/rule/0/match/0/foo_bar_com
         pathMatch:
           distinct: false

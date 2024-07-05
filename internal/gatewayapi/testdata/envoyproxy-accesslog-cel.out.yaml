@@ -140,7 +140,7 @@ xdsIR:
       openTelemetry:
       - authority: otel-collector.monitoring.svc.cluster.local
         destination:
-          name: accesslog-0
+          name: accesslog_otel_0_1
           settings:
           - endpoints:
             - host: otel-collector.monitoring.svc.cluster.local
@@ -160,6 +160,11 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
       name: envoy-gateway/gateway-1/http
       path:
         escapedSlashesAction: UnescapeAndRedirect

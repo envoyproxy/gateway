@@ -1,6 +1,6 @@
 module github.com/envoyproxy/gateway
 
-go 1.22.4
+go 1.22.5
 
 replace github.com/imdario/mergo => github.com/imdario/mergo v0.3.16
 
@@ -62,7 +62,7 @@ require (
 	sigs.k8s.io/yaml v1.4.0
 )
 
-require github.com/docker/docker v27.0.2+incompatible
+require github.com/docker/docker v27.0.3+incompatible
 
 require (
 	cel.dev/expr v0.15.0 // indirect

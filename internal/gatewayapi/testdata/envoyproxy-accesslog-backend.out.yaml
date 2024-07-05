@@ -137,7 +137,7 @@ xdsIR:
     accessLog:
       openTelemetry:
       - destination:
-          name: accesslog-0
+          name: accesslog_otel_0_1
           settings:
           - addressType: IP
             endpoints:
@@ -157,6 +157,11 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
       name: envoy-gateway/gateway-1/http
       path:
         escapedSlashesAction: UnescapeAndRedirect
