@@ -277,10 +277,25 @@ xds:
           virtualHosts:
           - domains:
             - '*'
+            metadata:
+              filterMetadata:
+                envoy-gateway:
+                  resources:
+                  - kind: ""
+                    name: eg
+                    namespace: envoy-gateway-system
+                    sectionName: http
             name: envoy-gateway-system/eg/http/*
             routes:
             - match:
                 pathSeparatedPrefix: /service
+              metadata:
+                filterMetadata:
+                  envoy-gateway:
+                    resources:
+                    - kind: HTTPRoute
+                      name: routes
+                      namespace: envoy-gateway-system
               name: httproute/envoy-gateway-system/routes/rule/0/match/0/*
               route:
                 cluster: httproute/envoy-gateway-system/routes/rule/0
