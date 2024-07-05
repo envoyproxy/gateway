@@ -104,3 +104,16 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+  - name: "ninth-route"
+    hostname: "*"
+    traffic:
+      loadBalancer:
+        consistentHash:
+          cookie:
+            name: "test"
+    destination:
+      name: "ninth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000

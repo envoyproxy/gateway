@@ -7,6 +7,24 @@ package metrics
 
 import "go.opentelemetry.io/otel/attribute"
 
+var (
+	// statusLabel defines a label to indicate the status of current metric,
+	// e.g. is a SUCCESS or FAILURE status.
+	statusLabel = NewLabel("status")
+
+	// reasonLabel defines a label to indicate the reason of failure status metric,
+	// it's an optional label.
+	reasonLabel = NewLabel("reason")
+)
+
+const (
+	StatusSuccess = "success"
+	StatusFailure = "failure"
+
+	ReasonError    = "error"
+	ReasonConflict = "conflict"
+)
+
 // A Label provides a named dimension for a Metric.
 type Label struct {
 	key attribute.Key
