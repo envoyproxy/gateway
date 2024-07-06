@@ -1,9 +1,14 @@
-{{- /* This will try to find a resource in the "boilerplates"  top-level content directory */ -}}
 {{- $name := .Get 0 -}}
 {{- $position := .Position }}
 
+{{- $boilerplates_path := "/boilerplates" -}}
+{{- $url_prefix := (index (split $.Page.File.Dir "/") 0) -}}
+{{- if or (eq $url_prefix "latest") (strings.HasPrefix $url_prefix "v1.0") -}}
+    {{- $boilerplates_path = printf "/%s/boilerplates" $url_prefix -}}
+{{- end -}}
+
 {{- if $name -}}
-    {{- $bundle := .Page.GetPage "/boilerplates" -}}
+    {{- $bundle := .Page.GetPage $boilerplates_path -}}
     {{- with $bundle -}}
         {{- $name := printf "%s.md" $name -}}
         {{- $pattern := printf "%s*" $name -}}
@@ -14,7 +19,7 @@
             {{- errorf "Could not find boilerplate '%s' (%s)" $name $position -}}
         {{- end -}}
     {{- else -}}
-        {{- errorf "'boilerplates' directory was not found (%s)" $position -}}
+        {{- errorf "%s directory was not found (%s)" $boilerplates_path $position -}}
     {{- end -}}
 {{- else -}}
     {{- errorf "Missing name in boilerplate (%s)" $position -}}
