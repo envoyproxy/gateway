@@ -822,7 +822,77 @@ spec:
 
 After applying the configuration, you will see the change in both containers in the `envoyproxy` deployment.
 
+## Customize Filter Order
+
+Under the hood, Envoy Gateway uses a series of [Envoy HTTP filters](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/http_filters)
+to process HTTP requests and responses, and to apply various policies.
+
+By default, Envoy Gateway applies the following filters in the order shown:
+* envoy.filters.http.fault
+* envoy.filters.http.cors
+* envoy.filters.http.ext_authz
+* envoy.filters.http.basic_authn
+* envoy.filters.http.oauth2
+* envoy.filters.http.jwt_authn
+* envoy.filters.http.ext_proc
+* envoy.filters.http.wasm
+* envoy.filters.http.rbac
+* envoy.filters.http.local_ratelimit
+* envoy.filters.http.ratelimit
+* envoy.filters.http.router
+
+The default order in which these filters are applied is opinionated and may not suit all use cases. 
+To address this, Envoy Gateway allows you to adjust the execution order of these filters with the `filterOrder` field in the [EnvoyProxy][] resource.
+
+`filterOrder` is a list of customized filter order configurations. Each configuration can specify a filter
+name and a filter to place it before or after. These configurations are applied in the order they are listed.
+If a filter occurs in multiple configurations, the final order is the result of applying all these configurations in order.
+To avoid conflicts, it is recommended to only specify one configuration per filter.
+
+For example, the following configuration moves the `envoy.filters.http.wasm` filter before the `envoy.filters.http.jwt_authn`
+filter and the `envoy.filters.http.cors` filter after the `envoy.filters.http.basic_authn` filter:
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: envoy-gateway-system
+spec:
+  filterOrder:
+    - name: envoy.filters.http.wasm
+      before: envoy.filters.http.jwt_authn
+    - name: envoy.filters.http.cors
+      after: envoy.filters.http.basic_authn
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: envoy-gateway-system
+spec:
+  filterOrder:
+    - name: envoy.filters.http.wasm
+      before: envoy.filters.http.jwt_authn
+    - name: envoy.filters.http.cors
+      after: envoy.filters.http.basic_authn
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
 [EnvoyProxy]: ../../../api/extension_types#envoyproxy
 [egctl translate]: ../egctl/#validating-gateway-api-configuration
-
