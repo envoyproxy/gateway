@@ -140,6 +140,61 @@ Verify logs from loki:
 curl -s "http://$LOKI_IP:3100/loki/api/v1/query_range" --data-urlencode "query={exporter=\"OTLP\"}" | jq '.data.result[0].values'
 ```
 
+## gGRPC Access Log Service(ALS) Sink
+
+Envoy Gateway can send logs to a backend implemented [gRPC access log service proto](https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/accesslog/v3/als.proto).
+There's an example service [here](https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/envoy-als.yaml), which simply count the log and export to prometheus endpoint.
+
+```shell
+kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/envoy-als.yaml -n monitoring
+```
+
+The following configuration sends logs to the gRPC access log service:
+
+```shell
+kubectl apply -f - <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: als
+    namespace: envoy-gateway-system
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: als
+  namespace: envoy-gateway-system
+spec:
+  telemetry:
+    accessLog:
+      settings:
+        - format:
+            type: Text
+            text: |
+              [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
+          sinks:
+            - type: ALS
+              als:
+                backendRefs:
+                  - name: envoy-als
+                    namespace: monitoring
+                    port: 8080
+                type: HTTP
+EOF
+```
+
+Verify logs from envoy-als:
+
+```shell
+curl -s "http://$(kubectl get svc envoy-als -n monitoring -o jsonpath='{.status.loadBalancer.ingress[0].ip}'):19001/metrics" | grep log_count
+```
+
 ## CEL Expressions
 
 Envoy Gateway provides [CEL expressions](https://www.envoyproxy.io/docs/envoy/latest/xds/type/v3/cel.proto.html#common-expression-language-cel-proto) to filter access log . 
