@@ -24,5 +24,5 @@ var (
 
 const (
 	// statusNoAction means the status of metric is taking no action.
-	statusNoAction = "NoAction"
+	statusNoAction = "no_action"
 )
