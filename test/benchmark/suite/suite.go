@@ -33,6 +33,12 @@ const (
 	DefaultControllerName  = "gateway.envoyproxy.io/gatewayclass-controller"
 )
 
+type BenchmarkTest struct {
+	ShortName   string
+	Description string
+	Test        func(*testing.T, *BenchmarkTestSuite) []*BenchmarkReport
+}
+
 type BenchmarkTestSuite struct {
 	Client         client.Client
 	TimeoutConfig  config.TimeoutConfig
@@ -45,8 +51,12 @@ type BenchmarkTestSuite struct {
 	HTTPRouteTemplate  *gwapiv1.HTTPRoute
 	BenchmarkClientJob *batchv1.Job
 
-	// Indicates which resources are scaled.
-	scaledLabel map[string]string
+	// Labels
+	scaledLabels map[string]string // indicate which resources are scaled
+
+	// Clients that for internal usage.
+	kubeClient kube.CLIClient // required for getting logs from pod
+	promClient *prom.Client
 }
 
 func NewBenchmarkTestSuite(client client.Client, options BenchmarkOptions,
@@ -101,9 +111,11 @@ func NewBenchmarkTestSuite(client client.Client, options BenchmarkOptions,
 		GatewayTemplate:    gateway,
 		HTTPRouteTemplate:  httproute,
 		BenchmarkClientJob: benchmarkClient,
-		scaledLabel: map[string]string{
+		scaledLabels: map[string]string{
 			BenchmarkTestScaledKey: "true",
 		},
+		kubeClient: kubeClient,
+		promClient: promClient,
 	}, nil
 }
 
@@ -113,7 +125,7 @@ func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 	buf := make([]byte, 0)
 	writer := bytes.NewBuffer(buf)
 
-	writeSection(writer, "Benchmark Report", 1, "")
+	writeSection(writer, "Benchmark Report", 1, "Benchmark test settings:")
 	renderEnvSettingsTable(writer)
 
 	for _, test := range tests {
@@ -127,7 +139,7 @@ func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 		// Generate a human-readable benchmark report for each test.
 		t.Logf("Got %d reports for test: %s", len(reports), test.ShortName)
 
-		if err := RenderReport(writer, "Test: "+test.ShortName, test.Description, reports, 2); err != nil {
+		if err := RenderReport(writer, "Test: "+test.ShortName, test.Description, 2, reports); err != nil {
 			t.Errorf("Error generating report for %s: %v", test.ShortName, err)
 		}
 	}
@@ -162,7 +174,7 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, name, 
 	}
 
 	// Wait from benchmark test job to complete.
-	if err = wait.PollUntilContextTimeout(ctx, 10*time.Second, time.Duration(duration*10)*time.Second, true, func(ctx context.Context) (bool, error) {
+	if err = wait.PollUntilContextTimeout(ctx, 6*time.Second, time.Duration(duration*10)*time.Second, true, func(ctx context.Context) (bool, error) {
 		job := new(batchv1.Job)
 		if err = b.Client.Get(ctx, *jobNN, job); err != nil {
 			return false, err
@@ -191,17 +203,11 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, name, 
 
 	t.Logf("Running benchmark test: %s successfully", name)
 
-	report, err := NewBenchmarkReport(name)
-	if err != nil {
-		return nil, err
-	}
-
+	report := NewBenchmarkReport(name, b.kubeClient, b.promClient)
 	// Get all the reports from this benchmark test run.
-	if err = report.Collect(t, ctx, jobNN); err != nil {
+	if err = report.Collect(ctx, jobNN); err != nil {
 		return nil, err
 	}
-
-	report.Print(t, name)
 
 	return report, nil
 }
@@ -209,6 +215,9 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, name, 
 func (b *BenchmarkTestSuite) createBenchmarkClientJob(ctx context.Context, name, gatewayHostPort string, requestHeaders ...string) (*types.NamespacedName, error) {
 	job := b.BenchmarkClientJob.DeepCopy()
 	job.SetName(name)
+	job.SetLabels(map[string]string{
+		BenchmarkTestClientKey: "true",
+	})
 
 	runtimeArgs := prepareBenchmarkClientRuntimeArgs(gatewayHostPort, requestHeaders...)
 	container := &job.Spec.Template.Spec.Containers[0]
@@ -261,7 +270,7 @@ func (b *BenchmarkTestSuite) ScaleUpHTTPRoutes(ctx context.Context, scaleRange [
 		routeName := fmt.Sprintf(routeNameFormat, i)
 		newRoute := b.HTTPRouteTemplate.DeepCopy()
 		newRoute.SetName(routeName)
-		newRoute.SetLabels(b.scaledLabel)
+		newRoute.SetLabels(b.scaledLabels)
 		newRoute.Spec.ParentRefs[0].Name = gwapiv1.ObjectName(refGateway)
 
 		if err := b.CreateResource(ctx, newRoute); err != nil {
@@ -297,7 +306,7 @@ func (b *BenchmarkTestSuite) ScaleDownHTTPRoutes(ctx context.Context, scaleRange
 		routeName := fmt.Sprintf(routeNameFormat, i)
 		oldRoute := b.HTTPRouteTemplate.DeepCopy()
 		oldRoute.SetName(routeName)
-		oldRoute.SetLabels(b.scaledLabel)
+		oldRoute.SetLabels(b.scaledLabels)
 		oldRoute.Spec.ParentRefs[0].Name = gwapiv1.ObjectName(refGateway)
 
 		if err := b.DeleteResource(ctx, oldRoute); err != nil {

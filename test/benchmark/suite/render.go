@@ -12,95 +12,58 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"math"
 	"os"
 	"strconv"
 	"strings"
 	"text/tabwriter"
-
-	prom "github.com/prometheus/client_model/go"
-	"github.com/prometheus/common/expfmt"
-	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 const (
 	omitEmptyValue     = "-"
 	benchmarkEnvPrefix = "BENCHMARK_"
 
-	// Supported metric type.
-	metricTypeGauge   = "gauge"
-	metricTypeCounter = "counter"
-
-	// Supported metric unit.
-	metricUnitMiB      = "MiB"
-	metricUnitSeconds  = "Seconds"
-	metricUnitMilliCPU = "m"
+	querySum = "Sum"
+	queryAvg = "Avg"
+	queryMin = "Min"
+	queryMax = "Max"
 )
 
-type ReportTableHeader struct {
-	Name   string
-	Metric *MetricEntry
-
-	// Underlying name of one envoy-proxy, used by data-plane metrics.
-	ProxyName string
+type tableHeader struct {
+	name      string
+	unit      string
+	promQL    string // only valid for metrics table
+	queryType string
 }
 
-type MetricEntry struct {
-	Name             string
-	Type             string
-	FromControlPlane bool
-	DisplayUnit      string
-	ConvertUnit      func(float64) float64
+var metricsTableHeader = []tableHeader{
+	{
+		name: "Test Name",
+	},
+	{
+		name:      "Envoy Gateway Memory",
+		unit:      "MiB",
+		promQL:    `container_memory_working_set_bytes{namespace="envoy-gateway-system",container="envoy-gateway"}/1024/1024`,
+		queryType: querySum,
+	},
+	{
+		name:      "Envoy Gateway CPU",
+		unit:      "s",
+		promQL:    `container_cpu_usage_seconds_total{namespace="envoy-gateway-system",container="envoy-gateway"}`,
+		queryType: querySum,
+	},
 }
 
 // RenderReport renders a report out of given list of benchmark report in Markdown format.
-func RenderReport(writer io.Writer, name, description string, reports []*BenchmarkReport, titleLevel int) error {
-	headerSettings := []ReportTableHeader{
-		{
-			Name: "Benchmark Name",
-		},
-		{
-			Name: "Envoy Gateway Memory",
-			Metric: &MetricEntry{
-				Name:             "process_resident_memory_bytes",
-				Type:             metricTypeGauge,
-				DisplayUnit:      metricUnitMiB,
-				FromControlPlane: true,
-				ConvertUnit:      byteToMiB,
-			},
-		},
-		{
-			Name: "Envoy Gateway Total CPU",
-			Metric: &MetricEntry{
-				Name:             "process_cpu_seconds_total",
-				Type:             metricTypeCounter,
-				DisplayUnit:      metricUnitSeconds,
-				FromControlPlane: true,
-			},
-		},
-		{
-			Name: "Envoy Proxy Memory",
-			Metric: &MetricEntry{
-				Name:             "envoy_server_memory_allocated",
-				Type:             metricTypeGauge,
-				DisplayUnit:      metricUnitMiB,
-				FromControlPlane: false,
-				ConvertUnit:      byteToMiB,
-			},
-		},
-	}
+func RenderReport(writer io.Writer, name, description string, titleLevel int, reports []*BenchmarkReport) error {
+	writeSection(writer, "Test: "+name, titleLevel, description)
 
-	writeSection(writer, name, titleLevel, description)
-
-	writeSection(writer, "Results", titleLevel+1, "Click to see the full results.")
-	renderResultsTable(writer, reports)
-
-	writeSection(writer, "Metrics", titleLevel+1, "")
-	err := renderMetricsTable(writer, headerSettings, reports)
-	if err != nil {
+	writeSection(writer, "Results", titleLevel+1, "Expand to see the full results.")
+	if err := renderResultsTable(writer, reports); err != nil {
 		return err
 	}
 
+	writeSection(writer, "Metrics", titleLevel+1, "")
+	renderMetricsTable(writer, reports)
 	return nil
 }
 
@@ -110,41 +73,19 @@ func newMarkdownStyleTableWriter(writer io.Writer) *tabwriter.Writer {
 }
 
 func renderEnvSettingsTable(writer io.Writer) {
-	_, _ = fmt.Fprintln(writer, "Benchmark test settings:")
-
 	table := newMarkdownStyleTableWriter(writer)
 
-	headers := []ReportTableHeader{
-		{
-			Name: "RPS",
-		},
-		{
-			Name: "Connections",
-		},
-		{
-			Name: "Duration",
-			Metric: &MetricEntry{
-				DisplayUnit: metricUnitSeconds,
-			},
-		},
-		{
-			Name: "CPU Limits",
-			Metric: &MetricEntry{
-				DisplayUnit: metricUnitMilliCPU,
-			},
-		},
-		{
-			Name: "Memory Limits",
-			Metric: &MetricEntry{
-				DisplayUnit: metricUnitMiB,
-			},
-		},
+	headers := []tableHeader{
+		{name: "RPS"},
+		{name: "Connections"},
+		{name: "Duration", unit: "s"},
+		{name: "CPU Limits", unit: "m"},
+		{name: "Memory Limits", unit: "MiB"},
 	}
+	writeTableHeader(table, headers)
 
-	renderMetricsTableHeader(table, headers)
-
-	writeTableRow(table, headers, func(_ int, h ReportTableHeader) string {
-		env := strings.ReplaceAll(strings.ToUpper(h.Name), " ", "_")
+	writeTableRow(table, headers, func(_ int, h tableHeader) string {
+		env := strings.ReplaceAll(strings.ToUpper(h.name), " ", "_")
 		if v, ok := os.LookupEnv(benchmarkEnvPrefix + env); ok {
 			return v
 		}
@@ -154,70 +95,35 @@ func renderEnvSettingsTable(writer io.Writer) {
 	_ = table.Flush()
 }
 
-func renderResultsTable(writer io.Writer, reports []*BenchmarkReport) {
-	// TODO: better processing these benchmark results.
+func renderResultsTable(writer io.Writer, reports []*BenchmarkReport) error {
 	for _, report := range reports {
-		writeCollapsibleSection(writer, report.Name, report.RawResult)
+		tmpResults := bytes.Split(report.Result, []byte("\n"))
+		outResults := make([][]byte, 0, len(tmpResults))
+		for _, r := range tmpResults {
+			if !bytes.HasPrefix(r, []byte("[")) && !bytes.HasPrefix(r, []byte("Nighthawk")) {
+				outResults = append(outResults, r)
+			}
+		}
+
+		writeCollapsibleSection(writer, report.Name, bytes.Join(outResults, []byte("\n")))
 	}
+
+	return nil
 }
 
-func renderMetricsTable(writer io.Writer, headerSettings []ReportTableHeader, reports []*BenchmarkReport) error {
+func renderMetricsTable(writer io.Writer, reports []*BenchmarkReport) {
 	table := newMarkdownStyleTableWriter(writer)
 
-	// Preprocess the table header for metrics table.
-	var headers []ReportTableHeader
-	// 1. Collect all the possible proxy names.
-	proxyNames := sets.NewString()
-	for _, report := range reports {
-		for name := range report.RawDPMetrics {
-			proxyNames.Insert(name)
-		}
-	}
-	// 2. Generate header names for data-plane proxies.
-	for _, hs := range headerSettings {
-		if hs.Metric != nil && !hs.Metric.FromControlPlane {
-			for i, proxyName := range proxyNames.List() {
-				names := strings.Split(proxyName, "-")
-				headers = append(headers, ReportTableHeader{
-					Name:      fmt.Sprintf("%s: %s<sup>[%d]</sup>", hs.Name, names[len(names)-1], i+1),
-					Metric:    hs.Metric,
-					ProxyName: proxyName,
-				})
-			}
-		} else {
-			// For control-plane metrics or plain header.
-			headers = append(headers, hs)
-		}
-	}
-
-	renderMetricsTableHeader(table, headers)
+	writeTableHeader(table, metricsTableHeader)
 
 	for _, report := range reports {
-		mfCP, err := parseMetrics(report.RawCPMetrics)
-		if err != nil {
-			return err
-		}
-
-		mfDPs := make(map[string]map[string]*prom.MetricFamily, len(report.RawDPMetrics))
-		for dpName, dpMetrics := range report.RawDPMetrics {
-			mfDP, err := parseMetrics(dpMetrics)
-			if err != nil {
-				return err
-			}
-			mfDPs[dpName] = mfDP
-		}
-
-		writeTableRow(table, headers, func(_ int, h ReportTableHeader) string {
-			if h.Metric == nil {
+		writeTableRow(table, metricsTableHeader, func(_ int, h tableHeader) string {
+			if len(h.promQL) == 0 {
 				return report.Name
 			}
 
-			if h.Metric.FromControlPlane {
-				return processMetricValue(mfCP, h)
-			} else {
-				if mfDP, ok := mfDPs[h.ProxyName]; ok {
-					return processMetricValue(mfDP, h)
-				}
+			if v, ok := report.Metrics[h.name]; ok {
+				return strconv.FormatFloat(v, 'f', -1, 64)
 			}
 
 			return omitEmptyValue
@@ -225,28 +131,6 @@ func renderMetricsTable(writer io.Writer, headerSettings []ReportTableHeader, re
 	}
 
 	_ = table.Flush()
-
-	// Generate footnotes for envoy-proxy headers.
-	for i, proxyName := range proxyNames.List() {
-		_, _ = fmt.Fprintln(writer, fmt.Sprintf("%d.", i+1), proxyName)
-	}
-
-	return nil
-}
-
-func renderMetricsTableHeader(table *tabwriter.Writer, headers []ReportTableHeader) {
-	writeTableRow(table, headers, func(_ int, h ReportTableHeader) string {
-		if h.Metric != nil && len(h.Metric.DisplayUnit) > 0 {
-			return fmt.Sprintf("%s (%s)", h.Name, h.Metric.DisplayUnit)
-		}
-		return h.Name
-	})
-
-	writeTableDelimiter(table, len(headers))
-}
-
-func byteToMiB(x float64) float64 {
-	return math.Round(x / (1024 * 1024))
 }
 
 // writeSection writes one section in Markdown style, content is optional.
@@ -271,11 +155,21 @@ func writeCollapsibleSection(writer io.Writer, title string, content []byte) {
 `, title, summary)
 }
 
-// writeTableRow writes one row in Markdown table style.
-func writeTableRow[T any](table *tabwriter.Writer, values []T, get func(int, T) string) {
+func writeTableHeader(table *tabwriter.Writer, headers []tableHeader) {
+	writeTableRow(table, headers, func(_ int, h tableHeader) string {
+		if len(h.unit) > 0 {
+			return fmt.Sprintf("%s (%s)", h.name, h.unit)
+		}
+		return h.name
+	})
+	writeTableDelimiter(table, len(headers))
+}
+
+// writeTableRow writes one row in Markdown table style according to headers.
+func writeTableRow(table *tabwriter.Writer, headers []tableHeader, on func(int, tableHeader) string) {
 	row := "|"
-	for i, v := range values {
-		row += get(i, v) + "\t"
+	for i, v := range headers {
+		row += on(i, v) + "\t"
 	}
 
 	_, _ = fmt.Fprintln(table, row)
@@ -289,43 +183,4 @@ func writeTableDelimiter(table *tabwriter.Writer, n int) {
 	}
 
 	_, _ = fmt.Fprintln(table, sep)
-}
-
-// parseMetrics parses input metrics that in Prometheus format.
-func parseMetrics(metrics []byte) (map[string]*prom.MetricFamily, error) {
-	var (
-		reader = bytes.NewReader(metrics)
-		parser expfmt.TextParser
-	)
-
-	mf, err := parser.TextToMetricFamilies(reader)
-	if err != nil {
-		return nil, err
-	}
-
-	return mf, nil
-}
-
-// processMetricValue process one metric value according to the given header and metric families.
-func processMetricValue(metricFamilies map[string]*prom.MetricFamily, header ReportTableHeader) string {
-	if mf, ok := metricFamilies[header.Metric.Name]; ok {
-		var value float64
-
-		switch header.Metric.Type {
-		case metricTypeGauge:
-			value = *mf.Metric[0].Gauge.Value
-		case metricTypeCounter:
-			value = *mf.Metric[0].Counter.Value
-		default:
-			return omitEmptyValue
-		}
-
-		if header.Metric.ConvertUnit != nil {
-			value = header.Metric.ConvertUnit(value)
-		}
-
-		return strconv.FormatFloat(value, 'f', -1, 64)
-	}
-
-	return omitEmptyValue
 }
