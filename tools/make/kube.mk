@@ -11,8 +11,8 @@ GATEWAY_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/d
 WAIT_TIMEOUT ?= 15m
 
 BENCHMARK_TIMEOUT ?= 60m
-BENCHMARK_CPU_LIMITS ?= 1000 # unit: 'm'
-BENCHMARK_MEMORY_LIMITS ?= 1024 # unit: 'Mi'
+BENCHMARK_CPU_LIMITS ?= 1000m
+BENCHMARK_MEMORY_LIMITS ?= 1024Mi
 BENCHMARK_RPS ?= 10000
 BENCHMARK_CONNECTIONS ?= 100
 BENCHMARK_DURATION ?= 60
@@ -76,8 +76,8 @@ kube-deploy: manifests helm-generate.gateway-helm ## Install Envoy Gateway into 
 kube-deploy-for-benchmark-test: manifests helm-generate ## Install Envoy Gateway for benchmark test purpose only.
 	@$(LOG_TARGET)
 	helm install eg charts/gateway-helm --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) \
-		--set deployment.envoyGateway.resources.limits.cpu=$(BENCHMARK_CPU_LIMITS)m \
-		--set deployment.envoyGateway.resources.limits.memory=$(BENCHMARK_MEMORY_LIMITS)Mi \
+		--set deployment.envoyGateway.resources.limits.cpu=$(BENCHMARK_CPU_LIMITS) \
+		--set deployment.envoyGateway.resources.limits.memory=$(BENCHMARK_MEMORY_LIMITS) \
 		-n envoy-gateway-system --create-namespace --debug --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
 
 .PHONY: kube-undeploy
