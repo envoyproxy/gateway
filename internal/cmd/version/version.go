@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"runtime"
 	"runtime/debug"
 	"strings"
 
@@ -22,6 +23,7 @@ type Info struct {
 	GatewayAPIVersion   string `json:"gatewayAPIVersion"`
 	EnvoyProxyVersion   string `json:"envoyProxyVersion"`
 	GitCommitID         string `json:"gitCommitID"`
+	GolangVersion       string `json:"golangVersion"`
 }
 
 func Get() Info {
@@ -30,6 +32,7 @@ func Get() Info {
 		GatewayAPIVersion:   gatewayAPIVersion,
 		EnvoyProxyVersion:   envoyProxyVersion,
 		GitCommitID:         gitCommitID,
+		GolangVersion:       runtime.Version(),
 	}
 }
 
@@ -68,6 +71,7 @@ func Print(w io.Writer, format string) error {
 		_, _ = fmt.Fprintf(w, "ENVOY_PROXY_VERSION: %s\n", v.EnvoyProxyVersion)
 		_, _ = fmt.Fprintf(w, "GATEWAYAPI_VERSION: %s\n", v.GatewayAPIVersion)
 		_, _ = fmt.Fprintf(w, "GIT_COMMIT_ID: %s\n", v.GitCommitID)
+		_, _ = fmt.Fprintf(w, "GOLANG_VERSION: %s\n", v.GolangVersion)
 	}
 
 	return nil

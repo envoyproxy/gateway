@@ -7,8 +7,12 @@ package tests
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -17,6 +21,8 @@ import (
 	"fortio.org/fortio/periodic"
 	flog "fortio.org/log"
 	"github.com/google/go-cmp/cmp"
+	dto "github.com/prometheus/client_model/go"
+	"github.com/prometheus/common/expfmt"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/config"
+	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -268,6 +275,78 @@ func EnvoyExtensionPolicyMustBeAccepted(t *testing.T, client client.Client, poli
 	require.NoErrorf(t, waitErr, "error waiting for EnvoyExtensionPolicy to be accepted")
 }
 
+func ScrapeMetrics(t *testing.T, c client.Client, nn types.NamespacedName, port int32, path string) error {
+	url, err := RetrieveURL(c, nn, port, path)
+	if err != nil {
+		return err
+	}
+
+	t.Logf("scraping metrics from %s", url)
+
+	metrics, err := RetrieveMetrics(url, time.Second)
+	if err != nil {
+		return err
+	}
+
+	// TODO: support metric matching
+	// for now, just check metric exists
+	if len(metrics) > 0 {
+		return nil
+	}
+
+	return errors.New("no metrics found")
+}
+
+func RetrieveURL(c client.Client, nn types.NamespacedName, port int32, path string) (string, error) {
+	svc := corev1.Service{}
+	if err := c.Get(context.Background(), nn, &svc); err != nil {
+		return "", err
+	}
+	host := ""
+	switch svc.Spec.Type {
+	case corev1.ServiceTypeLoadBalancer:
+		for _, ing := range svc.Status.LoadBalancer.Ingress {
+			if ing.IP != "" {
+				host = ing.IP
+				break
+			}
+		}
+	default:
+		host = fmt.Sprintf("%s.%s.svc", nn.Name, nn.Namespace)
+	}
+	return fmt.Sprintf("http://%s:%d%s", host, port, path), nil
+}
+
+var metricParser = &expfmt.TextParser{}
+
+func RetrieveMetrics(url string, timeout time.Duration) (map[string]*dto.MetricFamily, error) {
+	httpClient := http.Client{
+		Timeout: timeout,
+	}
+	res, err := httpClient.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to scrape metrics: %w", err)
+	}
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to scrape metrics: %s", res.Status)
+	}
+
+	return metricParser.TextToMetricFamilies(res.Body)
+}
+
+func RetrieveMetric(url string, name string, timeout time.Duration) (*dto.MetricFamily, error) {
+	metrics, err := RetrieveMetrics(url, timeout)
+	if err != nil {
+		return nil, err
+	}
+
+	if mf, ok := metrics[name]; ok {
+		return mf, nil
+	}
+
+	return nil, fmt.Errorf("metric %s not found", name)
+}
+
 func WaitForLoadBalancerAddress(t *testing.T, client client.Client, timeout time.Duration, nn types.NamespacedName) (string, error) {
 	t.Helper()
 
@@ -288,4 +367,97 @@ func WaitForLoadBalancerAddress(t *testing.T, client client.Client, timeout time
 	})
 	require.NoErrorf(t, waitErr, "error waiting for Service to have at least one load balancer IP address in status")
 	return ipAddr, nil
+}
+
+func ALSLogCount(t *testing.T, suite *suite.ConformanceTestSuite) int {
+	metricPath, err := RetrieveURL(suite.Client, types.NamespacedName{
+		Namespace: "monitoring",
+		Name:      "envoy-als",
+	}, 19001, "/metrics")
+	if err != nil {
+		t.Fatalf("failed to get metric url: %v", err)
+	}
+
+	countMetric, err := RetrieveMetric(metricPath, "log_count", time.Second)
+	if err != nil {
+		t.Fatalf("failed to get metric: %v", err)
+	}
+
+	total := 0
+	for _, m := range countMetric.Metric {
+		if m.Counter != nil && m.Counter.Value != nil {
+			total += int(*m.Counter.Value)
+		}
+	}
+
+	return total
+}
+
+// QueryLogCountFromLoki queries log count from loki
+func QueryLogCountFromLoki(t *testing.T, c client.Client, keyValues map[string]string, match string) (int, error) {
+	svc := corev1.Service{}
+	if err := c.Get(context.Background(), types.NamespacedName{
+		Namespace: "monitoring",
+		Name:      "loki",
+	}, &svc); err != nil {
+		return -1, err
+	}
+	lokiHost := ""
+	for _, ing := range svc.Status.LoadBalancer.Ingress {
+		if ing.IP != "" {
+			lokiHost = ing.IP
+			break
+		}
+	}
+
+	qParams := make([]string, 0, len(keyValues))
+	for k, v := range keyValues {
+		qParams = append(qParams, fmt.Sprintf("%s=\"%s\"", k, v))
+	}
+
+	q := "{" + strings.Join(qParams, ",") + "}"
+	if match != "" {
+		q = q + "|~\"" + match + "\""
+	}
+	params := url.Values{}
+	params.Add("query", q)
+	params.Add("start", fmt.Sprintf("%d", time.Now().Add(-10*time.Minute).Unix())) // query logs from last 10 minutes
+	lokiQueryURL := fmt.Sprintf("http://%s:3100/loki/api/v1/query_range?%s", lokiHost, params.Encode())
+	res, err := http.DefaultClient.Get(lokiQueryURL)
+	if err != nil {
+		return -1, err
+	}
+	t.Logf("get response from loki, query=%s, status=%s", q, res.Status)
+
+	b, err := io.ReadAll(res.Body)
+	if err != nil {
+		return -1, err
+	}
+
+	lokiResponse := &LokiQueryResponse{}
+	if err := json.Unmarshal(b, lokiResponse); err != nil {
+		return -1, err
+	}
+
+	if len(lokiResponse.Data.Result) == 0 {
+		return 0, nil
+	}
+
+	total := 0
+	for _, res := range lokiResponse.Data.Result {
+		total += len(res.Values)
+	}
+	t.Logf("get response from loki, query=%s, total=%d", q, total)
+	return total, nil
+}
+
+type LokiQueryResponse struct {
+	Status string `json:"status"`
+	Data   struct {
+		ResultType string `json:"resultType"`
+		Result     []struct {
+			Metric interface{}
+			Values []interface{} `json:"values"`
+		}
+	}
 }

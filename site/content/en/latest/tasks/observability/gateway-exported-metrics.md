@@ -7,7 +7,7 @@ The Envoy Gateway provides a collection of self-monitoring metrics in [Prometheu
 These metrics allow monitoring of the behavior of Envoy Gateway itself (as distinct from that of the EnvoyProxy it managed).
 
 {{% alert title="EnvoyProxy Metrics" color="warning" %}}
-For EnvoyProxy Metrics, please refer to the [EnvoyProxy Observability](./proxy-observability#metrics) to learn more.
+For EnvoyProxy Metrics, please refer to the [EnvoyProxy Metrics](./proxy-metric) to learn more.
 {{% /alert %}}
 
 ## Watching Components
@@ -17,12 +17,11 @@ they all follow the design of [Watching Components](../../../contributions/desig
 
 Envoy Gateway collects the following metrics in Watching Components:
 
-| Name                                    | Description                                            |
-|-----------------------------------------|--------------------------------------------------------|
-| `watchable_depth`                       | Current depth of watchable map.                        |
-| `watchable_subscribed_duration_seconds` | How long in seconds a subscribed watchable is handled. |
-| `watchable_subscribed_total`            | Total number of subscribed watchable.                  |
-| `watchable_subscribed_errors_total`     | Total number of subscribed watchable errors.           |
+| Name                                   | Description                                                  |
+|----------------------------------------|--------------------------------------------------------------|
+| `watchable_depth`                      | Current depth of watchable map.                              |
+| `watchable_subscribe_duration_seconds` | How long in seconds a subscribed watchable queue is handled. |
+| `watchable_subscribe_total`            | Total number of subscribed watchable queue.                  |
 
 Each metric includes the `runner` label to identify the corresponding components,
 the relationship between label values and components is as follows:
@@ -35,7 +34,7 @@ the relationship between label values and components is as follows:
 | `xds-translator`   | xDS Translator                  |
 | `global-ratelimit` | Global RateLimit xDS Translator |
 
-Metrics may include one or more additional labels, such as `message` etc.
+Metrics may include one or more additional labels, such as `message`, `status` and `reason` etc.
 
 ## Status Updater
 
@@ -43,14 +42,10 @@ Envoy Gateway monitors the status updates of various resources (like `GatewayCla
 
 Envoy Gateway collects the following metrics in Status Updater:
 
-| Name                             | Description                                                                                             |
-|----------------------------------|---------------------------------------------------------------------------------------------------------|
-| `status_update_total`            | Total number of status updates by object kind.                                                          |
-| `status_update_failed_total`     | Number of status updates that failed by object kind.                                                    |
-| `status_update_conflict_total`   | Number of status update conflicts encountered by object kind.                                           |
-| `status_update_success_total`    | Number of status updates that succeeded by object kind.                                                 |
-| `status_update_noop_total`       | Number of status updates that are no-ops by object kind. This is a subset of successful status updates. |
-| `status_update_duration_seconds` | How long a status update takes to finish.                                                               |
+| Name                             | Description                                    |
+|----------------------------------|------------------------------------------------|
+| `status_update_total`            | Total number of status update by object kind.  |
+| `status_update_duration_seconds` | How long a status update takes to finish.      |
 
 Each metric includes `kind` label to identify the corresponding resources.
 
@@ -60,19 +55,14 @@ Envoy Gateway monitors the cache and xDS connection status in xDS Server.
 
 Envoy Gateway collects the following metrics in xDS Server:
 
-| Name                                | Description                                                   |
-|-------------------------------------|---------------------------------------------------------------|
-| `xds_snapshot_creation_total`       | Total number of xds snapshot cache creation.                  |
-| `xds_snapshot_creation_failed`      | Number of xds snapshot cache creation that failed.            |
-| `xds_snapshot_creation_success`     | Number of xds snapshot cache creation that succeed.           |
-| `xds_snapshot_update_total`         | Total number of xds snapshot cache updates by node id.        |
-| `xds_snapshot_update_failed`        | Number of xds snapshot cache updates that failed by node id.  |
-| `xds_snapshot_update_success`       | Number of xds snapshot cache updates that succeed by node id. |
-| `xds_stream_duration_seconds`       | How long a xds stream takes to finish.                        |
-| `xds_delta_stream_duration_seconds` | How long a xds delta stream takes to finish.                  |
+| Name                          | Description                                            |
+|-------------------------------|--------------------------------------------------------|
+| `xds_snapshot_create_total`   | Total number of xds snapshot cache creates.            |
+| `xds_snapshot_update_total`   | Total number of xds snapshot cache updates by node id. |
+| `xds_stream_duration_seconds` | How long a xds stream takes to finish.                 |
 
 - For xDS snapshot cache update and xDS stream connection status, each metric includes `nodeID` label to identify the connection peer.
-- For xDS stream connection status, each metric also includes `streamID` label to identify the connection stream.
+- For xDS stream connection status, each metric also includes `streamID` label to identify the connection stream, and `isDeltaStream` label to identify the delta connection stream.
 
 ## Infrastructure Manager
 
@@ -83,16 +73,25 @@ Envoy Gateway collects the following metrics in Infrastructure Manager:
 | Name                               | Description                                             |
 |------------------------------------|---------------------------------------------------------|
 | `resource_apply_total`             | Total number of applied resources.                      |
-| `resource_apply_failed`            | Number of applied resources that failed.                |
-| `resource_apply_success`           | Number of applied resources that succeed.               |
 | `resource_apply_duration_seconds`  | How long in seconds a resource be applied successfully. |
 | `resource_delete_total`            | Total number of deleted resources.                      |
-| `resource_delete_failed`           | Number of deleted resources that failed.                |
-| `resource_delete_success`          | Number of deleted resources that succeed.               |
 | `resource_delete_duration_seconds` | How long in seconds a resource be deleted successfully. |
 
 Each metric includes the `kind` label to identify the corresponding resources being applied or deleted by Infrastructure Manager.
 
 Metrics may also include `name` and `namespace` label to identify the name and namespace of corresponding Infrastructure Manager.
+
+## Wasm
+
+Envoy Gateway monitors the status of Wasm remote fetch cache.
+
+| Name                      | Description                                      |
+|---------------------------|--------------------------------------------------|
+| `wasm_cache_entries`      | Number of Wasm remote fetch cache entries.       | 
+| `wasm_cache_lookup_total` | Total number of Wasm remote fetch cache lookups. |
+| `wasm_remote_fetch_total` | Total number of Wasm remote fetches and results. |
+
+For metric `wasm_cache_lookup_total`, we are using `hit` label (boolean) to indicate whether the Wasm cache has been hit.
+
 
 [prom-format]: https://prometheus.io/docs/instrumenting/exposition_formats/#text-based-format

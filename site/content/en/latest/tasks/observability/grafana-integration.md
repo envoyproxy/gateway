@@ -9,7 +9,7 @@ This task shows you how to visualise the metrics exposed to Prometheus using Gra
 
 {{< boilerplate o11y_prerequisites >}}
 
-Follow the steps from the [Gateway Observability](../gateway-observability) and [Proxy Observability](../proxy-observability#metrics) to enable Prometheus metrics
+Follow the steps from the [Gateway Observability](./gateway-observability) and [Proxy Metrics](./proxy-metric) to enable Prometheus metrics
 for both Envoy Gateway (Control Plane) and Envoy Proxy (Data Plane).
 
 Expose endpoints:

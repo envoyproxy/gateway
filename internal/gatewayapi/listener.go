@@ -104,9 +104,10 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 			case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
 				irListener := &ir.HTTPListener{
 					CoreListenerDetails: ir.CoreListenerDetails{
-						Name:    irListenerName(listener),
-						Address: "0.0.0.0",
-						Port:    uint32(containerPort),
+						Name:     irListenerName(listener),
+						Address:  "0.0.0.0",
+						Port:     uint32(containerPort),
+						Metadata: buildListenerMetadata(listener, gateway),
 					},
 					TLS: irTLSConfigs(listener.tlsSecrets...),
 					Path: ir.PathSettings{
@@ -156,6 +157,16 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 				foundPorts[irKey] = append(foundPorts[irKey], servicePort)
 			}
 		}
+	}
+}
+
+func buildListenerMetadata(listener *ListenerContext, gateway *GatewayContext) *ir.ResourceMetadata {
+	return &ir.ResourceMetadata{
+		Kind:        gateway.GetObjectKind().GroupVersionKind().Kind,
+		Name:        gateway.GetName(),
+		Namespace:   gateway.GetNamespace(),
+		Annotations: filterEGPrefix(gateway.GetAnnotations()),
+		SectionName: string(listener.Name),
 	}
 }
 
@@ -235,8 +246,8 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 
 	irAccessLog := &ir.AccessLog{}
 	// translate the access log configuration to the IR
-	for idx, accessLog := range envoyproxy.Spec.Telemetry.AccessLog.Settings {
-		for _, sink := range accessLog.Sinks {
+	for i, accessLog := range envoyproxy.Spec.Telemetry.AccessLog.Settings {
+		for j, sink := range accessLog.Sinks {
 			switch sink.Type {
 			case egv1a1.ProxyAccessLogSinkTypeFile:
 				if sink.File == nil {
@@ -262,6 +273,50 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					}
 					irAccessLog.JSON = append(irAccessLog.JSON, al)
 				}
+			case egv1a1.ProxyAccessLogSinkTypeALS:
+				if sink.ALS == nil {
+					continue
+				}
+
+				var logName string
+				if sink.ALS.LogName != nil {
+					logName = *sink.ALS.LogName
+				} else {
+					logName = fmt.Sprintf("%s/%s", envoyproxy.Namespace, envoyproxy.Name)
+				}
+
+				// TODO: how to get authority from the backendRefs?
+				ds, err := t.processBackendRefs(sink.ALS.BackendRefs, envoyproxy.Namespace, resources, envoyproxy)
+				if err != nil {
+					return nil, err
+				}
+
+				al := &ir.ALSAccessLog{
+					LogName: logName,
+					Destination: ir.RouteDestination{
+						Name:     fmt.Sprintf("accesslog_als_%d_%d", i, j), // TODO: rename this, so that we can share backend with tracing?
+						Settings: ds,
+					},
+					Type: sink.ALS.Type,
+				}
+
+				if al.Type == egv1a1.ALSEnvoyProxyAccessLogTypeHTTP && sink.ALS.HTTP != nil {
+					http := &ir.ALSAccessLogHTTP{
+						RequestHeaders:   sink.ALS.HTTP.RequestHeaders,
+						ResponseHeaders:  sink.ALS.HTTP.ResponseHeaders,
+						ResponseTrailers: sink.ALS.HTTP.ResponseTrailers,
+					}
+					al.HTTP = http
+				}
+
+				switch accessLog.Format.Type {
+				case egv1a1.ProxyAccessLogFormatTypeJSON:
+					al.Attributes = accessLog.Format.JSON
+				case egv1a1.ProxyAccessLogFormatTypeText:
+					al.Text = accessLog.Format.Text
+				}
+
+				irAccessLog.ALS = append(irAccessLog.ALS, al)
 			case egv1a1.ProxyAccessLogSinkTypeOpenTelemetry:
 				if sink.OpenTelemetry == nil {
 					continue
@@ -278,7 +333,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					return nil, err
 				}
 				al.Destination = ir.RouteDestination{
-					Name:     fmt.Sprintf("accesslog-%d", idx), // TODO: rename this, so that we can share backend with tracing?
+					Name:     fmt.Sprintf("accesslog_otel_%d_%d", i, j), // TODO: rename this, so that we can share backend with tracing?
 					Settings: ds,
 				}
 
@@ -411,7 +466,7 @@ func (t *Translator) processBackendRefs(backendRefs []egv1a1.BackendRef, namespa
 			return nil, err
 		}
 
-		ds := t.processServiceDestinationSetting(ref.BackendObjectReference, ns, ir.GRPC, resources, envoyProxy)
+		ds := t.processServiceDestinationSetting(ref.BackendObjectReference, ns, ir.TCP, resources, envoyProxy)
 		result = append(result, ds)
 	}
 	if len(result) == 0 {
