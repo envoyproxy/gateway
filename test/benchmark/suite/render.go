@@ -51,6 +51,18 @@ var metricsTableHeader = []tableHeader{
 		promQL:    `container_cpu_usage_seconds_total{namespace="envoy-gateway-system",container="envoy-gateway"}`,
 		queryType: querySum,
 	},
+	{
+		name:      "Envoy Proxy Memory (Avg)",
+		unit:      "MiB",
+		promQL:    `container_memory_working_set_bytes{namespace="envoy-gateway-system",container="envoy"}/1024/1024`,
+		queryType: queryAvg,
+	},
+	{
+		name:      "Envoy Proxy CPU (Avg)",
+		unit:      "s",
+		promQL:    `container_cpu_usage_seconds_total{namespace="envoy-gateway-system",container="envoy"}`,
+		queryType: queryAvg,
+	},
 }
 
 // RenderReport renders a report out of given list of benchmark report in Markdown format.

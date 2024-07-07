@@ -42,7 +42,9 @@ func NewBenchmarkReport(name string, kubeClient kube.CLIClient, promClient *prom
 }
 
 func (r *BenchmarkReport) Collect(ctx context.Context, job *types.NamespacedName) error {
-	r.GetMetrics(ctx)
+	if err := r.GetMetrics(ctx); err != nil {
+		return err
+	}
 
 	if err := r.GetResult(ctx, job); err != nil {
 		return err
@@ -80,17 +82,31 @@ func (r *BenchmarkReport) GetResult(ctx context.Context, job *types.NamespacedNa
 	return nil
 }
 
-func (r *BenchmarkReport) GetMetrics(ctx context.Context) {
+func (r *BenchmarkReport) GetMetrics(ctx context.Context) error {
 	for _, h := range metricsTableHeader {
 		if len(h.promQL) == 0 {
 			continue
 		}
 
-		v, err := r.promClient.QuerySum(ctx, h.promQL)
+		var (
+			v   float64
+			err error
+		)
+		switch h.queryType {
+		case querySum:
+			v, err = r.promClient.QuerySum(ctx, h.promQL)
+		case queryAvg:
+			v, err = r.promClient.QueryAvg(ctx, h.promQL)
+		default:
+			return fmt.Errorf("unsupported query type: %s", h.queryType)
+		}
+
 		if err == nil {
 			r.Metrics[h.name], _ = strconv.ParseFloat(fmt.Sprintf("%.2f", v), 64)
 		}
 	}
+
+	return nil
 }
 
 // getLogsFromPod scrapes the logs directly from the pod (default container).

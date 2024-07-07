@@ -90,6 +90,21 @@ func (c *Client) QuerySum(ctx context.Context, promQL string) (float64, error) {
 	return got, nil
 }
 
+func (c *Client) QueryAvg(ctx context.Context, promQL string) (float64, error) {
+	val, err := c.RawQuery(ctx, promQL)
+	if err != nil {
+		return 0, err
+	}
+
+	got, err := sum(val)
+	if err != nil {
+		return 0, fmt.Errorf("could not find metric value: %w", err)
+	}
+
+	got = got / float64(val.(model.Vector).Len())
+	return got, nil
+}
+
 func sum(val model.Value) (float64, error) {
 	if val.Type() != model.ValVector {
 		return 0, fmt.Errorf("value not a model.Vector; was %s", val.Type().String())

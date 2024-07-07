@@ -25,6 +25,10 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/config"
 	"sigs.k8s.io/yaml"
+
+	opt "github.com/envoyproxy/gateway/internal/cmd/options"
+	kube "github.com/envoyproxy/gateway/internal/kubernetes"
+	prom "github.com/envoyproxy/gateway/test/utils/prometheus"
 )
 
 const (
@@ -101,6 +105,16 @@ func NewBenchmarkTestSuite(client client.Client, options BenchmarkOptions,
 	staticArgs := prepareBenchmarkClientStaticArgs(options)
 	container := &benchmarkClient.Spec.Template.Spec.Containers[0]
 	container.Args = append(container.Args, staticArgs...)
+
+	// Initial various client.
+	kubeClient, err := kube.NewCLIClient(opt.DefaultConfigFlags.ToRawKubeConfigLoader())
+	if err != nil {
+		return nil, err
+	}
+	promClient, err := prom.NewClient(client, types.NamespacedName{Name: "prometheus", Namespace: "monitoring"})
+	if err != nil {
+		return nil, err
+	}
 
 	return &BenchmarkTestSuite{
 		Client:             client,
