@@ -1,6 +1,7 @@
 ---
 ---
-Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest.
+
+Follow the steps from the [Quickstart](../tasks/quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 Envoy Gateway provides an add-ons Helm Chart, which includes all the needing components for observability.

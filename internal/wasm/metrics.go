@@ -46,5 +46,3 @@ var (
 		"Total number of Wasm remote fetches and results.",
 	)
 )
-
-// TODO zhaohuabing export metrics to control plane dashboard.
