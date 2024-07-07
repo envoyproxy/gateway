@@ -101,7 +101,7 @@ func (c *Client) QueryAvg(ctx context.Context, promQL string) (float64, error) {
 		return 0, fmt.Errorf("could not find metric value: %w", err)
 	}
 
-	got = got / float64(val.(model.Vector).Len())
+	got /= float64(val.(model.Vector).Len())
 	return got, nil
 }
 
