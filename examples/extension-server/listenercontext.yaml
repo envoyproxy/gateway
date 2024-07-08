@@ -1,0 +1,11 @@
+apiVersion: example.extensions.io/v1alpha1
+kind: ListenerContextExample
+metadata:
+  name: listeneruser
+spec:
+  targetRefs:
+  - kind: Gateway
+    name: eg
+    group: gateway.networking.k8s.io
+  username: user
+  password: p@ssw0rd
