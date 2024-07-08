@@ -246,16 +246,18 @@ func validateProxyAccessLog(accessLog *egv1a1.ProxyAccessLog) []error {
 	var errs []error
 
 	for _, setting := range accessLog.Settings {
-		switch setting.Format.Type {
-		case egv1a1.ProxyAccessLogFormatTypeText:
-			if setting.Format.Text == nil {
-				err := fmt.Errorf("unable to configure access log when using Text format but \"text\" field being empty")
-				errs = append(errs, err)
-			}
-		case egv1a1.ProxyAccessLogFormatTypeJSON:
-			if setting.Format.JSON == nil {
-				err := fmt.Errorf("unable to configure access log when using JSON format but \"json\" field being empty")
-				errs = append(errs, err)
+		if setting.Format != nil {
+			switch setting.Format.Type {
+			case egv1a1.ProxyAccessLogFormatTypeText:
+				if setting.Format.Text == nil {
+					err := fmt.Errorf("unable to configure access log when using Text format but \"text\" field being empty")
+					errs = append(errs, err)
+				}
+			case egv1a1.ProxyAccessLogFormatTypeJSON:
+				if setting.Format.JSON == nil {
+					err := fmt.Errorf("unable to configure access log when using JSON format but \"json\" field being empty")
+					errs = append(errs, err)
+				}
 			}
 		}
 
