@@ -4,6 +4,9 @@
 // the root of the repo.
 
 // Functions here are borrowed from the troubleshoot project because they're not exported.
+// There's some differences in the implementation, but the core logic is the same.
+// 1. Remove `managedFields` from the objects
+// 2. Remove json output
 
 package collect
 
@@ -38,7 +41,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-// Use for error maps and arrays. These are guaraneteed to not result in a error when marshaling.
+// Use for error maps and arrays. These are guaranteed to not result in an error when marshaling.
 func marshalErrors(errors interface{}) io.Reader {
 	if errors == nil {
 		return nil
