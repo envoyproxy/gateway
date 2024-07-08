@@ -18,7 +18,7 @@ changes:
       Added User Guide and Dashboards for Control Plane and Resource Observability
       Added User Guide for Connection Limits in ClientTrafficPolicy
       Added User Guide on using Private Key Provider
-      Added Desing Doc for Authorization
+      Added Design Doc for Authorization
       Added Design Doc for XDS Metadata
       Added Design Doc for Backend resource
       Added Design Doc for Control Plane Observability
@@ -42,8 +42,8 @@ changes:
       Updated Extensbility User Gudie to use yaml-format patches
       Updated Quickstart Guide to include next steps
       Updated CRD docs to include enum values
-      Updated Extensibility User Guide with Envoy Patch Polciy examples
-      Updated structure of docs: rename Guides to Tasks, move Contriubtion
+      Updated Extensibility User Guide with Envoy Patch Policy examples
+      Updated structure of docs: rename Guides to Tasks, move Contribution
       Updated Support Matrix
       Updated egctl x status docs for xRoute and xPolicy
       Updated egctl User Guide with Install and Uninstall commands
@@ -165,7 +165,7 @@ changes:
       Updated e2e test for Limit to cover multiple listeners
       Updated e2e test for CORS to not require access-control-expose-headers
       Run CEL tests on all supported K8s versions
-      Added OSV Scanner for Golang Vulnerabilties and Licenses
+      Added OSV Scanner for Golang Vulnerabilities and Licenses
       Added Trivy scanner for Docker images
 
 
@@ -190,9 +190,9 @@ changes:
       Updated OAuth2 filter to preserve Authorization header if OIDC token forwarding is enabled
       Updated Default Filter Order to have Fault filter first in the HTTP Filter Chain
       Updated Ext-Auth Per-Route config to use filter-specific Config Type
-      Updated Overload Manager configuration according to Envoy reccomendations by default
+      Updated Overload Manager configuration according to Envoy recommendations by default
       Updated Infrastructure resource management to user Server-Side Apply
-      Updated Reflection of Errors in Gateway Status when too many adresses are assigned
+      Updated Reflection of Errors in Gateway Status when too many addresses are assigned
       Fixed enforcement of same-namespace for BackendTLSPolicy and target
       Fixed processing all listeners before returning with an error
       Fixed creation of infrastructure resources if there are no listeners
@@ -204,8 +204,8 @@ changes:
       Fixed Translation Consistency by sorting Gateways
       Fixed QUIC Listener to only Advertise HTTP/3 over ALPN
       Fixed SNI matching for TCP Routes with TLS termination
-      Fixed Reconcilation when EnvoyProxy backendRefs changes
-      Fixed Reconcilation when a referenced Secret or ConfigMap changes
+      Fixed Reconciliation when EnvoyProxy backendRefs changes
+      Fixed Reconciliation when a referenced Secret or ConfigMap changes
       Fixed ReplaceFullPath not working for root path
       Fixed Default Application Protocol to TCP
       Fixed not using well-known ports (80, 443) in rediret location
