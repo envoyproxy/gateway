@@ -1,3 +1,4 @@
+tools.dir = tools
 tools.bindir = tools/bin
 tools.srcdir = tools/src
 
@@ -16,7 +17,7 @@ manifests: $(tools/controller-gen)
 	$(tools/controller-gen) crd:allowDangerousTypes=true paths="./..." output:crd:artifacts:config=charts/extension-server/crds/generated
 
 generate: $(tools/controller-gen)
-	$(tools/controller-gen) object paths="{./api/...}"
+	$(tools/controller-gen) object:headerFile="$(tools.dir)/boilerplate.generatego.txt",year=2024 paths="{./api/...}"
 
 tools.clean: # Remove all tools
 	@$(LOG_TARGET)
