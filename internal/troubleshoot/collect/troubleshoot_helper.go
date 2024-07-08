@@ -12,13 +12,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/replicatedhq/troubleshoot/pkg/k8sutil"
 	"io"
-	"k8s.io/apimachinery/pkg/runtime"
 	"reflect"
 	"sort"
 	"strings"
 
+	"github.com/replicatedhq/troubleshoot/pkg/k8sutil"
 	"github.com/replicatedhq/troubleshoot/pkg/k8sutil/discovery"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -27,6 +26,7 @@ import (
 	apiextv1b1clientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/version"
@@ -481,7 +481,6 @@ func daemonsets(ctx context.Context, client *kubernetes.Clientset, namespaces []
 
 	for _, namespace := range namespaces {
 		daemonsets, err := client.AppsV1().DaemonSets(namespace).List(ctx, metav1.ListOptions{})
-
 		if err != nil {
 			errorsByNamespace[namespace] = err.Error()
 			continue

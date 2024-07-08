@@ -15,7 +15,7 @@ lint: ## Run all linter of code sources, including golint, yamllint, whitenoise 
 .PHONY: lint-deps
 lint-deps: ## Everything necessary to lint
 
-GOLANGCI_LINT_FLAGS ?= $(if $(GITHUB_ACTION),--out-format=github-actions)
+GOLANGCI_LINT_FLAGS ?= $(if $(GITHUB_ACTION),--out-format=colored-line-number)
 .PHONY: lint.golint
 lint: lint.golint
 lint-deps: $(tools/golangci-lint)
