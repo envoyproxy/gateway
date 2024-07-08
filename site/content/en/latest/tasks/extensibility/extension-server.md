@@ -58,15 +58,19 @@ a different tag for it in order to allow Kubernetes to pull it correctly.
 
   {{< tabpane text=true >}}
   {{% tab header="local kind server" %}}
+
   ```shell
   kind load docker-image --name envoy-gateway extension-server:latest
   ```
+
   {{% /tab %}}
   {{% tab header="other Kubernetes server" %}}
+
   ```shell
   docker tag extension-server:latest $YOUR_DOCKER_REPO
   docker push $YOUR_DOCKER_REPO
   ```
+
   {{% /tab %}}
   {{< /tabpane >}}
 
