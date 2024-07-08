@@ -28,6 +28,7 @@ func newExperimentalCommand() *cobra.Command {
 	experimentalCommand.AddCommand(newDashboardCommand())
 	experimentalCommand.AddCommand(newInstallCommand())
 	experimentalCommand.AddCommand(newUnInstallCommand())
+	experimentalCommand.AddCommand(newCollectCommand())
 
 	return experimentalCommand
 }

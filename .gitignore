@@ -37,3 +37,5 @@ charts/gateway-addons-helm/charts/
 
 # VIM
 .*.swp
+
+*.tar.gz
