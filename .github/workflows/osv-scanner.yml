@@ -22,6 +22,14 @@ jobs:
       contents: read
       # Require writing security events to upload SARIF file to security tab
       security-events: write
+    with:
+      scan-args: |-
+        --skip-git
+        --recursive
+        ./
+        --config
+        tools/osv-scanner/config.toml
+
   scan-pr:
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
     uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@3c399db9dd6dd8106a27d280d53c55077d3f7cea"  # v1.8.1
@@ -29,3 +37,10 @@ jobs:
       actions: read
       contents: read
       security-events: write
+    with:
+      scan-args: |-
+        --skip-git
+        --recursive
+        ./
+        --config
+        tools/osv-scanner/config.toml

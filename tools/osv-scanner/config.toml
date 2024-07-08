@@ -1,0 +1,3 @@
+[[IgnoredVulns]]
+id = "GO-2022-0646 "
+reason = "No a real issue, just a warning about third party package."
