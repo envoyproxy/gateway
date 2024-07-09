@@ -8,6 +8,7 @@ package egctl
 import (
 	"context"
 	"fmt"
+	troubleshootv1b2 "github.com/replicatedhq/troubleshoot/pkg/apis/troubleshoot/v1beta2"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -115,6 +116,16 @@ func runCollect(collectOpts collectOptions) error {
 			ClientConfig: restConfig,
 			BundlePath:   bundlePath,
 			Namespace:    collectOpts.envoyGatewayNamespace,
+		},
+		// Collect logs from EnvoyGateway system namespace
+		&tbcollect.CollectLogs{
+			Collector: &troubleshootv1b2.Logs{
+				Name:      "pod-logs",
+				Namespace: collectOpts.envoyGatewayNamespace,
+			},
+			ClientConfig: restConfig,
+			BundlePath:   bundlePath,
+			Context:      ctx,
 		},
 	}
 	total := len(collectors)
