@@ -5,7 +5,7 @@ changes:
     change: |
       Added Performance Benchmarking Document
       Added User Guide for Zipkin Tracing
-      Added User Guide for Customizatio of Filter Order
+      Added User Guide for Customizing Ordering of Filters
       Added User Guide for External Processing Filter in EnvoyExtensionPolicy
       Added User Guide for installation of egctl with brew
       Added User Guide for Client Buffer Size Limit
@@ -59,7 +59,7 @@ changes:
   - area: installation
     change: |
       Added new gateway-addons-helm chart for Observability
-      Added support for global image settings for all images in the EG chart
+      Added support for global image settings for all images in Envoy Gateway helm chart
       Added Support for PodDistruptionBudget for Envoy Gateway
       Added Support for TopologySpreadConstraints for Envoy Gateway
       Added Support for Tolerations for Envoy Gateway
@@ -207,8 +207,8 @@ changes:
       Fixed Reconciliation when EnvoyProxy backendRefs changes
       Fixed Reconciliation when a referenced Secret or ConfigMap changes
       Fixed ReplaceFullPath not working for root path
-      Fixed Default Application Protocol to TCP
-      Fixed not using well-known ports (80, 443) in rediret location
+      Fixed Default Application Protocol to TCP for Zipkin Tracing
+      Fixed not appending well-known ports (80, 443) in rediret Location header
 
   - area: providers
     change: |
