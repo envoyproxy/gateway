@@ -118,6 +118,15 @@ type OIDCProvider struct {
 	//
 	// +optional
 	TokenEndpoint *string `json:"tokenEndpoint,omitempty"`
+
+	// BackendRefs references a Backend object that represents the OIDC Provider.
+	// A BackendTLSPolicy can be attached to the Backend object to configure the
+	// TLS settings for the OIDC Provider.
+	//
+	// +optional
+	// +notImplementedHide
+	// +kubebuilder:validation:MaxItems=1
+	BackendRefs []BackendRef `json:"backendRefs,omitempty"`
 }
 
 // OIDCCookieNames defines the names of cookies to use in the Envoy OIDC filter.
