@@ -278,7 +278,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
+									Format: &egv1a1.ProxyAccessLogFormat{
 										Type: "foo",
 									},
 								},
@@ -297,7 +297,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
+									Format: &egv1a1.ProxyAccessLogFormat{
 										Type: egv1a1.ProxyAccessLogFormatTypeText,
 									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
@@ -324,7 +324,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
+									Format: &egv1a1.ProxyAccessLogFormat{
 										Type: egv1a1.ProxyAccessLogFormatTypeJSON,
 									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
@@ -351,7 +351,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
+									Format: &egv1a1.ProxyAccessLogFormat{
 										Type: egv1a1.ProxyAccessLogFormatTypeJSON,
 										Text: ptr.To("[%START_TIME%]"),
 									},
@@ -379,7 +379,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
+									Format: &egv1a1.ProxyAccessLogFormat{
 										Type: egv1a1.ProxyAccessLogFormatTypeJSON,
 										JSON: map[string]string{
 											"foo": "bar",
@@ -406,7 +406,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
+									Format: &egv1a1.ProxyAccessLogFormat{
 										Type: egv1a1.ProxyAccessLogFormatTypeText,
 										Text: ptr.To("[%START_TIME%]"),
 									},
@@ -431,7 +431,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
+									Format: &egv1a1.ProxyAccessLogFormat{
 										Type: egv1a1.ProxyAccessLogFormatTypeText,
 										Text: ptr.To("[%START_TIME%]"),
 									},
@@ -456,7 +456,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
+									Format: &egv1a1.ProxyAccessLogFormat{
 										Type: egv1a1.ProxyAccessLogFormatTypeText,
 										Text: ptr.To("[%START_TIME%]"),
 									},
@@ -484,13 +484,6 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
-										Type: egv1a1.ProxyAccessLogFormatTypeJSON,
-										JSON: map[string]string{
-											"attr1": "value1",
-											"attr2": "value2",
-										},
-									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
 										{
 											Type: egv1a1.ProxyAccessLogSinkTypeALS,
@@ -522,10 +515,6 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
-										Type: "Text",
-										Text: ptr.To("[%START_TIME%]"),
-									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
 										{
 											Type: egv1a1.ProxyAccessLogSinkTypeALS,
@@ -559,10 +548,6 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
-										Type: "Text",
-										Text: ptr.To("[%START_TIME%]"),
-									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
 										{
 											Type: egv1a1.ProxyAccessLogSinkTypeALS,
@@ -595,10 +580,6 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
-										Type: "Text",
-										Text: ptr.To("[%START_TIME%]"),
-									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
 										{
 											Type: egv1a1.ProxyAccessLogSinkTypeALS,
@@ -631,10 +612,6 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
-										Type: "Text",
-										Text: ptr.To("[%START_TIME%]"),
-									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
 										{
 											Type: egv1a1.ProxyAccessLogSinkTypeALS,
@@ -659,10 +636,6 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
-										Type: "Text",
-										Text: ptr.To("[%START_TIME%]"),
-									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
 										{
 											Type: egv1a1.ProxyAccessLogSinkTypeALS,
@@ -688,10 +661,6 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
-										Type: "Text",
-										Text: ptr.To("[%START_TIME%]"),
-									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
 										{
 											Type: egv1a1.ProxyAccessLogSinkTypeALS,
@@ -730,7 +699,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
+									Format: &egv1a1.ProxyAccessLogFormat{
 										Type: "Text",
 										Text: ptr.To("[%START_TIME%]"),
 									},
@@ -758,7 +727,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
+									Format: &egv1a1.ProxyAccessLogFormat{
 										Type: "Text",
 										Text: ptr.To("[%START_TIME%]"),
 									},
@@ -793,7 +762,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
+									Format: &egv1a1.ProxyAccessLogFormat{
 										Type: "Text",
 										Text: ptr.To("[%START_TIME%]"),
 									},
@@ -828,7 +797,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
+									Format: &egv1a1.ProxyAccessLogFormat{
 										Type: "Text",
 										Text: ptr.To("[%START_TIME%]"),
 									},
@@ -863,7 +832,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
+									Format: &egv1a1.ProxyAccessLogFormat{
 										Type: "Text",
 										Text: ptr.To("[%START_TIME%]"),
 									},
@@ -906,7 +875,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
+									Format: &egv1a1.ProxyAccessLogFormat{
 										Type: "Text",
 										Text: ptr.To("[%START_TIME%]"),
 									},
@@ -940,7 +909,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
+									Format: &egv1a1.ProxyAccessLogFormat{
 										Type: "Text",
 										Text: ptr.To("[%START_TIME%]"),
 									},
