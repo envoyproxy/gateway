@@ -375,6 +375,10 @@ func pods(ctx context.Context, client *kubernetes.Clientset, namespaces []string
 			continue
 		}
 
+		if len(pods.Items) == 0 {
+			continue
+		}
+
 		gvk, err := apiutil.GVKForObject(pods, scheme.Scheme)
 		if err == nil {
 			pods.GetObjectKind().SetGroupVersionKind(gvk)
@@ -417,6 +421,10 @@ func services(ctx context.Context, client *kubernetes.Clientset, namespaces []st
 			continue
 		}
 
+		if len(services.Items) == 0 {
+			continue
+		}
+
 		gvk, err := apiutil.GVKForObject(services, scheme.Scheme)
 		if err == nil {
 			services.GetObjectKind().SetGroupVersionKind(gvk)
@@ -450,6 +458,10 @@ func deployments(ctx context.Context, client *kubernetes.Clientset, namespaces [
 		deployments, err := client.AppsV1().Deployments(namespace).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			errorsByNamespace[namespace] = err.Error()
+			continue
+		}
+
+		if len(deployments.Items) == 0 {
 			continue
 		}
 
@@ -489,6 +501,10 @@ func daemonsets(ctx context.Context, client *kubernetes.Clientset, namespaces []
 			continue
 		}
 
+		if len(daemonsets.Items) == 0 {
+			continue
+		}
+
 		gvk, err := apiutil.GVKForObject(daemonsets, scheme.Scheme)
 		if err == nil {
 			daemonsets.GetObjectKind().SetGroupVersionKind(gvk)
@@ -525,6 +541,10 @@ func jobs(ctx context.Context, client *kubernetes.Clientset, namespaces []string
 			continue
 		}
 
+		if len(nsJobs.Items) == 0 {
+			continue
+		}
+
 		gvk, err := apiutil.GVKForObject(nsJobs, scheme.Scheme)
 		if err == nil {
 			nsJobs.GetObjectKind().SetGroupVersionKind(gvk)
@@ -558,6 +578,10 @@ func configMaps(ctx context.Context, client kubernetes.Interface, namespaces []s
 		configmaps, err := client.CoreV1().ConfigMaps(namespace).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			errorsByNamespace[namespace] = err.Error()
+			continue
+		}
+
+		if len(configmaps.Items) == 0 {
 			continue
 		}
 
