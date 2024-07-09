@@ -9,19 +9,21 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	kube "github.com/envoyproxy/gateway/internal/kubernetes"
-	troubleshootv1b2 "github.com/replicatedhq/troubleshoot/pkg/apis/troubleshoot/v1beta2"
-	tbcollect "github.com/replicatedhq/troubleshoot/pkg/collect"
 	"io"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"net/http"
 	"path"
 	"strconv"
 	"strings"
+
+	kube "github.com/envoyproxy/gateway/internal/kubernetes"
+	troubleshootv1b2 "github.com/replicatedhq/troubleshoot/pkg/apis/troubleshoot/v1beta2"
+	tbcollect "github.com/replicatedhq/troubleshoot/pkg/collect"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 var _ tbcollect.Collector = &PrometheusMetric{}
@@ -59,7 +61,7 @@ func (p PrometheusMetric) Collect(_ chan<- interface{}) (tbcollect.CollectorResu
 		return nil, err
 	}
 
-	pods, err := listPods(context.TODO(), client, p.Namespace)
+	pods, err := listPods(context.TODO(), client, p.Namespace, labels.Everything())
 	if err != nil {
 		return nil, err
 	}
@@ -100,8 +102,10 @@ func (p PrometheusMetric) Collect(_ chan<- interface{}) (tbcollect.CollectorResu
 	return output, nil
 }
 
-func listPods(ctx context.Context, client kubernetes.Interface, namespace string) ([]corev1.Pod, error) {
-	pods, err := client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
+func listPods(ctx context.Context, client kubernetes.Interface, namespace string, selector labels.Selector) ([]corev1.Pod, error) {
+	pods, err := client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
+		LabelSelector: selector.String(),
+	})
 	if err != nil {
 		return nil, err
 	}

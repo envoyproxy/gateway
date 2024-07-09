@@ -133,6 +133,12 @@ func runCollect(collectOpts collectOptions) error {
 			ClientConfig: restConfig,
 			Namespace:    collectOpts.envoyGatewayNamespace,
 		},
+		// Collect config dump from EnvoyGateway system namespace
+		collect.ConfigDump{
+			BundlePath:   bundlePath,
+			ClientConfig: restConfig,
+			Namespace:    collectOpts.envoyGatewayNamespace,
+		},
 	}
 	total := len(collectors)
 	allCollectedData := make(map[string][]byte)
