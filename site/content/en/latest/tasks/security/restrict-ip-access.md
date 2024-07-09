@@ -1,11 +1,11 @@
 ---
-title: "IP Whitelisting/Blacklisting"
+title: "IP Allowlist/Denylist"
 ---
 
-This task provides instructions for configuring IP whitelisting/blacklisting on Envoy Gateway. IP whitelisting/blacklisting
+This task provides instructions for configuring IP allowlist/denylist on Envoy Gateway. IP allowlist/denylist
 checks if an incoming request is from an allowed IP address before routing the request to a backend service.
 
-Envoy Gateway introduces a new CRD called [SecurityPolicy][SecurityPolicy] that allows the user to configure IP whitelisting/blacklisting.
+Envoy Gateway introduces a new CRD called [SecurityPolicy][SecurityPolicy] that allows the user to configure IP allowlist/denylist.
 This instantiated resource can be linked to a [Gateway][Gateway], [HTTPRoute][HTTPRoute] or [GRPCRoute][GRPCRoute] resource.
 
 ## Prerequisites
@@ -82,7 +82,7 @@ kubectl get securitypolicy/authorization-client-ip -o yaml
 
 ### Original Source IP
 
-It's important to note that the IP address used for whitelisting/blacklisting is the original source IP address of the request.
+It's important to note that the IP address used for allowlist/denylist is the original source IP address of the request.
 You can use a [ClientTrafficPolicy] to configure how Envoy Gateway should determine the original source IP address.
 
 For example, the below ClientTrafficPolicy configures Envoy Gateway to use the `X-Forwarded-For` header to determine the original source IP address.
