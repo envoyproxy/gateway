@@ -127,6 +127,12 @@ func runCollect(collectOpts collectOptions) error {
 			BundlePath:   bundlePath,
 			Context:      ctx,
 		},
+		// Collect prometheus metrics from EnvoyGateway system namespace
+		collect.PrometheusMetric{
+			BundlePath:   bundlePath,
+			ClientConfig: restConfig,
+			Namespace:    collectOpts.envoyGatewayNamespace,
+		},
 	}
 	total := len(collectors)
 	allCollectedData := make(map[string][]byte)
