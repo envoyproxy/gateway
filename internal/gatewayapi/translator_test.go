@@ -239,9 +239,16 @@ func TestTranslate(t *testing.T) {
 						ClusterIP: "3.3.3.3",
 						Ports: []corev1.ServicePort{
 							{
-								Name:       "grpc",
-								Port:       4317,
-								TargetPort: intstr.IntOrString{IntVal: 4317},
+								Name:        "grpc",
+								Port:        4317,
+								TargetPort:  intstr.IntOrString{IntVal: 4317},
+								Protocol:    corev1.ProtocolTCP,
+								AppProtocol: ptr.To("grpc"),
+							},
+							{
+								Name:       "zipkin",
+								Port:       9411,
+								TargetPort: intstr.IntOrString{IntVal: 9411},
 								Protocol:   corev1.ProtocolTCP,
 							},
 						},
@@ -262,6 +269,11 @@ func TestTranslate(t *testing.T) {
 						{
 							Name:     ptr.To("grpc"),
 							Port:     ptr.To[int32](4317),
+							Protocol: ptr.To(corev1.ProtocolTCP),
+						},
+						{
+							Name:     ptr.To("zipkin"),
+							Port:     ptr.To[int32](9411),
 							Protocol: ptr.To(corev1.ProtocolTCP),
 						},
 					},

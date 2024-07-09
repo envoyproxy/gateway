@@ -12,6 +12,29 @@ accesslog:
       path: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
       protocol: "%PROTOCOL%"
       response_code: "%RESPONSE_CODE%"
+  als:
+  - destination:
+      name: accesslog/monitoring/envoy-als/port/9000
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 1.1.1.1
+          port: 9000
+        protocol: GRPC
+        weight: 1
+    text: |
+      [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
+    attributes:
+      attr1: value1
+      attr2: value2
+    http:
+      requestHeaders:
+      - x-client-ip-address
+      responseHeaders:
+      - cache-control
+      responseTrailers:
+      - expires
+    type: HTTP
   openTelemetry:
   - text: |
       [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"

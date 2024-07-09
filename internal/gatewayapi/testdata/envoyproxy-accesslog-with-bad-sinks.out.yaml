@@ -108,6 +108,7 @@ infraIR:
                   type: Text
                 sinks:
                 - type: File
+                - type: ALS
                 - type: OpenTelemetry
         status: {}
       listeners:
@@ -131,6 +132,11 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
       name: envoy-gateway/gateway-1/http
       path:
         escapedSlashesAction: UnescapeAndRedirect

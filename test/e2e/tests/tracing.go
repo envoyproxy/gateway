@@ -33,7 +33,7 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, OpenTelemetryTracingTest)
+	ConformanceTests = append(ConformanceTests, OpenTelemetryTracingTest, ZipkinTracingTest)
 }
 
 var OpenTelemetryTracingTest = suite.ConformanceTest{
@@ -49,7 +49,7 @@ var OpenTelemetryTracingTest = suite.ConformanceTest{
 
 			expectedResponse := httputils.ExpectedResponse{
 				Request: httputils.Request{
-					Path: "/tracing",
+					Path: "/otel",
 				},
 				Response: httputils.Response{
 					StatusCode: 200,
@@ -61,7 +61,58 @@ var OpenTelemetryTracingTest = suite.ConformanceTest{
 
 			tags := map[string]string{
 				"component":    "proxy",
+				"provider":     "otel",
 				"service.name": naming.ServiceName(gwNN),
+			}
+			// let's wait for the log to be sent to stdout
+			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
+				func(ctx context.Context) (bool, error) {
+					count, err := QueryTraceFromTempo(t, suite.Client, tags)
+					if err != nil {
+						t.Logf("failed to get trace count from tempo: %v", err)
+						return false, nil
+					}
+
+					if count > 0 {
+						return true, nil
+					}
+					return false, nil
+				}); err != nil {
+				t.Errorf("failed to get trace from tempo: %v", err)
+			}
+		})
+	},
+}
+
+var ZipkinTracingTest = suite.ConformanceTest{
+	ShortName:   "ZipkinTracing",
+	Description: "Make sure Zipkin tracing is working",
+	Manifests:   []string{"testdata/tracing-zipkin.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		t.Run("tempo", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "tracing-zipkin", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "eg-special-case", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+			expectedResponse := httputils.ExpectedResponse{
+				Request: httputils.Request{
+					Path: "/zipkin",
+				},
+				Response: httputils.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+			// make sure listener is ready
+			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+
+			tags := map[string]string{
+				"component": "proxy",
+				"provider":  "zipkin",
+				// TODO: this came from --service-cluster, which is different from OTel,
+				// should make them kept consistent
+				"service.name": fmt.Sprintf("%s/%s", gwNN.Namespace, gwNN.Name),
 			}
 			// let's wait for the log to be sent to stdout
 			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,

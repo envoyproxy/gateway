@@ -17,7 +17,7 @@ Envoy Gateway is designed to run in Kubernetes for production. The most essentia
 * The `kubectl` command-line tool
 
 {{% alert title="Compatibility Matrix" color="warning" %}}
-Refer to the [Version Compatibility Matrix](./matrix) to learn more.
+Refer to the [Version Compatibility Matrix](/news/releases/matrix) to learn more.
 {{% /alert %}}
 
 ## Install with YAML

@@ -230,6 +230,10 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-tls
+        namespace: envoy-gateway
       name: envoy-gateway/gateway-tls/
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -268,6 +272,10 @@ xdsIR:
             weight: 1
         hostname: '*'
         isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-tls
+          namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-tls/rule/0/match/-1/*
       tls:
         certificates:

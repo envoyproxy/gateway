@@ -31,6 +31,8 @@ const (
 	// Request timeout, which is defined as Duration, specifies the upstream timeout for the route
 	// If not specified, the default is 15s
 	HTTPRequestTimeout = "15s"
+	// egPrefix is a prefix of annotation keys that are processed by Envoy Gateway
+	egPrefix = "gateway.envoyproxy.io/"
 )
 
 var (
@@ -654,6 +656,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 			continue
 		}
 		hasHostnameIntersection = true
+		routeMetadata := buildRouteMetadata(route)
 
 		var perHostRoutes []*ir.HTTPRoute
 		for _, host := range hosts {
@@ -680,6 +683,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 				underscoredHost := strings.ReplaceAll(host, ".", "_")
 				hostRoute := &ir.HTTPRoute{
 					Name:                  fmt.Sprintf("%s/%s", routeRoute.Name, underscoredHost),
+					Metadata:              routeMetadata,
 					Hostname:              host,
 					PathMatch:             routeRoute.PathMatch,
 					HeaderMatches:         routeRoute.HeaderMatches,
@@ -717,6 +721,28 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 	}
 
 	return hasHostnameIntersection
+}
+
+func buildRouteMetadata(route RouteContext) *ir.ResourceMetadata {
+	return &ir.ResourceMetadata{
+		Kind:        route.GetObjectKind().GroupVersionKind().Kind,
+		Name:        route.GetName(),
+		Namespace:   route.GetNamespace(),
+		Annotations: filterEGPrefix(route.GetAnnotations()),
+	}
+}
+
+func filterEGPrefix(in map[string]string) map[string]string {
+	out := map[string]string{}
+	for k, v := range in {
+		if strings.HasPrefix(k, egPrefix) {
+			out[strings.TrimPrefix(k, egPrefix)] = v
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 func (t *Translator) ProcessTLSRoutes(tlsRoutes []*gwapiv1a2.TLSRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*TLSRouteContext {
@@ -1281,10 +1307,14 @@ func (t *Translator) processServiceDestinationSetting(
 		}
 	}
 
-	// support HTTPRouteBackendProtocolH2C
-	if servicePort.AppProtocol != nil &&
-		*servicePort.AppProtocol == "kubernetes.io/h2c" {
-		protocol = ir.HTTP2
+	// support HTTPRouteBackendProtocolH2C/GRPC
+	if servicePort.AppProtocol != nil {
+		switch *servicePort.AppProtocol {
+		case "kubernetes.io/h2c":
+			protocol = ir.HTTP2
+		case "grpc":
+			protocol = ir.GRPC
+		}
 	}
 
 	// Route to endpoints by default
