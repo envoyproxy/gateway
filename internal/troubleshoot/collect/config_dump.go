@@ -9,8 +9,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
-	"net/http"
 	"path"
 
 	troubleshootv1b2 "github.com/replicatedhq/troubleshoot/pkg/apis/troubleshoot/v1beta2"
@@ -74,47 +72,29 @@ func (cd ConfigDump) Collect(_ chan<- interface{}) (tbcollect.CollectorResult, e
 		return output, err
 	}
 
+	logs := make([]string, 0, len(pods))
 	for _, pod := range pods {
 		nn := types.NamespacedName{Namespace: pod.Namespace, Name: pod.Name}
 		data, err := configDump(cliClient, nn, true)
 		if err != nil {
+			logs = append(logs, fmt.Sprintf("failed to get config dump for pod %s/%s: %v", pod.Namespace, pod.Name, err))
 			continue
 		}
 
 		k := fmt.Sprintf("%s-%s.json", pod.Namespace, pod.Name)
 		_ = output.SaveResult(cd.BundlePath, path.Join("config-dumps", k), bytes.NewBuffer(data))
 	}
+	if len(logs) > 0 {
+		_ = output.SaveResult(cd.BundlePath, path.Join("config-dumps", "errors.log"), marshalErrors(logs))
+	}
 
 	return output, nil
 }
 
 func configDump(cli kube.CLIClient, nn types.NamespacedName, includeEds bool) ([]byte, error) {
-	fw, err := kube.NewLocalPortForwarder(cli, nn, 0, 19000)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := fw.Start(); err != nil {
-		return nil, err
-	}
-	defer fw.Stop()
-
-	url := fmt.Sprintf("http://%s/config_dump", fw.Address())
+	reqPath := "/config_dump"
 	if includeEds {
-		url = fmt.Sprintf("%s?include_eds", url)
+		reqPath = fmt.Sprintf("%s?include_eds", reqPath)
 	}
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
-
-	return io.ReadAll(resp.Body)
+	return requestWithPortForwarder(cli, nn, 19000, reqPath)
 }

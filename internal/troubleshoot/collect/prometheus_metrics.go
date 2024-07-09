@@ -74,9 +74,11 @@ func (p PrometheusMetric) Collect(_ chan<- interface{}) (tbcollect.CollectorResu
 		return output, err
 	}
 
+	logs := make([]string, 0)
 	for _, pod := range pods {
 		annos := pod.GetAnnotations()
-		if _, ok := annos["prometheus.io/scrape"]; !ok {
+		if v, ok := annos["prometheus.io/scrape"]; !ok || v != "true" {
+			logs = append(logs, fmt.Sprintf("pod %s/%s is skipped because of missing annotation prometheus.io/scrape", pod.Namespace, pod.Name))
 			continue
 		}
 
@@ -84,6 +86,7 @@ func (p PrometheusMetric) Collect(_ chan<- interface{}) (tbcollect.CollectorResu
 		if v, ok := annos["prometheus.io/port"]; !ok {
 			port, err = strconv.Atoi(v)
 			if err != nil {
+				logs = append(logs, fmt.Sprintf("pod %s/%s is skipped because of invalid prometheus.io/port", pod.Namespace, pod.Name))
 				continue
 			}
 		}
@@ -91,13 +94,17 @@ func (p PrometheusMetric) Collect(_ chan<- interface{}) (tbcollect.CollectorResu
 			reqPath = v
 		}
 
-		data, err := scrapeMetrics(cliClient, nn, port, reqPath)
+		data, err := requestWithPortForwarder(cliClient, nn, port, reqPath)
 		if err != nil {
+			logs = append(logs, fmt.Sprintf("pod %s/%s is skipped because of err: %v", pod.Namespace, pod.Name, err))
 			continue
 		}
 
 		k := fmt.Sprintf("%s-%s.prom", pod.Namespace, pod.Name)
 		_ = output.SaveResult(p.BundlePath, path.Join("prometheus-metrics", k), bytes.NewBuffer(data))
+	}
+	if len(logs) > 0 {
+		_ = output.SaveResult(p.BundlePath, path.Join("prometheus-metrics", "error.log"), bytes.NewBuffer([]byte(strings.Join(logs, "\n"))))
 	}
 
 	return output, nil
@@ -114,7 +121,7 @@ func listPods(ctx context.Context, client kubernetes.Interface, namespace string
 	return pods.Items, nil
 }
 
-func scrapeMetrics(cli kube.CLIClient, nn types.NamespacedName, port int, reqPath string) ([]byte, error) {
+func requestWithPortForwarder(cli kube.CLIClient, nn types.NamespacedName, port int, reqPath string) ([]byte, error) {
 	fw, err := kube.NewLocalPortForwarder(cli, nn, 0, port)
 	if err != nil {
 		return nil, err
