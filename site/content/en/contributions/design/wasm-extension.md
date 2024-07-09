@@ -16,7 +16,7 @@ Deploying Wasm modules from OCI registries has several benefits:
 
 ## Architecture
 
-![](../wasm-extension.png)
+![](/img/wasm-extension.png)
 
 ### Control Plane Wasm File Cache
 
