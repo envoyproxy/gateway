@@ -1,4 +1,18 @@
 apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: client-timeout
+  namespace: gateway-conformance-infra
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: client-timeout
+  faultInjection:
+    delay:
+      fixedDelay: 100ms
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: ClientTrafficPolicy
 metadata:
   name: client-timeout
@@ -8,10 +22,9 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: same-namespace
-    namespace: gateway-conformance-infra
   timeout:
     http:
-      requestReceivedTimeout: 1ms
+      requestReceivedTimeout: 50ms
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
