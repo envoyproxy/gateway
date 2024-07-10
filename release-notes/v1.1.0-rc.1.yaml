@@ -123,7 +123,7 @@ changes:
       Added Support for Loadbalancing Header Hash Policy in BackendTrafficPolicy CRD
       Added Support for Cluster Connection Buffer Size Limit in BackendTrafficPolicy
       Added Support for more Rate Limit Rules in BackendTrafficPolicy CRD
-      Added Support for WASM extension in EnvoyExtensionPolicy CRD
+      Added Support for Wasm extension in EnvoyExtensionPolicy CRD
       Added Support for External Processing extension in EnvoyExtensionPolicy CRD
       Removed Status Print Column from xPolicy CRDs
 
@@ -145,7 +145,7 @@ changes:
       Added e2e test for CEL Access Log Filter
       Added e2e test for GRPC Access Log Service Sink
       Added e2e test for XDS Metadata
-      Added e2e test for WASM from OCI Images and HTTP Source
+      Added e2e test for Wasm from OCI Images and HTTP Source
       Added e2e test for Service IP Routing
       Added e2e test for Multiple GatewayClasses
       Added e2e test for HTTP Full Path rewrite
