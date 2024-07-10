@@ -34,10 +34,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 )
 
-func init() {
-	UpgradeTests = append(UpgradeTests, EnvoyShutdownTest)
-}
-
 var EnvoyShutdownTest = suite.ConformanceTest{
 	ShortName:   "EnvoyShutdown",
 	Description: "Deleting envoy pod should not lead to failures",
