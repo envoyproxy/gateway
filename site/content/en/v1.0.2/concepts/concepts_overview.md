@@ -27,13 +27,13 @@ There are several resources that play a part in enabling you to meet your Kubern
 
 
 
-[BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy
-[ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy
-[SecurityPolicy]: ../../../api/extension_types#securitypolicy
-[EnvoyProxy]: ../../../api/extension_types#envoyproxy
-[SecurityPolicy]: ../../../api/extension_types#securitypolicy
-[EnvoyPatchPolicy]: ../../../api/extension_types#envoypatchpolicy
-[EnvoyExtensionPolicy]: ../../../api/extension_types#envoyextensionpolicy
+[BackendTrafficPolicy]: ../api/extension_types#backendtrafficpolicy
+[ClientTrafficPolicy]: ../api/extension_types#clienttrafficpolicy
+[SecurityPolicy]: ../api/extension_types#securitypolicy
+[EnvoyProxy]: ../api/extension_types#envoyproxy
+[SecurityPolicy]: ../api/extension_types#securitypolicy
+[EnvoyPatchPolicy]: ../api/extension_types#envoypatchpolicy
+[EnvoyExtensionPolicy]: ../api/extension_types#envoyextensionpolicy
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
 [GatewayClass]: https://gateway-api.sigs.k8s.io/api-types/gatewayclass/
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
