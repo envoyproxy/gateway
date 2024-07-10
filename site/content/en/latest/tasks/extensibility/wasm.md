@@ -8,7 +8,7 @@ Wasm extensions allow you to extend the functionality of Envoy Gateway by runnin
 without modifying the Envoy Gateway binary. These extensions can be written in any language that compiles to Wasm, such as C++, Rust, AssemblyScript, or TinyGo.
 
 Envoy Gateway introduces a new CRD called [EnvoyExtensionPolicy][] that allows the user to configure Wasm extensions.
-This instantiated resource can be linked to a [Gateway][Gateway] and [EnvoyExtensionPolicy][]  resource.
+This instantiated resource can be linked to a [Gateway][Gateway] and [HTTPRoute][HTTPRoute] resource.
 
 ## Prerequisites
 
