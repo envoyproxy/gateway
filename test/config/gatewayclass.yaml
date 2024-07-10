@@ -29,7 +29,7 @@ spec:
             - name: socket-dir
               hostPath:
                 path: /var/run/ext-proc
-                type: ''
+                type: ""
   telemetry:
     metrics:
       prometheus: {}
@@ -46,6 +46,8 @@ spec:
             type: Text
             text: |
               [%START_TIME%] %METADATA(ROUTE:envoy-gateway:resources)% "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
+          matches:
+            - "'x-envoy-logged' in request.headers"
           sinks:
             - type: File
               file:
@@ -58,6 +60,7 @@ spec:
                     port: 4317
                 resources:
                   k8s.cluster.name: "envoy-gateway"
+        - sinks:
             - type: ALS
               als:
                 backendRefs:
@@ -72,6 +75,10 @@ spec:
             namespace: monitoring
             port: 4317
       customTags:
+        "provider":
+          type: Literal
+          literal:
+            value: "otel"
         "k8s.cluster.name":
           type: Literal
           literal:
@@ -158,3 +165,4 @@ metadata:
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
 ---
+

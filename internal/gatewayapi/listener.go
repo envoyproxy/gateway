@@ -247,6 +247,16 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 	irAccessLog := &ir.AccessLog{}
 	// translate the access log configuration to the IR
 	for i, accessLog := range envoyproxy.Spec.Telemetry.AccessLog.Settings {
+		var format egv1a1.ProxyAccessLogFormat
+		if accessLog.Format != nil {
+			format = *accessLog.Format
+		} else {
+			format = egv1a1.ProxyAccessLogFormat{
+				Type: egv1a1.ProxyAccessLogFormatTypeText,
+				// Empty text format means default format
+			}
+		}
+
 		for j, sink := range accessLog.Sinks {
 			switch sink.Type {
 			case egv1a1.ProxyAccessLogSinkTypeFile:
@@ -254,21 +264,21 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					continue
 				}
 
-				switch accessLog.Format.Type {
+				switch format.Type {
 				case egv1a1.ProxyAccessLogFormatTypeText:
 					al := &ir.TextAccessLog{
-						Format: accessLog.Format.Text,
+						Format: format.Text,
 						Path:   sink.File.Path,
 					}
 					irAccessLog.Text = append(irAccessLog.Text, al)
 				case egv1a1.ProxyAccessLogFormatTypeJSON:
-					if len(accessLog.Format.JSON) == 0 {
+					if len(format.JSON) == 0 {
 						// TODO: use a default JSON format if not specified?
 						continue
 					}
 
 					al := &ir.JSONAccessLog{
-						JSON: accessLog.Format.JSON,
+						JSON: format.JSON,
 						Path: sink.File.Path,
 					}
 					irAccessLog.JSON = append(irAccessLog.JSON, al)
@@ -309,11 +319,11 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					al.HTTP = http
 				}
 
-				switch accessLog.Format.Type {
+				switch format.Type {
 				case egv1a1.ProxyAccessLogFormatTypeJSON:
-					al.Attributes = accessLog.Format.JSON
+					al.Attributes = format.JSON
 				case egv1a1.ProxyAccessLogFormatTypeText:
-					al.Text = accessLog.Format.Text
+					al.Text = format.Text
 				}
 
 				irAccessLog.ALS = append(irAccessLog.ALS, al)
@@ -348,11 +358,11 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					al.Authority = host
 				}
 
-				switch accessLog.Format.Type {
+				switch format.Type {
 				case egv1a1.ProxyAccessLogFormatTypeJSON:
-					al.Attributes = accessLog.Format.JSON
+					al.Attributes = format.JSON
 				case egv1a1.ProxyAccessLogFormatTypeText:
-					al.Text = accessLog.Format.Text
+					al.Text = format.Text
 				}
 
 				irAccessLog.OpenTelemetry = append(irAccessLog.OpenTelemetry, al)
@@ -466,7 +476,7 @@ func (t *Translator) processBackendRefs(backendRefs []egv1a1.BackendRef, namespa
 			return nil, err
 		}
 
-		ds := t.processServiceDestinationSetting(ref.BackendObjectReference, ns, ir.GRPC, resources, envoyProxy)
+		ds := t.processServiceDestinationSetting(ref.BackendObjectReference, ns, ir.TCP, resources, envoyProxy)
 		result = append(result, ds)
 	}
 	if len(result) == 0 {
