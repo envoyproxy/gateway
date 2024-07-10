@@ -36,7 +36,7 @@ changes:
       Updated the Bootstrap field within the EnvoyProxy CRD with an additional value
       field to specify bootstrap config
 
-  - area: ci-tooling-testing
+  - area: CI tooling testing
     change: |
 
   - area: conformance
