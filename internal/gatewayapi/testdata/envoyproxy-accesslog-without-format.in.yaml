@@ -1,0 +1,138 @@
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway-system
+    name: test
+  spec:
+    telemetry:
+      accessLog:
+        settings:
+        - sinks:
+          - type: File
+            file:
+              path: /dev/stdout
+          - type: ALS
+            als:
+              logName: accesslog
+              backendRefs:
+              - name: envoy-als
+                namespace: monitoring
+                port: 9000
+              http:
+                requestHeaders:
+                - x-client-ip-address
+                responseHeaders:
+                - cache-control
+                responseTrailers:
+                - expires
+              type: HTTP
+          - type: ALS
+            als:
+              backendRefs:
+              - name: envoy-als
+                namespace: monitoring
+                port: 9000
+              type: TCP
+          - type: OpenTelemetry
+            openTelemetry:
+              host: otel-collector.monitoring.svc.cluster.local
+              port: 4317
+              resources:
+                k8s.cluster.name: "cluster-1"
+    provider:
+      type: Kubernetes
+      kubernetes:
+        envoyService:
+          type: LoadBalancer
+        envoyDeployment:
+          replicas: 2
+          container:
+            env:
+            - name: env_a
+              value: env_a_value
+            - name: env_b
+              value: env_b_name
+            image: "envoyproxy/envoy:distroless-dev"
+            resources:
+              requests:
+                cpu: 100m
+                memory: 512Mi
+            securityContext:
+              runAsUser: 2000
+              allowPrivilegeEscalation: false
+          pod:
+            annotations:
+              key1: val1
+              key2: val2
+            affinity:
+              nodeAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                  nodeSelectorTerms:
+                  - matchExpressions:
+                    - key: cloud.google.com/gke-nodepool
+                      operator: In
+                      values:
+                      - router-node
+            tolerations:
+            - effect: NoSchedule
+              key: node-type
+              operator: Exists
+              value: "router"
+            securityContext:
+              runAsUser: 1000
+              runAsGroup: 3000
+              fsGroup: 2000
+              fsGroupChangePolicy: "OnRootMismatch"
+            volumes:
+            - name: certs
+              secret:
+                secretName: envoy-cert
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+services:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: envoy-als
+    namespace: monitoring
+  spec:
+    type: ClusterIP
+    ports:
+    - name: grpc
+      port: 9000
+      appProtocol: grpc
+      protocol: TCP
+      targetPort: 9000
+endpointSlices:
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    name: endpointslice-envoy-als
+    namespace: monitoring
+    labels:
+      kubernetes.io/service-name: envoy-als
+  addressType: IPv4
+  ports:
+  - name: grpc
+    protocol: TCP
+    appProtocol: grpc
+    port: 9090
+  endpoints:
+  - addresses:
+    - "10.240.0.10"
+    conditions:
+      ready: true

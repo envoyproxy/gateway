@@ -203,6 +203,8 @@ opentelemetry-collector:
             # Loki will convert this to k8s_pod_name label.
             value: k8s.pod.name, k8s.namespace.name
     receivers:
+      zipkin:
+        endpoint: ${env:MY_POD_IP}:9411
       otlp:
         protocols:
           grpc:
@@ -230,3 +232,4 @@ opentelemetry-collector:
             - otlp
           receivers:
             - otlp
+            - zipkin

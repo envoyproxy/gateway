@@ -161,7 +161,7 @@ echo $GATEWAY_HOST
 Send a request to the backend service without `Authentication` header:
 
 ```shell
-curl -v -H "Host: www.example.com" "http://${GATEWAY_HOST}/"
+curl -kv -H "Host: www.example.com" "https://${GATEWAY_HOST}/" 
 ```
 
 You should see `401 Unauthorized` in the response, indicating that the request is not allowed without authentication.
