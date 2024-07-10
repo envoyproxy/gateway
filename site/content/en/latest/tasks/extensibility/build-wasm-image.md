@@ -9,16 +9,15 @@ Additionally, users can leverage existing image toolchain to build and manage Wa
 This document describes how to build OCI images which are consumable by Envoy Gateway. These formats are also compatible with
 Istio's Wasm extension API. 
 
-## Overview
+## Wasm Image Formats
 
 There are two types of OCI images that are supported by Envoy Gateway. One is in the Docker format, and another is the standard 
-OCI specification compliant format. Please note that both of them are supported by any OCI registries, and you can operate 
-on standard CLI tools e.g. Docker CLI, [buildah](https://buildah.io/), etc. You can choose either format depending on your preference, 
-and both types of containers are consumable by Envoy Gateway [EnvoyExtensionPolicy][] API.
+OCI specification compliant format. Please note that both of them are supported by any OCI registries. You can choose 
+either format depending on your preference, and both types of images are consumable by Envoy Gateway [EnvoyExtensionPolicy][] API.
 
 ## Build Wasm Docker image
 
-We assume that you have a valid Wasm binary named `plugin.wasm`.
+We assume that you have a valid Wasm binary named `plugin.wasm`. Then you can build a Docker image with the Docker CLI.
 
 1. First, we prepare the following Dockerfile:
 
@@ -45,7 +44,8 @@ $ docker push my-registry/mywasm:0.1.0
 
 ## Build Wasm OCI image
 
-We assume that you have a valid Wasm binary named `plugin.wasm` that you want to package as an image.
+We assume that you have a valid Wasm binary named `plugin.wasm`, and you have [buildah](https://buildah.io/) installed on your machine. 
+Then you can build an OCI image with the `buildah` CLI.
 
 1. First, we create a working container from `scratch` base image with `buildah from` command.
 
@@ -63,7 +63,7 @@ af82a227630327c24026d7c6d3057c3d5478b14426b74c547df011ca5f23d271
 
 **Note: you must execute `buildah copy` exactly once in order to end up having only one layer in produced images**
 
-4. Now, you can build a *compat* image and push it to your registry via `buildah commit` command
+4. Now, you can build an OCI image and push it to your registry via `buildah commit` command
 
 ```
 $ buildah commit mywasm docker://my-remote-registry/mywasm:0.1.0
