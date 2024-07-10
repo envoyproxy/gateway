@@ -130,6 +130,7 @@ changes:
 
     breaking-change: |
       Gateway-API BackendTLSPolicy v1alpha3 is incompatible with previous versions of the CRD
+      xPolicy targetRefs no longer support a target namespace
 
 
   - area: conformance
