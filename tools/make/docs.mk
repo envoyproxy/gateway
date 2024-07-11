@@ -14,7 +14,8 @@ docs: docs.clean helm-readme-gen docs-api copy-current-release-docs ## Generate 
 .PHONY: copy-current-release-docs
 copy-current-release-docs:  ## Generate Envoy Gateway Docs Sources
 	@$(LOG_TARGET)
-	rm -rf $(ROOT_DIR)/site/content/en/docs/**
+	rm -rf $(ROOT_DIR)/site/content/en/docs
+	mkdir -p $(ROOT_DIR)/site/content/en/docs
 	cp -r $(ROOT_DIR)/site/content/en/v1.0.2/** $(ROOT_DIR)/site/content/en/docs
 
 .PHONY: docs-release
