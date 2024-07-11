@@ -408,7 +408,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
+									Format: &egv1a1.ProxyAccessLogFormat{
 										Type: egv1a1.ProxyAccessLogFormatTypeText,
 									},
 								},
@@ -431,7 +431,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
+									Format: &egv1a1.ProxyAccessLogFormat{
 										Type: egv1a1.ProxyAccessLogFormatTypeText,
 										Text: ptr.To("[%START_TIME%]"),
 									},

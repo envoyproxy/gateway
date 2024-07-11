@@ -46,6 +46,8 @@ const (
 	gatewayAPIType = "gateway-api"
 	xdsType        = "xds"
 	irType         = "ir"
+
+	dummyClusterIP = "1.2.3.4"
 )
 
 type TranslationResult struct {
@@ -576,7 +578,7 @@ func addMissingServices(requiredServices map[string]*corev1.Service, obj interfa
 			refs = append(refs, rule.BackendRefs...)
 		}
 	case *gwapiv1a2.UDPRoute:
-		protocol = corev1.Protocol(gatewayapi.UDPProtocol)
+		protocol = gatewayapi.UDPProtocol
 		objNamespace = route.Namespace
 		for _, rule := range route.Spec.Rules {
 			refs = append(refs, rule.BackendRefs...)
@@ -609,12 +611,11 @@ func addMissingServices(requiredServices map[string]*corev1.Service, obj interfa
 				},
 				Spec: corev1.ServiceSpec{
 					// Just a dummy IP
-					ClusterIP: "127.0.0.1",
+					ClusterIP: dummyClusterIP,
 					Ports:     []corev1.ServicePort{servicePort},
 				},
 			}
 			requiredServices[key] = service
-
 		} else {
 			inserted := false
 			for _, port := range service.Spec.Ports {
@@ -791,6 +792,10 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 					Namespace: namespace,
 				},
 				Spec: typedSpec.(corev1.ServiceSpec),
+			}
+			if addMissingResources && len(service.Spec.ClusterIP) == 0 {
+				// fill with dummy IP when service clusterIP is empty
+				service.Spec.ClusterIP = dummyClusterIP
 			}
 			resources.Services = append(resources.Services, service)
 		case egv1a1.KindEnvoyPatchPolicy:

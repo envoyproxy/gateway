@@ -74,7 +74,7 @@ jobs:
       run: make build-multiarch PLATFORMS="linux_amd64 linux_arm64"
 
     - name: Upload EG Binaries
-      uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808  # v4.3.3
+      uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b  # v4.3.4
       with:
         name: envoy-gateway
         path: bin/
@@ -137,6 +137,8 @@ jobs:
 
   benchmark-test:
     runs-on: ubuntu-latest
+    # There's a different workflow for benchmark-test on push.
+    if: ${{ ! startsWith(github.event_name, 'push') }}
     needs: [build]
     steps:
     - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
@@ -151,12 +153,13 @@ jobs:
         BENCHMARK_RPS: 10000
         BENCHMARK_CONNECTIONS: 100
         BENCHMARK_DURATION: 30
-        BENCHMARK_CPU_LIMITS: 1000
-        BENCHMARK_MEMORY_LIMITS: 2000
+        BENCHMARK_CPU_LIMITS: 1000m
+        BENCHMARK_MEMORY_LIMITS: 2000Mi
+        BENCHMARK_REPORT_DIR: benchmark_report
       run: make benchmark
 
     - name: Read Benchmark report
-      run: cat test/benchmark/benchmark_report.md
+      run: cat test/benchmark/benchmark_report/benchmark_report.md
 
   publish:
     runs-on: ubuntu-latest
