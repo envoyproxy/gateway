@@ -17,8 +17,40 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # For push event, we run benchmark test here because we need to
+  # include benchmark report in the latest release.
+  benchmark-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
+    - uses: ./tools/github-actions/setup-deps
+
+    # Benchmark
+    - name: Run Benchmark tests
+      env:
+        KIND_NODE_TAG: v1.28.9
+        IMAGE_PULL_POLICY: IfNotPresent
+        # Args for benchmark test
+        BENCHMARK_RPS: 10000
+        BENCHMARK_CONNECTIONS: 100
+        BENCHMARK_DURATION: 30
+        BENCHMARK_CPU_LIMITS: 1000m
+        BENCHMARK_MEMORY_LIMITS: 2000Mi
+        BENCHMARK_REPORT_DIR: benchmark_report
+      run: make benchmark
+
+    - name: Package benchmark report
+      run: cd test/benchmark && zip -r benchmark_report.zip benchmark_report
+
+    - name: Upload Benchmark Report
+      uses: actions/upload-artifact@v4  # version is better be consistent with actions/download-artifact
+      with:
+        name: benchmark_report
+        path: test/benchmark/benchmark_report.zip
+
   latest-release:
     runs-on: ubuntu-22.04
+    needs: [benchmark-test]
     permissions:
       contents: write
     steps:
@@ -28,6 +60,12 @@ jobs:
     - name: Generate Release Manifests
       # Use `Always` image pull policy for latest version.
       run: IMAGE_PULL_POLICY=Always make generate-manifests IMAGE=envoyproxy/gateway-dev TAG=latest OUTPUT_DIR=release-artifacts
+
+    - name: Download Benchmark Report
+      uses: actions/download-artifact@v4
+      with:
+        name: benchmark_report
+        path: release-artifacts
 
     - name: Build egctl latest multiarch binaries
       run: |
@@ -70,6 +108,7 @@ jobs:
         files: |
           release-artifacts/install.yaml
           release-artifacts/quickstart.yaml
+          release-artifacts/benchmark_report.zip
           egctl_latest_linux_amd64.tar.gz
           egctl_latest_linux_arm64.tar.gz
           egctl_latest_darwin_amd64.tar.gz
