@@ -113,22 +113,22 @@ spec:
 ## Features / API Fields
 Here is a list of features that can be included in this API
 * Network Filters:
-    * WASM
+    * Wasm
     * Golang
 * HTTP Filters:
     * External Processing
     * Lua
-    * WASM
+    * Wasm
     * Golang
 
 ## Design Decisions
 * This API will only support a single `targetRef` and can bind to a `Gateway` resource or a `HTTPRoute` or `GRPCRoute` or `TCPRoute`.
-* Extensions that support both Network and HTTP filter variants (e.g. WASM, Golang) will be translated to the appropriate filter type according to the sort of route that they attach to.
+* Extensions that support both Network and HTTP filter variants (e.g. Wasm, Golang) will be translated to the appropriate filter type according to the sort of route that they attach to.
 * Extensions that only support HTTP extensibility (Ext-Proc, LUA) can only be attached to HTTP/GRPC Routes.  
 * A user-defined extension that is added to the request processing flow can have a significant impact on security,
   resilience and performance of the proxy. Gateway Operators can restrict access to the extensibility policy using K8s RBAC. 
 * Users may need to customize the order of extension and built-in filters. This will be addressed in a separate issue.  
-* Gateway operators may need to include multiple extensions (e.g. WASM modules developed by different teams and distributed separately). 
+* Gateway operators may need to include multiple extensions (e.g. Wasm modules developed by different teams and distributed separately). 
   This API will support attachment of multiple policies. Extension will execute in an order defined by the priority field.
 * This API resource MUST be part of same namespace as the targetRef resource
 * If the policy targets a resource but cannot attach to it, this information should be reflected
