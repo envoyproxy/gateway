@@ -42,13 +42,13 @@ var metricsTableHeader = []tableHeader{
 	{
 		name:      "Envoy Gateway Memory",
 		unit:      "MiB",
-		promQL:    `container_memory_working_set_bytes{namespace="envoy-gateway-system",container="envoy-gateway"}/1024/1024`,
+		promQL:    `process_resident_memory_bytes{namespace="envoy-gateway-system", control_plane="envoy-gateway"}/1024/1024`,
 		queryType: querySum,
 	},
 	{
 		name:      "Envoy Gateway CPU",
 		unit:      "s",
-		promQL:    `container_cpu_usage_seconds_total{namespace="envoy-gateway-system",container="envoy-gateway"}`,
+		promQL:    `process_cpu_seconds_total{namespace="envoy-gateway-system", control_plane="envoy-gateway"}`,
 		queryType: querySum,
 	},
 	{
