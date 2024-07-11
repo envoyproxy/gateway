@@ -7,6 +7,9 @@ CLEAN_NODE_MODULES ?= true
 .PHONY: docs
 docs: docs.clean helm-readme-gen docs-api ## Generate Envoy Gateway Docs Sources
 	@$(LOG_TARGET)
+	rm -rf $(ROOT_DIR)/site/content/en/docs
+	mkdir $(ROOT_DIR)/site/content/en/docs
+	cp -r $(ROOT_DIR)/site/content/en/v1.0.2/** $(ROOT_DIR)/site/content/en/docs
 	cd $(ROOT_DIR)/site && npm install
 	cd $(ROOT_DIR)/site && npm run build:production
 	cp tools/hack/get-egctl.sh $(DOCS_OUTPUT_DIR)
