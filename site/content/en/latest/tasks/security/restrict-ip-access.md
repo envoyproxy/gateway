@@ -175,8 +175,6 @@ curl -v -H "Host: www.example.com" -H "X-Forwarded-For: 10.0.1.1" "http://${GATE
 
 The request should be allowed and you should see the response from the backend service.
 
-```shell
-
 ## Clean-Up
 
 Follow the steps from the [Quickstart](../../quickstart) to uninstall Envoy Gateway and the example manifest.
