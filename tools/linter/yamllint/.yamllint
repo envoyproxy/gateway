@@ -9,6 +9,7 @@ ignore: |
   charts/gateway-addons-helm/
   bin/install.yaml
   test/helm/
+  examples/extension-server/charts/extension-server
 
 rules:
   braces:
