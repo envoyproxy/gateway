@@ -34,8 +34,6 @@ This Wasm extension adds a custom header `x-wasm-custom: FOO` to the response.
 
 This [EnvoyExtensionPolicy][] configuration fetches the Wasm extension from an HTTP URL.
 
-```yaml
-
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
 
@@ -98,8 +96,6 @@ kubectl get envoyextensionpolicy/http-wasm-source-test -o yaml
 ### Image Wasm Extension
 
 This [EnvoyExtensionPolicy][] configuration fetches the Wasm extension from an OCI image.
-
-```yaml
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
