@@ -6,14 +6,12 @@ Envoy Gateway provides an [EnvoyProxy][] CRD that can be linked to the Parameter
 in GatewayClass, allowing cluster admins to customize the managed EnvoyProxy Deployment and
 Service. To learn more about GatewayClass and ParametersRef, please refer to [Gateway API documentation][].
 
-## Installation
+## Prerequisites
 
 Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
-## Add GatewayClass ParametersRef
-
-First, you need to add ParametersRef in GatewayClass, and refer to EnvoyProxy Config:
+Before you start, you need to add `ParametersRef` in GatewayClass, and refer to EnvoyProxy Config:
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -745,6 +743,8 @@ spec:
 
 You can customize the EnvoyProxy using patches.
 
+### Patching Deployment for EnvoyProxy
+
 For example, the following configuration will add resource limits to the `envoy` and the `shutdown-manager` containers in the `envoyproxy` deployment:
 
 {{< tabpane text=true >}}
@@ -821,6 +821,61 @@ spec:
 {{< /tabpane >}}
 
 After applying the configuration, you will see the change in both containers in the `envoyproxy` deployment.
+
+### Patching Service for EnvoyProxy
+
+For example, the following configuration will change the internal traffic policy for the `envoyproxy` service:
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: eg
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyService:
+        patch:
+          type: StrategicMerge
+          value:
+            spec:
+              internalTrafficPolicy: Local
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: eg
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyService:
+        patch:
+          type: StrategicMerge
+          value:
+            spec:
+              internalTrafficPolicy: Local
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+After applying the configuration, you will see the `internalTrafficPolicy` is changed from `Cluster` to `Local` in the `envoyproxy` service.
 
 ## Customize Filter Order
 
