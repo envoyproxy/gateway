@@ -13,6 +13,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path"
 	"strconv"
 	"testing"
 	"time"
@@ -48,7 +49,7 @@ type BenchmarkTestSuite struct {
 	TimeoutConfig  config.TimeoutConfig
 	ControllerName string
 	Options        BenchmarkOptions
-	ReportSavePath string
+	ReportSaveDir  string
 
 	// Resources template for supported benchmark targets.
 	GatewayTemplate    *gwapiv1.Gateway
@@ -64,7 +65,7 @@ type BenchmarkTestSuite struct {
 }
 
 func NewBenchmarkTestSuite(client client.Client, options BenchmarkOptions,
-	gatewayManifest, httpRouteManifest, benchmarkClientManifest, reportPath string,
+	gatewayManifest, httpRouteManifest, benchmarkClientManifest, reportDir string,
 ) (*BenchmarkTestSuite, error) {
 	var (
 		gateway         = new(gwapiv1.Gateway)
@@ -101,6 +102,19 @@ func NewBenchmarkTestSuite(client client.Client, options BenchmarkOptions,
 	config.SetupTimeoutConfig(&timeoutConfig)
 	timeoutConfig.RouteMustHaveParents = 180 * time.Second
 
+	// Ensure the report directory exist.
+	if len(reportDir) > 0 {
+		if _, err = os.Stat(reportDir); err != nil {
+			if os.IsNotExist(err) {
+				if err = os.MkdirAll(reportDir, os.ModePerm); err != nil {
+					return nil, err
+				}
+			} else {
+				return nil, err
+			}
+		}
+	}
+
 	// Prepare static options for benchmark client.
 	staticArgs := prepareBenchmarkClientStaticArgs(options)
 	container := &benchmarkClient.Spec.Template.Spec.Containers[0]
@@ -121,7 +135,7 @@ func NewBenchmarkTestSuite(client client.Client, options BenchmarkOptions,
 		Options:            options,
 		TimeoutConfig:      timeoutConfig,
 		ControllerName:     DefaultControllerName,
-		ReportSavePath:     reportPath,
+		ReportSaveDir:      reportDir,
 		GatewayTemplate:    gateway,
 		HTTPRouteTemplate:  httproute,
 		BenchmarkClientJob: benchmarkClient,
@@ -158,11 +172,12 @@ func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 		}
 	}
 
-	if len(b.ReportSavePath) > 0 {
-		if err := os.WriteFile(b.ReportSavePath, writer.Bytes(), 0o600); err != nil {
-			t.Errorf("Error writing report to path '%s': %v", b.ReportSavePath, err)
+	if len(b.ReportSaveDir) > 0 {
+		reportPath := path.Join(b.ReportSaveDir, "benchmark_report.md")
+		if err := os.WriteFile(reportPath, writer.Bytes(), 0o600); err != nil {
+			t.Errorf("Error writing report to path '%s': %v", reportPath, err)
 		} else {
-			t.Logf("Writing report to path '%s' successfully", b.ReportSavePath)
+			t.Logf("Writing report to path '%s' successfully", reportPath)
 		}
 	} else {
 		t.Logf("%s", writer.Bytes())
