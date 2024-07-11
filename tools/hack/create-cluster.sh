@@ -24,6 +24,10 @@ for _ in $(seq 1 "${NUM_WORKERS}"); do
 done
 fi
 
+## Check if kind cluster already exists.
+if tools/bin/kind get clusters | grep -q "${CLUSTER_NAME}"; then
+  echo "Cluster ${CLUSTER_NAME} already exists."
+else
 ## Create kind cluster.
 if [[ -z "${KIND_NODE_TAG}" ]]; then
   cat << EOF | tools/bin/kind create cluster --name "${CLUSTER_NAME}" --config -
@@ -34,6 +38,8 @@ else
 ${KIND_CFG}
 EOF
 fi
+fi
+
 
 ## Install MetalLB.
 kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/"${METALLB_VERSION}"/config/manifests/metallb-native.yaml
