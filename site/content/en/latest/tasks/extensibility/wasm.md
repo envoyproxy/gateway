@@ -117,7 +117,7 @@ spec:
     code:
       type: Image
       image:
-        url: zhaohuabing/testwasm:0.1.0
+        url: zhaohuabing/testwasm:v0.0.1
 EOF
 ```
 
@@ -142,7 +142,7 @@ spec:
       code:
         type: Image
         image:
-          url: zhaohuabing/testwasm:0.1.0
+          url: zhaohuabing/testwasm:v0.0.1
 ```
 
 {{% /tab %}}
