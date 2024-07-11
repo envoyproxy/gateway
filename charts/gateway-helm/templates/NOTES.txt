@@ -15,6 +15,6 @@ To learn more about the release, try:
   $ helm status {{ .Release.Name }} -n {{ .Release.Namespace }}
   $ helm get all {{ .Release.Name }} -n {{ .Release.Namespace }}
 
-To have a quickstart of Envoy Gateway, please refer to https://gateway.envoyproxy.io/latest/user/quickstart.
+To have a quickstart of Envoy Gateway, please refer to https://gateway.envoyproxy.io/latest/tasks/quickstart.
 
 To get more details, please visit https://gateway.envoyproxy.io and https://github.com/envoyproxy/gateway.

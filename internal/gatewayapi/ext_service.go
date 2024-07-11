@@ -82,7 +82,7 @@ func (t *Translator) processExtServiceDestination(
 	return ds, nil
 }
 
-// TODO: also refer to extension type, as WASM may also introduce destinations
+// TODO: also refer to extension type, as Wasm may also introduce destinations
 func irIndexedExtServiceDestinationName(policyNamespacedName types.NamespacedName, policyKind string, idx int) string {
 	return strings.ToLower(fmt.Sprintf(
 		"%s/%s/%s/%d",

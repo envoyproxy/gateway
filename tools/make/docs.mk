@@ -1,5 +1,6 @@
 DOCS_OUTPUT_DIR := site/public
 RELEASE_VERSIONS ?= $(foreach v,$(wildcard ${ROOT_DIR}/docs/*),$(notdir ${v}))
+CLEAN_NODE_MODULES ?= true
 
 ##@ Docs
 
@@ -26,7 +27,9 @@ clean: docs.clean
 docs.clean:
 	@$(LOG_TARGET)
 	rm -rf $(DOCS_OUTPUT_DIR)
+ifeq ($(CLEAN_NODE_MODULES),true)
 	rm -rf site/node_modules
+endif
 	rm -rf site/resources
 	rm -f site/package-lock.json
 	rm -f site/.hugo_build.lock
@@ -112,4 +115,6 @@ docs-check-links:
 
 release-notes-docs: $(tools/release-notes-docs)
 	@$(LOG_TARGET)
-	$(tools/release-notes-docs) release-notes/$(TAG).yaml site/content/en/latest/releases/; \
+	@for file in $(wildcard release-notes/*.yaml); do \
+		$(tools/release-notes-docs) $$file site/content/en/news/releases/notes; \
+	done
