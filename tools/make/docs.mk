@@ -12,7 +12,7 @@ docs: docs.clean helm-readme-gen docs-api copy-current-release-docs ## Generate 
 	cp tools/hack/get-egctl.sh $(DOCS_OUTPUT_DIR)
 
 .PHONY: copy-current-release-docs
-copy-current-release-docs:  ## Generate Envoy Gateway Docs Sources
+copy-current-release-docs:  ## Copy the current release docs to the docs folder
 	@$(LOG_TARGET)
 	rm -rf $(ROOT_DIR)/site/content/en/docs
 	mkdir -p $(ROOT_DIR)/site/content/en/docs
@@ -22,7 +22,7 @@ copy-current-release-docs:  ## Generate Envoy Gateway Docs Sources
 docs-release: docs-release-prepare release-notes-docs docs-release-gen docs  ## Generate Envoy Gateway Release Docs
 
 .PHONY: docs-serve
-docs-serve: ## Start Envoy Gateway Site Locally
+docs-serve: copy-current-release-docs ## Start Envoy Gateway Site Locally
 	@$(LOG_TARGET)
 	cd $(ROOT_DIR)/site && npm run serve
 
