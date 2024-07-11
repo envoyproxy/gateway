@@ -10,7 +10,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/ptr"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
@@ -41,7 +40,7 @@ func TestExtractTargetRefs(t *testing.T) {
 				"targetRefs": "someValue",
 			},
 			output:        nil,
-			expectedError: "targetRefs is not an array",
+			expectedError: "no targets found for the policy",
 		},
 		{
 			desc: "invalid targetref",
@@ -51,7 +50,7 @@ func TestExtractTargetRefs(t *testing.T) {
 				},
 			},
 			output:        nil,
-			expectedError: "invalid targetRef found: {\"someKey\":\"someValue\"}",
+			expectedError: "no targets found for the policy",
 		},
 		{
 			desc: "valid single targetRef",
@@ -105,53 +104,6 @@ func TestExtractTargetRefs(t *testing.T) {
 				},
 			},
 		},
-		{
-			desc: "valid multiple targetRefs and targetRef",
-			specInput: map[string]any{
-				"targetRefs": []any{
-					map[string]any{
-						"group": "some.group",
-						"kind":  "SomeKind2",
-						"name":  "othername",
-					},
-					map[string]any{
-						"group": "some.group",
-						"kind":  "SomeKind",
-						"name":  "name",
-					},
-				},
-				"targetRef": map[string]any{
-					"group":       "some.group",
-					"kind":        "SomeKind",
-					"name":        "three",
-					"sectionName": "one",
-				},
-			},
-			output: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-				{
-					LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-						Group: "some.group",
-						Kind:  "SomeKind2",
-						Name:  "othername",
-					},
-				},
-				{
-					LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-						Group: "some.group",
-						Kind:  "SomeKind",
-						Name:  "name",
-					},
-				},
-				{
-					LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-						Group: "some.group",
-						Kind:  "SomeKind",
-						Name:  "three",
-					},
-					SectionName: ptr.To(gwapiv1a2.SectionName("one")),
-				},
-			},
-		},
 	}
 
 	for _, currTest := range tests {
@@ -160,7 +112,7 @@ func TestExtractTargetRefs(t *testing.T) {
 				Object: map[string]any{},
 			}
 			policy.Object["spec"] = currTest.specInput
-			targets, err := extractTargetRefs(policy)
+			targets, err := extractTargetRefs(policy, []*GatewayContext{})
 
 			if currTest.expectedError != "" {
 				require.EqualError(t, err, currTest.expectedError)
