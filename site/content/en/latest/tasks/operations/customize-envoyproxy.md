@@ -824,7 +824,7 @@ After applying the configuration, you will see the change in both containers in 
 
 ### Patching Service for EnvoyProxy
 
-For example, the following configuration will change the internal traffic policy for the `envoyproxy` service:
+For example, the following configuration will add an annotation for the `envoyproxy` service:
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -844,8 +844,9 @@ spec:
         patch:
           type: StrategicMerge
           value:
-            spec:
-              internalTrafficPolicy: Local
+            metadata:
+              annotations:
+                custom-annotation: foobar
 EOF
 ```
 
@@ -868,14 +869,15 @@ spec:
         patch:
           type: StrategicMerge
           value:
-            spec:
-              internalTrafficPolicy: Local
+            metadata:
+              annotations:
+                custom-annotation: foobar
 ```
 
 {{% /tab %}}
 {{< /tabpane >}}
 
-After applying the configuration, you will see the `internalTrafficPolicy` is changed from `Cluster` to `Local` in the `envoyproxy` service.
+After applying the configuration, you will see the `custom-annotation: foobar` has been added to the `envoyproxy` service.
 
 ## Customize Filter Order
 
