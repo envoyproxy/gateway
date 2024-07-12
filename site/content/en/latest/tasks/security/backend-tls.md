@@ -28,9 +28,11 @@ openssl req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 -subj '/O=example In
 Create a certificate and a private key for `www.example.com`:
 
 ```shell
-openssl req -out www.example.com.csr -newkey rsa:2048 -nodes -keyout www.example.com.key -subj "/CN=www.example.com/O=example organization"
+openssl req -out www.example.com.csr -newkey rsa:2048 -nodes -keyout www.example.com.key -subj "/CN=www.example.com/O=example organization" -addext "subjectAltName = DNS:www.example.com"
 openssl x509 -req -days 365 -CA ca.crt -CAkey ca.key -set_serial 0 -in www.example.com.csr -out www.example.com.crt
 ```
+
+Note that the certificate must contain a DNS SAN for the relevant domain.
 
 Store the cert/key in a Secret:
 
@@ -206,7 +208,7 @@ Verify the HTTPRoute status:
 kubectl get HTTPRoute backend -o yaml
 ```
 
-## Testing
+## Testing backend TLS
 
 {{< tabpane text=true >}}
 {{% tab header="With External LoadBalancer Support" %}}
@@ -275,4 +277,113 @@ Inspect the output and see that the response contains the details of the TLS han
 {{% /tab %}}
 {{< /tabpane >}}
 
+## Customize backend TLS Parameters
+
+In addition to enablement of backend TLS with the Gateway-API BackendTLSPolicy, Envoy Gateway supports customizing  TLS parameters. 
+To achieve this, the [EnvoyProxy][] resource can be used to specify TLS parameters. We will customize the TLS version in this example. 
+
+First, you need to add ParametersRef in GatewayClass, and refer to EnvoyProxy Config:
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: custom-proxy-config
+    namespace: envoy-gateway-system
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: custom-proxy-config
+    namespace: envoy-gateway-system
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+You can customize the EnvoyProxy Backend TLS Parameters via EnvoyProxy Config like:
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: envoy-gateway-system
+spec:
+  backendTLS:
+    minVersion: "1.3"
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: envoy-gateway-system
+spec:
+  backendTLS:
+    MinVersion: "1.3"
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+## Testing TLS Parameters
+
+Query the TLS-enabled backend through Envoy proxy:
+
+```shell
+curl -v -HHost:www.example.com --resolve "www.example.com:80:127.0.0.1" \
+http://www.example.com:80/get
+```
+
+Inspect the output and see that the response contains the details of the TLS handshake between Envoy and the backend. 
+The TLS version is now TLS1.3, as configured in the EnvoyProxy resource. The TLS cipher is also changed, since TLS1.3 supports different ciphers from TLS1.2.
+
+```shell
+< HTTP/1.1 200 OK
+[...]
+ "tls": {
+  "version": "TLSv1.3",
+  "serverName": "www.example.com",
+  "negotiatedProtocol": "http/1.1",
+  "cipherSuite": "TLS_AES_128_GCM_SHA256"
+ }
+```
+
 [BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/
+[EnvoyProxy]: ../../../api/extension_types#envoyproxy
