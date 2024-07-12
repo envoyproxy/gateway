@@ -542,7 +542,12 @@ func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, 
 	// to targets that were already found via the selectors. Only add them to the returned list if
 	// they are not yet there. Always add them at the end.
 	fastLookup := sets.New(ret...)
+	var emptyTargetRef gwapiv1a2.LocalPolicyTargetReferenceWithSectionName
 	for _, v := range policy.GetTargetRefs() {
+		if v == emptyTargetRef {
+			// This can happen when the targetRef structure is read from extension server policies
+			continue
+		}
 		if !fastLookup.Has(v) {
 			ret = append(ret, v)
 		}
