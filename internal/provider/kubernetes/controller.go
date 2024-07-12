@@ -1280,13 +1280,6 @@ func (r *gatewayAPIReconciler) hasManagedClass(obj client.Object) bool {
 		panic(fmt.Sprintf("unsupported object type %T", obj))
 	}
 
-	// The EnvoyProxy must be in the same namespace as EG.
-	if ep.Namespace != r.namespace {
-		r.log.Info("envoyproxy namespace does not match Envoy Gateway's namespace",
-			"namespace", ep.Namespace, "name", ep.Name)
-		return false
-	}
-
 	gcList := new(gwapiv1.GatewayClassList)
 	err := r.client.List(context.TODO(), gcList)
 	if err != nil {
