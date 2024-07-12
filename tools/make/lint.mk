@@ -68,7 +68,7 @@ lint.shellcheck: $(tools/shellcheck)
 	@$(LOG_TARGET)
 	$(tools/shellcheck) tools/hack/*.sh
 
-.PHONY: lint.fix
+.PHONY: lint.fix-golint
 lint-deps: $(tools/gci)
 lint.fix: ## Run all linter of code sources and fix the issues.
 	@$(LOG_TARGET)
