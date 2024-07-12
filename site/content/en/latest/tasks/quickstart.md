@@ -110,6 +110,8 @@ kubectl apply -f ./gateway-helm/crds/generated
 
 Update your `BackendTLSPolicy` and `GRPCRoute` resources according to Gateway-API [v1.1 Upgrade Notes](https://gateway-api.sigs.k8s.io/guides/#v11-upgrade-notes)
 
+Update your Envoy Gateway xPolicy resources: remove the namespace section from targetRef. 
+
 Install Envoy Gateway v1.1.0:
 
 ```shell
