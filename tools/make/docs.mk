@@ -1,5 +1,7 @@
 DOCS_OUTPUT_DIR := site/public
 RELEASE_VERSIONS ?= $(foreach v,$(wildcard ${ROOT_DIR}/docs/*),$(notdir ${v}))
+LINKINATOR_IGNORE := "github.com githubusercontent.com example.com github.io _print v0.6.0 v0.5.0 v0.4.0 v0.3.0 v0.2.0"
+CLEAN_NODE_MODULES ?= true
 
 ##@ Docs
 
@@ -26,7 +28,9 @@ clean: docs.clean
 docs.clean:
 	@$(LOG_TARGET)
 	rm -rf $(DOCS_OUTPUT_DIR)
+ifeq ($(CLEAN_NODE_MODULES),true)
 	rm -rf site/node_modules
+endif
 	rm -rf site/resources
 	rm -f site/package-lock.json
 	rm -f site/.hugo_build.lock
@@ -108,8 +112,10 @@ docs-check-links:
 	# github.com does not allow access too often, there are a lot of 429 errors
 	# TODO: find a way to remove github.com from ignore list
 	# TODO: example.com is not a valid domain, we should remove it from ignore list
-	linkinator site/public/ -r --concurrency 25 --skip "github.com example.com github.io _print v0.6.0 v0.5.0 v0.4.0 v0.3.0 v0.2.0"
+	linkinator site/public/ -r --concurrency 25 --skip $(LINKINATOR_IGNORE)
 
 release-notes-docs: $(tools/release-notes-docs)
 	@$(LOG_TARGET)
-	$(tools/release-notes-docs) release-notes/$(TAG).yaml site/content/en/latest/releases/; \
+	@for file in $(wildcard release-notes/*.yaml); do \
+		$(tools/release-notes-docs) $$file site/content/en/news/releases/notes; \
+	done
