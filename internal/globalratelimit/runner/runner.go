@@ -110,6 +110,15 @@ func (r *Runner) serveXdsConfigServer(ctx context.Context) {
 	}
 }
 
+func buildXDSResourceFromCache(rateLimitConfigsCache map[string][]cachetype.Resource) types.XdsResources {
+	xdsResourcesToUpdate := types.XdsResources{}
+	for _, xdsR := range rateLimitConfigsCache {
+		xdsResourcesToUpdate[resourcev3.RateLimitConfigType] = append(xdsResourcesToUpdate[resourcev3.RateLimitConfigType], xdsR...)
+	}
+
+	return xdsResourcesToUpdate
+}
+
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// rateLimitConfigsCache is a cache of the rate limit config, which is keyed by the xdsIR key.
 	rateLimitConfigsCache := map[string][]cachetype.Resource{}
@@ -120,11 +129,8 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			r.Logger.Info("received a notification")
 
 			if update.Delete {
-				if err := r.addNewSnapshot(ctx, nil); err != nil {
-					r.Logger.Error(err, "failed to update the config snapshot")
-					errChan <- err
-				}
 				delete(rateLimitConfigsCache, update.Key)
+				r.updateSnapshot(ctx, buildXDSResourceFromCache(rateLimitConfigsCache))
 			} else {
 				// Translate to ratelimit xDS Config.
 				rvt, err := r.translate(update.Value)
@@ -135,13 +141,8 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				// Update ratelimit xDS config cache.
 				if rvt != nil {
 					// Build XdsResources to use for the snapshot update from the cache.
-					xdsResourcesToUpdate := types.XdsResources{}
 					rateLimitConfigsCache[update.Key] = rvt.XdsResources[resourcev3.RateLimitConfigType]
-					for _, xdsR := range rateLimitConfigsCache {
-						xdsResourcesToUpdate[resourcev3.RateLimitConfigType] = append(xdsResourcesToUpdate[resourcev3.RateLimitConfigType], xdsR...)
-					}
-
-					r.updateSnapshot(ctx, xdsResourcesToUpdate)
+					r.updateSnapshot(ctx, buildXDSResourceFromCache(rateLimitConfigsCache))
 				}
 			}
 		},
