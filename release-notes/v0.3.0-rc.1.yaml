@@ -23,7 +23,7 @@ changes:
       Added Support for Routes ReferenceGrant
       Added Support for Namespace Server Config Type
 
-  - area: ci-tooling-testing
+  - area: CI tooling testing
     change: |
       Fixes Make Image Failed in Darwin
       Fixes Wait for Job Succeeded before conformance test

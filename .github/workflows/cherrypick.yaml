@@ -9,26 +9,26 @@ permissions:
   contents: read
 
 jobs:
-  cherry_pick_release_v1_0:
+  cherry_pick_release_v1_1:
     permissions:
       pull-requests: write
       contents: write
     runs-on: ubuntu-22.04
-    name: Cherry pick into release-v1.0
-    if: ${{ contains(github.event.pull_request.labels.*.name, 'cherrypick/release-v1.0') && github.event.pull_request.merged == true }}
+    name: Cherry pick into release-v1.1
+    if: ${{ contains(github.event.pull_request.labels.*.name, 'cherrypick/release-v1.1') && github.event.pull_request.merged == true }}
     steps:
       - name: Checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
         with:
           fetch-depth: 0
-      - name: Cherry pick into release/v1.0
+      - name: Cherry pick into release/v1.1
         uses: carloscastrojumo/github-cherry-pick-action@503773289f4a459069c832dc628826685b75b4b3  # v1.0.10
         with:
-          branch: release/v1.0
-          title: "[release/v1.0] {old_title}"
-          body: "Cherry picking #{old_pull_request_id} onto release/v1.0"
+          branch: release/v1.1
+          title: "[release/v1.1] {old_title}"
+          body: "Cherry picking #{old_pull_request_id} onto release/v1.1"
           labels: |
-            cherrypick/release-v1.0
+            cherrypick/release-v1.1
           # put release manager here
           reviewers: |
-            Xunzhuo
+            guydc

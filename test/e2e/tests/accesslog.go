@@ -152,7 +152,22 @@ var ALSTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "accesslog-als", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-			preCount := ALSLogCount(t, suite)
+
+			preCount := 0
+			// make sure ALS server metric endpoint is ready
+			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
+				func(ctx context.Context) (bool, error) {
+					curCount, err := ALSLogCount(suite)
+					if err != nil {
+						t.Logf("failed to get log count from loki: %v", err)
+						return false, nil
+					}
+					preCount = curCount
+					return true, nil
+				}); err != nil {
+				t.Errorf("failed to get log count from loki: %v", err)
+			}
+
 			expectedResponse := httputils.ExpectedResponse{
 				Request: httputils.Request{
 					Path: "/als",
@@ -170,7 +185,11 @@ var ALSTest = suite.ConformanceTest{
 
 			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
 				func(ctx context.Context) (bool, error) {
-					curCount := ALSLogCount(t, suite)
+					curCount, err := ALSLogCount(suite)
+					if err != nil {
+						t.Logf("failed to get log count from loki: %v", err)
+						return false, nil
+					}
 					return preCount < curCount, nil
 				}); err != nil {
 				t.Errorf("failed to get log count from loki: %v", err)
