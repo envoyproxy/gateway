@@ -124,7 +124,8 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				// Translate to ratelimit xDS Config.
 				rvt, err := r.translate(update.Value)
 				if err != nil {
-					r.Logger.Error(err, err.Error())
+					r.Logger.Error(err, "failed to translate an updated xds-ir to ratelimit xDS Config")
+					errChan <- err
 				}
 
 				// Update ratelimit xDS config cache.
