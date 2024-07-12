@@ -31,20 +31,17 @@ func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, r ResourceRend
 		}
 	)
 
-	resourceApplyTotal.With(labels...).Increment()
-
 	if sa, err = r.ServiceAccount(); err != nil {
-		resourceApplyFailed.With(labels...).Increment()
-
+		resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		return err
 	}
 
 	defer func() {
 		if err == nil {
 			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			resourceApplySuccess.With(labels...).Increment()
+			resourceApplyTotal.WithSuccess(labels...).Increment()
 		} else {
-			resourceApplyFailed.With(labels...).Increment()
+			resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
 	}()
 
@@ -64,11 +61,8 @@ func (i *Infra) createOrUpdateConfigMap(ctx context.Context, r ResourceRender) (
 		}
 	)
 
-	resourceApplyTotal.With(labels...).Increment()
-
 	if cm, err = r.ConfigMap(); err != nil {
-		resourceApplyFailed.With(labels...).Increment()
-
+		resourceApplyTotal.WithFailure(metrics.StatusFailure, labels...).Increment()
 		return err
 	}
 
@@ -79,9 +73,9 @@ func (i *Infra) createOrUpdateConfigMap(ctx context.Context, r ResourceRender) (
 	defer func() {
 		if err == nil {
 			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			resourceApplySuccess.With(labels...).Increment()
+			resourceApplyTotal.WithSuccess(labels...).Increment()
 		} else {
-			resourceApplyFailed.With(labels...).Increment()
+			resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
 	}()
 
@@ -101,11 +95,8 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 		}
 	)
 
-	resourceApplyTotal.With(labels...).Increment()
-
 	if deployment, err = r.Deployment(); err != nil {
-		resourceApplyFailed.With(labels...).Increment()
-
+		resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		return err
 	}
 
@@ -119,9 +110,9 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 	defer func() {
 		if err == nil {
 			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			resourceApplySuccess.With(labels...).Increment()
+			resourceApplyTotal.WithSuccess(labels...).Increment()
 		} else {
-			resourceApplyFailed.With(labels...).Increment()
+			resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
 	}()
 
@@ -141,11 +132,8 @@ func (i *Infra) createOrUpdateDaemonSet(ctx context.Context, r ResourceRender) (
 		}
 	)
 
-	resourceApplyTotal.With(labels...).Increment()
-
 	if daemonSet, err = r.DaemonSet(); err != nil {
-		resourceApplyFailed.With(labels...).Increment()
-
+		resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		return err
 	}
 
@@ -159,9 +147,9 @@ func (i *Infra) createOrUpdateDaemonSet(ctx context.Context, r ResourceRender) (
 	defer func() {
 		if err == nil {
 			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			resourceApplySuccess.With(labels...).Increment()
+			resourceApplyTotal.WithSuccess(labels...).Increment()
 		} else {
-			resourceApplyFailed.With(labels...).Increment()
+			resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
 	}()
 
@@ -179,10 +167,8 @@ func (i *Infra) createOrUpdatePodDisruptionBudget(ctx context.Context, r Resourc
 		}
 	)
 
-	resourceApplyTotal.With(labels...).Increment()
-
 	if pdb, err = r.PodDisruptionBudget(); err != nil {
-		resourceApplyFailed.With(labels...).Increment()
+		resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		return err
 	}
 
@@ -195,9 +181,9 @@ func (i *Infra) createOrUpdatePodDisruptionBudget(ctx context.Context, r Resourc
 	defer func() {
 		if err == nil {
 			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			resourceApplySuccess.With(labels...).Increment()
+			resourceApplyTotal.WithSuccess(labels...).Increment()
 		} else {
-			resourceApplyFailed.With(labels...).Increment()
+			resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
 	}()
 
@@ -218,11 +204,8 @@ func (i *Infra) createOrUpdateHPA(ctx context.Context, r ResourceRender) (err er
 		}
 	)
 
-	resourceApplyTotal.With(labels...).Increment()
-
 	if hpa, err = r.HorizontalPodAutoscaler(); err != nil {
-		resourceApplyFailed.With(labels...).Increment()
-
+		resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		return err
 	}
 
@@ -235,9 +218,9 @@ func (i *Infra) createOrUpdateHPA(ctx context.Context, r ResourceRender) (err er
 	defer func() {
 		if err == nil {
 			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			resourceApplySuccess.With(labels...).Increment()
+			resourceApplyTotal.WithSuccess(labels...).Increment()
 		} else {
-			resourceApplyFailed.With(labels...).Increment()
+			resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
 	}()
 
@@ -257,20 +240,17 @@ func (i *Infra) createOrUpdateService(ctx context.Context, r ResourceRender) (er
 		}
 	)
 
-	resourceApplyTotal.With(labels...).Increment()
-
 	if svc, err = r.Service(); err != nil {
-		resourceApplyFailed.With(labels...).Increment()
-
+		resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		return err
 	}
 
 	defer func() {
 		if err == nil {
 			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			resourceApplySuccess.With(labels...).Increment()
+			resourceApplyTotal.WithSuccess(labels...).Increment()
 		} else {
-			resourceApplyFailed.With(labels...).Increment()
+			resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
 	}()
 
@@ -295,14 +275,12 @@ func (i *Infra) deleteServiceAccount(ctx context.Context, r ResourceRender) (err
 		}
 	)
 
-	resourceDeleteTotal.With(labels...).Increment()
-
 	defer func() {
 		if err == nil {
 			resourceDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			resourceDeleteSuccess.With(labels...).Increment()
+			resourceDeleteTotal.WithSuccess(labels...).Increment()
 		} else {
-			resourceDeleteFailed.With(labels...).Increment()
+			resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
 	}()
 
@@ -327,14 +305,12 @@ func (i *Infra) deleteDeployment(ctx context.Context, r ResourceRender) (err err
 		}
 	)
 
-	resourceDeleteTotal.With(labels...).Increment()
-
 	defer func() {
 		if err == nil {
 			resourceDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			resourceDeleteSuccess.With(labels...).Increment()
+			resourceDeleteTotal.WithSuccess(labels...).Increment()
 		} else {
-			resourceDeleteFailed.With(labels...).Increment()
+			resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
 	}()
 
@@ -359,14 +335,12 @@ func (i *Infra) deleteDaemonSet(ctx context.Context, r ResourceRender) (err erro
 		}
 	)
 
-	resourceDeleteTotal.With(labels...).Increment()
-
 	defer func() {
 		if err == nil {
 			resourceDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			resourceDeleteSuccess.With(labels...).Increment()
+			resourceDeleteTotal.WithSuccess(labels...).Increment()
 		} else {
-			resourceDeleteFailed.With(labels...).Increment()
+			resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
 	}()
 
@@ -391,14 +365,12 @@ func (i *Infra) deleteConfigMap(ctx context.Context, r ResourceRender) (err erro
 		}
 	)
 
-	resourceDeleteTotal.With(labels...).Increment()
-
 	defer func() {
 		if err == nil {
 			resourceDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			resourceDeleteSuccess.With(labels...).Increment()
+			resourceDeleteTotal.WithSuccess(labels...).Increment()
 		} else {
-			resourceDeleteFailed.With(labels...).Increment()
+			resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
 	}()
 
@@ -423,14 +395,12 @@ func (i *Infra) deleteService(ctx context.Context, r ResourceRender) (err error)
 		}
 	)
 
-	resourceDeleteTotal.With(labels...).Increment()
-
 	defer func() {
 		if err == nil {
 			resourceDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			resourceDeleteSuccess.With(labels...).Increment()
+			resourceDeleteTotal.WithSuccess(labels...).Increment()
 		} else {
-			resourceDeleteFailed.With(labels...).Increment()
+			resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
 	}()
 
@@ -455,14 +425,12 @@ func (i *Infra) deleteHPA(ctx context.Context, r ResourceRender) (err error) {
 		}
 	)
 
-	resourceDeleteTotal.With(labels...).Increment()
-
 	defer func() {
 		if err == nil {
 			resourceDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			resourceDeleteSuccess.With(labels...).Increment()
+			resourceDeleteTotal.WithSuccess(labels...).Increment()
 		} else {
-			resourceDeleteFailed.With(labels...).Increment()
+			resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
 	}()
 
@@ -487,14 +455,12 @@ func (i *Infra) deletePDB(ctx context.Context, r ResourceRender) (err error) {
 		}
 	)
 
-	resourceDeleteTotal.With(labels...).Increment()
-
 	defer func() {
 		if err == nil {
 			resourceDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			resourceDeleteSuccess.With(labels...).Increment()
+			resourceDeleteTotal.WithSuccess(labels...).Increment()
 		} else {
-			resourceDeleteFailed.With(labels...).Increment()
+			resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
 	}()
 

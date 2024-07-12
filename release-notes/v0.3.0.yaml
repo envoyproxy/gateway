@@ -34,7 +34,7 @@ changes:
       Added Support for Namespace Server Config Type
       Added initial management of Envoy Proxy deployment via EnvoyProxy API
 
-  - area: ci-tooling-testing
+  - area: CI tooling testing
     change: |
       Fixed Make Image Failed in Darwin
       Fixed Wait for Job Succeeded before conformance test

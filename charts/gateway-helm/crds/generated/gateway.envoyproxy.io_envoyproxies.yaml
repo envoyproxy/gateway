@@ -10241,7 +10241,9 @@ spec:
                         items:
                           properties:
                             format:
-                              description: Format defines the format of accesslog.
+                              description: |-
+                                Format defines the format of accesslog.
+                                This will be ignored if sink type is ALS.
                               properties:
                                 json:
                                   additionalProperties:
@@ -10586,7 +10588,6 @@ spec:
                               minItems: 1
                               type: array
                           required:
-                          - format
                           - sinks
                           type: object
                         maxItems: 50

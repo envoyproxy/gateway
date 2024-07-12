@@ -10,7 +10,7 @@ This "quick start" will help you get started with Envoy Gateway in a few simple 
 
 A Kubernetes cluster.
 
-__Note:__ Refer to the [Compatibility Matrix](../install/matrix) for supported Kubernetes versions.
+__Note:__ Refer to the [Compatibility Matrix](/news/releases/matrix) for supported Kubernetes versions.
 
 __Note:__ In case your Kubernetes cluster, does not have a LoadBalancer implementation, we recommend installing one
 so the `Gateway` resource has an Address associated with it. We recommend using [MetalLB](https://metallb.universe.tf/installation/).
@@ -89,6 +89,34 @@ curl --verbose --header "Host: www.example.com" http://localhost:8888/get
 
 {{% /tab %}}
 {{< /tabpane >}}
+
+## v1.1 Upgrade Notes
+
+Due to breaking changes in the Gateway API v1.1, some manual migration steps are required to upgrade Envoy Gateway to v1.1. 
+
+Delete `BackendTLSPolicy` CRD (and resources): 
+
+```shell
+kubectl delete crd backendtlspolicies.gateway.networking.k8s.io
+```
+
+Update Gateway-API and Envoy Gateway CRDs:
+
+```shell
+helm pull oci://docker.io/envoyproxy/gateway-helm --version v1.1.0 --untar
+kubectl apply -f ./gateway-helm/crds/gatewayapi-crds.yaml
+kubectl apply -f ./gateway-helm/crds/generated
+```
+
+Update your `BackendTLSPolicy` and `GRPCRoute` resources according to Gateway-API [v1.1 Upgrade Notes](https://gateway-api.sigs.k8s.io/guides/#v11-upgrade-notes)
+
+Update your Envoy Gateway xPolicy resources: remove the namespace section from targetRef. 
+
+Install Envoy Gateway v1.1.0:
+
+```shell
+helm upgrade eg oci://docker.io/envoyproxy/gateway-helm --version v1.1.0 -n envoy-gateway-system 
+```
 
 ## What to explore next?
 

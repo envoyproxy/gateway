@@ -25,6 +25,7 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/structpb"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/protocov"
 	"github.com/envoyproxy/gateway/internal/xds/types"
@@ -56,7 +57,8 @@ const (
 	metadataCommandOperator        = "%METADATA"
 	celCommandOperator             = "%CEL"
 
-	celFilter = "envoy.access_loggers.extension_filters.cel"
+	tcpGRPCAccessLog = "envoy.access_loggers.tcp_grpc"
+	celFilter        = "envoy.access_loggers.extension_filters.cel"
 )
 
 // for the case when a route does not exist to upstream, hcm logs will not be present
@@ -172,6 +174,53 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 				TypedConfig: accesslogAny,
 			},
 		})
+	}
+	// handle ALS access logs
+	for _, als := range al.ALS {
+		cc := &grpcaccesslog.CommonGrpcAccessLogConfig{
+			LogName: als.LogName,
+			GrpcService: &cfgcore.GrpcService{
+				TargetSpecifier: &cfgcore.GrpcService_EnvoyGrpc_{
+					EnvoyGrpc: &cfgcore.GrpcService_EnvoyGrpc{
+						ClusterName: als.Destination.Name,
+					},
+				},
+			},
+			TransportApiVersion: cfgcore.ApiVersion_V3,
+		}
+
+		switch als.Type {
+		case egv1a1.ALSEnvoyProxyAccessLogTypeHTTP:
+			alCfg := &grpcaccesslog.HttpGrpcAccessLogConfig{
+				CommonConfig: cc,
+			}
+
+			if als.HTTP != nil {
+				alCfg.AdditionalRequestHeadersToLog = als.HTTP.RequestHeaders
+				alCfg.AdditionalResponseHeadersToLog = als.HTTP.ResponseHeaders
+				alCfg.AdditionalResponseTrailersToLog = als.HTTP.ResponseTrailers
+			}
+
+			accesslogAny, _ := anypb.New(alCfg)
+			accessLogs = append(accessLogs, &accesslog.AccessLog{
+				Name: wellknown.HTTPGRPCAccessLog,
+				ConfigType: &accesslog.AccessLog_TypedConfig{
+					TypedConfig: accesslogAny,
+				},
+			})
+		case egv1a1.ALSEnvoyProxyAccessLogTypeTCP:
+			alCfg := &grpcaccesslog.TcpGrpcAccessLogConfig{
+				CommonConfig: cc,
+			}
+
+			accesslogAny, _ := anypb.New(alCfg)
+			accessLogs = append(accessLogs, &accesslog.AccessLog{
+				Name: tcpGRPCAccessLog,
+				ConfigType: &accesslog.AccessLog_TypedConfig{
+					TypedConfig: accesslogAny,
+				},
+			})
+		}
 	}
 	// handle open telemetry access logs
 	for _, otel := range al.OpenTelemetry {
@@ -431,6 +480,19 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 		return nil
 	}
 
+	// add clusters for ALS access logs
+	for _, als := range al.ALS {
+		if err := addXdsCluster(tCtx, &xdsClusterArgs{
+			name:         als.Destination.Name,
+			settings:     als.Destination.Settings,
+			tSocket:      nil,
+			endpointType: EndpointTypeStatic,
+		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+			return err
+		}
+	}
+
+	// add clusters for Open Telemetry access logs
 	for _, otel := range al.OpenTelemetry {
 		if err := addXdsCluster(tCtx, &xdsClusterArgs{
 			name:         otel.Destination.Name,

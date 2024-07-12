@@ -361,7 +361,7 @@ spec:
             - sh
             - "-c"
             - "cp -a /app /app-live && cd /app-live && go  run . --certPath=/app-live/certs/ "
-          image: golang:1.22.3-alpine
+          image: golang:1.22.5-alpine
           ports:
             - containerPort: 8000
           volumeMounts:
