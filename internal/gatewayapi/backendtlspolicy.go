@@ -69,7 +69,7 @@ func (t *Translator) processBackendTLSPolicy(
 			if envoyProxy.Spec.BackendTLS.MinVersion != nil {
 				tlsBundle.MinVersion = ptr.To(ir.TLSVersion(*envoyProxy.Spec.BackendTLS.MinVersion))
 			}
-			if envoyProxy.Spec.BackendTLS.MinVersion != nil {
+			if envoyProxy.Spec.BackendTLS.MaxVersion != nil {
 				tlsBundle.MaxVersion = ptr.To(ir.TLSVersion(*envoyProxy.Spec.BackendTLS.MaxVersion))
 			}
 			if len(envoyProxy.Spec.BackendTLS.ALPNProtocols) > 0 {
