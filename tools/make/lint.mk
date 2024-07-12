@@ -70,7 +70,7 @@ lint.shellcheck: $(tools/shellcheck)
 
 .PHONY: lint.fix-golint
 lint-deps: $(tools/gci)
-lint.fix: ## Run all linter of code sources and fix the issues.
+lint.fix-golint: ## Run all linter of code sources and fix the issues.
 	@$(LOG_TARGET)
 	$(MAKE) lint.golint GOLANGCI_LINT_FLAGS="--fix"
 	find . -name "*.go" | xargs $(tools/gci) write --skip-generated -s Standard -s Default -s "Prefix(github.com/envoyproxy/gateway)" 
