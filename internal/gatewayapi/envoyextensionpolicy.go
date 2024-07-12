@@ -74,7 +74,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 	// Process the policies targeting xRoutes
 	for _, currPolicy := range envoyExtensionPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := currPolicy.Spec.GetTargetRefs()
+		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, routes)
 		for _, currTarget := range targetRefs {
 			if currTarget.Kind != KindGateway {
 				policy, found := handledPolicies[policyName]
@@ -148,7 +148,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 	// Process the policies targeting Gateways
 	for _, currPolicy := range envoyExtensionPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := currPolicy.Spec.GetTargetRefs()
+		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways)
 		for _, currTarget := range targetRefs {
 			if currTarget.Kind == KindGateway {
 				policy, found := handledPolicies[policyName]
@@ -321,7 +321,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 	)
 
 	if wasms, err = t.buildWasms(policy, resources); err != nil {
-		err = perr.WithMessage(err, "WASM")
+		err = perr.WithMessage(err, "Wasm")
 		errs = errors.Join(errs, err)
 	}
 
@@ -380,7 +380,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 		errs = errors.Join(errs, err)
 	}
 	if wasms, err = t.buildWasms(policy, resources); err != nil {
-		err = perr.WithMessage(err, "WASM")
+		err = perr.WithMessage(err, "Wasm")
 		errs = errors.Join(errs, err)
 	}
 

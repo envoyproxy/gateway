@@ -81,6 +81,9 @@ func (r *BenchmarkReport) Collect(t *testing.T, ctx context.Context, job *types.
 
 func (r *BenchmarkReport) GetBenchmarkResult(t *testing.T, ctx context.Context, job *types.NamespacedName) error {
 	pods, err := r.kubeClient.Kube().CoreV1().Pods(job.Namespace).List(ctx, metav1.ListOptions{LabelSelector: "job-name=" + job.Name})
+	if err != nil {
+		return err
+	}
 
 	if len(pods.Items) < 1 {
 		return fmt.Errorf("failed to get any pods for job %s", job.String())
@@ -183,26 +186,28 @@ func (r *BenchmarkReport) getLogsFromPod(ctx context.Context, pod *types.Namespa
 func (r *BenchmarkReport) getMetricsFromPortForwarder(t *testing.T, pod *types.NamespacedName, url string) ([]byte, error) {
 	fw, err := kube.NewLocalPortForwarder(r.kubeClient, *pod, localMetricsPort, controlPlaneMetricsPort)
 	if err != nil {
-		return nil, fmt.Errorf("failed to build port forwarder for pod %s: %v", pod.String(), err)
+		return nil, fmt.Errorf("failed to build port forwarder for pod %s: %w", pod.String(), err)
 	}
 
 	if err = fw.Start(); err != nil {
 		fw.Stop()
 
-		return nil, fmt.Errorf("failed to start port forwarder for pod %s: %v", pod.String(), err)
+		return nil, fmt.Errorf("failed to start port forwarder for pod %s: %w", pod.String(), err)
 	}
+	requestURL := fmt.Sprintf("http://%s%s", fw.Address(), url)
 
 	var out []byte
 	// Retrieving metrics from Pod.
-	go func() {
+	go func(requestURL string) {
 		defer fw.Stop()
 
-		url := fmt.Sprintf("http://%s%s", fw.Address(), url)
-		resp, err := http.Get(url)
+		//nolint: gosec
+		resp, err := http.Get(requestURL)
 		if err != nil {
-			t.Errorf("failed to request %s: %v", url, err)
+			t.Errorf("failed to request %s: %v", requestURL, err)
 			return
 		}
+		defer resp.Body.Close()
 
 		metrics, err := io.ReadAll(resp.Body)
 		if err != nil {
@@ -211,7 +216,7 @@ func (r *BenchmarkReport) getMetricsFromPortForwarder(t *testing.T, pod *types.N
 		}
 
 		out = metrics
-	}()
+	}(requestURL)
 
 	fw.WaitForStop()
 
