@@ -6,7 +6,6 @@
 package translator
 
 import (
-	"encoding/json"
 	"errors"
 	"sort"
 	"strings"
@@ -189,27 +188,6 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 			},
 			TransportApiVersion: cfgcore.ApiVersion_V3,
 		}
-
-		// include text and json format as metadata when initiating stream
-		md := make([]*cfgcore.HeaderValue, 0, 2)
-
-		if als.Text != nil && *als.Text != "" {
-			md = append(md, &cfgcore.HeaderValue{
-				Key:   "x-accesslog-text",
-				Value: strings.ReplaceAll(strings.Trim(*als.Text, "\x00\n\r"), "\x00\n\r", " "),
-			})
-		}
-
-		if len(als.Attributes) > 0 {
-			if attr, err := json.Marshal(als.Attributes); err == nil {
-				md = append(md, &cfgcore.HeaderValue{
-					Key:   "x-accesslog-attr",
-					Value: string(attr),
-				})
-			}
-		}
-
-		cc.GrpcService.InitialMetadata = md
 
 		switch als.Type {
 		case egv1a1.ALSEnvoyProxyAccessLogTypeHTTP:
