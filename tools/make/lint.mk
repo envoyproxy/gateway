@@ -69,6 +69,13 @@ lint.shellcheck: $(tools/shellcheck)
 	@$(LOG_TARGET)
 	$(tools/shellcheck) tools/hack/*.sh
 
+.PHONY: lint.fix-golint
+lint-deps: $(tools/gci)
+lint.fix-golint: ## Run all linter of code sources and fix the issues.
+	@$(LOG_TARGET)
+	$(MAKE) lint.golint GOLANGCI_LINT_FLAGS="--fix"
+	find . -name "*.go" | xargs $(tools/gci) write --skip-generated -s Standard -s Default -s "Prefix(github.com/envoyproxy/gateway)" 
+
 .PHONY: gen-check
 gen-check: generate manifests protos go.testdata.complete
 	@$(LOG_TARGET)
