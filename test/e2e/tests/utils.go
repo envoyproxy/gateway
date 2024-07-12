@@ -369,18 +369,18 @@ func WaitForLoadBalancerAddress(t *testing.T, client client.Client, timeout time
 	return ipAddr, nil
 }
 
-func ALSLogCount(t *testing.T, suite *suite.ConformanceTestSuite) int {
+func ALSLogCount(suite *suite.ConformanceTestSuite) (int, error) {
 	metricPath, err := RetrieveURL(suite.Client, types.NamespacedName{
 		Namespace: "monitoring",
 		Name:      "envoy-als",
 	}, 19001, "/metrics")
 	if err != nil {
-		t.Fatalf("failed to get metric url: %v", err)
+		return -1, err
 	}
 
 	countMetric, err := RetrieveMetric(metricPath, "log_count", time.Second)
 	if err != nil {
-		t.Fatalf("failed to get metric: %v", err)
+		return -1, err
 	}
 
 	total := 0
@@ -390,7 +390,7 @@ func ALSLogCount(t *testing.T, suite *suite.ConformanceTestSuite) int {
 		}
 	}
 
-	return total
+	return total, nil
 }
 
 // QueryLogCountFromLoki queries log count from loki
