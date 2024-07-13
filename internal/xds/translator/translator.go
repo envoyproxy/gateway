@@ -320,16 +320,17 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 				}
 			}
 
-			// add http route client certs
-			for _, route := range httpListener.Routes {
-				if route.Destination != nil {
-					for _, st := range route.Destination.Settings {
-						if st.TLS != nil {
-							for _, cert := range st.TLS.ClientCertificates {
-								secret := buildXdsTLSCertSecret(cert)
-								if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
-									errs = errors.Join(errs, err)
-								}
+		}
+
+		// add http route client certs
+		for _, route := range httpListener.Routes {
+			if route.Destination != nil {
+				for _, st := range route.Destination.Settings {
+					if st.TLS != nil {
+						for _, cert := range st.TLS.ClientCertificates {
+							secret := buildXdsTLSCertSecret(cert)
+							if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+								errs = errors.Join(errs, err)
 							}
 						}
 					}
