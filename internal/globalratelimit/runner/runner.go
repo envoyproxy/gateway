@@ -17,6 +17,7 @@ import (
 	"strconv"
 
 	discoveryv3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+	cachetype "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	cachev3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	serverv3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
@@ -109,17 +110,27 @@ func (r *Runner) serveXdsConfigServer(ctx context.Context) {
 	}
 }
 
+func buildXDSResourceFromCache(rateLimitConfigsCache map[string][]cachetype.Resource) types.XdsResources {
+	xdsResourcesToUpdate := types.XdsResources{}
+	for _, xdsR := range rateLimitConfigsCache {
+		xdsResourcesToUpdate[resourcev3.RateLimitConfigType] = append(xdsResourcesToUpdate[resourcev3.RateLimitConfigType], xdsR...)
+	}
+
+	return xdsResourcesToUpdate
+}
+
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
+	// rateLimitConfigsCache is a cache of the rate limit config, which is keyed by the xdsIR key.
+	rateLimitConfigsCache := map[string][]cachetype.Resource{}
+
 	// Subscribe to resources.
 	message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentGlobalRateLimitRunner), Message: "xds-ir"}, r.XdsIR.Subscribe(ctx),
 		func(update message.Update[string, *ir.Xds], errChan chan error) {
 			r.Logger.Info("received a notification")
 
 			if update.Delete {
-				if err := r.addNewSnapshot(ctx, nil); err != nil {
-					r.Logger.Error(err, "failed to update the config snapshot")
-					errChan <- err
-				}
+				delete(rateLimitConfigsCache, update.Key)
+				r.updateSnapshot(ctx, buildXDSResourceFromCache(rateLimitConfigsCache))
 			} else {
 				// Translate to ratelimit xDS Config.
 				rvt, err := r.translate(update.Value)
@@ -130,7 +141,9 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 
 				// Update ratelimit xDS config cache.
 				if rvt != nil {
-					r.updateSnapshot(ctx, rvt.XdsResources)
+					// Build XdsResources to use for the snapshot update from the cache.
+					rateLimitConfigsCache[update.Key] = rvt.XdsResources[resourcev3.RateLimitConfigType]
+					r.updateSnapshot(ctx, buildXDSResourceFromCache(rateLimitConfigsCache))
 				}
 			}
 		},
