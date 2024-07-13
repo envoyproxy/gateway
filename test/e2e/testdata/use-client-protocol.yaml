@@ -8,7 +8,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: use-client-protocol
-    namespace: gateway-conformance-infra
   useClientProtocol: true
 ---
 apiVersion: gateway.networking.k8s.io/v1
