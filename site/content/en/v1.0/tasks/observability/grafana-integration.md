@@ -52,7 +52,7 @@ Envoy Gateway has examples of dashboard for you to get started:
 
 ### Envoy Proxy Global
 
-![Envoy Global](/img/envoy-proxy-global-dashboard.png)
+![Envoy Proxy Global](/img/envoy-proxy-global-dashboard.png)
 
 ### Envoy Clusters
 
