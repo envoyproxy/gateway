@@ -75,11 +75,17 @@ go.clean: ## Clean the building output files
 	@$(LOG_TARGET)
 	rm -rf $(OUTPUT_DIR)
 
+.PHONY: go.mod.tidy
+go.mod.tidy: ## Update and check dependences with go mod tidy.
+	@$(LOG_TARGET)
+	go mod tidy -compat=$(GO_VERSION)
+	# run go mod tidy in examples/extension-server directory
+	cd examples/extension-server && go mod tidy -compat=$(GO_VERSION)
+
 .PHONY: go.mod.lint
 lint: go.mod.lint
-go.mod.lint:
+go.mod.lint: go.mod.tidy ## Check if go.mod is clean
 	@$(LOG_TARGET)
-	@go mod tidy -compat=$(GO_VERSION)
 	@if test -n "$$(git status -s -- go.mod go.sum)"; then \
 		git diff --exit-code go.mod; \
 		git diff --exit-code go.sum; \
