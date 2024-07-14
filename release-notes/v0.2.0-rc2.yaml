@@ -6,7 +6,7 @@ changes:
       Updated and expanded developer documentation.
       Added `kube-demo` target to demonstrate Envoy Gateway functionality.
       Added developer debugging documentation.
-  - area: ci
+  - area: CI
     change: |
       Added Gateway API conformance tests.
   - area: providers
@@ -23,9 +23,9 @@ changes:
       Expanded support for Gateway API status.
       Added support for request modifier and redirect filters.
       Added support to return 500 responses for invalid backends.
-  - area: message-service
+  - area: message service
     change: |
       Updated IRs to support managing multiple Envoy fleets.
-  - area: infra-manager
+  - area: infra manager
     change: |
       Separate Envoy infrastructure is created per Gateway.

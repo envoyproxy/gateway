@@ -11,7 +11,7 @@ changes:
     change: |
       Added the EnvoyGateway API type for configuring Envoy Gateway.
       Added the EnvoyProxy API type for configuring managed Envoys.
-  - area: ci-tooling-testing
+  - area: CI tooling testing
     change: |
       Added tooling to build, run, etc. Envoy Gateway.
       Added Gateway API conformance tests.

@@ -26,7 +26,7 @@ changes:
       Added Support for Service Method Match in GRPCRoute
       Fixed a Bug in the Extension Hooks for xDS Virtual Hosts and Routes
 
-  - area: ci-tooling-testing
+  - area: CI tooling testing
     change: |
       Fixed CI Flakes During Helm Install
       Added Test To Ensure Static xDS Cluster Has Same Field Values as Dynamic Cluster

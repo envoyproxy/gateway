@@ -31,7 +31,7 @@ changes:
     breaking-change: |
       Renamed field in EnvoyGateway API from Extension to ExtensionManager
 
-  - area: ci-tooling-testing
+  - area: CI tooling testing
     change: |
       Added Retest Github Action
       Added CherryPick Github Action

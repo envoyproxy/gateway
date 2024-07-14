@@ -55,6 +55,10 @@ def convert_yaml_to_markdown(input_yaml_file, output_markdown_path):
                 file.write("### Breaking Changes\n")
                 file.write(change_to_markdown(area['breaking-change']) + '\n\n')
 
+            if 'deprecation' in area:
+                file.write("### Deprecations\n")
+                file.write(change_to_markdown(area['deprecation']) + '\n\n')
+
     print("Markdown file '{}' has been generated.".format(output_markdown_file))
 
 if __name__ == "__main__":
