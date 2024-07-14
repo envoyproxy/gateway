@@ -141,20 +141,8 @@ run-e2e: ## Run e2e tests
 ifeq ($(E2E_RUN_TEST),)
 	go test -v -tags e2e ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=false
 	go test -v -tags e2e ./test/e2e/merge_gateways --gateway-class=merge-gateways --debug=true --cleanup-base-resources=false
-	go test -v -tags e2e ./test/e2e/multiple_gc --debug=true --cleanup-base-resources=false
+	go test -v -tags e2e ./test/e2e/multiple_gc --debug=true --cleanup-base-resources=true
 	go test -v -tags e2e ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
-else
-ifeq ($(E2E_RUN_EG_UPGRADE_TESTS),false)
-	go test -v -tags e2e ./test/e2e/merge_gateways --gateway-class=merge-gateways --debug=true --cleanup-base-resources=false \
-		--run-test $(E2E_RUN_TEST)
-	go test -v -tags e2e ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
-		--run-test $(E2E_RUN_TEST)
-	go test -v -tags e2e ./test/e2e/multiple_gc --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
-		--run-test $(E2E_RUN_TEST)
-else
-	go test -v -tags e2e ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
-		--run-test $(E2E_RUN_TEST)
-endif
 endif
 
 .PHONY: run-benchmark

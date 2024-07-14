@@ -93,6 +93,10 @@ func (pt *PackageTool) Setup() error {
 		return err
 	}
 
+	if pt.logger == nil {
+		pt.logger = NewPrinterForWriter(os.Stdout, false)
+	}
+
 	if err = pt.actionConfig.Init(
 		kubectlFactory,
 		ns,
@@ -350,6 +354,7 @@ func (pt *PackageTool) setUninstallOptions(opts *PackageOptions) {
 	pt.actionUninstall.KeepHistory = false
 
 	pt.actionUninstall.DryRun = opts.DryRun
+	pt.actionUninstall.Timeout = opts.Timeout
 
 	if opts.Wait {
 		pt.actionUninstall.Wait = opts.Wait
