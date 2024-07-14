@@ -120,7 +120,7 @@ experimental-conformance: create-cluster kube-install-image kube-deploy run-expe
 benchmark: create-cluster kube-install-image kube-deploy-for-benchmark-test run-benchmark delete-cluster ## Create a kind cluster, deploy EG into it, run Envoy Gateway benchmark test, and clean up.
 
 .PHONY: e2e
-e2e: create-cluster kube-install-image kube-deploy install-ratelimit run-e2e delete-cluster
+e2e: create-cluster kube-install-image kube-deploy install-ratelimit install-e2e-telemetry run-e2e delete-cluster
 
 .PHONY: install-ratelimit
 install-ratelimit:
@@ -133,7 +133,7 @@ install-ratelimit:
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 
 .PHONY: run-e2e
-run-e2e: install-e2e-telemetry
+run-e2e: ## Run e2e tests
 	@$(LOG_TARGET)
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
