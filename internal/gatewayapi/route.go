@@ -314,12 +314,33 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 		ruleRoutes = append(ruleRoutes, irRoute)
 	}
 
+	var sessionPersistence *ir.SessionPersistence
+	if rule.SessionPersistence != nil {
+		sessionPersistence = &ir.SessionPersistence{
+			SessionName: *rule.SessionPersistence.SessionName,
+		}
+		if rule.SessionPersistence.Type != nil && *rule.SessionPersistence.Type == gwapiv1.HeaderBasedSessionPersistence {
+			sessionPersistence.Header = &ir.HeaderBasedSessionPersistence{}
+		} else {
+			// Cookie-based session persistence is default.
+			sessionPersistence.Cookie = &ir.CookieBasedSessionPersistence{}
+			if rule.SessionPersistence.AbsoluteTimeout != nil {
+				ttl, err := time.ParseDuration(string(*rule.SessionPersistence.AbsoluteTimeout))
+				if err != nil {
+					return nil, err
+				}
+				sessionPersistence.Cookie.TTL = &ttl
+			}
+		}
+	}
+
 	// A rule is matched if any one of its matches
 	// is satisfied (i.e. a logical "OR"), so generate
 	// a unique Xds IR HTTPRoute per match.
 	for matchIdx, match := range rule.Matches {
 		irRoute := &ir.HTTPRoute{
-			Name: irRouteName(httpRoute, ruleIdx, matchIdx),
+			Name:               irRouteName(httpRoute, ruleIdx, matchIdx),
+			SessionPersistence: sessionPersistence,
 		}
 		processTimeout(irRoute, rule)
 

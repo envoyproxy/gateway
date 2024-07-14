@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/netip"
 	"reflect"
+	"time"
 
 	"golang.org/x/exp/slices"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -565,6 +566,8 @@ type HTTPRoute struct {
 	UseClientProtocol *bool `json:"useClientProtocol,omitempty" yaml:"useClientProtocol,omitempty"`
 	// Metadata is used to enrich envoy route metadata with user and provider-specific information
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	// SessionPersistence holds the configuration for session persistence.
+	SessionPersistence *SessionPersistence `json:"sessionPersistence,omitempty" yaml:"sessionPersistence,omitempty"`
 }
 
 // DNS contains configuration options for DNS resolution.
@@ -575,6 +578,30 @@ type DNS struct {
 	// RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.
 	RespectDNSTTL *bool `json:"respectDnsTtl,omitempty"`
 }
+
+// SessionPersistence defines the desired state of SessionPersistence.
+// +k8s:deepcopy-gen=true
+type SessionPersistence struct {
+	// SessionName defines the name of the persistent session token.
+	SessionName string `json:"sessionName,omitempty"`
+
+	// Cookie defines the configuration for cookie-based session persistence.
+	// Either Cookie or Header must be non-empty.
+	Cookie *CookieBasedSessionPersistence `json:"cookie,omitempty"`
+	// Header defines the configuration for header-based session persistence.
+	// Either Cookie or Header must be non-empty.
+	Header *HeaderBasedSessionPersistence `json:"header,omitempty"`
+}
+
+// CookieBasedSessionPersistence defines the configuration for cookie-based session persistence.
+// +k8s:deepcopy-gen=true
+type CookieBasedSessionPersistence struct {
+	TTL *time.Duration `json:"ttl,omitempty"`
+}
+
+// HeaderBasedSessionPersistence defines the configuration for header-based session persistence.
+// +k8s:deepcopy-gen=true
+type HeaderBasedSessionPersistence struct{}
 
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.
 // +k8s:deepcopy-gen=true
