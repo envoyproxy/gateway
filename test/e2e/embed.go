@@ -25,6 +25,9 @@ import (
 //go:embed testdata/*.yaml base/*
 var Manifests embed.FS
 
+//go:embed testdata/*.yaml upgrade/*
+var UpgradeManifests embed.FS
+
 func CheckInstallScheme(t *testing.T, c client.Client) {
 	require.NoError(t, gwapiv1a3.Install(c.Scheme()))
 	require.NoError(t, gwapiv1a2.Install(c.Scheme()))
