@@ -92,5 +92,5 @@ kubectl delete authenticationfilter/jwt-example
 Checkout the [Developer Guide](../../contributions/develop/) to get involved in the project.
 
 [jwt]: https://tools.ietf.org/html/rfc7519
-[AuthenticationFilter]: https://gateway.envoyproxy.io/v0.3.0/api/extension_types.html#authenticationfilter
+[AuthenticationFilter]: ../api/extension_types#authenticationfilter
 [jwks]: https://tools.ietf.org/html/rfc7517
