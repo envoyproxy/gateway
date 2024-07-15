@@ -110,9 +110,9 @@ these types of cross-namespace references. Envoy Gateway supports the following 
 [TLSRoute]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.TLSRoute
 [ReferenceGrant]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.ReferenceGrant
 [SecretObjectReference]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.SecretObjectReference
-[rate limiting]: ../rate-limit/
-[request authentication]: ../jwt-authentication/
-[EnvoyProxy]: ../../api/extension_types#envoyproxy
+[rate limiting]: ./rate-limit
+[request authentication]: ./jwt-authentication
+[EnvoyProxy]: ../api/extension_types#envoyproxy
 [resolving conflicts]: https://gateway-api.sigs.k8s.io/concepts/guidelines/?h=conflict#conflicts
 [ExtensionRefs]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteFilterType
 [grpc-filter]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.GRPCRouteFilter

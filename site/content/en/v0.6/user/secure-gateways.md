@@ -11,7 +11,7 @@ testing and demonstration purposes only.
 
 ## Installation
 
-Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart Guide](./quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 ## TLS Certificates
@@ -242,7 +242,7 @@ Lastly, test connectivity using the above [Testing section](#testing).
 
 ## Clean-Up
 
-Follow the steps from the [Quickstart Guide](../quickstart) to uninstall Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart Guide](./quickstart) to uninstall Envoy Gateway and the example manifest.
 
 Delete the Secrets:
 
@@ -257,14 +257,14 @@ This section gives a walkthrough to generate RSA and ECDSA derived certificates 
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart Guide](./quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
-Follow the steps in the [TLS Certificates](../secure-gateways#tls-certificates) section in the guide to generate self-signed RSA derived Server certificate and private key, and configure those in the Gateway listener configuration to terminate HTTPS traffic.
+Follow the steps in the [TLS Certificates](./secure-gateways#tls-certificates) section in the guide to generate self-signed RSA derived Server certificate and private key, and configure those in the Gateway listener configuration to terminate HTTPS traffic.
 
 ## Pre-checks
 
-While testing in [Cluster without External LoadBalancer Support](../secure-gateways#clusters-without-external-loadbalancer-support), we can query the example app through Envoy proxy while enforcing an RSA cipher, as shown below:
+While testing in [Cluster without External LoadBalancer Support](./secure-gateways#clusters-without-external-loadbalancer-support), we can query the example app through Envoy proxy while enforcing an RSA cipher, as shown below:
 
 ```shell
 curl -v -HHost:www.example.com --resolve "www.example.com:8443:127.0.0.1" \
@@ -295,7 +295,7 @@ Moving forward in the doc, we will be configuring the existing Gateway listener 
 
 ## TLS Certificates
 
-Reuse the CA certificate and key pair generated in the [Secure Gateways](../secure-gateways#tls-certificates) guide and use this CA to sign both RSA and ECDSA Server certificates.
+Reuse the CA certificate and key pair generated in the [Secure Gateways](./secure-gateways#tls-certificates) guide and use this CA to sign both RSA and ECDSA Server certificates.
 Note the CA certificate and key names are `example.com.crt` and `example.com.key` respectively.
 
 
@@ -369,14 +369,14 @@ This sections gives a walkthrough to generate multiple certificates correspondin
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart Guide](./quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
-Follow the steps in the [TLS Certificates](../secure-gateways#tls-certificates) section in the guide to generate self-signed RSA derived Server certificate and private key, and configure those in the Gateway listener configuration to terminate HTTPS traffic.
+Follow the steps in the [TLS Certificates](./secure-gateways#tls-certificates) section in the guide to generate self-signed RSA derived Server certificate and private key, and configure those in the Gateway listener configuration to terminate HTTPS traffic.
 
 ## Additional Configurations
 
-Using the [TLS Certificates](../secure-gateways#tls-certificates) section in the guide we first generate additional Secret for another Host `www.sample.com`.
+Using the [TLS Certificates](./secure-gateways#tls-certificates) section in the guide we first generate additional Secret for another Host `www.sample.com`.
 
 ```shell
 openssl req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 -subj '/O=sample Inc./CN=sample.com' -keyout sample.com.key -out sample.com.crt
@@ -446,7 +446,7 @@ Since the multiple certificates are configured on the same Gateway listener, Env
 
 ### Clusters with External LoadBalancer Support
 
-Refer to the steps mentioned earlier in the guide under [Testing in clusters with External LoadBalancer Support](../secure-gateways#clusters-with-external-loadbalancer-support)
+Refer to the steps mentioned earlier in the guide under [Testing in clusters with External LoadBalancer Support](./secure-gateways#clusters-with-external-loadbalancer-support)
 
 ## Next Steps
 

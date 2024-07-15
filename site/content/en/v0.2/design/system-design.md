@@ -159,16 +159,16 @@ The draft for this document is [here][draft_design].
 [grl]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/global_rate_limiting
 [rls]: https://github.com/envoyproxy/ratelimit
 [rlf]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ratelimit/v3/rate_limit.proto#envoy-v3-api-msg-extensions-filters-http-ratelimit-v3-ratelimit
-[crf]: https://gateway-api.sigs.k8s.io/v1alpha2/api-types/httproute/#filters-optional
+[crf]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRoute#filters-optional
 [gwapi_conflicts]: https://gateway-api.sigs.k8s.io/concepts/guidelines/#conflicts
 [listener]: https://www.envoyproxy.io/docs/envoy/latest/configuration/listeners/listeners#config-listeners
 [route]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-msg-config-route-v3-route
-[be_ref]: https://gateway-api.sigs.k8s.io/v1alpha2/api-types/httproute/#backendrefs-optional
+[be_ref]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRoute#backendrefs-optional
 [cluster]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster
 [draft_design]: https://docs.google.com/document/d/1riyTPPYuvNzIhBdrAX8dpfxTmcobWZDSYTTB5NeybuY/edit
 [cr]: https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/
-[be]: https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1alpha2.BackendObjectReference
+[be]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io%2fv1.BackendObjectReference
 [svc]: https://kubernetes.io/docs/concepts/services-networking/service/
-[ wcd ]: ./watching.md
+[ wcd ]: ./watching
 [Issue #37]: https://github.com/envoyproxy/gateway/issues/37
-[roadmap]: roadmap.md
+[roadmap]: ../contributions/roadmap

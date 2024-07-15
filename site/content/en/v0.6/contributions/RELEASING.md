@@ -6,7 +6,10 @@ description: "This section tells the release process of Envoy Gateway."
 This document guides maintainers through the process of creating an Envoy Gateway release.
 
 - [Release Candidate](#release-candidate)
+  - [Prerequisites](#prerequisites)
+  - [Setup cherry picker action](#setup-cherry-picker-action)
 - [Minor Release](#minor-release)
+  - [Prerequisites](#prerequisites-1)
 - [Announce the Release](#announce-the-release)
 
 ## Release Candidate
@@ -73,7 +76,7 @@ export GITHUB_REMOTE=origin
 
 ### Setup cherry picker action
 
-After release branch cut, RM (Release Manager) should add job [cherrypick action](../../../.github/workflows/cherrypick.yaml) for target release.
+After release branch cut, RM (Release Manager) should add job [cherrypick action](https://github.com/envoyproxy/gateway/blob/main/.github/workflows/cherrypick.yaml) for target release.
 
 Configuration looks like following:
 

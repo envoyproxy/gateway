@@ -1,6 +1,6 @@
 DOCS_OUTPUT_DIR := site/public
 RELEASE_VERSIONS ?= $(foreach v,$(wildcard ${ROOT_DIR}/docs/*),$(notdir ${v}))
-LINKINATOR_IGNORE := "github.com githubusercontent.com example.com github.io _print v0.6 v0.5 v0.4 v0.3 v0.2"
+LINKINATOR_IGNORE := "github.com githubusercontent.com example.com github.io _print"
 CLEAN_NODE_MODULES ?= true
 
 ##@ Docs
@@ -122,7 +122,7 @@ docs-check-links:
 	# github.com does not allow access too often, there are a lot of 429 errors
 	# TODO: find a way to remove github.com from ignore list
 	# TODO: example.com is not a valid domain, we should remove it from ignore list
-	linkinator site/public/ -r --concurrency 25 --skip $(LINKINATOR_IGNORE)
+	linkinator site/public/ -r --timeout 1000 --concurrency 25 --skip $(LINKINATOR_IGNORE)
 
 release-notes-docs: $(tools/release-notes-docs)
 	@$(LOG_TARGET)
