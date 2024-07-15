@@ -122,7 +122,7 @@ docs-check-links:
 	# github.com does not allow access too often, there are a lot of 429 errors
 	# TODO: find a way to remove github.com from ignore list
 	# TODO: example.com is not a valid domain, we should remove it from ignore list
-	linkinator site/public/ -r --timeout 1000 --concurrency 25 --skip $(LINKINATOR_IGNORE)
+	linkinator site/public/ -r --concurrency 25 --skip $(LINKINATOR_IGNORE)
 
 release-notes-docs: $(tools/release-notes-docs)
 	@$(LOG_TARGET)
