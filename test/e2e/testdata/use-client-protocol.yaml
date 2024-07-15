@@ -4,8 +4,8 @@ metadata:
   name: use-client-protocol-btp
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: use-client-protocol
   useClientProtocol: true

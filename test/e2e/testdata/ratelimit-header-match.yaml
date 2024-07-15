@@ -4,11 +4,10 @@ metadata:
   name: ratelimit-anded-headers
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: header-ratelimit
-    namespace: gateway-conformance-infra
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: header-ratelimit
   rateLimit:
     type: Global
     global:
