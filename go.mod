@@ -5,7 +5,7 @@ go 1.22.5
 replace github.com/imdario/mergo => github.com/imdario/mergo v0.3.16
 
 require (
-	fortio.org/fortio v1.65.0
+	fortio.org/fortio v1.66.0
 	fortio.org/log v1.14.0
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/cncf/xds/go v0.0.0-20240423153145-555b57ec207b
@@ -66,9 +66,9 @@ require github.com/docker/docker v27.0.3+incompatible
 
 require (
 	cel.dev/expr v0.15.0 // indirect
-	fortio.org/cli v1.6.0 // indirect
+	fortio.org/cli v1.7.0 // indirect
 	fortio.org/dflag v1.7.2 // indirect
-	fortio.org/scli v1.15.0 // indirect
+	fortio.org/scli v1.15.1 // indirect
 	fortio.org/sets v1.1.1 // indirect
 	fortio.org/struct2env v0.4.1 // indirect
 	fortio.org/version v1.0.4 // indirect
@@ -129,7 +129,7 @@ require (
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.45.0 // indirect
 	golang.org/x/crypto v0.25.0 // indirect
-	golang.org/x/crypto/x509roots/fallback v0.0.0-20240604170348-d4e7c9cb6cb8 // indirect
+	golang.org/x/crypto/x509roots/fallback v0.0.0-20240626151235-a6a393ffd658 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	k8s.io/apiserver v0.30.2 // indirect
 	oras.land/oras-go v1.2.5 // indirect
