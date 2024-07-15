@@ -13,7 +13,7 @@ Envoy Gateway supports the Gateway-API defined [BackendTLSPolicy][].
 
 ## Installation
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart][] to install Envoy Gateway and the example manifest.
 
 ## TLS Certificates
 
@@ -385,5 +385,6 @@ The TLS version is now TLS1.3, as configured in the EnvoyProxy resource. The TLS
  }
 ```
 
+[Quickstart]: ../quickstart
 [BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/
-[EnvoyProxy]: ../../../api/extension_types#envoyproxy
+[EnvoyProxy]: ../../api/extension_types#envoyproxy

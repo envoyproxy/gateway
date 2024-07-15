@@ -13,7 +13,7 @@ Envoy Gateway supports the Gateway-API defined [BackendTLSPolicy][] to establish
 
 ## Installation
 
-Follow the steps from the [Backend TLS](../backend-tls) to install Envoy Gateway and configure TLS to the backend server. 
+Follow the steps from the [Backend TLS][] to install Envoy Gateway and configure TLS to the backend server. 
 
 ## TLS Certificates
 
@@ -151,5 +151,6 @@ The response now contains a "peerCertificates" attribute that reflects the clien
  }
 ```
 
+[Backend TLS]: ./backend-tls
 [BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/
-[EnvoyProxy]: ../../../api/extension_types#envoyproxy
+[EnvoyProxy]: ../../api/extension_types#envoyproxy

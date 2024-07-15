@@ -13,7 +13,7 @@ Envoy Gateway supports the Gateway-API defined [BackendTLSPolicy][].
 
 ## Installation
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart][] to install Envoy Gateway and the example manifest.
 
 ## TLS Certificates
 
@@ -209,4 +209,5 @@ Inspect the output and see that the response contains the details of the TLS han
  }
 ```
 
+[Quickstart]: ../quickstart
 [BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/
