@@ -83,8 +83,52 @@ kubectl patch deployment backend --type=json --patch '
 ```
 
 ## Configure Envoy Proxy to use a client certificate 
- 
+
+In addition to enablement of backend TLS with the Gateway-API BackendTLSPolicy, Envoy Gateway supports customizing  TLS parameters.
 To achieve this, the [EnvoyProxy][] resource can be used to specify a TLS Client Certificate.
+
+First, you need to add ParametersRef in GatewayClass, and refer to EnvoyProxy Config:
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: custom-proxy-config
+    namespace: envoy-gateway-system
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: custom-proxy-config
+    namespace: envoy-gateway-system
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
