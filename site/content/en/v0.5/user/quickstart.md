@@ -9,7 +9,7 @@ This guide will help you get started with Envoy Gateway in a few simple steps.
 
 A Kubernetes cluster.
 
-__Note:__ Refer to the [Compatibility Matrix](/blog/2022/10/01/versions/) for supported Kubernetes versions.
+__Note:__ Refer to the [Compatibility Matrix](/news/releases/matrix/) for supported Kubernetes versions.
 
 ## Installation
 

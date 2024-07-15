@@ -7,7 +7,7 @@ This guide show you how to config proxy observability, includes metrics, logs, a
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart Guide](./quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 [FluentBit](https://fluentbit.io/) is used to collect logs from the EnvoyProxy instances and forward them to Loki. Install FluentBit:
@@ -87,7 +87,7 @@ curl localhost:19001/metrics  | grep "default/backend/rule/0/match/0-www"
 
 ## Logs
 
-By default, Envoy Gateway send logs to stdout in [default text format](https://www.envoyproxy.io/docs/envoy/v0.6.0/configuration/observability/access_log/usage.html#default-format-string).
+By default, Envoy Gateway send logs to stdout in [default text format](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage.html#default-format-string).
 Verify logs from loki:
 
 ```shell
