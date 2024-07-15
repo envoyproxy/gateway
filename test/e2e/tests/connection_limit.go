@@ -9,6 +9,7 @@
 package tests
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"testing"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
@@ -56,8 +58,24 @@ var ConnectionLimitTest = suite.ConformanceTest{
 
 			// we make the number of connections equal to the number of connectionLimit connections + 3
 			// avoid partial connection errors or interruptions
-			for i := 0; i < 6; i++ {
+			// Try to open a connection to the gateway, this will consume one connection
+			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
+				func(_ context.Context) (done bool, err error) {
+					_, err = net.DialTimeout("tcp", gwAddr, 100*time.Millisecond)
+					if err != nil {
+						t.Logf("failed to open connection: %v", err)
+						return false, nil
+					}
+					t.Log("opened connection 1")
+					return true, nil
+				}); err != nil {
+				t.Errorf("failed to open connections: %v", err)
+			}
+
+			// Open the remaining 5 connections
+			for i := 1; i < 6; i++ {
 				conn, err := net.Dial("tcp", gwAddr)
+				t.Logf("opened connection %d", i+1)
 				if err != nil {
 					t.Errorf("failed to open connection: %v", err)
 				} else {
