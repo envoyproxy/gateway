@@ -41,10 +41,10 @@ metadata:
   name: http-wasm-source-test
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: http-with-http-wasm-source
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-with-http-wasm-source
   wasm:
   - name: wasm-filter
     rootID: my_root_id

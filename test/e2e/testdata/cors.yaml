@@ -4,11 +4,10 @@ metadata:
   name: cors-example
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: http-with-cors
-    namespace: gateway-conformance-infra
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-with-cors
   cors:
     allowOrigins:
     - "https://www.foo.com"

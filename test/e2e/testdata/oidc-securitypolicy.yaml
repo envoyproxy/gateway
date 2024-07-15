@@ -63,10 +63,10 @@ metadata:
   name: oidc-test
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: http-with-oidc
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-with-oidc
   oidc:
     provider:
       issuer: "http://keycloak.gateway-conformance-infra/realms/master"

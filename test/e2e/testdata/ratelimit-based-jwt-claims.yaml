@@ -4,11 +4,10 @@ metadata:
   name: jwt-example
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: http-ratelimit-based-jwt-claims
-    namespace: gateway-conformance-infra
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-ratelimit-based-jwt-claims
   jwt:
     providers:
     - name: example
@@ -24,11 +23,10 @@ metadata:
   name: ratelimit-specific-user
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: http-ratelimit-based-jwt-claims
-    namespace: gateway-conformance-infra
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-ratelimit-based-jwt-claims
   rateLimit:
     type: Global
     global:

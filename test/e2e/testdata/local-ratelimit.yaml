@@ -4,11 +4,10 @@ metadata:
   name: ratelimit-specific-user
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: http-ratelimit-specific-user
-    namespace: gateway-conformance-infra
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-ratelimit-specific-user
   rateLimit:
     type: Local
     local:
@@ -30,11 +29,10 @@ metadata:
   name: ratelimit-all-traffic
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: http-ratelimit-all-traffic
-    namespace: gateway-conformance-infra
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-ratelimit-all-traffic
   rateLimit:
     type: Local
     local:

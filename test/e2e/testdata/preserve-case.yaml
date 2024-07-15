@@ -18,11 +18,10 @@ metadata:
   name: preserve-case
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: same-namespace
-    namespace: gateway-conformance-infra
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: same-namespace
   http1:
     preserveHeaderCase: true
 ---
