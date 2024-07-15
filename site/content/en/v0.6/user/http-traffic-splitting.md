@@ -8,7 +8,7 @@ with status code `500` for all requests that would have been sent to that backen
 
 ## Installation
 
-Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart Guide](./quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Single backendRef

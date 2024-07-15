@@ -376,6 +376,6 @@ spec:
 ```
 
 [Issue 31]: https://github.com/envoyproxy/gateway/issues/31
-[EnvoyProxy]: ../../api/extension_types#envoyproxy
+[EnvoyProxy]: ../api/extension_types#envoyproxy
 [GatewayClass]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GatewayClass
 [parametersRef]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.ParametersReference 

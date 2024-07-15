@@ -7,7 +7,7 @@ This guide shows you how to visualise the metrics exposed to prometheus using gr
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart Guide](./quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 Follow the steps from the [Proxy Observability](../proxy-observability#Metrics) to enable prometheus metrics.
@@ -62,4 +62,4 @@ Envoy Gateway has examples of dashboard for you to get started:
 
 ![Envoy Pod Resources](/img/envoy-pod-resources-dashboard.png)
 
-You can load the above dashboards in your Grafana to get started. Please refer to Grafana docs for [importing dashboards](https://grafana.com/docs/grafana/v0.6.0/dashboards/manage-dashboards/#import-a-dashboard).
+You can load the above dashboards in your Grafana to get started. Please refer to Grafana docs for [importing dashboards](https://grafana.com/docs/grafana/latest/dashboards/manage-dashboards/#import-a-dashboard).

@@ -137,7 +137,7 @@ _udp.foo.bar.com.	0	IN	SRV	0 0 42376 .
 
 ## Clean-Up
 
-Follow the steps from the [Quickstart Guide](../quickstart) to uninstall Envoy Gateway.
+Follow the steps from the [Quickstart Guide](./quickstart) to uninstall Envoy Gateway.
 
 Delete the CoreDNS example manifest and the UDPRoute:
 
@@ -153,4 +153,4 @@ kubectl delete udproute/coredns
 Checkout the [Developer Guide](../../contributions/develop/) to get involved in the project.
 
 [UDPRoute]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.UDPRoute
-[UDP proxy documentation]: https://www.envoyproxy.io/docs/envoy/v0.6.0/configuration/listeners/udp_filters/udp_proxy
+[UDP proxy documentation]: https://www.envoyproxy.io/docs/envoy/latest/configuration/listeners/udp_filters/udp_proxy
