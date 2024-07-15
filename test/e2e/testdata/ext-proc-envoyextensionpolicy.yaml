@@ -42,9 +42,9 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: http-with-ext-proc
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-with-ext-proc
   extProc:
   - backendRefs:
     - name: grpc-ext-proc
@@ -61,9 +61,9 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: http-without-procmode
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-without-procmode
   extProc:
   - backendRefs:
     - name: grpc-ext-proc
@@ -123,9 +123,9 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: http-with-extproc-uds-tls
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-with-extproc-uds-tls
   extProc:
   - backendRefs:
     - kind: Backend

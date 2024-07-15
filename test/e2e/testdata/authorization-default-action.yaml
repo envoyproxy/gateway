@@ -39,9 +39,9 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: http-with-authorization-empty
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-with-authorization-empty
   authorization: {}  # An empty authorization policy means deny all since default action is deny
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -51,8 +51,8 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: http-with-authorization-allow-all
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-with-authorization-allow-all
   authorization:  # Allow all since default action is allow and no rules are defined
     defaultAction: Allow

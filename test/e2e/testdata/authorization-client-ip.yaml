@@ -39,9 +39,9 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: http-with-authorization-client-ip-1
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-with-authorization-client-ip-1
   authorization:
     defaultAction: Allow
     rules:
@@ -69,9 +69,9 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: http-with-authorization-client-ip-2
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-with-authorization-client-ip-2
   authorization:
     defaultAction: Deny
     rules:
@@ -93,6 +93,6 @@ spec:
     xForwardedFor:
       numTrustedHops: 1
   targetRefs:
-    - group: gateway.networking.k8s.io
-      kind: Gateway
-      name: same-namespace
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: same-namespace

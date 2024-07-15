@@ -5,9 +5,9 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: http-with-cors
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-with-cors
   cors:
     allowOrigins:
     - "https://www.foo.com"
