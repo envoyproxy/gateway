@@ -52,11 +52,12 @@ var UDPRouteTest = suite.ConformanceTest{
 			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
 				func(_ context.Context) (done bool, err error) {
 					t.Logf("performing DNS query %s on %s", domain, gwAddr)
-					_, err = dns.Exchange(msg, gwAddr)
+					r, err := dns.Exchange(msg, gwAddr)
 					if err != nil {
 						t.Logf("failed to perform a UDP query: %v", err)
 						return false, nil
 					}
+					t.Logf("got DNS response: %s", r.String())
 					return true, nil
 				}); err != nil {
 				t.Errorf("failed to perform DNS query: %v", err)

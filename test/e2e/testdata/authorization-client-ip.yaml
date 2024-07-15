@@ -38,8 +38,8 @@ metadata:
   name: authorization-client-ip-1
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-with-authorization-client-ip-1
   authorization:
@@ -68,8 +68,8 @@ metadata:
   name: authorization-client-ip-2
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-with-authorization-client-ip-2
   authorization:
@@ -92,7 +92,7 @@ spec:
   clientIPDetection:
     xForwardedFor:
       numTrustedHops: 1
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: Gateway
     name: same-namespace
