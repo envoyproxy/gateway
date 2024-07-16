@@ -85,6 +85,7 @@ var OIDCTest = suite.ConformanceTest{
 					// Send a request to the http route with OIDC configured.
 					// It will be redirected to the keycloak login page
 					res, err := client.Get(testURL, true)
+					require.NoError(t, err, "Failed to get the login page")
 					require.Equal(t, 200, res.StatusCode, "Expected 200 OK")
 
 					// Parse the response body to get the URL where the login page would post the user-entered credentials
