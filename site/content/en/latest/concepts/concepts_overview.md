@@ -1,4 +1,12 @@
-# Envoy Gateway Resources
++++
+title = "Envoy Gateway Resources"
++++
+
+There are several resources that play a part in enabling you to meet your Kubernetes ingress traffic handling needs. This page provides a brief overview of the resources you’ll be working with.
+
+## Overview
+
+![](/img/envoy-gateway-resources-overview.png)
 
 There are several resources that play a part in enabling you to meet your Kubernetes ingress traffic handling needs. This page provides a brief overview of the resources you’ll be working with.
 
