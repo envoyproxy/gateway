@@ -38,8 +38,8 @@ metadata:
   name: authorization-empty
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-with-authorization-empty
   authorization: {}  # An empty authorization policy means deny all since default action is deny
@@ -50,8 +50,8 @@ metadata:
   name: authorization-allow-all
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-with-authorization-allow-all
   authorization:  # Allow all since default action is allow and no rules are defined

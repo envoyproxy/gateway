@@ -4,11 +4,10 @@ metadata:
   name: fault-injection-abort
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: http-fault-abort
-    namespace: gateway-conformance-infra
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-fault-abort
   faultInjection:
     abort:
       httpStatus: 501
@@ -19,11 +18,10 @@ metadata:
   name: fault-injection-abort-and-delay
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: http-route-delayandabort
-    namespace: gateway-conformance-infra
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-route-delayandabort
   faultInjection:
     delay:
       fixedDelay: 2s

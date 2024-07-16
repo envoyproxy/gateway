@@ -4,11 +4,10 @@ metadata:
   name: retry-policy
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: retry-route
-    namespace: gateway-conformance-infra
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: retry-route
   retry:
     numRetries: 5
     perRetry:
