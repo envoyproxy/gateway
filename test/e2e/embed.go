@@ -12,3 +12,6 @@ import "embed"
 
 //go:embed testdata/*.yaml base/*
 var Manifests embed.FS
+
+//go:embed testdata/*.yaml upgrade/*
+var UpgradeManifests embed.FS

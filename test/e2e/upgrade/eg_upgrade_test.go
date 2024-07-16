@@ -41,17 +41,20 @@ func TestEGUpgrade(t *testing.T) {
 		GatewayClassName:     *flags.GatewayClassName,
 		Debug:                *flags.ShowDebug,
 		CleanupBaseResources: *flags.CleanupBaseResources,
-		ManifestFS:           []fs.FS{e2e.Manifests},
+		ManifestFS:           []fs.FS{e2e.UpgradeManifests},
 		RunTest:              *flags.RunTest,
-		// SupportedFeatures cannot be empty, so we set it to SupportGateway
-		// All e2e tests should leave Features empty.
-		SupportedFeatures: sets.New[features.SupportedFeature](features.SupportGateway),
-		SkipTests: []string{
-			tests.EGUpgradeTest.ShortName, // https://github.com/envoyproxy/gateway/issues/3311
-		},
+		BaseManifests:        "upgrade/manifests.yaml",
+		SupportedFeatures:    sets.New[features.SupportedFeature](features.SupportGateway),
+		SkipTests:            []string{},
 	})
 	if err != nil {
 		t.Fatalf("Failed to create test suite: %v", err)
+	}
+
+	// upgrade tests should be executed in a specific order
+	tests.UpgradeTests = []suite.ConformanceTest{
+		tests.EnvoyShutdownTest,
+		tests.EGUpgradeTest,
 	}
 
 	t.Logf("Running %d Upgrade tests", len(tests.UpgradeTests))

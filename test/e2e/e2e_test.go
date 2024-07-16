@@ -47,7 +47,6 @@ func TestE2E(t *testing.T) {
 		SupportedFeatures: sets.New[features.SupportedFeature](features.SupportGateway),
 		SkipTests: []string{
 			tests.GatewayInfraResourceTest.ShortName, // https://github.com/envoyproxy/gateway/issues/3191
-			tests.UseClientProtocolTest.ShortName,    // https://github.com/envoyproxy/gateway/issues/3473
 		},
 	})
 	if err != nil {

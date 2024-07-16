@@ -19,7 +19,6 @@ BENCHMARK_DURATION ?= 60
 BENCHMARK_REPORT_DIR ?= benchmark_report
 
 E2E_RUN_TEST ?=
-E2E_RUN_EG_UPGRADE_TESTS ?= false
 E2E_CLEANUP ?= true
 
 # Set Kubernetes Resources Directory Path
@@ -40,7 +39,7 @@ CONTROLLERGEN_OBJECT_FLAGS :=  object:headerFile="$(ROOT_DIR)/tools/boilerplate/
 .PHONY: manifests
 manifests: $(tools/controller-gen) generate-gwapi-manifests ## Generate WebhookConfiguration and CustomResourceDefinition objects.
 	@$(LOG_TARGET)
-	$(tools/controller-gen) crd:allowDangerousTypes=true paths="./..." output:crd:artifacts:config=charts/gateway-helm/crds/generated
+	$(tools/controller-gen) crd:allowDangerousTypes=true paths="./api/..." output:crd:artifacts:config=charts/gateway-helm/crds/generated
 
 .PHONY: generate-gwapi-manifests
 generate-gwapi-manifests:
@@ -129,7 +128,7 @@ experimental-conformance: create-cluster kube-install-image kube-deploy run-expe
 benchmark: create-cluster kube-install-image kube-deploy-for-benchmark-test run-benchmark delete-cluster ## Create a kind cluster, deploy EG into it, run Envoy Gateway benchmark test, and clean up.
 
 .PHONY: e2e
-e2e: create-cluster kube-install-image kube-deploy install-ratelimit run-e2e delete-cluster
+e2e: create-cluster kube-install-image kube-deploy install-ratelimit install-e2e-telemetry run-e2e delete-cluster
 
 .PHONY: install-ratelimit
 install-ratelimit:
@@ -142,7 +141,7 @@ install-ratelimit:
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 
 .PHONY: run-e2e
-run-e2e: install-e2e-telemetry
+run-e2e: ## Run e2e tests
 	@$(LOG_TARGET)
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
@@ -150,20 +149,8 @@ run-e2e: install-e2e-telemetry
 ifeq ($(E2E_RUN_TEST),)
 	go test -v -tags e2e ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=false
 	go test -v -tags e2e ./test/e2e/merge_gateways --gateway-class=merge-gateways --debug=true --cleanup-base-resources=false
-	go test -v -tags e2e ./test/e2e/multiple_gc --debug=true --cleanup-base-resources=false
+	go test -v -tags e2e ./test/e2e/multiple_gc --debug=true --cleanup-base-resources=true
 	go test -v -tags e2e ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
-else
-ifeq ($(E2E_RUN_EG_UPGRADE_TESTS),false)
-	go test -v -tags e2e ./test/e2e/merge_gateways --gateway-class=merge-gateways --debug=true --cleanup-base-resources=false \
-		--run-test $(E2E_RUN_TEST)
-	go test -v -tags e2e ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
-		--run-test $(E2E_RUN_TEST)
-	go test -v -tags e2e ./test/e2e/multiple_gc --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
-		--run-test $(E2E_RUN_TEST)
-else
-	go test -v -tags e2e ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
-		--run-test $(E2E_RUN_TEST)
-endif
 endif
 
 .PHONY: run-benchmark
