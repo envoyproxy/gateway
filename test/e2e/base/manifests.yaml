@@ -221,7 +221,7 @@ metadata:
   labels:
     app: infra-backend-v3
 spec:
-  replicas: 2
+  replicas: 4
   selector:
     matchLabels:
       app: infra-backend-v3

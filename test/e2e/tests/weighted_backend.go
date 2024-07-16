@@ -23,14 +23,14 @@ func init() {
 	ConformanceTests = append(ConformanceTests, WeightEqualTest, WeightBlueGreenTest, WeightCompleteRolloutTest)
 }
 
-const sendRequest = 50
-
 var WeightEqualTest = suite.ConformanceTest{
 	ShortName:   "WeightEqualBackend",
 	Description: "Resource with Weight Backend enabled, and use the all backend weight is equal",
 	Manifests:   []string{"testdata/weighted-backend-all-equal.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("all backends receive the same weight of traffic", func(t *testing.T) {
+			const sendRequest = 50
+
 			ns := "gateway-conformance-infra"
 			weightEqualRoute := types.NamespacedName{Name: "weight-equal-http-route", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
@@ -95,6 +95,8 @@ var WeightBlueGreenTest = suite.ConformanceTest{
 	Manifests:   []string{"testdata/weighted-backend-bluegreen.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("all backends receive the blue green weight of traffic", func(t *testing.T) {
+			const sendRequest = 50
+
 			ns := "gateway-conformance-infra"
 			weightEqualRoute := types.NamespacedName{Name: "weight-bluegreen-http-route", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
@@ -159,6 +161,8 @@ var WeightCompleteRolloutTest = suite.ConformanceTest{
 	Manifests:   []string{"testdata/weight-backend-completing-rollout.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("all backends receive the complete rollout weight of traffic", func(t *testing.T) {
+			const sendRequest = 50
+
 			ns := "gateway-conformance-infra"
 			weightEqualRoute := types.NamespacedName{Name: "weight-complete-rollout-http-route", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
