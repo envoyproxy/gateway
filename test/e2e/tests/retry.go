@@ -9,6 +9,7 @@
 package tests
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -19,7 +20,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 
-	"github.com/envoyproxy/gateway/test/e2e/utils/prometheus"
+	"github.com/envoyproxy/gateway/test/utils/prometheus"
 )
 
 func init() {
@@ -31,6 +32,11 @@ var RetryTest = suite.ConformanceTest{
 	Description: "Test that the BackendTrafficPolicy API implementation supports retry",
 	Manifests:   []string{"testdata/retry.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ctx := context.Background()
+
+		promClient, err := prometheus.NewClient(suite.Client, types.NamespacedName{Name: "prometheus", Namespace: "monitoring"})
+		require.NoError(t, err)
+
 		t.Run("retry-on-500", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "retry-route", Namespace: ns}
@@ -47,12 +53,10 @@ var RetryTest = suite.ConformanceTest{
 				Namespace: ns,
 			}
 
-			promAddr, err := prometheus.Address(suite.Client, types.NamespacedName{Name: "prometheus", Namespace: "monitoring"})
-			require.NoError(t, err)
 			promQL := fmt.Sprintf(`envoy_cluster_upstream_rq_retry{envoy_cluster_name="httproute/%s/%s/rule/0"}`, routeNN.Namespace, routeNN.Name)
 
 			before := float64(0)
-			v, err := prometheus.QuerySum(promAddr, promQL)
+			v, err := promClient.QuerySum(ctx, promQL)
 			if err == nil {
 				before = v
 			}
@@ -73,7 +77,7 @@ var RetryTest = suite.ConformanceTest{
 				suite.TimeoutConfig.MaxTimeToConsistency,
 				func(_ time.Duration) bool {
 					// check retry stats from Prometheus
-					v, err := prometheus.QuerySum(promAddr, promQL)
+					v, err := promClient.QuerySum(ctx, promQL)
 					if err != nil {
 						return false
 					}

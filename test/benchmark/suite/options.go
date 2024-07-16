@@ -8,14 +8,6 @@
 
 package suite
 
-import "testing"
-
-type BenchmarkTest struct {
-	ShortName   string
-	Description string
-	Test        func(*testing.T, *BenchmarkTestSuite) []*BenchmarkReport
-}
-
 // BenchmarkOptions for nighthawk-client.
 type BenchmarkOptions struct {
 	RPS         string

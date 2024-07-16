@@ -3,10 +3,7 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-//go:build benchmark
-// +build benchmark
-
-package suite
+package kubernetes
 
 import (
 	"testing"
@@ -14,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	batchv1 "k8s.io/api/batch/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
@@ -21,6 +19,19 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
+
+func NewClient(t *testing.T) client.Client {
+	cfg, err := config.GetConfig()
+	require.NoError(t, err)
+
+	c, err := client.New(cfg, client.Options{})
+	require.NoError(t, err)
+
+	// Install all the scheme to kubernetes client.
+	CheckInstallScheme(t, c)
+
+	return c
+}
 
 func CheckInstallScheme(t *testing.T, c client.Client) {
 	require.NoError(t, gwapiv1a3.Install(c.Scheme()))
