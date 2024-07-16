@@ -26,6 +26,7 @@ func init() {
 	ConformanceTests = append(ConformanceTests,
 		RoundRobinLoadBalancingTest,
 		ConsistentHashSourceIPLoadBalancingTest,
+		ConsistentHashHeaderLoadBalancingTest,
 	)
 }
 
@@ -34,7 +35,7 @@ var RoundRobinLoadBalancingTest = suite.ConformanceTest{
 	Description: "Test for round robin load balancing type",
 	Manifests:   []string{"testdata/load_balancing_round_robin.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		const sendRequest = 100
+		const sendRequests = 100
 
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "round-robin-lb-route", Namespace: ns}
@@ -63,7 +64,7 @@ var RoundRobinLoadBalancingTest = suite.ConformanceTest{
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
 
 			trafficMap := make(map[string]int)
-			for i := 0; i < sendRequest; i++ {
+			for i := 0; i < sendRequests; i++ {
 				cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
 				if err != nil {
 					t.Errorf("failed to get expected response: %v", err)
@@ -83,7 +84,7 @@ var RoundRobinLoadBalancingTest = suite.ConformanceTest{
 			}
 
 			// Expect traffic number for each endpoint.
-			even := sendRequest / 4
+			even := sendRequests / 4
 
 			for podName, traffic := range trafficMap {
 				if !AlmostEquals(traffic, even, 3) {
@@ -99,7 +100,7 @@ var ConsistentHashSourceIPLoadBalancingTest = suite.ConformanceTest{
 	Description: "Test for source IP based consistent hash load balancing type",
 	Manifests:   []string{"testdata/load_balancing_consistent_hash_source_ip.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		const sendRequest = 10
+		const sendRequests = 10
 
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "source-ip-lb-route", Namespace: ns}
@@ -130,7 +131,7 @@ var ConsistentHashSourceIPLoadBalancingTest = suite.ConformanceTest{
 			// Same source IP will always hit the same endpoint.
 			var expectPodName string
 
-			for i := 0; i < sendRequest; i++ {
+			for i := 0; i < sendRequests; i++ {
 				cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
 				if err != nil {
 					t.Errorf("failed to get expected response: %v", err)
@@ -149,6 +150,73 @@ var ConsistentHashSourceIPLoadBalancingTest = suite.ConformanceTest{
 						expectPodName = podName
 					} else {
 						require.Equal(t, expectPodName, podName)
+					}
+				}
+			}
+		})
+	},
+}
+
+var ConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
+	ShortName:   "Header based Consistent Hash Load Balancing",
+	Description: "Test for header based consistent hash load balancing type",
+	Manifests:   []string{"testdata/load_balancing_consistent_hash_header.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		const sendRequests = 10
+
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "header-lb-route", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+
+		ancestorRef := gwapiv1a2.ParentReference{
+			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+			Kind:      gatewayapi.KindPtr(gatewayapi.KindGateway),
+			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+			Name:      gwapiv1.ObjectName(gwNN.Name),
+		}
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "header-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
+
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+		t.Run("all traffics route to the same backend with same test header", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/header",
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+
+			headers := []string{"0.0.0.0", "1.2.3.4", "4.5.6.7", "7.8.9.10", "10.11.12.13"}
+
+			for _, header := range headers {
+				// Same test header will always hit the same endpoint.
+				var expectPodName string
+
+				for i := 0; i < sendRequests; i++ {
+					req.Headers["Lb-Test-Header"] = []string{header}
+					cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
+					if err != nil {
+						t.Errorf("failed to get expected response: %v", err)
+					}
+
+					if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
+						t.Errorf("failed to compare request and response: %v", err)
+					}
+
+					podName := cReq.Pod
+					if len(podName) == 0 {
+						// it shouldn't be missing here
+						t.Errorf("failed to get pod header in response: %v", err)
+					} else {
+						if len(expectPodName) == 0 {
+							expectPodName = podName
+						} else {
+							require.Equal(t, expectPodName, podName)
+						}
 					}
 				}
 			}
