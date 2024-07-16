@@ -13,10 +13,7 @@ import (
 	"io/fs"
 	"testing"
 
-	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -24,19 +21,13 @@ import (
 
 	"github.com/envoyproxy/gateway/test/e2e"
 	"github.com/envoyproxy/gateway/test/e2e/tests"
+	kubetest "github.com/envoyproxy/gateway/test/utils/kubernetes"
 )
 
 func TestMultipleGC(t *testing.T) {
 	flag.Parse()
 
-	cfg, err := config.GetConfig()
-	require.NoError(t, err)
-
-	c, err := client.New(cfg, client.Options{})
-	require.NoError(t, err)
-
-	// Install all the scheme to kubernetes client.
-	e2e.CheckInstallScheme(t, c)
+	c := kubetest.NewClient(t)
 
 	if flags.RunTest != nil && *flags.RunTest != "" {
 		t.Logf("Running E2E test %s with %s GatewayClass\n cleanup: %t\n debug: %t",
@@ -45,6 +36,7 @@ func TestMultipleGC(t *testing.T) {
 		t.Logf("Running E2E tests with %s GatewayClass\n cleanup: %t\n debug: %t",
 			*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug)
 	}
+
 	t.Run("Internet GC Test", func(t *testing.T) {
 		t.Parallel()
 		internetGatewaySuiteGatewayClassName := "internet"
