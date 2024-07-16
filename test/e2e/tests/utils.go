@@ -93,6 +93,7 @@ func SecurityPolicyMustBeAccepted(t *testing.T, client client.Client, policyName
 		}
 
 		if policyAcceptedByAncestor(policy.Status.Ancestors, controllerName, ancestorRef) {
+			t.Logf("SecurityPolicy has been accepted: %v", policy)
 			return true, nil
 		}
 
