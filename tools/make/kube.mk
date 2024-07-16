@@ -19,7 +19,6 @@ BENCHMARK_DURATION ?= 60
 BENCHMARK_REPORT_DIR ?= benchmark_report
 
 E2E_RUN_TEST ?=
-E2E_RUN_EG_UPGRADE_TESTS ?= false
 E2E_CLEANUP ?= true
 
 # Set Kubernetes Resources Directory Path

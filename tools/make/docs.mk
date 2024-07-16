@@ -1,6 +1,6 @@
 DOCS_OUTPUT_DIR := site/public
 RELEASE_VERSIONS ?= $(foreach v,$(wildcard ${ROOT_DIR}/docs/*),$(notdir ${v}))
-LINKINATOR_IGNORE := "github.com githubusercontent.com example.com github.io _print v0.6 v0.5 v0.4 v0.3 v0.2"
+LINKINATOR_IGNORE := "github.com githubusercontent.com example.com github.io _print"
 CLEAN_NODE_MODULES ?= true
 
 ##@ Docs
