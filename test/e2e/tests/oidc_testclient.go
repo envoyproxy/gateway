@@ -212,7 +212,7 @@ func extractFromData(responseBody string, match formMatch, includeFromInputs boo
 	// Find the form with the specified ID or match criteria
 	form := findForm(doc, match)
 	if form == nil {
-		return "", "", nil, fmt.Errorf("%s not found", match)
+		return "", "", nil, fmt.Errorf("%s not found in %s", match, responseBody)
 	}
 
 	var (
