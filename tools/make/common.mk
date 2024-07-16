@@ -38,7 +38,7 @@ endif
 REV=$(shell git rev-parse --short HEAD)
 
 # Supported Platforms for building multiarch binaries.
-PLATFORMS ?= darwin_amd64 darwin_arm64 linux_amd64 linux_arm64 
+PLATFORMS ?= darwin_amd64 darwin_arm64 linux_amd64 linux_arm64
 
 # Set a specific PLATFORM
 ifeq ($(origin PLATFORM), undefined)
@@ -94,20 +94,20 @@ endef
 define USAGE_OPTIONS
 
 Options:
-  \033[36mBINS\033[0m       
+  \033[36mBINS\033[0m
 		 The binaries to build. Default is all of cmd.
 		 This option is available when using: make build|build-multiarch
 		 Example: \033[36mmake build BINS="envoy-gateway"\033[0m
-  \033[36mIMAGES\033[0m     
+  \033[36mIMAGES\033[0m
 		 Backend images to make. Default is all of cmds.
 		 This option is available when using: make image|image-multiarch|push|push-multiarch
 		 Example: \033[36mmake image-multiarch IMAGES="envoy-gateway"\033[0m
-  \033[36mPLATFORM\033[0m   
+  \033[36mPLATFORM\033[0m
 		 The specified platform to build.
 		 This option is available when using: make build|image
 		 Example: \033[36mmake build BINS="envoy-gateway" PLATFORM="linux_amd64""\033[0m
 		 Supported Platforms: linux_amd64 linux_arm64 darwin_amd64 darwin_arm64
-  \033[36mPLATFORMS\033[0m  
+  \033[36mPLATFORMS\033[0m
 		 The multiple platforms to build.
 		 This option is available when using: make build-multiarch
 		 Example: \033[36mmake build-multiarch BINS="envoy-gateway" PLATFORMS="linux_amd64 linux_arm64"\033[0m
@@ -119,7 +119,7 @@ export USAGE_OPTIONS
 
 .PHONY: generate
 generate: ## Generate go code from templates and tags
-generate: kube-generate docs-api helm-generate go.generate
+generate: kube-generate docs-api helm-generate go.generate release-notes-docs copy-current-release-docs
 
 ## help: Show this help info.
 .PHONY: help

@@ -11,7 +11,6 @@ package tests
 import (
 	"net/http"
 	"net/url"
-	"strings"
 	"testing"
 	"time"
 
@@ -23,14 +22,6 @@ import (
 
 func init() {
 	ConformanceTests = append(ConformanceTests, ClientTimeoutTest)
-}
-
-var largeSizeHeader = func() string {
-	var b strings.Builder
-	for i := 0; i < 5000; i++ {
-		b.WriteString("FakeHeaderValue")
-	}
-	return b.String()
 }
 
 var ClientTimeoutTest = suite.ConformanceTest{
@@ -48,10 +39,6 @@ var ClientTimeoutTest = suite.ConformanceTest{
 			req := &http.Request{
 				Method: "GET",
 				URL:    &url.URL{Scheme: "http", Host: gwAddr, Path: "/request-timeout"},
-				Header: http.Header{
-					// larger enough to trigger request timeout
-					"x-large-size-header": []string{largeSizeHeader()},
-				},
 			}
 
 			client := &http.Client{}
@@ -66,8 +53,9 @@ var ClientTimeoutTest = suite.ConformanceTest{
 					}
 					defer resp.Body.Close()
 
-					// return 408 instead of 400 when request timeout.
-					if http.StatusRequestTimeout == resp.StatusCode {
+					// return 504 instead of 400 when request timeout.
+					// https://github.com/envoyproxy/envoy/blob/56021dbfb10b53c6d08ed6fc811e1ff4c9ac41fd/source/common/http/utility.cc#L1409
+					if http.StatusGatewayTimeout == resp.StatusCode {
 						return true
 					} else {
 						t.Logf("response status code: %d, (after %v) ", resp.StatusCode, elapsed)

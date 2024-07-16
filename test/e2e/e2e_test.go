@@ -55,9 +55,7 @@ func TestE2E(t *testing.T) {
 		// All e2e tests should leave Features empty.
 		SupportedFeatures: sets.New[features.SupportedFeature](features.SupportGateway),
 		SkipTests: []string{
-			tests.ClientTimeoutTest.ShortName,        // https://github.com/envoyproxy/gateway/issues/2720
 			tests.GatewayInfraResourceTest.ShortName, // https://github.com/envoyproxy/gateway/issues/3191
-			tests.UseClientProtocolTest.ShortName,    // https://github.com/envoyproxy/gateway/issues/3473
 		},
 	})
 	if err != nil {
