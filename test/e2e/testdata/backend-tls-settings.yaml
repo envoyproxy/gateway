@@ -11,9 +11,9 @@ spec:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - group: ""
-          kind: Secret
-          name: backend-tls-certificate
+          - group: ""
+            kind: Secret
+            name: backend-tls-certificate
         mode: Terminate
     - name: http
       port: 80
