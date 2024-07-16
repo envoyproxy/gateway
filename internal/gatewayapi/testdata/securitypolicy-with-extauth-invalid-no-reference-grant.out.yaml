@@ -175,3 +175,4 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /foo
+        security: {}

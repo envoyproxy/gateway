@@ -420,19 +420,17 @@ func (t *Translator) translateSecurityPolicyForRoute(
 			if irListener != nil {
 				for _, r := range irListener.Routes {
 					if strings.HasPrefix(r.Name, prefix) {
-						if errs == nil {
-							r.Security = &ir.SecurityFeatures{
-								CORS:          cors,
-								JWT:           jwt,
-								OIDC:          oidc,
-								BasicAuth:     basicAuth,
-								ExtAuth:       extAuth,
-								Authorization: authorization,
-							}
-						} else {
+						r.Security = &ir.SecurityFeatures{
+							CORS:          cors,
+							JWT:           jwt,
+							OIDC:          oidc,
+							BasicAuth:     basicAuth,
+							ExtAuth:       extAuth,
+							Authorization: authorization,
+						}
+						if errs != nil {
 							// Return a 500 direct response to avoid unauthorized access
 							r.DirectResponse = &ir.DirectResponse{
-								Body:       ptr.To("Failed to apply SecurityPolicies"),
 								StatusCode: 500,
 							}
 						}
@@ -529,19 +527,17 @@ func (t *Translator) translateSecurityPolicyForGateway(
 			if r.Security != nil {
 				continue
 			}
-			if errs == nil {
-				r.Security = &ir.SecurityFeatures{
-					CORS:          cors,
-					JWT:           jwt,
-					OIDC:          oidc,
-					BasicAuth:     basicAuth,
-					ExtAuth:       extAuth,
-					Authorization: authorization,
-				}
-			} else {
+			r.Security = &ir.SecurityFeatures{
+				CORS:          cors,
+				JWT:           jwt,
+				OIDC:          oidc,
+				BasicAuth:     basicAuth,
+				ExtAuth:       extAuth,
+				Authorization: authorization,
+			}
+			if errs != nil {
 				// Return a 500 direct response to avoid unauthorized access
 				r.DirectResponse = &ir.DirectResponse{
-					Body:       ptr.To("Failed to apply SecurityPolicies"),
 					StatusCode: 500,
 				}
 			}
