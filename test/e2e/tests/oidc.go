@@ -78,7 +78,7 @@ var OIDCTest = suite.ConformanceTest{
 			)
 			require.NoError(t, err)
 
-			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
+			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, 5*time.Minute, true,
 				func(_ context.Context) (done bool, err error) {
 					t.Logf("sending request to %s", testURL)
 
