@@ -161,6 +161,9 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+        directResponse:
+          body: Failed to apply SecurityPolicies
+          statusCode: 500
         hostname: www.foo.com
         isHTTP2: false
         metadata:
@@ -172,4 +175,3 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /foo
-        security: {}

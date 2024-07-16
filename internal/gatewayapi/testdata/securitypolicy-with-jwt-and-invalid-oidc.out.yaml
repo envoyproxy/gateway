@@ -258,6 +258,9 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+        directResponse:
+          body: Failed to apply SecurityPolicies
+          statusCode: 500
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
@@ -269,18 +272,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /foo
-        security:
-          jwt:
-            providers:
-            - audiences:
-              - one.foo.com
-              claimToHeaders:
-              - claim: claim1
-                header: one-route-example-key
-              issuer: https://one.example.com
-              name: example1
-              remoteJWKS:
-                uri: https://one.example.com/jwt/public-key/jwks.json
       - destination:
           name: httproute/default/httproute-2/rule/0
           settings:
@@ -290,6 +281,9 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+        directResponse:
+          body: Failed to apply SecurityPolicies
+          statusCode: 500
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
@@ -301,15 +295,3 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /bar
-        security:
-          jwt:
-            providers:
-            - audiences:
-              - two.foo.com
-              claimToHeaders:
-              - claim: claim2
-                header: one-route-example-key
-              issuer: https://two.example.com
-              name: example2
-              remoteJWKS:
-                uri: https://one.example.com/jwt/public-key/jwks.json
