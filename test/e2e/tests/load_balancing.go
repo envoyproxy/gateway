@@ -11,6 +11,7 @@ package tests
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -22,7 +23,10 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, RoundRobinLoadBalancingTest)
+	ConformanceTests = append(ConformanceTests,
+		RoundRobinLoadBalancingTest,
+		ConsistentHashSourceIPLoadBalancingTest,
+	)
 }
 
 var RoundRobinLoadBalancingTest = suite.ConformanceTest{
@@ -84,6 +88,68 @@ var RoundRobinLoadBalancingTest = suite.ConformanceTest{
 			for podName, traffic := range trafficMap {
 				if !AlmostEquals(traffic, even, 3) {
 					t.Errorf("The traffic are not be split evenly for pod %s: %d", podName, traffic)
+				}
+			}
+		})
+	},
+}
+
+var ConsistentHashSourceIPLoadBalancingTest = suite.ConformanceTest{
+	ShortName:   "Source IP based Consistent Hash Load Balancing",
+	Description: "Test for source IP based consistent hash load balancing type",
+	Manifests:   []string{"testdata/load_balancing_consistent_hash_source_ip.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		const sendRequest = 10
+
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "source-ip-lb-route", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+
+		ancestorRef := gwapiv1a2.ParentReference{
+			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+			Kind:      gatewayapi.KindPtr(gatewayapi.KindGateway),
+			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+			Name:      gwapiv1.ObjectName(gwNN.Name),
+		}
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "source-ip-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
+
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+		t.Run("all traffics route to the same backend with same source ip", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/source",
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+
+			// Same source IP will always hit the same endpoint.
+			var expectPodName string
+
+			for i := 0; i < sendRequest; i++ {
+				cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
+				if err != nil {
+					t.Errorf("failed to get expected response: %v", err)
+				}
+
+				if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
+					t.Errorf("failed to compare request and response: %v", err)
+				}
+
+				podName := cReq.Pod
+				if len(podName) == 0 {
+					// it shouldn't be missing here
+					t.Errorf("failed to get pod header in response: %v", err)
+				} else {
+					if len(expectPodName) == 0 {
+						expectPodName = podName
+					} else {
+						require.Equal(t, expectPodName, podName)
+					}
 				}
 			}
 		})
