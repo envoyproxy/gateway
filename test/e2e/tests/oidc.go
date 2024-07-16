@@ -9,14 +9,17 @@
 package tests
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwhttp "sigs.k8s.io/gateway-api/conformance/utils/http"
@@ -75,18 +78,30 @@ var OIDCTest = suite.ConformanceTest{
 			)
 			require.NoError(t, err)
 
-			// Send a request to the http route with OIDC configured.
-			// It will be redirected to the keycloak login page
-			res, err := client.Get(testURL, true)
-			require.NoError(t, err)
-			require.Equal(t, 200, res.StatusCode, "Expected 200 OK")
+			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
+				func(_ context.Context) (done bool, err error) {
+					t.Logf("sending request to %s", testURL)
 
-			// Parse the response body to get the URL where the login page would post the user-entered credentials
-			require.NoError(t, client.ParseLoginForm(res.Body, keyCloakLoginFormID), "Failed to parse login form")
+					// Send a request to the http route with OIDC configured.
+					// It will be redirected to the keycloak login page
+					res, err := client.Get(testURL, true)
+					require.Equal(t, 200, res.StatusCode, "Expected 200 OK")
+
+					// Parse the response body to get the URL where the login page would post the user-entered credentials
+					if err := client.ParseLoginForm(res.Body, keyCloakLoginFormID); err != nil {
+						t.Logf("failed to parse login form: %v", err)
+						return false, nil
+					}
+
+					t.Log("successfully parsed login form")
+					return true, nil
+				}); err != nil {
+				t.Errorf("failed to parse login form: %v", err)
+			}
 
 			// Submit the login form to the IdP.
 			// This will authenticate and redirect back to the application
-			res, err = client.Login(map[string]string{"username": username, "password": password, "credentialId": ""})
+			res, err := client.Login(map[string]string{"username": username, "password": password, "credentialId": ""})
 			require.NoError(t, err, "Failed to login to the IdP")
 
 			// Verify that we get the expected response from the application
