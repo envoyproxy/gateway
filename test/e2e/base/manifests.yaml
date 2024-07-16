@@ -971,3 +971,6 @@ spec:
   shutdown:
     drainTimeout: 5s
     minDrainDuration: 1s
+
+# Important: please do not add resources to this manifest unless they are shared resources used by multiple tests.
+# If you need to add resources specific to a single test, please add them to the test's manifest file in the testdata directory.
