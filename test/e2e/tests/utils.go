@@ -104,6 +104,33 @@ func SecurityPolicyMustBeAccepted(t *testing.T, client client.Client, policyName
 	require.NoErrorf(t, waitErr, "error waiting for SecurityPolicy to be accepted")
 }
 
+// SecurityPolicyMustFail waits for an SecurityPolicy to fail with the specified reason.
+func SecurityPolicyMustFail(
+	t *testing.T, client client.Client, policyName types.NamespacedName,
+	controllerName string, ancestorRef gwapiv1a2.ParentReference, message string,
+) {
+	t.Helper()
+
+	policy := &egv1a1.SecurityPolicy{}
+	waitErr := wait.PollUntilContextTimeout(
+		context.Background(), 1*time.Second, 60*time.Second,
+		true, func(ctx context.Context) (bool, error) {
+			err := client.Get(ctx, policyName, policy)
+			if err != nil {
+				return false, fmt.Errorf("error fetching SecurityPolicy: %w", err)
+			}
+
+			if policyFailAcceptedByAncestor(policy.Status.Ancestors, controllerName, ancestorRef, message) {
+				t.Logf("SecurityPolicy has been failed: %v", policy)
+				return true, nil
+			}
+
+			return false, nil
+		})
+
+	require.NoErrorf(t, waitErr, "error waiting for SecurityPolicy to fail with message: %s policy %v", message, policy)
+}
+
 // BackendTrafficPolicyMustBeAccepted waits for the specified BackendTrafficPolicy to be accepted.
 func BackendTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1a2.ParentReference) {
 	t.Helper()
