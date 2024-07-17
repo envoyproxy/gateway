@@ -553,15 +553,12 @@ type HTTPRoute struct {
 	URLRewrite *URLRewrite `json:"urlRewrite,omitempty" yaml:"urlRewrite,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
-	// External Processing extensions
-	ExtProcs []ExtProc `json:"extProc,omitempty" yaml:"extProc,omitempty"`
-	// Wasm extensions
-	Wasms []Wasm `json:"wasm,omitempty" yaml:"wasm,omitempty"`
-
 	// Traffic holds the features associated with BackendTrafficPolicy
 	Traffic *TrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
 	// Security holds the features associated with SecurityPolicy
 	Security *SecurityFeatures `json:"security,omitempty" yaml:"security,omitempty"`
+	// EnvoyExtension holds the features associated with EnvoyExtensionPolicy
+	EnvoyExtensions *EnvoyExtensionFeatures `json:"envoyExtensions,omitempty" yaml:"envoyExtensions,omitempty"`
 	// UseClientProtocol enables using the same protocol upstream that was used downstream
 	UseClientProtocol *bool `json:"useClientProtocol,omitempty" yaml:"useClientProtocol,omitempty"`
 	// Metadata is used to enrich envoy route metadata with user and provider-specific information
@@ -650,6 +647,15 @@ func (s *SecurityFeatures) Validate() error {
 	}
 
 	return errs
+}
+
+// EnvoyExtensionFeatures holds the information associated with the Envoy Extension Policy.
+// +k8s:deepcopy-gen=true
+type EnvoyExtensionFeatures struct {
+	// External Processing extensions
+	ExtProcs []ExtProc `json:"extProcs,omitempty" yaml:"extProcs,omitempty"`
+	// Wasm extensions
+	Wasms []Wasm `json:"wasms,omitempty" yaml:"wasms,omitempty"`
 }
 
 // UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension
