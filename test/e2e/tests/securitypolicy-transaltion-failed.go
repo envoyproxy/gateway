@@ -47,11 +47,11 @@ var FailedSecurityPolicyDirectResponseTest = suite.ConformanceTest{
 
 			// TODO: We should wait for the `programmed` condition to be true before sending traffic.
 			expectedResponse := http.ExpectedResponse{
-				Request: gwhttp.Request{
+				Request: http.Request{
 					Host: "www.example.com",
 					Path: "/myapp",
 				},
-				Response: gwhttp.Response{
+				Response: http.Response{
 					StatusCode: 500,
 				},
 				Namespace: ns,
