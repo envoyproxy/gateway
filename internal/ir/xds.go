@@ -1190,9 +1190,6 @@ func (h AddHeader) Validate() error {
 // DirectResponse holds the details for returning a body and status code for a route.
 // +k8s:deepcopy-gen=true
 type DirectResponse struct {
-	// Body configures the body of the direct response. Currently only a string response
-	// is supported, but in the future a config.core.v3.DataSource may replace it.
-	Body *string `json:"body,omitempty" yaml:"body,omitempty"`
 	// StatusCode will be used for the direct response's status code.
 	StatusCode uint32 `json:"statusCode" yaml:"statusCode"`
 }
