@@ -15,3 +15,5 @@ bin
 ./charts
 *.js
 */testdata/*.yaml
+./site/public/*
+./site/node_modules/*
