@@ -45,7 +45,6 @@ var FailedSecurityPolicyDirectResponseTest = suite.ConformanceTest{
 			}
 			SecurityPolicyMustFail(t, suite.Client, types.NamespacedName{Name: "oidc-test", Namespace: ns}, suite.ControllerName, ancestorRef, "")
 
-			// TODO: We should wait for the `programmed` condition to be true before sending traffic.
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Host: "www.example.com",
