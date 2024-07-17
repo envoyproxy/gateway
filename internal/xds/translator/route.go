@@ -505,12 +505,12 @@ func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy 
 			hashPolicy.GetCookie().Ttl = durationpb.New(ch.Cookie.TTL.Duration)
 		}
 		if ch.Cookie.Attributes != nil {
-			attributes := make([]*routev3.RouteAction_HashPolicy_CookieAttribute, len(ch.Cookie.Attributes))
-			i := 0
+			attributes := make([]*routev3.RouteAction_HashPolicy_CookieAttribute, 0, len(ch.Cookie.Attributes))
 			for name, value := range ch.Cookie.Attributes {
-				attributes[i].Name = name
-				attributes[i].Value = value
-				i++
+				attributes = append(attributes, &routev3.RouteAction_HashPolicy_CookieAttribute{
+					Name:  name,
+					Value: value,
+				})
 			}
 			hashPolicy.GetCookie().Attributes = attributes
 		}
