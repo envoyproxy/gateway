@@ -16,7 +16,7 @@ gateways:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: Gateway
     metadata:
-      namespace: envoy-gateway2
+      namespace: default
       name: gateway-1
     spec:
       gatewayClassName: envoy-gateway-class

@@ -44,7 +44,7 @@ gateways:
   metadata:
     creationTimestamp: null
     name: gateway-1
-    namespace: envoy-gateway2
+    namespace: default
   spec:
     gatewayClassName: envoy-gateway-class
     listeners:
@@ -113,6 +113,21 @@ httpRoutes:
       parentRef:
         name: gateway-1
 infraIR:
+  default/gateway-1:
+    proxy:
+      listeners:
+      - address: null
+        name: default/gateway-1/http
+        ports:
+        - containerPort: 10080
+          name: http-80
+          protocol: HTTP
+          servicePort: 80
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: default
+      name: default/gateway-1
   envoy-gateway/gateway-1:
     proxy:
       listeners:
@@ -128,22 +143,26 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway/gateway-1
-  envoy-gateway2/gateway-1:
-    proxy:
-      listeners:
-      - address: null
-        name: envoy-gateway2/gateway-1/http
-        ports:
-        - containerPort: 10080
-          name: http-80
-          protocol: HTTP
-          servicePort: 80
-      metadata:
-        labels:
-          gateway.envoyproxy.io/owning-gateway-name: gateway-1
-          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway2
-      name: envoy-gateway2/gateway-1
 xdsIR:
+  default/gateway-1:
+    accessLog:
+      text:
+      - path: /dev/stdout
+    http:
+    - address: 0.0.0.0
+      hostnames:
+      - '*'
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+        sectionName: http
+      name: default/gateway-1/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
   envoy-gateway/gateway-1:
     accessLog:
       text:
@@ -184,22 +203,3 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-  envoy-gateway2/gateway-1:
-    accessLog:
-      text:
-      - path: /dev/stdout
-    http:
-    - address: 0.0.0.0
-      hostnames:
-      - '*'
-      isHTTP2: false
-      metadata:
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway2
-        sectionName: http
-      name: envoy-gateway2/gateway-1/http
-      path:
-        escapedSlashesAction: UnescapeAndRedirect
-        mergeSlashes: true
-      port: 10080
