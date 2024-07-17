@@ -102,8 +102,7 @@ infraIR:
           telemetry:
             accessLog:
               settings:
-              - format: null
-                sinks:
+              - sinks:
                 - file:
                     path: /dev/stdout
                   type: File

@@ -141,17 +141,24 @@ install-ratelimit:
 	tools/hack/deployment-exists.sh "app.kubernetes.io/name=envoy-ratelimit" "envoy-gateway-system"
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 
-.PHONY: run-e2e
-run-e2e: ## Run e2e tests
+.PHONY: e2e-prepare
+e2e-prepare: ## Prepare the environment for running e2e tests
 	@$(LOG_TARGET)
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml
+
+.PHONY: run-e2e
+run-e2e: e2e-prepare ## Run e2e tests
+	@$(LOG_TARGET)
 ifeq ($(E2E_RUN_TEST),)
 	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=false
 	go test $(E2E_TEST_ARGS) ./test/e2e/merge_gateways --gateway-class=merge-gateways --debug=true --cleanup-base-resources=false
 	go test $(E2E_TEST_ARGS) ./test/e2e/multiple_gc --debug=true --cleanup-base-resources=true
 	go test $(E2E_TEST_ARGS) ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
+else
+	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
+		--run-test $(E2E_RUN_TEST)
 endif
 
 .PHONY: run-benchmark
