@@ -7,7 +7,6 @@ This document guides maintainers through the process of creating an Envoy Gatewa
 
 - [Release Candidate](#release-candidate)
   - [Prerequisites](#prerequisites)
-  - [Setup cherry picker action](#setup-cherry-picker-action)
 - [Minor Release](#minor-release)
   - [Prerequisites](#prerequisites-1)
 - [Announce the Release](#announce-the-release)
@@ -73,37 +72,6 @@ export GITHUB_REMOTE=origin
 17. [Generate][] the GitHub changelog.
 18. Ensure you check the "This is a pre-release" checkbox when editing the GitHub release.
 19. If you find any bugs in this process, please create an issue.
-
-### Setup cherry picker action
-
-After release branch cut, RM (Release Manager) should add job [cherrypick action](https://github.com/envoyproxy/gateway/blob/main/.github/workflows/cherrypick.yaml) for target release.
-
-Configuration looks like following:
-
-```yaml
-  cherry_pick_release_v0_4:
-    runs-on: ubuntu-latest
-    name: Cherry pick into release-v0.4
-    if: ${{ contains(github.event.pull_request.labels.*.name, 'cherrypick/release-v0.4') && github.event.pull_request.merged == true }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
-        with:
-          fetch-depth: 0
-      - name: Cherry pick into release/v0.4
-        uses: carloscastrojumo/github-cherry-pick-action@a145da1b8142e752d3cbc11aaaa46a535690f0c5  # v1.0.9
-        with:
-          branch: release/v0.4
-          title: "[release/v0.4] {old_title}"
-          body: "Cherry picking #{old_pull_request_id} onto release/v0.4"
-          labels: |
-            cherrypick/release-v0.4
-          # put release manager here
-          reviewers: |
-            AliceProxy
-```
-
-Replace `v0.4` with real branch name, and `AliceProxy` with the real name of RM.
 
 ## Minor Release
 
