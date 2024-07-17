@@ -12,6 +12,7 @@
 package gatewayapi
 
 import (
+	"k8s.io/apimachinery/pkg/types"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -482,6 +483,69 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			results := getPolicyTargetRefs(tc.policy, tc.targets)
 			require.ElementsMatch(t, results, tc.results)
+		})
+	}
+}
+
+func TestIsRefToGateway(t *testing.T) {
+	cases := []struct {
+		name      string
+		parentRef gwapiv1.ParentReference
+		gatewayNN types.NamespacedName
+		expected  bool
+	}{
+		{
+			name: "match without namespace",
+			parentRef: gwapiv1.ParentReference{
+				Name: gwapiv1.ObjectName("eg"),
+			},
+			gatewayNN: types.NamespacedName{
+				Name:      "eg",
+				Namespace: "ns1",
+			},
+			expected: true,
+		},
+		{
+			name: "match without namespace2",
+			parentRef: gwapiv1.ParentReference{
+				Name: gwapiv1.ObjectName("eg"),
+			},
+			gatewayNN: types.NamespacedName{
+				Name:      "eg",
+				Namespace: "ns2",
+			},
+			expected: true,
+		},
+		{
+			name: "match with namespace",
+			parentRef: gwapiv1.ParentReference{
+				Name:      gwapiv1.ObjectName("eg"),
+				Namespace: NamespacePtr("ns1"),
+			},
+			gatewayNN: types.NamespacedName{
+				Name:      "eg",
+				Namespace: "ns1",
+			},
+			expected: true,
+		},
+		{
+			name: "match without namespace2",
+			parentRef: gwapiv1.ParentReference{
+				Name:      gwapiv1.ObjectName("eg"),
+				Namespace: NamespacePtr("ns2"),
+			},
+			gatewayNN: types.NamespacedName{
+				Name:      "eg",
+				Namespace: "ns1",
+			},
+			expected: false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := IsRefToGateway(tc.parentRef, tc.gatewayNN)
+			require.Equal(t, tc.expected, got)
 		})
 	}
 }

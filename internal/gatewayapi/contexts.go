@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"k8s.io/utils/ptr"
 	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
@@ -226,7 +227,18 @@ func GetHostnames(route RouteContext) []string {
 func GetParentReferences(route RouteContext) []gwapiv1.ParentReference {
 	rv := reflect.ValueOf(route).Elem()
 	pr := rv.FieldByName("Spec").FieldByName("ParentRefs")
-	return pr.Interface().([]gwapiv1.ParentReference)
+	refs := pr.Interface().([]gwapiv1.ParentReference)
+
+	ns := route.GetNamespace()
+	for _, ref := range refs {
+		if ref.Namespace == nil {
+			// In case the parentRef has no namespace, set the namespace of the Route,
+			// This will avoid an issue that different Gateways with same name in different namespaces
+			ref.Namespace = ptr.To(gwapiv1.Namespace(ns))
+		}
+	}
+
+	return refs
 }
 
 // GetRouteStatus returns the RouteStatus object associated with the Route.

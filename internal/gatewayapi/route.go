@@ -1409,7 +1409,6 @@ func inspectAppProtocolByRouteKind(kind gwapiv1.Kind) ir.AppProtocol {
 // attach for each parentRef.
 func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteContext, gateways []*GatewayContext, resources *Resources) bool {
 	var relevantRoute bool
-
 	for _, parentRef := range GetParentReferences(routeContext) {
 		isRelevantParentRef, selectedListeners := GetReferencedListeners(parentRef, gateways)
 
