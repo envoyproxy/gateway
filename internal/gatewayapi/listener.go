@@ -282,8 +282,9 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 				switch format.Type {
 				case egv1a1.ProxyAccessLogFormatTypeText:
 					al := &ir.TextAccessLog{
-						Format: format.Text,
-						Path:   sink.File.Path,
+						Format:     format.Text,
+						Path:       sink.File.Path,
+						CELMatches: validExprs,
 					}
 					irAccessLog.Text = append(irAccessLog.Text, al)
 				case egv1a1.ProxyAccessLogFormatTypeJSON:
