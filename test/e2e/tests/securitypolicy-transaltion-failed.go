@@ -30,7 +30,7 @@ func init() {
 var FailedSecurityPolicyTest = suite.ConformanceTest{
 	ShortName:   "SecurityPolicyFailedTranslation",
 	Description: "Test direct 500 response when failed to translate SecurityPolicy",
-	Manifests:   []string{"testdata/oidc-keycloak.yaml", "testdata/securitypolicy-translation-failed.yaml"},
+	Manifests:   []string{"testdata/securitypolicy-translation-failed.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("http route with failed SecurityPolicy", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
