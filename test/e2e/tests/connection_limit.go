@@ -25,7 +25,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
-	"github.com/envoyproxy/gateway/test/e2e/utils/prometheus"
+	"github.com/envoyproxy/gateway/test/utils/prometheus"
 )
 
 func init() {
@@ -37,6 +37,11 @@ var ConnectionLimitTest = suite.ConformanceTest{
 	Description: "Deny Requests over connection limit",
 	Manifests:   []string{"testdata/connection-limit.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ctx := context.Background()
+
+		promClient, err := prometheus.NewClient(suite.Client, types.NamespacedName{Name: "prometheus", Namespace: "monitoring"})
+		require.NoError(t, err)
+
 		t.Run("Close connections over limit", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "http-with-connection-limit", Namespace: ns}
@@ -50,11 +55,6 @@ var ConnectionLimitTest = suite.ConformanceTest{
 				Name:      gwapiv1.ObjectName(gwNN.Name),
 			}
 			ClientTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "connection-limit-ctp", Namespace: ns}, suite.ControllerName, ancestorRef)
-
-			promAddr, err := prometheus.Address(suite.Client,
-				types.NamespacedName{Name: "prometheus", Namespace: "monitoring"},
-			)
-			require.NoError(t, err)
 
 			// we make the number of connections equal to the number of connectionLimit connections + 3
 			// avoid partial connection errors or interruptions
@@ -93,7 +93,7 @@ var ConnectionLimitTest = suite.ConformanceTest{
 				suite.TimeoutConfig.MaxTimeToConsistency,
 				func(_ time.Duration) bool {
 					// check connection_limit stats from Prometheus
-					v, err := prometheus.QuerySum(promAddr, promQL)
+					v, err := promClient.QuerySum(ctx, promQL)
 					if err != nil {
 						// wait until Prometheus sync stats
 						return false
