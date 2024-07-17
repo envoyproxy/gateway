@@ -23,12 +23,12 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, OIDCTest)
+	ConformanceTests = append(ConformanceTests, FailedSecurityPolicyDirectResponseTest)
 }
 
-// FailedSecurityPolicyTest tests the direct 500 response for HTTPRoute targeted by a failed SecurityPolicy.
-var FailedSecurityPolicyTest = suite.ConformanceTest{
-	ShortName:   "SecurityPolicyFailedTranslation",
+// FailedSecurityPolicyDirectResponseTest tests the direct 500 response for HTTPRoute targeted by a failed SecurityPolicy.
+var FailedSecurityPolicyDirectResponseTest = suite.ConformanceTest{
+	ShortName:   "FailedSecurityPolicyDirectResponse",
 	Description: "Test direct 500 response when failed to translate SecurityPolicy",
 	Manifests:   []string{"testdata/securitypolicy-translation-failed.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
