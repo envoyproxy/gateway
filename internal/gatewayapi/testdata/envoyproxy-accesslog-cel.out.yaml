@@ -118,6 +118,14 @@ infraIR:
                     resources:
                       k8s.cluster.name: cluster-1
                   type: OpenTelemetry
+              - sinks:
+                - als:
+                    backendRefs:
+                    - name: envoy-als
+                      namespace: monitoring
+                      port: 9000
+                    type: TCP
+                  type: ALS
         status: {}
       listeners:
       - address: null
@@ -135,10 +143,21 @@ infraIR:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      celMatches:
-      - response.code >= 400
+      als:
+      - destination:
+          name: accesslog_als_1_0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 10.240.0.10
+              port: 9090
+            protocol: GRPC
+        name: envoy-gateway-system/test
+        type: TCP
       openTelemetry:
       - authority: otel-collector.monitoring.svc.cluster.local
+        celMatches:
+        - response.code >= 400
         destination:
           name: accesslog_otel_0_1
           settings:
@@ -152,7 +171,9 @@ xdsIR:
         text: |
           [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
       text:
-      - format: |
+      - celMatches:
+        - response.code >= 400
+        format: |
           [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
         path: /dev/stdout
     http:
