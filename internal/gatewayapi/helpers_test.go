@@ -489,13 +489,15 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 
 func TestIsRefToGateway(t *testing.T) {
 	cases := []struct {
-		name      string
-		parentRef gwapiv1.ParentReference
-		gatewayNN types.NamespacedName
-		expected  bool
+		name               string
+		parentRefNamespace gwapiv1.Namespace
+		parentRef          gwapiv1.ParentReference
+		gatewayNN          types.NamespacedName
+		expected           bool
 	}{
 		{
-			name: "match without namespace",
+			name:               "match without namespace-true",
+			parentRefNamespace: gwapiv1.Namespace("ns1"),
 			parentRef: gwapiv1.ParentReference{
 				Name: gwapiv1.ObjectName("eg"),
 			},
@@ -506,7 +508,8 @@ func TestIsRefToGateway(t *testing.T) {
 			expected: true,
 		},
 		{
-			name: "match without namespace2",
+			name:               "match without namespace-false",
+			parentRefNamespace: gwapiv1.Namespace("ns1"),
 			parentRef: gwapiv1.ParentReference{
 				Name: gwapiv1.ObjectName("eg"),
 			},
@@ -514,10 +517,11 @@ func TestIsRefToGateway(t *testing.T) {
 				Name:      "eg",
 				Namespace: "ns2",
 			},
-			expected: true,
+			expected: false,
 		},
 		{
-			name: "match with namespace",
+			name:               "match with namespace-true",
+			parentRefNamespace: gwapiv1.Namespace("ns1"),
 			parentRef: gwapiv1.ParentReference{
 				Name:      gwapiv1.ObjectName("eg"),
 				Namespace: NamespacePtr("ns1"),
@@ -529,7 +533,8 @@ func TestIsRefToGateway(t *testing.T) {
 			expected: true,
 		},
 		{
-			name: "match without namespace2",
+			name:               "match without namespace2-false",
+			parentRefNamespace: gwapiv1.Namespace("ns1"),
 			parentRef: gwapiv1.ParentReference{
 				Name:      gwapiv1.ObjectName("eg"),
 				Namespace: NamespacePtr("ns2"),
@@ -544,7 +549,7 @@ func TestIsRefToGateway(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := IsRefToGateway(tc.parentRef, tc.gatewayNN)
+			got := IsRefToGateway(tc.parentRefNamespace, tc.parentRef, tc.gatewayNN)
 			require.Equal(t, tc.expected, got)
 		})
 	}
