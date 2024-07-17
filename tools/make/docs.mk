@@ -1,5 +1,8 @@
 DOCS_OUTPUT_DIR := site/public
 RELEASE_VERSIONS ?= $(foreach v,$(wildcard ${ROOT_DIR}/docs/*),$(notdir ${v}))
+# TODO: github.com does not allow access too often, there are a lot of 429 errors
+#       find a way to remove github.com from ignore list
+# TODO: example.com is not a valid domain, we should remove it from ignore list
 LINKINATOR_IGNORE := "github.com githubusercontent.com example.com github.io _print"
 CLEAN_NODE_MODULES ?= true
 
@@ -116,12 +119,8 @@ docs-release-gen:
 	@echo '  url = "/$(DOC_VERSION)"' >> site/hugo.toml
 
 .PHONY: docs-check-links
-docs-check-links:
+docs-check-links: # Check for broken links in the docs
 	@$(LOG_TARGET)
-	# Check for broken links, right now we are focusing on the v1.0.0
-	# github.com does not allow access too often, there are a lot of 429 errors
-	# TODO: find a way to remove github.com from ignore list
-	# TODO: example.com is not a valid domain, we should remove it from ignore list
 	linkinator site/public/ -r --concurrency 25 --skip $(LINKINATOR_IGNORE)
 
 release-notes-docs: $(tools/release-notes-docs)
