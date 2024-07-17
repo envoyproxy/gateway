@@ -394,8 +394,6 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	}
 
 	// Apply IR to all relevant routes
-	// Note: there are multiple features in a security policy, even if some of them
-	// are invalid, we still want to apply the valid ones.
 	prefix := irRoutePrefix(route)
 	parentRefs := GetParentReferences(route)
 	for _, p := range parentRefs {
@@ -429,6 +427,12 @@ func (t *Translator) translateSecurityPolicyForRoute(
 							BasicAuth:     basicAuth,
 							ExtAuth:       extAuth,
 							Authorization: authorization,
+						}
+						if errs != nil {
+							// Return a 500 direct response to avoid unauthorized access
+							r.DirectResponse = &ir.DirectResponse{
+								StatusCode: 500,
+							}
 						}
 					}
 				}
@@ -523,7 +527,6 @@ func (t *Translator) translateSecurityPolicyForGateway(
 			if r.Security != nil {
 				continue
 			}
-
 			r.Security = &ir.SecurityFeatures{
 				CORS:          cors,
 				JWT:           jwt,
@@ -531,6 +534,12 @@ func (t *Translator) translateSecurityPolicyForGateway(
 				BasicAuth:     basicAuth,
 				ExtAuth:       extAuth,
 				Authorization: authorization,
+			}
+			if errs != nil {
+				// Return a 500 direct response to avoid unauthorized access
+				r.DirectResponse = &ir.DirectResponse{
+					StatusCode: 500,
+				}
 			}
 		}
 	}
