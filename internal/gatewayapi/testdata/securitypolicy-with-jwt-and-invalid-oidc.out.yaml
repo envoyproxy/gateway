@@ -259,7 +259,6 @@ xdsIR:
             protocol: HTTP
             weight: 1
         directResponse:
-          body: Failed to apply SecurityPolicies
           statusCode: 500
         hostname: gateway.envoyproxy.io
         isHTTP2: false
@@ -294,7 +293,6 @@ xdsIR:
             protocol: HTTP
             weight: 1
         directResponse:
-          body: Failed to apply SecurityPolicies
           statusCode: 500
         hostname: gateway.envoyproxy.io
         isHTTP2: false

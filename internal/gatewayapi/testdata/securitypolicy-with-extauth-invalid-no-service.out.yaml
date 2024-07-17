@@ -161,7 +161,6 @@ xdsIR:
             protocol: HTTP
             weight: 1
         directResponse:
-          body: Failed to apply SecurityPolicies
           statusCode: 500
         hostname: www.foo.com
         isHTTP2: false
