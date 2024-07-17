@@ -2,8 +2,9 @@ DOCS_OUTPUT_DIR := site/public
 RELEASE_VERSIONS ?= $(foreach v,$(wildcard ${ROOT_DIR}/docs/*),$(notdir ${v}))
 # TODO: github.com does not allow access too often, there are a lot of 429 errors
 #       find a way to remove github.com from ignore list
+# TODO: example.com is not a valid domain, we should remove it from ignore list
 # TODO: https://www.gnu.org/software/make became unstable, we should remove it from ignore list later
-LINKINATOR_IGNORE := "github.com githubusercontent.com github.io gnu.org _print"
+LINKINATOR_IGNORE := "github.com githubusercontent.com example.com github.io gnu.org _print"
 CLEAN_NODE_MODULES ?= true
 
 ##@ Docs
