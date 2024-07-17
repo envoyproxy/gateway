@@ -26,9 +26,8 @@ func init() {
 	ConformanceTests = append(ConformanceTests, OIDCTest)
 }
 
-// OIDCTest tests OIDC authentication for an http route with OIDC configured.
-// The http route points to an application to verify that OIDC authentication works on application/http path level.
-var OIDCTest = suite.ConformanceTest{
+// FailedSecurityPolicyTest tests the direct 500 response for HTTPRoute targeted by a failed SecurityPolicy.
+var FailedSecurityPolicyTest = suite.ConformanceTest{
 	ShortName:   "SecurityPolicyFailedTranslation",
 	Description: "Test direct 500 response when failed to translate SecurityPolicy",
 	Manifests:   []string{"testdata/oidc-keycloak.yaml", "testdata/securitypolicy-translation-failed.yaml"},
