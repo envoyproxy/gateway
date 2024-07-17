@@ -24,6 +24,14 @@ envoyProxyForGatewayClass:
               port: 4317
               resources:
                 k8s.cluster.name: "cluster-1"
+        - sinks:
+          - type: ALS
+            als:
+              backendRefs:
+              - name: envoy-als
+                namespace: monitoring
+                port: 9000
+              type: TCP
     provider:
       type: Kubernetes
       kubernetes:
@@ -87,3 +95,36 @@ gateways:
       allowedRoutes:
         namespaces:
           from: Same
+services:
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: envoy-als
+      namespace: monitoring
+    spec:
+      type: ClusterIP
+      ports:
+        - name: grpc
+          port: 9000
+          appProtocol: grpc
+          protocol: TCP
+          targetPort: 9000
+endpointSlices:
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      name: endpointslice-envoy-als
+      namespace: monitoring
+      labels:
+        kubernetes.io/service-name: envoy-als
+    addressType: IPv4
+    ports:
+      - name: grpc
+        appProtocol: grpc
+        protocol: TCP
+        port: 9090
+    endpoints:
+      - addresses:
+          - "10.240.0.10"
+        conditions:
+          ready: true

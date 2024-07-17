@@ -8,11 +8,11 @@ package gatewayapi
 import (
 	"errors"
 	"fmt"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 
 	"github.com/google/cel-go/cel"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -257,6 +257,21 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 			}
 		}
 
+		var (
+			validExprs []string
+			errs       []error
+		)
+		for _, expr := range accessLog.Matches {
+			if !validCELExpression(expr) {
+				errs = append(errs, fmt.Errorf("invalid CEL expression: %s", expr))
+				continue
+			}
+			validExprs = append(validExprs, expr)
+		}
+		if len(errs) > 0 {
+			return nil, utilerrors.NewAggregate(errs)
+		}
+
 		for j, sink := range accessLog.Sinks {
 			switch sink.Type {
 			case egv1a1.ProxyAccessLogSinkTypeFile:
@@ -278,8 +293,9 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					}
 
 					al := &ir.JSONAccessLog{
-						JSON: format.JSON,
-						Path: sink.File.Path,
+						JSON:       format.JSON,
+						Path:       sink.File.Path,
+						CELMatches: validExprs,
 					}
 					irAccessLog.JSON = append(irAccessLog.JSON, al)
 				}
@@ -307,7 +323,8 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 						Name:     fmt.Sprintf("accesslog_als_%d_%d", i, j), // TODO: rename this, so that we can share backend with tracing?
 						Settings: ds,
 					},
-					Type: sink.ALS.Type,
+					Type:       sink.ALS.Type,
+					CELMatches: validExprs,
 				}
 
 				if al.Type == egv1a1.ALSEnvoyProxyAccessLogTypeHTTP && sink.ALS.HTTP != nil {
@@ -334,7 +351,8 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 
 				// TODO: remove support for Host/Port in v1.2
 				al := &ir.OpenTelemetryAccessLog{
-					Resources: sink.OpenTelemetry.Resources,
+					CELMatches: validExprs,
+					Resources:  sink.OpenTelemetry.Resources,
 				}
 
 				// TODO: how to get authority from the backendRefs?
@@ -368,22 +386,6 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 				irAccessLog.OpenTelemetry = append(irAccessLog.OpenTelemetry, al)
 			}
 		}
-
-		var (
-			validExprs []string
-			errs       []error
-		)
-		for _, expr := range accessLog.Matches {
-			if !validCELExpression(expr) {
-				errs = append(errs, fmt.Errorf("invalid CEL expression: %s", expr))
-				continue
-			}
-			validExprs = append(validExprs, expr)
-		}
-		if len(errs) > 0 {
-			return nil, utilerrors.NewAggregate(errs)
-		}
-		irAccessLog.CELMatches = validExprs
 	}
 
 	return irAccessLog, nil

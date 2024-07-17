@@ -372,7 +372,7 @@ func RetrieveMetric(url string, name string, timeout time.Duration) (*dto.Metric
 		return mf, nil
 	}
 
-	return nil, fmt.Errorf("metric %s not found", name)
+	return nil, nil
 }
 
 func WaitForLoadBalancerAddress(t *testing.T, client client.Client, timeout time.Duration, nn types.NamespacedName) (string, error) {
@@ -409,6 +409,11 @@ func ALSLogCount(suite *suite.ConformanceTestSuite) (int, error) {
 	countMetric, err := RetrieveMetric(metricPath, "log_count", time.Second)
 	if err != nil {
 		return -1, err
+	}
+
+	// metric not found or empty
+	if countMetric == nil {
+		return 0, nil
 	}
 
 	total := 0
