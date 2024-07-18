@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -482,6 +483,74 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			results := getPolicyTargetRefs(tc.policy, tc.targets)
 			require.ElementsMatch(t, results, tc.results)
+		})
+	}
+}
+
+func TestIsRefToGateway(t *testing.T) {
+	cases := []struct {
+		name           string
+		routeNamespace gwapiv1.Namespace
+		parentRef      gwapiv1.ParentReference
+		gatewayNN      types.NamespacedName
+		expected       bool
+	}{
+		{
+			name:           "match without namespace-true",
+			routeNamespace: gwapiv1.Namespace("ns1"),
+			parentRef: gwapiv1.ParentReference{
+				Name: gwapiv1.ObjectName("eg"),
+			},
+			gatewayNN: types.NamespacedName{
+				Name:      "eg",
+				Namespace: "ns1",
+			},
+			expected: true,
+		},
+		{
+			name:           "match without namespace-false",
+			routeNamespace: gwapiv1.Namespace("ns1"),
+			parentRef: gwapiv1.ParentReference{
+				Name: gwapiv1.ObjectName("eg"),
+			},
+			gatewayNN: types.NamespacedName{
+				Name:      "eg",
+				Namespace: "ns2",
+			},
+			expected: false,
+		},
+		{
+			name:           "match with namespace-true",
+			routeNamespace: gwapiv1.Namespace("ns1"),
+			parentRef: gwapiv1.ParentReference{
+				Name:      gwapiv1.ObjectName("eg"),
+				Namespace: NamespacePtr("ns1"),
+			},
+			gatewayNN: types.NamespacedName{
+				Name:      "eg",
+				Namespace: "ns1",
+			},
+			expected: true,
+		},
+		{
+			name:           "match without namespace2-false",
+			routeNamespace: gwapiv1.Namespace("ns1"),
+			parentRef: gwapiv1.ParentReference{
+				Name:      gwapiv1.ObjectName("eg"),
+				Namespace: NamespacePtr("ns2"),
+			},
+			gatewayNN: types.NamespacedName{
+				Name:      "eg",
+				Namespace: "ns1",
+			},
+			expected: false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := IsRefToGateway(tc.routeNamespace, tc.parentRef, tc.gatewayNN)
+			require.Equal(t, tc.expected, got)
 		})
 	}
 }
