@@ -265,7 +265,7 @@ var ConsistentHashCookieLoadBalancingTest = suite.ConformanceTest{
 			cookieJar, err := cookiejar.New(nil)
 			require.NoError(t, err)
 
-			// Making request on our own since the gateway-api conformance suite doest not support
+			// Making request on our own since the gateway-api conformance suite does not support
 			// setting cookies for one request.
 			client := &nethttp.Client{
 				Jar:       cookieJar,
