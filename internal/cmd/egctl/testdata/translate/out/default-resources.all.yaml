@@ -203,6 +203,7 @@ gatewayClass:
     - HTTPRoute
     - HTTPRouteBackendProtocolH2C
     - HTTPRouteBackendProtocolWebSocket
+    - HTTPRouteBackendRequestHeaderModification
     - HTTPRouteBackendTimeout
     - HTTPRouteDestinationPortMatching
     - HTTPRouteHostRewrite
