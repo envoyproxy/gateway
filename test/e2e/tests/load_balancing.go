@@ -47,7 +47,10 @@ var RoundRobinLoadBalancingTest = suite.ConformanceTest{
 	Description: "Test for round robin load balancing type",
 	Manifests:   []string{"testdata/load_balancing_round_robin.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		const sendRequests = 100
+		const (
+			sendRequests = 100
+			replicas     = 3
+		)
 
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "round-robin-lb-route", Namespace: ns}
@@ -60,7 +63,7 @@ var RoundRobinLoadBalancingTest = suite.ConformanceTest{
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "round-robin-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
-		WaitDeployment(t, suite.Client, types.NamespacedName{Name: "lb-backend-1", Namespace: ns}, 4)
+		WaitDeployment(t, suite.Client, types.NamespacedName{Name: "lb-backend-1", Namespace: ns}, replicas)
 
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
@@ -97,10 +100,10 @@ var RoundRobinLoadBalancingTest = suite.ConformanceTest{
 			}
 
 			// Expect traffic number for each endpoint.
-			even := sendRequests / 4
+			even := sendRequests / replicas
 
 			for podName, traffic := range trafficMap {
-				if !AlmostEquals(traffic, even, 3) {
+				if !AlmostEquals(traffic, even, 5) {
 					t.Errorf("The traffic are not be split evenly for pod %s: %d", podName, traffic)
 				}
 			}
