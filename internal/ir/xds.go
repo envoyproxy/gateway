@@ -587,16 +587,16 @@ type SessionPersistence struct {
 
 	// Cookie defines the configuration for cookie-based session persistence.
 	// Either Cookie or Header must be non-empty.
-	Cookie *CookieBasedSessionPersistence `json:"cookie,omitempty"`
+	Cookie *CookieBasedSessionPersistence `json:"cookie,omitempty" yaml:"cookie,omitempty"`
 	// Header defines the configuration for header-based session persistence.
 	// Either Cookie or Header must be non-empty.
-	Header *HeaderBasedSessionPersistence `json:"header,omitempty"`
+	Header *HeaderBasedSessionPersistence `json:"header,omitempty" yaml:"header,omitempty"`
 }
 
 // CookieBasedSessionPersistence defines the configuration for cookie-based session persistence.
 // +k8s:deepcopy-gen=true
 type CookieBasedSessionPersistence struct {
-	TTL *time.Duration `json:"ttl,omitempty"`
+	TTL *time.Duration `json:"ttl,omitempty" yaml:"ttl,omitempty"`
 }
 
 // HeaderBasedSessionPersistence defines the configuration for header-based session persistence.
