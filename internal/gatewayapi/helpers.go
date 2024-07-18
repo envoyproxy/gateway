@@ -109,7 +109,7 @@ func KindDerefOr(kind *gwapiv1.Kind, defaultKind string) string {
 // to a Gateway with the given namespace/name, irrespective of whether a
 // section/listener name has been specified (i.e. a parent ref to a listener
 // on the specified gateway will return "true").
-func IsRefToGateway(parentRefNamespace gwapiv1.Namespace, parentRef gwapiv1.ParentReference, gateway types.NamespacedName) bool {
+func IsRefToGateway(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.ParentReference, gateway types.NamespacedName) bool {
 	if parentRef.Group != nil && string(*parentRef.Group) != gwapiv1.GroupName {
 		return false
 	}
@@ -118,7 +118,7 @@ func IsRefToGateway(parentRefNamespace gwapiv1.Namespace, parentRef gwapiv1.Pare
 		return false
 	}
 
-	ns := parentRefNamespace
+	ns := routeNamespace
 	if parentRef.Namespace != nil {
 		ns = *parentRef.Namespace
 	}
@@ -134,11 +134,11 @@ func IsRefToGateway(parentRefNamespace gwapiv1.Namespace, parentRef gwapiv1.Pare
 // in the given list, and if so, a list of the Listeners within that Gateway that
 // are included by the parent ref (either one specific Listener, or all Listeners
 // in the Gateway, depending on whether section name is specified or not).
-func GetReferencedListeners(parentRefNamespace gwapiv1.Namespace, parentRef gwapiv1.ParentReference, gateways []*GatewayContext) (bool, []*ListenerContext) {
+func GetReferencedListeners(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.ParentReference, gateways []*GatewayContext) (bool, []*ListenerContext) {
 	var referencedListeners []*ListenerContext
 
 	for _, gateway := range gateways {
-		if IsRefToGateway(parentRefNamespace, parentRef, utils.NamespacedName(gateway)) {
+		if IsRefToGateway(routeNamespace, parentRef, utils.NamespacedName(gateway)) {
 			// The parentRef may be to the entire Gateway, or to a specific listener.
 			for _, listener := range gateway.listeners {
 				if (parentRef.SectionName == nil || *parentRef.SectionName == listener.Name) && (parentRef.Port == nil || *parentRef.Port == listener.Port) {

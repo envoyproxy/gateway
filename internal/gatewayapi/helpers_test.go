@@ -489,15 +489,15 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 
 func TestIsRefToGateway(t *testing.T) {
 	cases := []struct {
-		name               string
-		parentRefNamespace gwapiv1.Namespace
-		parentRef          gwapiv1.ParentReference
-		gatewayNN          types.NamespacedName
-		expected           bool
+		name           string
+		routeNamespace gwapiv1.Namespace
+		parentRef      gwapiv1.ParentReference
+		gatewayNN      types.NamespacedName
+		expected       bool
 	}{
 		{
-			name:               "match without namespace-true",
-			parentRefNamespace: gwapiv1.Namespace("ns1"),
+			name:           "match without namespace-true",
+			routeNamespace: gwapiv1.Namespace("ns1"),
 			parentRef: gwapiv1.ParentReference{
 				Name: gwapiv1.ObjectName("eg"),
 			},
@@ -508,8 +508,8 @@ func TestIsRefToGateway(t *testing.T) {
 			expected: true,
 		},
 		{
-			name:               "match without namespace-false",
-			parentRefNamespace: gwapiv1.Namespace("ns1"),
+			name:           "match without namespace-false",
+			routeNamespace: gwapiv1.Namespace("ns1"),
 			parentRef: gwapiv1.ParentReference{
 				Name: gwapiv1.ObjectName("eg"),
 			},
@@ -520,8 +520,8 @@ func TestIsRefToGateway(t *testing.T) {
 			expected: false,
 		},
 		{
-			name:               "match with namespace-true",
-			parentRefNamespace: gwapiv1.Namespace("ns1"),
+			name:           "match with namespace-true",
+			routeNamespace: gwapiv1.Namespace("ns1"),
 			parentRef: gwapiv1.ParentReference{
 				Name:      gwapiv1.ObjectName("eg"),
 				Namespace: NamespacePtr("ns1"),
@@ -533,8 +533,8 @@ func TestIsRefToGateway(t *testing.T) {
 			expected: true,
 		},
 		{
-			name:               "match without namespace2-false",
-			parentRefNamespace: gwapiv1.Namespace("ns1"),
+			name:           "match without namespace2-false",
+			routeNamespace: gwapiv1.Namespace("ns1"),
 			parentRef: gwapiv1.ParentReference{
 				Name:      gwapiv1.ObjectName("eg"),
 				Namespace: NamespacePtr("ns2"),
@@ -549,7 +549,7 @@ func TestIsRefToGateway(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := IsRefToGateway(tc.parentRefNamespace, tc.parentRef, tc.gatewayNN)
+			got := IsRefToGateway(tc.routeNamespace, tc.parentRef, tc.gatewayNN)
 			require.Equal(t, tc.expected, got)
 		})
 	}
