@@ -9,10 +9,16 @@
 package tests
 
 import (
+	"context"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
@@ -48,6 +54,7 @@ var RoundRobinLoadBalancingTest = suite.ConformanceTest{
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "round-robin-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
+		WaitDeployment(t, suite.Client, types.NamespacedName{Name: "lb-backend-1", Namespace: ns}, 4)
 
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
@@ -113,6 +120,7 @@ var ConsistentHashSourceIPLoadBalancingTest = suite.ConformanceTest{
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "source-ip-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
+		WaitDeployment(t, suite.Client, types.NamespacedName{Name: "lb-backend-2", Namespace: ns}, 4)
 
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
@@ -175,6 +183,7 @@ var ConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "header-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
+		WaitDeployment(t, suite.Client, types.NamespacedName{Name: "lb-backend-3", Namespace: ns}, 4)
 
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
@@ -222,4 +231,26 @@ var ConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
 			}
 		})
 	},
+}
+
+// WaitDeployment waits deployment to have expected available replicas.
+func WaitDeployment(t *testing.T, cli client.Client, name types.NamespacedName, expectReplicas int32) {
+	t.Helper()
+
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+		deployment := new(appsv1.Deployment)
+		err := cli.Get(ctx, name, deployment)
+		if err != nil {
+			return false, fmt.Errorf("error fetching Deployment %s: %w", name.String(), err)
+		}
+
+		if deployment.Status.AvailableReplicas == expectReplicas {
+			return true, nil
+		}
+
+		t.Logf("Deployment not yet accepted: %s", name.String())
+		return false, nil
+	})
+
+	require.NoErrorf(t, waitErr, "error waiting for Deployment %s to be accepted", name.String())
 }
