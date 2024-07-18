@@ -303,7 +303,7 @@ var ConsistentHashCookieLoadBalancingTest = suite.ConformanceTest{
 					// Dump response that helps debug.
 					dump, err := httputil.DumpResponse(resp, true)
 					require.NoError(t, err)
-					t.Logf("Receied Response:\n%s\n\n", string(dump))
+					t.Logf("Received Response:\n%s\n\n", string(dump))
 
 					require.Equal(t, nethttp.StatusOK, resp.StatusCode)
 
