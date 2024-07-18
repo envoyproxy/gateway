@@ -15,7 +15,6 @@ import (
 	"io"
 	nethttp "net/http"
 	"net/http/cookiejar"
-	"net/http/httputil"
 	"strings"
 	"testing"
 	"time"
@@ -299,12 +298,6 @@ var ConsistentHashCookieLoadBalancingTest = suite.ConformanceTest{
 
 					body, err := io.ReadAll(resp.Body)
 					require.NoError(t, err)
-
-					// Dump response that helps debug.
-					dump, err := httputil.DumpResponse(resp, true)
-					require.NoError(t, err)
-					t.Logf("Received Response:\n%s\n\n", string(dump))
-
 					require.Equal(t, nethttp.StatusOK, resp.StatusCode)
 
 					// Parse response body.
