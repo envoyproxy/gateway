@@ -1,22 +1,35 @@
 DOCS_OUTPUT_DIR := site/public
 RELEASE_VERSIONS ?= $(foreach v,$(wildcard ${ROOT_DIR}/docs/*),$(notdir ${v}))
-LINKINATOR_IGNORE := "github.com githubusercontent.com example.com github.io _print v0.6.0 v0.5.0 v0.4.0 v0.3.0 v0.2.0"
+# TODO: github.com does not allow access too often, there are a lot of 429 errors
+#       find a way to remove github.com from ignore list
+# TODO: example.com is not a valid domain, we should remove it from ignore list
+# TODO: https://www.gnu.org/software/make became unstable, we should remove it from ignore list later
+LINKINATOR_IGNORE := "github.com githubusercontent.com example.com github.io gnu.org _print"
 CLEAN_NODE_MODULES ?= true
 
 ##@ Docs
 
 .PHONY: docs
-docs: docs.clean helm-readme-gen docs-api ## Generate Envoy Gateway Docs Sources
+docs: docs.clean helm-readme-gen docs-api copy-current-release-docs ## Generate Envoy Gateway Docs Sources
 	@$(LOG_TARGET)
 	cd $(ROOT_DIR)/site && npm install
 	cd $(ROOT_DIR)/site && npm run build:production
 	cp tools/hack/get-egctl.sh $(DOCS_OUTPUT_DIR)
 
+.PHONY: copy-current-release-docs
+copy-current-release-docs:  ## Copy the current release docs to the docs folder
+	@$(LOG_TARGET)
+	@CURRENT_RELEASE=$(shell ls $(ROOT_DIR)/site/content/en | grep -E '^v[0-9]+\.[0-9]+$$' | sort | tail -n 1); \
+	echo "Copying the current release $$CURRENT_RELEASE docs to the docs folder"; \
+	rm -rf $(ROOT_DIR)/site/content/en/docs; \
+	mkdir -p $(ROOT_DIR)/site/content/en/docs; \
+	cp -r $(ROOT_DIR)/site/content/en/$$CURRENT_RELEASE/** $(ROOT_DIR)/site/content/en/docs
+
 .PHONY: docs-release
 docs-release: docs-release-prepare release-notes-docs docs-release-gen docs  ## Generate Envoy Gateway Release Docs
 
 .PHONY: docs-serve
-docs-serve: ## Start Envoy Gateway Site Locally
+docs-serve: copy-current-release-docs ## Start Envoy Gateway Site Locally
 	@$(LOG_TARGET)
 	cd $(ROOT_DIR)/site && npm run serve
 
@@ -92,8 +105,9 @@ docs-release-prepare:
 .PHONY: docs-release-gen
 docs-release-gen:
 	@$(LOG_TARGET)
-	@$(call log, "Added Release Doc: site/content/en/$(TAG)")
-	cp -r site/content/en/latest site/content/en/$(TAG)
+	$(eval DOC_VERSION := $(shell cat VERSION | cut -d "." -f 1,2))
+	@$(call log, "Added Release Doc: site/content/en/$(DOC_VERSION)")
+	cp -r site/content/en/latest/ site/content/en/$(DOC_VERSION)/
 	@for DOC in $(shell ls site/content/en/latest/user); do \
 		cp site/content/en/$(TAG)/user/$$DOC $(OUTPUT_DIR)/$$DOC ; \
 		cat $(OUTPUT_DIR)/$$DOC | sed "s;v0.0.0-latest;$(TAG);g" | sed "s;latest;$(TAG);g" > $(OUTPUT_DIR)/$(TAG)-$$DOC ; \
@@ -102,16 +116,12 @@ docs-release-gen:
 	done
 
 	@echo '[[params.versions]]' >> site/hugo.toml
-	@echo '  version = "$(TAG)"' >> site/hugo.toml
-	@echo '  url = "/$(TAG)"' >> site/hugo.toml
+	@echo '  version = "$(DOC_VERSION)"' >> site/hugo.toml
+	@echo '  url = "/$(DOC_VERSION)"' >> site/hugo.toml
 
 .PHONY: docs-check-links
-docs-check-links:
+docs-check-links: # Check for broken links in the docs
 	@$(LOG_TARGET)
-	# Check for broken links, right now we are focusing on the v1.0.0
-	# github.com does not allow access too often, there are a lot of 429 errors
-	# TODO: find a way to remove github.com from ignore list
-	# TODO: example.com is not a valid domain, we should remove it from ignore list
 	linkinator site/public/ -r --concurrency 25 --skip $(LINKINATOR_IGNORE)
 
 release-notes-docs: $(tools/release-notes-docs)

@@ -13,28 +13,19 @@ import (
 	"io/fs"
 	"testing"
 
-	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/pkg/features"
 
 	"github.com/envoyproxy/gateway/test/e2e/tests"
+	kubetest "github.com/envoyproxy/gateway/test/utils/kubernetes"
 )
 
 func TestE2E(t *testing.T) {
 	flag.Parse()
 
-	cfg, err := config.GetConfig()
-	require.NoError(t, err)
-
-	c, err := client.New(cfg, client.Options{})
-	require.NoError(t, err)
-
-	// Install all the scheme for kubernetes client.
-	CheckInstallScheme(t, c)
+	c := kubetest.NewClient(t)
 
 	if flags.RunTest != nil && *flags.RunTest != "" {
 		t.Logf("Running E2E test %s with %s GatewayClass\n cleanup: %t\n debug: %t",
@@ -56,7 +47,6 @@ func TestE2E(t *testing.T) {
 		SupportedFeatures: sets.New[features.SupportedFeature](features.SupportGateway),
 		SkipTests: []string{
 			tests.GatewayInfraResourceTest.ShortName, // https://github.com/envoyproxy/gateway/issues/3191
-			tests.UseClientProtocolTest.ShortName,    // https://github.com/envoyproxy/gateway/issues/3473
 		},
 	})
 	if err != nil {

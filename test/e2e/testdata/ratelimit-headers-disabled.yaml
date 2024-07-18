@@ -6,10 +6,10 @@ metadata:
 spec:
   headers:
     disableRateLimitHeaders: true
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: same-namespace
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: same-namespace
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
@@ -17,11 +17,10 @@ metadata:
   name: ratelimit-headers-disabled-btp
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: ratelimit-headers-disabled
-    namespace: gateway-conformance-infra
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: ratelimit-headers-disabled
   rateLimit:
     type: Global
     global:

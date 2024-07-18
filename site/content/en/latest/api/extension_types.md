@@ -755,7 +755,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `type` | _[ConsistentHashType](#consistenthashtype)_ |  true  | ConsistentHashType defines the type of input to hash on. Valid Type values are "SourceIP" or "Header". |
+| `type` | _[ConsistentHashType](#consistenthashtype)_ |  true  | ConsistentHashType defines the type of input to hash on. Valid Type values are<br />"SourceIP",<br />"Header",<br />"Cookie". |
 | `header` | _[Header](#header)_ |  false  | Header configures the header hash policy when the consistent hash type is set to Header. |
 | `cookie` | _[Cookie](#cookie)_ |  false  | Cookie configures the cookie hash policy when the consistent hash type is set to Cookie. |
 | `tableSize` | _integer_ |  false  | The table size for consistent hashing, must be prime number limited to 5000011. |
