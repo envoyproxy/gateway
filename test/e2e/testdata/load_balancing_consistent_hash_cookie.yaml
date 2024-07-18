@@ -1,0 +1,82 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: lb-backend-4
+  namespace: gateway-conformance-infra
+spec:
+  selector:
+    app: lb-backend-4
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lb-backend-4
+  namespace: gateway-conformance-infra
+  labels:
+    app: lb-backend-4
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: lb-backend-4
+  template:
+    metadata:
+      labels:
+        app: lb-backend-4
+    spec:
+      containers:
+        - name: backend
+          image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: SERVICE_NAME
+              value: lb-backend-4
+          resources:
+            requests:
+              cpu: 10m
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: cookie-lb-policy
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: cookie-lb-route
+  loadBalancer:
+    type: ConsistentHash
+    consistentHash:
+      type: Cookie
+      cookie:
+        name: "Lb-Test-Cookie"
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: cookie-lb-route
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /cookie
+      backendRefs:
+        - name: lb-backend-4
+          port: 8080
