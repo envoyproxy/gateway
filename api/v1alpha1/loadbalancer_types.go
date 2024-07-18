@@ -58,7 +58,10 @@ const (
 // +kubebuilder:validation:XValidation:rule="self.type == 'Header' ? has(self.header) : !has(self.header)",message="If consistent hash type is header, the header field must be set."
 // +kubebuilder:validation:XValidation:rule="self.type == 'Cookie' ? has(self.cookie) : !has(self.cookie)",message="If consistent hash type is cookie, the cookie field must be set."
 type ConsistentHash struct {
-	// ConsistentHashType defines the type of input to hash on. Valid Type values are "SourceIP" or "Header".
+	// ConsistentHashType defines the type of input to hash on. Valid Type values are
+	// "SourceIP",
+	// "Header",
+	// "Cookie".
 	//
 	// +unionDiscriminator
 	Type ConsistentHashType `json:"type"`
