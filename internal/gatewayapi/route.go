@@ -329,7 +329,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 				if err != nil {
 					return nil, err
 				}
-				sessionPersistence.Cookie.TTL = &ttl
+				sessionPersistence.Cookie.TTL = &metav1.Duration{Duration: ttl}
 			}
 		}
 	}

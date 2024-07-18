@@ -1,0 +1,37 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        safeRegex:
+          regex: /v1/.*
+      name: header-based-session-persistence-route
+      route:
+        cluster: regex-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        safeRegex:
+          regex: /v1/.*/hoge
+      name: cookie-based-session-persistence-route-regex
+      route:
+        cluster: regex-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        pathSeparatedPrefix: /v2
+      name: cookie-based-session-persistence-route-prefix
+      route:
+        cluster: regex-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        path: /v3/user
+      name: cookie-based-session-persistence-route-exact
+      route:
+        cluster: regex-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

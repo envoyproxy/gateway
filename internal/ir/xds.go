@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"net/netip"
 	"reflect"
-	"time"
 
 	"golang.org/x/exp/slices"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -596,7 +595,7 @@ type SessionPersistence struct {
 // CookieBasedSessionPersistence defines the configuration for cookie-based session persistence.
 // +k8s:deepcopy-gen=true
 type CookieBasedSessionPersistence struct {
-	TTL *time.Duration `json:"ttl,omitempty" yaml:"ttl,omitempty"`
+	TTL *metav1.Duration `json:"ttl,omitempty" yaml:"ttl,omitempty"`
 }
 
 // HeaderBasedSessionPersistence defines the configuration for header-based session persistence.
