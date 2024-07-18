@@ -51,19 +51,24 @@ type client struct {
 }
 
 func NewCLIClient(clientConfig clientcmd.ClientConfig) (CLIClient, error) {
-	return newClientInternal(clientConfig)
+	cfg, err := clientConfig.ClientConfig()
+	if err != nil {
+		return nil, err
+	}
+	return newClientInternal(cfg)
 }
 
-func newClientInternal(clientConfig clientcmd.ClientConfig) (*client, error) {
+func NewForRestConfig(cfg *rest.Config) (CLIClient, error) {
+	return newClientInternal(cfg)
+}
+
+func newClientInternal(restCfg *rest.Config) (*client, error) {
 	var (
 		c   client
 		err error
 	)
 
-	c.config, err = clientConfig.ClientConfig()
-	if err != nil {
-		return nil, err
-	}
+	c.config = restCfg
 	setRestDefaults(c.config)
 
 	c.restClient, err = rest.RESTClientFor(c.config)
