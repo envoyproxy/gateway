@@ -15,6 +15,8 @@ import (
 	"io"
 	nethttp "net/http"
 	"net/http/cookiejar"
+	"net/http/httputil"
+	"strings"
 	"testing"
 	"time"
 
@@ -292,15 +294,21 @@ var ConsistentHashCookieLoadBalancingTest = suite.ConformanceTest{
 				for i := 0; i < sendRequests; i++ {
 					resp, err := client.Do(req)
 					if err != nil {
-						t.Errorf("failed to get expected response: %v", err)
+						t.Errorf("failed to get response: %v", err)
 					}
 
-					require.Equal(t, nethttp.StatusOK, resp.StatusCode)
-
-					cReq := &roundtripper.CapturedRequest{}
 					body, err := io.ReadAll(resp.Body)
 					require.NoError(t, err)
 
+					// Dump response that helps debug.
+					dump, err := httputil.DumpResponse(resp, true)
+					require.NoError(t, err)
+					t.Logf("Receied Response:\n%s\n\n", string(dump))
+
+					require.Equal(t, nethttp.StatusOK, resp.StatusCode)
+
+					// Parse response body.
+					cReq := &roundtripper.CapturedRequest{}
 					if resp.Header.Get("Content-Type") == "application/json" {
 						err = json.Unmarshal(body, cReq)
 						require.NoError(t, err)
@@ -323,6 +331,50 @@ var ConsistentHashCookieLoadBalancingTest = suite.ConformanceTest{
 					require.NoError(t, resp.Body.Close())
 				}
 			}
+		})
+
+		t.Run("a cookie will be generated if the require cookie does not exist", func(t *testing.T) {
+			cookieJar, err := cookiejar.New(nil)
+			require.NoError(t, err)
+
+			// Making request on our own since the gateway-api conformance suite does not support
+			// setting cookies for one request.
+			client := &nethttp.Client{
+				Jar:       cookieJar,
+				Transport: nethttp.DefaultTransport,
+			}
+			req, err := nethttp.NewRequest(nethttp.MethodGet, fmt.Sprintf("http://%s/cookie", gwAddr), nil)
+			require.NoError(t, err)
+
+			// A not desired cookie is been set.
+			client.Jar.SetCookies(req.URL, []*nethttp.Cookie{
+				{
+					Name:  "foo",
+					Value: "bar",
+				},
+			})
+
+			waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+				resp, err := client.Do(req)
+				if err != nil {
+					t.Errorf("failed to get response: %v", err)
+					return false, err
+				}
+
+				if resp.StatusCode != nethttp.StatusOK {
+					return false, nil
+				}
+
+				if h := resp.Header.Get("set-cookie"); len(h) > 0 &&
+					strings.Contains(h, "Lb-Test-Cookie") &&
+					strings.Contains(h, "Max-Age=60; SameSite=Strict") {
+					return true, nil
+				}
+
+				t.Logf("Cookie have not been generated yet")
+				return false, nil
+			})
+			require.NoError(t, waitErr)
 		})
 	},
 }

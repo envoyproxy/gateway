@@ -63,6 +63,9 @@ spec:
       type: Cookie
       cookie:
         name: "Lb-Test-Cookie"
+        ttl: 60s
+        attributes:
+          SameSite: Strict
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
