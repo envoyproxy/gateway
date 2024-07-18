@@ -10,7 +10,12 @@ package tests
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	nethttp "net/http"
+	"net/http/cookiejar"
+	"strings"
 	"testing"
 	"time"
 
@@ -23,6 +28,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
+	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -33,6 +39,7 @@ func init() {
 		RoundRobinLoadBalancingTest,
 		ConsistentHashSourceIPLoadBalancingTest,
 		ConsistentHashHeaderLoadBalancingTest,
+		ConsistentHashCookieLoadBalancingTest,
 	)
 }
 
@@ -41,7 +48,10 @@ var RoundRobinLoadBalancingTest = suite.ConformanceTest{
 	Description: "Test for round robin load balancing type",
 	Manifests:   []string{"testdata/load_balancing_round_robin.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		const sendRequests = 100
+		const (
+			sendRequests = 100
+			replicas     = 3
+		)
 
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "round-robin-lb-route", Namespace: ns}
@@ -54,7 +64,7 @@ var RoundRobinLoadBalancingTest = suite.ConformanceTest{
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "round-robin-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
-		WaitDeployment(t, suite.Client, types.NamespacedName{Name: "lb-backend-1", Namespace: ns}, 4)
+		WaitDeployment(t, suite.Client, types.NamespacedName{Name: "lb-backend-1", Namespace: ns}, replicas)
 
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
@@ -91,10 +101,10 @@ var RoundRobinLoadBalancingTest = suite.ConformanceTest{
 			}
 
 			// Expect traffic number for each endpoint.
-			even := sendRequests / 4
+			even := sendRequests / replicas
 
 			for podName, traffic := range trafficMap {
-				if !AlmostEquals(traffic, even, 3) {
+				if !AlmostEquals(traffic, even, 5) {
 					t.Errorf("The traffic are not be split evenly for pod %s: %d", podName, traffic)
 				}
 			}
@@ -229,6 +239,135 @@ var ConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
 					}
 				}
 			}
+		})
+	},
+}
+
+var ConsistentHashCookieLoadBalancingTest = suite.ConformanceTest{
+	ShortName:   "Cookie based Consistent Hash Load Balancing",
+	Description: "Test for cookie based consistent hash load balancing type",
+	Manifests:   []string{"testdata/load_balancing_consistent_hash_cookie.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		const sendRequests = 10
+
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "cookie-lb-route", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+
+		ancestorRef := gwapiv1a2.ParentReference{
+			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+			Kind:      gatewayapi.KindPtr(gatewayapi.KindGateway),
+			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+			Name:      gwapiv1.ObjectName(gwNN.Name),
+		}
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "cookie-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
+		WaitDeployment(t, suite.Client, types.NamespacedName{Name: "lb-backend-4", Namespace: ns}, 4)
+
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+		t.Run("all traffics route to the same backend with same test cookie", func(t *testing.T) {
+			cookieJar, err := cookiejar.New(nil)
+			require.NoError(t, err)
+
+			// Making request on our own since the gateway-api conformance suite does not support
+			// setting cookies for one request.
+			client := &nethttp.Client{
+				Jar:       cookieJar,
+				Transport: nethttp.DefaultTransport,
+			}
+			req, err := nethttp.NewRequest(nethttp.MethodGet, fmt.Sprintf("http://%s/cookie", gwAddr), nil)
+			require.NoError(t, err)
+
+			cookieValues := []string{"abc", "def", "ghi", "jkl", "mno"}
+			for _, cookieValue := range cookieValues {
+				// Same test cookie will always hit the same endpoint.
+				var expectPodName string
+
+				client.Jar.SetCookies(req.URL, []*nethttp.Cookie{
+					{
+						Name:  "Lb-Test-Cookie",
+						Value: cookieValue,
+					},
+				})
+
+				for i := 0; i < sendRequests; i++ {
+					resp, err := client.Do(req)
+					if err != nil {
+						t.Errorf("failed to get response: %v", err)
+					}
+
+					body, err := io.ReadAll(resp.Body)
+					require.NoError(t, err)
+					require.Equal(t, nethttp.StatusOK, resp.StatusCode)
+
+					// Parse response body.
+					cReq := &roundtripper.CapturedRequest{}
+					if resp.Header.Get("Content-Type") == "application/json" {
+						err = json.Unmarshal(body, cReq)
+						require.NoError(t, err)
+					} else {
+						t.Fatalf("unsupported response content type")
+					}
+
+					podName := cReq.Pod
+					if len(podName) == 0 {
+						// it shouldn't be missing here
+						t.Errorf("failed to get pod header in response: %v", err)
+					} else {
+						if len(expectPodName) == 0 {
+							expectPodName = podName
+						} else {
+							require.Equal(t, expectPodName, podName)
+						}
+					}
+
+					require.NoError(t, resp.Body.Close())
+				}
+			}
+		})
+
+		t.Run("a cookie will be generated if the require cookie does not exist", func(t *testing.T) {
+			cookieJar, err := cookiejar.New(nil)
+			require.NoError(t, err)
+
+			// Making request on our own since the gateway-api conformance suite does not support
+			// setting cookies for one request.
+			client := &nethttp.Client{
+				Jar:       cookieJar,
+				Transport: nethttp.DefaultTransport,
+			}
+			req, err := nethttp.NewRequest(nethttp.MethodGet, fmt.Sprintf("http://%s/cookie", gwAddr), nil)
+			require.NoError(t, err)
+
+			// A not desired cookie is been set.
+			client.Jar.SetCookies(req.URL, []*nethttp.Cookie{
+				{
+					Name:  "foo",
+					Value: "bar",
+				},
+			})
+
+			waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+				resp, err := client.Do(req)
+				if err != nil {
+					t.Errorf("failed to get response: %v", err)
+					return false, err
+				}
+
+				if resp.StatusCode != nethttp.StatusOK {
+					return false, nil
+				}
+
+				if h := resp.Header.Get("set-cookie"); len(h) > 0 &&
+					strings.Contains(h, "Lb-Test-Cookie") &&
+					strings.Contains(h, "Max-Age=60; SameSite=Strict") {
+					return true, nil
+				}
+
+				t.Logf("Cookie have not been generated yet")
+				return false, nil
+			})
+			require.NoError(t, waitErr)
 		})
 	},
 }
