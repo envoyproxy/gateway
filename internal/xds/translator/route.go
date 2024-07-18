@@ -419,15 +419,6 @@ func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite, pathMa
 
 func buildXdsDirectResponseAction(res *ir.DirectResponse) *routev3.DirectResponseAction {
 	routeAction := &routev3.DirectResponseAction{Status: res.StatusCode}
-
-	if res.Body != nil {
-		routeAction.Body = &corev3.DataSource{
-			Specifier: &corev3.DataSource_InlineString{
-				InlineString: *res.Body,
-			},
-		}
-	}
-
 	return routeAction
 }
 
