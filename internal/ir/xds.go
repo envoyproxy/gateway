@@ -553,15 +553,12 @@ type HTTPRoute struct {
 	URLRewrite *URLRewrite `json:"urlRewrite,omitempty" yaml:"urlRewrite,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
-	// External Processing extensions
-	ExtProcs []ExtProc `json:"extProc,omitempty" yaml:"extProc,omitempty"`
-	// Wasm extensions
-	Wasms []Wasm `json:"wasm,omitempty" yaml:"wasm,omitempty"`
-
 	// Traffic holds the features associated with BackendTrafficPolicy
 	Traffic *TrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
 	// Security holds the features associated with SecurityPolicy
 	Security *SecurityFeatures `json:"security,omitempty" yaml:"security,omitempty"`
+	// EnvoyExtension holds the features associated with EnvoyExtensionPolicy
+	EnvoyExtensions *EnvoyExtensionFeatures `json:"envoyExtensions,omitempty" yaml:"envoyExtensions,omitempty"`
 	// UseClientProtocol enables using the same protocol upstream that was used downstream
 	UseClientProtocol *bool `json:"useClientProtocol,omitempty" yaml:"useClientProtocol,omitempty"`
 	// Metadata is used to enrich envoy route metadata with user and provider-specific information
@@ -650,6 +647,15 @@ func (s *SecurityFeatures) Validate() error {
 	}
 
 	return errs
+}
+
+// EnvoyExtensionFeatures holds the information associated with the Envoy Extension Policy.
+// +k8s:deepcopy-gen=true
+type EnvoyExtensionFeatures struct {
+	// External Processing extensions
+	ExtProcs []ExtProc `json:"extProcs,omitempty" yaml:"extProcs,omitempty"`
+	// Wasm extensions
+	Wasms []Wasm `json:"wasms,omitempty" yaml:"wasms,omitempty"`
 }
 
 // UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension
@@ -1603,7 +1609,6 @@ type RateLimitValue struct {
 // AccessLog holds the access logging configuration.
 // +k8s:deepcopy-gen=true
 type AccessLog struct {
-	CELMatches    []string                  `json:"celMatches,omitempty" yaml:"celMatches,omitempty"`
 	Text          []*TextAccessLog          `json:"text,omitempty" yaml:"text,omitempty"`
 	JSON          []*JSONAccessLog          `json:"json,omitempty" yaml:"json,omitempty"`
 	ALS           []*ALSAccessLog           `json:"als,omitempty" yaml:"als,omitempty"`
@@ -1613,20 +1618,23 @@ type AccessLog struct {
 // TextAccessLog holds the configuration for text access logging.
 // +k8s:deepcopy-gen=true
 type TextAccessLog struct {
-	Format *string `json:"format,omitempty" yaml:"format,omitempty"`
-	Path   string  `json:"path" yaml:"path"`
+	CELMatches []string `json:"celMatches,omitempty" yaml:"celMatches,omitempty"`
+	Format     *string  `json:"format,omitempty" yaml:"format,omitempty"`
+	Path       string   `json:"path" yaml:"path"`
 }
 
 // JSONAccessLog holds the configuration for JSON access logging.
 // +k8s:deepcopy-gen=true
 type JSONAccessLog struct {
-	JSON map[string]string `json:"json,omitempty" yaml:"json,omitempty"`
-	Path string            `json:"path" yaml:"path"`
+	CELMatches []string          `json:"celMatches,omitempty" yaml:"celMatches,omitempty"`
+	JSON       map[string]string `json:"json,omitempty" yaml:"json,omitempty"`
+	Path       string            `json:"path" yaml:"path"`
 }
 
 // ALSAccessLog holds the configuration for gRPC ALS access logging.
 // +k8s:deepcopy-gen=true
 type ALSAccessLog struct {
+	CELMatches  []string                          `json:"celMatches,omitempty" yaml:"celMatches,omitempty"`
 	LogName     string                            `json:"name" yaml:"name"`
 	Destination RouteDestination                  `json:"destination,omitempty" yaml:"destination,omitempty"`
 	Type        egv1a1.ALSEnvoyProxyAccessLogType `json:"type" yaml:"type"`
@@ -1646,6 +1654,7 @@ type ALSAccessLogHTTP struct {
 // OpenTelemetryAccessLog holds the configuration for OpenTelemetry access logging.
 // +k8s:deepcopy-gen=true
 type OpenTelemetryAccessLog struct {
+	CELMatches  []string          `json:"celMatches,omitempty" yaml:"celMatches,omitempty"`
 	Authority   string            `json:"authority,omitempty" yaml:"authority,omitempty"`
 	Text        *string           `json:"text,omitempty" yaml:"text,omitempty"`
 	Attributes  map[string]string `json:"attributes,omitempty" yaml:"attributes,omitempty"`

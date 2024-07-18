@@ -51,7 +51,7 @@ func (*extProc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPLi
 			continue
 		}
 
-		for _, ep := range route.ExtProcs {
+		for _, ep := range route.EnvoyExtensions.ExtProcs {
 			if hcmContainsFilter(mgr, extProcFilterName(ep)) {
 				continue
 			}
@@ -156,7 +156,7 @@ func routeContainsExtProc(irRoute *ir.HTTPRoute) bool {
 		return false
 	}
 
-	return len(irRoute.ExtProcs) > 0
+	return irRoute.EnvoyExtensions != nil && len(irRoute.EnvoyExtensions.ExtProcs) > 0
 }
 
 // patchResources patches the cluster resources for the external services.
@@ -173,8 +173,8 @@ func (*extProc) patchResources(tCtx *types.ResourceVersionTable,
 			continue
 		}
 
-		for i := range route.ExtProcs {
-			ep := route.ExtProcs[i]
+		for i := range route.EnvoyExtensions.ExtProcs {
+			ep := route.EnvoyExtensions.ExtProcs[i]
 			if err := createExtServiceXDSCluster(
 				&ep.Destination, tCtx); err != nil && !errors.Is(
 				err, ErrXdsClusterExists) {
@@ -196,8 +196,11 @@ func (*extProc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	if irRoute == nil {
 		return errors.New("ir route is nil")
 	}
+	if irRoute.EnvoyExtensions == nil {
+		return nil
+	}
 
-	for _, ep := range irRoute.ExtProcs {
+	for _, ep := range irRoute.EnvoyExtensions.ExtProcs {
 		filterName := extProcFilterName(ep)
 		if err := enableFilterOnRoute(route, filterName); err != nil {
 			return err

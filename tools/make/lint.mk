@@ -77,7 +77,7 @@ lint.fix-golint: ## Run all linter of code sources and fix the issues.
 	find . -name "*.go" | xargs $(tools/gci) write --skip-generated -s Standard -s Default -s "Prefix(github.com/envoyproxy/gateway)" 
 
 .PHONY: gen-check
-gen-check: generate manifests protos go.testdata.complete
+gen-check: format generate manifests protos go.testdata.complete
 	@$(LOG_TARGET)
 	@if [ ! -z "`git status --porcelain`" ]; then \
 		$(call errorlog, ERROR: Some files need to be updated, please run 'make generate', 'make manifests' and 'make protos' to include any changed files to your PR); \
