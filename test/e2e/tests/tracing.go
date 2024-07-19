@@ -114,19 +114,34 @@ var ZipkinTracingTest = suite.ConformanceTest{
 				// should make them kept consistent
 				"service.name": fmt.Sprintf("%s/%s", gwNN.Namespace, gwNN.Name),
 			}
-			// let's wait for the log to be sent to stdout
 			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
 				func(ctx context.Context) (bool, error) {
-					count, err := QueryTraceFromTempo(t, suite.Client, tags)
+					preCount, err := QueryTraceFromTempo(t, suite.Client, tags)
 					if err != nil {
 						t.Logf("failed to get trace count from tempo: %v", err)
 						return false, nil
 					}
 
-					if count > 0 {
-						return true, nil
+					httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+
+					err = wait.PollUntilContextTimeout(context.TODO(), time.Second, 10*time.Second, true, func(ctx context.Context) (done bool, err error) {
+						curCount, err := QueryTraceFromTempo(t, suite.Client, tags)
+						if err != nil {
+							t.Logf("failed to get trace count from tempo: %v", err)
+							return false, nil
+						}
+
+						if curCount > preCount {
+							return true, nil
+						}
+
+						return false, nil
+					})
+					if err != nil {
+						return false, err
 					}
-					return false, nil
+
+					return true, nil
 				}); err != nil {
 				t.Errorf("failed to get trace from tempo: %v", err)
 			}
