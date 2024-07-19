@@ -1,5 +1,8 @@
-# The image in the deployment is replaced with the image from the global configuration.
-# It's retained for backwards compatibility.
+global:
+  images:
+    envoyGateway:
+      image: "docker.io/envoyproxy/gateway-dev:latest"
+
 deployment:
   envoyGateway:
     securityContext:
