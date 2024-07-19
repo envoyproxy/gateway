@@ -26,11 +26,22 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 // +kubebuilder:validation:Pattern=`^(\*|https?:\/\/(\*|(\*\.)?(([\w-]+\.?)+)?[\w-]+)(:\d{1,5})?)$`
 type Origin string
 
+// RegexOrigin is
+//
+// For example, the following are valid origins:
+// - https://foo.example.com
+//
+// +kubebuilder:validation:MinLength=1
+// +kubebuilder:validation:MaxLength=253
+type RegexOrigin string
+
 // CORS defines the configuration for Cross-Origin Resource Sharing (CORS).
 type CORS struct {
 	// AllowOrigins defines the origins that are allowed to make requests.
 	// +kubebuilder:validation:MinItems=1
 	AllowOrigins []Origin `json:"allowOrigins,omitempty" yaml:"allowOrigins"`
+	// AllowRegexOrigins defines the origin regexes that are allowed to make requests.
+	AllowRegexOrigins []RegexOrigin `json:"allowRegexOrigins,omitempty" yaml:"allowRegexOrigins"`
 	// AllowMethods defines the methods that are allowed to make requests.
 	// +kubebuilder:validation:MinItems=1
 	AllowMethods []string `json:"allowMethods,omitempty" yaml:"allowMethods"`

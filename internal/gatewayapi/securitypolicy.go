@@ -564,6 +564,12 @@ func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
 		}
 	}
 
+	for _, origin := range cors.AllowRegexOrigins {
+		allowOrigins = append(allowOrigins, &ir.StringMatch{
+			SafeRegex: (*string)(&origin),
+		})
+	}
+
 	return &ir.CORS{
 		AllowOrigins:     allowOrigins,
 		AllowMethods:     cors.AllowMethods,
