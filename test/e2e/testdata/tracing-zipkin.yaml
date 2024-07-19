@@ -12,11 +12,6 @@ spec:
       allowedRoutes:
         namespaces:
           from: All
-  infrastructure:
-    parametersRef:
-      group: gateway.envoyproxy.io
-      kind: EnvoyProxy
-      name: zipkin-tracing
 ---
 #  This is a EnvoyProxy used for Zipkin tracing and will
 #  target to the eg-special-case Gateway
