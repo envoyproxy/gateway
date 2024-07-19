@@ -528,6 +528,7 @@ func QueryTraceFromTempo(t *testing.T, c client.Client, tags map[string]string) 
 	}
 	query := tempoURL.Query()
 	query.Add("start", fmt.Sprintf("%d", time.Now().Add(-10*time.Minute).Unix())) // query traces from last 10 minutes
+	query.Add("end", fmt.Sprintf("%d", time.Now().Unix()))
 	query.Add("tags", tagsQueryParam)
 	tempoURL.RawQuery = query.Encode()
 
