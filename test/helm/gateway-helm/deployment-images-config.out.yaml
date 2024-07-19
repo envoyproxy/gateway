@@ -552,7 +552,7 @@ spec:
       restartPolicy: Never
       securityContext:
         runAsGroup: 65534
-        runAsNonRoot: true
         runAsUser: 65534
+        runAsNonRoot: true
       serviceAccountName: gateway-helm-certgen
   ttlSecondsAfterFinished: 30

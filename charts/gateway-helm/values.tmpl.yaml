@@ -22,6 +22,7 @@ podDisruptionBudget:
   minAvailable: 0
 deployment:
   envoyGateway:
+    securityContext: {}
     image:
       repository: ""
       tag: ""
@@ -80,3 +81,4 @@ certgen:
   rbac:
     annotations: {}
     labels: {}
+  securityContext: {}

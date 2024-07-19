@@ -41,9 +41,13 @@ spec:
       {{- include "eg.image.pullSecrets" . | nindent 6 }}
       restartPolicy: Never
       securityContext:
+      {{- if .Values.certgen.securityContext }}
+        {{- toYaml .Values.certgen.securityContext | nindent 8 }}
+      {{- else }}
         runAsGroup: 65534
-        runAsNonRoot: true
         runAsUser: 65534
+        runAsNonRoot: true
+      {{- end }}
       serviceAccountName: {{ include "eg.fullname" . }}-certgen
   {{- if not ( kindIs "invalid" .Values.certgen.job.ttlSecondsAfterFinished) }}
   ttlSecondsAfterFinished: {{ .Values.certgen.job.ttlSecondsAfterFinished }}

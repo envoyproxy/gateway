@@ -1,0 +1,13 @@
+# The image in the deployment is replaced with the image from the global configuration.
+# It's retained for backwards compatibility.
+deployment:
+  envoyGateway:
+    securityContext:
+      runAsUser: 1234
+      runAsGroup: 1234
+      fsGroup: 1234
+certgen:
+  securityContext:
+    runAsUser: 3456
+    runAsGroup: 3456
+    fsGroup: 3456

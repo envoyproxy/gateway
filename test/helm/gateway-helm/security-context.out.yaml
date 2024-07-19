@@ -48,7 +48,7 @@ data:
                     - imagePullPolicy: IfNotPresent
                       name: envoy-ratelimit
         shutdownManager:
-          image: docker.io/envoyproxy/gateway-dev:latest
+          image: docker.io/envoyproxy/gateway-dev:e80c41d6
       type: Kubernetes
 ---
 # Source: gateway-helm/templates/envoy-gateway-rbac.yaml
@@ -390,8 +390,8 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: docker.io/envoyproxy/gateway-dev:latest
-        imagePullPolicy: Always
+        image: docker.io/envoyproxy/gateway-dev:e80c41d6
+        imagePullPolicy: IfNotPresent
         livenessProbe:
           httpGet:
             path: /healthz
@@ -432,7 +432,9 @@ spec:
           readOnly: true
       imagePullSecrets: []
       securityContext:
-        runAsNonRoot: true
+        fsGroup: 1234
+        runAsGroup: 1234
+        runAsUser: 1234
       serviceAccountName: envoy-gateway
       terminationGracePeriodSeconds: 10
       volumes:
@@ -541,14 +543,14 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: docker.io/envoyproxy/gateway-dev:latest
-        imagePullPolicy: Always
+        image: docker.io/envoyproxy/gateway-dev:e80c41d6
+        imagePullPolicy: IfNotPresent
         name: envoy-gateway-certgen
       imagePullSecrets: []
       restartPolicy: Never
       securityContext:
-        runAsGroup: 65534
-        runAsUser: 65534
-        runAsNonRoot: true
+        fsGroup: 3456
+        runAsGroup: 3456
+        runAsUser: 3456
       serviceAccountName: gateway-helm-certgen
   ttlSecondsAfterFinished: 30

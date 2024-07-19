@@ -104,7 +104,11 @@ spec:
           readOnly: true
       {{- include "eg.image.pullSecrets" . | nindent 6 }}
       securityContext:
+      {{- if .Values.deployment.envoyGateway.securityContext }}
+        {{- toYaml .Values.deployment.envoyGateway.securityContext | nindent 8 }}
+      {{- else }}
         runAsNonRoot: true
+      {{- end }}
       serviceAccountName: envoy-gateway
       terminationGracePeriodSeconds: 10
       volumes:
