@@ -312,6 +312,10 @@ func (r *gatewayAPIReconciler) validateBackendForReconcile(obj client.Object) bo
 		return true
 	}
 
+	if r.isEnvoyProxyReferencingBackend(&nsName) {
+		return true
+	}
+
 	return r.isEnvoyExtensionPolicyReferencingBackend(&nsName)
 }
 
@@ -425,6 +429,10 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 	}
 
 	if r.isSecurityPolicyReferencingBackend(&nsName) {
+		return true
+	}
+
+	if r.isEnvoyProxyReferencingBackend(&nsName) {
 		return true
 	}
 
