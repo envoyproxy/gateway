@@ -422,11 +422,11 @@ spec:
             cpu: 100m
             memory: 256Mi
         securityContext:
+          runAsNonRoot: true
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
-          runAsNonRoot: true
           capabilities:
-           drop:
+            drop:
             - ALL
         volumeMounts:
         - mountPath: /config
@@ -551,6 +551,15 @@ spec:
         image: docker.io/envoyproxy/gateway-dev:latest
         imagePullPolicy: IfNotPresent
         name: envoy-gateway-certgen
+        securityContext:
+          runAsGroup: 65534
+          runAsUser: 65534
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
       imagePullSecrets: []
       restartPolicy: Never
       securityContext:

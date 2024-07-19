@@ -38,15 +38,20 @@ spec:
         resources:
           {{- toYaml . | nindent 10 }}
         {{- end }}
+        securityContext:
+          runAsGroup: 65534
+          runAsUser: 65534
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
       {{- include "eg.image.pullSecrets" . | nindent 6 }}
       restartPolicy: Never
+      {{- with .Values.certgen.job.securityContext }}
       securityContext:
-      {{- if .Values.certgen.job.securityContext }}
-        {{- toYaml .Values.certgen.job.securityContext | nindent 8 }}
-      {{- else }}
-        runAsGroup: 65534
-        runAsUser: 65534
-        runAsNonRoot: true
+        {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ include "eg.fullname" . }}-certgen
   {{- if not ( kindIs "invalid" .Values.certgen.job.ttlSecondsAfterFinished) }}
