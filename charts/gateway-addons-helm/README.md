@@ -61,6 +61,7 @@ To uninstall the chart:
 | fluent-bit.config.service | string | `"[SERVICE]\n    Daemon Off\n    Flush {{ .Values.flush }}\n    Log_Level {{ .Values.logLevel }}\n    Parsers_File parsers.conf\n    Parsers_File custom_parsers.conf\n    HTTP_Server On\n    HTTP_Listen 0.0.0.0\n    HTTP_Port {{ .Values.metricsPort }}\n    Health_Check On\n"` |  |
 | fluent-bit.enabled | bool | `true` |  |
 | fluent-bit.fullnameOverride | string | `"fluent-bit"` |  |
+| fluent-bit.image.repository | string | `"fluent/fluent-bit"` |  |
 | fluent-bit.podAnnotations."fluentbit.io/exclude" | string | `"true"` |  |
 | fluent-bit.podAnnotations."prometheus.io/path" | string | `"/api/v1/metrics/prometheus"` |  |
 | fluent-bit.podAnnotations."prometheus.io/port" | string | `"2020"` |  |

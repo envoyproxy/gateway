@@ -42,11 +42,6 @@ spec:
     allowedRoutes:
       namespaces:
         from: All
-  infrastructure:
-    parametersRef:
-      group: gateway.envoyproxy.io
-      kind: EnvoyProxy
-      name: zipkin-tracing
 ---
 apiVersion: v1
 kind: Service
