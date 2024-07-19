@@ -451,6 +451,11 @@ spec:
             memory: 256Mi
         securityContext:
           allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          capabilities:
+           drop:
+            - ALL
         volumeMounts:
         - mountPath: /config
           name: envoy-gateway-config
@@ -459,8 +464,6 @@ spec:
           name: certs
           readOnly: true
       imagePullSecrets: []
-      securityContext:
-        runAsNonRoot: true
       serviceAccountName: envoy-gateway
       terminationGracePeriodSeconds: 10
       volumes:
