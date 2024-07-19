@@ -191,6 +191,13 @@ install-e2e-telemetry: helm-generate.gateway-addons-helm
 	helm upgrade -i eg-addons charts/gateway-addons-helm --set grafana.enabled=false,opentelemetry-collector.enabled=true -n monitoring --create-namespace --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
 	# Change loki service type from ClusterIP to LoadBalancer
 	kubectl patch service loki -n monitoring -p '{"spec": {"type": "LoadBalancer"}}'
+	# Wait service Ready
+	kubectl rollout status --watch --timeout=5m -n monitoring deployment/prometheus
+	kubectl rollout status --watch --timeout=5m statefulset/loki -n monitoring
+	kubectl rollout status --watch --timeout=5m statefulset/tempo -n monitoring
+	# Restart otel-collector to make sure otlp exporter worked
+	kubectl rollout restart -n monitoring deployment/otel-collector
+	kubectl rollout status --watch --timeout=5m -n monitoring deployment/otel-collector
 
 .PHONY: uninstall-e2e-telemetry
 uninstall-e2e-telemetry:
