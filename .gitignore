@@ -40,3 +40,5 @@ charts/gateway-addons-helm/dashboards/vendor/
 
 # VIM
 .*.swp
+
+*.tar.gz

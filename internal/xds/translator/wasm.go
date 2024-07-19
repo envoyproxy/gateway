@@ -53,7 +53,7 @@ func (*wasm) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListe
 		if !routeContainsWasm(route) {
 			continue
 		}
-		for _, ep := range route.Wasms {
+		for _, ep := range route.EnvoyExtensions.Wasms {
 			if hcmContainsFilter(mgr, wasmFilterName(ep)) {
 				continue
 			}
@@ -161,7 +161,7 @@ func routeContainsWasm(irRoute *ir.HTTPRoute) bool {
 		return false
 	}
 
-	return len(irRoute.Wasms) > 0
+	return irRoute.EnvoyExtensions != nil && len(irRoute.EnvoyExtensions.Wasms) > 0
 }
 
 // patchResources patches the cluster resources for the http wasm code source.
@@ -181,8 +181,11 @@ func (*wasm) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	if irRoute == nil {
 		return errors.New("ir route is nil")
 	}
+	if irRoute.EnvoyExtensions == nil {
+		return nil
+	}
 
-	for _, ep := range irRoute.Wasms {
+	for _, ep := range irRoute.EnvoyExtensions.Wasms {
 		filterName := wasmFilterName(ep)
 		if err := enableFilterOnRoute(route, filterName); err != nil {
 			return err

@@ -10,6 +10,7 @@ ignore: |
   bin/install.yaml
   test/helm/
   examples/extension-server/charts/extension-server
+  site/node_modules/
 
 rules:
   braces:

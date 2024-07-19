@@ -4,11 +4,10 @@ metadata:
   name: circuitbreaker-example
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-with-circuitbreaker
-    namespace: gateway-conformance-infra
   circuitBreaker:
     maxConnections: 0
     maxParallelRequests: 0

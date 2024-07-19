@@ -10,7 +10,7 @@ Envoy Gateway can be installed via a Helm chart with a few simple steps, dependi
 ## Before you begin
 
 {{% alert title="Compatibility Matrix" color="warning" %}}
-Refer to the [Version Compatibility Matrix](/blog/2022/10/01/versions/) to learn more.
+Refer to the [Version Compatibility Matrix](/news/releases/matrix/) to learn more.
 {{% /alert %}}
 
 The Envoy Gateway Helm chart is hosted by DockerHub.
@@ -138,5 +138,5 @@ These are the ports used by Envoy Gateway and the managed Envoy Proxy.
 | Heath Check  | 0.0.0.0     | 19001   |
 
 {{% alert title="Next Steps" color="warning" %}}
-Envoy Gateway should now be successfully installed and running, but in order to experience more abilities of Envoy Gateway, you can refer to [User Guides](../../user).
+Envoy Gateway should now be successfully installed and running, but in order to experience more abilities of Envoy Gateway, you can refer to [User Guides](../user).
 {{% /alert %}}

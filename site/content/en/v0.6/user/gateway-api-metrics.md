@@ -7,7 +7,7 @@ The project also provides example dashboard for visualising the metrics using Gr
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart Guide](./quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 Run the following commands to install the metrics stack, with the Gateway API State Metrics configuration, on your kubernetes cluster:
@@ -29,7 +29,7 @@ kubectl -n monitoring rollout status --watch --timeout=5m statefulset/prometheus
 kubectl -n monitoring port-forward service/prometheus-k8s 9090:9090 > /dev/null &
 ```
 
-Navigate to [http://localhost:9090](http://localhost:9090).
+Navigate to `http://localhost:9090`.
 Metrics can be queried from the 'Graph' tab e.g. `gatewayapi_gateway_created`
 See the [Gateway API State Metrics README](https://github.com/Kuadrant/gateway-api-state-metrics/tree/main#metrics) for the full list of Gateway API metrics available.
 
@@ -47,7 +47,7 @@ kubectl -n monitoring wait --timeout=5m deployment/grafana --for=condition=Avail
 kubectl -n monitoring port-forward service/grafana 3000:3000 > /dev/null &
 ```
 
-Navigate to [http://localhost:3000](http://localhost:3000) and sign in with admin/admin.
+Navigate to `http://localhost:3000` and sign in with admin/admin.
 The Gateway API State dashboards will be available in the 'Default' folder and tagged with 'gateway-api'.
 See the [Gateway API State Metrics README](https://github.com/Kuadrant/gateway-api-state-metrics/tree/main#dashboards) for further information on available dashboards.
 

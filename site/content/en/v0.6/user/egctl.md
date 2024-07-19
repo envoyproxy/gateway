@@ -396,7 +396,7 @@ spec:
 EOF
 ```
 
-You can see the output contains a [EnvoyProxy](../../api/extension_types#envoyproxy) resource that
+You can see the output contains a [EnvoyProxy](../api/extension_types#envoyproxy) resource that
 can be used as a starting point to modify the xDS bootstrap resource for the managed Envoy Proxy fleet.
 
 ```yaml

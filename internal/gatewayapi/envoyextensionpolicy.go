@@ -351,8 +351,10 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 			if irListener != nil {
 				for _, r := range irListener.Routes {
 					if strings.HasPrefix(r.Name, prefix) {
-						r.ExtProcs = extProcs
-						r.Wasms = wasms
+						r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
+							ExtProcs: extProcs,
+							Wasms:    wasms,
+						}
 					}
 				}
 			}
@@ -405,16 +407,13 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 		// targeting a lesser specific scope(Gateway).
 		for _, r := range http.Routes {
 			// if already set - there's a route level policy, so skip
-			if r.ExtProcs != nil ||
-				r.Wasms != nil {
+			if r.EnvoyExtensions != nil {
 				continue
 			}
 
-			if r.ExtProcs == nil {
-				r.ExtProcs = extProcs
-			}
-			if r.Wasms == nil {
-				r.Wasms = wasms
+			r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
+				ExtProcs: extProcs,
+				Wasms:    wasms,
 			}
 		}
 	}
