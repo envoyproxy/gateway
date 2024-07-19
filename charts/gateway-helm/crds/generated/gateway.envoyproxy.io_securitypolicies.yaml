@@ -1129,8 +1129,9 @@ spec:
             type: object
             x-kubernetes-validations:
             - message: either targetRef or targetRefs must be used
-              rule: (has(self.targetRef) && !has(self.targetRefs)) || (!has(self.targetRef)
-                && has(self.targetRefs))
+              rule: '(has(self.targetRef) && !has(self.targetRefs)) || (!has(self.targetRef)
+                && has(self.targetRefs)) || (has(self.targetSelectors) && self.targetSelectors.size()
+                > 0) '
             - message: this policy can only have a targetRef.group of gateway.networking.k8s.io
               rule: 'has(self.targetRef) ? self.targetRef.group == ''gateway.networking.k8s.io''
                 : true'
