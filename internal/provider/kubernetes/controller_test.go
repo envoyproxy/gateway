@@ -86,6 +86,115 @@ func TestAddGatewayClassFinalizer(t *testing.T) {
 	}
 }
 
+func TestAddEnvoyProxyFinalizer(t *testing.T) {
+	testCases := []struct {
+		name   string
+		ep     *egv1a1.EnvoyProxy
+		expect []string
+	}{
+		{
+			name: "envoyproxy with no finalizers",
+			ep: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+			},
+			expect: []string{gatewayClassFinalizer},
+		},
+		{
+			name: "envoyproxy with a different finalizer",
+			ep: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "test-ep",
+					Finalizers: []string{"fooFinalizer"},
+				},
+			},
+			expect: []string{"fooFinalizer", gatewayClassFinalizer},
+		},
+		{
+			name: "envoyproxy with existing gatewayclass finalizer",
+			ep: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "test-ep",
+					Finalizers: []string{gatewayClassFinalizer},
+				},
+			},
+			expect: []string{gatewayClassFinalizer},
+		},
+	}
+	// Create the reconciler.
+	r := new(gatewayAPIReconciler)
+	ctx := context.Background()
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			r.client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.ep).Build()
+			err := r.addFinalizer(ctx, tc.ep)
+			require.NoError(t, err)
+			key := types.NamespacedName{Name: tc.ep.Name}
+			err = r.client.Get(ctx, key, tc.ep)
+			require.NoError(t, err)
+			require.Equal(t, tc.expect, tc.ep.Finalizers)
+		})
+	}
+}
+
+func TestRemoveEnvoyProxyFinalizer(t *testing.T) {
+	testCases := []struct {
+		name   string
+		ep     *egv1a1.EnvoyProxy
+		expect []string
+	}{
+		{
+			name: "envoyproxy with no finalizers",
+			ep: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+			},
+			expect: nil,
+		},
+		{
+			name: "envoyproxy with a different finalizer",
+			ep: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "test-ep",
+					Finalizers: []string{"fooFinalizer"},
+				},
+			},
+			expect: []string{"fooFinalizer"},
+		},
+		{
+			name: "envoyproxy with existing gatewayclass finalizer",
+			ep: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "test-ep",
+					Finalizers: []string{gatewayClassFinalizer},
+				},
+			},
+			expect: nil,
+		},
+	}
+
+	// Create the reconciler.
+	r := new(gatewayAPIReconciler)
+	ctx := context.Background()
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			r.client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.ep).Build()
+			err := r.removeFinalizer(ctx, tc.ep)
+			require.NoError(t, err)
+			key := types.NamespacedName{Name: tc.ep.Name}
+			err = r.client.Get(ctx, key, tc.ep)
+			require.NoError(t, err)
+			require.Equal(t, tc.expect, tc.ep.Finalizers)
+		})
+	}
+}
+
 func TestRemoveGatewayClassFinalizer(t *testing.T) {
 	testCases := []struct {
 		name   string
@@ -177,8 +286,9 @@ func TestProcessGatewayClassParamsRef(t *testing.T) {
 			},
 			ep: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: config.DefaultNamespace,
-					Name:      "test",
+					Namespace:  config.DefaultNamespace,
+					Name:       "test",
+					Finalizers: []string{gatewayClassFinalizer},
 				},
 			},
 			expected: true,

@@ -75,6 +75,7 @@ verbs:
 - get
 - list
 - watch
+- patch
 {{- end }}
 
 {{- define "eg.rbac.namespaced.gateway.envoyproxy.status" -}}
