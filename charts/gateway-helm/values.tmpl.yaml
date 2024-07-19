@@ -78,7 +78,7 @@ certgen:
     annotations: {}
     resources: {}
     ttlSecondsAfterFinished: 30
+    securityContext: {}
   rbac:
     annotations: {}
     labels: {}
-  securityContext: {}

@@ -7,7 +7,8 @@ deployment:
       runAsGroup: 1234
       fsGroup: 1234
 certgen:
-  securityContext:
-    runAsUser: 3456
-    runAsGroup: 3456
-    fsGroup: 3456
+  job:
+    securityContext:
+      runAsUser: 3456
+      runAsGroup: 3456
+      fsGroup: 3456

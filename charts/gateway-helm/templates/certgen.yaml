@@ -41,8 +41,8 @@ spec:
       {{- include "eg.image.pullSecrets" . | nindent 6 }}
       restartPolicy: Never
       securityContext:
-      {{- if .Values.certgen.securityContext }}
-        {{- toYaml .Values.certgen.securityContext | nindent 8 }}
+      {{- if .Values.certgen.job.securityContext }}
+        {{- toYaml .Values.certgen.job.securityContext | nindent 8 }}
       {{- else }}
         runAsGroup: 65534
         runAsUser: 65534
