@@ -96,7 +96,6 @@ spec:
         securityContext:
           runAsNonRoot: true
           allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
           capabilities:
             drop:
             - ALL
