@@ -115,7 +115,8 @@ var ZipkinTracingTest = suite.ConformanceTest{
 
 					httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-					err = wait.PollUntilContextTimeout(context.TODO(), time.Second, 10*time.Second, true, func(ctx context.Context) (done bool, err error) {
+					// looks like we need almost 15 seconds to get the trace from Tempo?
+					err = wait.PollUntilContextTimeout(context.TODO(), time.Second, 15*time.Second, true, func(ctx context.Context) (done bool, err error) {
 						curCount, err := QueryTraceFromTempo(t, suite.Client, tags)
 						if err != nil {
 							t.Logf("failed to get curCount count from tempo: %v", err)
