@@ -825,7 +825,6 @@ func (t *Translator) processUnresolvedHTTPFilter(errMsg string, filterContext *H
 		errMsg,
 	)
 	filterContext.DirectResponse = &ir.DirectResponse{
-		Body:       &errMsg,
 		StatusCode: 500,
 	}
 }
@@ -842,7 +841,6 @@ func (t *Translator) processUnsupportedHTTPFilter(filterType string, filterConte
 		errMsg,
 	)
 	filterContext.DirectResponse = &ir.DirectResponse{
-		Body:       &errMsg,
 		StatusCode: 500,
 	}
 }
@@ -859,7 +857,6 @@ func (t *Translator) processInvalidHTTPFilter(filterType string, filterContext *
 		errMsg,
 	)
 	filterContext.DirectResponse = &ir.DirectResponse{
-		Body:       &errMsg,
 		StatusCode: 500,
 	}
 }

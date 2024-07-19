@@ -13,73 +13,47 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/http"
-	"testing"
+	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/envoyproxy/gateway/internal/cmd/options"
 	kube "github.com/envoyproxy/gateway/internal/kubernetes"
-)
-
-const (
-	localMetricsPort        = 0
-	controlPlaneMetricsPort = 19001
+	prom "github.com/envoyproxy/gateway/test/utils/prometheus"
 )
 
 type BenchmarkReport struct {
-	Name         string
-	RawResult    []byte
-	RawCPMetrics []byte
-	RawDPMetrics map[string][]byte
+	Name    string
+	Result  []byte
+	Metrics map[string]float64 // metricTableHeaderName:metricValue
 
 	kubeClient kube.CLIClient
+	promClient *prom.Client
 }
 
-func NewBenchmarkReport(name string) (*BenchmarkReport, error) {
-	kubeClient, err := kube.NewCLIClient(options.DefaultConfigFlags.ToRawKubeConfigLoader())
-	if err != nil {
-		return nil, err
-	}
-
+func NewBenchmarkReport(name string, kubeClient kube.CLIClient, promClient *prom.Client) *BenchmarkReport {
 	return &BenchmarkReport{
-		Name:         name,
-		RawDPMetrics: make(map[string][]byte),
-		kubeClient:   kubeClient,
-	}, nil
-}
-
-// Print prints the raw report of one benchmark test.
-func (r *BenchmarkReport) Print(t *testing.T, name string) {
-	t.Logf("The raw report of benchmark test: %s", name)
-
-	t.Logf("=== Benchmark Result: \n\n %s \n\n", r.RawResult)
-	t.Logf("=== Control-Plane Metrics: \n\n %s \n\n", r.RawCPMetrics)
-
-	for dpName, dpMetrics := range r.RawDPMetrics {
-		t.Logf("=== Data-Plane Metrics for %s: \n\n %s \n\n", dpName, dpMetrics)
+		Name:       name,
+		Metrics:    make(map[string]float64),
+		kubeClient: kubeClient,
+		promClient: promClient,
 	}
 }
 
-func (r *BenchmarkReport) Collect(t *testing.T, ctx context.Context, job *types.NamespacedName) error {
-	if err := r.GetBenchmarkResult(t, ctx, job); err != nil {
+func (r *BenchmarkReport) Collect(ctx context.Context, job *types.NamespacedName) error {
+	if err := r.GetMetrics(ctx); err != nil {
 		return err
 	}
 
-	if err := r.GetControlPlaneMetrics(t, ctx); err != nil {
-		return err
-	}
-
-	if err := r.GetDataPlaneMetrics(t, ctx); err != nil {
+	if err := r.GetResult(ctx, job); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (r *BenchmarkReport) GetBenchmarkResult(t *testing.T, ctx context.Context, job *types.NamespacedName) error {
+func (r *BenchmarkReport) GetResult(ctx context.Context, job *types.NamespacedName) error {
 	pods, err := r.kubeClient.Kube().CoreV1().Pods(job.Namespace).List(ctx, metav1.ListOptions{LabelSelector: "job-name=" + job.Name})
 	if err != nil {
 		return err
@@ -89,73 +63,47 @@ func (r *BenchmarkReport) GetBenchmarkResult(t *testing.T, ctx context.Context, 
 		return fmt.Errorf("failed to get any pods for job %s", job.String())
 	}
 
-	if len(pods.Items) > 1 {
-		t.Logf("Got %d pod(s) associated job %s, should be 1 pod, could be pod err and job backoff then restart, please check your pod(s) status",
-			len(pods.Items), job.Name)
+	// Find the pod that complete successfully.
+	var pod corev1.Pod
+	for _, p := range pods.Items {
+		if p.Status.Phase == corev1.PodSucceeded {
+			pod = p
+			break
+		}
 	}
 
-	pod := &pods.Items[0]
-	logs, err := r.getLogsFromPod(
-		ctx, &types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace},
-	)
+	logs, err := r.getLogsFromPod(ctx, &types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace})
 	if err != nil {
 		return err
 	}
 
-	r.RawResult = logs
+	r.Result = logs
 
 	return nil
 }
 
-func (r *BenchmarkReport) GetControlPlaneMetrics(t *testing.T, ctx context.Context) error {
-	egPods, err := r.kubeClient.Kube().CoreV1().Pods("envoy-gateway-system").
-		List(ctx, metav1.ListOptions{LabelSelector: "control-plane=envoy-gateway"})
-	if err != nil {
-		return err
-	}
-
-	if len(egPods.Items) < 1 {
-		return fmt.Errorf("failed to get any pods for envoy-gateway")
-	}
-
-	if len(egPods.Items) > 1 {
-		t.Logf("Got %d pod(s), using the first one as default envoy-gateway pod", len(egPods.Items))
-	}
-
-	egPod := &egPods.Items[0]
-	metrics, err := r.getMetricsFromPortForwarder(
-		t, &types.NamespacedName{Name: egPod.Name, Namespace: egPod.Namespace}, "/metrics",
-	)
-	if err != nil {
-		return err
-	}
-
-	r.RawCPMetrics = metrics
-
-	return nil
-}
-
-func (r *BenchmarkReport) GetDataPlaneMetrics(t *testing.T, ctx context.Context) error {
-	epPods, err := r.kubeClient.Kube().CoreV1().Pods("envoy-gateway-system").
-		List(ctx, metav1.ListOptions{LabelSelector: "gateway.envoyproxy.io/owning-gateway-namespace=benchmark-test,gateway.envoyproxy.io/owning-gateway-name=benchmark"})
-	if err != nil {
-		return err
-	}
-
-	if len(epPods.Items) < 1 {
-		return fmt.Errorf("failed to get any pods for envoy-proxies")
-	}
-
-	t.Logf("Got %d pod(s) from data-plane", len(epPods.Items))
-
-	for _, epPod := range epPods.Items {
-		podNN := &types.NamespacedName{Name: epPod.Name, Namespace: epPod.Namespace}
-		metrics, err := r.getMetricsFromPortForwarder(t, podNN, "/stats/prometheus")
-		if err != nil {
-			return err
+func (r *BenchmarkReport) GetMetrics(ctx context.Context) error {
+	for _, h := range metricsTableHeader {
+		if len(h.promQL) == 0 {
+			continue
 		}
 
-		r.RawDPMetrics[podNN.String()] = metrics
+		var (
+			v   float64
+			err error
+		)
+		switch h.queryType {
+		case querySum:
+			v, err = r.promClient.QuerySum(ctx, h.promQL)
+		case queryAvg:
+			v, err = r.promClient.QueryAvg(ctx, h.promQL)
+		default:
+			return fmt.Errorf("unsupported query type: %s", h.queryType)
+		}
+
+		if err == nil {
+			r.Metrics[h.name], _ = strconv.ParseFloat(fmt.Sprintf("%.2f", v), 64)
+		}
 	}
 
 	return nil
@@ -180,45 +128,4 @@ func (r *BenchmarkReport) getLogsFromPod(ctx context.Context, pod *types.Namespa
 	}
 
 	return buf.Bytes(), nil
-}
-
-// getMetricsFromPortForwarder retrieves metrics from pod by request url, like `/metrics`.
-func (r *BenchmarkReport) getMetricsFromPortForwarder(t *testing.T, pod *types.NamespacedName, url string) ([]byte, error) {
-	fw, err := kube.NewLocalPortForwarder(r.kubeClient, *pod, localMetricsPort, controlPlaneMetricsPort)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build port forwarder for pod %s: %w", pod.String(), err)
-	}
-
-	if err = fw.Start(); err != nil {
-		fw.Stop()
-
-		return nil, fmt.Errorf("failed to start port forwarder for pod %s: %w", pod.String(), err)
-	}
-	requestURL := fmt.Sprintf("http://%s%s", fw.Address(), url)
-
-	var out []byte
-	// Retrieving metrics from Pod.
-	go func(requestURL string) {
-		defer fw.Stop()
-
-		//nolint: gosec
-		resp, err := http.Get(requestURL)
-		if err != nil {
-			t.Errorf("failed to request %s: %v", requestURL, err)
-			return
-		}
-		defer resp.Body.Close()
-
-		metrics, err := io.ReadAll(resp.Body)
-		if err != nil {
-			t.Errorf("failed to read metrics: %v", err)
-			return
-		}
-
-		out = metrics
-	}(requestURL)
-
-	fw.WaitForStop()
-
-	return out, nil
 }

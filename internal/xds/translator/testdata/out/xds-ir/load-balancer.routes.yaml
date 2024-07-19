@@ -77,3 +77,16 @@
             name: test
         upgradeConfigs:
         - upgradeType: websocket
+    - match:
+        prefix: /
+      name: tenth-route
+      route:
+        cluster: tenth-route-dest
+        hashPolicy:
+        - cookie:
+            attributes:
+            - name: foo
+              value: bar
+            name: test
+        upgradeConfigs:
+        - upgradeType: websocket

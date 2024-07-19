@@ -49,7 +49,7 @@ to the following guidelines for all code, APIs, and documentation:
   build. If your PR cannot have 100% coverage for some reason please clearly explain why when you
   open it.
 * Any PR that changes user-facing behavior **must** have associated documentation in the [docs](https://github.com/envoyproxy/gateway/tree/main/site) folder of the repo as
-  well as the [changelog](/blog/releases).
+  well as the [changelog](/news/releases).
 * All code comments and documentation are expected to have proper English grammar and punctuation.
   If you are not a fluent English speaker (or a bad writer ;-)) please let us know and we will try
   to find some help but there are no guarantees.
@@ -175,7 +175,7 @@ git config --add alias.c "commit -s"
 ## Fixing DCO
 
 If your PR fails the DCO check, it's necessary to fix the entire commit history in the PR. Best
-practice is to [squash](https://gitready.com/advanced/2009/02/10/squashing-commits-with-rebase.html)
+practice is to [squash](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/about-pull-request-merges#squash-and-merge-your-commits)
 the commit history to a single commit, append the DCO sign-off as described above, and [force
 push](https://git-scm.com/docs/git-push#git-push---force). For example, if you have 2 commits in
 your history:

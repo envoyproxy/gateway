@@ -35,25 +35,19 @@ Envoy Gateway has examples of dashboard for you to get started, you can check th
 
 If you'd like import Grafana dashboards on your own, please refer to Grafana docs for [importing dashboards](https://grafana.com/docs/grafana/latest/dashboards/manage-dashboards/#import-a-dashboard).
 
-### [Envoy Global](https://raw.githubusercontent.com/envoyproxy/gateway/main/charts/gateway-addons-helm/dashboards/envoy-global.json)
+### Envoy Proxy Global
 
-This dashboard example shows the overall downstram and upstream stats for each Envoy Proxy instance.
+This dashboard example shows the overall downstream and upstream stats for each Envoy Proxy instance.
 
-![Envoy Global](/img/envoy-global-dashboard.png)
+![Envoy Proxy Global](/img/envoy-proxy-global-dashboard.png)
 
-### [Envoy Clusters](https://raw.githubusercontent.com/envoyproxy/gateway/main/charts/gateway-addons-helm/dashboards/envoy-clusters.json)
+### Envoy Clusters
 
 This dashboard example shows the overall stats for each cluster from Envoy Proxy fleet.
 
 ![Envoy Clusters](/img/envoy-clusters-dashboard.png)
 
-### [Envoy Pod Resources](https://raw.githubusercontent.com/envoyproxy/gateway/main/charts/gateway-addons-helm/dashboards/envoy-pod-resource.json)
-
-This dashboard example shows the overall pod resources stats for each Envoy Proxy instance.
-
-![Envoy Pod Resources](/img/envoy-pod-resources-dashboard.png)
-
-### [Envoy Gateway Global](https://raw.githubusercontent.com/envoyproxy/gateway/main/charts/gateway-addons-helm/dashboards/envoy-gateway-global.json)
+### Envoy Gateway Global
 
 This dashboard example shows the overall stats exported by Envoy Gateway fleet.
 
@@ -65,16 +59,29 @@ This dashboard example shows the overall stats exported by Envoy Gateway fleet.
 
 ![Envoy Gateway Global: Infrastructure Manager](/img/envoy-gateway-global-infra-manager.png)
 
-### [Envoy Gateway Resources](https://raw.githubusercontent.com/envoyproxy/gateway/main/charts/gateway-addons-helm/dashboards/envoy-gateway-resource.json)
+### Resources Monitor
 
-This dashboard example shows the overall resources stats for each Envoy Gateway fleet.
+This dashboard example shows the overall resources stats for both Envoy Gateway and Envoy Proxy fleet.
 
-![Envoy Gateway Resources](/img/envoy-gateway-resources-dashboard.png)
+![Envoy Gateway Resources](/img/resources-monitor-dashboard.png)
 
 ## Update Dashboards
 
-The example dashboards cannot be updated in-place by default, if you are trying to
-make some changes to current dashboards, you can save them directly as a JSON file.
-
-All dashboards of Envoy Gateway are maintained under `charts/gateway-addons-helm/dashboards`, 
+All dashboards of Envoy Gateway are maintained under `charts/gateway-addons-helm/dashboards`,
 feel free to make [contributions](../../../contributions/CONTRIBUTING).
+
+### Grafonnet
+
+Newer dashboards are generated with [Jsonnet](https://jsonnet.org/) with the [Grafonnet](https://grafana.github.io/grafonnet/index.html). 
+This is the preferred method for any new dashboards.
+
+You can run `make helm-generate.gateway-addons-helm` to generate new version of dashboards.
+All the generated dashboards have a `.gen.json` suffix.
+
+### Legacy Dashboards
+
+Many of our older dashboards are manually created in the UI and exported as JSON and checked in.
+
+These example dashboards cannot be updated in-place by default, if you are trying to
+make some changes to the older dashboards, you can save them directly as a JSON file
+and then re-import.

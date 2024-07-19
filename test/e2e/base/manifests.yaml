@@ -6,7 +6,6 @@
 # namespace):
 # - same-namespace (only supports route in same ns)
 # - all-namespaces (supports routes in all ns)
-# - backend-namespaces (supports routes in ns with backend label)
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -48,55 +47,6 @@ spec:
       group: gateway.envoyproxy.io
       kind: EnvoyProxy
       name: zipkin-tracing
-      namespace: envoy-gateway-system
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: Gateway
-metadata:
-  name: backend-namespaces
-  namespace: gateway-conformance-infra
-spec:
-  gatewayClassName: "{GATEWAY_CLASS_NAME}"
-  listeners:
-  - name: https
-    port: 443
-    protocol: HTTPS
-    tls:
-      certificateRefs:
-      - group: ""
-        kind: Secret
-        name: backend-tls-certificate
-      mode: Terminate
-  - name: http
-    port: 80
-    protocol: HTTP
-    allowedRoutes:
-      namespaces:
-        from: Selector
-        selector:
-          matchLabels:
-            gateway-conformance: backend
----
-apiVersion: gateway.networking.k8s.io/v1beta1
-kind: Gateway
-metadata:
-  name: my-tcp-gateway
-  namespace: gateway-conformance-infra
-spec:
-  gatewayClassName: "{GATEWAY_CLASS_NAME}"
-  listeners:
-  - name: foo
-    protocol: TCP
-    port: 8080
-    allowedRoutes:
-      kinds:
-      - kind: TCPRoute
-  - name: bar
-    protocol: TCP
-    port: 8090
-    allowedRoutes:
-      kinds:
-      - kind: TCPRoute
 ---
 apiVersion: v1
 kind: Service
@@ -473,92 +423,6 @@ spec:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: gateway-conformance-udp
-  labels:
-    gateway-conformance: udp
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: coredns
-  namespace: gateway-conformance-udp
-  labels:
-    app: udp
-spec:
-  ports:
-  - name: udp-dns
-    port: 53
-    protocol: UDP
-    targetPort: 53
-  selector:
-    app: udp
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: coredns
-  namespace: gateway-conformance-udp
-  labels:
-    app: udp
-spec:
-  selector:
-    matchLabels:
-      app: udp
-  template:
-    metadata:
-      labels:
-        app: udp
-    spec:
-      containers:
-      - args:
-        - -conf
-        - /root/Corefile
-        image: coredns/coredns
-        name: coredns
-        volumeMounts:
-        - mountPath: /root
-          name: conf
-      volumes:
-      - configMap:
-          defaultMode: 420
-          name: coredns
-        name: conf
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: coredns
-  namespace: gateway-conformance-udp
-data:
-  Corefile: |
-    .:53 {
-        forward . 8.8.8.8 9.9.9.9
-        log
-        errors
-    }
-
-    foo.bar.com:53 {
-      whoami
-    }
----
-apiVersion: gateway.networking.k8s.io/v1beta1
-kind: Gateway
-metadata:
-  name: udp-gateway
-  namespace: gateway-conformance-udp
-spec:
-  gatewayClassName: "{GATEWAY_CLASS_NAME}"
-  listeners:
-  - name: coredns
-    protocol: UDP
-    port: 5300
-    allowedRoutes:
-      kinds:
-      - kind: UDPRoute
----
-apiVersion: v1
-kind: Namespace
-metadata:
   name: gateway-preserve-case-backend
 ---
 apiVersion: v1
@@ -672,21 +536,6 @@ metadata:
   name: my-tls-secret
   namespace: envoy-gateway-system
 type: kubernetes.io/tls
----
-apiVersion: gateway.networking.k8s.io/v1beta1
-kind: Gateway
-metadata:
-  name: connection-limit-gateway
-  namespace: gateway-conformance-infra
-spec:
-  gatewayClassName: "{GATEWAY_CLASS_NAME}"
-  listeners:
-  - name: http
-    port: 80
-    protocol: HTTP
-    allowedRoutes:
-      namespaces:
-        from: Same
 ---
 apiVersion: v1
 data:
@@ -1035,67 +884,3 @@ spec:
     protocol: TCP
     port: 19001
     targetPort: 19001
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: Gateway
-metadata:
-  name: eg-special-case
-  namespace: gateway-conformance-infra
-spec:
-  gatewayClassName: "{GATEWAY_CLASS_NAME}"
-  listeners:
-  - name: http
-    port: 80
-    protocol: HTTP
-    allowedRoutes:
-      namespaces:
-        from: All
-  infrastructure:
-    parametersRef:
-      group: gateway.envoyproxy.io
-      kind: EnvoyProxy
-      name: zipkin-tracing
----
-#  This is a EnvoyProxy used for Zipkin tracing and will
-#  target to the eg-special-case Gateway
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: EnvoyProxy
-metadata:
-  name: zipkin-tracing
-  namespace: gateway-conformance-infra
-spec:
-  logging:
-    level:
-      default: debug
-  telemetry:
-    tracing:
-      provider:
-        type: Zipkin
-        backendRefs:
-        - name: otel-collector
-          namespace: monitoring
-          port: 9411
-        zipkin:
-          enable128BitTraceId: true
-      customTags:
-        "provider":
-          type: Literal
-          literal:
-            value: "zipkin"
-        "k8s.cluster.name":
-          type: Literal
-          literal:
-            value: "envoy-gateway"
-        "k8s.pod.name":
-          type: Environment
-          environment:
-            name: ENVOY_POD_NAME
-            defaultValue: "-"
-        "k8s.namespace.name":
-          type: Environment
-          environment:
-            name: ENVOY_GATEWAY_NAMESPACE
-            defaultValue: "envoy-gateway-system"
-  shutdown:
-    drainTimeout: 5s
-    minDrainDuration: 1s
