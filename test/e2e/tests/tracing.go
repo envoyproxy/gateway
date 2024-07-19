@@ -127,7 +127,7 @@ var ZipkinTracingTest = suite.ConformanceTest{
 					err = wait.PollUntilContextTimeout(context.TODO(), time.Second, 10*time.Second, true, func(ctx context.Context) (done bool, err error) {
 						curCount, err := QueryTraceFromTempo(t, suite.Client, tags)
 						if err != nil {
-							t.Logf("failed to get trace count from tempo: %v", err)
+							t.Logf("failed to get curCount count from tempo: %v", err)
 							return false, nil
 						}
 
@@ -138,7 +138,8 @@ var ZipkinTracingTest = suite.ConformanceTest{
 						return false, nil
 					})
 					if err != nil {
-						return false, err
+						t.Logf("failed to get current count from tempo: %v", err)
+						return false, nil
 					}
 
 					return true, nil
