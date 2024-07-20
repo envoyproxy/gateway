@@ -6,10 +6,9 @@ The [HTTPRoute][] resource allows one or more [backendRefs][] to be provided. Re
 
 When requests are made to a `HTTPRoute` that uses a `HTTPRequestMirrorFilter`, the response will never come from the `backendRef` defined in the filter. Responses from the mirror `backendRef` are always ignored.
 
-## Installation
+## Prerequisites
 
-Follow the steps from the [Quickstart][] to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+{{< boilerplate prerequisites >}}
 
 ## Mirroring the Traffic
 
