@@ -1134,6 +1134,25 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				" Invalid value: \"object\": either targetRef or targetRefs must be used",
 			},
 		},
+		{
+			desc: "target selectors without targetRefs or targetRef",
+			mutate: func(sp *egv1a1.BackendTrafficPolicy) {
+				sp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group: ptr.To(gwapiv1a2.Group("gateway.networking.k8s.io")),
+								Kind:  "HTTPRoute",
+								MatchLabels: map[string]string{
+									"eg/namespace": "reference-apps",
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
 	}
 
 	for _, tc := range cases {
