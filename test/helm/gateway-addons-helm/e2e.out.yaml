@@ -9048,7 +9048,7 @@ spec:
       dnsPolicy: ClusterFirst
       containers:
         - name: fluent-bit
-          image: "cr.fluentbit.io/fluent/fluent-bit:2.1.4"
+          image: "fluent/fluent-bit:2.1.4"
           imagePullPolicy: Always
           ports:
             - name: http
