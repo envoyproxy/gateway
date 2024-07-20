@@ -227,7 +227,6 @@ var ConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
 				require.True(t, got)
 			})
 		}
-
 	},
 }
 
