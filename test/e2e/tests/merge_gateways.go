@@ -12,6 +12,7 @@ import (
 	"context"
 	"net"
 	"testing"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -178,6 +179,9 @@ var MergeGatewaysTest = suite.ConformanceTest{
 				t.Errorf("failed to create conflicted gateway: %v", err)
 				t.FailNow()
 			}
+
+			// Sleep few seconds, ensure the HTTPRoutes can be referenced to the conflicted listener of Gateway.
+			time.Sleep(3 * time.Second)
 
 			if err := suite.Client.Create(ctx, &conflictedHTTPRoute); err != nil {
 				t.Errorf("failed to create conflicted httproute: %v", err)
