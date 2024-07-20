@@ -191,7 +191,7 @@ changes:
       Added Support for PolicyStatus in EnvoyPatchPolicy
       Added Support for Websocket upgrades in HTTP/1 Routes
       Added Support for custom controller name in egctl
-      Added Support for BackendTLSPoplicy CA Certificate reference to Secret
+      Added Support for BackendTLSPolicy CA Certificate reference to Secret
       Added names to Filter Chains
       Added Support extension server hooks for TCP and UDP listeners
       Added Support for attaching EnvoyProxy resource to Gateways
