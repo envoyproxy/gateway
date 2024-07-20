@@ -60,6 +60,8 @@ prometheus:
 # Values for Fluent-bit dependency
 fluent-bit:
   enabled: true
+  image:
+    repository: fluent/fluent-bit # use image from dockerhub
   fullnameOverride: fluent-bit
   testFramework:
     enabled: false
