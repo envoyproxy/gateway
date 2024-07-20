@@ -107,7 +107,7 @@ func runTrafficTest(t *testing.T, suite *suite.ConformanceTestSuite,
 		podName := cReq.Pod
 		if len(podName) == 0 {
 			// it shouldn't be missing here
-			t.Errorf("failed to get pod header in response: %v", err)
+			tlog.Errorf(t, "failed to get pod header in response: %v", err)
 		} else {
 			trafficMap[podName]++
 		}
