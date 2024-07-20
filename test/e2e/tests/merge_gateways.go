@@ -12,7 +12,6 @@ import (
 	"context"
 	"net"
 	"testing"
-	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -97,10 +96,11 @@ var MergeGatewaysTest = suite.ConformanceTest{
 			})
 		})
 
-		t.Run("apply a gateway with conflicted listener", func(t *testing.T) {
+		t.Run("apply a gateway with conflicted listener and a httproute", func(t *testing.T) {
 			// Manually create the conflicted Gateway and HTTPRoute resources,
 			// in order to make sure the conflicted status will certainly surface for them.
 
+			// Create Gateway first to make sure there's no HTTPRoute attach to it.
 			conflictedGateway := gwapiv1.Gateway{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       gatewayapi.KindGateway,
@@ -127,6 +127,32 @@ var MergeGatewaysTest = suite.ConformanceTest{
 				},
 			}
 
+			if err := suite.Client.Create(ctx, &conflictedGateway); err != nil {
+				t.Errorf("failed to create conflicted gateway: %v", err)
+			}
+
+			conflictedListenerStatus := []gwapiv1.ListenerStatus{{
+				Name: gwapiv1.SectionName("http3"),
+				SupportedKinds: []gwapiv1.RouteGroupKind{
+					{
+						Group: gatewayapi.GroupPtr(gwapiv1.GroupName),
+						Kind:  gatewayapi.KindHTTPRoute,
+					},
+					{
+						Group: gatewayapi.GroupPtr(gwapiv1.GroupName),
+						Kind:  gatewayapi.KindGRPCRoute,
+					},
+				},
+				Conditions: []metav1.Condition{{
+					Type:   string(gwapiv1.ListenerConditionConflicted),
+					Status: metav1.ConditionTrue,
+					Reason: string(gwapiv1.ListenerReasonHostnameConflict),
+				}},
+				AttachedRoutes: 0,
+			}}
+			kubernetes.GatewayStatusMustHaveListeners(t, suite.Client, suite.TimeoutConfig, gw4NN, conflictedListenerStatus)
+
+			// Create HTTPRoute at last to make sure it will be referenced by the conflicted listener in Gateway.
 			conflictedHTTPRoute := gwapiv1.HTTPRoute{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       gatewayapi.KindHTTPRoute,
@@ -175,18 +201,20 @@ var MergeGatewaysTest = suite.ConformanceTest{
 				},
 			}
 
-			if err := suite.Client.Create(ctx, &conflictedGateway); err != nil {
-				t.Errorf("failed to create conflicted gateway: %v", err)
-				t.FailNow()
-			}
-
-			// Sleep few seconds, ensure the HTTPRoutes can be referenced to the conflicted listener of Gateway.
-			time.Sleep(3 * time.Second)
-
 			if err := suite.Client.Create(ctx, &conflictedHTTPRoute); err != nil {
 				t.Errorf("failed to create conflicted httproute: %v", err)
 				t.FailNow()
 			}
+
+			conflictedListenerStatus[0].AttachedRoutes = 1
+			kubernetes.GatewayStatusMustHaveListeners(t, suite.Client, suite.TimeoutConfig, gw4NN, conflictedListenerStatus)
+
+			expectedHTTPRouteCondition := metav1.Condition{
+				Type:   string(gwapiv1.RouteConditionAccepted),
+				Status: metav1.ConditionFalse,
+				Reason: "NoReadyListeners",
+			}
+			kubernetes.HTTPRouteMustHaveCondition(t, suite.Client, suite.TimeoutConfig, route4NN, gw4NN, expectedHTTPRouteCondition)
 		})
 
 		t.Run("gateway with conflicted listener cannot be merged", func(t *testing.T) {
@@ -207,34 +235,6 @@ var MergeGatewaysTest = suite.ConformanceTest{
 					gw4NN.String(), gw4Addr, gw1Addr)
 				t.FailNow()
 			}
-
-			conflictedListener := []gwapiv1.ListenerStatus{{
-				Name: gwapiv1.SectionName("http3"),
-				SupportedKinds: []gwapiv1.RouteGroupKind{
-					{
-						Group: gatewayapi.GroupPtr(gwapiv1.GroupName),
-						Kind:  gatewayapi.KindHTTPRoute,
-					},
-					{
-						Group: gatewayapi.GroupPtr(gwapiv1.GroupName),
-						Kind:  gatewayapi.KindGRPCRoute,
-					},
-				},
-				Conditions: []metav1.Condition{{
-					Type:   string(gwapiv1.ListenerConditionConflicted),
-					Status: metav1.ConditionTrue,
-					Reason: string(gwapiv1.ListenerReasonHostnameConflict),
-				}},
-				AttachedRoutes: 1,
-			}}
-			kubernetes.GatewayStatusMustHaveListeners(t, suite.Client, suite.TimeoutConfig, gw4NN, conflictedListener)
-
-			expectedHTTPRouteCondition := metav1.Condition{
-				Type:   string(gwapiv1.RouteConditionAccepted),
-				Status: metav1.ConditionFalse,
-				Reason: "NoReadyListeners",
-			}
-			kubernetes.HTTPRouteMustHaveCondition(t, suite.Client, suite.TimeoutConfig, route4NN, gw4NN, expectedHTTPRouteCondition)
 
 			// Not merged gateway should not receive any traffic.
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gw4HostPort, http.ExpectedResponse{
