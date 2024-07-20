@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 )
 
 func init() {
@@ -64,7 +65,7 @@ var ControlPlaneMetricTest = suite.ConformanceTest{
 			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, 2*time.Minute, true,
 				func(_ context.Context) (done bool, err error) {
 					if err := ScrapeMetrics(t, suite.Client, nn, 19001, "/metrics"); err != nil {
-						t.Logf("failed to get metric: %v", err)
+						tlog.Logf(t, "failed to get metric: %v", err)
 						return false, nil
 					}
 					return true, nil

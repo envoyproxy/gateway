@@ -176,7 +176,7 @@ func cleanUpResources(c client.Client, t *testing.T) {
 		}
 
 		for _, o := range list.Items {
-			t.Logf("deleting %s: %s/%s", o.GetObjectKind(), o.GetNamespace(), o.GetName())
+			tlog.Logf(t, "deleting %s: %s/%s", o.GetObjectKind(), o.GetNamespace(), o.GetName())
 			if err := c.Delete(context.Background(), &o); err != nil {
 				if !kerrors.IsNotFound(err) {
 					t.Fatalf("error deleting %s: %s/%s : %v", o.GetObjectKind(), o.GetNamespace(), o.GetName(), err)
@@ -192,7 +192,7 @@ func cleanUpResources(c client.Client, t *testing.T) {
 				}
 
 				if len(list.Items) > 0 {
-					t.Logf("Waiting for deletion of %d %s", len(list.Items), gvk.String())
+					tlog.Logf(t, "Waiting for deletion of %d %s", len(list.Items), gvk.String())
 					return false, nil
 				}
 
