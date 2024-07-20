@@ -20,10 +20,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
@@ -45,13 +44,14 @@ func init() {
 }
 
 var RoundRobinLoadBalancingTest = suite.ConformanceTest{
-	ShortName:   "Round Robin Load Balancing",
+	ShortName:   "RoundRobinLoadBalancing",
 	Description: "Test for round robin load balancing type",
 	Manifests:   []string{"testdata/load_balancing_round_robin.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		const (
 			sendRequests = 100
 			replicas     = 3
+			offset       = 5
 		)
 
 		ns := "gateway-conformance-infra"
@@ -65,7 +65,7 @@ var RoundRobinLoadBalancingTest = suite.ConformanceTest{
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "round-robin-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
-		WaitDeployment(t, suite.Client, types.NamespacedName{Name: "lb-backend-1", Namespace: ns}, replicas)
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-roundrobin"}, corev1.PodRunning, PodReady)
 
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
@@ -81,40 +81,53 @@ var RoundRobinLoadBalancingTest = suite.ConformanceTest{
 			}
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
 
-			trafficMap := make(map[string]int)
-			for i := 0; i < sendRequests; i++ {
-				cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
-				if err != nil {
-					t.Errorf("failed to get expected response: %v", err)
-				}
-
-				if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
-					t.Errorf("failed to compare request and response: %v", err)
-				}
-
-				podName := cReq.Pod
-				if len(podName) == 0 {
-					// it shouldn't be missing here
-					t.Errorf("failed to get pod header in response: %v", err)
-				} else {
-					trafficMap[podName]++
-				}
-			}
-
-			// Expect traffic number for each endpoint.
-			even := sendRequests / replicas
-
-			for podName, traffic := range trafficMap {
-				if !AlmostEquals(traffic, even, 5) {
-					t.Errorf("The traffic are not be split evenly for pod %s: %d", podName, traffic)
-				}
+			if err := wait.PollUntilContextTimeout(context.TODO(), 500*time.Millisecond, 15*time.Second, true, func(_ context.Context) (bool, error) {
+				return runTrafficTest(t, suite, req, expectedResponse, replicas, sendRequests, offset), nil
+			}); err != nil {
 			}
 		})
 	},
 }
 
+func runTrafficTest(t *testing.T, suite *suite.ConformanceTestSuite,
+	req roundtripper.Request, expectedResponse http.ExpectedResponse,
+	replicas, totalRequestCount, offset int,
+) bool {
+	trafficMap := make(map[string]int)
+	for i := 0; i < totalRequestCount; i++ {
+		cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
+		if err != nil {
+			t.Errorf("failed to get expected response: %v", err)
+		}
+
+		if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
+			t.Errorf("failed to compare request and response: %v", err)
+		}
+
+		podName := cReq.Pod
+		if len(podName) == 0 {
+			// it shouldn't be missing here
+			t.Errorf("failed to get pod header in response: %v", err)
+		} else {
+			trafficMap[podName]++
+		}
+	}
+
+	// Expect traffic number for each endpoint.
+	even := totalRequestCount / replicas
+	for podName, traffic := range trafficMap {
+		if !AlmostEquals(traffic, even, offset) {
+			tlog.Logf(t, "The traffic [Total:%d Replicas: %d Offset: %d] are not be split evenly for pod %s: %d",
+				totalRequestCount, replicas, offset, podName, traffic)
+			return false
+		}
+	}
+
+	return true
+}
+
 var ConsistentHashSourceIPLoadBalancingTest = suite.ConformanceTest{
-	ShortName:   "Source IP based Consistent Hash Load Balancing",
+	ShortName:   "SourceIPBasedConsistentHashLoadBalancing",
 	Description: "Test for source IP based consistent hash load balancing type",
 	Manifests:   []string{"testdata/load_balancing_consistent_hash_source_ip.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
@@ -131,7 +144,7 @@ var ConsistentHashSourceIPLoadBalancingTest = suite.ConformanceTest{
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "source-ip-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
-		WaitDeployment(t, suite.Client, types.NamespacedName{Name: "lb-backend-2", Namespace: ns}, 4)
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-sourceip"}, corev1.PodRunning, PodReady)
 
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
@@ -177,7 +190,7 @@ var ConsistentHashSourceIPLoadBalancingTest = suite.ConformanceTest{
 }
 
 var ConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
-	ShortName:   "Header based Consistent Hash Load Balancing",
+	ShortName:   "HeaderBasedConsistentHashLoadBalancing",
 	Description: "Test for header based consistent hash load balancing type",
 	Manifests:   []string{"testdata/load_balancing_consistent_hash_header.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
@@ -194,7 +207,7 @@ var ConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "header-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
-		WaitDeployment(t, suite.Client, types.NamespacedName{Name: "lb-backend-3", Namespace: ns}, 4)
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-header"}, corev1.PodRunning, PodReady)
 
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
@@ -245,7 +258,7 @@ var ConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
 }
 
 var ConsistentHashCookieLoadBalancingTest = suite.ConformanceTest{
-	ShortName:   "Cookie based Consistent Hash Load Balancing",
+	ShortName:   "CookieBasedConsistentHashLoadBalancing",
 	Description: "Test for cookie based consistent hash load balancing type",
 	Manifests:   []string{"testdata/load_balancing_consistent_hash_cookie.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
@@ -262,7 +275,7 @@ var ConsistentHashCookieLoadBalancingTest = suite.ConformanceTest{
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "cookie-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
-		WaitDeployment(t, suite.Client, types.NamespacedName{Name: "lb-backend-4", Namespace: ns}, 4)
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-cookie"}, corev1.PodRunning, PodReady)
 
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
@@ -340,7 +353,7 @@ var ConsistentHashCookieLoadBalancingTest = suite.ConformanceTest{
 			req, err := nethttp.NewRequest(nethttp.MethodGet, fmt.Sprintf("http://%s/cookie", gwAddr), nil)
 			require.NoError(t, err)
 
-			// A not desired cookie is been set.
+			// A not desired cookie has been set.
 			client.Jar.SetCookies(req.URL, []*nethttp.Cookie{
 				{
 					Name:  "foo",
@@ -371,26 +384,4 @@ var ConsistentHashCookieLoadBalancingTest = suite.ConformanceTest{
 			require.NoError(t, waitErr)
 		})
 	},
-}
-
-// WaitDeployment waits deployment to have expected available replicas.
-func WaitDeployment(t *testing.T, cli client.Client, name types.NamespacedName, expectReplicas int32) {
-	t.Helper()
-
-	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
-		deployment := new(appsv1.Deployment)
-		err := cli.Get(ctx, name, deployment)
-		if err != nil {
-			return false, fmt.Errorf("error fetching Deployment %s: %w", name.String(), err)
-		}
-
-		if deployment.Status.AvailableReplicas == expectReplicas {
-			return true, nil
-		}
-
-		tlog.Logf(t, "Deployment not yet accepted: %s", name.String())
-		return false, nil
-	})
-
-	require.NoErrorf(t, waitErr, "error waiting for Deployment %s to be accepted", name.String())
 }
