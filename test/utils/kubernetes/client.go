@@ -6,6 +6,7 @@
 package kubernetes
 
 import (
+	"k8s.io/client-go/rest"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -20,7 +21,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
-func NewClient(t *testing.T) client.Client {
+func NewClient(t *testing.T) (client.Client, *rest.Config) {
 	cfg, err := config.GetConfig()
 	require.NoError(t, err)
 
@@ -30,7 +31,7 @@ func NewClient(t *testing.T) client.Client {
 	// Install all the scheme to kubernetes client.
 	CheckInstallScheme(t, c)
 
-	return c
+	return c, cfg
 }
 
 func CheckInstallScheme(t *testing.T, c client.Client) {

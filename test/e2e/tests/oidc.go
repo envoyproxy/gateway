@@ -25,9 +25,9 @@ import (
 	gwhttp "sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
-	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 )
 
 const (
@@ -50,6 +50,10 @@ var OIDCTest = suite.ConformanceTest{
 	Manifests:   []string{"testdata/oidc-keycloak.yaml", "testdata/oidc-securitypolicy.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("http route with oidc authentication", func(t *testing.T) {
+			// Add a function to dump current cluster status
+			t.Cleanup(func() {
+				CollectAndDump(t, suite.RestConfig)
+			})
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "http-with-oidc", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}

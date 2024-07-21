@@ -7,7 +7,6 @@ package egctl
 
 import (
 	"fmt"
-
 	adminv3 "github.com/envoyproxy/go-control-plane/envoy/admin/v3"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
