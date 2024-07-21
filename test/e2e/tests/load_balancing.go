@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 )
@@ -364,7 +365,7 @@ var ConsistentHashCookieLoadBalancingTest = suite.ConformanceTest{
 					return true, nil
 				}
 
-				t.Logf("Cookie have not been generated yet")
+				tlog.Logf(t, "Cookie have not been generated yet")
 				return false, nil
 			})
 			require.NoError(t, waitErr)
@@ -387,7 +388,7 @@ func WaitDeployment(t *testing.T, cli client.Client, name types.NamespacedName, 
 			return true, nil
 		}
 
-		t.Logf("Deployment not yet accepted: %s", name.String())
+		tlog.Logf(t, "Deployment not yet accepted: %s", name.String())
 		return false, nil
 	})
 

@@ -25,6 +25,7 @@ import (
 	gwhttp "sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 )
@@ -80,7 +81,7 @@ var OIDCTest = suite.ConformanceTest{
 
 			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, 5*time.Minute, true,
 				func(_ context.Context) (done bool, err error) {
-					t.Logf("sending request to %s", testURL)
+					tlog.Logf(t, "sending request to %s", testURL)
 
 					// Send a request to the http route with OIDC configured.
 					// It will be redirected to the keycloak login page
@@ -90,7 +91,7 @@ var OIDCTest = suite.ConformanceTest{
 
 					// Parse the response body to get the URL where the login page would post the user-entered credentials
 					if err := client.ParseLoginForm(res.Body, keyCloakLoginFormID); err != nil {
-						t.Logf("failed to parse login form: %v", err)
+						tlog.Logf(t, "failed to parse login form: %v", err)
 						return false, nil
 					}
 
