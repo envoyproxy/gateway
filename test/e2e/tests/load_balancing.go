@@ -81,9 +81,9 @@ var RoundRobinLoadBalancingTest = suite.ConformanceTest{
 			}
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
 
-			compareFunc := func(trafficMpa map[string]int) bool {
+			compareFunc := func(trafficMap map[string]int) bool {
 				even := sendRequests / replicas
-				for _, count := range trafficMpa {
+				for _, count := range trafficMap {
 					if !AlmostEquals(count, even, offset) {
 						return false
 					}
@@ -101,7 +101,7 @@ var RoundRobinLoadBalancingTest = suite.ConformanceTest{
 	},
 }
 
-type TrafficCompareFunc func(trafficMpa map[string]int) bool
+type TrafficCompareFunc func(trafficMap map[string]int) bool
 
 func runTrafficTest(t *testing.T, suite *suite.ConformanceTestSuite,
 	req roundtripper.Request, expectedResponse http.ExpectedResponse,
@@ -169,9 +169,9 @@ var ConsistentHashSourceIPLoadBalancingTest = suite.ConformanceTest{
 			}
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
 
-			compareFunc := func(trafficMpa map[string]int) bool {
+			compareFunc := func(trafficMap map[string]int) bool {
 				// All traffic should be routed to the same pod.
-				return len(trafficMpa) == 1
+				return len(trafficMap) == 1
 			}
 
 			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, 30*time.Second, true, func(_ context.Context) (bool, error) {
@@ -220,9 +220,9 @@ var ConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
 			t.Run(header, func(t *testing.T) {
 				req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
 				req.Headers["Lb-Test-Header"] = []string{header}
-				got := runTrafficTest(t, suite, req, expectedResponse, sendRequests, func(trafficMpa map[string]int) bool {
+				got := runTrafficTest(t, suite, req, expectedResponse, sendRequests, func(trafficMap map[string]int) bool {
 					// All traffic should be routed to the same pod.
-					return len(trafficMpa) == 1
+					return len(trafficMap) == 1
 				})
 				require.True(t, got)
 			})
