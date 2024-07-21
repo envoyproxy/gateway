@@ -279,7 +279,8 @@ func resolveSecurityPolicyGatewayTargetRef(
 
 	// Check if another policy targeting the same Gateway exists
 	if gateway.attached {
-		message := "Unable to target Gateway, another SecurityPolicy has already attached to it"
+		message := fmt.Sprintf("Unable to target Gateway %s, another SecurityPolicy has already attached to it",
+			string(target.Name))
 
 		return gateway.GatewayContext, &status.PolicyResolveError{
 			Reason:  gwapiv1a2.PolicyReasonConflicted,
@@ -331,8 +332,8 @@ func resolveSecurityPolicyRouteTargetRef(
 
 	// Check if another policy targeting the same xRoute exists
 	if route.attached {
-		message := fmt.Sprintf("Unable to target %s, another SecurityPolicy has already attached to it",
-			string(target.Kind))
+		message := fmt.Sprintf("Unable to target %s %s, another SecurityPolicy has already attached to it",
+			string(target.Kind), string(target.Name))
 
 		return route.RouteContext, &status.PolicyResolveError{
 			Reason:  gwapiv1a2.PolicyReasonConflicted,
