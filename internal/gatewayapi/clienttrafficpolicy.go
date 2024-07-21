@@ -110,7 +110,8 @@ func (t *Translator) ProcessClientTrafficPolicies(
 				section := string(*(currTarget.SectionName))
 				s, ok := policyMap[key]
 				if ok && s.Has(section) {
-					message := "Unable to target section, another ClientTrafficPolicy has already attached to it"
+					message := fmt.Sprintf("Unable to target section %s, another ClientTrafficPolicy has already attached to it",
+						string(currTarget.Name))
 
 					resolveErr = &status.PolicyResolveError{
 						Reason:  gwapiv1a2.PolicyReasonConflicted,
@@ -206,7 +207,8 @@ func (t *Translator) ProcessClientTrafficPolicies(
 				// Check if another policy targeting the same Gateway exists
 				s, ok := policyMap[key]
 				if ok && s.Has(AllSections) {
-					message := "Unable to target Gateway, another ClientTrafficPolicy has already attached to it"
+					message := fmt.Sprintf("Unable to target Gateway %s, another ClientTrafficPolicy has already attached to it",
+						string(currTarget.Name))
 
 					resolveErr = &status.PolicyResolveError{
 						Reason:  gwapiv1a2.PolicyReasonConflicted,
