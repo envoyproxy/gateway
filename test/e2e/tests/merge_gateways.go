@@ -246,6 +246,9 @@ var MergeGatewaysTest = suite.ConformanceTest{
 
 		// Clean-up the conflicted gateway and route resources.
 		t.Cleanup(func() {
+			// Collect and dump every config before removing the created resource.
+			CollectAndDump(t, suite.RestConfig)
+
 			conflictedGateway := new(gwapiv1.Gateway)
 			conflictedHTTPRoute := new(gwapiv1.HTTPRoute)
 
