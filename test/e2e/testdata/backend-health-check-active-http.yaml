@@ -8,7 +8,6 @@ spec:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: http-with-health-check-active-http-pass
-      namespace: gateway-conformance-infra
   healthCheck:
     active:
       timeout: 3s
@@ -31,7 +30,6 @@ spec:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: http-with-health-check-active-http-fail
-      namespace: gateway-conformance-infra
   healthCheck:
     active:
       timeout: 3s
@@ -89,7 +87,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: same-namespace
-    namespace: gateway-conformance-infra
   type: JSONPatch
   jsonPatches:
     - type: "type.googleapis.com/envoy.config.cluster.v3.Cluster"

@@ -254,7 +254,6 @@ var (
 			Exact: ptr.To("filter-error"),
 		},
 		DirectResponse: &DirectResponse{
-			Body:       ptr.To("invalid filter type"),
 			StatusCode: uint32(500),
 		},
 	}
@@ -297,7 +296,6 @@ var (
 			Exact: ptr.To("redirect"),
 		},
 		DirectResponse: &DirectResponse{
-			Body:       ptr.To("invalid filter type"),
 			StatusCode: uint32(799),
 		},
 	}

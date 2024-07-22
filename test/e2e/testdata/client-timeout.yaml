@@ -4,10 +4,10 @@ metadata:
   name: client-timeout
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: http-client-timeout
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-client-timeout
   faultInjection:
     delay:
       fixedDelay: 100ms
@@ -18,10 +18,10 @@ metadata:
   name: client-timeout
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: same-namespace
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: same-namespace
   timeout:
     http:
       requestReceivedTimeout: 50ms

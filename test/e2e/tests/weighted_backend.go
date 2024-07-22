@@ -23,14 +23,14 @@ func init() {
 	ConformanceTests = append(ConformanceTests, WeightEqualTest, WeightBlueGreenTest, WeightCompleteRolloutTest)
 }
 
-const sendRequest = 50
-
 var WeightEqualTest = suite.ConformanceTest{
 	ShortName:   "WeightEqualBackend",
 	Description: "Resource with Weight Backend enabled, and use the all backend weight is equal",
 	Manifests:   []string{"testdata/weighted-backend-all-equal.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("all backends receive the same weight of traffic", func(t *testing.T) {
+			const sendRequests = 50
+
 			ns := "gateway-conformance-infra"
 			weightEqualRoute := types.NamespacedName{Name: "weight-equal-http-route", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
@@ -52,11 +52,11 @@ var WeightEqualTest = suite.ConformanceTest{
 			// Since we only route to pods with "infra-backend-v 1" and "infra-backend-v 2" prefixes
 			// So here we use fixed weight values
 			expected := map[string]int{
-				"infra-backend-v1": sendRequest * .5,
-				"infra-backend-v2": sendRequest * .5,
+				"infra-backend-v1": sendRequests * .5,
+				"infra-backend-v2": sendRequests * .5,
 			}
 			weightMap := make(map[string]int)
-			for i := 0; i < sendRequest; i++ {
+			for i := 0; i < sendRequests; i++ {
 				cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
 				if err != nil {
 					t.Errorf("failed to get expected response: %v", err)
@@ -95,6 +95,8 @@ var WeightBlueGreenTest = suite.ConformanceTest{
 	Manifests:   []string{"testdata/weighted-backend-bluegreen.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("all backends receive the blue green weight of traffic", func(t *testing.T) {
+			const sendRequests = 50
+
 			ns := "gateway-conformance-infra"
 			weightEqualRoute := types.NamespacedName{Name: "weight-bluegreen-http-route", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
@@ -116,11 +118,11 @@ var WeightBlueGreenTest = suite.ConformanceTest{
 			// Since we only route to pods with "infra-backend-v 1" and "infra-backend-v 2" prefixes
 			// So here we use fixed weight values
 			expected := map[string]int{
-				"infra-backend-v1": sendRequest * .9,
-				"infra-backend-v2": sendRequest * .1,
+				"infra-backend-v1": sendRequests * .9,
+				"infra-backend-v2": sendRequests * .1,
 			}
 			weightMap := make(map[string]int)
-			for i := 0; i < sendRequest; i++ {
+			for i := 0; i < sendRequests; i++ {
 				cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
 				if err != nil {
 					t.Errorf("failed to get expected response: %v", err)
@@ -159,6 +161,8 @@ var WeightCompleteRolloutTest = suite.ConformanceTest{
 	Manifests:   []string{"testdata/weight-backend-completing-rollout.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("all backends receive the complete rollout weight of traffic", func(t *testing.T) {
+			const sendRequests = 50
+
 			ns := "gateway-conformance-infra"
 			weightEqualRoute := types.NamespacedName{Name: "weight-complete-rollout-http-route", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
@@ -180,11 +184,11 @@ var WeightCompleteRolloutTest = suite.ConformanceTest{
 			// Since we only route to pods with "infra-backend-v 1" and "infra-backend-v 2" prefixes
 			// So here we use fixed weight values
 			expected := map[string]int{
-				"infra-backend-v1": sendRequest * 1,
-				"infra-backend-v2": sendRequest * 0,
+				"infra-backend-v1": sendRequests * 1,
+				"infra-backend-v2": sendRequests * 0,
 			}
 			weightMap := make(map[string]int)
-			for i := 0; i < sendRequest; i++ {
+			for i := 0; i < sendRequests; i++ {
 				cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
 				if err != nil {
 					t.Errorf("failed to get expected response: %v", err)

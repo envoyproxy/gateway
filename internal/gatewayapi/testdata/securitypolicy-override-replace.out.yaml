@@ -16,7 +16,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 2
+    - attachedRoutes: 3
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -116,6 +116,44 @@ httpRoutes:
         name: gateway-1
         namespace: envoy-gateway
         sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-3
+    namespace: default
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /baz
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -158,6 +196,32 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    creationTimestamp: null
+    name: policy-for-route-3
+    namespace: default
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-3
   status:
     ancestors:
     - ancestorRef:
@@ -225,7 +289,7 @@ securityPolicies:
         type: Accepted
       - lastTransitionTime: null
         message: 'This policy is being overridden by other securityPolicies for these
-          routes: [default/httproute-1]'
+          routes: [default/httproute-1 default/httproute-3]'
         reason: Overridden
         status: "True"
         type: Overridden
@@ -343,3 +407,24 @@ xdsIR:
               name: example1
               remoteJWKS:
                 uri: https://one.example.com/jwt/public-key/jwks.json
+      - destination:
+          name: httproute/default/httproute-3/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            protocol: HTTP
+            weight: 1
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-3
+          namespace: default
+        name: httproute/default/httproute-3/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /baz
+        security: {}

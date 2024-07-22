@@ -20,7 +20,7 @@ type ProxyAccessLogSetting struct {
 	// Format defines the format of accesslog.
 	// This will be ignored if sink type is ALS.
 	// +optional
-	Format *ProxyAccessLogFormat `json:"format"`
+	Format *ProxyAccessLogFormat `json:"format,omitempty"`
 	// Matches defines the match conditions for accesslog in CEL expression.
 	// An accesslog will be emitted only when one or more match conditions are evaluated to true.
 	// Invalid [CEL](https://www.envoyproxy.io/docs/envoy/latest/xds/type/v3/cel.proto.html#common-expression-language-cel-proto) expressions will be ignored.

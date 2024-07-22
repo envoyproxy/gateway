@@ -117,3 +117,18 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+  - name: "tenth-route"
+    hostname: "*"
+    traffic:
+      loadBalancer:
+        consistentHash:
+          cookie:
+            name: "test"
+            attributes:
+              foo: bar
+    destination:
+      name: "tenth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000

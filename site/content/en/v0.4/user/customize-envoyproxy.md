@@ -243,11 +243,11 @@ spec:
 EOF
 ```
 
-You can use [egctl translate](https://gateway.envoyproxy.io/v0.4.0/user/egctl.html#validating-gateway-api-configuration)
+You can use [egctl translate](../user/egctl#validating-gateway-api-configuration)
 to get the default xDS Bootstrap configuration used by Envoy Gateway.
 After applying the config, the bootstrap config will be overridden by the new config you provided.
 Any errors in the configuration will be surfaced as status within the `GatewayClass` resource.
-You can also validate this configuration using [egctl translate](https://gateway.envoyproxy.io/v0.4/user/egctl.html#validating-gateway-api-configuration).
+You can also validate this configuration using [egctl translate](../user/egctl#validating-gateway-api-configuration).
 
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
-[EnvoyProxy]: https://gateway.envoyproxy.io/v0.4.0/api/config_types.html#envoyproxy
+[EnvoyProxy]: ../api/config_types#envoyproxy
