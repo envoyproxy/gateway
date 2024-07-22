@@ -138,7 +138,7 @@ changes:
 
 
     breaking-change: |
-      SecurityPolicy translation failures will now cause routes referenced by the policy to return an immediate 500 reponse
+      SecurityPolicy translation failures will now cause routes referenced by the policy to return an immediate 500 response
       Gateway-API BackendTLSPolicy v1alpha3 is incompatible with previous versions of the CRD
       xPolicy targetRefs can no longer specify a namespace, since Gateway-API v1.1.0 uses LocalPolicyTargetReferenceWithSectionName in Policy resources
 
