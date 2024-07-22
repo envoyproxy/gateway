@@ -1063,6 +1063,7 @@ _Appears in:_
 | `overwriteControlPlaneCerts` | _boolean_ |  false  | OverwriteControlPlaneCerts updates the secrets containing the control plane certs, when set. |
 | `leaderElection` | _[LeaderElection](#leaderelection)_ |  false  | LeaderElection specifies the configuration for leader election.<br />If it's not set up, leader election will be active by default, using Kubernetes' standard settings. |
 | `shutdownManager` | _[ShutdownManager](#shutdownmanager)_ |  false  | ShutdownManager defines the configuration for the shutdown manager. |
+| `statsdExporter` | _[StatsdExporter](#statsdexporter)_ |  false  | StatsdExporter defines the configuration for the Statsd Exporter,<br />Which is used to export metrics to RateLimit backend. |
 
 
 #### EnvoyGatewayLogComponent
@@ -3428,6 +3429,20 @@ _Appears in:_
 | ----- | ----------- |
 | `Exact` | SourceMatchExact All IP Addresses within the specified Source IP CIDR are treated as a single client selector<br />and share the same rate limit bucket.<br /> | 
 | `Distinct` | SourceMatchDistinct Each IP Address within the specified Source IP CIDR is treated as a distinct client selector<br />and uses a separate rate limit bucket/counter.<br />Note: This is only supported for Global Rate Limits.<br /> | 
+
+
+#### StatsdExporter
+
+
+
+
+
+_Appears in:_
+- [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `image` | _string_ |  true  | Image specifies the StatsdExporter container image to be used, instead of the default image.<br />If not set, the default image(`prom/statsd-exporter:v0.18.0`) will be used. |
 
 
 #### StringMatch
