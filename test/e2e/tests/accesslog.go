@@ -18,6 +18,7 @@ import (
 	httputils "sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 )
 
 func init() {
@@ -159,7 +160,7 @@ var ALSTest = suite.ConformanceTest{
 				func(ctx context.Context) (bool, error) {
 					curCount, err := ALSLogCount(suite)
 					if err != nil {
-						t.Logf("failed to get log count from loki: %v", err)
+						tlog.Logf(t, "failed to get log count from loki: %v", err)
 						return false, nil
 					}
 					preCount = curCount
@@ -187,7 +188,7 @@ var ALSTest = suite.ConformanceTest{
 				func(ctx context.Context) (bool, error) {
 					curCount, err := ALSLogCount(suite)
 					if err != nil {
-						t.Logf("failed to get log count from loki: %v", err)
+						tlog.Logf(t, "failed to get log count from loki: %v", err)
 						return false, nil
 					}
 					return preCount < curCount, nil
@@ -206,7 +207,7 @@ func runLogTest(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string,
 			// query log count from loki
 			preCount, err := QueryLogCountFromLoki(t, suite.Client, expectedLabels, expectedMatch)
 			if err != nil {
-				t.Logf("failed to get log count from loki: %v", err)
+				tlog.Logf(t, "failed to get log count from loki: %v", err)
 				return false, nil
 			}
 
@@ -217,7 +218,7 @@ func runLogTest(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string,
 			if err := wait.PollUntilContextTimeout(ctx, 500*time.Millisecond, 15*time.Second, true, func(_ context.Context) (bool, error) {
 				count, err := QueryLogCountFromLoki(t, suite.Client, expectedLabels, expectedMatch)
 				if err != nil {
-					t.Logf("failed to get log count from loki: %v", err)
+					tlog.Logf(t, "failed to get log count from loki: %v", err)
 					return false, nil
 				}
 
@@ -226,7 +227,7 @@ func runLogTest(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string,
 					return true, nil
 				}
 
-				t.Logf("preCount=%d, count=%d", preCount, count)
+				tlog.Logf(t, "preCount=%d, count=%d", preCount, count)
 				return false, nil
 			}); err != nil {
 				return false, nil

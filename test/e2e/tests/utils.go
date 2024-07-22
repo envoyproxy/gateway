@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -20,7 +21,10 @@ import (
 	"fortio.org/fortio/fhttp"
 	"fortio.org/fortio/periodic"
 	flog "fortio.org/log"
+	"github.com/go-logfmt/logfmt"
+	"github.com/gogo/protobuf/jsonpb" // nolint: depguard // tempopb use gogo/protobuf
 	"github.com/google/go-cmp/cmp"
+	"github.com/grafana/tempo/pkg/tempopb"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
 	"github.com/stretchr/testify/require"
@@ -43,7 +47,7 @@ const defaultServiceStartupTimeout = 5 * time.Minute
 // WaitForPods waits for the pods in the given namespace and with the given selector
 // to be in the given phase and condition.
 func WaitForPods(t *testing.T, cl client.Client, namespace string, selectors map[string]string, phase corev1.PodPhase, condition corev1.PodCondition) {
-	t.Logf("waiting for %s/[%s] to be %v...", namespace, selectors, phase)
+	tlog.Logf(t, "waiting for %s/[%s] to be %v...", namespace, selectors, phase)
 
 	require.Eventually(t, func() bool {
 		pods := &corev1.PodList{}
@@ -73,7 +77,7 @@ func WaitForPods(t *testing.T, cl client.Client, namespace string, selectors map
 				}
 			}
 
-			t.Logf("pod %s/%s status: %v", p.Namespace, p.Name, p.Status)
+			tlog.Logf(t, "pod %s/%s status: %v", p.Namespace, p.Name, p.Status)
 			return false
 		}
 
@@ -93,11 +97,11 @@ func SecurityPolicyMustBeAccepted(t *testing.T, client client.Client, policyName
 		}
 
 		if policyAcceptedByAncestor(policy.Status.Ancestors, controllerName, ancestorRef) {
-			t.Logf("SecurityPolicy has been accepted: %v", policy)
+			tlog.Logf(t, "SecurityPolicy has been accepted: %v", policy)
 			return true, nil
 		}
 
-		t.Logf("SecurityPolicy not yet accepted: %v", policy)
+		tlog.Logf(t, "SecurityPolicy not yet accepted: %v", policy)
 		return false, nil
 	})
 
@@ -121,7 +125,7 @@ func SecurityPolicyMustFail(
 			}
 
 			if policyFailAcceptedByAncestor(policy.Status.Ancestors, controllerName, ancestorRef, message) {
-				t.Logf("SecurityPolicy has been failed: %v", policy)
+				tlog.Logf(t, "SecurityPolicy has been failed: %v", policy)
 				return true, nil
 			}
 
@@ -146,7 +150,7 @@ func BackendTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, poli
 			return true, nil
 		}
 
-		t.Logf("BackendTrafficPolicy not yet accepted: %v", policy)
+		tlog.Logf(t, "BackendTrafficPolicy not yet accepted: %v", policy)
 		return false, nil
 	})
 
@@ -168,7 +172,7 @@ func ClientTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, polic
 			return true, nil
 		}
 
-		t.Logf("ClientTrafficPolicy not yet accepted: %v", policy)
+		tlog.Logf(t, "ClientTrafficPolicy not yet accepted: %v", policy)
 		return false, nil
 	})
 
@@ -208,7 +212,7 @@ func runLoadAndWait(t *testing.T, timeoutConfig config.TimeoutConfig, done chan 
 	res, err := fhttp.RunHTTPTest(&opts)
 	if err != nil {
 		done <- false
-		t.Logf("failed to create load: %v", err)
+		tlog.Logf(t, "failed to create load: %v", err)
 	}
 
 	// collect stats
@@ -217,7 +221,7 @@ func runLoadAndWait(t *testing.T, timeoutConfig config.TimeoutConfig, done chan 
 	failedReq := totalReq - okReq
 	errorReq := res.ErrorsDurationHistogram.Count
 	timedOut := res.ActualDuration == opts.Duration
-	t.Logf("Load completed after %s with %d requests, %d success, %d failures and %d errors", res.ActualDuration, totalReq, okReq, failedReq, errorReq)
+	tlog.Logf(t, "Load completed after %s with %d requests, %d success, %d failures and %d errors", res.ActualDuration, totalReq, okReq, failedReq, errorReq)
 
 	if okReq == totalReq && errorReq == 0 && !timedOut {
 		done <- true
@@ -255,7 +259,7 @@ func EnvoyExtensionPolicyMustFail(
 			}
 
 			if policyFailAcceptedByAncestor(policy.Status.Ancestors, controllerName, ancestorRef, message) {
-				t.Logf("EnvoyExtensionPolicy has been failed: %v", policy)
+				tlog.Logf(t, "EnvoyExtensionPolicy has been failed: %v", policy)
 				return true, nil
 			}
 
@@ -292,11 +296,11 @@ func EnvoyExtensionPolicyMustBeAccepted(t *testing.T, client client.Client, poli
 		}
 
 		if policyAcceptedByAncestor(policy.Status.Ancestors, controllerName, ancestorRef) {
-			t.Logf("EnvoyExtensionPolicy has been accepted: %v", policy)
+			tlog.Logf(t, "EnvoyExtensionPolicy has been accepted: %v", policy)
 			return true, nil
 		}
 
-		t.Logf("EnvoyExtensionPolicy not yet accepted: %v", policy)
+		tlog.Logf(t, "EnvoyExtensionPolicy not yet accepted: %v", policy)
 		return false, nil
 	})
 
@@ -309,7 +313,7 @@ func ScrapeMetrics(t *testing.T, c client.Client, nn types.NamespacedName, port 
 		return err
 	}
 
-	t.Logf("scraping metrics from %s", url)
+	tlog.Logf(t, "scraping metrics from %s", url)
 
 	metrics, err := RetrieveMetrics(url, time.Second)
 	if err != nil {
@@ -460,7 +464,7 @@ func QueryLogCountFromLoki(t *testing.T, c client.Client, keyValues map[string]s
 	if err != nil {
 		return -1, err
 	}
-	t.Logf("get response from loki, query=%s, status=%s", q, res.Status)
+	tlog.Logf(t, "get response from loki, query=%s, status=%s", q, res.Status)
 
 	b, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -480,7 +484,7 @@ func QueryLogCountFromLoki(t *testing.T, c client.Client, keyValues map[string]s
 	for _, res := range lokiResponse.Data.Result {
 		total += len(res.Values)
 	}
-	t.Logf("get response from loki, query=%s, total=%d", q, total)
+	tlog.Logf(t, "get response from loki, query=%s, total=%d", q, total)
 	return total, nil
 }
 
@@ -493,4 +497,75 @@ type LokiQueryResponse struct {
 			Values []interface{} `json:"values"`
 		}
 	}
+}
+
+// QueryTraceFromTempo queries span count from tempo
+func QueryTraceFromTempo(t *testing.T, c client.Client, tags map[string]string) (int, error) {
+	svc := corev1.Service{}
+	if err := c.Get(context.Background(), types.NamespacedName{
+		Namespace: "monitoring",
+		Name:      "tempo",
+	}, &svc); err != nil {
+		return -1, err
+	}
+	host := ""
+	for _, ing := range svc.Status.LoadBalancer.Ingress {
+		if ing.IP != "" {
+			host = ing.IP
+			break
+		}
+	}
+
+	tagsQueryParam, err := createTagsQueryParam(tags)
+	if err != nil {
+		return -1, err
+	}
+
+	tempoURL := url.URL{
+		Scheme: "http",
+		Host:   net.JoinHostPort(host, "3100"),
+		Path:   "/api/search",
+	}
+	query := tempoURL.Query()
+	query.Add("start", fmt.Sprintf("%d", time.Now().Add(-10*time.Minute).Unix())) // query traces from last 10 minutes
+	query.Add("end", fmt.Sprintf("%d", time.Now().Unix()))
+	query.Add("tags", tagsQueryParam)
+	tempoURL.RawQuery = query.Encode()
+
+	req, err := http.NewRequest("GET", tempoURL.String(), nil)
+	if err != nil {
+		return -1, err
+	}
+
+	tlog.Logf(t, "send request to %s", tempoURL.String())
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return -1, err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return -1, fmt.Errorf("failed to query tempo, url=%s, status=%s", tempoURL.String(), res.Status)
+	}
+
+	tempoResponse := &tempopb.SearchResponse{}
+	if err := jsonpb.Unmarshal(res.Body, tempoResponse); err != nil {
+		return -1, err
+	}
+
+	total := len(tempoResponse.Traces)
+	tlog.Logf(t, "get response from tempo, url=%s, response=%v, total=%d", tempoURL.String(), tempoResponse, total)
+	return total, nil
+}
+
+// copy from https://github.com/grafana/tempo/blob/c0127c78c368319433c7c67ca8967adbfed2259e/cmd/tempo-query/tempo/plugin.go#L361
+func createTagsQueryParam(tags map[string]string) (string, error) {
+	tagsBuilder := &strings.Builder{}
+	tagsEncoder := logfmt.NewEncoder(tagsBuilder)
+	for k, v := range tags {
+		err := tagsEncoder.EncodeKeyval(k, v)
+		if err != nil {
+			return "", err
+		}
+	}
+	return tagsBuilder.String(), nil
 }

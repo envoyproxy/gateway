@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/test/utils/prometheus"
@@ -77,7 +78,7 @@ var BackendHealthCheckActiveHTTPTest = suite.ConformanceTest{
 						// wait until Prometheus sync stats
 						return false
 					}
-					t.Logf("cluster pass health check: success stats query count: %v", v)
+					tlog.Logf(t, "cluster pass health check: success stats query count: %v", v)
 
 					if v == 0 {
 						t.Error("success is not the same as expected")
@@ -100,7 +101,7 @@ var BackendHealthCheckActiveHTTPTest = suite.ConformanceTest{
 						// wait until Prometheus sync stats
 						return false
 					}
-					t.Logf("cluster fail health check: failure stats query count: %v", v)
+					tlog.Logf(t, "cluster fail health check: failure stats query count: %v", v)
 
 					if v == 0 {
 						t.Error("failure is not same as expected")
