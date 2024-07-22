@@ -18,6 +18,7 @@ import (
 	httputils "sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 )
 
 func init() {
@@ -54,7 +55,7 @@ var MetricTest = suite.ConformanceTest{
 						Namespace: "envoy-gateway-system",
 						Name:      "same-namespace-gw-metrics",
 					}, 19001, "/stats/prometheus"); err != nil {
-						t.Logf("failed to get metric: %v", err)
+						tlog.Logf(t, "failed to get metric: %v", err)
 						return false, nil
 					}
 					return true, nil
@@ -88,7 +89,7 @@ var MetricTest = suite.ConformanceTest{
 						Namespace: "monitoring",
 						Name:      "otel-collecot-prometheus",
 					}, 19001, "/metrics"); err != nil {
-						t.Logf("failed to get metric: %v", err)
+						tlog.Logf(t, "failed to get metric: %v", err)
 						return false, nil
 					}
 					return true, nil
