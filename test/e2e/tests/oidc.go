@@ -50,6 +50,10 @@ var OIDCTest = suite.ConformanceTest{
 	Manifests:   []string{"testdata/oidc-keycloak.yaml", "testdata/oidc-securitypolicy.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("http route with oidc authentication", func(t *testing.T) {
+			// Add a function to dump current cluster status
+			t.Cleanup(func() {
+				CollectAndDump(t, suite.RestConfig)
+			})
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "http-with-oidc", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
