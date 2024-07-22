@@ -41,16 +41,20 @@ type ResourceRender struct {
 	rateLimit           *egv1a1.RateLimit
 	rateLimitDeployment *egv1a1.KubernetesDeploymentSpec
 
+	statsdExporter *egv1a1.StatsdExporter
+
 	// ownerReferenceUID store the uid of its owner reference.
 	ownerReferenceUID map[string]types.UID
 }
 
 // NewResourceRender returns a new ResourceRender.
 func NewResourceRender(ns string, gateway *egv1a1.EnvoyGateway, ownerReferenceUID map[string]types.UID) *ResourceRender {
+	egProvider := gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider()
 	return &ResourceRender{
 		Namespace:           ns,
 		rateLimit:           gateway.RateLimit,
-		rateLimitDeployment: gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment,
+		rateLimitDeployment: egProvider.RateLimitDeployment,
+		statsdExporter:      egProvider.StatsdExporter,
 		ownerReferenceUID:   ownerReferenceUID,
 	}
 }
@@ -185,7 +189,7 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 
 // Deployment returns the expected rate limit Deployment based on the provided infra.
 func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
-	containers := expectedRateLimitContainers(r.rateLimit, r.rateLimitDeployment, r.Namespace)
+	containers := expectedRateLimitContainers(r.rateLimit, r.rateLimitDeployment, r.statsdExporter, r.Namespace)
 	labels := rateLimitLabels()
 	selector := resource.GetSelector(labels)
 

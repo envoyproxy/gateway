@@ -220,6 +220,18 @@ type EnvoyGatewayKubernetesProvider struct {
 	// ShutdownManager defines the configuration for the shutdown manager.
 	// +optional
 	ShutdownManager *ShutdownManager `json:"shutdownManager,omitempty"`
+
+	// StatsdExporter defines the configuration for the Statsd Exporter,
+	// Which is used to export metrics to RateLimit backend.
+	// +optional
+	StatsdExporter *StatsdExporter `json:"statsdExporter,omitempty"`
+}
+
+type StatsdExporter struct {
+	// Image specifies the StatsdExporter container image to be used, instead of the default image.
+	// If not set, the default image(`prom/statsd-exporter:v0.18.0`) will be used.
+	// +option
+	Image *string `json:"image,omitempty"`
 }
 
 const (

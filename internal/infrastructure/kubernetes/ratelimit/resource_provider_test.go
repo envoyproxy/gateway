@@ -239,12 +239,21 @@ func TestDeployment(t *testing.T) {
 	cases := []struct {
 		caseName  string
 		rateLimit *egv1a1.RateLimit
+		statsd    *egv1a1.StatsdExporter
 		deploy    *egv1a1.KubernetesDeploymentSpec
 	}{
 		{
 			caseName:  "default",
 			rateLimit: rateLimit,
 			deploy:    cfg.EnvoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment,
+		},
+		{
+			caseName:  "custom-statsd-image",
+			rateLimit: rateLimit,
+			deploy:    cfg.EnvoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment,
+			statsd: &egv1a1.StatsdExporter{
+				Image: ptr.To[string]("ghcr.io/envoyproxy/statsd-exporter:v0.18.0"),
+			},
 		},
 		{
 			caseName: "disable-prometheus",
@@ -689,6 +698,7 @@ func TestDeployment(t *testing.T) {
 				Type: egv1a1.ProviderTypeKubernetes,
 				Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
 					RateLimitDeployment: tc.deploy,
+					StatsdExporter:      tc.statsd,
 				},
 			}
 			r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUID)

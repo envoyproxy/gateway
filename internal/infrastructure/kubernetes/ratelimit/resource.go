@@ -136,7 +136,9 @@ func rateLimitLabels() map[string]string {
 }
 
 // expectedRateLimitContainers returns expected rateLimit containers.
-func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeployment *egv1a1.KubernetesDeploymentSpec,
+func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit,
+	rateLimitDeployment *egv1a1.KubernetesDeploymentSpec,
+	exporter *egv1a1.StatsdExporter,
 	namespace string,
 ) []corev1.Container {
 	ports := []corev1.ContainerPort{
@@ -192,16 +194,20 @@ func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeploymen
 	}
 
 	if enablePrometheus(rateLimit) {
-		containers = append(containers, promStatsdExporterContainer())
+		containers = append(containers, promStatsdExporterContainer(exporter))
 	}
 
 	return containers
 }
 
-func promStatsdExporterContainer() corev1.Container {
+func promStatsdExporterContainer(exporter *egv1a1.StatsdExporter) corev1.Container {
+	image := egv1a1.DefaultStatsdExporterImage
+	if exporter != nil && exporter.Image != nil {
+		image = *exporter.Image
+	}
 	return corev1.Container{
 		Name:            "prom-statsd-exporter",
-		Image:           "prom/statsd-exporter:v0.18.0",
+		Image:           image,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command: []string{
 			"/bin/statsd_exporter",
