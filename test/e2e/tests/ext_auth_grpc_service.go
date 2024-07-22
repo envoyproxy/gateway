@@ -133,10 +133,8 @@ var GRPCExtAuthTest = suite.ConformanceTest{
 			}
 			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns}, suite.ControllerName, ancestorRef)
 
-			podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
-
 			// Wait for the grpc ext auth service pod to be ready
-			WaitForPods(t, suite.Client, ns, map[string]string{"app": "grpc-ext-auth"}, corev1.PodRunning, podReady)
+			WaitForPods(t, suite.Client, ns, map[string]string{"app": "grpc-ext-auth"}, corev1.PodRunning, PodReady)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{

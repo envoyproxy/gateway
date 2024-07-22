@@ -46,6 +46,8 @@ import (
 
 const defaultServiceStartupTimeout = 5 * time.Minute
 
+var PodReady = corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
+
 // WaitForPods waits for the pods in the given namespace and with the given selector
 // to be in the given phase and condition.
 func WaitForPods(t *testing.T, cl client.Client, namespace string, selectors map[string]string, phase corev1.PodPhase, condition corev1.PodCondition) {
