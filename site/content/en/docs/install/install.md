@@ -14,7 +14,7 @@ Envoy Gateway can be installed via a Helm chart with a few simple steps, dependi
 ## Before you begin
 
 {{% alert title="Compatibility Matrix" color="warning" %}}
-Refer to the [Version Compatibility Matrix](/news/releases/matrix) to learn more.
+Refer to the [Version Compatibility Matrix](../../news/releases/matrix) to learn more.
 {{% /alert %}}
 
 The Envoy Gateway Helm chart is hosted by DockerHub.
