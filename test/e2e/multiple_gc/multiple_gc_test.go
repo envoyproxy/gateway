@@ -28,7 +28,7 @@ import (
 func TestMultipleGC(t *testing.T) {
 	flag.Parse()
 
-	c := kubetest.NewClient(t)
+	c, cfg := kubetest.NewClient(t)
 
 	if flags.RunTest != nil && *flags.RunTest != "" {
 		tlog.Logf(t, "Running E2E test %s with %s GatewayClass\n cleanup: %t\n debug: %t",
@@ -43,6 +43,7 @@ func TestMultipleGC(t *testing.T) {
 		internetGatewaySuiteGatewayClassName := "internet"
 		internetGatewaySuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 			Client:               c,
+			RestConfig:           cfg,
 			GatewayClassName:     internetGatewaySuiteGatewayClassName,
 			Debug:                *flags.ShowDebug,
 			CleanupBaseResources: *flags.CleanupBaseResources,
