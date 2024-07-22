@@ -52,6 +52,6 @@ curl https://gateway.envoyproxy.io/get-egctl.sh | VERSION=latest bash
 
 {{% alert title="Next Steps" color="warning" %}}
 
-You can refer to [User Guides](../../user/egctl) to more details about egctl.
+You can refer to [User Guides](../user/egctl) to more details about egctl.
 
 {{% /alert %}}

@@ -21,7 +21,7 @@ can be linked to a [Gateway][], [HTTPRoute][] or [GRPCRoute][] resource.
 
 ### Install Envoy Gateway
 
-* Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the HTTPRoute example manifest.
+* Follow the steps from the [Quickstart Guide](./quickstart) to install Envoy Gateway and the HTTPRoute example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 ### Install Redis
@@ -817,10 +817,10 @@ EOF
 kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
 ```
 
-[Global Rate Limiting]: https://www.envoyproxy.io/docs/envoy/v0.6.0/intro/arch_overview/other_features/global_rate_limiting
-[BackendTrafficPolicy]: ../../api/extension_types#backendtrafficpolicy
+[Global Rate Limiting]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/global_rate_limiting
+[BackendTrafficPolicy]: ../api/extension_types#backendtrafficpolicy
 [Envoy Ratelimit]: https://github.com/envoyproxy/ratelimit
-[EnvoyGateway]: ../../api/extension_types#envoygateway
+[EnvoyGateway]: ../api/extension_types#envoygateway
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
 [GRPCRoute]: https://gateway-api.sigs.k8s.io/api-types/grpcroute/

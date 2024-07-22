@@ -18,7 +18,7 @@ Changing to the Let's Encrypt production environment is straight-forward after t
 
 ## Installation
 
-Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart Guide](./quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Deploying cert-manager
@@ -432,5 +432,5 @@ eg-https   kubernetes.io/tls   3      42m
 
 ## See Also
 
-* [Secure Gateways](../secure-gateways/)
+* [Secure Gateways](./secure-gateways)
 * [Securing gateway.networking.k8s.io Gateway Resources](https://cert-manager.io/docs/usage/gateway/)

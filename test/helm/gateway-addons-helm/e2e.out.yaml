@@ -5427,270 +5427,7 @@ data:
         "version": 1,
         "weekStart": ""
       }
-  envoy-gateway-resource.json: |-
-      {
-        "annotations": {
-          "list": [
-            {
-              "builtIn": 1,
-              "datasource": {
-                "type": "grafana",
-                "uid": "-- Grafana --"
-              },
-              "enable": true,
-              "hide": true,
-              "iconColor": "rgba(0, 211, 255, 1)",
-              "name": "Annotations & Alerts",
-              "type": "dashboard"
-            }
-          ]
-        },
-        "description": "Envoy Gateway Memory and CPU Usage",
-        "editable": true,
-        "fiscalYearStartMonth": 0,
-        "graphTooltip": 0,
-        "links": [],
-        "panels": [
-          {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "${datasource}"
-            },
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "mode": "palette-classic"
-                },
-                "custom": {
-                  "axisBorderShow": false,
-                  "axisCenteredZero": false,
-                  "axisColorMode": "text",
-                  "axisLabel": "",
-                  "axisPlacement": "auto",
-                  "barAlignment": 0,
-                  "drawStyle": "line",
-                  "fillOpacity": 0,
-                  "gradientMode": "none",
-                  "hideFrom": {
-                    "legend": false,
-                    "tooltip": false,
-                    "viz": false
-                  },
-                  "insertNulls": false,
-                  "lineInterpolation": "linear",
-                  "lineWidth": 1,
-                  "pointSize": 5,
-                  "scaleDistribution": {
-                    "type": "linear"
-                  },
-                  "showPoints": "auto",
-                  "spanNulls": false,
-                  "stacking": {
-                    "group": "A",
-                    "mode": "none"
-                  },
-                  "thresholdsStyle": {
-                    "mode": "off"
-                  }
-                },
-                "mappings": [],
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "red",
-                      "value": 80
-                    }
-                  ]
-                }
-              },
-              "overrides": []
-            },
-            "gridPos": {
-              "h": 8,
-              "w": 12,
-              "x": 0,
-              "y": 0
-            },
-            "id": 5,
-            "options": {
-              "legend": {
-                "calcs": [],
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true
-              },
-              "tooltip": {
-                "maxHeight": 600,
-                "mode": "single",
-                "sort": "none"
-              }
-            },
-            "targets": [
-              {
-                "datasource": {
-                  "type": "prometheus",
-                  "uid": "PBFA97CFB590B2093"
-                },
-                "disableTextWrap": false,
-                "editorMode": "code",
-                "expr": "sum by(namespace) (container_memory_working_set_bytes{container=\"envoy-gateway\"}/1024/1024)",
-                "fullMetaSearch": false,
-                "includeNullMetadata": true,
-                "instant": false,
-                "legendFormat": "__auto",
-                "range": true,
-                "refId": "A",
-                "useBackend": false
-              }
-            ],
-            "title": "Envoy Gateway Memory Usage (MiB)",
-            "type": "timeseries"
-          },
-          {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "${datasource}"
-            },
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "mode": "palette-classic"
-                },
-                "custom": {
-                  "axisBorderShow": false,
-                  "axisCenteredZero": false,
-                  "axisColorMode": "text",
-                  "axisLabel": "",
-                  "axisPlacement": "auto",
-                  "barAlignment": 0,
-                  "drawStyle": "line",
-                  "fillOpacity": 0,
-                  "gradientMode": "none",
-                  "hideFrom": {
-                    "legend": false,
-                    "tooltip": false,
-                    "viz": false
-                  },
-                  "insertNulls": false,
-                  "lineInterpolation": "linear",
-                  "lineWidth": 1,
-                  "pointSize": 5,
-                  "scaleDistribution": {
-                    "type": "linear"
-                  },
-                  "showPoints": "auto",
-                  "spanNulls": false,
-                  "stacking": {
-                    "group": "A",
-                    "mode": "none"
-                  },
-                  "thresholdsStyle": {
-                    "mode": "off"
-                  }
-                },
-                "mappings": [],
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "red",
-                      "value": 80
-                    }
-                  ]
-                }
-              },
-              "overrides": []
-            },
-            "gridPos": {
-              "h": 8,
-              "w": 12,
-              "x": 12,
-              "y": 0
-            },
-            "id": 6,
-            "options": {
-              "legend": {
-                "calcs": [],
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true
-              },
-              "tooltip": {
-                "maxHeight": 600,
-                "mode": "single",
-                "sort": "none"
-              }
-            },
-            "targets": [
-              {
-                "datasource": {
-                  "type": "prometheus",
-                  "uid": "PBFA97CFB590B2093"
-                },
-                "disableTextWrap": false,
-                "editorMode": "code",
-                "expr": "sum by(namespace) (rate(container_cpu_usage_seconds_total{container=\"envoy-gateway\"}[5m]) * 1000)",
-                "fullMetaSearch": false,
-                "includeNullMetadata": false,
-                "instant": false,
-                "legendFormat": "__auto",
-                "range": true,
-                "refId": "A",
-                "useBackend": false
-              }
-            ],
-            "title": "Envoy Gateway CPU Time (ms)",
-            "type": "timeseries"
-          }
-        ],
-        "schemaVersion": 39,
-        "tags": [
-          "Control Plane"
-        ],
-        "templating": {
-          "list": [
-            {
-              "current": {
-                "selected": false,
-                "text": "Prometheus",
-                "value": "PBFA97CFB590B2093"
-              },
-              "hide": 0,
-              "includeAll": false,
-              "multi": false,
-              "name": "datasource",
-              "options": [],
-              "query": "prometheus",
-              "queryValue": "",
-              "refresh": 1,
-              "regex": "",
-              "skipUrlSync": false,
-              "type": "datasource"
-            }
-          ]
-        },
-        "time": {
-          "from": "now-15m",
-          "to": "now"
-        },
-        "timeRangeUpdatedDuringEditOrView": false,
-        "timepicker": {},
-        "timezone": "",
-        "title": "Envoy Gateway Resources",
-        "uid": "edq1b2tldspa8d",
-        "version": 1,
-        "weekStart": ""
-      }
-  envoy-global.json: |-
+  envoy-proxy-global.json: |-
       {
         "annotations": {
           "list": [
@@ -8673,261 +8410,255 @@ data:
         "version": 1,
         "weekStart": ""
       }
-  envoy-pod-resource.json: |-
+  resources-monitor.gen.json: |-
       {
-        "annotations": {
-          "list": [
+         "description": "Memory and CPU Usage Monitor for Envoy Gateway and Envoy Proxy.\n",
+         "graphTooltip": 1,
+         "panels": [
             {
-              "builtIn": 1,
-              "datasource": {
-                "type": "grafana",
-                "uid": "-- Grafana --"
-              },
-              "enable": true,
-              "hide": true,
-              "iconColor": "rgba(0, 211, 255, 1)",
-              "name": "Annotations & Alerts",
-              "type": "dashboard"
-            }
-          ]
-        },
-        "description": "Envoy Pod Memory and CPU Usage",
-        "editable": true,
-        "fiscalYearStartMonth": 0,
-        "graphTooltip": 0,
-        "id": 4,
-        "links": [],
-        "liveNow": false,
-        "panels": [
-          {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "${datasource}"
+               "collapsed": false,
+               "gridPos": {
+                  "h": 1,
+                  "w": 24,
+                  "x": 0,
+                  "y": 0
+               },
+               "id": 1,
+               "panels": [ ],
+               "title": "Envoy Gateway",
+               "type": "row"
             },
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "mode": "palette-classic"
-                },
-                "custom": {
-                  "axisBorderShow": false,
-                  "axisCenteredZero": false,
-                  "axisColorMode": "text",
-                  "axisLabel": "",
-                  "axisPlacement": "auto",
-                  "barAlignment": 0,
-                  "drawStyle": "line",
-                  "fillOpacity": 0,
-                  "gradientMode": "none",
-                  "hideFrom": {
-                    "legend": false,
-                    "tooltip": false,
-                    "viz": false
-                  },
-                  "insertNulls": false,
-                  "lineInterpolation": "linear",
-                  "lineWidth": 1,
-                  "pointSize": 5,
-                  "scaleDistribution": {
-                    "type": "linear"
-                  },
-                  "showPoints": "auto",
-                  "spanNulls": false,
-                  "stacking": {
-                    "group": "A",
-                    "mode": "none"
-                  },
-                  "thresholdsStyle": {
-                    "mode": "off"
-                  }
-                },
-                "mappings": [],
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "red",
-                      "value": 80
-                    }
-                  ]
-                }
-              },
-              "overrides": []
-            },
-            "gridPos": {
-              "h": 8,
-              "w": 12,
-              "x": 0,
-              "y": 0
-            },
-            "id": 2,
-            "options": {
-              "legend": {
-                "calcs": [],
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true
-              },
-              "tooltip": {
-                "maxHeight": 600,
-                "mode": "single",
-                "sort": "none"
-              }
-            },
-            "targets": [
-              {
-                "datasource": {
-                  "type": "prometheus",
-                  "uid": "${datasource}"
-                },
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "sum by(pod) (container_memory_working_set_bytes{container=~\"envoy\"}/1000000)",
-                "instant": false,
-                "range": true,
-                "refId": "A"
-              }
-            ],
-            "title": "Memory Working Set Envoy Pods(mb)",
-            "type": "timeseries"
-          },
-          {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "${datasource}"
-            },
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "mode": "palette-classic"
-                },
-                "custom": {
-                  "axisBorderShow": false,
-                  "axisCenteredZero": false,
-                  "axisColorMode": "text",
-                  "axisLabel": "",
-                  "axisPlacement": "auto",
-                  "barAlignment": 0,
-                  "drawStyle": "line",
-                  "fillOpacity": 0,
-                  "gradientMode": "none",
-                  "hideFrom": {
-                    "legend": false,
-                    "tooltip": false,
-                    "viz": false
-                  },
-                  "insertNulls": false,
-                  "lineInterpolation": "linear",
-                  "lineWidth": 1,
-                  "pointSize": 5,
-                  "scaleDistribution": {
-                    "type": "linear"
-                  },
-                  "showPoints": "auto",
-                  "spanNulls": false,
-                  "stacking": {
-                    "group": "A",
-                    "mode": "none"
-                  },
-                  "thresholdsStyle": {
-                    "mode": "off"
-                  }
-                },
-                "mappings": [],
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "red",
-                      "value": 80
-                    }
-                  ]
-                }
-              },
-              "overrides": []
-            },
-            "gridPos": {
-              "h": 8,
-              "w": 12,
-              "x": 12,
-              "y": 0
-            },
-            "id": 1,
-            "options": {
-              "legend": {
-                "calcs": [],
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true
-              },
-              "tooltip": {
-                "maxHeight": 600,
-                "mode": "single",
-                "sort": "none"
-              }
-            },
-            "targets": [
-              {
-                "datasource": {
-                  "type": "prometheus",
-                  "uid": "PBFA97CFB590B2093"
-                },
-                "editorMode": "builder",
-                "expr": "sum by(pod) (rate(container_cpu_usage_seconds_total{container=\"envoy\"}[5m]))",
-                "instant": false,
-                "range": true,
-                "refId": "A"
-              }
-            ],
-            "title": "CPU Usage Envoy Pods",
-            "type": "timeseries"
-          }
-        ],
-        "refresh": "",
-        "schemaVersion": 39,
-        "tags": [
-          "Data Plane"
-        ],
-        "templating": {
-          "list": [
             {
-              "current": {
-                "selected": false,
-                "text": "Prometheus",
-                "value": "PBFA97CFB590B2093"
-              },
-              "hide": 0,
-              "includeAll": false,
-              "multi": false,
-              "name": "datasource",
-              "options": [],
-              "query": "prometheus",
-              "refresh": 1,
-              "regex": "",
-              "skipUrlSync": false,
-              "type": "datasource"
+               "datasource": {
+                  "type": "datasource",
+                  "uid": "-- Mixed --"
+               },
+               "fieldConfig": {
+                  "defaults": {
+                     "custom": {
+                        "fillOpacity": 10,
+                        "scaleDistribution": {
+                           "log": 10,
+                           "type": "log"
+                        },
+                        "showPoints": "never"
+                     },
+                     "unit": "s"
+                  }
+               },
+               "gridPos": {
+                  "h": 8,
+                  "w": 8,
+                  "x": 0,
+                  "y": 1
+               },
+               "id": 2,
+               "interval": "1m",
+               "options": {
+                  "legend": {
+                     "calcs": [
+                        "lastNotNull",
+                        "max"
+                     ],
+                     "displayMode": "table"
+                  }
+               },
+               "pluginVersion": "v11.0.0",
+               "targets": [
+                  {
+                     "datasource": {
+                        "type": "prometheus",
+                        "uid": "$datasource"
+                     },
+                     "expr": "sum by (namespace) (\n    rate(\n        container_cpu_usage_seconds_total{\n            container=\"envoy-gateway\"\n        }\n    [$__rate_interval])\n)\n",
+                     "intervalFactor": 2,
+                     "legendFormat": "{{namespace}}\n"
+                  }
+               ],
+               "title": "CPU Usage",
+               "type": "timeseries"
+            },
+            {
+               "datasource": {
+                  "type": "datasource",
+                  "uid": "-- Mixed --"
+               },
+               "fieldConfig": {
+                  "defaults": {
+                     "custom": {
+                        "fillOpacity": 10,
+                        "scaleDistribution": {
+                           "log": 2,
+                           "type": "log"
+                        },
+                        "showPoints": "never"
+                     },
+                     "unit": "bytes"
+                  }
+               },
+               "gridPos": {
+                  "h": 8,
+                  "w": 8,
+                  "x": 8,
+                  "y": 1
+               },
+               "id": 3,
+               "interval": "1m",
+               "options": {
+                  "legend": {
+                     "calcs": [
+                        "lastNotNull",
+                        "max"
+                     ],
+                     "displayMode": "table"
+                  }
+               },
+               "pluginVersion": "v11.0.0",
+               "targets": [
+                  {
+                     "datasource": {
+                        "type": "prometheus",
+                        "uid": "$datasource"
+                     },
+                     "expr": "sum by (namespace) (\n  container_memory_working_set_bytes{container=\"envoy-gateway\"}\n)\n",
+                     "intervalFactor": 2,
+                     "legendFormat": "{{namespace}}\n"
+                  }
+               ],
+               "title": "Memory Usage",
+               "type": "timeseries"
+            },
+            {
+               "collapsed": false,
+               "gridPos": {
+                  "h": 1,
+                  "w": 24,
+                  "x": 0,
+                  "y": 9
+               },
+               "id": 4,
+               "panels": [ ],
+               "title": "Envoy Proxy",
+               "type": "row"
+            },
+            {
+               "datasource": {
+                  "type": "datasource",
+                  "uid": "-- Mixed --"
+               },
+               "fieldConfig": {
+                  "defaults": {
+                     "custom": {
+                        "fillOpacity": 10,
+                        "scaleDistribution": {
+                           "log": 10,
+                           "type": "log"
+                        },
+                        "showPoints": "never"
+                     },
+                     "unit": "s"
+                  }
+               },
+               "gridPos": {
+                  "h": 8,
+                  "w": 8,
+                  "x": 0,
+                  "y": 10
+               },
+               "id": 5,
+               "interval": "1m",
+               "options": {
+                  "legend": {
+                     "calcs": [
+                        "lastNotNull",
+                        "max"
+                     ],
+                     "displayMode": "table"
+                  }
+               },
+               "pluginVersion": "v11.0.0",
+               "targets": [
+                  {
+                     "datasource": {
+                        "type": "prometheus",
+                        "uid": "$datasource"
+                     },
+                     "expr": "sum by (pod) (\n    rate(\n        container_cpu_usage_seconds_total{\n            container=\"envoy\"\n        }\n    [$__rate_interval])\n)\n",
+                     "intervalFactor": 2,
+                     "legendFormat": "{{pod}}\n"
+                  }
+               ],
+               "title": "CPU Usage",
+               "type": "timeseries"
+            },
+            {
+               "datasource": {
+                  "type": "datasource",
+                  "uid": "-- Mixed --"
+               },
+               "fieldConfig": {
+                  "defaults": {
+                     "custom": {
+                        "fillOpacity": 10,
+                        "scaleDistribution": {
+                           "log": 2,
+                           "type": "log"
+                        },
+                        "showPoints": "never"
+                     },
+                     "unit": "bytes"
+                  }
+               },
+               "gridPos": {
+                  "h": 8,
+                  "w": 8,
+                  "x": 8,
+                  "y": 10
+               },
+               "id": 6,
+               "interval": "1m",
+               "options": {
+                  "legend": {
+                     "calcs": [
+                        "lastNotNull",
+                        "max"
+                     ],
+                     "displayMode": "table"
+                  }
+               },
+               "pluginVersion": "v11.0.0",
+               "targets": [
+                  {
+                     "datasource": {
+                        "type": "prometheus",
+                        "uid": "$datasource"
+                     },
+                     "expr": "sum by (pod) (\n  container_memory_working_set_bytes{container=\"envoy\"}\n)\n",
+                     "intervalFactor": 2,
+                     "legendFormat": "{{pod}}\n"
+                  }
+               ],
+               "title": "Memory Usage",
+               "type": "timeseries"
             }
-          ]
-        },
-        "time": {
-          "from": "now-5m",
-          "to": "now"
-        },
-        "timeRangeUpdatedDuringEditOrView": false,
-        "timepicker": {},
-        "timezone": "",
-        "title": "Envoy Pod Resources",
-        "uid": "f2279235-80b7-4c85-84f4-f25a3bf3eac0",
-        "version": 1,
-        "weekStart": ""
+         ],
+         "schemaVersion": 39,
+         "templating": {
+            "list": [
+               {
+                  "name": "datasource",
+                  "query": "prometheus",
+                  "type": "datasource"
+               }
+            ]
+         },
+         "time": {
+            "from": "now-6h",
+            "to": "now"
+         },
+         "timezone": "utc",
+         "title": "Resources Monitor",
+         "uid": "f7aeb41676b7865cf31ae49691325f91"
       }
 ---
 # Source: gateway-addons-helm/charts/fluent-bit/templates/clusterrole.yaml
@@ -9317,7 +9048,7 @@ spec:
       dnsPolicy: ClusterFirst
       containers:
         - name: fluent-bit
-          image: "cr.fluentbit.io/fluent/fluent-bit:2.1.4"
+          image: "fluent/fluent-bit:2.1.4"
           imagePullPolicy: Always
           ports:
             - name: http

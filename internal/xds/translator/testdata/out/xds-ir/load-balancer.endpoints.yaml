@@ -106,3 +106,15 @@
     loadBalancingWeight: 1
     locality:
       region: ninth-route-dest/backend/0
+- clusterName: tenth-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: tenth-route-dest/backend/0

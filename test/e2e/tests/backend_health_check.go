@@ -9,6 +9,7 @@
 package tests
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -20,9 +21,10 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
-	"github.com/envoyproxy/gateway/test/e2e/utils/prometheus"
+	"github.com/envoyproxy/gateway/test/utils/prometheus"
 )
 
 func init() {
@@ -35,6 +37,7 @@ var BackendHealthCheckActiveHTTPTest = suite.ConformanceTest{
 	Manifests:   []string{"testdata/backend-health-check-active-http.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("active http", func(t *testing.T) {
+			ctx := context.Background()
 			ns := "gateway-conformance-infra"
 			passRouteNN := types.NamespacedName{Name: "http-with-health-check-active-http-pass", Namespace: ns}
 			failRouteNN := types.NamespacedName{Name: "http-with-health-check-active-http-fail", Namespace: ns}
@@ -50,7 +53,7 @@ var BackendHealthCheckActiveHTTPTest = suite.ConformanceTest{
 			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "health-check-active-http-pass-btp", Namespace: ns}, suite.ControllerName, ancestorRef)
 			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "health-check-active-http-fail-btp", Namespace: ns}, suite.ControllerName, ancestorRef)
 
-			promAddr, err := prometheus.Address(suite.Client,
+			promClient, err := prometheus.NewClient(suite.Client,
 				types.NamespacedName{Name: "prometheus", Namespace: "monitoring"},
 			)
 			require.NoError(t, err)
@@ -70,12 +73,12 @@ var BackendHealthCheckActiveHTTPTest = suite.ConformanceTest{
 				suite.TimeoutConfig.MaxTimeToConsistency,
 				func(_ time.Duration) bool {
 					// check membership_healthy stats from Prometheus
-					v, err := prometheus.QuerySum(promAddr, passPromQL)
+					v, err := promClient.QuerySum(ctx, passPromQL)
 					if err != nil {
 						// wait until Prometheus sync stats
 						return false
 					}
-					t.Logf("cluster pass health check: success stats query count: %v", v)
+					tlog.Logf(t, "cluster pass health check: success stats query count: %v", v)
 
 					if v == 0 {
 						t.Error("success is not the same as expected")
@@ -93,12 +96,12 @@ var BackendHealthCheckActiveHTTPTest = suite.ConformanceTest{
 				suite.TimeoutConfig.MaxTimeToConsistency,
 				func(_ time.Duration) bool {
 					// check membership_healthy stats from Prometheus
-					v, err := prometheus.QuerySum(promAddr, failPromQL)
+					v, err := promClient.QuerySum(ctx, failPromQL)
 					if err != nil {
 						// wait until Prometheus sync stats
 						return false
 					}
-					t.Logf("cluster fail health check: failure stats query count: %v", v)
+					tlog.Logf(t, "cluster fail health check: failure stats query count: %v", v)
 
 					if v == 0 {
 						t.Error("failure is not same as expected")

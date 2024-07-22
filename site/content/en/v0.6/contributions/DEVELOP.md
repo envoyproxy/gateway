@@ -158,6 +158,6 @@ and is hosted in the repo.
 [Envoy admin interface]: https://www.envoyproxy.io/docs/envoy/latest/operations/admin#operations-admin-interface
 [jwt]: https://tools.ietf.org/html/rfc7519
 [jwks]: https://tools.ietf.org/html/rfc7517
-[request authentication]: https://gateway.envoyproxy.io/latest/user/authn.html
+[request authentication]: ../user/jwt-authentication
 [JWT Debugger]: https://jwt.io/
 [JWK Creator]: https://russelldavies.github.io/jwk-creator/
