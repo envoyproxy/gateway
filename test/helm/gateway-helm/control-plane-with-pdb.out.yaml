@@ -145,6 +145,7 @@ rules:
   - get
   - list
   - watch
+  - patch
 - apiGroups:
   - gateway.envoyproxy.io
   resources:
