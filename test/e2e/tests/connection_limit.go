@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/test/utils/prometheus"
@@ -63,7 +64,7 @@ var ConnectionLimitTest = suite.ConformanceTest{
 				func(_ context.Context) (done bool, err error) {
 					_, err = net.DialTimeout("tcp", gwAddr, 100*time.Millisecond)
 					if err != nil {
-						t.Logf("failed to open connection: %v", err)
+						tlog.Logf(t, "failed to open connection: %v", err)
 						return false, nil
 					}
 					t.Log("opened connection 1")
@@ -75,7 +76,7 @@ var ConnectionLimitTest = suite.ConformanceTest{
 			// Open the remaining 5 connections
 			for i := 1; i < 6; i++ {
 				conn, err := net.Dial("tcp", gwAddr)
-				t.Logf("opened connection %d", i+1)
+				tlog.Logf(t, "opened connection %d", i+1)
 				if err != nil {
 					t.Errorf("failed to open connection: %v", err)
 				} else {
@@ -98,7 +99,7 @@ var ConnectionLimitTest = suite.ConformanceTest{
 						// wait until Prometheus sync stats
 						return false
 					}
-					t.Logf("connection_limit stats query count: %v", v)
+					tlog.Logf(t, "connection_limit stats query count: %v", v)
 
 					// connection interruptions or other connection errors may occur
 					// we just need to determine whether there is a connection limit stats

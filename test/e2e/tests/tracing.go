@@ -19,6 +19,7 @@ import (
 	httputils "sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	"github.com/envoyproxy/gateway/internal/utils/naming"
 )
@@ -60,7 +61,7 @@ var OpenTelemetryTracingTest = suite.ConformanceTest{
 				func(ctx context.Context) (bool, error) {
 					count, err := QueryTraceFromTempo(t, suite.Client, tags)
 					if err != nil {
-						t.Logf("failed to get trace count from tempo: %v", err)
+						tlog.Logf(t, "failed to get trace count from tempo: %v", err)
 						return false, nil
 					}
 
@@ -109,7 +110,7 @@ var ZipkinTracingTest = suite.ConformanceTest{
 				func(ctx context.Context) (bool, error) {
 					preCount, err := QueryTraceFromTempo(t, suite.Client, tags)
 					if err != nil {
-						t.Logf("failed to get trace count from tempo: %v", err)
+						tlog.Logf(t, "failed to get trace count from tempo: %v", err)
 						return false, nil
 					}
 
@@ -119,7 +120,7 @@ var ZipkinTracingTest = suite.ConformanceTest{
 					err = wait.PollUntilContextTimeout(context.TODO(), time.Second, 15*time.Second, true, func(ctx context.Context) (done bool, err error) {
 						curCount, err := QueryTraceFromTempo(t, suite.Client, tags)
 						if err != nil {
-							t.Logf("failed to get curCount count from tempo: %v", err)
+							tlog.Logf(t, "failed to get curCount count from tempo: %v", err)
 							return false, nil
 						}
 
@@ -130,7 +131,7 @@ var ZipkinTracingTest = suite.ConformanceTest{
 						return false, nil
 					})
 					if err != nil {
-						t.Logf("failed to get current count from tempo: %v", err)
+						tlog.Logf(t, "failed to get current count from tempo: %v", err)
 						return false, nil
 					}
 

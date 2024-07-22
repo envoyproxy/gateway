@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	"github.com/envoyproxy/gateway/test/utils/prometheus"
 )
@@ -60,7 +61,7 @@ var RetryTest = suite.ConformanceTest{
 			if err == nil {
 				before = v
 			}
-			t.Logf("query count %s before: %v", promQL, before)
+			tlog.Logf(t, "query count %s before: %v", promQL, before)
 
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
 			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
@@ -81,7 +82,7 @@ var RetryTest = suite.ConformanceTest{
 					if err != nil {
 						return false
 					}
-					t.Logf("query count %s after: %v", promQL, v)
+					tlog.Logf(t, "query count %s after: %v", promQL, v)
 
 					delta := int64(v - before)
 					// numRetries is 5, so delta mod 5 equals 0
