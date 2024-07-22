@@ -26,10 +26,16 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 // +kubebuilder:validation:Pattern=`^(\*|https?:\/\/(\*|(\*\.)?(([\w-]+\.?)+)?[\w-]+)(:\d{1,5})?)$`
 type Origin string
 
-// RegexOrigin is
+// RegexOrigin is defined by full-fledged regex, so it is possible to use any
+// scheme, domain, port or any other value. The value should be valid regex
+// string.
+// Syntax should be according to https://github.com/google/re2/wiki/Syntax.
+// Also, backslashes must be escaped.
 //
 // For example, the following are valid origins:
 // - https://foo.example.com
+// - https?://(.*\\.)?example\\.com
+// - .*://localhost(?:\\:\\d+)?
 //
 // +kubebuilder:validation:MinLength=1
 // +kubebuilder:validation:MaxLength=253

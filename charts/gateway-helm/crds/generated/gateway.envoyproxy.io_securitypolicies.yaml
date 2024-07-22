@@ -232,16 +232,17 @@ spec:
                       are allowed to make requests.
                     items:
                       description: |-
-                        RegexOrigin is defined by the scheme (protocol), hostname (domain), and port of
-                        the URL used to access it. The hostname can be "precise" which is just the
-                        domain name or "wildcard" which is a domain name prefixed with a single
-                        wildcard label such as "*.example.com".
-                        In addition to that a single wildcard (with or without scheme) can be
-                        configured to match any origin.
+                        RegexOrigin is defined by full-fledged regex, so it is possible to use any
+                        scheme, domain, port or any other value. The value should be valid regex
+                        string.
+                        Syntax should be according to https://github.com/google/re2/wiki/Syntax.
+                        Also, backslashes must be escaped.
 
 
                         For example, the following are valid origins:
                         - https://foo.example.com
+                        - https?://(.*\\.)?example\\.com
+                        - .*://localhost(?:\\:\\d+)?
                       maxLength: 253
                       minLength: 1
                       type: string
