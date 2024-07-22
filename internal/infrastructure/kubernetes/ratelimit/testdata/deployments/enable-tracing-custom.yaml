@@ -95,7 +95,7 @@ spec:
           value: "0.6"
         - name: OTEL_EXPORTER_OTLP_ENDPOINT
           value: http://trace-collector.envoy-gateway-system.svc.cluster.local:4317
-        image: envoyproxy/ratelimit:master
+        image: envoyproxy/ratelimit:91484c59
         imagePullPolicy: IfNotPresent
         name: envoy-ratelimit
         ports:

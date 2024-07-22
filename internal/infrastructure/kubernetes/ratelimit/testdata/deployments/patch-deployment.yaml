@@ -80,7 +80,7 @@ spec:
           value: tcp
         - name: REDIS_URL
           value: redis.redis.svc:6379
-        image: envoyproxy/ratelimit:master
+        image: envoyproxy/ratelimit:91484c59
         imagePullPolicy: IfNotPresent
         name: envoy-ratelimit
         ports:
