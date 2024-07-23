@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/config"
@@ -40,9 +41,12 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	tb "github.com/envoyproxy/gateway/internal/troubleshoot"
 )
 
 const defaultServiceStartupTimeout = 5 * time.Minute
+
+var PodReady = corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
 
 // WaitForPods waits for the pods in the given namespace and with the given selector
 // to be in the given phase and condition.
@@ -568,4 +572,14 @@ func createTagsQueryParam(tags map[string]string) (string, error) {
 		}
 	}
 	return tagsBuilder.String(), nil
+}
+
+// CollectAndDump collects and dumps the cluster data for troubleshooting and log.
+// This function should be call within t.Cleanup.
+func CollectAndDump(t *testing.T, rest *rest.Config) {
+	result := tb.CollectResult(context.TODO(), rest, "", "envoy-gateway")
+	for r, data := range result {
+		tlog.Logf(t, "filename: %s", r)
+		tlog.Logf(t, "data: \n%s", data)
+	}
 }

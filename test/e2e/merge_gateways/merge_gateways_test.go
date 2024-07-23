@@ -28,7 +28,7 @@ import (
 func TestMergeGateways(t *testing.T) {
 	flag.Parse()
 
-	c := kubetest.NewClient(t)
+	c, cfg := kubetest.NewClient(t)
 
 	if flags.RunTest != nil && *flags.RunTest != "" {
 		tlog.Logf(t, "Running E2E test %s with %s GatewayClass\n cleanup: %t\n debug: %t",
@@ -40,6 +40,7 @@ func TestMergeGateways(t *testing.T) {
 
 	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 		Client:               c,
+		RestConfig:           cfg,
 		GatewayClassName:     *flags.GatewayClassName,
 		Debug:                *flags.ShowDebug,
 		CleanupBaseResources: *flags.CleanupBaseResources,
