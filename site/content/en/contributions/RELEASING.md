@@ -126,7 +126,26 @@ export GITHUB_REMOTE=origin
       {{- with (strings.HasPrefix $pagePrefix "v1.1") -}}
       {{- "v1.1.0" -}}
       {{- end -}}
+      {{- with (strings.HasPrefix $pagePrefix "doc") -}}
+      {{- "v1.1.0" -}}
+      {{- end -}}
       ```
+
+   1. Update `site/layouts/shortcodes/yaml-version.html` base on latest minor version.
+      
+      ```console
+      {{- $pagePrefix := (index (split $.Page.File.Dir "/") 0) -}}
+      {{- with (eq $pagePrefix "latest") -}}
+      {{- "latest" -}}
+      {{- end -}}
+      {{- with (strings.HasPrefix $pagePrefix "v1.1") -}}
+      {{- "v1.1.0" -}}
+      {{- end -}}
+      {{- with (strings.HasPrefix $pagePrefix "doc") -}}
+      {{- "v1.1.0" -}}
+      {{- end -}}
+      ```
+
 
 3. Sign, commit, and push your changes to your fork.
 4. Submit a [Pull Request][] to merge the changes into the `main` branch. Do not proceed until all your PRs have merged
