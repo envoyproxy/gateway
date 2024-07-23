@@ -300,6 +300,12 @@ spec:
                     maximum: 2147483647
                     minimum: 1
                     type: integer
+                  resetStreamOnError:
+                    description: |-
+                      ResetStreamOnError determines if Envoy will terminate the stream or the connection in the event of HTTP messaging error
+                      It's recommended for L2 Envoy deployments to set this value to true.
+                      https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/level_two
+                    type: boolean
                 type: object
               http3:
                 description: HTTP3 provides HTTP/3 configuration on the listener.

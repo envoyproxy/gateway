@@ -770,6 +770,7 @@ func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute
 		clusterArgs.timeout = bt.Timeout
 		clusterArgs.tcpkeepalive = bt.TCPKeepalive
 		clusterArgs.backendConnection = bt.BackendConnection
+		clusterArgs.http2Settings = bt.HTTP2
 	}
 
 	if err := addXdsCluster(tCtx, clusterArgs); err != nil && !errors.Is(err, ErrXdsClusterExists) {

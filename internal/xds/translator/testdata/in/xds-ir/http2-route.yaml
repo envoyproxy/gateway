@@ -28,3 +28,59 @@ http:
         - host: "1.2.3.4"
           port: 50000
         protocol: GRPC
+    traffic:
+      http2:
+        initialConnectionWindowSize: 1048576
+        initialStreamWindowSize: 524288000
+        maxConcurrentStreams: 200
+        resetStreamOnError: true
+  - name: "second-route"
+    hostname: "*"
+    pathMatch:
+      name: "test"
+      exact: "bar/foo"
+    destination:
+      name: "second-route-dest"
+      settings:
+        - endpoints:
+            - host: "1.2.3.4"
+              port: 50000
+          protocol: GRPC
+    traffic:
+      http2: {}
+  - name: "third-route-use-client"
+    hostname: "*"
+    pathMatch:
+      name: "test"
+      exact: "bar/bar"
+    destination:
+      name: "third-route-dest"
+      settings:
+        - endpoints:
+            - host: "1.2.3.4"
+              port: 50000
+          protocol: HTTP
+    useClientProtocol: true
+    traffic:
+      http2:
+        initialConnectionWindowSize: 1048576
+        initialStreamWindowSize: 524288000
+        maxConcurrentStreams: 200
+        resetStreamOnError: true
+  - name: "fourth-route-not-http2"
+    hostname: "*"
+    pathMatch:
+      name: "test"
+      exact: "foo/foo"
+    destination:
+      name: "fourth-route-dest"
+      settings:
+        - endpoints:
+            - host: "1.2.3.4"
+              port: 50000
+    traffic:
+      http2:
+        initialConnectionWindowSize: 1048576
+        initialStreamWindowSize: 524288000
+        maxConcurrentStreams: 200
+        resetStreamOnError: true

@@ -460,6 +460,7 @@ _Appears in:_
 | `useClientProtocol` | _boolean_ |  false  | UseClientProtocol configures Envoy to prefer sending requests to backends using<br />the same HTTP protocol that the incoming request used. Defaults to false, which means<br />that Envoy will use the protocol indicated by the attached BackendRef. |
 | `timeout` | _[Timeout](#timeout)_ |  false  | Timeout settings for the backend connections. |
 | `connection` | _[BackendConnection](#backendconnection)_ |  false  | Connection includes backend connection settings. |
+| `http2` | _[HTTP2Settings](#http2settings)_ |  false  | HTTP2 provides HTTP/2 configuration for backend connections. |
 
 
 #### BasicAuth
@@ -1772,9 +1773,10 @@ _Appears in:_
 
 
 
-HTTP2Settings provides HTTP/2 configuration on the listener.
+HTTP2Settings provides HTTP/2 configuration for listeners and backends.
 
 _Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
 
 | Field | Type | Required | Description |
@@ -1782,6 +1784,7 @@ _Appears in:_
 | `initialStreamWindowSize` | _[Quantity](#quantity)_ |  false  | InitialStreamWindowSize sets the initial window size for HTTP/2 streams.<br />If not set, the default value is 64 KiB(64*1024). |
 | `initialConnectionWindowSize` | _[Quantity](#quantity)_ |  false  | InitialConnectionWindowSize sets the initial window size for HTTP/2 connections.<br />If not set, the default value is 1 MiB. |
 | `maxConcurrentStreams` | _integer_ |  false  | MaxConcurrentStreams sets the maximum number of concurrent streams allowed per connection.<br />If not set, the default value is 100. |
+| `resetStreamOnError` | _boolean_ |  false  | ResetStreamOnError determines if Envoy will terminate the stream or the connection in the event of HTTP messaging error<br />It's recommended for L2 Envoy deployments to set this value to true.<br />https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/level_two |
 
 
 #### HTTP3Settings

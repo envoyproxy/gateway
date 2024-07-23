@@ -28,11 +28,7 @@ import (
 
 const (
 	// Use an invalid string to represent all sections (listeners) within a Gateway
-	AllSections                         = "/"
-	MinHTTP2InitialStreamWindowSize     = 65535      // https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-http2protocoloptions-initial-stream-window-size
-	MaxHTTP2InitialStreamWindowSize     = 2147483647 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-http2protocoloptions-initial-stream-window-size
-	MinHTTP2InitialConnectionWindowSize = MinHTTP2InitialStreamWindowSize
-	MaxHTTP2InitialConnectionWindowSize = MaxHTTP2InitialStreamWindowSize
+	AllSections = "/"
 )
 
 func hasSectionName(target *gwapiv1a2.LocalPolicyTargetReferenceWithSectionName) bool {
