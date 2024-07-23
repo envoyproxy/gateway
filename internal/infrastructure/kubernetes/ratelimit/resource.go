@@ -229,7 +229,7 @@ func promStatsdExporterContainer() corev1.Container {
 		},
 		TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 		TerminationMessagePath:   "/dev/termination-log",
-		SecurityContext:          resource.DefaultSecurityContext(),
+		SecurityContext:          defaultSecurityContext(),
 	}
 }
 
@@ -509,5 +509,13 @@ func expectedRateLimitContainerSecurityContext(rateLimitDeployment *egv1a1.Kuber
 	if rateLimitDeployment.Container.SecurityContext != nil {
 		return rateLimitDeployment.Container.SecurityContext
 	}
-	return resource.DefaultSecurityContext()
+	return defaultSecurityContext()
+}
+
+func defaultSecurityContext() *corev1.SecurityContext {
+	defaultSC := resource.DefaultSecurityContext()
+	// run as non-root user
+	defaultSC.RunAsGroup = ptr.To(int64(65534))
+	defaultSC.RunAsUser = ptr.To(int64(65534))
+	return defaultSC
 }
