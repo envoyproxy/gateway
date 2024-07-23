@@ -6,7 +6,7 @@ replace github.com/imdario/mergo => github.com/imdario/mergo v0.3.16
 
 require (
 	fortio.org/fortio v1.66.0
-	fortio.org/log v1.14.0
+	fortio.org/log v1.15.0
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/cncf/xds/go v0.0.0-20240423153145-555b57ec207b
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
@@ -142,6 +142,7 @@ require (
 	github.com/jmoiron/sqlx v1.3.5 // indirect
 	github.com/klauspost/compress v1.17.8 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
+	github.com/kortschak/goroutine v1.1.2 // indirect
 	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
 	github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0 // indirect
 	github.com/lib/pq v1.10.9 // indirect
