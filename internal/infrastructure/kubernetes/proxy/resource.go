@@ -296,6 +296,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 					},
 				},
 			},
+			SecurityContext: resource.DefaultSecurityContext(),
 		},
 	}
 
