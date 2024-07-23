@@ -286,7 +286,7 @@ securityPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Unable to target HTTPRoute, another SecurityPolicy has already attached
+        message: Unable to target HTTPRoute httproute-1, another SecurityPolicy has already attached
           to it
         reason: Conflicted
         status: "False"
@@ -381,7 +381,7 @@ securityPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Unable to target Gateway, another SecurityPolicy has already attached
+        message: Unable to target Gateway gateway-1, another SecurityPolicy has already attached
           to it
         reason: Conflicted
         status: "False"
