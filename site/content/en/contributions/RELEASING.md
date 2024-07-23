@@ -107,7 +107,8 @@ export GITHUB_REMOTE=origin
 
    1. Update the `Documentation` referred link on the menu in `site/hugo.toml`:
    
-      **DON'T FORGOT TO MOVE THEM UNDER LATEST**
+      **DON'T FORGOT TO MOVE IT UNDER `LATEST`**
+
       ```shell
       [[menu.main]]
          name = "Documentation"
