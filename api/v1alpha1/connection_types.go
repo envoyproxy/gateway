@@ -17,6 +17,7 @@ type ClientConnection struct {
 	// +optional
 	ConnectionLimit *ConnectionLimit `json:"connectionLimit,omitempty"`
 	// BufferLimit provides configuration for the maximum buffer size in bytes for each incoming connection.
+	// BufferLimit applies to connection streaming (maybe non-streaming) channel between processes, it's in user space.
 	// For example, 20Mi, 1Gi, 256Ki etc.
 	// Note that when the suffix is not provided, the value is interpreted as bytes.
 	// Default: 32768 bytes.
@@ -25,6 +26,7 @@ type ClientConnection struct {
 	// +optional
 	BufferLimit *resource.Quantity `json:"bufferLimit,omitempty"`
 	// SocketBufferLimit provides configuration for the maximum buffer size in bytes for each incoming socket.
+	// SocketBufferLimit applies to socket streaming channel between TCP/IP stacks, it's in kernel space.
 	// For example, 20Mi, 1Gi, 256Ki etc.
 	// Note that when the suffix is not provided, the value is interpreted as bytes.
 	//
