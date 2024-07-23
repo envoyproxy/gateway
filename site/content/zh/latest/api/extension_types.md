@@ -515,6 +515,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `allowOrigins` | _[Origin](#origin) array_ |  true  | AllowOrigins defines the origins that are allowed to make requests. |
+| `allowRegexOrigins` | _[RegexOrigin](#regexorigin) array_ |  true  | AllowRegexOrigins defines the origin regexes that are allowed to make requests. |
 | `allowMethods` | _string array_ |  true  | AllowMethods defines the methods that are allowed to make requests. |
 | `allowHeaders` | _string array_ |  true  | AllowHeaders defines the headers that are allowed to be sent with requests. |
 | `exposeHeaders` | _string array_ |  true  | ExposeHeaders defines the headers that can be exposed in the responses. |
@@ -3190,6 +3191,27 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `certificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  false  | CertificateRef defines the client certificate reference for TLS connections.<br />Currently only a Kubernetes Secret of type TLS is supported. |
+
+
+#### RegexOrigin
+
+_Underlying type:_ _string_
+
+RegexOrigin is defined by full-fledged regex, so it is possible to use any
+scheme, domain, port or any other value. The value should be valid regex
+string.
+Syntax should be according to https://github.com/google/re2/wiki/Syntax.
+Also, backslashes must be escaped.
+
+
+For example, the following are valid origins:
+- https://foo.example.com
+- https?://(.*\\.)?example\\.com
+- .*://localhost(?:\\:\\d+)?
+
+_Appears in:_
+- [CORS](#cors)
+
 
 
 #### RemoteJWKS
