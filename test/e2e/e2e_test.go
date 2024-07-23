@@ -56,9 +56,13 @@ func TestE2E(t *testing.T) {
 	}
 
 	cSuite.Setup(t, tests.ConformanceTests)
-	tlog.Logf(t, "Running %d E2E tests", len(tests.ConformanceTests))
+	if cSuite.RunTest != "" {
+		tlog.Logf(t, "Running E2E test %s", cSuite.RunTest)
+	} else {
+		tlog.Logf(t, "Running %d E2E tests", len(tests.ConformanceTests))
+	}
 	err = cSuite.Run(t, tests.ConformanceTests)
 	if err != nil {
-		t.Fatalf("Failed to run E2E tests: %v", err)
+		tlog.Fatalf(t, "Failed to run E2E tests: %v", err)
 	}
 }
