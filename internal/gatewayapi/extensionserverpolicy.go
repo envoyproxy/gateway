@@ -18,6 +18,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
@@ -50,7 +51,7 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 		policy := policy.DeepCopy()
 		var policyStatus gwapiv1a2.PolicyStatus
 		accepted := false
-		targetRefs, err := extractTargetRefs(policy)
+		targetRefs, err := extractTargetRefs(policy, gateways)
 		if err != nil {
 			errs = errors.Join(errs, fmt.Errorf("error finding targetRefs for policy %s: %w", policy.GetName(), err))
 			continue
@@ -96,53 +97,24 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 	return res, errs
 }
 
-func extractTargetRefs(policy *unstructured.Unstructured) ([]gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, error) {
-	ret := []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{}
+func extractTargetRefs(policy *unstructured.Unstructured, gateways []*GatewayContext) ([]gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, error) {
 	spec, found := policy.Object["spec"].(map[string]any)
 	if !found {
 		return nil, fmt.Errorf("no targets found for the policy")
 	}
-	targetRefs, found := spec["targetRefs"]
-	if found {
-		if refArr, ok := targetRefs.([]any); ok {
-			for i := range refArr {
-				ref, err := extractSingleTargetRef(refArr[i])
-				if err != nil {
-					return nil, err
-				}
-				ret = append(ret, ref)
-			}
-		} else {
-			return nil, fmt.Errorf("targetRefs is not an array")
-		}
+	specAsJSON, err := json.Marshal(spec)
+	if err != nil {
+		return nil, fmt.Errorf("no targets found for the policy")
 	}
-	targetRef, found := spec["targetRef"]
-	if found {
-		ref, err := extractSingleTargetRef(targetRef)
-		if err != nil {
-			return nil, err
-		}
-		ret = append(ret, ref)
+	var targetRefs egv1a1.PolicyTargetReferences
+	if err := json.Unmarshal(specAsJSON, &targetRefs); err != nil {
+		return nil, fmt.Errorf("no targets found for the policy")
 	}
+	ret := getPolicyTargetRefs(targetRefs, gateways)
 	if len(ret) == 0 {
 		return nil, fmt.Errorf("no targets found for the policy")
 	}
 	return ret, nil
-}
-
-func extractSingleTargetRef(data any) (gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, error) {
-	var currRef gwapiv1a2.LocalPolicyTargetReferenceWithSectionName
-	d, err := json.Marshal(data)
-	if err != nil {
-		return currRef, err
-	}
-	if err := json.Unmarshal(d, &currRef); err != nil {
-		return currRef, err
-	}
-	if currRef.Group == "" || currRef.Name == "" || currRef.Kind == "" {
-		return currRef, fmt.Errorf("invalid targetRef found: %s", string(d))
-	}
-	return currRef, nil
 }
 
 func policyStatusToUnstructured(policyStatus gwapiv1a2.PolicyStatus) map[string]any {

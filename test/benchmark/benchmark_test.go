@@ -12,23 +12,13 @@ import (
 	"flag"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
-
 	"github.com/envoyproxy/gateway/test/benchmark/suite"
 	"github.com/envoyproxy/gateway/test/benchmark/tests"
+	kubetest "github.com/envoyproxy/gateway/test/utils/kubernetes"
 )
 
 func TestBenchmark(t *testing.T) {
-	cfg, err := config.GetConfig()
-	require.NoError(t, err)
-
-	cli, err := client.New(cfg, client.Options{})
-	require.NoError(t, err)
-
-	// Install all the scheme for kubernetes client.
-	suite.CheckInstallScheme(t, cli)
+	cli, _ := kubetest.NewClient(t)
 
 	// Parse benchmark options.
 	flag.Parse()
@@ -45,7 +35,7 @@ func TestBenchmark(t *testing.T) {
 		"config/gateway.yaml",
 		"config/httproute.yaml",
 		"config/nighthawk-client.yaml",
-		*suite.ReportSavePath,
+		*suite.ReportSaveDir,
 	)
 	if err != nil {
 		t.Fatalf("Failed to create BenchmarkTestSuite: %v", err)

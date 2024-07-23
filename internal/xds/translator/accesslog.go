@@ -6,7 +6,6 @@
 package translator
 
 import (
-	"encoding/json"
 	"errors"
 	"sort"
 	"strings"
@@ -132,6 +131,7 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 			ConfigType: &accesslog.AccessLog_TypedConfig{
 				TypedConfig: accesslogAny,
 			},
+			Filter: buildAccessLogFilter(text.CELMatches, forListener),
 		})
 	}
 	// handle json file access logs
@@ -174,6 +174,7 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 			ConfigType: &accesslog.AccessLog_TypedConfig{
 				TypedConfig: accesslogAny,
 			},
+			Filter: buildAccessLogFilter(json.CELMatches, forListener),
 		})
 	}
 	// handle ALS access logs
@@ -189,27 +190,6 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 			},
 			TransportApiVersion: cfgcore.ApiVersion_V3,
 		}
-
-		// include text and json format as metadata when initiating stream
-		md := make([]*cfgcore.HeaderValue, 0, 2)
-
-		if als.Text != nil && *als.Text != "" {
-			md = append(md, &cfgcore.HeaderValue{
-				Key:   "x-accesslog-text",
-				Value: strings.ReplaceAll(strings.Trim(*als.Text, "\x00\n\r"), "\x00\n\r", " "),
-			})
-		}
-
-		if len(als.Attributes) > 0 {
-			if attr, err := json.Marshal(als.Attributes); err == nil {
-				md = append(md, &cfgcore.HeaderValue{
-					Key:   "x-accesslog-attr",
-					Value: string(attr),
-				})
-			}
-		}
-
-		cc.GrpcService.InitialMetadata = md
 
 		switch als.Type {
 		case egv1a1.ALSEnvoyProxyAccessLogTypeHTTP:
@@ -229,6 +209,7 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 				ConfigType: &accesslog.AccessLog_TypedConfig{
 					TypedConfig: accesslogAny,
 				},
+				Filter: buildAccessLogFilter(als.CELMatches, forListener),
 			})
 		case egv1a1.ALSEnvoyProxyAccessLogTypeTCP:
 			alCfg := &grpcaccesslog.TcpGrpcAccessLogConfig{
@@ -241,6 +222,7 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 				ConfigType: &accesslog.AccessLog_TypedConfig{
 					TypedConfig: accesslogAny,
 				},
+				Filter: buildAccessLogFilter(als.CELMatches, forListener),
 			})
 		}
 	}
@@ -288,22 +270,8 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 			ConfigType: &accesslog.AccessLog_TypedConfig{
 				TypedConfig: accesslogAny,
 			},
+			Filter: buildAccessLogFilter(otel.CELMatches, forListener),
 		})
-	}
-
-	// add filter for access logs
-	filters := make([]*accesslog.AccessLogFilter, 0)
-	for _, expr := range al.CELMatches {
-		filters = append(filters, celAccessLogFilter(expr))
-	}
-	if forListener {
-		filters = append(filters, listenerAccessLogFilter)
-	}
-
-	f := buildAccessLogFilter(filters...)
-
-	for _, log := range accessLogs {
-		log.Filter = f
 	}
 
 	return accessLogs
@@ -324,19 +292,28 @@ func celAccessLogFilter(expr string) *accesslog.AccessLogFilter {
 	}
 }
 
-func buildAccessLogFilter(f ...*accesslog.AccessLogFilter) *accesslog.AccessLogFilter {
-	if len(f) == 0 {
+func buildAccessLogFilter(exprs []string, forListener bool) *accesslog.AccessLogFilter {
+	// add filter for access logs
+	var filters []*accesslog.AccessLogFilter
+	for _, expr := range exprs {
+		filters = append(filters, celAccessLogFilter(expr))
+	}
+	if forListener {
+		filters = append(filters, listenerAccessLogFilter)
+	}
+
+	if len(filters) == 0 {
 		return nil
 	}
 
-	if len(f) == 1 {
-		return f[0]
+	if len(filters) == 1 {
+		return filters[0]
 	}
 
 	return &accesslog.AccessLogFilter{
 		FilterSpecifier: &accesslog.AccessLogFilter_AndFilter{
 			AndFilter: &accesslog.AndFilter{
-				Filters: f,
+				Filters: filters,
 			},
 		},
 	}

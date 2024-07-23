@@ -109,7 +109,7 @@ func KindDerefOr(kind *gwapiv1.Kind, defaultKind string) string {
 // to a Gateway with the given namespace/name, irrespective of whether a
 // section/listener name has been specified (i.e. a parent ref to a listener
 // on the specified gateway will return "true").
-func IsRefToGateway(parentRef gwapiv1.ParentReference, gateway types.NamespacedName) bool {
+func IsRefToGateway(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.ParentReference, gateway types.NamespacedName) bool {
 	if parentRef.Group != nil && string(*parentRef.Group) != gwapiv1.GroupName {
 		return false
 	}
@@ -118,7 +118,12 @@ func IsRefToGateway(parentRef gwapiv1.ParentReference, gateway types.NamespacedN
 		return false
 	}
 
-	if parentRef.Namespace != nil && string(*parentRef.Namespace) != gateway.Namespace {
+	ns := routeNamespace
+	if parentRef.Namespace != nil {
+		ns = *parentRef.Namespace
+	}
+
+	if string(ns) != gateway.Namespace {
 		return false
 	}
 
@@ -129,11 +134,11 @@ func IsRefToGateway(parentRef gwapiv1.ParentReference, gateway types.NamespacedN
 // in the given list, and if so, a list of the Listeners within that Gateway that
 // are included by the parent ref (either one specific Listener, or all Listeners
 // in the Gateway, depending on whether section name is specified or not).
-func GetReferencedListeners(parentRef gwapiv1.ParentReference, gateways []*GatewayContext) (bool, []*ListenerContext) {
+func GetReferencedListeners(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.ParentReference, gateways []*GatewayContext) (bool, []*ListenerContext) {
 	var referencedListeners []*ListenerContext
 
 	for _, gateway := range gateways {
-		if IsRefToGateway(parentRef, utils.NamespacedName(gateway)) {
+		if IsRefToGateway(routeNamespace, parentRef, utils.NamespacedName(gateway)) {
 			// The parentRef may be to the entire Gateway, or to a specific listener.
 			for _, listener := range gateway.listeners {
 				if (parentRef.SectionName == nil || *parentRef.SectionName == listener.Name) && (parentRef.Port == nil || *parentRef.Port == listener.Port) {
@@ -542,7 +547,12 @@ func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, 
 	// to targets that were already found via the selectors. Only add them to the returned list if
 	// they are not yet there. Always add them at the end.
 	fastLookup := sets.New(ret...)
+	var emptyTargetRef gwapiv1a2.LocalPolicyTargetReferenceWithSectionName
 	for _, v := range policy.GetTargetRefs() {
+		if v == emptyTargetRef {
+			// This can happen when the targetRef structure is read from extension server policies
+			continue
+		}
 		if !fastLookup.Has(v) {
 			ret = append(ret, v)
 		}

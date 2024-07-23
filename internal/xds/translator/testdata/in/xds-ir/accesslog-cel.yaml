@@ -1,13 +1,15 @@
 name: "accesslog"
 accesslog:
-  celMatches:
-  - response.code >= 400
   text:
   - path: "/dev/stdout"
+    celMatches:
+    - response.code >= 400
     format: |
       [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
   json:
   - path: "/dev/stdout"
+    celMatches:
+    - response.code >= 400
     json:
       start_time: "%START_TIME%"
       method: "%REQ(:METHOD)%"
@@ -22,6 +24,8 @@ accesslog:
     resources:
       "cluster_name": "cluster1"
     authority: "otel-collector.default.svc.cluster.local"
+    celMatches:
+    - response.code >= 400
     destination:
       name: "accesslog-0"
       settings:

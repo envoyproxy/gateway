@@ -37,6 +37,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -303,7 +304,7 @@ func pushWasmImageForTest(t *testing.T, suite *suite.ConformanceTestSuite, regis
 		if err == nil {
 			break
 		}
-		t.Logf("failed to push image: %v", err)
+		tlog.Logf(t, "failed to push image: %v", err)
 	}
 	if err != nil {
 		t.Fatalf("failed to push image: %v", err)
@@ -316,7 +317,7 @@ func pushWasmImageForTest(t *testing.T, suite *suite.ConformanceTestSuite, regis
 		t.Fatalf("failed to get image digest: %v", err)
 	}
 
-	t.Logf("pushed image %s with digest: %s", tag, digest.Hex)
+	tlog.Logf(t, "pushed image %s with digest: %s", tag, digest.Hex)
 	return digest.Hex
 }
 

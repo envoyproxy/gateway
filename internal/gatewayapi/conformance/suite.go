@@ -15,8 +15,7 @@ import (
 // SkipTests is a list of tests that are skipped in the conformance suite.
 var SkipTests = []suite.ConformanceTest{
 	tests.GatewayStaticAddresses,
-	tests.GatewayHTTPListenerIsolation,          // https://github.com/kubernetes-sigs/gateway-api/issues/3352
-	tests.HTTPRouteBackendRequestHeaderModifier, // https://github.com/envoyproxy/gateway/issues/3338
+	tests.GatewayHTTPListenerIsolation, // https://github.com/envoyproxy/gateway/issues/3352
 }
 
 func skipTestsShortNames(skipTests []suite.ConformanceTest) []string {

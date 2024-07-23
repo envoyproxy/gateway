@@ -18,6 +18,7 @@ import (
 	httputils "sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 )
 
 func init() {
@@ -152,7 +153,22 @@ var ALSTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "accesslog-als", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-			preCount := ALSLogCount(t, suite)
+
+			preCount := 0
+			// make sure ALS server metric endpoint is ready
+			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
+				func(ctx context.Context) (bool, error) {
+					curCount, err := ALSLogCount(suite)
+					if err != nil {
+						tlog.Logf(t, "failed to get log count from loki: %v", err)
+						return false, nil
+					}
+					preCount = curCount
+					return true, nil
+				}); err != nil {
+				t.Errorf("failed to get log count from loki: %v", err)
+			}
+
 			expectedResponse := httputils.ExpectedResponse{
 				Request: httputils.Request{
 					Path: "/als",
@@ -170,7 +186,11 @@ var ALSTest = suite.ConformanceTest{
 
 			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
 				func(ctx context.Context) (bool, error) {
-					curCount := ALSLogCount(t, suite)
+					curCount, err := ALSLogCount(suite)
+					if err != nil {
+						tlog.Logf(t, "failed to get log count from loki: %v", err)
+						return false, nil
+					}
 					return preCount < curCount, nil
 				}); err != nil {
 				t.Errorf("failed to get log count from loki: %v", err)
@@ -187,7 +207,7 @@ func runLogTest(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string,
 			// query log count from loki
 			preCount, err := QueryLogCountFromLoki(t, suite.Client, expectedLabels, expectedMatch)
 			if err != nil {
-				t.Logf("failed to get log count from loki: %v", err)
+				tlog.Logf(t, "failed to get log count from loki: %v", err)
 				return false, nil
 			}
 
@@ -198,7 +218,7 @@ func runLogTest(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string,
 			if err := wait.PollUntilContextTimeout(ctx, 500*time.Millisecond, 15*time.Second, true, func(_ context.Context) (bool, error) {
 				count, err := QueryLogCountFromLoki(t, suite.Client, expectedLabels, expectedMatch)
 				if err != nil {
-					t.Logf("failed to get log count from loki: %v", err)
+					tlog.Logf(t, "failed to get log count from loki: %v", err)
 					return false, nil
 				}
 
@@ -207,7 +227,7 @@ func runLogTest(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string,
 					return true, nil
 				}
 
-				t.Logf("preCount=%d, count=%d", preCount, count)
+				tlog.Logf(t, "preCount=%d, count=%d", preCount, count)
 				return false, nil
 			}); err != nil {
 				return false, nil

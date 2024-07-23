@@ -4,10 +4,10 @@ metadata:
   name: jwt-optional
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: jwt-optional
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: jwt-optional
   jwt:
     providers:
       - name: example

@@ -253,7 +253,7 @@ enable = true
   [[menu.main]]
     name = "Documentation"
     weight = -102
-    url = "/v1.0.2"
+    url = "/docs"
 
   # i18n for Chinese
   [[languages.zh.menu.main]]
@@ -278,25 +278,29 @@ enable = true
   url = "/latest"
 
 [[params.versions]]
-  version = "v1.0.2"
-  url = "/v1.0.2"
+  version = "v1.0"
+  url = "/docs"
 
 [[params.versions]]
-  version = "v0.6.0"
-  url = "/v0.6.0"
+  version = "v0.6"
+  url = "/v0.6"
 
 [[params.versions]]
-  version = "v0.5.0"
-  url = "/v0.5.0"
+  version = "v0.5"
+  url = "/v0.5"
 
 [[params.versions]]
-  version = "v0.4.0"
-  url = "/v0.4.0"
+  version = "v0.4"
+  url = "/v0.4"
 
 [[params.versions]]
-  version = "v0.3.0"
-  url = "/v0.3.0"
+  version = "v0.3"
+  url = "/v0.3"
 
 [[params.versions]]
-  version = "v0.2.0"
-  url = "/v0.2.0"
+  version = "v0.2"
+  url = "/v0.2"
+
+[[params.versions]]
+  version = "v1.1"
+  url = "/v1.1"
