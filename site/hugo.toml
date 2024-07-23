@@ -300,3 +300,7 @@ enable = true
 [[params.versions]]
   version = "v0.2"
   url = "/v0.2"
+
+[[params.versions]]
+  version = "v1.1"
+  url = "/v1.1"
