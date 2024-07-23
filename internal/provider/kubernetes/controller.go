@@ -288,14 +288,37 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			return reconcile.Result{}, err
 		}
 
+		if classRefsEnvoyProxy(managedGC, gwcResource.EnvoyProxyForGatewayClass) && managedGC.DeletionTimestamp.IsZero() && gwcResource.EnvoyProxyForGatewayClass.DeletionTimestamp.IsZero() {
+			// finalize the accepted GatewayClass.
+			if err := r.addFinalizer(ctx, managedGC); err != nil {
+				r.log.Error(err, fmt.Sprintf("failed adding finalizer to gatewayclass %s",
+					managedGC.Name))
+				return reconcile.Result{}, err
+			}
+		}
+
+		// Check stored referenced Envoy Proxy and remove finalizer if not referenced in the managed GatewayClass.
+		managedResources := r.resources.GetResourcesByGatewayClass(managedGC.Name)
+		if managedResources != nil {
+			refEnvoyProxy := managedResources.EnvoyProxyForGatewayClass
+			if refEnvoyProxy != nil && !classRefsEnvoyProxy(managedGC, refEnvoyProxy) {
+				if err := r.removeFinalizer(ctx, refEnvoyProxy); err != nil {
+					r.log.Error(err, fmt.Sprintf("failed to remove finalizer from unreferenced envoy proxy %s", refEnvoyProxy.Name))
+					return reconcile.Result{}, err
+				}
+			}
+		}
+
 		if len(gwcResource.Gateways) == 0 {
 			r.log.Info("No gateways found for accepted gatewayclass")
 
 			// If needed, remove the finalizer from the accepted GatewayClass.
-			if err := r.removeFinalizer(ctx, managedGC); err != nil {
-				r.log.Error(err, fmt.Sprintf("failed to remove finalizer from gatewayclass %s",
-					managedGC.Name))
-				return reconcile.Result{}, err
+			if !classRefsEnvoyProxy(managedGC, gwcResource.EnvoyProxyForGatewayClass) {
+				if err := r.removeFinalizer(ctx, managedGC); err != nil {
+					r.log.Error(err, fmt.Sprintf("failed to remove finalizer from gatewayclass %s",
+						managedGC.Name))
+					return reconcile.Result{}, err
+				}
 			}
 		} else {
 			// finalize the accepted GatewayClass.
@@ -1638,7 +1661,7 @@ func (r *gatewayAPIReconciler) processGatewayClassParamsRef(ctx context.Context,
 		return fmt.Errorf("failed to find envoyproxy %s/%s: %w", r.namespace, gc.Spec.ParametersRef.Name, err)
 	}
 
-	if !ep.DeletionTimestamp.IsZero() && !classRefsEnvoyProxy(gc, ep) {
+	if !gc.DeletionTimestamp.IsZero() {
 		if err := r.removeFinalizer(ctx, ep); err != nil {
 			r.log.Error(err, fmt.Sprintf("failed to remove finalizer from envoy proxy %s", ep.Name))
 			return err
@@ -1650,7 +1673,7 @@ func (r *gatewayAPIReconciler) processGatewayClassParamsRef(ctx context.Context,
 		return err
 	}
 
-	if gc.DeletionTimestamp.IsZero() && classRefsEnvoyProxy(gc, ep) && ep.DeletionTimestamp.IsZero() {
+	if gc.DeletionTimestamp.IsZero() && ep.DeletionTimestamp.IsZero() {
 		if err := r.addFinalizer(ctx, ep); err != nil {
 			r.log.Error(err, fmt.Sprintf("failed adding finalizer to envoy proxy %s", ep.Name))
 			return err
