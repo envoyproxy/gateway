@@ -199,7 +199,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			Args:                     args,
 			Env:                      expectedContainerEnv(containerSpec),
 			Resources:                *containerSpec.Resources,
-			SecurityContext:          containerSpec.SecurityContext,
+			SecurityContext:          expectedSecurityContext(containerSpec),
 			Ports:                    ports,
 			VolumeMounts:             expectedContainerVolumeMounts(containerSpec),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
@@ -435,4 +435,12 @@ func calculateMaxHeapSizeBytes(envoyResourceRequirements *corev1.ResourceRequire
 	}
 
 	return 0
+}
+
+func expectedSecurityContext(containerSpec *egv1a1.KubernetesContainerSpec) *corev1.SecurityContext {
+	if containerSpec != nil && containerSpec.SecurityContext != nil {
+		return containerSpec.SecurityContext
+	}
+
+	return resource.DefaultSecurityContext()
 }
