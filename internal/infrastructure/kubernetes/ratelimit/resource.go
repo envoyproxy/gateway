@@ -158,7 +158,7 @@ func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeploymen
 			Env:                      expectedRateLimitContainerEnv(rateLimit, rateLimitDeployment, namespace),
 			Ports:                    ports,
 			Resources:                *rateLimitDeployment.Container.Resources,
-			SecurityContext:          rateLimitDeployment.Container.SecurityContext,
+			SecurityContext:          expectedRateLimitContainerSecurityContext(rateLimitDeployment),
 			VolumeMounts:             expectedContainerVolumeMounts(rateLimit, rateLimitDeployment),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
@@ -229,6 +229,7 @@ func promStatsdExporterContainer() corev1.Container {
 		},
 		TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 		TerminationMessagePath:   "/dev/termination-log",
+		SecurityContext:          defaultSecurityContext(),
 	}
 }
 
@@ -502,4 +503,28 @@ func checkTraceEndpointScheme(url string) string {
 	}
 
 	return fmt.Sprintf("%s%s", httpScheme, url)
+}
+
+func expectedRateLimitContainerSecurityContext(rateLimitDeployment *egv1a1.KubernetesDeploymentSpec) *corev1.SecurityContext {
+	if rateLimitDeployment.Container.SecurityContext != nil {
+		return rateLimitDeployment.Container.SecurityContext
+	}
+	return defaultSecurityContext()
+}
+
+func defaultSecurityContext() *corev1.SecurityContext {
+	return &corev1.SecurityContext{
+		AllowPrivilegeEscalation: ptr.To(false),
+		Capabilities: &corev1.Capabilities{
+			Drop: []corev1.Capability{
+				"ALL",
+			},
+		},
+		Privileged:             ptr.To(false),
+		ReadOnlyRootFilesystem: ptr.To(true),
+		RunAsNonRoot:           ptr.To(true),
+		SeccompProfile: &corev1.SeccompProfile{
+			Type: "RuntimeDefault",
+		},
+	}
 }
