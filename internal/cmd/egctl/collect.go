@@ -15,14 +15,12 @@ import (
 	"syscall"
 	"time"
 
-	troubleshootv1b2 "github.com/replicatedhq/troubleshoot/pkg/apis/troubleshoot/v1beta2"
-	tbcollect "github.com/replicatedhq/troubleshoot/pkg/collect"
 	"github.com/replicatedhq/troubleshoot/pkg/convert"
 	"github.com/spf13/cobra"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
 	"github.com/envoyproxy/gateway/internal/cmd/options"
-	"github.com/envoyproxy/gateway/internal/troubleshoot/collect"
+	tb "github.com/envoyproxy/gateway/internal/troubleshoot"
 )
 
 type collectOptions struct {
@@ -65,16 +63,6 @@ func runCollect(collectOpts collectOptions) error {
 	defer cancel()
 	go waitForSignal(ctx, cancel)
 
-	progressChan := make(chan interface{})
-	go func() {
-		select {
-		case <-ctx.Done():
-			close(progressChan)
-		case msg := <-progressChan:
-			fmt.Printf("Collecting support bundle: %v\n", msg)
-		}
-	}()
-
 	tmpDir, err := os.MkdirTemp("", "envoy-gateway-support-bundle")
 	if err != nil {
 		return fmt.Errorf("create temp dir: %w", err)
@@ -100,68 +88,8 @@ func runCollect(collectOpts collectOptions) error {
 		return fmt.Errorf("create bundle dir: %w", err)
 	}
 
-	var result tbcollect.CollectorResult
-	collectors := []tbcollect.Collector{
-		// Collect the custom resources from Gateway API and EG
-		collect.CustomResource{
-			ClientConfig: restConfig,
-			BundlePath:   bundlePath,
-			IncludeGroups: []string{
-				"gateway.envoyproxy.io",
-				"gateway.networking.k8s.io",
-			},
-		},
-		// Collect resources from EnvoyGateway system namespace
-		collect.EnvoyGatewayResource{
-			ClientConfig: restConfig,
-			BundlePath:   bundlePath,
-			Namespace:    collectOpts.envoyGatewayNamespace,
-		},
-		// Collect logs from EnvoyGateway system namespace
-		&tbcollect.CollectLogs{
-			Collector: &troubleshootv1b2.Logs{
-				Name:      "pod-logs",
-				Namespace: collectOpts.envoyGatewayNamespace,
-			},
-			ClientConfig: restConfig,
-			BundlePath:   bundlePath,
-			Context:      ctx,
-		},
-		// Collect prometheus metrics from EnvoyGateway system namespace
-		collect.PrometheusMetric{
-			BundlePath:   bundlePath,
-			ClientConfig: restConfig,
-			Namespace:    collectOpts.envoyGatewayNamespace,
-		},
-		// Collect config dump from EnvoyGateway system namespace
-		collect.ConfigDump{
-			BundlePath:   bundlePath,
-			ClientConfig: restConfig,
-			Namespace:    collectOpts.envoyGatewayNamespace,
-		},
-	}
-	total := len(collectors)
-	allCollectedData := make(map[string][]byte)
-	for i, collector := range collectors {
-		res, err := collector.Collect(progressChan)
-		if err != nil {
-			progressChan <- fmt.Errorf("failed to run collector: %s: %w", collector.Title(), err)
-			progressChan <- tbcollect.CollectProgress{
-				CurrentName:    collector.Title(),
-				CurrentStatus:  "failed",
-				CompletedCount: i + 1,
-				TotalCount:     total,
-			}
-			continue
-		}
-		for k, v := range res {
-			allCollectedData[k] = v
-		}
-	}
-	result = allCollectedData
-
-	filename := fmt.Sprintf("%s.tar.gz", basename)
-	return result.ArchiveSupportBundle(bundlePath, filename)
+	result := tb.CollectResult(ctx, restConfig, bundlePath, collectOpts.envoyGatewayNamespace)
+	return result.ArchiveSupportBundle(bundlePath, fmt.Sprintf("%s.tar.gz", basename))
 }
 
 func waitForSignal(c context.Context, cancel context.CancelFunc) {

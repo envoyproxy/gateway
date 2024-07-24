@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 	"sigs.k8s.io/gateway-api/pkg/features"
 
 	"github.com/envoyproxy/gateway/test/e2e"
@@ -27,18 +28,19 @@ import (
 func TestMergeGateways(t *testing.T) {
 	flag.Parse()
 
-	c := kubetest.NewClient(t)
+	c, cfg := kubetest.NewClient(t)
 
 	if flags.RunTest != nil && *flags.RunTest != "" {
-		t.Logf("Running E2E test %s with %s GatewayClass\n cleanup: %t\n debug: %t",
+		tlog.Logf(t, "Running E2E test %s with %s GatewayClass\n cleanup: %t\n debug: %t",
 			*flags.RunTest, *flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug)
 	} else {
-		t.Logf("Running E2E tests with %s GatewayClass\n cleanup: %t\n debug: %t",
+		tlog.Logf(t, "Running E2E tests with %s GatewayClass\n cleanup: %t\n debug: %t",
 			*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug)
 	}
 
 	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 		Client:               c,
+		RestConfig:           cfg,
 		GatewayClassName:     *flags.GatewayClassName,
 		Debug:                *flags.ShowDebug,
 		CleanupBaseResources: *flags.CleanupBaseResources,
@@ -58,7 +60,7 @@ func TestMergeGateways(t *testing.T) {
 	cSuite.Applier.GatewayClass = *flags.GatewayClassName
 	cSuite.ControllerName = kubernetes.GWCMustHaveAcceptedConditionTrue(t, cSuite.Client, cSuite.TimeoutConfig, cSuite.GatewayClassName)
 
-	t.Logf("Running %d MergeGateways tests", len(tests.MergeGatewaysTests))
+	tlog.Logf(t, "Running %d MergeGateways tests", len(tests.MergeGatewaysTests))
 	err = cSuite.Run(t, tests.MergeGatewaysTests)
 	if err != nil {
 		t.Fatalf("Failed to run MergeGateways tests: %v", err)

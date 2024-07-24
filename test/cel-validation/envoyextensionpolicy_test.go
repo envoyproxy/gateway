@@ -407,6 +407,25 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				"spec.extProc[0].processingMode.request.body: Unsupported value: \"not-a-body-mode\": supported values: \"Streamed\", \"Buffered\", \"BufferedPartial\"",
 			},
 		},
+		{
+			desc: "target selectors without targetRefs or targetRef",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group: ptr.To(gwapiv1a2.Group("gateway.networking.k8s.io")),
+								Kind:  "HTTPRoute",
+								MatchLabels: map[string]string{
+									"eg/namespace": "reference-apps",
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
 	}
 
 	for _, tc := range cases {
