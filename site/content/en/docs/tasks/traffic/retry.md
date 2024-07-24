@@ -60,7 +60,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: backend
-    namespace: default
   retry:
     numRetries: 5
     perRetry:
@@ -92,7 +91,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: backend
-    namespace: default
   retry:
     numRetries: 5
     perRetry:
