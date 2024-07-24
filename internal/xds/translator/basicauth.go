@@ -37,7 +37,7 @@ func (*basicAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTP
 	if irListener == nil {
 		return errors.New("ir listener is nil")
 	}
-	if hcmContainsFilter(mgr, egv1a1.EnvoyFilterBasicAuthn.String()) {
+	if hcmContainsFilter(mgr, egv1a1.EnvoyFilterBasicAuth.String()) {
 		return nil
 	}
 
@@ -89,7 +89,7 @@ func buildHCMBasicAuthFilter(basicAuth *ir.BasicAuth) (*hcmv3.HttpFilter, error)
 	}
 
 	return &hcmv3.HttpFilter{
-		Name: egv1a1.EnvoyFilterBasicAuthn.String(),
+		Name: egv1a1.EnvoyFilterBasicAuth.String(),
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: basicAuthAny,
 		},
@@ -121,11 +121,11 @@ func (*basicAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error 
 	)
 
 	perFilterCfg = route.GetTypedPerFilterConfig()
-	if _, ok := perFilterCfg[egv1a1.EnvoyFilterBasicAuthn.String()]; ok {
+	if _, ok := perFilterCfg[egv1a1.EnvoyFilterBasicAuth.String()]; ok {
 		// This should not happen since this is the only place where the filter
 		// config is added in a route.
 		return fmt.Errorf("route already contains filter config: %s, %+v",
-			egv1a1.EnvoyFilterBasicAuthn.String(), route)
+			egv1a1.EnvoyFilterBasicAuth.String(), route)
 	}
 
 	// Overwrite the HCM level filter config with the per route filter config.
@@ -141,7 +141,7 @@ func (*basicAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error 
 	if perFilterCfg == nil {
 		route.TypedPerFilterConfig = make(map[string]*anypb.Any)
 	}
-	route.TypedPerFilterConfig[egv1a1.EnvoyFilterBasicAuthn.String()] = basicAuthAny
+	route.TypedPerFilterConfig[egv1a1.EnvoyFilterBasicAuth.String()] = basicAuthAny
 
 	return nil
 }

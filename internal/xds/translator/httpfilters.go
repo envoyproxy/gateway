@@ -108,7 +108,7 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 2
 	case isFilterType(filter, egv1a1.EnvoyFilterExtAuthz):
 		order = 3
-	case isFilterType(filter, egv1a1.EnvoyFilterBasicAuthn):
+	case isFilterType(filter, egv1a1.EnvoyFilterBasicAuth):
 		order = 4
 	case isFilterType(filter, egv1a1.EnvoyFilterOAuth2):
 		order = 5

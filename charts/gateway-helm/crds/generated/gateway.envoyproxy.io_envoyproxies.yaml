@@ -242,7 +242,7 @@ spec:
                   - envoy.filters.http.ext_authz
 
 
-                  - envoy.filters.http.basic_authn
+                  - envoy.filters.http.basic_auth
 
 
                   - envoy.filters.http.oauth2
@@ -283,7 +283,7 @@ spec:
                       - envoy.filters.http.fault
                       - envoy.filters.http.cors
                       - envoy.filters.http.ext_authz
-                      - envoy.filters.http.basic_authn
+                      - envoy.filters.http.basic_auth
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
                       - envoy.filters.http.ext_proc
@@ -301,7 +301,7 @@ spec:
                       - envoy.filters.http.fault
                       - envoy.filters.http.cors
                       - envoy.filters.http.ext_authz
-                      - envoy.filters.http.basic_authn
+                      - envoy.filters.http.basic_auth
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
                       - envoy.filters.http.ext_proc
@@ -317,7 +317,7 @@ spec:
                       - envoy.filters.http.fault
                       - envoy.filters.http.cors
                       - envoy.filters.http.ext_authz
-                      - envoy.filters.http.basic_authn
+                      - envoy.filters.http.basic_auth
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
                       - envoy.filters.http.ext_proc
