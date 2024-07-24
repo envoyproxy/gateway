@@ -7,8 +7,7 @@ used on a Route rule. This MUST NOT be used on the same Route rule as a HTTPRequ
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+{{< boilerplate prerequisites >}}
 
 ## Rewrite URL Prefix Path
 
