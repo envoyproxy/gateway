@@ -4,8 +4,6 @@ title: "Use egctl"
 
 `egctl` is a command line tool to provide additional functionality for Envoy Gateway users.
 
-
-
 ## egctl experimental translate
 
 This subcommand allows users to translate from an input configuration type to an output configuration type.

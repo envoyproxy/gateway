@@ -6,10 +6,9 @@ title: "TCP Routing"
 connections on the port specified by the listener to a set of backends specified by the TCPRoute. To learn more about
 HTTP routing, refer to the [Gateway API documentation][].
 
-## Installation
+## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+{{< boilerplate prerequisites >}}
 
 ## Configuration
 
