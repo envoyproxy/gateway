@@ -74,7 +74,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
 EOF
 ```
 
@@ -94,7 +93,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
 ```
 
 {{% /tab %}}
