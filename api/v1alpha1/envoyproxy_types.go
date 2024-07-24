@@ -174,8 +174,12 @@ type FilterPosition struct {
 type EnvoyFilter string
 
 const (
+	// EnvoyFilterHealthCheck defines the Envoy HTTP health check filter.
+	EnvoyFilterHealthCheck EnvoyFilter = "envoy.filters.http.health_check"
+
 	// EnvoyFilterFault defines the Envoy HTTP fault filter.
 	EnvoyFilterFault EnvoyFilter = "envoy.filters.http.fault"
+
 	// EnvoyFilterCORS defines the Envoy HTTP CORS filter.
 	EnvoyFilterCORS EnvoyFilter = "envoy.filters.http.cors"
 
@@ -197,14 +201,14 @@ const (
 	// EnvoyFilterWasm defines the Envoy HTTP WebAssembly filter.
 	EnvoyFilterWasm EnvoyFilter = "envoy.filters.http.wasm"
 
+	// EnvoyFilterRBAC defines the Envoy RBAC filter.
+	EnvoyFilterRBAC EnvoyFilter = "envoy.filters.http.rbac"
+
 	// EnvoyFilterLocalRateLimit defines the Envoy HTTP local rate limit filter.
 	EnvoyFilterLocalRateLimit EnvoyFilter = "envoy.filters.http.local_ratelimit"
 
 	// EnvoyFilterRateLimit defines the Envoy HTTP rate limit filter.
 	EnvoyFilterRateLimit EnvoyFilter = "envoy.filters.http.ratelimit"
-
-	// EnvoyFilterRBAC defines the Envoy RBAC filter.
-	EnvoyFilterRBAC EnvoyFilter = "envoy.filters.http.rbac"
 
 	// EnvoyFilterRouter defines the Envoy HTTP router filter.
 	EnvoyFilterRouter EnvoyFilter = "envoy.filters.http.router"

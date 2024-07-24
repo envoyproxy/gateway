@@ -100,29 +100,29 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 	// Important: After adding new filter types, don't forget to modify the validation rule of the EnvoyFilter type in the API
 	// TODO (zhaohuabing): remove duplicate filter type constants and replace them with the type constants in the api package
 	switch {
-	case isFilterType(filter, wellknown.HealthCheck):
+	case isFilterType(filter, egv1a1.EnvoyFilterHealthCheck):
 		order = 0
-	case isFilterType(filter, wellknown.Fault):
+	case isFilterType(filter, egv1a1.EnvoyFilterFault):
 		order = 1
-	case isFilterType(filter, wellknown.CORS):
+	case isFilterType(filter, egv1a1.EnvoyFilterCORS):
 		order = 2
-	case isFilterType(filter, extAuthFilter):
+	case isFilterType(filter, egv1a1.EnvoyFilterExtAuthz):
 		order = 3
-	case isFilterType(filter, basicAuthFilter):
+	case isFilterType(filter, egv1a1.EnvoyFilterBasicAuthn):
 		order = 4
-	case isFilterType(filter, oauth2Filter):
+	case isFilterType(filter, egv1a1.EnvoyFilterOAuth2):
 		order = 5
-	case isFilterType(filter, jwtAuthn):
+	case isFilterType(filter, egv1a1.EnvoyFilterJWTAuthn):
 		order = 6
-	case isFilterType(filter, extProcFilter):
+	case isFilterType(filter, egv1a1.EnvoyFilterExtProc):
 		order = 7 + mustGetFilterIndex(filter.Name)
-	case isFilterType(filter, wasmFilter):
+	case isFilterType(filter, egv1a1.EnvoyFilterWasm):
 		order = 100 + mustGetFilterIndex(filter.Name)
-	case isFilterType(filter, string(egv1a1.EnvoyFilterRBAC)):
+	case isFilterType(filter, egv1a1.EnvoyFilterRBAC):
 		order = 201
-	case isFilterType(filter, localRateLimitFilter):
+	case isFilterType(filter, egv1a1.EnvoyFilterLocalRateLimit):
 		order = 202
-	case isFilterType(filter, wellknown.HTTPRateLimit):
+	case isFilterType(filter, egv1a1.EnvoyFilterRateLimit):
 		order = 203
 	case isFilterType(filter, wellknown.Router):
 		order = 204
@@ -188,7 +188,7 @@ func sortHTTPFilters(filters []*hcmv3.HttpFilter, filterOrder []egv1a1.FilterPos
 		// The real filter name is a generated name prefixed with the filter type,
 		// for example,"envoy.filters.http.oauth2/securitypolicy/default/policy-for-http-route-1".
 		for element := l.Front(); element != nil; element = element.Next() {
-			if isFilterType(element.Value.(*hcmv3.HttpFilter), filterType) {
+			if isFilterType(element.Value.(*hcmv3.HttpFilter), egv1a1.EnvoyFilter(filterType)) {
 				currentFilters = append(currentFilters, element)
 			}
 		}
@@ -203,7 +203,7 @@ func sortHTTPFilters(filters []*hcmv3.HttpFilter, filterOrder []egv1a1.FilterPos
 		// specified in the `FilterOrder.Before` field.
 		case filterOrder[i].Before != nil:
 			for element := l.Front(); element != nil; element = element.Next() {
-				if isFilterType(element.Value.(*hcmv3.HttpFilter), string(*filterOrder[i].Before)) {
+				if isFilterType(element.Value.(*hcmv3.HttpFilter), *filterOrder[i].Before) {
 					for _, filter := range currentFilters {
 						l.MoveBefore(filter, element)
 					}
@@ -215,7 +215,7 @@ func sortHTTPFilters(filters []*hcmv3.HttpFilter, filterOrder []egv1a1.FilterPos
 		case filterOrder[i].After != nil:
 			var afterFilter *list.Element
 			for element := l.Front(); element != nil; element = element.Next() {
-				if isFilterType(element.Value.(*hcmv3.HttpFilter), string(*filterOrder[i].After)) {
+				if isFilterType(element.Value.(*hcmv3.HttpFilter), *filterOrder[i].After) {
 					afterFilter = element
 				}
 			}
@@ -300,11 +300,11 @@ func patchRouteWithPerRouteConfig(
 }
 
 // isFilterType returns true if the filter is the provided filter type.
-func isFilterType(filter *hcmv3.HttpFilter, filterType string) bool {
+func isFilterType(filter *hcmv3.HttpFilter, filterType egv1a1.EnvoyFilter) bool {
 	// Multiple filters of the same types are added to the HCM filter chain, one for each
 	// route. The filter name is prefixed with the filter type, for example:
 	// "envoy.filters.http.oauth2_first-route".
-	return strings.HasPrefix(filter.Name, filterType)
+	return strings.HasPrefix(filter.Name, string(filterType))
 }
 
 // mustGetFilterIndex returns the index of the filter in its filter type.
