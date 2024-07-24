@@ -39,7 +39,7 @@ Once the above steps are done and all the pods are up in both the clusters. We a
 Install the Gateway API CRDs and Envoy Gateway in cluster1:
 
 ```shell
-helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --create-namespace --kubeconfig output/kubeconfigs/kind-config-cluster1
+helm install eg oci://docker.io/envoyproxy/gateway-helm --version {{< helm-version >}} -n envoy-gateway-system --create-namespace --kubeconfig output/kubeconfigs/kind-config-cluster1
 ```
 
 Wait for Envoy Gateway to become available:

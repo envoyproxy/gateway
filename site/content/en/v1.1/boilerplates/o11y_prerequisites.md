@@ -10,5 +10,5 @@ By default, the [OpenTelemetry Collector](https://opentelemetry.io/docs/collecto
 Install the add-ons Helm Chart:
 
 ```shell
-helm install eg-addons oci://docker.io/envoyproxy/gateway-addons-helm --version v0.0.0-latest --set opentelemetry-collector.enabled=true -n monitoring --create-namespace
+helm install eg-addons oci://docker.io/envoyproxy/gateway-addons-helm --version {{< helm-version >}} --set opentelemetry-collector.enabled=true -n monitoring --create-namespace
 ```
