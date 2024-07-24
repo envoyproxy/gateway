@@ -44,8 +44,8 @@ backendTrafficPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Unable to target HTTPRoute httproute-1, another BackendTrafficPolicy has already
-          attached to it
+        message: Unable to target HTTPRoute httproute-1, another BackendTrafficPolicy 
+          has already attached to it
         reason: Conflicted
         status: "False"
         type: Accepted
@@ -152,8 +152,8 @@ backendTrafficPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Unable to target Gateway gateway-1, another BackendTrafficPolicy has already
-          attached to it
+        message: Unable to target Gateway gateway-1, another BackendTrafficPolicy 
+          has already attached to it
         reason: Conflicted
         status: "False"
         type: Accepted
