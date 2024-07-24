@@ -17,12 +17,9 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
-)
-
-const (
-	extAuthFilter = "envoy.filters.http.ext_authz"
 )
 
 func init() {
@@ -94,7 +91,7 @@ func buildHCMExtAuthFilter(extAuth *ir.ExtAuth) (*hcmv3.HttpFilter, error) {
 }
 
 func extAuthFilterName(extAuth *ir.ExtAuth) string {
-	return perRouteFilterName(extAuthFilter, extAuth.Name)
+	return perRouteFilterName(egv1a1.EnvoyFilterExtAuthz, extAuth.Name)
 }
 
 func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {

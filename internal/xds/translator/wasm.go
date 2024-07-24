@@ -17,12 +17,12 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 const (
-	wasmFilter            = "envoy.filters.http.wasm"
 	vmRuntimeV8           = "envoy.wasm.runtime.v8"
 	wasmHTTPServerCluster = "wasm_cluster"
 )
@@ -99,7 +99,7 @@ func buildHCMWasmFilter(wasm ir.Wasm) (*hcmv3.HttpFilter, error) {
 }
 
 func wasmFilterName(wasm ir.Wasm) string {
-	return perRouteFilterName(wasmFilter, wasm.Name)
+	return perRouteFilterName(egv1a1.EnvoyFilterWasm, wasm.Name)
 }
 
 func wasmConfig(wasm ir.Wasm) (*wasmfilterv3.Wasm, error) {
