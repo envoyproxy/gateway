@@ -442,13 +442,16 @@ func expectedEnvoySecurityContext(containerSpec *egv1a1.KubernetesContainerSpec)
 		return containerSpec.SecurityContext
 	}
 
-	return resource.DefaultSecurityContext()
+	sc := resource.DefaultSecurityContext()
+	// Envoy container needs to write to the log file/UDS socket.
+	sc.ReadOnlyRootFilesystem = nil
+	return sc
 }
 
 func expectedShutdownManagerSecurityContext() *corev1.SecurityContext {
 	sc := resource.DefaultSecurityContext()
 	// ShutdownManger creates a file to indicate the connection drain process is completed,
 	// so it needs file write permission.
-	sc.ReadOnlyRootFilesystem = ptr.To(false)
+	sc.ReadOnlyRootFilesystem = nil
 	return sc
 }

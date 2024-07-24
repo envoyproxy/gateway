@@ -346,7 +346,6 @@ spec:
             drop:
             - ALL
           privileged: false
-          readOnlyRootFilesystem: false
           runAsNonRoot: true
           seccompProfile:
             type: RuntimeDefault
