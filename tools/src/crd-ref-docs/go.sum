@@ -10,6 +10,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/elastic/crd-ref-docs v0.0.13-0.20240413123740-ea9fcaa0230f h1:cE1CF4Bfi+9gvaNz35jOsp3tFJVm/mFr88szZ41FG8Q=
 github.com/elastic/crd-ref-docs v0.0.13-0.20240413123740-ea9fcaa0230f/go.mod h1:X83mMBdJt05heJUYiS3T0yJ/JkCuliuhSUNav5Gjo/U=
+github.com/elastic/crd-ref-docs v0.0.13-0.20240723135120-56876bccac3a h1:+sHMdth53bKHbct/BqfYIhYXGKhIZJDv2PhS9Gfw8xg=
+github.com/elastic/crd-ref-docs v0.0.13-0.20240723135120-56876bccac3a/go.mod h1:X83mMBdJt05heJUYiS3T0yJ/JkCuliuhSUNav5Gjo/U=
 github.com/fatih/color v1.16.0 h1:zmkK9Ngbjj+K0yRhTVONQh1p/HknKYSlNT+vZCzyokM=
 github.com/fatih/color v1.16.0/go.mod h1:fL2Sau1YI5c0pdGEVCbKQbLXB6edEj1ZgiY4NijnWvE=
 github.com/fsnotify/fsnotify v1.7.0 h1:8JEhPFa5W2WU7YfeZzPNqzMP6Lwt7L2715Ggo0nosvA=
