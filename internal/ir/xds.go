@@ -581,9 +581,6 @@ type DNS struct {
 // SessionPersistence defines the desired state of SessionPersistence.
 // +k8s:deepcopy-gen=true
 type SessionPersistence struct {
-	// SessionName defines the name of the persistent session token.
-	SessionName string `json:"sessionName,omitempty"`
-
 	// Cookie defines the configuration for cookie-based session persistence.
 	// Either Cookie or Header must be non-empty.
 	Cookie *CookieBasedSessionPersistence `json:"cookie,omitempty" yaml:"cookie,omitempty"`
@@ -595,12 +592,18 @@ type SessionPersistence struct {
 // CookieBasedSessionPersistence defines the configuration for cookie-based session persistence.
 // +k8s:deepcopy-gen=true
 type CookieBasedSessionPersistence struct {
+	// Name defines the name of the persistent session token.
+	Name string `json:"sessionName,omitempty"`
+
 	TTL *metav1.Duration `json:"ttl,omitempty" yaml:"ttl,omitempty"`
 }
 
 // HeaderBasedSessionPersistence defines the configuration for header-based session persistence.
 // +k8s:deepcopy-gen=true
-type HeaderBasedSessionPersistence struct{}
+type HeaderBasedSessionPersistence struct {
+	// Name defines the name of the persistent session token.
+	Name string `json:"sessionName,omitempty"`
+}
 
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.
 // +k8s:deepcopy-gen=true

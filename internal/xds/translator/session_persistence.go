@@ -64,14 +64,14 @@ func (s *sessionPersistence) patchHCM(mgr *hcmv3.HttpConnectionManager, irListen
 		case sp.Cookie != nil:
 			cfg = &cookiev3.CookieBasedSessionState{
 				Cookie: &httpv3.Cookie{
-					Name: sp.SessionName,
+					Name: sp.Header.Name,
 					Path: routePathToCookiePath(route.PathMatch),
 					Ttl:  durationpb.New(sp.Cookie.TTL.Duration),
 				},
 			}
 		case sp.Header != nil:
 			cfg = &headerv3.HeaderBasedSessionState{
-				Name: sp.SessionName,
+				Name: sp.Header.Name,
 			}
 		}
 
