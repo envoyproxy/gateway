@@ -122,6 +122,8 @@ type EnvoyProxySpec struct {
 	//
 	// - envoy.filters.http.router
 	//
+	// Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain.
+	//
 	// +optional
 	FilterOrder []FilterPosition `json:"filterOrder,omitempty"`
 	// BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.
@@ -168,7 +170,7 @@ type FilterPosition struct {
 }
 
 // EnvoyFilter defines the type of Envoy HTTP filter.
-// +kubebuilder:validation:Enum=envoy.filters.http.cors;envoy.filters.http.ext_authz;envoy.filters.http.basic_authn;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.fault;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.wasm;envoy.filters.http.ext_proc;envoy.filters.http.rbac
+// +kubebuilder:validation:Enum=envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.ext_authz;envoy.filters.http.basic_authn;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit
 type EnvoyFilter string
 
 const (

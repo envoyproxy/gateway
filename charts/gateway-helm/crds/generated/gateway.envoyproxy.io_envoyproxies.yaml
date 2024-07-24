@@ -264,6 +264,9 @@ spec:
 
 
                   - envoy.filters.http.router
+
+
+                  Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain.
                 items:
                   description: FilterPosition defines the position of an Envoy HTTP
                     filter in the filter chain.
@@ -273,49 +276,52 @@ spec:
                         After defines the filter that should come after the filter.
                         Only one of Before or After must be set.
                       enum:
+                      - envoy.filters.http.health_check
+                      - envoy.filters.http.fault
                       - envoy.filters.http.cors
                       - envoy.filters.http.ext_authz
                       - envoy.filters.http.basic_authn
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
-                      - envoy.filters.http.fault
+                      - envoy.filters.http.ext_proc
+                      - envoy.filters.http.wasm
+                      - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
-                      - envoy.filters.http.wasm
-                      - envoy.filters.http.ext_proc
-                      - envoy.filters.http.rbac
                       type: string
                     before:
                       description: |-
                         Before defines the filter that should come before the filter.
                         Only one of Before or After must be set.
                       enum:
+                      - envoy.filters.http.health_check
+                      - envoy.filters.http.fault
                       - envoy.filters.http.cors
                       - envoy.filters.http.ext_authz
                       - envoy.filters.http.basic_authn
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
-                      - envoy.filters.http.fault
+                      - envoy.filters.http.ext_proc
+                      - envoy.filters.http.wasm
+                      - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
-                      - envoy.filters.http.wasm
-                      - envoy.filters.http.ext_proc
-                      - envoy.filters.http.rbac
                       type: string
                     name:
                       description: Name of the filter.
                       enum:
+                      - envoy.filters.http.health_check
+                      - envoy.filters.http.fault
                       - envoy.filters.http.cors
                       - envoy.filters.http.ext_authz
                       - envoy.filters.http.basic_authn
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
-                      - envoy.filters.http.fault
+                      - envoy.filters.http.ext_proc
+                      - envoy.filters.http.wasm
+                      - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
-                      - envoy.filters.http.wasm
-                      - envoy.filters.http.ext_proc
-                      - envoy.filters.http.rbac
                       type: string
                   required:
                   - name

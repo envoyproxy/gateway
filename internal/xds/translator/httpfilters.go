@@ -97,6 +97,7 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 	// Set a rational order for all the filters.
 	// When the fault filter is configured to be at the first, the computation of
 	// the remaining filters is skipped when rejected early
+	// Important: After adding new filter types, don't forget to modify the validation rule of the EnvoyFilter type in the API
 	// TODO (zhaohuabing): remove duplicate filter type constants and replace them with the type constants in the api package
 	switch {
 	case isFilterType(filter, wellknown.HealthCheck):
