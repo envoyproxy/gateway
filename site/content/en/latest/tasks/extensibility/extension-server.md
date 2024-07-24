@@ -37,8 +37,7 @@ Authentication.
 
 ### Prerequisites
 
-* Follow the steps from the [Quickstart](../quickstart) task to install Envoy Gateway and the example manifest.
-  Before proceeding, you should be able to query the example backend using HTTP.
+{{< boilerplate prerequisites >}}
 
 ### Build and run the example Extension Server
 

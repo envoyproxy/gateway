@@ -8,8 +8,7 @@ Service. To learn more about GatewayClass and ParametersRef, please refer to [Ga
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+{{< boilerplate prerequisites >}}
 
 Before you start, you need to add `ParametersRef` in GatewayClass, and refer to EnvoyProxy Config:
 
