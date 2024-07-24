@@ -199,7 +199,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			Args:                     args,
 			Env:                      expectedContainerEnv(containerSpec),
 			Resources:                *containerSpec.Resources,
-			SecurityContext:          expectedSecurityContext(containerSpec),
+			SecurityContext:          expectedEnvoySecurityContext(containerSpec),
 			Ports:                    ports,
 			VolumeMounts:             expectedContainerVolumeMounts(containerSpec),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
@@ -296,7 +296,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 					},
 				},
 			},
-			SecurityContext: resource.DefaultSecurityContext(),
+			SecurityContext: expectedShutdownManagerSecurityContext(),
 		},
 	}
 
@@ -437,10 +437,18 @@ func calculateMaxHeapSizeBytes(envoyResourceRequirements *corev1.ResourceRequire
 	return 0
 }
 
-func expectedSecurityContext(containerSpec *egv1a1.KubernetesContainerSpec) *corev1.SecurityContext {
+func expectedEnvoySecurityContext(containerSpec *egv1a1.KubernetesContainerSpec) *corev1.SecurityContext {
 	if containerSpec != nil && containerSpec.SecurityContext != nil {
 		return containerSpec.SecurityContext
 	}
 
 	return resource.DefaultSecurityContext()
+}
+
+func expectedShutdownManagerSecurityContext() *corev1.SecurityContext {
+	sc := resource.DefaultSecurityContext()
+	// ShutdownManger creates a file to indicate the connection drain process is completed,
+	// so it needs file write permission.
+	sc.ReadOnlyRootFilesystem = ptr.To(false)
+	return sc
 }
