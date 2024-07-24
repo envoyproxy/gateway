@@ -72,7 +72,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
   connection:
     connectionLimit:
       value: 5    
@@ -95,7 +94,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
   connection:
     connectionLimit:
       value: 5    

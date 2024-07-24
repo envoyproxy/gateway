@@ -36,7 +36,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
   tcpKeepalive:
     idleTime: 20m
     interval: 60s
@@ -60,7 +59,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
   tcpKeepalive:
     idleTime: 20m
     interval: 60s
@@ -218,7 +216,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
   enableProxyProtocol: true
 EOF
 ```
@@ -239,7 +236,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
   enableProxyProtocol: true
 ```
 
@@ -357,7 +353,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
   clientIPDetection:
     xForwardedFor:
       numTrustedHops: 2
@@ -380,7 +375,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
   clientIPDetection:
     xForwardedFor:
       numTrustedHops: 2

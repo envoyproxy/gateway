@@ -47,7 +47,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-ratelimit
-    namespace: default
   rateLimit:
     type: Local
     local:
@@ -77,7 +76,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-ratelimit
-    namespace: default
   rateLimit:
     type: Local
     local:
@@ -265,7 +263,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-ratelimit
-    namespace: default
   rateLimit:
     type: Local
     local:
@@ -291,7 +288,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-ratelimit
-    namespace: default
   rateLimit:
     type: Local
     local:
