@@ -13,14 +13,7 @@ This instantiated resource can be linked to a [Gateway][Gateway] and [HTTPRoute]
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
-
-Verify the Gateway status:
-
-```shell
-kubectl get gateway/eg -o yaml
-```
+{{< boilerplate prerequisites >}}
 
 ## HTTP External Authorization Service
 
