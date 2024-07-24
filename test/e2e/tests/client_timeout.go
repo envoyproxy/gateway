@@ -18,6 +18,7 @@ import (
 	httputils "sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 )
 
 func init() {
@@ -58,7 +59,7 @@ var ClientTimeoutTest = suite.ConformanceTest{
 					if http.StatusGatewayTimeout == resp.StatusCode {
 						return true
 					} else {
-						t.Logf("response status code: %d, (after %v) ", resp.StatusCode, elapsed)
+						tlog.Logf(t, "response status code: %d, (after %v) ", resp.StatusCode, elapsed)
 						return false
 					}
 				})

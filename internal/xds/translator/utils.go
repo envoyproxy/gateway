@@ -19,6 +19,7 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 	"k8s.io/utils/ptr"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
@@ -115,7 +116,7 @@ func enableFilterOnRoute(route *routev3.Route, filterName string) error {
 }
 
 // perRouteFilterName generates a unique filter name for the provided filterType and configName.
-func perRouteFilterName(filterType, configName string) string {
+func perRouteFilterName(filterType egv1a1.EnvoyFilter, configName string) string {
 	return fmt.Sprintf("%s/%s", filterType, configName)
 }
 

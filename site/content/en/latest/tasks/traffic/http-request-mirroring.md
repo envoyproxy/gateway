@@ -6,10 +6,9 @@ The [HTTPRoute][] resource allows one or more [backendRefs][] to be provided. Re
 
 When requests are made to a `HTTPRoute` that uses a `HTTPRequestMirrorFilter`, the response will never come from the `backendRef` defined in the filter. Responses from the mirror `backendRef` are always ignored.
 
-## Installation
+## Prerequisites
 
-Follow the steps from the [Quickstart][] to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+{{< boilerplate prerequisites >}}
 
 ## Mirroring the Traffic
 
@@ -440,7 +439,6 @@ spec:
 Error from server: error when creating "STDIN": admission webhook "validate.gateway.networking.k8s.io" denied the request: spec.rules[0].filters: Invalid value: "RequestMirror": cannot be used multiple times in the same rule
 ```
 
-[Quickstart]: ../../quickstart/
 [Traffic Splitting]: ../http-traffic-splitting/
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
 [backendRefs]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.BackendRef

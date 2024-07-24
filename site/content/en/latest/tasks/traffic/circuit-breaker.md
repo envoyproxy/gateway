@@ -20,9 +20,10 @@ This instantiated resource can be linked to a [Gateway][], [HTTPRoute][] or [GRP
 
 ### Install Envoy Gateway
 
-* Follow the installation step from the [Quickstart](../../quickstart) to install Envoy Gateway and sample resources.
+{{< boilerplate prerequisites >}}
 
 ### Install the hey load testing tool
+
 * The `hey` CLI will be used to generate load and measure response times. Follow the installation instruction from the [Hey project] docs.   
 
 ## Test and customize circuit breaker settings
@@ -76,7 +77,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: backend
-    namespace: default
   circuitBreaker:
     maxPendingRequests: 0
     maxParallelRequests: 10
@@ -98,7 +98,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: backend
-    namespace: default
   circuitBreaker:
     maxPendingRequests: 0
     maxParallelRequests: 10

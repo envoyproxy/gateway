@@ -18,7 +18,7 @@ import (
 )
 
 func TestBenchmark(t *testing.T) {
-	cli := kubetest.NewClient(t)
+	cli, _ := kubetest.NewClient(t)
 
 	// Parse benchmark options.
 	flag.Parse()

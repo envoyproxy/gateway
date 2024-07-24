@@ -4,7 +4,7 @@
 
 {{- /* check if the page is under versioned path */ -}}
 {{- $url_prefix := (index (split $.Page.File.Dir "/") 0) -}}
-{{- if or (eq $url_prefix "latest") (strings.HasPrefix $url_prefix "v1.") -}}
+{{- if or (eq $url_prefix "docs") (eq $url_prefix "latest") (strings.HasPrefix $url_prefix "v1.") -}}
     {{- $boilerplates_path = printf "/%s/boilerplates" $url_prefix -}}
 {{- end -}}
 

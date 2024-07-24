@@ -278,6 +278,10 @@ enable = true
   url = "/latest"
 
 [[params.versions]]
+  version = "v1.1"
+  url = "/v1.1"
+
+[[params.versions]]
   version = "v1.0"
   url = "/docs"
 
