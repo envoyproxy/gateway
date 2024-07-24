@@ -3335,6 +3335,7 @@ _Appears in:_
 | `jwt` | _[JWT](#jwt)_ |  false  | JWT defines the configuration for JSON Web Token (JWT) authentication. |
 | `oidc` | _[OIDC](#oidc)_ |  false  | OIDC defines the configuration for the OpenID Connect (OIDC) authentication. |
 | `extAuth` | _[ExtAuth](#extauth)_ |  false  | ExtAuth defines the configuration for External Authorization. |
+| `authorization` | _[Authorization](#authorization)_ |  false  | Authorization defines the authorization configuration. |
 
 
 #### ServiceExternalTrafficPolicy
