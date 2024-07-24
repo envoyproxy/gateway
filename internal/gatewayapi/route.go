@@ -320,7 +320,6 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 			return nil, fmt.Errorf("idle timeout is not supported in envoy gateway")
 		}
 
-		var sessionPersistence *ir.SessionPersistence
 		if rule.SessionPersistence.Type == nil || // Cookie-based session persistence is default.
 			*rule.SessionPersistence.Type == gwapiv1.CookieBasedSessionPersistence {
 			sessionPersistence = &ir.SessionPersistence{
