@@ -64,7 +64,7 @@ require (
 
 require (
 	github.com/docker/docker v27.0.3+incompatible
-	github.com/replicatedhq/troubleshoot v0.95.1-0.20240707233129-f5f02f5a807c
+	github.com/replicatedhq/troubleshoot v0.95.1
 )
 
 require (
