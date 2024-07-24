@@ -230,6 +230,9 @@ spec:
                   Default filter order is:
 
 
+                  - envoy.filters.http.health_check
+
+
                   - envoy.filters.http.fault
 
 

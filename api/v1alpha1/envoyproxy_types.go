@@ -98,6 +98,8 @@ type EnvoyProxySpec struct {
 	// If unspecified, the default filter order is applied.
 	// Default filter order is:
 	//
+	// - envoy.filters.http.health_check
+	//
 	// - envoy.filters.http.fault
 	//
 	// - envoy.filters.http.cors
