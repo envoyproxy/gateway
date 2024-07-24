@@ -337,8 +337,10 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 				sessionPersistence.Cookie.TTL = &metav1.Duration{Duration: ttl}
 			}
 		} else if *rule.SessionPersistence.Type == gwapiv1.HeaderBasedSessionPersistence {
-			sessionPersistence.Header = &ir.HeaderBasedSessionPersistence{
-				Name: *rule.SessionPersistence.SessionName,
+			sessionPersistence = &ir.SessionPersistence{
+				Header: &ir.HeaderBasedSessionPersistence{
+					Name: *rule.SessionPersistence.SessionName,
+				},
 			}
 		} else {
 			// Unknown session persistence type is specified.

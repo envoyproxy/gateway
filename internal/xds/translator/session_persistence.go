@@ -7,6 +7,7 @@ package translator
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -64,7 +65,7 @@ func (s *sessionPersistence) patchHCM(mgr *hcmv3.HttpConnectionManager, irListen
 		case sp.Cookie != nil:
 			cfg = &cookiev3.CookieBasedSessionState{
 				Cookie: &httpv3.Cookie{
-					Name: sp.Header.Name,
+					Name: sp.Cookie.Name,
 					Path: routePathToCookiePath(route.PathMatch),
 					Ttl:  durationpb.New(sp.Cookie.TTL.Duration),
 				},
@@ -77,11 +78,12 @@ func (s *sessionPersistence) patchHCM(mgr *hcmv3.HttpConnectionManager, irListen
 
 		cfgAny, err := anypb.New(cfg)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to marshal %s config: %w", sessionPersistenceFilter, err)
 		}
 
 		mgr.HttpFilters = append(mgr.HttpFilters, &hcmv3.HttpFilter{
-			Name: sessionPersistenceFilter,
+			Name:     perRouteFilterName(sessionPersistenceFilter, route.Name),
+			Disabled: true,
 			ConfigType: &hcmv3.HttpFilter_TypedConfig{
 				TypedConfig: cfgAny,
 			},
@@ -126,6 +128,20 @@ func getLongestNonRegexPrefix(path string) string {
 
 // patchRoute patches the provide Route with a filter's Route level configuration.
 func (s *sessionPersistence) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
+	if route == nil {
+		return errors.New("xds route is nil")
+	}
+	if irRoute == nil {
+		return errors.New("ir route is nil")
+	}
+	if irRoute.SessionPersistence == nil {
+		return nil
+	}
+
+	if err := enableFilterOnRoute(route, perRouteFilterName(sessionPersistenceFilter, route.Name)); err != nil {
+		return err
+	}
+
 	return nil
 }
 

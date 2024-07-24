@@ -13,8 +13,9 @@ http:
     pathMatch:
       safeRegex: "/v1/.*"
     sessionPersistence:
-      sessionName: "session1"
-      header: {}
+      header: {
+        name: "session1"
+      }
     destination:
       name: "regex-route-dest"
       settings:
@@ -26,8 +27,8 @@ http:
     pathMatch:
       safeRegex: "/v1/.*/hoge"
     sessionPersistence:
-      sessionName: "session1"
       cookie:
+        name: "session1"
         ttl: "1h"
     destination:
       name: "regex-route-dest"
@@ -40,8 +41,8 @@ http:
     pathMatch:
       prefix: "/v2/"
     sessionPersistence:
-      sessionName: "session1"
       cookie:
+        name: "session1"
         ttl: "1h"
     destination:
       name: "regex-route-dest"
@@ -54,8 +55,8 @@ http:
     pathMatch:
       exact: "/v3/user"
     sessionPersistence:
-      sessionName: "session1"
       cookie:
+        name: "session1"
         ttl: "1h"
     destination:
       name: "regex-route-dest"

@@ -14,25 +14,29 @@
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
         httpFilters:
-        - name: envoy.filters.http.stateful_session
+        - disabled: true
+          name: envoy.filters.http.stateful_session/header-based-session-persistence-route
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.http.stateful_session.header.v3.HeaderBasedSessionState
             name: session1
-        - name: envoy.filters.http.stateful_session
+        - disabled: true
+          name: envoy.filters.http.stateful_session/cookie-based-session-persistence-route-regex
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.http.stateful_session.cookie.v3.CookieBasedSessionState
             cookie:
               name: session1
               path: /v1
               ttl: 3600s
-        - name: envoy.filters.http.stateful_session
+        - disabled: true
+          name: envoy.filters.http.stateful_session/cookie-based-session-persistence-route-prefix
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.http.stateful_session.cookie.v3.CookieBasedSessionState
             cookie:
               name: session1
               path: /v2/
               ttl: 3600s
-        - name: envoy.filters.http.stateful_session
+        - disabled: true
+          name: envoy.filters.http.stateful_session/cookie-based-session-persistence-route-exact
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.http.stateful_session.cookie.v3.CookieBasedSessionState
             cookie:

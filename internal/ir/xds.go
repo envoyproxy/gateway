@@ -593,7 +593,7 @@ type SessionPersistence struct {
 // +k8s:deepcopy-gen=true
 type CookieBasedSessionPersistence struct {
 	// Name defines the name of the persistent session token.
-	Name string `json:"sessionName,omitempty"`
+	Name string `json:"name,omitempty"`
 
 	TTL *metav1.Duration `json:"ttl,omitempty" yaml:"ttl,omitempty"`
 }
@@ -602,7 +602,7 @@ type CookieBasedSessionPersistence struct {
 // +k8s:deepcopy-gen=true
 type HeaderBasedSessionPersistence struct {
 	// Name defines the name of the persistent session token.
-	Name string `json:"sessionName,omitempty"`
+	Name string `json:"name,omitempty"`
 }
 
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.
