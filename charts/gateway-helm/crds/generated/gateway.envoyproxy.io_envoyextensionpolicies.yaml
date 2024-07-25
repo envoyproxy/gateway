@@ -113,6 +113,9 @@ spec:
                           description: Connection includes backend connection settings.
                           properties:
                             bufferLimit:
+                              allOf:
+                              - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
                               anyOf:
                               - type: integer
                               - type: string
@@ -121,12 +124,7 @@ spec:
                                 If unspecified, an implementation defined default is applied (32768 bytes).
                                 For example, 20Mi, 1Gi, 256Ki etc.
                                 Note: that when the suffix is not provided, the value is interpreted as bytes.
-                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                               x-kubernetes-int-or-string: true
-                              x-kubernetes-validations:
-                              - message: BufferLimit must be of the format "^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
-                                rule: 'type(self) == string ? self.matches(r"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$")
-                                  : type(self) == int'
                           type: object
                         healthCheck:
                           description: HealthCheck allows gateway to perform active
@@ -726,6 +724,7 @@ spec:
                         - message: Must have port for Service reference
                           rule: '(size(self.group) == 0 && self.kind == ''Service'')
                             ? has(self.port) : true'
+                      maxItems: 16
                       type: array
                     failOpen:
                       description: |-
@@ -774,7 +773,7 @@ spec:
                   type: object
                   x-kubernetes-validations:
                   - message: BackendRefs must be used, backendRef is not supported.
-                    rule: '!has(self.backendRefs) || has(self.backendRef)'
+                    rule: '!has(self.backendRef)'
                   - message: Exactly one backendRef can be specified in backendRefs.
                     rule: has(self.backendRefs) && self.backendRefs.size()==1
                   - message: BackendRefs only supports Service and Backend kind.
@@ -782,8 +781,8 @@ spec:
                       == ''Service'' || f.kind == ''Backend'') : true'
                   - message: BackendRefs only supports Core and gateway.envoyproxy.io
                       group.
-                    rule: 'has(self.backendRefs) ? self.backendRefs.all(f, f.group
-                      == ” || f.group == ''gateway.envoyproxy.io'') : true'
+                    rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
+                      == "" || f.group == ''gateway.envoyproxy.io'')) : true'
                 maxItems: 16
                 type: array
               targetRef:

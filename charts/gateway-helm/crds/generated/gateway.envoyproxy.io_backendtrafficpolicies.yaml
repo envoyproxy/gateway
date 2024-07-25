@@ -123,6 +123,9 @@ spec:
                 description: Connection includes backend connection settings.
                 properties:
                   bufferLimit:
+                    allOf:
+                    - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
                     anyOf:
                     - type: integer
                     - type: string
@@ -132,12 +135,7 @@ spec:
                       If unspecified, an implementation defined default is applied (32768 bytes).
                       For example, 20Mi, 1Gi, 256Ki etc.
                       Note: that when the suffix is not provided, the value is interpreted as bytes.
-                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
-                    x-kubernetes-validations:
-                    - message: BufferLimit must be of the format "^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
-                      rule: 'type(self) == string ? self.matches(r"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$")
-                        : type(self) == int'
                   socketBufferLimit:
                     anyOf:
                     - type: integer

@@ -22,7 +22,8 @@ type ClientConnection struct {
 	// Note that when the suffix is not provided, the value is interpreted as bytes.
 	// Default: 32768 bytes.
 	//
-	// +kubebuilder:validation:XValidation:rule="type(self) == string ? self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\") : type(self) == int",message="bufferLimit must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
+	// +kubebuilder:validation:XIntOrString
+	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
 	// +optional
 	BufferLimit *resource.Quantity `json:"bufferLimit,omitempty"`
 	// SocketBufferLimit provides configuration for the maximum buffer size in bytes for each incoming socket.
@@ -44,7 +45,8 @@ type BackendConnection struct {
 	// For example, 20Mi, 1Gi, 256Ki etc.
 	// Note: that when the suffix is not provided, the value is interpreted as bytes.
 	//
-	// +kubebuilder:validation:XValidation:rule="type(self) == string ? self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\") : type(self) == int",message="BufferLimit must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
+	// +kubebuilder:validation:XIntOrString
+	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
 	// +optional
 	BufferLimit *resource.Quantity `json:"bufferLimit,omitempty"`
 	// SocketBufferLimit provides configuration for the maximum buffer size in bytes for each socket

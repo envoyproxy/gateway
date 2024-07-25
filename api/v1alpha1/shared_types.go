@@ -485,6 +485,7 @@ type BackendCluster struct {
 	// BackendRefs references a Kubernetes object that represents the
 	// backend server to which the authorization request will be sent.
 	//
+	// +kubebuilder:validation:MaxItems=16
 	// +optional
 	BackendRefs []BackendRef `json:"backendRefs,omitempty"`
 
