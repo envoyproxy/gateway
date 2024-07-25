@@ -15,6 +15,8 @@ __Note:__ Refer to the [Compatibility Matrix](/news/releases/matrix) for support
 __Note:__ In case your Kubernetes cluster, does not have a LoadBalancer implementation, we recommend installing one
 so the `Gateway` resource has an Address associated with it. We recommend using [MetalLB](https://metallb.universe.tf/installation/).
 
+__Note:__ For Mac user, you need install and run [Docker Mac Net Connect](https://github.com/chipmk/docker-mac-net-connect) to make the Docker network work.
+
 ## Installation
 
 Install the Gateway API CRDs and Envoy Gateway:
