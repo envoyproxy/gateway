@@ -104,7 +104,7 @@ func NewBenchmarkTestSuite(client client.Client, options BenchmarkOptions,
 
 	// Ensure the report directory exist.
 	if len(reportDir) > 0 {
-		if _, err = createDirIfNotExist(reportDir); err != nil {
+		if err = createDirIfNotExist(reportDir); err != nil {
 			return nil, err
 		}
 	}
@@ -228,7 +228,7 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, name, 
 
 	report, err := NewBenchmarkReport(name, path.Join(b.ReportSaveDir, "profiles"), b.kubeClient, b.promClient)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create benchmark report: %v", err)
+		return nil, fmt.Errorf("failed to create benchmark report: %w", err)
 	}
 
 	// Get all the reports from this benchmark test run.
@@ -391,14 +391,14 @@ func (b *BenchmarkTestSuite) RegisterCleanup(t *testing.T, ctx context.Context, 
 	})
 }
 
-func createDirIfNotExist(dir string) (ok bool, err error) {
+func createDirIfNotExist(dir string) (err error) {
 	if _, err = os.Stat(dir); err != nil {
 		if os.IsNotExist(err) {
 			if err = os.MkdirAll(dir, os.ModePerm); err == nil {
-				return true, nil
+				return nil
 			}
 		}
-		return false, err
+		return err
 	}
-	return true, nil
+	return nil
 }
