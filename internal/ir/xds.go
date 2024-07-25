@@ -2234,7 +2234,7 @@ type ExtProc struct {
 	Destination RouteDestination `json:"destination" yaml:"destination"`
 
 	// Traffic holds the features associated with traffic management
-	Traffic *TrafficFeatures `json:"trafficFeatures" yaml:"trafficFeatures"`
+	Traffic *TrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
 
 	// Authority is the hostname:port of the HTTP External Processing service.
 	Authority string `json:"authority" yaml:"authority"`
