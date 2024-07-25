@@ -99,7 +99,7 @@ func TestAddEnvoyProxyFinalizer(t *testing.T) {
 					Name: "test",
 				},
 			},
-			expect: []string{gatewayClassFinalizer},
+			expect: []string{envoyProxyFinalizer},
 		},
 		{
 			name: "envoyproxy with a different finalizer",
@@ -109,17 +109,17 @@ func TestAddEnvoyProxyFinalizer(t *testing.T) {
 					Finalizers: []string{"fooFinalizer"},
 				},
 			},
-			expect: []string{"fooFinalizer", gatewayClassFinalizer},
+			expect: []string{"fooFinalizer", envoyProxyFinalizer},
 		},
 		{
 			name: "envoyproxy with existing gatewayclass finalizer",
 			ep: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "test-ep",
-					Finalizers: []string{gatewayClassFinalizer},
+					Finalizers: []string{envoyProxyFinalizer},
 				},
 			},
-			expect: []string{gatewayClassFinalizer},
+			expect: []string{envoyProxyFinalizer},
 		},
 	}
 	// Create the reconciler.
@@ -170,7 +170,7 @@ func TestRemoveEnvoyProxyFinalizer(t *testing.T) {
 			ep: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "test-ep",
-					Finalizers: []string{gatewayClassFinalizer},
+					Finalizers: []string{envoyProxyFinalizer},
 				},
 			},
 			expect: nil,

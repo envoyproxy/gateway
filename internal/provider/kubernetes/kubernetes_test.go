@@ -219,7 +219,7 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 	// Ensure the envoyproxy has not been finalized.
 	require.Eventually(t, func() bool {
 		err := cli.Get(ctx, types.NamespacedName{Name: ep.Name, Namespace: testNs}, ep)
-		return err == nil && !slices.Contains(ep.Finalizers, gatewayClassFinalizer)
+		return err == nil && !slices.Contains(ep.Finalizers, envoyProxyFinalizer)
 	}, defaultWait, defaultTick)
 
 	// Ensure the gateway class has not been finalized.
@@ -343,7 +343,7 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 	// Ensure the envoyproxy has been finalized.
 	require.Eventually(t, func() bool {
 		err := cli.Get(ctx, types.NamespacedName{Name: ep.Name, Namespace: testNs}, ep)
-		return err == nil && slices.Contains(ep.Finalizers, gatewayClassFinalizer)
+		return err == nil && slices.Contains(ep.Finalizers, envoyProxyFinalizer)
 	}, defaultWait, defaultTick)
 
 	//Ensure that envoyproxy finalizer will be removed when GatewayClass stops referencing it
@@ -351,7 +351,7 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 	require.NoError(t, cli.Update(ctx, gc))
 	require.Eventually(t, func() bool {
 		err := cli.Get(ctx, types.NamespacedName{Name: ep.Name, Namespace: testNs}, ep)
-		return err == nil && !slices.Contains(ep.Finalizers, gatewayClassFinalizer)
+		return err == nil && !slices.Contains(ep.Finalizers, envoyProxyFinalizer)
 	}, defaultWait, defaultTick)
 }
 

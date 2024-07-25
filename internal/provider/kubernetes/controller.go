@@ -1031,9 +1031,9 @@ func (r *gatewayAPIReconciler) removeFinalizer(ctx context.Context, obj client.O
 		}
 		return nil
 	case *egv1a1.EnvoyProxy:
-		if slice.ContainsString(objType.Finalizers, gatewayClassFinalizer) {
+		if slice.ContainsString(objType.Finalizers, envoyProxyFinalizer) {
 			base := client.MergeFrom(objType.DeepCopy())
-			objType.Finalizers = slice.RemoveString(objType.Finalizers, gatewayClassFinalizer)
+			objType.Finalizers = slice.RemoveString(objType.Finalizers, envoyProxyFinalizer)
 			if err := r.client.Patch(ctx, objType, base); err != nil {
 				return fmt.Errorf("failed to add finalizer to Envoy Proxy %s: %w", objType.Name, err)
 			}
@@ -1057,9 +1057,9 @@ func (r *gatewayAPIReconciler) addFinalizer(ctx context.Context, obj client.Obje
 		}
 		return nil
 	case *egv1a1.EnvoyProxy:
-		if !slice.ContainsString(objType.Finalizers, gatewayClassFinalizer) {
+		if !slice.ContainsString(objType.Finalizers, envoyProxyFinalizer) {
 			base := client.MergeFrom(objType.DeepCopy())
-			objType.Finalizers = append(objType.Finalizers, gatewayClassFinalizer)
+			objType.Finalizers = append(objType.Finalizers, envoyProxyFinalizer)
 			if err := r.client.Patch(ctx, objType, base); err != nil {
 				return fmt.Errorf("failed to add finalizer to Envoy Proxy %s: %w", objType.Name, err)
 			}
