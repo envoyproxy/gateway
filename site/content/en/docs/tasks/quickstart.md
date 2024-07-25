@@ -15,6 +15,8 @@ __Note:__ Refer to the [Compatibility Matrix](/news/releases/matrix) for support
 __Note:__ In case your Kubernetes cluster, does not have a LoadBalancer implementation, we recommend installing one
 so the `Gateway` resource has an Address associated with it. We recommend using [MetalLB](https://metallb.universe.tf/installation/).
 
+__Note:__ For Mac user, you need install and run [Docker Mac Net Connect](https://github.com/chipmk/docker-mac-net-connect) to make the Docker network work.
+
 ## Installation
 
 Install the Gateway API CRDs and Envoy Gateway:
@@ -32,7 +34,7 @@ kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for
 Install the GatewayClass, Gateway, HTTPRoute and example app:
 
 ```shell
-kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/latest/quickstart.yaml -n default
+kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/{{< yaml-version >}}/quickstart.yaml -n default
 ```
 
 **Note**: [`quickstart.yaml`] defines that Envoy Gateway will listen for
@@ -43,7 +45,7 @@ unprivileged port, so that Envoy Gateway doesn't need additional privileges.
 It's important to be aware of this mapping, since you may need to take it into
 consideration when debugging.
 
-[`quickstart.yaml`]: https://github.com/envoyproxy/gateway/releases/download/latest/quickstart.yaml
+[`quickstart.yaml`]: https://github.com/envoyproxy/gateway/releases/download/{{< yaml-version >}}/quickstart.yaml
 
 ## Testing the Configuration
 
@@ -142,7 +144,7 @@ Use the steps in this section to uninstall everything from the quickstart.
 Delete the GatewayClass, Gateway, HTTPRoute and Example App:
 
 ```shell
-kubectl delete -f https://github.com/envoyproxy/gateway/releases/download/latest/quickstart.yaml --ignore-not-found=true
+kubectl delete -f https://github.com/envoyproxy/gateway/releases/download/{{< yaml-version >}}/quickstart.yaml --ignore-not-found=true
 ```
 
 Delete the Gateway API CRDs and Envoy Gateway:

@@ -823,7 +823,7 @@ curl --header "Host: www.merged1.com" http://$GATEWAY_HOST:8080/example
 Install the GatewayClass, Gateway, HTTPRoute and example app from [Quickstart][] example:
 
 ```shell
-kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/latest/quickstart.yaml -n default
+kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/{{< yaml-version >}}/quickstart.yaml -n default
 ```
 
 Lets create also and additional `Gateway` linked to the GatewayClass and `backend` application from Quickstart example.
