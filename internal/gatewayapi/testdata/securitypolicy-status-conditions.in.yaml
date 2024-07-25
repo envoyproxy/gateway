@@ -69,6 +69,28 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: unknown-httproute
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-route-in-other-ns
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-other-ns
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-selectors-cross-namespaces
+  spec:
+    targetSelectors:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      matchLabels:
+        target.selector: "true"
+        security.policy.name: target-selectors-cross-namespaces
 httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: HTTPRoute
@@ -79,6 +101,44 @@ httpRoutes:
     parentRefs:
     - namespace: envoy-gateway
       name: gateway-1
+    rules:
+    - matches:
+      - path:
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: HTTPRoute
+  metadata:
+    namespace: envoy-gateway
+    name: httproute-for-target-selectors
+    labels:
+      target.selector: "true"
+      security.policy.name: target-selectors-cross-namespaces
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-3
+    rules:
+    - matches:
+      - path:
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: HTTPRoute
+  metadata:
+    namespace: other-ns
+    name: httproute-other-ns
+    labels:
+      target.selector: "true"
+      security.policy.name: target-selectors-cross-namespaces
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-3
     rules:
     - matches:
       - path:
@@ -146,3 +206,22 @@ gateways:
       allowedRoutes:
         namespaces:
           from: Same
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-3
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+namespaces:
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: other-ns
