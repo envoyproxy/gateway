@@ -215,6 +215,28 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 
 		return false
 	}, defaultWait, defaultTick)
+	// Create the namespace for the Gateway under test.
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "test-gw-of-class"}}
+	require.NoError(t, cli.Create(ctx, ns))
+
+	gw := &gwapiv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-gw",
+			Namespace: ns.Name,
+		},
+		Spec: gwapiv1.GatewaySpec{
+			GatewayClassName: gwapiv1.ObjectName(gc.Name),
+			Listeners: []gwapiv1.Listener{
+				{
+					Name:     "test",
+					Port:     gwapiv1.PortNumber(int32(8080)),
+					Protocol: gwapiv1.HTTPProtocolType,
+				},
+			},
+		},
+	}
+
+	require.NoError(t, cli.Create(ctx, gw))
 
 	// Ensure the envoyproxy has been finalized.
 	require.Eventually(t, func() bool {
@@ -229,6 +251,10 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 		err := cli.Get(ctx, types.NamespacedName{Name: ep.Name, Namespace: testNs}, ep)
 		return err == nil && !slices.Contains(ep.Finalizers, gatewayClassFinalizer)
 	}, defaultWait, defaultTick)
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, gw))
+	}()
 }
 
 func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {

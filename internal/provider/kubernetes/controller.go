@@ -776,7 +776,6 @@ func (r *gatewayAPIReconciler) processFinalizers(ctx context.Context, managedGC 
 	if managedResources != nil {
 		refEnvoyProxy := managedResources.EnvoyProxyForGatewayClass
 		if refEnvoyProxy != nil && !classRefsEnvoyProxy(managedGC, refEnvoyProxy) {
-			fmt.Printf("REMOVED the refed ep finalizer because it does not ref the gc: %s\n", refEnvoyProxy.Name)
 			if err := r.removeFinalizer(ctx, refEnvoyProxy); err != nil {
 				return fmt.Errorf("failed to remove finalizer from previous referenced envoy proxy %s: %w", refEnvoyProxy.Name, err)
 			}
