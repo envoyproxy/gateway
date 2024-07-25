@@ -817,6 +817,9 @@ type ExtAuth struct {
 	// Only one of GRPCService or HTTPService may be specified.
 	HTTP *HTTPExtAuthService `json:"http,omitempty"`
 
+	// Traffic contains configuration for traffic features for the ExtAuth service
+	Traffic *TrafficFeatures `json:"traffic,omitempty"`
+
 	// HeadersToExtAuth defines the client request headers that will be included
 	// in the request to the external authorization service.
 	// Note: If not specified, the default behavior for gRPC and HTTP external
@@ -2229,6 +2232,9 @@ type ExtProc struct {
 
 	// Destination defines the destination for the gRPC External Processing service.
 	Destination RouteDestination `json:"destination" yaml:"destination"`
+
+	// Traffic holds the features associated with traffic management
+	Traffic *TrafficFeatures `json:"trafficFeatures" yaml:"trafficFeatures"`
 
 	// Authority is the hostname:port of the HTTP External Processing service.
 	Authority string `json:"authority" yaml:"authority"`

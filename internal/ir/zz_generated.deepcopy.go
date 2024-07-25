@@ -792,6 +792,11 @@ func (in *ExtAuth) DeepCopyInto(out *ExtAuth) {
 		*out = new(HTTPExtAuthService)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Traffic != nil {
+		in, out := &in.Traffic, &out.Traffic
+		*out = new(TrafficFeatures)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.HeadersToExtAuth != nil {
 		in, out := &in.HeadersToExtAuth, &out.HeadersToExtAuth
 		*out = make([]string, len(*in))
@@ -818,6 +823,11 @@ func (in *ExtAuth) DeepCopy() *ExtAuth {
 func (in *ExtProc) DeepCopyInto(out *ExtProc) {
 	*out = *in
 	in.Destination.DeepCopyInto(&out.Destination)
+	if in.Traffic != nil {
+		in, out := &in.Traffic, &out.Traffic
+		*out = new(TrafficFeatures)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.MessageTimeout != nil {
 		in, out := &in.MessageTimeout, &out.MessageTimeout
 		*out = new(v1.Duration)

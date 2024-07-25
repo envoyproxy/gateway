@@ -471,9 +471,15 @@ func (t *Translator) buildExtProc(
 			NamespaceDerefOr(extProc.BackendRefs[0].Namespace, policyNamespacedName.Namespace))
 	}
 
+	traffic, err := translateTrafficFeatures(extProc.BackendCluster.BackendConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	extProcIR := &ir.ExtProc{
 		Name:        name,
 		Destination: rd,
+		Traffic:     traffic,
 		Authority:   authority,
 	}
 

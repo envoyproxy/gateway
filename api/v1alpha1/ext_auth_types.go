@@ -5,10 +5,6 @@
 
 package v1alpha1
 
-import (
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-)
-
 // ExtAuth defines the configuration for External Authorization.
 //
 // +kubebuilder:validation:XValidation:rule="(has(self.grpc) || has(self.http))",message="one of grpc or http must be specified"
@@ -56,45 +52,23 @@ type ExtAuth struct {
 // The authorization request message is defined in
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/auth/v3/external_auth.proto
 // +kubebuilder:validation:XValidation:message="backendRef or backendRefs needs to be set",rule="has(self.backendRef) || self.backendRefs.size() > 0"
+// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core group.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.group == \"\") : true"
+// +kubebuilder:validation:XValidation:message="only support Service kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service') : true"
+// +kubebuilder:validation:XValidation:message="only one backendRef can be specified.",rule="has(self.backendRefs) ? self.backendRefs.size() == 1 : true"
 type GRPCExtAuthService struct {
-	// BackendRef references a Kubernetes object that represents the
-	// backend server to which the authorization request will be sent.
 	// Only Service kind is supported for now.
-	//
-	// Deprecated: Use BackendRefs instead.
-	BackendRef *gwapiv1.BackendObjectReference `json:"backendRef,omitempty"`
-
-	// BackendRefs references a Kubernetes object that represents the
-	// backend server to which the authorization request will be sent.
-	// Only Service kind is supported for now.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxItems=1
-	// +kubebuilder:validation:XValidation:message="only support Service kind.",rule="self.all(f, f.kind == 'Service')"
-	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core group.",rule="self.all(f, f.group == '')"
-	BackendRefs []BackendRef `json:"backendRefs,omitempty"`
+	BackendCluster `json:",inline"`
 }
 
 // HTTPExtAuthService defines the HTTP External Authorization service
 //
 // +kubebuilder:validation:XValidation:message="backendRef or backendRefs needs to be set",rule="has(self.backendRef) || self.backendRefs.size() > 0"
+// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core group.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.group == \"\") : true"
+// +kubebuilder:validation:XValidation:message="only support Service kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service') : true"
+// +kubebuilder:validation:XValidation:message="only one backendRef can be specified.",rule="has(self.backendRefs) ? self.backendRefs.size() == 1 : true"
 type HTTPExtAuthService struct {
-	// BackendRef references a Kubernetes object that represents the
-	// backend server to which the authorization request will be sent.
 	// Only Service kind is supported for now.
-	//
-	// Deprecated: Use BackendRefs instead.
-	BackendRef *gwapiv1.BackendObjectReference `json:"backendRef,omitempty"`
-
-	// BackendRefs references a Kubernetes object that represents the
-	// backend server to which the authorization request will be sent.
-	// Only Service kind is supported for now.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxItems=1
-	// +kubebuilder:validation:XValidation:message="only support Service kind.",rule="self.all(f, f.kind == 'Service')"
-	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core group.",rule="self.all(f, f.group == '')"
-	BackendRefs []BackendRef `json:"backendRefs,omitempty"`
+	BackendCluster `json:",inline"`
 
 	// Path is the path of the HTTP External Authorization service.
 	// If path is specified, the authorization request will be sent to that path,

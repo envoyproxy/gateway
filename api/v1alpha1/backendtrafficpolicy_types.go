@@ -46,42 +46,17 @@ type BackendTrafficPolicy struct {
 // BackendTrafficPolicySpec defines the desired state of BackendTrafficPolicy.
 type BackendTrafficPolicySpec struct {
 	PolicyTargetReferences `json:",inline"`
+	ClusterSettings        `json:",inline"`
 
 	// RateLimit allows the user to limit the number of incoming requests
 	// to a predefined value based on attributes within the traffic flow.
 	// +optional
 	RateLimit *RateLimitSpec `json:"rateLimit,omitempty"`
 
-	// LoadBalancer policy to apply when routing traffic from the gateway to
-	// the backend endpoints
-	// +optional
-	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty"`
-
-	// ProxyProtocol enables the Proxy Protocol when communicating with the backend.
-	// +optional
-	ProxyProtocol *ProxyProtocol `json:"proxyProtocol,omitempty"`
-
-	// TcpKeepalive settings associated with the upstream client connection.
-	// Disabled by default.
-	//
-	// +optional
-	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty"`
-
-	// HealthCheck allows gateway to perform active health checking on backends.
-	//
-	// +optional
-	HealthCheck *HealthCheck `json:"healthCheck,omitempty"`
-
 	// FaultInjection defines the fault injection policy to be applied. This configuration can be used to
 	// inject delays and abort requests to mimic failure scenarios such as service failures and overloads
 	// +optional
 	FaultInjection *FaultInjection `json:"faultInjection,omitempty"`
-
-	// Circuit Breaker settings for the upstream connections and requests.
-	// If not set, circuit breakers will be enabled with the default thresholds
-	//
-	// +optional
-	CircuitBreaker *CircuitBreaker `json:"circuitBreaker,omitempty"`
 
 	// Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
 	// If not set, retry will be disabled.
@@ -95,21 +70,12 @@ type BackendTrafficPolicySpec struct {
 	// +optional
 	UseClientProtocol *bool `json:"useClientProtocol,omitempty"`
 
-	// Timeout settings for the backend connections.
-	//
-	// +optional
-	Timeout *Timeout `json:"timeout,omitempty"`
-
 	// The compression config for the http streams.
 	//
 	// +optional
 	// +notImplementedHide
 	Compression []*Compression `json:"compression,omitempty"`
 
-	// Connection includes backend connection settings.
-	//
-	// +optional
-	Connection *BackendConnection `json:"connection,omitempty"`
 	// DNS includes dns resolution settings.
 	//
 	// +optional
@@ -140,6 +106,44 @@ type BackendTrafficPolicyConnection struct {
 	// +kubebuilder:validation:XValidation:rule="type(self) == string ? self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\") : type(self) == int",message="BufferLimit must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
 	// +optional
 	BufferLimit *resource.Quantity `json:"bufferLimit,omitempty"`
+}
+
+type ClusterSettings struct {
+	// LoadBalancer policy to apply when routing traffic from the gateway to
+	// the backend endpoints
+	// +optional
+	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty"`
+
+	// ProxyProtocol enables the Proxy Protocol when communicating with the backend.
+	// +optional
+	ProxyProtocol *ProxyProtocol `json:"proxyProtocol,omitempty"`
+
+	// TcpKeepalive settings associated with the upstream client connection.
+	// Disabled by default.
+	//
+	// +optional
+	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty"`
+
+	// HealthCheck allows gateway to perform active health checking on backends.
+	//
+	// +optional
+	HealthCheck *HealthCheck `json:"healthCheck,omitempty"`
+
+	// Circuit Breaker settings for the upstream connections and requests.
+	// If not set, circuit breakers will be enabled with the default thresholds
+	//
+	// +optional
+	CircuitBreaker *CircuitBreaker `json:"circuitBreaker,omitempty"`
+
+	// Timeout settings for the backend connections.
+	//
+	// +optional
+	Timeout *Timeout `json:"timeout,omitempty"`
+
+	// Connection includes backend connection settings.
+	//
+	// +optional
+	Connection *BackendConnection `json:"connection,omitempty"`
 }
 
 func init() {
