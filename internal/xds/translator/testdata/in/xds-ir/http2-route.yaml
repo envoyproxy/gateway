@@ -42,10 +42,10 @@ http:
     destination:
       name: "second-route-dest"
       settings:
-        - endpoints:
-            - host: "1.2.3.4"
-              port: 50000
-          protocol: GRPC
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        protocol: GRPC
     traffic:
       http2: {}
   - name: "third-route-use-client"
@@ -56,10 +56,10 @@ http:
     destination:
       name: "third-route-dest"
       settings:
-        - endpoints:
-            - host: "1.2.3.4"
-              port: 50000
-          protocol: HTTP
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        protocol: HTTP
     useClientProtocol: true
     traffic:
       http2:
@@ -75,9 +75,9 @@ http:
     destination:
       name: "fourth-route-dest"
       settings:
-        - endpoints:
-            - host: "1.2.3.4"
-              port: 50000
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
     traffic:
       http2:
         initialConnectionWindowSize: 1048576
