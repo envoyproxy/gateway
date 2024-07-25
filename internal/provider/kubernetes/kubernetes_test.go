@@ -215,8 +215,21 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 
 		return false
 	}, defaultWait, defaultTick)
+
+	// Ensure the envoyproxy has not been finalized.
+	require.Eventually(t, func() bool {
+		err := cli.Get(ctx, types.NamespacedName{Name: ep.Name, Namespace: testNs}, ep)
+		return err == nil && !slices.Contains(ep.Finalizers, gatewayClassFinalizer)
+	}, defaultWait, defaultTick)
+
+	// Ensure the gateway class has not been finalized.
+	require.Eventually(t, func() bool {
+		err := cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc)
+		return err == nil && !slices.Contains(gc.Finalizers, gatewayClassFinalizer)
+	}, defaultWait, defaultTick)
+
 	// Create the namespace for the Gateway under test.
-	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "test-gw-of-class"}}
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "test-paramsref-of-class"}}
 	require.NoError(t, cli.Create(ctx, ns))
 
 	gw := &gwapiv1.Gateway{
@@ -238,6 +251,95 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 
 	require.NoError(t, cli.Create(ctx, gw))
 
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, gw))
+	}()
+	labels := map[string]string{
+		gatewayapi.OwningGatewayNameLabel:      gw.Name,
+		gatewayapi.OwningGatewayNamespaceLabel: gw.Namespace,
+	}
+
+	deploy := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: gw.Namespace,
+			Name:      gw.Name + "-deployment",
+			Labels:    labels,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{MatchLabels: labels},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: labels,
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{{
+						Name:  "dummy",
+						Image: "dummy",
+						Ports: []corev1.ContainerPort{{
+							ContainerPort: 8080,
+						}},
+					}},
+				},
+			},
+		},
+		Status: appsv1.DeploymentStatus{
+			AvailableReplicas: 1,
+		},
+	}
+
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: gw.Namespace,
+			Name:      gw.Name + "-svc",
+			Labels:    labels,
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{{
+				Port: 80,
+			}},
+		},
+		Status: corev1.ServiceStatus{
+			LoadBalancer: corev1.LoadBalancerStatus{
+				Ingress: []corev1.LoadBalancerIngress{{IP: "1.1.1.1"}},
+			},
+		},
+	}
+
+	require.NoError(t, cli.Create(ctx, deploy))
+	require.NoError(t, cli.Create(ctx, svc))
+
+	// Ensure the Gateway reports "Scheduled".
+	require.Eventually(t, func() bool {
+		if err := cli.Get(ctx, utils.NamespacedName(gw), gw); err != nil {
+			return false
+		}
+
+		for _, cond := range gw.Status.Conditions {
+			fmt.Printf("Condition: %v\n", cond)
+			if cond.Type == string(gwapiv1.GatewayConditionAccepted) && cond.Status == metav1.ConditionTrue {
+				return true
+			}
+		}
+
+		// Scheduled=True condition not found.
+		return false
+	}, defaultWait, defaultTick)
+
+	// Ensure the number of Gateways in the Gateway resource table is as expected.
+	require.Eventually(t, func() bool {
+		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
+		if !ok {
+			return false
+		}
+		return res != nil && len(res.Gateways) == 1
+	}, defaultWait, defaultTick)
+
+	// Ensure the gateway class has been finalized.
+	require.Eventually(t, func() bool {
+		err := cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc)
+		return err == nil && slices.Contains(gc.Finalizers, gatewayClassFinalizer)
+	}, defaultWait, defaultTick)
+
 	// Ensure the envoyproxy has been finalized.
 	require.Eventually(t, func() bool {
 		err := cli.Get(ctx, types.NamespacedName{Name: ep.Name, Namespace: testNs}, ep)
@@ -251,10 +353,6 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 		err := cli.Get(ctx, types.NamespacedName{Name: ep.Name, Namespace: testNs}, ep)
 		return err == nil && !slices.Contains(ep.Finalizers, gatewayClassFinalizer)
 	}, defaultWait, defaultTick)
-
-	defer func() {
-		require.NoError(t, cli.Delete(ctx, gw))
-	}()
 }
 
 func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
