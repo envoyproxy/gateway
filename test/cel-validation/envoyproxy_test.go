@@ -1345,7 +1345,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						{
 							Name:   egv1a1.EnvoyFilterRateLimit,
 							Before: ptr.To(egv1a1.EnvoyFilterCORS),
-							After:  ptr.To(egv1a1.EnvoyFilterBasicAuthn),
+							After:  ptr.To(egv1a1.EnvoyFilterBasicAuth),
 						},
 					},
 				}
@@ -1386,7 +1386,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					FilterOrder: []egv1a1.FilterPosition{
 						{
 							Name:  egv1a1.EnvoyFilterRateLimit,
-							After: ptr.To(egv1a1.EnvoyFilterBasicAuthn),
+							After: ptr.To(egv1a1.EnvoyFilterBasicAuth),
 						},
 					},
 				}

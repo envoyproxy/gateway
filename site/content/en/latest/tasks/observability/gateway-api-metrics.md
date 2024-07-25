@@ -7,8 +7,7 @@ The project also provides example dashboard for visualising the metrics using Gr
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+{{< boilerplate prerequisites >}}
 
 Run the following commands to install the metrics stack, with the Gateway API State Metrics configuration, on your kubernetes cluster:
 

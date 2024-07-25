@@ -20,12 +20,9 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"k8s.io/utils/ptr"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
-)
-
-const (
-	oauth2Filter = "envoy.filters.http.oauth2"
 )
 
 func init() {
@@ -101,7 +98,7 @@ func buildHCMOAuth2Filter(oidc *ir.OIDC) (*hcmv3.HttpFilter, error) {
 }
 
 func oauth2FilterName(oidc *ir.OIDC) string {
-	return perRouteFilterName(oauth2Filter, oidc.Name)
+	return perRouteFilterName(egv1a1.EnvoyFilterOAuth2, oidc.Name)
 }
 
 func oauth2Config(oidc *ir.OIDC) (*oauth2v3.OAuth2, error) {

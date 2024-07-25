@@ -4,7 +4,6 @@ title: "Client Traffic Policy"
 
 This task explains the usage of the [ClientTrafficPolicy][] API.
 
-
 ## Introduction
 
 The [ClientTrafficPolicy][] API allows system administrators to configure
@@ -18,8 +17,7 @@ This API was added as a new policy attachment resource that can be applied to Ga
 
 ### Prerequisites
 
-* Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+{{< boilerplate prerequisites >}}
 
 ### Support TCP keepalive for downstream client
 
@@ -38,7 +36,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
   tcpKeepalive:
     idleTime: 20m
     interval: 60s
@@ -62,7 +59,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
   tcpKeepalive:
     idleTime: 20m
     interval: 60s
@@ -220,7 +216,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
   enableProxyProtocol: true
 EOF
 ```
@@ -241,7 +236,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
   enableProxyProtocol: true
 ```
 
@@ -359,7 +353,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
   clientIPDetection:
     xForwardedFor:
       numTrustedHops: 2
@@ -382,7 +375,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
   clientIPDetection:
     xForwardedFor:
       numTrustedHops: 2

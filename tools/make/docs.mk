@@ -108,13 +108,7 @@ docs-release-gen:
 	$(eval DOC_VERSION := $(shell cat VERSION | cut -d "." -f 1,2))
 	@$(call log, "Added Release Doc: site/content/en/$(DOC_VERSION)")
 	cp -r site/content/en/latest/ site/content/en/$(DOC_VERSION)/
-	@for DOC in $(shell ls site/content/en/latest/user); do \
-		cp site/content/en/$(TAG)/user/$$DOC $(OUTPUT_DIR)/$$DOC ; \
-		cat $(OUTPUT_DIR)/$$DOC | sed "s;v0.0.0-latest;$(TAG);g" | sed "s;latest;$(TAG);g" > $(OUTPUT_DIR)/$(TAG)-$$DOC ; \
-		mv $(OUTPUT_DIR)/$(TAG)-$$DOC site/content/en/$(TAG)/user/$$DOC ; \
-		$(call log, "Updated: site/content/en/$(TAG)/user/$$DOC") ; \
-	done
-
+	@echo "" >> site/hugo.toml
 	@echo '[[params.versions]]' >> site/hugo.toml
 	@echo '  version = "$(DOC_VERSION)"' >> site/hugo.toml
 	@echo '  url = "/$(DOC_VERSION)"' >> site/hugo.toml

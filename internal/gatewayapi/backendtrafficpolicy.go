@@ -247,7 +247,8 @@ func resolveBTPolicyGatewayTargetRef(policy *egv1a1.BackendTrafficPolicy, target
 
 	// Check if another policy targeting the same Gateway exists
 	if gateway.attached {
-		message := "Unable to target Gateway, another BackendTrafficPolicy has already attached to it"
+		message := fmt.Sprintf("Unable to target Gateway %s, another BackendTrafficPolicy has already attached to it",
+			string(target.Name))
 
 		return gateway.GatewayContext, &status.PolicyResolveError{
 			Reason:  gwapiv1a2.PolicyReasonConflicted,
@@ -291,8 +292,8 @@ func resolveBTPolicyRouteTargetRef(policy *egv1a1.BackendTrafficPolicy, target g
 
 	// Check if another policy targeting the same xRoute exists
 	if route.attached {
-		message := fmt.Sprintf("Unable to target %s, another BackendTrafficPolicy has already attached to it",
-			string(target.Kind))
+		message := fmt.Sprintf("Unable to target %s %s, another BackendTrafficPolicy has already attached to it",
+			string(target.Kind), string(target.Name))
 
 		return route.RouteContext, &status.PolicyResolveError{
 			Reason:  gwapiv1a2.PolicyReasonConflicted,

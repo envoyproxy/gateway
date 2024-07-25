@@ -15,12 +15,9 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
-)
-
-const (
-	extProcFilter = "envoy.filters.http.ext_proc"
 )
 
 func init() {
@@ -93,7 +90,7 @@ func buildHCMExtProcFilter(extProc ir.ExtProc) (*hcmv3.HttpFilter, error) {
 }
 
 func extProcFilterName(extProc ir.ExtProc) string {
-	return perRouteFilterName(extProcFilter, extProc.Name)
+	return perRouteFilterName(egv1a1.EnvoyFilterExtProc, extProc.Name)
 }
 
 func extProcConfig(extProc ir.ExtProc) *extprocv3.ExternalProcessor {
