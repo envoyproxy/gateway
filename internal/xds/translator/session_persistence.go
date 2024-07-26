@@ -10,7 +10,9 @@ import (
 	"fmt"
 	"strings"
 
+	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	statefulsessionv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/stateful_session/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	cookiev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/stateful_session/cookie/v3"
 	headerv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/stateful_session/header/v3"
@@ -25,6 +27,9 @@ import (
 
 const (
 	sessionPersistenceFilter = "envoy.filters.http.stateful_session"
+
+	cookieConfigName = "envoy.http.stateful_session.cookie"
+	headerConfigName = "envoy.http.stateful_session.header"
 )
 
 type sessionPersistence struct{}
@@ -60,10 +65,12 @@ func (s *sessionPersistence) patchHCM(mgr *hcmv3.HttpConnectionManager, irListen
 			continue
 		}
 
-		var cfg proto.Message
+		var sessionCfg proto.Message
+		var configName string
 		switch {
 		case sp.Cookie != nil:
-			cfg = &cookiev3.CookieBasedSessionState{
+			configName = cookieConfigName
+			sessionCfg = &cookiev3.CookieBasedSessionState{
 				Cookie: &httpv3.Cookie{
 					Name: sp.Cookie.Name,
 					Path: routePathToCookiePath(route.PathMatch),
@@ -71,9 +78,22 @@ func (s *sessionPersistence) patchHCM(mgr *hcmv3.HttpConnectionManager, irListen
 				},
 			}
 		case sp.Header != nil:
-			cfg = &headerv3.HeaderBasedSessionState{
+			configName = headerConfigName
+			sessionCfg = &headerv3.HeaderBasedSessionState{
 				Name: sp.Header.Name,
 			}
+		}
+
+		sessionCfgAny, err := anypb.New(sessionCfg)
+		if err != nil {
+			return fmt.Errorf("failed to marshal %s config: %w", sessionPersistenceFilter, err)
+		}
+
+		cfg := &statefulsessionv3.StatefulSession{
+			SessionState: &corev3.TypedExtensionConfig{
+				Name:        configName,
+				TypedConfig: sessionCfgAny,
+			},
 		}
 
 		cfgAny, err := anypb.New(cfg)
@@ -89,6 +109,7 @@ func (s *sessionPersistence) patchHCM(mgr *hcmv3.HttpConnectionManager, irListen
 			},
 		})
 	}
+
 	return nil
 }
 
@@ -147,10 +168,6 @@ func (s *sessionPersistence) patchRoute(route *routev3.Route, irRoute *ir.HTTPRo
 
 // patchResources adds all the other needed resources referenced by this
 // filter to the resource version table.
-// for example:
-//   - a jwt filter needs to add the cluster for the jwks.
-//   - an oidc filter needs to add the cluster for token endpoint and the secret
-//     for the oauth2 client secret and the hmac secret.
 func (s *sessionPersistence) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute) error {
 	return nil
 }

@@ -733,6 +733,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					Mirrors:               routeRoute.Mirrors,
 					ExtensionRefs:         routeRoute.ExtensionRefs,
 					IsHTTP2:               routeRoute.IsHTTP2,
+					SessionPersistence:    routeRoute.SessionPersistence,
 				}
 				if routeRoute.Traffic != nil {
 					hostRoute.Traffic = &ir.TrafficFeatures{

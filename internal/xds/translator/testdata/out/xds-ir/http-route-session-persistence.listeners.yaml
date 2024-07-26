@@ -17,32 +17,48 @@
         - disabled: true
           name: envoy.filters.http.stateful_session/header-based-session-persistence-route
           typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.http.stateful_session.header.v3.HeaderBasedSessionState
-            name: session1
+            '@type': type.googleapis.com/envoy.extensions.filters.http.stateful_session.v3.StatefulSession
+            sessionState:
+              name: envoy.http.stateful_session.header
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.http.stateful_session.header.v3.HeaderBasedSessionState
+                name: session1
         - disabled: true
           name: envoy.filters.http.stateful_session/cookie-based-session-persistence-route-regex
           typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.http.stateful_session.cookie.v3.CookieBasedSessionState
-            cookie:
-              name: session1
-              path: /v1
-              ttl: 3600s
+            '@type': type.googleapis.com/envoy.extensions.filters.http.stateful_session.v3.StatefulSession
+            sessionState:
+              name: envoy.http.stateful_session.cookie
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.http.stateful_session.cookie.v3.CookieBasedSessionState
+                cookie:
+                  name: session1
+                  path: /v1
+                  ttl: 3600s
         - disabled: true
           name: envoy.filters.http.stateful_session/cookie-based-session-persistence-route-prefix
           typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.http.stateful_session.cookie.v3.CookieBasedSessionState
-            cookie:
-              name: session1
-              path: /v2/
-              ttl: 3600s
+            '@type': type.googleapis.com/envoy.extensions.filters.http.stateful_session.v3.StatefulSession
+            sessionState:
+              name: envoy.http.stateful_session.cookie
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.http.stateful_session.cookie.v3.CookieBasedSessionState
+                cookie:
+                  name: session1
+                  path: /v2/
+                  ttl: 3600s
         - disabled: true
           name: envoy.filters.http.stateful_session/cookie-based-session-persistence-route-exact
           typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.http.stateful_session.cookie.v3.CookieBasedSessionState
-            cookie:
-              name: session1
-              path: /v3/user
-              ttl: 3600s
+            '@type': type.googleapis.com/envoy.extensions.filters.http.stateful_session.v3.StatefulSession
+            sessionState:
+              name: envoy.http.stateful_session.cookie
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.http.stateful_session.cookie.v3.CookieBasedSessionState
+                cookie:
+                  name: session1
+                  path: /v3/user
+                  ttl: 3600s
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
