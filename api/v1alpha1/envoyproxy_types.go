@@ -98,13 +98,15 @@ type EnvoyProxySpec struct {
 	// If unspecified, the default filter order is applied.
 	// Default filter order is:
 	//
+	// - envoy.filters.http.health_check
+	//
 	// - envoy.filters.http.fault
 	//
 	// - envoy.filters.http.cors
 	//
 	// - envoy.filters.http.ext_authz
 	//
-	// - envoy.filters.http.basic_authn
+	// - envoy.filters.http.basic_auth
 	//
 	// - envoy.filters.http.oauth2
 	//
@@ -121,6 +123,8 @@ type EnvoyProxySpec struct {
 	// - envoy.filters.http.ratelimit
 	//
 	// - envoy.filters.http.router
+	//
+	// Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain.
 	//
 	// +optional
 	FilterOrder []FilterPosition `json:"filterOrder,omitempty"`
@@ -168,20 +172,24 @@ type FilterPosition struct {
 }
 
 // EnvoyFilter defines the type of Envoy HTTP filter.
-// +kubebuilder:validation:Enum=envoy.filters.http.cors;envoy.filters.http.ext_authz;envoy.filters.http.basic_authn;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.fault;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.wasm;envoy.filters.http.ext_proc;envoy.filters.http.rbac
+// +kubebuilder:validation:Enum=envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.ext_authz;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit
 type EnvoyFilter string
 
 const (
+	// EnvoyFilterHealthCheck defines the Envoy HTTP health check filter.
+	EnvoyFilterHealthCheck EnvoyFilter = "envoy.filters.http.health_check"
+
 	// EnvoyFilterFault defines the Envoy HTTP fault filter.
 	EnvoyFilterFault EnvoyFilter = "envoy.filters.http.fault"
+
 	// EnvoyFilterCORS defines the Envoy HTTP CORS filter.
 	EnvoyFilterCORS EnvoyFilter = "envoy.filters.http.cors"
 
 	// EnvoyFilterExtAuthz defines the Envoy HTTP external authorization filter.
 	EnvoyFilterExtAuthz EnvoyFilter = "envoy.filters.http.ext_authz"
 
-	// EnvoyFilterBasicAuthn defines the Envoy HTTP basic authentication filter.
-	EnvoyFilterBasicAuthn EnvoyFilter = "envoy.filters.http.basic_authn"
+	// EnvoyFilterBasicAuth defines the Envoy HTTP basic authentication filter.
+	EnvoyFilterBasicAuth EnvoyFilter = "envoy.filters.http.basic_auth"
 
 	// EnvoyFilterOAuth2 defines the Envoy HTTP OAuth2 filter.
 	EnvoyFilterOAuth2 EnvoyFilter = "envoy.filters.http.oauth2"
@@ -195,14 +203,14 @@ const (
 	// EnvoyFilterWasm defines the Envoy HTTP WebAssembly filter.
 	EnvoyFilterWasm EnvoyFilter = "envoy.filters.http.wasm"
 
+	// EnvoyFilterRBAC defines the Envoy RBAC filter.
+	EnvoyFilterRBAC EnvoyFilter = "envoy.filters.http.rbac"
+
 	// EnvoyFilterLocalRateLimit defines the Envoy HTTP local rate limit filter.
 	EnvoyFilterLocalRateLimit EnvoyFilter = "envoy.filters.http.local_ratelimit"
 
 	// EnvoyFilterRateLimit defines the Envoy HTTP rate limit filter.
 	EnvoyFilterRateLimit EnvoyFilter = "envoy.filters.http.ratelimit"
-
-	// EnvoyFilterRBAC defines the Envoy RBAC filter.
-	EnvoyFilterRBAC EnvoyFilter = "envoy.filters.http.rbac"
 
 	// EnvoyFilterRouter defines the Envoy HTTP router filter.
 	EnvoyFilterRouter EnvoyFilter = "envoy.filters.http.router"
