@@ -240,7 +240,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-ratelimit
-    namespace: default
   rateLimit:
     type: Global
     global:
@@ -270,7 +269,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-ratelimit
-    namespace: default
   rateLimit:
     type: Global
     global:
@@ -460,7 +458,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-ratelimit
-    namespace: default
   rateLimit:
     type: Global
     global:
@@ -490,7 +487,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-ratelimit
-    namespace: default
   rateLimit:
     type: Global
     global:
@@ -663,7 +659,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-ratelimit
-    namespace: default
   rateLimit:
     type: Global
     global:
@@ -689,7 +684,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-ratelimit
-    namespace: default
   rateLimit:
     type: Global
     global:
@@ -820,8 +814,7 @@ spec:
   targetRef:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
-    name: http-ratelimit 
-    namespace: default
+    name: http-ratelimit
   rateLimit:
     type: Global
     global:
@@ -870,8 +863,7 @@ spec:
   targetRef:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
-    name: http-ratelimit 
-    namespace: default
+    name: http-ratelimit
   rateLimit:
     type: Global
     global:

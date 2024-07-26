@@ -74,7 +74,6 @@ type SecurityPolicySpec struct {
 	// Authorization defines the authorization configuration.
 	//
 	// +optional
-	// +notImplementedHide
 	Authorization *Authorization `json:"authorization,omitempty"`
 }
 

@@ -11,8 +11,7 @@ This task uses a self-signed CA, so it should be used for testing and demonstrat
 
 ## Installation
 
-Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+{{< boilerplate prerequisites >}}
 
 ## TLS Certificates
 
@@ -74,7 +73,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
 EOF
 ```
 
@@ -94,7 +92,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
 ```
 
 {{% /tab %}}

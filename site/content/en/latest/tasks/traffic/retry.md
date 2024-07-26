@@ -15,7 +15,7 @@ Envoy Gateway introduces a new CRD called [BackendTrafficPolicy](../../../api/ex
 
 ## Prerequisites
 
-Follow the installation step from the [Quickstart](../../quickstart) to install Envoy Gateway and sample resources.
+{{< boilerplate prerequisites >}}
 
 ## Test and customize retry settings
 
@@ -60,7 +60,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: backend
-    namespace: default
   retry:
     numRetries: 5
     perRetry:
@@ -92,7 +91,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: backend
-    namespace: default
   retry:
     numRetries: 5
     perRetry:
