@@ -114,7 +114,7 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 5
 	case isFilterType(filter, egv1a1.EnvoyFilterJWTAuthn):
 		order = 6
-	case isFilterType(filter, sessionPersistenceFilter):
+	case isFilterType(filter, egv1a1.EnvoyFilterSessionPersistence):
 		order = 7
 	case isFilterType(filter, egv1a1.EnvoyFilterExtProc):
 		order = 8 + mustGetFilterIndex(filter.Name)

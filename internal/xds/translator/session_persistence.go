@@ -21,13 +21,12 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 const (
-	sessionPersistenceFilter = "envoy.filters.http.stateful_session"
-
 	cookieConfigName = "envoy.http.stateful_session.cookie"
 	headerConfigName = "envoy.http.stateful_session.header"
 )
@@ -54,7 +53,7 @@ func (s *sessionPersistence) patchHCM(mgr *hcmv3.HttpConnectionManager, irListen
 
 	// Return early if filter already exists.
 	for _, f := range mgr.HttpFilters {
-		if f.Name == sessionPersistenceFilter {
+		if f.Name == egv1a1.EnvoyFilterSessionPersistence.String() {
 			return nil
 		}
 	}
@@ -86,7 +85,7 @@ func (s *sessionPersistence) patchHCM(mgr *hcmv3.HttpConnectionManager, irListen
 
 		sessionCfgAny, err := anypb.New(sessionCfg)
 		if err != nil {
-			return fmt.Errorf("failed to marshal %s config: %w", sessionPersistenceFilter, err)
+			return fmt.Errorf("failed to marshal %s config: %w", egv1a1.EnvoyFilterSessionPersistence.String(), err)
 		}
 
 		cfg := &statefulsessionv3.StatefulSession{
@@ -98,11 +97,11 @@ func (s *sessionPersistence) patchHCM(mgr *hcmv3.HttpConnectionManager, irListen
 
 		cfgAny, err := anypb.New(cfg)
 		if err != nil {
-			return fmt.Errorf("failed to marshal %s config: %w", sessionPersistenceFilter, err)
+			return fmt.Errorf("failed to marshal %s config: %w", egv1a1.EnvoyFilterSessionPersistence.String(), err)
 		}
 
 		mgr.HttpFilters = append(mgr.HttpFilters, &hcmv3.HttpFilter{
-			Name:     perRouteFilterName(sessionPersistenceFilter, route.Name),
+			Name:     perRouteFilterName(egv1a1.EnvoyFilterSessionPersistence, route.Name),
 			Disabled: true,
 			ConfigType: &hcmv3.HttpFilter_TypedConfig{
 				TypedConfig: cfgAny,
@@ -159,7 +158,7 @@ func (s *sessionPersistence) patchRoute(route *routev3.Route, irRoute *ir.HTTPRo
 		return nil
 	}
 
-	if err := enableFilterOnRoute(route, perRouteFilterName(sessionPersistenceFilter, route.Name)); err != nil {
+	if err := enableFilterOnRoute(route, perRouteFilterName(egv1a1.EnvoyFilterSessionPersistence, route.Name)); err != nil {
 		return err
 	}
 
