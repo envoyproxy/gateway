@@ -39,6 +39,7 @@ type ClientConnection struct {
 // BackendConnection allows users to configure connection-level settings of backend
 type BackendConnection struct {
 	// BufferLimit Soft limit on size of the cluster’s connections read and write buffers.
+	// BufferLimit applies to connection streaming (maybe non-streaming) channel between processes, it's in user space.
 	// If unspecified, an implementation defined default is applied (32768 bytes).
 	// For example, 20Mi, 1Gi, 256Ki etc.
 	// Note: that when the suffix is not provided, the value is interpreted as bytes.
@@ -48,6 +49,7 @@ type BackendConnection struct {
 	BufferLimit *resource.Quantity `json:"bufferLimit,omitempty"`
 	// SocketBufferLimit provides configuration for the maximum buffer size in bytes for each socket
 	// to backend.
+	// SocketBufferLimit applies to socket streaming channel between TCP/IP stacks, it's in kernel space.
 	// For example, 20Mi, 1Gi, 256Ki etc.
 	// Note that when the suffix is not provided, the value is interpreted as bytes.
 	//
