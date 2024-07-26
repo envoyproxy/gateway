@@ -34,7 +34,7 @@ Refer to the [Developer Guide](../../contributions/develop) to learn more.
 Install the Gateway API CRDs and Envoy Gateway:
 
 ```shell
-helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --create-namespace
+helm install eg oci://docker.io/envoyproxy/gateway-helm --version {{< helm-version >}} -n envoy-gateway-system --create-namespace
 ```
 
 Wait for Envoy Gateway to become available:
@@ -46,7 +46,7 @@ kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for
 Install the GatewayClass, Gateway, HTTPRoute and example app:
 
 ```shell
-kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/latest/quickstart.yaml -n default
+kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/{{< yaml-version >}}/quickstart.yaml -n default
 ```
 
 **Note**: [`quickstart.yaml`] defines that Envoy Gateway will listen for
@@ -57,7 +57,7 @@ unprivileged port, so that Envoy Gateway doesn't need additional privileges.
 It's important to be aware of this mapping, since you may need to take it into
 consideration when debugging.
 
-[`quickstart.yaml`]: https://github.com/envoyproxy/gateway/releases/download/latest/quickstart.yaml
+[`quickstart.yaml`]: https://github.com/envoyproxy/gateway/releases/download/{{< yaml-version >}}/quickstart.yaml
 
 ## Helm chart customizations
 
@@ -70,7 +70,7 @@ If you want to know all the available fields inside the values.yaml file, please
 ### Increase the replicas
 
 ```shell
-helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --create-namespace --set deployment.replicas=2
+helm install eg oci://docker.io/envoyproxy/gateway-helm --version {{< helm-version >}} -n envoy-gateway-system --create-namespace --set deployment.replicas=2
 ```
 
 ### Change the kubernetesClusterDomain name
@@ -78,7 +78,7 @@ helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest 
 If you have installed your cluster with different domain name you can use below command.
 
 ```shell
-helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --create-namespace --set kubernetesClusterDomain=<domain name>
+helm install eg oci://docker.io/envoyproxy/gateway-helm --version {{< helm-version >}} -n envoy-gateway-system --create-namespace --set kubernetesClusterDomain=<domain name>
 ```
 
 **Note**: Above are some of the ways we can directly use for customization of our installation. But if you are looking for more complex changes [values.yaml](https://helm.sh/docs/chart_template_guide/values_files/) comes to rescue.
@@ -115,7 +115,7 @@ Here we have made three changes to our values.yaml file. Increase the resources 
 You can use the below command to install the envoy gateway using values.yaml file.
 
 ```shell
-helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --create-namespace -f values.yaml
+helm install eg oci://docker.io/envoyproxy/gateway-helm --version {{< helm-version >}} -n envoy-gateway-system --create-namespace -f values.yaml
 ```
 
 ## Open Ports

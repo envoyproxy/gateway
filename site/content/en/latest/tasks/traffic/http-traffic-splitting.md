@@ -6,10 +6,9 @@ The [HTTPRoute][] resource allows one or more [backendRefs][] to be provided. Re
 if they match the rules of the HTTPRoute. If an invalid backendRef is configured, then HTTP responses will be returned
 with status code `500` for all requests that would have been sent to that backend.
 
-## Installation
+## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+{{< boilerplate prerequisites >}}
 
 ## Single backendRef
 

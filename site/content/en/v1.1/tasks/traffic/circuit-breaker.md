@@ -76,7 +76,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: backend
-    namespace: default
   circuitBreaker:
     maxPendingRequests: 0
     maxParallelRequests: 10
@@ -98,7 +97,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: backend
-    namespace: default
   circuitBreaker:
     maxPendingRequests: 0
     maxParallelRequests: 10
