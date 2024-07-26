@@ -13,6 +13,8 @@ spec:
     - "https://www.foo.com"
     - "https://www.bar.com"
     - "https://*.foobar.com"
+    allowRegexOrigins:
+    - "https://foo.com:3[0-9]{3}"
     allowMethods:
     - GET
     - POST
