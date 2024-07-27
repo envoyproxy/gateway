@@ -29,9 +29,25 @@ jobs:
       - name: Cherry pick into release/v1.1
         run: |
           TARGET_BRANCH="release/v1.1"
+          CHERRY_PICK_BRANCH="cherry-pick-$(date +'%Y%m%d%H%M%S')"
           MERGE_COMMIT_SHA=$(git log -1 --pretty=format:%H)
 
+          # Fetch and create new branch from target
           git fetch origin $TARGET_BRANCH
-          git checkout $TARGET_BRANCH
+          git checkout -b $CHERRY_PICK_BRANCH origin/$TARGET_BRANCH
+
+          # Cherry-pick the commit
           git cherry-pick $MERGE_COMMIT_SHA || git cherry-pick --abort
-          git push origin $TARGET_BRANCH
+
+          # Push the new branch
+          git push origin $CHERRY_PICK_BRANCH
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Cherry pick ${MERGE_COMMIT_SHA} into ${TARGET_BRANCH}"
+          branch: $CHERRY_PICK_BRANCH
+          title: "[release/v1.1] Cherry pick ${MERGE_COMMIT_SHA}"
+          body: "Cherry picking commit ${MERGE_COMMIT_SHA} onto ${TARGET_BRANCH}"
+          base: $TARGET_BRANCH
