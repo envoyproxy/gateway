@@ -1,0 +1,37 @@
+name: Cherry pick
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: ["closed"]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  cherry_pick_release_v1_1:
+    runs-on: ubuntu-22.04
+    name: Cherry pick into release/v1.1
+    if: ${{ contains(github.event.pull_request.labels.*.name, 'cherrypick/release-v1.1') && github.event.pull_request.merged == true }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Cherry pick into release/v1.1
+        run: |
+          TARGET_BRANCH="release/v1.1"
+          MERGE_COMMIT_SHA=$(git log -1 --pretty=format:%H)
+
+          git fetch origin $TARGET_BRANCH
+          git checkout $TARGET_BRANCH
+          git cherry-pick $MERGE_COMMIT_SHA || git cherry-pick --abort
+          git push origin $TARGET_BRANCH
