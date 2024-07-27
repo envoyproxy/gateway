@@ -27,4 +27,4 @@ spec:
         # Actually, absoluteTimeout is not necessary for Header based session persistence.
         # But, we have to add it, otherwise the gateway-api validation (mistakenly) rejects it.
         # https://github.com/kubernetes-sigs/gateway-api/issues/3214
-        absoluteTimeout: 100s 
+        absoluteTimeout: 10s

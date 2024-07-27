@@ -320,14 +320,14 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 			return nil, fmt.Errorf("idle timeout is not supported in envoy gateway")
 		}
 
-		if rule.SessionPersistence.Type == nil || // Cookie-based session persistence is default.
-			*rule.SessionPersistence.Type == gwapiv1.CookieBasedSessionPersistence {
+		switch {
+		case rule.SessionPersistence.Type == nil || // Cookie-based session persistence is default.
+			*rule.SessionPersistence.Type == gwapiv1.CookieBasedSessionPersistence:
 			sessionPersistence = &ir.SessionPersistence{
 				Cookie: &ir.CookieBasedSessionPersistence{
 					Name: *rule.SessionPersistence.SessionName,
 				},
 			}
-
 			if rule.SessionPersistence.AbsoluteTimeout != nil {
 				ttl, err := time.ParseDuration(string(*rule.SessionPersistence.AbsoluteTimeout))
 				if err != nil {
@@ -335,13 +335,13 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 				}
 				sessionPersistence.Cookie.TTL = &metav1.Duration{Duration: ttl}
 			}
-		} else if *rule.SessionPersistence.Type == gwapiv1.HeaderBasedSessionPersistence {
+		case *rule.SessionPersistence.Type == gwapiv1.HeaderBasedSessionPersistence:
 			sessionPersistence = &ir.SessionPersistence{
 				Header: &ir.HeaderBasedSessionPersistence{
 					Name: *rule.SessionPersistence.SessionName,
 				},
 			}
-		} else {
+		default:
 			// Unknown session persistence type is specified.
 			return nil, fmt.Errorf("unknown session persistence type %s", *rule.SessionPersistence.Type)
 		}
