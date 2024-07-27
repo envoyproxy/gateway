@@ -72,6 +72,10 @@ linters-settings:
       - default
       # Groups all imports with the specified Prefix.
       - prefix(github.com/envoyproxy/gateway)
+  copyloopvar:
+    # Check all assigning the loop variable to another variable.
+    # Default: false
+    check-alias: true
   gofmt:
     simplify: true
   goheader:
@@ -114,6 +118,7 @@ linters-settings:
       - suite-extra-assert-call
   unparam:
     check-exported: false
+
 
 issues:
   exclude-rules:
