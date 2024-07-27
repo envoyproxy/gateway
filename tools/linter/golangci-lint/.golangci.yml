@@ -119,7 +119,6 @@ linters-settings:
   unparam:
     check-exported: false
 
-
 issues:
   exclude-rules:
     - path: zz_generated
