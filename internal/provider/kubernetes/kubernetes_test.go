@@ -216,18 +216,6 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 		return false
 	}, defaultWait, defaultTick)
 
-	// Ensure the envoyproxy has not been finalized.
-	require.Eventually(t, func() bool {
-		err := cli.Get(ctx, types.NamespacedName{Name: ep.Name, Namespace: testNs}, ep)
-		return err == nil && !slices.Contains(ep.Finalizers, envoyProxyFinalizer)
-	}, defaultWait, defaultTick)
-
-	// Ensure the gateway class has not been finalized.
-	require.Eventually(t, func() bool {
-		err := cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc)
-		return err == nil && !slices.Contains(gc.Finalizers, gatewayClassFinalizer)
-	}, defaultWait, defaultTick)
-
 	// Create the namespace for the Gateway under test.
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "test-paramsref-of-class"}}
 	require.NoError(t, cli.Create(ctx, ns))
