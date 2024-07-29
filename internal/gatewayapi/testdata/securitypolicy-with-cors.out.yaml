@@ -402,11 +402,11 @@ securityPolicies:
     namespace: default
   spec:
     cors:
-      allowRegexOrigins:
-      - "https://foobar.com:3[0-9]{3}"
       allowMethods:
       - GET
       - POST
+      allowRegexOrigins:
+      - https://foobar.com:3[0-9]{3}
       maxAge: 33m20s
     targetRef:
       group: gateway.networking.k8s.io
@@ -669,5 +669,5 @@ xdsIR:
             allowOrigins:
             - distinct: false
               name: ""
-              safeRegex: "https://foobar.com:3[0-9]{3}"
+              safeRegex: https://foobar.com:3[0-9]{3}
             maxAge: 33m20s
