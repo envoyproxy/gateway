@@ -61,15 +61,9 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 			}
 
 			// Negative statuses have already been assigned so its safe to skip
-			gateway, resolveErr := resolveExtServerPolicyGatewayTargetRef(policy, currTarget, gatewayMap)
+			gateway := resolveExtServerPolicyGatewayTargetRef(policy, currTarget, gatewayMap)
 			if gateway == nil {
 				// unable to find a matching Gateway for policy
-				continue
-			}
-
-			// Skip the gateway. Don't add anything to the policy status.
-			if resolveErr != nil {
-				// The targetRef part is somehow wrong, this policy can't be attached.
 				continue
 			}
 
@@ -123,7 +117,7 @@ func policyStatusToUnstructured(policyStatus gwapiv1a2.PolicyStatus) map[string]
 	return ret
 }
 
-func resolveExtServerPolicyGatewayTargetRef(policy *unstructured.Unstructured, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, gateways map[types.NamespacedName]*policyGatewayTargetContext) (*GatewayContext, *status.PolicyResolveError) {
+func resolveExtServerPolicyGatewayTargetRef(policy *unstructured.Unstructured, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, gateways map[types.NamespacedName]*policyGatewayTargetContext) *GatewayContext {
 	// Check if the gateway exists
 	key := types.NamespacedName{
 		Name:      string(target.Name),
@@ -133,10 +127,10 @@ func resolveExtServerPolicyGatewayTargetRef(policy *unstructured.Unstructured, t
 
 	// Gateway not found
 	if !ok {
-		return nil, nil
+		return nil
 	}
 
-	return gateway.GatewayContext, nil
+	return gateway.GatewayContext
 }
 
 func (t *Translator) translateExtServerPolicyForGateway(
