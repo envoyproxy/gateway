@@ -141,7 +141,10 @@ spec:
         - containerPort: 19001
           name: metrics
           protocol: TCP
-        resources: {}
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
