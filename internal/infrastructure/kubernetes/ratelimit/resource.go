@@ -229,6 +229,7 @@ func promStatsdExporterContainer() corev1.Container {
 		},
 		TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 		TerminationMessagePath:   "/dev/termination-log",
+		Resources:                *egv1a1.DefaultResourceRequirements(),
 	}
 }
 

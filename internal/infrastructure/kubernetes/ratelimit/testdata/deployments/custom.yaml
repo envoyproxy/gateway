@@ -133,7 +133,10 @@ spec:
         - containerPort: 19001
           name: metrics
           protocol: TCP
-        resources: {}
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:
