@@ -63,7 +63,7 @@ require (
 )
 
 require (
-	github.com/docker/docker v27.0.3+incompatible
+	github.com/docker/docker v27.1.1+incompatible
 	github.com/replicatedhq/troubleshoot v0.95.1
 )
 
