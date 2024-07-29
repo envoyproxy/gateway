@@ -51,16 +51,13 @@ func (s *sessionPersistence) patchHCM(mgr *hcmv3.HttpConnectionManager, irListen
 		return errors.New("ir listener is nil")
 	}
 
-	// Return early if filter already exists.
-	for _, f := range mgr.HttpFilters {
-		if f.Name == egv1a1.EnvoyFilterSessionPersistence.String() {
-			return nil
-		}
-	}
-
 	for _, route := range irListener.Routes {
 		sp := route.SessionPersistence
 		if sp == nil {
+			continue
+		}
+
+		if hcmContainsFilter(mgr, perRouteFilterName(egv1a1.EnvoyFilterSessionPersistence, route.Name)) {
 			continue
 		}
 
