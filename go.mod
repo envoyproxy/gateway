@@ -6,7 +6,7 @@ replace github.com/imdario/mergo => github.com/imdario/mergo v0.3.16
 
 require (
 	fortio.org/fortio v1.66.0
-	fortio.org/log v1.15.0
+	fortio.org/log v1.16.0
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/cncf/xds/go v0.0.0-20240423153145-555b57ec207b
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
