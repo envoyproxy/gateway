@@ -94,7 +94,11 @@ spec:
         resources: {{- toYaml .Values.deployment.envoyGateway.resources | nindent 10
           }}
         securityContext:
+          runAsNonRoot: true
           allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
         volumeMounts:
         - mountPath: /config
           name: envoy-gateway-config
@@ -103,8 +107,10 @@ spec:
           name: certs
           readOnly: true
       {{- include "eg.image.pullSecrets" . | nindent 6 }}
+      {{- with .Values.deployment.envoyGateway.securityContext }}
       securityContext:
-        runAsNonRoot: true
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       serviceAccountName: envoy-gateway
       terminationGracePeriodSeconds: 10
       volumes:

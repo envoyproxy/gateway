@@ -1,0 +1,17 @@
+global:
+  images:
+    envoyGateway:
+      image: "docker.io/envoyproxy/gateway-dev:latest"
+
+deployment:
+  envoyGateway:
+    securityContext:
+      runAsUser: 1234
+      runAsGroup: 1234
+      fsGroup: 1234
+certgen:
+  job:
+    securityContext:
+      runAsUser: 3456
+      runAsGroup: 3456
+      fsGroup: 3456
