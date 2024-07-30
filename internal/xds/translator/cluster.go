@@ -145,12 +145,14 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STRICT_DNS}
 		cluster.DnsRefreshRate = durationpb.New(30 * time.Second)
 		cluster.RespectDnsTtl = true
-		if args.dns.DNSRefreshRate != nil {
-			if args.dns.DNSRefreshRate.Duration > 0 {
-				cluster.DnsRefreshRate = durationpb.New(args.dns.DNSRefreshRate.Duration)
-			}
-			if args.dns.RespectDNSTTL != nil {
-				cluster.RespectDnsTtl = ptr.Deref(args.dns.RespectDNSTTL, true)
+		if args.dns != nil {
+			if args.dns.DNSRefreshRate != nil {
+				if args.dns.DNSRefreshRate.Duration > 0 {
+					cluster.DnsRefreshRate = durationpb.New(args.dns.DNSRefreshRate.Duration)
+				}
+				if args.dns.RespectDNSTTL != nil {
+					cluster.RespectDnsTtl = ptr.Deref(args.dns.RespectDNSTTL, true)
+				}
 			}
 		}
 	}
