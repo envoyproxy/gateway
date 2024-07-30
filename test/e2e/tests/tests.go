@@ -13,6 +13,7 @@ import "sigs.k8s.io/gateway-api/conformance/utils/suite"
 var (
 	ConformanceTests   []suite.ConformanceTest
 	UpgradeTests       []suite.ConformanceTest
+	LifecycleTests     []suite.ConformanceTest
 	MergeGatewaysTests []suite.ConformanceTest
 	MultipleGCTests    map[string][]suite.ConformanceTest
 )
