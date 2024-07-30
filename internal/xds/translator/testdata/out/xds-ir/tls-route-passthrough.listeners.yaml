@@ -13,7 +13,7 @@
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tls-passthrough-foo-dest
         statPrefix: passthrough
-    name: tls-passthrough-foo/tls-route-passthrough-foo
+    name: tls-route-passthrough-foo
   listenerFilters:
   - name: envoy.filters.listener.tls_inspector
     typedConfig:
@@ -35,7 +35,7 @@
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tls-passthrough-bar-dest
         statPrefix: passthrough
-    name: tls-passthrough-bar/tls-route-passthrough-bar
+    name: tls-route-passthrough-bar
   listenerFilters:
   - name: envoy.filters.listener.tls_inspector
     typedConfig:

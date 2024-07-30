@@ -99,4 +99,4 @@ xdsIR:
           name: udproute/default/udproute-1/rule/-1
           settings:
           - weight: 1
-        name: udproute/default/udproute-1
+        name: envoy-gateway/gateway-1/udp/udproute/default/udproute-1

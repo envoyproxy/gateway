@@ -114,4 +114,4 @@ xdsIR:
               port: 8080
             protocol: TCP
             weight: 50
-        name: tcproute/default/tcproute-1
+        name: envoy-gateway/gateway-1/tcp/tcproute/default/tcproute-1

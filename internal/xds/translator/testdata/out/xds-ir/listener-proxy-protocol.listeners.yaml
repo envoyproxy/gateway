@@ -72,7 +72,7 @@
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tls-route-dest
         statPrefix: tcp
-    name: second-listener/tcp-route-dest
+    name: tcp-route-dest
   listenerFilters:
   - name: envoy.filters.listener.proxy_protocol
     typedConfig:

@@ -179,7 +179,7 @@ xdsIR:
               port: 8080
             protocol: TCP
             weight: 1
-        name: tcproute/default/tcproute-1
+        name: envoy-gateway/gateway-1/tls/tcproute/default/tcproute-1
         tls:
           terminate:
             certificates:
@@ -204,7 +204,7 @@ xdsIR:
               port: 8080
             protocol: TCP
             weight: 1
-        name: tcproute/default/tcproute-2
+        name: envoy-gateway/gateway-1/tls-hostname/tcproute/default/tcproute-2
         tls:
           inspector:
             snis:

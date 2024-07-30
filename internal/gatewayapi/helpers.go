@@ -384,12 +384,12 @@ func irRouteName(route RouteContext, ruleIdx, matchIdx int) string {
 	return fmt.Sprintf("%srule/%d/match/%d", irRoutePrefix(route), ruleIdx, matchIdx)
 }
 
-func irTCPRouteName(route RouteContext) string {
-	return fmt.Sprintf("%s/%s/%s", strings.ToLower(string(GetRouteType(route))), route.GetNamespace(), route.GetName())
+func irTCPRouteName(irListenerName string, route RouteContext) string {
+	return fmt.Sprintf("%s/%s/%s/%s", irListenerName, strings.ToLower(string(GetRouteType(route))), route.GetNamespace(), route.GetName())
 }
 
-func irUDPRouteName(route RouteContext) string {
-	return irTCPRouteName(route)
+func irUDPRouteName(irListenerName string, route RouteContext) string {
+	return irTCPRouteName(irListenerName, route)
 }
 
 func irRouteDestinationName(route RouteContext, ruleIdx int) string {

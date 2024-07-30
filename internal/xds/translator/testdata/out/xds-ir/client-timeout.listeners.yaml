@@ -48,6 +48,6 @@
         cluster: second-route-dest
         idleTimeout: 1200s
         statPrefix: tcp
-    name: second-listener/second-route
+    name: second-route
   name: second-listener
   perConnectionBufferLimitBytes: 32768

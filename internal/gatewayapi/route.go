@@ -831,7 +831,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 			irListener := gwXdsIR.GetTCPListener(irListenerName(listener))
 			if irListener != nil {
 				irRoute := &ir.TCPRoute{
-					Name: irTCPRouteName(tlsRoute),
+					Name: irTCPRouteName(irListener.Name, tlsRoute),
 					TLS: &ir.TLS{TLSInspectorConfig: &ir.TLSInspectorConfig{
 						SNIs: hosts,
 					}},
@@ -968,7 +968,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			irListener := gwXdsIR.GetUDPListener(irListenerName(listener))
 			if irListener != nil {
 				irRoute := &ir.UDPRoute{
-					Name: irUDPRouteName(udpRoute),
+					Name: irUDPRouteName(irListener.Name, udpRoute),
 					Destination: &ir.RouteDestination{
 						Name:     irRouteDestinationName(udpRoute, -1 /*rule index*/),
 						Settings: destSettings,
@@ -1101,7 +1101,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			irListener := gwXdsIR.GetTCPListener(irListenerName(listener))
 			if irListener != nil {
 				irRoute := &ir.TCPRoute{
-					Name: irTCPRouteName(tcpRoute),
+					Name: irTCPRouteName(irListener.Name, tcpRoute),
 					Destination: &ir.RouteDestination{
 						Name:     irRouteDestinationName(tcpRoute, -1 /*rule index*/),
 						Settings: destSettings,

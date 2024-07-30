@@ -610,7 +610,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 					}
 				}
 			}
-			if err := addXdsTCPFilterChain(xdsListener, tcpListener, route, route.Destination.Name, accesslog, tcpListener.Timeout, tcpListener.Connection); err != nil {
+			if err := addXdsTCPFilterChain(xdsListener, route, route.Destination.Name, accesslog, tcpListener.Timeout, tcpListener.Connection); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}

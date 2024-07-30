@@ -351,7 +351,7 @@ xdsIR:
         loadBalancer:
           consistentHash:
             sourceIP: true
-        name: tcproute/default/tcp-app-1
+        name: default/tcp-gateway/bar/tcproute/default/tcp-app-1
         proxyProtocol:
           version: V2
         tcpKeepalive:
@@ -381,7 +381,7 @@ xdsIR:
         loadBalancer:
           consistentHash:
             sourceIP: true
-        name: udproute/default/udp-app-1
+        name: default/tcp-gateway/foo/udproute/default/udp-app-1
         timeout:
           http:
             connectionIdleTimeout: 16s

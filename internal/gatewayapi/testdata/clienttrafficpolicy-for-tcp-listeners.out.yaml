@@ -203,7 +203,7 @@ xdsIR:
               port: 8080
             protocol: TCP
             weight: 1
-        name: tcproute/default/tcproute-1
+        name: envoy-gateway/gateway-1/tls-1/tcproute/default/tcproute-1
         tls:
           terminate:
             alpnProtocols:
@@ -265,7 +265,7 @@ xdsIR:
               port: 8080
             protocol: TCP
             weight: 1
-        name: tcproute/default/tcproute-1
+        name: envoy-gateway/gateway-1/tcp-1/tcproute/default/tcproute-1
       tcpKeepalive:
         idleTime: 1200
         interval: 60

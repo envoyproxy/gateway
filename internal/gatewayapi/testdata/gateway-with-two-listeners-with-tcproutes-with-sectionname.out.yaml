@@ -173,7 +173,7 @@ xdsIR:
               port: 8163
             protocol: TCP
             weight: 1
-        name: tcproute/default/tcproute-1
+        name: envoy-gateway/gateway-1/tcp1/tcproute/default/tcproute-1
     - address: 0.0.0.0
       name: envoy-gateway/gateway-1/tcp2
       port: 10163
@@ -187,4 +187,4 @@ xdsIR:
               port: 8163
             protocol: TCP
             weight: 1
-        name: tcproute/default/tcproute-2
+        name: envoy-gateway/gateway-1/tcp2/tcproute/default/tcproute-2
