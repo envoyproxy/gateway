@@ -375,7 +375,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 		}
 	}
 
-	if policy.Spec.DNSRefreshSettings != nil {
+	if policy.Spec.DNSSettings != nil {
 		ds = t.translateDNSSettings(policy)
 	}
 
@@ -513,7 +513,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		}
 	}
 
-	if policy.Spec.DNSRefreshSettings != nil {
+	if policy.Spec.DNSSettings != nil {
 		ds = t.translateDNSSettings(policy)
 	}
 
@@ -899,11 +899,11 @@ func (t *Translator) buildConsistentHashLoadBalancer(policy *egv1a1.BackendTraff
 
 func (t *Translator) translateDNSSettings(policy *egv1a1.BackendTrafficPolicy) *ir.DNSSettings {
 	ds := &ir.DNSSettings{}
-	if policy.Spec.DNSRefreshSettings.RespectDNSTTL != nil {
-		ds.RespectDNSTTL = policy.Spec.DNSRefreshSettings.RespectDNSTTL
+	if policy.Spec.DNSSettings.RespectDNSTTL != nil {
+		ds.RespectDNSTTL = policy.Spec.DNSSettings.RespectDNSTTL
 	}
-	if policy.Spec.DNSRefreshSettings.DNSRefreshRate != nil {
-		ds.DNSRefreshRate = policy.Spec.DNSRefreshSettings.DNSRefreshRate
+	if policy.Spec.DNSSettings.DNSRefreshRate != nil {
+		ds.DNSRefreshRate = policy.Spec.DNSSettings.DNSRefreshRate
 	}
 	return ds
 }

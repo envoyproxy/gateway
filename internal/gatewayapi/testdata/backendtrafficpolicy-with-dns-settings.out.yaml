@@ -6,7 +6,7 @@ backendTrafficPolicies:
       name: policy-for-route-1
       namespace: default
     spec:
-      dnsRefreshSettings:
+      dnsSettings:
         dnsRefreshRate: 1s
         respectDnsTtl: true
       targetRef:
@@ -35,7 +35,7 @@ backendTrafficPolicies:
       name: policy-for-route-2
       namespace: default
     spec:
-      dnsRefreshSettings:
+      dnsSettings:
         dnsRefreshRate: 5s
         respectDnsTtl: false
       targetRef:
@@ -64,7 +64,7 @@ backendTrafficPolicies:
       name: policy-for-all-routes-in-gateway-1
       namespace: envoy-gateway
     spec:
-      dnsRefreshSettings:
+      dnsSettings:
         dnsRefreshRate: 10s
         respectDnsTtl: true
       targetRef:

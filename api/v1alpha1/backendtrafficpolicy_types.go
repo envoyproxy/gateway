@@ -110,10 +110,10 @@ type BackendTrafficPolicySpec struct {
 	//
 	// +optional
 	Connection *BackendConnection `json:"connection,omitempty"`
-	// DNSRefreshSettings includes dns resolution settings.
+	// DNSSettings includes dns resolution settings.
 	//
 	// +optional
-	DNSRefreshSettings *DNSSettings `json:"dnsRefreshSettings,omitempty"`
+	DNSSettings *DNSSettings `json:"dnsSettings,omitempty"`
 }
 
 // +kubebuilder:object:root=true
