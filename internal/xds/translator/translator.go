@@ -772,6 +772,10 @@ func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute
 		clusterArgs.backendConnection = bt.BackendConnection
 	}
 
+	if httpRoute.DNS != nil {
+		clusterArgs.dns = httpRoute.DNS
+	}
+
 	if err := addXdsCluster(tCtx, clusterArgs); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 		return err
 	}
