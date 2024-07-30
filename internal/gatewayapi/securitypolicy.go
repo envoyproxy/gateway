@@ -248,12 +248,10 @@ func resolveSecurityPolicyGatewayTargetRef(
 	target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
 	gateways map[types.NamespacedName]*policyGatewayTargetContext,
 ) (*GatewayContext, *status.PolicyResolveError) {
-	targetNs := policy.Namespace
-
 	// Find the Gateway
 	key := types.NamespacedName{
 		Name:      string(target.Name),
-		Namespace: targetNs,
+		Namespace: policy.Namespace,
 	}
 	gateway, ok := gateways[key]
 
@@ -263,18 +261,6 @@ func resolveSecurityPolicyGatewayTargetRef(
 	// by this controller.
 	if !ok {
 		return nil, nil
-	}
-
-	// Ensure Policy and target are in the same namespace
-	if policy.Namespace != targetNs {
-		// TODO zhaohuabing use CEL to validate cross-namespace reference
-		message := fmt.Sprintf("Namespace:%s TargetRef.Namespace:%s, SecurityPolicy can only target a resource in the same namespace.",
-			policy.Namespace, targetNs)
-
-		return gateway.GatewayContext, &status.PolicyResolveError{
-			Reason:  gwapiv1a2.PolicyReasonInvalid,
-			Message: message,
-		}
 	}
 
 	// Check if another policy targeting the same Gateway exists
@@ -300,13 +286,11 @@ func resolveSecurityPolicyRouteTargetRef(
 	target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
 	routes map[policyTargetRouteKey]*policyRouteTargetContext,
 ) (RouteContext, *status.PolicyResolveError) {
-	targetNs := policy.Namespace
-
 	// Check if the route exists
 	key := policyTargetRouteKey{
 		Kind:      string(target.Kind),
 		Name:      string(target.Name),
-		Namespace: targetNs,
+		Namespace: policy.Namespace,
 	}
 	route, ok := routes[key]
 
@@ -316,18 +300,6 @@ func resolveSecurityPolicyRouteTargetRef(
 	// by this controller.
 	if !ok {
 		return nil, nil
-	}
-
-	// Ensure Policy and target are in the same namespace
-	// TODO zhaohuabing use CEL to validate cross-namespace reference
-	if policy.Namespace != targetNs {
-		message := fmt.Sprintf("Namespace:%s TargetRef.Namespace:%s, SecurityPolicy can only target a resource in the same namespace.",
-			policy.Namespace, targetNs)
-
-		return route.RouteContext, &status.PolicyResolveError{
-			Reason:  gwapiv1a2.PolicyReasonInvalid,
-			Message: message,
-		}
 	}
 
 	// Check if another policy targeting the same xRoute exists
