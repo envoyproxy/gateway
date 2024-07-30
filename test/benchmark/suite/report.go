@@ -13,7 +13,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"path"
 	"strconv"
@@ -24,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	kube "github.com/envoyproxy/gateway/internal/kubernetes"
+	"github.com/envoyproxy/gateway/internal/troubleshoot/collect"
 	prom "github.com/envoyproxy/gateway/test/utils/prometheus"
 )
 
@@ -131,9 +131,9 @@ func (r *BenchmarkReport) GetProfiles(ctx context.Context) error {
 		return err
 	}
 
-	// Memory heap profiles. TODO: make the port of pod configurable if it's feasible.
-	heapProf, err := r.getResponseFromPortForwarder(
-		&types.NamespacedName{Name: egPod.Name, Namespace: egPod.Namespace}, 0, 19000, "/debug/pprof/heap",
+	// Memory heap profiles.
+	heapProf, err := collect.RequestWithPortForwarder(
+		r.kubeClient, types.NamespacedName{Name: egPod.Name, Namespace: egPod.Namespace}, 19000, "/debug/pprof/heap",
 	)
 	if err != nil {
 		return err
@@ -171,36 +171,6 @@ func (r *BenchmarkReport) getLogsFromPod(ctx context.Context, pod *types.Namespa
 	}
 
 	return buf.Bytes(), nil
-}
-
-// getResponseFromPortForwarder gets response by sending endpoint request to pod port-forwarder.
-func (r *BenchmarkReport) getResponseFromPortForwarder(pod *types.NamespacedName, localPort, podPort int, endpoint string) ([]byte, error) {
-	fw, err := kube.NewLocalPortForwarder(r.kubeClient, *pod, localPort, podPort)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build port forwarder for pod %s: %w", pod.String(), err)
-	}
-
-	if err = fw.Start(); err != nil {
-		fw.Stop()
-		return nil, fmt.Errorf("failed to start port forwarder for pod %s: %w", pod.String(), err)
-	}
-	defer fw.Stop()
-
-	// Retrieving response by requesting Pod with url endpoint.
-	url := fmt.Sprintf("http://%s%s", fw.Address(), endpoint)
-	resp, err := http.Get(url) // nolint: gosec
-	if err != nil {
-		return nil, fmt.Errorf("failed to get request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	out, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read body from request: %w", err)
-	}
-
-	fw.WaitForStop()
-	return out, nil
 }
 
 func (r *BenchmarkReport) fetchEnvoyGatewayPod(ctx context.Context) (*corev1.Pod, error) {
