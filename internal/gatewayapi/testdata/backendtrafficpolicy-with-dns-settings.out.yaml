@@ -6,7 +6,7 @@ backendTrafficPolicies:
     name: policy-for-route-1
     namespace: default
   spec:
-    dnsSettings:
+    dns:
       dnsRefreshRate: 1s
       respectDnsTtl: true
     targetRef:
@@ -35,7 +35,7 @@ backendTrafficPolicies:
     name: policy-for-route-2
     namespace: default
   spec:
-    dnsSettings:
+    dns:
       dnsRefreshRate: 5s
       respectDnsTtl: false
     targetRef:
@@ -64,7 +64,7 @@ backendTrafficPolicies:
     name: policy-for-all-routes-in-gateway-1
     namespace: envoy-gateway
   spec:
-    dnsSettings:
+    dns:
       dnsRefreshRate: 10s
       respectDnsTtl: true
     targetRef:
@@ -342,7 +342,7 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
-        dnsSettings:
+        dns:
           dnsRefreshRate: 10s
           respectDnsTtl: true
         hostname: gateway.envoyproxy.io
@@ -386,7 +386,7 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
-        dnsSettings:
+        dns:
           dnsRefreshRate: 5s
           respectDnsTtl: false
         hostname: gateway.envoyproxy.io
@@ -410,7 +410,7 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
-        dnsSettings:
+        dns:
           dnsRefreshRate: 1s
           respectDnsTtl: true
         hostname: gateway.envoyproxy.io

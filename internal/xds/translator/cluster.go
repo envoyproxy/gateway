@@ -52,7 +52,7 @@ type xdsClusterArgs struct {
 	tcpkeepalive      *ir.TCPKeepalive
 	metrics           *ir.Metrics
 	backendConnection *ir.BackendConnection
-	dns               *ir.DNSSettings
+	dns               *ir.DNS
 	useClientProtocol bool
 }
 

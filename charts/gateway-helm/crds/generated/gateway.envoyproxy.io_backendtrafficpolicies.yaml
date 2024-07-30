@@ -138,16 +138,19 @@ spec:
                       rule: 'type(self) == string ? self.matches(r"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$")
                         : type(self) == int'
                 type: object
-              dnsSettings:
-                description: DNSSettings includes dns resolution settings.
+              dns:
+                description: DNS includes dns resolution settings.
                 properties:
                   dnsRefreshRate:
-                    description: DNSRefreshRate specifies the rate at which DNS records
-                      should be refreshed.
+                    description: |-
+                      DNSRefreshRate specifies the rate at which DNS records should be refreshed.
+                      Defaults to 30 seconds.
                     type: string
                   respectDnsTtl:
-                    description: RespectDNSTTL indicates whether the DNS Time-To-Live
-                      (TTL) should be respected.
+                    description: |-
+                      RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.
+                      If the value is set to true, the DNS refresh rate will be set to the resource record’s TTL.
+                      Defaults to true.
                     type: boolean
                 type: object
               faultInjection:

@@ -564,12 +564,12 @@ type HTTPRoute struct {
 	// Metadata is used to enrich envoy route metadata with user and provider-specific information
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 	// DNS is used to configure how DNS resolution is handled for the route
-	DNS *DNSSettings `json:"dnsSettings,omitempty" yaml:"dnsSettings,omitempty"`
+	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
 }
 
-// DNSSettings contains configuration options for DNS resolution.
+// DNS contains configuration options for DNS resolution.
 // +k8s:deepcopy-gen=true
-type DNSSettings struct {
+type DNS struct {
 	// DNSRefreshRate specifies the rate at which DNS records should be refreshed.
 	DNSRefreshRate *metav1.Duration `json:"dnsRefreshRate,omitempty"`
 	// RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.
@@ -1398,7 +1398,7 @@ type TCPRoute struct {
 	// settings of upstream connection
 	BackendConnection *BackendConnection `json:"backendConnection,omitempty" yaml:"backendConnection,omitempty"`
 	// DNS is used to configure how DNS resolution is handled for the route
-	DNS *DNSSettings `json:"dnsSettings,omitempty" yaml:"dnsSettings,omitempty"`
+	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
 }
 
 // TLS holds information for configuring TLS on a listener
@@ -1509,7 +1509,7 @@ type UDPRoute struct {
 	Timeout *Timeout `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	// settings of upstream connection
 	BackendConnection *BackendConnection `json:"backendConnection,omitempty" yaml:"backendConnection,omitempty"`
-	DNS               *DNSSettings       `json:"dnsSettings,omitempty" yaml:"dnsSettings,omitempty"`
+	DNS               *DNS               `json:"dns,omitempty" yaml:"dns,omitempty"`
 }
 
 // Validate the fields within the UDPListener structure

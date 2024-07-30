@@ -96,7 +96,7 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-    dnsSettings:
+    dns:
       dnsRefreshRate: "1s"
       respectDnsTtl: true
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -109,7 +109,7 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-2
-    dnsSettings:
+    dns:
       dnsRefreshRate: "5s"
       respectDnsTtl: false
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -122,6 +122,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-    dnsSettings:
+    dns:
       dnsRefreshRate: "10s"
       respectDnsTtl: true
