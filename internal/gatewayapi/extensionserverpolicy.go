@@ -14,9 +14,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
@@ -63,15 +61,9 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 			}
 
 			// Negative statuses have already been assigned so its safe to skip
-			gateway, resolveErr := resolveExtServerPolicyGatewayTargetRef(policy, currTarget, gatewayMap)
+			gateway := resolveExtServerPolicyGatewayTargetRef(policy, currTarget, gatewayMap)
 			if gateway == nil {
 				// unable to find a matching Gateway for policy
-				continue
-			}
-
-			// Skip the gateway. Don't add anything to the policy status.
-			if resolveErr != nil {
-				// The targetRef part is somehow wrong, this policy can't be attached.
 				continue
 			}
 
@@ -125,33 +117,20 @@ func policyStatusToUnstructured(policyStatus gwapiv1a2.PolicyStatus) map[string]
 	return ret
 }
 
-func resolveExtServerPolicyGatewayTargetRef(policy *unstructured.Unstructured, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, gateways map[types.NamespacedName]*policyGatewayTargetContext) (*GatewayContext, *status.PolicyResolveError) {
-	targetNs := ptr.To(gwapiv1b1.Namespace(policy.GetNamespace()))
-
+func resolveExtServerPolicyGatewayTargetRef(policy *unstructured.Unstructured, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, gateways map[types.NamespacedName]*policyGatewayTargetContext) *GatewayContext {
 	// Check if the gateway exists
 	key := types.NamespacedName{
 		Name:      string(target.Name),
-		Namespace: string(*targetNs),
+		Namespace: policy.GetNamespace(),
 	}
 	gateway, ok := gateways[key]
 
 	// Gateway not found
 	if !ok {
-		return nil, nil
+		return nil
 	}
 
-	// Ensure Policy and target are in the same namespace
-	if policy.GetNamespace() != string(*targetNs) {
-		message := fmt.Sprintf("Namespace:%s TargetRef.Namespace:%s, extension server policies can only target a resource in the same namespace.",
-			policy.GetNamespace(), *targetNs)
-
-		return gateway.GatewayContext, &status.PolicyResolveError{
-			Reason:  gwapiv1a2.PolicyReasonInvalid,
-			Message: message,
-		}
-	}
-
-	return gateway.GatewayContext, nil
+	return gateway.GatewayContext
 }
 
 func (t *Translator) translateExtServerPolicyForGateway(
