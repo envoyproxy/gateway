@@ -288,29 +288,16 @@ func resolveCTPolicyTargetRef(
 	targetRef *gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
 	gateways map[types.NamespacedName]*policyGatewayTargetContext,
 ) (*GatewayContext, *status.PolicyResolveError) {
-	targetNs := policy.Namespace
-
 	// Check if the gateway exists
 	key := types.NamespacedName{
 		Name:      string(targetRef.Name),
-		Namespace: targetNs,
+		Namespace: policy.Namespace,
 	}
 	gateway, ok := gateways[key]
 
 	// Gateway not found
 	if !ok {
 		return nil, nil
-	}
-
-	// Ensure Policy and target Gateway are in the same namespace
-	if policy.Namespace != targetNs {
-		message := fmt.Sprintf("Namespace:%s TargetRef.Namespace:%s, ClientTrafficPolicy can only target a Gateway in the same namespace.",
-			policy.Namespace, targetNs)
-
-		return gateway.GatewayContext, &status.PolicyResolveError{
-			Reason:  gwapiv1a2.PolicyReasonInvalid,
-			Message: message,
-		}
 	}
 
 	// If sectionName is set, make sure its valid

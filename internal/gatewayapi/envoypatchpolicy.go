@@ -33,8 +33,6 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 			irKey        string
 		)
 
-		targetNs := policy.Namespace
-
 		if t.MergeGateways {
 			targetKind = KindGatewayClass
 			irKey = string(t.GatewayClassName)
@@ -49,7 +47,7 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 		} else {
 			targetKind = KindGateway
 			gatewayNN := types.NamespacedName{
-				Namespace: targetNs,
+				Namespace: policy.Namespace,
 				Name:      string(policy.Spec.TargetRef.Name),
 			}
 			// It must exist since the gateways have already been processed
@@ -94,25 +92,6 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 		if policy.Spec.TargetRef.Group != gwapiv1.GroupName || string(policy.Spec.TargetRef.Kind) != targetKind {
 			message := fmt.Sprintf("TargetRef.Group:%s TargetRef.Kind:%s, only TargetRef.Group:%s and TargetRef.Kind:%s is supported.",
 				policy.Spec.TargetRef.Group, policy.Spec.TargetRef.Kind, gwapiv1.GroupName, targetKind)
-
-			resolveErr = &status.PolicyResolveError{
-				Reason:  gwapiv1a2.PolicyReasonInvalid,
-				Message: message,
-			}
-			status.SetResolveErrorForPolicyAncestors(&policy.Status,
-				ancestorRefs,
-				t.GatewayControllerName,
-				policy.Generation,
-				resolveErr,
-			)
-
-			continue
-		}
-
-		// Ensure EnvoyPatchPolicy and target Gateway are in the same namespace
-		if policy.Namespace != targetNs {
-			message := fmt.Sprintf("Namespace:%s TargetRef.Namespace:%s, EnvoyPatchPolicy can only target a %s in the same namespace.",
-				policy.Namespace, targetNs, targetKind)
 
 			resolveErr = &status.PolicyResolveError{
 				Reason:  gwapiv1a2.PolicyReasonInvalid,
