@@ -1785,7 +1785,7 @@ _Appears in:_
 | `initialStreamWindowSize` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#quantity-resource-api)_ |  false  | InitialStreamWindowSize sets the initial window size for HTTP/2 streams.<br />If not set, the default value is 64 KiB(64*1024). |
 | `initialConnectionWindowSize` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#quantity-resource-api)_ |  false  | InitialConnectionWindowSize sets the initial window size for HTTP/2 connections.<br />If not set, the default value is 1 MiB. |
 | `maxConcurrentStreams` | _integer_ |  false  | MaxConcurrentStreams sets the maximum number of concurrent streams allowed per connection.<br />If not set, the default value is 100. |
-| `resetStreamOnError` | _boolean_ |  false  | ResetStreamOnError determines if Envoy will terminate the stream or the connection in the event of HTTP messaging error<br />It's recommended for L2 Envoy deployments to set this value to true.<br />https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/level_two |
+| `terminateConnectionOnMessagingError` | _boolean_ |  false  | ResetConnectionOnError determines if Envoy will terminate the connection or just the offending stream in the event of HTTP messaging error<br />It's recommended for L2 Envoy deployments to set this value to false.<br />https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/level_two<br />Default: true |
 
 
 #### HTTP3Settings

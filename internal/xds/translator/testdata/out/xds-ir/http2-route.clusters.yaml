@@ -73,7 +73,7 @@
           initialConnectionWindowSize: 524288000
           initialStreamWindowSize: 1048576
           maxConcurrentStreams: 200
-          overrideStreamErrorOnInvalidHttpMessage: true
+          overrideStreamErrorOnInvalidHttpMessage: false
         httpProtocolOptions: {}
 - circuitBreakers:
     thresholds:

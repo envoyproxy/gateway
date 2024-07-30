@@ -674,9 +674,9 @@ func buildHTTP2Settings(opts *ir.HTTP2Settings) *corev3.Http2ProtocolOptions {
 		}
 	}
 
-	if opts.ResetStreamOnError != nil {
+	if opts.TerminateConnectionOnMessagingError != nil {
 		out.OverrideStreamErrorOnInvalidHttpMessage = &wrapperspb.BoolValue{
-			Value: *opts.ResetStreamOnError,
+			Value: !*opts.TerminateConnectionOnMessagingError,
 		}
 	}
 
