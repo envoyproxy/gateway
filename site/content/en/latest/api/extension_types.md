@@ -460,6 +460,7 @@ _Appears in:_
 | `useClientProtocol` | _boolean_ |  false  | UseClientProtocol configures Envoy to prefer sending requests to backends using<br />the same HTTP protocol that the incoming request used. Defaults to false, which means<br />that Envoy will use the protocol indicated by the attached BackendRef. |
 | `timeout` | _[Timeout](#timeout)_ |  false  | Timeout settings for the backend connections. |
 | `connection` | _[BackendConnection](#backendconnection)_ |  false  | Connection includes backend connection settings. |
+| `dnsSettings` | _[DNSSettings](#dnssettings)_ |  false  | DNSSettings includes dns resolution settings. |
 
 
 #### BasicAuth
@@ -843,6 +844,21 @@ _Appears in:_
 | `Literal` | CustomTagTypeLiteral adds hard-coded value to each span.<br /> | 
 | `Environment` | CustomTagTypeEnvironment adds value from environment variable to each span.<br /> | 
 | `RequestHeader` | CustomTagTypeRequestHeader adds value from request header to each span.<br /> | 
+
+
+#### DNSSettings
+
+
+
+
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `dnsRefreshRate` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  true  | DNSRefreshRate specifies the rate at which DNS records should be refreshed. |
+| `respectDnsTtl` | _boolean_ |  true  | RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected. |
 
 
 #### EnvironmentCustomTag
