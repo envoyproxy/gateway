@@ -1,5 +1,5 @@
 ---
-title: Migrating to Envoy Gateway
+title: Migrating from Ingress Resources
 ---
 
 ## Introduction
@@ -19,6 +19,33 @@ Before you start the migration, ensure you have the following:
 Here’s a step-by-step example of migrating from Ingress to Envoy Gateway using `ingress2gateway`:
 
 1. **Convert Ingress Resources**:
+
+   Given an example Ingress configuration:
+
+   ```yaml
+   apiVersion: networking.k8s.io/v1
+   kind: Ingress
+   metadata:
+     name: example-ingress
+     namespace: default
+   spec:
+     ingressClassName: nginx
+     rules:
+     - host: example.com
+       http:
+         paths:
+         - path: /
+           pathType: Prefix
+           backend:
+             service:
+               name: example-service
+               port:
+                 number: 80
+     tls:
+     - hosts:
+       - example.com
+       secretName: example-tls
+   ```
 
    Run the following command to convert your Ingress resources into Gateway API resources:
 
