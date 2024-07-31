@@ -427,6 +427,13 @@ spec:
             memory: 256Mi
         securityContext:
           allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
         volumeMounts:
         - mountPath: /config
           name: envoy-gateway-config
@@ -437,8 +444,6 @@ spec:
       imagePullSecrets:
       - name: secret1
       - name: secret2
-      securityContext:
-        runAsNonRoot: true
       serviceAccountName: envoy-gateway
       terminationGracePeriodSeconds: 10
       volumes:
@@ -550,13 +555,21 @@ spec:
         image: private-hub/envoyproxy/gateway:abcdef12
         imagePullPolicy: Always
         name: envoy-gateway-certgen
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsGroup: 65534
+          runAsUser: 65534
+          seccompProfile:
+            type: RuntimeDefault
       imagePullSecrets:
       - name: secret1
       - name: secret2
       restartPolicy: Never
-      securityContext:
-        runAsGroup: 65534
-        runAsNonRoot: true
-        runAsUser: 65534
       serviceAccountName: gateway-helm-certgen
   ttlSecondsAfterFinished: 30

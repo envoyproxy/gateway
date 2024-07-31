@@ -95,6 +95,13 @@ spec:
           }}
         securityContext:
           allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
         volumeMounts:
         - mountPath: /config
           name: envoy-gateway-config
@@ -103,8 +110,6 @@ spec:
           name: certs
           readOnly: true
       {{- include "eg.image.pullSecrets" . | nindent 6 }}
-      securityContext:
-        runAsNonRoot: true
       serviceAccountName: envoy-gateway
       terminationGracePeriodSeconds: 10
       volumes:
