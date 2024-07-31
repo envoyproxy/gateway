@@ -13,35 +13,51 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
+	"path"
 	"strconv"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	kube "github.com/envoyproxy/gateway/internal/kubernetes"
+	"github.com/envoyproxy/gateway/internal/troubleshoot/collect"
 	prom "github.com/envoyproxy/gateway/test/utils/prometheus"
 )
 
 type BenchmarkReport struct {
-	Name    string
-	Result  []byte
-	Metrics map[string]float64 // metricTableHeaderName:metricValue
+	Name              string
+	Result            []byte
+	Metrics           map[string]float64 // metricTableHeaderName:metricValue
+	ProfilesPath      map[string]string  // profileKey:profileFilepath
+	ProfilesOutputDir string
 
 	kubeClient kube.CLIClient
 	promClient *prom.Client
 }
 
-func NewBenchmarkReport(name string, kubeClient kube.CLIClient, promClient *prom.Client) *BenchmarkReport {
-	return &BenchmarkReport{
-		Name:       name,
-		Metrics:    make(map[string]float64),
-		kubeClient: kubeClient,
-		promClient: promClient,
+func NewBenchmarkReport(name, profilesOutputDir string, kubeClient kube.CLIClient, promClient *prom.Client) (*BenchmarkReport, error) {
+	if err := createDirIfNotExist(profilesOutputDir); err != nil {
+		return nil, err
 	}
+
+	return &BenchmarkReport{
+		Name:              name,
+		Metrics:           make(map[string]float64),
+		ProfilesPath:      make(map[string]string),
+		ProfilesOutputDir: profilesOutputDir,
+		kubeClient:        kubeClient,
+		promClient:        promClient,
+	}, nil
 }
 
 func (r *BenchmarkReport) Collect(ctx context.Context, job *types.NamespacedName) error {
+	if err := r.GetProfiles(ctx); err != nil {
+		return err
+	}
+
 	if err := r.GetMetrics(ctx); err != nil {
 		return err
 	}
@@ -109,6 +125,33 @@ func (r *BenchmarkReport) GetMetrics(ctx context.Context) error {
 	return nil
 }
 
+func (r *BenchmarkReport) GetProfiles(ctx context.Context) error {
+	egPod, err := r.fetchEnvoyGatewayPod(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Memory heap profiles.
+	heapProf, err := collect.RequestWithPortForwarder(
+		r.kubeClient, types.NamespacedName{Name: egPod.Name, Namespace: egPod.Namespace}, 19000, "/debug/pprof/heap",
+	)
+	if err != nil {
+		return err
+	}
+
+	heapProfPath := path.Join(r.ProfilesOutputDir, fmt.Sprintf("heap.%s.pprof", r.Name))
+	if err = os.WriteFile(heapProfPath, heapProf, 0o600); err != nil {
+		return fmt.Errorf("failed to write profiles %s: %w", heapProfPath, err)
+	}
+
+	// Remove parent output report dir.
+	splits := strings.SplitN(heapProfPath, "/", 2)[0]
+	heapProfPath = strings.TrimPrefix(heapProfPath, splits+"/")
+	r.ProfilesPath["heap"] = heapProfPath
+
+	return nil
+}
+
 // getLogsFromPod scrapes the logs directly from the pod (default container).
 func (r *BenchmarkReport) getLogsFromPod(ctx context.Context, pod *types.NamespacedName) ([]byte, error) {
 	podLogOpts := corev1.PodLogOptions{}
@@ -128,4 +171,20 @@ func (r *BenchmarkReport) getLogsFromPod(ctx context.Context, pod *types.Namespa
 	}
 
 	return buf.Bytes(), nil
+}
+
+func (r *BenchmarkReport) fetchEnvoyGatewayPod(ctx context.Context) (*corev1.Pod, error) {
+	egPods, err := r.kubeClient.Kube().CoreV1().
+		Pods("envoy-gateway-system").
+		List(ctx, metav1.ListOptions{LabelSelector: "control-plane=envoy-gateway"})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(egPods.Items) < 1 {
+		return nil, fmt.Errorf("failed to get any pods for envoy-gateway")
+	}
+
+	// Using the first one pod as default envoy-gateway pod
+	return &egPods.Items[0], nil
 }

@@ -76,6 +76,10 @@ func RenderReport(writer io.Writer, name, description string, titleLevel int, re
 
 	writeSection(writer, "Metrics", titleLevel+1, "")
 	renderMetricsTable(writer, reports)
+
+	writeSection(writer, "Profiles", titleLevel+1, "")
+	renderProfilesTable(writer, "Memory", "heap", titleLevel+2, reports)
+
 	return nil
 }
 
@@ -143,6 +147,17 @@ func renderMetricsTable(writer io.Writer, reports []*BenchmarkReport) {
 	}
 
 	_ = table.Flush()
+}
+
+func renderProfilesTable(writer io.Writer, target, key string, titleLevel int, reports []*BenchmarkReport) {
+	writeSection(writer, target, titleLevel, "")
+
+	for _, report := range reports {
+		// The image is not be rendered yet, so it is a placeholder for the path.
+		// The image will be rendered after the test has finished.
+		writeSection(writer, report.Name, titleLevel+1,
+			fmt.Sprintf("![%s-%s](%s.png)", key, report.Name, report.ProfilesPath[key]))
+	}
 }
 
 // writeSection writes one section in Markdown style, content is optional.
