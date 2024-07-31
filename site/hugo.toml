@@ -279,11 +279,11 @@ enable = true
 
 [[params.versions]]
   version = "v1.1"
-  url = "/v1.1"
+  url = "/docs"
 
 [[params.versions]]
   version = "v1.0"
-  url = "/docs"
+  url = "/v1.0"
 
 [[params.versions]]
   version = "v0.6"
