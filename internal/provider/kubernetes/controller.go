@@ -783,7 +783,7 @@ func (r *gatewayAPIReconciler) processFinalizers(ctx context.Context, managedGC 
 
 	if len(resourceTree.Gateways) > 0 && managedGC.DeletionTimestamp.IsZero() {
 		if err := r.addFinalizer(ctx, managedGC); err != nil {
-			return fmt.Errorf("failed adding finalizer to gatewayclass %s: %w", managedGC.Name, err)
+			return fmt.Errorf("failed to add finalizer to gatewayclass %s: %w", managedGC.Name, err)
 		}
 	}
 
