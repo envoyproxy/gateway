@@ -300,7 +300,7 @@ spec:
                     maximum: 2147483647
                     minimum: 1
                     type: integer
-                  terminateConnectionOnMessagingError:
+                  terminateConnOnError:
                     description: |-
                       ResetConnectionOnError determines if Envoy will terminate the connection or just the offending stream in the event of HTTP messaging error
                       It's recommended for L2 Envoy deployments to set this value to false.

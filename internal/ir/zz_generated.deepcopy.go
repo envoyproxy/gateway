@@ -1005,8 +1005,8 @@ func (in *HTTP2Settings) DeepCopyInto(out *HTTP2Settings) {
 		*out = new(uint32)
 		**out = **in
 	}
-	if in.TerminateConnectionOnMessagingError != nil {
-		in, out := &in.TerminateConnectionOnMessagingError, &out.TerminateConnectionOnMessagingError
+	if in.TerminateConnOnError != nil {
+		in, out := &in.TerminateConnOnError, &out.TerminateConnOnError
 		*out = new(bool)
 		**out = **in
 	}

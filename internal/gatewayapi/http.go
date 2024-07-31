@@ -60,7 +60,7 @@ func buildIRHTTP2Settings(http2Settings *egv1a1.HTTP2Settings) (*ir.HTTP2Setting
 
 	http2.MaxConcurrentStreams = http2Settings.MaxConcurrentStreams
 
-	http2.TerminateConnectionOnMessagingError = http2Settings.TerminateConnectionOnMessagingError
+	http2.TerminateConnOnError = http2Settings.TerminateConnOnError
 
 	return http2, errs
 }

@@ -10,7 +10,7 @@ backendTrafficPolicies:
       initialConnectionWindowSize: 500Mi
       initialStreamWindowSize: 1Mi
       maxConcurrentStreams: 200
-      terminateConnectionOnMessagingError: false
+      terminateConnOnError: false
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -331,4 +331,4 @@ xdsIR:
             initialConnectionWindowSize: 1048576
             initialStreamWindowSize: 524288000
             maxConcurrentStreams: 200
-            terminateConnectionOnMessagingError: false
+            terminateConnOnError: false

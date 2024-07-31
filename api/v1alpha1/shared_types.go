@@ -508,5 +508,5 @@ type HTTP2Settings struct {
 	// https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/level_two
 	// Default: true
 	// +optional
-	TerminateConnectionOnMessagingError *bool `json:"terminateConnectionOnMessagingError,omitempty"`
+	TerminateConnOnError *bool `json:"terminateConnOnError,omitempty"`
 }

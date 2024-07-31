@@ -96,9 +96,9 @@ func http2ProtocolOptions(opts *ir.HTTP2Settings) *corev3.Http2ProtocolOptions {
 		},
 	}
 
-	if opts.TerminateConnectionOnMessagingError != nil {
+	if opts.TerminateConnOnError != nil {
 		out.OverrideStreamErrorOnInvalidHttpMessage = &wrapperspb.BoolValue{
-			Value: !*opts.TerminateConnectionOnMessagingError,
+			Value: !*opts.TerminateConnOnError,
 		}
 	}
 
