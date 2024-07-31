@@ -61,6 +61,12 @@ type BackendTrafficPolicySpec struct {
 	// +optional
 	ProxyProtocol *ProxyProtocol `json:"proxyProtocol,omitempty"`
 
+	// The Original Src filter binds upstream connections to the original source address determined
+	// for the connection. This address could come from something like the Proxy Protocol filter, or it
+	// could come from trusted http headers.
+	// +optional
+	OriginalSrc *OriginalSrc `json:"originalSrc,omitempty"`
+
 	// TcpKeepalive settings associated with the upstream client connection.
 	// Disabled by default.
 	//

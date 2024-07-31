@@ -288,6 +288,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 		rl        *ir.RateLimit
 		lb        *ir.LoadBalancer
 		pp        *ir.ProxyProtocol
+		sr        *ir.OriginalSrc
 		hc        *ir.HealthCheck
 		cb        *ir.CircuitBreaker
 		fi        *ir.FaultInjection
@@ -313,6 +314,9 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 	}
 	if policy.Spec.ProxyProtocol != nil {
 		pp = t.buildProxyProtocol(policy)
+	}
+	if policy.Spec.OriginalSrc != nil {
+		sr = t.buildOriginalSrc(policy)
 	}
 	if policy.Spec.HealthCheck != nil {
 		hc = t.buildHealthCheck(policy)
@@ -363,6 +367,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 				if strings.HasPrefix(r.Destination.Name, prefix) {
 					r.LoadBalancer = lb
 					r.ProxyProtocol = pp
+					r.OriginalSrc = sr
 					r.HealthCheck = hc
 					r.CircuitBreaker = cb
 					r.TCPKeepalive = ka
@@ -392,6 +397,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 						RateLimit:         rl,
 						LoadBalancer:      lb,
 						ProxyProtocol:     pp,
+						OriginalSrc:       sr,
 						HealthCheck:       hc,
 						CircuitBreaker:    cb,
 						FaultInjection:    fi,
@@ -426,6 +432,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		rl        *ir.RateLimit
 		lb        *ir.LoadBalancer
 		pp        *ir.ProxyProtocol
+		sr        *ir.OriginalSrc
 		hc        *ir.HealthCheck
 		cb        *ir.CircuitBreaker
 		fi        *ir.FaultInjection
@@ -450,6 +457,9 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	}
 	if policy.Spec.ProxyProtocol != nil {
 		pp = t.buildProxyProtocol(policy)
+	}
+	if policy.Spec.OriginalSrc != nil {
+		sr = t.buildOriginalSrc(policy)
 	}
 	if policy.Spec.HealthCheck != nil {
 		hc = t.buildHealthCheck(policy)
@@ -509,6 +519,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 
 			r.LoadBalancer = lb
 			r.ProxyProtocol = pp
+			r.OriginalSrc = sr
 			r.HealthCheck = hc
 			r.CircuitBreaker = cb
 			r.TCPKeepalive = ka
@@ -561,6 +572,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 				RateLimit:      rl,
 				LoadBalancer:   lb,
 				ProxyProtocol:  pp,
+				OriginalSrc:    sr,
 				HealthCheck:    hc,
 				CircuitBreaker: cb,
 				FaultInjection: fi,
@@ -861,6 +873,13 @@ func (t *Translator) buildProxyProtocol(policy *egv1a1.BackendTrafficPolicy) *ir
 	}
 
 	return pp
+}
+
+func (t *Translator) buildOriginalSrc(policy *egv1a1.BackendTrafficPolicy) *ir.OriginalSrc {
+	src := &ir.OriginalSrc{}
+	src.BindPort = policy.Spec.OriginalSrc.BindPort
+	src.Mark = policy.Spec.OriginalSrc.Mark
+	return src
 }
 
 func (t *Translator) buildHealthCheck(policy *egv1a1.BackendTrafficPolicy) *ir.HealthCheck {
