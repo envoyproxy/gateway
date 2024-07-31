@@ -771,13 +771,13 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 
 // processFinalizers encapsulates logic for managing finalizers on GatewayClass and EnvoyProxy objects.
 func (r *gatewayAPIReconciler) processFinalizers(ctx context.Context, managedGC *gwapiv1.GatewayClass, resourceTree *gatewayapi.Resources) error {
-	// Add finalizer to EnvoyProxy if it is referenced by the GatewayClass.
+	// Add finalizer to EnvoyProxy and GatewayClass if GatewayClass references this EnvoyProxy.
 	if classRefsEnvoyProxy(managedGC, resourceTree.EnvoyProxyForGatewayClass) && resourceTree.EnvoyProxyForGatewayClass.DeletionTimestamp.IsZero() && managedGC.DeletionTimestamp.IsZero() {
 		if err := r.addFinalizer(ctx, resourceTree.EnvoyProxyForGatewayClass); err != nil {
-			return fmt.Errorf("failed adding finalizer to Envoy Proxy %s: %w", resourceTree.EnvoyProxyForGatewayClass.Name, err)
+			return fmt.Errorf("failed to add finalizer to Envoy Proxy %s: %w", resourceTree.EnvoyProxyForGatewayClass.Name, err)
 		}
 		if err := r.addFinalizer(ctx, managedGC); err != nil {
-			return fmt.Errorf("failed adding finalizer to gatewayclass %s: %w", managedGC.Name, err)
+			return fmt.Errorf("failed to add finalizer to gatewayclass %s: %w", managedGC.Name, err)
 		}
 	}
 
