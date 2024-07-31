@@ -63,6 +63,7 @@ type Resources struct {
 	EnvoyExtensionPolicies  []*egv1a1.EnvoyExtensionPolicy `json:"envoyExtensionPolicies,omitempty" yaml:"envoyExtensionPolicies,omitempty"`
 	ExtensionServerPolicies []unstructured.Unstructured    `json:"extensionServerPolicies,omitempty" yaml:"extensionServerPolicies,omitempty"`
 	Backends                []*egv1a1.Backend              `json:"backends,omitempty" yaml:"backends,omitempty"`
+	VirtualBackends         []*egv1a1.VirtualBackend       `json:"virtualBackends,omitempty" yaml:"virtualBackends,omitempty"`
 }
 
 func NewResources() *Resources {
@@ -86,6 +87,7 @@ func NewResources() *Resources {
 		EnvoyExtensionPolicies:  []*egv1a1.EnvoyExtensionPolicy{},
 		ExtensionServerPolicies: []unstructured.Unstructured{},
 		Backends:                []*egv1a1.Backend{},
+		VirtualBackends:         []*egv1a1.VirtualBackend{},
 	}
 }
 
@@ -133,6 +135,16 @@ func (r *Resources) GetBackend(namespace, name string) *egv1a1.Backend {
 	for _, be := range r.Backends {
 		if be.Namespace == namespace && be.Name == name {
 			return be
+		}
+	}
+
+	return nil
+}
+
+func (r *Resources) GetVirtualBackend(namespace, name string) *egv1a1.VirtualBackend {
+	for _, vb := range r.VirtualBackends {
+		if vb.Namespace == namespace && vb.Name == name {
+			return vb
 		}
 	}
 

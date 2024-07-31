@@ -478,6 +478,17 @@ _Appears in:_
 | `users` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  true  | The Kubernetes secret which contains the username-password pairs in<br />htpasswd format, used to verify user credentials in the "Authorization"<br />header.<br /><br />This is an Opaque secret. The username-password pairs should be stored in<br />the key ".htpasswd". As the key name indicates, the value needs to be the<br />htpasswd format, for example: "user1:\{SHA\}hashed_user1_password".<br />Right now, only SHA hash algorithm is supported.<br />Reference to https://httpd.apache.org/docs/2.4/programs/htpasswd.html<br />for more details.<br /><br />Note: The secret must be in the same namespace as the SecurityPolicy. |
 
 
+#### Body
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [VirtualBackendSpec](#virtualbackendspec)
+
+
+
 #### BootstrapType
 
 _Underlying type:_ _string_
@@ -3270,6 +3281,17 @@ _Appears in:_
 | `File` | ResourceProviderTypeFile defines the "File" provider.<br /> | 
 
 
+#### ResponseHeader
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [VirtualBackendSpec](#virtualbackendspec)
+
+
+
 #### Retry
 
 
@@ -3464,6 +3486,17 @@ _Appears in:_
 | ----- | ----------- |
 | `Exact` | SourceMatchExact All IP Addresses within the specified Source IP CIDR are treated as a single client selector<br />and share the same rate limit bucket.<br /> | 
 | `Distinct` | SourceMatchDistinct Each IP Address within the specified Source IP CIDR is treated as a distinct client selector<br />and uses a separate rate limit bucket/counter.<br />Note: This is only supported for Global Rate Limits.<br /> | 
+
+
+#### StatusCode
+
+_Underlying type:_ _integer_
+
+
+
+_Appears in:_
+- [VirtualBackendSpec](#virtualbackendspec)
+
 
 
 #### StringMatch
@@ -3709,6 +3742,24 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `path` | _string_ |  true  | Path defines the unix domain socket path of the backend endpoint. |
+
+
+
+
+#### VirtualBackendSpec
+
+
+
+
+
+_Appears in:_
+- [VirtualBackend](#virtualbackend)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `body` | _[Body](#body)_ |  true  |  |
+| `statusCode` | _[StatusCode](#statuscode)_ |  true  |  |
+| `responseHeadersToAdd` | _[ResponseHeader](#responseheader) array_ |  true  |  |
 
 
 #### Wasm
