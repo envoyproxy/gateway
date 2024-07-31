@@ -709,11 +709,11 @@ func (route *TCPRouteTranslator) asClusterArgs(extra *ExtraArgs) *xdsClusterArgs
 	}
 }
 
-type HttpRouteTranslator struct {
+type HTTPRouteTranslator struct {
 	*ir.HTTPRoute
 }
 
-func (httpRoute *HttpRouteTranslator) asClusterArgs(extra *ExtraArgs) *xdsClusterArgs {
+func (httpRoute *HTTPRouteTranslator) asClusterArgs(extra *ExtraArgs) *xdsClusterArgs {
 	clusterArgs := &xdsClusterArgs{
 		name:              httpRoute.Destination.Name,
 		settings:          httpRoute.Destination.Settings,

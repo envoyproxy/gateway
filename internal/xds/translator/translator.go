@@ -452,7 +452,7 @@ func (t *Translator) addRouteToRouteConfig(
 		if httpRoute.Destination != nil {
 			if err = processXdsCluster(
 				tCtx,
-				&HttpRouteTranslator{httpRoute},
+				&HTTPRouteTranslator{httpRoute},
 				&ExtraArgs{
 					metrics:       metrics,
 					http1Settings: httpListener.HTTP1,
