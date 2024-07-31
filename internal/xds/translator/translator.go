@@ -585,6 +585,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 				endpointType:      buildEndpointType(route.Destination.Settings),
 				metrics:           metrics,
 				backendConnection: route.BackendConnection,
+				dns:               route.DNS,
 			}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 				errs = errors.Join(errs, err)
 			}
@@ -656,6 +657,7 @@ func processUDPListenerXdsTranslation(
 				endpointType:      buildEndpointType(route.Destination.Settings),
 				metrics:           metrics,
 				backendConnection: route.BackendConnection,
+				dns:               route.DNS,
 			}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 				errs = errors.Join(errs, err)
 			}
