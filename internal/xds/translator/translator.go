@@ -24,7 +24,6 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
-	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
@@ -453,9 +452,11 @@ func (t *Translator) addRouteToRouteConfig(
 		if httpRoute.Destination != nil {
 			if err = processXdsCluster(
 				tCtx,
-				httpRoute,
-				httpListener.HTTP1,
-				metrics,
+				&HttpRouteTranslator{httpRoute},
+				&ExtraArgs{
+					metrics:       metrics,
+					http1Settings: httpListener.HTTP1,
+				},
 			); err != nil {
 				errs = errors.Join(errs, err)
 			}
@@ -573,20 +574,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 		patchProxyProtocolFilter(xdsListener, tcpListener.EnableProxyProtocol)
 
 		for _, route := range tcpListener.Routes {
-			if err := addXdsCluster(tCtx, &xdsClusterArgs{
-				name:              route.Destination.Name,
-				settings:          route.Destination.Settings,
-				loadBalancer:      route.LoadBalancer,
-				proxyProtocol:     route.ProxyProtocol,
-				circuitBreaker:    route.CircuitBreaker,
-				tcpkeepalive:      route.TCPKeepalive,
-				healthCheck:       route.HealthCheck,
-				timeout:           route.Timeout,
-				endpointType:      buildEndpointType(route.Destination.Settings),
-				metrics:           metrics,
-				backendConnection: route.BackendConnection,
-				dns:               route.DNS,
-			}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+			if err := processXdsCluster(tCtx, &TCPRouteTranslator{route}, &ExtraArgs{metrics: metrics}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 				errs = errors.Join(errs, err)
 			}
 			if route.TLS != nil && route.TLS.Terminate != nil {
@@ -648,17 +636,7 @@ func processUDPListenerXdsTranslation(
 			}
 
 			// 1:1 between IR UDPRoute and xDS Cluster
-			if err := addXdsCluster(tCtx, &xdsClusterArgs{
-				name:              route.Destination.Name,
-				settings:          route.Destination.Settings,
-				loadBalancer:      route.LoadBalancer,
-				timeout:           route.Timeout,
-				tSocket:           nil,
-				endpointType:      buildEndpointType(route.Destination.Settings),
-				metrics:           metrics,
-				backendConnection: route.BackendConnection,
-				dns:               route.DNS,
-			}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+			if err := processXdsCluster(tCtx, &UDPRouteTranslator{route}, &ExtraArgs{metrics: metrics}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 				errs = errors.Join(errs, err)
 			}
 		}
@@ -750,38 +728,11 @@ func findXdsEndpoint(tCtx *types.ResourceVersionTable, name string) *endpointv3.
 	return nil
 }
 
-// processXdsCluster processes a xds cluster by its endpoint address type.
-func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute, http1Settings *ir.HTTP1Settings, metrics *ir.Metrics) error {
-	clusterArgs := &xdsClusterArgs{
-		name:              httpRoute.Destination.Name,
-		settings:          httpRoute.Destination.Settings,
-		tSocket:           nil,
-		endpointType:      buildEndpointType(httpRoute.Destination.Settings),
-		http1Settings:     http1Settings,
-		metrics:           metrics,
-		useClientProtocol: ptr.Deref(httpRoute.UseClientProtocol, false),
-	}
-
-	// Populate traffic features.
-	bt := httpRoute.Traffic
-	if bt != nil {
-		clusterArgs.loadBalancer = bt.LoadBalancer
-		clusterArgs.proxyProtocol = bt.ProxyProtocol
-		clusterArgs.circuitBreaker = bt.CircuitBreaker
-		clusterArgs.healthCheck = bt.HealthCheck
-		clusterArgs.timeout = bt.Timeout
-		clusterArgs.tcpkeepalive = bt.TCPKeepalive
-		clusterArgs.backendConnection = bt.BackendConnection
-	}
-
-	if httpRoute.DNS != nil {
-		clusterArgs.dns = httpRoute.DNS
-	}
-
-	if err := addXdsCluster(tCtx, clusterArgs); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+// processXdsCluster processes xds cluster with args per route.
+func processXdsCluster(tCtx *types.ResourceVersionTable, route clusterArgs, extras *ExtraArgs) error {
+	if err := addXdsCluster(tCtx, route.asClusterArgs(extras)); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 		return err
 	}
-
 	return nil
 }
 

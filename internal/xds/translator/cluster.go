@@ -660,3 +660,85 @@ func buildBackandConnectionBufferLimitBytes(bc *ir.BackendConnection) *wrappers.
 
 	return wrapperspb.UInt32(tcpClusterPerConnectionBufferLimitBytes)
 }
+
+type ExtraArgs struct {
+	metrics       *ir.Metrics
+	http1Settings *ir.HTTP1Settings
+}
+
+type clusterArgs interface {
+	asClusterArgs(extras *ExtraArgs) *xdsClusterArgs
+}
+
+type UDPRouteTranslator struct {
+	*ir.UDPRoute
+}
+
+func (route *UDPRouteTranslator) asClusterArgs(extra *ExtraArgs) *xdsClusterArgs {
+	return &xdsClusterArgs{
+		name:              route.Destination.Name,
+		settings:          route.Destination.Settings,
+		loadBalancer:      route.LoadBalancer,
+		timeout:           route.Timeout,
+		tSocket:           nil,
+		endpointType:      buildEndpointType(route.Destination.Settings),
+		metrics:           extra.metrics,
+		backendConnection: route.BackendConnection,
+		dns:               route.DNS,
+	}
+}
+
+type TCPRouteTranslator struct {
+	*ir.TCPRoute
+}
+
+func (route *TCPRouteTranslator) asClusterArgs(extra *ExtraArgs) *xdsClusterArgs {
+	return &xdsClusterArgs{
+		name:              route.Destination.Name,
+		settings:          route.Destination.Settings,
+		loadBalancer:      route.LoadBalancer,
+		proxyProtocol:     route.ProxyProtocol,
+		circuitBreaker:    route.CircuitBreaker,
+		tcpkeepalive:      route.TCPKeepalive,
+		healthCheck:       route.HealthCheck,
+		timeout:           route.Timeout,
+		endpointType:      buildEndpointType(route.Destination.Settings),
+		metrics:           extra.metrics,
+		backendConnection: route.BackendConnection,
+		dns:               route.DNS,
+	}
+}
+
+type HttpRouteTranslator struct {
+	*ir.HTTPRoute
+}
+
+func (httpRoute *HttpRouteTranslator) asClusterArgs(extra *ExtraArgs) *xdsClusterArgs {
+	clusterArgs := &xdsClusterArgs{
+		name:              httpRoute.Destination.Name,
+		settings:          httpRoute.Destination.Settings,
+		tSocket:           nil,
+		endpointType:      buildEndpointType(httpRoute.Destination.Settings),
+		metrics:           extra.metrics,
+		http1Settings:     extra.http1Settings,
+		useClientProtocol: ptr.Deref(httpRoute.UseClientProtocol, false),
+	}
+
+	// Populate traffic features.
+	bt := httpRoute.Traffic
+	if bt != nil {
+		clusterArgs.loadBalancer = bt.LoadBalancer
+		clusterArgs.proxyProtocol = bt.ProxyProtocol
+		clusterArgs.circuitBreaker = bt.CircuitBreaker
+		clusterArgs.healthCheck = bt.HealthCheck
+		clusterArgs.timeout = bt.Timeout
+		clusterArgs.tcpkeepalive = bt.TCPKeepalive
+		clusterArgs.backendConnection = bt.BackendConnection
+	}
+
+	if httpRoute.DNS != nil {
+		clusterArgs.dns = httpRoute.DNS
+	}
+
+	return clusterArgs
+}
