@@ -198,7 +198,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 		// Process the parametersRef of the accepted GatewayClass.
 		// This should run before processGateways and processBackendRefs
-		if managedGC.Spec.ParametersRef != nil && managedGC.DeletionTimestamp.IsZero() {
+		if managedGC.Spec.ParametersRef != nil {
 			if err := r.processGatewayClassParamsRef(ctx, managedGC, resourceMappings, gwcResource); err != nil {
 				msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
 				if err := r.updateStatusForGatewayClass(ctx, managedGC, false, string(gwapiv1.GatewayClassReasonInvalidParameters), msg); err != nil {
@@ -771,16 +771,7 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 
 // processFinalizers encapsulates logic for managing finalizers on GatewayClass and EnvoyProxy objects.
 func (r *gatewayAPIReconciler) processFinalizers(ctx context.Context, managedGC *gwapiv1.GatewayClass, resourceTree *gatewayapi.Resources) error {
-	// Add finalizer to EnvoyProxy and GatewayClass if GatewayClass references this EnvoyProxy.
-	if classRefsEnvoyProxy(managedGC, resourceTree.EnvoyProxyForGatewayClass) && resourceTree.EnvoyProxyForGatewayClass.DeletionTimestamp.IsZero() && managedGC.DeletionTimestamp.IsZero() {
-		if err := r.addFinalizer(ctx, resourceTree.EnvoyProxyForGatewayClass); err != nil {
-			return fmt.Errorf("failed to add finalizer to Envoy Proxy %s: %w", resourceTree.EnvoyProxyForGatewayClass.Name, err)
-		}
-		if err := r.addFinalizer(ctx, managedGC); err != nil {
-			return fmt.Errorf("failed to add finalizer to gatewayclass %s: %w", managedGC.Name, err)
-		}
-	}
-
+	// Add finalizer to GatewayClass if there are gateways.
 	if len(resourceTree.Gateways) > 0 && managedGC.DeletionTimestamp.IsZero() {
 		if err := r.addFinalizer(ctx, managedGC); err != nil {
 			return fmt.Errorf("failed to add finalizer to gatewayclass %s: %w", managedGC.Name, err)
@@ -1677,6 +1668,15 @@ func (r *gatewayAPIReconciler) processGatewayClassParamsRef(ctx context.Context,
 
 	if err := r.processEnvoyProxy(ep, resourceMap); err != nil {
 		return err
+	}
+
+	if classRefsEnvoyProxy(gc, ep) {
+		if err := r.addFinalizer(ctx, ep); err != nil {
+			return fmt.Errorf("failed to add finalizer to Envoy Proxy %s: %w", ep.Name, err)
+		}
+		if err := r.addFinalizer(ctx, gc); err != nil {
+			return fmt.Errorf("failed to add finalizer to gatewayclass %s: %w", gc.Name, err)
+		}
 	}
 
 	// Update the EnvoyProxyForGatewayClass reference to the current EnvoyProxy
