@@ -150,9 +150,9 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 				if args.dns.DNSRefreshRate.Duration > 0 {
 					cluster.DnsRefreshRate = durationpb.New(args.dns.DNSRefreshRate.Duration)
 				}
-				if args.dns.RespectDNSTTL != nil {
-					cluster.RespectDnsTtl = ptr.Deref(args.dns.RespectDNSTTL, true)
-				}
+			}
+			if args.dns.RespectDNSTTL != nil {
+				cluster.RespectDnsTtl = ptr.Deref(args.dns.RespectDNSTTL, true)
 			}
 		}
 	}
