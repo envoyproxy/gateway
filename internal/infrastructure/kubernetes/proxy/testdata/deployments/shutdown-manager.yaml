@@ -258,6 +258,15 @@ spec:
           requests:
             cpu: 100m
             memory: 512Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
         startupProbe:
           failureThreshold: 30
           httpGet:
@@ -334,7 +343,15 @@ spec:
             cpu: 100m
             memory: 64Mi
         securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          runAsNonRoot: true
           runAsUser: 1234
+          seccompProfile:
+            type: RuntimeDefault
         startupProbe:
           failureThreshold: 30
           httpGet:

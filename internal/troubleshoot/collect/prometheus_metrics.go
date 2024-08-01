@@ -94,7 +94,7 @@ func (p PrometheusMetric) Collect(_ chan<- interface{}) (tbcollect.CollectorResu
 			reqPath = v
 		}
 
-		data, err := requestWithPortForwarder(cliClient, nn, port, reqPath)
+		data, err := RequestWithPortForwarder(cliClient, nn, port, reqPath)
 		if err != nil {
 			logs = append(logs, fmt.Sprintf("pod %s/%s is skipped because of err: %v", pod.Namespace, pod.Name, err))
 			continue
@@ -121,7 +121,7 @@ func listPods(ctx context.Context, client kubernetes.Interface, namespace string
 	return pods.Items, nil
 }
 
-func requestWithPortForwarder(cli kube.CLIClient, nn types.NamespacedName, port int, reqPath string) ([]byte, error) {
+func RequestWithPortForwarder(cli kube.CLIClient, nn types.NamespacedName, port int, reqPath string) ([]byte, error) {
 	fw, err := kube.NewLocalPortForwarder(cli, nn, 0, port)
 	if err != nil {
 		return nil, err
