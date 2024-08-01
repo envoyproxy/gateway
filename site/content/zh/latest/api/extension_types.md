@@ -480,7 +480,7 @@ _Appears in:_
 
 #### Body
 
-_Underlying type:_ _string_
+_Underlying type:_ _integer array_
 
 
 
@@ -3759,7 +3759,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `body` | _[Body](#body)_ |  true  |  |
 | `statusCode` | _[StatusCode](#statuscode)_ |  true  |  |
-| `responseHeadersToAdd` | _[ResponseHeader](#responseheader) array_ |  true  |  |
+| `responseHeaders` | _[ResponseHeader](#responseheader) array_ |  true  |  |
 
 
 #### Wasm

@@ -41,5 +41,5 @@ virtualBackends:
       namespace: default
       name: virtual-backend-1
     spec:
-      body: '{"err": "Some error"}'
+      body: eyJlcnIiOiAiU29tZSBlcnJvciJ9
       statusCode: 501

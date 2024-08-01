@@ -212,7 +212,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 					}
 
 					route.DirectResponse = directResponse
-					for _, header := range vb.Spec.ResponseHeadersToAdd {
+					for _, header := range vb.Spec.ResponseHeaders {
 						splittedHeader := strings.SplitN(string(header), ": ", 1)
 						responseHeader := ir.AddHeader{
 							Name:   splittedHeader[0],

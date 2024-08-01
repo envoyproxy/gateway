@@ -39,8 +39,9 @@ spec:
           spec:
             properties:
               body:
+                format: byte
                 type: string
-              responseHeadersToAdd:
+              responseHeaders:
                 items:
                   type: string
                 type: array

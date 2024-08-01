@@ -12,7 +12,7 @@ const (
 	KindVirtualBackend = "VirtualBackend"
 )
 
-type Body string
+type Body []byte
 
 type StatusCode uint32
 
@@ -26,7 +26,7 @@ type VirtualBackend struct {
 }
 
 type VirtualBackendSpec struct {
-	Body                 Body             `json:"body,omitempty" yaml:"body"`
-	StatusCode           StatusCode       `json:"statusCode,omitempty" yaml:"statusCode"`
-	ResponseHeadersToAdd []ResponseHeader `json:"responseHeadersToAdd,omitempty" yaml:"responseHeadersToAdd,omitempty"`
+	Body            Body             `json:"body,omitempty" yaml:"body"`
+	StatusCode      StatusCode       `json:"statusCode,omitempty" yaml:"statusCode"`
+	ResponseHeaders []ResponseHeader `json:"responseHeaders,omitempty" yaml:"responseHeaders,omitempty"`
 }
