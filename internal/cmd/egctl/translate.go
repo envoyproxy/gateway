@@ -63,47 +63,48 @@ func newTranslateCommand() *cobra.Command {
 		addMissingResources                  bool
 		outTypes                             []string
 		dnsDomain                            string
+		namespace                            string
 	)
 
 	translateCommand := &cobra.Command{
 		Use:   "translate",
 		Short: "Translate Configuration from an input type to an output type",
 		Example: `  # Translate Gateway API Resources into All xDS Resources.
-  egctl experimental translate --from gateway-api --to xds --file <input file>
+  egctl experimental translate --from gateway-api --to xds --file <input file> -n <namespace>
 
   # Translate Gateway API Resources into All xDS Resources in JSON output.
-  egctl experimental translate --from gateway-api --to xds --type all --output json --file <input file>
+  egctl experimental translate --from gateway-api --to xds --type all --output json --file <input file> -n <namespace>
 
   # Translate Gateway API Resources into All xDS Resources in YAML output.
-  egctl experimental translate --from gateway-api --to xds --type all --output yaml --file <input file>
+  egctl experimental translate --from gateway-api --to xds --type all --output yaml --file <input file> -n <namespace>
 
   # Translate Gateway API Resources into Bootstrap xDS Resources.
-  egctl experimental translate --from gateway-api --to xds --type bootstrap --file <input file>
+  egctl experimental translate --from gateway-api --to xds --type bootstrap --file <input file> -n <namespace>
 
   # Translate Gateway API Resources into Cluster xDS Resources.
-  egctl experimental translate --from gateway-api --to xds --type cluster --file <input file>
+  egctl experimental translate --from gateway-api --to xds --type cluster --file <input file> -n <namespace>
 
   # Translate Gateway API Resources into Listener xDS Resources.
-  egctl experimental translate --from gateway-api --to xds --type listener --file <input file>
+  egctl experimental translate --from gateway-api --to xds --type listener --file <input file> -n <namespace>
 
   # Translate Gateway API Resources into Route xDS Resources.
-  egctl experimental translate --from gateway-api --to xds --type route --file <input file>
+  egctl experimental translate --from gateway-api --to xds --type route --file <input file> -n <namespace>
 
   # Translate Gateway API Resources into Cluster xDS Resources with short syntax.
-  egctl x translate --from gateway-api --to xds -t cluster -o yaml -f <input file>
+  egctl x translate --from gateway-api --to xds -t cluster -o yaml -f <input file> -n <namespace>
 
   # Translate Gateway API Resources into All xDS Resources with dummy resources added.
-  egctl x translate --from gateway-api --to xds -t cluster --add-missing-resources -f <input file>
+  egctl x translate --from gateway-api --to xds -t cluster --add-missing-resources -f <input file> -n <namespace>
 
   # Translate Gateway API Resources into All xDS Resources in YAML output,
   # also print the Gateway API Resources with updated status in the same output.
-  egctl experimental translate --from gateway-api --to gateway-api,xds --type all --output yaml --file <input file>
+  egctl experimental translate --from gateway-api --to gateway-api,xds --type all --output yaml --file <input file> -n <namespace>
 
   # Translate Gateway API Resources into IR in YAML output,
   egctl experimental translate --from gateway-api --to ir --output yaml --file <input file>
 	`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return translate(cmd.OutOrStdout(), inFile, inType, outTypes, output, resourceType, addMissingResources, dnsDomain)
+			return translate(cmd.OutOrStdout(), inFile, inType, outTypes, output, resourceType, addMissingResources, namespace, dnsDomain)
 		},
 	}
 
@@ -117,6 +118,8 @@ func newTranslateCommand() *cobra.Command {
 	translateCommand.PersistentFlags().StringVarP(&resourceType, "type", "t", string(AllEnvoyConfigType), getValidResourceTypesStr())
 	translateCommand.PersistentFlags().BoolVarP(&addMissingResources, "add-missing-resources", "", false, "Provides dummy resources if missed")
 	translateCommand.PersistentFlags().StringVarP(&dnsDomain, "dns-domain", "", "cluster.local", "DNS domain used by k8s services, default is cluster.local")
+	translateCommand.PersistentFlags().StringVarP(&namespace, "namespace", "n", "envoy-gateway-system", "Namespace where envoy proxy pod are installed.")
+
 	return translateCommand
 }
 
@@ -220,7 +223,7 @@ func validate(inFile, inType string, outTypes []string, resourceType string) err
 	return nil
 }
 
-func translate(w io.Writer, inFile, inType string, outTypes []string, output, resourceType string, addMissingResources bool, dnsDomain string) error {
+func translate(w io.Writer, inFile, inType string, outTypes []string, output, resourceType string, addMissingResources bool, namespace, dnsDomain string) error {
 	if err := validate(inFile, inType, outTypes, resourceType); err != nil {
 		return err
 	}
@@ -247,7 +250,7 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 				}
 			}
 			if outType == xdsType {
-				res, err := translateGatewayAPIToXds(dnsDomain, resourceType, resources)
+				res, err := translateGatewayAPIToXds(namespace, dnsDomain, resourceType, resources)
 				if err != nil {
 					return err
 				}
@@ -333,7 +336,7 @@ func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) (gatewayap
 	return gRes.Resources, nil
 }
 
-func translateGatewayAPIToXds(dnsDomain string, resourceType string, resources *gatewayapi.Resources) (map[string]any, error) {
+func translateGatewayAPIToXds(namespace, dnsDomain string, resourceType string, resources *gatewayapi.Resources) (map[string]any, error) {
 	if resources.GatewayClass == nil {
 		return nil, fmt.Errorf("the GatewayClass resource is required")
 	}
@@ -363,7 +366,7 @@ func translateGatewayAPIToXds(dnsDomain string, resourceType string, resources *
 		xTranslator := &translator.Translator{
 			// Set some default settings for translation
 			GlobalRateLimit: &translator.GlobalRateLimitSettings{
-				ServiceURL: ratelimit.GetServiceURL("envoy-gateway", dnsDomain),
+				ServiceURL: ratelimit.GetServiceURL(namespace, dnsDomain),
 			},
 		}
 		if resources.EnvoyProxyForGatewayClass != nil {
