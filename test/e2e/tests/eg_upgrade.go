@@ -53,7 +53,7 @@ var EGUpgradeTest = suite.ConformanceTest{
 			depNS := "envoy-gateway-system"
 			lastVersionTag := os.Getenv("last_version_tag")
 			if lastVersionTag == "" {
-				lastVersionTag = "v1.1.0" // Default version tag if not specified
+				lastVersionTag = "v1.0.2" // Default version tag if not specified
 			}
 
 			// Uninstall the current version of EG
