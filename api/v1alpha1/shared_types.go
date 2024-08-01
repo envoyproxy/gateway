@@ -503,7 +503,7 @@ type HTTP2Settings struct {
 	// +optional
 	MaxConcurrentStreams *uint32 `json:"maxConcurrentStreams,omitempty"`
 
-	// ResetConnectionOnError determines if Envoy will terminate the connection or just the offending stream in the event of HTTP messaging error
+	// TerminateConnOnError determines if Envoy will terminate the connection or just the offending stream in the event of HTTP messaging error
 	// It's recommended for L2 Envoy deployments to set this value to false.
 	// https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/level_two
 	// Default: true
