@@ -295,6 +295,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 		ka        *ir.TCPKeepalive
 		rt        *ir.Retry
 		bc        *ir.BackendConnection
+		ds        *ir.DNS
 		err, errs error
 	)
 
@@ -349,6 +350,10 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 		}
 	}
 
+	if policy.Spec.DNS != nil {
+		ds = t.translateDNS(policy)
+	}
+
 	// Early return if got any errors
 	if errs != nil {
 		return errs
@@ -368,6 +373,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 					r.TCPKeepalive = ka
 					r.Timeout = to
 					r.BackendConnection = bc
+					r.DNS = ds
 				}
 			}
 		}
@@ -380,6 +386,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 					r.LoadBalancer = lb
 					r.Timeout = to
 					r.BackendConnection = bc
+					r.DNS = ds
 				}
 			}
 		}
@@ -400,6 +407,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 						BackendConnection: bc,
 					}
 
+					r.DNS = ds
 					// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
 					r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 
@@ -432,6 +440,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		ct        *ir.Timeout
 		ka        *ir.TCPKeepalive
 		rt        *ir.Retry
+		ds        *ir.DNS
 		err, errs error
 	)
 
@@ -479,6 +488,10 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		}
 	}
 
+	if policy.Spec.DNS != nil {
+		ds = t.translateDNS(policy)
+	}
+
 	// Early return if got any errors
 	if errs != nil {
 		return errs
@@ -516,6 +529,10 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 			if r.Timeout == nil {
 				r.Timeout = ct
 			}
+
+			if r.DNS == nil {
+				r.DNS = ds
+			}
 		}
 	}
 
@@ -539,6 +556,10 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		route.LoadBalancer = lb
 		if route.Timeout == nil {
 			route.Timeout = ct
+		}
+
+		if route.DNS == nil {
+			route.DNS = ds
 		}
 	}
 
@@ -566,6 +587,10 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 				FaultInjection: fi,
 				TCPKeepalive:   ka,
 				Retry:          rt,
+			}
+
+			if r.DNS == nil {
+				r.DNS = ds
 			}
 
 			// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
@@ -845,6 +870,17 @@ func (t *Translator) buildConsistentHashLoadBalancer(policy *egv1a1.BackendTraff
 	}
 
 	return consistentHash, nil
+}
+
+func (t *Translator) translateDNS(policy *egv1a1.BackendTrafficPolicy) *ir.DNS {
+	ds := &ir.DNS{}
+	if policy.Spec.DNS.RespectDNSTTL != nil {
+		ds.RespectDNSTTL = policy.Spec.DNS.RespectDNSTTL
+	}
+	if policy.Spec.DNS.DNSRefreshRate != nil {
+		ds.DNSRefreshRate = policy.Spec.DNS.DNSRefreshRate
+	}
+	return ds
 }
 
 func (t *Translator) buildProxyProtocol(policy *egv1a1.BackendTrafficPolicy) *ir.ProxyProtocol {
