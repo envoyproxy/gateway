@@ -272,7 +272,8 @@ func TestProcessGatewayClassParamsRef(t *testing.T) {
 			name: "valid envoyproxy reference",
 			gc: &gwapiv1.GatewayClass{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "test",
+					Name:       "test",
+					Finalizers: []string{gatewayClassFinalizer},
 				},
 				Spec: gwapiv1.GatewayClassSpec{
 					ControllerName: gcCtrlName,
@@ -288,7 +289,7 @@ func TestProcessGatewayClassParamsRef(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace:  config.DefaultNamespace,
 					Name:       "test",
-					Finalizers: []string{gatewayClassFinalizer},
+					Finalizers: []string{envoyProxyFinalizer},
 				},
 			},
 			expected: true,
