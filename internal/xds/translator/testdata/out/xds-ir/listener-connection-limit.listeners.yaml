@@ -27,7 +27,7 @@
             resourceApiVersion: V3
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: http-10080
         useRemoteAddress: true
     name: first-listener
   drainType: MODIFY_ONLY
@@ -43,7 +43,7 @@
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.connection_limit.v3.ConnectionLimit
         maxConnections: "5"
-        statPrefix: http
+        statPrefix: http-10081
     - name: envoy.filters.network.http_connection_manager
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
@@ -67,7 +67,7 @@
             resourceApiVersion: V3
           routeConfigName: second-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: http-10081
         useRemoteAddress: true
     name: second-listener
   drainType: MODIFY_ONLY
