@@ -827,7 +827,7 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Reso
 			backendRef = egv1a1.ToBackendObjectReference(http.BackendRefs[0])
 		}
 		protocol = ir.HTTP
-		if traffic, err = translateTrafficFeatures(http.BackendConfig); err != nil {
+		if traffic, err = translateTrafficFeatures(http.BackendSettings); err != nil {
 			return nil, err
 		}
 	case grpc != nil:
@@ -836,7 +836,7 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Reso
 			backendRef = egv1a1.ToBackendObjectReference(grpc.BackendRefs[0])
 		}
 		protocol = ir.GRPC
-		if traffic, err = translateTrafficFeatures(grpc.BackendConfig); err != nil {
+		if traffic, err = translateTrafficFeatures(grpc.BackendSettings); err != nil {
 			return nil, err
 		}
 	// These are sanity checks, they should never happen because the API server

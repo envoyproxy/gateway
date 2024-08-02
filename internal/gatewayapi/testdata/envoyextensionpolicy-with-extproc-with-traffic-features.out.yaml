@@ -108,7 +108,7 @@ envoyExtensionPolicies:
     namespace: default
   spec:
     extProc:
-    - backendConfig:
+    - backendSettings:
         circuitBreaker:
           maxConnections: 2048
         connection:

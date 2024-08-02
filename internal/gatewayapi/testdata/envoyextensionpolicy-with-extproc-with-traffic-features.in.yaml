@@ -210,7 +210,7 @@ envoyExtensionPolicies:
         Namespace: envoy-gateway
         Kind: Backend
         Group: gateway.envoyproxy.io
-      backendConfig:
+      backendSettings:
         dns:
           respectDnsTtl: true
         loadBalancer:

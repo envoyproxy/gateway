@@ -489,11 +489,11 @@ type BackendCluster struct {
 	// +optional
 	BackendRefs []BackendRef `json:"backendRefs,omitempty"`
 
-	// BackendConfig holds configuration for managing the connection
+	// BackendSettings holds configuration for managing the connection
 	// to the backend.
 	//
 	// +optional
-	BackendConfig *ClusterSettings `json:"backendConfig,omitempty"`
+	BackendSettings *ClusterSettings `json:"backendSettings,omitempty"`
 }
 
 // CIDR defines a CIDR Address range.

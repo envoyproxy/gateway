@@ -267,8 +267,8 @@ func (in *BackendCluster) DeepCopyInto(out *BackendCluster) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.BackendConfig != nil {
-		in, out := &in.BackendConfig, &out.BackendConfig
+	if in.BackendSettings != nil {
+		in, out := &in.BackendSettings, &out.BackendSettings
 		*out = new(ClusterSettings)
 		(*in).DeepCopyInto(*out)
 	}

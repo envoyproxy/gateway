@@ -471,7 +471,7 @@ func (t *Translator) buildExtProc(
 			NamespaceDerefOr(extProc.BackendRefs[0].Namespace, policyNamespacedName.Namespace))
 	}
 
-	traffic, err := translateTrafficFeatures(extProc.BackendCluster.BackendConfig)
+	traffic, err := translateTrafficFeatures(extProc.BackendCluster.BackendSettings)
 	if err != nil {
 		return nil, err
 	}

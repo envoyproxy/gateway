@@ -270,7 +270,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.BackendObjectReference)_ |  true  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br /><br />Deprecated: Use BackendRefs instead. |
 | `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent. |
-| `backendConfig` | _[ClusterSettings](#clustersettings)_ |  false  | BackendConfig holds configuration for managing the connection<br />to the backend. |
+| `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  | BackendSettings holds configuration for managing the connection<br />to the backend. |
 
 
 
@@ -1497,7 +1497,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.BackendObjectReference)_ |  true  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br /><br />Deprecated: Use BackendRefs instead. |
 | `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent. |
-| `backendConfig` | _[ClusterSettings](#clustersettings)_ |  false  | BackendConfig holds configuration for managing the connection<br />to the backend. |
+| `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  | BackendSettings holds configuration for managing the connection<br />to the backend. |
 | `messageTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | MessageTimeout is the timeout for a response to be returned from the external processor<br />Default: 200ms |
 | `failOpen` | _boolean_ |  false  | FailOpen defines if requests or responses that cannot be processed due to connectivity to the<br />external processor are terminated or passed-through.<br />Default: false |
 | `processingMode` | _[ExtProcProcessingMode](#extprocprocessingmode)_ |  false  | ProcessingMode defines how request and response body is processed<br />Default: header and body are not sent to the external processor |
@@ -1726,7 +1726,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.BackendObjectReference)_ |  true  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br /><br />Deprecated: Use BackendRefs instead. |
 | `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent. |
-| `backendConfig` | _[ClusterSettings](#clustersettings)_ |  false  | BackendConfig holds configuration for managing the connection<br />to the backend. |
+| `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  | BackendSettings holds configuration for managing the connection<br />to the backend. |
 
 
 #### Gateway
@@ -1892,7 +1892,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.BackendObjectReference)_ |  true  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br /><br />Deprecated: Use BackendRefs instead. |
 | `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent. |
-| `backendConfig` | _[ClusterSettings](#clustersettings)_ |  false  | BackendConfig holds configuration for managing the connection<br />to the backend. |
+| `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  | BackendSettings holds configuration for managing the connection<br />to the backend. |
 | `path` | _string_ |  true  | Path is the path of the HTTP External Authorization service.<br />If path is specified, the authorization request will be sent to that path,<br />or else the authorization request will be sent to the root path. |
 | `headersToBackend` | _string array_ |  false  | HeadersToBackend are the authorization response headers that will be added<br />to the original client request before sending it to the backend server.<br />Note that coexisting headers will be overridden.<br />If not specified, no authorization response headers will be added to the<br />original client request. |
 
