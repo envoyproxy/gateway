@@ -96,5 +96,5 @@ func configDump(cli kube.CLIClient, nn types.NamespacedName, includeEds bool) ([
 	if includeEds {
 		reqPath = fmt.Sprintf("%s?include_eds", reqPath)
 	}
-	return requestWithPortForwarder(cli, nn, 19000, reqPath)
+	return RequestWithPortForwarder(cli, nn, 19000, reqPath)
 }

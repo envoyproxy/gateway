@@ -563,6 +563,17 @@ type HTTPRoute struct {
 	UseClientProtocol *bool `json:"useClientProtocol,omitempty" yaml:"useClientProtocol,omitempty"`
 	// Metadata is used to enrich envoy route metadata with user and provider-specific information
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	// DNS is used to configure how DNS resolution is handled for the route
+	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
+}
+
+// DNS contains configuration options for DNS resolution.
+// +k8s:deepcopy-gen=true
+type DNS struct {
+	// DNSRefreshRate specifies the rate at which DNS records should be refreshed.
+	DNSRefreshRate *metav1.Duration `json:"dnsRefreshRate,omitempty"`
+	// RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.
+	RespectDNSTTL *bool `json:"respectDnsTtl,omitempty"`
 }
 
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.
@@ -1386,6 +1397,8 @@ type TCPRoute struct {
 	ProxyProtocol *ProxyProtocol `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
 	// settings of upstream connection
 	BackendConnection *BackendConnection `json:"backendConnection,omitempty" yaml:"backendConnection,omitempty"`
+	// DNS is used to configure how DNS resolution is handled for the route
+	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
 }
 
 // TLS holds information for configuring TLS on a listener
@@ -1496,6 +1509,7 @@ type UDPRoute struct {
 	Timeout *Timeout `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	// settings of upstream connection
 	BackendConnection *BackendConnection `json:"backendConnection,omitempty" yaml:"backendConnection,omitempty"`
+	DNS               *DNS               `json:"dns,omitempty" yaml:"dns,omitempty"`
 }
 
 // Validate the fields within the UDPListener structure
