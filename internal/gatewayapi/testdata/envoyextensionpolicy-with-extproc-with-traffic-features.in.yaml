@@ -211,6 +211,8 @@ envoyExtensionPolicies:
         Kind: Backend
         Group: gateway.envoyproxy.io
       backendConfig:
+        dns:
+          respectDnsTtl: true
         loadBalancer:
           type: ConsistentHash
           consistentHash:

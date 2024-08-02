@@ -572,11 +572,6 @@ func (in *BackendTrafficPolicySpec) DeepCopyInto(out *BackendTrafficPolicySpec) 
 			}
 		}
 	}
-	if in.DNS != nil {
-		in, out := &in.DNS, &out.DNS
-		*out = new(DNS)
-		(*in).DeepCopyInto(*out)
-	}
 	if in.HTTP2 != nil {
 		in, out := &in.HTTP2, &out.HTTP2
 		*out = new(HTTP2Settings)
@@ -1004,6 +999,11 @@ func (in *ClusterSettings) DeepCopyInto(out *ClusterSettings) {
 	if in.Connection != nil {
 		in, out := &in.Connection, &out.Connection
 		*out = new(BackendConnection)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.DNS != nil {
+		in, out := &in.DNS, &out.DNS
+		*out = new(DNS)
 		(*in).DeepCopyInto(*out)
 	}
 }

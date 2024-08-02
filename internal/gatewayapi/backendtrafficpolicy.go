@@ -341,10 +341,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 			errs = errors.Join(errs, err)
 		}
 	}
-
-	if policy.Spec.DNS != nil {
-		ds = t.translateDNS(policy)
-	}
+	ds = translateDNS(policy.Spec.DNS)
 
 	// Early return if got any errors
 	if errs != nil {
@@ -398,9 +395,9 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 						Retry:             rt,
 						BackendConnection: bc,
 						HTTP2:             h2,
+						DNS:               ds,
 					}
 
-					r.DNS = ds
 					// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
 					r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 
@@ -474,9 +471,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		}
 	}
 
-	if policy.Spec.DNS != nil {
-		ds = t.translateDNS(policy)
-	}
+	ds = translateDNS(policy.Spec.DNS)
 
 	// Early return if got any errors
 	if errs != nil {
@@ -499,26 +494,15 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		}
 
 		for _, r := range tcp.Routes {
-			// policy(targeting xRoute) has already set it, so we skip it.
-			if r.LoadBalancer != nil || r.ProxyProtocol != nil ||
-				r.HealthCheck != nil || r.CircuitBreaker != nil ||
-				r.TCPKeepalive != nil || r.Timeout != nil {
-				continue
-			}
-
-			r.LoadBalancer = lb
-			r.ProxyProtocol = pp
-			r.HealthCheck = hc
-			r.CircuitBreaker = cb
-			r.TCPKeepalive = ka
-
-			if r.Timeout == nil {
-				r.Timeout = ct
-			}
-
-			if r.DNS == nil {
-				r.DNS = ds
-			}
+			// only set attributes which weren't already set by a more
+			// specific policy
+			setIfNil(&r.LoadBalancer, lb)
+			setIfNil(&r.ProxyProtocol, pp)
+			setIfNil(&r.HealthCheck, hc)
+			setIfNil(&r.CircuitBreaker, cb)
+			setIfNil(&r.TCPKeepalive, ka)
+			setIfNil(&r.Timeout, ct)
+			setIfNil(&r.DNS, ds)
 		}
 	}
 
@@ -534,19 +518,11 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 
 		route := udp.Route
 
-		// policy(targeting xRoute) has already set it, so we skip it.
-		if route.LoadBalancer != nil || route.Timeout != nil {
-			continue
-		}
-
-		route.LoadBalancer = lb
-		if route.Timeout == nil {
-			route.Timeout = ct
-		}
-
-		if route.DNS == nil {
-			route.DNS = ds
-		}
+		// only set attributes which weren't already set by a more
+		// specific policy
+		setIfNil(&route.LoadBalancer, lb)
+		setIfNil(&route.Timeout, ct)
+		setIfNil(&route.DNS, ds)
 	}
 
 	for _, http := range x.HTTP {
@@ -574,10 +550,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 				TCPKeepalive:   ka,
 				Retry:          rt,
 				HTTP2:          h2,
-			}
-
-			if r.DNS == nil {
-				r.DNS = ds
+				DNS:            ds,
 			}
 
 			// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
@@ -588,9 +561,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 			}
 
 			if policy.Spec.UseClientProtocol != nil {
-				if r.UseClientProtocol == nil {
-					r.UseClientProtocol = policy.Spec.UseClientProtocol
-				}
+				setIfNil(&r.UseClientProtocol, policy.Spec.UseClientProtocol)
 			}
 		}
 	}
@@ -781,17 +752,6 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 		}
 	}
 	return irRule, nil
-}
-
-func (t *Translator) translateDNS(policy *egv1a1.BackendTrafficPolicy) *ir.DNS {
-	ds := &ir.DNS{}
-	if policy.Spec.DNS.RespectDNSTTL != nil {
-		ds.RespectDNSTTL = policy.Spec.DNS.RespectDNSTTL
-	}
-	if policy.Spec.DNS.DNSRefreshRate != nil {
-		ds.DNSRefreshRate = policy.Spec.DNS.DNSRefreshRate
-	}
-	return ds
 }
 
 func ratelimitUnitToDuration(unit egv1a1.RateLimitUnit) int64 {

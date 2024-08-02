@@ -480,3 +480,13 @@ func translateActiveHealthCheckPayload(p *egv1a1.ActiveHealthCheckPayload) *ir.H
 
 	return irPayload
 }
+
+func translateDNS(policy *egv1a1.DNS) *ir.DNS {
+	if policy == nil {
+		return nil
+	}
+	return &ir.DNS{
+		RespectDNSTTL:  policy.RespectDNSTTL,
+		DNSRefreshRate: policy.DNSRefreshRate,
+	}
+}

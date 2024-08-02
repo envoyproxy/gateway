@@ -565,8 +565,6 @@ type HTTPRoute struct {
 	UseClientProtocol *bool `json:"useClientProtocol,omitempty" yaml:"useClientProtocol,omitempty"`
 	// Metadata is used to enrich envoy route metadata with user and provider-specific information
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
-	// DNS is used to configure how DNS resolution is handled for the route
-	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
 }
 
 // DNS contains configuration options for DNS resolution.
@@ -605,6 +603,8 @@ type TrafficFeatures struct {
 	// HTTP2 provides HTTP/2 configuration for clusters
 	// +optional
 	HTTP2 *HTTP2Settings `json:"http2,omitempty" yaml:"http2,omitempty"`
+	// DNS is used to configure how DNS resolution is handled by the Envoy Proxy cluster
+	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
 }
 
 func (b *TrafficFeatures) Validate() error {
@@ -1517,7 +1517,8 @@ type UDPRoute struct {
 	Timeout *Timeout `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	// settings of upstream connection
 	BackendConnection *BackendConnection `json:"backendConnection,omitempty" yaml:"backendConnection,omitempty"`
-	DNS               *DNS               `json:"dns,omitempty" yaml:"dns,omitempty"`
+	// DNS is used to configure how DNS resolution is handled by the Envoy Proxy cluster
+	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
 }
 
 // Validate the fields within the UDPListener structure

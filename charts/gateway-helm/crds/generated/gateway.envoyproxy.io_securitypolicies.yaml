@@ -328,6 +328,21 @@ spec:
                                   Note: that when the suffix is not provided, the value is interpreted as bytes.
                                 x-kubernetes-int-or-string: true
                             type: object
+                          dns:
+                            description: DNS includes dns resolution settings.
+                            properties:
+                              dnsRefreshRate:
+                                description: |-
+                                  DNSRefreshRate specifies the rate at which DNS records should be refreshed.
+                                  Defaults to 30 seconds.
+                                type: string
+                              respectDnsTtl:
+                                description: |-
+                                  RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.
+                                  If the value is set to true, the DNS refresh rate will be set to the resource record’s TTL.
+                                  Defaults to true.
+                                type: boolean
+                            type: object
                           healthCheck:
                             description: HealthCheck allows gateway to perform active
                               health checking on backends.
@@ -1038,6 +1053,21 @@ spec:
                                   For example, 20Mi, 1Gi, 256Ki etc.
                                   Note: that when the suffix is not provided, the value is interpreted as bytes.
                                 x-kubernetes-int-or-string: true
+                            type: object
+                          dns:
+                            description: DNS includes dns resolution settings.
+                            properties:
+                              dnsRefreshRate:
+                                description: |-
+                                  DNSRefreshRate specifies the rate at which DNS records should be refreshed.
+                                  Defaults to 30 seconds.
+                                type: string
+                              respectDnsTtl:
+                                description: |-
+                                  RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.
+                                  If the value is set to true, the DNS refresh rate will be set to the resource record’s TTL.
+                                  Defaults to true.
+                                type: boolean
                             type: object
                           healthCheck:
                             description: HealthCheck allows gateway to perform active

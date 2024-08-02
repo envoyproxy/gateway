@@ -76,11 +76,6 @@ type BackendTrafficPolicySpec struct {
 	// +notImplementedHide
 	Compression []*Compression `json:"compression,omitempty"`
 
-	// DNS includes dns resolution settings.
-	//
-	// +optional
-	DNS *DNS `json:"dns,omitempty"`
-
 	// HTTP2 provides HTTP/2 configuration for backend connections.
 	//
 	// +optional
@@ -144,6 +139,11 @@ type ClusterSettings struct {
 	//
 	// +optional
 	Connection *BackendConnection `json:"connection,omitempty"`
+
+	// DNS includes dns resolution settings.
+	//
+	// +optional
+	DNS *DNS `json:"dns,omitempty"`
 }
 
 func init() {

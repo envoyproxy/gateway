@@ -113,6 +113,8 @@ envoyExtensionPolicies:
           maxConnections: 2048
         connection:
           bufferLimit: 20Mi
+        dns:
+          respectDnsTtl: true
         healthCheck:
           passive:
             consecutiveGatewayErrors: 4
