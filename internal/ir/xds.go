@@ -456,8 +456,8 @@ type HTTP2Settings struct {
 	InitialConnectionWindowSize *uint32 `json:"initialStreamWindowSize,omitempty" yaml:"initialStreamWindowSize,omitempty"`
 	// MaxConcurrentStreams is the maximum number of concurrent streams that can be opened on a connection.
 	MaxConcurrentStreams *uint32 `json:"maxConcurrentStreams,omitempty" yaml:"maxConcurrentStreams,omitempty"`
-	// TerminateConnOnError determines if a stream or connection is reset on messaging error.
-	TerminateConnOnError *bool `json:"terminateConnOnError,omitempty" yaml:"terminateConnOnError,omitempty"`
+	// ResetStreamOnError determines if a stream or connection is reset on messaging error.
+	ResetStreamOnError *bool `json:"resetStreamOnError,omitempty" yaml:"resetStreamOnError,omitempty"`
 }
 
 // HealthCheckSettings provides HealthCheck configuration on the HTTP/HTTPS listener.

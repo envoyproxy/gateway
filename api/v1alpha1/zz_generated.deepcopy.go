@@ -2453,9 +2453,9 @@ func (in *HTTP2Settings) DeepCopyInto(out *HTTP2Settings) {
 		*out = new(uint32)
 		**out = **in
 	}
-	if in.TerminateConnOnError != nil {
-		in, out := &in.TerminateConnOnError, &out.TerminateConnOnError
-		*out = new(bool)
+	if in.OnInvalidMessage != nil {
+		in, out := &in.OnInvalidMessage, &out.OnInvalidMessage
+		*out = new(InvalidMessageAction)
 		**out = **in
 	}
 }

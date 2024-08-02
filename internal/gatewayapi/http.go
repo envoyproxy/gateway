@@ -60,7 +60,14 @@ func buildIRHTTP2Settings(http2Settings *egv1a1.HTTP2Settings) (*ir.HTTP2Setting
 
 	http2.MaxConcurrentStreams = http2Settings.MaxConcurrentStreams
 
-	http2.TerminateConnOnError = http2Settings.TerminateConnOnError
+	if http2Settings.OnInvalidMessage != nil {
+		switch *http2Settings.OnInvalidMessage {
+		case egv1a1.InvalidMessageActionTerminateStream:
+			http2.ResetStreamOnError = ptr.To(true)
+		case egv1a1.InvalidMessageActionTerminateConnection:
+			http2.ResetStreamOnError = ptr.To(false)
+		}
+	}
 
 	return http2, errs
 }

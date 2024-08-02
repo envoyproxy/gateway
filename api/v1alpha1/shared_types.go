@@ -480,6 +480,13 @@ type BackendRef struct {
 // +kubebuilder:validation:Pattern=`((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/([0-9]+))|((([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))\/([0-9]+))`
 type CIDR string
 
+type InvalidMessageAction string
+
+const (
+	InvalidMessageActionTerminateConnection InvalidMessageAction = "TerminateConnection"
+	InvalidMessageActionTerminateStream     InvalidMessageAction = "TerminateStream"
+)
+
 // HTTP2Settings provides HTTP/2 configuration for listeners and backends.
 type HTTP2Settings struct {
 	// InitialStreamWindowSize sets the initial window size for HTTP/2 streams.
@@ -503,10 +510,10 @@ type HTTP2Settings struct {
 	// +optional
 	MaxConcurrentStreams *uint32 `json:"maxConcurrentStreams,omitempty"`
 
-	// TerminateConnOnError determines if Envoy will terminate the connection or just the offending stream in the event of HTTP messaging error
-	// It's recommended for L2 Envoy deployments to set this value to false.
+	// OnInvalidMessage determines if Envoy will terminate the connection or just the offending stream in the event of HTTP messaging error
+	// It's recommended for L2 Envoy deployments to set this value to TerminateStream.
 	// https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/level_two
-	// Default: true
+	// Default: TerminateConnection
 	// +optional
-	TerminateConnOnError *bool `json:"terminateConnOnError,omitempty"`
+	OnInvalidMessage *InvalidMessageAction `json:"onInvalidMessage,omitempty"`
 }

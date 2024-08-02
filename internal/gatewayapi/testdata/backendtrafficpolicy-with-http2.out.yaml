@@ -10,7 +10,7 @@ backendTrafficPolicies:
       initialConnectionWindowSize: 500Mi
       initialStreamWindowSize: 1Mi
       maxConcurrentStreams: 200
-      terminateConnOnError: false
+      onInvalidMessage: TerminateStream
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -41,6 +41,7 @@ backendTrafficPolicies:
       initialConnectionWindowSize: 1Gi
       initialStreamWindowSize: 2Mi
       maxConcurrentStreams: 500
+      onInvalidMessage: TerminateConnection
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -286,6 +287,7 @@ xdsIR:
             initialConnectionWindowSize: 2097152
             initialStreamWindowSize: 1073741824
             maxConcurrentStreams: 500
+            resetStreamOnError: false
   envoy-gateway/gateway-2:
     accessLog:
       text:
@@ -331,4 +333,4 @@ xdsIR:
             initialConnectionWindowSize: 1048576
             initialStreamWindowSize: 524288000
             maxConcurrentStreams: 200
-            terminateConnOnError: false
+            resetStreamOnError: true
