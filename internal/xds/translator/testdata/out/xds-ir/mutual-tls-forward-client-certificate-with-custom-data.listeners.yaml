@@ -28,7 +28,7 @@
             resourceApiVersion: V3
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: https
+        statPrefix: https-10001
         useRemoteAddress: true
     name: first-listener
     transportSocket:
@@ -87,7 +87,7 @@
             resourceApiVersion: V3
           routeConfigName: second-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: https
+        statPrefix: https-10002
         useRemoteAddress: true
     name: second-listener
     transportSocket:
@@ -148,7 +148,7 @@
         serverHeaderTransformation: PASS_THROUGH
         setCurrentClientCertDetails:
           subject: true
-        statPrefix: https
+        statPrefix: https-10003
         useRemoteAddress: true
     name: third-listener
     transportSocket:
@@ -211,7 +211,7 @@
           dns: true
           subject: true
           uri: true
-        statPrefix: https
+        statPrefix: https-10004
         useRemoteAddress: true
     name: fourth-listener
     transportSocket:
@@ -276,7 +276,7 @@
           dns: true
           subject: true
           uri: true
-        statPrefix: https
+        statPrefix: https-10005
         useRemoteAddress: true
     name: fifth-listener
     transportSocket:

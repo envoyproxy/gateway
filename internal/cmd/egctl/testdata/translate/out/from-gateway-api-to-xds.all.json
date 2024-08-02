@@ -684,7 +684,7 @@
                             "routeConfigName": "default/eg/http"
                           },
                           "serverHeaderTransformation": "PASS_THROUGH",
-                          "statPrefix": "http",
+                          "statPrefix": "http-10080",
                           "useRemoteAddress": true
                         }
                       }
@@ -790,7 +790,7 @@
                             "routeConfigName": "default/eg/grpc"
                           },
                           "serverHeaderTransformation": "PASS_THROUGH",
-                          "statPrefix": "http",
+                          "statPrefix": "http-8080",
                           "useRemoteAddress": true
                         }
                       }
@@ -857,7 +857,7 @@
                               }
                             ],
                             "cluster": "tcproute/default/backend/rule/-1",
-                            "statPrefix": "tcp"
+                            "statPrefix": "tcp-1234"
                           }
                         }
                       ],
@@ -928,7 +928,7 @@
                               }
                             ],
                             "cluster": "tlsroute/default/backend/rule/-1",
-                            "statPrefix": "passthrough"
+                            "statPrefix": "tls-passthrough-8443"
                           }
                         }
                       ],
