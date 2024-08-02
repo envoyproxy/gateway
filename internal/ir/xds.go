@@ -490,6 +490,12 @@ type HeaderSettings struct {
 	// (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
 	// It defaults to false.
 	PreserveXRequestID bool `json:"preserveXRequestID,omitempty" yaml:"preserveXRequestID,omitempty"`
+
+	// EarlyAddRequestHeaders defines headers that would be added before envoy request processing.
+	EarlyAddRequestHeaders []AddHeader `json:"earlyAddRequestHeaders,omitempty" yaml:"earlyAddRequestHeaders,omitempty"`
+
+	// EarlyRemoveRequestHeaders defines headers that would be removed before envoy request processing.
+	EarlyRemoveRequestHeaders []string `json:"earlyRemoveRequestHeaders,omitempty" yaml:"earlyRemoveRequestHeaders,omitempty"`
 }
 
 // ClientTimeout sets the timeout configuration for downstream connections

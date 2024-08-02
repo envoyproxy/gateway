@@ -12,6 +12,7 @@ import (
 
 	xdscore "github.com/cncf/xds/go/xds/core/v3"
 	matcher "github.com/cncf/xds/go/xds/type/matcher/v3"
+	mutation_rulesv3 "github.com/envoyproxy/go-control-plane/envoy/config/common/mutation_rules/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	tls_inspectorv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/tls_inspector/v3"
@@ -19,6 +20,7 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tcpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/tcp_proxy/v3"
 	udpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/udp/udp_proxy/v3"
+	early_header_mutationv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/early_header_mutation/header_mutation/v3"
 	preservecasev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/header_formatters/preserve_case/v3"
 	customheaderv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/original_ip_detection/custom_header/v3"
 	quicv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/quic/v3"
@@ -274,9 +276,10 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 		CommonHttpProtocolOptions: &corev3.HttpProtocolOptions{
 			HeadersWithUnderscoresAction: buildHeadersWithUnderscoresAction(irListener.Headers),
 		},
-		Tracing:                   hcmTracing,
-		ForwardClientCertDetails:  buildForwardClientCertDetailsAction(irListener.Headers),
-		PreserveExternalRequestId: ptr.Deref(irListener.Headers, ir.HeaderSettings{}).PreserveXRequestID,
+		Tracing:                       hcmTracing,
+		ForwardClientCertDetails:      buildForwardClientCertDetailsAction(irListener.Headers),
+		PreserveExternalRequestId:     ptr.Deref(irListener.Headers, ir.HeaderSettings{}).PreserveXRequestID,
+		EarlyHeaderMutationExtensions: buildEarlyHeaderMutation(irListener.Headers),
 	}
 
 	if mgr.ForwardClientCertDetails == hcmv3.HttpConnectionManager_APPEND_FORWARD || mgr.ForwardClientCertDetails == hcmv3.HttpConnectionManager_SANITIZE_SET {
@@ -363,6 +366,58 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 	}
 
 	return nil
+}
+
+func buildEarlyHeaderMutation(headers *ir.HeaderSettings) []*corev3.TypedExtensionConfig {
+	if headers == nil || (len(headers.EarlyAddRequestHeaders) == 0 && len(headers.EarlyRemoveRequestHeaders) == 0) {
+		return nil
+	}
+
+	var mutationRules []*mutation_rulesv3.HeaderMutation
+
+	for _, header := range headers.EarlyAddRequestHeaders {
+		var appendAction corev3.HeaderValueOption_HeaderAppendAction
+		if header.Append {
+			appendAction = corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD
+		} else {
+			appendAction = corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD
+		}
+
+		mr := &mutation_rulesv3.HeaderMutation{
+			Action: &mutation_rulesv3.HeaderMutation_Append{
+				Append: &corev3.HeaderValueOption{
+					Header: &corev3.HeaderValue{
+						Key:   header.Name,
+						Value: header.Value,
+					},
+					AppendAction: appendAction,
+				},
+			},
+		}
+
+		mutationRules = append(mutationRules, mr)
+	}
+
+	for _, header := range headers.EarlyRemoveRequestHeaders {
+		mr := &mutation_rulesv3.HeaderMutation{
+			Action: &mutation_rulesv3.HeaderMutation_Remove{
+				Remove: header,
+			},
+		}
+
+		mutationRules = append(mutationRules, mr)
+	}
+
+	earlyHeaderMutationAny, _ := anypb.New(&early_header_mutationv3.HeaderMutation{
+		Mutations: mutationRules,
+	})
+
+	return []*corev3.TypedExtensionConfig{
+		{
+			Name:        "envoy.http.early_header_mutation.header_mutation",
+			TypedConfig: earlyHeaderMutationAny,
+		},
+	}
 }
 
 func addServerNamesMatch(xdsListener *listenerv3.Listener, filterChain *listenerv3.FilterChain, hostnames []string) error {

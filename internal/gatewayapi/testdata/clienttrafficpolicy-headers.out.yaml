@@ -7,6 +7,15 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     headers:
+      earlyRequestHeaderModifier:
+        add:
+        - name: my-added-header
+          value: my-added-header-value
+        remove:
+        - my-removed-header
+        set:
+        - name: my-set-header
+          value: my-set-header-value
       enableEnvoyHeaders: true
       preserveXRequestID: true
       withUnderscoresAction: Allow
@@ -129,6 +138,15 @@ xdsIR:
     http:
     - address: 0.0.0.0
       headers:
+        earlyAddRequestHeaders:
+        - append: true
+          name: my-added-header
+          value: my-added-header-value
+        - append: false
+          name: my-set-header
+          value: my-set-header-value
+        earlyRemoveRequestHeaders:
+        - my-removed-header
         enableEnvoyHeaders: true
         preserveXRequestID: true
         withUnderscoresAction: Allow
@@ -147,6 +165,15 @@ xdsIR:
       port: 10080
     - address: 0.0.0.0
       headers:
+        earlyAddRequestHeaders:
+        - append: true
+          name: my-added-header
+          value: my-added-header-value
+        - append: false
+          name: my-set-header
+          value: my-set-header-value
+        earlyRemoveRequestHeaders:
+        - my-removed-header
         enableEnvoyHeaders: true
         preserveXRequestID: true
         withUnderscoresAction: Allow

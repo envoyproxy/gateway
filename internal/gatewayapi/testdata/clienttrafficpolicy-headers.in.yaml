@@ -9,6 +9,15 @@ clientTrafficPolicies:
       enableEnvoyHeaders: true
       withUnderscoresAction: Allow
       preserveXRequestID: true
+      earlyRequestHeaderModifier:
+        add:
+        - name: "my-added-header"
+          value: "my-added-header-value"
+        set:
+        - name: "my-set-header"
+          value: "my-set-header-value"
+        remove:
+        - "my-removed-header"
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
