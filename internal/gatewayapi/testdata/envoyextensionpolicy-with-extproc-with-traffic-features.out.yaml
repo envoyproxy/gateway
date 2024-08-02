@@ -108,7 +108,20 @@ envoyExtensionPolicies:
     namespace: default
   spec:
     extProc:
-    - backendSettings:
+    - backendRefs:
+      - name: grpc-backend
+        namespace: envoy-gateway
+        port: 8000
+      - name: grpc-backend-2
+        port: 9000
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-ip
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-ip-tls
+        namespace: envoy-gateway
+      backendSettings:
         circuitBreaker:
           maxConnections: 2048
         connection:
@@ -132,19 +145,6 @@ envoyExtensionPolicies:
         timeout:
           tcp:
             connectTimeout: 15s
-      backendRefs:
-      - name: grpc-backend
-        namespace: envoy-gateway
-        port: 8000
-      - name: grpc-backend-2
-        port: 9000
-      - group: gateway.envoyproxy.io
-        kind: Backend
-        name: backend-ip
-      - group: gateway.envoyproxy.io
-        kind: Backend
-        name: backend-ip-tls
-        namespace: envoy-gateway
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
