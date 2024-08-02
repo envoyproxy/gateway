@@ -118,7 +118,7 @@ func newTranslateCommand() *cobra.Command {
 	translateCommand.PersistentFlags().StringVarP(&resourceType, "type", "t", string(AllEnvoyConfigType), getValidResourceTypesStr())
 	translateCommand.PersistentFlags().BoolVarP(&addMissingResources, "add-missing-resources", "", false, "Provides dummy resources if missed")
 	translateCommand.PersistentFlags().StringVarP(&dnsDomain, "dns-domain", "", "cluster.local", "DNS domain used by k8s services, default is cluster.local")
-	translateCommand.PersistentFlags().StringVarP(&namespace, "namespace", "n", "envoy-gateway-system", "Namespace where envoy proxy pod are installed.")
+	translateCommand.PersistentFlags().StringVarP(&namespace, "namespace", "n", "envoy-gateway-system", "Namespace where envoy gateway is installed.")
 
 	return translateCommand
 }
