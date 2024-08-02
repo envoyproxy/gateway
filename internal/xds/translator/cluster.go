@@ -53,6 +53,7 @@ type xdsClusterArgs struct {
 	tcpkeepalive      *ir.TCPKeepalive
 	metrics           *ir.Metrics
 	backendConnection *ir.BackendConnection
+	dns               *ir.DNS
 	useClientProtocol bool
 }
 
@@ -145,6 +146,16 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STRICT_DNS}
 		cluster.DnsRefreshRate = durationpb.New(30 * time.Second)
 		cluster.RespectDnsTtl = true
+		if args.dns != nil {
+			if args.dns.DNSRefreshRate != nil {
+				if args.dns.DNSRefreshRate.Duration > 0 {
+					cluster.DnsRefreshRate = durationpb.New(args.dns.DNSRefreshRate.Duration)
+				}
+			}
+			if args.dns.RespectDNSTTL != nil {
+				cluster.RespectDnsTtl = ptr.Deref(args.dns.RespectDNSTTL, true)
+			}
+		}
 	}
 
 	// build common, HTTP/1 and HTTP/2  protocol options for cluster
@@ -651,6 +662,90 @@ func buildBackandConnectionBufferLimitBytes(bc *ir.BackendConnection) *wrappers.
 	}
 
 	return wrapperspb.UInt32(tcpClusterPerConnectionBufferLimitBytes)
+}
+
+type ExtraArgs struct {
+	metrics       *ir.Metrics
+	http1Settings *ir.HTTP1Settings
+	http2Settings *ir.HTTP2Settings
+}
+
+type clusterArgs interface {
+	asClusterArgs(extras *ExtraArgs) *xdsClusterArgs
+}
+
+type UDPRouteTranslator struct {
+	*ir.UDPRoute
+}
+
+func (route *UDPRouteTranslator) asClusterArgs(extra *ExtraArgs) *xdsClusterArgs {
+	return &xdsClusterArgs{
+		name:              route.Destination.Name,
+		settings:          route.Destination.Settings,
+		loadBalancer:      route.LoadBalancer,
+		timeout:           route.Timeout,
+		tSocket:           nil,
+		endpointType:      buildEndpointType(route.Destination.Settings),
+		metrics:           extra.metrics,
+		backendConnection: route.BackendConnection,
+		dns:               route.DNS,
+	}
+}
+
+type TCPRouteTranslator struct {
+	*ir.TCPRoute
+}
+
+func (route *TCPRouteTranslator) asClusterArgs(extra *ExtraArgs) *xdsClusterArgs {
+	return &xdsClusterArgs{
+		name:              route.Destination.Name,
+		settings:          route.Destination.Settings,
+		loadBalancer:      route.LoadBalancer,
+		proxyProtocol:     route.ProxyProtocol,
+		circuitBreaker:    route.CircuitBreaker,
+		tcpkeepalive:      route.TCPKeepalive,
+		healthCheck:       route.HealthCheck,
+		timeout:           route.Timeout,
+		endpointType:      buildEndpointType(route.Destination.Settings),
+		metrics:           extra.metrics,
+		backendConnection: route.BackendConnection,
+		dns:               route.DNS,
+	}
+}
+
+type HTTPRouteTranslator struct {
+	*ir.HTTPRoute
+}
+
+func (httpRoute *HTTPRouteTranslator) asClusterArgs(extra *ExtraArgs) *xdsClusterArgs {
+	clusterArgs := &xdsClusterArgs{
+		name:              httpRoute.Destination.Name,
+		settings:          httpRoute.Destination.Settings,
+		tSocket:           nil,
+		endpointType:      buildEndpointType(httpRoute.Destination.Settings),
+		metrics:           extra.metrics,
+		http1Settings:     extra.http1Settings,
+		http2Settings:     extra.http2Settings,
+		useClientProtocol: ptr.Deref(httpRoute.UseClientProtocol, false),
+	}
+
+	// Populate traffic features.
+	bt := httpRoute.Traffic
+	if bt != nil {
+		clusterArgs.loadBalancer = bt.LoadBalancer
+		clusterArgs.proxyProtocol = bt.ProxyProtocol
+		clusterArgs.circuitBreaker = bt.CircuitBreaker
+		clusterArgs.healthCheck = bt.HealthCheck
+		clusterArgs.timeout = bt.Timeout
+		clusterArgs.tcpkeepalive = bt.TCPKeepalive
+		clusterArgs.backendConnection = bt.BackendConnection
+	}
+
+	if httpRoute.DNS != nil {
+		clusterArgs.dns = httpRoute.DNS
+	}
+
+	return clusterArgs
 }
 
 func buildHTTP2Settings(opts *ir.HTTP2Settings) *corev3.Http2ProtocolOptions {
