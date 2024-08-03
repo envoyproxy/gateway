@@ -195,7 +195,14 @@ func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
 // stableSelector returns a stable selector based on the owning gateway labels.
 // "stable" here means the selector doesn't change when the infra is updated.
 func (r *ResourceRender) stableSelector() *metav1.LabelSelector {
-	return resource.GetSelector(envoyLabels(r.infra.GetProxyMetadata().Labels))
+	labels := map[string]string{}
+	for k, v := range r.infra.GetProxyMetadata().Labels {
+		if k == gatewayapi.OwningGatewayNameLabel || k == gatewayapi.OwningGatewayNamespaceLabel || k == gatewayapi.OwningGatewayClassLabel {
+			labels[k] = v
+		}
+	}
+
+	return resource.GetSelector(envoyLabels(labels))
 }
 
 // Deployment returns the expected Deployment based on the provided infra.
