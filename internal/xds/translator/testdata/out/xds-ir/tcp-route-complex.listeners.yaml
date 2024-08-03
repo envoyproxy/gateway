@@ -14,7 +14,7 @@
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tcp-route-complex-dest
-        statPrefix: passthrough
+        statPrefix: tls-passthrough-10080
     name: tcp-route-complex
   listenerFilters:
   - name: envoy.filters.listener.tls_inspector
