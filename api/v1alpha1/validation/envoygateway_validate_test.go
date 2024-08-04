@@ -68,89 +68,11 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			expect: false,
 		},
 		{
-			name: "supported file provider",
+			name: "unsupported provider",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
-					Provider: &egv1a1.EnvoyGatewayProvider{
-						Type: egv1a1.ProviderTypeFile,
-						Custom: &egv1a1.EnvoyGatewayCustomProvider{
-							Resource: egv1a1.EnvoyGatewayResourceProvider{
-								Type: egv1a1.ResourceProviderTypeFile,
-								File: &egv1a1.EnvoyGatewayFileResourceProvider{
-									Paths: []string{"foo", "bar"},
-								},
-							},
-							Infrastructure: egv1a1.EnvoyGatewayInfrastructureProvider{
-								Type: egv1a1.InfrastructureProviderTypeHost,
-								Host: &egv1a1.EnvoyGatewayHostInfrastructureProvider{},
-							},
-						},
-					},
-				},
-			},
-			expect: true,
-		},
-		{
-			name: "file provider without file resource",
-			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
-					Provider: &egv1a1.EnvoyGatewayProvider{
-						Type: egv1a1.ProviderTypeFile,
-						Custom: &egv1a1.EnvoyGatewayCustomProvider{
-							Resource: egv1a1.EnvoyGatewayResourceProvider{
-								Type: egv1a1.ResourceProviderTypeFile,
-							},
-							Infrastructure: egv1a1.EnvoyGatewayInfrastructureProvider{
-								Type: egv1a1.InfrastructureProviderTypeHost,
-								Host: &egv1a1.EnvoyGatewayHostInfrastructureProvider{},
-							},
-						},
-					},
-				},
-			},
-			expect: false,
-		},
-		{
-			name: "file provider without host infrastructure",
-			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
-					Provider: &egv1a1.EnvoyGatewayProvider{
-						Type: egv1a1.ProviderTypeFile,
-						Custom: &egv1a1.EnvoyGatewayCustomProvider{
-							Resource: egv1a1.EnvoyGatewayResourceProvider{
-								Type: egv1a1.ResourceProviderTypeFile,
-								File: &egv1a1.EnvoyGatewayFileResourceProvider{},
-							},
-							Infrastructure: egv1a1.EnvoyGatewayInfrastructureProvider{
-								Type: egv1a1.InfrastructureProviderTypeHost,
-							},
-						},
-					},
-				},
-			},
-			expect: false,
-		},
-		{
-			name: "file provider without any paths assigning in resource",
-			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
-					Provider: &egv1a1.EnvoyGatewayProvider{
-						Type: egv1a1.ProviderTypeFile,
-						Custom: &egv1a1.EnvoyGatewayCustomProvider{
-							Resource: egv1a1.EnvoyGatewayResourceProvider{
-								Type: egv1a1.ResourceProviderTypeFile,
-								File: &egv1a1.EnvoyGatewayFileResourceProvider{},
-							},
-							Infrastructure: egv1a1.EnvoyGatewayInfrastructureProvider{
-								Type: egv1a1.InfrastructureProviderTypeHost,
-								Host: &egv1a1.EnvoyGatewayHostInfrastructureProvider{},
-							},
-						},
-					},
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: &egv1a1.EnvoyGatewayProvider{Type: egv1a1.ProviderTypeFile},
 				},
 			},
 			expect: false,
