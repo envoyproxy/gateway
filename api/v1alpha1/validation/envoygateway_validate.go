@@ -6,115 +6,201 @@
 package validation
 
 import (
-	"errors"
 	"fmt"
 	"net/url"
-
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 // ValidateEnvoyGateway validates the provided EnvoyGateway.
 func ValidateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
-	switch {
-	case eg == nil:
-		return errors.New("envoy gateway config is unspecified")
-	case eg.Gateway == nil:
-		return errors.New("gateway is unspecified")
-	case len(eg.Gateway.ControllerName) == 0:
-		return errors.New("gateway controllerName is unspecified")
-	case eg.Provider == nil:
-		return errors.New("provider is unspecified")
-	case eg.Provider.Type != egv1a1.ProviderTypeKubernetes:
-		return fmt.Errorf("unsupported provider %v", eg.Provider.Type)
-	case eg.Provider.Kubernetes != nil && eg.Provider.Kubernetes.Watch != nil:
-		watch := eg.Provider.Kubernetes.Watch
-		switch watch.Type {
-		case egv1a1.KubernetesWatchModeTypeNamespaces:
-			if len(watch.Namespaces) == 0 {
-				return errors.New("namespaces should be specified when envoy gateway watch mode is 'Namespaces'")
-			}
-		case egv1a1.KubernetesWatchModeTypeNamespaceSelector:
-			if watch.NamespaceSelector == nil {
-				return errors.New("namespaceSelector should be specified when envoy gateway watch mode is 'NamespaceSelector'")
+	if eg == nil {
+		return fmt.Errorf("envoy gateway config is unspecified")
+	}
+
+	if eg.Gateway == nil {
+		return fmt.Errorf("gateway is unspecified")
+	}
+
+	if len(eg.Gateway.ControllerName) == 0 {
+		return fmt.Errorf("gateway controllerName is unspecified")
+	}
+
+	if eg.Provider == nil {
+		return fmt.Errorf("provider is unspecified")
+	}
+
+	switch eg.Provider.Type {
+	case egv1a1.ProviderTypeKubernetes:
+		if err := validateEnvoyGatewayKubernetesProvider(eg.Provider.Kubernetes); err != nil {
+			return err
+		}
+	case egv1a1.ProviderTypeFile:
+		if err := validateEnvoyGatewayFileProvider(eg.Provider.Custom); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("unsupported provider type")
+	}
+
+	if err := validateEnvoyGatewayLogging(eg.Logging); err != nil {
+		return err
+	}
+
+	if err := validateEnvoyGatewayRateLimit(eg.RateLimit); err != nil {
+		return err
+	}
+
+	if err := validateEnvoyGatewayExtensionManager(eg.ExtensionManager); err != nil {
+		return err
+	}
+
+	if err := validateEnvoyGatewayTelemetry(eg.Telemetry); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func validateEnvoyGatewayKubernetesProvider(provider *egv1a1.EnvoyGatewayKubernetesProvider) error {
+	if provider == nil || provider.Watch == nil {
+		return nil
+	}
+
+	watch := provider.Watch
+	switch watch.Type {
+	case egv1a1.KubernetesWatchModeTypeNamespaces:
+		if len(watch.Namespaces) == 0 {
+			return fmt.Errorf("namespaces should be specified when envoy gateway watch mode is 'Namespaces'")
+		}
+	case egv1a1.KubernetesWatchModeTypeNamespaceSelector:
+		if watch.NamespaceSelector == nil {
+			return fmt.Errorf("namespaceSelector should be specified when envoy gateway watch mode is 'NamespaceSelector'")
+		}
+	default:
+		return fmt.Errorf("envoy gateway watch mode invalid, should be 'Namespaces' or 'NamespaceSelector'")
+	}
+	return nil
+}
+
+func validateEnvoyGatewayFileProvider(provider *egv1a1.EnvoyGatewayCustomProvider) error {
+	if provider == nil {
+		return fmt.Errorf("empty custom provider settings for file provider")
+	}
+
+	rType, iType := provider.Resource.Type, provider.Infrastructure.Type
+	if rType != egv1a1.ResourceProviderTypeFile || iType != egv1a1.InfrastructureProviderTypeHost {
+		return fmt.Errorf("file provider only supports 'File' resource type and 'Host' infra type")
+	}
+
+	if provider.Resource.File == nil {
+		return fmt.Errorf("field 'file' should be specified when resource type is 'File'")
+	}
+
+	if len(provider.Resource.File.Paths) == 0 {
+		return fmt.Errorf("no paths were assigned for file resource provider to watch")
+	}
+
+	if provider.Infrastructure.Host == nil {
+		return fmt.Errorf("field 'host' should be specified when infrastructure type is 'Host'")
+	}
+
+	return nil
+}
+
+func validateEnvoyGatewayLogging(logging *egv1a1.EnvoyGatewayLogging) error {
+	if logging == nil || len(logging.Level) == 0 {
+		return nil
+	}
+
+	for component, logLevel := range logging.Level {
+		switch component {
+		case egv1a1.LogComponentGatewayDefault,
+			egv1a1.LogComponentProviderRunner,
+			egv1a1.LogComponentGatewayAPIRunner,
+			egv1a1.LogComponentXdsTranslatorRunner,
+			egv1a1.LogComponentXdsServerRunner,
+			egv1a1.LogComponentInfrastructureRunner,
+			egv1a1.LogComponentGlobalRateLimitRunner:
+			switch logLevel {
+			case egv1a1.LogLevelDebug, egv1a1.LogLevelError, egv1a1.LogLevelWarn, egv1a1.LogLevelInfo:
+			default:
+				return fmt.Errorf("envoy gateway logging level invalid. valid options: info/debug/warn/error")
 			}
 		default:
-			return errors.New("envoy gateway watch mode invalid, should be 'Namespaces' or 'NamespaceSelector'")
+			return fmt.Errorf("envoy gateway logging components invalid. valid options: system/provider/gateway-api/xds-translator/xds-server/infrastructure")
 		}
-	case eg.Logging != nil && len(eg.Logging.Level) != 0:
-		level := eg.Logging.Level
-		for component, logLevel := range level {
-			switch component {
-			case egv1a1.LogComponentGatewayDefault,
-				egv1a1.LogComponentProviderRunner,
-				egv1a1.LogComponentGatewayAPIRunner,
-				egv1a1.LogComponentXdsTranslatorRunner,
-				egv1a1.LogComponentXdsServerRunner,
-				egv1a1.LogComponentInfrastructureRunner,
-				egv1a1.LogComponentGlobalRateLimitRunner:
-				switch logLevel {
-				case egv1a1.LogLevelDebug, egv1a1.LogLevelError, egv1a1.LogLevelWarn, egv1a1.LogLevelInfo:
-				default:
-					return errors.New("envoy gateway logging level invalid. valid options: info/debug/warn/error")
-				}
-			default:
-				return errors.New("envoy gateway logging components invalid. valid options: system/provider/gateway-api/xds-translator/xds-server/infrastructure")
-			}
-		}
-	case eg.RateLimit != nil:
-		if eg.RateLimit.Backend.Type != egv1a1.RedisBackendType {
-			return fmt.Errorf("unsupported ratelimit backend %v", eg.RateLimit.Backend.Type)
-		}
-		if eg.RateLimit.Backend.Redis == nil || eg.RateLimit.Backend.Redis.URL == "" {
-			return fmt.Errorf("empty ratelimit redis settings")
-		}
-		if _, err := url.Parse(eg.RateLimit.Backend.Redis.URL); err != nil {
-			return fmt.Errorf("unknown ratelimit redis url format: %w", err)
-		}
-	case eg.ExtensionManager != nil:
-		if eg.ExtensionManager.Hooks == nil || eg.ExtensionManager.Hooks.XDSTranslator == nil {
-			return fmt.Errorf("registered extension has no hooks specified")
+	}
+	return nil
+}
+
+func validateEnvoyGatewayRateLimit(rateLimit *egv1a1.RateLimit) error {
+	if rateLimit == nil {
+		return nil
+	}
+	if rateLimit.Backend.Type != egv1a1.RedisBackendType {
+		return fmt.Errorf("unsupported ratelimit backend %v", rateLimit.Backend.Type)
+	}
+	if rateLimit.Backend.Redis == nil || rateLimit.Backend.Redis.URL == "" {
+		return fmt.Errorf("empty ratelimit redis settings")
+	}
+	if _, err := url.Parse(rateLimit.Backend.Redis.URL); err != nil {
+		return fmt.Errorf("unknown ratelimit redis url format: %w", err)
+	}
+	return nil
+}
+
+func validateEnvoyGatewayExtensionManager(extensionManager *egv1a1.ExtensionManager) error {
+	if extensionManager == nil {
+		return nil
+	}
+
+	if extensionManager.Hooks == nil || extensionManager.Hooks.XDSTranslator == nil {
+		return fmt.Errorf("registered extension has no hooks specified")
+	}
+
+	if len(extensionManager.Hooks.XDSTranslator.Pre) == 0 && len(extensionManager.Hooks.XDSTranslator.Post) == 0 {
+		return fmt.Errorf("registered extension has no hooks specified")
+	}
+
+	if extensionManager.Service == nil {
+		return fmt.Errorf("extension service config is empty")
+	}
+
+	switch {
+	case extensionManager.Service.Host == "" && extensionManager.Service.FQDN == nil && extensionManager.Service.Unix == nil && extensionManager.Service.IP == nil:
+		return fmt.Errorf("extension service must contain a configured target")
+
+	case extensionManager.Service.FQDN != nil && (extensionManager.Service.IP != nil || extensionManager.Service.Unix != nil || extensionManager.Service.Host != ""),
+		extensionManager.Service.IP != nil && (extensionManager.Service.FQDN != nil || extensionManager.Service.Unix != nil || extensionManager.Service.Host != ""),
+		extensionManager.Service.Unix != nil && (extensionManager.Service.IP != nil || extensionManager.Service.FQDN != nil || extensionManager.Service.Host != ""):
+		return fmt.Errorf("only one backend target can be configured for the extension manager")
+	}
+
+	if extensionManager.Service.TLS != nil {
+		certificateRefKind := extensionManager.Service.TLS.CertificateRef.Kind
+
+		if certificateRefKind == nil {
+			return fmt.Errorf("certificateRef empty in extension service server TLS settings")
 		}
 
-		if len(eg.ExtensionManager.Hooks.XDSTranslator.Pre) == 0 && len(eg.ExtensionManager.Hooks.XDSTranslator.Post) == 0 {
-			return fmt.Errorf("registered extension has no hooks specified")
+		if *certificateRefKind != "Secret" {
+			return fmt.Errorf("unsupported extension server TLS certificateRef %v", certificateRefKind)
 		}
+	}
+	return nil
+}
 
-		if eg.ExtensionManager.Service == nil {
-			return fmt.Errorf("extension service config is empty")
-		}
+func validateEnvoyGatewayTelemetry(telemetry *egv1a1.EnvoyGatewayTelemetry) error {
+	if telemetry == nil {
+		return nil
+	}
 
-		switch {
-		case eg.ExtensionManager.Service.Host == "" && eg.ExtensionManager.Service.FQDN == nil && eg.ExtensionManager.Service.Unix == nil && eg.ExtensionManager.Service.IP == nil:
-			return fmt.Errorf("extension service must contain a configured target")
-
-		case eg.ExtensionManager.Service.FQDN != nil && (eg.ExtensionManager.Service.IP != nil || eg.ExtensionManager.Service.Unix != nil || eg.ExtensionManager.Service.Host != ""),
-			eg.ExtensionManager.Service.IP != nil && (eg.ExtensionManager.Service.FQDN != nil || eg.ExtensionManager.Service.Unix != nil || eg.ExtensionManager.Service.Host != ""),
-			eg.ExtensionManager.Service.Unix != nil && (eg.ExtensionManager.Service.IP != nil || eg.ExtensionManager.Service.FQDN != nil || eg.ExtensionManager.Service.Host != ""):
-
-			return fmt.Errorf("only one backend target can be configured for the extension manager")
-
-		}
-
-		if eg.ExtensionManager.Service.TLS != nil {
-			certificateRefKind := eg.ExtensionManager.Service.TLS.CertificateRef.Kind
-
-			if certificateRefKind == nil {
-				return fmt.Errorf("certificateRef empty in extension service server TLS settings")
-			}
-
-			if *certificateRefKind != gwapiv1.Kind("Secret") {
-				return fmt.Errorf("unsupported extension server TLS certificateRef %v", certificateRefKind)
-			}
-		}
-	case eg.Telemetry != nil:
-		if eg.Telemetry.Metrics != nil {
-			for _, sink := range eg.Telemetry.Metrics.Sinks {
-				if sink.Type == egv1a1.MetricSinkTypeOpenTelemetry {
-					if sink.OpenTelemetry == nil {
-						return fmt.Errorf("OpenTelemetry is required when sink Type is OpenTelemetry")
-					}
+	if telemetry.Metrics != nil {
+		for _, sink := range telemetry.Metrics.Sinks {
+			if sink.Type == egv1a1.MetricSinkTypeOpenTelemetry {
+				if sink.OpenTelemetry == nil {
+					return fmt.Errorf("OpenTelemetry is required when sink Type is OpenTelemetry")
 				}
 			}
 		}
