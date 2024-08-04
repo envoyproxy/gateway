@@ -62,6 +62,8 @@ func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatur
 
 	ret.HealthCheck = buildHealthCheck(*policy)
 
+	ret.DNS = translateDNS(*policy)
+
 	// If nothing was set in any of the above calls, return nil instead of an empty
 	// container
 	var empty ir.TrafficFeatures
@@ -481,12 +483,12 @@ func translateActiveHealthCheckPayload(p *egv1a1.ActiveHealthCheckPayload) *ir.H
 	return irPayload
 }
 
-func translateDNS(policy *egv1a1.DNS) *ir.DNS {
-	if policy == nil {
+func translateDNS(policy egv1a1.ClusterSettings) *ir.DNS {
+	if policy.DNS == nil {
 		return nil
 	}
 	return &ir.DNS{
-		RespectDNSTTL:  policy.RespectDNSTTL,
-		DNSRefreshRate: policy.DNSRefreshRate,
+		RespectDNSTTL:  policy.DNS.RespectDNSTTL,
+		DNSRefreshRate: policy.DNS.DNSRefreshRate,
 	}
 }

@@ -341,7 +341,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 			errs = errors.Join(errs, err)
 		}
 	}
-	ds = translateDNS(policy.Spec.DNS)
+	ds = translateDNS(policy.Spec.ClusterSettings)
 
 	// Early return if got any errors
 	if errs != nil {
@@ -471,7 +471,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		}
 	}
 
-	ds = translateDNS(policy.Spec.DNS)
+	ds = translateDNS(policy.Spec.ClusterSettings)
 
 	// Early return if got any errors
 	if errs != nil {
