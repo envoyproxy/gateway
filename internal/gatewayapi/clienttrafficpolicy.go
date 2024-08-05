@@ -648,7 +648,7 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 	}
 
 	if headerSettings.EarlyRequestHeaderModifier != nil {
-		headersToAdd, headersToRemove, err := translateEarlyRequestHeaderModifierFilter(headerSettings.EarlyRequestHeaderModifier)
+		headersToAdd, headersToRemove, err := translateEarlyRequestHeaderModifier(headerSettings.EarlyRequestHeaderModifier)
 		if err != nil {
 			return err
 		}
@@ -892,7 +892,7 @@ func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection,
 	return irConnection, nil
 }
 
-func translateEarlyRequestHeaderModifierFilter(headerModifier *gwapiv1.HTTPHeaderFilter) ([]ir.AddHeader, []string, error) {
+func translateEarlyRequestHeaderModifier(headerModifier *gwapiv1.HTTPHeaderFilter) ([]ir.AddHeader, []string, error) {
 	// Make sure the header modifier config actually exists
 	if headerModifier == nil {
 		return nil, nil, nil

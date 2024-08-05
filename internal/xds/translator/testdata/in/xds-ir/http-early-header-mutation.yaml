@@ -24,7 +24,7 @@ http:
   hostnames:
   - "*"
   headers:
-    earlyRequestHeaderModifier:
+    earlyAddRequestHeaders:
     - name: "some-header"
       value: "some-value"
       append: true
