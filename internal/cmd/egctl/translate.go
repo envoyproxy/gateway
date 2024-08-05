@@ -241,20 +241,20 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 		for _, outType := range outTypes {
 			// Translate
 			if outType == gatewayAPIType {
-				result.Resources, err = translateGatewayAPIToGatewayAPI(resources)
+				result.Resources, err = translateGatewayAPIToGatewayAPI(resources.Resources)
 				if err != nil {
 					return err
 				}
 			}
 			if outType == xdsType {
-				res, err := translateGatewayAPIToXds(dnsDomain, resourceType, resources)
+				res, err := translateGatewayAPIToXds(dnsDomain, resourceType, resources.Resources)
 				if err != nil {
 					return err
 				}
 				result.Xds = res
 			}
 			if outType == irType {
-				res, err := translateGatewayAPIToIR(resources)
+				res, err := translateGatewayAPIToIR(resources.Resources)
 				if err != nil {
 					return err
 				}
@@ -632,14 +632,25 @@ func addMissingServices(requiredServices map[string]*corev1.Service, obj interfa
 	}
 }
 
+// LoadResources struct to handle multiple GCs and EPs
+type LoadResources struct {
+	Resources      *gatewayapi.Resources
+	GatewayClasses []*gwapiv1.GatewayClass
+	EnvoyProxies   []*egv1a1.EnvoyProxy
+}
+
 // kubernetesYAMLToResources converts a Kubernetes YAML string into GatewayAPI Resources
-func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayapi.Resources, error) {
+func kubernetesYAMLToResources(str string, addMissingResources bool) (*LoadResources, error) {
 	resources := gatewayapi.NewResources()
 	var useDefaultNamespace bool
 	providedNamespaceMap := sets.New[string]()
 	requiredNamespaceMap := sets.New[string]()
 	yamls := strings.Split(str, "\n---")
 	combinedScheme := envoygateway.GetScheme()
+
+	var gatewayClasses []*gwapiv1.GatewayClass
+	var envoyProxies []*egv1a1.EnvoyProxy
+
 	for _, y := range yamls {
 		if strings.TrimSpace(y) == "" {
 			continue
@@ -653,9 +664,6 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 		gvk := un.GroupVersionKind()
 		name, namespace := un.GetName(), un.GetNamespace()
 		if namespace == "" {
-			// When kubectl applies a resource in yaml which doesn't have a namespace,
-			// the current namespace is applied. Here we do the same thing before translating
-			// the GatewayAPI resource. Otherwise, the resource can't pass the namespace validation
 			useDefaultNamespace = true
 			namespace = config.DefaultNamespace
 		}
@@ -686,7 +694,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 				},
 				Spec: typedSpec.(egv1a1.EnvoyProxySpec),
 			}
-			resources.EnvoyProxyForGatewayClass = envoyProxy
+			envoyProxies = append(envoyProxies, envoyProxy)
 		case gatewayapi.KindGatewayClass:
 			typedSpec := spec.Interface()
 			gatewayClass := &gwapiv1.GatewayClass{
@@ -696,11 +704,10 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 				},
 				Spec: typedSpec.(gwapiv1.GatewayClassSpec),
 			}
-			// fill controller name by default controller name when gatewayclass controller name empty.
 			if gatewayClass.Spec.ControllerName == "" {
 				gatewayClass.Spec.ControllerName = egv1a1.GatewayControllerName
 			}
-			resources.GatewayClass = gatewayClass
+			gatewayClasses = append(gatewayClasses, gatewayClass)
 		case gatewayapi.KindGateway:
 			typedSpec := spec.Interface()
 			gateway := &gwapiv1.Gateway{
@@ -794,7 +801,6 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 				Spec: typedSpec.(corev1.ServiceSpec),
 			}
 			if addMissingResources && len(service.Spec.ClusterIP) == 0 {
-				// fill with dummy IP when service clusterIP is empty
 				service.Spec.ClusterIP = dummyClusterIP
 			}
 			resources.Services = append(resources.Services, service)
@@ -927,7 +933,6 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 			}
 		}
 
-		// Add EnvoyProxy if it does not exist
 		if resources.EnvoyProxyForGatewayClass == nil {
 			if err := addDefaultEnvoyProxy(resources); err != nil {
 				return nil, err
@@ -935,7 +940,13 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 		}
 	}
 
-	return resources, nil
+	loadResources := &LoadResources{
+		Resources:      resources,
+		GatewayClasses: gatewayClasses,
+		EnvoyProxies:   envoyProxies,
+	}
+
+	return loadResources, nil
 }
 
 func addDefaultEnvoyProxy(resources *gatewayapi.Resources) error {
