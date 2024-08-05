@@ -9,35 +9,35 @@
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tcp-route-simple-dest
-        statPrefix: tcp
+        statPrefix: tcp-10080
     name: tcp-route-simple
   - filters:
     - name: envoy.filters.network.tcp_proxy
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tcp-route-simple-1-dest
-        statPrefix: tcp
+        statPrefix: tcp-10080
     name: tcp-route-simple-1
   - filters:
     - name: envoy.filters.network.tcp_proxy
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tcp-route-simple-2-dest
-        statPrefix: tcp
+        statPrefix: tcp-10080
     name: tcp-route-simple-2
   - filters:
     - name: envoy.filters.network.tcp_proxy
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tcp-route-simple-3-dest
-        statPrefix: tcp
+        statPrefix: tcp-10080
     name: tcp-route-simple-3
   - filters:
     - name: envoy.filters.network.tcp_proxy
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tcp-route-simple-4-dest
-        statPrefix: tcp
+        statPrefix: tcp-10080
     name: tcp-route-simple-4
   name: tcp-listener-simple
   perConnectionBufferLimitBytes: 32768

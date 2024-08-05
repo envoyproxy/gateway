@@ -27,7 +27,7 @@
             resourceApiVersion: V3
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: http-10080
         useRemoteAddress: true
     name: first-listener
   drainType: MODIFY_ONLY
@@ -67,7 +67,7 @@
             resourceApiVersion: V3
           routeConfigName: second-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: http-10081
         useRemoteAddress: true
     name: second-listener
   drainType: MODIFY_ONLY

@@ -25,7 +25,7 @@
             resourceApiVersion: V3
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: http-8081
         useRemoteAddress: true
     name: first-listener
   drainType: MODIFY_ONLY
@@ -57,7 +57,7 @@
             resourceApiVersion: V3
           routeConfigName: second-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: http-8082
         useRemoteAddress: true
     name: second-listener
   drainType: MODIFY_ONLY
@@ -90,7 +90,7 @@
             resourceApiVersion: V3
           routeConfigName: third-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: http-8083
         useRemoteAddress: true
     name: third-listener
   drainType: MODIFY_ONLY
@@ -123,7 +123,7 @@
             resourceApiVersion: V3
           routeConfigName: fourth-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: http-8084
         useRemoteAddress: true
     name: fourth-listener
   drainType: MODIFY_ONLY
