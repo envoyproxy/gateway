@@ -20,3 +20,24 @@
         cluster: first-route-dest
         upgradeConfigs:
         - upgradeType: websocket
+    - match:
+        path: bar/foo
+      name: second-route
+      route:
+        cluster: second-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        path: bar/bar
+      name: third-route-use-client
+      route:
+        cluster: third-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        path: foo/foo
+      name: fourth-route-not-http2
+      route:
+        cluster: fourth-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
