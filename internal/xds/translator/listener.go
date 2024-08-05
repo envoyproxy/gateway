@@ -7,6 +7,8 @@ package translator
 
 import (
 	"errors"
+	"strconv"
+	"strings"
 
 	xdscore "github.com/cncf/xds/go/xds/core/v3"
 	matcher "github.com/cncf/xds/go/xds/type/matcher/v3"
@@ -226,6 +228,9 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 		statPrefix = "http"
 	}
 
+	// Append port to the statPrefix.
+	statPrefix = strings.Join([]string{statPrefix, strconv.Itoa(int(irListener.Port))}, "-")
+
 	// Client IP detection
 	useRemoteAddress := true
 	originalIPDetectionExtensions := originalIPDetectionExtensions(irListener.ClientIPDetection)
@@ -403,12 +408,15 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute
 	isTLSTerminate := irRoute.TLS != nil && irRoute.TLS.Terminate != nil
 	statPrefix := "tcp"
 	if isTLSPassthrough {
-		statPrefix = "passthrough"
+		statPrefix = "tls-passthrough"
 	}
 
 	if isTLSTerminate {
-		statPrefix = "terminate"
+		statPrefix = "tls-terminate"
 	}
+
+	// Append port to the statPrefix.
+	statPrefix = strings.Join([]string{statPrefix, strconv.Itoa(int(xdsListener.Address.GetSocketAddress().GetPortValue()))}, "-")
 
 	mgr := &tcpv3.TcpProxy{
 		AccessLog:  buildXdsAccessLog(accesslog, false),

@@ -918,7 +918,7 @@ xds:
                       resourceApiVersion: V3
                     routeConfigName: default/eg/http
                   serverHeaderTransformation: PASS_THROUGH
-                  statPrefix: http
+                  statPrefix: http-10080
                   useRemoteAddress: true
               name: default/eg/http
             drainType: MODIFY_ONLY
@@ -986,7 +986,7 @@ xds:
                       resourceApiVersion: V3
                     routeConfigName: default/eg/grpc
                   serverHeaderTransformation: PASS_THROUGH
-                  statPrefix: http
+                  statPrefix: http-8080
                   useRemoteAddress: true
               name: default/eg/grpc
             drainType: MODIFY_ONLY
@@ -1028,7 +1028,7 @@ xds:
                             {"start_time":"%START_TIME%","method":"%REQ(:METHOD)%","x-envoy-origin-path":"%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%","protocol":"%PROTOCOL%","response_code":"%RESPONSE_CODE%","response_flags":"%RESPONSE_FLAGS%","response_code_details":"%RESPONSE_CODE_DETAILS%","connection_termination_details":"%CONNECTION_TERMINATION_DETAILS%","upstream_transport_failure_reason":"%UPSTREAM_TRANSPORT_FAILURE_REASON%","bytes_received":"%BYTES_RECEIVED%","bytes_sent":"%BYTES_SENT%","duration":"%DURATION%","x-envoy-upstream-service-time":"%RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)%","x-forwarded-for":"%REQ(X-FORWARDED-FOR)%","user-agent":"%REQ(USER-AGENT)%","x-request-id":"%REQ(X-REQUEST-ID)%",":authority":"%REQ(:AUTHORITY)%","upstream_host":"%UPSTREAM_HOST%","upstream_cluster":"%UPSTREAM_CLUSTER%","upstream_local_address":"%UPSTREAM_LOCAL_ADDRESS%","downstream_local_address":"%DOWNSTREAM_LOCAL_ADDRESS%","downstream_remote_address":"%DOWNSTREAM_REMOTE_ADDRESS%","requested_server_name":"%REQUESTED_SERVER_NAME%","route_name":"%ROUTE_NAME%"}
                       path: /dev/stdout
                   cluster: tcproute/default/backend/rule/-1
-                  statPrefix: tcp
+                  statPrefix: tcp-1234
               name: default/eg/tcp/tcproute/default/backend
             name: default/eg/tcp
             perConnectionBufferLimitBytes: 32768
@@ -1071,7 +1071,7 @@ xds:
                             {"start_time":"%START_TIME%","method":"%REQ(:METHOD)%","x-envoy-origin-path":"%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%","protocol":"%PROTOCOL%","response_code":"%RESPONSE_CODE%","response_flags":"%RESPONSE_FLAGS%","response_code_details":"%RESPONSE_CODE_DETAILS%","connection_termination_details":"%CONNECTION_TERMINATION_DETAILS%","upstream_transport_failure_reason":"%UPSTREAM_TRANSPORT_FAILURE_REASON%","bytes_received":"%BYTES_RECEIVED%","bytes_sent":"%BYTES_SENT%","duration":"%DURATION%","x-envoy-upstream-service-time":"%RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)%","x-forwarded-for":"%REQ(X-FORWARDED-FOR)%","user-agent":"%REQ(USER-AGENT)%","x-request-id":"%REQ(X-REQUEST-ID)%",":authority":"%REQ(:AUTHORITY)%","upstream_host":"%UPSTREAM_HOST%","upstream_cluster":"%UPSTREAM_CLUSTER%","upstream_local_address":"%UPSTREAM_LOCAL_ADDRESS%","downstream_local_address":"%DOWNSTREAM_LOCAL_ADDRESS%","downstream_remote_address":"%DOWNSTREAM_REMOTE_ADDRESS%","requested_server_name":"%REQUESTED_SERVER_NAME%","route_name":"%ROUTE_NAME%"}
                       path: /dev/stdout
                   cluster: tlsroute/default/backend/rule/-1
-                  statPrefix: passthrough
+                  statPrefix: tls-passthrough-8443
               name: default/eg/tls-passthrough/tlsroute/default/backend
             listenerFilters:
             - name: envoy.filters.listener.tls_inspector
