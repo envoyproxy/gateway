@@ -125,7 +125,11 @@
     envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
       '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
       explicitHttpConfig:
-        http2ProtocolOptions: {}
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 2097152
+          initialStreamWindowSize: 131072
+          maxConcurrentStreams: 200
+          overrideStreamErrorOnInvalidHttpMessage: true
   upstreamConnectionOptions:
     tcpKeepalive:
       keepaliveProbes: 7

@@ -31,7 +31,8 @@ type ClientConnection struct {
 	// For example, 20Mi, 1Gi, 256Ki etc.
 	// Note that when the suffix is not provided, the value is interpreted as bytes.
 	//
-	// +kubebuilder:validation:XValidation:rule="type(self) == string ? self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\") : type(self) == int",message="socketBufferLimit must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
+	// +kubebuilder:validation:XIntOrString
+	// +kubebuilder:vallidation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
 	// +optional
 	// +notImplementedHide
 	SocketBufferLimit *resource.Quantity `json:"socketBufferLimit,omitempty"`
@@ -55,7 +56,8 @@ type BackendConnection struct {
 	// For example, 20Mi, 1Gi, 256Ki etc.
 	// Note that when the suffix is not provided, the value is interpreted as bytes.
 	//
-	// +kubebuilder:validation:XValidation:rule="type(self) == string ? self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\") : type(self) == int",message="socketBufferLimit must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
+	// +kubebuilder:validation:XIntOrString
+	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
 	// +optional
 	// +notImplementedHide
 	SocketBufferLimit *resource.Quantity `json:"socketBufferLimit,omitempty"`

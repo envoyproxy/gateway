@@ -334,7 +334,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.http2.initialStreamWindowSize: Invalid value: \"\": initialStreamWindowSize must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\"",
+				"spec.http2.initialStreamWindowSize: Invalid value: \"15m\": spec.http2.initialStreamWindowSize in body should match '^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$'",
 			},
 		},
 		{
@@ -356,7 +356,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.http2.InitialConnectionWindowSize: Invalid value: \"\": initialConnectionWindowSize must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\"",
+				"spec.http2.initialConnectionWindowSize: Invalid value: \"15m\": spec.http2.initialConnectionWindowSize in body should match '^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$'",
 			},
 		},
 		{

@@ -259,7 +259,9 @@ _Appears in:_
 
 
 
-
+BackendCluster contains all the configuration required for configuring access
+to a backend. This can include multiple endpoints, and settings that apply for
+managing the connection to all these endpoints.
 
 _Appears in:_
 - [ExtProc](#extproc)
@@ -459,11 +461,11 @@ _Appears in:_
 | `timeout` | _[Timeout](#timeout)_ |  false  | Timeout settings for the backend connections. |
 | `connection` | _[BackendConnection](#backendconnection)_ |  false  | Connection includes backend connection settings. |
 | `dns` | _[DNS](#dns)_ |  false  | DNS includes dns resolution settings. |
+| `http2` | _[HTTP2Settings](#http2settings)_ |  false  | HTTP2 provides HTTP/2 configuration for backend connections. |
 | `rateLimit` | _[RateLimitSpec](#ratelimitspec)_ |  false  | RateLimit allows the user to limit the number of incoming requests<br />to a predefined value based on attributes within the traffic flow. |
 | `faultInjection` | _[FaultInjection](#faultinjection)_ |  false  | FaultInjection defines the fault injection policy to be applied. This configuration can be used to<br />inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
 | `retry` | _[Retry](#retry)_ |  false  | Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.<br />If not set, retry will be disabled. |
 | `useClientProtocol` | _boolean_ |  false  | UseClientProtocol configures Envoy to prefer sending requests to backends using<br />the same HTTP protocol that the incoming request used. Defaults to false, which means<br />that Envoy will use the protocol indicated by the attached BackendRef. |
-| `http2` | _[HTTP2Settings](#http2settings)_ |  false  | HTTP2 provides HTTP/2 configuration for backend connections. |
 
 
 #### BasicAuth
@@ -709,7 +711,8 @@ _Appears in:_
 
 
 
-
+ClusterSettings provides the various knobs that can be set to control how traffic to a given
+backend will be configured.
 
 _Appears in:_
 - [BackendCluster](#backendcluster)
@@ -728,6 +731,7 @@ _Appears in:_
 | `timeout` | _[Timeout](#timeout)_ |  false  | Timeout settings for the backend connections. |
 | `connection` | _[BackendConnection](#backendconnection)_ |  false  | Connection includes backend connection settings. |
 | `dns` | _[DNS](#dns)_ |  false  | DNS includes dns resolution settings. |
+| `http2` | _[HTTP2Settings](#http2settings)_ |  false  | HTTP2 provides HTTP/2 configuration for backend connections. |
 
 
 #### Compression
@@ -1827,6 +1831,7 @@ HTTP2Settings provides HTTP/2 configuration for listeners and backends.
 _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+- [ClusterSettings](#clustersettings)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |

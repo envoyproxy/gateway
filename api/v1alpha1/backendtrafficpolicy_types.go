@@ -75,11 +75,6 @@ type BackendTrafficPolicySpec struct {
 	// +optional
 	// +notImplementedHide
 	Compression []*Compression `json:"compression,omitempty"`
-
-	// HTTP2 provides HTTP/2 configuration for backend connections.
-	//
-	// +optional
-	HTTP2 *HTTP2Settings `json:"http2,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -103,6 +98,8 @@ type BackendTrafficPolicyConnection struct {
 	BufferLimit *resource.Quantity `json:"bufferLimit,omitempty"`
 }
 
+// ClusterSettings provides the various knobs that can be set to control how traffic to a given
+// backend will be configured.
 type ClusterSettings struct {
 	// LoadBalancer policy to apply when routing traffic from the gateway to
 	// the backend endpoints
@@ -144,6 +141,11 @@ type ClusterSettings struct {
 	//
 	// +optional
 	DNS *DNS `json:"dns,omitempty"`
+
+	// HTTP2 provides HTTP/2 configuration for backend connections.
+	//
+	// +optional
+	HTTP2 *HTTP2Settings `json:"http2,omitempty"`
 }
 
 func init() {

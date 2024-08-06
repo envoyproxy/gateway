@@ -132,6 +132,11 @@ envoyExtensionPolicies:
           passive:
             consecutiveGatewayErrors: 4
             interval: 5s
+        http2:
+          initialConnectionWindowSize: 2Mi
+          initialStreamWindowSize: 128Ki
+          maxConcurrentStreams: 200
+          onInvalidMessage: TerminateStream
         loadBalancer:
           consistentHash:
             header:
@@ -377,6 +382,11 @@ xdsIR:
                 passive:
                   consecutiveGatewayErrors: 4
                   interval: 5s
+              http2:
+                initialConnectionWindowSize: 131072
+                initialStreamWindowSize: 2097152
+                maxConcurrentStreams: 200
+                resetStreamOnError: true
               loadBalancer:
                 consistentHash:
                   header:

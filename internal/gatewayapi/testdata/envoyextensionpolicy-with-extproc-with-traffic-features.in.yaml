@@ -213,6 +213,11 @@ envoyExtensionPolicies:
       backendSettings:
         dns:
           respectDnsTtl: true
+        http2:
+          initialStreamWindowSize: 128Ki
+          initialConnectionWindowSize: 2Mi
+          maxConcurrentStreams: 200
+          onInvalidMessage: TerminateStream
         loadBalancer:
           type: ConsistentHash
           consistentHash:

@@ -64,6 +64,12 @@ func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatur
 
 	ret.DNS = translateDNS(*policy)
 
+	if h2, err := buildIRHTTP2Settings(policy.HTTP2); err != nil {
+		return nil, err
+	} else {
+		ret.HTTP2 = h2
+	}
+
 	// If nothing was set in any of the above calls, return nil instead of an empty
 	// container
 	var empty ir.TrafficFeatures

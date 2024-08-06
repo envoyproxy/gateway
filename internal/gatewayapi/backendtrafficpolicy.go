@@ -335,12 +335,11 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 		errs = errors.Join(errs, err)
 	}
 
-	if policy.Spec.HTTP2 != nil {
-		if h2, err = buildIRHTTP2Settings(policy.Spec.HTTP2); err != nil {
-			err = perr.WithMessage(err, "HTTP2")
-			errs = errors.Join(errs, err)
-		}
+	if h2, err = buildIRHTTP2Settings(policy.Spec.HTTP2); err != nil {
+		err = perr.WithMessage(err, "HTTP2")
+		errs = errors.Join(errs, err)
 	}
+
 	ds = translateDNS(policy.Spec.ClusterSettings)
 
 	// Early return if got any errors
@@ -464,11 +463,9 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		err = perr.WithMessage(err, "Timeout")
 		errs = errors.Join(errs, err)
 	}
-	if policy.Spec.HTTP2 != nil {
-		if h2, err = buildIRHTTP2Settings(policy.Spec.HTTP2); err != nil {
-			err = perr.WithMessage(err, "HTTP2")
-			errs = errors.Join(errs, err)
-		}
+	if h2, err = buildIRHTTP2Settings(policy.Spec.HTTP2); err != nil {
+		err = perr.WithMessage(err, "HTTP2")
+		errs = errors.Join(errs, err)
 	}
 
 	ds = translateDNS(policy.Spec.ClusterSettings)

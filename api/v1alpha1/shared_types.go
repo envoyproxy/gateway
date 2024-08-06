@@ -475,6 +475,9 @@ type BackendRef struct {
 	gwapiv1.BackendObjectReference `json:",inline"`
 }
 
+// BackendCluster contains all the configuration required for configuring access
+// to a backend. This can include multiple endpoints, and settings that apply for
+// managing the connection to all these endpoints.
 type BackendCluster struct {
 	// BackendRef references a Kubernetes object that represents the
 	// backend server to which the authorization request will be sent.
@@ -513,14 +516,16 @@ type HTTP2Settings struct {
 	// InitialStreamWindowSize sets the initial window size for HTTP/2 streams.
 	// If not set, the default value is 64 KiB(64*1024).
 	//
-	// +kubebuilder:validation:XValidation:rule="type(self) == string ? self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\") : type(self) == int",message="initialStreamWindowSize must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
+	// +kubebuilder:validation:XIntOrString
+	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
 	// +optional
 	InitialStreamWindowSize *resource.Quantity `json:"initialStreamWindowSize,omitempty"`
 
 	// InitialConnectionWindowSize sets the initial window size for HTTP/2 connections.
 	// If not set, the default value is 1 MiB.
 	//
-	// +kubebuilder:validation:XValidation:rule="type(self) == string ? self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\") : type(self) == int",message="initialConnectionWindowSize must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
+	// +kubebuilder:validation:XIntOrString
+	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
 	// +optional
 	InitialConnectionWindowSize *resource.Quantity `json:"initialConnectionWindowSize,omitempty"`
 

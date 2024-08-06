@@ -75,6 +75,11 @@ http:
               interval: 5s
               maxEjectionPercent: 10
               splitExternalLocalOriginErrors: false
+          http2:
+            initialConnectionWindowSize: 131072
+            initialStreamWindowSize: 2097152
+            maxConcurrentStreams: 200
+            resetStreamOnError: true
           loadBalancer:
             roundRobin:
               slowStart:

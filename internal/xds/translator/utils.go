@@ -161,6 +161,7 @@ func createExtServiceXDSCluster(rd *ir.RouteDestination, traffic *ir.TrafficFeat
 		backendConnection: traffic.BackendConnection,
 		endpointType:      endpointType,
 		dns:               traffic.DNS,
+		http2Settings:     traffic.HTTP2,
 	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 		return err
 	}
