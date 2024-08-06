@@ -337,7 +337,9 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 					Name: sessionName,
 				},
 			}
-			if rule.SessionPersistence.AbsoluteTimeout != nil {
+			if rule.SessionPersistence.AbsoluteTimeout != nil &&
+				rule.SessionPersistence.CookieConfig != nil && rule.SessionPersistence.CookieConfig.LifetimeType != nil &&
+				*rule.SessionPersistence.CookieConfig.LifetimeType == gwapiv1.PermanentCookieLifetimeType {
 				ttl, err := time.ParseDuration(string(*rule.SessionPersistence.AbsoluteTimeout))
 				if err != nil {
 					return nil, err
