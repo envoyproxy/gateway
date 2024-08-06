@@ -418,7 +418,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 	}
 
 	// Translate Proxy Protocol
-	enableProxyProtocol = buildProxyProtocol(policy.Spec.EnableProxyProtocol)
+	enableProxyProtocol = ptr.Deref(policy.Spec.EnableProxyProtocol, false)
 
 	// Translate Client Timeout Settings
 	timeout, err = buildClientTimeout(policy.Spec.Timeout)
@@ -606,14 +606,6 @@ func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout,
 	}
 
 	return irClientTimeout, nil
-}
-
-func buildProxyProtocol(enableProxyProtocol *bool) bool {
-	if enableProxyProtocol != nil && *enableProxyProtocol {
-		return true
-	}
-
-	return false
 }
 
 func translateClientIPDetection(clientIPDetection *egv1a1.ClientIPDetectionSettings, httpIR *ir.HTTPListener) {

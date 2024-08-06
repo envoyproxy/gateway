@@ -739,10 +739,7 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(extra *ExtraArgs) *xdsCluste
 		clusterArgs.timeout = bt.Timeout
 		clusterArgs.tcpkeepalive = bt.TCPKeepalive
 		clusterArgs.backendConnection = bt.BackendConnection
-	}
-
-	if httpRoute.DNS != nil {
-		clusterArgs.dns = httpRoute.DNS
+		clusterArgs.dns = bt.DNS
 	}
 
 	return clusterArgs

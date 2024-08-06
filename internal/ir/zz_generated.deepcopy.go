@@ -792,6 +792,11 @@ func (in *ExtAuth) DeepCopyInto(out *ExtAuth) {
 		*out = new(HTTPExtAuthService)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Traffic != nil {
+		in, out := &in.Traffic, &out.Traffic
+		*out = new(TrafficFeatures)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.HeadersToExtAuth != nil {
 		in, out := &in.HeadersToExtAuth, &out.HeadersToExtAuth
 		*out = make([]string, len(*in))
@@ -818,6 +823,11 @@ func (in *ExtAuth) DeepCopy() *ExtAuth {
 func (in *ExtProc) DeepCopyInto(out *ExtProc) {
 	*out = *in
 	in.Destination.DeepCopyInto(&out.Destination)
+	if in.Traffic != nil {
+		in, out := &in.Traffic, &out.Traffic
+		*out = new(TrafficFeatures)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.MessageTimeout != nil {
 		in, out := &in.MessageTimeout, &out.MessageTimeout
 		*out = new(v1.Duration)
@@ -1346,11 +1356,6 @@ func (in *HTTPRoute) DeepCopyInto(out *HTTPRoute) {
 	if in.Metadata != nil {
 		in, out := &in.Metadata, &out.Metadata
 		*out = new(ResourceMetadata)
-		(*in).DeepCopyInto(*out)
-	}
-	if in.DNS != nil {
-		in, out := &in.DNS, &out.DNS
-		*out = new(DNS)
 		(*in).DeepCopyInto(*out)
 	}
 }
@@ -2911,6 +2916,11 @@ func (in *TrafficFeatures) DeepCopyInto(out *TrafficFeatures) {
 	if in.HTTP2 != nil {
 		in, out := &in.HTTP2, &out.HTTP2
 		*out = new(HTTP2Settings)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.DNS != nil {
+		in, out := &in.DNS, &out.DNS
+		*out = new(DNS)
 		(*in).DeepCopyInto(*out)
 	}
 }

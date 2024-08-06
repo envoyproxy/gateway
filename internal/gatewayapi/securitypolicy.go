@@ -813,6 +813,7 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Reso
 		ds         *ir.DestinationSetting
 		authority  string
 		err        error
+		traffic    *ir.TrafficFeatures
 	)
 
 	switch {
@@ -826,12 +827,18 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Reso
 			backendRef = egv1a1.ToBackendObjectReference(http.BackendRefs[0])
 		}
 		protocol = ir.HTTP
+		if traffic, err = translateTrafficFeatures(http.BackendSettings); err != nil {
+			return nil, err
+		}
 	case grpc != nil:
 		backendRef = grpc.BackendRef
 		if len(grpc.BackendRefs) != 0 {
 			backendRef = egv1a1.ToBackendObjectReference(grpc.BackendRefs[0])
 		}
 		protocol = ir.GRPC
+		if traffic, err = translateTrafficFeatures(grpc.BackendSettings); err != nil {
+			return nil, err
+		}
 	// These are sanity checks, they should never happen because the API server
 	// should have caught them
 	default: // http == nil && grpc == nil:
@@ -866,6 +873,7 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Reso
 		Name:             irConfigName(policy),
 		HeadersToExtAuth: policy.Spec.ExtAuth.HeadersToExtAuth,
 		FailOpen:         policy.Spec.ExtAuth.FailOpen,
+		Traffic:          traffic,
 	}
 
 	if http != nil {
