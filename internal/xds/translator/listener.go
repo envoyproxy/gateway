@@ -86,7 +86,7 @@ func http2ProtocolOptions(opts *ir.HTTP2Settings) *corev3.Http2ProtocolOptions {
 		opts = &ir.HTTP2Settings{}
 	}
 
-	return &corev3.Http2ProtocolOptions{
+	out := &corev3.Http2ProtocolOptions{
 		MaxConcurrentStreams: &wrapperspb.UInt32Value{
 			Value: ptr.Deref(opts.MaxConcurrentStreams, http2MaxConcurrentStreamsLimit),
 		},
@@ -97,6 +97,14 @@ func http2ProtocolOptions(opts *ir.HTTP2Settings) *corev3.Http2ProtocolOptions {
 			Value: ptr.Deref(opts.InitialConnectionWindowSize, http2InitialConnectionWindowSize),
 		},
 	}
+
+	if opts.ResetStreamOnError != nil {
+		out.OverrideStreamErrorOnInvalidHttpMessage = &wrapperspb.BoolValue{
+			Value: *opts.ResetStreamOnError,
+		}
+	}
+
+	return out
 }
 
 func xffNumTrustedHops(clientIPDetection *ir.ClientIPDetectionSettings) uint32 {

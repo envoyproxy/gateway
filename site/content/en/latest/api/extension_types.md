@@ -461,6 +461,7 @@ _Appears in:_
 | `timeout` | _[Timeout](#timeout)_ |  false  | Timeout settings for the backend connections. |
 | `connection` | _[BackendConnection](#backendconnection)_ |  false  | Connection includes backend connection settings. |
 | `dns` | _[DNS](#dns)_ |  false  | DNS includes dns resolution settings. |
+| `http2` | _[HTTP2Settings](#http2settings)_ |  false  | HTTP2 provides HTTP/2 configuration for backend connections. |
 
 
 #### BasicAuth
@@ -1789,9 +1790,10 @@ _Appears in:_
 
 
 
-HTTP2Settings provides HTTP/2 configuration on the listener.
+HTTP2Settings provides HTTP/2 configuration for listeners and backends.
 
 _Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
 
 | Field | Type | Required | Description |
@@ -1799,6 +1801,7 @@ _Appears in:_
 | `initialStreamWindowSize` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#quantity-resource-api)_ |  false  | InitialStreamWindowSize sets the initial window size for HTTP/2 streams.<br />If not set, the default value is 64 KiB(64*1024). |
 | `initialConnectionWindowSize` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#quantity-resource-api)_ |  false  | InitialConnectionWindowSize sets the initial window size for HTTP/2 connections.<br />If not set, the default value is 1 MiB. |
 | `maxConcurrentStreams` | _integer_ |  false  | MaxConcurrentStreams sets the maximum number of concurrent streams allowed per connection.<br />If not set, the default value is 100. |
+| `onInvalidMessage` | _[InvalidMessageAction](#invalidmessageaction)_ |  false  | OnInvalidMessage determines if Envoy will terminate the connection or just the offending stream in the event of HTTP messaging error<br />It's recommended for L2 Envoy deployments to set this value to TerminateStream.<br />https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/level_two<br />Default: TerminateConnection |
 
 
 #### HTTP3Settings
@@ -2045,6 +2048,21 @@ _Appears in:_
 | Value | Description |
 | ----- | ----------- |
 | `Host` | InfrastructureProviderTypeHost defines the "Host" provider.<br /> | 
+
+
+#### InvalidMessageAction
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [HTTP2Settings](#http2settings)
+
+| Value | Description |
+| ----- | ----------- |
+| `TerminateConnection` |  | 
+| `TerminateStream` |  | 
 
 
 #### JSONPatchOperation

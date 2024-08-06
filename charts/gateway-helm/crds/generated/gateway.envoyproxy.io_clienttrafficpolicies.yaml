@@ -300,6 +300,13 @@ spec:
                     maximum: 2147483647
                     minimum: 1
                     type: integer
+                  onInvalidMessage:
+                    description: |-
+                      OnInvalidMessage determines if Envoy will terminate the connection or just the offending stream in the event of HTTP messaging error
+                      It's recommended for L2 Envoy deployments to set this value to TerminateStream.
+                      https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/level_two
+                      Default: TerminateConnection
+                    type: string
                 type: object
               http3:
                 description: HTTP3 provides HTTP/3 configuration on the listener.
