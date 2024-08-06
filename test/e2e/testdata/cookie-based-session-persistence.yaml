@@ -25,3 +25,5 @@ spec:
         sessionName: Session-A
         type: Cookie
         absoluteTimeout: 10s
+        cookieConfig:
+          lifetimeType: Permanent
