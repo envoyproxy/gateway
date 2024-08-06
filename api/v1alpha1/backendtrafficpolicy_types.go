@@ -6,7 +6,6 @@
 package v1alpha1
 
 import (
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
@@ -128,18 +127,6 @@ type BackendTrafficPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []BackendTrafficPolicy `json:"items"`
-}
-
-// BackendTrafficPolicyConnection allows users to configure connection-level settings of backend
-type BackendTrafficPolicyConnection struct {
-	// BufferLimit Soft limit on size of the cluster’s connections read and write buffers.
-	// If unspecified, an implementation defined default is applied (32768 bytes).
-	// For example, 20Mi, 1Gi, 256Ki etc.
-	// Note: that when the suffix is not provided, the value is interpreted as bytes.
-	//
-	// +kubebuilder:validation:XValidation:rule="type(self) == string ? self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\") : type(self) == int",message="BufferLimit must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
-	// +optional
-	BufferLimit *resource.Quantity `json:"bufferLimit,omitempty"`
 }
 
 func init() {
