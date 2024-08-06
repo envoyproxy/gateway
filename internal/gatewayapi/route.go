@@ -320,12 +320,21 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 			return nil, fmt.Errorf("idle timeout is not supported in envoy gateway")
 		}
 
+		var sessionName string
+		if rule.SessionPersistence.SessionName == nil {
+			// SessionName is optional on the gateway-api, but envoy requires it
+			// so we generate the one here.
+			sessionName = "sticky-host"
+		} else {
+			sessionName = *rule.SessionPersistence.SessionName
+		}
+
 		switch {
 		case rule.SessionPersistence.Type == nil || // Cookie-based session persistence is default.
 			*rule.SessionPersistence.Type == gwapiv1.CookieBasedSessionPersistence:
 			sessionPersistence = &ir.SessionPersistence{
 				Cookie: &ir.CookieBasedSessionPersistence{
-					Name: *rule.SessionPersistence.SessionName,
+					Name: sessionName,
 				},
 			}
 			if rule.SessionPersistence.AbsoluteTimeout != nil {
@@ -338,7 +347,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 		case *rule.SessionPersistence.Type == gwapiv1.HeaderBasedSessionPersistence:
 			sessionPersistence = &ir.SessionPersistence{
 				Header: &ir.HeaderBasedSessionPersistence{
-					Name: *rule.SessionPersistence.SessionName,
+					Name: sessionName,
 				},
 			}
 		default:
