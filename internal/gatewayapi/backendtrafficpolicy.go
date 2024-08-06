@@ -296,6 +296,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 		rt        *ir.Retry
 		bc        *ir.BackendConnection
 		ds        *ir.DNS
+		h2        *ir.HTTP2Settings
 		err, errs error
 	)
 
@@ -346,6 +347,13 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 	if policy.Spec.Connection != nil {
 		if bc, err = t.buildBackendConnection(policy); err != nil {
 			err = perr.WithMessage(err, "BackendConnection")
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	if policy.Spec.HTTP2 != nil {
+		if h2, err = buildIRHTTP2Settings(policy.Spec.HTTP2); err != nil {
+			err = perr.WithMessage(err, "HTTP2")
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -405,6 +413,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 						TCPKeepalive:      ka,
 						Retry:             rt,
 						BackendConnection: bc,
+						HTTP2:             h2,
 					}
 
 					r.DNS = ds
@@ -441,6 +450,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		ka        *ir.TCPKeepalive
 		rt        *ir.Retry
 		ds        *ir.DNS
+		h2        *ir.HTTP2Settings
 		err, errs error
 	)
 
@@ -484,6 +494,12 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	if policy.Spec.Timeout != nil {
 		if ct, err = t.buildTimeout(policy, nil); err != nil {
 			err = perr.WithMessage(err, "Timeout")
+			errs = errors.Join(errs, err)
+		}
+	}
+	if policy.Spec.HTTP2 != nil {
+		if h2, err = buildIRHTTP2Settings(policy.Spec.HTTP2); err != nil {
+			err = perr.WithMessage(err, "HTTP2")
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -587,6 +603,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 				FaultInjection: fi,
 				TCPKeepalive:   ka,
 				Retry:          rt,
+				HTTP2:          h2,
 			}
 
 			if r.DNS == nil {
