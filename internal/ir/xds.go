@@ -456,6 +456,8 @@ type HTTP2Settings struct {
 	InitialConnectionWindowSize *uint32 `json:"initialStreamWindowSize,omitempty" yaml:"initialStreamWindowSize,omitempty"`
 	// MaxConcurrentStreams is the maximum number of concurrent streams that can be opened on a connection.
 	MaxConcurrentStreams *uint32 `json:"maxConcurrentStreams,omitempty" yaml:"maxConcurrentStreams,omitempty"`
+	// ResetStreamOnError determines if a stream or connection is reset on messaging error.
+	ResetStreamOnError *bool `json:"resetStreamOnError,omitempty" yaml:"resetStreamOnError,omitempty"`
 }
 
 // HealthCheckSettings provides HealthCheck configuration on the HTTP/HTTPS listener.
@@ -563,6 +565,17 @@ type HTTPRoute struct {
 	UseClientProtocol *bool `json:"useClientProtocol,omitempty" yaml:"useClientProtocol,omitempty"`
 	// Metadata is used to enrich envoy route metadata with user and provider-specific information
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	// DNS is used to configure how DNS resolution is handled for the route
+	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
+}
+
+// DNS contains configuration options for DNS resolution.
+// +k8s:deepcopy-gen=true
+type DNS struct {
+	// DNSRefreshRate specifies the rate at which DNS records should be refreshed.
+	DNSRefreshRate *metav1.Duration `json:"dnsRefreshRate,omitempty"`
+	// RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.
+	RespectDNSTTL *bool `json:"respectDnsTtl,omitempty"`
 }
 
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.
@@ -589,6 +602,9 @@ type TrafficFeatures struct {
 	Retry *Retry `json:"retry,omitempty" yaml:"retry,omitempty"`
 	// settings of upstream connection
 	BackendConnection *BackendConnection `json:"backendConnection,omitempty" yaml:"backendConnection,omitempty"`
+	// HTTP2 provides HTTP/2 configuration for clusters
+	// +optional
+	HTTP2 *HTTP2Settings `json:"http2,omitempty" yaml:"http2,omitempty"`
 }
 
 func (b *TrafficFeatures) Validate() error {
@@ -1386,6 +1402,8 @@ type TCPRoute struct {
 	ProxyProtocol *ProxyProtocol `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
 	// settings of upstream connection
 	BackendConnection *BackendConnection `json:"backendConnection,omitempty" yaml:"backendConnection,omitempty"`
+	// DNS is used to configure how DNS resolution is handled for the route
+	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
 }
 
 // TLS holds information for configuring TLS on a listener
@@ -1496,6 +1514,7 @@ type UDPRoute struct {
 	Timeout *Timeout `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	// settings of upstream connection
 	BackendConnection *BackendConnection `json:"backendConnection,omitempty" yaml:"backendConnection,omitempty"`
+	DNS               *DNS               `json:"dns,omitempty" yaml:"dns,omitempty"`
 }
 
 // Validate the fields within the UDPListener structure

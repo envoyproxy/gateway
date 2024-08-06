@@ -110,6 +110,15 @@ type BackendTrafficPolicySpec struct {
 	//
 	// +optional
 	Connection *BackendConnection `json:"connection,omitempty"`
+	// DNS includes dns resolution settings.
+	//
+	// +optional
+	DNS *DNS `json:"dns,omitempty"`
+
+	// HTTP2 provides HTTP/2 configuration for backend connections.
+	//
+	// +optional
+	HTTP2 *HTTP2Settings `json:"http2,omitempty"`
 }
 
 // +kubebuilder:object:root=true

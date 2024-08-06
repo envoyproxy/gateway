@@ -128,6 +128,7 @@ spec:
                     - type: string
                     description: |-
                       BufferLimit Soft limit on size of the cluster’s connections read and write buffers.
+                      BufferLimit applies to connection streaming (maybe non-streaming) channel between processes, it's in user space.
                       If unspecified, an implementation defined default is applied (32768 bytes).
                       For example, 20Mi, 1Gi, 256Ki etc.
                       Note: that when the suffix is not provided, the value is interpreted as bytes.
@@ -137,6 +138,37 @@ spec:
                     - message: BufferLimit must be of the format "^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
                       rule: 'type(self) == string ? self.matches(r"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$")
                         : type(self) == int'
+                  socketBufferLimit:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      SocketBufferLimit provides configuration for the maximum buffer size in bytes for each socket
+                      to backend.
+                      SocketBufferLimit applies to socket streaming channel between TCP/IP stacks, it's in kernel space.
+                      For example, 20Mi, 1Gi, 256Ki etc.
+                      Note that when the suffix is not provided, the value is interpreted as bytes.
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                    x-kubernetes-validations:
+                    - message: socketBufferLimit must be of the format "^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+                      rule: 'type(self) == string ? self.matches(r"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$")
+                        : type(self) == int'
+                type: object
+              dns:
+                description: DNS includes dns resolution settings.
+                properties:
+                  dnsRefreshRate:
+                    description: |-
+                      DNSRefreshRate specifies the rate at which DNS records should be refreshed.
+                      Defaults to 30 seconds.
+                    type: string
+                  respectDnsTtl:
+                    description: |-
+                      RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.
+                      If the value is set to true, the DNS refresh rate will be set to the resource record’s TTL.
+                      Defaults to true.
+                    type: boolean
                 type: object
               faultInjection:
                 description: |-
@@ -420,6 +452,51 @@ spec:
                           of errors between external and local origin.
                         type: boolean
                     type: object
+                type: object
+              http2:
+                description: HTTP2 provides HTTP/2 configuration for backend connections.
+                properties:
+                  initialConnectionWindowSize:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      InitialConnectionWindowSize sets the initial window size for HTTP/2 connections.
+                      If not set, the default value is 1 MiB.
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                    x-kubernetes-validations:
+                    - message: initialConnectionWindowSize must be of the format "^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+                      rule: 'type(self) == string ? self.matches(r"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$")
+                        : type(self) == int'
+                  initialStreamWindowSize:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      InitialStreamWindowSize sets the initial window size for HTTP/2 streams.
+                      If not set, the default value is 64 KiB(64*1024).
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                    x-kubernetes-validations:
+                    - message: initialStreamWindowSize must be of the format "^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+                      rule: 'type(self) == string ? self.matches(r"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$")
+                        : type(self) == int'
+                  maxConcurrentStreams:
+                    description: |-
+                      MaxConcurrentStreams sets the maximum number of concurrent streams allowed per connection.
+                      If not set, the default value is 100.
+                    format: int32
+                    maximum: 2147483647
+                    minimum: 1
+                    type: integer
+                  onInvalidMessage:
+                    description: |-
+                      OnInvalidMessage determines if Envoy will terminate the connection or just the offending stream in the event of HTTP messaging error
+                      It's recommended for L2 Envoy deployments to set this value to TerminateStream.
+                      https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/level_two
+                      Default: TerminateConnection
+                    type: string
                 type: object
               loadBalancer:
                 description: |-
