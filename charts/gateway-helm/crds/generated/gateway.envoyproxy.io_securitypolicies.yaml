@@ -96,8 +96,10 @@ spec:
                               description: |-
                                 ClientCIDRs are the IP CIDR ranges of the client.
                                 Valid examples are "192.168.1.0/24" or "2001:db8::/64"
-                                Multiple CIDR ranges can be specified.
-                                One of the CIDR ranges must match the client IP for the rule to match.
+
+
+                                If multiple CIDR ranges are specified, one of the CIDR ranges must match
+                                the client IP for the rule to match.
 
 
                                 The client IP is inferred from the X-Forwarded-For header, a custom header,
@@ -115,8 +117,9 @@ spec:
                             jwtClaims:
                               description: |-
                                 JWTClaims are the claims in a JWT token.
-                                Multiple claims can be specified.
-                                If there are multiple claims, all claims must match for the rule to match.
+
+
+                                If multiple claims are specified, all claims must match for the rule to match.
                                 For example, if there are two claims: one for the audience and one for the issuer,
                                 the rule will match only if both the audience and the issuer match.
                                 Note: in order to use JWT claims for authorization, you must configure the
@@ -127,38 +130,29 @@ spec:
                                   name:
                                     description: Name is the name of the claim.
                                     type: string
-                                  value:
-                                    description: Matches are the values that the claim
-                                      must match.
+                                  type:
+                                    default: String
+                                    description: |-
+                                      Type is the type of the claim.
+                                      Valid values are "String" and "StringArray".
+                                      For example, sub is a string claim, and groups is a string array claim.
+                                    enum:
+                                    - String
+                                    - StringArray
+                                    type: string
+                                  values:
+                                    description: |-
+                                      Values are the values that the claim must match.
+                                      If the claim is a string type, the specified value must match exactly.
+                                      If the claim is a string array type, the specified value must match one of the values in the array.
+                                      If multiple values are specified, one of the values must match for the rule to match.
                                     items:
-                                      description: |-
-                                        StringMatch defines how to match any strings.
-                                        This is a general purpose match condition that can be used by other EG APIs
-                                        that need to match against a string.
-                                      properties:
-                                        type:
-                                          default: Exact
-                                          description: Type specifies how to match
-                                            against a string.
-                                          enum:
-                                          - Exact
-                                          - Prefix
-                                          - Suffix
-                                          - RegularExpression
-                                          type: string
-                                        value:
-                                          description: Value specifies the string
-                                            value that the match must have.
-                                          maxLength: 1024
-                                          minLength: 1
-                                          type: string
-                                      required:
-                                      - value
-                                      type: object
+                                      type: string
                                     type: array
                                 required:
                                 - name
-                                - value
+                                - type
+                                - values
                                 type: object
                               type: array
                           required:
