@@ -86,13 +86,18 @@ spec:
                             If not specified, Envoy Gateway will generate a unique name for the rule.n
                           type: string
                         principal:
-                          description: Principal specifies the client identity of
-                            a request.
+                          description: |-
+                            Principal specifies the client identity of a request.
+                            If there are multiple principal types, all principals must match for the rule to match.
+                            For example, if there are two principals: one for client IP and one for JWT claim,
+                            the rule will match only if both the client IP and the JWT claim match.
                           properties:
                             clientCIDRs:
                               description: |-
                                 ClientCIDRs are the IP CIDR ranges of the client.
                                 Valid examples are "192.168.1.0/24" or "2001:db8::/64"
+                                Multiple CIDR ranges can be specified.
+                                One of the CIDR ranges must match the client IP for the rule to match.
 
 
                                 The client IP is inferred from the X-Forwarded-For header, a custom header,
@@ -106,6 +111,55 @@ spec:
                                 pattern: ((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/([0-9]+))|((([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))\/([0-9]+))
                                 type: string
                               minItems: 1
+                              type: array
+                            jwtClaims:
+                              description: |-
+                                JWTClaims are the claims in a JWT token.
+                                Multiple claims can be specified.
+                                If there are multiple claims, all claims must match for the rule to match.
+                                For example, if there are two claims: one for the audience and one for the issuer,
+                                the rule will match only if both the audience and the issuer match.
+                                Note: in order to use JWT claims for authorization, you must configure the
+                                JWT authentication in the same `SecurityPolicy`.
+                              items:
+                                description: JWTClaim specifies a claim in a JWT token.
+                                properties:
+                                  name:
+                                    description: Name is the name of the claim.
+                                    type: string
+                                  value:
+                                    description: Matches are the values that the claim
+                                      must match.
+                                    items:
+                                      description: |-
+                                        StringMatch defines how to match any strings.
+                                        This is a general purpose match condition that can be used by other EG APIs
+                                        that need to match against a string.
+                                      properties:
+                                        type:
+                                          default: Exact
+                                          description: Type specifies how to match
+                                            against a string.
+                                          enum:
+                                          - Exact
+                                          - Prefix
+                                          - Suffix
+                                          - RegularExpression
+                                          type: string
+                                        value:
+                                          description: Value specifies the string
+                                            value that the match must have.
+                                          maxLength: 1024
+                                          minLength: 1
+                                          type: string
+                                      required:
+                                      - value
+                                      type: object
+                                    type: array
+                                required:
+                                - name
+                                - value
+                                type: object
                               type: array
                           required:
                           - clientCIDRs

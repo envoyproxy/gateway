@@ -36,6 +36,9 @@ type AuthorizationRule struct {
 	Action AuthorizationAction `json:"action"`
 
 	// Principal specifies the client identity of a request.
+	// If there are multiple principal types, all principals must match for the rule to match.
+	// For example, if there are two principals: one for client IP and one for JWT claim,
+	// the rule will match only if both the client IP and the JWT claim match.
 	Principal Principal `json:"principal"`
 }
 
@@ -47,6 +50,9 @@ type Principal struct {
 	// ClientCIDRs are the IP CIDR ranges of the client.
 	// Valid examples are "192.168.1.0/24" or "2001:db8::/64"
 	//
+	// If multiple CIDR ranges are specified, one of the CIDR ranges must match
+	// the client IP for the rule to match.
+	//
 	// The client IP is inferred from the X-Forwarded-For header, a custom header,
 	// or the proxy protocol.
 	// You can use the `ClientIPDetection` or the `EnableProxyProtocol` field in
@@ -54,9 +60,44 @@ type Principal struct {
 	// +kubebuilder:validation:MinItems=1
 	ClientCIDRs []CIDR `json:"clientCIDRs"`
 
-	// TODO: Zhaohuabing the MinItems=1 validation can be relaxed to allow empty list
-	// after other principal types are supported. However, at least one principal is required
+	// JWTClaims are the claims in a JWT token.
+	//
+	// If multiple claims are specified, all claims must match for the rule to match.
+	// For example, if there are two claims: one for the audience and one for the issuer,
+	// the rule will match only if both the audience and the issuer match.
+	// Note: in order to use JWT claims for authorization, you must configure the
+	// JWT authentication in the same `SecurityPolicy`.
+	// +optional
+	// +notImplementedHide
+	JWTClaims []JWTClaim `json:"jwtClaims"`
 }
+
+// JWTClaim specifies a claim in a JWT token.
+type JWTClaim struct {
+	// Type is the type of the claim.
+	// Valid values are "String" and "StringArray".
+	// For example, sub is a string claim, and groups is a string array claim.
+	// +kubebuilder:validation:Enum=String;StringArray
+	// +kubebuilder:default=String
+	// +unionDiscriminator
+	Type JWTClaimType `json:"type"`
+
+	// Name is the name of the claim.
+	Name string `json:"name"`
+
+	// Values are the values that the claim must match.
+	// If the claim is a string type, the specified value must match exactly.
+	// If the claim is a string array type, the specified value must match one of the values in the array.
+	// If multiple values are specified, one of the values must match for the rule to match.
+	Values []string `json:"values"`
+}
+
+type JWTClaimType string
+
+const (
+	JWTClaimTypeString      JWTClaimType = "String"
+	JWTClaimTypeStringArray JWTClaimType = "StringArray"
+)
 
 // AuthorizationAction defines the action to be taken if a rule matches.
 // +kubebuilder:validation:Enum=Allow;Deny
