@@ -173,12 +173,11 @@ func (*extProc) patchResources(tCtx *types.ResourceVersionTable,
 		for i := range route.EnvoyExtensions.ExtProcs {
 			ep := route.EnvoyExtensions.ExtProcs[i]
 			if err := createExtServiceXDSCluster(
-				&ep.Destination, tCtx); err != nil && !errors.Is(
+				&ep.Destination, ep.Traffic, tCtx); err != nil && !errors.Is(
 				err, ErrXdsClusterExists) {
 				errs = errors.Join(errs, err)
 			}
 		}
-
 	}
 
 	return errs

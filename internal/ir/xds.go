@@ -565,8 +565,6 @@ type HTTPRoute struct {
 	UseClientProtocol *bool `json:"useClientProtocol,omitempty" yaml:"useClientProtocol,omitempty"`
 	// Metadata is used to enrich envoy route metadata with user and provider-specific information
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
-	// DNS is used to configure how DNS resolution is handled for the route
-	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
 }
 
 // DNS contains configuration options for DNS resolution.
@@ -605,6 +603,8 @@ type TrafficFeatures struct {
 	// HTTP2 provides HTTP/2 configuration for clusters
 	// +optional
 	HTTP2 *HTTP2Settings `json:"http2,omitempty" yaml:"http2,omitempty"`
+	// DNS is used to configure how DNS resolution is handled by the Envoy Proxy cluster
+	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
 }
 
 func (b *TrafficFeatures) Validate() error {
@@ -816,6 +816,9 @@ type ExtAuth struct {
 	// HTTP defines the HTTP External Authorization service.
 	// Only one of GRPCService or HTTPService may be specified.
 	HTTP *HTTPExtAuthService `json:"http,omitempty"`
+
+	// Traffic contains configuration for traffic features for the ExtAuth service
+	Traffic *TrafficFeatures `json:"traffic,omitempty"`
 
 	// HeadersToExtAuth defines the client request headers that will be included
 	// in the request to the external authorization service.
@@ -1514,7 +1517,8 @@ type UDPRoute struct {
 	Timeout *Timeout `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	// settings of upstream connection
 	BackendConnection *BackendConnection `json:"backendConnection,omitempty" yaml:"backendConnection,omitempty"`
-	DNS               *DNS               `json:"dns,omitempty" yaml:"dns,omitempty"`
+	// DNS is used to configure how DNS resolution is handled by the Envoy Proxy cluster
+	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
 }
 
 // Validate the fields within the UDPListener structure
@@ -2229,6 +2233,9 @@ type ExtProc struct {
 
 	// Destination defines the destination for the gRPC External Processing service.
 	Destination RouteDestination `json:"destination" yaml:"destination"`
+
+	// Traffic holds the features associated with traffic management
+	Traffic *TrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
 
 	// Authority is the hostname:port of the HTTP External Processing service.
 	Authority string `json:"authority" yaml:"authority"`

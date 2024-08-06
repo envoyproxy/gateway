@@ -342,9 +342,6 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
-        dns:
-          dnsRefreshRate: 10s
-          respectDnsTtl: true
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
@@ -356,7 +353,10 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /v3
-        traffic: {}
+        traffic:
+          dns:
+            dnsRefreshRate: 10s
+            respectDnsTtl: true
   envoy-gateway/gateway-2:
     accessLog:
       text:
@@ -386,9 +386,6 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
-        dns:
-          dnsRefreshRate: 5s
-          respectDnsTtl: false
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
@@ -400,7 +397,10 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /v2
-        traffic: {}
+        traffic:
+          dns:
+            dnsRefreshRate: 5s
+            respectDnsTtl: false
       - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
@@ -410,9 +410,6 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
-        dns:
-          dnsRefreshRate: 1s
-          respectDnsTtl: true
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
@@ -424,4 +421,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        traffic: {}
+        traffic:
+          dns:
+            dnsRefreshRate: 1s
+            respectDnsTtl: true
