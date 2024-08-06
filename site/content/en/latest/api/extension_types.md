@@ -28,6 +28,7 @@ API group.
 - [EnvoyProxy](#envoyproxy)
 - [SecurityPolicy](#securitypolicy)
 - [SecurityPolicyList](#securitypolicylist)
+- [VirtualBackend](#virtualbackend)
 
 
 
@@ -476,17 +477,6 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `users` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  true  | The Kubernetes secret which contains the username-password pairs in<br />htpasswd format, used to verify user credentials in the "Authorization"<br />header.<br /><br />This is an Opaque secret. The username-password pairs should be stored in<br />the key ".htpasswd". As the key name indicates, the value needs to be the<br />htpasswd format, for example: "user1:\{SHA\}hashed_user1_password".<br />Right now, only SHA hash algorithm is supported.<br />Reference to https://httpd.apache.org/docs/2.4/programs/htpasswd.html<br />for more details.<br /><br />Note: The secret must be in the same namespace as the SecurityPolicy. |
-
-
-#### Body
-
-_Underlying type:_ _integer array_
-
-
-
-_Appears in:_
-- [VirtualBackendSpec](#virtualbackendspec)
-
 
 
 #### BootstrapType
@@ -3744,22 +3734,36 @@ _Appears in:_
 | `path` | _string_ |  true  | Path defines the unix domain socket path of the backend endpoint. |
 
 
+#### VirtualBackend
+
+
+
+VirtualBackend defines the configuration for direct response.
+
+
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
+| `kind` | _string_ | |`VirtualBackend`
+| `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` | _[VirtualBackendSpec](#virtualbackendspec)_ |  true  | Spec defines desired state of VirtualBackend. |
 
 
 #### VirtualBackendSpec
 
 
 
-
+VirtualBackendSpec defines direct response configuration.
 
 _Appears in:_
 - [VirtualBackend](#virtualbackend)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `body` | _[Body](#body)_ |  true  |  |
-| `statusCode` | _[StatusCode](#statuscode)_ |  true  |  |
-| `responseHeaders` | _[ResponseHeader](#responseheader) array_ |  true  |  |
+| `body` | _integer_ |  false  | Body contains data which gateway returns in direct response. |
+| `statusCode` | _[StatusCode](#statuscode)_ |  true  | StatusCode defines HTTP response status code of direct response. Default value is 200. |
+| `responseHeaders` | _object (keys:[ResponseHeader](#responseheader), values:string)_ |  false  | ResponseHeaders defines Header:Value map of additional headers to response. |
 
 
 #### Wasm

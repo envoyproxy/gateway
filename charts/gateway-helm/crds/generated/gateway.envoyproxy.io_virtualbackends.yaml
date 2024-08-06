@@ -8,9 +8,13 @@ metadata:
 spec:
   group: gateway.envoyproxy.io
   names:
+    categories:
+    - envoy-gateway
     kind: VirtualBackend
     listKind: VirtualBackendList
     plural: virtualbackends
+    shortNames:
+    - vb
     singular: virtualbackend
   scope: Namespaced
   versions:
@@ -37,18 +41,31 @@ spec:
           metadata:
             type: object
           spec:
+            description: Spec defines desired state of VirtualBackend.
             properties:
               body:
+                description: Body contains data which gateway returns in direct response.
                 format: byte
                 type: string
               responseHeaders:
-                items:
+                additionalProperties:
                   type: string
-                type: array
+                description: ResponseHeaders defines Header:Value map of additional
+                  headers to response.
+                type: object
               statusCode:
+                default: 200
+                description: StatusCode defines HTTP response status code of direct
+                  response. Default value is 200.
                 format: int32
+                maximum: 599
+                minimum: 100
                 type: integer
+            required:
+            - statusCode
             type: object
+            x-kubernetes-validations:
+            - rule: has(self.statusCode)
         required:
         - spec
         type: object

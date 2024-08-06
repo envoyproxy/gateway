@@ -207,16 +207,15 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				vb := resources.GetVirtualBackend(NamespaceDerefOr(backendRef.Namespace, httpRoute.Namespace), string(backendRef.Name))
 				for _, route := range ruleRoutes {
 					directResponse := &ir.DirectResponse{
-						Body:       string(vb.Spec.Body),
+						Body:       string(*vb.Spec.Body),
 						StatusCode: uint32(vb.Spec.StatusCode),
 					}
 
 					route.DirectResponse = directResponse
-					for _, header := range vb.Spec.ResponseHeaders {
-						splittedHeader := strings.SplitN(string(header), ": ", 1)
+					for header, value := range vb.Spec.ResponseHeaders {
 						responseHeader := ir.AddHeader{
-							Name:   splittedHeader[0],
-							Value:  splittedHeader[1],
+							Name:   string(header),
+							Value:  value,
 							Append: false,
 						}
 						route.AddResponseHeaders = append(route.AddResponseHeaders, responseHeader)
