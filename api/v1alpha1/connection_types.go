@@ -17,6 +17,7 @@ type ClientConnection struct {
 	// +optional
 	ConnectionLimit *ConnectionLimit `json:"connectionLimit,omitempty"`
 	// BufferLimit provides configuration for the maximum buffer size in bytes for each incoming connection.
+	// BufferLimit applies to connection streaming (maybe non-streaming) channel between processes, it's in user space.
 	// For example, 20Mi, 1Gi, 256Ki etc.
 	// Note that when the suffix is not provided, the value is interpreted as bytes.
 	// Default: 32768 bytes.
@@ -24,11 +25,21 @@ type ClientConnection struct {
 	// +kubebuilder:validation:XValidation:rule="type(self) == string ? self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\") : type(self) == int",message="bufferLimit must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
 	// +optional
 	BufferLimit *resource.Quantity `json:"bufferLimit,omitempty"`
+	// SocketBufferLimit provides configuration for the maximum buffer size in bytes for each incoming socket.
+	// SocketBufferLimit applies to socket streaming channel between TCP/IP stacks, it's in kernel space.
+	// For example, 20Mi, 1Gi, 256Ki etc.
+	// Note that when the suffix is not provided, the value is interpreted as bytes.
+	//
+	// +kubebuilder:validation:XValidation:rule="type(self) == string ? self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\") : type(self) == int",message="socketBufferLimit must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
+	// +optional
+	// +notImplementedHide
+	SocketBufferLimit *resource.Quantity `json:"socketBufferLimit,omitempty"`
 }
 
 // BackendConnection allows users to configure connection-level settings of backend
 type BackendConnection struct {
 	// BufferLimit Soft limit on size of the cluster’s connections read and write buffers.
+	// BufferLimit applies to connection streaming (maybe non-streaming) channel between processes, it's in user space.
 	// If unspecified, an implementation defined default is applied (32768 bytes).
 	// For example, 20Mi, 1Gi, 256Ki etc.
 	// Note: that when the suffix is not provided, the value is interpreted as bytes.
@@ -36,6 +47,16 @@ type BackendConnection struct {
 	// +kubebuilder:validation:XValidation:rule="type(self) == string ? self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\") : type(self) == int",message="BufferLimit must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
 	// +optional
 	BufferLimit *resource.Quantity `json:"bufferLimit,omitempty"`
+	// SocketBufferLimit provides configuration for the maximum buffer size in bytes for each socket
+	// to backend.
+	// SocketBufferLimit applies to socket streaming channel between TCP/IP stacks, it's in kernel space.
+	// For example, 20Mi, 1Gi, 256Ki etc.
+	// Note that when the suffix is not provided, the value is interpreted as bytes.
+	//
+	// +kubebuilder:validation:XValidation:rule="type(self) == string ? self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\") : type(self) == int",message="socketBufferLimit must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
+	// +optional
+	// +notImplementedHide
+	SocketBufferLimit *resource.Quantity `json:"socketBufferLimit,omitempty"`
 }
 
 type ConnectionLimit struct {
