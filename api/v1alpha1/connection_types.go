@@ -32,7 +32,7 @@ type ClientConnection struct {
 	// Note that when the suffix is not provided, the value is interpreted as bytes.
 	//
 	// +kubebuilder:validation:XIntOrString
-	// +kubebuilder:vallidation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
 	// +optional
 	// +notImplementedHide
 	SocketBufferLimit *resource.Quantity `json:"socketBufferLimit,omitempty"`
