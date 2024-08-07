@@ -129,13 +129,17 @@ func hcmContainsFilter(mgr *hcmv3.HttpConnectionManager, filterName string) bool
 	return false
 }
 
-func createExtServiceXDSCluster(rd *ir.RouteDestination, tCtx *types.ResourceVersionTable) error {
+func createExtServiceXDSCluster(rd *ir.RouteDestination, traffic *ir.TrafficFeatures, tCtx *types.ResourceVersionTable) error {
 	var (
 		endpointType EndpointType
 		tSocket      *corev3.TransportSocket
 		err          error
 	)
 
+	// Make sure that there are safe defaults for the traffic
+	if traffic == nil {
+		traffic = &ir.TrafficFeatures{}
+	}
 	// Get the address type from the first setting.
 	// This is safe because no mixed address types in the settings.
 	addrTypeState := rd.Settings[0].AddressType
@@ -144,12 +148,20 @@ func createExtServiceXDSCluster(rd *ir.RouteDestination, tCtx *types.ResourceVer
 	} else {
 		endpointType = EndpointTypeStatic
 	}
-
 	if err = addXdsCluster(tCtx, &xdsClusterArgs{
-		name:         rd.Name,
-		settings:     rd.Settings,
-		tSocket:      tSocket,
-		endpointType: endpointType,
+		name:              rd.Name,
+		settings:          rd.Settings,
+		tSocket:           tSocket,
+		loadBalancer:      traffic.LoadBalancer,
+		proxyProtocol:     traffic.ProxyProtocol,
+		circuitBreaker:    traffic.CircuitBreaker,
+		healthCheck:       traffic.HealthCheck,
+		timeout:           traffic.Timeout,
+		tcpkeepalive:      traffic.TCPKeepalive,
+		backendConnection: traffic.BackendConnection,
+		endpointType:      endpointType,
+		dns:               traffic.DNS,
+		http2Settings:     traffic.HTTP2,
 	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 		return err
 	}
