@@ -226,7 +226,7 @@ xdsIR:
               port: 8080
             protocol: HTTPS
             weight: 1
-        name: tlsroute/default/tlsroute-1
+        name: envoy-gateway/gateway-1/tls-passthrough/tlsroute/default/tlsroute-1
         tls:
           inspector:
             snis:

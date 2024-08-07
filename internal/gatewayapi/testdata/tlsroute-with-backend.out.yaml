@@ -123,7 +123,7 @@ xdsIR:
           name: tlsroute/default/tlsroute-1/rule/-1
           settings:
           - weight: 1
-        name: tlsroute/default/tlsroute-1
+        name: envoy-gateway/gateway-1/tls/tlsroute/default/tlsroute-1
         tls:
           inspector:
             snis:
