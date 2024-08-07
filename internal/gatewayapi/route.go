@@ -324,7 +324,10 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 		if rule.SessionPersistence.SessionName == nil {
 			// SessionName is optional on the gateway-api, but envoy requires it
 			// so we generate the one here.
-			sessionName = "sticky-host"
+
+			// We generate a unique session name per route.
+			// `/` isn't allowed in the header key, so we just replace it with `-`.
+			sessionName = strings.ReplaceAll(irRouteDestinationName(httpRoute, ruleIdx), "/", "-")
 		} else {
 			sessionName = *rule.SessionPersistence.SessionName
 		}
