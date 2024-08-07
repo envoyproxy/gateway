@@ -27,7 +27,7 @@ func init() {
 }
 
 var HeaderBasedSessionPersistenceTest = suite.ConformanceTest{
-	ShortName:   "HeaderBasedSessionPersistenceTest",
+	ShortName:   "HeaderBasedSessionPersistence",
 	Description: "Test that the session persistence filter is correctly configured with header based session persistence",
 	Manifests:   []string{"testdata/header-based-session-persistence.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
@@ -97,7 +97,7 @@ var HeaderBasedSessionPersistenceTest = suite.ConformanceTest{
 }
 
 var CookieBasedSessionPersistenceTest = suite.ConformanceTest{
-	ShortName:   "CookieBasedSessionPersistenceTest",
+	ShortName:   "CookieBasedSessionPersistence",
 	Description: "Test that the session persistence filter is correctly configured with cookie based session persistence",
 	Manifests:   []string{"testdata/cookie-based-session-persistence.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {

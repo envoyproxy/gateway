@@ -22,7 +22,7 @@
               name: envoy.http.stateful_session.header
               typedConfig:
                 '@type': type.googleapis.com/envoy.extensions.http.stateful_session.header.v3.HeaderBasedSessionState
-                name: session1
+                name: session-header
         - disabled: true
           name: envoy.filters.http.stateful_session/cookie-based-session-persistence-route-regex
           typedConfig:
@@ -32,7 +32,7 @@
               typedConfig:
                 '@type': type.googleapis.com/envoy.extensions.http.stateful_session.cookie.v3.CookieBasedSessionState
                 cookie:
-                  name: session1
+                  name: session-header
                   path: /v1
                   ttl: 3600s
         - disabled: true
@@ -44,7 +44,7 @@
               typedConfig:
                 '@type': type.googleapis.com/envoy.extensions.http.stateful_session.cookie.v3.CookieBasedSessionState
                 cookie:
-                  name: session1
+                  name: session-header
                   path: /v2/
                   ttl: 3600s
         - disabled: true
@@ -56,7 +56,7 @@
               typedConfig:
                 '@type': type.googleapis.com/envoy.extensions.http.stateful_session.cookie.v3.CookieBasedSessionState
                 cookie:
-                  name: session1
+                  name: session-cookie
                   path: /v3/user
                   ttl: 3600s
         - name: envoy.filters.http.router
