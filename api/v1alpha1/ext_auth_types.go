@@ -10,9 +10,9 @@ package v1alpha1
 // +kubebuilder:validation:XValidation:rule="(has(self.grpc) || has(self.http))",message="one of grpc or http must be specified"
 // +kubebuilder:validation:XValidation:rule="(has(self.grpc) && !has(self.http)) || (!has(self.grpc) && has(self.http))",message="only one of grpc or http can be specified"
 // +kubebuilder:validation:XValidation:rule="has(self.grpc) ? (!has(self.grpc.backendRef) || !has(self.grpc.backendRef.group) || self.grpc.backendRef.group == \"\") : true", message="group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) is supported"
-// +kubebuilder:validation:XValidation:rule="has(self.grpc) ? (!has(self.grpc.backendRef) || !has(self.grpc.backendRef.kind) || self.grpc.backendRef.kind == 'Service') : true", message="kind is invalid, only Service (specified by omitting the kind field or setting it to 'Service') is supported"
+// +kubebuilder:validation:XValidation:rule="has(self.grpc) ? (!has(self.grpc.backendRef) || !has(self.grpc.backendRef.kind) || self.grpc.backendRef.kind == 'Service' || self.grpc.backendRef.kind == 'Backend') : true", message="kind is invalid, only Service (specified by omitting the kind field or setting it to 'Service') is supported"
 // +kubebuilder:validation:XValidation:rule="has(self.http) ? (!has(self.http.backendRef) || !has(self.http.backendRef.group) || self.http.backendRef.group == \"\") : true", message="group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) is supported"
-// +kubebuilder:validation:XValidation:rule="has(self.http) ? (!has(self.http.backendRef) || !has(self.http.backendRef.kind) || self.http.backendRef.kind == 'Service') : true", message="kind is invalid, only Service (specified by omitting the kind field or setting it to 'Service') is supported"
+// +kubebuilder:validation:XValidation:rule="has(self.http) ? (!has(self.http.backendRef) || !has(self.http.backendRef.kind) || self.http.backendRef.kind == 'Service' || self.grpc.backendRef.kind == 'Backend') : true", message="kind is invalid, only Service (specified by omitting the kind field or setting it to 'Service') is supported"
 type ExtAuth struct {
 	// GRPC defines the gRPC External Authorization service.
 	// Either GRPCService or HTTPService must be specified,

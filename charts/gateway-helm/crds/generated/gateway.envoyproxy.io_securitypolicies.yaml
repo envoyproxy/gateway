@@ -1832,7 +1832,8 @@ spec:
                 - message: kind is invalid, only Service (specified by omitting the
                     kind field or setting it to 'Service') is supported
                   rule: 'has(self.grpc) ? (!has(self.grpc.backendRef) || !has(self.grpc.backendRef.kind)
-                    || self.grpc.backendRef.kind == ''Service'') : true'
+                    || self.grpc.backendRef.kind == ''Service'' || self.grpc.backendRef.kind
+                    == ''Backend'') : true'
                 - message: group is invalid, only the core API group (specified by
                     omitting the group field or setting it to an empty string) is
                     supported
@@ -1841,7 +1842,8 @@ spec:
                 - message: kind is invalid, only Service (specified by omitting the
                     kind field or setting it to 'Service') is supported
                   rule: 'has(self.http) ? (!has(self.http.backendRef) || !has(self.http.backendRef.kind)
-                    || self.http.backendRef.kind == ''Service'') : true'
+                    || self.http.backendRef.kind == ''Service'' || self.grpc.backendRef.kind
+                    == ''Backend'') : true'
               jwt:
                 description: JWT defines the configuration for JSON Web Token (JWT)
                   authentication.
