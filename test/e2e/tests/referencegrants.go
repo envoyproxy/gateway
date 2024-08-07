@@ -26,34 +26,54 @@ var MultiReferenceGrantsSameNamespaceTest = suite.ConformanceTest{
 	Description: "Test for multiple reference grants in the same namespace",
 	Manifests:   []string{"testdata/multi-referencegrants-same-namespace-services.yaml", "testdata/multi-referencegrants-same-namespace.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		ns := "gateway-conformance-infra"
-		routeNN := types.NamespacedName{Name: "multi-referencegrant-same-namespace", Namespace: ns}
-		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+		resourceNS := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "multi-referencegrant-same-namespace", Namespace: resourceNS}
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: resourceNS}
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
-		paths := []string{"/v1/echo", "/v2/echo", "/v3/echo"}
-
-		// Expectation all paths should return 200
-		for _, path := range paths {
-			expectedResponse := http.ExpectedResponse{
+		targetHost := "multireferencegrant.local"
+		targetNS := "multireferencegrants-ns"
+		testcases := []http.ExpectedResponse{
+			{
 				Request: http.Request{
-					Path: path,
-					Host: "multireferencegrant.local",
+					Host: targetHost,
+					Path: "/v1/echo",
 				},
 				Response: http.Response{
 					StatusCode: 200,
 				},
-				Namespace: ns,
-			}
+				Backend:   "app-backend-v1",
+				Namespace: targetNS,
+			},
+			{
+				Request: http.Request{
+					Host: targetHost,
+					Path: "/v2/echo",
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Backend:   "app-backend-v2",
+				Namespace: targetNS,
+			},
+			{
+				Request: http.Request{
+					Host: targetHost,
+					Path: "/v3/echo",
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Backend:   "app-backend-v3",
+				Namespace: targetNS,
+			},
+		}
 
-			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
-			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
-			if err != nil {
-				t.Errorf("failed to get expected response: %v", err)
-			}
-			if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
-				t.Errorf("failed to compare request and response: %v", err)
-			}
+		for i, tc := range testcases {
+			t.Run(tc.GetTestCaseName(i), func(t *testing.T) {
+				t.Parallel()
+				http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, tc)
+			})
 		}
 	},
 }

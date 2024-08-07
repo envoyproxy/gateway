@@ -17,7 +17,7 @@ spec:
       kind: Service
       name: app-backend-v3
       namespace: multireferencegrants-ns
-      port: 80
+      port: 8080
       weight: 1
     matches:
     - path:
@@ -28,7 +28,7 @@ spec:
       kind: Service
       name: app-backend-v2
       namespace: multireferencegrants-ns
-      port: 80
+      port: 8080
       weight: 1
     matches:
     - path:
@@ -39,7 +39,7 @@ spec:
       kind: Service
       name: app-backend-v1
       namespace: multireferencegrants-ns
-      port: 80
+      port: 8080
       weight: 1
     matches:
     - path:
