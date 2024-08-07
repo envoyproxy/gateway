@@ -896,9 +896,7 @@ func backendRefAuthority(resources *Resources, backendRef *gwapiv1.BackendObject
 
 	backendNamespace := NamespaceDerefOr(backendRef.Namespace, policy.Namespace)
 	backendKind := KindDerefOr(backendRef.Kind, KindService)
-
-	switch backendKind {
-	case egv1a1.KindBackend:
+	if backendKind == egv1a1.KindBackend {
 		backend := resources.GetBackend(backendNamespace, string(backendRef.Name))
 		if backend != nil {
 			// TODO: exists multi FQDN endpoints?
