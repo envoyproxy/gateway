@@ -3,14 +3,67 @@ title: "Customize EnvoyProxy"
 ---
 
 Envoy Gateway provides an [EnvoyProxy][] CRD that can be linked to the ParametersRef
-in GatewayClass, allowing cluster admins to customize the managed EnvoyProxy Deployment and
+in a Gateway and GatewayClass, allowing cluster admins to customize the managed EnvoyProxy Deployment and
 Service. To learn more about GatewayClass and ParametersRef, please refer to [Gateway API documentation][].
 
 ## Prerequisites
 
 {{< boilerplate prerequisites >}}
 
-Before you start, you need to add `ParametersRef` in GatewayClass, and refer to EnvoyProxy Config:
+Before you start, you need to add `Infrastructure.ParametersRef` in Gateway, and refer to EnvoyProxy Config:
+**Note**: `MergeGateways` cannot be set to `true` in your EnvoyProxy config if attaching to the Gateway.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: eg
+spec:
+  gatewayClassName: eg
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: custom-proxy-config
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: eg
+spec:
+  gatewayClassName: eg
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: custom-proxy-config
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+You can also attach the EnvoyProxy resource to the GatewayClass using the `parametersRef` field.
+This configuration is discouraged if you plan on creating multiple Gateways linking to the same
+GatewayClass and would like different infrastructure configurations for each of them.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -27,7 +80,7 @@ spec:
     group: gateway.envoyproxy.io
     kind: EnvoyProxy
     name: custom-proxy-config
-    namespace: envoy-gateway-system
+    namespace: default
 EOF
 ```
 
@@ -47,7 +100,7 @@ spec:
     group: gateway.envoyproxy.io
     kind: EnvoyProxy
     name: custom-proxy-config
-    namespace: envoy-gateway-system
+    namespace: default
 ```
 
 {{% /tab %}}
@@ -66,7 +119,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -86,7 +139,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -118,7 +171,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -139,7 +192,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -167,7 +220,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -190,7 +243,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -220,7 +273,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -247,7 +300,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -279,7 +332,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -304,7 +357,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -338,7 +391,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -367,7 +420,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -403,7 +456,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -425,7 +478,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -458,7 +511,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default 
 spec:
   bootstrap:
     type: Replace
@@ -546,7 +599,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   bootstrap:
     type: Replace
@@ -648,7 +701,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default 
 spec:
   provider:
     type: Kubernetes
@@ -676,7 +729,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default 
 spec:
   provider:
     type: Kubernetes
@@ -712,7 +765,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default 
 spec:
   extraArgs:
     - --disable-extensions envoy.access_loggers/envoy.access_loggers.wasm 
@@ -729,7 +782,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default 
 spec:
   extraArgs:
     - --disable-extensions envoy.access_loggers/envoy.access_loggers.wasm 
@@ -755,7 +808,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: eg
-  namespace: envoy-gateway-system
+  namespace: default 
 spec:
   provider:
     type: Kubernetes
@@ -791,7 +844,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: eg
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -834,7 +887,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: eg
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -859,7 +912,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: eg
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -917,7 +970,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   filterOrder:
     - name: envoy.filters.http.wasm
@@ -937,7 +990,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   filterOrder:
     - name: envoy.filters.http.wasm
