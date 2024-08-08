@@ -902,7 +902,7 @@ func backendRefAuthority(resources *Resources, backendRef *gwapiv1.BackendObject
 			// TODO: exists multi FQDN endpoints?
 			for _, ep := range backend.Spec.Endpoints {
 				if ep.FQDN != nil {
-					return ep.FQDN.Hostname
+					return fmt.Sprintf("%s:%d", ep.FQDN.Hostname, ep.FQDN.Port)
 				}
 			}
 		}

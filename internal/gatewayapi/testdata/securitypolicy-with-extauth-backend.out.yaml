@@ -240,7 +240,7 @@ xdsIR:
           extAuth:
             failOpen: true
             grpc:
-              authority: primary.foo.com
+              authority: primary.foo.com:3000
               destination:
                 name: securitypolicy/default/policy-for-http-route-1/default/backend-fqdn
                 settings:
@@ -278,7 +278,7 @@ xdsIR:
           extAuth:
             failOpen: true
             grpc:
-              authority: primary.foo.com
+              authority: primary.foo.com:3000
               destination:
                 name: securitypolicy/default/policy-for-http-route-1/default/backend-fqdn
                 settings:

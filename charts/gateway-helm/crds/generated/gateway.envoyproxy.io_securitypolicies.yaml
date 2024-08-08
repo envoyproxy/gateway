@@ -1009,15 +1009,17 @@ spec:
                     x-kubernetes-validations:
                     - message: backendRef or backendRefs needs to be set
                       rule: has(self.backendRef) || self.backendRefs.size() > 0
-                    - message: BackendRefs only supports Core group.
-                      rule: 'has(self.backendRefs) ? self.backendRefs.all(f, f.group
-                        == "") : true'
-                    - message: only support Service kind.
+                    - message: BackendRefs must be used, backendRef is not supported.
+                      rule: '!has(self.backendRef)'
+                    - message: Exactly one backendRef can be specified in backendRefs.
+                      rule: has(self.backendRefs) && self.backendRefs.size()==1
+                    - message: BackendRefs only supports Service and Backend kind.
                       rule: 'has(self.backendRefs) ? self.backendRefs.all(f, f.kind
-                        == ''Service'') : true'
-                    - message: only one backendRef can be specified.
-                      rule: 'has(self.backendRefs) ? self.backendRefs.size() == 1
-                        : true'
+                        == ''Service'' || f.kind == ''Backend'') : true'
+                    - message: BackendRefs only supports Core and gateway.envoyproxy.io
+                        group.
+                      rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
+                        == "" || f.group == ''gateway.envoyproxy.io'')) : true'
                   headersToExtAuth:
                     description: |-
                       HeadersToExtAuth defines the client request headers that will be included
@@ -1808,15 +1810,17 @@ spec:
                     x-kubernetes-validations:
                     - message: backendRef or backendRefs needs to be set
                       rule: has(self.backendRef) || self.backendRefs.size() > 0
-                    - message: BackendRefs only supports Core group.
-                      rule: 'has(self.backendRefs) ? self.backendRefs.all(f, f.group
-                        == "") : true'
-                    - message: only support Service kind.
+                    - message: BackendRefs must be used, backendRef is not supported.
+                      rule: '!has(self.backendRef)'
+                    - message: Exactly one backendRef can be specified in backendRefs.
+                      rule: has(self.backendRefs) && self.backendRefs.size()==1
+                    - message: BackendRefs only supports Service and Backend kind.
                       rule: 'has(self.backendRefs) ? self.backendRefs.all(f, f.kind
-                        == ''Service'') : true'
-                    - message: only one backendRef can be specified.
-                      rule: 'has(self.backendRefs) ? self.backendRefs.size() == 1
-                        : true'
+                        == ''Service'' || f.kind == ''Backend'') : true'
+                    - message: BackendRefs only supports Core and gateway.envoyproxy.io
+                        group.
+                      rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
+                        == "" || f.group == ''gateway.envoyproxy.io'')) : true'
                 type: object
                 x-kubernetes-validations:
                 - message: one of grpc or http must be specified
@@ -1824,26 +1828,6 @@ spec:
                 - message: only one of grpc or http can be specified
                   rule: (has(self.grpc) && !has(self.http)) || (!has(self.grpc) &&
                     has(self.http))
-                - message: group is invalid, only the core API group (specified by
-                    omitting the group field or setting it to an empty string) is
-                    supported
-                  rule: 'has(self.grpc) ? (!has(self.grpc.backendRef) || !has(self.grpc.backendRef.group)
-                    || self.grpc.backendRef.group == "") : true'
-                - message: kind is invalid, only Service (specified by omitting the
-                    kind field or setting it to 'Service') is supported
-                  rule: 'has(self.grpc) ? (!has(self.grpc.backendRef) || !has(self.grpc.backendRef.kind)
-                    || self.grpc.backendRef.kind == ''Service'' || self.grpc.backendRef.kind
-                    == ''Backend'') : true'
-                - message: group is invalid, only the core API group (specified by
-                    omitting the group field or setting it to an empty string) is
-                    supported
-                  rule: 'has(self.http) ? (!has(self.http.backendRef) || !has(self.http.backendRef.group)
-                    || self.http.backendRef.group == "") : true'
-                - message: kind is invalid, only Service (specified by omitting the
-                    kind field or setting it to 'Service') is supported
-                  rule: 'has(self.http) ? (!has(self.http.backendRef) || !has(self.http.backendRef.kind)
-                    || self.http.backendRef.kind == ''Service'' || self.grpc.backendRef.kind
-                    == ''Backend'') : true'
               jwt:
                 description: JWT defines the configuration for JSON Web Token (JWT)
                   authentication.
