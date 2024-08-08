@@ -8,13 +8,13 @@ data:
   http-ext-auth.js: |
     const Http = require("http");
     const path = require("path");
-    
+
     const tokens = {
       "token1": "user1",
       "token2": "user2",
       "token3": "user3"
     };
-    
+
     const server = new Http.Server((req, res) => {
       const authorization = req.headers["authorization"] || "";
       const extracted = authorization.split(" ");
@@ -31,11 +31,11 @@ data:
       res.writeHead(403);
       res.end();
     });
-    
+
     const port = process.env.PORT || 9002;
     server.listen(port);
     console.log(`starting HTTP server on: ${port}`);
-    
+
     function checkToken(token) {
       return tokens[token];
     }
