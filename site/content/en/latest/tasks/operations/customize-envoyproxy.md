@@ -15,6 +15,7 @@ Before you start, you need to add `Infrastructure.ParametersRef` in Gateway, and
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
