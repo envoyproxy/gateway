@@ -13,11 +13,11 @@ import (
 	"os/signal"
 	"syscall"
 
-	pb "github.com/envoyproxy/gateway/proto/extension"
+	"github.com/exampleorg/envoygateway-extension/internal/extensionserver"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/grpc"
 
-	"github.com/exampleorg/envoygateway-extension/internal/extensionserver"
+	pb "github.com/envoyproxy/gateway/proto/extension"
 )
 
 func main() {

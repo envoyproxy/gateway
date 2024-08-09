@@ -192,6 +192,19 @@ func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
 	}, nil
 }
 
+// stableSelector returns a stable selector based on the owning gateway labels.
+// "stable" here means the selector doesn't change when the infra is updated.
+func (r *ResourceRender) stableSelector() *metav1.LabelSelector {
+	labels := map[string]string{}
+	for k, v := range r.infra.GetProxyMetadata().Labels {
+		if k == gatewayapi.OwningGatewayNameLabel || k == gatewayapi.OwningGatewayNamespaceLabel || k == gatewayapi.OwningGatewayClassLabel {
+			labels[k] = v
+		}
+	}
+
+	return resource.GetSelector(envoyLabels(labels))
+}
+
 // Deployment returns the expected Deployment based on the provided infra.
 func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	proxyConfig := r.infra.GetProxyConfig()
@@ -222,8 +235,6 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	if err != nil {
 		return nil, err
 	}
-	podLabels := r.getPodLabels(deploymentConfig.Pod)
-	selector := resource.GetSelector(podLabels)
 
 	deployment := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
@@ -238,10 +249,11 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		Spec: appsv1.DeploymentSpec{
 			Replicas: deploymentConfig.Replicas,
 			Strategy: *deploymentConfig.Strategy,
-			Selector: selector,
+			// Deployment's selector is immutable.
+			Selector: r.stableSelector(),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels:      selector.MatchLabels,
+					Labels:      r.getPodLabels(deploymentConfig.Pod),
 					Annotations: podAnnotations,
 				},
 				Spec: corev1.PodSpec{
@@ -317,8 +329,6 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 	if err != nil {
 		return nil, err
 	}
-	podLabels := r.getPodLabels(daemonSetConfig.Pod)
-	selector := resource.GetSelector(podLabels)
 
 	daemonSet := &appsv1.DaemonSet{
 		TypeMeta: metav1.TypeMeta{
@@ -331,11 +341,12 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 			Annotations: dsAnnotations,
 		},
 		Spec: appsv1.DaemonSetSpec{
-			Selector:       selector,
+			// Daemonset's selector is immutable.
+			Selector:       r.stableSelector(),
 			UpdateStrategy: *daemonSetConfig.Strategy,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels:      selector.MatchLabels,
+					Labels:      r.getPodLabels(daemonSetConfig.Pod),
 					Annotations: podAnnotations,
 				},
 				Spec: r.getPodSpec(containers, nil, daemonSetConfig.Pod, proxyConfig),
@@ -369,11 +380,6 @@ func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, e
 		return nil, nil
 	}
 
-	labels, err := r.getLabels()
-	if err != nil {
-		return nil, err
-	}
-
 	return &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      r.Name(),
@@ -385,9 +391,7 @@ func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, e
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
 			MinAvailable: &intstr.IntOrString{IntVal: ptr.Deref(podDisruptionBudget.MinAvailable, 0)},
-			Selector: &metav1.LabelSelector{
-				MatchLabels: labels,
-			},
+			Selector:     r.stableSelector(),
 		},
 	}, nil
 }

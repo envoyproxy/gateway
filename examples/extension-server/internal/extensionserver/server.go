@@ -11,15 +11,15 @@ import (
 	"fmt"
 	"log/slog"
 
-	pb "github.com/envoyproxy/gateway/proto/extension"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	bav3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/basic_auth/v3"
 	hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
+	"github.com/exampleorg/envoygateway-extension/api/v1alpha1"
 	"google.golang.org/protobuf/types/known/anypb"
 
-	"github.com/exampleorg/envoygateway-extension/api/v1alpha1"
+	pb "github.com/envoyproxy/gateway/proto/extension"
 )
 
 type Server struct {

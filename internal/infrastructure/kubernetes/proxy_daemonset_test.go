@@ -25,13 +25,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-const (
-	// envoyContainerName is the name of the Envoy container.
-	envoyContainerName = "envoy"
-)
-
-func deploymentWithImage(deploy *appsv1.Deployment, image string) *appsv1.Deployment {
-	dCopy := deploy.DeepCopy()
+func daemonsetWithImage(ds *appsv1.DaemonSet, image string) *appsv1.DaemonSet {
+	dCopy := ds.DeepCopy()
 	for i, c := range dCopy.Spec.Template.Spec.Containers {
 		if c.Name == envoyContainerName {
 			dCopy.Spec.Template.Spec.Containers[i].Image = image
@@ -40,8 +35,8 @@ func deploymentWithImage(deploy *appsv1.Deployment, image string) *appsv1.Deploy
 	return dCopy
 }
 
-func deploymentWithSelectorAndLabel(deploy *appsv1.Deployment, selector *metav1.LabelSelector, additionalLabel map[string]string) *appsv1.Deployment {
-	dCopy := deploy.DeepCopy()
+func daemonsetWithSelectorAndLabel(ds *appsv1.DaemonSet, selector *metav1.LabelSelector, additionalLabel map[string]string) *appsv1.DaemonSet {
+	dCopy := ds.DeepCopy()
 	if selector != nil {
 		dCopy.Spec.Selector = selector
 	}
@@ -51,38 +46,50 @@ func deploymentWithSelectorAndLabel(deploy *appsv1.Deployment, selector *metav1.
 	return dCopy
 }
 
-func TestCreateOrUpdateProxyDeployment(t *testing.T) {
+func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
 	cfg, err := config.New()
 	require.NoError(t, err)
 
 	infra := ir.NewInfra()
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
+	infra.Proxy.Config = &egv1a1.EnvoyProxy{
+		Spec: egv1a1.EnvoyProxySpec{
+			Provider: &egv1a1.EnvoyProxyProvider{
+				Type: egv1a1.ProviderTypeKubernetes,
+				Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+					// Use daemonset, instead of deployment.
+					EnvoyDaemonSet: egv1a1.DefaultKubernetesDaemonSet(egv1a1.DefaultEnvoyProxyImage),
+					EnvoyService:   egv1a1.DefaultKubernetesService(),
+				},
+			},
+		},
+	}
 
 	r := proxy.NewResourceRender(cfg.Namespace, infra.GetProxyInfra(), cfg.EnvoyGateway)
-	deploy, err := r.Deployment()
+	ds, err := r.DaemonSet()
 	require.NoError(t, err)
 
 	testCases := []struct {
 		name    string
 		in      *ir.Infra
-		current *appsv1.Deployment
-		want    *appsv1.Deployment
+		current *appsv1.DaemonSet
+		want    *appsv1.DaemonSet
 		wantErr bool
 	}{
 		{
-			name: "create deployment",
+			name: "create daemonset",
 			in:   infra,
-			want: deploy,
+			want: ds,
 		},
 		{
-			name:    "deployment exists",
+			name:    "daemonset exists",
 			in:      infra,
-			current: deploy,
-			want:    deploy,
+			current: ds,
+			want:    ds,
 		},
 		{
-			name: "update deployment image",
+			name: "update daemonset image",
 			in: &ir.Infra{
 				Proxy: &ir.ProxyInfra{
 					Metadata: &ir.InfraMetadata{
@@ -96,7 +103,7 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 							Provider: &egv1a1.EnvoyProxyProvider{
 								Type: egv1a1.ProviderTypeKubernetes,
 								Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
-									EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+									EnvoyDaemonSet: &egv1a1.KubernetesDaemonSetSpec{
 										Container: &egv1a1.KubernetesContainerSpec{
 											Image: ptr.To("envoyproxy/envoy-dev:v1.2.3"),
 										},
@@ -109,11 +116,11 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 					Listeners: ir.NewProxyListeners(),
 				},
 			},
-			current: deploy,
-			want:    deploymentWithImage(deploy, "envoyproxy/envoy-dev:v1.2.3"),
+			current: ds,
+			want:    daemonsetWithImage(ds, "envoyproxy/envoy-dev:v1.2.3"),
 		},
 		{
-			name: "update deployment label",
+			name: "update daemonset label",
 			in: &ir.Infra{
 				Proxy: &ir.ProxyInfra{
 					Metadata: &ir.InfraMetadata{
@@ -127,10 +134,12 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 							Provider: &egv1a1.EnvoyProxyProvider{
 								Type: egv1a1.ProviderTypeKubernetes,
 								Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
-									EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+									EnvoyDaemonSet: &egv1a1.KubernetesDaemonSetSpec{
 										Pod: &egv1a1.KubernetesPodSpec{
 											Labels: map[string]string{
-												"custom-label": "version1", // added.
+												// Add a new label to the custom label config.
+												// It wouldn't break the daemonset because the selector would still match after this label update.
+												"custom-label": "version1",
 											},
 										},
 									},
@@ -142,9 +151,9 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 					Listeners: ir.NewProxyListeners(),
 				},
 			},
-			current: deploy,
+			current: ds,
 			// Selector is not updated with a custom label, only pod's label is updated.
-			want: deploymentWithSelectorAndLabel(deploy, nil, map[string]string{"custom-label": "version1"}),
+			want: daemonsetWithSelectorAndLabel(ds, nil, map[string]string{"custom-label": "version1"}),
 		},
 		{
 			name: "the daemonset originally has a selector and label, and an user add a new label to the custom label config",
@@ -161,12 +170,10 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 							Provider: &egv1a1.EnvoyProxyProvider{
 								Type: egv1a1.ProviderTypeKubernetes,
 								Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
-									EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+									EnvoyDaemonSet: &egv1a1.KubernetesDaemonSetSpec{
 										Pod: &egv1a1.KubernetesPodSpec{
 											Labels: map[string]string{
-												"custom-label": "version1",
-												// Add a new label to the custom label config.
-												// It wouldn't break the deployment because the selector would still match after this label update.
+												"custom-label":         "version1",
 												"another-custom-label": "version1", // added.
 											},
 										},
@@ -179,12 +186,12 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 					Listeners: ir.NewProxyListeners(),
 				},
 			},
-			current: deploymentWithSelectorAndLabel(deploy, resource2.GetSelector(map[string]string{"custom-label": "version1"}), map[string]string{"custom-label": "version1"}),
+			current: daemonsetWithSelectorAndLabel(ds, resource2.GetSelector(map[string]string{"custom-label": "version1"}), map[string]string{"custom-label": "version1"}),
 			// Only label is updated, selector is not updated.
-			want: deploymentWithSelectorAndLabel(deploy, resource2.GetSelector(map[string]string{"custom-label": "version1"}), map[string]string{"custom-label": "version1", "another-custom-label": "version1"}),
+			want: daemonsetWithSelectorAndLabel(ds, resource2.GetSelector(map[string]string{"custom-label": "version1"}), map[string]string{"custom-label": "version1", "another-custom-label": "version1"}),
 		},
 		{
-			name: "the deployment originally has a selector and label, and an user update an existing custom label",
+			name: "the daemonset originally has a selector and label, and an user update an existing custom label",
 			in: &ir.Infra{
 				Proxy: &ir.ProxyInfra{
 					Metadata: &ir.InfraMetadata{
@@ -198,10 +205,10 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 							Provider: &egv1a1.EnvoyProxyProvider{
 								Type: egv1a1.ProviderTypeKubernetes,
 								Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
-									EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+									EnvoyDaemonSet: &egv1a1.KubernetesDaemonSetSpec{
 										Pod: &egv1a1.KubernetesPodSpec{
 											Labels: map[string]string{
-												// Update the label value which will break the deployment
+												// Update the label value which will break the daemonset
 												// because the selector cannot be updated while the user wants to update the label value.
 												// We cannot help this case, just emit an error and let the user recreate the envoy proxy by themselves.
 												"custom-label": "version2",
@@ -216,7 +223,7 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 					Listeners: ir.NewProxyListeners(),
 				},
 			},
-			current: deploymentWithSelectorAndLabel(deploy, resource2.GetSelector(map[string]string{"custom-label": "version1"}), map[string]string{"custom-label": "version1"}),
+			current: daemonsetWithSelectorAndLabel(ds, resource2.GetSelector(map[string]string{"custom-label": "version1"}), map[string]string{"custom-label": "version1"}),
 			wantErr: true,
 		},
 	}
@@ -240,14 +247,14 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 
 			kube := NewInfra(cli, cfg)
 			r := proxy.NewResourceRender(kube.Namespace, tc.in.GetProxyInfra(), cfg.EnvoyGateway)
-			err := kube.createOrUpdateDeployment(context.Background(), r)
+			err := kube.createOrUpdateDaemonSet(context.Background(), r)
 			if tc.wantErr {
 				require.Error(t, err)
 				return
 			}
 			require.NoError(t, err)
 
-			actual := &appsv1.Deployment{
+			actual := &appsv1.DaemonSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: kube.Namespace,
 					Name:      proxy.ExpectedResourceHashedName(tc.in.Proxy.Name),
@@ -255,49 +262,6 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 			}
 			require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(actual), actual))
 			require.Equal(t, tc.want.Spec, actual.Spec)
-		})
-	}
-}
-
-func TestDeleteProxyDeployment(t *testing.T) {
-	cli := fakeclient.NewClientBuilder().
-		WithScheme(envoygateway.GetScheme()).
-		WithObjects().
-		WithInterceptorFuncs(interceptorFunc).
-		Build()
-	cfg, err := config.New()
-	require.NoError(t, err)
-
-	testCases := []struct {
-		name   string
-		expect bool
-	}{
-		{
-			name:   "delete deployment",
-			expect: false,
-		},
-	}
-
-	for _, tc := range testCases {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			kube := NewInfra(cli, cfg)
-
-			infra := ir.NewInfra()
-			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
-			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
-			r := proxy.NewResourceRender(kube.Namespace, infra.GetProxyInfra(), kube.EnvoyGateway)
-
-			err := kube.createOrUpdateDeployment(context.Background(), r)
-			require.NoError(t, err)
-			deployment := &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: kube.Namespace,
-					Name:      r.Name(),
-				},
-			}
-			err = kube.Client.Delete(context.Background(), deployment)
-			require.NoError(t, err)
 		})
 	}
 }
