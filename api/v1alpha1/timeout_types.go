@@ -76,4 +76,9 @@ type HTTPClientTimeout struct {
 	//
 	// +optional
 	IdleTimeout *gwapiv1.Duration `json:"idleTimeout,omitempty"`
+	// The StreamIdleTimeout refers to a configuration setting in Envoy, an open-source edge and service proxy designed for cloud-native applications. Envoy is often used in service mesh architectures to handle traffic management, load balancing, and observability.
+	// Default: 1 hour.
+	//
+	// +optional
+	StreamIdleTimeout *gwapiv1.Duration `json:"streamIdleTimeout,omitempty"`
 }
