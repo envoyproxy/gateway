@@ -29,15 +29,19 @@ type GaugeValues struct {
 
 func (f *Gauge) Record(value float64) {
 	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
 	if f.current == nil {
 		f.current = &GaugeValues{}
 		f.stores[attribute.NewSet()] = f.current
 	}
 	f.current.val = value
-	f.mutex.Unlock()
 }
 
 func (f *Gauge) With(labelValues ...LabelValue) *Gauge {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
 	attrs, set := mergeLabelValues(f.attrs, labelValues)
 	m := &Gauge{
 		g:      f.g,
