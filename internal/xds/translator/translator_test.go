@@ -127,7 +127,6 @@ func TestTranslateXds(t *testing.T) {
 				},
 				FilterOrder: x.FilterOrder,
 			}
-
 			tCtx, err := tr.Translate(x)
 			if !strings.HasSuffix(inputFileName, "partial-invalid") && len(cfg.errMsg) == 0 {
 				t.Logf(inputFileName)

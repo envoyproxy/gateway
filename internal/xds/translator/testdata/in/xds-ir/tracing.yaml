@@ -25,6 +25,27 @@ tracing:
       - host: "otel-collector.default.svc.cluster.local"
         port: 4317
       protocol: "GRPC"
+  traffic:
+    backendConnection:
+      bufferLimit: 20971520
+    circuitBreaker:
+      maxConnections: 2048
+    healthCheck:
+      passive:
+        baseEjectionTime: 30s
+        consecutiveGatewayErrors: 4
+        consecutive5XxErrors: 5
+        consecutiveLocalOriginFailures: 5
+        interval: 5s
+        maxEjectionPercent: 10
+        splitExternalLocalOriginErrors: false
+    proxyProtocol:
+      version: V2
+    tcpKeepalive:
+      probes: 7
+    timeout:
+      tcp:
+        connectTimeout: 15s
   provider:
     host: otel-collector.monitoring.svc.cluster.local
     port: 4317

@@ -17,6 +17,27 @@ accesslog:
           port: 9000
         protocol: GRPC
         weight: 1
+    traffic:
+      backendConnection:
+        bufferLimit: 20971520
+      circuitBreaker:
+        maxConnections: 2048
+      healthCheck:
+        passive:
+          baseEjectionTime: 30s
+          consecutiveGatewayErrors: 4
+          consecutive5XxErrors: 5
+          consecutiveLocalOriginFailures: 5
+          interval: 5s
+          maxEjectionPercent: 10
+          splitExternalLocalOriginErrors: false
+      proxyProtocol:
+        version: V2
+      tcpKeepalive:
+        probes: 7
+      timeout:
+        tcp:
+          connectTimeout: 15s
     attributes:
       attr1: value1
       attr2: value2

@@ -106,6 +106,33 @@ infraIR:
                 - name: otel-collector
                   namespace: monitoring
                   port: 4317
+                backendSettings:
+                  circuitBreaker:
+                    maxConnections: 2048
+                  connection:
+                    bufferLimit: 20Mi
+                  healthCheck:
+                    passive:
+                      consecutiveGatewayErrors: 4
+                      interval: 5s
+                  http2:
+                    initialConnectionWindowSize: 2Mi
+                    initialStreamWindowSize: 128Ki
+                    maxConcurrentStreams: 200
+                    onInvalidMessage: TerminateStream
+                  loadBalancer:
+                    consistentHash:
+                      header:
+                        name: X-some-header
+                      type: Header
+                    type: ConsistentHash
+                  proxyProtocol:
+                    version: V2
+                  tcpKeepalive:
+                    probes: 7
+                  timeout:
+                    tcp:
+                      connectTimeout: 15s
                 type: OpenTelemetry
               samplingRate: 100
         status: {}
@@ -156,6 +183,58 @@ xdsIR:
         - name: otel-collector
           namespace: monitoring
           port: 4317
+        backendSettings:
+          circuitBreaker:
+            maxConnections: 2048
+          connection:
+            bufferLimit: 20Mi
+          healthCheck:
+            passive:
+              consecutiveGatewayErrors: 4
+              interval: 5s
+          http2:
+            initialConnectionWindowSize: 2Mi
+            initialStreamWindowSize: 128Ki
+            maxConcurrentStreams: 200
+            onInvalidMessage: TerminateStream
+          loadBalancer:
+            consistentHash:
+              header:
+                name: X-some-header
+              type: Header
+            type: ConsistentHash
+          proxyProtocol:
+            version: V2
+          tcpKeepalive:
+            probes: 7
+          timeout:
+            tcp:
+              connectTimeout: 15s
         type: OpenTelemetry
       samplingRate: 100
       serviceName: gateway-1.envoy-gateway
+      traffic:
+        backendConnection:
+          bufferLimit: 20971520
+        circuitBreaker:
+          maxConnections: 2048
+        healthCheck:
+          passive:
+            consecutiveGatewayErrors: 4
+            interval: 5s
+        http2:
+          initialConnectionWindowSize: 131072
+          initialStreamWindowSize: 2097152
+          maxConcurrentStreams: 200
+          resetStreamOnError: true
+        loadBalancer:
+          consistentHash:
+            header:
+              name: X-some-header
+        proxyProtocol:
+          version: V2
+        tcpKeepalive:
+          probes: 7
+        timeout:
+          tcp:
+            connectTimeout: 15s

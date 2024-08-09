@@ -160,12 +160,26 @@ func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Trac
 		return nil
 	}
 
+	traffic := tracing.Traffic
+	// Make sure that there are safe defaults for the traffic
+	if traffic == nil {
+		traffic = &ir.TrafficFeatures{}
+	}
 	if err := addXdsCluster(tCtx, &xdsClusterArgs{
-		name:         tracing.Destination.Name,
-		settings:     tracing.Destination.Settings,
-		tSocket:      nil,
-		endpointType: EndpointTypeDNS,
-		metrics:      metrics,
+		name:              tracing.Destination.Name,
+		settings:          tracing.Destination.Settings,
+		tSocket:           nil,
+		endpointType:      EndpointTypeDNS,
+		metrics:           metrics,
+		loadBalancer:      traffic.LoadBalancer,
+		proxyProtocol:     traffic.ProxyProtocol,
+		circuitBreaker:    traffic.CircuitBreaker,
+		healthCheck:       traffic.HealthCheck,
+		timeout:           traffic.Timeout,
+		tcpkeepalive:      traffic.TCPKeepalive,
+		backendConnection: traffic.BackendConnection,
+		dns:               traffic.DNS,
+		http2Settings:     traffic.HTTP2,
 	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 		return err
 	}

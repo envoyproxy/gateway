@@ -86,12 +86,14 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
 								Host: ptr.To("otel-collector.monitoring.svc"),
 								Port: 4317,
-								BackendRefs: []egv1a1.BackendRef{
-									{
-										BackendObjectReference: gwapiv1.BackendObjectReference{
-											Name:      "otel-collector",
-											Namespace: ptr.To(gwapiv1.Namespace("monitoring")),
-											Port:      ptr.To(gwapiv1.PortNumber(4317)),
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name:      "otel-collector",
+												Namespace: ptr.To(gwapiv1.Namespace("monitoring")),
+												Port:      ptr.To(gwapiv1.PortNumber(4317)),
+											},
 										},
 									},
 								},

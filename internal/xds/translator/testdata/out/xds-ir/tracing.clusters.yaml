@@ -17,10 +17,11 @@
   type: EDS
 - circuitBreakers:
     thresholds:
-    - maxRetries: 1024
+    - maxConnections: 2048
+      maxRetries: 1024
   commonLbConfig:
     localityWeightedLbConfig: {}
-  connectTimeout: 10s
+  connectTimeout: 15s
   dnsLookupFamily: V4_ONLY
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
@@ -38,9 +39,25 @@
       locality:
         region: tracing-0/backend/0
   name: tracing-0
-  outlierDetection: {}
-  perConnectionBufferLimitBytes: 32768
+  outlierDetection:
+    baseEjectionTime: 30s
+    consecutive5xx: 5
+    consecutiveGatewayFailure: 4
+    consecutiveLocalOriginFailure: 5
+    interval: 5s
+    maxEjectionPercent: 10
+  perConnectionBufferLimitBytes: 20971520
   respectDnsTtl: true
+  transportSocket:
+    name: envoy.transport_sockets.upstream_proxy_protocol
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.transport_sockets.proxy_protocol.v3.ProxyProtocolUpstreamTransport
+      config:
+        version: V2
+      transportSocket:
+        name: envoy.transport_sockets.raw_buffer
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.transport_sockets.raw_buffer.v3.RawBuffer
   type: STRICT_DNS
   typedExtensionProtocolOptions:
     envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
@@ -49,3 +66,6 @@
         http2ProtocolOptions:
           initialConnectionWindowSize: 1048576
           initialStreamWindowSize: 65536
+  upstreamConnectionOptions:
+    tcpKeepalive:
+      keepaliveProbes: 7
