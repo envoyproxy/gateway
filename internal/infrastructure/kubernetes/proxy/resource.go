@@ -226,9 +226,9 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 					},
 				},
 				TimeoutSeconds:   1,
-				PeriodSeconds:    10,
+				PeriodSeconds:    5,
 				SuccessThreshold: 1,
-				FailureThreshold: 3,
+				FailureThreshold: 1,
 			},
 			Lifecycle: &corev1.Lifecycle{
 				PreStop: &corev1.LifecycleHandler{
