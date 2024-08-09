@@ -201,12 +201,12 @@ spec:
           name: metrics
           protocol: TCP
         readinessProbe:
-          failureThreshold: 3
+          failureThreshold: 1
           httpGet:
             path: /ready
             port: 19001
             scheme: HTTP
-          periodSeconds: 10
+          periodSeconds: 5
           successThreshold: 1
           timeoutSeconds: 1
         resources:
