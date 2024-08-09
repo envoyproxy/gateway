@@ -227,6 +227,26 @@ spec:
                       type: string
                     minItems: 1
                     type: array
+                  allowRegexOrigins:
+                    description: AllowRegexOrigins defines the origin regexes that
+                      are allowed to make requests.
+                    items:
+                      description: |-
+                        RegexOrigin is defined by full-fledged regex, so it is possible to use any
+                        scheme, domain, port or any other value. The value should be valid regex
+                        string.
+                        Syntax should be according to https://github.com/google/re2/wiki/Syntax.
+                        Also, backslashes must be escaped.
+
+
+                        For example, the following are valid origins:
+                        - https://foo.example.com
+                        - https?://(.*\\.)?example\\.com
+                        - .*://localhost(?:\\:\\d+)?
+                      maxLength: 253
+                      minLength: 1
+                      type: string
+                    type: array
                   exposeHeaders:
                     description: ExposeHeaders defines the headers that can be exposed
                       in the responses.
