@@ -25,6 +25,10 @@ import (
 	egv1a1validation "github.com/envoyproxy/gateway/api/v1alpha1/validation"
 )
 
+const (
+	EmptyPath = ""
+)
+
 var (
 	ErrListenerNameEmpty                       = errors.New("field Name must be specified")
 	ErrListenerAddressInvalid                  = errors.New("field Address must be a valid IP address")
@@ -1720,7 +1724,12 @@ type JSONPatchOperation struct {
 	Op string `json:"op" yaml:"op"`
 	// Path is the location of the target document/field where the operation will be performed
 	// Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details.
-	Path string `json:"path" yaml:"path"`
+	// +optional
+	Path *string `json:"path,omitempty"  yaml:"path,omitempty"`
+	// JSONPath specifies the locations of the target document/field where the operation will be performed
+	// Refer to https://datatracker.ietf.org/doc/rfc9535/ for more details.
+	// +optional
+	JSONPath *string `json:"jsonPath,omitempty"  yaml:"jsonPath,omitempty"`
 	// From is the source location of the value to be copied or moved. Only valid
 	// for move or copy operations
 	// Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details.
@@ -1728,6 +1737,14 @@ type JSONPatchOperation struct {
 	From *string `json:"from,omitempty" yaml:"from,omitempty"`
 	// Value is the new value of the path location.
 	Value *apiextensionsv1.JSON `json:"value,omitempty" yaml:"value,omitempty"`
+}
+
+func (o *JSONPatchOperation) IsPathNilOrEmpty() bool {
+	return o.Path == nil || *o.Path == EmptyPath
+}
+
+func (o *JSONPatchOperation) IsJSONPathNilOrEmpty() bool {
+	return o.JSONPath == nil || *o.JSONPath == EmptyPath
 }
 
 // Tracing defines the configuration for tracing a Envoy xDS Resource
