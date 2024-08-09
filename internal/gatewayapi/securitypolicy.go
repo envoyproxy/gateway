@@ -848,11 +848,8 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Reso
 	if err = t.validateExtServiceBackendReference(backendRef, policy.Namespace, policy.Kind, resources); err != nil {
 		return nil, err
 	}
-	authority = fmt.Sprintf("%s.%s:%d",
-		backendRef.Name,
-		NamespaceDerefOr(backendRef.Namespace, policy.Namespace),
-		*backendRef.Port)
 
+	authority = backendRefAuthority(resources, backendRef, policy)
 	pnn := utils.NamespacedName(policy)
 	if ds, err = t.processExtServiceDestination(
 		backendRef,
@@ -890,6 +887,31 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Reso
 		}
 	}
 	return extAuth, nil
+}
+
+func backendRefAuthority(resources *Resources, backendRef *gwapiv1.BackendObjectReference, policy *egv1a1.SecurityPolicy) string {
+	if backendRef == nil {
+		return ""
+	}
+
+	backendNamespace := NamespaceDerefOr(backendRef.Namespace, policy.Namespace)
+	backendKind := KindDerefOr(backendRef.Kind, KindService)
+	if backendKind == egv1a1.KindBackend {
+		backend := resources.GetBackend(backendNamespace, string(backendRef.Name))
+		if backend != nil {
+			// TODO: exists multi FQDN endpoints?
+			for _, ep := range backend.Spec.Endpoints {
+				if ep.FQDN != nil {
+					return fmt.Sprintf("%s:%d", ep.FQDN.Hostname, ep.FQDN.Port)
+				}
+			}
+		}
+	}
+
+	return fmt.Sprintf("%s.%s:%d",
+		backendRef.Name,
+		backendNamespace,
+		*backendRef.Port)
 }
 
 func irExtServiceDestinationName(policy *egv1a1.SecurityPolicy, backendRef *gwapiv1.BackendObjectReference) string {
