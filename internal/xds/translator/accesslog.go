@@ -478,14 +478,27 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 	if al == nil {
 		return nil
 	}
-
 	// add clusters for ALS access logs
 	for _, als := range al.ALS {
+		traffic := als.Traffic
+		// Make sure that there are safe defaults for the traffic
+		if traffic == nil {
+			traffic = &ir.TrafficFeatures{}
+		}
 		if err := addXdsCluster(tCtx, &xdsClusterArgs{
-			name:         als.Destination.Name,
-			settings:     als.Destination.Settings,
-			tSocket:      nil,
-			endpointType: EndpointTypeStatic,
+			name:              als.Destination.Name,
+			settings:          als.Destination.Settings,
+			tSocket:           nil,
+			endpointType:      EndpointTypeStatic,
+			loadBalancer:      traffic.LoadBalancer,
+			proxyProtocol:     traffic.ProxyProtocol,
+			circuitBreaker:    traffic.CircuitBreaker,
+			healthCheck:       traffic.HealthCheck,
+			timeout:           traffic.Timeout,
+			tcpkeepalive:      traffic.TCPKeepalive,
+			backendConnection: traffic.BackendConnection,
+			dns:               traffic.DNS,
+			http2Settings:     traffic.HTTP2,
 		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 			return err
 		}
@@ -493,12 +506,27 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 
 	// add clusters for Open Telemetry access logs
 	for _, otel := range al.OpenTelemetry {
+		traffic := otel.Traffic
+		// Make sure that there are safe defaults for the traffic
+		if traffic == nil {
+			traffic = &ir.TrafficFeatures{}
+		}
+
 		if err := addXdsCluster(tCtx, &xdsClusterArgs{
-			name:         otel.Destination.Name,
-			settings:     otel.Destination.Settings,
-			tSocket:      nil,
-			endpointType: EndpointTypeDNS,
-			metrics:      metrics,
+			name:              otel.Destination.Name,
+			settings:          otel.Destination.Settings,
+			tSocket:           nil,
+			endpointType:      EndpointTypeDNS,
+			metrics:           metrics,
+			loadBalancer:      traffic.LoadBalancer,
+			proxyProtocol:     traffic.ProxyProtocol,
+			circuitBreaker:    traffic.CircuitBreaker,
+			healthCheck:       traffic.HealthCheck,
+			timeout:           traffic.Timeout,
+			tcpkeepalive:      traffic.TCPKeepalive,
+			backendConnection: traffic.BackendConnection,
+			dns:               traffic.DNS,
+			http2Settings:     traffic.HTTP2,
 		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 			return err
 		}

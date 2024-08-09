@@ -1663,6 +1663,7 @@ type ALSAccessLog struct {
 	CELMatches  []string                          `json:"celMatches,omitempty" yaml:"celMatches,omitempty"`
 	LogName     string                            `json:"name" yaml:"name"`
 	Destination RouteDestination                  `json:"destination,omitempty" yaml:"destination,omitempty"`
+	Traffic     *TrafficFeatures                  `json:"traffic,omitempty" yaml:"traffic,omitempty"`
 	Type        egv1a1.ALSEnvoyProxyAccessLogType `json:"type" yaml:"type"`
 	Text        *string                           `json:"text,omitempty" yaml:"text,omitempty"`
 	Attributes  map[string]string                 `json:"attributes,omitempty" yaml:"attributes,omitempty"`
@@ -1686,6 +1687,7 @@ type OpenTelemetryAccessLog struct {
 	Attributes  map[string]string `json:"attributes,omitempty" yaml:"attributes,omitempty"`
 	Resources   map[string]string `json:"resources,omitempty" yaml:"resources,omitempty"`
 	Destination RouteDestination  `json:"destination,omitempty" yaml:"destination,omitempty"`
+	Traffic     *TrafficFeatures  `json:"traffic,omitempty" yaml:"traffic,omitempty"`
 }
 
 // EnvoyPatchPolicy defines the intermediate representation of the EnvoyPatchPolicy resource.
@@ -1744,6 +1746,7 @@ type Tracing struct {
 	SamplingRate float64                     `json:"samplingRate,omitempty"`
 	CustomTags   map[string]egv1a1.CustomTag `json:"customTags,omitempty"`
 	Destination  RouteDestination            `json:"destination,omitempty"`
+	Traffic      *TrafficFeatures            `json:"traffic,omitempty"`
 	Provider     egv1a1.TracingProvider      `json:"provider"`
 }
 
