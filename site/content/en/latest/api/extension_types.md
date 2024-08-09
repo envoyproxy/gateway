@@ -340,6 +340,7 @@ _Appears in:_
 - [ExtProc](#extproc)
 - [GRPCExtAuthService](#grpcextauthservice)
 - [HTTPExtAuthService](#httpextauthservice)
+- [OIDCProvider](#oidcprovider)
 - [OpenTelemetryEnvoyProxyAccessLog](#opentelemetryenvoyproxyaccesslog)
 - [ProxyOpenTelemetrySink](#proxyopentelemetrysink)
 - [TracingProvider](#tracingprovider)
