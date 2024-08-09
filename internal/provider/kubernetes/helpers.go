@@ -22,6 +22,7 @@ import (
 
 const (
 	gatewayClassFinalizer = gwapiv1.GatewayClassFinalizerGatewaysExist
+	envoyProxyFinalizer   = "gatewayclass-exists-finalizer.gateway.envoyproxy.github.com"
 )
 
 type ObjectKindNamespacedName struct {

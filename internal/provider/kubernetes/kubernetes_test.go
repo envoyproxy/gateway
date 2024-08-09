@@ -158,8 +158,6 @@ func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, provider 
 
 func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
-
-	// Note: The namespace for the EnvoyProxy must match EG's configured namespace.
 	testNs := config.DefaultNamespace
 
 	epName := "test-envoy-proxy"
@@ -178,6 +176,15 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 		Namespace: gatewayapi.NamespacePtr(testNs),
 	}
 	require.NoError(t, cli.Create(ctx, gc))
+
+	gc2 := test.GetGatewayClass("gc-with-param-ref2", egv1a1.GatewayControllerName, nil)
+	gc2.Spec.ParametersRef = &gwapiv1.ParametersReference{
+		Group:     gwapiv1.Group(egv1a1.GroupVersion.Group),
+		Kind:      egv1a1.KindEnvoyProxy,
+		Name:      epName,
+		Namespace: gatewayapi.NamespacePtr(testNs),
+	}
+	require.NoError(t, cli.Create(ctx, gc2))
 
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, gc))
@@ -214,6 +221,144 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 		}
 
 		return false
+	}, defaultWait, defaultTick)
+
+	// Create the namespace for the Gateway under test.
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "test-paramsref-of-class"}}
+	require.NoError(t, cli.Create(ctx, ns))
+
+	gw := &gwapiv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-gw",
+			Namespace: ns.Name,
+		},
+		Spec: gwapiv1.GatewaySpec{
+			GatewayClassName: gwapiv1.ObjectName(gc.Name),
+			Listeners: []gwapiv1.Listener{
+				{
+					Name:     "test",
+					Port:     gwapiv1.PortNumber(int32(8080)),
+					Protocol: gwapiv1.HTTPProtocolType,
+				},
+			},
+		},
+	}
+
+	require.NoError(t, cli.Create(ctx, gw))
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, gw))
+	}()
+	labels := map[string]string{
+		gatewayapi.OwningGatewayNameLabel:      gw.Name,
+		gatewayapi.OwningGatewayNamespaceLabel: gw.Namespace,
+	}
+
+	deploy := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: gw.Namespace,
+			Name:      gw.Name + "-deployment",
+			Labels:    labels,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{MatchLabels: labels},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: labels,
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{{
+						Name:  "dummy",
+						Image: "dummy",
+						Ports: []corev1.ContainerPort{{
+							ContainerPort: 8080,
+						}},
+					}},
+				},
+			},
+		},
+		Status: appsv1.DeploymentStatus{
+			AvailableReplicas: 1,
+		},
+	}
+
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: gw.Namespace,
+			Name:      gw.Name + "-svc",
+			Labels:    labels,
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{{
+				Port: 80,
+			}},
+		},
+		Status: corev1.ServiceStatus{
+			LoadBalancer: corev1.LoadBalancerStatus{
+				Ingress: []corev1.LoadBalancerIngress{{IP: "1.1.1.1"}},
+			},
+		},
+	}
+
+	require.NoError(t, cli.Create(ctx, deploy))
+	require.NoError(t, cli.Create(ctx, svc))
+
+	// Ensure the Gateway reports "Scheduled".
+	require.Eventually(t, func() bool {
+		if err := cli.Get(ctx, utils.NamespacedName(gw), gw); err != nil {
+			return false
+		}
+
+		for _, cond := range gw.Status.Conditions {
+			fmt.Printf("Condition: %v\n", cond)
+			if cond.Type == string(gwapiv1.GatewayConditionAccepted) && cond.Status == metav1.ConditionTrue {
+				return true
+			}
+		}
+
+		// Scheduled=True condition not found.
+		return false
+	}, defaultWait, defaultTick)
+
+	// Ensure the number of Gateways in the Gateway resource table is as expected.
+	require.Eventually(t, func() bool {
+		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
+		if !ok {
+			return false
+		}
+		return res != nil && len(res.Gateways) == 1
+	}, defaultWait, defaultTick)
+
+	// Ensure the gateway class with gateways has been finalized.
+	require.Eventually(t, func() bool {
+		err := cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc)
+		return err == nil && slices.Contains(gc.Finalizers, gatewayClassFinalizer)
+	}, defaultWait, defaultTick)
+
+	// Ensure that gateway class without gateways has not been finalized.
+	require.Eventually(t, func() bool {
+		err := cli.Get(ctx, types.NamespacedName{Name: gc2.Name}, gc2)
+		return err == nil && !slices.Contains(gc2.Finalizers, gatewayClassFinalizer)
+	}, defaultWait, defaultTick)
+
+	// Ensure the envoyproxy has been finalized.
+	require.Eventually(t, func() bool {
+		err := cli.Get(ctx, types.NamespacedName{Name: ep.Name, Namespace: testNs}, ep)
+		return err == nil && slices.Contains(ep.Finalizers, envoyProxyFinalizer)
+	}, defaultWait, defaultTick)
+
+	//Ensure that envoyproxy finalizer will not be removed when 1 of 2 GatewayClasses stops referencing it
+	gc.Spec.ParametersRef = nil
+	require.NoError(t, cli.Update(ctx, gc))
+	require.Eventually(t, func() bool {
+		err := cli.Get(ctx, types.NamespacedName{Name: ep.Name, Namespace: testNs}, ep)
+		return err == nil && slices.Contains(ep.Finalizers, envoyProxyFinalizer)
+	}, defaultWait, defaultTick)
+
+	require.NoError(t, cli.Delete(ctx, gc2))
+	require.Eventually(t, func() bool {
+		err := cli.Get(ctx, types.NamespacedName{Name: ep.Name, Namespace: testNs}, ep)
+		return err == nil && !slices.Contains(ep.Finalizers, envoyProxyFinalizer)
 	}, defaultWait, defaultTick)
 }
 
