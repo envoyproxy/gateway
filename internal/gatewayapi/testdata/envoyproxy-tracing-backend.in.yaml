@@ -9,6 +9,33 @@ envoyProxyForGatewayClass:
       tracing:
         samplingRate: 100
         provider:
+          backendSettings:
+            http2:
+              initialStreamWindowSize: 128Ki
+              initialConnectionWindowSize: 2Mi
+              maxConcurrentStreams: 200
+              onInvalidMessage: TerminateStream
+            loadBalancer:
+              type: ConsistentHash
+              consistentHash:
+                type: Header
+                header:
+                  name: X-some-header
+            proxyProtocol:
+              version: V2
+            tcpKeepalive:
+              probes: 7
+            healthCheck:
+              passive:
+                consecutiveGatewayErrors: 4
+                interval: 5s
+            circuitBreaker:
+              maxConnections: 2048
+            timeout:
+              tcp:
+                connectTimeout: 15s
+            connection:
+              bufferLimit: 20Mi
           backendRefs:
           - name: otel-collector
             namespace: monitoring
