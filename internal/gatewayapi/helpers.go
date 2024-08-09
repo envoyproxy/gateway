@@ -314,6 +314,37 @@ func computeHosts(routeHostnames []string, listenerHostname *gwapiv1.Hostname) [
 	return hostnames
 }
 
+// removeIsolatedListeners returns a list of the hostnames between the route
+// and the listener, without isolated hostnames.
+func removeIsolatedListeners(routeHostnames []string, listenerContext *ListenerContext) []string {
+	routeHostnamesSet := map[string]struct{}{}
+	for _, host := range routeHostnames {
+		routeHostnamesSet[host] = struct{}{}
+	}
+
+	for _, listener := range listenerContext.gateway.listeners {
+		if listenerContext == listener {
+			continue
+		}
+		if listenerContext.Port != listener.Port {
+			continue
+		}
+		if listener.Hostname == nil {
+			continue
+		}
+		if _, ok := routeHostnamesSet[string(*listener.Hostname)]; ok {
+			delete(routeHostnamesSet, string(*listener.Hostname))
+		}
+	}
+
+	var hostnames []string
+	for host := range routeHostnamesSet {
+		hostnames = append(hostnames, host)
+	}
+
+	return hostnames
+}
+
 // hostnameMatchesWildcardHostname returns true if hostname has the non-wildcard
 // portion of wildcardHostname as a suffix, plus at least one DNS label matching the
 // wildcard.

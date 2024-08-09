@@ -652,6 +652,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 
 	for _, listener := range parentRef.listeners {
 		hosts := computeHosts(GetHostnames(route), listener.Hostname)
+		hosts = removeIsolatedListeners(hosts, listener)
 		if len(hosts) == 0 {
 			continue
 		}
