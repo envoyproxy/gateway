@@ -112,6 +112,8 @@ type EnvoyProxySpec struct {
 	//
 	// - envoy.filters.http.jwt_authn
 	//
+	// - envoy.filters.http.stateful_session
+	//
 	// - envoy.filters.http.ext_proc
 	//
 	// - envoy.filters.http.wasm
@@ -172,7 +174,7 @@ type FilterPosition struct {
 }
 
 // EnvoyFilter defines the type of Envoy HTTP filter.
-// +kubebuilder:validation:Enum=envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.ext_authz;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit
+// +kubebuilder:validation:Enum=envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.ext_authz;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit
 type EnvoyFilter string
 
 const (
@@ -196,6 +198,9 @@ const (
 
 	// EnvoyFilterJWTAuthn defines the Envoy HTTP JWT authentication filter.
 	EnvoyFilterJWTAuthn EnvoyFilter = "envoy.filters.http.jwt_authn"
+
+	// EnvoyFilterSessionPersistence defines the Envoy HTTP session persistence filter.
+	EnvoyFilterSessionPersistence EnvoyFilter = "envoy.filters.http.stateful_session"
 
 	// EnvoyFilterExtProc defines the Envoy HTTP external process filter.
 	EnvoyFilterExtProc EnvoyFilter = "envoy.filters.http.ext_proc"

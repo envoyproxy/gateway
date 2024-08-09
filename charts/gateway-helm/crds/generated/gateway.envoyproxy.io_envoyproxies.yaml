@@ -251,6 +251,9 @@ spec:
                   - envoy.filters.http.jwt_authn
 
 
+                  - envoy.filters.http.stateful_session
+
+
                   - envoy.filters.http.ext_proc
 
 
@@ -286,6 +289,7 @@ spec:
                       - envoy.filters.http.basic_auth
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
+                      - envoy.filters.http.stateful_session
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
                       - envoy.filters.http.rbac
@@ -304,6 +308,7 @@ spec:
                       - envoy.filters.http.basic_auth
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
+                      - envoy.filters.http.stateful_session
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
                       - envoy.filters.http.rbac
@@ -320,6 +325,7 @@ spec:
                       - envoy.filters.http.basic_auth
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
+                      - envoy.filters.http.stateful_session
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
                       - envoy.filters.http.rbac

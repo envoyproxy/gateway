@@ -1,0 +1,66 @@
+http:
+- name: "first-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "header-based-session-persistence-route"
+    hostname: "*"
+    pathMatch:
+      safeRegex: "/v1/.*"
+    sessionPersistence:
+      header: {
+        name: "session-header"
+      }
+    destination:
+      name: "regex-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "cookie-based-session-persistence-route-regex"
+    hostname: "*"
+    pathMatch:
+      safeRegex: "/v1/.*/hoge"
+    sessionPersistence:
+      cookie:
+        name: "session-header"
+        ttl: "1h"
+    destination:
+      name: "regex-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "cookie-based-session-persistence-route-prefix"
+    hostname: "*"
+    pathMatch:
+      prefix: "/v2/"
+    sessionPersistence:
+      cookie:
+        name: "session-header"
+        ttl: "1h"
+    destination:
+      name: "regex-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "cookie-based-session-persistence-route-exact"
+    hostname: "*"
+    pathMatch:
+      exact: "/v3/user"
+    sessionPersistence:
+      cookie:
+        name: "session-cookie"
+        ttl: "1h"
+    destination:
+      name: "regex-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
