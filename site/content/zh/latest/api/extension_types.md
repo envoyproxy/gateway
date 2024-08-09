@@ -28,6 +28,7 @@ API group.
 - [EnvoyProxy](#envoyproxy)
 - [SecurityPolicy](#securitypolicy)
 - [SecurityPolicyList](#securitypolicylist)
+- [VirtualBackend](#virtualbackend)
 
 
 
@@ -3311,6 +3312,17 @@ _Appears in:_
 | `File` | ResourceProviderTypeFile defines the "File" provider.<br /> | 
 
 
+#### ResponseHeader
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [VirtualBackendSpec](#virtualbackendspec)
+
+
+
 #### Retry
 
 
@@ -3505,6 +3517,17 @@ _Appears in:_
 | ----- | ----------- |
 | `Exact` | SourceMatchExact All IP Addresses within the specified Source IP CIDR are treated as a single client selector<br />and share the same rate limit bucket.<br /> | 
 | `Distinct` | SourceMatchDistinct Each IP Address within the specified Source IP CIDR is treated as a distinct client selector<br />and uses a separate rate limit bucket/counter.<br />Note: This is only supported for Global Rate Limits.<br /> | 
+
+
+#### StatusCode
+
+_Underlying type:_ _integer_
+
+
+
+_Appears in:_
+- [VirtualBackendSpec](#virtualbackendspec)
+
 
 
 #### StringMatch
@@ -3752,6 +3775,38 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `path` | _string_ |  true  | Path defines the unix domain socket path of the backend endpoint. |
+
+
+#### VirtualBackend
+
+
+
+VirtualBackend defines the configuration for direct response.
+
+
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
+| `kind` | _string_ | |`VirtualBackend`
+| `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` | _[VirtualBackendSpec](#virtualbackendspec)_ |  true  | Spec defines desired state of VirtualBackend. |
+
+
+#### VirtualBackendSpec
+
+
+
+VirtualBackendSpec defines direct response configuration.
+
+_Appears in:_
+- [VirtualBackend](#virtualbackend)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `body` | _integer_ |  false  | Body contains data which gateway returns in direct response. |
+| `statusCode` | _[StatusCode](#statuscode)_ |  true  | StatusCode defines HTTP response status code of direct response. Default value is 200. |
+| `responseHeaders` | _object (keys:[ResponseHeader](#responseheader), values:string)_ |  false  | ResponseHeaders defines Header:Value map of additional headers to response. |
 
 
 #### Wasm

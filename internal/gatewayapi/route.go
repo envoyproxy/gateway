@@ -202,6 +202,27 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			if !t.IsEnvoyServiceRouting(envoyProxy) && ds != nil && len(ds.Endpoints) > 0 && ds.AddressType != nil {
 				dstAddrTypeMap[*ds.AddressType]++
 			}
+
+			if backendRef.Kind != nil && *backendRef.Kind == egv1a1.KindVirtualBackend {
+				vb := resources.GetVirtualBackend(NamespaceDerefOr(backendRef.Namespace, httpRoute.Namespace), string(backendRef.Name))
+				for _, route := range ruleRoutes {
+					directResponse := &ir.DirectResponse{
+						Body:       string(*vb.Spec.Body),
+						StatusCode: uint32(vb.Spec.StatusCode),
+					}
+
+					route.DirectResponse = directResponse
+					for header, value := range vb.Spec.ResponseHeaders {
+						responseHeader := ir.AddHeader{
+							Name:   string(header),
+							Value:  value,
+							Append: false,
+						}
+						route.AddResponseHeaders = append(route.AddResponseHeaders, responseHeader)
+					}
+				}
+			}
+
 			if ds == nil {
 				continue
 			}
@@ -237,7 +258,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		// If the route has no valid backends then just use a direct response and don't fuss with weighted responses
 		for _, ruleRoute := range ruleRoutes {
 			noValidBackends := ruleRoute.Destination == nil || ruleRoute.Destination.ToBackendWeights().Valid == 0
-			if noValidBackends && ruleRoute.Redirect == nil {
+			if noValidBackends && ruleRoute.Redirect == nil && ruleRoute.DirectResponse == nil {
 				ruleRoute.DirectResponse = &ir.DirectResponse{
 					StatusCode: 500,
 				}
