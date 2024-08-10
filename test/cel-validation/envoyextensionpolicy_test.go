@@ -284,11 +284,13 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					ExtProc: []egv1a1.ExtProc{
 						{
-							BackendRefs: []egv1a1.BackendRef{
-								{
-									BackendObjectReference: gwapiv1.BackendObjectReference{
-										Name: "grpc-proc-service",
-										Port: ptr.To(gwapiv1.PortNumber(80)),
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-proc-service",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
+										},
 									},
 								},
 							},
@@ -313,12 +315,14 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					ExtProc: []egv1a1.ExtProc{
 						{
-							BackendRefs: []egv1a1.BackendRef{
-								{
-									BackendObjectReference: gwapiv1.BackendObjectReference{
-										Group: ptr.To(gwapiv1.Group("unsupported")),
-										Name:  "grpc-proc-service",
-										Port:  ptr.To(gwapiv1.PortNumber(80)),
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Group: ptr.To(gwapiv1.Group("unsupported")),
+											Name:  "grpc-proc-service",
+											Port:  ptr.To(gwapiv1.PortNumber(80)),
+										},
 									},
 								},
 							},
@@ -335,7 +339,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"spec.extProc[0].backendRefs: Invalid value: \"array\": BackendRefs only supports Core and gateway.envoyproxy.io group"},
+			wantErrors: []string{"spec.extProc[0]: Invalid value: \"object\": BackendRefs only supports Core and gateway.envoyproxy.io group"},
 		},
 		{
 			desc: "ExtProc with invalid BackendRef Kind",
@@ -343,12 +347,14 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					ExtProc: []egv1a1.ExtProc{
 						{
-							BackendRefs: []egv1a1.BackendRef{
-								{
-									BackendObjectReference: gwapiv1.BackendObjectReference{
-										Kind: ptr.To(gwapiv1.Kind("unsupported")),
-										Name: "grpc-proc-service",
-										Port: ptr.To(gwapiv1.PortNumber(80)),
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Kind: ptr.To(gwapiv1.Kind("unsupported")),
+											Name: "grpc-proc-service",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
+										},
 									},
 								},
 							},
@@ -365,7 +371,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"spec.extProc[0].backendRefs: Invalid value: \"array\": BackendRefs only supports Service and Backend kind"},
+			wantErrors: []string{"spec.extProc[0]: Invalid value: \"object\": BackendRefs only supports Service and Backend kind"},
 		},
 		{
 			desc: "ExtProc with invalid fields",
@@ -373,11 +379,13 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					ExtProc: []egv1a1.ExtProc{
 						{
-							BackendRefs: []egv1a1.BackendRef{
-								{
-									BackendObjectReference: gwapiv1.BackendObjectReference{
-										Name: "grpc-proc-service",
-										Port: ptr.To(gwapiv1.PortNumber(80)),
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-proc-service",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
+										},
 									},
 								},
 							},

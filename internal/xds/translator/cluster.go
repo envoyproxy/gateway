@@ -48,6 +48,7 @@ type xdsClusterArgs struct {
 	circuitBreaker    *ir.CircuitBreaker
 	healthCheck       *ir.HealthCheck
 	http1Settings     *ir.HTTP1Settings
+	http2Settings     *ir.HTTP2Settings
 	timeout           *ir.Timeout
 	tcpkeepalive      *ir.TCPKeepalive
 	metrics           *ir.Metrics
@@ -515,13 +516,15 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) map[string]*anypb.
 		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_UseDownstreamProtocolConfig{
 			UseDownstreamProtocolConfig: &httpv3.HttpProtocolOptions_UseDownstreamHttpConfig{
 				HttpProtocolOptions:  http1opts,
-				Http2ProtocolOptions: &corev3.Http2ProtocolOptions{},
+				Http2ProtocolOptions: buildHTTP2Settings(args.http2Settings),
 			},
 		}
 	case requiresHTTP2Options:
 		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
 			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
-				ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_Http2ProtocolOptions{},
+				ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_Http2ProtocolOptions{
+					Http2ProtocolOptions: buildHTTP2Settings(args.http2Settings),
+				},
 			},
 		}
 	case requiresHTTP1Options:
@@ -664,6 +667,7 @@ func buildBackandConnectionBufferLimitBytes(bc *ir.BackendConnection) *wrappers.
 type ExtraArgs struct {
 	metrics       *ir.Metrics
 	http1Settings *ir.HTTP1Settings
+	http2Settings *ir.HTTP2Settings
 }
 
 type clusterArgs interface {
@@ -721,6 +725,7 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(extra *ExtraArgs) *xdsCluste
 		endpointType:      buildEndpointType(httpRoute.Destination.Settings),
 		metrics:           extra.metrics,
 		http1Settings:     extra.http1Settings,
+		http2Settings:     extra.http2Settings,
 		useClientProtocol: ptr.Deref(httpRoute.UseClientProtocol, false),
 	}
 
@@ -734,11 +739,38 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(extra *ExtraArgs) *xdsCluste
 		clusterArgs.timeout = bt.Timeout
 		clusterArgs.tcpkeepalive = bt.TCPKeepalive
 		clusterArgs.backendConnection = bt.BackendConnection
-	}
-
-	if httpRoute.DNS != nil {
-		clusterArgs.dns = httpRoute.DNS
+		clusterArgs.dns = bt.DNS
 	}
 
 	return clusterArgs
+}
+
+func buildHTTP2Settings(opts *ir.HTTP2Settings) *corev3.Http2ProtocolOptions {
+	if opts == nil {
+		opts = &ir.HTTP2Settings{}
+	}
+
+	// defaults based on https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/edge
+	out := &corev3.Http2ProtocolOptions{
+		InitialStreamWindowSize: &wrapperspb.UInt32Value{
+			Value: ptr.Deref(opts.InitialStreamWindowSize, http2InitialStreamWindowSize),
+		},
+		InitialConnectionWindowSize: &wrapperspb.UInt32Value{
+			Value: ptr.Deref(opts.InitialConnectionWindowSize, http2InitialConnectionWindowSize),
+		},
+	}
+
+	if opts.MaxConcurrentStreams != nil {
+		out.MaxConcurrentStreams = &wrapperspb.UInt32Value{
+			Value: *opts.MaxConcurrentStreams,
+		}
+	}
+
+	if opts.ResetStreamOnError != nil {
+		out.OverrideStreamErrorOnInvalidHttpMessage = &wrapperspb.BoolValue{
+			Value: *opts.ResetStreamOnError,
+		}
+	}
+
+	return out
 }
