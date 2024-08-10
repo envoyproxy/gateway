@@ -123,15 +123,13 @@ const (
 // - `x-accesslog-attr` - JSON encoded key/value pairs when a JSON format is used.
 //
 // +kubebuilder:validation:XValidation:rule="self.type == 'HTTP' || !has(self.http)",message="The http field may only be set when type is HTTP."
+// +kubebuilder:validation:XValidation:message="BackendRefs must be used, backendRef is not supported.",rule="!has(self.backendRef)"
+// +kubebuilder:validation:XValidation:message="must have at least one backend in backendRefs",rule="has(self.backendRefs) && self.backendRefs.size() > 0"
+// +kubebuilder:validation:XValidation:message="BackendRefs only supports Service kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service') : true"
+// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core group.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\")) : true"
 type ALSEnvoyProxyAccessLog struct {
-	// BackendRefs references a Kubernetes object that represents the gRPC service to which
-	// the access logs will be sent. Currently only Service is supported.
-	//
-	// +kubebuilder:validation:MinItems=1
-	// +kubebuilder:validation:MaxItems=1
-	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Service kind.",rule="self.all(f, f.kind == 'Service')"
-	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core group.",rule="self.all(f, f.group == '')"
-	BackendRefs []BackendRef `json:"backendRefs"`
+	BackendCluster `json:",inline"`
+
 	// LogName defines the friendly name of the access log to be returned in
 	// StreamAccessLogsMessage.Identifier. This allows the access log server
 	// to differentiate between different access logs coming from the same Envoy.
@@ -167,7 +165,11 @@ type FileEnvoyProxyAccessLog struct {
 // OpenTelemetryEnvoyProxyAccessLog defines the OpenTelemetry access log sink.
 //
 // +kubebuilder:validation:XValidation:message="host or backendRefs needs to be set",rule="has(self.host) || self.backendRefs.size() > 0"
+// +kubebuilder:validation:XValidation:message="BackendRefs must be used, backendRef is not supported.",rule="!has(self.backendRef)"
+// +kubebuilder:validation:XValidation:message="BackendRefs only supports Service kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service') : true"
+// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core group.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\")) : true"
 type OpenTelemetryEnvoyProxyAccessLog struct {
+	BackendCluster `json:",inline"`
 	// Host define the extension service hostname.
 	// Deprecated: Use BackendRefs instead.
 	//
@@ -180,15 +182,6 @@ type OpenTelemetryEnvoyProxyAccessLog struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:default=4317
 	Port int32 `json:"port,omitempty"`
-	// BackendRefs references a Kubernetes object that represents the
-	// backend server to which the access log will be sent.
-	// Only Service kind is supported for now.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxItems=1
-	// +kubebuilder:validation:XValidation:message="only support Service kind.",rule="self.all(f, f.kind == 'Service')"
-	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core group.",rule="self.all(f, f.group == '')"
-	BackendRefs []BackendRef `json:"backendRefs,omitempty"`
 	// Resources is a set of labels that describe the source of a log entry, including envoy node info.
 	// It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).
 	// +optional

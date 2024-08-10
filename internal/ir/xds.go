@@ -565,6 +565,8 @@ type HTTPRoute struct {
 	UseClientProtocol *bool `json:"useClientProtocol,omitempty" yaml:"useClientProtocol,omitempty"`
 	// Metadata is used to enrich envoy route metadata with user and provider-specific information
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	// SessionPersistence holds the configuration for session persistence.
+	SessionPersistence *SessionPersistence `json:"sessionPersistence,omitempty" yaml:"sessionPersistence,omitempty"`
 }
 
 // DNS contains configuration options for DNS resolution.
@@ -574,6 +576,33 @@ type DNS struct {
 	DNSRefreshRate *metav1.Duration `json:"dnsRefreshRate,omitempty"`
 	// RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.
 	RespectDNSTTL *bool `json:"respectDnsTtl,omitempty"`
+}
+
+// SessionPersistence defines the desired state of SessionPersistence.
+// +k8s:deepcopy-gen=true
+type SessionPersistence struct {
+	// Cookie defines the configuration for cookie-based session persistence.
+	// Either Cookie or Header must be non-empty.
+	Cookie *CookieBasedSessionPersistence `json:"cookie,omitempty" yaml:"cookie,omitempty"`
+	// Header defines the configuration for header-based session persistence.
+	// Either Cookie or Header must be non-empty.
+	Header *HeaderBasedSessionPersistence `json:"header,omitempty" yaml:"header,omitempty"`
+}
+
+// CookieBasedSessionPersistence defines the configuration for cookie-based session persistence.
+// +k8s:deepcopy-gen=true
+type CookieBasedSessionPersistence struct {
+	// Name defines the name of the persistent session token.
+	Name string `json:"name"`
+
+	TTL *metav1.Duration `json:"ttl,omitempty" yaml:"ttl,omitempty"`
+}
+
+// HeaderBasedSessionPersistence defines the configuration for header-based session persistence.
+// +k8s:deepcopy-gen=true
+type HeaderBasedSessionPersistence struct {
+	// Name defines the name of the persistent session token.
+	Name string `json:"name"`
 }
 
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.
@@ -1657,6 +1686,7 @@ type ALSAccessLog struct {
 	CELMatches  []string                          `json:"celMatches,omitempty" yaml:"celMatches,omitempty"`
 	LogName     string                            `json:"name" yaml:"name"`
 	Destination RouteDestination                  `json:"destination,omitempty" yaml:"destination,omitempty"`
+	Traffic     *TrafficFeatures                  `json:"traffic,omitempty" yaml:"traffic,omitempty"`
 	Type        egv1a1.ALSEnvoyProxyAccessLogType `json:"type" yaml:"type"`
 	Text        *string                           `json:"text,omitempty" yaml:"text,omitempty"`
 	Attributes  map[string]string                 `json:"attributes,omitempty" yaml:"attributes,omitempty"`
@@ -1680,6 +1710,7 @@ type OpenTelemetryAccessLog struct {
 	Attributes  map[string]string `json:"attributes,omitempty" yaml:"attributes,omitempty"`
 	Resources   map[string]string `json:"resources,omitempty" yaml:"resources,omitempty"`
 	Destination RouteDestination  `json:"destination,omitempty" yaml:"destination,omitempty"`
+	Traffic     *TrafficFeatures  `json:"traffic,omitempty" yaml:"traffic,omitempty"`
 }
 
 // EnvoyPatchPolicy defines the intermediate representation of the EnvoyPatchPolicy resource.
@@ -1738,6 +1769,7 @@ type Tracing struct {
 	SamplingRate float64                     `json:"samplingRate,omitempty"`
 	CustomTags   map[string]egv1a1.CustomTag `json:"customTags,omitempty"`
 	Destination  RouteDestination            `json:"destination,omitempty"`
+	Traffic      *TrafficFeatures            `json:"traffic,omitempty"`
 	Provider     egv1a1.TracingProvider      `json:"provider"`
 }
 
