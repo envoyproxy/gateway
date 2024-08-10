@@ -18,11 +18,11 @@ Before you start the migration, ensure you have the following:
 
 Here’s a step-by-step example of migrating from Ingress to Envoy Gateway using `ingress2gateway`:
 
-#### 1. Install and Configure Envoy Gateway
+### 1. Install and Configure Envoy Gateway
 
 Ensure that Envoy Gateway is installed and running in your cluster. Follow the [official Envoy Gateway installation guide](../install) for setup instructions.
 
-#### 2. Create a GatewayClass
+### 2. Create a GatewayClass
 
 To ensure the generated HTTPRoutes are programmed correctly in the Envoy Gateway data plane, create a GatewayClass that links to the Envoy Gateway controller.
 
@@ -43,11 +43,11 @@ Apply this resource:
 kubectl apply -f gatewayclass.yaml
 ```
 
-#### 3. Install Ingress2gateway
+### 3. Install Ingress2gateway
 
 Ensure you have the Ingress2gateway package installed. If not, follow the package’s installation instructions.
 
-#### 4. Run Ingress2gateway
+### 4. Run Ingress2gateway
 
 Use Ingress2gateway to read your existing Ingress resources and translate them into Gateway API resources.
 
@@ -60,7 +60,7 @@ This command will:
 2. Search for Ingress and provider-specific resources in that namespace.
 3. Convert them to Gateway API resources (Gateways and HTTPRoutes).
 
-##### Example Ingress Configuration
+#### Example Ingress Configuration
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -84,7 +84,7 @@ spec:
               number: 80
 ```
 
-#### 5. Save the Output
+### 5. Save the Output
 
 The command will output the equivalent Gateway API resources in YAML/JSON format to stdout. Save this output to a file for further use.
 
@@ -92,7 +92,7 @@ The command will output the equivalent Gateway API resources in YAML/JSON format
 ./ingress2gateway print > gateway-resources.yaml
 ```
 
-#### 6. Apply the Translated Resources
+### 6. Apply the Translated Resources
 
 Apply the translated Gateway API resources to your cluster.
 
@@ -100,7 +100,7 @@ Apply the translated Gateway API resources to your cluster.
 kubectl apply -f gateway-resources.yaml
 ```
 
-#### 7. Create a Gateway Resource
+### 7. Create a Gateway Resource
 
 Create a `Gateway` resource specifying the `GatewayClass` created earlier and including the necessary listeners.
 
@@ -125,7 +125,7 @@ Apply this resource:
 kubectl apply -f gateway.yaml
 ```
 
-#### 8. Validate the Migration
+### 8. Validate the Migration
 
 Ensure the HTTPRoutes and Gateways are correctly set up and that traffic is being routed as expected. Validate the new configuration by checking the status of the Gateway and HTTPRoute resources.
 
@@ -134,10 +134,10 @@ kubectl get gateways
 kubectl get httproutes
 ```
 
-#### 9. Monitor and Troubleshoot
+### 9. Monitor and Troubleshoot
 
 Monitor the Envoy Gateway logs and metrics to ensure everything is functioning correctly. Troubleshoot any issues by reviewing the Gateway and HTTPRoute statuses and Envoy Gateway controller logs.
 
-### Summary
+## Summary
 
 By following this guide, users can effectively migrate their existing Ingress resources to Envoy Gateway using the Ingress2gateway package. Creating a GatewayClass and linking it to the Envoy Gateway controller ensures that the translated resources are properly programmed in the data plane, providing a seamless transition to the Envoy Gateway environment.
