@@ -471,12 +471,14 @@ func TestValidateServiceForReconcile(t *testing.T) {
 								{
 									Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
 									OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
-										BackendRefs: []egv1a1.BackendRef{
-											{
-												BackendObjectReference: gwapiv1.BackendObjectReference{
-													Name:      "otel-collector",
-													Namespace: ptr.To(gwapiv1.Namespace("default")),
-													Port:      ptr.To(gwapiv1.PortNumber(4317)),
+										BackendCluster: egv1a1.BackendCluster{
+											BackendRefs: []egv1a1.BackendRef{
+												{
+													BackendObjectReference: gwapiv1.BackendObjectReference{
+														Name:      "otel-collector",
+														Namespace: ptr.To(gwapiv1.Namespace("default")),
+														Port:      ptr.To(gwapiv1.PortNumber(4317)),
+													},
 												},
 											},
 										},
@@ -491,12 +493,14 @@ func TestValidateServiceForReconcile(t *testing.T) {
 						{
 							Type: egv1a1.MetricSinkTypeOpenTelemetry,
 							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
-								BackendRefs: []egv1a1.BackendRef{
-									{
-										BackendObjectReference: gwapiv1.BackendObjectReference{
-											Name:      "otel-collector",
-											Namespace: ptr.To(gwapiv1.Namespace("default")),
-											Port:      ptr.To(gwapiv1.PortNumber(4317)),
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name:      "otel-collector",
+												Namespace: ptr.To(gwapiv1.Namespace("default")),
+												Port:      ptr.To(gwapiv1.PortNumber(4317)),
+											},
 										},
 									},
 								},
@@ -507,12 +511,14 @@ func TestValidateServiceForReconcile(t *testing.T) {
 				Tracing: &egv1a1.ProxyTracing{
 					Provider: egv1a1.TracingProvider{
 						Type: egv1a1.TracingProviderTypeOpenTelemetry,
-						BackendRefs: []egv1a1.BackendRef{
-							{
-								BackendObjectReference: gwapiv1.BackendObjectReference{
-									Name:      "otel-collector",
-									Namespace: ptr.To(gwapiv1.Namespace("default")),
-									Port:      ptr.To(gwapiv1.PortNumber(4317)),
+						BackendCluster: egv1a1.BackendCluster{
+							BackendRefs: []egv1a1.BackendRef{
+								{
+									BackendObjectReference: gwapiv1.BackendObjectReference{
+										Name:      "otel-collector",
+										Namespace: ptr.To(gwapiv1.Namespace("default")),
+										Port:      ptr.To(gwapiv1.PortNumber(4317)),
+									},
 								},
 							},
 						},
@@ -675,10 +681,12 @@ func TestValidateServiceForReconcile(t *testing.T) {
 						},
 						ExtAuth: &egv1a1.ExtAuth{
 							HTTP: &egv1a1.HTTPExtAuthService{
-								BackendRefs: []egv1a1.BackendRef{
-									{
-										BackendObjectReference: gwapiv1.BackendObjectReference{
-											Name: "ext-auth-http-service",
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "ext-auth-http-service",
+											},
 										},
 									},
 								},
@@ -708,10 +716,12 @@ func TestValidateServiceForReconcile(t *testing.T) {
 						},
 						ExtAuth: &egv1a1.ExtAuth{
 							GRPC: &egv1a1.GRPCExtAuthService{
-								BackendRefs: []egv1a1.BackendRef{
-									{
-										BackendObjectReference: gwapiv1.BackendObjectReference{
-											Name: "ext-auth-grpc-service",
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "ext-auth-grpc-service",
+											},
 										},
 									},
 								},
@@ -741,10 +751,12 @@ func TestValidateServiceForReconcile(t *testing.T) {
 						},
 						ExtProc: []egv1a1.ExtProc{
 							{
-								BackendRefs: []egv1a1.BackendRef{
-									{
-										BackendObjectReference: gwapiv1.BackendObjectReference{
-											Name: "ext-proc-service",
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "ext-proc-service",
+											},
 										},
 									},
 								},
@@ -774,10 +786,12 @@ func TestValidateServiceForReconcile(t *testing.T) {
 						},
 						ExtProc: []egv1a1.ExtProc{
 							{
-								BackendRefs: []egv1a1.BackendRef{
-									{
-										BackendObjectReference: gwapiv1.BackendObjectReference{
-											Name: "ext-proc-service",
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "ext-proc-service",
+											},
 										},
 									},
 								},

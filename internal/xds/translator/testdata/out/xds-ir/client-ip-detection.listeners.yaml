@@ -25,7 +25,7 @@
             resourceApiVersion: V3
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: http-8081
         useRemoteAddress: true
         xffNumTrustedHops: 2
     name: first-listener
@@ -65,7 +65,7 @@
             resourceApiVersion: V3
           routeConfigName: second-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: http-8082
         useRemoteAddress: false
     name: second-listener
   drainType: MODIFY_ONLY
@@ -106,7 +106,7 @@
             resourceApiVersion: V3
           routeConfigName: third-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: http-8083
         useRemoteAddress: false
     name: third-listener
   drainType: MODIFY_ONLY

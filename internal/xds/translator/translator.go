@@ -450,13 +450,19 @@ func (t *Translator) addRouteToRouteConfig(
 		vHost.Routes = append(vHost.Routes, xdsRoute)
 
 		if httpRoute.Destination != nil {
+			ea := &ExtraArgs{
+				metrics:       metrics,
+				http1Settings: httpListener.HTTP1,
+			}
+
+			if httpRoute.Traffic != nil && httpRoute.Traffic.HTTP2 != nil {
+				ea.http2Settings = httpRoute.Traffic.HTTP2
+			}
+
 			if err = processXdsCluster(
 				tCtx,
 				&HTTPRouteTranslator{httpRoute},
-				&ExtraArgs{
-					metrics:       metrics,
-					http1Settings: httpListener.HTTP1,
-				},
+				ea,
 			); err != nil {
 				errs = errors.Join(errs, err)
 			}

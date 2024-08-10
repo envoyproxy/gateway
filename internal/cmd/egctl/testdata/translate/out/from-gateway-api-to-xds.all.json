@@ -504,7 +504,10 @@
                   "envoy.extensions.upstreams.http.v3.HttpProtocolOptions": {
                     "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions",
                     "explicitHttpConfig": {
-                      "http2ProtocolOptions": {}
+                      "http2ProtocolOptions": {
+                        "initialConnectionWindowSize": 1048576,
+                        "initialStreamWindowSize": 65536
+                      }
                     }
                   }
                 }
@@ -681,7 +684,7 @@
                             "routeConfigName": "default/eg/http"
                           },
                           "serverHeaderTransformation": "PASS_THROUGH",
-                          "statPrefix": "http",
+                          "statPrefix": "http-10080",
                           "useRemoteAddress": true
                         }
                       }
@@ -787,7 +790,7 @@
                             "routeConfigName": "default/eg/grpc"
                           },
                           "serverHeaderTransformation": "PASS_THROUGH",
-                          "statPrefix": "http",
+                          "statPrefix": "http-8080",
                           "useRemoteAddress": true
                         }
                       }
@@ -854,7 +857,7 @@
                               }
                             ],
                             "cluster": "tcproute/default/backend/rule/-1",
-                            "statPrefix": "tcp"
+                            "statPrefix": "tcp-1234"
                           }
                         }
                       ],
@@ -925,7 +928,7 @@
                               }
                             ],
                             "cluster": "tlsroute/default/backend/rule/-1",
-                            "statPrefix": "passthrough"
+                            "statPrefix": "tls-passthrough-8443"
                           }
                         }
                       ],

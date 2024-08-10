@@ -10,6 +10,7 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
@@ -474,7 +475,71 @@ type BackendRef struct {
 	gwapiv1.BackendObjectReference `json:",inline"`
 }
 
+// BackendCluster contains all the configuration required for configuring access
+// to a backend. This can include multiple endpoints, and settings that apply for
+// managing the connection to all these endpoints.
+type BackendCluster struct {
+	// BackendRef references a Kubernetes object that represents the
+	// backend server to which the authorization request will be sent.
+	//
+	// Deprecated: Use BackendRefs instead.
+	BackendRef *gwapiv1.BackendObjectReference `json:"backendRef,omitempty"`
+
+	// BackendRefs references a Kubernetes object that represents the
+	// backend server to which the authorization request will be sent.
+	//
+	// +kubebuilder:validation:MaxItems=16
+	// +optional
+	BackendRefs []BackendRef `json:"backendRefs,omitempty"`
+
+	// BackendSettings holds configuration for managing the connection
+	// to the backend.
+	//
+	// +optional
+	BackendSettings *ClusterSettings `json:"backendSettings,omitempty"`
+}
+
 // CIDR defines a CIDR Address range.
 // A CIDR can be an IPv4 address range such as "192.168.1.0/24" or an IPv6 address range such as "2001:0db8:11a3:09d7::/64".
 // +kubebuilder:validation:Pattern=`((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/([0-9]+))|((([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))\/([0-9]+))`
 type CIDR string
+
+type InvalidMessageAction string
+
+const (
+	InvalidMessageActionTerminateConnection InvalidMessageAction = "TerminateConnection"
+	InvalidMessageActionTerminateStream     InvalidMessageAction = "TerminateStream"
+)
+
+// HTTP2Settings provides HTTP/2 configuration for listeners and backends.
+type HTTP2Settings struct {
+	// InitialStreamWindowSize sets the initial window size for HTTP/2 streams.
+	// If not set, the default value is 64 KiB(64*1024).
+	//
+	// +kubebuilder:validation:XIntOrString
+	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+	// +optional
+	InitialStreamWindowSize *resource.Quantity `json:"initialStreamWindowSize,omitempty"`
+
+	// InitialConnectionWindowSize sets the initial window size for HTTP/2 connections.
+	// If not set, the default value is 1 MiB.
+	//
+	// +kubebuilder:validation:XIntOrString
+	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+	// +optional
+	InitialConnectionWindowSize *resource.Quantity `json:"initialConnectionWindowSize,omitempty"`
+
+	// MaxConcurrentStreams sets the maximum number of concurrent streams allowed per connection.
+	// If not set, the default value is 100.
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2147483647
+	// +optional
+	MaxConcurrentStreams *uint32 `json:"maxConcurrentStreams,omitempty"`
+
+	// OnInvalidMessage determines if Envoy will terminate the connection or just the offending stream in the event of HTTP messaging error
+	// It's recommended for L2 Envoy deployments to set this value to TerminateStream.
+	// https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/level_two
+	// Default: TerminateConnection
+	// +optional
+	OnInvalidMessage *InvalidMessageAction `json:"onInvalidMessage,omitempty"`
+}
