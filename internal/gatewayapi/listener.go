@@ -313,7 +313,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 				}
 
 				// TODO: how to get authority from the backendRefs?
-				ds, err := t.processBackendRefs(sink.ALS.BackendRefs, envoyproxy.Namespace, resources, envoyproxy)
+				ds, traffic, err := t.processBackendRefs(sink.ALS.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
 				if err != nil {
 					return nil, err
 				}
@@ -324,6 +324,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 						Name:     fmt.Sprintf("accesslog_als_%d_%d", i, j), // TODO: rename this, so that we can share backend with tracing?
 						Settings: ds,
 					},
+					Traffic:    traffic,
 					Type:       sink.ALS.Type,
 					CELMatches: validExprs,
 				}
@@ -350,20 +351,20 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					continue
 				}
 
+				// TODO: how to get authority from the backendRefs?
+				ds, traffic, err := t.processBackendRefs(sink.OpenTelemetry.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
+				if err != nil {
+					return nil, err
+				}
 				// TODO: remove support for Host/Port in v1.2
 				al := &ir.OpenTelemetryAccessLog{
 					CELMatches: validExprs,
 					Resources:  sink.OpenTelemetry.Resources,
-				}
-
-				// TODO: how to get authority from the backendRefs?
-				ds, err := t.processBackendRefs(sink.OpenTelemetry.BackendRefs, envoyproxy.Namespace, resources, envoyproxy)
-				if err != nil {
-					return nil, err
-				}
-				al.Destination = ir.RouteDestination{
-					Name:     fmt.Sprintf("accesslog_otel_%d_%d", i, j), // TODO: rename this, so that we can share backend with tracing?
-					Settings: ds,
+					Destination: ir.RouteDestination{
+						Name:     fmt.Sprintf("accesslog_otel_%d_%d", i, j), // TODO: rename this, so that we can share backend with tracing?
+						Settings: ds,
+					},
+					Traffic: traffic,
 				}
 
 				if len(ds) == 0 {
@@ -401,7 +402,7 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 	tracing := envoyproxy.Spec.Telemetry.Tracing
 
 	// TODO: how to get authority from the backendRefs?
-	ds, err := t.processBackendRefs(tracing.Provider.BackendRefs, envoyproxy.Namespace, resources, envoyproxy)
+	ds, traffic, err := t.processBackendRefs(tracing.Provider.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
 	if err != nil {
 		return nil, err
 	}
@@ -440,6 +441,7 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 			Settings: ds,
 		},
 		Provider: tracing.Provider,
+		Traffic:  traffic,
 	}, nil
 }
 
@@ -455,7 +457,7 @@ func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy, resources *Re
 			continue
 		}
 
-		_, err := t.processBackendRefs(sink.OpenTelemetry.BackendRefs, envoyproxy.Namespace, resources, envoyproxy)
+		_, _, err := t.processBackendRefs(sink.OpenTelemetry.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
 		if err != nil {
 			return nil, err
 		}
@@ -467,25 +469,29 @@ func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy, resources *Re
 	}, nil
 }
 
-func (t *Translator) processBackendRefs(backendRefs []egv1a1.BackendRef, namespace string, resources *Resources, envoyProxy *egv1a1.EnvoyProxy) ([]*ir.DestinationSetting, error) {
-	result := make([]*ir.DestinationSetting, 0, len(backendRefs))
-	for _, ref := range backendRefs {
+func (t *Translator) processBackendRefs(backendCluster egv1a1.BackendCluster, namespace string, resources *Resources, envoyProxy *egv1a1.EnvoyProxy) ([]*ir.DestinationSetting, *ir.TrafficFeatures, error) {
+	traffic, err := translateTrafficFeatures(backendCluster.BackendSettings)
+	if err != nil {
+		return nil, nil, err
+	}
+	result := make([]*ir.DestinationSetting, 0, len(backendCluster.BackendRefs))
+	for _, ref := range backendCluster.BackendRefs {
 		ns := NamespaceDerefOr(ref.Namespace, namespace)
 		kind := KindDerefOr(ref.Kind, KindService)
 		if kind != KindService {
-			return nil, errors.New("only service kind is supported for backendRefs")
+			return nil, nil, errors.New("only service kind is supported for backendRefs")
 		}
 		if err := validateBackendService(ref.BackendObjectReference, resources, ns, corev1.ProtocolTCP); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		ds := t.processServiceDestinationSetting(ref.BackendObjectReference, ns, ir.TCP, resources, envoyProxy)
 		result = append(result, ds)
 	}
 	if len(result) == 0 {
-		return nil, nil
+		return nil, traffic, nil
 	}
-	return result, nil
+	return result, traffic, nil
 }
 
 func destinationSettingFromHostAndPort(host string, port uint32) []*ir.DestinationSetting {

@@ -23,6 +23,9 @@ const (
 )
 
 func buildIRHTTP2Settings(http2Settings *egv1a1.HTTP2Settings) (*ir.HTTP2Settings, error) {
+	if http2Settings == nil {
+		return nil, nil
+	}
 	var (
 		http2 = &ir.HTTP2Settings{}
 		errs  error
