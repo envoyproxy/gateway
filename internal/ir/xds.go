@@ -571,6 +571,8 @@ type HTTPRoute struct {
 	UseClientProtocol *bool `json:"useClientProtocol,omitempty" yaml:"useClientProtocol,omitempty"`
 	// Metadata is used to enrich envoy route metadata with user and provider-specific information
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	// SessionPersistence holds the configuration for session persistence.
+	SessionPersistence *SessionPersistence `json:"sessionPersistence,omitempty" yaml:"sessionPersistence,omitempty"`
 }
 
 // DNS contains configuration options for DNS resolution.
@@ -580,6 +582,33 @@ type DNS struct {
 	DNSRefreshRate *metav1.Duration `json:"dnsRefreshRate,omitempty"`
 	// RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.
 	RespectDNSTTL *bool `json:"respectDnsTtl,omitempty"`
+}
+
+// SessionPersistence defines the desired state of SessionPersistence.
+// +k8s:deepcopy-gen=true
+type SessionPersistence struct {
+	// Cookie defines the configuration for cookie-based session persistence.
+	// Either Cookie or Header must be non-empty.
+	Cookie *CookieBasedSessionPersistence `json:"cookie,omitempty" yaml:"cookie,omitempty"`
+	// Header defines the configuration for header-based session persistence.
+	// Either Cookie or Header must be non-empty.
+	Header *HeaderBasedSessionPersistence `json:"header,omitempty" yaml:"header,omitempty"`
+}
+
+// CookieBasedSessionPersistence defines the configuration for cookie-based session persistence.
+// +k8s:deepcopy-gen=true
+type CookieBasedSessionPersistence struct {
+	// Name defines the name of the persistent session token.
+	Name string `json:"name"`
+
+	TTL *metav1.Duration `json:"ttl,omitempty" yaml:"ttl,omitempty"`
+}
+
+// HeaderBasedSessionPersistence defines the configuration for header-based session persistence.
+// +k8s:deepcopy-gen=true
+type HeaderBasedSessionPersistence struct {
+	// Name defines the name of the persistent session token.
+	Name string `json:"name"`
 }
 
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.
