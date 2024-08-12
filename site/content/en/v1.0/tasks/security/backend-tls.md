@@ -42,7 +42,7 @@ subjectAltName = @alt_names
 [alt_names]
 DNS.1 = www.example.com
 EOF
-````
+```
 
 Then create a certificate using this openssl configuration file:
 
