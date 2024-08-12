@@ -25,11 +25,30 @@ Create a root certificate and private key to sign certificates:
 openssl req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 -subj '/O=example Inc./CN=example.com' -keyout ca.key -out ca.crt
 ```
 
-Create a certificate and a private key for `www.example.com`:
+Create a certificate and a private key for `www.example.com`.
+
+First, create an openssl configuration file:
 
 ```shell
-openssl req -out www.example.com.csr -newkey rsa:2048 -nodes -keyout www.example.com.key -subj "/CN=www.example.com/O=example organization" -addext "subjectAltName = DNS:www.example.com"
-openssl x509 -req -days 365 -CA ca.crt -CAkey ca.key -set_serial 0 -in www.example.com.csr -out www.example.com.crt
+cat > openssl.conf  <<EOF
+[req]
+req_extensions = v3_req
+prompt = no
+
+[v3_req]
+keyUsage = keyEncipherment, digitalSignature
+extendedKeyUsage = serverAuth
+subjectAltName = @alt_names
+[alt_names]
+DNS.1 = www.example.com
+EOF
+````
+
+Then create a certificate using this openssl configuration file:
+
+```shell
+openssl req -out www.example.com.csr -newkey rsa:2048 -nodes -keyout www.example.com.key -subj "/CN=www.example.com/O=example organization"
+openssl x509 -req -days 365 -CA ca.crt -CAkey ca.key -set_serial 0 -in www.example.com.csr -out www.example.com.crt -extfile openssl.conf -extensions v3_req
 ```
 
 Note that the certificate must contain a DNS SAN for the relevant domain.
