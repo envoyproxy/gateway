@@ -121,8 +121,8 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `timeout` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  | Timeout defines the time to wait for a health check response. |
 | `interval` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  | Interval defines the time between active health checks. |
-| `unhealthyThreshold` | _integer_ |  false  | UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy. |
-| `healthyThreshold` | _integer_ |  false  | HealthyThreshold defines the number of healthy health checks required before a backend host is marked healthy. |
+| `unhealthyThreshold` | _[uint32](#uint32)_ |  false  | UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy. |
+| `healthyThreshold` | _[uint32](#uint32)_ |  false  | HealthyThreshold defines the number of healthy health checks required before a backend host is marked healthy. |
 | `type` | _[ActiveHealthCheckerType](#activehealthcheckertype)_ |  true  | Type defines the type of health checker. |
 | `http` | _[HTTPActiveHealthChecker](#httpactivehealthchecker)_ |  false  | HTTP defines the configuration of http health checker.<br />It's required while the health checker type is HTTP. |
 | `tcp` | _[TCPActiveHealthChecker](#tcpactivehealthchecker)_ |  false  | TCP defines the configuration of tcp health checker.<br />It's required while the health checker type is TCP. |
@@ -362,6 +362,7 @@ _Appears in:_
 | `name` | _[ObjectName](#objectname)_ |  true  | Name is the name of the referent. |
 | `namespace` | _[Namespace](#namespace)_ |  false  | Namespace is the namespace of the backend. When unspecified, the local<br />namespace is inferred.<br /><br />Note that when a namespace different than the local namespace is specified,<br />a ReferenceGrant object is required in the referent namespace to allow that<br />namespace's owner to accept the reference. See the ReferenceGrant<br />documentation for details.<br /><br />Support: Core |
 | `port` | _[PortNumber](#portnumber)_ |  false  | Port specifies the destination port number to use for this resource.<br />Port is required when the referent is a Kubernetes Service. In this<br />case, the port number is the service port number, not the target port.<br />For other resources, destination port might be derived from the referent<br />resource or this field. |
+| `priority` | _[uint32](#uint32)_ |  true  | Priority is optional. If not specified, the default will be the highest priority (0).<br />Typically, endpoints with the highest priority (0) are utilized.<br />If there are insufficient available or healthy endpoints at a given priority level, Envoy will automatically fail over to the next priority group. |
 
 
 #### BackendSpec
@@ -2559,9 +2560,9 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `splitExternalLocalOriginErrors` | _boolean_ |  false  | SplitExternalLocalOriginErrors enables splitting of errors between external and local origin. |
 | `interval` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  | Interval defines the time between passive health checks. |
-| `consecutiveLocalOriginFailures` | _integer_ |  false  | ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.<br />Parameter takes effect only when split_external_local_origin_errors is set to true. |
-| `consecutiveGatewayErrors` | _integer_ |  false  | ConsecutiveGatewayErrors sets the number of consecutive gateway errors triggering ejection. |
-| `consecutive5XxErrors` | _integer_ |  false  | Consecutive5xxErrors sets the number of consecutive 5xx errors triggering ejection. |
+| `consecutiveLocalOriginFailures` | _[uint32](#uint32)_ |  false  | ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.<br />Parameter takes effect only when split_external_local_origin_errors is set to true. |
+| `consecutiveGatewayErrors` | _[uint32](#uint32)_ |  false  | ConsecutiveGatewayErrors sets the number of consecutive gateway errors triggering ejection. |
+| `consecutive5XxErrors` | _[uint32](#uint32)_ |  false  | Consecutive5xxErrors sets the number of consecutive 5xx errors triggering ejection. |
 | `baseEjectionTime` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  | BaseEjectionTime defines the base duration for which a host will be ejected on consecutive failures. |
 | `maxEjectionPercent` | _integer_ |  false  | MaxEjectionPercent sets the maximum percentage of hosts in a cluster that can be ejected. |
 
@@ -2938,7 +2939,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `samplingRate` | _integer_ |  false  | SamplingRate controls the rate at which traffic will be<br />selected for tracing if no prior sampling decision has been made.<br />Defaults to 100, valid values [0-100]. 100 indicates 100% sampling. |
+| `samplingRate` | _[uint32](#uint32)_ |  false  | SamplingRate controls the rate at which traffic will be<br />selected for tracing if no prior sampling decision has been made.<br />Defaults to 100, valid values [0-100]. 100 indicates 100% sampling. |
 | `customTags` | _object (keys:string, values:[CustomTag](#customtag))_ |  true  | CustomTags defines the custom tags to add to each span.<br />If provider is kubernetes, pod name and namespace are added by default. |
 | `provider` | _[TracingProvider](#tracingprovider)_ |  true  | Provider defines the tracing provider. |
 
@@ -3112,7 +3113,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `samplingRate` | _integer_ |  false  | SamplingRate controls the rate at which traffic will be<br />selected for tracing if no prior sampling decision has been made.<br />Defaults to 100, valid values [0-100]. 100 indicates 100% sampling. |
+| `samplingRate` | _[uint32](#uint32)_ |  false  | SamplingRate controls the rate at which traffic will be<br />selected for tracing if no prior sampling decision has been made.<br />Defaults to 100, valid values [0-100]. 100 indicates 100% sampling. |
 | `provider` | _[RateLimitTracingProvider](#ratelimittracingprovider)_ |  true  | Provider defines the rateLimit tracing provider.<br />Only OpenTelemetry is supported currently. |
 
 
@@ -3820,7 +3821,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `numTrustedHops` | _integer_ |  false  | NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP<br />headers to trust when determining the origin client's IP address.<br />Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for<br />for more details. |
+| `numTrustedHops` | _[uint32](#uint32)_ |  false  | NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP<br />headers to trust when determining the origin client's IP address.<br />Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for<br />for more details. |
 
 
 #### ZipkinTracingProvider
