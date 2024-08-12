@@ -438,7 +438,7 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 			weight = 1
 		}
 		locality.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: weight}
-
+		locality.Priority = ptr.Deref(ds.Priority, 0)
 		localities = append(localities, locality)
 	}
 	return &endpointv3.ClusterLoadAssignment{ClusterName: clusterName, Endpoints: localities}
