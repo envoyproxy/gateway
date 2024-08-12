@@ -908,7 +908,7 @@ func translateEarlyRequestHeaderModifier(headerModifier *gwapiv1.HTTPHeaderFilte
 				continue
 			}
 			// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
-			if strings.Contains(string(addHeader.Name), "/") || strings.Contains(string(addHeader.Name), ":") {
+			if strings.ContainsAny(string(addHeader.Name), "/:") {
 				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaderModifier Filter cannot set headers with a '/' or ':' character in them. Header: %q", string(addHeader.Name)))
 				continue
 			}
@@ -948,7 +948,7 @@ func translateEarlyRequestHeaderModifier(headerModifier *gwapiv1.HTTPHeaderFilte
 				continue
 			}
 			// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
-			if strings.Contains(string(setHeader.Name), "/") || strings.Contains(string(setHeader.Name), ":") {
+			if strings.ContainsAny(string(setHeader.Name), "/:") {
 				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaderModifier cannot set headers with a '/' or ':' character in them. Header: '%s'", string(setHeader.Name)))
 				continue
 			}
