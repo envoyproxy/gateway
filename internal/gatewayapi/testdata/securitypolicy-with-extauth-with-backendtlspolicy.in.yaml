@@ -119,11 +119,8 @@ referenceGrants:
         - group: gateway.envoyproxy.io
           kind: SecurityPolicy
           namespace: default
-        - group: gateway.networking.k8s.io
-          kind: BackendTLSPolicy
-          namespace: default
       to:
-        - group: ''
+        - group: ""
           kind: Service
 configMaps:
   - apiVersion: v1
@@ -157,18 +154,17 @@ backendTLSPolicies:
     kind: BackendTLSPolicy
     metadata:
       name: policy-btls-http
-      namespace: default
+      namespace: envoy-gateway
     spec:
-      targetRef:
-        group: ''
-        kind: Service
-        name: http-backend
-        namespace: envoy-gateway
-        sectionName: "80"
-      tls:
-        caCertRefs:
+      targetRefs:
+        - group: ""
+          kind: Service
+          name: http-backend
+          sectionName: "80"
+      validation:
+        caCertificateRefs:
           - name: ca-cmap
-            group: ''
+            group: ""
             kind: ConfigMap
         hostname: http-backend
   - apiVersion: gateway.networking.k8s.io/v1alpha2
@@ -177,15 +173,15 @@ backendTLSPolicies:
       name: policy-btls-grpc
       namespace: default
     spec:
-      targetRef:
-        group: ''
-        kind: Service
-        name: grpc-backend
-        sectionName: "9000"
-      tls:
-        caCertRefs:
+      targetRefs:
+        - group: ""
+          kind: Service
+          name: grpc-backend
+          sectionName: "9000"
+      validation:
+        caCertificateRefs:
           - name: ca-cmap
-            group: ''
+            group: ""
             kind: ConfigMap
         hostname: grpc-backend
 securityPolicies:
@@ -199,13 +195,12 @@ securityPolicies:
         group: gateway.networking.k8s.io
         kind: Gateway
         name: gateway-1
-        namespace: default
       extAuth:
         http:
-          backendRef:
-            Name: http-backend
-            Namespace: envoy-gateway
-            Port: 80
+          backendRefs:
+            - Name: http-backend
+              Namespace: envoy-gateway
+              Port: 80
           Path: /auth
           headersToBackend:
             - header1
@@ -221,13 +216,12 @@ securityPolicies:
         group: gateway.networking.k8s.io
         kind: HTTPRoute
         name: httproute-1
-        namespace: default
       extAuth:
         headersToExtAuth:
           - header1
           - header2
         grpc:
-          backendRef:
-            name: grpc-backend
-            port: 9000
+          backendRefs:
+            - name: grpc-backend
+              port: 9000
         failOpen: true

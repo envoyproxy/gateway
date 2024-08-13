@@ -25,10 +25,8 @@ import (
 	xdstranslatorrunner "github.com/envoyproxy/gateway/internal/xds/translator/runner"
 )
 
-var (
-	// cfgPath is the path to the EnvoyGateway configuration file.
-	cfgPath string
-)
+// cfgPath is the path to the EnvoyGateway configuration file.
+var cfgPath string
 
 // getServerCommand returns the server cobra command to be executed.
 func getServerCommand() *cobra.Command {

@@ -4,14 +4,8 @@ description: "This section tells the development of
  Envoy Gateway Documents."
 ---
 
-{{% alert title="Note" color="warning" %}}
-We migrated from ***Sphinx*** to ***Hugo*** for Envoy Gateway Documents.
-
-Read blog: [Welcome to new website!](/blog/2023/10/08/welcome-to-new-website/)
-{{% /alert %}}
-
-The documentation for the Envoy Gateway lives in the `site/content/en` directory. Any
-individual document can be written using [Markdown].
+The documentation for the Envoy Gateway lives in the `site/content/en` directory (the Chinese content in the `site/content/zh` directory).
+Any individual document can be written using [Markdown].
 
 ## Documentation Structure
 
@@ -53,8 +47,7 @@ make docs-release TAG=v0.6.0
 
 This will update the VERSION file at the project root, which records current release version,
 and it will be used in the pages version context and binary version output. Also, this will generate
-new dir `site/content/en/v0.6.0`, which contains docs at v0.6.0 and updates artifact links to `v0.6.0`
-in all files under `site/content/en/v0.6.0/user`, like `quickstart.md`, `http-routing.md` and etc.
+new dir `site/content/en/v0.6.0`, which contains docs at v0.6.0，like `/api`, `/install` and etc.
 
 ## Publishing Docs
 

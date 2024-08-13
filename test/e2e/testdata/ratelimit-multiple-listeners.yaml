@@ -36,11 +36,10 @@ metadata:
   name: ratelimit-all-ips
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: cidr-ratelimit
-    namespace: gateway-conformance-infra
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: cidr-ratelimit
   rateLimit:
     type: Global
     global:
@@ -48,7 +47,7 @@ spec:
         - clientSelectors:
             - sourceCIDR:
                 value: 0.0.0.0/0
-                type: distinct
+                type: Distinct
           limit:
             requests: 3
             unit: Hour

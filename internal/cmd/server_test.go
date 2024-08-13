@@ -71,5 +71,4 @@ func TestGetConfigValidate(t *testing.T) {
 			}
 		})
 	}
-
 }

@@ -16,30 +16,23 @@ import (
 	"testing"
 	"time"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
-
 	"fortio.org/fortio/periodic"
-
-	"github.com/envoyproxy/gateway/internal/gatewayapi"
-	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/conformance/utils/config"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
-)
 
-func init() {
-	UpgradeTests = append(UpgradeTests, EnvoyShutdownTest)
-}
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
+)
 
 var EnvoyShutdownTest = suite.ConformanceTest{
 	ShortName:   "EnvoyShutdown",
@@ -132,15 +125,15 @@ func restartProxyAndWaitForRollout(t *testing.T, timeoutConfig config.TimeoutCon
 	const egRestartAnnotation = "gateway.envoyproxy.io/restartedAt"
 	restartTime := time.Now().Format(time.RFC3339)
 	ctx := context.Background()
-	ep := v1alpha1.EnvoyProxy{}
+	ep := egv1a1.EnvoyProxy{}
 	if err := c.Get(context.Background(), epNN, &ep); err != nil {
 		return err
 	}
 
 	jsonData := fmt.Sprintf("{\"metadata\": {\"annotations\": {\"gateway.envoyproxy.io/restartedAt\": \"%s\"}}, \"spec\": {\"template\": {\"metadata\": {\"annotations\": {\"gateway.envoyproxy.io/restartedAt\": \"%s\"}}}}}", restartTime, restartTime)
 
-	ep.Spec.Provider.Kubernetes.EnvoyDeployment.Patch = &v1alpha1.KubernetesPatchSpec{
-		Value: v1.JSON{
+	ep.Spec.Provider.Kubernetes.EnvoyDeployment.Patch = &egv1a1.KubernetesPatchSpec{
+		Value: apiextensionsv1.JSON{
 			Raw: []byte(jsonData),
 		},
 	}

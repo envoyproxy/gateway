@@ -129,7 +129,6 @@ func TestGeneratedValidKubeCerts(t *testing.T) {
 			require.NoErrorf(t, err, "Validating %s failed", tc.name)
 		})
 	}
-
 }
 
 func verifyCert(certPEM []byte, roots *x509.CertPool, dnsname string, currentTime time.Time) error {

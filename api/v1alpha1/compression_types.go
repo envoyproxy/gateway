@@ -13,8 +13,7 @@ type CompressorType string
 // GzipCompressor defines the config for the Gzip compressor.
 // The default values can be found here:
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/gzip/compressor/v3/gzip.proto#extension-envoy-compression-gzip-compressor
-type GzipCompressor struct {
-}
+type GzipCompressor struct{}
 
 // Compression defines the config of enabling compression.
 // This can help reduce the bandwidth at the expense of higher CPU.

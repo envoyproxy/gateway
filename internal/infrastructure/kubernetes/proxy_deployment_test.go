@@ -47,7 +47,7 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
 
-	r := proxy.NewResourceRender(cfg.Namespace, infra.GetProxyInfra())
+	r := proxy.NewResourceRender(cfg.Namespace, infra.GetProxyInfra(), cfg.EnvoyGateway)
 	deploy, err := r.Deployment()
 	require.NoError(t, err)
 
@@ -119,7 +119,7 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 			}
 
 			kube := NewInfra(cli, cfg)
-			r := proxy.NewResourceRender(kube.Namespace, tc.in.GetProxyInfra())
+			r := proxy.NewResourceRender(kube.Namespace, tc.in.GetProxyInfra(), cfg.EnvoyGateway)
 			err := kube.createOrUpdateDeployment(context.Background(), r)
 			require.NoError(t, err)
 
@@ -162,7 +162,7 @@ func TestDeleteProxyDeployment(t *testing.T) {
 			infra := ir.NewInfra()
 			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
-			r := proxy.NewResourceRender(kube.Namespace, infra.GetProxyInfra())
+			r := proxy.NewResourceRender(kube.Namespace, infra.GetProxyInfra(), kube.EnvoyGateway)
 
 			err := kube.createOrUpdateDeployment(context.Background(), r)
 			require.NoError(t, err)

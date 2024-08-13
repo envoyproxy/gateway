@@ -14,10 +14,11 @@
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tcp-route-weighted-backend-dest
-        statPrefix: passthrough
+        statPrefix: tls-passthrough-10080
+    name: tcp-route-weighted-backend
   listenerFilters:
   - name: envoy.filters.listener.tls_inspector
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
-  name: tcp-route-weighted-backend
+  name: tcp-listener-weighted-backend
   perConnectionBufferLimitBytes: 32768

@@ -114,6 +114,7 @@ type RateLimitSelectCondition struct {
 	SourceCIDR *SourceMatch `json:"sourceCIDR,omitempty"`
 }
 
+// +kubebuilder:validation:Enum=Exact;Distinct
 type SourceMatchType string
 
 const (

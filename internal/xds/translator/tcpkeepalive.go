@@ -62,5 +62,4 @@ func buildTCPSocketOptions(keepAlive *ir.TCPKeepalive) []*corev3.SocketOption {
 	}
 
 	return socketOptions
-
 }

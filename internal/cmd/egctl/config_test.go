@@ -156,7 +156,8 @@ func TestExtractSubResourcesConfigDump(t *testing.T) {
 			output:       "yaml",
 			resourceType: BootstrapEnvoyConfigType,
 			expected:     "out.bootstrap.yaml",
-		}, {
+		},
+		{
 			output:       "json",
 			resourceType: ClusterEnvoyConfigType,
 			expected:     "out.cluster.json",
@@ -165,7 +166,8 @@ func TestExtractSubResourcesConfigDump(t *testing.T) {
 			output:       "yaml",
 			resourceType: ClusterEnvoyConfigType,
 			expected:     "out.cluster.yaml",
-		}, {
+		},
+		{
 			output:       "json",
 			resourceType: ListenerEnvoyConfigType,
 			expected:     "out.listener.json",
@@ -174,7 +176,8 @@ func TestExtractSubResourcesConfigDump(t *testing.T) {
 			output:       "yaml",
 			resourceType: ListenerEnvoyConfigType,
 			expected:     "out.listener.yaml",
-		}, {
+		},
+		{
 			output:       "json",
 			resourceType: RouteEnvoyConfigType,
 			expected:     "out.route.json",
@@ -303,7 +306,6 @@ func (f *fakeCLIClient) Kube() kubernetes.Interface {
 }
 
 func TestFetchRunningRateLimitPods(t *testing.T) {
-
 	cases := []struct {
 		caseName      string
 		rlPods        []corev1.Pod
@@ -363,23 +365,18 @@ func TestFetchRunningRateLimitPods(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-
 		t.Run(tc.caseName, func(t *testing.T) {
-
 			fakeCli := &fakeCLIClient{
 				pods: tc.rlPods,
 			}
 
 			_, err := fetchRunningRateLimitPods(fakeCli, tc.namespace, tc.labelSelector)
 			require.Equal(t, tc.expectErr, err)
-
 		})
-
 	}
 }
 
 func TestCheckEnableGlobalRateLimit(t *testing.T) {
-
 	cases := []struct {
 		caseName    string
 		egConfigMap *corev1.ConfigMap
@@ -433,9 +430,7 @@ gateway:
 	}
 
 	for _, tc := range cases {
-
 		t.Run(tc.caseName, func(t *testing.T) {
-
 			fakeCli := &fakeCLIClient{
 				cm: tc.egConfigMap,
 			}
@@ -443,14 +438,11 @@ gateway:
 			actual, err := checkEnableGlobalRateLimit(fakeCli)
 			require.Equal(t, tc.expect, actual)
 			require.NoError(t, err)
-
 		})
-
 	}
 }
 
 func TestExtractRateLimitConfig(t *testing.T) {
-
 	cases := []struct {
 		caseName     string
 		responseBody []byte
@@ -467,23 +459,18 @@ func TestExtractRateLimitConfig(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-
 		t.Run(tc.caseName, func(t *testing.T) {
-
 			fw, err := newFakePortForwarder(tc.responseBody)
 			require.NoError(t, err)
 
 			out, err := extractRateLimitConfig(fw, tc.rlPod)
 			require.NoError(t, err)
 			require.NotEmpty(t, out)
-
 		})
-
 	}
 }
 
 func TestCheckRateLimitPodStatusReady(t *testing.T) {
-
 	cases := []struct {
 		caseName string
 		status   corev1.PodStatus
@@ -538,5 +525,4 @@ func TestCheckRateLimitPodStatusReady(t *testing.T) {
 			require.Equal(t, tc.expect, actual)
 		})
 	}
-
 }

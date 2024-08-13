@@ -135,6 +135,5 @@ var PreserveCaseTest = suite.ConformanceTest{
 				t.Errorf("case was not preserved for test header: %+v", respBody)
 			}
 		})
-
 	},
 }

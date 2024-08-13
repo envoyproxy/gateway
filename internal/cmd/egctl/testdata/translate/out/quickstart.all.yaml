@@ -98,16 +98,17 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        name: eg
+        namespace: envoy-gateway-system
+        sectionName: http
       name: envoy-gateway-system/eg/http
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/envoy-gateway-system/backend/rule/0
           settings:
           - endpoints:
@@ -117,6 +118,10 @@ xdsIR:
             weight: 1
         hostname: www.example.com
         isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: backend
+          namespace: envoy-gateway-system
         name: httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com
         pathMatch:
           distinct: false

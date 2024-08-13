@@ -18,17 +18,33 @@ import (
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gwv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
 )
 
-// supportedTypes list all the resource types that status command supports.
-var supportedTypes = []string{
-	"GatewayClass", "Gateway", "HTTPRoute", "GRPCRoute",
-	"TLSRoute", "TCPRoute", "UDPRoute", "BackendTLSPolicy",
-	"BackendTrafficPolicy", "ClientTrafficPolicy", "EnvoyPatchPolicy", "SecurityPolicy",
+var (
+	supportedXRouteTypes = []string{
+		gatewayapi.KindHTTPRoute, gatewayapi.KindGRPCRoute, gatewayapi.KindTCPRoute,
+		gatewayapi.KindUDPRoute, gatewayapi.KindTLSRoute,
+	}
+
+	supportedXPolicyTypes = []string{
+		gatewayapi.KindBackendTLSPolicy, gatewayapi.KindBackendTrafficPolicy, gatewayapi.KindClientTrafficPolicy,
+		gatewayapi.KindSecurityPolicy, gatewayapi.KindEnvoyPatchPolicy, gatewayapi.KindEnvoyExtensionPolicy,
+	}
+
+	supportedAllTypes = []string{
+		gatewayapi.KindGatewayClass, gatewayapi.KindGateway,
+	}
+)
+
+func init() {
+	supportedAllTypes = append(supportedAllTypes, supportedXRouteTypes...)
+	supportedAllTypes = append(supportedAllTypes, supportedXPolicyTypes...)
 }
 
 func newStatusCommand() *cobra.Command {
@@ -40,7 +56,7 @@ func newStatusCommand() *cobra.Command {
 	statusCommand := &cobra.Command{
 		Use:   "status",
 		Short: "Show the summary of the status of resources in Envoy Gateway",
-		Example: `  # Show the status of gatewayclass resources under default namespace.
+		Example: `  # Show the status of gatewayclass resources.
   egctl x status gatewayclass
 
   # Show the status of gateway resources with less information under default namespace.
@@ -52,8 +68,8 @@ func newStatusCommand() *cobra.Command {
   # Show the status of httproute resources with details under a specific namespace.
   egctl x status httproute -v -n foobar
 
-  # Show the status of httproute resources under all namespaces.
-  egctl x status httproute -A
+  # Show the status of all route resources under all namespaces.
+  egctl x status xroute -A
 
   # Show the status of all resources under all namespaces.
   egctl x status all -A
@@ -74,14 +90,29 @@ func newStatusCommand() *cobra.Command {
 				return fmt.Errorf("invalid args: must specific a resources type")
 			}
 
-			if resourceType == "all" {
-				for _, rt := range supportedTypes {
+			switch strings.ToLower(resourceType) {
+			case "all":
+				for _, rt := range supportedAllTypes {
 					if err = runStatus(ctx, k8sClient, rt, namespace, quiet, verbose, allNamespaces, true, true); err != nil {
 						return err
 					}
 				}
 				return nil
-			} else {
+			case "xroute":
+				for _, rt := range supportedXRouteTypes {
+					if err = runStatus(ctx, k8sClient, rt, namespace, quiet, verbose, allNamespaces, true, true); err != nil {
+						return err
+					}
+				}
+				return nil
+			case "xpolicy":
+				for _, rt := range supportedXPolicyTypes {
+					if err = runStatus(ctx, k8sClient, rt, namespace, quiet, verbose, allNamespaces, true, true); err != nil {
+						return err
+					}
+				}
+				return nil
+			default:
 				return runStatus(ctx, k8sClient, resourceType, namespace, quiet, verbose, allNamespaces, false, false)
 			}
 		},
@@ -99,17 +130,18 @@ func newStatusTableWriter(out io.Writer) *tabwriter.Writer {
 	return tabwriter.NewWriter(out, 10, 0, 3, ' ', 0)
 }
 
-func writeStatusTable(table *tabwriter.Writer, headers []string, bodies [][]string) {
-	fmt.Fprintln(table, strings.Join(headers, "\t"))
-	for _, body := range bodies {
-		fmt.Fprintln(table, strings.Join(body, "\t"))
+func writeStatusTable(table *tabwriter.Writer, header []string, body [][]string) {
+	fmt.Fprintln(table, strings.Join(header, "\t"))
+	for _, b := range body {
+		fmt.Fprintln(table, strings.Join(b, "\t"))
 	}
 }
 
 // runStatus find and write the summary table of status for a specific resource type.
-func runStatus(ctx context.Context, cli client.Client, resourceType, namespace string, quiet, verbose, allNamespaces, ignoreEmpty, typedName bool) error {
+func runStatus(ctx context.Context, cli client.Client, inputResourceType, namespace string, quiet, verbose, allNamespaces, ignoreEmpty, typedName bool) error {
 	var (
 		resourcesList client.ObjectList
+		resourceKind  string
 		table         = newStatusTableWriter(os.Stdout)
 	)
 
@@ -117,62 +149,70 @@ func runStatus(ctx context.Context, cli client.Client, resourceType, namespace s
 		namespace = ""
 	}
 
-	switch strings.ToLower(resourceType) {
+	switch strings.ToLower(inputResourceType) {
 	case "gc", "gatewayclass":
-		gc := gwv1.GatewayClassList{}
+		gc := gwapiv1.GatewayClassList{}
 		if err := cli.List(ctx, &gc, client.InNamespace(namespace)); err != nil {
 			return err
 		}
 		resourcesList = &gc
+		resourceKind = gatewayapi.KindGatewayClass
 
 	case "gtw", "gateway":
-		gtw := gwv1.GatewayList{}
+		gtw := gwapiv1.GatewayList{}
 		if err := cli.List(ctx, &gtw, client.InNamespace(namespace)); err != nil {
 			return err
 		}
 		resourcesList = &gtw
+		resourceKind = gatewayapi.KindGateway
 
 	case "httproute":
-		httproute := gwv1.HTTPRouteList{}
+		httproute := gwapiv1.HTTPRouteList{}
 		if err := cli.List(ctx, &httproute, client.InNamespace(namespace)); err != nil {
 			return err
 		}
 		resourcesList = &httproute
+		resourceKind = gatewayapi.KindHTTPRoute
 
 	case "grpcroute":
-		grpcroute := gwv1a2.GRPCRouteList{}
+		grpcroute := gwapiv1.GRPCRouteList{}
 		if err := cli.List(ctx, &grpcroute, client.InNamespace(namespace)); err != nil {
 			return err
 		}
 		resourcesList = &grpcroute
+		resourceKind = gatewayapi.KindGRPCRoute
 
 	case "tcproute":
-		tcproute := gwv1a2.TCPRouteList{}
+		tcproute := gwapiv1a2.TCPRouteList{}
 		if err := cli.List(ctx, &tcproute, client.InNamespace(namespace)); err != nil {
 			return err
 		}
 		resourcesList = &tcproute
+		resourceKind = gatewayapi.KindTCPRoute
 
 	case "udproute":
-		udproute := gwv1a2.UDPRouteList{}
+		udproute := gwapiv1a2.UDPRouteList{}
 		if err := cli.List(ctx, &udproute, client.InNamespace(namespace)); err != nil {
 			return err
 		}
 		resourcesList = &udproute
+		resourceKind = gatewayapi.KindUDPRoute
 
 	case "tlsroute":
-		tlsroute := gwv1a2.TLSRouteList{}
+		tlsroute := gwapiv1a2.TLSRouteList{}
 		if err := cli.List(ctx, &tlsroute, client.InNamespace(namespace)); err != nil {
 			return err
 		}
 		resourcesList = &tlsroute
+		resourceKind = gatewayapi.KindTLSRoute
 
 	case "btlspolicy", "backendtlspolicy":
-		btlspolicy := gwv1a2.BackendTLSPolicyList{}
+		btlspolicy := gwapiv1a3.BackendTLSPolicyList{}
 		if err := cli.List(ctx, &btlspolicy, client.InNamespace(namespace)); err != nil {
 			return err
 		}
 		resourcesList = &btlspolicy
+		resourceKind = gatewayapi.KindBackendTLSPolicy
 
 	case "btp", "backendtrafficpolicy":
 		btp := egv1a1.BackendTrafficPolicyList{}
@@ -180,6 +220,7 @@ func runStatus(ctx context.Context, cli client.Client, resourceType, namespace s
 			return err
 		}
 		resourcesList = &btp
+		resourceKind = gatewayapi.KindBackendTrafficPolicy
 
 	case "ctp", "clienttrafficpolicy":
 		ctp := egv1a1.ClientTrafficPolicyList{}
@@ -187,6 +228,7 @@ func runStatus(ctx context.Context, cli client.Client, resourceType, namespace s
 			return err
 		}
 		resourcesList = &ctp
+		resourceKind = gatewayapi.KindClientTrafficPolicy
 
 	case "epp", "envoypatchpolicy":
 		epp := egv1a1.EnvoyPatchPolicyList{}
@@ -194,6 +236,15 @@ func runStatus(ctx context.Context, cli client.Client, resourceType, namespace s
 			return err
 		}
 		resourcesList = &epp
+		resourceKind = gatewayapi.KindEnvoyPatchPolicy
+
+	case "eep", "envoyextensionpolicy":
+		eep := egv1a1.EnvoyExtensionPolicyList{}
+		if err := cli.List(ctx, &eep, client.InNamespace(namespace)); err != nil {
+			return err
+		}
+		resourcesList = &eep
+		resourceKind = gatewayapi.KindEnvoyExtensionPolicy
 
 	case "sp", "securitypolicy":
 		sp := egv1a1.SecurityPolicyList{}
@@ -201,9 +252,11 @@ func runStatus(ctx context.Context, cli client.Client, resourceType, namespace s
 			return err
 		}
 		resourcesList = &sp
+		resourceKind = gatewayapi.KindSecurityPolicy
 
 	default:
-		return fmt.Errorf("unknown resource type: %s, supported types are: %s", resourceType, strings.Join(supportedTypes, ","))
+		return fmt.Errorf("unknown input resource type: %s, supported input types are: %s",
+			inputResourceType, strings.Join(supportedAllTypes, ", "))
 	}
 
 	namespaced, err := cli.IsObjectNamespaced(resourcesList)
@@ -212,17 +265,14 @@ func runStatus(ctx context.Context, cli client.Client, resourceType, namespace s
 	}
 
 	needNamespaceHeader := allNamespaces && namespaced
-	headers := fetchStatusHeaders(verbose, needNamespaceHeader)
-	bodies, err := fetchStatusBodies(resourcesList, resourceType, quiet, verbose, needNamespaceHeader, typedName)
-	if err != nil {
-		return err
-	}
+	header := fetchStatusHeader(resourceKind, verbose, needNamespaceHeader)
+	body := fetchStatusBody(resourcesList, resourceKind, quiet, verbose, needNamespaceHeader, typedName)
 
-	if ignoreEmpty && len(bodies) == 0 {
+	if ignoreEmpty && len(body) == 0 {
 		return nil
 	}
 
-	writeStatusTable(table, headers, bodies)
+	writeStatusTable(table, header, body)
 	if err = table.Flush(); err != nil {
 		return err
 	}
@@ -235,38 +285,68 @@ func runStatus(ctx context.Context, cli client.Client, resourceType, namespace s
 	return nil
 }
 
-func fetchStatusHeaders(verbose, needNamespace bool) []string {
-	headers := []string{"NAME", "TYPE", "STATUS", "REASON"}
-
+// extendStatusHeader extends header in the way of:
+//   - Insert `NAMESPACE` at first if needed
+//   - Append various details if verbose is on
+func extendStatusHeader(header []string, verbose, needNamespace bool) []string {
 	if needNamespace {
-		headers = append([]string{"NAMESPACE"}, headers...)
+		header = append([]string{"NAMESPACE"}, header...)
 	}
 	if verbose {
-		headers = append(headers, []string{"MESSAGE", "OBSERVED GENERATION", "LAST TRANSITION TIME"}...)
+		header = append(header, []string{"MESSAGE", "OBSERVED GENERATION", "LAST TRANSITION TIME"}...)
 	}
 
-	return headers
+	return header
 }
 
-func fetchStatusBodies(resourcesList client.ObjectList, resourceType string, quiet, verbose, needNamespace, typedName bool) ([][]string, error) {
-	v := reflect.ValueOf(resourcesList).Elem()
-
-	itemsField := v.FieldByName("Items")
-	if !itemsField.IsValid() {
-		return nil, fmt.Errorf("failed to load `.Items` field from %s", resourceType)
+// extendStatusBodyWithNamespaceAndName extends current body with namespace and name at head.
+func extendStatusBodyWithNamespaceAndName(body [][]string, namespace, name string, needNamespace bool) [][]string {
+	for i := 0; i < len(body); i++ {
+		if needNamespace {
+			body[i] = append([]string{namespace, name}, body[i]...)
+		} else {
+			body[i] = append([]string{name}, body[i]...)
+		}
+		// Only display once for the first row.
+		namespace, name = "", ""
 	}
+	return body
+}
 
-	var body [][]string
+func kindName(kind, name string) string {
+	return strings.ToLower(kind) + "/" + name
+}
+
+func fetchStatusHeader(resourceKind string, verbose, needNamespace bool) (header []string) {
+	defaultHeader := []string{"NAME", "TYPE", "STATUS", "REASON"}
+	xRouteHeader := []string{"NAME", "PARENT", "TYPE", "STATUS", "REASON"}
+	xPolicyHeader := []string{"NAME", "ANCESTOR REFERENCE", "TYPE", "STATUS", "REASON"}
+
+	switch {
+	case strings.HasSuffix(resourceKind, "Route"):
+		return extendStatusHeader(xRouteHeader, verbose, needNamespace)
+	case strings.HasSuffix(resourceKind, "Policy"):
+		return extendStatusHeader(xPolicyHeader, verbose, needNamespace)
+	default:
+		return extendStatusHeader(defaultHeader, verbose, needNamespace)
+	}
+}
+
+func fetchStatusBody(resourcesList client.ObjectList, resourceKind string, quiet, verbose, needNamespace, typedName bool) (body [][]string) {
+	v := reflect.ValueOf(resourcesList).Elem()
+	itemsField := v.FieldByName("Items")
+
 	for i := 0; i < itemsField.Len(); i++ {
-		item := itemsField.Index(i)
+		var (
+			name, namespace string
+			rows            [][]string
+			item            = itemsField.Index(i)
+			nameField       = item.FieldByName("Name")
+			statusField     = item.FieldByName("Status")
+		)
 
-		// There's no need to check whether Name, Namespace and Kind field is valid,
-		// since all the objects in ObjectList are implemented k8s Object interface.
-		var name, namespace string
-		nameField := item.FieldByName("Name")
 		if typedName {
-			kindField := item.FieldByName("Kind")
-			name = strings.ToLower(kindField.String()) + "/" + nameField.String()
+			name = kindName(resourceKind, nameField.String())
 		} else {
 			name = nameField.String()
 		}
@@ -276,86 +356,73 @@ func fetchStatusBodies(resourcesList client.ObjectList, resourceType string, qui
 			namespace = namespaceField.String()
 		}
 
-		statusField := item.FieldByName("Status")
-		if !statusField.IsValid() {
-			return nil, fmt.Errorf("failed to find `.Items[i].Status` field from %s", resourceType)
-		}
-
-		// Different resources store the conditions at different position.
-		switch strings.ToLower(resourceType) {
-		case "httproute", "grpcroute", "tlsroute", "tcproute", "udproute":
-			// Scrape conditions from `Resource.Status.Parents[i].Conditions` field
+		switch {
+		// For xRoute, the conditions are storing in `Resource.Status.Parents[i].Conditions`.
+		case strings.HasSuffix(resourceKind, "Route"):
 			parentsField := statusField.FieldByName("Parents")
-			if !parentsField.IsValid() {
-				return nil, fmt.Errorf("failed to find `.Items[i].Status.Parents` field from %s", resourceType)
-			}
-
 			for j := 0; j < parentsField.Len(); j++ {
 				parentItem := parentsField.Index(j)
-				rows, err := fetchConditionsField(parentItem, resourceType, name, namespace, quiet, verbose, needNamespace)
-				if err != nil {
-					return nil, err
+				conditions := fetchConditions(parentItem, quiet, verbose)
+
+				// Extend conditions with parent.
+				parentRef := parentItem.FieldByName("ParentRef")
+				parentName := kindName(
+					parentRef.FieldByName("Kind").Elem().String(),
+					parentRef.FieldByName("Name").String(),
+				)
+				for k := 0; k < len(conditions); k++ {
+					conditions[k] = append([]string{parentName}, conditions[k]...)
+					parentName = ""
 				}
 
-				body = append(body, rows...)
+				rows = append(rows, conditions...)
 			}
 
-		case "btlspolicy", "backendtlspolicy":
-			// Scrape conditions from `Resource.Status.Ancestors[i].Conditions` field
+		// For xPolicy, the conditions are storing in `Resource.Status.Ancestors[i].Conditions`.
+		case strings.HasSuffix(resourceKind, "Policy"):
 			ancestorsField := statusField.FieldByName("Ancestors")
-			if !ancestorsField.IsValid() {
-				return nil, fmt.Errorf("failed to find `.Items[i].Status.Ancestors` field from %s", resourceType)
-			}
-
 			for j := 0; j < ancestorsField.Len(); j++ {
-				ancestorItem := ancestorsField.Index(j)
-				rows, err := fetchConditionsField(ancestorItem, resourceType, name, namespace, quiet, verbose, needNamespace)
-				if err != nil {
-					return nil, err
+				policyAncestorStatus := ancestorsField.Index(j)
+				conditions := fetchConditions(policyAncestorStatus, quiet, verbose)
+
+				// Extend conditions with ancestor.
+				ancestorRef := policyAncestorStatus.FieldByName("AncestorRef")
+				ancestorName := kindName(
+					ancestorRef.FieldByName("Kind").Elem().String(),
+					ancestorRef.FieldByName("Name").String(),
+				)
+				for k := 0; k < len(conditions); k++ {
+					conditions[k] = append([]string{ancestorName}, conditions[k]...)
+					ancestorName = ""
 				}
 
-				body = append(body, rows...)
+				rows = append(rows, conditions...)
 			}
 
+		// For others, the conditions are storing in `Resource.Status.Conditions`.
 		default:
-			// Scrape conditions from `Resource.Status.Conditions` field
-			rows, err := fetchConditionsField(statusField, resourceType, name, namespace, quiet, verbose, needNamespace)
-			if err != nil {
-				return nil, err
-			}
-
-			body = append(body, rows...)
+			conditions := fetchConditions(statusField, quiet, verbose)
+			rows = append(rows, conditions...)
 		}
+
+		rows = extendStatusBodyWithNamespaceAndName(rows, namespace, name, needNamespace)
+		body = append(body, rows...)
 	}
 
-	return body, nil
+	return body
 }
 
-func fetchConditionsField(parent reflect.Value, resourceType, name, namespace string, quiet, verbose, needNamespace bool) ([][]string, error) {
-	conditionsField := parent.FieldByName("Conditions")
-	if !conditionsField.IsValid() {
-		return nil, fmt.Errorf("failed to find `Conditions` field for %s", resourceType)
-	}
-
-	conditions, ok := conditionsField.Interface().([]metav1.Condition)
-	if !ok {
-		return nil, fmt.Errorf("failed to convert `Conditions` field to type `[]metav1.Condition`")
-	}
-
-	rows := fetchConditions(conditions, name, namespace, quiet, verbose, needNamespace)
-	return rows, nil
-}
-
-func fetchConditions(conditions []metav1.Condition, name, namespace string, quiet, verbose, needNamespace bool) [][]string {
+// fetchConditions fetches conditions from the `Conditions` field of parent
+// by calling fetchCondition for each condition.
+func fetchConditions(parent reflect.Value, quiet, verbose bool) [][]string {
 	var rows [][]string
 
-	// Sort in descending order by time of each condition.
-	for i := len(conditions) - 1; i >= 0; i-- {
-		if i < len(conditions)-1 {
-			name, namespace = "", ""
-		}
+	conditionsField := parent.FieldByName("Conditions")
+	conditions := conditionsField.Interface().([]metav1.Condition)
 
-		row := fetchCondition(conditions[i], name, namespace, verbose, needNamespace)
+	// All conditions are sorted in descending order by time.
+	for i := len(conditions) - 1; i >= 0; i-- {
+		row := fetchCondition(conditions[i], verbose)
 		rows = append(rows, row)
 
 		if quiet {
@@ -366,13 +433,11 @@ func fetchConditions(conditions []metav1.Condition, name, namespace string, quie
 	return rows
 }
 
-func fetchCondition(condition metav1.Condition, name, namespace string, verbose, needNamespace bool) []string {
-	row := []string{name, condition.Type, string(condition.Status), condition.Reason}
+// fetchCondition fetches the Type, Status, Reason of one condition, and more if verbose.
+func fetchCondition(condition metav1.Condition, verbose bool) []string {
+	row := []string{condition.Type, string(condition.Status), condition.Reason}
 
-	// Write conditions corresponding to its headers.
-	if needNamespace {
-		row = append([]string{namespace}, row...)
-	}
+	// Write more details about this condition if verbose is on.
 	if verbose {
 		row = append(row, []string{
 			condition.Message,

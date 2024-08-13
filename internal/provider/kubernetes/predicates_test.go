@@ -21,9 +21,10 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes/test"
 )
@@ -33,34 +34,34 @@ import (
 func TestGatewayClassHasMatchingController(t *testing.T) {
 	testCases := []struct {
 		name   string
-		obj    client.Object
+		gc     *gwapiv1.GatewayClass
 		client client.Client
 		expect bool
 	}{
 		{
 			name:   "matching controller name",
-			obj:    test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
+			gc:     test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 			expect: true,
 		},
 		{
 			name:   "non-matching controller name",
-			obj:    test.GetGatewayClass("test-gc", "not.configured/controller", nil),
+			gc:     test.GetGatewayClass("test-gc", "not.configured/controller", nil),
 			expect: false,
 		},
 	}
 
 	// Create the reconciler.
-	logger := logging.DefaultLogger(v1alpha1.LogLevelInfo)
+	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
-		classController: v1alpha1.GatewayControllerName,
+		classController: egv1a1.GatewayControllerName,
 		log:             logger,
 	}
 
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			res := r.hasMatchingController(tc.obj)
+			res := r.hasMatchingController(tc.gc)
 			require.Equal(t, tc.expect, res)
 		})
 	}
@@ -103,13 +104,13 @@ func TestGatewayClassHasMatchingNamespaceLabels(t *testing.T) {
 		},
 	}
 
-	logger := logging.DefaultLogger(v1alpha1.LogLevelInfo)
+	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
 
 	for _, tc := range testCases {
 		tc := tc
 
 		r := gatewayAPIReconciler{
-			classController: v1alpha1.GatewayControllerName,
+			classController: egv1a1.GatewayControllerName,
 			namespaceLabel:  &metav1.LabelSelector{MatchExpressions: matchExpressions(tc.namespaceLabels, metav1.LabelSelectorOpExists, []string{})},
 			log:             logger,
 			client: fakeclient.NewClientBuilder().
@@ -150,7 +151,7 @@ func TestValidateGatewayForReconcile(t *testing.T) {
 	}{
 		{
 			name:    "references class with matching controller name",
-			configs: []client.Object{test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil)},
+			configs: []client.Object{test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil)},
 			gateway: test.GetGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc", 8080),
 			expect:  true,
 		},
@@ -163,10 +164,10 @@ func TestValidateGatewayForReconcile(t *testing.T) {
 	}
 
 	// Create the reconciler.
-	logger := logging.DefaultLogger(v1alpha1.LogLevelInfo)
+	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
-		classController: v1alpha1.GatewayControllerName,
+		classController: egv1a1.GatewayControllerName,
 		log:             logger,
 	}
 
@@ -183,6 +184,21 @@ func TestValidateGatewayForReconcile(t *testing.T) {
 // TestValidateSecretForReconcile tests the validateSecretForReconcile
 // predicate function.
 func TestValidateSecretForReconcile(t *testing.T) {
+	mtlsEnabledEnvoyProxyConfig := &egv1a1.EnvoyProxy{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "mtls-settings",
+		},
+		Spec: egv1a1.EnvoyProxySpec{
+			BackendTLS: &egv1a1.BackendTLSConfig{
+				ClientCertificateRef: &gwapiv1.SecretObjectReference{
+					Kind: gatewayapi.KindPtr("Secret"),
+					Name: "client-tls-certificate",
+				},
+				TLSSettings: egv1a1.TLSSettings{},
+			},
+		},
+	}
 	testCases := []struct {
 		name    string
 		configs []client.Object
@@ -190,9 +206,24 @@ func TestValidateSecretForReconcile(t *testing.T) {
 		expect  bool
 	}{
 		{
+			name: "envoy proxy references a secret",
+			configs: []client.Object{
+				test.GetGatewayClass("test-secret-ref", egv1a1.GatewayControllerName, &test.GroupKindNamespacedName{
+					Group:     gwapiv1.Group(mtlsEnabledEnvoyProxyConfig.GroupVersionKind().Group),
+					Kind:      gwapiv1.Kind(mtlsEnabledEnvoyProxyConfig.Kind),
+					Namespace: gwapiv1.Namespace(mtlsEnabledEnvoyProxyConfig.Namespace),
+					Name:      gwapiv1.ObjectName(mtlsEnabledEnvoyProxyConfig.Name),
+				}),
+				test.GetSecret(types.NamespacedName{Namespace: mtlsEnabledEnvoyProxyConfig.Namespace, Name: "client-tls-certificate"}),
+				mtlsEnabledEnvoyProxyConfig,
+			},
+			secret: test.GetSecret(types.NamespacedName{Namespace: mtlsEnabledEnvoyProxyConfig.Namespace, Name: "client-tls-certificate"}),
+			expect: true,
+		},
+		{
 			name: "references valid gateway",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 				test.GetSecureGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc", test.GroupKindNamespacedName{
 					Kind: gatewayapi.KindSecret,
 					Name: "secret",
@@ -216,21 +247,23 @@ func TestValidateSecretForReconcile(t *testing.T) {
 		{
 			name: "references SecurityPolicy OIDC",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 				test.GetGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc", 8080),
-				&v1alpha1.SecurityPolicy{
+				&egv1a1.SecurityPolicy{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "oidc",
 					},
-					Spec: v1alpha1.SecurityPolicySpec{
-						TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-							PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-								Kind: "Gateway",
-								Name: "scheduled-status-test",
+					Spec: egv1a1.SecurityPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
+								},
 							},
 						},
-						OIDC: &v1alpha1.OIDC{
-							Provider: v1alpha1.OIDCProvider{
+						OIDC: &egv1a1.OIDC{
+							Provider: egv1a1.OIDCProvider{
 								Issuer:                "https://accounts.google.com",
 								AuthorizationEndpoint: ptr.To("https://accounts.google.com/o/oauth2/v2/auth"),
 								TokenEndpoint:         ptr.To("https://oauth2.googleapis.com/token"),
@@ -249,20 +282,22 @@ func TestValidateSecretForReconcile(t *testing.T) {
 		{
 			name: "references SecurityPolicy Basic Auth",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 				test.GetGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc", 8080),
-				&v1alpha1.SecurityPolicy{
+				&egv1a1.SecurityPolicy{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "basic-auth",
 					},
-					Spec: v1alpha1.SecurityPolicySpec{
-						TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-							PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-								Kind: "Gateway",
-								Name: "scheduled-status-test",
+					Spec: egv1a1.SecurityPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
+								},
 							},
 						},
-						BasicAuth: &v1alpha1.BasicAuth{
+						BasicAuth: &egv1a1.BasicAuth{
 							Users: gwapiv1b1.SecretObjectReference{
 								Name: "secret",
 							},
@@ -276,18 +311,59 @@ func TestValidateSecretForReconcile(t *testing.T) {
 		{
 			name: "secret is not referenced by any EG CRs",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 			},
 			secret: test.GetSecret(types.NamespacedName{Name: "secret"}),
 			expect: false,
 		},
+		{
+			name: "references EnvoyExtensionPolicy Wasm OCI Image",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				test.GetGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc", 8080),
+				&egv1a1.EnvoyExtensionPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "wasm-oci",
+					},
+					Spec: egv1a1.EnvoyExtensionPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRefs: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+								{
+									LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+										Kind: "Gateway",
+										Name: "scheduled-status-test",
+									},
+								},
+							},
+						},
+						Wasm: []egv1a1.Wasm{
+							{
+								Name:   ptr.To("wasm-filter"),
+								RootID: ptr.To("my_root_id"),
+								Code: egv1a1.WasmCodeSource{
+									Type: egv1a1.ImageWasmCodeSourceType,
+									Image: &egv1a1.ImageWasmCodeSource{
+										URL: "https://example.com/testwasm:v1.0.0",
+										PullSecretRef: &gwapiv1b1.SecretObjectReference{
+											Name: "secret",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			secret: test.GetSecret(types.NamespacedName{Name: "secret"}),
+			expect: true,
+		},
 	}
 
 	// Create the reconciler.
-	logger := logging.DefaultLogger(v1alpha1.LogLevelInfo)
+	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
-		classController: v1alpha1.GatewayControllerName,
+		classController: egv1a1.GatewayControllerName,
 		log:             logger,
 	}
 
@@ -297,7 +373,9 @@ func TestValidateSecretForReconcile(t *testing.T) {
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).
 			WithIndex(&gwapiv1.Gateway{}, secretGatewayIndex, secretGatewayIndexFunc).
-			WithIndex(&v1alpha1.SecurityPolicy{}, secretSecurityPolicyIndex, secretSecurityPolicyIndexFunc).
+			WithIndex(&egv1a1.SecurityPolicy{}, secretSecurityPolicyIndex, secretSecurityPolicyIndexFunc).
+			WithIndex(&egv1a1.EnvoyProxy{}, secretEnvoyProxyIndex, secretEnvoyProxyIndexFunc).
+			WithIndex(&egv1a1.EnvoyExtensionPolicy{}, secretEnvoyExtensionPolicyIndex, secretEnvoyExtensionPolicyIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateSecretForReconcile(tc.secret)
@@ -320,7 +398,7 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 		{
 			name: "route service but no routes exist",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 				sampleGateway,
 			},
 			endpointSlice: test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "service"),
@@ -329,7 +407,7 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 		{
 			name: "http route service routes exist, but endpointslice is associated with another service",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 				sampleGateway,
 				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", types.NamespacedName{Name: "service"}, 80),
 			},
@@ -339,7 +417,7 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 		{
 			name: "http route service routes exist",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 				sampleGateway,
 				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", types.NamespacedName{Name: "service"}, 80),
 			},
@@ -349,10 +427,10 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 	}
 
 	// Create the reconciler.
-	logger := logging.DefaultLogger(v1alpha1.LogLevelInfo)
+	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
-		classController: v1alpha1.GatewayControllerName,
+		classController: egv1a1.GatewayControllerName,
 		log:             logger,
 	}
 
@@ -362,7 +440,7 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).
 			WithIndex(&gwapiv1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc).
-			WithIndex(&gwapiv1a2.GRPCRoute{}, backendGRPCRouteIndex, backendGRPCRouteIndexFunc).
+			WithIndex(&gwapiv1.GRPCRoute{}, backendGRPCRouteIndex, backendGRPCRouteIndexFunc).
 			WithIndex(&gwapiv1a2.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc).
 			WithIndex(&gwapiv1a2.TCPRoute{}, backendTCPRouteIndex, backendTCPRouteIndexFunc).
 			WithIndex(&gwapiv1a2.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc).
@@ -379,6 +457,76 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 func TestValidateServiceForReconcile(t *testing.T) {
 	sampleGateway := test.GetGateway(types.NamespacedName{Namespace: "default", Name: "scheduled-status-test"}, "test-gc", 8080)
 	mergeGatewaysConfig := test.GetEnvoyProxy(types.NamespacedName{Namespace: "default", Name: "merge-gateways-config"}, true)
+	telemetryEnabledGatewaysConfig := &egv1a1.EnvoyProxy{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "telemetry",
+		},
+		Spec: egv1a1.EnvoyProxySpec{
+			Telemetry: &egv1a1.ProxyTelemetry{
+				AccessLog: &egv1a1.ProxyAccessLog{
+					Settings: []egv1a1.ProxyAccessLogSetting{
+						{
+							Sinks: []egv1a1.ProxyAccessLogSink{
+								{
+									Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
+									OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
+										BackendCluster: egv1a1.BackendCluster{
+											BackendRefs: []egv1a1.BackendRef{
+												{
+													BackendObjectReference: gwapiv1.BackendObjectReference{
+														Name:      "otel-collector",
+														Namespace: ptr.To(gwapiv1.Namespace("default")),
+														Port:      ptr.To(gwapiv1.PortNumber(4317)),
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				Metrics: &egv1a1.ProxyMetrics{
+					Sinks: []egv1a1.ProxyMetricSink{
+						{
+							Type: egv1a1.MetricSinkTypeOpenTelemetry,
+							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name:      "otel-collector",
+												Namespace: ptr.To(gwapiv1.Namespace("default")),
+												Port:      ptr.To(gwapiv1.PortNumber(4317)),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				Tracing: &egv1a1.ProxyTracing{
+					Provider: egv1a1.TracingProvider{
+						Type: egv1a1.TracingProviderTypeOpenTelemetry,
+						BackendCluster: egv1a1.BackendCluster{
+							BackendRefs: []egv1a1.BackendRef{
+								{
+									BackendObjectReference: gwapiv1.BackendObjectReference{
+										Name:      "otel-collector",
+										Namespace: ptr.To(gwapiv1.Namespace("default")),
+										Port:      ptr.To(gwapiv1.PortNumber(4317)),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
 
 	testCases := []struct {
 		name    string
@@ -389,7 +537,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 		{
 			name: "gateway service but deployment does not exist",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 				sampleGateway,
 			},
 			service: test.GetService(types.NamespacedName{Name: "service"}, map[string]string{
@@ -401,9 +549,9 @@ func TestValidateServiceForReconcile(t *testing.T) {
 		{
 			name: "gateway service deployment also exist",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 				sampleGateway,
-				test.GetGatewayDeployment(types.NamespacedName{Name: infraName(sampleGateway, false)}, nil),
+				test.GetGatewayDeployment(types.NamespacedName{Name: proxy.ExpectedResourceHashedName("default/scheduled-status-test")}, nil),
 			},
 			service: test.GetService(types.NamespacedName{Name: "service"}, map[string]string{
 				gatewayapi.OwningGatewayNameLabel:      "scheduled-status-test",
@@ -416,7 +564,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 		{
 			name: "route service but no routes exist",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 				sampleGateway,
 			},
 			service: test.GetService(types.NamespacedName{Name: "service"}, nil, nil),
@@ -425,7 +573,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 		{
 			name: "http route service routes exist",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 				sampleGateway,
 				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", types.NamespacedName{Name: "service"}, 80),
 			},
@@ -438,7 +586,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			// in which case we'll have to reconcile the bad config, and remove listeners accordingly.
 			name: "route service routes exist but with non-existing gateway reference",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", types.NamespacedName{Name: "service"}, 80),
 			},
 			service: test.GetService(types.NamespacedName{Name: "service"}, nil, nil),
@@ -447,7 +595,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 		{
 			name: "grpc route service routes exist",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 				sampleGateway,
 				test.GetGRPCRoute(types.NamespacedName{Name: "grpcroute-test"}, "scheduled-status-test", types.NamespacedName{Name: "service"}, 80),
 			},
@@ -457,7 +605,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 		{
 			name: "tls route service routes exist",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 				sampleGateway,
 				test.GetTLSRoute(types.NamespacedName{Name: "tlsroute-test"}, "scheduled-status-test",
 					types.NamespacedName{Name: "service"}, 443),
@@ -468,7 +616,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 		{
 			name: "udp route service routes exist",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 				sampleGateway,
 				test.GetUDPRoute(types.NamespacedName{Name: "udproute-test"}, "scheduled-status-test",
 					types.NamespacedName{Name: "service"}, 80),
@@ -479,7 +627,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 		{
 			name: "tcp route service routes exist",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 				sampleGateway,
 				test.GetTCPRoute(types.NamespacedName{Name: "tcproute-test"}, "scheduled-status-test",
 					types.NamespacedName{Name: "service"}, 80),
@@ -488,23 +636,59 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			expect:  true,
 		},
 		{
+			name: "service referenced by EnvoyProxy updated",
+			configs: []client.Object{
+				test.GetGatewayClass("test-mg", egv1a1.GatewayControllerName, &test.GroupKindNamespacedName{
+					Group:     gwapiv1.Group(telemetryEnabledGatewaysConfig.GroupVersionKind().Group),
+					Kind:      gwapiv1.Kind(telemetryEnabledGatewaysConfig.Kind),
+					Namespace: gwapiv1.Namespace(telemetryEnabledGatewaysConfig.Namespace),
+					Name:      gwapiv1.ObjectName(telemetryEnabledGatewaysConfig.Name),
+				}),
+				telemetryEnabledGatewaysConfig,
+			},
+			service: test.GetService(types.NamespacedName{Name: "otel-collector", Namespace: "default"}, nil, nil),
+			expect:  true,
+		},
+		{
+			name: "service referenced by EnvoyProxy unrelated",
+			configs: []client.Object{
+				test.GetGatewayClass("test-mg", egv1a1.GatewayControllerName, &test.GroupKindNamespacedName{
+					Group:     gwapiv1.Group(telemetryEnabledGatewaysConfig.GroupVersionKind().Group),
+					Kind:      gwapiv1.Kind(telemetryEnabledGatewaysConfig.Kind),
+					Namespace: gwapiv1.Namespace(telemetryEnabledGatewaysConfig.Namespace),
+					Name:      gwapiv1.ObjectName(telemetryEnabledGatewaysConfig.Name),
+				}),
+				telemetryEnabledGatewaysConfig,
+			},
+			service: test.GetService(types.NamespacedName{Name: "otel-collector-unrelated", Namespace: "default"}, nil, nil),
+			expect:  false,
+		},
+		{
 			name: "service referenced by SecurityPolicy ExtAuth HTTP service",
 			configs: []client.Object{
-				&v1alpha1.SecurityPolicy{
+				&egv1a1.SecurityPolicy{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "ext-auth-http",
 					},
-					Spec: v1alpha1.SecurityPolicySpec{
-						TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-							PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-								Kind: "Gateway",
-								Name: "scheduled-status-test",
+					Spec: egv1a1.SecurityPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
+								},
 							},
 						},
-						ExtAuth: &v1alpha1.ExtAuth{
-							HTTP: &v1alpha1.HTTPExtAuthService{
-								BackendRef: gwapiv1.BackendObjectReference{
-									Name: "ext-auth-http-service",
+						ExtAuth: &egv1a1.ExtAuth{
+							HTTP: &egv1a1.HTTPExtAuthService{
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "ext-auth-http-service",
+											},
+										},
+									},
 								},
 							},
 						},
@@ -515,24 +699,65 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			expect:  true,
 		},
 		{
+			name: "service referenced by SecurityPolicy ExtAuth GRPC service",
+			configs: []client.Object{
+				&egv1a1.SecurityPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "ext-auth-http",
+					},
+					Spec: egv1a1.SecurityPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
+								},
+							},
+						},
+						ExtAuth: &egv1a1.ExtAuth{
+							GRPC: &egv1a1.GRPCExtAuthService{
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "ext-auth-grpc-service",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			service: test.GetService(types.NamespacedName{Name: "ext-auth-grpc-service"}, nil, nil),
+			expect:  true,
+		},
+		{
 			name: "service referenced by EnvoyExtensionPolicy ExtPrc GRPC service",
 			configs: []client.Object{
-				&v1alpha1.EnvoyExtensionPolicy{
+				&egv1a1.EnvoyExtensionPolicy{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "ext-proc",
 					},
-					Spec: v1alpha1.EnvoyExtensionPolicySpec{
-						TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-							PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-								Kind: "Gateway",
-								Name: "scheduled-status-test",
+					Spec: egv1a1.EnvoyExtensionPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
+								},
 							},
 						},
-						ExtProc: []v1alpha1.ExtProc{
+						ExtProc: []egv1a1.ExtProc{
 							{
-								BackendRef: v1alpha1.ExtProcBackendRef{
-									BackendObjectReference: gwapiv1.BackendObjectReference{
-										Name: "ext-proc-service",
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "ext-proc-service",
+											},
+										},
 									},
 								},
 							},
@@ -546,22 +771,28 @@ func TestValidateServiceForReconcile(t *testing.T) {
 		{
 			name: "service referenced by EnvoyExtensionPolicy ExtPrc GRPC service unrelated",
 			configs: []client.Object{
-				&v1alpha1.EnvoyExtensionPolicy{
+				&egv1a1.EnvoyExtensionPolicy{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "ext-proc",
 					},
-					Spec: v1alpha1.EnvoyExtensionPolicySpec{
-						TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-							PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-								Kind: "Gateway",
-								Name: "scheduled-status-test",
+					Spec: egv1a1.EnvoyExtensionPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
+								},
 							},
 						},
-						ExtProc: []v1alpha1.ExtProc{
+						ExtProc: []egv1a1.ExtProc{
 							{
-								BackendRef: v1alpha1.ExtProcBackendRef{
-									BackendObjectReference: gwapiv1.BackendObjectReference{
-										Name: "ext-proc-service",
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "ext-proc-service",
+											},
+										},
 									},
 								},
 							},
@@ -575,7 +806,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 		{
 			name: "update status of all gateways under gatewayclass when MergeGateways enabled",
 			configs: []client.Object{
-				test.GetGatewayClass("test-mg", v1alpha1.GatewayControllerName, &test.GroupKindNamespacedName{
+				test.GetGatewayClass("test-mg", egv1a1.GatewayControllerName, &test.GroupKindNamespacedName{
 					Group:     gwapiv1.Group(mergeGatewaysConfig.GroupVersionKind().Group),
 					Kind:      gwapiv1.Kind(mergeGatewaysConfig.Kind),
 					Namespace: gwapiv1.Namespace(mergeGatewaysConfig.Namespace),
@@ -594,7 +825,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 		{
 			name: "no gateways found under gatewayclass when MergeGateways enabled",
 			configs: []client.Object{
-				test.GetGatewayClass("test-mg", v1alpha1.GatewayControllerName, &test.GroupKindNamespacedName{
+				test.GetGatewayClass("test-mg", egv1a1.GatewayControllerName, &test.GroupKindNamespacedName{
 					Group:     gwapiv1.Group(mergeGatewaysConfig.GroupVersionKind().Group),
 					Kind:      gwapiv1.Kind(mergeGatewaysConfig.Kind),
 					Namespace: gwapiv1.Namespace(mergeGatewaysConfig.Namespace),
@@ -610,10 +841,10 @@ func TestValidateServiceForReconcile(t *testing.T) {
 	}
 
 	// Create the reconciler.
-	logger := logging.DefaultLogger(v1alpha1.LogLevelInfo)
+	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
-		classController: v1alpha1.GatewayControllerName,
+		classController: egv1a1.GatewayControllerName,
 		log:             logger,
 		mergeGateways:   sets.New[string]("test-mg"),
 	}
@@ -624,12 +855,13 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).
 			WithIndex(&gwapiv1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc).
-			WithIndex(&gwapiv1a2.GRPCRoute{}, backendGRPCRouteIndex, backendGRPCRouteIndexFunc).
+			WithIndex(&gwapiv1.GRPCRoute{}, backendGRPCRouteIndex, backendGRPCRouteIndexFunc).
 			WithIndex(&gwapiv1a2.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc).
 			WithIndex(&gwapiv1a2.TCPRoute{}, backendTCPRouteIndex, backendTCPRouteIndexFunc).
 			WithIndex(&gwapiv1a2.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc).
-			WithIndex(&v1alpha1.SecurityPolicy{}, backendSecurityPolicyIndex, backendSecurityPolicyIndexFunc).
-			WithIndex(&v1alpha1.EnvoyExtensionPolicy{}, backendEnvoyExtensionPolicyIndex, backendEnvoyExtensionPolicyIndexFunc).
+			WithIndex(&egv1a1.SecurityPolicy{}, backendSecurityPolicyIndex, backendSecurityPolicyIndexFunc).
+			WithIndex(&egv1a1.EnvoyExtensionPolicy{}, backendEnvoyExtensionPolicyIndex, backendEnvoyExtensionPolicyIndexFunc).
+			WithIndex(&egv1a1.EnvoyProxy{}, backendEnvoyProxyTelemetryIndex, backendEnvoyProxyTelemetryIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateServiceForReconcile(tc.service)
@@ -655,7 +887,7 @@ func TestValidateDeploymentForReconcile(t *testing.T) {
 			// purpose of the Deployment watcher is just for update Gateway object statuses.
 			name: "gateway deployment deployment also exist",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName, nil),
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 				sampleGateway,
 				test.GetService(types.NamespacedName{Name: "deployment"}, map[string]string{
 					gatewayapi.OwningGatewayNameLabel:      "scheduled-status-test",
@@ -671,7 +903,7 @@ func TestValidateDeploymentForReconcile(t *testing.T) {
 		{
 			name: "update status of all gateways under gatewayclass when MergeGateways enabled",
 			configs: []client.Object{
-				test.GetGatewayClass("test-mg", v1alpha1.GatewayControllerName, &test.GroupKindNamespacedName{
+				test.GetGatewayClass("test-mg", egv1a1.GatewayControllerName, &test.GroupKindNamespacedName{
 					Group:     gwapiv1.Group(mergeGatewaysConfig.GroupVersionKind().Group),
 					Kind:      gwapiv1.Kind(mergeGatewaysConfig.Kind),
 					Namespace: gwapiv1.Namespace(mergeGatewaysConfig.Namespace),
@@ -687,7 +919,7 @@ func TestValidateDeploymentForReconcile(t *testing.T) {
 		{
 			name: "no gateways found under gatewayclass when MergeGateways enabled",
 			configs: []client.Object{
-				test.GetGatewayClass("test-mg", v1alpha1.GatewayControllerName, &test.GroupKindNamespacedName{
+				test.GetGatewayClass("test-mg", egv1a1.GatewayControllerName, &test.GroupKindNamespacedName{
 					Group:     gwapiv1.Group(mergeGatewaysConfig.GroupVersionKind().Group),
 					Kind:      gwapiv1.Kind(mergeGatewaysConfig.Kind),
 					Namespace: gwapiv1.Namespace(mergeGatewaysConfig.Namespace),
@@ -706,10 +938,10 @@ func TestValidateDeploymentForReconcile(t *testing.T) {
 	}
 
 	// Create the reconciler.
-	logger := logging.DefaultLogger(v1alpha1.LogLevelInfo)
+	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
-		classController: v1alpha1.GatewayControllerName,
+		classController: egv1a1.GatewayControllerName,
 		log:             logger,
 		mergeGateways:   sets.New[string]("test-mg"),
 	}
@@ -813,10 +1045,10 @@ func TestCheckObjectNamespaceLabels(t *testing.T) {
 	}
 
 	// Create the reconciler.
-	logger := logging.DefaultLogger(v1alpha1.LogLevelInfo)
+	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
-		classController: v1alpha1.GatewayControllerName,
+		classController: egv1a1.GatewayControllerName,
 		log:             logger,
 	}
 

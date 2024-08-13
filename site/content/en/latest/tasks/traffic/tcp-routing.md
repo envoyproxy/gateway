@@ -6,10 +6,9 @@ title: "TCP Routing"
 connections on the port specified by the listener to a set of backends specified by the TCPRoute. To learn more about
 HTTP routing, refer to the [Gateway API documentation][].
 
-## Installation
+## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+{{< boilerplate prerequisites >}}
 
 ## Configuration
 
@@ -22,6 +21,9 @@ In this example two TCP listeners will be applied to the Gateway in order to rou
 TCPRoutes, note that the protocol set for the listeners on the Gateway is TCP:
 
 Install the GatewayClass and a `tcp-gateway` Gateway first.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -54,7 +56,47 @@ spec:
 EOF
 ```
 
-Install two services `foo` and `bar`, which are binded to `backend-1` and `backend-2`.
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resources to your cluster:
+
+```yaml
+---
+kind: GatewayClass
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: tcp-gateway
+spec:
+  gatewayClassName: eg
+  listeners:
+  - name: foo
+    protocol: TCP
+    port: 8088
+    allowedRoutes:
+      kinds:
+      - kind: TCPRoute
+  - name: bar
+    protocol: TCP
+    port: 8089
+    allowedRoutes:
+      kinds:
+      - kind: TCPRoute
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+Install two services `foo` and `bar`, which are bound to `backend-1` and `backend-2`.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -156,7 +198,116 @@ spec:
 EOF
 ```
 
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resources to your cluster:
+
+```yaml
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: foo
+  labels:
+    app: backend-1
+spec:
+  ports:
+    - name: http
+      port: 3001
+      targetPort: 3000
+  selector:
+    app: backend-1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bar
+  labels:
+    app: backend-2
+spec:
+  ports:
+    - name: http
+      port: 3002
+      targetPort: 3000
+  selector:
+    app: backend-2
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend-1
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: backend-1
+        version: v1
+    spec:
+      containers:
+        - image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+          imagePullPolicy: IfNotPresent
+          name: backend-1
+          ports:
+            - containerPort: 3000
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: SERVICE_NAME
+              value: foo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend-2
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: backend-2
+        version: v1
+    spec:
+      containers:
+        - image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+          imagePullPolicy: IfNotPresent
+          name: backend-2
+          ports:
+            - containerPort: 3000
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: SERVICE_NAME
+              value: bar
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 Install two TCPRoutes `tcp-app-1` and `tcp-app-2` with different `sectionName`:
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -187,6 +338,42 @@ spec:
       port: 3002
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resources to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TCPRoute
+metadata:
+  name: tcp-app-1
+spec:
+  parentRefs:
+  - name: tcp-gateway
+    sectionName: foo
+  rules:
+  - backendRefs:
+    - name: foo
+      port: 3001
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TCPRoute
+metadata:
+  name: tcp-app-2
+spec:
+  parentRefs:
+  - name: tcp-gateway
+    sectionName: bar
+  rules:
+  - backendRefs:
+    - name: bar
+      port: 3002
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 In the above example we separate the traffic for the two separate backend TCP Services by using the sectionName field in
 the parentRefs:

@@ -15,7 +15,7 @@ import (
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"sigs.k8s.io/yaml"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 const (
@@ -42,7 +42,7 @@ type ProxyInfra struct {
 	// Name is the name used for managed proxy infrastructure.
 	Name string `json:"name" yaml:"name"`
 	// Config defines user-facing configuration of the managed proxy infrastructure.
-	Config *v1alpha1.EnvoyProxy `json:"config,omitempty" yaml:"config,omitempty"`
+	Config *egv1a1.EnvoyProxy `json:"config,omitempty" yaml:"config,omitempty"`
 	// Listeners define the listeners exposed by the proxy infrastructure.
 	Listeners []*ProxyListener `json:"listeners,omitempty" yaml:"listeners,omitempty"`
 	// Addresses contain the external addresses this gateway has been
@@ -176,9 +176,9 @@ func (p *ProxyInfra) GetProxyMetadata() *InfraMetadata {
 }
 
 // GetProxyConfig returns the ProxyInfra config.
-func (p *ProxyInfra) GetProxyConfig() *v1alpha1.EnvoyProxy {
+func (p *ProxyInfra) GetProxyConfig() *egv1a1.EnvoyProxy {
 	if p.Config == nil {
-		p.Config = new(v1alpha1.EnvoyProxy)
+		p.Config = new(egv1a1.EnvoyProxy)
 	}
 
 	return p.Config
@@ -222,8 +222,8 @@ func (p *ProxyInfra) Validate() error {
 				if listener.Ports[j].ServicePort < 1 || listener.Ports[j].ServicePort > 65353 {
 					errs = append(errs, errors.New("listener service port must be a valid port number"))
 				}
-				if listener.Ports[j].ContainerPort < 1024 || listener.Ports[j].ContainerPort > 65353 {
-					errs = append(errs, errors.New("listener container port must be a valid ephemeral port number"))
+				if listener.Ports[j].ContainerPort < 1 || listener.Ports[j].ContainerPort > 65353 {
+					errs = append(errs, errors.New("listener container port must be a valid port number"))
 				}
 			}
 		}

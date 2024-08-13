@@ -115,7 +115,6 @@ func GetServiceURL(namespace string, dnsDomain string) string {
 
 // LabelSelector returns the string slice form labels used for all envoy rate limit resources.
 func LabelSelector() []string {
-
 	rlLabelMap := rateLimitLabels()
 	retLabels := make([]string, 0, len(rlLabelMap))
 
@@ -138,7 +137,8 @@ func rateLimitLabels() map[string]string {
 
 // expectedRateLimitContainers returns expected rateLimit containers.
 func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeployment *egv1a1.KubernetesDeploymentSpec,
-	namespace string) []corev1.Container {
+	namespace string,
+) []corev1.Container {
 	ports := []corev1.ContainerPort{
 		{
 			Name:          "grpc",
@@ -158,11 +158,11 @@ func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeploymen
 			Env:                      expectedRateLimitContainerEnv(rateLimit, rateLimitDeployment, namespace),
 			Ports:                    ports,
 			Resources:                *rateLimitDeployment.Container.Resources,
-			SecurityContext:          rateLimitDeployment.Container.SecurityContext,
+			SecurityContext:          expectedRateLimitContainerSecurityContext(rateLimitDeployment),
 			VolumeMounts:             expectedContainerVolumeMounts(rateLimit, rateLimitDeployment),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
-			ReadinessProbe: &corev1.Probe{
+			StartupProbe: &corev1.Probe{
 				ProbeHandler: corev1.ProbeHandler{
 					HTTPGet: &corev1.HTTPGetAction{
 						Path:   ReadinessPath,
@@ -173,7 +173,20 @@ func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeploymen
 				TimeoutSeconds:   1,
 				PeriodSeconds:    10,
 				SuccessThreshold: 1,
-				FailureThreshold: 3,
+				FailureThreshold: 30,
+			},
+			ReadinessProbe: &corev1.Probe{
+				ProbeHandler: corev1.ProbeHandler{
+					HTTPGet: &corev1.HTTPGetAction{
+						Path:   ReadinessPath,
+						Port:   intstr.IntOrString{Type: intstr.Int, IntVal: ReadinessPort},
+						Scheme: corev1.URISchemeHTTP,
+					},
+				},
+				TimeoutSeconds:   1,
+				PeriodSeconds:    5,
+				SuccessThreshold: 1,
+				FailureThreshold: 1,
 			},
 		},
 	}
@@ -216,6 +229,8 @@ func promStatsdExporterContainer() corev1.Container {
 		},
 		TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 		TerminationMessagePath:   "/dev/termination-log",
+		SecurityContext:          defaultSecurityContext(),
+		Resources:                *egv1a1.DefaultResourceRequirements(),
 	}
 }
 
@@ -284,12 +299,13 @@ func expectedDeploymentVolumes(rateLimit *egv1a1.RateLimit, rateLimitDeployment 
 		})
 	}
 
-	return resource.ExpectedDeploymentVolumes(rateLimitDeployment.Pod, volumes)
+	return resource.ExpectedVolumes(rateLimitDeployment.Pod, volumes)
 }
 
 // expectedRateLimitContainerEnv returns expected rateLimit container envs.
 func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeployment *egv1a1.KubernetesDeploymentSpec,
-	namespace string) []corev1.EnvVar {
+	namespace string,
+) []corev1.EnvVar {
 	env := []corev1.EnvVar{
 		{
 			Name:  RuntimeRootEnvVar,
@@ -399,7 +415,7 @@ func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 	}
 
 	if enableTracing(rateLimit) {
-		var sampleRate = 1.0
+		sampleRate := 1.0
 		if rateLimit.Telemetry.Tracing.SamplingRate != nil {
 			sampleRate = float64(*rateLimit.Telemetry.Tracing.SamplingRate) / 100.0
 		}
@@ -488,4 +504,19 @@ func checkTraceEndpointScheme(url string) string {
 	}
 
 	return fmt.Sprintf("%s%s", httpScheme, url)
+}
+
+func expectedRateLimitContainerSecurityContext(rateLimitDeployment *egv1a1.KubernetesDeploymentSpec) *corev1.SecurityContext {
+	if rateLimitDeployment.Container.SecurityContext != nil {
+		return rateLimitDeployment.Container.SecurityContext
+	}
+	return defaultSecurityContext()
+}
+
+func defaultSecurityContext() *corev1.SecurityContext {
+	defaultSC := resource.DefaultSecurityContext()
+	// run as non-root user
+	defaultSC.RunAsGroup = ptr.To(int64(65534))
+	defaultSC.RunAsUser = ptr.To(int64(65534))
+	return defaultSC
 }

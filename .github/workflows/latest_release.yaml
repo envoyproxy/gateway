@@ -17,16 +17,58 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # For push event, we run benchmark test here because we need to
+  # include benchmark report in the latest release.
+  benchmark-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
+    - uses: ./tools/github-actions/setup-deps
+
+    - name: Setup Graphviz
+      uses: ts-graphviz/setup-graphviz@v2
+
+    # Benchmark
+    - name: Run Benchmark tests
+      env:
+        KIND_NODE_TAG: v1.28.9
+        IMAGE_PULL_POLICY: IfNotPresent
+        # Args for benchmark test
+        BENCHMARK_RPS: 10000
+        BENCHMARK_CONNECTIONS: 100
+        BENCHMARK_DURATION: 30
+        BENCHMARK_CPU_LIMITS: 1000m
+        BENCHMARK_MEMORY_LIMITS: 2000Mi
+        BENCHMARK_REPORT_DIR: benchmark_report
+      run: make benchmark
+
+    - name: Package benchmark report
+      run: cd test/benchmark && zip -r benchmark_report.zip benchmark_report
+
+    - name: Upload Benchmark Report
+      uses: actions/upload-artifact@v4  # version is better be consistent with actions/download-artifact
+      with:
+        name: benchmark_report
+        path: test/benchmark/benchmark_report.zip
+
   latest-release:
     runs-on: ubuntu-22.04
+    needs: [benchmark-test]
     permissions:
       contents: write
     steps:
-    - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633  # v4.1.2
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
     - uses: ./tools/github-actions/setup-deps
 
     - name: Generate Release Manifests
-      run: make generate-manifests IMAGE=envoyproxy/gateway-dev TAG=latest OUTPUT_DIR=release-artifacts
+      # Use `Always` image pull policy for latest version.
+      run: IMAGE_PULL_POLICY=Always make generate-manifests IMAGE=envoyproxy/gateway-dev TAG=latest OUTPUT_DIR=release-artifacts
+
+    - name: Download Benchmark Report
+      uses: actions/download-artifact@v4
+      with:
+        name: benchmark_report
+        path: release-artifacts
 
     - name: Build egctl latest multiarch binaries
       run: |
@@ -61,7 +103,7 @@ jobs:
         GITHUB_REPOSITORY: ${{ github.repository_owner }}/${{ github.event.repository.name }}
 
     - name: Recreate the Latest Release and Tag
-      uses: softprops/action-gh-release@9d7c94cfd0a1f3ed45544c887983e9fa900f0564  # v0.1.15
+      uses: softprops/action-gh-release@c062e08bd532815e2082a85e87e3ef29c3e6d191  # v0.1.15
       with:
         draft: false
         prerelease: true
@@ -69,6 +111,7 @@ jobs:
         files: |
           release-artifacts/install.yaml
           release-artifacts/quickstart.yaml
+          release-artifacts/benchmark_report.zip
           egctl_latest_linux_amd64.tar.gz
           egctl_latest_linux_arm64.tar.gz
           egctl_latest_darwin_amd64.tar.gz

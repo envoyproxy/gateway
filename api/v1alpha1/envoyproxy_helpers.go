@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
 )
@@ -46,7 +46,7 @@ func DefaultEnvoyProxyHpaMetrics() []autoscalingv2.MetricSpec {
 	return []autoscalingv2.MetricSpec{
 		{
 			Resource: &autoscalingv2.ResourceMetricSource{
-				Name: v1.ResourceCPU,
+				Name: corev1.ResourceCPU,
 				Target: autoscalingv2.MetricTarget{
 					Type:               autoscalingv2.UtilizationMetricType,
 					AverageUtilization: ptr.To[int32](80),
@@ -55,6 +55,23 @@ func DefaultEnvoyProxyHpaMetrics() []autoscalingv2.MetricSpec {
 			Type: autoscalingv2.ResourceMetricSourceType,
 		},
 	}
+}
+
+// NeedToSwitchPorts returns true if the EnvoyProxy needs to switch ports.
+func (e *EnvoyProxy) NeedToSwitchPorts() bool {
+	if e.Spec.Provider == nil {
+		return true
+	}
+
+	if e.Spec.Provider.Kubernetes == nil {
+		return true
+	}
+
+	if e.Spec.Provider.Kubernetes.UseListenerPortAsContainerPort == nil {
+		return true
+	}
+
+	return !*e.Spec.Provider.Kubernetes.UseListenerPortAsContainerPort
 }
 
 // GetEnvoyProxyKubeProvider returns the EnvoyProxyKubernetesProvider of EnvoyProxyProvider or
@@ -70,11 +87,20 @@ func (r *EnvoyProxyProvider) GetEnvoyProxyKubeProvider() *EnvoyProxyKubernetesPr
 		return r.Kubernetes
 	}
 
-	if r.Kubernetes.EnvoyDeployment == nil {
+	// if EnvoyDeployment and EnvoyDaemonSet are both nil, use EnvoyDeployment
+	if r.Kubernetes.EnvoyDeployment == nil && r.Kubernetes.EnvoyDaemonSet == nil {
 		r.Kubernetes.EnvoyDeployment = DefaultKubernetesDeployment(DefaultEnvoyProxyImage)
 	}
 
-	r.Kubernetes.EnvoyDeployment.defaultKubernetesDeploymentSpec(DefaultEnvoyProxyImage)
+	// if use EnvoyDeployment, set default values
+	if r.Kubernetes.EnvoyDeployment != nil {
+		r.Kubernetes.EnvoyDeployment.defaultKubernetesDeploymentSpec(DefaultEnvoyProxyImage)
+	}
+
+	// if use EnvoyDaemonSet, set default values
+	if r.Kubernetes.EnvoyDaemonSet != nil {
+		r.Kubernetes.EnvoyDaemonSet.defaultKubernetesDaemonSetSpec(DefaultEnvoyProxyImage)
+	}
 
 	if r.Kubernetes.EnvoyService == nil {
 		r.Kubernetes.EnvoyService = DefaultKubernetesService()
@@ -123,11 +149,16 @@ func (logging *ProxyLogging) GetEnvoyProxyComponentLevel() string {
 }
 
 // DefaultShutdownManagerContainerResourceRequirements returns a new ResourceRequirements with default settings.
-func DefaultShutdownManagerContainerResourceRequirements() *v1.ResourceRequirements {
-	return &v1.ResourceRequirements{
-		Requests: v1.ResourceList{
-			v1.ResourceCPU:    resource.MustParse(DefaultShutdownManagerCPUResourceRequests),
-			v1.ResourceMemory: resource.MustParse(DefaultShutdownManagerMemoryResourceRequests),
+func DefaultShutdownManagerContainerResourceRequirements() *corev1.ResourceRequirements {
+	return &corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse(DefaultShutdownManagerCPUResourceRequests),
+			corev1.ResourceMemory: resource.MustParse(DefaultShutdownManagerMemoryResourceRequests),
 		},
 	}
+}
+
+// String returns the string representation of the EnvoyFilter type.
+func (f EnvoyFilter) String() string {
+	return string(f)
 }

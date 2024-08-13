@@ -13,7 +13,7 @@ import (
 	api "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	log "github.com/envoyproxy/gateway/internal/logging"
 )
 
@@ -22,7 +22,7 @@ var (
 		return otel.GetMeterProvider().Meter("envoy-gateway")
 	}
 
-	metricsLogger = log.DefaultLogger(v1alpha1.LogLevelInfo).WithName("metrics")
+	metricsLogger = log.DefaultLogger(egv1a1.LogLevelInfo).WithName("metrics")
 )
 
 func init() {
@@ -94,7 +94,8 @@ func (d *store) preAddOptions() []metric.Option {
 			metric.Stream{
 				Aggregation: metric.AggregationExplicitBucketHistogram{
 					Boundaries: store.Bounds,
-				}},
+				},
+			},
 		))
 		opts = append(opts, v)
 	}

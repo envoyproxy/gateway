@@ -17,7 +17,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 )
 
@@ -107,7 +107,7 @@ func GenerateCerts(cfg *config.Server) (*Certificates, error) {
 		var egDNSNames, envoyDNSNames []string
 		egProvider := cfg.EnvoyGateway.GetEnvoyGatewayProvider().Type
 		switch egProvider {
-		case v1alpha1.ProviderTypeKubernetes:
+		case egv1a1.ProviderTypeKubernetes:
 			egDNSNames = kubeServiceNames(DefaultEnvoyGatewayDNSPrefix, cfg.Namespace, cfg.DNSDomain)
 			envoyDNSNames = append(envoyDNSNames, fmt.Sprintf("*.%s", cfg.Namespace))
 		default:
@@ -225,7 +225,6 @@ func newCert(request *certificateRequest) ([]byte, []byte, error) {
 		Bytes: newCert,
 	})
 	return newCertPEM, newKeyPEM, nil
-
 }
 
 // newCA generates a new CA, given the CA's CN and an expiry time.

@@ -5,6 +5,8 @@
 
 package v1alpha1
 
+import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+
 // EnvoyGatewayMetrics defines control plane push/pull metrics configurations.
 type EnvoyGatewayMetrics struct {
 	// Sinks defines the metric sinks where metrics are sent to.
@@ -38,6 +40,18 @@ type EnvoyGatewayOpenTelemetrySink struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:default=4317
 	Port int32 `json:"port,omitempty"`
+	// ExportInterval configures the intervening time between exports for a
+	// Sink. This option overrides any value set for the
+	// OTEL_METRIC_EXPORT_INTERVAL environment variable.
+	// If ExportInterval is less than or equal to zero, 60 seconds
+	// is used as the default.
+	ExportInterval *gwapiv1.Duration `json:"exportInterval,omitempty"`
+	// ExportTimeout configures the time a Sink waits for an export to
+	// complete before canceling it. This option overrides any value set for the
+	// OTEL_METRIC_EXPORT_TIMEOUT environment variable.
+	// If ExportTimeout is less than or equal to zero, 30 seconds
+	// is used as the default.
+	ExportTimeout *gwapiv1.Duration `json:"exportTimeout,omitempty"`
 }
 
 // EnvoyGatewayPrometheusProvider will expose prometheus endpoint in pull mode.

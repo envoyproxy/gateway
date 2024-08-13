@@ -22,7 +22,6 @@ type HealthCheck struct {
 // PassiveHealthCheck defines the configuration for passive health checks in the context of Envoy's Outlier Detection,
 // see https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/outlier
 type PassiveHealthCheck struct {
-
 	// SplitExternalLocalOriginErrors enables splitting of errors between external and local origin.
 	//
 	// +kubebuilder:default=false

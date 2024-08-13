@@ -19,7 +19,6 @@ import (
 
 func init() {
 	ConformanceTests = append(ConformanceTests, RedirectTrailingSlashTest)
-
 }
 
 // RedirectTrailingSlashTest tests that only one slash in the redirect URL

@@ -9,19 +9,23 @@
 package tests
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	gwv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"k8s.io/apimachinery/pkg/util/wait"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwhttp "sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 )
@@ -46,16 +50,20 @@ var OIDCTest = suite.ConformanceTest{
 	Manifests:   []string{"testdata/oidc-keycloak.yaml", "testdata/oidc-securitypolicy.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("http route with oidc authentication", func(t *testing.T) {
+			// Add a function to dump current cluster status
+			t.Cleanup(func() {
+				CollectAndDump(t, suite.RestConfig)
+			})
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "http-with-oidc", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
-			ancestorRef := gwv1a2.ParentReference{
-				Group:     gatewayapi.GroupPtr(gwv1.GroupName),
+			ancestorRef := gwapiv1a2.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 				Kind:      gatewayapi.KindPtr(gatewayapi.KindGateway),
 				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
-				Name:      gwv1.ObjectName(gwNN.Name),
+				Name:      gwapiv1.ObjectName(gwNN.Name),
 			}
 			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "oidc-test", Namespace: ns}, suite.ControllerName, ancestorRef)
 
@@ -75,18 +83,31 @@ var OIDCTest = suite.ConformanceTest{
 			)
 			require.NoError(t, err)
 
-			// Send a request to the http route with OIDC configured.
-			// It will be redirected to the keycloak login page
-			res, err := client.Get(testURL, true)
-			require.NoError(t, err)
-			require.Equal(t, 200, res.StatusCode, "Expected 200 OK")
+			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, 5*time.Minute, true,
+				func(_ context.Context) (done bool, err error) {
+					tlog.Logf(t, "sending request to %s", testURL)
 
-			// Parse the response body to get the URL where the login page would post the user-entered credentials
-			require.NoError(t, client.ParseLoginForm(res.Body, keyCloakLoginFormID), "Failed to parse login form")
+					// Send a request to the http route with OIDC configured.
+					// It will be redirected to the keycloak login page
+					res, err := client.Get(testURL, true)
+					require.NoError(t, err, "Failed to get the login page")
+					require.Equal(t, 200, res.StatusCode, "Expected 200 OK")
+
+					// Parse the response body to get the URL where the login page would post the user-entered credentials
+					if err := client.ParseLoginForm(res.Body, keyCloakLoginFormID); err != nil {
+						tlog.Logf(t, "failed to parse login form: %v", err)
+						return false, nil
+					}
+
+					t.Log("successfully parsed login form")
+					return true, nil
+				}); err != nil {
+				t.Errorf("failed to parse login form: %v", err)
+			}
 
 			// Submit the login form to the IdP.
 			// This will authenticate and redirect back to the application
-			res, err = client.Login(map[string]string{"username": username, "password": password, "credentialId": ""})
+			res, err := client.Login(map[string]string{"username": username, "password": password, "credentialId": ""})
 			require.NoError(t, err, "Failed to login to the IdP")
 
 			// Verify that we get the expected response from the application
@@ -130,11 +151,11 @@ var OIDCTest = suite.ConformanceTest{
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
-			ancestorRef := gwv1a2.ParentReference{
-				Group:     gatewayapi.GroupPtr(gwv1.GroupName),
+			ancestorRef := gwapiv1a2.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 				Kind:      gatewayapi.KindPtr(gatewayapi.KindGateway),
 				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
-				Name:      gwv1.ObjectName(gwNN.Name),
+				Name:      gwapiv1.ObjectName(gwNN.Name),
 			}
 			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "oidc-test", Namespace: ns}, suite.ControllerName, ancestorRef)
 

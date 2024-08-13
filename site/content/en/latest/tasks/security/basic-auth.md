@@ -12,8 +12,7 @@ This instantiated resource can be linked to a [Gateway][Gateway], [HTTPRoute][HT
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+{{< boilerplate prerequisites >}}
 
 ## Configuration
 
@@ -49,23 +48,20 @@ Update the Gateway from the Quickstart to include an HTTPS listener that listens
 `example-cert` Secret:
 
 ```shell
-kubectl patch gateway eg --type=json --patch '[{
-   "op": "add",
-   "path": "/spec/listeners/-",
-   "value": {
-      "name": "https",
-      "protocol": "HTTPS",
-      "port": 443,
-      "tls": {
-        "mode": "Terminate",
-        "certificateRefs": [{
-          "kind": "Secret",
-          "group": "",
-          "name": "example-cert",
-        }],
-      },
-    },
-}]'
+kubectl patch gateway eg --type=json --patch '
+  - op: add
+    path: /spec/listeners/-
+    value:
+      name: https
+      protocol: HTTPS
+      port: 443
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            group: ""
+            name: example-cert
+  '
 ```
 
 ### Create a .htpasswd file
@@ -103,6 +99,9 @@ kubectl create secret generic basic-auth --from-file=.htpasswd
 The below example defines a SecurityPolicy that authenticates requests against the user list in the kubernetes
 secret generated in the previous step.
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -119,6 +118,29 @@ spec:
       name: "basic-auth"
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: basic-auth-example
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: backend
+  basicAuth:
+    users:
+      name: "basic-auth"
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 Verify the SecurityPolicy configuration:
 
@@ -138,7 +160,7 @@ echo $GATEWAY_HOST
 Send a request to the backend service without `Authentication` header:
 
 ```shell
-curl -v -H "Host: www.example.com" "http://${GATEWAY_HOST}/"
+curl -kv -H "Host: www.example.com" "https://${GATEWAY_HOST}/" 
 ```
 
 You should see `401 Unauthorized` in the response, indicating that the request is not allowed without authentication.

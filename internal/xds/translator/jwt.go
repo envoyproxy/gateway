@@ -17,15 +17,15 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"k8s.io/utils/ptr"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 const (
-	jwtAuthn         = "envoy.filters.http.jwt_authn"
 	envoyTrustBundle = "/etc/ssl/certs/ca-certificates.crt"
 )
 
@@ -33,8 +33,7 @@ func init() {
 	registerHTTPFilter(&jwt{})
 }
 
-type jwt struct {
-}
+type jwt struct{}
 
 var _ httpFilter = &jwt{}
 
@@ -55,7 +54,7 @@ func (*jwt) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListen
 
 	// Return early if filter already exists.
 	for _, httpFilter := range mgr.HttpFilters {
-		if httpFilter.Name == jwtAuthn {
+		if httpFilter.Name == egv1a1.EnvoyFilterJWTAuthn.String() {
 			return nil
 		}
 	}
@@ -65,7 +64,6 @@ func (*jwt) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListen
 		return err
 	}
 
-	// Ensure the authn filter is the first and the terminal filter is the last in the chain.
 	mgr.HttpFilters = append([]*hcmv3.HttpFilter{jwtFilter}, mgr.HttpFilters...)
 
 	return nil
@@ -88,7 +86,7 @@ func buildHCMJWTFilter(irListener *ir.HTTPListener) (*hcmv3.HttpFilter, error) {
 	}
 
 	return &hcmv3.HttpFilter{
-		Name: jwtAuthn,
+		Name: egv1a1.EnvoyFilterJWTAuthn.String(),
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: jwtAuthnAny,
 		},
@@ -133,7 +131,8 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 			for _, claimToHeader := range irProvider.ClaimToHeaders {
 				claimToHeader := &jwtauthnv3.JwtClaimToHeader{
 					HeaderName: claimToHeader.Header,
-					ClaimName:  claimToHeader.Claim}
+					ClaimName:  claimToHeader.Claim,
+				}
 				claimToHeaders = append(claimToHeaders, claimToHeader)
 			}
 			jwtProvider := &jwtauthnv3.JwtProvider{
@@ -163,6 +162,15 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 				},
 			})
 		}
+
+		if route.Security.JWT.AllowMissing {
+			reqs = append(reqs, &jwtauthnv3.JwtRequirement{
+				RequiresType: &jwtauthnv3.JwtRequirement_AllowMissing{
+					AllowMissing: &emptypb.Empty{},
+				},
+			})
+		}
+
 		if len(reqs) == 1 {
 			reqMap[route.Name] = reqs[0]
 		} else {
@@ -226,13 +234,14 @@ func (*jwt) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	}
 
 	filterCfg := route.GetTypedPerFilterConfig()
-	if _, ok := filterCfg[jwtAuthn]; !ok {
+	if _, ok := filterCfg[egv1a1.EnvoyFilterJWTAuthn.String()]; !ok {
 		if !routeContainsJWTAuthn(irRoute) {
 			return nil
 		}
 
 		routeCfgProto := &jwtauthnv3.PerRouteConfig{
-			RequirementSpecifier: &jwtauthnv3.PerRouteConfig_RequirementName{RequirementName: irRoute.Name}}
+			RequirementSpecifier: &jwtauthnv3.PerRouteConfig_RequirementName{RequirementName: irRoute.Name},
+		}
 
 		routeCfgAny, err := anypb.New(routeCfgProto)
 		if err != nil {
@@ -243,7 +252,7 @@ func (*jwt) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 			route.TypedPerFilterConfig = make(map[string]*anypb.Any)
 		}
 
-		route.TypedPerFilterConfig[jwtAuthn] = routeCfgAny
+		route.TypedPerFilterConfig[egv1a1.EnvoyFilterJWTAuthn.String()] = routeCfgAny
 	}
 
 	return nil
@@ -255,47 +264,16 @@ func (*jwt) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRo
 		return errors.New("xds resource table is nil")
 	}
 
-	var errs error
+	var err, errs error
 	for _, route := range routes {
 		if !routeContainsJWTAuthn(route) {
 			continue
 		}
 
 		for i := range route.Security.JWT.Providers {
-			var (
-				jwks    *urlCluster
-				ds      *ir.DestinationSetting
-				tSocket *corev3.TransportSocket
-				err     error
-			)
-
 			provider := route.Security.JWT.Providers[i]
-			jwks, err = url2Cluster(provider.RemoteJWKS.URI)
-			if err != nil {
-				errs = errors.Join(errs, err)
-				continue
-			}
 
-			ds = &ir.DestinationSetting{
-				Weight:    ptr.To[uint32](1),
-				Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(jwks.hostname, jwks.port)},
-			}
-
-			clusterArgs := &xdsClusterArgs{
-				name:         jwks.name,
-				settings:     []*ir.DestinationSetting{ds},
-				endpointType: jwks.endpointType,
-			}
-			if jwks.tls {
-				tSocket, err = buildXdsUpstreamTLSSocket(jwks.hostname)
-				if err != nil {
-					errs = errors.Join(errs, err)
-					continue
-				}
-				clusterArgs.tSocket = tSocket
-			}
-
-			if err = addXdsCluster(tCtx, clusterArgs); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+			if err = addClusterFromURL(provider.RemoteJWKS.URI, tCtx); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
@@ -334,7 +312,7 @@ func routeContainsJWTAuthn(irRoute *ir.HTTPRoute) bool {
 }
 
 // buildJwtFromHeaders returns a list of JwtHeader transformed from JWTFromHeader struct
-func buildJwtFromHeaders(headers []v1alpha1.JWTHeaderExtractor) []*jwtauthnv3.JwtHeader {
+func buildJwtFromHeaders(headers []egv1a1.JWTHeaderExtractor) []*jwtauthnv3.JwtHeader {
 	jwtHeaders := make([]*jwtauthnv3.JwtHeader, 0, len(headers))
 
 	for _, header := range headers {

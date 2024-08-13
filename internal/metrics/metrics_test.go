@@ -29,12 +29,9 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
-var (
-	overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
-)
+var overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
 
 func TestCounter(t *testing.T) {
-
 	name := "counter_metric"
 
 	var writer io.ReadWriter = bytes.NewBuffer(nil)
@@ -87,7 +84,6 @@ func TestCounter(t *testing.T) {
 }
 
 func TestGauge(t *testing.T) {
-
 	name := "gauge_metric"
 
 	var writer io.ReadWriter = bytes.NewBuffer(nil)
@@ -130,7 +126,6 @@ func TestGauge(t *testing.T) {
 }
 
 func TestHistogram(t *testing.T) {
-
 	name := "histogram_metric"
 
 	var writer io.ReadWriter = bytes.NewBuffer(nil)
@@ -219,7 +214,7 @@ func exporterWriter(name string, origin io.ReadWriter) (io.ReadWriter, error) {
 		fname := fmt.Sprintf("testdata/%s.json", name)
 
 		// nolint:gosec
-		f, err := os.OpenFile(fname, os.O_CREATE|os.O_RDWR, 0644)
+		f, err := os.OpenFile(fname, os.O_CREATE|os.O_RDWR, 0o644)
 		if err != nil {
 			return nil, err
 		}

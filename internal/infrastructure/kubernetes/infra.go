@@ -12,9 +12,10 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 )
 
@@ -26,7 +27,9 @@ type ResourceRender interface {
 	Service() (*corev1.Service, error)
 	ConfigMap() (*corev1.ConfigMap, error)
 	Deployment() (*appsv1.Deployment, error)
+	DaemonSet() (*appsv1.DaemonSet, error)
 	HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPodAutoscaler, error)
+	PodDisruptionBudget() (*policyv1.PodDisruptionBudget, error)
 }
 
 // Infra manages the creation and deletion of Kubernetes infrastructure
@@ -36,7 +39,7 @@ type Infra struct {
 	Namespace string
 
 	// EnvoyGateway is the configuration used to startup Envoy Gateway.
-	EnvoyGateway *v1alpha1.EnvoyGateway
+	EnvoyGateway *egv1a1.EnvoyGateway
 
 	// Client wrap k8s client.
 	Client *InfraClient
@@ -66,12 +69,20 @@ func (i *Infra) createOrUpdate(ctx context.Context, r ResourceRender) error {
 		return fmt.Errorf("failed to create or update deployment %s/%s: %w", i.Namespace, r.Name(), err)
 	}
 
+	if err := i.createOrUpdateDaemonSet(ctx, r); err != nil {
+		return fmt.Errorf("failed to create or update daemonset %s/%s: %w", i.Namespace, r.Name(), err)
+	}
+
 	if err := i.createOrUpdateService(ctx, r); err != nil {
 		return fmt.Errorf("failed to create or update service %s/%s: %w", i.Namespace, r.Name(), err)
 	}
 
 	if err := i.createOrUpdateHPA(ctx, r); err != nil {
 		return fmt.Errorf("failed to create or update hpa %s/%s: %w", i.Namespace, r.Name(), err)
+	}
+
+	if err := i.createOrUpdatePodDisruptionBudget(ctx, r); err != nil {
+		return fmt.Errorf("failed to create or update pdb %s/%s: %w", i.Namespace, r.Name(), err)
 	}
 
 	return nil
@@ -91,12 +102,20 @@ func (i *Infra) delete(ctx context.Context, r ResourceRender) error {
 		return fmt.Errorf("failed to delete deployment %s/%s: %w", i.Namespace, r.Name(), err)
 	}
 
+	if err := i.deleteDaemonSet(ctx, r); err != nil {
+		return fmt.Errorf("failed to delete daemonset %s/%s: %w", i.Namespace, r.Name(), err)
+	}
+
 	if err := i.deleteService(ctx, r); err != nil {
 		return fmt.Errorf("failed to delete service %s/%s: %w", i.Namespace, r.Name(), err)
 	}
 
 	if err := i.deleteHPA(ctx, r); err != nil {
 		return fmt.Errorf("failed to delete hpa %s/%s: %w", i.Namespace, r.Name(), err)
+	}
+
+	if err := i.deletePDB(ctx, r); err != nil {
+		return fmt.Errorf("failed to delete pdb %s/%s: %w", i.Namespace, r.Name(), err)
 	}
 
 	return nil

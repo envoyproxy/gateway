@@ -16,7 +16,6 @@ type XdsIRRoutes []*ir.HTTPRoute
 func (x XdsIRRoutes) Len() int      { return len(x) }
 func (x XdsIRRoutes) Swap(i, j int) { x[i], x[j] = x[j], x[i] }
 func (x XdsIRRoutes) Less(i, j int) bool {
-
 	// 1. Sort based on path match type
 	// Exact > RegularExpression > PathPrefix
 	if x[i].PathMatch != nil && x[i].PathMatch.Exact != nil {

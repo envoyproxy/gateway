@@ -8,27 +8,29 @@ path:
   escapedSlashesAction: UnescapeAndRedirect
 routes:
 - name: "first-route"
-  rateLimit:
-    global:
-      rules:
-      - headerMatches:
-        - name: "x-user-id"
-          exact: "one"
-        limit:
-          requests: 5
-          unit: second
+  traffic:
+    rateLimit:
+      global:
+        rules:
+        - headerMatches:
+          - name: "x-user-id"
+            exact: "one"
+          limit:
+            requests: 5
+            unit: second
   pathMatch:
     exact: "foo/baz"
 - name: "second-route"
-  rateLimit:
-    global:
-      rules:
-      - headerMatches:
-        - name: "x-user-id"
-          exact: "two"
-        limit:
-          requests: 10
-          unit: second
+  traffic:
+    rateLimit:
+      global:
+        rules:
+        - headerMatches:
+          - name: "x-user-id"
+            exact: "two"
+          limit:
+            requests: 10
+            unit: second
   pathMatch:
     exact: "foo/bar"
   destination:

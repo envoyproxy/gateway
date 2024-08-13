@@ -24,15 +24,14 @@ type XDSHook struct {
 	grpcClient extension.EnvoyGatewayExtensionClient
 }
 
-func (h *XDSHook) PostRouteModifyHook(route *route.Route, routeHostnames []string, extensionResources []*unstructured.Unstructured) (*route.Route, error) {
-	// Take all of the unstructured resources for the extension and package them into bytes
+func translateUnstructuredToUnstructuredBytes(e []*unstructured.Unstructured) ([]*extension.ExtensionResource, error) {
 	extensionResourceBytes := []*extension.ExtensionResource{}
-	for _, res := range extensionResources {
+	for _, res := range e {
 		if res != nil {
 			unstructuredBytes, err := res.MarshalJSON()
 			// This is probably a programming error, but just return the unmodified route if so
 			if err != nil {
-				return route, err
+				return nil, err
 			}
 
 			extensionResourceBytes = append(extensionResourceBytes,
@@ -41,6 +40,15 @@ func (h *XDSHook) PostRouteModifyHook(route *route.Route, routeHostnames []strin
 				},
 			)
 		}
+	}
+	return extensionResourceBytes, nil
+}
+
+func (h *XDSHook) PostRouteModifyHook(route *route.Route, routeHostnames []string, extensionResources []*unstructured.Unstructured) (*route.Route, error) {
+	// Take all of the unstructured resources for the extension and package them into bytes
+	extensionResourceBytes, err := translateUnstructuredToUnstructuredBytes(extensionResources)
+	if err != nil {
+		return route, err
 	}
 
 	// Make the request to the extension server
@@ -53,7 +61,6 @@ func (h *XDSHook) PostRouteModifyHook(route *route.Route, routeHostnames []strin
 				ExtensionResources: extensionResourceBytes,
 			},
 		})
-
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +76,6 @@ func (h *XDSHook) PostVirtualHostModifyHook(vh *route.VirtualHost) (*route.Virtu
 			VirtualHost:            vh,
 			PostVirtualHostContext: &extension.PostVirtualHostExtensionContext{},
 		})
-
 	if err != nil {
 		return nil, err
 	}
@@ -77,15 +83,21 @@ func (h *XDSHook) PostVirtualHostModifyHook(vh *route.VirtualHost) (*route.Virtu
 	return resp.VirtualHost, nil
 }
 
-func (h *XDSHook) PostHTTPListenerModifyHook(l *listener.Listener) (*listener.Listener, error) {
+func (h *XDSHook) PostHTTPListenerModifyHook(l *listener.Listener, extensionResources []*unstructured.Unstructured) (*listener.Listener, error) {
+	// Take all of the unstructured resources for the extension and package them into bytes
+	extensionResourceBytes, err := translateUnstructuredToUnstructuredBytes(extensionResources)
+	if err != nil {
+		return l, err
+	}
 	// Make the request to the extension server
 	ctx := context.Background()
 	resp, err := h.grpcClient.PostHTTPListenerModify(ctx,
 		&extension.PostHTTPListenerModifyRequest{
-			Listener:            l,
-			PostListenerContext: &extension.PostHTTPListenerExtensionContext{},
+			Listener: l,
+			PostListenerContext: &extension.PostHTTPListenerExtensionContext{
+				ExtensionResources: extensionResourceBytes,
+			},
 		})
-
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +114,6 @@ func (h *XDSHook) PostTranslateModifyHook(clusters []*cluster.Cluster, secrets [
 			Clusters:             clusters,
 			Secrets:              secrets,
 		})
-
 	if err != nil {
 		return nil, nil, err
 	}

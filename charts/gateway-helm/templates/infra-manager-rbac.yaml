@@ -20,6 +20,7 @@ rules:
   - apps
   resources:
   - deployments
+  - daemonsets
   verbs:
   - create
   - get
@@ -27,8 +28,10 @@ rules:
   - patch
 - apiGroups:
   - autoscaling
+  - policy
   resources:
   - horizontalpodautoscalers
+  - poddisruptionbudgets
   verbs:
   - create
   - get

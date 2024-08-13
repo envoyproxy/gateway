@@ -93,7 +93,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
     oidc:
       provider:
         issuer: "https://accounts.google.com"
@@ -102,6 +101,10 @@ securityPolicies:
         name: "client1-secret"
       redirectURL: "https://www.example.com/bar/oauth2/callback"
       logoutPath: "/bar/logout"
+      forwardAccessToken: true
+      defaultTokenTTL: 30m
+      refreshToken: true
+      defaultRefreshTokenTTL: 24h
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
@@ -113,7 +116,6 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
     oidc:
       provider:
         issuer: "https://oauth.foo.com"
@@ -126,3 +128,7 @@ securityPolicies:
       resources: ["api"]
       redirectURL: "https://www.example.com/foo/oauth2/callback"
       logoutPath: "/foo/logout"
+      forwardAccessToken: true
+      defaultTokenTTL: 1h
+      refreshToken: true
+      defaultRefreshTokenTTL: 48h

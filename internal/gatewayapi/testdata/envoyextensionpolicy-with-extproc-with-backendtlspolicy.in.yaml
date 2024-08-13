@@ -117,10 +117,7 @@ referenceGrants:
   spec:
     from:
     - group: gateway.envoyproxy.io
-      kind: SecurityPolicy
-      namespace: default
-    - group: gateway.networking.k8s.io
-      kind: BackendTLSPolicy
+      kind: EnvoyExtensionPolicy
       namespace: default
     to:
     - group: ''
@@ -157,16 +154,15 @@ backendTLSPolicies:
   kind: BackendTLSPolicy
   metadata:
     name: policy-btls-grpc
-    namespace: default
+    namespace: envoy-gateway
   spec:
-    targetRef:
-      group: ''
+    targetRefs:
+    - group: ''
       kind: Service
       name: grpc-backend
-      namespace: envoy-gateway
       sectionName: "8000"
-    tls:
-      caCertRefs:
+    validation:
+      caCertificateRefs:
       - name: ca-cmap
         group: ''
         kind: ConfigMap
@@ -177,13 +173,13 @@ backendTLSPolicies:
     name: policy-btls-grpc-2
     namespace: default
   spec:
-    targetRef:
-      group: ''
+    targetRefs:
+    - group: ''
       kind: Service
       name: grpc-backend-2
       sectionName: "9000"
-    tls:
-      caCertRefs:
+    validation:
+      caCertificateRefs:
       - name: ca-cmap
         group: ''
         kind: ConfigMap
@@ -199,12 +195,18 @@ envoyExtensionPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: default
     extProc:
-    - backendRef:
-        Name: grpc-backend
+    - backendRefs:
+      - Name: grpc-backend
         Namespace: envoy-gateway
         Port: 8000
+      processingMode:
+        request:
+          body: Buffered
+        response:
+          body: Streamed
+      messageTimeout: 5s
+      failOpen: true
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
@@ -215,8 +217,10 @@ envoyExtensionPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
     extProc:
-    - backendRef:
-        Name: grpc-backend-2
+    - backendRefs:
+      - Name: grpc-backend-2
         Port: 9000
+      processingMode:
+        request: {}
+        response: {}

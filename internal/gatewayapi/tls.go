@@ -12,12 +12,12 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	v1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 // validateTLSSecretData ensures the cert and key provided in a secret
 // is not malformed and can be properly parsed
-func validateTLSSecretsData(secrets []*corev1.Secret, host *v1.Hostname) error {
+func validateTLSSecretsData(secrets []*corev1.Secret, host *gwapiv1.Hostname) error {
 	var publicKeyAlgorithm string
 	var parseErr error
 
@@ -57,7 +57,6 @@ func validateTLSSecretsData(secrets []*corev1.Secret, host *v1.Hostname) error {
 		if matchedFQDN, ok := pkaSecretSet[pkaSecretKey]; ok {
 			return fmt.Errorf("%s/%s public key algorithm must be unique, matched certificate FQDN %s has a conflicting algorithm [%s]",
 				secret.Namespace, secret.Name, matchedFQDN, publicKeyAlgorithm)
-
 		}
 		pkaSecretSet[pkaSecretKey] = matchedFQDN
 
@@ -86,7 +85,7 @@ func validateTLSSecretsData(secrets []*corev1.Secret, host *v1.Hostname) error {
 }
 
 // verifyHostname checks if the listener Hostname matches any domain in the certificate, returns a list of matched hosts.
-func verifyHostname(cert *x509.Certificate, host *v1.Hostname) ([]string, error) {
+func verifyHostname(cert *x509.Certificate, host *gwapiv1.Hostname) ([]string, error) {
 	var matchedHosts []string
 
 	if len(cert.DNSNames) > 0 {

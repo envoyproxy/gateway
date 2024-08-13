@@ -9,10 +9,17 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
+type ClientTLSSettings struct {
+	// ClientValidation specifies the configuration to validate the client
+	// initiating the TLS connection to the Gateway listener.
+	// +optional
+	ClientValidation *ClientValidationContext `json:"clientValidation,omitempty"`
+	TLSSettings      `json:",inline"`
+}
+
 // +kubebuilder:validation:XValidation:rule="has(self.minVersion) && self.minVersion == '1.3' ? !has(self.ciphers) : true", message="setting ciphers has no effect if the minimum possible TLS version is 1.3"
 // +kubebuilder:validation:XValidation:rule="has(self.minVersion) && has(self.maxVersion) ? {\"Auto\":0,\"1.0\":1,\"1.1\":2,\"1.2\":3,\"1.3\":4}[self.minVersion] <= {\"1.0\":1,\"1.1\":2,\"1.2\":3,\"1.3\":4,\"Auto\":5}[self.maxVersion] : !has(self.minVersion) && has(self.maxVersion) ? 3 <= {\"1.0\":1,\"1.1\":2,\"1.2\":3,\"1.3\":4,\"Auto\":5}[self.maxVersion] : true", message="minVersion must be smaller or equal to maxVersion"
 type TLSSettings struct {
-
 	// Min specifies the minimal TLS protocol version to allow.
 	// The default is TLS 1.2 if this is not specified.
 	//
@@ -66,11 +73,6 @@ type TLSSettings struct {
 	//
 	// +optional
 	ALPNProtocols []ALPNProtocol `json:"alpnProtocols,omitempty"`
-
-	// ClientValidation specifies the configuration to validate the client
-	// initiating the TLS connection to the Gateway listener.
-	// +optional
-	ClientValidation *ClientValidationContext `json:"clientValidation,omitempty"`
 }
 
 // ALPNProtocol specifies the protocol to be negotiated using ALPN
@@ -110,6 +112,11 @@ const (
 // to the Gateway.
 // By default, no client specific configuration is validated.
 type ClientValidationContext struct {
+	// Optional set to true accepts connections even when a client doesn't present a certificate.
+	// Defaults to false, which rejects connections without a valid client certificate.
+	// +optional
+	Optional bool `json:"optional,omitempty"`
+
 	// CACertificateRefs contains one or more references to
 	// Kubernetes objects that contain TLS certificates of
 	// the Certificate Authorities that can be used

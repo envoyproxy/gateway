@@ -57,13 +57,12 @@ backendTrafficPolicies:
     kind: BackendTrafficPolicy
     metadata:
       namespace: default
-      name: policy-for-gateway
+      name: policy-for-gateway-1
     spec:
       targetRef:
         group: gateway.networking.k8s.io
         kind: UDPRoute
         name: udp-app-1
-        namespace: default
       circuitBreaker:
         maxConnections: 2048
         maxPendingRequests: 1
@@ -114,13 +113,12 @@ backendTrafficPolicies:
     kind: BackendTrafficPolicy
     metadata:
       namespace: default
-      name: policy-for-gateway
+      name: policy-for-gateway-2
     spec:
       targetRef:
         group: gateway.networking.k8s.io
         kind: TCPRoute
         name: tcp-app-1
-        namespace: default
       circuitBreaker:
         maxConnections: 2048
         maxPendingRequests: 1

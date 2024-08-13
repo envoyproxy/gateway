@@ -11,9 +11,10 @@ This task uses a self-signed CA, so it should be used for testing and demonstrat
 
 ## Installation
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway.
+{{< boilerplate prerequisites >}}
 
 ## TLS Certificates
+
 Generate the certificates and keys used by the Gateway to terminate client TLS connections.
 
 Create a root certificate and private key to sign certificates:
@@ -49,7 +50,24 @@ kubectl get gateway/eg -o yaml
 
 ## Testing
 
-### Clusters without External LoadBalancer Support
+{{< tabpane text=true >}}
+{{% tab header="With External LoadBalancer Support" %}}
+
+Get the External IP of the Gateway:
+
+```shell
+export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
+```
+
+Query the example app through the Gateway:
+
+```shell
+curl -v -HHost:www.example.com --resolve "www.example.com:443:${GATEWAY_HOST}" \
+--cacert example.com.crt https://www.example.com/get
+```
+
+{{% /tab %}}
+{{% tab header="Without LoadBalancer Support" %}}
 
 Get the name of the Envoy service created the by the example Gateway:
 
@@ -70,17 +88,5 @@ curl -v -HHost:www.example.com --resolve "www.example.com:8443:127.0.0.1" \
 --cacert example.com.crt https://www.example.com:8443/get
 ```
 
-### Clusters with External LoadBalancer Support
-
-Get the External IP of the Gateway:
-
-```shell
-export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
-```
-
-Query the example app through the Gateway:
-
-```shell
-curl -v -HHost:www.example.com --resolve "www.example.com:443:${GATEWAY_HOST}" \
---cacert example.com.crt https://www.example.com/get
-```
+{{% /tab %}}
+{{< /tabpane >}}

@@ -208,8 +208,8 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 			return false
 		}
 
-		if res.EnvoyProxy != nil {
-			assert.Equal(t, res.EnvoyProxy.Spec, ep.Spec)
+		if res.EnvoyProxyForGatewayClass != nil {
+			assert.Equal(t, res.EnvoyProxyForGatewayClass.Spec, ep.Spec)
 			return true
 		}
 
@@ -442,7 +442,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 
 	rewriteHostname := gwapiv1.PreciseHostname("rewrite.hostname.local")
 
-	var testCases = []struct {
+	testCases := []struct {
 		name  string
 		route gwapiv1.HTTPRoute
 	}{
@@ -986,7 +986,7 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 		require.NoError(t, cli.Delete(ctx, svc))
 	}()
 
-	var testCases = []struct {
+	testCases := []struct {
 		name  string
 		route gwapiv1a2.TLSRoute
 	}{
@@ -1149,13 +1149,17 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 				}},
 			},
 			Hostnames: []gwapiv1a2.Hostname{"test-tls.hostname.local"},
-			Rules: []gwapiv1a2.TLSRouteRule{{
-				BackendRefs: []gwapiv1a2.BackendRef{{
-					BackendObjectReference: gwapiv1a2.BackendObjectReference{
-						Name: "test-common-svc",
-						Port: ptr.To(gwapiv1.PortNumber(90)),
-					}},
-				}},
+			Rules: []gwapiv1a2.TLSRouteRule{
+				{
+					BackendRefs: []gwapiv1a2.BackendRef{
+						{
+							BackendObjectReference: gwapiv1a2.BackendObjectReference{
+								Name: "test-common-svc",
+								Port: ptr.To(gwapiv1.PortNumber(90)),
+							},
+						},
+					},
+				},
 			},
 		},
 	}
@@ -1585,7 +1589,6 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 		}
 		return res != nil && len(res.GRPCRoutes) == 1
 	}, defaultWait, defaultTick)
-
 }
 
 func waitUntilGatewayClassResourcesAreReady(resources *message.ProviderResources, gatewayClassName string) (*gatewayapi.Resources, bool) {

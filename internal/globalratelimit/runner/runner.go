@@ -17,14 +17,15 @@ import (
 	"strconv"
 
 	discoveryv3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+	cachetype "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	cachev3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	serverv3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
-	"github.com/envoyproxy/go-control-plane/pkg/test/v3"
+	testv3 "github.com/envoyproxy/go-control-plane/pkg/test/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -57,7 +58,7 @@ type Runner struct {
 }
 
 func (r *Runner) Name() string {
-	return string(v1alpha1.LogComponentGlobalRateLimitRunner)
+	return string(egv1a1.LogComponentGlobalRateLimitRunner)
 }
 
 func New(cfg *Config) *Runner {
@@ -77,7 +78,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	r.cache = cachev3.NewSnapshotCache(false, cachev3.IDHash{}, r.Logger.Sugar())
 
 	// Register xDS Config server.
-	cb := &test.Callbacks{}
+	cb := &testv3.Callbacks{}
 	discoveryv3.RegisterAggregatedDiscoveryServiceServer(r.grpc, serverv3.NewServer(ctx, r.cache, cb))
 
 	// Start and listen xDS gRPC config Server.
@@ -109,27 +110,40 @@ func (r *Runner) serveXdsConfigServer(ctx context.Context) {
 	}
 }
 
+func buildXDSResourceFromCache(rateLimitConfigsCache map[string][]cachetype.Resource) types.XdsResources {
+	xdsResourcesToUpdate := types.XdsResources{}
+	for _, xdsR := range rateLimitConfigsCache {
+		xdsResourcesToUpdate[resourcev3.RateLimitConfigType] = append(xdsResourcesToUpdate[resourcev3.RateLimitConfigType], xdsR...)
+	}
+
+	return xdsResourcesToUpdate
+}
+
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
+	// rateLimitConfigsCache is a cache of the rate limit config, which is keyed by the xdsIR key.
+	rateLimitConfigsCache := map[string][]cachetype.Resource{}
+
 	// Subscribe to resources.
-	message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentGlobalRateLimitRunner), Message: "xds-ir"}, r.XdsIR.Subscribe(ctx),
+	message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentGlobalRateLimitRunner), Message: "xds-ir"}, r.XdsIR.Subscribe(ctx),
 		func(update message.Update[string, *ir.Xds], errChan chan error) {
 			r.Logger.Info("received a notification")
 
 			if update.Delete {
-				if err := r.addNewSnapshot(ctx, nil); err != nil {
-					r.Logger.Error(err, "failed to update the config snapshot")
-					errChan <- err
-				}
+				delete(rateLimitConfigsCache, update.Key)
+				r.updateSnapshot(ctx, buildXDSResourceFromCache(rateLimitConfigsCache))
 			} else {
 				// Translate to ratelimit xDS Config.
 				rvt, err := r.translate(update.Value)
 				if err != nil {
-					r.Logger.Error(err, err.Error())
+					r.Logger.Error(err, "failed to translate an updated xds-ir to ratelimit xDS Config")
+					errChan <- err
 				}
 
 				// Update ratelimit xDS config cache.
 				if rvt != nil {
-					r.updateSnapshot(ctx, rvt.XdsResources)
+					// Build XdsResources to use for the snapshot update from the cache.
+					rateLimitConfigsCache[update.Key] = rvt.XdsResources[resourcev3.RateLimitConfigType]
+					r.updateSnapshot(ctx, buildXDSResourceFromCache(rateLimitConfigsCache))
 				}
 			}
 		},

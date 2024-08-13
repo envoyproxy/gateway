@@ -78,7 +78,7 @@ tcpRoutes:
         type: Accepted
       - lastTransitionTime: null
         message: TCP Port 8081 not found on service default/service-1
-        reason: PortNotFound
+        reason: BackendNotFound
         status: "False"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -90,3 +90,13 @@ xdsIR:
     accessLog:
       text:
       - path: /dev/stdout
+    tcp:
+    - address: 0.0.0.0
+      name: envoy-gateway/gateway-1/tcp
+      port: 10162
+      routes:
+      - destination:
+          name: tcproute/default/tcproute-1/rule/-1
+          settings:
+          - weight: 1
+        name: tcproute/default/tcproute-1

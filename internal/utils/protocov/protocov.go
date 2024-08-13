@@ -16,9 +16,7 @@ const (
 	APIPrefix = "type.googleapis.com/"
 )
 
-var (
-	marshalOpts = proto.MarshalOptions{}
-)
+var marshalOpts = proto.MarshalOptions{}
 
 func ToAnyWithError(msg proto.Message) (*anypb.Any, error) {
 	if msg == nil {

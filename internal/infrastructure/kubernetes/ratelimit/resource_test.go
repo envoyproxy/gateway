@@ -12,7 +12,6 @@ import (
 )
 
 func TestCheckTraceEndpointScheme(t *testing.T) {
-
 	cases := []struct {
 		caseName    string
 		actualURL   string
@@ -36,5 +35,4 @@ func TestCheckTraceEndpointScheme(t *testing.T) {
 			require.Equal(t, tc.expectedURL, actual)
 		})
 	}
-
 }

@@ -7,8 +7,7 @@ To learn more about gRPC routing, refer to the [Gateway API documentation][].
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+{{< boilerplate prerequisites >}}
 
 ## Installation
 
@@ -95,6 +94,9 @@ It supports two match types: `Exact` and `RegularExpression`.
 The following example shows how to match a request based on the service and method names for `grpc.reflection.v1alpha.ServerReflection/ServerReflectionInfo`,
 as well as a match for all services with a method name `Ping` which matches `yages.Echo/Ping` in our deployment.
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1alpha2
@@ -124,6 +126,41 @@ spec:
 EOF
 ```
 
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: GRPCRoute
+metadata:
+  name: yages
+  labels:
+    example: grpc-routing
+spec:
+  parentRefs:
+    - name: example-gateway
+  hostnames:
+    - "grpc-example.com"
+  rules:
+    - matches:
+      - method:
+          method: ServerReflectionInfo
+          service: grpc.reflection.v1alpha.ServerReflection
+      - method:
+          method: Ping
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: yages
+          port: 9000
+          weight: 1
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 Verify the GRPCRoute status:
 
 ```shell
@@ -141,6 +178,9 @@ grpcurl -plaintext -authority=grpc-example.com ${GATEWAY_HOST}:80 yages.Echo/Pin
 The following example shows how to match a request based on the service and method names
 with match type `RegularExpression`. It matches all the services and methods with pattern
 `/.*.Echo/Pin.+`, which matches `yages.Echo/Ping` in our deployment.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -172,6 +212,43 @@ spec:
           weight: 1
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: GRPCRoute
+metadata:
+  name: yages
+  labels:
+    example: grpc-routing
+spec:
+  parentRefs:
+    - name: example-gateway
+  hostnames:
+    - "grpc-example.com"
+  rules:
+    - matches:
+      - method:
+          method: ServerReflectionInfo
+          service: grpc.reflection.v1alpha.ServerReflection
+      - method:
+          method: "Pin.+"
+          service: ".*.Echo"
+          type: RegularExpression
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: yages
+          port: 9000
+          weight: 1
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 Verify the GRPCRoute status:
 

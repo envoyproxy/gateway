@@ -13,7 +13,6 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 //
 // +kubebuilder:validation:XValidation:rule=" has(self.delay) || has(self.abort) ",message="Delay and abort faults are set at least one."
 type FaultInjection struct {
-
 	// If specified, a delay will be injected into the request.
 	//
 	// +optional

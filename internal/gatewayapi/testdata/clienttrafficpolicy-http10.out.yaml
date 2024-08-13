@@ -12,7 +12,6 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
       sectionName: http-1
   status:
     ancestors:
@@ -43,7 +42,6 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
       sectionName: http-2
   status:
     ancestors:
@@ -74,7 +72,6 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
       sectionName: http-3
   status:
     ancestors:
@@ -86,7 +83,8 @@ clientTrafficPolicies:
         sectionName: http-3
       conditions:
       - lastTransitionTime: null
-        message: Can't set http10 default host on listener with only wildcard hostnames
+        message: 'HTTP1: cannot set http10 default host on listener with only wildcard
+          hostnames.'
         reason: Invalid
         status: "False"
         type: Accepted
@@ -233,6 +231,11 @@ xdsIR:
       http1:
         http10: {}
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-1
       name: envoy-gateway/gateway-1/http-1
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -245,6 +248,11 @@ xdsIR:
         http10:
           defaultHost: www.example.com
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-2
       name: envoy-gateway/gateway-1/http-2
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -255,6 +263,11 @@ xdsIR:
       - '*'
       http1: {}
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-3
       name: envoy-gateway/gateway-1/http-3
       path:
         escapedSlashesAction: UnescapeAndRedirect

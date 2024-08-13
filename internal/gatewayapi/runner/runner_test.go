@@ -19,9 +19,10 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
-	"github.com/envoyproxy/gateway/internal/extension/testutils"
+	"github.com/envoyproxy/gateway/internal/extension/registry"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
+	pb "github.com/envoyproxy/gateway/proto/extension"
 )
 
 func TestRunner(t *testing.T) {
@@ -31,12 +32,15 @@ func TestRunner(t *testing.T) {
 	infraIR := new(message.InfraIR)
 	cfg, err := config.New()
 	require.NoError(t, err)
+	extMgr, closeFunc, err := registry.NewInMemoryManager(egv1a1.ExtensionManager{}, &pb.UnimplementedEnvoyGatewayExtensionServer{})
+	require.NoError(t, err)
+	defer closeFunc()
 	r := New(&Config{
 		Server:            *cfg,
 		ProviderResources: pResources,
 		XdsIR:             xdsIR,
 		InfraIR:           infraIR,
-		ExtensionManager:  testutils.NewManager(egv1a1.ExtensionManager{}),
+		ExtensionManager:  extMgr,
 	})
 	ctx := context.Background()
 	// Start
@@ -59,7 +63,6 @@ func TestRunner(t *testing.T) {
 		// Ensure ir is empty
 		return (reflect.DeepEqual(xdsIR.LoadAll(), map[string]*ir.Xds{})) && (reflect.DeepEqual(infraIR.LoadAll(), map[string]*ir.Infra{}))
 	}, time.Second*1, time.Millisecond*20)
-
 }
 
 func TestGetIRKeysToDelete(t *testing.T) {
@@ -75,7 +78,8 @@ func TestGetIRKeysToDelete(t *testing.T) {
 			newKeys: []string{},
 			delKeys: []string{},
 		},
-		{name: "no new keys",
+		{
+			name:    "no new keys",
 			curKeys: []string{"one", "two"},
 			newKeys: []string{},
 			delKeys: []string{"one", "two"},
@@ -115,12 +119,15 @@ func TestDeleteStatusKeys(t *testing.T) {
 	infraIR := new(message.InfraIR)
 	cfg, err := config.New()
 	require.NoError(t, err)
+	extMgr, closeFunc, err := registry.NewInMemoryManager(egv1a1.ExtensionManager{}, &pb.UnimplementedEnvoyGatewayExtensionServer{})
+	require.NoError(t, err)
+	defer closeFunc()
 	r := New(&Config{
 		Server:            *cfg,
 		ProviderResources: pResources,
 		XdsIR:             xdsIR,
 		InfraIR:           infraIR,
-		ExtensionManager:  testutils.NewManager(egv1a1.ExtensionManager{}),
+		ExtensionManager:  extMgr,
 	})
 	ctx := context.Background()
 
@@ -162,7 +169,7 @@ func TestDeleteStatusKeys(t *testing.T) {
 
 	r.ProviderResources.GatewayStatuses.Store(keys[0], &gwapiv1.GatewayStatus{})
 	r.ProviderResources.HTTPRouteStatuses.Store(keys[1], &gwapiv1.HTTPRouteStatus{})
-	r.ProviderResources.GRPCRouteStatuses.Store(keys[2], &gwapiv1a2.GRPCRouteStatus{})
+	r.ProviderResources.GRPCRouteStatuses.Store(keys[2], &gwapiv1.GRPCRouteStatus{})
 	r.ProviderResources.TLSRouteStatuses.Store(keys[3], &gwapiv1a2.TLSRouteStatus{})
 	r.ProviderResources.TCPRouteStatuses.Store(keys[4], &gwapiv1a2.TCPRouteStatus{})
 	r.ProviderResources.UDPRouteStatuses.Store(keys[5], &gwapiv1a2.UDPRouteStatus{})
@@ -205,12 +212,15 @@ func TestDeleteAllStatusKeys(t *testing.T) {
 	infraIR := new(message.InfraIR)
 	cfg, err := config.New()
 	require.NoError(t, err)
+	extMgr, closeFunc, err := registry.NewInMemoryManager(egv1a1.ExtensionManager{}, &pb.UnimplementedEnvoyGatewayExtensionServer{})
+	require.NoError(t, err)
+	defer closeFunc()
 	r := New(&Config{
 		Server:            *cfg,
 		ProviderResources: pResources,
 		XdsIR:             xdsIR,
 		InfraIR:           infraIR,
-		ExtensionManager:  testutils.NewManager(egv1a1.ExtensionManager{}),
+		ExtensionManager:  extMgr,
 	})
 	ctx := context.Background()
 
@@ -248,7 +258,7 @@ func TestDeleteAllStatusKeys(t *testing.T) {
 
 	r.ProviderResources.GatewayStatuses.Store(keys[0], &gwapiv1.GatewayStatus{})
 	r.ProviderResources.HTTPRouteStatuses.Store(keys[1], &gwapiv1.HTTPRouteStatus{})
-	r.ProviderResources.GRPCRouteStatuses.Store(keys[2], &gwapiv1a2.GRPCRouteStatus{})
+	r.ProviderResources.GRPCRouteStatuses.Store(keys[2], &gwapiv1.GRPCRouteStatus{})
 	r.ProviderResources.TLSRouteStatuses.Store(keys[3], &gwapiv1a2.TLSRouteStatus{})
 	r.ProviderResources.TCPRouteStatuses.Store(keys[4], &gwapiv1a2.TCPRouteStatus{})
 	r.ProviderResources.UDPRouteStatuses.Store(keys[5], &gwapiv1a2.UDPRouteStatus{})

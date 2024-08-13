@@ -30,6 +30,24 @@
       responseFlagFilter:
         flags:
         - NR
+    name: envoy.access_loggers.http_grpc
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.access_loggers.grpc.v3.HttpGrpcAccessLogConfig
+      additionalRequestHeadersToLog:
+      - x-client-ip-address
+      additionalResponseHeadersToLog:
+      - cache-control
+      additionalResponseTrailersToLog:
+      - expires
+      commonConfig:
+        grpcService:
+          envoyGrpc:
+            clusterName: accesslog/monitoring/envoy-als/port/9000
+        transportApiVersion: V3
+  - filter:
+      responseFlagFilter:
+        flags:
+        - NR
     name: envoy.access_loggers.open_telemetry
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.access_loggers.open_telemetry.v3.OpenTelemetryAccessLogConfig
@@ -51,7 +69,7 @@
         grpcService:
           envoyGrpc:
             authority: otel-collector.default.svc.cluster.local
-            clusterName: accesslog|otel-collector.default.svc.cluster.local|4317
+            clusterName: accesslog-0
         logName: otel_envoy_accesslog
         transportApiVersion: V3
       resourceAttributes:
@@ -88,6 +106,20 @@
                 response_code: '%RESPONSE_CODE%'
                 start_time: '%START_TIME%'
             path: /dev/stdout
+        - name: envoy.access_loggers.http_grpc
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.access_loggers.grpc.v3.HttpGrpcAccessLogConfig
+            additionalRequestHeadersToLog:
+            - x-client-ip-address
+            additionalResponseHeadersToLog:
+            - cache-control
+            additionalResponseTrailersToLog:
+            - expires
+            commonConfig:
+              grpcService:
+                envoyGrpc:
+                  clusterName: accesslog/monitoring/envoy-als/port/9000
+              transportApiVersion: V3
         - name: envoy.access_loggers.open_telemetry
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.access_loggers.open_telemetry.v3.OpenTelemetryAccessLogConfig
@@ -109,7 +141,7 @@
               grpcService:
                 envoyGrpc:
                   authority: otel-collector.default.svc.cluster.local
-                  clusterName: accesslog|otel-collector.default.svc.cluster.local|4317
+                  clusterName: accesslog-0
               logName: otel_envoy_accesslog
               transportApiVersion: V3
             resourceAttributes:
@@ -137,8 +169,9 @@
             resourceApiVersion: V3
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: http-10080
         useRemoteAddress: true
+    name: first-listener
   drainType: MODIFY_ONLY
   name: first-listener
   perConnectionBufferLimitBytes: 32768

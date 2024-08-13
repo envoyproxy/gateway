@@ -7,7 +7,6 @@ package proxy
 
 import (
 	"fmt"
-	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -15,7 +14,6 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/cmd/envoy"
-	"github.com/envoyproxy/gateway/internal/cmd/version"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -101,8 +99,10 @@ func enablePrometheus(infra *ir.ProxyInfra) bool {
 
 // expectedProxyContainers returns expected proxy containers.
 func expectedProxyContainers(infra *ir.ProxyInfra,
-	deploymentConfig *egv1a1.KubernetesDeploymentSpec,
-	shutdownConfig *egv1a1.ShutdownConfig) ([]corev1.Container, error) {
+	containerSpec *egv1a1.KubernetesContainerSpec,
+	shutdownConfig *egv1a1.ShutdownConfig,
+	shutdownManager *egv1a1.ShutdownManager,
+) ([]corev1.Container, error) {
 	// Define slice to hold container ports
 	var ports []corev1.ContainerPort
 
@@ -143,10 +143,10 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		proxyMetrics = infra.Config.Spec.Telemetry.Metrics
 	}
 
-	maxHeapSizeBytes := caclulateMaxHeapSizeBytes(deploymentConfig.Container.Resources)
+	maxHeapSizeBytes := calculateMaxHeapSizeBytes(containerSpec.Resources)
 
 	// Get the default Bootstrap
-	bootstrapConfigurations, err := bootstrap.GetRenderedBootstrapConfig(&bootstrap.RenderBootsrapConfigOptions{
+	bootstrapConfigurations, err := bootstrap.GetRenderedBootstrapConfig(&bootstrap.RenderBootstrapConfigOptions{
 		ProxyMetrics:     proxyMetrics,
 		MaxHeapSizeBytes: maxHeapSizeBytes,
 	})
@@ -193,18 +193,18 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 	containers := []corev1.Container{
 		{
 			Name:                     envoyContainerName,
-			Image:                    *deploymentConfig.Container.Image,
+			Image:                    *containerSpec.Image,
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy"},
 			Args:                     args,
-			Env:                      expectedContainerEnv(deploymentConfig.Container),
-			Resources:                *deploymentConfig.Container.Resources,
-			SecurityContext:          deploymentConfig.Container.SecurityContext,
+			Env:                      expectedContainerEnv(containerSpec),
+			Resources:                *containerSpec.Resources,
+			SecurityContext:          expectedEnvoySecurityContext(containerSpec),
 			Ports:                    ports,
-			VolumeMounts:             expectedContainerVolumeMounts(deploymentConfig.Container),
+			VolumeMounts:             expectedContainerVolumeMounts(containerSpec),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
-			ReadinessProbe: &corev1.Probe{
+			StartupProbe: &corev1.Probe{
 				ProbeHandler: corev1.ProbeHandler{
 					HTTPGet: &corev1.HTTPGetAction{
 						Path:   bootstrap.EnvoyReadinessPath,
@@ -215,7 +215,20 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 				TimeoutSeconds:   1,
 				PeriodSeconds:    10,
 				SuccessThreshold: 1,
-				FailureThreshold: 3,
+				FailureThreshold: 30,
+			},
+			ReadinessProbe: &corev1.Probe{
+				ProbeHandler: corev1.ProbeHandler{
+					HTTPGet: &corev1.HTTPGetAction{
+						Path:   bootstrap.EnvoyReadinessPath,
+						Port:   intstr.IntOrString{Type: intstr.Int, IntVal: bootstrap.EnvoyReadinessPort},
+						Scheme: corev1.URISchemeHTTP,
+					},
+				},
+				TimeoutSeconds:   1,
+				PeriodSeconds:    5,
+				SuccessThreshold: 1,
+				FailureThreshold: 1,
 			},
 			Lifecycle: &corev1.Lifecycle{
 				PreStop: &corev1.LifecycleHandler{
@@ -229,7 +242,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		},
 		{
 			Name:                     "shutdown-manager",
-			Image:                    expectedShutdownManagerImage(),
+			Image:                    expectedShutdownManagerImage(shutdownManager),
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy-gateway"},
 			Args:                     expectedShutdownManagerArgs(shutdownConfig),
@@ -237,6 +250,19 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			Resources:                *egv1a1.DefaultShutdownManagerContainerResourceRequirements(),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
+			StartupProbe: &corev1.Probe{
+				ProbeHandler: corev1.ProbeHandler{
+					HTTPGet: &corev1.HTTPGetAction{
+						Path:   envoy.ShutdownManagerHealthCheckPath,
+						Port:   intstr.IntOrString{Type: intstr.Int, IntVal: envoy.ShutdownManagerPort},
+						Scheme: corev1.URISchemeHTTP,
+					},
+				},
+				TimeoutSeconds:   1,
+				PeriodSeconds:    10,
+				SuccessThreshold: 1,
+				FailureThreshold: 30,
+			},
 			ReadinessProbe: &corev1.Probe{
 				ProbeHandler: corev1.ProbeHandler{
 					HTTPGet: &corev1.HTTPGetAction{
@@ -270,15 +296,16 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 					},
 				},
 			},
+			SecurityContext: expectedShutdownManagerSecurityContext(),
 		},
 	}
 
 	return containers, nil
 }
 
-func expectedShutdownManagerImage() string {
-	if v := version.Get().ShutdownManagerVersion; v != "" {
-		return fmt.Sprintf("%s:%s", strings.Split(egv1a1.DefaultShutdownManagerImage, ":")[0], v)
+func expectedShutdownManagerImage(shutdownManager *egv1a1.ShutdownManager) string {
+	if shutdownManager != nil && shutdownManager.Image != nil {
+		return *shutdownManager.Image
 	}
 	return egv1a1.DefaultShutdownManagerImage
 }
@@ -326,8 +353,8 @@ func expectedContainerVolumeMounts(containerSpec *egv1a1.KubernetesContainerSpec
 	return resource.ExpectedContainerVolumeMounts(containerSpec, volumeMounts)
 }
 
-// expectedDeploymentVolumes returns expected proxy deployment volumes.
-func expectedDeploymentVolumes(name string, deploymentSpec *egv1a1.KubernetesDeploymentSpec) []corev1.Volume {
+// expectedVolumes returns expected proxy deployment volumes.
+func expectedVolumes(name string, pod *egv1a1.KubernetesPodSpec) []corev1.Volume {
 	volumes := []corev1.Volume{
 		{
 			Name: "certs",
@@ -362,7 +389,7 @@ func expectedDeploymentVolumes(name string, deploymentSpec *egv1a1.KubernetesDep
 		},
 	}
 
-	return resource.ExpectedDeploymentVolumes(deploymentSpec.Pod, volumes)
+	return resource.ExpectedVolumes(pod, volumes)
 }
 
 // expectedContainerEnv returns expected proxy container envs.
@@ -395,9 +422,9 @@ func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec) []corev
 	}
 }
 
-// caclulateMaxHeapSizeBytes calculates the maximum heap size in bytes as 80% of Envoy container memory limits.
+// calculateMaxHeapSizeBytes calculates the maximum heap size in bytes as 80% of Envoy container memory limits.
 // In case no limits are defined '0' is returned, which means no heap size limit is set.
-func caclulateMaxHeapSizeBytes(envoyResourceRequirements *corev1.ResourceRequirements) uint64 {
+func calculateMaxHeapSizeBytes(envoyResourceRequirements *corev1.ResourceRequirements) uint64 {
 	if envoyResourceRequirements == nil || envoyResourceRequirements.Limits == nil {
 		return 0
 	}
@@ -408,4 +435,23 @@ func caclulateMaxHeapSizeBytes(envoyResourceRequirements *corev1.ResourceRequire
 	}
 
 	return 0
+}
+
+func expectedEnvoySecurityContext(containerSpec *egv1a1.KubernetesContainerSpec) *corev1.SecurityContext {
+	if containerSpec != nil && containerSpec.SecurityContext != nil {
+		return containerSpec.SecurityContext
+	}
+
+	sc := resource.DefaultSecurityContext()
+	// Envoy container needs to write to the log file/UDS socket.
+	sc.ReadOnlyRootFilesystem = nil
+	return sc
+}
+
+func expectedShutdownManagerSecurityContext() *corev1.SecurityContext {
+	sc := resource.DefaultSecurityContext()
+	// ShutdownManger creates a file to indicate the connection drain process is completed,
+	// so it needs file write permission.
+	sc.ReadOnlyRootFilesystem = nil
+	return sc
 }

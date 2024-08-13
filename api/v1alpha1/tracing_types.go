@@ -18,7 +18,6 @@ type ProxyTracing struct {
 	// If provider is kubernetes, pod name and namespace are added by default.
 	CustomTags map[string]CustomTag `json:"customTags,omitempty"`
 	// Provider defines the tracing provider.
-	// Only OpenTelemetry is supported currently.
 	Provider TracingProvider `json:"provider"`
 }
 
@@ -26,37 +25,36 @@ type TracingProviderType string
 
 const (
 	TracingProviderTypeOpenTelemetry TracingProviderType = "OpenTelemetry"
+	TracingProviderTypeZipkin        TracingProviderType = "Zipkin"
 )
 
 // TracingProvider defines the tracing provider configuration.
 //
 // +kubebuilder:validation:XValidation:message="host or backendRefs needs to be set",rule="has(self.host) || self.backendRefs.size() > 0"
+// +kubebuilder:validation:XValidation:message="BackendRefs must be used, backendRef is not supported.",rule="!has(self.backendRef)"
+// +kubebuilder:validation:XValidation:message="only supports Service kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service') : true"
+// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core group.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\")) : true"
 type TracingProvider struct {
+	BackendCluster `json:",inline"`
 	// Type defines the tracing provider type.
-	// EG currently only supports OpenTelemetry.
-	// +kubebuilder:validation:Enum=OpenTelemetry
+	// +kubebuilder:validation:Enum=OpenTelemetry;Zipkin
 	// +kubebuilder:default=OpenTelemetry
 	Type TracingProviderType `json:"type"`
 	// Host define the provider service hostname.
-	// Deprecated: Use BackendRef instead.
+	// Deprecated: Use BackendRefs instead.
 	//
 	// +optional
 	Host *string `json:"host,omitempty"`
 	// Port defines the port the provider service is exposed on.
-	// Deprecated: Use BackendRef instead.
+	// Deprecated: Use BackendRefs instead.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:default=4317
 	Port int32 `json:"port,omitempty"`
-	// BackendRefs references a Kubernetes object that represents the
-	// backend server to which the accesslog will be sent.
-	// Only service Kind is supported for now.
-	//
+	// Zipkin defines the Zipkin tracing provider configuration
 	// +optional
-	// +kubebuilder:validation:MaxItems=1
-	// +kubebuilder:validation:XValidation:message="only support Service kind.",rule="self.all(f, f.kind == 'Service')"
-	BackendRefs []BackendRef `json:"backendRefs,omitempty"`
+	Zipkin *ZipkinTracingProvider `json:"zipkin,omitempty"`
 }
 
 type CustomTagType string
@@ -112,4 +110,17 @@ type RequestHeaderCustomTag struct {
 	// DefaultValue defines the default value to use if the request header is not set.
 	// +optional
 	DefaultValue *string `json:"defaultValue,omitempty"`
+}
+
+// ZipkinTracingProvider defines the Zipkin tracing provider configuration.
+type ZipkinTracingProvider struct {
+	// Enable128BitTraceID determines whether a 128bit trace id will be used
+	// when creating a new trace instance. If set to false, a 64bit trace
+	// id will be used.
+	// +optional
+	Enable128BitTraceID *bool `json:"enable128BitTraceId,omitempty"`
+	// DisableSharedSpanContext determines whether the default Envoy behaviour of
+	// client and server spans sharing the same span context should be disabled.
+	// +optional
+	DisableSharedSpanContext *bool `json:"disableSharedSpanContext,omitempty"`
 }

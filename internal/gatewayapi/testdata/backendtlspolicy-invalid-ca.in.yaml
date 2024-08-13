@@ -48,9 +48,6 @@ referenceGrants:
         - group: gateway.networking.k8s.io
           kind: Gateway
           namespace: envoy-gateway
-        - group: gateway.networking.k8s.io
-          kind: BackendTLSPolicy
-          namespace: policies
       to:
         - group: ""
           kind: Service
@@ -68,7 +65,6 @@ services:
           name: http
           protocol: TCP
           targetPort: 8080
-
 
 endpointSlices:
   - apiVersion: discovery.k8s.io/v1
@@ -94,7 +90,7 @@ configMaps:
     kind: ConfigMap
     metadata:
       name: no-ca-cmap
-      namespace: policies
+      namespace: backends
     data:
       garbage.crt: |
         itsAllGarbage
@@ -103,17 +99,16 @@ backendTLSPolicies:
     kind: BackendTLSPolicy
     metadata:
       name: policy-btls
-      namespace: policies
+      namespace: backends
     spec:
-      targetRef:
-        group: ''
-        kind: Service
-        name: http-backend
-        namespace: backends
-        sectionName: "8080"
-      tls:
-        caCertRefs:
+      targetRefs:
+        - group: ""
+          kind: Service
+          name: http-backend
+          sectionName: "8080"
+      validation:
+        caCertificateRefs:
           - name: no-ca-cmap
-            group: ''
+            group: ""
             kind: ConfigMap
         hostname: example.com

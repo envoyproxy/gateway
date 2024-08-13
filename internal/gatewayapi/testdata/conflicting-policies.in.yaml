@@ -1,4 +1,4 @@
-envoyproxy:
+envoyProxyForGatewayClass:
   apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyProxy
   metadata:
@@ -113,7 +113,6 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: mfqjpuycbgjrtdww
-      namespace: default
     timeout:
       http:
         requestReceivedTimeout: "5s"

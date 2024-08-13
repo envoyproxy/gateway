@@ -35,6 +35,10 @@ const (
 	// DefaultXdsServerPort is the default listening port of the xds-server.
 	DefaultXdsServerPort = 18000
 
+	wasmServerHost = envoyGatewayXdsServerHost
+	// DefaultWasmServerPort is the default listening port of the wasm HTTP server.
+	wasmServerPort = 18002
+
 	envoyReadinessAddress = "0.0.0.0"
 	EnvoyReadinessPort    = 19001
 	EnvoyReadinessPath    = "/ready"
@@ -45,7 +49,7 @@ var bootstrapTmplStr string
 
 var bootstrapTmpl = template.Must(template.New(envoyCfgFileName).Parse(bootstrapTmplStr))
 
-// envoyBootstrap defines the envoy Bootstrap configuration.
+// bootstrapConfig defines the envoy Bootstrap configuration.
 type bootstrapConfig struct {
 	// parameters defines configurable bootstrap configuration parameters.
 	parameters bootstrapParameters
@@ -53,19 +57,26 @@ type bootstrapConfig struct {
 	rendered string
 }
 
-// envoyBootstrap defines the envoy Bootstrap configuration.
+// bootstrapParameters defines the envoy Bootstrap configuration.
 type bootstrapParameters struct {
 	// XdsServer defines the configuration of the XDS server.
-	XdsServer xdsServerParameters
+	XdsServer serverParameters
+	// WasmServer defines the configuration of the Wasm HTTP server.
+	WasmServer serverParameters
 	// AdminServer defines the configuration of the Envoy admin interface.
 	AdminServer adminServerParameters
 	// ReadyServer defines the configuration for health check ready listener
 	ReadyServer readyServerParameters
 	// EnablePrometheus defines whether to enable metrics endpoint for prometheus.
 	EnablePrometheus bool
+	// EnablePrometheusCompression defines whether to enable HTTP compression on metrics endpoint for prometheus.
+	EnablePrometheusCompression bool
+	// PrometheusCompressionLibrary defines the HTTP compression library for metrics endpoint for prometheus.
+	PrometheusCompressionLibrary string
+
 	// OtelMetricSinks defines the configuration of the OpenTelemetry sinks.
 	OtelMetricSinks []metricSink
-	// EnableStatConfig defines whether to to customize the Envoy proxy stats.
+	// EnableStatConfig defines whether to customize the Envoy proxy stats.
 	EnableStatConfig bool
 	// StatsMatcher is to control creation of custom Envoy stats with prefix,
 	// suffix, and regex expressions match on the name of the stats.
@@ -74,7 +85,7 @@ type bootstrapParameters struct {
 	OverloadManager overloadManagerParameters
 }
 
-type xdsServerParameters struct {
+type serverParameters struct {
 	// Address is the address of the XDS Server that Envoy is managed by.
 	Address string
 	// Port is the port of the XDS Server that Envoy is managed by.
@@ -108,8 +119,8 @@ type readyServerParameters struct {
 
 type StatsMatcherParameters struct {
 	Exacts             []string
-	Prefixs            []string
-	Suffixs            []string
+	Prefixes           []string
+	Suffixes           []string
 	RegularExpressions []string
 }
 
@@ -117,7 +128,7 @@ type overloadManagerParameters struct {
 	MaxHeapSizeBytes uint64
 }
 
-type RenderBootsrapConfigOptions struct {
+type RenderBootstrapConfigOptions struct {
 	ProxyMetrics     *egv1a1.ProxyMetrics
 	MaxHeapSizeBytes uint64
 }
@@ -134,11 +145,13 @@ func (b *bootstrapConfig) render() error {
 }
 
 // GetRenderedBootstrapConfig renders the bootstrap YAML string
-func GetRenderedBootstrapConfig(opts *RenderBootsrapConfigOptions) (string, error) {
+func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, error) {
 	var (
-		enablePrometheus = true
-		metricSinks      []metricSink
-		StatsMatcher     StatsMatcherParameters
+		enablePrometheus             = true
+		enablePrometheusCompression  = false
+		PrometheusCompressionLibrary = "gzip"
+		metricSinks                  []metricSink
+		StatsMatcher                 StatsMatcherParameters
 	)
 
 	if opts != nil && opts.ProxyMetrics != nil {
@@ -146,6 +159,11 @@ func GetRenderedBootstrapConfig(opts *RenderBootsrapConfigOptions) (string, erro
 
 		if proxyMetrics.Prometheus != nil {
 			enablePrometheus = !proxyMetrics.Prometheus.Disable
+
+			if proxyMetrics.Prometheus.Compression != nil {
+				enablePrometheusCompression = true
+				PrometheusCompressionLibrary = string(proxyMetrics.Prometheus.Compression.Type)
+			}
 		}
 
 		addresses := sets.NewString()
@@ -187,9 +205,9 @@ func GetRenderedBootstrapConfig(opts *RenderBootsrapConfigOptions) (string, erro
 				case egv1a1.StringMatchExact:
 					StatsMatcher.Exacts = append(StatsMatcher.Exacts, match.Value)
 				case egv1a1.StringMatchPrefix:
-					StatsMatcher.Prefixs = append(StatsMatcher.Prefixs, match.Value)
+					StatsMatcher.Prefixes = append(StatsMatcher.Prefixes, match.Value)
 				case egv1a1.StringMatchSuffix:
-					StatsMatcher.Suffixs = append(StatsMatcher.Suffixs, match.Value)
+					StatsMatcher.Suffixes = append(StatsMatcher.Suffixes, match.Value)
 				case egv1a1.StringMatchRegularExpression:
 					if err := regex.Validate(match.Value); err != nil {
 						return "", err
@@ -202,9 +220,13 @@ func GetRenderedBootstrapConfig(opts *RenderBootsrapConfigOptions) (string, erro
 
 	cfg := &bootstrapConfig{
 		parameters: bootstrapParameters{
-			XdsServer: xdsServerParameters{
+			XdsServer: serverParameters{
 				Address: envoyGatewayXdsServerHost,
 				Port:    DefaultXdsServerPort,
+			},
+			WasmServer: serverParameters{
+				Address: wasmServerHost,
+				Port:    wasmServerPort,
 			},
 			AdminServer: adminServerParameters{
 				Address:       EnvoyAdminAddress,
@@ -216,8 +238,10 @@ func GetRenderedBootstrapConfig(opts *RenderBootsrapConfigOptions) (string, erro
 				Port:          EnvoyReadinessPort,
 				ReadinessPath: EnvoyReadinessPath,
 			},
-			EnablePrometheus: enablePrometheus,
-			OtelMetricSinks:  metricSinks,
+			EnablePrometheus:             enablePrometheus,
+			EnablePrometheusCompression:  enablePrometheusCompression,
+			PrometheusCompressionLibrary: PrometheusCompressionLibrary,
+			OtelMetricSinks:              metricSinks,
 		},
 	}
 	if opts != nil && opts.ProxyMetrics != nil && opts.ProxyMetrics.Matches != nil {

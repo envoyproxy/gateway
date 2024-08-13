@@ -81,6 +81,25 @@ httpRoutes:
       backendRefs:
       - name: service-2
         port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-3
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-2
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/test3"
+      backendRefs:
+      - name: service-2
+        port: 8080
 backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -92,7 +111,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
     loadBalancer:
       type: Random
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -105,11 +123,11 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
     loadBalancer:
       type: ConsistentHash
       consistentHash:
         type: SourceIP
+        tableSize: 524287
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -120,7 +138,6 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-2
-      namespace: envoy-gateway
     loadBalancer:
       type: RoundRobin
       slowStart:
@@ -135,8 +152,23 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-2
-      namespace: default
     loadBalancer:
       type: LeastRequest
       slowStart:
         window: 300s
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route3
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-3
+    loadBalancer:
+      type: ConsistentHash
+      consistentHash:
+        type: Cookie
+        cookie:
+          name: "test"

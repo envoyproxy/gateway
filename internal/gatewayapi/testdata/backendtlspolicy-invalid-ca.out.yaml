@@ -4,16 +4,15 @@ backendTLSPolicies:
   metadata:
     creationTimestamp: null
     name: policy-btls
-    namespace: policies
+    namespace: backends
   spec:
-    targetRef:
-      group: ""
+    targetRefs:
+    - group: ""
       kind: Service
       name: http-backend
-      namespace: backends
       sectionName: "8080"
-    tls:
-      caCertRefs:
+    validation:
+      caCertificateRefs:
       - group: ""
         kind: ConfigMap
         name: no-ca-cmap
@@ -26,7 +25,7 @@ backendTLSPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: No ca found in configmap no-ca-cmap
+        message: No ca found in configmap no-ca-cmap.
         reason: Invalid
         status: "False"
         type: Accepted
@@ -137,16 +136,18 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-btls
+        namespace: envoy-gateway
+        sectionName: http
       name: envoy-gateway/gateway-btls/http
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/envoy-gateway/httproute-btls/rule/0
           settings:
           - addressType: IP
@@ -157,6 +158,10 @@ xdsIR:
             weight: 1
         hostname: '*'
         isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-btls
+          namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-btls/rule/0/match/0/*
         pathMatch:
           distinct: false

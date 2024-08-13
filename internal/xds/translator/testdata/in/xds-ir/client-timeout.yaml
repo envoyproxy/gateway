@@ -20,4 +20,18 @@ http:
       http:
         requestReceivedTimeout: "5s"
         idleTimeout: "10s"
-
+tcp:
+  - name: "second-listener"
+    address: "0.0.0.0"
+    port: 10081
+    routes:
+      - name: "second-route"
+        destination:
+          name: "second-route-dest"
+          settings:
+            - endpoints:
+                - host: "1.2.3.4"
+                  port: 50000
+    timeout:
+      tcp:
+        idleTimeout: "1200s"

@@ -1,4 +1,4 @@
-envoyproxy:
+envoyProxyForGatewayClass:
   apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyProxy
   metadata:
@@ -18,7 +18,6 @@ envoyPatchPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
     jsonPatches:
     - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
       name: "envoy-gateway-gateway-1-http"

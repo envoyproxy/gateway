@@ -26,9 +26,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils/file"
 )
 
-var (
-	overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
-)
+var overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
 
 func TestTranslate(t *testing.T) {
 	testCases := []struct {
@@ -282,6 +280,13 @@ func TestTranslate(t *testing.T) {
 			to:     "gateway-api",
 			expect: false,
 		},
+		{
+			name:      "no-service-cluster-ip",
+			from:      "gateway-api",
+			to:        "xds",
+			expect:    true,
+			extraArgs: []string{"--add-missing-resources"},
+		},
 	}
 
 	flag.Parse()
@@ -351,9 +356,16 @@ func TestTranslate(t *testing.T) {
 			}
 			want := &TranslationResult{}
 			mustUnmarshal(t, requireTestDataOutFile(t, fn), want)
+
+			// Supported features are dynamic, instead of hard-coding them in the output files
+			// we define them here.
+			// Disabled until GatewayClass.Status.SupportedFeatures is stable
+			// if want.GatewayClass != nil {
+			//	want.GatewayClass.Status.SupportedFeatures = status.GatewaySupportedFeatures
+			// }
+
 			opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
 			require.Empty(t, cmp.Diff(want, got, opts))
-
 		})
 	}
 }

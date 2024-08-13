@@ -13,11 +13,12 @@ This instantiated resource can be linked to a [Gateway][], [HTTPRoute][] or [GRP
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
+{{< boilerplate prerequisites >}}
+
 For GRPC - follow the steps from the [GRPC Routing](../grpc-routing) example.
-Before proceeding, you should be able to query the example backend using HTTP or GRPC.
 
 ### Install the hey load testing tool
+
 * The `hey` CLI will be used to generate load and measure response times. Follow the installation instruction from the [Hey project] docs.
 
 ## Configuration
@@ -25,6 +26,9 @@ Before proceeding, you should be able to query the example backend using HTTP or
 Allow requests with a valid faultInjection by creating an [BackendTrafficPolicy][BackendTrafficPolicy] and attaching it to the example HTTPRoute or GRPCRoute.
 
 ### HTTPRoute
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -96,11 +100,90 @@ spec:
     - path:
         type: PathPrefix
         value: /bar
-
 EOF
 ```
 
-Two HTTPRoute has been created, one for `/foo` and another for `/bar`.  `fault-injection-abort` BackendTrafficPolicy has been created and targeted HTTPRoute foo to abort requests for `/foo`. `fault-injection-delay` BackendTrafficPolicy has been created and targeted HTTPRoute foo to delay `2s` requests for `/bar`. 
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resources to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: fault-injection-50-percent-abort
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: foo
+  faultInjection:
+    abort:
+      httpStatus: 501
+      percentage: 50
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: fault-injection-delay
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: bar
+  faultInjection:
+    delay:
+      fixedDelay: 2s
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: foo
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - "www.example.com"
+  rules:
+  - backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+      weight: 1
+    matches:
+    - path:
+        type: PathPrefix
+        value: /foo
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: bar
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - "www.example.com"
+  rules:
+  - backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+      weight: 1
+    matches:
+    - path:
+        type: PathPrefix
+        value: /bar
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+
+Two HTTPRoute resources were created, one for `/foo` and another for `/bar`.  `fault-injection-abort` BackendTrafficPolicy has been created and targeted HTTPRoute foo to abort requests for `/foo`. `fault-injection-delay` BackendTrafficPolicy has been created and targeted HTTPRoute foo to delay `2s` requests for `/bar`. 
 
 Verify the HTTPRoute configuration and status:
 
@@ -117,6 +200,9 @@ kubectl get backendtrafficpolicy/fault-injection-delay -o yaml
 ```
 
 ### GRPCRoute
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -153,6 +239,48 @@ spec:
       weight: 1
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resources to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: fault-injection-abort
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: GRPCRoute
+    name: yages
+  faultInjection:
+    abort:
+      grpcStatus: 14
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: GRPCRoute
+metadata:
+  name: yages
+  labels:
+    example: grpc-routing
+spec:
+  parentRefs:
+  - name: example-gateway
+  hostnames:
+  - "grpc-example.com"
+  rules:
+  - backendRefs:
+    - group: ""
+      kind: Service
+      name: yages
+      port: 9000
+      weight: 1
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 A BackendTrafficPolicy has been created and targeted GRPCRoute yages to abort requests for `yages` service..
 

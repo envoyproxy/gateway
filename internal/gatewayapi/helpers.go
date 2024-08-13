@@ -8,15 +8,22 @@ package gatewayapi
 import (
 	"errors"
 	"fmt"
+	"net"
+	"slices"
 	"strings"
 
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
@@ -65,14 +72,14 @@ func PortNumPtr(val int32) *gwapiv1.PortNumber {
 	return &portNum
 }
 
-func ObjectNamePtr(val string) *v1alpha2.ObjectName {
-	objectName := v1alpha2.ObjectName(val)
+func ObjectNamePtr(val string) *gwapiv1a2.ObjectName {
+	objectName := gwapiv1a2.ObjectName(val)
 	return &objectName
 }
 
 var (
 	PathMatchTypeDerefOr       = ptr.Deref[gwapiv1.PathMatchType]
-	GRPCMethodMatchTypeDerefOr = ptr.Deref[v1alpha2.GRPCMethodMatchType]
+	GRPCMethodMatchTypeDerefOr = ptr.Deref[gwapiv1.GRPCMethodMatchType]
 	HeaderMatchTypeDerefOr     = ptr.Deref[gwapiv1.HeaderMatchType]
 	QueryParamMatchTypeDerefOr = ptr.Deref[gwapiv1.QueryParamMatchType]
 )
@@ -102,7 +109,7 @@ func KindDerefOr(kind *gwapiv1.Kind, defaultKind string) string {
 // to a Gateway with the given namespace/name, irrespective of whether a
 // section/listener name has been specified (i.e. a parent ref to a listener
 // on the specified gateway will return "true").
-func IsRefToGateway(parentRef gwapiv1.ParentReference, gateway types.NamespacedName) bool {
+func IsRefToGateway(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.ParentReference, gateway types.NamespacedName) bool {
 	if parentRef.Group != nil && string(*parentRef.Group) != gwapiv1.GroupName {
 		return false
 	}
@@ -111,7 +118,12 @@ func IsRefToGateway(parentRef gwapiv1.ParentReference, gateway types.NamespacedN
 		return false
 	}
 
-	if parentRef.Namespace != nil && string(*parentRef.Namespace) != gateway.Namespace {
+	ns := routeNamespace
+	if parentRef.Namespace != nil {
+		ns = *parentRef.Namespace
+	}
+
+	if string(ns) != gateway.Namespace {
 		return false
 	}
 
@@ -122,26 +134,22 @@ func IsRefToGateway(parentRef gwapiv1.ParentReference, gateway types.NamespacedN
 // in the given list, and if so, a list of the Listeners within that Gateway that
 // are included by the parent ref (either one specific Listener, or all Listeners
 // in the Gateway, depending on whether section name is specified or not).
-func GetReferencedListeners(parentRef gwapiv1.ParentReference, gateways []*GatewayContext) (bool, []*ListenerContext) {
-	var selectsGateway bool
+func GetReferencedListeners(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.ParentReference, gateways []*GatewayContext) (bool, []*ListenerContext) {
 	var referencedListeners []*ListenerContext
 
 	for _, gateway := range gateways {
-		if !IsRefToGateway(parentRef, utils.NamespacedName(gateway)) {
-			continue
-		}
-
-		selectsGateway = true
-
-		// The parentRef may be to the entire Gateway, or to a specific listener.
-		for _, listener := range gateway.listeners {
-			if (parentRef.SectionName == nil || *parentRef.SectionName == listener.Name) && (parentRef.Port == nil || *parentRef.Port == listener.Port) {
-				referencedListeners = append(referencedListeners, listener)
+		if IsRefToGateway(routeNamespace, parentRef, utils.NamespacedName(gateway)) {
+			// The parentRef may be to the entire Gateway, or to a specific listener.
+			for _, listener := range gateway.listeners {
+				if (parentRef.SectionName == nil || *parentRef.SectionName == listener.Name) && (parentRef.Port == nil || *parentRef.Port == listener.Port) {
+					referencedListeners = append(referencedListeners, listener)
+				}
 			}
+			return true, referencedListeners
 		}
 	}
 
-	return selectsGateway, referencedListeners
+	return false, referencedListeners
 }
 
 // HasReadyListener returns true if at least one Listener in the
@@ -185,15 +193,15 @@ func ValidateHTTPRouteFilter(filter *gwapiv1.HTTPRouteFilter, extGKs ...schema.G
 }
 
 // ValidateGRPCRouteFilter validates the provided filter within GRPCRoute.
-func ValidateGRPCRouteFilter(filter *v1alpha2.GRPCRouteFilter, extGKs ...schema.GroupKind) error {
+func ValidateGRPCRouteFilter(filter *gwapiv1.GRPCRouteFilter, extGKs ...schema.GroupKind) error {
 	switch {
 	case filter == nil:
 		return errors.New("filter is nil")
-	case filter.Type == v1alpha2.GRPCRouteFilterRequestMirror ||
-		filter.Type == v1alpha2.GRPCRouteFilterRequestHeaderModifier ||
-		filter.Type == v1alpha2.GRPCRouteFilterResponseHeaderModifier:
+	case filter.Type == gwapiv1.GRPCRouteFilterRequestMirror ||
+		filter.Type == gwapiv1.GRPCRouteFilterRequestHeaderModifier ||
+		filter.Type == gwapiv1.GRPCRouteFilterResponseHeaderModifier:
 		return nil
-	case filter.Type == v1alpha2.GRPCRouteFilterExtensionRef:
+	case filter.Type == gwapiv1.GRPCRouteFilterExtensionRef:
 		switch {
 		case filter.ExtensionRef == nil:
 			return errors.New("extensionRef field must be specified for an extended filter")
@@ -226,9 +234,24 @@ func GatewayClassOwnerLabel(name string) map[string]string {
 	return map[string]string{OwningGatewayClassLabel: name}
 }
 
+// OwnerLabels returns the owner labels based on the mergeGateways setting
+func OwnerLabels(gateway *gwapiv1.Gateway, mergeGateways bool) map[string]string {
+	if mergeGateways {
+		return GatewayClassOwnerLabel(string(gateway.Spec.GatewayClassName))
+	}
+
+	return GatewayOwnerLabels(gateway.Namespace, gateway.Name)
+}
+
 // servicePortToContainerPort translates a service port into an ephemeral
 // container port.
-func servicePortToContainerPort(servicePort int32) int32 {
+func servicePortToContainerPort(servicePort int32, envoyProxy *egv1a1.EnvoyProxy) int32 {
+	if envoyProxy != nil {
+		if !envoyProxy.NeedToSwitchPorts() {
+			return servicePort
+		}
+	}
+
 	// If the service port is a privileged port (1-1023)
 	// add a constant to the value converting it into an ephemeral port.
 	// This allows the container to bind to the port without needing a
@@ -343,20 +366,8 @@ func irStringKey(gatewayNs, gatewayName string) string {
 	return fmt.Sprintf("%s/%s", gatewayNs, gatewayName)
 }
 
-func irHTTPListenerName(listener *ListenerContext) string {
+func irListenerName(listener *ListenerContext) string {
 	return fmt.Sprintf("%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name)
-}
-
-func irTLSListenerName(listener *ListenerContext, tlsRoute *TLSRouteContext) string {
-	return fmt.Sprintf("%s/%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name, tlsRoute.Name)
-}
-
-func irTCPListenerName(listener *ListenerContext, tcpRoute *TCPRouteContext) string {
-	return fmt.Sprintf("%s/%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name, tcpRoute.Name)
-}
-
-func irUDPListenerName(listener *ListenerContext, udpRoute *UDPRouteContext) string {
-	return fmt.Sprintf("%s/%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name, udpRoute.Name)
 }
 
 func irListenerPortName(proto ir.ProtocolType, port int32) string {
@@ -373,11 +384,19 @@ func irRouteName(route RouteContext, ruleIdx, matchIdx int) string {
 	return fmt.Sprintf("%srule/%d/match/%d", irRoutePrefix(route), ruleIdx, matchIdx)
 }
 
+func irTCPRouteName(route RouteContext) string {
+	return fmt.Sprintf("%s/%s/%s", strings.ToLower(string(GetRouteType(route))), route.GetNamespace(), route.GetName())
+}
+
+func irUDPRouteName(route RouteContext) string {
+	return irTCPRouteName(route)
+}
+
 func irRouteDestinationName(route RouteContext, ruleIdx int) string {
 	return fmt.Sprintf("%srule/%d", irRoutePrefix(route), ruleIdx)
 }
 
-func irTLSConfigs(tlsSecrets []*v1.Secret) *ir.TLSConfig {
+func irTLSConfigs(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
 	if len(tlsSecrets) == 0 {
 		return nil
 	}
@@ -387,15 +406,15 @@ func irTLSConfigs(tlsSecrets []*v1.Secret) *ir.TLSConfig {
 	}
 	for i, tlsSecret := range tlsSecrets {
 		tlsListenerConfigs.Certificates[i] = ir.TLSCertificate{
-			Name:              irTLSListenerConfigName(tlsSecret),
-			ServerCertificate: tlsSecret.Data[v1.TLSCertKey],
-			PrivateKey:        tlsSecret.Data[v1.TLSPrivateKeyKey],
+			Name:        irTLSListenerConfigName(tlsSecret),
+			Certificate: tlsSecret.Data[corev1.TLSCertKey],
+			PrivateKey:  tlsSecret.Data[corev1.TLSPrivateKeyKey],
 		}
 	}
 	return tlsListenerConfigs
 }
 
-func irTLSListenerConfigName(secret *v1.Secret) string {
+func irTLSListenerConfigName(secret *corev1.Secret) string {
 	return fmt.Sprintf("%s/%s", secret.Namespace, secret.Name)
 }
 
@@ -404,7 +423,7 @@ func irTLSCACertName(namespace, name string) string {
 }
 
 func IsMergeGatewaysEnabled(resources *Resources) bool {
-	return resources.EnvoyProxy != nil && resources.EnvoyProxy.Spec.MergeGateways != nil && *resources.EnvoyProxy.Spec.MergeGateways
+	return resources.EnvoyProxyForGatewayClass != nil && resources.EnvoyProxyForGatewayClass.Spec.MergeGateways != nil && *resources.EnvoyProxyForGatewayClass.Spec.MergeGateways
 }
 
 func protocolSliceToStringSlice(protocols []gwapiv1.ProtocolType) []string {
@@ -416,8 +435,8 @@ func protocolSliceToStringSlice(protocols []gwapiv1.ProtocolType) []string {
 }
 
 // getAncestorRefForPolicy returns Gateway as an ancestor reference for policy.
-func getAncestorRefForPolicy(gatewayNN types.NamespacedName, sectionName *v1alpha2.SectionName) v1alpha2.ParentReference {
-	return v1alpha2.ParentReference{
+func getAncestorRefForPolicy(gatewayNN types.NamespacedName, sectionName *gwapiv1a2.SectionName) gwapiv1a2.ParentReference {
+	return gwapiv1a2.ParentReference{
 		Group:       GroupPtr(gwapiv1.GroupName),
 		Kind:        KindPtr(KindGateway),
 		Namespace:   NamespacePtr(gatewayNN.Namespace),
@@ -462,4 +481,89 @@ func listenersWithSameHTTPPort(xdsIR *ir.Xds, listener *ir.HTTPListener) []strin
 		}
 	}
 	return res
+}
+
+func parseCIDR(cidr string) (*ir.CIDRMatch, error) {
+	ip, ipn, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return nil, err
+	}
+
+	mask, _ := ipn.Mask.Size()
+	return &ir.CIDRMatch{
+		CIDR:    ipn.String(),
+		IP:      ip.String(),
+		MaskLen: uint32(mask),
+		IsIPv6:  ip.To4() == nil,
+	}, nil
+}
+
+func irConfigName(policy client.Object) string {
+	return fmt.Sprintf(
+		"%s/%s",
+		strings.ToLower(policy.GetObjectKind().GroupVersionKind().Kind),
+		utils.NamespacedName(policy).String())
+}
+
+type targetRefWithTimestamp struct {
+	gwapiv1a2.LocalPolicyTargetReferenceWithSectionName
+	CreationTimestamp metav1.Time
+}
+
+func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, potentialTargets []T) []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {
+	dedup := sets.New[targetRefWithTimestamp]()
+	for _, currSelector := range policy.TargetSelectors {
+		labelSelector := labels.SelectorFromSet(currSelector.MatchLabels)
+		for _, obj := range potentialTargets {
+			gvk := obj.GetObjectKind().GroupVersionKind()
+			if gvk.Kind != string(currSelector.Kind) ||
+				gvk.Group != string(ptr.Deref(currSelector.Group, gwapiv1a2.GroupName)) {
+				continue
+			}
+
+			if labelSelector.Matches(labels.Set(obj.GetLabels())) {
+				dedup.Insert(targetRefWithTimestamp{
+					CreationTimestamp: obj.GetCreationTimestamp(),
+					LocalPolicyTargetReferenceWithSectionName: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+							Group: gwapiv1a2.Group(gvk.Group),
+							Kind:  gwapiv1a2.Kind(gvk.Kind),
+							Name:  gwapiv1a2.ObjectName(obj.GetName()),
+						},
+					},
+				})
+			}
+		}
+	}
+	selectorsList := dedup.UnsortedList()
+	slices.SortFunc(selectorsList, func(i, j targetRefWithTimestamp) int {
+		return i.CreationTimestamp.Compare(j.CreationTimestamp.Time)
+	})
+	ret := []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{}
+	for _, v := range selectorsList {
+		ret = append(ret, v.LocalPolicyTargetReferenceWithSectionName)
+	}
+	// Plain targetRefs in the policy don't have an associated creation timestamp, but can still refer
+	// to targets that were already found via the selectors. Only add them to the returned list if
+	// they are not yet there. Always add them at the end.
+	fastLookup := sets.New(ret...)
+	var emptyTargetRef gwapiv1a2.LocalPolicyTargetReferenceWithSectionName
+	for _, v := range policy.GetTargetRefs() {
+		if v == emptyTargetRef {
+			// This can happen when the targetRef structure is read from extension server policies
+			continue
+		}
+		if !fastLookup.Has(v) {
+			ret = append(ret, v)
+		}
+	}
+
+	return ret
+}
+
+// Sets *target to value if and only if *target is nil
+func setIfNil[T any](target **T, value *T) {
+	if *target == nil {
+		*target = value
+	}
 }

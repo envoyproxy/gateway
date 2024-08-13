@@ -140,8 +140,17 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
       name: envoy-gateway/gateway-1/http
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
+      port: 10080
+    udp:
+    - address: 0.0.0.0
+      name: envoy-gateway/gateway-2/udp
       port: 10080

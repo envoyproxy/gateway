@@ -20,9 +20,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils"
 )
 
-var (
-	ErrSecretExists = errors.New("skipped creating secret since it already exists")
-)
+var ErrSecretExists = errors.New("skipped creating secret since it already exists")
 
 // caCertificateKey is the key name for accessing TLS CA certificate bundles
 // in Kubernetes Secrets.

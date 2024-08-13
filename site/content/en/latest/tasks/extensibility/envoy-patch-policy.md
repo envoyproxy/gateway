@@ -22,8 +22,7 @@ not exposed by Envoy Gateway APIs today.
 
 ### Prerequisites
 
-* Follow the steps from the [Quickstart](../../quickstart) task to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+{{< boilerplate prerequisites >}}
 
 ### Enable EnvoyPatchPolicy
 
@@ -32,6 +31,8 @@ Before proceeding, you should be able to query the example backend using HTTP.
 * The default installation of Envoy Gateway installs a default [EnvoyGateway][] configuration and attaches it
 using a `ConfigMap`. In the next step, we will update this resource to enable EnvoyPatchPolicy.
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -53,6 +54,32 @@ data:
 EOF
 ```
 
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy-gateway-config
+  namespace: envoy-gateway-system
+data:
+  envoy-gateway.yaml: |
+    apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: EnvoyGateway
+    provider:
+      type: Kubernetes
+    gateway:
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    extensionApis:
+      enableEnvoyPatchPolicy: true
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 * After updating the `ConfigMap`, you will need to restart the `envoy-gateway` deployment so the configuration kicks in
 
 ```shell
@@ -63,10 +90,13 @@ kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
 
 ### Customize Response
 
-* Lets use EnvoyProxy's [Local Reply Modification][] feature to return a custom response back to the client when
+* Use EnvoyProxy's [Local Reply Modification][] feature to return a custom response back to the client when
 the status code is `404`
 
-* Lets apply the configuration
+* Apply the configuration
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -94,18 +124,63 @@ spec:
           - filter:
               status_code_filter:
                 comparison:
-                 op: EQ
-                 value:
-                   default_value: 404
-                   runtime_key: key_b
+                  op: EQ
+                  value:
+                    default_value: 404
+                    runtime_key: key_b
             status_code: 406
             body:
               inline_string: "could not find what you are looking for"
 EOF
 ```
 
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyPatchPolicy
+metadata:
+  name: custom-response-patch-policy
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+    namespace: default
+  type: JSONPatch
+  jsonPatches:
+    - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
+      # The listener name is of the form <GatewayNamespace>/<GatewayName>/<GatewayListenerName>
+      name: default/eg/http
+      operation:
+        op: add
+        path: "/default_filter_chain/filters/0/typed_config/local_reply_config"
+        value:
+          mappers:
+          - filter:
+              status_code_filter:
+                comparison:
+                  op: EQ
+                  value:
+                    default_value: 404
+                    runtime_key: key_b
+            status_code: 406
+            body:
+              inline_string: "could not find what you are looking for"
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 When mergeGateways is enabled, there will be one Envoy deployment for all Gateways in the cluster.
 Then the EnvoyPatchPolicy should target a specific GatewayClass.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -133,27 +208,69 @@ spec:
           - filter:
               status_code_filter:
                 comparison:
-                 op: EQ
-                 value:
-                   default_value: 404
-                   runtime_key: key_b
+                  op: EQ
+                  value:
+                    default_value: 404
+                    runtime_key: key_b
             status_code: 406
             body:
               inline_string: "could not find what you are looking for"
 EOF
 ```
 
-* Lets edit the HTTPRoute resource from the Quickstart to only match on paths with value `/get`
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
 
-```
-kubectl patch httproute backend --type=json --patch '[{
-   "op": "add",
-   "path": "/spec/rules/0/matches/0/path/value",
-   "value": "/get",
-}]'
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyPatchPolicy
+metadata:
+  name: custom-response-patch-policy
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: GatewayClass
+    name: eg
+    namespace: default
+  type: JSONPatch
+  jsonPatches:
+    - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
+      # The listener name is of the form <GatewayNamespace>/<GatewayName>/<GatewayListenerName>
+      name: default/eg/http
+      operation:
+        op: add
+        path: "/default_filter_chain/filters/0/typed_config/local_reply_config"
+        value:
+          mappers:
+          - filter:
+              status_code_filter:
+                comparison:
+                  op: EQ
+                  value:
+                    default_value: 404
+                    runtime_key: key_b
+            status_code: 406
+            body:
+              inline_string: "could not find what you are looking for"
 ```
 
-* Lets test it out by specifying a path apart from `/get`
+{{% /tab %}}
+{{< /tabpane >}}
+
+* Edit the HTTPRoute resource from the Quickstart to only match on paths with value `/get`
+
+```shell
+kubectl patch httproute backend --type=json --patch '
+  - op: add
+    path: /spec/rules/0/matches/0/path/value
+    value: /get
+  '
+```
+
+* Test it out by specifying a path apart from `/get`
 
 ```
 $ curl --header "Host: www.example.com" http://localhost:8888/find
@@ -169,7 +286,7 @@ could not find what you are looking for
 `Accepted=True` and `Programmed=True` conditions are set to ensure that the policy has been
 applied to Envoy Proxy.
 
-```
+```yaml
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyPatchPolicy
 metadata:

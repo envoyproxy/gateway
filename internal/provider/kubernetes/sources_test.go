@@ -59,8 +59,8 @@ func TestSources(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			cond := make(chan struct{})
-			store := NewWatchAndReconcileSource(cond, tc.obj)
-			err := store.Start(tc.ctx, tc.handler, tc.queue)
+			store := NewWatchAndReconcileSource(cond, tc.obj, tc.handler)
+			err := store.Start(tc.ctx, tc.queue)
 			if !tc.expected {
 				require.Error(t, err)
 			} else {

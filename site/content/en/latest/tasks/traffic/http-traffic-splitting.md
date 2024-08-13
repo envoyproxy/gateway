@@ -6,14 +6,16 @@ The [HTTPRoute][] resource allows one or more [backendRefs][] to be provided. Re
 if they match the rules of the HTTPRoute. If an invalid backendRef is configured, then HTTP responses will be returned
 with status code `500` for all requests that would have been sent to that backend.
 
-## Installation
+## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+{{< boilerplate prerequisites >}}
 
 ## Single backendRef
 
 When a single backendRef is configured in a HTTPRoute, it will receive 100% of the traffic.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -38,6 +40,36 @@ spec:
       port: 3000
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-headers
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - backends.example
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 The HTTPRoute status should indicate that it has been accepted and is bound to the example Gateway.
 
@@ -86,6 +118,9 @@ If multiple backendRefs are configured, then traffic will be split between the b
 configured.
 
 First, create a second instance of the example app from the quickstart:
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -145,7 +180,73 @@ spec:
 EOF
 ```
 
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resources to your cluster:
+
+```yaml
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: backend-2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-2
+  labels:
+    app: backend-2
+    service: backend-2
+spec:
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+  selector:
+    app: backend-2
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend-2
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: backend-2
+        version: v1
+    spec:
+      serviceAccountName: backend-2
+      containers:
+        - image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+          imagePullPolicy: IfNotPresent
+          name: backend-2
+          ports:
+            - containerPort: 3000
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 Then create an HTTPRoute that uses both the app from the quickstart and the second instance that was just created
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -174,6 +275,40 @@ spec:
       port: 3000
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-headers
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - backends.example
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+    - group: ""
+      kind: Service
+      name: backend-2
+      port: 3000
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 Querying `backends.example/get` should result in `200` responses from the example Gateway and the output from the
 example app that indicates which pod handled the request should switch between the first pod and the second one from the
@@ -217,6 +352,9 @@ HTTPRoute. The weight is not a percentage and the sum of all weights does not ne
 The HTTPRoute below will configure the gateway to send 80% of the traffic to the backend service, and 20% to the
 backend-2 service.
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
@@ -247,6 +385,42 @@ spec:
 EOF
 ```
 
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-headers
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - backends.example
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+      weight: 8
+    - group: ""
+      kind: Service
+      name: backend-2
+      port: 3000
+      weight: 2
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 ## Invalid backendRefs
 
 backendRefs can be considered invalid for the following reasons:
@@ -262,6 +436,9 @@ backendRefs can be considered invalid for the following reasons:
 Modifying the above example to make the backend-2 backendRef invalid by using a port that does not exist on the Service
 will result in 80% of the traffic being sent to the backend service, and 20% of the traffic receiving an HTTP response
 with status code `500`.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -292,6 +469,42 @@ spec:
       weight: 2
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-headers
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - backends.example
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+      weight: 8
+    - group: ""
+      kind: Service
+      name: backend-2
+      port: 9000
+      weight: 2
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 Querying `backends.example/get` should result in `200` responses 80% of the time, and `500` responses 20% of the time.
 

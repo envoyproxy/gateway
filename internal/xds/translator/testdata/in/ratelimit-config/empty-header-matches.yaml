@@ -8,12 +8,13 @@ path:
   escapedSlashesAction: UnescapeAndRedirect
 routes:
 - name: "first-route"
-  rateLimit:
-    global:
-      rules:
-      - limit:
-          requests: 5
-          unit: second
+  traffic:
+    rateLimit:
+      global:
+        rules:
+        - limit:
+            requests: 5
+            unit: second
   pathMatch:
     exact: "foo/bar"
   destination:

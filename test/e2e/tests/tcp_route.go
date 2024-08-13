@@ -19,17 +19,17 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/config"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 )
 
 func init() {
@@ -77,24 +77,23 @@ var TCPRouteTest = suite.ConformanceTest{
 			// Send a request to an valid path and expect a successful response
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, OkResp)
 		})
-
 	},
 }
 
 func GatewayAndTCPRoutesMustBeAccepted(t *testing.T, c client.Client, timeoutConfig config.TimeoutConfig, controllerName string, gw GatewayRef, routeNNs ...types.NamespacedName) string {
 	t.Helper()
 
-	tcpRoute := &v1alpha2.TCPRoute{}
+	tcpRoute := &gwapiv1a2.TCPRoute{}
 	err := c.Get(context.Background(), routeNNs[0], tcpRoute)
 	if err != nil {
-		t.Logf("error fetching TCPRoute: %v", err)
+		tlog.Logf(t, "error fetching TCPRoute: %v", err)
 	}
 
 	gwAddr, err := WaitForGatewayAddress(t, c, timeoutConfig, gw.NamespacedName, string(*tcpRoute.Spec.ParentRefs[0].SectionName))
 	require.NoErrorf(t, err, "timed out waiting for Gateway address to be assigned")
 
-	ns := gatewayv1.Namespace(gw.Namespace)
-	kind := gatewayv1.Kind("Gateway")
+	ns := gwapiv1.Namespace(gw.Namespace)
+	kind := gwapiv1.Kind("Gateway")
 
 	for _, routeNN := range routeNNs {
 		namespaceRequired := true
@@ -102,21 +101,21 @@ func GatewayAndTCPRoutesMustBeAccepted(t *testing.T, c client.Client, timeoutCon
 			namespaceRequired = false
 		}
 
-		var parents []gatewayv1.RouteParentStatus
+		var parents []gwapiv1.RouteParentStatus
 		for _, listener := range gw.listenerNames {
-			parents = append(parents, gatewayv1.RouteParentStatus{
-				ParentRef: gatewayv1.ParentReference{
-					Group:       (*gatewayv1.Group)(&gatewayv1.GroupVersion.Group),
+			parents = append(parents, gwapiv1.RouteParentStatus{
+				ParentRef: gwapiv1.ParentReference{
+					Group:       (*gwapiv1.Group)(&gwapiv1.GroupVersion.Group),
 					Kind:        &kind,
-					Name:        gatewayv1.ObjectName(gw.Name),
+					Name:        gwapiv1.ObjectName(gw.Name),
 					Namespace:   &ns,
 					SectionName: listener,
 				},
-				ControllerName: gatewayv1.GatewayController(controllerName),
+				ControllerName: gwapiv1.GatewayController(controllerName),
 				Conditions: []metav1.Condition{{
-					Type:   string(gatewayv1.RouteConditionAccepted),
+					Type:   string(gwapiv1.RouteConditionAccepted),
 					Status: metav1.ConditionTrue,
-					Reason: string(gatewayv1.RouteReasonAccepted),
+					Reason: string(gwapiv1.RouteReasonAccepted),
 				}},
 			})
 		}
@@ -124,7 +123,6 @@ func GatewayAndTCPRoutesMustBeAccepted(t *testing.T, c client.Client, timeoutCon
 	}
 
 	return gwAddr
-
 }
 
 // WaitForGatewayAddress waits until at least one IP Address has been set in the
@@ -134,10 +132,10 @@ func WaitForGatewayAddress(t *testing.T, client client.Client, timeoutConfig con
 
 	var ipAddr, port string
 	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, timeoutConfig.GatewayMustHaveAddress, true, func(ctx context.Context) (bool, error) {
-		gw := &gatewayv1.Gateway{}
+		gw := &gwapiv1.Gateway{}
 		err := client.Get(ctx, gwName, gw)
 		if err != nil {
-			t.Logf("error fetching Gateway: %v", err)
+			tlog.Logf(t, "error fetching Gateway: %v", err)
 			return false, fmt.Errorf("error fetching Gateway: %w", err)
 		}
 
@@ -147,7 +145,7 @@ func WaitForGatewayAddress(t *testing.T, client client.Client, timeoutConfig con
 		}
 		if sectionName != "" {
 			for i, val := range gw.Spec.Listeners {
-				if val.Name == gatewayv1.SectionName(sectionName) {
+				if val.Name == gwapiv1.SectionName(sectionName) {
 					port = strconv.FormatInt(int64(gw.Spec.Listeners[i].Port), 10)
 				}
 			}
@@ -157,7 +155,7 @@ func WaitForGatewayAddress(t *testing.T, client client.Client, timeoutConfig con
 
 		// TODO: Support more than IPAddress
 		for _, address := range gw.Status.Addresses {
-			if address.Type != nil && *address.Type == gatewayv1.IPAddressType {
+			if address.Type != nil && *address.Type == gwapiv1.IPAddressType {
 				ipAddr = address.Value
 				return true, nil
 			}
@@ -169,12 +167,12 @@ func WaitForGatewayAddress(t *testing.T, client client.Client, timeoutConfig con
 	return net.JoinHostPort(ipAddr, port), waitErr
 }
 
-func TCPRouteMustHaveParents(t *testing.T, client client.Client, timeoutConfig config.TimeoutConfig, routeName types.NamespacedName, parents []gatewayv1.RouteParentStatus, namespaceRequired bool) {
+func TCPRouteMustHaveParents(t *testing.T, client client.Client, timeoutConfig config.TimeoutConfig, routeName types.NamespacedName, parents []gwapiv1.RouteParentStatus, namespaceRequired bool) {
 	t.Helper()
 
-	var actual []gatewayv1.RouteParentStatus
+	var actual []gwapiv1.RouteParentStatus
 	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, timeoutConfig.RouteMustHaveParents, true, func(ctx context.Context) (bool, error) {
-		route := &v1alpha2.TCPRoute{}
+		route := &gwapiv1a2.TCPRoute{}
 		err := client.Get(ctx, routeName, route)
 		if err != nil {
 			return false, fmt.Errorf("error fetching HTTPRoute: %w", err)

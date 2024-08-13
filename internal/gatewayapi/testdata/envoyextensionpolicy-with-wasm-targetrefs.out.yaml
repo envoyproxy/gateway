@@ -1,0 +1,306 @@
+envoyExtensionPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    creationTimestamp: null
+    name: policy-for-gateway
+    namespace: envoy-gateway
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+    wasm:
+    - code:
+        http:
+          sha256: 746df05c8f3a0b07a46c0967cfbc5cbe5b9d48d0f79b6177eeedf8be6c8b34b5
+          url: https://www.example.com/wasm-filter-1.wasm
+        type: HTTP
+      config:
+        parameter1:
+          key1: value1
+          key2: value2
+        parameter2: value3
+      name: wasm-filter-1
+    - code:
+        http:
+          sha256: a1efca12ea51069abb123bf9c77889fcc2a31cc5483fc14d115e44fdf07c7980
+          url: https://www.example.com/wasm-filter-2.wasm
+        type: HTTP
+      config:
+        parameter1: value1
+        parameter2: value2
+      name: wasm-filter-2
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: 'This policy is being overridden by other envoyExtensionPolicies
+          for these routes: [envoy-gateway/httproute-1]'
+        reason: Overridden
+        status: "True"
+        type: Overridden
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-1
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: http
+      port: 80
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 2
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-1
+    namespace: envoy-gateway
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /foo
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Service envoy-gateway/service-1 not found
+        reason: BackendNotFound
+        status: "False"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-2
+    namespace: envoy-gateway
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /bar
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Service envoy-gateway/service-1 not found
+        reason: BackendNotFound
+        status: "False"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+infraIR:
+  envoy-gateway/gateway-1:
+    proxy:
+      listeners:
+      - address: null
+        name: envoy-gateway/gateway-1/http
+        ports:
+        - containerPort: 10080
+          name: http-80
+          protocol: HTTP
+          servicePort: 80
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+      name: envoy-gateway/gateway-1
+xdsIR:
+  envoy-gateway/gateway-1:
+    accessLog:
+      text:
+      - path: /dev/stdout
+    http:
+    - address: 0.0.0.0
+      hostnames:
+      - '*'
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      name: envoy-gateway/gateway-1/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+      routes:
+      - destination:
+          name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - weight: 1
+        directResponse:
+          statusCode: 500
+        envoyExtensions:
+          wasms:
+          - config:
+              parameter1:
+                key1: value1
+                key2: value2
+              parameter2: value3
+            failOpen: false
+            httpWasmCode:
+              originalDownloadingURL: https://www.example.com/wasm-filter-1.wasm
+              servingURL: https://envoy-gateway:18002/5c90b9a82642ce00a7753923fabead306b9d9a54a7c0bd2463a1af3efcfb110b.wasm
+              sha256: 746df05c8f3a0b07a46c0967cfbc5cbe5b9d48d0f79b6177eeedf8be6c8b34b5
+            name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/0
+            wasmName: wasm-filter-1
+          - config:
+              parameter1: value1
+              parameter2: value2
+            failOpen: false
+            httpWasmCode:
+              originalDownloadingURL: https://www.example.com/wasm-filter-2.wasm
+              servingURL: https://envoy-gateway:18002/593e4cc60a7e0fa4d4f86531a5e20e785213a52000f056a7a8b5c5afcb908052.wasm
+              sha256: a1efca12ea51069abb123bf9c77889fcc2a31cc5483fc14d115e44fdf07c7980
+            name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/1
+            wasmName: wasm-filter-2
+        hostname: www.example.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: envoy-gateway
+        name: httproute/envoy-gateway/httproute-1/rule/0/match/0/www_example_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /foo
+      - destination:
+          name: httproute/envoy-gateway/httproute-2/rule/0
+          settings:
+          - weight: 1
+        directResponse:
+          statusCode: 500
+        envoyExtensions:
+          wasms:
+          - config:
+              parameter1:
+                key1: value1
+                key2: value2
+              parameter2: value3
+            failOpen: false
+            httpWasmCode:
+              originalDownloadingURL: https://www.example.com/wasm-filter-1.wasm
+              servingURL: https://envoy-gateway:18002/5c90b9a82642ce00a7753923fabead306b9d9a54a7c0bd2463a1af3efcfb110b.wasm
+              sha256: 746df05c8f3a0b07a46c0967cfbc5cbe5b9d48d0f79b6177eeedf8be6c8b34b5
+            name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/0
+            wasmName: wasm-filter-1
+          - config:
+              parameter1: value1
+              parameter2: value2
+            failOpen: false
+            httpWasmCode:
+              originalDownloadingURL: https://www.example.com/wasm-filter-2.wasm
+              servingURL: https://envoy-gateway:18002/593e4cc60a7e0fa4d4f86531a5e20e785213a52000f056a7a8b5c5afcb908052.wasm
+              sha256: a1efca12ea51069abb123bf9c77889fcc2a31cc5483fc14d115e44fdf07c7980
+            name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/1
+            wasmName: wasm-filter-2
+        hostname: www.example.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: envoy-gateway
+        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/www_example_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /bar

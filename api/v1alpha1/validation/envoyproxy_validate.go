@@ -8,8 +8,10 @@ package validation
 import (
 	"errors"
 	"fmt"
+	"net"
 	"net/netip"
 
+	"github.com/dominikbraun/graph"
 	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	"github.com/google/go-cmp/cmp"
@@ -61,6 +63,13 @@ func validateEnvoyProxySpec(spec *egv1a1.EnvoyProxySpec) error {
 		errs = append(errs, validateProxyTelemetryErrs...)
 	}
 
+	// validate filter order
+	if spec != nil && spec.FilterOrder != nil {
+		if err := validateFilterOrder(spec.FilterOrder); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
 	return utilerrors.NewAggregate(errs)
 }
 
@@ -109,10 +118,20 @@ func validateService(spec *egv1a1.EnvoyProxySpec) []error {
 				errs = append(errs, fmt.Errorf("unsupported envoy service type %v", serviceType))
 			}
 		}
-		if serviceType, serviceAllocateLoadBalancerNodePorts :=
-			spec.Provider.Kubernetes.EnvoyService.Type, spec.Provider.Kubernetes.EnvoyService.AllocateLoadBalancerNodePorts; serviceType != nil && serviceAllocateLoadBalancerNodePorts != nil {
+		if serviceType, serviceAllocateLoadBalancerNodePorts := spec.Provider.Kubernetes.EnvoyService.Type, spec.Provider.Kubernetes.EnvoyService.AllocateLoadBalancerNodePorts; serviceType != nil && serviceAllocateLoadBalancerNodePorts != nil {
 			if *serviceType != egv1a1.ServiceTypeLoadBalancer {
 				errs = append(errs, fmt.Errorf("allocateLoadBalancerNodePorts can only be set for %v type", egv1a1.ServiceTypeLoadBalancer))
+			}
+		}
+		if serviceType, serviceLoadBalancerSourceRanges := spec.Provider.Kubernetes.EnvoyService.Type, spec.Provider.Kubernetes.EnvoyService.LoadBalancerSourceRanges; serviceType != nil && serviceLoadBalancerSourceRanges != nil {
+			if *serviceType != egv1a1.ServiceTypeLoadBalancer {
+				errs = append(errs, fmt.Errorf("loadBalancerSourceRanges can only be set for %v type", egv1a1.ServiceTypeLoadBalancer))
+			}
+
+			for _, serviceLoadBalancerSourceRange := range serviceLoadBalancerSourceRanges {
+				if ip, _, err := net.ParseCIDR(serviceLoadBalancerSourceRange); err != nil || ip.To4() == nil {
+					errs = append(errs, fmt.Errorf("loadBalancerSourceRange:%s is an invalid IP subnet", serviceLoadBalancerSourceRange))
+				}
 			}
 		}
 		if serviceType, serviceLoadBalancerIP := spec.Provider.Kubernetes.EnvoyService.Type, spec.Provider.Kubernetes.EnvoyService.LoadBalancerIP; serviceType != nil && serviceLoadBalancerIP != nil {
@@ -121,7 +140,7 @@ func validateService(spec *egv1a1.EnvoyProxySpec) []error {
 			}
 
 			if ip, err := netip.ParseAddr(*serviceLoadBalancerIP); err != nil || !ip.Unmap().Is4() {
-				errs = append(errs, fmt.Errorf("loadBalancerIP:%s is an invalid IPv4 address", *serviceLoadBalancerIP))
+				errs = append(errs, fmt.Errorf("loadBalancerIP:%s is an invalid IP address", *serviceLoadBalancerIP))
 			}
 		}
 		if patch := spec.Provider.Kubernetes.EnvoyService.Patch; patch != nil {
@@ -227,16 +246,18 @@ func validateProxyAccessLog(accessLog *egv1a1.ProxyAccessLog) []error {
 	var errs []error
 
 	for _, setting := range accessLog.Settings {
-		switch setting.Format.Type {
-		case egv1a1.ProxyAccessLogFormatTypeText:
-			if setting.Format.Text == nil {
-				err := fmt.Errorf("unable to configure access log when using Text format but \"text\" field being empty")
-				errs = append(errs, err)
-			}
-		case egv1a1.ProxyAccessLogFormatTypeJSON:
-			if setting.Format.JSON == nil {
-				err := fmt.Errorf("unable to configure access log when using JSON format but \"json\" field being empty")
-				errs = append(errs, err)
+		if setting.Format != nil {
+			switch setting.Format.Type {
+			case egv1a1.ProxyAccessLogFormatTypeText:
+				if setting.Format.Text == nil {
+					err := fmt.Errorf("unable to configure access log when using Text format but \"text\" field being empty")
+					errs = append(errs, err)
+				}
+			case egv1a1.ProxyAccessLogFormatTypeJSON:
+				if setting.Format.JSON == nil {
+					err := fmt.Errorf("unable to configure access log when using JSON format but \"json\" field being empty")
+					errs = append(errs, err)
+				}
 			}
 		}
 
@@ -257,4 +278,37 @@ func validateProxyAccessLog(accessLog *egv1a1.ProxyAccessLog) []error {
 	}
 
 	return errs
+}
+
+func validateFilterOrder(filterOrder []egv1a1.FilterPosition) error {
+	g := graph.New(graph.StringHash, graph.Directed(), graph.PreventCycles())
+
+	for _, filter := range filterOrder {
+		// Ignore the error since the same filter can be added multiple times
+		_ = g.AddVertex(string(filter.Name))
+		if filter.Before != nil {
+			_ = g.AddVertex(string(*filter.Before))
+		}
+		if filter.After != nil {
+			_ = g.AddVertex(string(*filter.After))
+		}
+	}
+
+	for _, filter := range filterOrder {
+		var from, to string
+		if filter.Before != nil {
+			from = string(filter.Name)
+			to = string(*filter.Before)
+		} else {
+			from = string(*filter.After)
+			to = string(filter.Name)
+		}
+		if err := g.AddEdge(from, to); err != nil {
+			if errors.Is(err, graph.ErrEdgeCreatesCycle) {
+				return fmt.Errorf("there is a cycle in the filter order: %s -> %s", from, to)
+			}
+		}
+	}
+
+	return nil
 }

@@ -56,8 +56,9 @@ http:
       - backendWeights:
           invalid: 0
           valid: 0
-        proxyProtocol:
-          version: "V2"
+        traffic:
+          proxyProtocol:
+            version: "V2"
         destination:
           name: httproute/envoy-gateway/httproute-btls-2/rule/0
           settings:

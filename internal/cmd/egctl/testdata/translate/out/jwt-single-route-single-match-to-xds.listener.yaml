@@ -73,8 +73,9 @@ xds:
                     resourceApiVersion: V3
                   routeConfigName: envoy-gateway-system/eg/http
                 serverHeaderTransformation: PASS_THROUGH
-                statPrefix: http
+                statPrefix: http-10080
                 useRemoteAddress: true
+            name: envoy-gateway-system/eg/http
           drainType: MODIFY_ONLY
           name: envoy-gateway-system/eg/http
           perConnectionBufferLimitBytes: 32768

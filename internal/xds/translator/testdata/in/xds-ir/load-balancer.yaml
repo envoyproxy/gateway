@@ -10,8 +10,9 @@ http:
   routes:
   - name: "first-route"
     hostname: "*"
-    loadBalancer:
-      roundRobin: {}
+    traffic:
+      loadBalancer:
+        roundRobin: {}
     destination:
       name: "first-route-dest"
       settings:
@@ -20,8 +21,9 @@ http:
           port: 50000
   - name: "second-route"
     hostname: "*"
-    loadBalancer:
-      random: {}
+    traffic:
+      loadBalancer:
+        random: {}
     destination:
       name: "second-route-dest"
       settings:
@@ -30,8 +32,9 @@ http:
           port: 50000
   - name: "third-route"
     hostname: "*"
-    loadBalancer:
-      leastRequest: {}
+    traffic:
+      loadBalancer:
+        leastRequest: {}
     destination:
       name: "third-route-dest"
       settings:
@@ -40,9 +43,10 @@ http:
           port: 50000
   - name: "fourth-route"
     hostname: "*"
-    loadBalancer:
-      consistentHash:
-        sourceIP: true
+    traffic:
+      loadBalancer:
+        consistentHash:
+          sourceIP: true
     destination:
       name: "fourth-route-dest"
       settings:
@@ -51,10 +55,11 @@ http:
           port: 50000
   - name: "fifth-route"
     hostname: "*"
-    loadBalancer:
-      leastRequest:
-        slowStart:
-          window: 60s
+    traffic:
+      loadBalancer:
+        leastRequest:
+          slowStart:
+            window: 60s
     destination:
       name: "fifth-route-dest"
       settings:
@@ -63,12 +68,66 @@ http:
           port: 50000
   - name: "sixth-route"
     hostname: "*"
-    loadBalancer:
-      roundRobin:
-        slowStart:
-          window: 300s
+    traffic:
+      loadBalancer:
+        roundRobin:
+          slowStart:
+            window: 300s
     destination:
       name: "sixth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "seventh-route"
+    hostname: "*"
+    traffic:
+      loadBalancer:
+        consistentHash:
+          header:
+            name: name
+    destination:
+      name: "seventh-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "eighth-route"
+    hostname: "*"
+    traffic:
+      loadBalancer:
+        consistentHash:
+          tableSize: 524287
+    destination:
+      name: "eighth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "ninth-route"
+    hostname: "*"
+    traffic:
+      loadBalancer:
+        consistentHash:
+          cookie:
+            name: "test"
+    destination:
+      name: "ninth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "tenth-route"
+    hostname: "*"
+    traffic:
+      loadBalancer:
+        consistentHash:
+          cookie:
+            name: "test"
+            attributes:
+              foo: bar
+    destination:
+      name: "tenth-route-dest"
       settings:
       - endpoints:
         - host: "1.2.3.4"

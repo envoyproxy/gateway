@@ -18,7 +18,7 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, JWTTest)
+	ConformanceTests = append(ConformanceTests, JWTTest, OptionalJWTTest)
 }
 
 const (
@@ -30,6 +30,8 @@ const (
 	v2Token = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IlRvbSIsImFkbWluIjp0cnVlLCJpYXQiOjE1MTYyMzkwMjJ9.kyzDDSo7XpweSPU1lxoI9IHzhTBrRNlnmcW9lmCbloZELShg-8isBx4AFoM4unXZTHpS_Y24y0gmd4nDQxgUE-CgjVSnGCb0Xhy3WO1gm9iChoKDyyQ3kHp98EmKxTyxKG2X9GyKcDFNBDjH12OBD7TcJUaBEvLf6Jw1SG2A7FakUPWeK04DQ916-ROylzI6qKyaZ0OpfYIbijvyAQxlQRxxs2XHlAkLdJhfVcUqJBwsFTbwHYARC-WNgd2_etAk1GWdwwZ_NoTmRzZAMryrYJpHY9KPlbnZ93Ye3o9h2viBQ_XRb7JBkWnAGYO4_KswpJWE_7ROUVj8iOJo2jfY6w"
 	// nolint: gosec
 	anotherToken = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkplcnJ5IiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.VKLURpaPLWanwE5xoGTfuYKqT9a91Fg1tRBAOyFzNa5t9SbtK8As7-3iJg4f_VlBHj13OeKjfpDEvgLerIt5TKnU708YKERB45di_7TNURoiVZayq3_gFznMqoSarP3irLDzh0YKUjc7Vuh3MX99fueTdbeA-c4pMhG_nwiFeRJhZNQQDzzKtmL9C_L2uwP4bDupmcYz6FAA2EN_r67WoXCjPWQoRQmE435EVQ-FYKgAR7qZ5TdjoSN91ByRQ7Ior9srPl7gOvjuaRbu7fjC-LT7wRE26v2vu-BCM2PveJf2NMobNb8q0pcmpB1TWhSXp1MIZs9yxbqEAZLOumYfUw"
+	// nolint: gosec
+	invalidToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
 )
 
 var JWTTest = suite.ConformanceTest{
@@ -106,5 +108,67 @@ var JWTTest = suite.ConformanceTest{
 				})
 			}
 		})
+	},
+}
+
+var OptionalJWTTest = suite.ConformanceTest{
+	ShortName:   "OptionalJWT",
+	Description: "Test enable optional JWT",
+	Manifests:   []string{"testdata/jwt-optional.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "jwt-optional", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+		testCases := []http.ExpectedResponse{
+			{
+				TestCaseName: "with a valid JWT",
+				Request: http.Request{
+					Path: "/public",
+					Headers: map[string]string{
+						"Authorization": "Bearer " + v1Token,
+					},
+				},
+				Backend: "infra-backend-v1",
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			},
+			{
+				TestCaseName: "with an invalid JWT",
+				Request: http.Request{
+					Path: "/public",
+					Headers: map[string]string{
+						"Authorization": "Bearer " + invalidToken,
+					},
+				},
+				Backend: "infra-backend-v1",
+				Response: http.Response{
+					StatusCode: 401,
+				},
+				Namespace: ns,
+			},
+			{
+				TestCaseName: "omitting JWT",
+				Request: http.Request{
+					Path: "/public",
+				},
+				Backend: "infra-backend-v1",
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			},
+		}
+
+		for i := range testCases {
+			tc := testCases[i]
+			t.Run(tc.GetTestCaseName(i), func(t *testing.T) {
+				t.Parallel()
+				http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, tc)
+			})
+		}
 	},
 }

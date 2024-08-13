@@ -53,6 +53,10 @@ An example configuration:
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyGateway
 extensionManager:
+  poliyResources:
+  - group: example.myextension.io
+    version: v1alpha1
+    kind: ListenerPolicyKind
   resources:
   - group: example.myextension.io
     version: v2
@@ -65,21 +69,31 @@ extensionManager:
       - HTTPListener
       - Translation
   service:
-    host: my-extension.example
-    port: 443
+    fqdn: 
+      hostname: my-extension.example
+      port: 443
     tls:
       certificateRef:
         name: my-secret
         namespace: default
 ```
 
-An extension must supply connection information in the `extension.service` field so that Envoy Gateway can communicate with the extension. The `tls` configuration is optional.
+An extension must supply connection information in the `extension.service` field so that Envoy Gateway can communicate with the extension. The `tls` configuration is optional. Envoy Gateway supports connecting to an extension server either with TCP or with Unix Domain Sockets as a transport layer.
 
 If the extension wants Envoy Gateway to watch resources for it then the extension must configure the optional `extension.resources` field and supply a list of:
 
 - `group`: the API group of the resource
 - `version`: the API version of the resource
 - `kind`: the Kind of resource
+
+If the extension wants Envoy Gateway to watch for policy resources then it must configure the optional `extensions.policyResources` field and supply a list of
+
+- `group`: the API group of the resource
+- `version`: the API version of the resource
+- `kind`: the Kind of resource
+
+Policy resources, like all Gateway-API policies, must contain `targetRef` or `targetRefs` fields in the spec which allow Envoy Gateway to identify which resources are targeted by the policy. 
+Policies can currently only target `Gateway` resources, and are provided as context to calls to the `HTTPListener` hook.
 
 The extension can configure the `extensionManager.hooks` field to specify which hook points it would like to support. If a given hook is not listed here then it will not be executed even
 if the extension is configured properly. This allows extension developers to only opt-in to the hook points they want to make use of.
@@ -93,8 +107,8 @@ Envoy Gateway manages [Envoy][] deployments, which act as the data plane that ha
 Gateway converts into [Envoy specific configuration (xDS)][] to send over to Envoy.
 
 Gateway API offers [ExtensionRef filters][] and [Policy Attachments][] as extension points for implementers to use. Envoy Gateway extends the Gateway API using these extension points to provide support for [rate limiting][]
-and [authentication][] native to the project. The initial design of Envoy Gateway extensions will primarily focus on ExtensionRef filters so that extension developers can reference their own resources as HTTP Filters in the same way
-that Envoy Gateway has native support for rate limiting and authentication filters.
+and [authentication][] native to the project. The initial design of Envoy Gateway extensions will primarily focus on `ExtensionRef` filters so that extension developers can reference their own resources as HTTP Filters in the same way
+that Envoy Gateway has native support for rate limiting and authentication filters, as well as policy resources which can target `Gateway`s.
 
 When Envoy Gateway encounters an [HTTPRoute][] or [GRPCRoute][] that has an `ExtensionRef` `filter` with a `group` and `kind` that Envoy Gateway does not support, it will first
 check the registered extension to determine if it supports the referenced object before considering it a configuration error.
@@ -144,10 +158,11 @@ and provide an error to the user.
 the namespace of any `ExtensionRef` is the same as the namespace of the `HTTPRoute` or `GRPCRoute` it is attached to rather than treating the `name` field of an `ExtensionRef` as a `name.namespace` string.
 If Gateway API adds support for these fields then the design of the Envoy Gateway extensions will be updated to support them.
 
+Similarly, any registered policy resource that targets an `HTTPListener` will be sent to the `HTTPListener` hook as context.
+
 ## Watching New Resources
 
-Envoy Gateway will dynamically create new watches on resources introduced by the registered Extension. It does so by using the [controller-runtime][] to create new watches on [Unstructured][] resources that match the `version`s, `group`s, and `kind`s that the
-registered extension configured. When communicating with an extension, Envoy Gateway sends these Unstructured resources over to the extension. This eliminates the need for the extension to create its own watches which would have a strong chance of creating race conditions and reconciliation loops when resources change. When an extension receives the Unstructured resources from Envoy Gateway it can perform its own type validation on them. Currently we make the simplifying assumption that the registered extension's `Kinds` are filters referenced by `extensionRef` in `HTTPRouteFilter`s . Support for Policy attachments will be introduced at a later time.
+Envoy Gateway will dynamically create new watches on resources introduced by the registered Extension. It does so by using the [controller-runtime][] to create new watches on [Unstructured][] resources that match the `version`s, `group`s, and `kind`s that the registered extension configured. When communicating with an extension, Envoy Gateway sends these Unstructured resources over to the extension. This eliminates the need for the extension to create its own watches which would have a strong chance of creating race conditions and reconciliation loops when resources change. When an extension receives the Unstructured resources from Envoy Gateway it can perform its own type validation on them. Currently we make the simplifying assumption that the registered extension's `Kinds` are filters referenced by `extensionRef` in `HTTPRouteFilter`s . Policy attachments which target `Gateway` resources work in the same way. 
 
 ## xDS Hooks API
 
@@ -236,7 +251,11 @@ message PostHTTPListenerModifyRequest {
 // Empty for now but we can add fields to the context as use-cases are discovered without
 // breaking any clients that use the API
 // additional context information can be added to this message as more use-cases are discovered
-message PostHTTPListenerExtensionContext {}
+message PostHTTPListenerExtensionContext {
+    // Resources introduced by the extension that were used as extension server
+    // policies targeting the listener
+    repeated ExtensionResource extension_resources = 1;
+}
 
 // PostHTTPListenerModifyResponse is the expected response from an extension and contains a modified version of the Listener that was sent
 // If an extension returns a nil Listener then it will not be modified
@@ -293,7 +312,7 @@ service EnvoyGatewayExtension {
   - This decision was made to solve the problem about how resources introduced by an extension get watched. If an extension server watches its own resources then it would need some way to trigger an Envoy Gateway reconfigure when a resource that Envoy Gateway is not watching gets updated. Having Envoy Gateway watch all resources removes any concern about creating race confitions or reconcile loops that would result from Envoy Gateway and the extension server both having so much separate state that needs to be synchronized.
 - The Extension Server takes ownership of producing the correct xDS configuration in the hook responses
 - The Extension Server will be responsible for ensuring the performance of the hook processing time
-- The Post xDS level gRPC hooks all currently send a context field even though it contains nothing for several hooks. These fields exist so that they can be updadated in the future to pass
+- The Post xDS level gRPC hooks all currently send a context field even though it contains nothing for several hooks. These fields exist so that they can be updated in the future to pass
 additional information to extensions as new use-cases and needs are discovered.
 - The initial design supplies the scaffolding for both "pre xDS" and "post xDS" hooks. Only the post hooks are currently implemented which operate on xDS resources after they have been generated.
 The pre hooks will be implemented at a later date along with one or more hooks in the infra manager. The infra manager level hook(s) will exist to power use-cases such as dynamically creating Deployments/Services for the extension the
@@ -302,7 +321,7 @@ whenever Envoy Gateway creates an instance of Envoy Proxy. An extension develope
 
 ## Known Challenges
 
-Extending Envoy Gateway by using an external extension server which makes use of hook points in Envoy Gateway does comes with a few trade-offs. One known trade-off is the impact of the time that it takes for the hook calls to be executed. Since an extension would make use of hook points in Envoy Gateway that use gRPC for communication, the time it takes to perform these requests could become a concern for some extension developers. One way to minimize the request time of the hook calls is to load the extension server as a sidecar to Envoy Gateway to minimize the impact of networking on the hook calls.
+Extending Envoy Gateway by using an external extension server which makes use of hook points in Envoy Gateway does comes with a few trade-offs. One known trade-off is the impact of the time that it takes for the hook calls to be executed. Since an extension would make use of hook points in Envoy Gateway that use gRPC for communication, the time it takes to perform these requests could become a concern for some extension developers. One way to minimize the request time of the hook calls is to load the extension server as a sidecar to Envoy Gateway using the Unix Local Domain transport to minimize the impact of networking on the hook calls.
 
 [official goals]: https://github.com/envoyproxy/gateway/blob/main/GOALS.md#extensibility
 [ExtensionRef filters]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.LocalObjectReference

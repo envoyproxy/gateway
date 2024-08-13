@@ -25,10 +25,10 @@ When a [Client Traffic Policy][] is attached to a gateway, the connection limit 
 
 ### Install Envoy Gateway
 
-* Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the HTTPRoute example manifest.
-  Before proceeding, you should be able to query the example backend using HTTP.
+{{< boilerplate prerequisites >}}
 
 ### Install the hey load testing tool
+
 * The `hey` CLI will be used to generate load and measure response times. Follow the installation instruction from the [Hey project] docs.
 
 ## Test and customize connection limit settings
@@ -57,6 +57,9 @@ There are no connection limits, and so all 100 requests succeed.
 
 Next, we apply a limit of 5 connections. 
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -69,12 +72,35 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
   connection:
     connectionLimit:
       value: 5    
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: connection-limit-ctp
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  connection:
+    connectionLimit:
+      value: 5    
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 Execute the load simulation again.
 

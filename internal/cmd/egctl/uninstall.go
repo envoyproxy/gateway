@@ -13,7 +13,6 @@ import (
 )
 
 func newUnInstallCommand() *cobra.Command {
-
 	packageFlags := &helm.PackageOptions{}
 	pt := helm.NewPackageTool()
 

@@ -13,14 +13,15 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/xds/types"
-
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
-
 	"google.golang.org/protobuf/types/known/anypb"
+	"k8s.io/utils/ptr"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 const (
@@ -115,7 +116,7 @@ func enableFilterOnRoute(route *routev3.Route, filterName string) error {
 }
 
 // perRouteFilterName generates a unique filter name for the provided filterType and configName.
-func perRouteFilterName(filterType, configName string) string {
+func perRouteFilterName(filterType egv1a1.EnvoyFilter, configName string) string {
 	return fmt.Sprintf("%s/%s", filterType, configName)
 }
 
@@ -128,13 +129,17 @@ func hcmContainsFilter(mgr *hcmv3.HttpConnectionManager, filterName string) bool
 	return false
 }
 
-func createExtServiceXDSCluster(rd *ir.RouteDestination, tCtx *types.ResourceVersionTable) error {
+func createExtServiceXDSCluster(rd *ir.RouteDestination, traffic *ir.TrafficFeatures, tCtx *types.ResourceVersionTable) error {
 	var (
 		endpointType EndpointType
 		tSocket      *corev3.TransportSocket
 		err          error
 	)
 
+	// Make sure that there are safe defaults for the traffic
+	if traffic == nil {
+		traffic = &ir.TrafficFeatures{}
+	}
 	// Get the address type from the first setting.
 	// This is safe because no mixed address types in the settings.
 	addrTypeState := rd.Settings[0].AddressType
@@ -143,20 +148,57 @@ func createExtServiceXDSCluster(rd *ir.RouteDestination, tCtx *types.ResourceVer
 	} else {
 		endpointType = EndpointTypeStatic
 	}
+	if err = addXdsCluster(tCtx, &xdsClusterArgs{
+		name:              rd.Name,
+		settings:          rd.Settings,
+		tSocket:           tSocket,
+		loadBalancer:      traffic.LoadBalancer,
+		proxyProtocol:     traffic.ProxyProtocol,
+		circuitBreaker:    traffic.CircuitBreaker,
+		healthCheck:       traffic.HealthCheck,
+		timeout:           traffic.Timeout,
+		tcpkeepalive:      traffic.TCPKeepalive,
+		backendConnection: traffic.BackendConnection,
+		endpointType:      endpointType,
+		dns:               traffic.DNS,
+		http2Settings:     traffic.HTTP2,
+	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+		return err
+	}
+	return nil
+}
 
-	if rd.Settings[0].TLS != nil {
-		tSocket, err = processTLSSocket(rd.Settings[0].TLS, tCtx)
-		if err != nil {
-			return err
-		}
+// addClusterFromURL adds a cluster to the resource version table from the provided URL.
+func addClusterFromURL(url string, tCtx *types.ResourceVersionTable) error {
+	var (
+		uc      *urlCluster
+		ds      *ir.DestinationSetting
+		tSocket *corev3.TransportSocket
+		err     error
+	)
+
+	if uc, err = url2Cluster(url); err != nil {
+		return err
 	}
 
-	if err = addXdsCluster(tCtx, &xdsClusterArgs{
-		name:         rd.Name,
-		settings:     rd.Settings,
-		tSocket:      tSocket,
-		endpointType: endpointType,
-	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+	ds = &ir.DestinationSetting{
+		Weight:    ptr.To[uint32](1),
+		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(uc.hostname, uc.port)},
+	}
+
+	clusterArgs := &xdsClusterArgs{
+		name:         uc.name,
+		settings:     []*ir.DestinationSetting{ds},
+		endpointType: uc.endpointType,
+	}
+	if uc.tls {
+		if tSocket, err = buildXdsUpstreamTLSSocket(uc.hostname); err != nil {
+			return err
+		}
+		clusterArgs.tSocket = tSocket
+	}
+
+	if err = addXdsCluster(tCtx, clusterArgs); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 		return err
 	}
 	return nil

@@ -134,9 +134,6 @@ github_branch= "main"
 # Google Custom Search Engine ID. Remove or comment out to disable search.
 # gcs_engine_id = "d72aa9b2712488cc3"
 
-# Enable Algolia DocSearch
-algolia_docsearch = false
-
 # Enable Lunr.js offline search
 offlineSearch = true
 
@@ -148,7 +145,7 @@ prism_syntax_highlighting = false
 #  Set to true to disable breadcrumb navigation.
 breadcrumb_disable = false
 # Set to true to disable the About link in the site footer
-footer_about_disable = false
+footer_about_enable = true
 # Set to false if you don't want to display a logo (/assets/icons/logo.svg) in the top navbar
 navbar_logo = true
 # Set to true if you don't want the top navbar to be translucent when over a `block/cover`, like on the homepage.
@@ -243,35 +240,31 @@ enable = true
     weight = -98
     url = "/contributions"
   [[menu.main]]
-    name = "Blog"
-    weight = -99
-    url = "/blog"
-  [[menu.main]]
     name = "About"
     weight = -100
     url = "/about"
   [[menu.main]]
-    name = "Announcements"
+    name = "News"
     weight = -101
-    url = "/announcements"
+    url = "/news"
   [[menu.main]]
     name = "Documentation"
     weight = -102
-    url = "/v1.0.1"
+    url = "/docs"
 
   # i18n for Chinese
   [[languages.zh.menu.main]]
-    name = "博客"
-    weight = -99
-    url = "/blog"
+    name = "贡献"
+    weight = -98
+    url = "/contributions"
   [[languages.zh.menu.main]]
     name = "关于"
     weight = -100
     url = "/about"
   [[languages.zh.menu.main]]
-    name = "公告"
+    name = "新闻"
     weight = -101
-    url = "/announcements"
+    url = "/news"
   [[languages.zh.menu.main]]
     name = "文档"
     weight = -102
@@ -282,25 +275,29 @@ enable = true
   url = "/latest"
 
 [[params.versions]]
-  version = "v1.0.1"
-  url = "/v1.0.1"
+  version = "v1.1"
+  url = "/docs"
 
 [[params.versions]]
-  version = "v0.6.0"
-  url = "/v0.6.0"
+  version = "v1.0"
+  url = "/v1.0"
 
 [[params.versions]]
-  version = "v0.5.0"
-  url = "/v0.5.0"
+  version = "v0.6"
+  url = "/v0.6"
 
 [[params.versions]]
-  version = "v0.4.0"
-  url = "/v0.4.0"
+  version = "v0.5"
+  url = "/v0.5"
 
 [[params.versions]]
-  version = "v0.3.0"
-  url = "/v0.3.0"
+  version = "v0.4"
+  url = "/v0.4"
 
 [[params.versions]]
-  version = "v0.2.0"
-  url = "/v0.2.0"
+  version = "v0.3"
+  url = "/v0.3"
+
+[[params.versions]]
+  version = "v0.2"
+  url = "/v0.2"

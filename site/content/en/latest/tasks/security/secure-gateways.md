@@ -11,8 +11,7 @@ This task uses a self-signed CA, so it should be used for testing and demonstrat
 
 ## Installation
 
-Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+{{< boilerplate prerequisites >}}
 
 ## TLS Certificates
 
@@ -41,23 +40,20 @@ Update the Gateway from the Quickstart to include an HTTPS listener that listens
 `example-cert` Secret:
 
 ```shell
-kubectl patch gateway eg --type=json --patch '[{
-   "op": "add",
-   "path": "/spec/listeners/-",
-   "value": {
-      "name": "https",
-      "protocol": "HTTPS",
-      "port": 443,
-      "tls": {
-        "mode": "Terminate",
-        "certificateRefs": [{
-          "kind": "Secret",
-          "group": "",
-          "name": "example-cert",
-        }],
-      },
-    },
-}]'
+kubectl patch gateway eg --type=json --patch '
+  - op: add
+    path: /spec/listeners/-
+    value:
+      name: https
+      protocol: HTTPS
+      port: 443
+      tls:
+        mode: Terminate
+        certificateRefs:
+        - kind: Secret
+          group: ""
+          name: example-cert
+  '
 ```
 
 Verify the Gateway status:
@@ -68,7 +64,24 @@ kubectl get gateway/eg -o yaml
 
 ## Testing
 
-### Clusters without External LoadBalancer Support
+{{< tabpane text=true >}}
+{{% tab header="With External LoadBalancer Support" %}}
+
+Get the External IP of the Gateway:
+
+```shell
+export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
+```
+
+Query the example app through the Gateway:
+
+```shell
+curl -v -HHost:www.example.com --resolve "www.example.com:443:${GATEWAY_HOST}" \
+--cacert example.com.crt https://www.example.com/get
+```
+
+{{% /tab %}}
+{{% tab header="Without LoadBalancer Support" %}}
 
 Get the name of the Envoy service created the by the example Gateway:
 
@@ -89,20 +102,9 @@ curl -v -HHost:www.example.com --resolve "www.example.com:8443:127.0.0.1" \
 --cacert example.com.crt https://www.example.com:8443/get
 ```
 
-### Clusters with External LoadBalancer Support
+{{% /tab %}}
+{{< /tabpane >}}
 
-Get the External IP of the Gateway:
-
-```shell
-export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
-```
-
-Query the example app through the Gateway:
-
-```shell
-curl -v -HHost:www.example.com --resolve "www.example.com:443:${GATEWAY_HOST}" \
---cacert example.com.crt https://www.example.com/get
-```
 
 ## Multiple HTTPS Listeners
 
@@ -122,34 +124,31 @@ kubectl create secret tls foo-cert --key=foo.example.com.key --cert=foo.example.
 Create another HTTPS listener on the example Gateway:
 
 ```shell
-kubectl patch gateway eg --type=json --patch '[{
-   "op": "add",
-   "path": "/spec/listeners/-",
-   "value": {
-      "name": "https-foo",
-      "protocol": "HTTPS",
-      "port": 443,
-      "hostname": "foo.example.com",
-      "tls": {
-        "mode": "Terminate",
-        "certificateRefs": [{
-          "kind": "Secret",
-          "group": "",
-          "name": "foo-cert",
-        }],
-      },
-    },
-}]'
+kubectl patch gateway eg --type=json --patch '
+  - op: add
+    path: /spec/listeners/-
+    value:
+      name: https-foo
+      protocol: HTTPS
+      port: 443
+      hostname: foo.example.com
+      tls:
+        mode: Terminate
+        certificateRefs:
+        - kind: Secret
+          group: ""
+          name: foo-cert
+  '
 ```
 
 Update the HTTPRoute to route traffic for hostname `foo.example.com` to the example backend service:
 
 ```shell
-kubectl patch httproute backend --type=json --patch '[{
-   "op": "add",
-   "path": "/spec/hostnames/-",
-   "value": "foo.example.com",
-}]'
+kubectl patch httproute backend --type=json --patch '
+  - op: add
+    path: /spec/hostnames/-
+    value: foo.example.com
+  '
 ```
 
 Verify the Gateway status:
@@ -171,9 +170,12 @@ Before proceeding, ensure you can query the HTTPS backend service from the [Test
 To demonstrate cross namespace certificate references, create a ReferenceGrant that allows Gateways from the "default"
 namespace to reference Secrets in the "envoy-gateway-system" namespace:
 
-```console
-$ cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1alpha2
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1beta1
 kind: ReferenceGrant
 metadata:
   name: example
@@ -188,6 +190,30 @@ spec:
     kind: Secret
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: example
+  namespace: envoy-gateway-system
+spec:
+  from:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    namespace: default
+  to:
+  - group: ""
+    kind: Secret
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 Delete the previously created Secret:
 
@@ -210,8 +236,11 @@ kubectl create secret tls example-cert -n envoy-gateway-system --key=www.example
 
 Update the Gateway HTTPS listener with `namespace: envoy-gateway-system`, for example:
 
-```console
-$ cat <<EOF | kubectl apply -f -
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
@@ -235,6 +264,37 @@ spec:
 EOF
 ```
 
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: eg
+spec:
+  gatewayClassName: eg
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+    - name: https
+      protocol: HTTPS
+      port: 443
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            group: ""
+            name: example-cert
+            namespace: envoy-gateway-system
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 The Gateway HTTPS listener status should now surface the `Ready: True` condition and you should once again be able to
 query the HTTPS backend through the Gateway.
 
@@ -242,7 +302,7 @@ Lastly, test connectivity using the above [Testing section](#testing).
 
 ## Clean-Up
 
-Follow the steps from the [Quickstart](../../quickstart) to uninstall Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) to uninstall Envoy Gateway and the example manifest.
 
 Delete the Secrets:
 
@@ -316,13 +376,12 @@ kubectl create secret tls example-cert-ecdsa --key=www.example.com.ecdsa.key --c
 Patch the Gateway with this additional ECDSA Secret:
 
 ```shell
-kubectl patch gateway eg --type=json --patch '[{
-   "op": "add",
-   "path": "/spec/listeners/1/tls/certificateRefs/-",
-   "value": {
-      "name": "example-cert-ecdsa",
-    },
-}]'
+kubectl patch gateway eg --type=json --patch '
+  - op: add
+    path: /spec/listeners/1/tls/certificateRefs/-
+    value:
+      name: example-cert-ecdsa
+  '
 ```
 
 Verify the Gateway status:
@@ -369,7 +428,7 @@ This sections gives a walkthrough to generate multiple certificates correspondin
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 Follow the steps in the [TLS Certificates](#tls-certificates) section to generate self-signed RSA derived Server certificate and private key, and configure those in the Gateway listener configuration to terminate HTTPS traffic.
@@ -393,28 +452,34 @@ Note that all occurrences of `example.com` were just replaced with `sample.com`
 Next we update the `Gateway` configuration to accommodate the new Certificate which will be used to Terminate TLS traffic:
 
 ```shell
-kubectl patch gateway eg --type=json --patch '[{
-   "op": "add",
-   "path": "/spec/listeners/1/tls/certificateRefs/-",
-   "value": {
-      "name": "sample-cert",
-    },
-}]'
+kubectl patch gateway eg --type=json --patch '
+  - op: add
+    path: /spec/listeners/1/tls/certificateRefs/-
+    value:
+      name: sample-cert
+  '
 ```
 
 Finally, we update the HTTPRoute to route traffic for hostname `www.sample.com` to the example backend service:
 
 ```shell
-kubectl patch httproute backend --type=json --patch '[{
-  "op": "add",
-  "path": "/spec/hostnames/-",
-  "value": "www.sample.com",
-}]'
+kubectl patch httproute backend --type=json --patch '
+  - op: add
+    path: /spec/hostnames/-
+    value: www.sample.com
+  '
 ```
 
 ## Testing
 
-### Clusters without External LoadBalancer Support
+{{< tabpane text=true >}}
+{{% tab header="With External LoadBalancer Support" %}}
+
+Refer to the steps mentioned earlier under [Testing in clusters with External LoadBalancer Support](#testing)
+
+
+{{% /tab %}}
+{{% tab header="Without LoadBalancer Support" %}}
 
 Get the name of the Envoy service created the by the example Gateway:
 
@@ -444,9 +509,8 @@ curl -v -HHost:www.sample.com --resolve "www.sample.com:8443:127.0.0.1" \
 
 Since the multiple certificates are configured on the same Gateway listener, Envoy was able to provide the client with appropriate certificate based on the SNI in the client request.
 
-### Clusters with External LoadBalancer Support
-
-Refer to the steps mentioned earlier under [Testing in clusters with External LoadBalancer Support](#clusters-with-external-loadbalancer-support)
+{{% /tab %}}
+{{< /tabpane >}}
 
 ## Next Steps
 

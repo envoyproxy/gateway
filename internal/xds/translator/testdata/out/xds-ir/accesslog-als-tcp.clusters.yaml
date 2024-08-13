@@ -1,0 +1,44 @@
+- circuitBreakers:
+    thresholds:
+    - maxConnections: 2048
+      maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 15s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: accesslog/monitoring/envoy-als/port/9000
+  lbPolicy: LEAST_REQUEST
+  name: accesslog/monitoring/envoy-als/port/9000
+  outlierDetection:
+    baseEjectionTime: 30s
+    consecutive5xx: 5
+    consecutiveGatewayFailure: 4
+    consecutiveLocalOriginFailure: 5
+    interval: 5s
+    maxEjectionPercent: 10
+  perConnectionBufferLimitBytes: 20971520
+  transportSocket:
+    name: envoy.transport_sockets.upstream_proxy_protocol
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.transport_sockets.proxy_protocol.v3.ProxyProtocolUpstreamTransport
+      config:
+        version: V2
+      transportSocket:
+        name: envoy.transport_sockets.raw_buffer
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.transport_sockets.raw_buffer.v3.RawBuffer
+  type: EDS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      explicitHttpConfig:
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+  upstreamConnectionOptions:
+    tcpKeepalive:
+      keepaliveProbes: 7

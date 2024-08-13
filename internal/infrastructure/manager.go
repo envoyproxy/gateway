@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	clicfg "sigs.k8s.io/controller-runtime/pkg/client/config"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes"
@@ -38,14 +38,14 @@ func NewManager(cfg *config.Server) (Manager, error) {
 	var mgr Manager
 
 	switch cfg.EnvoyGateway.Provider.Type {
-	case v1alpha1.ProviderTypeKubernetes:
+	case egv1a1.ProviderTypeKubernetes:
 		cli, err := client.New(clicfg.GetConfigOrDie(), client.Options{Scheme: envoygateway.GetScheme()})
 		if err != nil {
 			return nil, err
 		}
 		mgr = kubernetes.NewInfra(cli, cfg)
 
-	case v1alpha1.ProviderTypeFile:
+	case egv1a1.ProviderTypeFile:
 		// TODO(sh2): implement host infra for file provider
 
 	default:

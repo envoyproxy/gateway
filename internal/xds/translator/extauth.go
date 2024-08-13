@@ -14,23 +14,19 @@ import (
 	extauthv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ext_authz/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
-	"github.com/golang/protobuf/ptypes/duration"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/durationpb"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
-)
-
-const (
-	extAuthFilter = "envoy.filters.http.ext_authz"
 )
 
 func init() {
 	registerHTTPFilter(&extAuth{})
 }
 
-type extAuth struct {
-}
+type extAuth struct{}
 
 var _ httpFilter = &extAuth{}
 
@@ -38,7 +34,6 @@ var _ httpFilter = &extAuth{}
 // if applicable, and it does not already exist.
 // Note: this method creates an ext_authz filter for each route that contains an ExtAuthz config.
 // The filter is disabled by default. It is enabled on the route level.
-// TODO: zhaohuabing avoid duplicated HTTP filters
 func (*extAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
 	var errs error
 
@@ -96,7 +91,7 @@ func buildHCMExtAuthFilter(extAuth *ir.ExtAuth) (*hcmv3.HttpFilter, error) {
 }
 
 func extAuthFilterName(extAuth *ir.ExtAuth) string {
-	return perRouteFilterName(extAuthFilter, extAuth.Name)
+	return perRouteFilterName(egv1a1.EnvoyFilterExtAuthz, extAuth.Name)
 }
 
 func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
@@ -114,6 +109,7 @@ func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
 			MatchPattern: &matcherv3.StringMatcher_Exact{
 				Exact: header,
 			},
+			IgnoreCase: true,
 		})
 	}
 
@@ -133,7 +129,7 @@ func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
 				TargetSpecifier: &corev3.GrpcService_EnvoyGrpc_{
 					EnvoyGrpc: grpcService(extAuth.GRPC),
 				},
-				Timeout: &duration.Duration{
+				Timeout: &durationpb.Duration{
 					Seconds: defaultExtServiceRequestTimeout,
 				},
 			},
@@ -169,7 +165,7 @@ func httpService(http *ir.HTTPExtAuthService) *extauthv3.HttpService {
 		HttpUpstreamType: &corev3.HttpUri_Cluster{
 			Cluster: http.Destination.Name,
 		},
-		Timeout: &duration.Duration{
+		Timeout: &durationpb.Duration{
 			Seconds: defaultExtServiceRequestTimeout,
 		},
 	}
@@ -179,6 +175,7 @@ func httpService(http *ir.HTTPExtAuthService) *extauthv3.HttpService {
 			MatchPattern: &matcherv3.StringMatcher_Exact{
 				Exact: header,
 			},
+			IgnoreCase: true,
 		})
 	}
 
@@ -212,7 +209,8 @@ func routeContainsExtAuth(irRoute *ir.HTTPRoute) bool {
 
 // patchResources patches the cluster resources for the external auth services.
 func (*extAuth) patchResources(tCtx *types.ResourceVersionTable,
-	routes []*ir.HTTPRoute) error {
+	routes []*ir.HTTPRoute,
+) error {
 	if tCtx == nil || tCtx.XdsResources == nil {
 		return errors.New("xds resource table is nil")
 	}
@@ -224,13 +222,13 @@ func (*extAuth) patchResources(tCtx *types.ResourceVersionTable,
 		}
 		if route.Security.ExtAuth.HTTP != nil {
 			if err := createExtServiceXDSCluster(
-				&route.Security.ExtAuth.HTTP.Destination, tCtx); err != nil && !errors.Is(
+				&route.Security.ExtAuth.HTTP.Destination, route.Security.ExtAuth.Traffic, tCtx); err != nil && !errors.Is(
 				err, ErrXdsClusterExists) {
 				errs = errors.Join(errs, err)
 			}
 		} else {
 			if err := createExtServiceXDSCluster(
-				&route.Security.ExtAuth.GRPC.Destination, tCtx); err != nil && !errors.Is(
+				&route.Security.ExtAuth.GRPC.Destination, route.Security.ExtAuth.Traffic, tCtx); err != nil && !errors.Is(
 				err, ErrXdsClusterExists) {
 				errs = errors.Join(errs, err)
 			}

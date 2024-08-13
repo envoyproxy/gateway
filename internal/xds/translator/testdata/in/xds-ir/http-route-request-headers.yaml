@@ -18,20 +18,30 @@ http:
         - host: "1.2.3.4"
           port: 50000
     addRequestHeaders:
+    - name: "some-header-multi-value"
+      value:
+      - "some-value"
+      - "some-additional-value"
+      append: true
     - name: "some-header"
-      value: "some-value"
+      value:
+      - "some-value"
       append: true
     - name: "some-header-2"
-      value: "some-value"
+      value:
+      - "some-value"
       append: true
     - name: "some-header3"
-      value: "some-value"
+      value:
+      - "some-value"
       append: false
     - name: "some-header4"
-      value: "some-value"
+      value:
+      - "some-value"
       append: false
     - name: "empty-header"
-      value: ""
+      value:
+      - ""
       append: false
     removeRequestHeaders:
     - "some-header5"

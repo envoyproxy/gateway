@@ -33,7 +33,10 @@ httpRoutes:
             - name: http-backend
               namespace: default
               port: 8080
-
+            - name: backend-ip-tls
+              namespace: default
+              kind: Backend
+              group: gateway.envoyproxy.io
 referenceGrants:
   - apiVersion: gateway.networking.k8s.io/v1alpha2
     kind: ReferenceGrant
@@ -54,7 +57,8 @@ referenceGrants:
       to:
         - group: ""
           kind: Service
-
+        - group: gateway.envoyproxy.io
+          kind: Backend
 services:
   - apiVersion: v1
     kind: Service
@@ -68,7 +72,6 @@ services:
           name: http
           protocol: TCP
           targetPort: 8080
-
 
 endpointSlices:
   - apiVersion: discovery.k8s.io/v1
@@ -88,7 +91,6 @@ endpointSlices:
           - "10.244.0.11"
         conditions:
           ready: true
-
 
 configMaps:
   - apiVersion: v1
@@ -124,14 +126,41 @@ backendTLSPolicies:
       name: policy-btls
       namespace: default
     spec:
-      targetRef:
-        group: ''
-        kind: Service
-        name: http-backend
-        sectionName: "8080"
-      tls:
-        caCertRefs:
+      targetRefs:
+        - group: ""
+          kind: Service
+          name: http-backend
+          sectionName: "8080"
+      validation:
+        caCertificateRefs:
+          - name: ca-cmap
+            group: ""
+            kind: ConfigMap
+        hostname: example.com
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: BackendTLSPolicy
+    metadata:
+      name: policy-btls-backend-ip
+      namespace: default
+    spec:
+      targetRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-ip-tls
+      validation:
+        caCertificateRefs:
           - name: ca-cmap
             group: ''
             kind: ConfigMap
-        hostname: example.com
+        hostname: ip-backend
+backends:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-ip-tls
+      namespace: default
+    spec:
+      endpoints:
+        - ip:
+            address: 2.2.2.2
+            port: 3443

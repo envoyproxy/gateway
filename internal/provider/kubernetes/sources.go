@@ -13,22 +13,22 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // watchAndReconcileSource is a concrete implementation of the Source interface.
 type watchAndReconcileSource struct {
-	condition <-chan struct{}
-	object    client.Object
+	condition    <-chan struct{}
+	object       client.Object
+	eventHandler handler.EventHandler
 }
 
-func NewWatchAndReconcileSource(cond <-chan struct{}, obj client.Object) source.Source {
-	return &watchAndReconcileSource{condition: cond, object: obj}
+func NewWatchAndReconcileSource(cond <-chan struct{}, obj client.Object, eh handler.EventHandler) source.Source {
+	return &watchAndReconcileSource{condition: cond, object: obj, eventHandler: eh}
 }
 
 // Start implements the Source interface. It registers the EventHandler with the Informer.
-func (s *watchAndReconcileSource) Start(ctx context.Context, eh handler.EventHandler, queue workqueue.RateLimitingInterface, _ ...predicate.Predicate) error {
+func (s *watchAndReconcileSource) Start(ctx context.Context, queue workqueue.RateLimitingInterface) error {
 	if s.object == nil {
 		return errors.New("object to queue is required")
 	}
@@ -39,7 +39,7 @@ func (s *watchAndReconcileSource) Start(ctx context.Context, eh handler.EventHan
 			return
 		case <-s.condition:
 			// Triggers a reconcile
-			eh.Generic(ctx, event.GenericEvent{Object: s.object}, queue)
+			s.eventHandler.Generic(ctx, event.GenericEvent{Object: s.object}, queue)
 		}
 	}()
 	return nil

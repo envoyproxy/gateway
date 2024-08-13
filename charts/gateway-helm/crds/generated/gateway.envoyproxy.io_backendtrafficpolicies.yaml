@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.14.0
+    controller-gen.kubebuilder.io/version: v0.15.0
   name: backendtrafficpolicies.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -19,9 +19,6 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.conditions[?(@.type=="Accepted")].reason
-      name: Status
-      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -122,6 +119,53 @@ spec:
                   - type
                   type: object
                 type: array
+              connection:
+                description: Connection includes backend connection settings.
+                properties:
+                  bufferLimit:
+                    allOf:
+                    - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      BufferLimit Soft limit on size of the cluster’s connections read and write buffers.
+                      BufferLimit applies to connection streaming (maybe non-streaming) channel between processes, it's in user space.
+                      If unspecified, an implementation defined default is applied (32768 bytes).
+                      For example, 20Mi, 1Gi, 256Ki etc.
+                      Note: that when the suffix is not provided, the value is interpreted as bytes.
+                    x-kubernetes-int-or-string: true
+                  socketBufferLimit:
+                    allOf:
+                    - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      SocketBufferLimit provides configuration for the maximum buffer size in bytes for each socket
+                      to backend.
+                      SocketBufferLimit applies to socket streaming channel between TCP/IP stacks, it's in kernel space.
+                      For example, 20Mi, 1Gi, 256Ki etc.
+                      Note that when the suffix is not provided, the value is interpreted as bytes.
+                    x-kubernetes-int-or-string: true
+                type: object
+              dns:
+                description: DNS includes dns resolution settings.
+                properties:
+                  dnsRefreshRate:
+                    description: |-
+                      DNSRefreshRate specifies the rate at which DNS records should be refreshed.
+                      Defaults to 30 seconds.
+                    type: string
+                  respectDnsTtl:
+                    description: |-
+                      RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.
+                      If the value is set to true, the DNS refresh rate will be set to the resource record’s TTL.
+                      Defaults to true.
+                    type: boolean
+                type: object
               faultInjection:
                 description: |-
                   FaultInjection defines the fault injection policy to be applied. This configuration can be used to
@@ -405,6 +449,47 @@ spec:
                         type: boolean
                     type: object
                 type: object
+              http2:
+                description: HTTP2 provides HTTP/2 configuration for backend connections.
+                properties:
+                  initialConnectionWindowSize:
+                    allOf:
+                    - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      InitialConnectionWindowSize sets the initial window size for HTTP/2 connections.
+                      If not set, the default value is 1 MiB.
+                    x-kubernetes-int-or-string: true
+                  initialStreamWindowSize:
+                    allOf:
+                    - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      InitialStreamWindowSize sets the initial window size for HTTP/2 streams.
+                      If not set, the default value is 64 KiB(64*1024).
+                    x-kubernetes-int-or-string: true
+                  maxConcurrentStreams:
+                    description: |-
+                      MaxConcurrentStreams sets the maximum number of concurrent streams allowed per connection.
+                      If not set, the default value is 100.
+                    format: int32
+                    maximum: 2147483647
+                    minimum: 1
+                    type: integer
+                  onInvalidMessage:
+                    description: |-
+                      OnInvalidMessage determines if Envoy will terminate the connection or just the offending stream in the event of HTTP messaging error
+                      It's recommended for L2 Envoy deployments to set this value to TerminateStream.
+                      https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/level_two
+                      Default: TerminateConnection
+                    type: string
+                type: object
               loadBalancer:
                 description: |-
                   LoadBalancer policy to apply when routing traffic from the gateway to
@@ -415,15 +500,71 @@ spec:
                       ConsistentHash defines the configuration when the load balancer type is
                       set to ConsistentHash
                     properties:
+                      cookie:
+                        description: Cookie configures the cookie hash policy when
+                          the consistent hash type is set to Cookie.
+                        properties:
+                          attributes:
+                            additionalProperties:
+                              type: string
+                            description: Additional Attributes to set for the generated
+                              cookie.
+                            type: object
+                          name:
+                            description: |-
+                              Name of the cookie to hash.
+                              If this cookie does not exist in the request, Envoy will generate a cookie and set
+                              the TTL on the response back to the client based on Layer 4
+                              attributes of the backend endpoint, to ensure that these future requests
+                              go to the same backend endpoint. Make sure to set the TTL field for this case.
+                            type: string
+                          ttl:
+                            description: |-
+                              TTL of the generated cookie if the cookie is not present. This value sets the
+                              Max-Age attribute value.
+                            type: string
+                        required:
+                        - name
+                        type: object
+                      header:
+                        description: Header configures the header hash policy when
+                          the consistent hash type is set to Header.
+                        properties:
+                          name:
+                            description: Name of the header to hash.
+                            type: string
+                        required:
+                        - name
+                        type: object
+                      tableSize:
+                        default: 65537
+                        description: The table size for consistent hashing, must be
+                          prime number limited to 5000011.
+                        format: int64
+                        maximum: 5000011
+                        minimum: 2
+                        type: integer
                       type:
-                        description: ConsistentHashType defines the type of input
-                          to hash on.
+                        description: |-
+                          ConsistentHashType defines the type of input to hash on. Valid Type values are
+                          "SourceIP",
+                          "Header",
+                          "Cookie".
                         enum:
                         - SourceIP
+                        - Header
+                        - Cookie
                         type: string
                     required:
                     - type
                     type: object
+                    x-kubernetes-validations:
+                    - message: If consistent hash type is header, the header field
+                        must be set.
+                      rule: 'self.type == ''Header'' ? has(self.header) : !has(self.header)'
+                    - message: If consistent hash type is cookie, the cookie field
+                        must be set.
+                      rule: 'self.type == ''Cookie'' ? has(self.cookie) : !has(self.cookie)'
                   slowStart:
                     description: |-
                       SlowStart defines the configuration related to the slow start load balancer policy.
@@ -447,7 +588,7 @@ spec:
                       "ConsistentHash",
                       "LeastRequest",
                       "Random",
-                      "RoundRobin",
+                      "RoundRobin".
                     enum:
                     - ConsistentHash
                     - LeastRequest
@@ -574,6 +715,9 @@ spec:
                                     properties:
                                       type:
                                         default: Exact
+                                        enum:
+                                        - Exact
+                                        - Distinct
                                         type: string
                                       value:
                                         description: |-
@@ -704,6 +848,9 @@ spec:
                                     properties:
                                       type:
                                         default: Exact
+                                        enum:
+                                        - Exact
+                                        - Distinct
                                         type: string
                                       value:
                                         description: |-
@@ -842,10 +989,12 @@ spec:
                 type: object
               targetRef:
                 description: |-
-                  targetRef is the name of the resource this policy
-                  is being attached to.
-                  This Policy and the TargetRef MUST be in the same namespace
-                  for this Policy to have effect and be applied to the Gateway.
+                  TargetRef is the name of the resource this policy is being attached to.
+                  This policy and the TargetRef MUST be in the same namespace for this
+                  Policy to have effect
+
+
+                  Deprecated: use targetRefs/targetSelectors instead
                 properties:
                   group:
                     description: Group is the group of the target resource.
@@ -863,16 +1012,6 @@ spec:
                     maxLength: 253
                     minLength: 1
                     type: string
-                  namespace:
-                    description: |-
-                      Namespace is the namespace of the referent. When unspecified, the local
-                      namespace is inferred. Even when policy targets a resource in a different
-                      namespace, it MUST only apply to traffic originating from the same
-                      namespace as the policy.
-                    maxLength: 63
-                    minLength: 1
-                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-                    type: string
                   sectionName:
                     description: |-
                       SectionName is the name of a section within the target resource. When
@@ -880,8 +1019,9 @@ spec:
                       resources, SectionName is interpreted as the following:
 
 
-                      * Gateway: Listener Name
-                      * Service: Port Name
+                      * Gateway: Listener name
+                      * HTTPRoute: HTTPRouteRule name
+                      * Service: Port name
 
 
                       If a SectionName is specified, but does not exist on the targeted object,
@@ -896,14 +1036,97 @@ spec:
                 - kind
                 - name
                 type: object
-                x-kubernetes-validations:
-                - message: this policy can only have a targetRef.group of gateway.networking.k8s.io
-                  rule: self.group == 'gateway.networking.k8s.io'
-                - message: this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute
-                  rule: self.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute', 'UDPRoute',
-                    'TCPRoute', 'TLSRoute']
-                - message: this policy does not yet support the sectionName field
-                  rule: '!has(self.sectionName)'
+              targetRefs:
+                description: |-
+                  TargetRefs are the names of the Gateway resources this policy
+                  is being attached to.
+                items:
+                  description: |-
+                    LocalPolicyTargetReferenceWithSectionName identifies an API object to apply a
+                    direct policy to. This should be used as part of Policy resources that can
+                    target single resources. For more information on how this policy attachment
+                    mode works, and a sample Policy resource, refer to the policy attachment
+                    documentation for Gateway API.
+
+
+                    Note: This should only be used for direct policy attachment when references
+                    to SectionName are actually needed. In all other cases,
+                    LocalPolicyTargetReference should be used.
+                  properties:
+                    group:
+                      description: Group is the group of the target resource.
+                      maxLength: 253
+                      pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
+                    kind:
+                      description: Kind is kind of the target resource.
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                      type: string
+                    name:
+                      description: Name is the name of the target resource.
+                      maxLength: 253
+                      minLength: 1
+                      type: string
+                    sectionName:
+                      description: |-
+                        SectionName is the name of a section within the target resource. When
+                        unspecified, this targetRef targets the entire resource. In the following
+                        resources, SectionName is interpreted as the following:
+
+
+                        * Gateway: Listener name
+                        * HTTPRoute: HTTPRouteRule name
+                        * Service: Port name
+
+
+                        If a SectionName is specified, but does not exist on the targeted object,
+                        the Policy must fail to attach, and the policy implementation should record
+                        a `ResolvedRefs` or similar Condition in the Policy's status.
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
+                  required:
+                  - group
+                  - kind
+                  - name
+                  type: object
+                type: array
+              targetSelectors:
+                description: TargetSelectors allow targeting resources for this policy
+                  based on labels
+                items:
+                  properties:
+                    group:
+                      default: gateway.networking.k8s.io
+                      description: Group is the group that this selector targets.
+                        Defaults to gateway.networking.k8s.io
+                      maxLength: 253
+                      pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
+                    kind:
+                      description: Kind is the resource kind that this selector targets.
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                      type: string
+                    matchLabels:
+                      additionalProperties:
+                        type: string
+                      description: MatchLabels are the set of label selectors for
+                        identifying the targeted resource
+                      type: object
+                  required:
+                  - kind
+                  - matchLabels
+                  type: object
+                  x-kubernetes-validations:
+                  - message: group must be gateway.networking.k8s.io
+                    rule: 'has(self.group) ? self.group == ''gateway.networking.k8s.io''
+                      : true '
+                type: array
               tcpKeepalive:
                 description: |-
                   TcpKeepalive settings associated with the upstream client connection.
@@ -961,9 +1184,36 @@ spec:
                         type: string
                     type: object
                 type: object
-            required:
-            - targetRef
+              useClientProtocol:
+                description: |-
+                  UseClientProtocol configures Envoy to prefer sending requests to backends using
+                  the same HTTP protocol that the incoming request used. Defaults to false, which means
+                  that Envoy will use the protocol indicated by the attached BackendRef.
+                type: boolean
             type: object
+            x-kubernetes-validations:
+            - message: either targetRef or targetRefs must be used
+              rule: '(has(self.targetRef) && !has(self.targetRefs)) || (!has(self.targetRef)
+                && has(self.targetRefs)) || (has(self.targetSelectors) && self.targetSelectors.size()
+                > 0) '
+            - message: this policy can only have a targetRef.group of gateway.networking.k8s.io
+              rule: 'has(self.targetRef) ? self.targetRef.group == ''gateway.networking.k8s.io''
+                : true '
+            - message: this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute
+              rule: 'has(self.targetRef) ? self.targetRef.kind in [''Gateway'', ''HTTPRoute'',
+                ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute''] : true'
+            - message: this policy does not yet support the sectionName field
+              rule: 'has(self.targetRef) ? !has(self.targetRef.sectionName) : true'
+            - message: this policy can only have a targetRefs[*].group of gateway.networking.k8s.io
+              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.group ==
+                ''gateway.networking.k8s.io'') : true '
+            - message: this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute
+              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in [''Gateway'',
+                ''HTTPRoute'', ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute''])
+                : true '
+            - message: this policy does not yet support the sectionName field
+              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, !has(ref.sectionName))
+                : true'
           status:
             description: status defines the current status of BackendTrafficPolicy.
             properties:
@@ -1070,7 +1320,7 @@ spec:
 
 
                             * Gateway (Gateway conformance profile)
-                            * Service (Mesh conformance profile, experimental, ClusterIP Services only)
+                            * Service (Mesh conformance profile, ClusterIP Services only)
 
 
                             Support for other resources is Implementation-Specific.
@@ -1156,9 +1406,6 @@ spec:
 
 
                             Support: Extended
-
-
-                            <gateway:experimental>
                           format: int32
                           maximum: 65535
                           minimum: 1
@@ -1169,14 +1416,12 @@ spec:
                             following resources, SectionName is interpreted as the following:
 
 
-                            * Gateway: Listener Name. When both Port (experimental) and SectionName
+                            * Gateway: Listener name. When both Port (experimental) and SectionName
                             are specified, the name and port of the selected listener must match
                             both specified values.
-                            * Service: Port Name. When both Port (experimental) and SectionName
+                            * Service: Port name. When both Port (experimental) and SectionName
                             are specified, the name and port of the selected listener must match
-                            both specified values. Note that attaching Routes to Services as Parents
-                            is part of experimental Mesh support and is not supported for any other
-                            purpose.
+                            both specified values.
 
 
                             Implementations MAY choose to support attaching Routes to other resources.

@@ -11,7 +11,6 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:
@@ -138,16 +137,18 @@ xdsIR:
       http3:
         quicPort: 443
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: tls
       name: envoy-gateway/gateway-1/tls
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10443
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -158,6 +159,10 @@ xdsIR:
             weight: 1
         hostname: '*'
         isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
         name: httproute/default/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
