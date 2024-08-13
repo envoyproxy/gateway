@@ -1484,7 +1484,9 @@ func (in *HeaderSettings) DeepCopyInto(out *HeaderSettings) {
 	if in.EarlyAddRequestHeaders != nil {
 		in, out := &in.EarlyAddRequestHeaders, &out.EarlyAddRequestHeaders
 		*out = make([]AddHeader, len(*in))
-		copy(*out, *in)
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
 	}
 	if in.EarlyRemoveRequestHeaders != nil {
 		in, out := &in.EarlyRemoveRequestHeaders, &out.EarlyRemoveRequestHeaders

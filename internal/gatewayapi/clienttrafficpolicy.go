@@ -929,7 +929,7 @@ func translateEarlyRequestHeaderModifier(headerModifier *gwapiv1.HTTPHeaderFilte
 			newHeader := ir.AddHeader{
 				Name:   headerKey,
 				Append: true,
-				Value:  addHeader.Value,
+				Value:  strings.Split(addHeader.Value, ","),
 			}
 
 			AddRequestHeaders = append(AddRequestHeaders, newHeader)
@@ -968,7 +968,7 @@ func translateEarlyRequestHeaderModifier(headerModifier *gwapiv1.HTTPHeaderFilte
 			newHeader := ir.AddHeader{
 				Name:   string(setHeader.Name),
 				Append: false,
-				Value:  setHeader.Value,
+				Value:  strings.Split(setHeader.Value, ","),
 			}
 
 			AddRequestHeaders = append(AddRequestHeaders, newHeader)

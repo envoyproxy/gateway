@@ -146,10 +146,12 @@ xdsIR:
         earlyAddRequestHeaders:
         - append: true
           name: my-added-header
-          value: my-added-header-value
+          value:
+          - my-added-header-value
         - append: false
           name: my-set-header
-          value: my-set-header-value
+          value:
+          - my-set-header-value
         earlyRemoveRequestHeaders:
         - my-removed-header
         enableEnvoyHeaders: true
@@ -173,10 +175,12 @@ xdsIR:
         earlyAddRequestHeaders:
         - append: true
           name: my-added-header
-          value: my-added-header-value
+          value:
+          - my-added-header-value
         - append: false
           name: my-set-header
-          value: my-set-header-value
+          value:
+          - my-set-header-value
         earlyRemoveRequestHeaders:
         - my-removed-header
         enableEnvoyHeaders: true

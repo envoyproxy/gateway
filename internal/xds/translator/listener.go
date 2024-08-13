@@ -382,20 +382,35 @@ func buildEarlyHeaderMutation(headers *ir.HeaderSettings) []*corev3.TypedExtensi
 		} else {
 			appendAction = corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD
 		}
-
-		mr := &mutation_rulesv3.HeaderMutation{
-			Action: &mutation_rulesv3.HeaderMutation_Append{
-				Append: &corev3.HeaderValueOption{
-					Header: &corev3.HeaderValue{
-						Key:   header.Name,
-						Value: header.Value,
+		// Allow empty headers to be set, but don't add the config to do so unless necessary
+		if len(header.Value) == 0 {
+			mutationRules = append(mutationRules, &mutation_rulesv3.HeaderMutation{
+				Action: &mutation_rulesv3.HeaderMutation_Append{
+					Append: &corev3.HeaderValueOption{
+						Header: &corev3.HeaderValue{
+							Key: header.Name,
+						},
+						AppendAction:   appendAction,
+						KeepEmptyValue: true,
 					},
-					AppendAction: appendAction,
 				},
-			},
+			})
+		} else {
+			for _, val := range header.Value {
+				mutationRules = append(mutationRules, &mutation_rulesv3.HeaderMutation{
+					Action: &mutation_rulesv3.HeaderMutation_Append{
+						Append: &corev3.HeaderValueOption{
+							Header: &corev3.HeaderValue{
+								Key:   header.Name,
+								Value: val,
+							},
+							AppendAction:   appendAction,
+							KeepEmptyValue: val == "",
+						},
+					},
+				})
+			}
 		}
-
-		mutationRules = append(mutationRules, mr)
 	}
 
 	for _, header := range headers.EarlyRemoveRequestHeaders {
