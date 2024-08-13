@@ -445,7 +445,7 @@ func (t *Translator) processRequestHeaderModifierFilter(
 			newHeader := ir.AddHeader{
 				Name:   headerKey,
 				Append: true,
-				Value:  addHeader.Value,
+				Value:  strings.Split(addHeader.Value, ","),
 			}
 
 			filterContext.AddRequestHeaders = append(filterContext.AddRequestHeaders, newHeader)
@@ -500,7 +500,7 @@ func (t *Translator) processRequestHeaderModifierFilter(
 			newHeader := ir.AddHeader{
 				Name:   string(setHeader.Name),
 				Append: false,
-				Value:  setHeader.Value,
+				Value:  strings.Split(setHeader.Value, ","),
 			}
 
 			filterContext.AddRequestHeaders = append(filterContext.AddRequestHeaders, newHeader)
@@ -617,7 +617,7 @@ func (t *Translator) processResponseHeaderModifierFilter(
 			newHeader := ir.AddHeader{
 				Name:   headerKey,
 				Append: true,
-				Value:  addHeader.Value,
+				Value:  strings.Split(addHeader.Value, ","),
 			}
 
 			filterContext.AddResponseHeaders = append(filterContext.AddResponseHeaders, newHeader)
@@ -672,7 +672,7 @@ func (t *Translator) processResponseHeaderModifierFilter(
 			newHeader := ir.AddHeader{
 				Name:   string(setHeader.Name),
 				Append: false,
-				Value:  setHeader.Value,
+				Value:  strings.Split(setHeader.Value, ","),
 			}
 
 			filterContext.AddResponseHeaders = append(filterContext.AddResponseHeaders, newHeader)
