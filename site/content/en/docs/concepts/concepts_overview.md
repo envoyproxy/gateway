@@ -10,13 +10,12 @@ There are several resources that play a part in enabling you to meet your Kubern
 
 There are several resources that play a part in enabling you to meet your Kubernetes ingress traffic handling needs. This page provides a brief overview of the resources you’ll be working with.
 
-# Overview
-
-## Kubernetes Gateway API Resources
+### Kubernetes Gateway API Resources
 - **GatewayClass:** Defines a class of Gateways with common configuration.
 - **Gateway:** Specifies how traffic can enter the cluster.
 - **Routes:** **HTTPRoute, GRPCRoute, TLSRoute, TCPRoute, UDPRoute:** Define routing rules for different types of traffic.
-## Envoy Gateway (EG) API Resources
+
+### Envoy Gateway (EG) API Resources
 - **EnvoyProxy:** Represents the deployment and configuration of the Envoy proxy within a Kubernetes cluster, managing its lifecycle and settings.
 - **EnvoyPatchPolicy, ClientTrafficPolicy, SecurityPolicy, BackendTrafficPolicy, EnvoyExtensionPolicy, BackendTLSPolicy:** Additional policies and configurations specific to Envoy Gateway.
 - **Backend:** A resource that makes routing to cluster-external backends easier and makes access to external processes via Unix Domain Sockets possible.
