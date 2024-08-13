@@ -2070,7 +2070,8 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `op` | _[JSONPatchOperationType](#jsonpatchoperationtype)_ |  true  | Op is the type of operation to perform |
-| `path` | _string_ |  true  | Path is the location of the target document/field where the operation will be performed<br />Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details. |
+| `path` | _string_ |  false  | Path is the location of the target document/field where the operation will be performed<br />Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details. |
+| `jsonPath` | _string_ |  false  | JSONPath specifies the locations of the target document/field where the operation will be performed<br />Refer to https://datatracker.ietf.org/doc/rfc9535/ for more details. |
 | `from` | _string_ |  false  | From is the source location of the value to be copied or moved. Only valid<br />for move or copy operations<br />Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details. |
 | `value` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#json-v1-apiextensions-k8s-io)_ |  false  | Value is the new value of the path location. The value is only used by<br />the `add` and `replace` operations. |
 
