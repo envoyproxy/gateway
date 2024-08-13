@@ -1232,9 +1232,9 @@ func NewDestEndpoint(host string, port uint32) *DestinationEndpoint {
 // AddHeader configures a header to be added to a request or response.
 // +k8s:deepcopy-gen=true
 type AddHeader struct {
-	Name   string `json:"name" yaml:"name"`
-	Value  string `json:"value" yaml:"value"`
-	Append bool   `json:"append" yaml:"append"`
+	Name   string   `json:"name" yaml:"name"`
+	Value  []string `json:"value" yaml:"value"`
+	Append bool     `json:"append" yaml:"append"`
 }
 
 // Validate the fields within the AddHeader structure
