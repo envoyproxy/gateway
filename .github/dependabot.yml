@@ -35,6 +35,10 @@ updates:
       go.opentelemetry.io:
         patterns:
           - "go.opentelemetry.io/*"
+  - package-ecosystem: gomod
+    directory: examples/extension-server
+    schedule:
+      interval: weekly
   - package-ecosystem: pip
     directory: /tools/src/codespell
     schedule:
