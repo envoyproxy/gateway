@@ -144,13 +144,16 @@ xdsIR:
       - addRequestHeaders:
         - append: true
           name: X-Header-Add
-          value: header-val-1
+          value:
+          - header-val-1
         - append: true
           name: X-Header-Add-Append
-          value: header-val-2
+          value:
+          - header-val-2
         - append: false
           name: X-Header-Set
-          value: set-overwrites-values
+          value:
+          - set-overwrites-values
         destination:
           name: httproute/default/httproute-1/rule/0
           settings:
