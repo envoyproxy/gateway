@@ -196,7 +196,6 @@ curl -kv -H "Host: www.example.com" -u 'foo:bar' "https://${GATEWAY_HOST}/"
 The request should be allowed and you should see the response from the backend service.
 
 
-
 ## Clean-Up
 
 Follow the steps from the [Quickstart](../../quickstart) to uninstall Envoy Gateway and the example manifest.
