@@ -14,7 +14,8 @@ import (
 
 // getDirsAndFilesForWatcher prepares dirs and files for the watcher in notifier.
 func getDirsAndFilesForWatcher(paths []string) (
-	dirs sets.Set[string], files sets.Set[string], err error) {
+	dirs sets.Set[string], files sets.Set[string], err error,
+) {
 	dirs, files = sets.New[string](), sets.New[string]()
 
 	// Separate paths by whether is a directory or not.

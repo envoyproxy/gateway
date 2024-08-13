@@ -8,7 +8,7 @@ package provider
 import (
 	"context"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 type Provider interface {
@@ -16,5 +16,5 @@ type Provider interface {
 	Start(ctx context.Context) error
 
 	// Type returns the type of resource provider.
-	Type() v1alpha1.ProviderType
+	Type() egv1a1.ProviderType
 }

@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/admin"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extensionregistry "github.com/envoyproxy/gateway/internal/extension/registry"
@@ -117,7 +117,7 @@ func setupRunners(cfg *config.Server) (err error) {
 
 	// Setup the Extension Manager for Kubernetes provider.
 	var extMgr types.Manager
-	if cfg.EnvoyGateway.Provider.Type == v1alpha1.ProviderTypeKubernetes {
+	if cfg.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes {
 		extMgr, err = extensionregistry.NewManager(cfg)
 		if err != nil {
 			return err

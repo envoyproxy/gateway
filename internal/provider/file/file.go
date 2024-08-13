@@ -10,7 +10,7 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
 )
@@ -36,8 +36,8 @@ func New(svr *config.Server, resources *message.ProviderResources) (*Provider, e
 	}, nil
 }
 
-func (p *Provider) Type() v1alpha1.ProviderType {
-	return v1alpha1.ProviderTypeFile
+func (p *Provider) Type() egv1a1.ProviderType {
+	return egv1a1.ProviderTypeFile
 }
 
 func (p *Provider) Start(ctx context.Context) error {

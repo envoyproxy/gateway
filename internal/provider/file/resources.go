@@ -15,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/sets"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/yaml"
@@ -98,10 +99,10 @@ func loadFromDir(path string) ([]*gatewayapi.Resources, error) {
 //
 // convertKubernetesYAMLToResources converts a Kubernetes YAML string into GatewayAPI Resources.
 func convertKubernetesYAMLToResources(str string) (*gatewayapi.Resources, error) {
-	res := gatewayapi.NewResources()
+	resources := gatewayapi.NewResources()
 	var useDefaultNamespace bool
-	providedNamespaceMap := map[string]struct{}{}
-	requiredNamespaceMap := map[string]struct{}{}
+	providedNamespaceMap := sets.New[string]()
+	requiredNamespaceMap := sets.New[string]()
 	yamls := strings.Split(str, "\n---")
 	combinedScheme := envoygateway.GetScheme()
 	for _, y := range yamls {
@@ -123,7 +124,7 @@ func convertKubernetesYAMLToResources(str string) (*gatewayapi.Resources, error)
 			useDefaultNamespace = true
 			namespace = config.DefaultNamespace
 		}
-		requiredNamespaceMap[namespace] = struct{}{}
+		requiredNamespaceMap.Insert(namespace)
 		kobj, err := combinedScheme.New(gvk)
 		if err != nil {
 			return nil, err
@@ -150,7 +151,7 @@ func convertKubernetesYAMLToResources(str string) (*gatewayapi.Resources, error)
 				},
 				Spec: typedSpec.(egv1a1.EnvoyProxySpec),
 			}
-			res.EnvoyProxy = envoyProxy
+			resources.EnvoyProxyForGatewayClass = envoyProxy
 		case gatewayapi.KindGatewayClass:
 			typedSpec := spec.Interface()
 			gatewayClass := &gwapiv1.GatewayClass{
@@ -160,7 +161,11 @@ func convertKubernetesYAMLToResources(str string) (*gatewayapi.Resources, error)
 				},
 				Spec: typedSpec.(gwapiv1.GatewayClassSpec),
 			}
-			res.GatewayClass = gatewayClass
+			// fill controller name by default controller name when gatewayclass controller name empty.
+			if gatewayClass.Spec.ControllerName == "" {
+				gatewayClass.Spec.ControllerName = egv1a1.GatewayControllerName
+			}
+			resources.GatewayClass = gatewayClass
 		case gatewayapi.KindGateway:
 			typedSpec := spec.Interface()
 			gateway := &gwapiv1.Gateway{
@@ -170,7 +175,7 @@ func convertKubernetesYAMLToResources(str string) (*gatewayapi.Resources, error)
 				},
 				Spec: typedSpec.(gwapiv1.GatewaySpec),
 			}
-			res.Gateways = append(res.Gateways, gateway)
+			resources.Gateways = append(resources.Gateways, gateway)
 		case gatewayapi.KindTCPRoute:
 			typedSpec := spec.Interface()
 			tcpRoute := &gwapiv1a2.TCPRoute{
@@ -183,7 +188,7 @@ func convertKubernetesYAMLToResources(str string) (*gatewayapi.Resources, error)
 				},
 				Spec: typedSpec.(gwapiv1a2.TCPRouteSpec),
 			}
-			res.TCPRoutes = append(res.TCPRoutes, tcpRoute)
+			resources.TCPRoutes = append(resources.TCPRoutes, tcpRoute)
 		case gatewayapi.KindUDPRoute:
 			typedSpec := spec.Interface()
 			udpRoute := &gwapiv1a2.UDPRoute{
@@ -196,7 +201,7 @@ func convertKubernetesYAMLToResources(str string) (*gatewayapi.Resources, error)
 				},
 				Spec: typedSpec.(gwapiv1a2.UDPRouteSpec),
 			}
-			res.UDPRoutes = append(res.UDPRoutes, udpRoute)
+			resources.UDPRoutes = append(resources.UDPRoutes, udpRoute)
 		case gatewayapi.KindTLSRoute:
 			typedSpec := spec.Interface()
 			tlsRoute := &gwapiv1a2.TLSRoute{
@@ -209,7 +214,7 @@ func convertKubernetesYAMLToResources(str string) (*gatewayapi.Resources, error)
 				},
 				Spec: typedSpec.(gwapiv1a2.TLSRouteSpec),
 			}
-			res.TLSRoutes = append(res.TLSRoutes, tlsRoute)
+			resources.TLSRoutes = append(resources.TLSRoutes, tlsRoute)
 		case gatewayapi.KindHTTPRoute:
 			typedSpec := spec.Interface()
 			httpRoute := &gwapiv1.HTTPRoute{
@@ -222,10 +227,10 @@ func convertKubernetesYAMLToResources(str string) (*gatewayapi.Resources, error)
 				},
 				Spec: typedSpec.(gwapiv1.HTTPRouteSpec),
 			}
-			res.HTTPRoutes = append(res.HTTPRoutes, httpRoute)
+			resources.HTTPRoutes = append(resources.HTTPRoutes, httpRoute)
 		case gatewayapi.KindGRPCRoute:
 			typedSpec := spec.Interface()
-			grpcRoute := &gwapiv1a2.GRPCRoute{
+			grpcRoute := &gwapiv1.GRPCRoute{
 				TypeMeta: metav1.TypeMeta{
 					Kind: gatewayapi.KindGRPCRoute,
 				},
@@ -233,17 +238,17 @@ func convertKubernetesYAMLToResources(str string) (*gatewayapi.Resources, error)
 					Name:      name,
 					Namespace: namespace,
 				},
-				Spec: typedSpec.(gwapiv1a2.GRPCRouteSpec),
+				Spec: typedSpec.(gwapiv1.GRPCRouteSpec),
 			}
-			res.GRPCRoutes = append(res.GRPCRoutes, grpcRoute)
+			resources.GRPCRoutes = append(resources.GRPCRoutes, grpcRoute)
 		case gatewayapi.KindNamespace:
-			ns := &corev1.Namespace{
+			namespace := &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: name,
 				},
 			}
-			res.Namespaces = append(res.Namespaces, ns)
-			providedNamespaceMap[name] = struct{}{}
+			resources.Namespaces = append(resources.Namespaces, namespace)
+			providedNamespaceMap.Insert(name)
 		case gatewayapi.KindService:
 			typedSpec := spec.Interface()
 			service := &corev1.Service{
@@ -253,7 +258,7 @@ func convertKubernetesYAMLToResources(str string) (*gatewayapi.Resources, error)
 				},
 				Spec: typedSpec.(corev1.ServiceSpec),
 			}
-			res.Services = append(res.Services, service)
+			resources.Services = append(resources.Services, service)
 		case egv1a1.KindEnvoyPatchPolicy:
 			typedSpec := spec.Interface()
 			envoyPatchPolicy := &egv1a1.EnvoyPatchPolicy{
@@ -267,7 +272,7 @@ func convertKubernetesYAMLToResources(str string) (*gatewayapi.Resources, error)
 				},
 				Spec: typedSpec.(egv1a1.EnvoyPatchPolicySpec),
 			}
-			res.EnvoyPatchPolicies = append(res.EnvoyPatchPolicies, envoyPatchPolicy)
+			resources.EnvoyPatchPolicies = append(resources.EnvoyPatchPolicies, envoyPatchPolicy)
 		case egv1a1.KindClientTrafficPolicy:
 			typedSpec := spec.Interface()
 			clientTrafficPolicy := &egv1a1.ClientTrafficPolicy{
@@ -281,7 +286,7 @@ func convertKubernetesYAMLToResources(str string) (*gatewayapi.Resources, error)
 				},
 				Spec: typedSpec.(egv1a1.ClientTrafficPolicySpec),
 			}
-			res.ClientTrafficPolicies = append(res.ClientTrafficPolicies, clientTrafficPolicy)
+			resources.ClientTrafficPolicies = append(resources.ClientTrafficPolicies, clientTrafficPolicy)
 		case egv1a1.KindBackendTrafficPolicy:
 			typedSpec := spec.Interface()
 			backendTrafficPolicy := &egv1a1.BackendTrafficPolicy{
@@ -295,7 +300,7 @@ func convertKubernetesYAMLToResources(str string) (*gatewayapi.Resources, error)
 				},
 				Spec: typedSpec.(egv1a1.BackendTrafficPolicySpec),
 			}
-			res.BackendTrafficPolicies = append(res.BackendTrafficPolicies, backendTrafficPolicy)
+			resources.BackendTrafficPolicies = append(resources.BackendTrafficPolicies, backendTrafficPolicy)
 		case egv1a1.KindSecurityPolicy:
 			typedSpec := spec.Interface()
 			securityPolicy := &egv1a1.SecurityPolicy{
@@ -309,21 +314,21 @@ func convertKubernetesYAMLToResources(str string) (*gatewayapi.Resources, error)
 				},
 				Spec: typedSpec.(egv1a1.SecurityPolicySpec),
 			}
-			res.SecurityPolicies = append(res.SecurityPolicies, securityPolicy)
+			resources.SecurityPolicies = append(resources.SecurityPolicies, securityPolicy)
 		}
 	}
 
 	if useDefaultNamespace {
-		if _, found := providedNamespaceMap[config.DefaultNamespace]; !found {
+		if !providedNamespaceMap.Has(config.DefaultNamespace) {
 			namespace := &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: config.DefaultNamespace,
 				},
 			}
-			res.Namespaces = append(res.Namespaces, namespace)
-			providedNamespaceMap[config.DefaultNamespace] = struct{}{}
+			resources.Namespaces = append(resources.Namespaces, namespace)
+			providedNamespaceMap.Insert(config.DefaultNamespace)
 		}
 	}
 
-	return res, nil
+	return resources, nil
 }
