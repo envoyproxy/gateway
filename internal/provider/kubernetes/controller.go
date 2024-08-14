@@ -190,7 +190,6 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	gwcResources := make(gatewayapi.ControllerResources, 0, len(managedGCs))
 	for _, managedGC := range managedGCs {
 		// Initialize resource types.
-		managedGC := managedGC
 		gwcResource := gatewayapi.NewResources()
 		gwcResource.GatewayClass = managedGC
 		gwcResources = append(gwcResources, gwcResource)
@@ -348,7 +347,6 @@ func (r *gatewayAPIReconciler) managedGatewayClasses(ctx context.Context) ([]*gw
 	var cc controlledClasses
 
 	for _, gwClass := range gatewayClasses.Items {
-		gwClass := gwClass
 		if gwClass.Spec.ControllerName == r.classController {
 			// The gatewayclass was marked for deletion and the finalizer removed,
 			// so clean-up dependents.
@@ -435,7 +433,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 					backendRefKind, string(backendRef.Name))
 			} else {
 				for _, endpointSlice := range endpointSliceList.Items {
-					endpointSlice := endpointSlice
+					endpointSlice := endpointSlice //nolint:copyloopvar
 					r.log.Info("added EndpointSlice to resource tree", "namespace", endpointSlice.Namespace,
 						"name", endpointSlice.Name)
 					gwcResource.EndpointSlices = append(gwcResource.EndpointSlices, &endpointSlice)
@@ -756,7 +754,6 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 	if r.namespaceLabel != nil {
 		var rgs []gwapiv1b1.ReferenceGrant
 		for _, refGrant := range refGrants {
-			refGrant := refGrant
 			if ok, err := r.checkObjectNamespaceLabels(&refGrant); err != nil {
 				r.log.Error(err, "failed to check namespace labels for ReferenceGrant %s in namespace %s: %w", refGrant.GetName(), refGrant.GetNamespace())
 				continue
@@ -816,7 +813,7 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 	}
 
 	for _, gtw := range gatewayList.Items {
-		gtw := gtw
+		gtw := gtw //nolint:copyloopvar
 		if r.namespaceLabel != nil {
 			if ok, err := r.checkObjectNamespaceLabels(&gtw); err != nil {
 				r.log.Error(err, "failed to check namespace labels for gateway %s in namespace %s: %w", gtw.GetName(), gtw.GetNamespace())
@@ -833,11 +830,9 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 		}
 
 		for _, listener := range gtw.Spec.Listeners {
-			listener := listener
 			// Get Secret for gateway if it exists.
 			if terminatesTLS(&listener) {
 				for _, certRef := range listener.TLS.CertificateRefs {
-					certRef := certRef
 					if refsSecret(&certRef) {
 						if err := r.processSecretRef(
 							ctx,
@@ -899,7 +894,7 @@ func (r *gatewayAPIReconciler) processEnvoyPatchPolicies(ctx context.Context, re
 	}
 
 	for _, policy := range envoyPatchPolicies.Items {
-		policy := policy
+		policy := policy //nolint:copyloopvar
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		policy.Status = gwapiv1a2.PolicyStatus{}
@@ -919,7 +914,7 @@ func (r *gatewayAPIReconciler) processClientTrafficPolicies(
 	}
 
 	for _, policy := range clientTrafficPolicies.Items {
-		policy := policy
+		policy := policy //nolint:copyloopvar
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		policy.Status = gwapiv1a2.PolicyStatus{}
@@ -939,7 +934,7 @@ func (r *gatewayAPIReconciler) processBackendTrafficPolicies(ctx context.Context
 	}
 
 	for _, policy := range backendTrafficPolicies.Items {
-		policy := policy
+		policy := policy //nolint:copyloopvar
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		policy.Status = gwapiv1a2.PolicyStatus{}
@@ -958,7 +953,7 @@ func (r *gatewayAPIReconciler) processSecurityPolicies(
 	}
 
 	for _, policy := range securityPolicies.Items {
-		policy := policy
+		policy := policy //nolint:copyloopvar
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		policy.Status = gwapiv1a2.PolicyStatus{}
@@ -983,7 +978,7 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicies(
 	}
 
 	for _, policy := range backendTLSPolicies.Items {
-		policy := policy
+		policy := policy //nolint:copyloopvar
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		policy.Status = gwapiv1a2.PolicyStatus{}
@@ -1003,7 +998,7 @@ func (r *gatewayAPIReconciler) processBackends(ctx context.Context, resourceTree
 	}
 
 	for _, backend := range backends.Items {
-		backend := backend
+		backend := backend //nolint:copyloopvar
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		backend.Status = egv1a1.BackendStatus{}
@@ -1789,7 +1784,7 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicies(
 	}
 
 	for _, policy := range envoyExtensionPolicies.Items {
-		policy := policy
+		policy := policy //nolint:copyloopvar
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		policy.Status = gwapiv1a2.PolicyStatus{}
@@ -1816,8 +1811,6 @@ func (r *gatewayAPIReconciler) processExtensionServerPolicies(
 		}
 
 		for _, policy := range polList.Items {
-			policy := policy
-
 			policySpec, found := policy.Object["spec"].(map[string]any)
 			if !found {
 				return fmt.Errorf("no spec found in %s.%s %s", policy.GetAPIVersion(), policy.GetKind(), policy.GetName())

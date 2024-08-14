@@ -47,7 +47,6 @@ func TestStart(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			runner := &Runner{
 				Config: Config{
