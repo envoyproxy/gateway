@@ -139,3 +139,26 @@
     splitExternalLocalOriginErrors: true
   perConnectionBufferLimitBytes: 32768
   type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: fifth-route-dest
+  healthChecks:
+  - grpcHealthCheck: {}
+    healthyThreshold: 3
+    interval: 5s
+    timeout: 1s
+    unhealthyThreshold: 3
+  lbPolicy: LEAST_REQUEST
+  name: fifth-route-dest
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  type: EDS

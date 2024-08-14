@@ -128,6 +128,8 @@ const (
 	ActiveHealthCheckerTypeHTTP ActiveHealthCheckerType = "HTTP"
 	// ActiveHealthCheckerTypeTCP defines the TCP type of health checking.
 	ActiveHealthCheckerTypeTCP ActiveHealthCheckerType = "TCP"
+	// ActiveHealthCheckerTypeGRPC defines the GRPC type of health checking.
+	ActiveHealthCheckerTypeGRPC ActiveHealthCheckerType = "GRPC"
 )
 
 // HTTPActiveHealthChecker defines the settings of http health check.

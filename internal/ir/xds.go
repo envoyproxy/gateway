@@ -1968,6 +1968,8 @@ type ActiveHealthCheck struct {
 	HTTP *HTTPHealthChecker `json:"http,omitempty" yaml:"http,omitempty"`
 	// TCP defines the configuration of tcp health checker.
 	TCP *TCPHealthChecker `json:"tcp,omitempty" yaml:"tcp,omitempty"`
+	// GRPC defines if the GRPC healthcheck service should be used
+	GRPC bool `json:"grpc,omitempty" yaml:"grpc,omitempty"`
 }
 
 func (h *HealthCheck) SetHTTPHostIfAbsent(host string) {
@@ -1998,6 +2000,9 @@ func (h *HealthCheck) Validate() error {
 			matchCount++
 		}
 		if h.Active.TCP != nil {
+			matchCount++
+		}
+		if h.Active.GRPC {
 			matchCount++
 		}
 		if matchCount > 1 {

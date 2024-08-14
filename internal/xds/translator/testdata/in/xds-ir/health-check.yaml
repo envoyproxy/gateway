@@ -126,3 +126,20 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+  - name: "fifth-route"
+    hostname: "*"
+    traffic:
+      healthCheck:
+        active:
+          timeout: "1s"
+          interval: "5s"
+          unhealthyThreshold: 3
+          healthyThreshold: 3
+          grpc: true
+    destination:
+      name: "fifth-route-dest"
+      protocol: GRPC
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
