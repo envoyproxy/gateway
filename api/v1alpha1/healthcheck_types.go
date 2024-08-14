@@ -104,7 +104,7 @@ type ActiveHealthCheck struct {
 	HealthyThreshold *uint32 `json:"healthyThreshold"`
 
 	// Type defines the type of health checker.
-	// +kubebuilder:validation:Enum=HTTP;TCP
+	// +kubebuilder:validation:Enum=HTTP;TCP;GRPC
 	// +unionDiscriminator
 	Type ActiveHealthCheckerType `json:"type" yaml:"type"`
 
@@ -120,7 +120,7 @@ type ActiveHealthCheck struct {
 }
 
 // ActiveHealthCheckerType is the type of health checker.
-// +kubebuilder:validation:Enum=HTTP;TCP
+// +kubebuilder:validation:Enum=HTTP;TCP;GRPC
 type ActiveHealthCheckerType string
 
 const (

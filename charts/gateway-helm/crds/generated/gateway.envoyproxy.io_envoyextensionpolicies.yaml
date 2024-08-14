@@ -490,9 +490,11 @@ spec:
                                   - enum:
                                     - HTTP
                                     - TCP
+                                    - GRPC
                                   - enum:
                                     - HTTP
                                     - TCP
+                                    - GRPC
                                   description: Type defines the type of health checker.
                                   type: string
                                 unhealthyThreshold:
