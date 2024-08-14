@@ -448,6 +448,8 @@ In some cases, it could be necessary to modify headers before the proxy performs
 
 A ClientTrafficPolicy resource can be attached to a Gateway resource to configure early header modifications for all its routes. In the following example we will demonstrate how early header modification can be configured. 
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
