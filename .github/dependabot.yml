@@ -7,14 +7,14 @@ version: 2
 updates:
   - package-ecosystem: docker
     directories:
-    - /tools/docker/envoy-gateway/
-    - /site
+      - /tools/docker/envoy-gateway/
+      - /site
     schedule:
       interval: weekly
   - package-ecosystem: github-actions
     directories:
-    - /
-    - /tools/github-actions/setup-deps
+      - /
+      - /tools/github-actions/setup-deps
     schedule:
       interval: weekly
     ignore:
@@ -38,17 +38,17 @@ updates:
           - "golang.org/*"
   - package-ecosystem: pip
     directories:
-    - /tools/src/codespell
-    - /tools/src/sphinx-build
-    - /tools/src/yamllint
+      - /tools/src/codespell
+      - /tools/src/sphinx-build
+      - /tools/src/yamllint
     schedule:
       interval: weekly
   - package-ecosystem: gomod
     directories:
-    - /tools/src/helm-docs
-    - /tools/src/buf
-    - /tools/src/golangci-lint
-    - /tools/src/kind
-    - /tools/src/setup-envtest
+      - /tools/src/helm-docs
+      - /tools/src/buf
+      - /tools/src/golangci-lint
+      - /tools/src/kind
+      - /tools/src/setup-envtest
     schedule:
       interval: weekly
