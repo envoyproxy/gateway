@@ -563,6 +563,7 @@ spec:
       remove:
         - "early-removed-header"
 ```
+
 {{% /tab %}}
 {{< /tabpane >}}
 
