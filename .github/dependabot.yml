@@ -6,26 +6,24 @@
 version: 2
 updates:
   - package-ecosystem: docker
-    directory: /tools/docker/envoy-gateway/
-    schedule:
-      interval: weekly
-  - package-ecosystem: docker
-    directory: /site
+    directories:
+      - /tools/docker/envoy-gateway/
+      - /site
     schedule:
       interval: weekly
   - package-ecosystem: github-actions
-    directory: /
+    directories:
+      - /
+      - /tools/github-actions/setup-deps
     schedule:
       interval: weekly
     ignore:
       # skip to update retest, because it won't work with the latest version
       - dependency-name: "envoyproxy/toolshed/gh-actions/retest"
-  - package-ecosystem: github-actions
-    directory: /tools/github-actions/setup-deps
-    schedule:
-      interval: weekly
   - package-ecosystem: gomod
-    directory: /
+    directories:
+      - "/"
+      - "examples/extension-server"
     schedule:
       interval: weekly
     groups:
@@ -35,35 +33,22 @@ updates:
       go.opentelemetry.io:
         patterns:
           - "go.opentelemetry.io/*"
+      golang.org:
+        patterns:
+          - "golang.org/*"
   - package-ecosystem: pip
-    directory: /tools/src/codespell
+    directories:
+      - /tools/src/codespell
+      - /tools/src/sphinx-build
+      - /tools/src/yamllint
     schedule:
       interval: weekly
   - package-ecosystem: gomod
-    directory: /tools/src/helm-docs
-    schedule:
-      interval: weekly
-  - package-ecosystem: gomod
-    directory: /tools/src/buf
-    schedule:
-      interval: weekly
-  - package-ecosystem: gomod
-    directory: /tools/src/golangci-lint
-    schedule:
-      interval: weekly
-  - package-ecosystem: gomod
-    directory: /tools/src/kind
-    schedule:
-      interval: weekly
-  - package-ecosystem: gomod
-    directory: /tools/src/setup-envtest
-    schedule:
-      interval: weekly
-  - package-ecosystem: pip
-    directory: /tools/src/sphinx-build
-    schedule:
-      interval: weekly
-  - package-ecosystem: pip
-    directory: /tools/src/yamllint
+    directories:
+      - /tools/src/helm-docs
+      - /tools/src/buf
+      - /tools/src/golangci-lint
+      - /tools/src/kind
+      - /tools/src/setup-envtest
     schedule:
       interval: weekly
