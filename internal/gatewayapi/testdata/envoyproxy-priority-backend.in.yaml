@@ -201,18 +201,18 @@ envoyExtensionPolicies:
             - Name: grpc-backend
               Namespace: envoy-gateway
               Port: 8000
-              priority: 1
             - Name: grpc-backend-2
               Port: 9000
+              failover: true
             - Name: backend-ip
               Kind: Backend
               Group: gateway.envoyproxy.io
-              priority: 2
+              failover: true
             - Name: backend-ip-tls
               Namespace: envoy-gateway
               Kind: Backend
               Group: gateway.envoyproxy.io
-              priority: 3
+              failover: true
 backends:
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: Backend

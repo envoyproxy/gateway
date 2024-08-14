@@ -369,9 +369,9 @@ func (in *BackendList) DeepCopyObject() runtime.Object {
 func (in *BackendRef) DeepCopyInto(out *BackendRef) {
 	*out = *in
 	in.BackendObjectReference.DeepCopyInto(&out.BackendObjectReference)
-	if in.Priority != nil {
-		in, out := &in.Priority, &out.Priority
-		*out = new(uint32)
+	if in.Failover != nil {
+		in, out := &in.Failover, &out.Failover
+		*out = new(bool)
 		**out = **in
 	}
 }

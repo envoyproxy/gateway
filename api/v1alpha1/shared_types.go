@@ -473,10 +473,9 @@ type BackendRef struct {
 	// BackendObjectReference references a Kubernetes object that represents the backend.
 	// Only Service kind is supported for now.
 	gwapiv1.BackendObjectReference `json:",inline"`
-	// Priority is optional. If not specified, the default will be the highest priority (0).
-	// Typically, endpoints with the highest priority (0) are utilized.
-	// If there are insufficient available or healthy endpoints at a given priority level, Envoy will automatically fail over to the next priority group.
-	Priority *uint32 `json:"priority,omitempty"`
+	// Failover This indicates whether the backend is designated as a failover.
+	// Multiple failover backends can be configured for a single BackendService.⬤
+	Failover *bool `json:"failover,omitempty"`
 }
 
 // BackendCluster contains all the configuration required for configuring access

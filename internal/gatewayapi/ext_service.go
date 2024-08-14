@@ -78,8 +78,11 @@ func (t *Translator) processExtServiceDestination(
 
 	// TODO: support weighted non-xRoute backends
 	ds.Weight = ptr.To(uint32(1))
-	if backendRef.Priority != nil {
-		ds.Priority = ptr.Deref(&backendRef.Priority, ptr.To(uint32(0)))
+	if backendRef.Failover != nil {
+		// set only the secondary priority, the backend defaults to a primary priority if unset.
+		if ptr.Deref(backendRef.Failover, false) {
+			ds.Priority = ptr.To(uint32(1))
+		}
 	}
 	return ds, nil
 }

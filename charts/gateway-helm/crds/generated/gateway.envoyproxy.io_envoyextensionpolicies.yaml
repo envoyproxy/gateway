@@ -143,6 +143,11 @@ spec:
                         description: BackendRef defines how an ObjectReference that
                           is specific to BackendRef.
                         properties:
+                          failover:
+                            description: |-
+                              Failover This indicates whether the backend is designated as a failover.
+                              Multiple failover backends can be configured for a single BackendService.⬤
+                            type: boolean
                           group:
                             default: ""
                             description: |-
@@ -208,13 +213,6 @@ spec:
                             format: int32
                             maximum: 65535
                             minimum: 1
-                            type: integer
-                          priority:
-                            description: |-
-                              Priority is optional. If not specified, the default will be the highest priority (0).
-                              Typically, endpoints with the highest priority (0) are utilized.
-                              If there are insufficient available or healthy endpoints at a given priority level, Envoy will automatically fail over to the next priority group.
-                            format: int32
                             type: integer
                         required:
                         - name

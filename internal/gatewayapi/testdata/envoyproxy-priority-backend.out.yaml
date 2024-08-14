@@ -112,18 +112,18 @@ envoyExtensionPolicies:
       - name: grpc-backend
         namespace: envoy-gateway
         port: 8000
-        priority: 1
-      - name: grpc-backend-2
+      - failover: true
+        name: grpc-backend-2
         port: 9000
-      - group: gateway.envoyproxy.io
+      - failover: true
+        group: gateway.envoyproxy.io
         kind: Backend
         name: backend-ip
-        priority: 2
-      - group: gateway.envoyproxy.io
+      - failover: true
+        group: gateway.envoyproxy.io
         kind: Backend
         name: backend-ip-tls
         namespace: envoy-gateway
-        priority: 3
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -314,7 +314,6 @@ xdsIR:
               name: envoyextensionpolicy/default/policy-for-http-route/0
               settings:
               - addressType: IP
-                priority: 1
                 protocol: GRPC
                 tls:
                   caCertificate:
@@ -326,20 +325,21 @@ xdsIR:
                 endpoints:
                 - host: 8.8.8.8
                   port: 9000
+                priority: 1
                 protocol: GRPC
                 weight: 1
               - addressType: IP
                 endpoints:
                 - host: 1.1.1.1
                   port: 3001
-                priority: 2
+                priority: 1
                 protocol: GRPC
                 weight: 1
               - addressType: IP
                 endpoints:
                 - host: 2.2.2.2
                   port: 3443
-                priority: 3
+                priority: 1
                 protocol: GRPC
                 tls:
                   caCertificate:
