@@ -761,13 +761,35 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 	}
 
 	for _, refGrant := range refGrants {
-		if refGrant.Namespace == to.namespace {
-			for _, src := range refGrant.Spec.From {
-				if src.Kind == gwapiv1a2.Kind(from.kind) && string(src.Namespace) == from.namespace {
-					return &refGrant, nil
-				}
+		if refGrant.Namespace != to.namespace {
+			continue
+		}
+
+		var fromAllowed bool
+		for _, refGrantFrom := range refGrant.Spec.From {
+			if string(refGrantFrom.Kind) == from.kind && string(refGrantFrom.Namespace) == from.namespace {
+				fromAllowed = true
+				break
 			}
 		}
+
+		if !fromAllowed {
+			continue
+		}
+
+		var toAllowed bool
+		for _, refGrantTo := range refGrant.Spec.To {
+			if string(refGrantTo.Kind) == to.kind && (refGrantTo.Name == nil || *refGrantTo.Name == "" || string(*refGrantTo.Name) == to.name) {
+				toAllowed = true
+				break
+			}
+		}
+
+		if !toAllowed {
+			continue
+		}
+
+		return &refGrant, nil
 	}
 
 	// No ReferenceGrant found.

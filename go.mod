@@ -27,6 +27,7 @@ require (
 	github.com/grafana/tempo v1.5.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/miekg/dns v1.1.61
+	github.com/ohler55/ojg v1.22.1
 	github.com/prometheus/client_golang v1.19.1
 	github.com/prometheus/common v0.55.0
 	github.com/spf13/cobra v1.8.1
@@ -44,7 +45,7 @@ require (
 	go.opentelemetry.io/proto/otlp v1.3.1
 	go.uber.org/zap v1.27.0
 	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
-	golang.org/x/sys v0.22.0
+	golang.org/x/sys v0.23.0
 	google.golang.org/grpc v1.65.0
 	google.golang.org/protobuf v1.34.2
 	gopkg.in/yaml.v3 v3.0.1

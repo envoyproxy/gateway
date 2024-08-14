@@ -68,7 +68,9 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `backendRefs` | _[BackendRef](#backendref) array_ |  true  | BackendRefs references a Kubernetes object that represents the gRPC service to which<br />the access logs will be sent. Currently only Service is supported. |
+| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.BackendObjectReference)_ |  true  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br /><br />Deprecated: Use BackendRefs instead. |
+| `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent. |
+| `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  | BackendSettings holds configuration for managing the connection<br />to the backend. |
 | `logName` | _string_ |  false  | LogName defines the friendly name of the access log to be returned in<br />StreamAccessLogsMessage.Identifier. This allows the access log server<br />to differentiate between different access logs coming from the same Envoy. |
 | `type` | _[ALSEnvoyProxyAccessLogType](#alsenvoyproxyaccesslogtype)_ |  true  | Type defines the type of accesslog. Supported types are "HTTP" and "TCP". |
 | `http` | _[ALSEnvoyProxyHTTPAccessLogConfig](#alsenvoyproxyhttpaccesslogconfig)_ |  false  | HTTP defines additional configuration specific to HTTP access logs. |
@@ -128,7 +130,7 @@ _Appears in:_
 
 #### ActiveHealthCheckPayload
 
-_Underlying type:_ _[struct{Type ActiveHealthCheckPayloadType "json:\"type\" yaml:\"type\""; Text *string "json:\"text,omitempty\" yaml:\"text,omitempty\""; Binary []byte "json:\"binary,omitempty\" yaml:\"binary,omitempty\""}](#struct{type-activehealthcheckpayloadtype-"json:\"type\"-yaml:\"type\"";-text-*string-"json:\"text,omitempty\"-yaml:\"text,omitempty\"";-binary-[]byte-"json:\"binary,omitempty\"-yaml:\"binary,omitempty\""})_
+
 
 ActiveHealthCheckPayload defines the encoding of the payload bytes in the payload.
 
@@ -136,8 +138,26 @@ _Appears in:_
 - [HTTPActiveHealthChecker](#httpactivehealthchecker)
 - [TCPActiveHealthChecker](#tcpactivehealthchecker)
 
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `type` | _[ActiveHealthCheckPayloadType](#activehealthcheckpayloadtype)_ |  true  | Type defines the type of the payload. |
+| `text` | _string_ |  false  | Text payload in plain text. |
+| `binary` | _integer array_ |  false  | Binary payload base64 encoded. |
 
 
+#### ActiveHealthCheckPayloadType
+
+_Underlying type:_ _string_
+
+ActiveHealthCheckPayloadType is the type of the payload.
+
+_Appears in:_
+- [ActiveHealthCheckPayload](#activehealthcheckpayload)
+
+| Value | Description |
+| ----- | ----------- |
+| `Text` | ActiveHealthCheckPayloadTypeText defines the Text type payload.<br /> | 
+| `Binary` | ActiveHealthCheckPayloadTypeBinary defines the Binary type payload.<br /> | 
 
 
 #### ActiveHealthCheckerType
@@ -264,9 +284,13 @@ to a backend. This can include multiple endpoints, and settings that apply for
 managing the connection to all these endpoints.
 
 _Appears in:_
+- [ALSEnvoyProxyAccessLog](#alsenvoyproxyaccesslog)
 - [ExtProc](#extproc)
 - [GRPCExtAuthService](#grpcextauthservice)
 - [HTTPExtAuthService](#httpextauthservice)
+- [OpenTelemetryEnvoyProxyAccessLog](#opentelemetryenvoyproxyaccesslog)
+- [ProxyOpenTelemetrySink](#proxyopentelemetrysink)
+- [TracingProvider](#tracingprovider)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -279,19 +303,6 @@ _Appears in:_
 
 
 
-#### BackendConnection
-
-
-
-BackendConnection allows users to configure connection-level settings of backend
-
-_Appears in:_
-- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
-- [ClusterSettings](#clustersettings)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `bufferLimit` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#quantity-resource-api)_ |  false  | BufferLimit Soft limit on size of the cluster’s connections read and write buffers.<br />BufferLimit applies to connection streaming (maybe non-streaming) channel between processes, it's in user space.<br />If unspecified, an implementation defined default is applied (32768 bytes).<br />For example, 20Mi, 1Gi, 256Ki etc.<br />Note: that when the suffix is not provided, the value is interpreted as bytes. |
 
 
 #### BackendEndpoint
@@ -528,23 +539,6 @@ _Appears in:_
 | `allowCredentials` | _boolean_ |  true  | AllowCredentials indicates whether a request can include user credentials<br />like cookies, authentication headers, or TLS client certificates. |
 
 
-#### CircuitBreaker
-
-
-
-CircuitBreaker defines the Circuit Breaker configuration.
-
-_Appears in:_
-- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
-- [ClusterSettings](#clustersettings)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `maxConnections` | _integer_ |  false  | The maximum number of connections that Envoy will establish to the referenced backend defined within a xRoute rule. |
-| `maxPendingRequests` | _integer_ |  false  | The maximum number of pending requests that Envoy will queue to the referenced backend defined within a xRoute rule. |
-| `maxParallelRequests` | _integer_ |  false  | The maximum number of parallel requests that Envoy will make to the referenced backend defined within a xRoute rule. |
-| `maxParallelRetries` | _integer_ |  false  | The maximum number of parallel retries that Envoy will make to the referenced backend defined within a xRoute rule. |
-| `maxRequestsPerConnection` | _integer_ |  false  | The maximum number of requests that Envoy will make over a single connection to the referenced backend defined within a xRoute rule.<br />Default: unlimited. |
 
 
 #### ClaimToHeader
@@ -715,11 +709,15 @@ ClusterSettings provides the various knobs that can be set to control how traffi
 backend will be configured.
 
 _Appears in:_
+- [ALSEnvoyProxyAccessLog](#alsenvoyproxyaccesslog)
 - [BackendCluster](#backendcluster)
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [ExtProc](#extproc)
 - [GRPCExtAuthService](#grpcextauthservice)
 - [HTTPExtAuthService](#httpextauthservice)
+- [OpenTelemetryEnvoyProxyAccessLog](#opentelemetryenvoyproxyaccesslog)
+- [ProxyOpenTelemetrySink](#proxyopentelemetrysink)
+- [TracingProvider](#tracingprovider)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -879,20 +877,6 @@ _Appears in:_
 | `RequestHeader` | CustomTagTypeRequestHeader adds value from request header to each span.<br /> | 
 
 
-#### DNS
-
-
-
-
-
-_Appears in:_
-- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
-- [ClusterSettings](#clustersettings)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `dnsRefreshRate` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  true  | DNSRefreshRate specifies the rate at which DNS records should be refreshed.<br />Defaults to 30 seconds. |
-| `respectDnsTtl` | _boolean_ |  true  | RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.<br />If the value is set to true, the DNS refresh rate will be set to the resource record’s TTL.<br />Defaults to true. |
 
 
 #### EnvironmentCustomTag
@@ -980,6 +964,7 @@ _Appears in:_
 | `envoy.filters.http.basic_auth` | EnvoyFilterBasicAuth defines the Envoy HTTP basic authentication filter.<br /> | 
 | `envoy.filters.http.oauth2` | EnvoyFilterOAuth2 defines the Envoy HTTP OAuth2 filter.<br /> | 
 | `envoy.filters.http.jwt_authn` | EnvoyFilterJWTAuthn defines the Envoy HTTP JWT authentication filter.<br /> | 
+| `envoy.filters.http.stateful_session` | EnvoyFilterSessionPersistence defines the Envoy HTTP session persistence filter.<br /> | 
 | `envoy.filters.http.ext_proc` | EnvoyFilterExtProc defines the Envoy HTTP external process filter.<br /> | 
 | `envoy.filters.http.wasm` | EnvoyFilterWasm defines the Envoy HTTP WebAssembly filter.<br /> | 
 | `envoy.filters.http.rbac` | EnvoyFilterRBAC defines the Envoy RBAC filter.<br /> | 
@@ -1438,7 +1423,7 @@ _Appears in:_
 | `extraArgs` | _string array_ |  false  | ExtraArgs defines additional command line options that are provided to Envoy.<br />More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options<br />Note: some command line options are used internally(e.g. --log-level) so they cannot be provided here. |
 | `mergeGateways` | _boolean_ |  false  | MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.<br />Setting this field to true would merge all Gateway Listeners under the parent Gateway Class.<br />This means that the port, protocol and hostname tuple must be unique for every listener.<br />If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition. |
 | `shutdown` | _[ShutdownConfig](#shutdownconfig)_ |  false  | Shutdown defines configuration for graceful envoy shutdown process. |
-| `filterOrder` | _[FilterPosition](#filterposition) array_ |  false  | FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.<br />The FilterPosition in the list will be applied in the order they are defined.<br />If unspecified, the default filter order is applied.<br />Default filter order is:<br /><br />- envoy.filters.http.health_check<br /><br />- envoy.filters.http.fault<br /><br />- envoy.filters.http.cors<br /><br />- envoy.filters.http.ext_authz<br /><br />- envoy.filters.http.basic_auth<br /><br />- envoy.filters.http.oauth2<br /><br />- envoy.filters.http.jwt_authn<br /><br />- envoy.filters.http.ext_proc<br /><br />- envoy.filters.http.wasm<br /><br />- envoy.filters.http.rbac<br /><br />- envoy.filters.http.local_ratelimit<br /><br />- envoy.filters.http.ratelimit<br /><br />- envoy.filters.http.router<br /><br />Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain. |
+| `filterOrder` | _[FilterPosition](#filterposition) array_ |  false  | FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.<br />The FilterPosition in the list will be applied in the order they are defined.<br />If unspecified, the default filter order is applied.<br />Default filter order is:<br /><br />- envoy.filters.http.health_check<br /><br />- envoy.filters.http.fault<br /><br />- envoy.filters.http.cors<br /><br />- envoy.filters.http.ext_authz<br /><br />- envoy.filters.http.basic_auth<br /><br />- envoy.filters.http.oauth2<br /><br />- envoy.filters.http.jwt_authn<br /><br />- envoy.filters.http.stateful_session<br /><br />- envoy.filters.http.ext_proc<br /><br />- envoy.filters.http.wasm<br /><br />- envoy.filters.http.rbac<br /><br />- envoy.filters.http.local_ratelimit<br /><br />- envoy.filters.http.ratelimit<br /><br />- envoy.filters.http.router<br /><br />Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain. |
 | `backendTLS` | _[BackendTLSConfig](#backendtlsconfig)_ |  false  | BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.<br />These settings are applied on backends for which TLS policies are specified. |
 
 
@@ -1822,23 +1807,6 @@ _Appears in:_
 | `http10` | _[HTTP10Settings](#http10settings)_ |  false  | HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests. |
 
 
-#### HTTP2Settings
-
-
-
-HTTP2Settings provides HTTP/2 configuration for listeners and backends.
-
-_Appears in:_
-- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
-- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
-- [ClusterSettings](#clustersettings)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `initialStreamWindowSize` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#quantity-resource-api)_ |  false  | InitialStreamWindowSize sets the initial window size for HTTP/2 streams.<br />If not set, the default value is 64 KiB(64*1024). |
-| `initialConnectionWindowSize` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#quantity-resource-api)_ |  false  | InitialConnectionWindowSize sets the initial window size for HTTP/2 connections.<br />If not set, the default value is 1 MiB. |
-| `maxConcurrentStreams` | _integer_ |  false  | MaxConcurrentStreams sets the maximum number of concurrent streams allowed per connection.<br />If not set, the default value is 100. |
-| `onInvalidMessage` | _[InvalidMessageAction](#invalidmessageaction)_ |  false  | OnInvalidMessage determines if Envoy will terminate the connection or just the offending stream in the event of HTTP messaging error<br />It's recommended for L2 Envoy deployments to set this value to TerminateStream.<br />https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/level_two<br />Default: TerminateConnection |
 
 
 #### HTTP3Settings
@@ -1996,21 +1964,6 @@ _Appears in:_
 | `preserveXRequestID` | _boolean_ |  false  | PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge<br />(Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.<br />It defaults to false. |
 
 
-#### HealthCheck
-
-
-
-HealthCheck configuration to decide which endpoints
-are healthy and can be used for routing.
-
-_Appears in:_
-- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
-- [ClusterSettings](#clustersettings)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `active` | _[ActiveHealthCheck](#activehealthcheck)_ |  false  | Active health check configuration |
-| `passive` | _[PassiveHealthCheck](#passivehealthcheck)_ |  false  | Passive passive check configuration |
 
 
 #### HealthCheckSettings
@@ -2117,7 +2070,8 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `op` | _[JSONPatchOperationType](#jsonpatchoperationtype)_ |  true  | Op is the type of operation to perform |
-| `path` | _string_ |  true  | Path is the location of the target document/field where the operation will be performed<br />Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details. |
+| `path` | _string_ |  false  | Path is the location of the target document/field where the operation will be performed<br />Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details. |
+| `jsonPath` | _string_ |  false  | JSONPath specifies the locations of the target document/field where the operation will be performed<br />Refer to https://datatracker.ietf.org/doc/rfc9535/ for more details. |
 | `from` | _string_ |  false  | From is the source location of the value to be copied or moved. Only valid<br />for move or copy operations<br />Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details. |
 | `value` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#json-v1-apiextensions-k8s-io)_ |  false  | Value is the new value of the path location. The value is only used by<br />the `add` and `replace` operations. |
 
@@ -2425,21 +2379,6 @@ _Appears in:_
 | `value` | _string_ |  true  | Value defines the hard-coded value to add to each span. |
 
 
-#### LoadBalancer
-
-
-
-LoadBalancer defines the load balancer policy to be applied.
-
-_Appears in:_
-- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
-- [ClusterSettings](#clustersettings)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `type` | _[LoadBalancerType](#loadbalancertype)_ |  true  | Type decides the type of Load Balancer policy.<br />Valid LoadBalancerType values are<br />"ConsistentHash",<br />"LeastRequest",<br />"Random",<br />"RoundRobin". |
-| `consistentHash` | _[ConsistentHash](#consistenthash)_ |  false  | ConsistentHash defines the configuration when the load balancer type is<br />set to ConsistentHash |
-| `slowStart` | _[SlowStart](#slowstart)_ |  false  | SlowStart defines the configuration related to the slow start load balancer policy.<br />If set, during slow start window, traffic sent to the newly added hosts will gradually increase.<br />Currently this is only supported for RoundRobin and LeastRequest load balancers |
 
 
 #### LoadBalancerType
@@ -2575,9 +2514,11 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
+| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.BackendObjectReference)_ |  true  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br /><br />Deprecated: Use BackendRefs instead. |
+| `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent. |
+| `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  | BackendSettings holds configuration for managing the connection<br />to the backend. |
 | `host` | _string_ |  false  | Host define the extension service hostname.<br />Deprecated: Use BackendRefs instead. |
 | `port` | _integer_ |  false  | Port defines the port the extension service is exposed on.<br />Deprecated: Use BackendRefs instead. |
-| `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the access log will be sent.<br />Only Service kind is supported for now. |
 | `resources` | _object (keys:string, values:string)_ |  false  | Resources is a set of labels that describe the source of a log entry, including envoy node info.<br />It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/). |
 
 
@@ -2932,9 +2873,11 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
+| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.BackendObjectReference)_ |  true  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br /><br />Deprecated: Use BackendRefs instead. |
+| `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent. |
+| `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  | BackendSettings holds configuration for managing the connection<br />to the backend. |
 | `host` | _string_ |  false  | Host define the service hostname.<br />Deprecated: Use BackendRefs instead. |
 | `port` | _integer_ |  false  | Port defines the port the service is exposed on.<br />Deprecated: Use BackendRefs instead. |
-| `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the metric will be sent.<br />Only Service kind is supported for now. |
 
 
 #### ProxyPrometheusProvider
@@ -2952,20 +2895,6 @@ _Appears in:_
 | `compression` | _[Compression](#compression)_ |  false  | Configure the compression on Prometheus endpoint. Compression is useful in situations when bandwidth is scarce and large payloads can be effectively compressed at the expense of higher CPU load. |
 
 
-#### ProxyProtocol
-
-
-
-ProxyProtocol defines the configuration related to the proxy protocol
-when communicating with the backend.
-
-_Appears in:_
-- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
-- [ClusterSettings](#clustersettings)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `version` | _[ProxyProtocolVersion](#proxyprotocolversion)_ |  true  | Version of ProxyProtol<br />Valid ProxyProtocolVersion values are<br />"V1"<br />"V2" |
 
 
 #### ProxyProtocolVersion
@@ -3571,22 +3500,6 @@ _Appears in:_
 | `idleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | IdleTimeout for a TCP connection. Idle time is defined as a period in which there are no<br />bytes sent or received on either the upstream or downstream connection.<br />Default: 1 hour. |
 
 
-#### TCPKeepalive
-
-
-
-TCPKeepalive define the TCP Keepalive configuration.
-
-_Appears in:_
-- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
-- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
-- [ClusterSettings](#clustersettings)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `probes` | _integer_ |  false  | The total number of unacknowledged probes to send before deciding<br />the connection is dead.<br />Defaults to 9. |
-| `idleTime` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | The duration a connection needs to be idle before keep-alive<br />probes start being sent.<br />The duration format is<br />Defaults to `7200s`. |
-| `interval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | The duration between keep-alive probes.<br />Defaults to `75s`. |
 
 
 #### TCPTimeout
@@ -3663,20 +3576,6 @@ _Appears in:_
 | `matchLabels` | _object (keys:string, values:string)_ |  true  | MatchLabels are the set of label selectors for identifying the targeted resource |
 
 
-#### Timeout
-
-
-
-Timeout defines configuration for timeouts related to connections.
-
-_Appears in:_
-- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
-- [ClusterSettings](#clustersettings)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `tcp` | _[TCPTimeout](#tcptimeout)_ |  false  | Timeout settings for TCP. |
-| `http` | _[HTTPTimeout](#httptimeout)_ |  false  | Timeout settings for HTTP. |
 
 
 #### TracingProvider
@@ -3690,10 +3589,12 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
+| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.BackendObjectReference)_ |  true  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br /><br />Deprecated: Use BackendRefs instead. |
+| `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent. |
+| `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  | BackendSettings holds configuration for managing the connection<br />to the backend. |
 | `type` | _[TracingProviderType](#tracingprovidertype)_ |  true  | Type defines the tracing provider type. |
 | `host` | _string_ |  false  | Host define the provider service hostname.<br />Deprecated: Use BackendRefs instead. |
 | `port` | _integer_ |  false  | Port defines the port the provider service is exposed on.<br />Deprecated: Use BackendRefs instead. |
-| `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the trace will be sent.<br />Only Service kind is supported for now. |
 | `zipkin` | _[ZipkinTracingProvider](#zipkintracingprovider)_ |  false  | Zipkin defines the Zipkin tracing provider configuration |
 
 

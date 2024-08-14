@@ -55,6 +55,12 @@ func TestTranslateXds(t *testing.T) {
 		"jsonpatch": {
 			requireEnvoyPatchPolicies: true,
 		},
+		"jsonpatch-with-jsonpath": {
+			requireEnvoyPatchPolicies: true,
+		},
+		"jsonpatch-add-op-empty-jsonpath": {
+			requireEnvoyPatchPolicies: true,
+		},
 		"jsonpatch-missing-resource": {
 			requireEnvoyPatchPolicies: true,
 		},
@@ -127,7 +133,6 @@ func TestTranslateXds(t *testing.T) {
 				},
 				FilterOrder: x.FilterOrder,
 			}
-
 			tCtx, err := tr.Translate(x)
 			if !strings.HasSuffix(inputFileName, "partial-invalid") && len(cfg.errMsg) == 0 {
 				t.Logf(inputFileName)

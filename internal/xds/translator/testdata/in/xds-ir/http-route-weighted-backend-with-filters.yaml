@@ -19,7 +19,8 @@ http:
                 addRequestHeaders:
                   - append: false
                     name: add-header-3
-                    value: some-value
+                    value:
+                      - some-value
               protocol: HTTP
               weight: 1
         hostname: '*'
@@ -37,10 +38,12 @@ http:
                 addRequestHeaders:
                   - append: true
                     name: add-header-1
-                    value: some-value
+                    value:
+                      - some-value
                   - append: true
                     name: add-header-2
-                    value: some-value
+                    value:
+                      - some-value
               protocol: HTTP
               weight: 8
             - addressType: IP
