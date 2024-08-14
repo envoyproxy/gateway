@@ -16,7 +16,6 @@ spec:
       app.kubernetes.io/component: proxy
       app.kubernetes.io/managed-by: envoy-gateway
       app.kubernetes.io/name: envoy
-      foo.bar: custom-label
       gateway.envoyproxy.io/owning-gateway-name: default
       gateway.envoyproxy.io/owning-gateway-namespace: default
   template:

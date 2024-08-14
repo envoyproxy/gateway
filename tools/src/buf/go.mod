@@ -2,7 +2,7 @@ module local
 
 go 1.22.5
 
-require github.com/bufbuild/buf v1.35.1
+require github.com/bufbuild/buf v1.36.0
 
 require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.34.2-20240508200655-46a4cf4ba109.2 // indirect
