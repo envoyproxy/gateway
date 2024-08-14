@@ -2714,8 +2714,8 @@ func (in *HeaderSettings) DeepCopyInto(out *HeaderSettings) {
 		*out = new(bool)
 		**out = **in
 	}
-	if in.EarlyRequestHeaderModifier != nil {
-		in, out := &in.EarlyRequestHeaderModifier, &out.EarlyRequestHeaderModifier
+	if in.EarlyRequestHeaders != nil {
+		in, out := &in.EarlyRequestHeaders, &out.EarlyRequestHeaders
 		*out = new(apisv1.HTTPHeaderFilter)
 		(*in).DeepCopyInto(*out)
 	}

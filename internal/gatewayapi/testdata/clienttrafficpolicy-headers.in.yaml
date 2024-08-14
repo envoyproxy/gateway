@@ -9,7 +9,7 @@ clientTrafficPolicies:
       enableEnvoyHeaders: true
       withUnderscoresAction: Allow
       preserveXRequestID: true
-      earlyRequestHeaderModifier:
+      earlyRequestHeaders:
         add:
         - name: "my-added-header"
           value: "my-added-header-value"

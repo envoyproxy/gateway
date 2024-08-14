@@ -639,8 +639,8 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 		}
 	}
 
-	if headerSettings.EarlyRequestHeaderModifier != nil {
-		headersToAdd, headersToRemove, err := translateEarlyRequestHeaderModifier(headerSettings.EarlyRequestHeaderModifier)
+	if headerSettings.EarlyRequestHeaders != nil {
+		headersToAdd, headersToRemove, err := translateEarlyRequestHeaders(headerSettings.EarlyRequestHeaders)
 		if err != nil {
 			return err
 		}
@@ -884,7 +884,7 @@ func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection,
 	return irConnection, nil
 }
 
-func translateEarlyRequestHeaderModifier(headerModifier *gwapiv1.HTTPHeaderFilter) ([]ir.AddHeader, []string, error) {
+func translateEarlyRequestHeaders(headerModifier *gwapiv1.HTTPHeaderFilter) ([]ir.AddHeader, []string, error) {
 	// Make sure the header modifier config actually exists
 	if headerModifier == nil {
 		return nil, nil, nil
@@ -903,13 +903,13 @@ func translateEarlyRequestHeaderModifier(headerModifier *gwapiv1.HTTPHeaderFilte
 		for _, addHeader := range headersToAdd {
 			emptyFilterConfig = false
 			if addHeader.Name == "" {
-				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaderModifier cannot add a header with an empty name"))
+				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaders cannot add a header with an empty name"))
 				// try to process the rest of the headers and produce a valid config.
 				continue
 			}
 			// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
 			if strings.ContainsAny(string(addHeader.Name), "/:") {
-				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaderModifier Filter cannot set headers with a '/' or ':' character in them. Header: %q", string(addHeader.Name)))
+				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaders Filter cannot set headers with a '/' or ':' character in them. Header: %q", string(addHeader.Name)))
 				continue
 			}
 			// Check if the header is a duplicate
@@ -944,12 +944,12 @@ func translateEarlyRequestHeaderModifier(headerModifier *gwapiv1.HTTPHeaderFilte
 		for _, setHeader := range headersToSet {
 
 			if setHeader.Name == "" {
-				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaderModifier cannot set a header with an empty name"))
+				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaders cannot set a header with an empty name"))
 				continue
 			}
 			// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
 			if strings.ContainsAny(string(setHeader.Name), "/:") {
-				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaderModifier cannot set headers with a '/' or ':' character in them. Header: '%s'", string(setHeader.Name)))
+				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaders cannot set headers with a '/' or ':' character in them. Header: '%s'", string(setHeader.Name)))
 				continue
 			}
 
@@ -984,7 +984,7 @@ func translateEarlyRequestHeaderModifier(headerModifier *gwapiv1.HTTPHeaderFilte
 		}
 		for _, removedHeader := range headersToRemove {
 			if removedHeader == "" {
-				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaderModifier cannot remove a header with an empty name"))
+				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaders cannot remove a header with an empty name"))
 				continue
 			}
 
@@ -1005,7 +1005,7 @@ func translateEarlyRequestHeaderModifier(headerModifier *gwapiv1.HTTPHeaderFilte
 
 	// Update the status if the filter failed to configure any valid headers to add/remove
 	if len(AddRequestHeaders) == 0 && len(RemoveRequestHeaders) == 0 && !emptyFilterConfig {
-		errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaderModifier did not provide valid configuration to add/set/remove any headers"))
+		errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaders did not provide valid configuration to add/set/remove any headers"))
 	}
 
 	return AddRequestHeaders, RemoveRequestHeaders, errs

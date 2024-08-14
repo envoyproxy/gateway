@@ -7,7 +7,7 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     headers:
-      earlyRequestHeaderModifier:
+      earlyRequestHeaders:
         add:
         - name: ""
           value: empty
@@ -37,9 +37,9 @@ clientTrafficPolicies:
       conditions:
       - lastTransitionTime: null
         message: |-
-          Headers: EarlyRequestHeaderModifier cannot add a header with an empty name
-          EarlyRequestHeaderModifier cannot set a header with an empty name
-          EarlyRequestHeaderModifier cannot remove a header with an empty name.
+          Headers: EarlyRequestHeaders cannot add a header with an empty name
+          EarlyRequestHeaders cannot set a header with an empty name
+          EarlyRequestHeaders cannot remove a header with an empty name.
         reason: Invalid
         status: "False"
         type: Accepted

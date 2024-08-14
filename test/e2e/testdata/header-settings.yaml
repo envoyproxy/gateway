@@ -9,7 +9,7 @@ spec:
       kind: Gateway
       name: same-namespace
   headers:
-    earlyRequestHeaderModifier:
+    earlyRequestHeaders:
       add:
         - name: "early-added-header"
           value: "early"

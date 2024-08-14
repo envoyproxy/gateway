@@ -159,9 +159,9 @@ spec:
                       DisableRateLimitHeaders configures Envoy Proxy to omit the "X-RateLimit-" response headers
                       when rate limiting is enabled.
                     type: boolean
-                  earlyRequestHeaderModifier:
+                  earlyRequestHeaders:
                     description: |-
-                      EarlyRequestHeaderModifier defines settings for early request header modification, before envoy performs
+                      EarlyRequestHeaders defines settings for early request header modification, before envoy performs
                       routing, tracing and built-in header manipulation.
                     properties:
                       add:

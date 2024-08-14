@@ -7,7 +7,7 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     headers:
-      earlyRequestHeaderModifier:
+      earlyRequestHeaders:
         add:
         - name: my-added-header
           value: my-added-header-value

@@ -136,11 +136,11 @@ type HeaderSettings struct {
 	// +optional
 	PreserveXRequestID *bool `json:"preserveXRequestID,omitempty"`
 
-	// EarlyRequestHeaderModifier defines settings for early request header modification, before envoy performs
+	// EarlyRequestHeaders defines settings for early request header modification, before envoy performs
 	// routing, tracing and built-in header manipulation.
 	//
 	// +optional
-	EarlyRequestHeaderModifier *gwapiv1.HTTPHeaderFilter `json:"earlyRequestHeaderModifier,omitempty"`
+	EarlyRequestHeaders *gwapiv1.HTTPHeaderFilter `json:"earlyRequestHeaders,omitempty"`
 }
 
 // WithUnderscoresAction configures the action to take when an HTTP header with underscores
