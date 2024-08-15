@@ -59,7 +59,6 @@ func TestGatewayClassHasMatchingController(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.hasMatchingController(tc.gc)
 			require.Equal(t, tc.expect, res)
@@ -107,8 +106,6 @@ func TestGatewayClassHasMatchingNamespaceLabels(t *testing.T) {
 	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
 
 	for _, tc := range testCases {
-		tc := tc
-
 		r := gatewayAPIReconciler{
 			classController: egv1a1.GatewayControllerName,
 			namespaceLabel:  &metav1.LabelSelector{MatchExpressions: matchExpressions(tc.namespaceLabels, metav1.LabelSelectorOpExists, []string{})},
@@ -172,7 +169,6 @@ func TestValidateGatewayForReconcile(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		r.client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.configs...).Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateGatewayForReconcile(tc.gateway)
@@ -368,7 +364,6 @@ func TestValidateSecretForReconcile(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		r.client = fakeclient.NewClientBuilder().
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).
@@ -435,7 +430,6 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		r.client = fakeclient.NewClientBuilder().
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).
@@ -850,7 +844,6 @@ func TestValidateServiceForReconcile(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		r.client = fakeclient.NewClientBuilder().
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).
@@ -947,7 +940,6 @@ func TestValidateDeploymentForReconcile(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		r.client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.configs...).Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateDeploymentForReconcile(tc.deployment)
@@ -1053,7 +1045,6 @@ func TestCheckObjectNamespaceLabels(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		r.client = fakeclient.NewClientBuilder().WithObjects(tc.ns).Build()
 		r.namespaceLabel = &metav1.LabelSelector{MatchExpressions: matchExpressions(tc.reconcileLabels, metav1.LabelSelectorOpExists, []string{})}
 		ok, err := r.checkObjectNamespaceLabels(tc.object)

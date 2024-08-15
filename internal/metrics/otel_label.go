@@ -58,8 +58,7 @@ func mergeLabelValues(attrs []attribute.KeyValue, labelValues []LabelValue) ([]a
 	mergedAttrs := make([]attribute.KeyValue, 0, len(attrs)+len(labelValues))
 	mergedAttrs = append(mergedAttrs, attrs...)
 	for _, v := range labelValues {
-		kv := v
-		mergedAttrs = append(mergedAttrs, kv.keyValue)
+		mergedAttrs = append(mergedAttrs, v.keyValue)
 	}
 
 	return mergedAttrs, attribute.NewSet(mergedAttrs...)

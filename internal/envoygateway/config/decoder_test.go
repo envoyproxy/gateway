@@ -347,7 +347,6 @@ func TestDecode(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.in, func(t *testing.T) {
 			eg, err := Decode(tc.in)
 			if tc.expect {
