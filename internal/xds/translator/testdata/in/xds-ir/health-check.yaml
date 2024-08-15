@@ -135,7 +135,8 @@ http:
           interval: "5s"
           unhealthyThreshold: 3
           healthyThreshold: 3
-          grpc: true
+          grpc:
+            serviceName: my-service
     destination:
       name: "fifth-route-dest"
       protocol: GRPC

@@ -261,9 +261,11 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck) []*corev3.HealthChec
 		hc.HealthChecker = &corev3.HealthCheck_TcpHealthCheck_{
 			TcpHealthCheck: tcpChecker,
 		}
-	case healthcheck.GRPC:
+	case healthcheck.GRPC != nil:
 		hc.HealthChecker = &corev3.HealthCheck_GrpcHealthCheck_{
-			GrpcHealthCheck: &corev3.HealthCheck_GrpcHealthCheck{},
+			GrpcHealthCheck: &corev3.HealthCheck_GrpcHealthCheck{
+				ServiceName: ptr.Deref(healthcheck.GRPC.ServiceName, ""),
+			},
 		}
 	}
 	return []*corev3.HealthCheck{hc}

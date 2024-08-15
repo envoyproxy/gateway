@@ -182,6 +182,41 @@ backendTrafficPolicies:
   kind: BackendTrafficPolicy
   metadata:
     creationTimestamp: null
+    name: policy-for-grpc-route-3
+    namespace: default
+  spec:
+    healthCheck:
+      active:
+        grpc:
+          serviceName: foo-service
+        healthyThreshold: 1
+        interval: 3s
+        timeout: 1s
+        type: GRPC
+        unhealthyThreshold: 3
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: GRPCRoute
+      name: grpcroute-3
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    creationTimestamp: null
     name: policy-for-gateway
     namespace: envoy-gateway
   spec:
@@ -228,7 +263,7 @@ backendTrafficPolicies:
         type: Accepted
       - lastTransitionTime: null
         message: 'This policy is being overridden by other backendTrafficPolicies
-          for these routes: [default/grpcroute-2]'
+          for these routes: [default/grpcroute-2 default/grpcroute-3]'
         reason: Overridden
         status: "True"
         type: Overridden
@@ -251,7 +286,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 2
+    - attachedRoutes: 3
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -329,6 +364,39 @@ grpcRoutes:
     rules:
     - backendRefs:
       - name: service-1
+        port: 8080
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: GRPCRoute
+  metadata:
+    creationTimestamp: null
+    name: grpcroute-3
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-3
         port: 8080
   status:
     parents:
@@ -589,6 +657,31 @@ xdsIR:
               maxEjectionPercent: 100
               splitExternalLocalOriginErrors: false
       - destination:
+          name: grpcroute/default/grpcroute-3/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            protocol: GRPC
+            weight: 1
+        hostname: '*'
+        isHTTP2: true
+        metadata:
+          kind: GRPCRoute
+          name: grpcroute-3
+          namespace: default
+        name: grpcroute/default/grpcroute-3/rule/0/match/-1/*
+        traffic:
+          healthCheck:
+            active:
+              grpc:
+                serviceName: foo-service
+              healthyThreshold: 1
+              interval: 3s
+              timeout: 1s
+              unhealthyThreshold: 3
+      - destination:
           name: grpcroute/default/grpcroute-2/rule/0
           settings:
           - addressType: IP
@@ -607,7 +700,7 @@ xdsIR:
         traffic:
           healthCheck:
             active:
-              grpc: true
+              grpc: {}
               healthyThreshold: 1
               interval: 3s
               timeout: 1s

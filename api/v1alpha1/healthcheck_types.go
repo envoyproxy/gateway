@@ -74,6 +74,7 @@ type PassiveHealthCheck struct {
 //
 // +kubebuilder:validation:XValidation:rule="self.type == 'HTTP' ? has(self.http) : !has(self.http)",message="If Health Checker type is HTTP, http field needs to be set."
 // +kubebuilder:validation:XValidation:rule="self.type == 'TCP' ? has(self.tcp) : !has(self.tcp)",message="If Health Checker type is TCP, tcp field needs to be set."
+// +kubebuilder:validation:XValidation:rule="has(self.grpc) ? self.type == 'GRPC' : true", message="The grpc field can only be set if the Health Checker type is GRPC."
 type ActiveHealthCheck struct {
 	// Timeout defines the time to wait for a health check response.
 	//
@@ -117,6 +118,11 @@ type ActiveHealthCheck struct {
 	// It's required while the health checker type is TCP.
 	// +optional
 	TCP *TCPActiveHealthChecker `json:"tcp,omitempty" yaml:"tcp,omitempty"`
+
+	// GRPC defines the configuration of the GRPC health checker.
+	// It's optional, and can only be used if the specified type is GRPC.
+	// +optional
+	GRPC *GRPCActiveHealthChecker `json:"grpc,omitempty" yaml:"grpc,omitempty"`
 }
 
 // ActiveHealthCheckerType is the type of health checker.
@@ -159,6 +165,15 @@ type TCPActiveHealthChecker struct {
 	// Receive defines the expected response payload.
 	// +optional
 	Receive *ActiveHealthCheckPayload `json:"receive,omitempty" yaml:"receive,omitempty"`
+}
+
+// GRPCActiveHealthChecker defines the settings of the GRPC health check.
+type GRPCActiveHealthChecker struct {
+	// ServiceName to send in the health check request.
+	// If this is not specified, then the health check request applies to the entire
+	// server and not to a specific service.
+	// +optional
+	ServiceName *string `json:"serviceName,omitempty" yaml:"serviceName,omitempty"`
 }
 
 // ActiveHealthCheckPayloadType is the type of the payload.

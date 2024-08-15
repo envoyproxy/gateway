@@ -152,7 +152,8 @@
       resourceApiVersion: V3
     serviceName: fifth-route-dest
   healthChecks:
-  - grpcHealthCheck: {}
+  - grpcHealthCheck:
+      serviceName: my-service
     healthyThreshold: 3
     interval: 5s
     timeout: 1s

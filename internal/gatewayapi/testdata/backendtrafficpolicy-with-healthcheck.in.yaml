@@ -46,6 +46,20 @@ grpcRoutes:
   kind: GRPCRoute
   metadata:
     namespace: default
+    name: grpcroute-3
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-3
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: GRPCRoute
+  metadata:
+    namespace: default
     name: grpcroute-2
   spec:
     parentRefs:
@@ -264,4 +278,23 @@ backendTrafficPolicies:
         unhealthyThreshold: 3
         healthyThreshold: 1
         type: GRPC
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-for-grpc-route-3
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: GRPCRoute
+      name: grpcroute-3
+    healthCheck:
+      active:
+        timeout: 1s
+        interval: 3s
+        unhealthyThreshold: 3
+        healthyThreshold: 1
+        type: GRPC
+        grpc:
+          serviceName: foo-service
 
