@@ -110,15 +110,15 @@ kind: SecurityPolicy
 metadata:
   name: ext-auth-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: myapp
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: myapp
   extAuth:
     http:
-      backendRef:
-        name: http-ext-auth
-        port: 9002
+      backendRefs:
+        - name: http-ext-auth
+          port: 9002
       headersToBackend: ["x-current-user"]
 EOF
 ```
@@ -134,15 +134,15 @@ kind: SecurityPolicy
 metadata:
   name: ext-auth-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: myapp
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: myapp
   extAuth:
     http:
-      backendRef:
-        name: http-ext-auth
-        port: 9002
+      backendRefs:
+        - name: http-ext-auth
+          port: 9002
       headersToBackend: ["x-current-user"]
 ```
 
@@ -296,15 +296,15 @@ kind: SecurityPolicy
 metadata:
   name: ext-auth-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: myapp
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: myapp
   extAuth:
     grpc:
-      backendRef:
-        name: grpc-ext-auth
-        port: 9002
+      backendRefs:
+        - name: grpc-ext-auth
+          port: 9002
 EOF
 ```
 
@@ -319,15 +319,15 @@ kind: SecurityPolicy
 metadata:
   name: ext-auth-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: myapp
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: myapp
   extAuth:
     grpc:
-      backendRef:
-        name: grpc-ext-auth
-        port: 9002
+      backendRefs:
+        - name: grpc-ext-auth
+          port: 9002
 ```
 
 {{% /tab %}}

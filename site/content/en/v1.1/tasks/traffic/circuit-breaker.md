@@ -72,10 +72,10 @@ kind: BackendTrafficPolicy
 metadata:
   name: circuitbreaker-for-route
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: backend
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
   circuitBreaker:
     maxPendingRequests: 0
     maxParallelRequests: 10
@@ -93,10 +93,10 @@ kind: BackendTrafficPolicy
 metadata:
   name: circuitbreaker-for-route
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: backend
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
   circuitBreaker:
     maxPendingRequests: 0
     maxParallelRequests: 10

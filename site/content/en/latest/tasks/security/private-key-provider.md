@@ -433,7 +433,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
   type: JSONPatch
   jsonPatches:
     - type: "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
@@ -475,7 +474,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
   type: JSONPatch
   jsonPatches:
     - type: "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
@@ -520,7 +518,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
   type: JSONPatch
   jsonPatches:
     - type: "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
@@ -562,7 +559,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
   type: JSONPatch
   jsonPatches:
     - type: "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"

@@ -113,10 +113,10 @@ kind: EnvoyExtensionPolicy
 metadata:
   name: ext-proc-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: myapp
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: myapp
   extProc:
   - backendRefs:
     - name: grpc-ext-proc
@@ -139,10 +139,10 @@ kind: EnvoyExtensionPolicy
 metadata:
   name: ext-proc-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: myapp
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: myapp
   extProc:
     - backendRefs:
         - name: grpc-ext-proc
