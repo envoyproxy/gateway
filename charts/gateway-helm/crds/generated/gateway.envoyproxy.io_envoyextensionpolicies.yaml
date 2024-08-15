@@ -146,7 +146,7 @@ spec:
                           failover:
                             description: |-
                               Failover This indicates whether the backend is designated as a failover.
-                              Multiple failover backends can be configured for a single BackendService.⬤
+                              Multiple failover backends can be configured for a single BackendService.
                             type: boolean
                           group:
                             default: ""

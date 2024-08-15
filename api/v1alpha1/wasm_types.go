@@ -49,9 +49,9 @@ type Wasm struct {
 	// +kubebuilder:default=false
 	FailOpen *bool `json:"failOpen,omitempty"`
 
-	// Failover defines the location of the Wasm extension in the HTTP filter chain.
+	// Priority defines the location of the Wasm extension in the HTTP filter chain.
 	// If not specified, the Wasm extension will be inserted before the router filter.
-	// Failover *uint32 `json:"priority,omitempty"`
+	// Priority *uint32 `json:"priority,omitempty"`
 }
 
 // WasmCodeSource defines the source of the Wasm code.
