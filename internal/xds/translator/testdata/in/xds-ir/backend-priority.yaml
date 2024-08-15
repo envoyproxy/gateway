@@ -95,3 +95,4 @@ http:
           distinct: false
           name: ""
           prefix: /bar
+:

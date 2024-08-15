@@ -362,7 +362,7 @@ _Appears in:_
 | `name` | _[ObjectName](#objectname)_ |  true  | Name is the name of the referent. |
 | `namespace` | _[Namespace](#namespace)_ |  false  | Namespace is the namespace of the backend. When unspecified, the local<br />namespace is inferred.<br /><br />Note that when a namespace different than the local namespace is specified,<br />a ReferenceGrant object is required in the referent namespace to allow that<br />namespace's owner to accept the reference. See the ReferenceGrant<br />documentation for details.<br /><br />Support: Core |
 | `port` | _[PortNumber](#portnumber)_ |  false  | Port specifies the destination port number to use for this resource.<br />Port is required when the referent is a Kubernetes Service. In this<br />case, the port number is the service port number, not the target port.<br />For other resources, destination port might be derived from the referent<br />resource or this field. |
-| `failover` | _boolean_ |  true  | Failover This indicates whether the backend is designated as a failover.<br />Multiple failover backends can be configured for a single BackendService. |
+| `failover` | _boolean_ |  false  | Failover This indicates whether the backend is designated as a failover.<br />Multiple failover backends can be configured for a single BackendService. |
 
 
 #### BackendSpec
