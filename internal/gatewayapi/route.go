@@ -651,7 +651,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 	var hasHostnameIntersection bool
 
 	for _, listener := range parentRef.listeners {
-		hosts := computeHosts(GetHostnames(route), listener.Hostname)
+		hosts := computeHosts(GetHostnames(route), listener)
 		if len(hosts) == 0 {
 			continue
 		}
@@ -818,7 +818,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 
 		var hasHostnameIntersection bool
 		for _, listener := range parentRef.listeners {
-			hosts := computeHosts(GetHostnames(tlsRoute), listener.Hostname)
+			hosts := computeHosts(GetHostnames(tlsRoute), listener)
 			if len(hosts) == 0 {
 				continue
 			}
