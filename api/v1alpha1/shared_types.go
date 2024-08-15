@@ -487,6 +487,7 @@ type BackendCluster struct {
 	// backend server to which the authorization request will be sent.
 	//
 	// Deprecated: Use BackendRefs instead.
+	// +optional
 	BackendRef *gwapiv1.BackendObjectReference `json:"backendRef,omitempty"`
 
 	// BackendRefs references a Kubernetes object that represents the
