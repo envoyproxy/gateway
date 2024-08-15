@@ -1978,6 +1978,8 @@ type ActiveHealthCheck struct {
 	HTTP *HTTPHealthChecker `json:"http,omitempty" yaml:"http,omitempty"`
 	// TCP defines the configuration of tcp health checker.
 	TCP *TCPHealthChecker `json:"tcp,omitempty" yaml:"tcp,omitempty"`
+	// GRPC defines if the GRPC healthcheck service should be used
+	GRPC *GRPCHealthChecker `json:"grpc,omitempty" yaml:"grpc,omitempty"`
 }
 
 func (h *HealthCheck) SetHTTPHostIfAbsent(host string) {
@@ -2008,6 +2010,9 @@ func (h *HealthCheck) Validate() error {
 			matchCount++
 		}
 		if h.Active.TCP != nil {
+			matchCount++
+		}
+		if h.Active.GRPC != nil {
 			matchCount++
 		}
 		if matchCount > 1 {
@@ -2102,6 +2107,15 @@ func (h HTTPStatus) Validate() error {
 		return ErrHTTPStatusInvalid
 	}
 	return nil
+}
+
+// GRPCHealthChecker defines the settings of the gRPC health check.
+// +k8s:deepcopy-gen=true
+type GRPCHealthChecker struct {
+	// ServiceName is the name of a specific service hosted by the server for
+	// which the health check should be requested. If not specified, then the default
+	// is to send a health check request for the entire server.
+	ServiceName *string `json:"serviceName,omitempty" yaml:"serviceName,omitempty"`
 }
 
 // TCPHealthChecker defines the settings of tcp health check.

@@ -196,7 +196,6 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		dstAddrTypeMap := make(map[ir.DestinationAddressType]int)
 
 		for _, backendRef := range rule.BackendRefs {
-			backendRef := backendRef
 			ds := t.processDestination(backendRef, parentRef, httpRoute, resources)
 
 			if !t.IsEnvoyServiceRouting(envoyProxy) && ds != nil && len(ds.Endpoints) > 0 && ds.AddressType != nil {
@@ -552,7 +551,6 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		}
 
 		for _, backendRef := range rule.BackendRefs {
-			backendRef := backendRef
 			ds := t.processDestination(backendRef, parentRef, grpcRoute, resources)
 			if ds == nil {
 				continue
@@ -699,7 +697,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 	var hasHostnameIntersection bool
 
 	for _, listener := range parentRef.listeners {
-		hosts := computeHosts(GetHostnames(route), listener.Hostname)
+		hosts := computeHosts(GetHostnames(route), listener)
 		if len(hosts) == 0 {
 			continue
 		}
@@ -833,7 +831,6 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 		// compute backends
 		for _, rule := range tlsRoute.Spec.Rules {
 			for _, backendRef := range rule.BackendRefs {
-				backendRef := backendRef
 				ds := t.processDestination(backendRef, parentRef, tlsRoute, resources)
 				if ds != nil {
 					destSettings = append(destSettings, ds)
@@ -867,7 +864,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 
 		var hasHostnameIntersection bool
 		for _, listener := range parentRef.listeners {
-			hosts := computeHosts(GetHostnames(tlsRoute), listener.Hostname)
+			hosts := computeHosts(GetHostnames(tlsRoute), listener)
 			if len(hosts) == 0 {
 				continue
 			}
@@ -1107,7 +1104,6 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 		}
 
 		for _, backendRef := range tcpRoute.Spec.Rules[0].BackendRefs {
-			backendRef := backendRef
 			ds := t.processDestination(backendRef, parentRef, tcpRoute, resources)
 			if ds == nil {
 				continue

@@ -70,10 +70,10 @@ metadata:
   name: enable-http3
 spec:
   http3: {}
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: eg
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
 EOF
 ```
 
@@ -89,10 +89,10 @@ metadata:
   name: enable-http3
 spec:
   http3: {}
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: eg
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
 ```
 
 {{% /tab %}}

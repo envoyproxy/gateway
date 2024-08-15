@@ -44,10 +44,10 @@ kind: EnvoyExtensionPolicy
 metadata:
   name: wasm-test
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: backend
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
   wasm:
   - name: wasm-filter
     rootID: my_root_id
@@ -70,10 +70,10 @@ kind: EnvoyExtensionPolicy
 metadata:
   name: wasm-test
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: backend
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
   wasm:
     - name: wasm-filter
       rootID: my_root_id
@@ -107,8 +107,8 @@ kind: EnvoyExtensionPolicy
 metadata:
   name: wasm-test
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: backend
   wasm:
@@ -132,17 +132,17 @@ kind: EnvoyExtensionPolicy
 metadata:
   name: wasm-test
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: backend
   wasm:
-    - name: wasm-filter
-      rootID: my_root_id
-      code:
-        type: Image
-        image:
-          url: zhaohuabing/testwasm:v0.0.1
+  - name: wasm-filter
+    rootID: my_root_id
+    code:
+      type: Image
+      image:
+        url: zhaohuabing/testwasm:v0.0.1
 ```
 
 {{% /tab %}}

@@ -126,6 +126,7 @@ _Appears in:_
 | `type` | _[ActiveHealthCheckerType](#activehealthcheckertype)_ |  true  | Type defines the type of health checker. |
 | `http` | _[HTTPActiveHealthChecker](#httpactivehealthchecker)_ |  false  | HTTP defines the configuration of http health checker.<br />It's required while the health checker type is HTTP. |
 | `tcp` | _[TCPActiveHealthChecker](#tcpactivehealthchecker)_ |  false  | TCP defines the configuration of tcp health checker.<br />It's required while the health checker type is TCP. |
+| `grpc` | _[GRPCActiveHealthChecker](#grpcactivehealthchecker)_ |  false  | GRPC defines the configuration of the GRPC health checker.<br />It's optional, and can only be used if the specified type is GRPC. |
 
 
 #### ActiveHealthCheckPayload
@@ -173,6 +174,7 @@ _Appears in:_
 | ----- | ----------- |
 | `HTTP` | ActiveHealthCheckerTypeHTTP defines the HTTP type of health checking.<br /> | 
 | `TCP` | ActiveHealthCheckerTypeTCP defines the TCP type of health checking.<br /> | 
+| `GRPC` | ActiveHealthCheckerTypeGRPC defines the GRPC type of health checking.<br /> | 
 
 
 #### AppProtocolType
@@ -1699,6 +1701,20 @@ _Appears in:_
 | `name` | _[EnvoyFilter](#envoyfilter)_ |  true  | Name of the filter. |
 | `before` | _[EnvoyFilter](#envoyfilter)_ |  true  | Before defines the filter that should come before the filter.<br />Only one of Before or After must be set. |
 | `after` | _[EnvoyFilter](#envoyfilter)_ |  true  | After defines the filter that should come after the filter.<br />Only one of Before or After must be set. |
+
+
+#### GRPCActiveHealthChecker
+
+
+
+GRPCActiveHealthChecker defines the settings of the GRPC health check.
+
+_Appears in:_
+- [ActiveHealthCheck](#activehealthcheck)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `serviceName` | _string_ |  false  | ServiceName to send in the health check request.<br />If this is not specified, then the health check request applies to the entire<br />server and not to a specific service. |
 
 
 #### GRPCExtAuthService

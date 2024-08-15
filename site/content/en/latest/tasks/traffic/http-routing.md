@@ -140,10 +140,10 @@ kind: SecurityPolicy
 metadata:
   name: jwt-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: jwt-claim-routing
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: jwt-claim-routing
   jwt:
     providers:
       - name: example
@@ -208,10 +208,10 @@ kind: SecurityPolicy
 metadata:
   name: jwt-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: jwt-claim-routing
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: jwt-claim-routing
   jwt:
     providers:
       - name: example

@@ -109,7 +109,6 @@ func TestTranslateXds(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, inputFile := range inputFiles {
-		inputFile := inputFile
 		inputFileName := testName(inputFile)
 		t.Run(inputFileName, func(t *testing.T) {
 			cfg, ok := testConfigs[inputFileName]
@@ -192,7 +191,6 @@ func TestTranslateRateLimitConfig(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, inputFile := range inputFiles {
-		inputFile := inputFile
 		inputFileName := testName(inputFile)
 		t.Run(inputFileName, func(t *testing.T) {
 			in := requireXdsIRListenerFromInputTestData(t, inputFile)
@@ -222,7 +220,6 @@ func TestTranslateXdsWithExtension(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, inputFile := range inputFiles {
-		inputFile := inputFile
 		inputFileName := testName(inputFile)
 		t.Run(inputFileName, func(t *testing.T) {
 			cfg, ok := testConfigs[inputFileName]

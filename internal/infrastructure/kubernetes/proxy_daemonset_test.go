@@ -229,7 +229,6 @@ func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			var cli client.Client
 			if tc.current != nil {
