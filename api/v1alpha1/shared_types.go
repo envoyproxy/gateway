@@ -475,6 +475,7 @@ type BackendRef struct {
 	gwapiv1.BackendObjectReference `json:",inline"`
 	// Failover This indicates whether the backend is designated as a failover.
 	// Multiple failover backends can be configured for a single BackendService.
+	// +optional
 	Failover *bool `json:"failover,omitempty"`
 }
 
