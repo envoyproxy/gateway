@@ -10,6 +10,12 @@
       name: request-header-route
       requestHeadersToAdd:
       - header:
+          key: some-header-multi-value
+          value: some-value
+      - header:
+          key: some-header-multi-value
+          value: some-additional-value
+      - header:
           key: some-header
           value: some-value
       - header:

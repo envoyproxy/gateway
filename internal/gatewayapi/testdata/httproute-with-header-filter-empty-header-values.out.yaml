@@ -128,10 +128,12 @@ xdsIR:
       - addRequestHeaders:
         - append: true
           name: example-header-2
-          value: ""
+          value:
+          - ""
         - append: false
           name: example-header-1
-          value: ""
+          value:
+          - ""
         destination:
           name: httproute/default/httproute-1/rule/0
           settings:

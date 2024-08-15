@@ -338,17 +338,16 @@ var (
 		AddRequestHeaders: []AddHeader{
 			{
 				Name:   "example-header",
-				Value:  "example-value",
+				Value:  []string{"example-value"},
 				Append: true,
 			},
 			{
 				Name:   "example-header-2",
-				Value:  "example-value-2",
+				Value:  []string{"example-value-2"},
 				Append: false,
 			},
 			{
 				Name:   "empty-header",
-				Value:  "",
 				Append: false,
 			},
 		},
@@ -376,12 +375,12 @@ var (
 		AddRequestHeaders: []AddHeader{
 			{
 				Name:   "example-header",
-				Value:  "example-value",
+				Value:  []string{"example-value"},
 				Append: true,
 			},
 			{
 				Name:   "example-header",
-				Value:  "example-value-2",
+				Value:  []string{"example-value-2"},
 				Append: false,
 			},
 		},
@@ -401,7 +400,7 @@ var (
 		AddRequestHeaders: []AddHeader{
 			{
 				Name:   "",
-				Value:  "example-value",
+				Value:  []string{"example-value"},
 				Append: true,
 			},
 		},
@@ -416,17 +415,16 @@ var (
 		AddResponseHeaders: []AddHeader{
 			{
 				Name:   "example-header",
-				Value:  "example-value",
+				Value:  []string{"example-value"},
 				Append: true,
 			},
 			{
 				Name:   "example-header-2",
-				Value:  "example-value-2",
+				Value:  []string{"example-value-2"},
 				Append: false,
 			},
 			{
 				Name:   "empty-header",
-				Value:  "",
 				Append: false,
 			},
 		},
@@ -454,12 +452,12 @@ var (
 		AddResponseHeaders: []AddHeader{
 			{
 				Name:   "example-header",
-				Value:  "example-value",
+				Value:  []string{"example-value"},
 				Append: true,
 			},
 			{
 				Name:   "example-header",
-				Value:  "example-value-2",
+				Value:  []string{"example-value-2"},
 				Append: false,
 			},
 		},
@@ -479,7 +477,7 @@ var (
 		AddResponseHeaders: []AddHeader{
 			{
 				Name:   "",
-				Value:  "example-value",
+				Value:  []string{"example-value"},
 				Append: true,
 			},
 		},

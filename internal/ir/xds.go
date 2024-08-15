@@ -25,6 +25,10 @@ import (
 	egv1a1validation "github.com/envoyproxy/gateway/api/v1alpha1/validation"
 )
 
+const (
+	EmptyPath = ""
+)
+
 var (
 	ErrListenerNameEmpty                       = errors.New("field Name must be specified")
 	ErrListenerAddressInvalid                  = errors.New("field Address must be a valid IP address")
@@ -490,6 +494,12 @@ type HeaderSettings struct {
 	// (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
 	// It defaults to false.
 	PreserveXRequestID bool `json:"preserveXRequestID,omitempty" yaml:"preserveXRequestID,omitempty"`
+
+	// EarlyAddRequestHeaders defines headers that would be added before envoy request processing.
+	EarlyAddRequestHeaders []AddHeader `json:"earlyAddRequestHeaders,omitempty" yaml:"earlyAddRequestHeaders,omitempty"`
+
+	// EarlyRemoveRequestHeaders defines headers that would be removed before envoy request processing.
+	EarlyRemoveRequestHeaders []string `json:"earlyRemoveRequestHeaders,omitempty" yaml:"earlyRemoveRequestHeaders,omitempty"`
 }
 
 // ClientTimeout sets the timeout configuration for downstream connections
@@ -565,6 +575,8 @@ type HTTPRoute struct {
 	UseClientProtocol *bool `json:"useClientProtocol,omitempty" yaml:"useClientProtocol,omitempty"`
 	// Metadata is used to enrich envoy route metadata with user and provider-specific information
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	// SessionPersistence holds the configuration for session persistence.
+	SessionPersistence *SessionPersistence `json:"sessionPersistence,omitempty" yaml:"sessionPersistence,omitempty"`
 }
 
 // DNS contains configuration options for DNS resolution.
@@ -574,6 +586,33 @@ type DNS struct {
 	DNSRefreshRate *metav1.Duration `json:"dnsRefreshRate,omitempty"`
 	// RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.
 	RespectDNSTTL *bool `json:"respectDnsTtl,omitempty"`
+}
+
+// SessionPersistence defines the desired state of SessionPersistence.
+// +k8s:deepcopy-gen=true
+type SessionPersistence struct {
+	// Cookie defines the configuration for cookie-based session persistence.
+	// Either Cookie or Header must be non-empty.
+	Cookie *CookieBasedSessionPersistence `json:"cookie,omitempty" yaml:"cookie,omitempty"`
+	// Header defines the configuration for header-based session persistence.
+	// Either Cookie or Header must be non-empty.
+	Header *HeaderBasedSessionPersistence `json:"header,omitempty" yaml:"header,omitempty"`
+}
+
+// CookieBasedSessionPersistence defines the configuration for cookie-based session persistence.
+// +k8s:deepcopy-gen=true
+type CookieBasedSessionPersistence struct {
+	// Name defines the name of the persistent session token.
+	Name string `json:"name"`
+
+	TTL *metav1.Duration `json:"ttl,omitempty" yaml:"ttl,omitempty"`
+}
+
+// HeaderBasedSessionPersistence defines the configuration for header-based session persistence.
+// +k8s:deepcopy-gen=true
+type HeaderBasedSessionPersistence struct {
+	// Name defines the name of the persistent session token.
+	Name string `json:"name"`
 }
 
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.
@@ -1197,9 +1236,9 @@ func NewDestEndpoint(host string, port uint32) *DestinationEndpoint {
 // AddHeader configures a header to be added to a request or response.
 // +k8s:deepcopy-gen=true
 type AddHeader struct {
-	Name   string `json:"name" yaml:"name"`
-	Value  string `json:"value" yaml:"value"`
-	Append bool   `json:"append" yaml:"append"`
+	Name   string   `json:"name" yaml:"name"`
+	Value  []string `json:"value" yaml:"value"`
+	Append bool     `json:"append" yaml:"append"`
 }
 
 // Validate the fields within the AddHeader structure
@@ -1657,6 +1696,7 @@ type ALSAccessLog struct {
 	CELMatches  []string                          `json:"celMatches,omitempty" yaml:"celMatches,omitempty"`
 	LogName     string                            `json:"name" yaml:"name"`
 	Destination RouteDestination                  `json:"destination,omitempty" yaml:"destination,omitempty"`
+	Traffic     *TrafficFeatures                  `json:"traffic,omitempty" yaml:"traffic,omitempty"`
 	Type        egv1a1.ALSEnvoyProxyAccessLogType `json:"type" yaml:"type"`
 	Text        *string                           `json:"text,omitempty" yaml:"text,omitempty"`
 	Attributes  map[string]string                 `json:"attributes,omitempty" yaml:"attributes,omitempty"`
@@ -1680,6 +1720,7 @@ type OpenTelemetryAccessLog struct {
 	Attributes  map[string]string `json:"attributes,omitempty" yaml:"attributes,omitempty"`
 	Resources   map[string]string `json:"resources,omitempty" yaml:"resources,omitempty"`
 	Destination RouteDestination  `json:"destination,omitempty" yaml:"destination,omitempty"`
+	Traffic     *TrafficFeatures  `json:"traffic,omitempty" yaml:"traffic,omitempty"`
 }
 
 // EnvoyPatchPolicy defines the intermediate representation of the EnvoyPatchPolicy resource.
@@ -1720,7 +1761,12 @@ type JSONPatchOperation struct {
 	Op string `json:"op" yaml:"op"`
 	// Path is the location of the target document/field where the operation will be performed
 	// Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details.
-	Path string `json:"path" yaml:"path"`
+	// +optional
+	Path *string `json:"path,omitempty"  yaml:"path,omitempty"`
+	// JSONPath specifies the locations of the target document/field where the operation will be performed
+	// Refer to https://datatracker.ietf.org/doc/rfc9535/ for more details.
+	// +optional
+	JSONPath *string `json:"jsonPath,omitempty"  yaml:"jsonPath,omitempty"`
 	// From is the source location of the value to be copied or moved. Only valid
 	// for move or copy operations
 	// Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details.
@@ -1728,6 +1774,14 @@ type JSONPatchOperation struct {
 	From *string `json:"from,omitempty" yaml:"from,omitempty"`
 	// Value is the new value of the path location.
 	Value *apiextensionsv1.JSON `json:"value,omitempty" yaml:"value,omitempty"`
+}
+
+func (o *JSONPatchOperation) IsPathNilOrEmpty() bool {
+	return o.Path == nil || *o.Path == EmptyPath
+}
+
+func (o *JSONPatchOperation) IsJSONPathNilOrEmpty() bool {
+	return o.JSONPath == nil || *o.JSONPath == EmptyPath
 }
 
 // Tracing defines the configuration for tracing a Envoy xDS Resource
@@ -1738,6 +1792,7 @@ type Tracing struct {
 	SamplingRate float64                     `json:"samplingRate,omitempty"`
 	CustomTags   map[string]egv1a1.CustomTag `json:"customTags,omitempty"`
 	Destination  RouteDestination            `json:"destination,omitempty"`
+	Traffic      *TrafficFeatures            `json:"traffic,omitempty"`
 	Provider     egv1a1.TracingProvider      `json:"provider"`
 }
 
