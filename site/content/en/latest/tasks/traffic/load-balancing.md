@@ -13,7 +13,7 @@ Envoy Gateway supports the following load balancing policies:
 - **Consistent Hash**: load balancer implements consistent hashing to upstream hosts.
 
 Envoy Gateway introduces a new CRD called [BackendTrafficPolicy][] that allows the user to describe their desired load balancing polices.
-This instantiated resource can be linked to a [Gateway][], [HTTPRoute][] or [GRPCRoute][] resource.
+This instantiated resource can be linked to a [Gateway][], [HTTPRoute][] or [GRPCRoute][] resource. If `loadBalancer` is not specified in [BackendTrafficPolicy][], the default load balancing policy is `Least Request`.
 
 ## Prerequisites
 
