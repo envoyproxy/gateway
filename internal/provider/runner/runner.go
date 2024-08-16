@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 
-	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -44,20 +43,15 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	var p provider.Provider
 	switch r.EnvoyGateway.Provider.Type {
 	case egv1a1.ProviderTypeKubernetes:
-		var cfg *rest.Config
-		cfg, err = ctrl.GetConfig()
+		p, err = r.createKubernetesProvider()
 		if err != nil {
-			return fmt.Errorf("failed to get kubeconfig: %w", err)
-		}
-		p, err = kubernetes.New(cfg, &r.Config.Server, r.ProviderResources)
-		if err != nil {
-			return fmt.Errorf("failed to create provider %s: %w", egv1a1.ProviderTypeKubernetes, err)
+			return fmt.Errorf("failed to create kubernetes provider: %w", err)
 		}
 
-	case egv1a1.ProviderTypeFile:
-		p, err = file.New(&r.Config.Server, r.ProviderResources)
+	case egv1a1.ProviderTypeCustom:
+		p, err = r.createCustomResourceProvider()
 		if err != nil {
-			return fmt.Errorf("failed to create provider %s: %w", egv1a1.ProviderTypeFile, err)
+			return fmt.Errorf("failed to create custom provider: %w", err)
 		}
 
 	default:
@@ -73,4 +67,33 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	}()
 
 	return nil
+}
+
+func (r *Runner) createKubernetesProvider() (*kubernetes.Provider, error) {
+	cfg, err := ctrl.GetConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get kubeconfig: %w", err)
+	}
+
+	p, err := kubernetes.New(cfg, &r.Config.Server, r.ProviderResources)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create provider %s: %w", egv1a1.ProviderTypeKubernetes, err)
+	}
+
+	return p, err
+}
+
+func (r *Runner) createCustomResourceProvider() (p provider.Provider, err error) {
+	switch r.EnvoyGateway.Provider.Custom.Resource.Type {
+	case egv1a1.ResourceProviderTypeFile:
+		p, err = file.New(&r.Config.Server, r.ProviderResources)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create provider %s: %w", egv1a1.ProviderTypeCustom, err)
+		}
+
+	default:
+		return nil, fmt.Errorf("unsupported resource provider type")
+	}
+
+	return
 }

@@ -37,20 +37,21 @@ type Manager interface {
 func NewManager(cfg *config.Server) (Manager, error) {
 	var mgr Manager
 
-	switch cfg.EnvoyGateway.Provider.Type {
-	case egv1a1.ProviderTypeKubernetes:
+	if runKubernetesInfraProvider(cfg.EnvoyGateway.Provider) {
 		cli, err := client.New(clicfg.GetConfigOrDie(), client.Options{Scheme: envoygateway.GetScheme()})
 		if err != nil {
 			return nil, err
 		}
 		mgr = kubernetes.NewInfra(cli, cfg)
-
-	case egv1a1.ProviderTypeFile:
-		// TODO(sh2): implement host infra for file provider
-
-	default:
-		return nil, fmt.Errorf("unsupported provider type %v", cfg.EnvoyGateway.Provider.Type)
+	} else {
+		// TODO(sh2): implement host infra provider
+		return nil, fmt.Errorf("unsupported infrasture provider")
 	}
 
 	return mgr, nil
+}
+
+func runKubernetesInfraProvider(provider *egv1a1.EnvoyGatewayProvider) bool {
+	return provider.Type == egv1a1.ProviderTypeKubernetes ||
+		(provider.Type == egv1a1.ProviderTypeCustom && provider.Custom.Infrastructure == nil)
 }

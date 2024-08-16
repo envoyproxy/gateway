@@ -68,12 +68,25 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			expect: false,
 		},
 		{
-			name: "supported file provider",
+			name: "empty custom provider",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
 					Gateway: egv1a1.DefaultGateway(),
 					Provider: &egv1a1.EnvoyGatewayProvider{
-						Type: egv1a1.ProviderTypeFile,
+						Type:   egv1a1.ProviderTypeCustom,
+						Custom: &egv1a1.EnvoyGatewayCustomProvider{},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "custom provider with file resource provider and host infra provider",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway: egv1a1.DefaultGateway(),
+					Provider: &egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeCustom,
 						Custom: &egv1a1.EnvoyGatewayCustomProvider{
 							Resource: egv1a1.EnvoyGatewayResourceProvider{
 								Type: egv1a1.ResourceProviderTypeFile,
@@ -81,7 +94,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 									Paths: []string{"foo", "bar"},
 								},
 							},
-							Infrastructure: egv1a1.EnvoyGatewayInfrastructureProvider{
+							Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
 								Type: egv1a1.InfrastructureProviderTypeHost,
 								Host: &egv1a1.EnvoyGatewayHostInfrastructureProvider{},
 							},
@@ -92,19 +105,35 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			expect: true,
 		},
 		{
-			name: "file provider without file resource",
+			name: "custom provider with file provider ans k8s infra provider",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
 					Gateway: egv1a1.DefaultGateway(),
 					Provider: &egv1a1.EnvoyGatewayProvider{
-						Type: egv1a1.ProviderTypeFile,
+						Type: egv1a1.ProviderTypeCustom,
 						Custom: &egv1a1.EnvoyGatewayCustomProvider{
 							Resource: egv1a1.EnvoyGatewayResourceProvider{
 								Type: egv1a1.ResourceProviderTypeFile,
+								File: &egv1a1.EnvoyGatewayFileResourceProvider{
+									Paths: []string{"foo", "bar"},
+								},
 							},
-							Infrastructure: egv1a1.EnvoyGatewayInfrastructureProvider{
-								Type: egv1a1.InfrastructureProviderTypeHost,
-								Host: &egv1a1.EnvoyGatewayHostInfrastructureProvider{},
+						},
+					},
+				},
+			},
+			expect: true,
+		},
+		{
+			name: "custom provider with file provider but no file struct",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway: egv1a1.DefaultGateway(),
+					Provider: &egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeCustom,
+						Custom: &egv1a1.EnvoyGatewayCustomProvider{
+							Resource: egv1a1.EnvoyGatewayResourceProvider{
+								Type: egv1a1.ResourceProviderTypeFile,
 							},
 						},
 					},
@@ -113,18 +142,20 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			expect: false,
 		},
 		{
-			name: "file provider without host infrastructure",
+			name: "custom provider with file provider and host infra provider but no host struct",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
 					Gateway: egv1a1.DefaultGateway(),
 					Provider: &egv1a1.EnvoyGatewayProvider{
-						Type: egv1a1.ProviderTypeFile,
+						Type: egv1a1.ProviderTypeCustom,
 						Custom: &egv1a1.EnvoyGatewayCustomProvider{
 							Resource: egv1a1.EnvoyGatewayResourceProvider{
 								Type: egv1a1.ResourceProviderTypeFile,
-								File: &egv1a1.EnvoyGatewayFileResourceProvider{},
+								File: &egv1a1.EnvoyGatewayFileResourceProvider{
+									Paths: []string{"a", "b"},
+								},
 							},
-							Infrastructure: egv1a1.EnvoyGatewayInfrastructureProvider{
+							Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
 								Type: egv1a1.InfrastructureProviderTypeHost,
 							},
 						},
@@ -134,18 +165,18 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			expect: false,
 		},
 		{
-			name: "file provider without any paths assign in resource",
+			name: "custom provider with file provider and host infra provider but no paths assign in resource",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
 					Gateway: egv1a1.DefaultGateway(),
 					Provider: &egv1a1.EnvoyGatewayProvider{
-						Type: egv1a1.ProviderTypeFile,
+						Type: egv1a1.ProviderTypeCustom,
 						Custom: &egv1a1.EnvoyGatewayCustomProvider{
 							Resource: egv1a1.EnvoyGatewayResourceProvider{
 								Type: egv1a1.ResourceProviderTypeFile,
 								File: &egv1a1.EnvoyGatewayFileResourceProvider{},
 							},
-							Infrastructure: egv1a1.EnvoyGatewayInfrastructureProvider{
+							Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
 								Type: egv1a1.InfrastructureProviderTypeHost,
 								Host: &egv1a1.EnvoyGatewayHostInfrastructureProvider{},
 							},

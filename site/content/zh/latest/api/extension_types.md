@@ -1041,7 +1041,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `resource` | _[EnvoyGatewayResourceProvider](#envoygatewayresourceprovider)_ |  true  | Resource defines the desired resource provider.<br />This provider is used to specify the provider to be used<br />to retrieve the resource configurations such as Gateway API<br />resources |
-| `infrastructure` | _[EnvoyGatewayInfrastructureProvider](#envoygatewayinfrastructureprovider)_ |  true  | Infrastructure defines the desired infrastructure provider.<br />This provider is used to specify the provider to be used<br />to provide an environment to deploy the out resources like<br />the Envoy Proxy data plane. |
+| `infrastructure` | _[EnvoyGatewayInfrastructureProvider](#envoygatewayinfrastructureprovider)_ |  false  | Infrastructure defines the desired infrastructure provider.<br />This provider is used to specify the provider to be used<br />to provide an environment to deploy the out resources like<br />the Envoy Proxy data plane.<br /><br />Infrastructure is optional, if no provider is set,<br />The Kubernetes will be used as the default infrastructure provider. |
 
 
 #### EnvoyGatewayFileResourceProvider
@@ -2695,7 +2695,7 @@ _Appears in:_
 | Value | Description |
 | ----- | ----------- |
 | `Kubernetes` | ProviderTypeKubernetes defines the "Kubernetes" provider.<br /> | 
-| `File` | ProviderTypeFile defines the "File" provider. This type is not implemented<br />until https://github.com/envoyproxy/gateway/issues/1001 is fixed.<br /> | 
+| `Custom` | ProviderTypeCustom defines the "Custom" provider.<br /> | 
 
 
 #### ProxyAccessLog

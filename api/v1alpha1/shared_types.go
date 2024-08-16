@@ -47,16 +47,15 @@ type GroupVersionKind struct {
 
 // ProviderType defines the types of providers supported by Envoy Gateway.
 //
-// +kubebuilder:validation:Enum=Kubernetes
+// +kubebuilder:validation:Enum=Kubernetes;Custom
 type ProviderType string
 
 const (
 	// ProviderTypeKubernetes defines the "Kubernetes" provider.
 	ProviderTypeKubernetes ProviderType = "Kubernetes"
 
-	// ProviderTypeFile defines the "File" provider. This type is not implemented
-	// until https://github.com/envoyproxy/gateway/issues/1001 is fixed.
-	ProviderTypeFile ProviderType = "File"
+	// ProviderTypeCustom defines the "Custom" provider.
+	ProviderTypeCustom ProviderType = "Custom"
 )
 
 // KubernetesDeploymentSpec defines the desired state of the Kubernetes deployment resource.

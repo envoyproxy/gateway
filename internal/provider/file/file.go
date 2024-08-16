@@ -37,7 +37,7 @@ func New(svr *config.Server, resources *message.ProviderResources) (*Provider, e
 }
 
 func (p *Provider) Type() egv1a1.ProviderType {
-	return egv1a1.ProviderTypeFile
+	return egv1a1.ProviderTypeCustom
 }
 
 func (p *Provider) Start(ctx context.Context) error {
