@@ -26,7 +26,6 @@ func (r *gatewayAPIReconciler) getExtensionRefFilters(ctx context.Context) ([]un
 		if r.namespaceLabel != nil {
 			var extRs []unstructured.Unstructured
 			for _, extR := range uExtResources {
-				extR := extR
 				ok, err := r.checkObjectNamespaceLabels(&extR)
 				if err != nil {
 					r.log.Error(err, "failed to check namespace labels for ExtensionRefFilter %s in namespace %s: %w", extR.GetName(), extR.GetNamespace())

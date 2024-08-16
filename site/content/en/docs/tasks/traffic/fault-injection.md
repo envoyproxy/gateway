@@ -36,8 +36,8 @@ kind: BackendTrafficPolicy
 metadata:
   name: fault-injection-50-percent-abort
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: foo
   faultInjection:
@@ -50,8 +50,8 @@ kind: BackendTrafficPolicy
 metadata:
   name: fault-injection-delay
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: bar
   faultInjection:
@@ -113,8 +113,8 @@ kind: BackendTrafficPolicy
 metadata:
   name: fault-injection-50-percent-abort
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: foo
   faultInjection:
@@ -127,8 +127,8 @@ kind: BackendTrafficPolicy
 metadata:
   name: fault-injection-delay
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: bar
   faultInjection:
@@ -210,8 +210,8 @@ kind: BackendTrafficPolicy
 metadata:
   name: fault-injection-abort
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: GRPCRoute
     name: yages
   faultInjection:
@@ -250,8 +250,8 @@ kind: BackendTrafficPolicy
 metadata:
   name: fault-injection-abort
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: GRPCRoute
     name: yages
   faultInjection:

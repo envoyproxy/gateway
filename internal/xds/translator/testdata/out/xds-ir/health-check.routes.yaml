@@ -33,3 +33,10 @@
         cluster: fourth-route-dest
         upgradeConfigs:
         - upgradeType: websocket
+    - match:
+        prefix: /
+      name: fifth-route
+      route:
+        cluster: fifth-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

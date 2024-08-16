@@ -46,8 +46,8 @@ kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
@@ -75,8 +75,8 @@ kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
@@ -262,8 +262,8 @@ kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
@@ -287,8 +287,8 @@ kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:

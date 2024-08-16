@@ -34,7 +34,7 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 	}
 
 	for _, tlsRoute := range tlsRouteList.Items {
-		tlsRoute := tlsRoute
+		tlsRoute := tlsRoute //nolint:copyloopvar
 		if r.namespaceLabel != nil {
 			if ok, err := r.checkObjectNamespaceLabels(&tlsRoute); err != nil {
 				r.log.Error(err, "failed to check namespace labels for TLSRoute %s in namespace %s: %w", tlsRoute.GetName(), tlsRoute.GetNamespace())
@@ -54,7 +54,6 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 
 		for _, rule := range tlsRoute.Spec.Rules {
 			for _, backendRef := range rule.BackendRefs {
-				backendRef := backendRef
 				ref := gatewayapi.UpgradeBackendRef(backendRef)
 				if err := validateBackendRef(&ref); err != nil {
 					r.log.Error(err, "invalid backendRef")
@@ -114,7 +113,7 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 	}
 
 	for _, grpcRoute := range grpcRouteList.Items {
-		grpcRoute := grpcRoute
+		grpcRoute := grpcRoute //nolint:copyloopvar
 		if r.namespaceLabel != nil {
 			if ok, err := r.checkObjectNamespaceLabels(&grpcRoute); err != nil {
 				r.log.Error(err, "failed to check namespace labels for GRPCRoute %s in namespace %s: %w", grpcRoute.GetName(), grpcRoute.GetNamespace())
@@ -134,7 +133,6 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 
 		for _, rule := range grpcRoute.Spec.Rules {
 			for _, backendRef := range rule.BackendRefs {
-				backendRef := backendRef
 				if err := validateBackendRef(&backendRef.BackendRef); err != nil {
 					r.log.Error(err, "invalid backendRef")
 					continue
@@ -249,7 +247,7 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 	}
 
 	for _, httpRoute := range httpRouteList.Items {
-		httpRoute := httpRoute
+		httpRoute := httpRoute //nolint:copyloopvar
 		if r.namespaceLabel != nil {
 			if ok, err := r.checkObjectNamespaceLabels(&httpRoute); err != nil {
 				r.log.Error(err, "failed to check namespace labels for HTTPRoute %s in namespace %s: %w", httpRoute.GetName(), httpRoute.GetNamespace())
@@ -269,7 +267,6 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 
 		for _, rule := range httpRoute.Spec.Rules {
 			for _, backendRef := range rule.BackendRefs {
-				backendRef := backendRef
 				if err := validateBackendRef(&backendRef.BackendRef); err != nil {
 					r.log.Error(err, "invalid backendRef")
 					continue
@@ -427,7 +424,7 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 	}
 
 	for _, tcpRoute := range tcpRouteList.Items {
-		tcpRoute := tcpRoute
+		tcpRoute := tcpRoute //nolint:copyloopvar
 		if r.namespaceLabel != nil {
 			if ok, err := r.checkObjectNamespaceLabels(&tcpRoute); err != nil {
 				r.log.Error(err, "failed to check namespace labels for TCPRoute %s in namespace %s: %w", tcpRoute.GetName(), tcpRoute.GetNamespace())
@@ -447,7 +444,6 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 
 		for _, rule := range tcpRoute.Spec.Rules {
 			for _, backendRef := range rule.BackendRefs {
-				backendRef := backendRef
 				ref := gatewayapi.UpgradeBackendRef(backendRef)
 				if err := validateBackendRef(&ref); err != nil {
 					r.log.Error(err, "invalid backendRef")
@@ -506,7 +502,7 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 	}
 
 	for _, udpRoute := range udpRouteList.Items {
-		udpRoute := udpRoute
+		udpRoute := udpRoute //nolint:copyloopvar
 		if r.namespaceLabel != nil {
 			if ok, err := r.checkObjectNamespaceLabels(&udpRoute); err != nil {
 				r.log.Error(err, "failed to check namespace labels for UDPRoute %s in namespace %s: %w", udpRoute.GetName(), udpRoute.GetNamespace())
@@ -526,7 +522,6 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 
 		for _, rule := range udpRoute.Spec.Rules {
 			for _, backendRef := range rule.BackendRefs {
-				backendRef := backendRef
 				ref := gatewayapi.UpgradeBackendRef(backendRef)
 				if err := validateBackendRef(&ref); err != nil {
 					r.log.Error(err, "invalid backendRef")

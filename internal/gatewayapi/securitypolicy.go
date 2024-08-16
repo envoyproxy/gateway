@@ -523,7 +523,6 @@ func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
 	var allowOrigins []*ir.StringMatch
 
 	for _, origin := range cors.AllowOrigins {
-		origin := origin
 		if isWildcard(string(origin)) {
 			regexStr := wildcard2regex(string(origin))
 			allowOrigins = append(allowOrigins, &ir.StringMatch{

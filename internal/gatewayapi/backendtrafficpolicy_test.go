@@ -46,7 +46,6 @@ func TestInt64ToUint32(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 			out, success := int64ToUint32(tc.In)
 			require.Equal(t, tc.Out, out)
