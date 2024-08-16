@@ -29,6 +29,11 @@ grpcRoutes:
       - type: "RequestHeaderModifier"
         requestHeaderModifier:
           add:
+          - name: "my-header-multi-value"
+            value: "foo,bar"
+      - type: "RequestHeaderModifier"
+        requestHeaderModifier:
+          add:
           - name: "my-header"
             value: "foo"
       backendRefs:

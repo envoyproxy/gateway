@@ -64,7 +64,6 @@ func TestTranslate(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, inputFile := range inputFiles {
-		inputFile := inputFile
 		t.Run(testName(inputFile), func(t *testing.T) {
 			input, err := os.ReadFile(inputFile)
 			require.NoError(t, err)
@@ -331,7 +330,6 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, inputFile := range inputFiles {
-		inputFile := inputFile
 		t.Run(testName(inputFile), func(t *testing.T) {
 			input, err := os.ReadFile(inputFile)
 			require.NoError(t, err)
@@ -625,7 +623,6 @@ func TestIsValidHostname(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			err := translator.validateHostname(tc.hostname)
 			if tc.err == "" {
@@ -745,7 +742,6 @@ func TestIsValidCrossNamespaceRef(t *testing.T) {
 	testcases = append(testcases, modified)
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			var referenceGrants []*gwapiv1b1.ReferenceGrant
 			if tc.referenceGrant != nil {

@@ -235,7 +235,8 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck) []*corev3.HealthChec
 	if healthcheck.HealthyThreshold != nil {
 		hc.HealthyThreshold = wrapperspb.UInt32(*healthcheck.HealthyThreshold)
 	}
-	if healthcheck.HTTP != nil {
+	switch {
+	case healthcheck.HTTP != nil:
 		httpChecker := &corev3.HealthCheck_HttpHealthCheck{
 			Host: healthcheck.HTTP.Host,
 			Path: healthcheck.HTTP.Path,
@@ -250,8 +251,7 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck) []*corev3.HealthChec
 		hc.HealthChecker = &corev3.HealthCheck_HttpHealthCheck_{
 			HttpHealthCheck: httpChecker,
 		}
-	}
-	if healthcheck.TCP != nil {
+	case healthcheck.TCP != nil:
 		tcpChecker := &corev3.HealthCheck_TcpHealthCheck{
 			Send: buildHealthCheckPayload(healthcheck.TCP.Send),
 		}
@@ -260,6 +260,12 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck) []*corev3.HealthChec
 		}
 		hc.HealthChecker = &corev3.HealthCheck_TcpHealthCheck_{
 			TcpHealthCheck: tcpChecker,
+		}
+	case healthcheck.GRPC != nil:
+		hc.HealthChecker = &corev3.HealthCheck_GrpcHealthCheck_{
+			GrpcHealthCheck: &corev3.HealthCheck_GrpcHealthCheck{
+				ServiceName: ptr.Deref(healthcheck.GRPC.ServiceName, ""),
+			},
 		}
 	}
 	return []*corev3.HealthCheck{hc}
@@ -739,10 +745,7 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(extra *ExtraArgs) *xdsCluste
 		clusterArgs.timeout = bt.Timeout
 		clusterArgs.tcpkeepalive = bt.TCPKeepalive
 		clusterArgs.backendConnection = bt.BackendConnection
-	}
-
-	if httpRoute.DNS != nil {
-		clusterArgs.dns = httpRoute.DNS
+		clusterArgs.dns = bt.DNS
 	}
 
 	return clusterArgs

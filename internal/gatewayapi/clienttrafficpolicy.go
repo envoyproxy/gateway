@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -417,7 +418,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 	}
 
 	// Translate Proxy Protocol
-	enableProxyProtocol = buildProxyProtocol(policy.Spec.EnableProxyProtocol)
+	enableProxyProtocol = ptr.Deref(policy.Spec.EnableProxyProtocol, false)
 
 	// Translate Client Timeout Settings
 	timeout, err = buildClientTimeout(policy.Spec.Timeout)
@@ -432,7 +433,10 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 		translateClientIPDetection(policy.Spec.ClientIPDetection, httpIR)
 
 		// Translate Header Settings
-		translateListenerHeaderSettings(policy.Spec.Headers, httpIR)
+		if err = translateListenerHeaderSettings(policy.Spec.Headers, httpIR); err != nil {
+			err = perr.WithMessage(err, "Headers")
+			errs = errors.Join(errs, err)
+		}
 
 		// Translate Path Settings
 		translatePathSettings(policy.Spec.Path, httpIR)
@@ -604,14 +608,6 @@ func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout,
 	return irClientTimeout, nil
 }
 
-func buildProxyProtocol(enableProxyProtocol *bool) bool {
-	if enableProxyProtocol != nil && *enableProxyProtocol {
-		return true
-	}
-
-	return false
-}
-
 func translateClientIPDetection(clientIPDetection *egv1a1.ClientIPDetectionSettings, httpIR *ir.HTTPListener) {
 	// Return early if not set
 	if clientIPDetection == nil {
@@ -621,9 +617,9 @@ func translateClientIPDetection(clientIPDetection *egv1a1.ClientIPDetectionSetti
 	httpIR.ClientIPDetection = (*ir.ClientIPDetectionSettings)(clientIPDetection)
 }
 
-func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, httpIR *ir.HTTPListener) {
+func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, httpIR *ir.HTTPListener) error {
 	if headerSettings == nil {
-		return
+		return nil
 	}
 	httpIR.Headers = &ir.HeaderSettings{
 		EnableEnvoyHeaders:      ptr.Deref(headerSettings.EnableEnvoyHeaders, false),
@@ -642,6 +638,16 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 			httpIR.Headers.XForwardedClientCert.CertDetailsToAdd = headerSettings.XForwardedClientCert.CertDetailsToAdd
 		}
 	}
+
+	if headerSettings.EarlyRequestHeaders != nil {
+		headersToAdd, headersToRemove, err := translateEarlyRequestHeaders(headerSettings.EarlyRequestHeaders)
+		if err != nil {
+			return err
+		}
+		httpIR.Headers.EarlyAddRequestHeaders = headersToAdd
+		httpIR.Headers.EarlyRemoveRequestHeaders = headersToRemove
+	}
+	return nil
 }
 
 func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, httpIR *ir.HTTPListener) error {
@@ -876,4 +882,131 @@ func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection,
 	}
 
 	return irConnection, nil
+}
+
+func translateEarlyRequestHeaders(headerModifier *gwapiv1.HTTPHeaderFilter) ([]ir.AddHeader, []string, error) {
+	// Make sure the header modifier config actually exists
+	if headerModifier == nil {
+		return nil, nil, nil
+	}
+	var errs error
+	emptyFilterConfig := true // keep track of whether the provided config is empty or not
+
+	var AddRequestHeaders []ir.AddHeader
+	var RemoveRequestHeaders []string
+
+	// Add request headers
+	if headersToAdd := headerModifier.Add; headersToAdd != nil {
+		if len(headersToAdd) > 0 {
+			emptyFilterConfig = false
+		}
+		for _, addHeader := range headersToAdd {
+			emptyFilterConfig = false
+			if addHeader.Name == "" {
+				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaders cannot add a header with an empty name"))
+				// try to process the rest of the headers and produce a valid config.
+				continue
+			}
+			// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
+			if strings.ContainsAny(string(addHeader.Name), "/:") {
+				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaders Filter cannot set headers with a '/' or ':' character in them. Header: %q", string(addHeader.Name)))
+				continue
+			}
+			// Check if the header is a duplicate
+			headerKey := string(addHeader.Name)
+			canAddHeader := true
+			for _, h := range AddRequestHeaders {
+				if strings.EqualFold(h.Name, headerKey) {
+					canAddHeader = false
+					break
+				}
+			}
+
+			if !canAddHeader {
+				continue
+			}
+
+			newHeader := ir.AddHeader{
+				Name:   headerKey,
+				Append: true,
+				Value:  strings.Split(addHeader.Value, ","),
+			}
+
+			AddRequestHeaders = append(AddRequestHeaders, newHeader)
+		}
+	}
+
+	// Set headers
+	if headersToSet := headerModifier.Set; headersToSet != nil {
+		if len(headersToSet) > 0 {
+			emptyFilterConfig = false
+		}
+		for _, setHeader := range headersToSet {
+
+			if setHeader.Name == "" {
+				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaders cannot set a header with an empty name"))
+				continue
+			}
+			// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
+			if strings.ContainsAny(string(setHeader.Name), "/:") {
+				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaders cannot set headers with a '/' or ':' character in them. Header: '%s'", string(setHeader.Name)))
+				continue
+			}
+
+			// Check if the header to be set has already been configured
+			headerKey := string(setHeader.Name)
+			canAddHeader := true
+			for _, h := range AddRequestHeaders {
+				if strings.EqualFold(h.Name, headerKey) {
+					canAddHeader = false
+					break
+				}
+			}
+			if !canAddHeader {
+				continue
+			}
+			newHeader := ir.AddHeader{
+				Name:   string(setHeader.Name),
+				Append: false,
+				Value:  strings.Split(setHeader.Value, ","),
+			}
+
+			AddRequestHeaders = append(AddRequestHeaders, newHeader)
+		}
+	}
+
+	// Remove request headers
+	// As far as Envoy is concerned, it is ok to configure a header to be added/set and also in the list of
+	// headers to remove. It will remove the original header if present and then add/set the header after.
+	if headersToRemove := headerModifier.Remove; headersToRemove != nil {
+		if len(headersToRemove) > 0 {
+			emptyFilterConfig = false
+		}
+		for _, removedHeader := range headersToRemove {
+			if removedHeader == "" {
+				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaders cannot remove a header with an empty name"))
+				continue
+			}
+
+			canRemHeader := true
+			for _, h := range RemoveRequestHeaders {
+				if strings.EqualFold(h, removedHeader) {
+					canRemHeader = false
+					break
+				}
+			}
+			if !canRemHeader {
+				continue
+			}
+
+			RemoveRequestHeaders = append(RemoveRequestHeaders, removedHeader)
+		}
+	}
+
+	// Update the status if the filter failed to configure any valid headers to add/remove
+	if len(AddRequestHeaders) == 0 && len(RemoveRequestHeaders) == 0 && !emptyFilterConfig {
+		errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaders did not provide valid configuration to add/set/remove any headers"))
+	}
+
+	return AddRequestHeaders, RemoveRequestHeaders, errs
 }

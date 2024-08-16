@@ -111,7 +111,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
   type: JSONPatch
   jsonPatches:
     - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
@@ -151,7 +150,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
   type: JSONPatch
   jsonPatches:
     - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
@@ -195,7 +193,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: GatewayClass
     name: eg
-    namespace: default
   type: JSONPatch
   jsonPatches:
     - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
@@ -235,7 +232,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: GatewayClass
     name: eg
-    namespace: default
   type: JSONPatch
   jsonPatches:
     - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
@@ -322,7 +318,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
   type: JSONPatch
 status:
   conditions:

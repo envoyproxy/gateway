@@ -15,7 +15,6 @@ import (
 // SkipTests is a list of tests that are skipped in the conformance suite.
 var SkipTests = []suite.ConformanceTest{
 	tests.GatewayStaticAddresses,
-	tests.GatewayHTTPListenerIsolation, // https://github.com/envoyproxy/gateway/issues/3352
 }
 
 func skipTestsShortNames(skipTests []suite.ConformanceTest) []string {

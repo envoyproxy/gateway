@@ -71,7 +71,6 @@ func TestDeepCopy(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.out == nil {
 				require.Nil(t, tc.in.DeepCopy())
@@ -531,7 +530,6 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			err := tc.tableIn.AddOrReplaceXdsResource(tc.typeIn, tc.resourceIn, tc.funcIn)
 			require.NoError(t, err)
@@ -887,7 +885,6 @@ func TestInvalidAddXdsResource(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			err := tc.tableIn.AddOrReplaceXdsResource(tc.typeIn, tc.resourceIn, tc.funcIn)
 			require.Error(t, err)

@@ -97,7 +97,6 @@ func TestValidateGRPCFilterRef(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			err := ValidateGRPCRouteFilter(tc.filter, schema.GroupKind{Group: "example.io", Kind: "Foo"})
 			if tc.expected {
@@ -189,7 +188,6 @@ func TestValidateHTTPFilterRef(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			err := ValidateHTTPRouteFilter(tc.filter, schema.GroupKind{Group: "example.io", Kind: "Foo"})
 			if tc.expected {
@@ -479,7 +477,6 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			results := getPolicyTargetRefs(tc.policy, tc.targets)
 			require.ElementsMatch(t, results, tc.results)
