@@ -426,6 +426,10 @@ func buildActiveHealthCheck(policy egv1a1.HealthCheck) *ir.ActiveHealthCheck {
 		irHC.HTTP = buildHTTPActiveHealthChecker(hc.HTTP)
 	case egv1a1.ActiveHealthCheckerTypeTCP:
 		irHC.TCP = buildTCPActiveHealthChecker(hc.TCP)
+	case egv1a1.ActiveHealthCheckerTypeGRPC:
+		irHC.GRPC = &ir.GRPCHealthChecker{
+			Service: ptr.Deref(hc.GRPC, egv1a1.GRPCActiveHealthChecker{}).Service,
+		}
 	}
 
 	return irHC

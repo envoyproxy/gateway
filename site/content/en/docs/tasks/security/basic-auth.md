@@ -110,10 +110,10 @@ kind: SecurityPolicy
 metadata:
   name: basic-auth-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: backend
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
   basicAuth:
     users:
       name: "basic-auth"
@@ -131,10 +131,10 @@ kind: SecurityPolicy
 metadata:
   name: basic-auth-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: backend
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
   basicAuth:
     users:
       name: "basic-auth"

@@ -68,10 +68,10 @@ metadata:
   name: connection-limit-ctp
   namespace: default
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: eg
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
   connection:
     connectionLimit:
       value: 5    
@@ -90,10 +90,10 @@ metadata:
   name: connection-limit-ctp
   namespace: default
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: eg
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
   connection:
     connectionLimit:
       value: 5    

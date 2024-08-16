@@ -55,6 +55,12 @@ func TestTranslateXds(t *testing.T) {
 		"jsonpatch": {
 			requireEnvoyPatchPolicies: true,
 		},
+		"jsonpatch-with-jsonpath": {
+			requireEnvoyPatchPolicies: true,
+		},
+		"jsonpatch-add-op-empty-jsonpath": {
+			requireEnvoyPatchPolicies: true,
+		},
 		"jsonpatch-missing-resource": {
 			requireEnvoyPatchPolicies: true,
 		},
@@ -103,7 +109,6 @@ func TestTranslateXds(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, inputFile := range inputFiles {
-		inputFile := inputFile
 		inputFileName := testName(inputFile)
 		t.Run(inputFileName, func(t *testing.T) {
 			cfg, ok := testConfigs[inputFileName]
@@ -186,7 +191,6 @@ func TestTranslateRateLimitConfig(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, inputFile := range inputFiles {
-		inputFile := inputFile
 		inputFileName := testName(inputFile)
 		t.Run(inputFileName, func(t *testing.T) {
 			in := requireXdsIRListenerFromInputTestData(t, inputFile)
@@ -216,7 +220,6 @@ func TestTranslateXdsWithExtension(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, inputFile := range inputFiles {
-		inputFile := inputFile
 		inputFileName := testName(inputFile)
 		t.Run(inputFileName, func(t *testing.T) {
 			cfg, ok := testConfigs[inputFileName]

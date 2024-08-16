@@ -529,6 +529,18 @@ spec:
                               active:
                                 description: Active health check configuration
                                 properties:
+                                  grpc:
+                                    description: |-
+                                      GRPC defines the configuration of the GRPC health checker.
+                                      It's optional, and can only be used if the specified type is GRPC.
+                                    properties:
+                                      service:
+                                        description: |-
+                                          Service to send in the health check request.
+                                          If this is not specified, then the health check request applies to the entire
+                                          server and not to a specific service.
+                                        type: string
+                                    type: object
                                   healthyThreshold:
                                     default: 1
                                     description: HealthyThreshold defines the number
@@ -692,9 +704,11 @@ spec:
                                     - enum:
                                       - HTTP
                                       - TCP
+                                      - GRPC
                                     - enum:
                                       - HTTP
                                       - TCP
+                                      - GRPC
                                     description: Type defines the type of health checker.
                                     type: string
                                   unhealthyThreshold:
@@ -716,6 +730,10 @@ spec:
                                 - message: If Health Checker type is TCP, tcp field
                                     needs to be set.
                                   rule: 'self.type == ''TCP'' ? has(self.tcp) : !has(self.tcp)'
+                                - message: The grpc field can only be set if the Health
+                                    Checker type is GRPC.
+                                  rule: 'has(self.grpc) ? self.type == ''GRPC'' :
+                                    true'
                               passive:
                                 description: Passive passive check configuration
                                 properties:
@@ -1314,6 +1332,18 @@ spec:
                               active:
                                 description: Active health check configuration
                                 properties:
+                                  grpc:
+                                    description: |-
+                                      GRPC defines the configuration of the GRPC health checker.
+                                      It's optional, and can only be used if the specified type is GRPC.
+                                    properties:
+                                      service:
+                                        description: |-
+                                          Service to send in the health check request.
+                                          If this is not specified, then the health check request applies to the entire
+                                          server and not to a specific service.
+                                        type: string
+                                    type: object
                                   healthyThreshold:
                                     default: 1
                                     description: HealthyThreshold defines the number
@@ -1477,9 +1507,11 @@ spec:
                                     - enum:
                                       - HTTP
                                       - TCP
+                                      - GRPC
                                     - enum:
                                       - HTTP
                                       - TCP
+                                      - GRPC
                                     description: Type defines the type of health checker.
                                     type: string
                                   unhealthyThreshold:
@@ -1501,6 +1533,10 @@ spec:
                                 - message: If Health Checker type is TCP, tcp field
                                     needs to be set.
                                   rule: 'self.type == ''TCP'' ? has(self.tcp) : !has(self.tcp)'
+                                - message: The grpc field can only be set if the Health
+                                    Checker type is GRPC.
+                                  rule: 'has(self.grpc) ? self.type == ''GRPC'' :
+                                    true'
                               passive:
                                 description: Passive passive check configuration
                                 properties:

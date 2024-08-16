@@ -88,11 +88,10 @@ metadata:
   name: enable-mtls
   namespace: default
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
   tls:
     clientValidation:
       caCertificateRefs:
@@ -114,11 +113,10 @@ metadata:
   name: enable-mtls
   namespace: default
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
   tls:
     clientValidation:
       caCertificateRefs:
