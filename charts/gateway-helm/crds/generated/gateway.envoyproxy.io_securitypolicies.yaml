@@ -128,7 +128,12 @@ spec:
                                 description: JWTClaim specifies a claim in a JWT token.
                                 properties:
                                   name:
-                                    description: Name is the name of the claim.
+                                    description: |-
+                                      Name is the name of the claim.
+                                      If it is a nested claim, use a dot (.) separated string as the name to
+                                      represent the full path to the claim.
+                                      For example, if the claim is in the "department" field in the "organization" field,
+                                      the name should be "organization.department".
                                     type: string
                                   type:
                                     default: String

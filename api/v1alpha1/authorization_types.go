@@ -83,6 +83,10 @@ type JWTClaim struct {
 	Type JWTClaimType `json:"type"`
 
 	// Name is the name of the claim.
+	// If it is a nested claim, use a dot (.) separated string as the name to
+	// represent the full path to the claim.
+	// For example, if the claim is in the "department" field in the "organization" field,
+	// the name should be "organization.department".
 	Name string `json:"name"`
 
 	// Values are the values that the claim must match.
