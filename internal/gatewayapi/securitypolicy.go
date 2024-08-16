@@ -814,7 +814,7 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Reso
 		authority  string
 		err        error
 		traffic    *ir.TrafficFeatures
-		priority   *bool
+		failover   *bool
 	)
 
 	switch {
@@ -826,7 +826,7 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Reso
 		backendRef = http.BackendRef
 		if len(http.BackendRefs) != 0 {
 			backendRef = egv1a1.ToBackendObjectReference(http.BackendRefs[0])
-			priority = http.BackendRefs[0].Failover
+			failover = http.BackendRefs[0].Failover
 		}
 		protocol = ir.HTTP
 		if traffic, err = translateTrafficFeatures(http.BackendSettings); err != nil {
@@ -836,7 +836,7 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Reso
 		backendRef = grpc.BackendRef
 		if len(grpc.BackendRefs) != 0 {
 			backendRef = egv1a1.ToBackendObjectReference(grpc.BackendRefs[0])
-			priority = grpc.BackendRefs[0].Failover
+			failover = grpc.BackendRefs[0].Failover
 		}
 		protocol = ir.GRPC
 		if traffic, err = translateTrafficFeatures(grpc.BackendSettings); err != nil {
@@ -855,7 +855,7 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Reso
 	authority = backendRefAuthority(resources, backendRef, policy)
 	pnn := utils.NamespacedName(policy)
 	if ds, err = t.processExtServiceDestination(
-		&egv1a1.BackendRef{BackendObjectReference: *backendRef, Failover: priority},
+		&egv1a1.BackendRef{BackendObjectReference: *backendRef, Failover: failover},
 		pnn,
 		KindSecurityPolicy,
 		protocol,
