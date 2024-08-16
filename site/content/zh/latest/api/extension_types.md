@@ -1714,7 +1714,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `serviceName` | _string_ |  false  | ServiceName to send in the health check request.<br />If this is not specified, then the health check request applies to the entire<br />server and not to a specific service. |
+| `service` | _string_ |  false  | Service to send in the health check request.<br />If this is not specified, then the health check request applies to the entire<br />server and not to a specific service. |
 
 
 #### GRPCExtAuthService
