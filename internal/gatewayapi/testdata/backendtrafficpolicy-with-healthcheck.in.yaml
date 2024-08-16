@@ -296,5 +296,5 @@ backendTrafficPolicies:
         healthyThreshold: 1
         type: GRPC
         grpc:
-          serviceName: foo-service
+          service: foo-service
 

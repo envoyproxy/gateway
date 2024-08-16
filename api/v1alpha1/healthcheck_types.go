@@ -169,11 +169,11 @@ type TCPActiveHealthChecker struct {
 
 // GRPCActiveHealthChecker defines the settings of the GRPC health check.
 type GRPCActiveHealthChecker struct {
-	// ServiceName to send in the health check request.
+	// Service to send in the health check request.
 	// If this is not specified, then the health check request applies to the entire
 	// server and not to a specific service.
 	// +optional
-	ServiceName *string `json:"serviceName,omitempty" yaml:"serviceName,omitempty"`
+	Service *string `json:"service,omitempty" yaml:"service,omitempty"`
 }
 
 // ActiveHealthCheckPayloadType is the type of the payload.
