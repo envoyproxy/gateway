@@ -264,7 +264,7 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck) []*corev3.HealthChec
 	case healthcheck.GRPC != nil:
 		hc.HealthChecker = &corev3.HealthCheck_GrpcHealthCheck_{
 			GrpcHealthCheck: &corev3.HealthCheck_GrpcHealthCheck{
-				ServiceName: ptr.Deref(healthcheck.GRPC.ServiceName, ""),
+				ServiceName: ptr.Deref(healthcheck.GRPC.Service, ""),
 			},
 		}
 	}

@@ -188,7 +188,7 @@ backendTrafficPolicies:
     healthCheck:
       active:
         grpc:
-          serviceName: foo-service
+          service: foo-service
         healthyThreshold: 1
         interval: 3s
         timeout: 1s
@@ -676,7 +676,7 @@ xdsIR:
           healthCheck:
             active:
               grpc:
-                serviceName: foo-service
+                service: foo-service
               healthyThreshold: 1
               interval: 3s
               timeout: 1s
