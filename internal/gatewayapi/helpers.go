@@ -280,7 +280,7 @@ func computeHosts(routeHostnames []string, listenerContext *ListenerContext) []s
 		return []string{"*"}
 	}
 
-	hostnamesSet := sets.NewString()
+	hostnamesSet := map[string]struct{}{}
 
 	// Find intersecting hostnames
 	for i := range routeHostnames {
@@ -291,22 +291,22 @@ func computeHosts(routeHostnames []string, listenerContext *ListenerContext) []s
 		switch {
 		// No listener hostname: use the route hostname.
 		case len(listenerHostnameVal) == 0:
-			hostnamesSet.Insert(routeHostname)
+			hostnamesSet[routeHostname] = struct{}{}
 
 		// Listener hostname matches the route hostname: use it.
 		case listenerHostnameVal == routeHostname:
-			hostnamesSet.Insert(routeHostname)
+			hostnamesSet[routeHostname] = struct{}{}
 
 		// Listener has a wildcard hostname: check if the route hostname matches.
 		case strings.HasPrefix(listenerHostnameVal, "*"):
 			if hostnameMatchesWildcardHostname(routeHostname, listenerHostnameVal) {
-				hostnamesSet.Insert(routeHostname)
+				hostnamesSet[routeHostname] = struct{}{}
 			}
 
 		// Route has a wildcard hostname: check if the listener hostname matches.
 		case strings.HasPrefix(routeHostname, "*"):
 			if hostnameMatchesWildcardHostname(listenerHostnameVal, routeHostname) {
-				hostnamesSet.Insert(routeHostname)
+				hostnamesSet[listenerHostnameVal] = struct{}{}
 			}
 
 		}
@@ -331,7 +331,12 @@ func computeHosts(routeHostnames []string, listenerContext *ListenerContext) []s
 		delete(hostnamesSet, string(*listener.Hostname))
 	}
 
-	return hostnamesSet.List()
+	var hostnames []string
+	for host := range hostnamesSet {
+		hostnames = append(hostnames, host)
+	}
+
+	return hostnames
 }
 
 // hostnameMatchesWildcardHostname returns true if hostname has the non-wildcard
