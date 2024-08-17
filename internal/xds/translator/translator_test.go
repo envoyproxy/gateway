@@ -134,7 +134,7 @@ func TestTranslateXds(t *testing.T) {
 			}
 			tCtx, err := tr.Translate(x)
 			if !strings.HasSuffix(inputFileName, "partial-invalid") && len(cfg.errMsg) == 0 {
-				t.Logf(inputFileName)
+				t.Log(inputFileName)
 				require.NoError(t, err)
 			} else if len(cfg.errMsg) > 0 {
 				require.Error(t, err)
