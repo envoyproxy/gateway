@@ -329,7 +329,11 @@ func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 		},
 		{
 			Name:  UseStatsdEnvVar,
-			Value: "false",
+			Value: "true",
+		},
+		{
+			Name:  "STATSD_PORT",
+			Value: "9125",
 		},
 		{
 			Name:  ConfigTypeEnvVar,
