@@ -839,7 +839,7 @@ spec:
                           loadBalancer:
                             description: |-
                               LoadBalancer policy to apply when routing traffic from the gateway to
-                              the backend endpoints
+                              the backend endpoints. Defaults to `LeastRequest`.
                             properties:
                               consistentHash:
                                 description: |-
@@ -1651,7 +1651,7 @@ spec:
                           loadBalancer:
                             description: |-
                               LoadBalancer policy to apply when routing traffic from the gateway to
-                              the backend endpoints
+                              the backend endpoints. Defaults to `LeastRequest`.
                             properties:
                               consistentHash:
                                 description: |-
