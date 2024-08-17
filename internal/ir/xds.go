@@ -1155,6 +1155,10 @@ type DestinationSetting struct {
 	// invalid endpoints are represents with a
 	// non-zero weight with an empty endpoints list
 	Weight *uint32 `json:"weight,omitempty" yaml:"weight,omitempty"`
+	// Priority default to priority 0, the highest level.
+	// If multiple destinations share the same priority, they will all be utilized.
+	// Lower priority endpoints will be used only if higher priority levels are unavailable.
+	Priority *uint32 `json:"priority,omitempty"`
 	// Protocol associated with this destination/port.
 	Protocol  AppProtocol            `json:"protocol,omitempty" yaml:"protocol,omitempty"`
 	Endpoints []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`

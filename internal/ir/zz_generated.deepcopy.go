@@ -689,6 +689,11 @@ func (in *DestinationSetting) DeepCopyInto(out *DestinationSetting) {
 		*out = new(uint32)
 		**out = **in
 	}
+	if in.Priority != nil {
+		in, out := &in.Priority, &out.Priority
+		*out = new(uint32)
+		**out = **in
+	}
 	if in.Endpoints != nil {
 		in, out := &in.Endpoints, &out.Endpoints
 		*out = make([]*DestinationEndpoint, len(*in))
