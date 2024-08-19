@@ -73,7 +73,6 @@ func TestAddGatewayClassFinalizer(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			r.client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.gc).Build()
 			err := r.addFinalizer(ctx, tc.gc)
@@ -246,7 +245,6 @@ func TestRemoveGatewayClassFinalizer(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			r.client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.gc).Build()
 			err := r.removeFinalizer(ctx, tc.gc)

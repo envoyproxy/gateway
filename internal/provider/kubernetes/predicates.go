@@ -208,7 +208,6 @@ func (r *gatewayAPIReconciler) isGatewayReferencingSecret(nsName *types.Namespac
 	}
 
 	for _, gw := range gwList.Items {
-		gw := gw
 		if !r.validateGatewayForReconcile(&gw) {
 			return false
 		}
@@ -549,7 +548,6 @@ func (r *gatewayAPIReconciler) updateStatusForGatewaysUnderGatewayClass(ctx cont
 	}
 
 	for _, gateway := range gateways.Items {
-		gateway := gateway
 		r.updateStatusForGateway(ctx, &gateway)
 	}
 

@@ -32,8 +32,8 @@ kind: SecurityPolicy
 metadata:
   name: cors-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: backend
   cors:
@@ -63,8 +63,8 @@ kind: SecurityPolicy
 metadata:
   name: cors-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: backend
   cors:

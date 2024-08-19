@@ -439,7 +439,7 @@ func (t *Translator) buildExtProc(
 		}
 
 		ds, err = t.processExtServiceDestination(
-			&extProc.BackendRefs[i].BackendObjectReference,
+			&extProc.BackendRefs[i],
 			policyNamespacedName,
 			egv1a1.KindEnvoyExtensionPolicy,
 			ir.GRPC,

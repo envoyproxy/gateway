@@ -56,10 +56,10 @@ kind: BackendTrafficPolicy
 metadata:
   name: retry-for-route
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: backend
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
   retry:
     numRetries: 5
     perRetry:
@@ -87,10 +87,10 @@ kind: BackendTrafficPolicy
 metadata:
   name: retry-for-route
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: backend
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
   retry:
     numRetries: 5
     perRetry:

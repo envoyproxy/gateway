@@ -4,6 +4,7 @@ run:
 linters:
   enable:
     - bodyclose
+    - copyloopvar
     - depguard
     - errorlint
     - exportloopref
@@ -114,6 +115,8 @@ linters-settings:
       - suite-extra-assert-call
   unparam:
     check-exported: false
+  copyloopvar:
+    check-alias: true
 
 issues:
   exclude-rules:

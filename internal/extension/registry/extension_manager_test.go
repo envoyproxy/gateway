@@ -65,7 +65,6 @@ func TestGetExtensionServerAddress(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 			out := getExtensionServerAddress(tc.Service)
 			require.Equal(t, tc.Expected, out)

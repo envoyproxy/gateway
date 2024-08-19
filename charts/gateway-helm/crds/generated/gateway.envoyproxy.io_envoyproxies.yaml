@@ -10398,6 +10398,15 @@ spec:
                                           description: BackendRef defines how an ObjectReference
                                             that is specific to BackendRef.
                                           properties:
+                                            failover:
+                                              description: |-
+                                                Failover This indicates whether the backend is designated as a failover.
+                                                Multiple failover backends can be configured.
+                                                It is highly recommended to configure active or passive health checks to ensure that failover can be detected
+                                                when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.
+                                                The overprovisioning factor is set to 1.4, meaning the failover backends will only start receiving traffic when
+                                                the health of the active backends falls below 72%.
+                                              type: boolean
                                             group:
                                               default: ""
                                               description: |-
@@ -10590,6 +10599,18 @@ spec:
                                               active:
                                                 description: Active health check configuration
                                                 properties:
+                                                  grpc:
+                                                    description: |-
+                                                      GRPC defines the configuration of the GRPC health checker.
+                                                      It's optional, and can only be used if the specified type is GRPC.
+                                                    properties:
+                                                      service:
+                                                        description: |-
+                                                          Service to send in the health check request.
+                                                          If this is not specified, then the health check request applies to the entire
+                                                          server and not to a specific service.
+                                                        type: string
+                                                    type: object
                                                   healthyThreshold:
                                                     default: 1
                                                     description: HealthyThreshold
@@ -10773,9 +10794,11 @@ spec:
                                                     - enum:
                                                       - HTTP
                                                       - TCP
+                                                      - GRPC
                                                     - enum:
                                                       - HTTP
                                                       - TCP
+                                                      - GRPC
                                                     description: Type defines the
                                                       type of health checker.
                                                     type: string
@@ -10802,6 +10825,11 @@ spec:
                                                     set.
                                                   rule: 'self.type == ''TCP'' ? has(self.tcp)
                                                     : !has(self.tcp)'
+                                                - message: The grpc field can only
+                                                    be set if the Health Checker type
+                                                    is GRPC.
+                                                  rule: 'has(self.grpc) ? self.type
+                                                    == ''GRPC'' : true'
                                               passive:
                                                 description: Passive passive check
                                                   configuration
@@ -10903,7 +10931,7 @@ spec:
                                           loadBalancer:
                                             description: |-
                                               LoadBalancer policy to apply when routing traffic from the gateway to
-                                              the backend endpoints
+                                              the backend endpoints. Defaults to `LeastRequest`.
                                             properties:
                                               consistentHash:
                                                 description: |-
@@ -11269,6 +11297,15 @@ spec:
                                           description: BackendRef defines how an ObjectReference
                                             that is specific to BackendRef.
                                           properties:
+                                            failover:
+                                              description: |-
+                                                Failover This indicates whether the backend is designated as a failover.
+                                                Multiple failover backends can be configured.
+                                                It is highly recommended to configure active or passive health checks to ensure that failover can be detected
+                                                when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.
+                                                The overprovisioning factor is set to 1.4, meaning the failover backends will only start receiving traffic when
+                                                the health of the active backends falls below 72%.
+                                              type: boolean
                                             group:
                                               default: ""
                                               description: |-
@@ -11461,6 +11498,18 @@ spec:
                                               active:
                                                 description: Active health check configuration
                                                 properties:
+                                                  grpc:
+                                                    description: |-
+                                                      GRPC defines the configuration of the GRPC health checker.
+                                                      It's optional, and can only be used if the specified type is GRPC.
+                                                    properties:
+                                                      service:
+                                                        description: |-
+                                                          Service to send in the health check request.
+                                                          If this is not specified, then the health check request applies to the entire
+                                                          server and not to a specific service.
+                                                        type: string
+                                                    type: object
                                                   healthyThreshold:
                                                     default: 1
                                                     description: HealthyThreshold
@@ -11644,9 +11693,11 @@ spec:
                                                     - enum:
                                                       - HTTP
                                                       - TCP
+                                                      - GRPC
                                                     - enum:
                                                       - HTTP
                                                       - TCP
+                                                      - GRPC
                                                     description: Type defines the
                                                       type of health checker.
                                                     type: string
@@ -11673,6 +11724,11 @@ spec:
                                                     set.
                                                   rule: 'self.type == ''TCP'' ? has(self.tcp)
                                                     : !has(self.tcp)'
+                                                - message: The grpc field can only
+                                                    be set if the Health Checker type
+                                                    is GRPC.
+                                                  rule: 'has(self.grpc) ? self.type
+                                                    == ''GRPC'' : true'
                                               passive:
                                                 description: Passive passive check
                                                   configuration
@@ -11774,7 +11830,7 @@ spec:
                                           loadBalancer:
                                             description: |-
                                               LoadBalancer policy to apply when routing traffic from the gateway to
-                                              the backend endpoints
+                                              the backend endpoints. Defaults to `LeastRequest`.
                                             properties:
                                               consistentHash:
                                                 description: |-
@@ -12218,6 +12274,15 @@ spec:
                                     description: BackendRef defines how an ObjectReference
                                       that is specific to BackendRef.
                                     properties:
+                                      failover:
+                                        description: |-
+                                          Failover This indicates whether the backend is designated as a failover.
+                                          Multiple failover backends can be configured.
+                                          It is highly recommended to configure active or passive health checks to ensure that failover can be detected
+                                          when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.
+                                          The overprovisioning factor is set to 1.4, meaning the failover backends will only start receiving traffic when
+                                          the health of the active backends falls below 72%.
+                                        type: boolean
                                       group:
                                         default: ""
                                         description: |-
@@ -12404,6 +12469,18 @@ spec:
                                         active:
                                           description: Active health check configuration
                                           properties:
+                                            grpc:
+                                              description: |-
+                                                GRPC defines the configuration of the GRPC health checker.
+                                                It's optional, and can only be used if the specified type is GRPC.
+                                              properties:
+                                                service:
+                                                  description: |-
+                                                    Service to send in the health check request.
+                                                    If this is not specified, then the health check request applies to the entire
+                                                    server and not to a specific service.
+                                                  type: string
+                                              type: object
                                             healthyThreshold:
                                               default: 1
                                               description: HealthyThreshold defines
@@ -12577,9 +12654,11 @@ spec:
                                               - enum:
                                                 - HTTP
                                                 - TCP
+                                                - GRPC
                                               - enum:
                                                 - HTTP
                                                 - TCP
+                                                - GRPC
                                               description: Type defines the type of
                                                 health checker.
                                               type: string
@@ -12604,6 +12683,10 @@ spec:
                                               tcp field needs to be set.
                                             rule: 'self.type == ''TCP'' ? has(self.tcp)
                                               : !has(self.tcp)'
+                                          - message: The grpc field can only be set
+                                              if the Health Checker type is GRPC.
+                                            rule: 'has(self.grpc) ? self.type == ''GRPC''
+                                              : true'
                                         passive:
                                           description: Passive passive check configuration
                                           properties:
@@ -12701,7 +12784,7 @@ spec:
                                     loadBalancer:
                                       description: |-
                                         LoadBalancer policy to apply when routing traffic from the gateway to
-                                        the backend endpoints
+                                        the backend endpoints. Defaults to `LeastRequest`.
                                       properties:
                                         consistentHash:
                                           description: |-
@@ -13103,6 +13186,15 @@ spec:
                               description: BackendRef defines how an ObjectReference
                                 that is specific to BackendRef.
                               properties:
+                                failover:
+                                  description: |-
+                                    Failover This indicates whether the backend is designated as a failover.
+                                    Multiple failover backends can be configured.
+                                    It is highly recommended to configure active or passive health checks to ensure that failover can be detected
+                                    when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.
+                                    The overprovisioning factor is set to 1.4, meaning the failover backends will only start receiving traffic when
+                                    the health of the active backends falls below 72%.
+                                  type: boolean
                                 group:
                                   default: ""
                                   description: |-
@@ -13288,6 +13380,18 @@ spec:
                                   active:
                                     description: Active health check configuration
                                     properties:
+                                      grpc:
+                                        description: |-
+                                          GRPC defines the configuration of the GRPC health checker.
+                                          It's optional, and can only be used if the specified type is GRPC.
+                                        properties:
+                                          service:
+                                            description: |-
+                                              Service to send in the health check request.
+                                              If this is not specified, then the health check request applies to the entire
+                                              server and not to a specific service.
+                                            type: string
+                                        type: object
                                       healthyThreshold:
                                         default: 1
                                         description: HealthyThreshold defines the
@@ -13460,9 +13564,11 @@ spec:
                                         - enum:
                                           - HTTP
                                           - TCP
+                                          - GRPC
                                         - enum:
                                           - HTTP
                                           - TCP
+                                          - GRPC
                                         description: Type defines the type of health
                                           checker.
                                         type: string
@@ -13486,6 +13592,10 @@ spec:
                                         field needs to be set.
                                       rule: 'self.type == ''TCP'' ? has(self.tcp)
                                         : !has(self.tcp)'
+                                    - message: The grpc field can only be set if the
+                                        Health Checker type is GRPC.
+                                      rule: 'has(self.grpc) ? self.type == ''GRPC''
+                                        : true'
                                   passive:
                                     description: Passive passive check configuration
                                     properties:
@@ -13583,7 +13693,7 @@ spec:
                               loadBalancer:
                                 description: |-
                                   LoadBalancer policy to apply when routing traffic from the gateway to
-                                  the backend endpoints
+                                  the backend endpoints. Defaults to `LeastRequest`.
                                 properties:
                                   consistentHash:
                                     description: |-

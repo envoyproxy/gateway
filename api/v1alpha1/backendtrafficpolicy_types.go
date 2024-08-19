@@ -102,7 +102,7 @@ type BackendTrafficPolicyConnection struct {
 // backend will be configured.
 type ClusterSettings struct {
 	// LoadBalancer policy to apply when routing traffic from the gateway to
-	// the backend endpoints
+	// the backend endpoints. Defaults to `LeastRequest`.
 	// +optional
 	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty"`
 

@@ -106,7 +106,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				case resourcev3.ListenerType:
 					temp := &listenerv3.Listener{}
 					if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
-						tErr := fmt.Errorf(unmarshalErrorMessage(err, p.Operation.Value))
+						tErr := errors.New(unmarshalErrorMessage(err, p.Operation.Value))
 						tErrs = errors.Join(tErrs, tErr)
 						continue
 					}
@@ -119,7 +119,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				case resourcev3.RouteType:
 					temp := &routev3.RouteConfiguration{}
 					if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
-						tErr := fmt.Errorf(unmarshalErrorMessage(err, p.Operation.Value))
+						tErr := errors.New(unmarshalErrorMessage(err, p.Operation.Value))
 						tErrs = errors.Join(tErrs, tErr)
 						continue
 					}
@@ -132,7 +132,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				case resourcev3.ClusterType:
 					temp := &clusterv3.Cluster{}
 					if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
-						tErr := fmt.Errorf(unmarshalErrorMessage(err, p.Operation.Value))
+						tErr := errors.New(unmarshalErrorMessage(err, p.Operation.Value))
 						tErrs = errors.Join(tErrs, tErr)
 						continue
 					}
@@ -145,7 +145,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				case resourcev3.EndpointType:
 					temp := &endpointv3.ClusterLoadAssignment{}
 					if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
-						tErr := fmt.Errorf(unmarshalErrorMessage(err, p.Operation.Value))
+						tErr := errors.New(unmarshalErrorMessage(err, p.Operation.Value))
 						tErrs = errors.Join(tErrs, tErr)
 						continue
 					}
@@ -158,7 +158,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				case resourcev3.SecretType:
 					temp := &tlsv3.Secret{}
 					if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
-						tErr := fmt.Errorf(unmarshalErrorMessage(err, p.Operation.Value))
+						tErr := errors.New(unmarshalErrorMessage(err, p.Operation.Value))
 						tErrs = errors.Join(tErrs, tErr)
 						continue
 					}
@@ -302,7 +302,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				case resourcev3.ListenerType:
 					temp := &listenerv3.Listener{}
 					if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
-						tErr := fmt.Errorf(unmarshalErrorMessage(err, string(modifiedJSON)))
+						tErr := errors.New(unmarshalErrorMessage(err, string(modifiedJSON)))
 						tErrs = errors.Join(tErrs, tErr)
 						continue
 					}
@@ -319,7 +319,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				case resourcev3.RouteType:
 					temp := &routev3.RouteConfiguration{}
 					if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
-						tErr := fmt.Errorf(unmarshalErrorMessage(err, string(modifiedJSON)))
+						tErr := errors.New(unmarshalErrorMessage(err, string(modifiedJSON)))
 						tErrs = errors.Join(tErrs, tErr)
 						continue
 					}
@@ -336,7 +336,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				case resourcev3.ClusterType:
 					temp := &clusterv3.Cluster{}
 					if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
-						tErr := fmt.Errorf(unmarshalErrorMessage(err, string(modifiedJSON)))
+						tErr := errors.New(unmarshalErrorMessage(err, string(modifiedJSON)))
 						tErrs = errors.Join(tErrs, tErr)
 						continue
 					}
@@ -353,7 +353,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				case resourcev3.EndpointType:
 					temp := &endpointv3.ClusterLoadAssignment{}
 					if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
-						tErr := fmt.Errorf(unmarshalErrorMessage(err, string(modifiedJSON)))
+						tErr := errors.New(unmarshalErrorMessage(err, string(modifiedJSON)))
 						tErrs = errors.Join(tErrs, tErr)
 						continue
 					}
@@ -370,7 +370,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				case resourcev3.SecretType:
 					temp := &tlsv3.Secret{}
 					if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
-						tErr := fmt.Errorf(unmarshalErrorMessage(err, string(modifiedJSON)))
+						tErr := errors.New(unmarshalErrorMessage(err, string(modifiedJSON)))
 						tErrs = errors.Join(tErrs, tErr)
 						continue
 					}

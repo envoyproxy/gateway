@@ -227,7 +227,6 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				// their target is not found (not relevant)
 
 				for _, backendTLSPolicy := range result.BackendTLSPolicies {
-					backendTLSPolicy := backendTLSPolicy
 					key := utils.NamespacedName(backendTLSPolicy)
 					if !(reflect.ValueOf(backendTLSPolicy.Status).IsZero()) {
 						r.ProviderResources.BackendTLSPolicyStatuses.Store(key, &backendTLSPolicy.Status)
@@ -257,7 +256,6 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					delete(statusesToDelete.SecurityPolicyStatusKeys, key)
 				}
 				for _, envoyExtensionPolicy := range result.EnvoyExtensionPolicies {
-					envoyExtensionPolicy := envoyExtensionPolicy
 					key := utils.NamespacedName(envoyExtensionPolicy)
 					if !(reflect.ValueOf(envoyExtensionPolicy.Status).IsZero()) {
 						r.ProviderResources.EnvoyExtensionPolicyStatuses.Store(key, &envoyExtensionPolicy.Status)
@@ -265,7 +263,6 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					delete(statusesToDelete.EnvoyExtensionPolicyStatusKeys, key)
 				}
 				for _, extServerPolicy := range result.ExtensionServerPolicies {
-					extServerPolicy := extServerPolicy
 					key := message.NamespacedNameAndGVK{
 						NamespacedName:   utils.NamespacedName(&extServerPolicy),
 						GroupVersionKind: extServerPolicy.GroupVersionKind(),

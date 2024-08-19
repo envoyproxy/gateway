@@ -56,7 +56,6 @@ func TestRateLimitLabelSelector(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			got := LabelSelector()
 			require.ElementsMatch(t, tc.expected, got)
@@ -80,7 +79,6 @@ func TestRateLimitLabels(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			got := rateLimitLabels()
 			require.Equal(t, tc.expected, got)

@@ -494,6 +494,12 @@ type HeaderSettings struct {
 	// (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
 	// It defaults to false.
 	PreserveXRequestID bool `json:"preserveXRequestID,omitempty" yaml:"preserveXRequestID,omitempty"`
+
+	// EarlyAddRequestHeaders defines headers that would be added before envoy request processing.
+	EarlyAddRequestHeaders []AddHeader `json:"earlyAddRequestHeaders,omitempty" yaml:"earlyAddRequestHeaders,omitempty"`
+
+	// EarlyRemoveRequestHeaders defines headers that would be removed before envoy request processing.
+	EarlyRemoveRequestHeaders []string `json:"earlyRemoveRequestHeaders,omitempty" yaml:"earlyRemoveRequestHeaders,omitempty"`
 }
 
 // ClientTimeout sets the timeout configuration for downstream connections
@@ -1149,6 +1155,10 @@ type DestinationSetting struct {
 	// invalid endpoints are represents with a
 	// non-zero weight with an empty endpoints list
 	Weight *uint32 `json:"weight,omitempty" yaml:"weight,omitempty"`
+	// Priority default to priority 0, the highest level.
+	// If multiple destinations share the same priority, they will all be utilized.
+	// Lower priority endpoints will be used only if higher priority levels are unavailable.
+	Priority *uint32 `json:"priority,omitempty"`
 	// Protocol associated with this destination/port.
 	Protocol  AppProtocol            `json:"protocol,omitempty" yaml:"protocol,omitempty"`
 	Endpoints []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
@@ -1968,6 +1978,8 @@ type ActiveHealthCheck struct {
 	HTTP *HTTPHealthChecker `json:"http,omitempty" yaml:"http,omitempty"`
 	// TCP defines the configuration of tcp health checker.
 	TCP *TCPHealthChecker `json:"tcp,omitempty" yaml:"tcp,omitempty"`
+	// GRPC defines if the GRPC healthcheck service should be used
+	GRPC *GRPCHealthChecker `json:"grpc,omitempty" yaml:"grpc,omitempty"`
 }
 
 func (h *HealthCheck) SetHTTPHostIfAbsent(host string) {
@@ -1998,6 +2010,9 @@ func (h *HealthCheck) Validate() error {
 			matchCount++
 		}
 		if h.Active.TCP != nil {
+			matchCount++
+		}
+		if h.Active.GRPC != nil {
 			matchCount++
 		}
 		if matchCount > 1 {
@@ -2092,6 +2107,15 @@ func (h HTTPStatus) Validate() error {
 		return ErrHTTPStatusInvalid
 	}
 	return nil
+}
+
+// GRPCHealthChecker defines the settings of the gRPC health check.
+// +k8s:deepcopy-gen=true
+type GRPCHealthChecker struct {
+	// Service is the name of a specific service hosted by the server for
+	// which the health check should be requested. If not specified, then the default
+	// is to send a health check request for the entire server.
+	Service *string `json:"service,omitempty" yaml:"service,omitempty"`
 }
 
 // TCPHealthChecker defines the settings of tcp health check.

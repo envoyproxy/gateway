@@ -556,7 +556,7 @@ func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
 	}
 
 	if rr.RetryOn != nil {
-		if rr.RetryOn.Triggers != nil && len(rr.RetryOn.Triggers) > 0 {
+		if len(rr.RetryOn.Triggers) > 0 {
 			if ro, err := buildRetryOn(rr.RetryOn.Triggers); err == nil {
 				rp.RetryOn = ro
 			} else {
@@ -564,7 +564,7 @@ func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
 			}
 		}
 
-		if rr.RetryOn.HTTPStatusCodes != nil && len(rr.RetryOn.HTTPStatusCodes) > 0 {
+		if len(rr.RetryOn.HTTPStatusCodes) > 0 {
 			rp.RetriableStatusCodes = buildRetryStatusCodes(rr.RetryOn.HTTPStatusCodes)
 		}
 	}

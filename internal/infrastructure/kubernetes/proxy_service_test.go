@@ -26,7 +26,6 @@ func TestDeleteProxyService(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			kube := newTestInfra(t)
 			infra := ir.NewInfra()

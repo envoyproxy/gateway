@@ -523,7 +523,6 @@ func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
 	var allowOrigins []*ir.StringMatch
 
 	for _, origin := range cors.AllowOrigins {
-		origin := origin
 		if isWildcard(string(origin)) {
 			regexStr := wildcard2regex(string(origin))
 			allowOrigins = append(allowOrigins, &ir.StringMatch{
@@ -814,6 +813,7 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Reso
 		authority  string
 		err        error
 		traffic    *ir.TrafficFeatures
+		failover   *bool
 	)
 
 	switch {
@@ -825,6 +825,7 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Reso
 		backendRef = http.BackendRef
 		if len(http.BackendRefs) != 0 {
 			backendRef = egv1a1.ToBackendObjectReference(http.BackendRefs[0])
+			failover = http.BackendRefs[0].Failover
 		}
 		protocol = ir.HTTP
 		if traffic, err = translateTrafficFeatures(http.BackendSettings); err != nil {
@@ -834,6 +835,7 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Reso
 		backendRef = grpc.BackendRef
 		if len(grpc.BackendRefs) != 0 {
 			backendRef = egv1a1.ToBackendObjectReference(grpc.BackendRefs[0])
+			failover = grpc.BackendRefs[0].Failover
 		}
 		protocol = ir.GRPC
 		if traffic, err = translateTrafficFeatures(grpc.BackendSettings); err != nil {
@@ -852,7 +854,7 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Reso
 	authority = backendRefAuthority(resources, backendRef, policy)
 	pnn := utils.NamespacedName(policy)
 	if ds, err = t.processExtServiceDestination(
-		backendRef,
+		&egv1a1.BackendRef{BackendObjectReference: *backendRef, Failover: failover},
 		pnn,
 		KindSecurityPolicy,
 		protocol,
