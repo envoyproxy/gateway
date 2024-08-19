@@ -126,7 +126,6 @@ func TestAddEnvoyProxyFinalizer(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			r.client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.ep).Build()
 			err := r.addFinalizer(ctx, tc.ep)
@@ -181,7 +180,6 @@ func TestRemoveEnvoyProxyFinalizer(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			r.client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.ep).Build()
 			err := r.removeFinalizer(ctx, tc.ep)

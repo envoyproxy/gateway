@@ -821,7 +821,6 @@ func (r *gatewayAPIReconciler) processEnvoyProxyFinalizers(ctx context.Context, 
 		return err
 	}
 	for _, ep := range epList.Items {
-		ep := ep
 		isReferenced := false
 		for _, gc := range managedGCs {
 			if classRefsEnvoyProxy(gc, &ep) && gc.DeletionTimestamp.IsZero() {
