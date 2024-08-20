@@ -120,4 +120,4 @@ xdsIR:
           name: tcproute/default/tcproute-1/rule/-1
           settings:
           - weight: 1
-        name: tcproute/default/tcproute-1
+        name: envoy-gateway/gateway-1/tcp/tcproute/default/tcproute-1

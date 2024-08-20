@@ -861,7 +861,7 @@
                           }
                         }
                       ],
-                      "name": "tcproute/default/backend"
+                      "name": "default/eg/tcp/tcproute/default/backend"
                     }
                   ],
                   "name": "default/eg/tcp",
@@ -932,7 +932,7 @@
                           }
                         }
                       ],
-                      "name": "tlsroute/default/backend"
+                      "name": "default/eg/tls-passthrough/tlsroute/default/backend"
                     }
                   ],
                   "listenerFilters": [

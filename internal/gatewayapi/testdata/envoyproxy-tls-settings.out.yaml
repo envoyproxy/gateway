@@ -317,7 +317,7 @@ xdsIR:
               sni: example.com
               useSystemTrustStore: true
             weight: 1
-        name: tcproute/envoy-gateway/envoy-gateway
+        name: envoy-gateway/gateway-tls//tcproute/envoy-gateway/envoy-gateway
         tls:
           terminate:
             certificates:
