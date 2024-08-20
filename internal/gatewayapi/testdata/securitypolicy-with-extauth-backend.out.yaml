@@ -169,6 +169,9 @@ securityPolicies:
       failOpen: true
       grpc:
         backendRefs:
+        - kind: Service
+          name: service-2
+          port: 8080
         - group: gateway.envoyproxy.io
           kind: Backend
           name: backend-fqdn
@@ -240,10 +243,16 @@ xdsIR:
           extAuth:
             failOpen: true
             grpc:
-              authority: primary.foo.com:3000
+              authority: service-2.default:8080
               destination:
-                name: securitypolicy/default/policy-for-http-route-1/default/backend-fqdn
+                name: securitypolicy/default/policy-for-http-route-1/0
                 settings:
+                - addressType: IP
+                  endpoints:
+                  - host: 7.7.7.7
+                    port: 8080
+                  protocol: GRPC
+                  weight: 1
                 - addressType: FQDN
                   endpoints:
                   - host: primary.foo.com
@@ -278,10 +287,16 @@ xdsIR:
           extAuth:
             failOpen: true
             grpc:
-              authority: primary.foo.com:3000
+              authority: service-2.default:8080
               destination:
-                name: securitypolicy/default/policy-for-http-route-1/default/backend-fqdn
+                name: securitypolicy/default/policy-for-http-route-1/0
                 settings:
+                - addressType: IP
+                  endpoints:
+                  - host: 7.7.7.7
+                    port: 8080
+                  protocol: GRPC
+                  weight: 1
                 - addressType: FQDN
                   endpoints:
                   - host: primary.foo.com

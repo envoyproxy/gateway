@@ -805,69 +805,67 @@ func (t *Translator) buildBasicAuth(
 
 func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Resources, envoyProxy *egv1a1.EnvoyProxy) (*ir.ExtAuth, error) {
 	var (
-		http       = policy.Spec.ExtAuth.HTTP
-		grpc       = policy.Spec.ExtAuth.GRPC
-		backendRef *gwapiv1.BackendObjectReference
-		protocol   ir.AppProtocol
-		ds         *ir.DestinationSetting
-		authority  string
-		err        error
-		traffic    *ir.TrafficFeatures
-		failover   *bool
+		http      = policy.Spec.ExtAuth.HTTP
+		grpc      = policy.Spec.ExtAuth.GRPC
+		backends  *egv1a1.BackendCluster
+		protocol  ir.AppProtocol
+		ds        []*ir.DestinationSetting
+		authority string
+		err       error
+		traffic   *ir.TrafficFeatures
 	)
 
-	switch {
 	// These are sanity checks, they should never happen because the API server
 	// should have caught them
-	case http != nil && grpc != nil:
-		return nil, errors.New("only one of grpc or http can be specified")
-	case http != nil:
-		backendRef = http.BackendRef
-		if len(http.BackendRefs) != 0 {
-			backendRef = egv1a1.ToBackendObjectReference(http.BackendRefs[0])
-			failover = http.BackendRefs[0].Failover
-		}
-		protocol = ir.HTTP
-		if traffic, err = translateTrafficFeatures(http.BackendSettings); err != nil {
-			return nil, err
-		}
-	case grpc != nil:
-		backendRef = grpc.BackendRef
-		if len(grpc.BackendRefs) != 0 {
-			backendRef = egv1a1.ToBackendObjectReference(grpc.BackendRefs[0])
-			failover = grpc.BackendRefs[0].Failover
-		}
-		protocol = ir.GRPC
-		if traffic, err = translateTrafficFeatures(grpc.BackendSettings); err != nil {
-			return nil, err
-		}
-	// These are sanity checks, they should never happen because the API server
-	// should have caught them
-	default: // http == nil && grpc == nil:
+	if http == nil && grpc == nil {
 		return nil, errors.New("one of grpc or http must be specified")
+	} else if http != nil && grpc != nil {
+		return nil, errors.New("only one of grpc or http can be specified")
 	}
 
-	if err = t.validateExtServiceBackendReference(backendRef, policy.Namespace, policy.Kind, resources); err != nil {
-		return nil, err
+	switch {
+	case http != nil:
+		backends = &http.BackendCluster
+		protocol = ir.HTTP
+	case grpc != nil:
+		backends = &grpc.BackendCluster
+		protocol = ir.GRPC
 	}
-
-	authority = backendRefAuthority(resources, backendRef, policy)
 	pnn := utils.NamespacedName(policy)
-	if ds, err = t.processExtServiceDestination(
-		&egv1a1.BackendRef{BackendObjectReference: *backendRef, Failover: failover},
-		pnn,
-		KindSecurityPolicy,
-		protocol,
-		resources,
-		envoyProxy,
-	); err != nil {
-		return nil, err
+	for _, backendRef := range backends.BackendRefs {
+		if err = t.validateExtServiceBackendReference(&backendRef.BackendObjectReference, policy.Namespace, policy.Kind, resources); err != nil {
+			return nil, err
+		}
+
+		// Authority is the calculated hostname that will be used as the Authority header.
+		// If there are multiple backend referenced, simply use the first one - there are no good answers here.
+		// When translated to XDS, the authority is used on the filter level not on the cluster level.
+		// There's no way to translate to XDS and use a different authority for each backendref
+		if authority == "" {
+			authority = backendRefAuthority(resources, &backendRef.BackendObjectReference, policy)
+		}
+
+		extServiceDest, err := t.processExtServiceDestination(
+			&backendRef,
+			pnn,
+			KindSecurityPolicy,
+			protocol,
+			resources,
+			envoyProxy,
+		)
+		if err != nil {
+			return nil, err
+		}
+		ds = append(ds, extServiceDest)
 	}
 	rd := ir.RouteDestination{
-		Name:     irExtServiceDestinationName(policy, backendRef),
-		Settings: []*ir.DestinationSetting{ds},
+		Name:     irIndexedExtServiceDestinationName(pnn, egv1a1.KindSecurityPolicy, 0),
+		Settings: ds,
 	}
 
+	if traffic, err = translateTrafficFeatures(backends.BackendSettings); err != nil {
+		return nil, err
+	}
 	extAuth := &ir.ExtAuth{
 		Name:             irConfigName(policy),
 		HeadersToExtAuth: policy.Spec.ExtAuth.HeadersToExtAuth,
@@ -914,18 +912,6 @@ func backendRefAuthority(resources *Resources, backendRef *gwapiv1.BackendObject
 		backendRef.Name,
 		backendNamespace,
 		*backendRef.Port)
-}
-
-func irExtServiceDestinationName(policy *egv1a1.SecurityPolicy, backendRef *gwapiv1.BackendObjectReference) string {
-	nn := types.NamespacedName{
-		Name:      string(backendRef.Name),
-		Namespace: NamespaceDerefOr(backendRef.Namespace, policy.Namespace),
-	}
-
-	return strings.ToLower(fmt.Sprintf(
-		"%s/%s",
-		irConfigName(policy),
-		nn.String()))
 }
 
 func (t *Translator) buildAuthorization(policy *egv1a1.SecurityPolicy) (*ir.Authorization, error) {
