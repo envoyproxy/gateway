@@ -24,7 +24,6 @@ func TestGetHashedName(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			result := GetHashedName(tc.nsName, tc.length)
 			require.Equal(t, tc.expected, result, "Result does not match expected string")

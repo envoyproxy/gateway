@@ -473,6 +473,39 @@ type BackendRef struct {
 	// BackendObjectReference references a Kubernetes object that represents the backend.
 	// Only Service kind is supported for now.
 	gwapiv1.BackendObjectReference `json:",inline"`
+	// Failover This indicates whether the backend is designated as a failover.
+	// Multiple failover backends can be configured.
+	// It is highly recommended to configure active or passive health checks to ensure that failover can be detected
+	// when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.
+	// The overprovisioning factor is set to 1.4, meaning the failover backends will only start receiving traffic when
+	// the health of the active backends falls below 72%.
+	// +optional
+	Failover *bool `json:"failover,omitempty"`
+}
+
+// BackendCluster contains all the configuration required for configuring access
+// to a backend. This can include multiple endpoints, and settings that apply for
+// managing the connection to all these endpoints.
+type BackendCluster struct {
+	// BackendRef references a Kubernetes object that represents the
+	// backend server to which the authorization request will be sent.
+	//
+	// Deprecated: Use BackendRefs instead.
+	// +optional
+	BackendRef *gwapiv1.BackendObjectReference `json:"backendRef,omitempty"`
+
+	// BackendRefs references a Kubernetes object that represents the
+	// backend server to which the authorization request will be sent.
+	//
+	// +kubebuilder:validation:MaxItems=16
+	// +optional
+	BackendRefs []BackendRef `json:"backendRefs,omitempty"`
+
+	// BackendSettings holds configuration for managing the connection
+	// to the backend.
+	//
+	// +optional
+	BackendSettings *ClusterSettings `json:"backendSettings,omitempty"`
 }
 
 // CIDR defines a CIDR Address range.
@@ -492,14 +525,16 @@ type HTTP2Settings struct {
 	// InitialStreamWindowSize sets the initial window size for HTTP/2 streams.
 	// If not set, the default value is 64 KiB(64*1024).
 	//
-	// +kubebuilder:validation:XValidation:rule="type(self) == string ? self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\") : type(self) == int",message="initialStreamWindowSize must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
+	// +kubebuilder:validation:XIntOrString
+	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
 	// +optional
 	InitialStreamWindowSize *resource.Quantity `json:"initialStreamWindowSize,omitempty"`
 
 	// InitialConnectionWindowSize sets the initial window size for HTTP/2 connections.
 	// If not set, the default value is 1 MiB.
 	//
-	// +kubebuilder:validation:XValidation:rule="type(self) == string ? self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\") : type(self) == int",message="initialConnectionWindowSize must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
+	// +kubebuilder:validation:XIntOrString
+	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
 	// +optional
 	InitialConnectionWindowSize *resource.Quantity `json:"initialConnectionWindowSize,omitempty"`
 

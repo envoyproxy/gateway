@@ -1,0 +1,65 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      name: gateway-1
+      namespace: envoy-gateway
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: empty-hostname
+          port: 80
+          protocol: HTTP
+          allowedRoutes:
+            namespaces:
+              from: All
+        - name: wildcard-example-com
+          port: 80
+          protocol: HTTP
+          hostname: "*.example.com"
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      name: httproute-1
+      namespace: envoy-gateway
+    spec:
+      parentRefs:
+        - name: gateway-1
+          namespace: envoy-gateway
+          sectionName: empty-hostname
+      hostnames:
+        - "bar.com"
+        - "*.example.com"  # request matching is prevented by the isolation wildcard-example-com listener
+      rules:
+        - matches:
+            - path:
+                type: PathPrefix
+                value: /empty-hostname
+          backendRefs:
+            - name: service-1
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      name: httproute-2
+      namespace: envoy-gateway
+    spec:
+      parentRefs:
+        - name: gateway-1
+          namespace: envoy-gateway
+          sectionName: wildcard-example-com
+      hostnames:
+        - "bar.com"  # doesn't match wildcard-example-com listener
+        - "*.example.com"
+      rules:
+        - matches:
+            - path:
+                type: PathPrefix
+                value: /wildcard-example-com
+          backendRefs:
+            - name: service-1
+              port: 8080

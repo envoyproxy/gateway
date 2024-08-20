@@ -54,7 +54,7 @@ type ImageFetcherOption struct {
 }
 
 func (o *ImageFetcherOption) useAnonymous() bool {
-	return o.PullSecret == nil || len(o.PullSecret) == 0
+	return len(o.PullSecret) == 0
 }
 
 func (o *ImageFetcherOption) String() string {

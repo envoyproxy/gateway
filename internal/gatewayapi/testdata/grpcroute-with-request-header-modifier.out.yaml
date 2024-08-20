@@ -58,6 +58,11 @@ grpcRoutes:
       filters:
       - requestHeaderModifier:
           add:
+          - name: my-header-multi-value
+            value: foo,bar
+        type: RequestHeaderModifier
+      - requestHeaderModifier:
+          add:
           - name: my-header
             value: foo
         type: RequestHeaderModifier
@@ -118,8 +123,14 @@ xdsIR:
       routes:
       - addRequestHeaders:
         - append: true
+          name: my-header-multi-value
+          value:
+          - foo
+          - bar
+        - append: true
           name: my-header
-          value: foo
+          value:
+          - foo
         destination:
           name: grpcroute/default/grpcroute-1/rule/0
           settings:

@@ -131,7 +131,6 @@ func TestTLSConfig(t *testing.T) {
 	defer g.GracefulStop()
 
 	for name, tc := range tests {
-		tc := tc
 		t.Run(name, func(t *testing.T) {
 			// Store certificate and key to temp dir used by serveContext.
 			err = tc.serverCredentials.WritePEM(certFile, keyFile)

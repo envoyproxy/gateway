@@ -45,14 +45,51 @@ type BackendTrafficPolicy struct {
 // BackendTrafficPolicySpec defines the desired state of BackendTrafficPolicy.
 type BackendTrafficPolicySpec struct {
 	PolicyTargetReferences `json:",inline"`
+	ClusterSettings        `json:",inline"`
 
 	// RateLimit allows the user to limit the number of incoming requests
 	// to a predefined value based on attributes within the traffic flow.
 	// +optional
 	RateLimit *RateLimitSpec `json:"rateLimit,omitempty"`
 
+	// FaultInjection defines the fault injection policy to be applied. This configuration can be used to
+	// inject delays and abort requests to mimic failure scenarios such as service failures and overloads
+	// +optional
+	FaultInjection *FaultInjection `json:"faultInjection,omitempty"`
+
+	// Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
+	// If not set, retry will be disabled.
+	// +optional
+	Retry *Retry `json:"retry,omitempty"`
+
+	// UseClientProtocol configures Envoy to prefer sending requests to backends using
+	// the same HTTP protocol that the incoming request used. Defaults to false, which means
+	// that Envoy will use the protocol indicated by the attached BackendRef.
+	//
+	// +optional
+	UseClientProtocol *bool `json:"useClientProtocol,omitempty"`
+
+	// The compression config for the http streams.
+	//
+	// +optional
+	// +notImplementedHide
+	Compression []*Compression `json:"compression,omitempty"`
+}
+
+// +kubebuilder:object:root=true
+
+// BackendTrafficPolicyList contains a list of BackendTrafficPolicy resources.
+type BackendTrafficPolicyList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []BackendTrafficPolicy `json:"items"`
+}
+
+// ClusterSettings provides the various knobs that can be set to control how traffic to a given
+// backend will be configured.
+type ClusterSettings struct {
 	// LoadBalancer policy to apply when routing traffic from the gateway to
-	// the backend endpoints
+	// the backend endpoints. Defaults to `LeastRequest`.
 	// +optional
 	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty"`
 
@@ -71,44 +108,22 @@ type BackendTrafficPolicySpec struct {
 	// +optional
 	HealthCheck *HealthCheck `json:"healthCheck,omitempty"`
 
-	// FaultInjection defines the fault injection policy to be applied. This configuration can be used to
-	// inject delays and abort requests to mimic failure scenarios such as service failures and overloads
-	// +optional
-	FaultInjection *FaultInjection `json:"faultInjection,omitempty"`
-
 	// Circuit Breaker settings for the upstream connections and requests.
 	// If not set, circuit breakers will be enabled with the default thresholds
 	//
 	// +optional
 	CircuitBreaker *CircuitBreaker `json:"circuitBreaker,omitempty"`
 
-	// Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
-	// If not set, retry will be disabled.
-	// +optional
-	Retry *Retry `json:"retry,omitempty"`
-
-	// UseClientProtocol configures Envoy to prefer sending requests to backends using
-	// the same HTTP protocol that the incoming request used. Defaults to false, which means
-	// that Envoy will use the protocol indicated by the attached BackendRef.
-	//
-	// +optional
-	UseClientProtocol *bool `json:"useClientProtocol,omitempty"`
-
 	// Timeout settings for the backend connections.
 	//
 	// +optional
 	Timeout *Timeout `json:"timeout,omitempty"`
 
-	// The compression config for the http streams.
-	//
-	// +optional
-	// +notImplementedHide
-	Compression []*Compression `json:"compression,omitempty"`
-
 	// Connection includes backend connection settings.
 	//
 	// +optional
 	Connection *BackendConnection `json:"connection,omitempty"`
+
 	// DNS includes dns resolution settings.
 	//
 	// +optional
@@ -118,15 +133,6 @@ type BackendTrafficPolicySpec struct {
 	//
 	// +optional
 	HTTP2 *HTTP2Settings `json:"http2,omitempty"`
-}
-
-// +kubebuilder:object:root=true
-
-// BackendTrafficPolicyList contains a list of BackendTrafficPolicy resources.
-type BackendTrafficPolicyList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []BackendTrafficPolicy `json:"items"`
 }
 
 func init() {

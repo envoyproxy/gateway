@@ -103,7 +103,6 @@ func TestGatewaysOfClass(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			gwList := &gwapiv1.GatewayList{Items: tc.gws}
 			actual := gatewaysOfClass(gc, gwList)
@@ -185,7 +184,6 @@ func TestIsGatewayClassAccepted(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			actual := isAccepted(tc.gc)
 			require.Equal(t, tc.expect, actual)

@@ -439,7 +439,7 @@ func (t *Translator) buildExtProc(
 		}
 
 		ds, err = t.processExtServiceDestination(
-			&extProc.BackendRefs[i].BackendObjectReference,
+			&extProc.BackendRefs[i],
 			policyNamespacedName,
 			egv1a1.KindEnvoyExtensionPolicy,
 			ir.GRPC,
@@ -471,9 +471,15 @@ func (t *Translator) buildExtProc(
 			NamespaceDerefOr(extProc.BackendRefs[0].Namespace, policyNamespacedName.Namespace))
 	}
 
+	traffic, err := translateTrafficFeatures(extProc.BackendCluster.BackendSettings)
+	if err != nil {
+		return nil, err
+	}
+
 	extProcIR := &ir.ExtProc{
 		Name:        name,
 		Destination: rd,
+		Traffic:     traffic,
 		Authority:   authority,
 	}
 

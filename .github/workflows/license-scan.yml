@@ -18,7 +18,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
     - name: Run scanner
-      uses: google/osv-scanner-action/osv-scanner-action@7ac94f9d40028db4cacf8d53adec6626f5d3d2f7  # v1.8.2
+      uses: google/osv-scanner-action/osv-scanner-action@c615bb556a9a61495d218c7d439e7c8abbbfb151  # v1.8.3
       with:
         scan-args: |-
           --skip-git

@@ -98,6 +98,9 @@ spec:
                 description: Connection includes client connection settings.
                 properties:
                   bufferLimit:
+                    allOf:
+                    - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
                     anyOf:
                     - type: integer
                     - type: string
@@ -107,12 +110,7 @@ spec:
                       For example, 20Mi, 1Gi, 256Ki etc.
                       Note that when the suffix is not provided, the value is interpreted as bytes.
                       Default: 32768 bytes.
-                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
-                    x-kubernetes-validations:
-                    - message: bufferLimit must be of the format "^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
-                      rule: 'type(self) == string ? self.matches(r"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$")
-                        : type(self) == int'
                   connectionLimit:
                     description: ConnectionLimit defines limits related to connections
                     properties:
@@ -133,6 +131,9 @@ spec:
                         type: integer
                     type: object
                   socketBufferLimit:
+                    allOf:
+                    - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
                     anyOf:
                     - type: integer
                     - type: string
@@ -141,12 +142,7 @@ spec:
                       SocketBufferLimit applies to socket streaming channel between TCP/IP stacks, it's in kernel space.
                       For example, 20Mi, 1Gi, 256Ki etc.
                       Note that when the suffix is not provided, the value is interpreted as bytes.
-                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
-                    x-kubernetes-validations:
-                    - message: socketBufferLimit must be of the format "^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
-                      rule: 'type(self) == string ? self.matches(r"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$")
-                        : type(self) == int'
                 type: object
               enableProxyProtocol:
                 description: |-
@@ -163,6 +159,148 @@ spec:
                       DisableRateLimitHeaders configures Envoy Proxy to omit the "X-RateLimit-" response headers
                       when rate limiting is enabled.
                     type: boolean
+                  earlyRequestHeaders:
+                    description: |-
+                      EarlyRequestHeaders defines settings for early request header modification, before envoy performs
+                      routing, tracing and built-in header manipulation.
+                    properties:
+                      add:
+                        description: |-
+                          Add adds the given header(s) (name, value) to the request
+                          before the action. It appends to any existing values associated
+                          with the header name.
+
+
+                          Input:
+                            GET /foo HTTP/1.1
+                            my-header: foo
+
+
+                          Config:
+                            add:
+                            - name: "my-header"
+                              value: "bar,baz"
+
+
+                          Output:
+                            GET /foo HTTP/1.1
+                            my-header: foo,bar,baz
+                        items:
+                          description: HTTPHeader represents an HTTP Header name and
+                            value as defined by RFC 7230.
+                          properties:
+                            name:
+                              description: |-
+                                Name is the name of the HTTP Header to be matched. Name matching MUST be
+                                case insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).
+
+
+                                If multiple entries specify equivalent header names, the first entry with
+                                an equivalent name MUST be considered for a match. Subsequent entries
+                                with an equivalent header name MUST be ignored. Due to the
+                                case-insensitivity of header names, "foo" and "Foo" are considered
+                                equivalent.
+                              maxLength: 256
+                              minLength: 1
+                              pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                              type: string
+                            value:
+                              description: Value is the value of HTTP Header to be
+                                matched.
+                              maxLength: 4096
+                              minLength: 1
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
+                        maxItems: 16
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
+                      remove:
+                        description: |-
+                          Remove the given header(s) from the HTTP request before the action. The
+                          value of Remove is a list of HTTP header names. Note that the header
+                          names are case-insensitive (see
+                          https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).
+
+
+                          Input:
+                            GET /foo HTTP/1.1
+                            my-header1: foo
+                            my-header2: bar
+                            my-header3: baz
+
+
+                          Config:
+                            remove: ["my-header1", "my-header3"]
+
+
+                          Output:
+                            GET /foo HTTP/1.1
+                            my-header2: bar
+                        items:
+                          type: string
+                        maxItems: 16
+                        type: array
+                        x-kubernetes-list-type: set
+                      set:
+                        description: |-
+                          Set overwrites the request with the given header (name, value)
+                          before the action.
+
+
+                          Input:
+                            GET /foo HTTP/1.1
+                            my-header: foo
+
+
+                          Config:
+                            set:
+                            - name: "my-header"
+                              value: "bar"
+
+
+                          Output:
+                            GET /foo HTTP/1.1
+                            my-header: bar
+                        items:
+                          description: HTTPHeader represents an HTTP Header name and
+                            value as defined by RFC 7230.
+                          properties:
+                            name:
+                              description: |-
+                                Name is the name of the HTTP Header to be matched. Name matching MUST be
+                                case insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).
+
+
+                                If multiple entries specify equivalent header names, the first entry with
+                                an equivalent name MUST be considered for a match. Subsequent entries
+                                with an equivalent header name MUST be ignored. Due to the
+                                case-insensitivity of header names, "foo" and "Foo" are considered
+                                equivalent.
+                              maxLength: 256
+                              minLength: 1
+                              pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                              type: string
+                            value:
+                              description: Value is the value of HTTP Header to be
+                                matched.
+                              maxLength: 4096
+                              minLength: 1
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
+                        maxItems: 16
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
+                    type: object
                   enableEnvoyHeaders:
                     description: |-
                       EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests
@@ -283,31 +421,27 @@ spec:
                 description: HTTP2 provides HTTP/2 configuration on the listener.
                 properties:
                   initialConnectionWindowSize:
+                    allOf:
+                    - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
                     anyOf:
                     - type: integer
                     - type: string
                     description: |-
                       InitialConnectionWindowSize sets the initial window size for HTTP/2 connections.
                       If not set, the default value is 1 MiB.
-                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
-                    x-kubernetes-validations:
-                    - message: initialConnectionWindowSize must be of the format "^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
-                      rule: 'type(self) == string ? self.matches(r"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$")
-                        : type(self) == int'
                   initialStreamWindowSize:
+                    allOf:
+                    - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
                     anyOf:
                     - type: integer
                     - type: string
                     description: |-
                       InitialStreamWindowSize sets the initial window size for HTTP/2 streams.
                       If not set, the default value is 64 KiB(64*1024).
-                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
-                    x-kubernetes-validations:
-                    - message: initialStreamWindowSize must be of the format "^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
-                      rule: 'type(self) == string ? self.matches(r"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$")
-                        : type(self) == int'
                   maxConcurrentStreams:
                     description: |-
                       MaxConcurrentStreams sets the maximum number of concurrent streams allowed per connection.
