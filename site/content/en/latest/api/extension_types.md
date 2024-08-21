@@ -435,8 +435,6 @@ _Appears in:_
 | `status` | _[PolicyStatus](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyStatus)_ |  true  | status defines the current status of BackendTrafficPolicy. |
 
 
-
-
 #### BackendTrafficPolicyList
 
 

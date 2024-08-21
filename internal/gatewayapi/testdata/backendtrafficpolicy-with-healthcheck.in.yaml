@@ -128,6 +128,25 @@ httpRoutes:
       backendRefs:
       - name: service-3
         port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-4
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-2
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/v2"
+      backendRefs:
+      - name: service-2
+        port: 8080
 backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -197,6 +216,29 @@ backendTrafficPolicies:
         consecutiveGatewayErrors: 0
         consecutiveLocalOriginFailures: 5
         splitExternalLocalOriginErrors: false
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route-4
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-4
+    healthCheck:
+      active:
+        timeout: "1s"
+        interval: "5s"
+        unhealthyThreshold: 3
+        healthyThreshold: 3
+        type: HTTP
+        http:
+          path: "/healthz"
+          method: "GET"
+          expectedResponse:
+            type: Text
+            text: pong
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
