@@ -264,7 +264,7 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck) []*corev3.HealthChec
 	case healthcheck.GRPC != nil:
 		hc.HealthChecker = &corev3.HealthCheck_GrpcHealthCheck_{
 			GrpcHealthCheck: &corev3.HealthCheck_GrpcHealthCheck{
-				ServiceName: ptr.Deref(healthcheck.GRPC.ServiceName, ""),
+				ServiceName: ptr.Deref(healthcheck.GRPC.Service, ""),
 			},
 		}
 	}
@@ -444,7 +444,7 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 			weight = 1
 		}
 		locality.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: weight}
-
+		locality.Priority = ptr.Deref(ds.Priority, 0)
 		localities = append(localities, locality)
 	}
 	return &endpointv3.ClusterLoadAssignment{ClusterName: clusterName, Endpoints: localities}

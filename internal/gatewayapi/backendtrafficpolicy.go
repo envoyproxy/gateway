@@ -589,7 +589,7 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 	// limit. If no such rule is found, EG uses a default limit of uint32 max.
 	var defaultLimit *ir.RateLimitValue
 	for _, rule := range local.Rules {
-		if rule.ClientSelectors == nil || len(rule.ClientSelectors) == 0 {
+		if len(rule.ClientSelectors) == 0 {
 			if defaultLimit != nil {
 				return nil, fmt.Errorf("local rateLimit can not have more than one rule without clientSelectors")
 			}

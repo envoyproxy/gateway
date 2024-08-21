@@ -1155,6 +1155,10 @@ type DestinationSetting struct {
 	// invalid endpoints are represents with a
 	// non-zero weight with an empty endpoints list
 	Weight *uint32 `json:"weight,omitempty" yaml:"weight,omitempty"`
+	// Priority default to priority 0, the highest level.
+	// If multiple destinations share the same priority, they will all be utilized.
+	// Lower priority endpoints will be used only if higher priority levels are unavailable.
+	Priority *uint32 `json:"priority,omitempty"`
 	// Protocol associated with this destination/port.
 	Protocol  AppProtocol            `json:"protocol,omitempty" yaml:"protocol,omitempty"`
 	Endpoints []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
@@ -2108,10 +2112,10 @@ func (h HTTPStatus) Validate() error {
 // GRPCHealthChecker defines the settings of the gRPC health check.
 // +k8s:deepcopy-gen=true
 type GRPCHealthChecker struct {
-	// ServiceName is the name of a specific service hosted by the server for
+	// Service is the name of a specific service hosted by the server for
 	// which the health check should be requested. If not specified, then the default
 	// is to send a health check request for the entire server.
-	ServiceName *string `json:"serviceName,omitempty" yaml:"serviceName,omitempty"`
+	Service *string `json:"service,omitempty" yaml:"service,omitempty"`
 }
 
 // TCPHealthChecker defines the settings of tcp health check.

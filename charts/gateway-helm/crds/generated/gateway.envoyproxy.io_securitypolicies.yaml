@@ -398,6 +398,15 @@ spec:
                           description: BackendRef defines how an ObjectReference that
                             is specific to BackendRef.
                           properties:
+                            failover:
+                              description: |-
+                                Failover This indicates whether the backend is designated as a failover.
+                                Multiple failover backends can be configured.
+                                It is highly recommended to configure active or passive health checks to ensure that failover can be detected
+                                when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.
+                                The overprovisioning factor is set to 1.4, meaning the failover backends will only start receiving traffic when
+                                the health of the active backends falls below 72%.
+                              type: boolean
                             group:
                               default: ""
                               description: |-
@@ -587,9 +596,9 @@ spec:
                                       GRPC defines the configuration of the GRPC health checker.
                                       It's optional, and can only be used if the specified type is GRPC.
                                     properties:
-                                      serviceName:
+                                      service:
                                         description: |-
-                                          ServiceName to send in the health check request.
+                                          Service to send in the health check request.
                                           If this is not specified, then the health check request applies to the entire
                                           server and not to a specific service.
                                         type: string
@@ -883,7 +892,7 @@ spec:
                           loadBalancer:
                             description: |-
                               LoadBalancer policy to apply when routing traffic from the gateway to
-                              the backend endpoints
+                              the backend endpoints. Defaults to `LeastRequest`.
                             properties:
                               consistentHash:
                                 description: |-
@@ -1201,6 +1210,15 @@ spec:
                           description: BackendRef defines how an ObjectReference that
                             is specific to BackendRef.
                           properties:
+                            failover:
+                              description: |-
+                                Failover This indicates whether the backend is designated as a failover.
+                                Multiple failover backends can be configured.
+                                It is highly recommended to configure active or passive health checks to ensure that failover can be detected
+                                when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.
+                                The overprovisioning factor is set to 1.4, meaning the failover backends will only start receiving traffic when
+                                the health of the active backends falls below 72%.
+                              type: boolean
                             group:
                               default: ""
                               description: |-
@@ -1390,9 +1408,9 @@ spec:
                                       GRPC defines the configuration of the GRPC health checker.
                                       It's optional, and can only be used if the specified type is GRPC.
                                     properties:
-                                      serviceName:
+                                      service:
                                         description: |-
-                                          ServiceName to send in the health check request.
+                                          Service to send in the health check request.
                                           If this is not specified, then the health check request applies to the entire
                                           server and not to a specific service.
                                         type: string
@@ -1686,7 +1704,7 @@ spec:
                           loadBalancer:
                             description: |-
                               LoadBalancer policy to apply when routing traffic from the gateway to
-                              the backend endpoints
+                              the backend endpoints. Defaults to `LeastRequest`.
                             properties:
                               consistentHash:
                                 description: |-

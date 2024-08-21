@@ -247,7 +247,7 @@ func (c *localFileCache) getOrFetch(key cacheKey, opts GetOptions) (*cacheEntry,
 		sha := sha256.Sum256(b)
 		dChecksum = hex.EncodeToString(sha[:])
 	case "oci":
-		if opts.PullSecret != nil && len(opts.PullSecret) > 0 {
+		if len(opts.PullSecret) > 0 {
 			isPrivate = true
 		}
 		if imageBinaryFetcher, dChecksum, err = c.prepareFetch(ctx, u, insecure, opts); err != nil {
@@ -303,7 +303,7 @@ func (c *localFileCache) prepareFetch(
 	imgFetcherOps := ImageFetcherOption{
 		Insecure: insecure,
 	}
-	if opts.PullSecret != nil && len(opts.PullSecret) > 0 {
+	if len(opts.PullSecret) > 0 {
 		imgFetcherOps.PullSecret = opts.PullSecret
 	}
 	fetcher := NewImageFetcher(ctx, imgFetcherOps, c.logger)

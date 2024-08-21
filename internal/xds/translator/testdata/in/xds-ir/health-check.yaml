@@ -136,7 +136,7 @@ http:
           unhealthyThreshold: 3
           healthyThreshold: 3
           grpc:
-            serviceName: my-service
+            service: my-service
     destination:
       name: "fifth-route-dest"
       protocol: GRPC
