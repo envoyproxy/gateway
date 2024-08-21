@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"net/http"
 	"strings"
 	"time"
 
@@ -452,6 +453,10 @@ func buildHTTPActiveHealthChecker(h *egv1a1.HTTPActiveHealthChecker) *ir.HTTPHea
 	statusSet := sets.NewInt()
 	for _, r := range h.ExpectedStatuses {
 		statusSet.Insert(int(r))
+	}
+	// If no ExpectedStatus was set, use the default value (200)
+	if statusSet.Len() == 0 {
+		statusSet.Insert(http.StatusOK)
 	}
 	irStatuses := make([]ir.HTTPStatus, 0, statusSet.Len())
 
