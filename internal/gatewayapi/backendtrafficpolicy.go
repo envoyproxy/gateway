@@ -372,8 +372,6 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 
 				if strings.HasPrefix(r.Destination.Name, prefix) {
 					r.LoadBalancer = lb
-					r.Timeout = to
-					r.BackendConnection = bc
 					r.DNS = ds
 				}
 			}
@@ -518,7 +516,6 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		// only set attributes which weren't already set by a more
 		// specific policy
 		setIfNil(&route.LoadBalancer, lb)
-		setIfNil(&route.Timeout, ct)
 		setIfNil(&route.DNS, ds)
 	}
 

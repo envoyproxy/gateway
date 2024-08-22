@@ -3104,16 +3104,6 @@ func (in *UDPRoute) DeepCopyInto(out *UDPRoute) {
 		*out = new(LoadBalancer)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.Timeout != nil {
-		in, out := &in.Timeout, &out.Timeout
-		*out = new(Timeout)
-		(*in).DeepCopyInto(*out)
-	}
-	if in.BackendConnection != nil {
-		in, out := &in.BackendConnection, &out.BackendConnection
-		*out = new(BackendConnection)
-		(*in).DeepCopyInto(*out)
-	}
 	if in.DNS != nil {
 		in, out := &in.DNS, &out.DNS
 		*out = new(DNS)
