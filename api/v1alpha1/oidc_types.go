@@ -43,6 +43,7 @@ type OIDC struct {
 	// This means that requests to any subdomain will not require reauthentication after users log in to the parent domain.
 	// +optional
 	// +notImplementedHide
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9]))*$`
 	CookieDomain *string `json:"cookieDomain,omitempty"`
 
 	// The OIDC scopes to be used in the
