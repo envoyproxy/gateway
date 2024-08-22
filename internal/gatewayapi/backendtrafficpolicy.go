@@ -384,6 +384,11 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 						continue
 					}
 
+					// Some timeout setting originate from the route.
+					if localTo, err := buildTimeout(policy.Spec.ClusterSettings, r); err == nil {
+						to = localTo
+					}
+
 					r.Traffic = &ir.TrafficFeatures{
 						RateLimit:         rl,
 						LoadBalancer:      lb,
@@ -396,15 +401,11 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 						BackendConnection: bc,
 						HTTP2:             h2,
 						DNS:               ds,
+						Timeout:           to,
 					}
 
 					// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
 					r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
-
-					// Some timeout setting originate from the route.
-					if to, err = buildTimeout(policy.Spec.ClusterSettings, r); err == nil {
-						r.Traffic.Timeout = to
-					}
 
 					if policy.Spec.UseClientProtocol != nil {
 						r.UseClientProtocol = policy.Spec.UseClientProtocol

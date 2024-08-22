@@ -83,7 +83,13 @@ func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatur
 
 func buildTimeout(policy egv1a1.ClusterSettings, r *ir.HTTPRoute) (*ir.Timeout, error) {
 	if policy.Timeout == nil {
-		return nil, nil
+		var ret *ir.Timeout
+		// Some timeout parameters originate from the route. Don't lose them if
+		// there is no timeout section in the policy.
+		if r != nil && r.Traffic != nil {
+			ret = r.Traffic.Timeout.DeepCopy()
+		}
+		return ret, nil
 	}
 	var (
 		tto  *ir.TCPTimeout
@@ -139,7 +145,7 @@ func buildTimeout(policy egv1a1.ClusterSettings, r *ir.HTTPRoute) (*ir.Timeout, 
 	// http request timeout is translated during the gateway-api route resource translation
 	// merge route timeout setting with backendtrafficpolicy timeout settings
 	if terr {
-		if r != nil && r.Traffic != nil && r.Traffic.Timeout != nil {
+		if r != nil && r.Traffic != nil {
 			return r.Traffic.Timeout.DeepCopy(), errs
 		}
 	} else {
