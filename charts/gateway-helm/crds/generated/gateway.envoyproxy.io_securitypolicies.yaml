@@ -345,6 +345,15 @@ spec:
                           description: BackendRef defines how an ObjectReference that
                             is specific to BackendRef.
                           properties:
+                            failover:
+                              description: |-
+                                Failover This indicates whether the backend is designated as a failover.
+                                Multiple failover backends can be configured.
+                                It is highly recommended to configure active or passive health checks to ensure that failover can be detected
+                                when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.
+                                The overprovisioning factor is set to 1.4, meaning the failover backends will only start receiving traffic when
+                                the health of the active backends falls below 72%.
+                              type: boolean
                             group:
                               default: ""
                               description: |-
@@ -529,6 +538,18 @@ spec:
                               active:
                                 description: Active health check configuration
                                 properties:
+                                  grpc:
+                                    description: |-
+                                      GRPC defines the configuration of the GRPC health checker.
+                                      It's optional, and can only be used if the specified type is GRPC.
+                                    properties:
+                                      service:
+                                        description: |-
+                                          Service to send in the health check request.
+                                          If this is not specified, then the health check request applies to the entire
+                                          server and not to a specific service.
+                                        type: string
+                                    type: object
                                   healthyThreshold:
                                     default: 1
                                     description: HealthyThreshold defines the number
@@ -692,9 +713,11 @@ spec:
                                     - enum:
                                       - HTTP
                                       - TCP
+                                      - GRPC
                                     - enum:
                                       - HTTP
                                       - TCP
+                                      - GRPC
                                     description: Type defines the type of health checker.
                                     type: string
                                   unhealthyThreshold:
@@ -716,6 +739,10 @@ spec:
                                 - message: If Health Checker type is TCP, tcp field
                                     needs to be set.
                                   rule: 'self.type == ''TCP'' ? has(self.tcp) : !has(self.tcp)'
+                                - message: The grpc field can only be set if the Health
+                                    Checker type is GRPC.
+                                  rule: 'has(self.grpc) ? self.type == ''GRPC'' :
+                                    true'
                               passive:
                                 description: Passive passive check configuration
                                 properties:
@@ -812,7 +839,7 @@ spec:
                           loadBalancer:
                             description: |-
                               LoadBalancer policy to apply when routing traffic from the gateway to
-                              the backend endpoints
+                              the backend endpoints. Defaults to `LeastRequest`.
                             properties:
                               consistentHash:
                                 description: |-
@@ -1009,15 +1036,17 @@ spec:
                     x-kubernetes-validations:
                     - message: backendRef or backendRefs needs to be set
                       rule: has(self.backendRef) || self.backendRefs.size() > 0
-                    - message: BackendRefs only supports Core group.
-                      rule: 'has(self.backendRefs) ? self.backendRefs.all(f, f.group
-                        == "") : true'
-                    - message: only support Service kind.
+                    - message: BackendRefs must be used, backendRef is not supported.
+                      rule: '!has(self.backendRef)'
+                    - message: Exactly one backendRef can be specified in backendRefs.
+                      rule: has(self.backendRefs) && self.backendRefs.size()==1
+                    - message: BackendRefs only supports Service and Backend kind.
                       rule: 'has(self.backendRefs) ? self.backendRefs.all(f, f.kind
-                        == ''Service'') : true'
-                    - message: only one backendRef can be specified.
-                      rule: 'has(self.backendRefs) ? self.backendRefs.size() == 1
-                        : true'
+                        == ''Service'' || f.kind == ''Backend'') : true'
+                    - message: BackendRefs only supports Core and gateway.envoyproxy.io
+                        group.
+                      rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
+                        == "" || f.group == ''gateway.envoyproxy.io'')) : true'
                   headersToExtAuth:
                     description: |-
                       HeadersToExtAuth defines the client request headers that will be included
@@ -1128,6 +1157,15 @@ spec:
                           description: BackendRef defines how an ObjectReference that
                             is specific to BackendRef.
                           properties:
+                            failover:
+                              description: |-
+                                Failover This indicates whether the backend is designated as a failover.
+                                Multiple failover backends can be configured.
+                                It is highly recommended to configure active or passive health checks to ensure that failover can be detected
+                                when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.
+                                The overprovisioning factor is set to 1.4, meaning the failover backends will only start receiving traffic when
+                                the health of the active backends falls below 72%.
+                              type: boolean
                             group:
                               default: ""
                               description: |-
@@ -1312,6 +1350,18 @@ spec:
                               active:
                                 description: Active health check configuration
                                 properties:
+                                  grpc:
+                                    description: |-
+                                      GRPC defines the configuration of the GRPC health checker.
+                                      It's optional, and can only be used if the specified type is GRPC.
+                                    properties:
+                                      service:
+                                        description: |-
+                                          Service to send in the health check request.
+                                          If this is not specified, then the health check request applies to the entire
+                                          server and not to a specific service.
+                                        type: string
+                                    type: object
                                   healthyThreshold:
                                     default: 1
                                     description: HealthyThreshold defines the number
@@ -1475,9 +1525,11 @@ spec:
                                     - enum:
                                       - HTTP
                                       - TCP
+                                      - GRPC
                                     - enum:
                                       - HTTP
                                       - TCP
+                                      - GRPC
                                     description: Type defines the type of health checker.
                                     type: string
                                   unhealthyThreshold:
@@ -1499,6 +1551,10 @@ spec:
                                 - message: If Health Checker type is TCP, tcp field
                                     needs to be set.
                                   rule: 'self.type == ''TCP'' ? has(self.tcp) : !has(self.tcp)'
+                                - message: The grpc field can only be set if the Health
+                                    Checker type is GRPC.
+                                  rule: 'has(self.grpc) ? self.type == ''GRPC'' :
+                                    true'
                               passive:
                                 description: Passive passive check configuration
                                 properties:
@@ -1595,7 +1651,7 @@ spec:
                           loadBalancer:
                             description: |-
                               LoadBalancer policy to apply when routing traffic from the gateway to
-                              the backend endpoints
+                              the backend endpoints. Defaults to `LeastRequest`.
                             properties:
                               consistentHash:
                                 description: |-
@@ -1808,15 +1864,17 @@ spec:
                     x-kubernetes-validations:
                     - message: backendRef or backendRefs needs to be set
                       rule: has(self.backendRef) || self.backendRefs.size() > 0
-                    - message: BackendRefs only supports Core group.
-                      rule: 'has(self.backendRefs) ? self.backendRefs.all(f, f.group
-                        == "") : true'
-                    - message: only support Service kind.
+                    - message: BackendRefs must be used, backendRef is not supported.
+                      rule: '!has(self.backendRef)'
+                    - message: Exactly one backendRef can be specified in backendRefs.
+                      rule: has(self.backendRefs) && self.backendRefs.size()==1
+                    - message: BackendRefs only supports Service and Backend kind.
                       rule: 'has(self.backendRefs) ? self.backendRefs.all(f, f.kind
-                        == ''Service'') : true'
-                    - message: only one backendRef can be specified.
-                      rule: 'has(self.backendRefs) ? self.backendRefs.size() == 1
-                        : true'
+                        == ''Service'' || f.kind == ''Backend'') : true'
+                    - message: BackendRefs only supports Core and gateway.envoyproxy.io
+                        group.
+                      rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
+                        == "" || f.group == ''gateway.envoyproxy.io'')) : true'
                 type: object
                 x-kubernetes-validations:
                 - message: one of grpc or http must be specified
@@ -1824,24 +1882,6 @@ spec:
                 - message: only one of grpc or http can be specified
                   rule: (has(self.grpc) && !has(self.http)) || (!has(self.grpc) &&
                     has(self.http))
-                - message: group is invalid, only the core API group (specified by
-                    omitting the group field or setting it to an empty string) is
-                    supported
-                  rule: 'has(self.grpc) ? (!has(self.grpc.backendRef) || !has(self.grpc.backendRef.group)
-                    || self.grpc.backendRef.group == "") : true'
-                - message: kind is invalid, only Service (specified by omitting the
-                    kind field or setting it to 'Service') is supported
-                  rule: 'has(self.grpc) ? (!has(self.grpc.backendRef) || !has(self.grpc.backendRef.kind)
-                    || self.grpc.backendRef.kind == ''Service'') : true'
-                - message: group is invalid, only the core API group (specified by
-                    omitting the group field or setting it to an empty string) is
-                    supported
-                  rule: 'has(self.http) ? (!has(self.http.backendRef) || !has(self.http.backendRef.group)
-                    || self.http.backendRef.group == "") : true'
-                - message: kind is invalid, only Service (specified by omitting the
-                    kind field or setting it to 'Service') is supported
-                  rule: 'has(self.http) ? (!has(self.http.backendRef) || !has(self.http.backendRef.kind)
-                    || self.http.backendRef.kind == ''Service'') : true'
               jwt:
                 description: JWT defines the configuration for JSON Web Token (JWT)
                   authentication.

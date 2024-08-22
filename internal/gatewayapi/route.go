@@ -196,7 +196,6 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		dstAddrTypeMap := make(map[ir.DestinationAddressType]int)
 
 		for _, backendRef := range rule.BackendRefs {
-			backendRef := backendRef
 			ds := t.processDestination(backendRef, parentRef, httpRoute, resources)
 
 			if !t.IsEnvoyServiceRouting(envoyProxy) && ds != nil && len(ds.Endpoints) > 0 && ds.AddressType != nil {
@@ -314,12 +313,60 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 		ruleRoutes = append(ruleRoutes, irRoute)
 	}
 
+	var sessionPersistence *ir.SessionPersistence
+	if rule.SessionPersistence != nil {
+		if rule.SessionPersistence.IdleTimeout != nil {
+			return nil, fmt.Errorf("idle timeout is not supported in envoy gateway")
+		}
+
+		var sessionName string
+		if rule.SessionPersistence.SessionName == nil {
+			// SessionName is optional on the gateway-api, but envoy requires it
+			// so we generate the one here.
+
+			// We generate a unique session name per route.
+			// `/` isn't allowed in the header key, so we just replace it with `-`.
+			sessionName = strings.ReplaceAll(irRouteDestinationName(httpRoute, ruleIdx), "/", "-")
+		} else {
+			sessionName = *rule.SessionPersistence.SessionName
+		}
+
+		switch {
+		case rule.SessionPersistence.Type == nil || // Cookie-based session persistence is default.
+			*rule.SessionPersistence.Type == gwapiv1.CookieBasedSessionPersistence:
+			sessionPersistence = &ir.SessionPersistence{
+				Cookie: &ir.CookieBasedSessionPersistence{
+					Name: sessionName,
+				},
+			}
+			if rule.SessionPersistence.AbsoluteTimeout != nil &&
+				rule.SessionPersistence.CookieConfig != nil && rule.SessionPersistence.CookieConfig.LifetimeType != nil &&
+				*rule.SessionPersistence.CookieConfig.LifetimeType == gwapiv1.PermanentCookieLifetimeType {
+				ttl, err := time.ParseDuration(string(*rule.SessionPersistence.AbsoluteTimeout))
+				if err != nil {
+					return nil, err
+				}
+				sessionPersistence.Cookie.TTL = &metav1.Duration{Duration: ttl}
+			}
+		case *rule.SessionPersistence.Type == gwapiv1.HeaderBasedSessionPersistence:
+			sessionPersistence = &ir.SessionPersistence{
+				Header: &ir.HeaderBasedSessionPersistence{
+					Name: sessionName,
+				},
+			}
+		default:
+			// Unknown session persistence type is specified.
+			return nil, fmt.Errorf("unknown session persistence type %s", *rule.SessionPersistence.Type)
+		}
+	}
+
 	// A rule is matched if any one of its matches
 	// is satisfied (i.e. a logical "OR"), so generate
 	// a unique Xds IR HTTPRoute per match.
 	for matchIdx, match := range rule.Matches {
 		irRoute := &ir.HTTPRoute{
-			Name: irRouteName(httpRoute, ruleIdx, matchIdx),
+			Name:               irRouteName(httpRoute, ruleIdx, matchIdx),
+			SessionPersistence: sessionPersistence,
 		}
 		processTimeout(irRoute, rule)
 
@@ -504,7 +551,6 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		}
 
 		for _, backendRef := range rule.BackendRefs {
-			backendRef := backendRef
 			ds := t.processDestination(backendRef, parentRef, grpcRoute, resources)
 			if ds == nil {
 				continue
@@ -651,7 +697,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 	var hasHostnameIntersection bool
 
 	for _, listener := range parentRef.listeners {
-		hosts := computeHosts(GetHostnames(route), listener.Hostname)
+		hosts := computeHosts(GetHostnames(route), listener)
 		if len(hosts) == 0 {
 			continue
 		}
@@ -699,6 +745,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					Mirrors:               routeRoute.Mirrors,
 					ExtensionRefs:         routeRoute.ExtensionRefs,
 					IsHTTP2:               routeRoute.IsHTTP2,
+					SessionPersistence:    routeRoute.SessionPersistence,
 				}
 				if routeRoute.Traffic != nil {
 					hostRoute.Traffic = &ir.TrafficFeatures{
@@ -784,7 +831,6 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 		// compute backends
 		for _, rule := range tlsRoute.Spec.Rules {
 			for _, backendRef := range rule.BackendRefs {
-				backendRef := backendRef
 				ds := t.processDestination(backendRef, parentRef, tlsRoute, resources)
 				if ds != nil {
 					destSettings = append(destSettings, ds)
@@ -818,7 +864,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 
 		var hasHostnameIntersection bool
 		for _, listener := range parentRef.listeners {
-			hosts := computeHosts(GetHostnames(tlsRoute), listener.Hostname)
+			hosts := computeHosts(GetHostnames(tlsRoute), listener)
 			if len(hosts) == 0 {
 				continue
 			}
@@ -1058,7 +1104,6 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 		}
 
 		for _, backendRef := range tcpRoute.Spec.Rules[0].BackendRefs {
-			backendRef := backendRef
 			ds := t.processDestination(backendRef, parentRef, tcpRoute, resources)
 			if ds == nil {
 				continue

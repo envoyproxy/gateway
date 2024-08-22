@@ -134,13 +134,16 @@ xdsIR:
       - addRequestHeaders:
         - append: true
           name: add-header-1
-          value: some-value
+          value:
+          - some-value
         - append: true
           name: add-header-2
-          value: some-value
+          value:
+          - some-value
         - append: true
           name: add-header-3
-          value: some-value
+          value:
+          - some-value
         destination:
           name: httproute/default/httproute-1/rule/0
           settings:

@@ -292,8 +292,6 @@ func TestTranslate(t *testing.T) {
 	flag.Parse()
 
 	for _, tc := range testCases {
-		tc := tc
-
 		t.Run(tc.name+"|"+tc.resourceType, func(t *testing.T) {
 			b := bytes.NewBufferString("")
 			root := newTranslateCommand()

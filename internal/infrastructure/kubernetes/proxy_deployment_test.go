@@ -21,6 +21,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
+	resource2 "github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -35,6 +36,17 @@ func deploymentWithImage(deploy *appsv1.Deployment, image string) *appsv1.Deploy
 		if c.Name == envoyContainerName {
 			dCopy.Spec.Template.Spec.Containers[i].Image = image
 		}
+	}
+	return dCopy
+}
+
+func deploymentWithSelectorAndLabel(deploy *appsv1.Deployment, selector *metav1.LabelSelector, additionalLabel map[string]string) *appsv1.Deployment {
+	dCopy := deploy.DeepCopy()
+	if selector != nil {
+		dCopy.Spec.Selector = selector
+	}
+	for k, v := range additionalLabel {
+		dCopy.Spec.Template.Labels[k] = v
 	}
 	return dCopy
 }
@@ -56,6 +68,7 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 		in      *ir.Infra
 		current *appsv1.Deployment
 		want    *appsv1.Deployment
+		wantErr bool
 	}{
 		{
 			name: "create deployment",
@@ -99,10 +112,116 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 			current: deploy,
 			want:    deploymentWithImage(deploy, "envoyproxy/envoy-dev:v1.2.3"),
 		},
+		{
+			name: "update deployment label",
+			in: &ir.Infra{
+				Proxy: &ir.ProxyInfra{
+					Metadata: &ir.InfraMetadata{
+						Labels: map[string]string{
+							gatewayapi.OwningGatewayNamespaceLabel: "default",
+							gatewayapi.OwningGatewayNameLabel:      infra.Proxy.Name,
+						},
+					},
+					Config: &egv1a1.EnvoyProxy{
+						Spec: egv1a1.EnvoyProxySpec{
+							Provider: &egv1a1.EnvoyProxyProvider{
+								Type: egv1a1.ProviderTypeKubernetes,
+								Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+									EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+										Pod: &egv1a1.KubernetesPodSpec{
+											Labels: map[string]string{
+												"custom-label": "version1", // added.
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					Name:      ir.DefaultProxyName,
+					Listeners: ir.NewProxyListeners(),
+				},
+			},
+			current: deploy,
+			// Selector is not updated with a custom label, only pod's label is updated.
+			want: deploymentWithSelectorAndLabel(deploy, nil, map[string]string{"custom-label": "version1"}),
+		},
+		{
+			name: "the daemonset originally has a selector and label, and an user add a new label to the custom label config",
+			in: &ir.Infra{
+				Proxy: &ir.ProxyInfra{
+					Metadata: &ir.InfraMetadata{
+						Labels: map[string]string{
+							gatewayapi.OwningGatewayNamespaceLabel: "default",
+							gatewayapi.OwningGatewayNameLabel:      infra.Proxy.Name,
+						},
+					},
+					Config: &egv1a1.EnvoyProxy{
+						Spec: egv1a1.EnvoyProxySpec{
+							Provider: &egv1a1.EnvoyProxyProvider{
+								Type: egv1a1.ProviderTypeKubernetes,
+								Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+									EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+										Pod: &egv1a1.KubernetesPodSpec{
+											Labels: map[string]string{
+												"custom-label": "version1",
+												// Add a new label to the custom label config.
+												// It wouldn't break the deployment because the selector would still match after this label update.
+												"another-custom-label": "version1", // added.
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					Name:      ir.DefaultProxyName,
+					Listeners: ir.NewProxyListeners(),
+				},
+			},
+			current: deploymentWithSelectorAndLabel(deploy, resource2.GetSelector(map[string]string{"custom-label": "version1"}), map[string]string{"custom-label": "version1"}),
+			// Only label is updated, selector is not updated.
+			want: deploymentWithSelectorAndLabel(deploy, resource2.GetSelector(map[string]string{"custom-label": "version1"}), map[string]string{"custom-label": "version1", "another-custom-label": "version1"}),
+		},
+		{
+			name: "the deployment originally has a selector and label, and an user update an existing custom label",
+			in: &ir.Infra{
+				Proxy: &ir.ProxyInfra{
+					Metadata: &ir.InfraMetadata{
+						Labels: map[string]string{
+							gatewayapi.OwningGatewayNamespaceLabel: "default",
+							gatewayapi.OwningGatewayNameLabel:      infra.Proxy.Name,
+						},
+					},
+					Config: &egv1a1.EnvoyProxy{
+						Spec: egv1a1.EnvoyProxySpec{
+							Provider: &egv1a1.EnvoyProxyProvider{
+								Type: egv1a1.ProviderTypeKubernetes,
+								Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+									EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+										Pod: &egv1a1.KubernetesPodSpec{
+											Labels: map[string]string{
+												// Update the label value which will break the deployment
+												// because the selector cannot be updated while the user wants to update the label value.
+												// We cannot help this case, just emit an error and let the user recreate the envoy proxy by themselves.
+												"custom-label": "version2",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					Name:      ir.DefaultProxyName,
+					Listeners: ir.NewProxyListeners(),
+				},
+			},
+			current: deploymentWithSelectorAndLabel(deploy, resource2.GetSelector(map[string]string{"custom-label": "version1"}), map[string]string{"custom-label": "version1"}),
+			wantErr: true,
+		},
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			var cli client.Client
 			if tc.current != nil {
@@ -121,6 +240,10 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 			kube := NewInfra(cli, cfg)
 			r := proxy.NewResourceRender(kube.Namespace, tc.in.GetProxyInfra(), cfg.EnvoyGateway)
 			err := kube.createOrUpdateDeployment(context.Background(), r)
+			if tc.wantErr {
+				require.Error(t, err)
+				return
+			}
 			require.NoError(t, err)
 
 			actual := &appsv1.Deployment{
@@ -155,7 +278,6 @@ func TestDeleteProxyDeployment(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			kube := NewInfra(cli, cfg)
 

@@ -851,7 +851,6 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			var objs []client.Object
 			for i := range tc.classes {

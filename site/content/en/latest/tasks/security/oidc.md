@@ -134,10 +134,10 @@ kind: SecurityPolicy
 metadata:
   name: oidc-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: myapp
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: myapp
   oidc:
     provider:
       issuer: "https://accounts.google.com"
@@ -160,10 +160,10 @@ kind: SecurityPolicy
 metadata:
   name: oidc-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: myapp
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: myapp
   oidc:
     provider:
       issuer: "https://accounts.google.com"
@@ -238,10 +238,10 @@ kind: SecurityPolicy
 metadata:
   name: oidc-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: eg
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
   oidc:
     provider:
       issuer: "https://accounts.google.com"
@@ -264,10 +264,10 @@ kind: SecurityPolicy
 metadata:
   name: oidc-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: eg
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
   oidc:
     provider:
       issuer: "https://accounts.google.com"

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"net/http"
 	"strings"
 	"time"
 
@@ -426,6 +427,10 @@ func buildActiveHealthCheck(policy egv1a1.HealthCheck) *ir.ActiveHealthCheck {
 		irHC.HTTP = buildHTTPActiveHealthChecker(hc.HTTP)
 	case egv1a1.ActiveHealthCheckerTypeTCP:
 		irHC.TCP = buildTCPActiveHealthChecker(hc.TCP)
+	case egv1a1.ActiveHealthCheckerTypeGRPC:
+		irHC.GRPC = &ir.GRPCHealthChecker{
+			Service: ptr.Deref(hc.GRPC, egv1a1.GRPCActiveHealthChecker{}).Service,
+		}
 	}
 
 	return irHC
@@ -448,6 +453,10 @@ func buildHTTPActiveHealthChecker(h *egv1a1.HTTPActiveHealthChecker) *ir.HTTPHea
 	statusSet := sets.NewInt()
 	for _, r := range h.ExpectedStatuses {
 		statusSet.Insert(int(r))
+	}
+	// If no ExpectedStatus was set, use the default value (200)
+	if statusSet.Len() == 0 {
+		statusSet.Insert(http.StatusOK)
 	}
 	irStatuses := make([]ir.HTTPStatus, 0, statusSet.Len())
 

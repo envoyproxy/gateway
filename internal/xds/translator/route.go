@@ -438,9 +438,9 @@ func buildXdsRequestMirrorPolicies(mirrorDestinations []*ir.RouteDestination) []
 }
 
 func buildXdsAddedHeaders(headersToAdd []ir.AddHeader) []*corev3.HeaderValueOption {
-	headerValueOptions := make([]*corev3.HeaderValueOption, len(headersToAdd))
+	headerValueOptions := []*corev3.HeaderValueOption{}
 
-	for i, header := range headersToAdd {
+	for _, header := range headersToAdd {
 		var appendAction corev3.HeaderValueOption_HeaderAppendAction
 
 		if header.Append {
@@ -448,18 +448,26 @@ func buildXdsAddedHeaders(headersToAdd []ir.AddHeader) []*corev3.HeaderValueOpti
 		} else {
 			appendAction = corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD
 		}
-
-		headerValueOptions[i] = &corev3.HeaderValueOption{
-			Header: &corev3.HeaderValue{
-				Key:   header.Name,
-				Value: header.Value,
-			},
-			AppendAction: appendAction,
-		}
-
 		// Allow empty headers to be set, but don't add the config to do so unless necessary
-		if header.Value == "" {
-			headerValueOptions[i].KeepEmptyValue = true
+		if len(header.Value) == 0 {
+			headerValueOptions = append(headerValueOptions, &corev3.HeaderValueOption{
+				Header: &corev3.HeaderValue{
+					Key: header.Name,
+				},
+				AppendAction:   appendAction,
+				KeepEmptyValue: true,
+			})
+		} else {
+			for _, val := range header.Value {
+				headerValueOptions = append(headerValueOptions, &corev3.HeaderValueOption{
+					Header: &corev3.HeaderValue{
+						Key:   header.Name,
+						Value: val,
+					},
+					AppendAction:   appendAction,
+					KeepEmptyValue: val == "",
+				})
+			}
 		}
 	}
 
@@ -548,7 +556,7 @@ func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
 	}
 
 	if rr.RetryOn != nil {
-		if rr.RetryOn.Triggers != nil && len(rr.RetryOn.Triggers) > 0 {
+		if len(rr.RetryOn.Triggers) > 0 {
 			if ro, err := buildRetryOn(rr.RetryOn.Triggers); err == nil {
 				rp.RetryOn = ro
 			} else {
@@ -556,7 +564,7 @@ func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
 			}
 		}
 
-		if rr.RetryOn.HTTPStatusCodes != nil && len(rr.RetryOn.HTTPStatusCodes) > 0 {
+		if len(rr.RetryOn.HTTPStatusCodes) > 0 {
 			rp.RetriableStatusCodes = buildRetryStatusCodes(rr.RetryOn.HTTPStatusCodes)
 		}
 	}

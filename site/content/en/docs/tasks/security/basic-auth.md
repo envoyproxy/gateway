@@ -110,10 +110,10 @@ kind: SecurityPolicy
 metadata:
   name: basic-auth-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: backend
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
   basicAuth:
     users:
       name: "basic-auth"
@@ -131,10 +131,10 @@ kind: SecurityPolicy
 metadata:
   name: basic-auth-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: backend
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
   basicAuth:
     users:
       name: "basic-auth"
@@ -195,7 +195,6 @@ curl -kv -H "Host: www.example.com" -u 'foo:bar' "https://${GATEWAY_HOST}/"
 
 The request should be allowed and you should see the response from the backend service.
 
-```shell
 
 ## Clean-Up
 

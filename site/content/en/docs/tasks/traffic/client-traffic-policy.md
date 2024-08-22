@@ -34,10 +34,10 @@ metadata:
   name: enable-tcp-keepalive-policy
   namespace: default
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: eg
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
   tcpKeepalive:
     idleTime: 20m
     interval: 60s
@@ -57,10 +57,10 @@ metadata:
   name: enable-tcp-keepalive-policy
   namespace: default
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: eg
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
   tcpKeepalive:
     idleTime: 20m
     interval: 60s
@@ -214,10 +214,10 @@ metadata:
   name: enable-proxy-protocol-policy
   namespace: default
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: eg
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
   enableProxyProtocol: true
 EOF
 ```
@@ -234,10 +234,10 @@ metadata:
   name: enable-proxy-protocol-policy
   namespace: default
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: eg
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
   enableProxyProtocol: true
 ```
 
@@ -351,10 +351,10 @@ metadata:
   name: http-client-ip-detection
   namespace: default
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: eg
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
   clientIPDetection:
     xForwardedFor:
       numTrustedHops: 2
@@ -373,10 +373,10 @@ metadata:
   name: http-client-ip-detection
   namespace: default
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: eg
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
   clientIPDetection:
     xForwardedFor:
       numTrustedHops: 2
@@ -502,10 +502,10 @@ kind: ClientTrafficPolicy
 metadata:
   name: client-timeout
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: eg
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
   timeout:
     http:
       requestReceivedTimeout: 2s
@@ -523,10 +523,10 @@ kind: ClientTrafficPolicy
 metadata:
   name: client-timeout
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: eg
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
   timeout:
     http:
       requestReceivedTimeout: 2s
@@ -582,10 +582,10 @@ kind: ClientTrafficPolicy
 metadata:
   name: client-timeout
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: eg
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
   timeout:
     http:
       idleTimeout: 5s
@@ -603,10 +603,10 @@ kind: ClientTrafficPolicy
 metadata:
   name: client-timeout
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: eg
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
   timeout:
     http:
       idleTimeout: 5s
@@ -647,10 +647,10 @@ kind: ClientTrafficPolicy
 metadata:
   name: client-timeout
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: eg
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
   connection:
     bufferLimit: 1024
 EOF
@@ -667,10 +667,10 @@ kind: ClientTrafficPolicy
 metadata:
   name: client-timeout
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: eg
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
   connection:
     bufferLimit: 1024
 ```

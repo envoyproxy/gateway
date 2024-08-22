@@ -159,7 +159,6 @@ func TestValidateTLSSecretsData(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 			secrets := createTestSecrets(t, tc.CertFile, tc.KeyFile)
 			require.NotNil(t, secrets)
@@ -204,7 +203,6 @@ func TestValidateCertificate(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 			certData, err := os.ReadFile(filepath.Join("testdata", "tls", tc.CertFile))
 			require.NoError(t, err)
