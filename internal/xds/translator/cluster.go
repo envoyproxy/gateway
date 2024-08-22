@@ -686,15 +686,12 @@ type UDPRouteTranslator struct {
 
 func (route *UDPRouteTranslator) asClusterArgs(extra *ExtraArgs) *xdsClusterArgs {
 	return &xdsClusterArgs{
-		name:              route.Destination.Name,
-		settings:          route.Destination.Settings,
-		loadBalancer:      route.LoadBalancer,
-		timeout:           route.Timeout,
-		tSocket:           nil,
-		endpointType:      buildEndpointType(route.Destination.Settings),
-		metrics:           extra.metrics,
-		backendConnection: route.BackendConnection,
-		dns:               route.DNS,
+		name:         route.Destination.Name,
+		settings:     route.Destination.Settings,
+		loadBalancer: route.LoadBalancer,
+		endpointType: buildEndpointType(route.Destination.Settings),
+		metrics:      extra.metrics,
+		dns:          route.DNS,
 	}
 }
 

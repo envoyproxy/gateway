@@ -47,5 +47,5 @@
   lbPolicy: LEAST_REQUEST
   name: udp-route-dest
   outlierDetection: {}
-  perConnectionBufferLimitBytes: 100000000
+  perConnectionBufferLimitBytes: 32768
   type: EDS
