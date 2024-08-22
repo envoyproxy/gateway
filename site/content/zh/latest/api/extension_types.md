@@ -2129,12 +2129,12 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `type` | _[JWTClaimType](#jwtclaimtype)_ |  true  | Type is the type of the claim.<br />Valid values are "String" and "StringArray".<br />For example, sub is a string claim, and groups is a string array claim. |
+| `valueType` | _[JWTClaimValueType](#jwtclaimvaluetype)_ |  true  | ValueType is the type of the claim value. |
 | `name` | _string_ |  true  | Name is the name of the claim.<br />If it is a nested claim, use a dot (.) separated string as the name to<br />represent the full path to the claim.<br />For example, if the claim is in the "department" field in the "organization" field,<br />the name should be "organization.department". |
 | `values` | _string array_ |  true  | Values are the values that the claim must match.<br />If the claim is a string type, the specified value must match exactly.<br />If the claim is a string array type, the specified value must match one of the values in the array.<br />If multiple values are specified, one of the values must match for the rule to match. |
 
 
-#### JWTClaimType
+#### JWTClaimValueType
 
 _Underlying type:_ _string_
 

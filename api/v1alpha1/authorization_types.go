@@ -74,13 +74,11 @@ type Principal struct {
 
 // JWTClaim specifies a claim in a JWT token.
 type JWTClaim struct {
-	// Type is the type of the claim.
-	// Valid values are "String" and "StringArray".
-	// For example, sub is a string claim, and groups is a string array claim.
+	// ValueType is the type of the claim value.
 	// +kubebuilder:validation:Enum=String;StringArray
 	// +kubebuilder:default=String
 	// +unionDiscriminator
-	Type JWTClaimType `json:"type"`
+	ValueType JWTClaimValueType `json:"valueType"`
 
 	// Name is the name of the claim.
 	// If it is a nested claim, use a dot (.) separated string as the name to
@@ -96,11 +94,11 @@ type JWTClaim struct {
 	Values []string `json:"values"`
 }
 
-type JWTClaimType string
+type JWTClaimValueType string
 
 const (
-	JWTClaimTypeString      JWTClaimType = "String"
-	JWTClaimTypeStringArray JWTClaimType = "StringArray"
+	JWTClaimValueTypeString      JWTClaimValueType = "String"
+	JWTClaimValueTypeStringArray JWTClaimValueType = "StringArray"
 )
 
 // AuthorizationAction defines the action to be taken if a rule matches.

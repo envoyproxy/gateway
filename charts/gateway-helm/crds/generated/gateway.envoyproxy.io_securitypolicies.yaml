@@ -135,12 +135,10 @@ spec:
                                       For example, if the claim is in the "department" field in the "organization" field,
                                       the name should be "organization.department".
                                     type: string
-                                  type:
+                                  valueType:
                                     default: String
-                                    description: |-
-                                      Type is the type of the claim.
-                                      Valid values are "String" and "StringArray".
-                                      For example, sub is a string claim, and groups is a string array claim.
+                                    description: ValueType is the type of the claim
+                                      value.
                                     enum:
                                     - String
                                     - StringArray
@@ -156,7 +154,7 @@ spec:
                                     type: array
                                 required:
                                 - name
-                                - type
+                                - valueType
                                 - values
                                 type: object
                               type: array
