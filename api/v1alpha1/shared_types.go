@@ -479,6 +479,7 @@ type BackendRef struct {
 	// when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.
 	// The overprovisioning factor is set to 1.4, meaning the failover backends will only start receiving traffic when
 	// the health of the active backends falls below 72%.
+	//
 	// +optional
 	Failover *bool `json:"failover,omitempty"`
 }
