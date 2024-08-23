@@ -380,7 +380,6 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `endpoints` | _[BackendEndpoint](#backendendpoint) array_ |  true  | Endpoints defines the endpoints to be used when connecting to the backend. |
 | `appProtocols` | _[AppProtocolType](#appprotocoltype) array_ |  false  | AppProtocols defines the application protocols to be supported when connecting to the backend. |
-| `failover` | _boolean_ |  false  | Failover indicates whether the backend is designated as a failover.<br />It is highly recommended to configure active or passive health checks to ensure that failover can be detected<br />when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.<br />The overprovisioning factor is set to 1.4, meaning the failover backends will only start receiving traffic when<br />the health of the active backends falls below 72%. |
 
 
 #### BackendStatus

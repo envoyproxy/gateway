@@ -124,13 +124,14 @@ type BackendSpec struct {
 	// +optional
 	AppProtocols []AppProtocolType `json:"appProtocols,omitempty"`
 
-	// Failover This indicates whether the backend is designated as a failover.
+	// Failover indicates whether the backend is designated as a failover.
 	// It is highly recommended to configure active or passive health checks to ensure that failover can be detected
 	// when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.
 	// The overprovisioning factor is set to 1.4, meaning the failover backends will only start receiving traffic when
 	// the health of the active backends falls below 72%.
 	//
 	// +optional
+	// +notImplementedHide
 	Failover *bool `json:"failover,omitempty"`
 }
 
