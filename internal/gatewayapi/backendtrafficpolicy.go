@@ -325,7 +325,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 	if policy.Spec.Retry != nil {
 		rt = t.buildRetry(policy)
 	}
-	if to, err = buildTimeout(policy.Spec.ClusterSettings, nil); err != nil {
+	if to, err = buildClusterSettingsTimeout(policy.Spec.ClusterSettings, nil); err != nil {
 		err = perr.WithMessage(err, "Timeout")
 		errs = errors.Join(errs, err)
 	}
@@ -385,7 +385,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 					}
 
 					// Some timeout setting originate from the route.
-					if localTo, err := buildTimeout(policy.Spec.ClusterSettings, r); err == nil {
+					if localTo, err := buildClusterSettingsTimeout(policy.Spec.ClusterSettings, r.Traffic); err == nil {
 						to = localTo
 					}
 
@@ -461,7 +461,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	if policy.Spec.Retry != nil {
 		rt = t.buildRetry(policy)
 	}
-	if ct, err = buildTimeout(policy.Spec.ClusterSettings, nil); err != nil {
+	if ct, err = buildClusterSettingsTimeout(policy.Spec.ClusterSettings, nil); err != nil {
 		err = perr.WithMessage(err, "Timeout")
 		errs = errors.Join(errs, err)
 	}
@@ -557,7 +557,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 			// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
 			r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 
-			if ct, err = buildTimeout(policy.Spec.ClusterSettings, r); err == nil {
+			if ct, err = buildClusterSettingsTimeout(policy.Spec.ClusterSettings, r.Traffic); err == nil {
 				r.Traffic.Timeout = ct
 			}
 
