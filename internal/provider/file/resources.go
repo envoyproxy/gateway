@@ -75,7 +75,8 @@ func loadFromDir(path string) ([]*gatewayapi.Resources, error) {
 
 	var rs []*gatewayapi.Resources
 	for _, entry := range entries {
-		if entry.IsDir() {
+		// Ignoring subdirectories and all hidden files and directories.
+		if entry.IsDir() || strings.HasPrefix(entry.Name(), ".") {
 			continue
 		}
 

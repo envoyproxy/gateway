@@ -9,11 +9,9 @@ import (
 	"github.com/spf13/cobra"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/admin"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extensionregistry "github.com/envoyproxy/gateway/internal/extension/registry"
-	"github.com/envoyproxy/gateway/internal/extension/types"
 	gatewayapirunner "github.com/envoyproxy/gateway/internal/gatewayapi/runner"
 	ratelimitrunner "github.com/envoyproxy/gateway/internal/globalratelimit/runner"
 	infrarunner "github.com/envoyproxy/gateway/internal/infrastructure/runner"
@@ -110,18 +108,15 @@ func getConfigByPath(cfgPath string) (*config.Server, error) {
 
 // setupRunners starts all the runners required for the Envoy Gateway to
 // fulfill its tasks.
-func setupRunners(cfg *config.Server) (err error) {
+func setupRunners(cfg *config.Server) error {
 	// TODO - Setup a Config Manager
 	// https://github.com/envoyproxy/gateway/issues/43
 	ctx := ctrl.SetupSignalHandler()
 
-	// Setup the Extension Manager for Kubernetes provider.
-	var extMgr types.Manager
-	if cfg.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes {
-		extMgr, err = extensionregistry.NewManager(cfg)
-		if err != nil {
-			return err
-		}
+	// Setup the Extension Manager
+	extMgr, err := extensionregistry.NewManager(cfg)
+	if err != nil {
+		return err
 	}
 
 	pResources := new(message.ProviderResources)
@@ -215,10 +210,8 @@ func setupRunners(cfg *config.Server) (err error) {
 	cfg.Logger.Info("shutting down")
 
 	// Close connections to extension services
-	if extMgr != nil {
-		if mgr, ok := extMgr.(*extensionregistry.Manager); ok {
-			mgr.CleanupHookConns()
-		}
+	if mgr, ok := extMgr.(*extensionregistry.Manager); ok {
+		mgr.CleanupHookConns()
 	}
 
 	return nil
