@@ -1213,7 +1213,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `type` | _[ProviderType](#providertype)_ |  true  | Type is the type of provider to use. Supported types are "Kubernetes". |
+| `type` | _[ProviderType](#providertype)_ |  true  | Type is the type of provider to use. Supported types are "Kubernetes", "Custom". |
 | `kubernetes` | _[EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)_ |  false  | Kubernetes defines the configuration of the Kubernetes provider. Kubernetes<br />provides runtime configuration via the Kubernetes API. |
 | `custom` | _[EnvoyGatewayCustomProvider](#envoygatewaycustomprovider)_ |  false  | Custom defines the configuration for the Custom provider. This provider<br />allows you to define a specific resource provider and an infrastructure<br />provider. |
 

@@ -174,7 +174,7 @@ type ExtensionAPISettings struct {
 // EnvoyGatewayProvider defines the desired configuration of a provider.
 // +union
 type EnvoyGatewayProvider struct {
-	// Type is the type of provider to use. Supported types are "Kubernetes".
+	// Type is the type of provider to use. Supported types are "Kubernetes", "Custom".
 	//
 	// +unionDiscriminator
 	Type ProviderType `json:"type"`

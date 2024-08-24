@@ -10213,6 +10213,7 @@ spec:
                       optional auxiliary control planes. Supported types are "Kubernetes".
                     enum:
                     - Kubernetes
+                    - Custom
                     type: string
                 required:
                 - type

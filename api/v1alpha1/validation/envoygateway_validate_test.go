@@ -68,6 +68,19 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			expect: false,
 		},
 		{
+			name: "nil custom provider",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway: egv1a1.DefaultGateway(),
+					Provider: &egv1a1.EnvoyGatewayProvider{
+						Type:   egv1a1.ProviderTypeCustom,
+						Custom: nil,
+					},
+				},
+			},
+			expect: false,
+		},
+		{
 			name: "empty custom provider",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
@@ -105,7 +118,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			expect: true,
 		},
 		{
-			name: "custom provider with file provider ans k8s infra provider",
+			name: "custom provider with file provider and k8s infra provider",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
 					Gateway: egv1a1.DefaultGateway(),
@@ -123,6 +136,23 @@ func TestValidateEnvoyGateway(t *testing.T) {
 				},
 			},
 			expect: true,
+		},
+		{
+			name: "custom provider with unsupported resource provider",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway: egv1a1.DefaultGateway(),
+					Provider: &egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeCustom,
+						Custom: &egv1a1.EnvoyGatewayCustomProvider{
+							Resource: egv1a1.EnvoyGatewayResourceProvider{
+								Type: "foobar",
+							},
+						},
+					},
+				},
+			},
+			expect: false,
 		},
 		{
 			name: "custom provider with file provider but no file struct",
@@ -157,6 +187,29 @@ func TestValidateEnvoyGateway(t *testing.T) {
 							},
 							Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
 								Type: egv1a1.InfrastructureProviderTypeHost,
+							},
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "custom provider with file provider and unsupported infra provider",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway: egv1a1.DefaultGateway(),
+					Provider: &egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeCustom,
+						Custom: &egv1a1.EnvoyGatewayCustomProvider{
+							Resource: egv1a1.EnvoyGatewayResourceProvider{
+								Type: egv1a1.ResourceProviderTypeFile,
+								File: &egv1a1.EnvoyGatewayFileResourceProvider{
+									Paths: []string{"a", "b"},
+								},
+							},
+							Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
+								Type: "foobar",
 							},
 						},
 					},
