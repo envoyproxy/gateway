@@ -12,7 +12,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	clicfg "sigs.k8s.io/controller-runtime/pkg/client/config"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes"
@@ -37,7 +36,7 @@ type Manager interface {
 func NewManager(cfg *config.Server) (Manager, error) {
 	var mgr Manager
 
-	if runKubernetesInfraProvider(cfg.EnvoyGateway.Provider) {
+	if cfg.EnvoyGateway.Provider.CanRunKubernetesInfraProvider() {
 		cli, err := client.New(clicfg.GetConfigOrDie(), client.Options{Scheme: envoygateway.GetScheme()})
 		if err != nil {
 			return nil, err
@@ -49,9 +48,4 @@ func NewManager(cfg *config.Server) (Manager, error) {
 	}
 
 	return mgr, nil
-}
-
-func runKubernetesInfraProvider(provider *egv1a1.EnvoyGatewayProvider) bool {
-	return provider.Type == egv1a1.ProviderTypeKubernetes ||
-		(provider.Type == egv1a1.ProviderTypeCustom && provider.Custom.Infrastructure == nil)
 }
