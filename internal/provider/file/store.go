@@ -31,15 +31,20 @@ func newResourcesStore(name string, resources *message.ProviderResources, logger
 func (r *resourcesStore) HandleEvent(event fsnotify.Event, files, dirs []string) {
 	r.logger.Info("receive an event", "name", event.Name, "op", event.Op.String())
 
-	// TODO(sh2): Find a better way to process the event. For now,
-	// it only simply reload all the resources from files and
-	// directories despite the event type.
-	if err := r.LoadAndStore(files, dirs); err != nil {
-		r.logger.Error(err, "error processing resources")
+	// TODO(sh2): Support multiple GatewayClass.
+	switch event.Op {
+	case fsnotify.Write:
+		if err := r.LoadAndStore(files, dirs); err != nil {
+			r.logger.Error(err, "failed to load and store resources")
+		}
+	case fsnotify.Remove:
+		// Under our current assumption, one file only contains one GatewayClass and
+		// all its other related resources, so we can remove them safely.
+		r.resources.GatewayAPIResources.Delete(r.name)
 	}
 }
 
-// LoadAndStore loads and stores resources from files and directories.
+// LoadAndStore loads and stores all resources from files and directories.
 func (r *resourcesStore) LoadAndStore(files, dirs []string) error {
 	rs, err := loadFromFilesAndDirs(files, dirs)
 	if err != nil {
@@ -53,11 +58,21 @@ func (r *resourcesStore) LoadAndStore(files, dirs []string) error {
 	// in each provider. The ideal case is two different providers share the same resources process logic.
 	//
 	// - This issue is tracked by https://github.com/envoyproxy/gateway/issues/3213
-	//
-	// So here we just simply Store each gatewayapi.Resources.
-	var gwcResources gatewayapi.ControllerResources = rs
-	r.resources.GatewayAPIResources.Store(r.name, &gwcResources)
 
+	// We cannot make sure by the time the Write event was triggerd, whether the GatewayClass exist,
+	// so here we just simply Store the first gatewayapi.Resources that has GatewayClass.
+	gwcResources := make(gatewayapi.ControllerResources, 0, 1)
+	for _, resource := range rs {
+		if resource.GatewayClass != nil {
+			gwcResources = append(gwcResources, resource)
+		}
+	}
+	if len(gwcResources) == 0 {
+		return nil
+	}
+
+	r.resources.GatewayAPIResources.Store(r.name, &gwcResources)
 	r.logger.Info("loaded and stored resources successfully")
+
 	return nil
 }
