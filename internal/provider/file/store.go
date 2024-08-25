@@ -59,7 +59,7 @@ func (r *resourcesStore) LoadAndStore(files, dirs []string) error {
 	//
 	// - This issue is tracked by https://github.com/envoyproxy/gateway/issues/3213
 
-	// We cannot make sure by the time the Write event was triggerd, whether the GatewayClass exist,
+	// We cannot make sure by the time the Write event was triggered, whether the GatewayClass exist,
 	// so here we just simply Store the first gatewayapi.Resources that has GatewayClass.
 	gwcResources := make(gatewayapi.ControllerResources, 0, 1)
 	for _, resource := range rs {
