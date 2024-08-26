@@ -2049,6 +2049,14 @@ spec:
                     required:
                     - name
                     type: object
+                  cookieDomain:
+                    description: |-
+                      The optional domain to set the access and ID token cookies on.
+                      If not set, the cookies will default to the host of the request, not including the subdomains.
+                      If set, the cookies will be set on the specified domain and all subdomains.
+                      This means that requests to any subdomain will not require reauthentication after users log in to the parent domain.
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9]))*$
+                    type: string
                   cookieNames:
                     description: |-
                       The optional cookie name overrides to be used for Bearer and IdToken cookies in the
