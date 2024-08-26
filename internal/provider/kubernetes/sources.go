@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
@@ -28,7 +29,7 @@ func NewWatchAndReconcileSource(cond <-chan struct{}, obj client.Object, eh hand
 }
 
 // Start implements the Source interface. It registers the EventHandler with the Informer.
-func (s *watchAndReconcileSource) Start(ctx context.Context, queue workqueue.RateLimitingInterface) error {
+func (s *watchAndReconcileSource) Start(ctx context.Context, queue workqueue.TypedRateLimitingInterface[reconcile.Request]) error {
 	if s.object == nil {
 		return errors.New("object to queue is required")
 	}
