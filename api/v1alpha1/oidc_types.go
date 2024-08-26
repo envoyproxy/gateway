@@ -37,6 +37,15 @@ type OIDC struct {
 	// +optional
 	CookieNames *OIDCCookieNames `json:"cookieNames,omitempty"`
 
+	// The optional domain to set the access and ID token cookies on.
+	// If not set, the cookies will default to the host of the request, not including the subdomains.
+	// If set, the cookies will be set on the specified domain and all subdomains.
+	// This means that requests to any subdomain will not require reauthentication after users log in to the parent domain.
+	// +optional
+	// +notImplementedHide
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9]))*$`
+	CookieDomain *string `json:"cookieDomain,omitempty"`
+
 	// The OIDC scopes to be used in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	// The "openid" scope is always added to the list of scopes if not already
