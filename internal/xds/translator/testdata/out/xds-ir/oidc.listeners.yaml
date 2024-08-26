@@ -73,6 +73,7 @@
               authorizationEndpoint: https://oauth.bar.com/oauth2/v2/auth
               credentials:
                 clientId: client.oauth.bar.com
+                cookieDomain: .example.com
                 cookieNames:
                   bearerToken: CustomAccessTokenOverride
                   idToken: CustomIdTokenOverride
