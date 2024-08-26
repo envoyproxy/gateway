@@ -662,6 +662,7 @@ func (t *Translator) buildOIDC(
 		DefaultRefreshTokenTTL: oidc.DefaultRefreshTokenTTL,
 		CookieSuffix:           suffix,
 		CookieNameOverrides:    policy.Spec.OIDC.CookieNames,
+		CookieDomain:           policy.Spec.OIDC.CookieDomain,
 		HMACSecret:             hmacData,
 	}, nil
 }

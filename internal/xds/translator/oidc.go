@@ -205,6 +205,10 @@ func oauth2Config(oidc *ir.OIDC) (*oauth2v3.OAuth2, error) {
 		oauth2.Config.Credentials.CookieNames.IdToken = *oidc.CookieNameOverrides.IDToken
 	}
 
+	if oidc.CookieDomain != nil {
+		oauth2.Config.Credentials.CookieDomain = *oidc.CookieDomain
+	}
+
 	return oauth2, nil
 }
 
