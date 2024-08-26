@@ -3486,6 +3486,11 @@ func (in *OIDC) DeepCopyInto(out *OIDC) {
 		*out = new(OIDCCookieNames)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.CookieDomain != nil {
+		in, out := &in.CookieDomain, &out.CookieDomain
+		*out = new(string)
+		**out = **in
+	}
 	if in.Scopes != nil {
 		in, out := &in.Scopes, &out.Scopes
 		*out = make([]string, len(*in))
