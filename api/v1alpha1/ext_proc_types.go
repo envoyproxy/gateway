@@ -47,7 +47,6 @@ type ExtProcProcessingMode struct {
 
 // ExtProc defines the configuration for External Processing filter.
 // +kubebuilder:validation:XValidation:message="BackendRefs must be used, backendRef is not supported.",rule="!has(self.backendRef)"
-// +kubebuilder:validation:XValidation:message="Exactly one backendRef can be specified in backendRefs.",rule="has(self.backendRefs) && self.backendRefs.size()==1"
 // +kubebuilder:validation:XValidation:message="BackendRefs only supports Service and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'Backend') : true"
 // +kubebuilder:validation:XValidation:message="BackendRefs only supports Core and gateway.envoyproxy.io group.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'gateway.envoyproxy.io')) : true"
 type ExtProc struct {
