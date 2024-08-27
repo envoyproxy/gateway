@@ -145,9 +145,9 @@ securityPolicies:
           - header1
           - header2
         grpc:
-          backendRef:
-            name: grpc-backend
-            port: 9000
+          backendRefs:
+            - name: grpc-backend
+              port: 9000
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: SecurityPolicy
     metadata:
@@ -161,10 +161,10 @@ securityPolicies:
       extAuth:
         failOpen: false
         http:
-          backendRef:
-            Name: http-backend
-            Namespace: envoy-gateway
-            Port: 80
+          backendRefs:
+            - Name: http-backend
+              Namespace: envoy-gateway
+              Port: 80
           Path: /auth
           headersToBackend:
             - header1
