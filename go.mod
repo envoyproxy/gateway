@@ -12,7 +12,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/docker/cli v27.1.2+incompatible
 	github.com/dominikbraun/graph v0.23.0
-	github.com/envoyproxy/go-control-plane v0.12.1-0.20240612043845-c54ec4ce422d
+	github.com/envoyproxy/go-control-plane v0.13.0
 	github.com/envoyproxy/ratelimit v1.4.1-0.20230427142404-e2a87f41d3a7
 	github.com/evanphx/json-patch/v5 v5.9.0
 	github.com/fatih/color v1.17.0
@@ -26,7 +26,7 @@ require (
 	github.com/google/go-containerregistry v0.20.2
 	github.com/grafana/tempo v1.5.0
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/miekg/dns v1.1.61
+	github.com/miekg/dns v1.1.62
 	github.com/ohler55/ojg v1.24.0
 	github.com/prometheus/client_golang v1.20.0
 	github.com/prometheus/common v0.55.0
@@ -48,7 +48,7 @@ require (
 	golang.org/x/sys v0.24.0
 	google.golang.org/protobuf v1.34.2
 	gopkg.in/yaml.v3 v3.0.1
-	helm.sh/helm/v3 v3.15.3
+	helm.sh/helm/v3 v3.15.4
 	k8s.io/api v0.31.0
 	k8s.io/apiextensions-apiserver v0.31.0
 	k8s.io/apimachinery v0.31.0
