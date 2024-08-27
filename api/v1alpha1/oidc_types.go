@@ -42,7 +42,8 @@ type OIDC struct {
 	// If set, the cookies will be set on the specified domain and all subdomains.
 	// This means that requests to any subdomain will not require reauthentication after users log in to the parent domain.
 	// +optional
-	// +kubebuilder:validation:Pattern=`^[a-z0-9.]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9]))*$`
+	// +notImplementedHide
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9]))*$`
 	CookieDomain *string `json:"cookieDomain,omitempty"`
 
 	// The OIDC scopes to be used in the

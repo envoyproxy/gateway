@@ -97,7 +97,7 @@ providers, including Auth0, Azure AD, Keycloak, Okta, OneLogin, Salesforce, UAA,
 
 Follow the steps in the [Google OIDC documentation][google-oidc] to register an OIDC application. Please make sure the
 redirect URL is set to the one you configured in the SecurityPolicy that you will create in the step below. In this example,
-the redirect URL is `http://www.example.com:8443/myapp/oauth2/callback`.
+the redirect URL is `https://www.example.com:8443/myapp/oauth2/callback`.
 
 After registering the application, you should have the following information:
 * Client ID: The client ID of the OIDC application.
@@ -221,7 +221,7 @@ If you haven't registered an OIDC application, follow the steps in the previous 
 
 If you haven't created a kubernetes secret, follow the steps in the previous section to create a kubernetes secret.
 
-### Create another HTTPRoute
+### Create an HTTPRoute with a different subdomain
 
 Let's create another HTTPRoute in the same Gateway, but with a different subdomain.
 
@@ -355,17 +355,40 @@ Verify the SecurityPolicy configuration:
 kubectl get securitypolicy/oidc-example -o yaml
 ```
 
+### Update the Listener TLS certificate to support multiple subdomains
+
+Create a multi-domain wildcard certificate for `*.example.com`.
+
+```shell
+openssl req -out wildcard.csr -newkey rsa:2048 -nodes -keyout wildcard.key -subj "/CN=*.example.com/O=example organization"
+openssl x509 -req -days 365 -CA example.com.crt -CAkey example.com.key -set_serial 0 -in wildcard.csr -out wildcard.crt
+```
+
+Replace the TLS certificate of the Gateway with the wildcard certificate.
+
+```shell
+kubectl delete secret example-cert
+kubectl create secret tls example-cert --key=wildcard.key --cert=wildcard.crt
+```
+
 ### Testing
 
 If you haven't done so, follow the steps in the previous section to port forward gateway port to localhost and put
 www.example.com in the /etc/hosts file in your test machine.
 
+Also, put foo.example.com in the /etc/hosts file in your test machine.
+
+```shell
+...
+127.0.0.1 foo.example.com
+```
+
 Open a browser and navigate to the `https://www.example.com:8443/myapp` address. You should be redirected to the Google
 login page. After you successfully login, you should see the response from the backend service.
 
 You can also try to access `https://foo.example.com:8443` and `https://www.example.com:8443/bar` addresses. You should
-be able to see the response from the backend service since these HTTPRoutes are protected by the same OIDC policy and
-the ID token cookie is shared across subdomains.
+be able to see the response from the backend service since these HTTPRoutes are also protected by the same OIDC config,
+and the ID token cookie is shared across subdomains.
 
 ## Clean-Up
 

@@ -132,4 +132,4 @@ securityPolicies:
       defaultTokenTTL: 1h
       refreshToken: true
       defaultRefreshTokenTTL: 48h
-      cookieDomain: ".example.com"
+      cookieDomain: "example.com"
