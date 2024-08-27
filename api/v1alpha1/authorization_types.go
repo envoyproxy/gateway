@@ -73,25 +73,63 @@ type Principal struct {
 }
 
 // JWTClaim specifies a claim in a JWT token.
+// +kubebuilder:validation:XValidation:rule="(has(self.wellKnown) || has(self.custom))",message="one of wellKnown or custom must be specified"
+// +kubebuilder:validation:XValidation:rule="(has(self.wellKnown) && !has(self.custom)) || (!has(self.wellKnown) && has(self.custom))",message="only one of wellKnown or custom can be specified"
 type JWTClaim struct {
-	// ValueType is the type of the claim value.
-	// +kubebuilder:validation:Enum=String;StringArray
-	// +kubebuilder:default=String
+	// WellKnown specifies a well-known claim in a JWT token.
+	// Either `WellKnown` or `Custom` must be specified.
+	//
+	// +kubebuilder:validation:Enum=scope;iss;sub;name;email;client_id;roles;groups;entitlements
 	// +unionDiscriminator
-	ValueType JWTClaimValueType `json:"valueType"`
+	// +optional
+	WellKnown *WellKnownJWTClaim `json:"wellKnown,omitempty"`
 
-	// Name is the name of the claim.
-	// If it is a nested claim, use a dot (.) separated string as the name to
-	// represent the full path to the claim.
-	// For example, if the claim is in the "department" field in the "organization" field,
-	// the name should be "organization.department".
-	Name string `json:"name"`
+	// Custom specifies a custom claim in a JWT token.
+	// Either `WellKnown` or `Custom` must be specified.
+	// +optional
+	Custom *CustomJWTClaim `json:"custom,omitempty"`
 
 	// Values are the values that the claim must match.
 	// If the claim is a string type, the specified value must match exactly.
 	// If the claim is a string array type, the specified value must match one of the values in the array.
+	// Note: scope claim is treated as a string array type, using space as the delimiter.
 	// If multiple values are specified, one of the values must match for the rule to match.
 	Values []string `json:"values"`
+}
+
+// WellKnownJWTClaim specifies a well-known claim in a JWT token.
+type WellKnownJWTClaim string
+
+// https://www.iana.org/assignments/jwt/jwt.xhtml#claims
+
+const (
+	WellKnownJWTClaimScope        WellKnownJWTClaim = "scope"
+	WellKnownJWTClaimIss          WellKnownJWTClaim = "iss"
+	WellKnownJWTClaimSub          WellKnownJWTClaim = "sub"
+	WellKnownJWTClaimName         WellKnownJWTClaim = "name"
+	WellKnownJWTClaimEmail        WellKnownJWTClaim = "email"
+	WellKnownJWTClaimClientID     WellKnownJWTClaim = "client_id"
+	WellKnownJWTClaimRoles        WellKnownJWTClaim = "roles"
+	WellKnownJWTClaimGroups       WellKnownJWTClaim = "groups"
+	WellKnownJWTClaimEntitlements WellKnownJWTClaim = "entitlements"
+)
+
+// CustomJWTClaim specifies a custom claim in a JWT token.
+type CustomJWTClaim struct {
+	// Name is the name of a custom claim.
+	// If it is a nested claim, use a dot (.) separated string as the name to
+	// represent the full path to the claim.
+	// For example, if the claim is in the "department" field in the "organization" field,
+	// the name should be "organization.department".
+	// +optional
+	Name string `json:"name"`
+
+	// ValueType is the type of the claim value, only meaningful for custom claims.
+	// +kubebuilder:validation:Enum=String;StringArray
+	// +kubebuilder:default=String
+	// +unionDiscriminator
+	// +optional
+	ValueType *JWTClaimValueType `json:"valueType,omitempty"`
 }
 
 type JWTClaimValueType string

@@ -845,6 +845,21 @@ _Appears in:_
 | `failClosed` | _boolean_ |  false  | FailClosed is a switch used to control the flow of traffic when client IP detection<br />fails. If set to true, the listener will respond with 403 Forbidden when the client<br />IP address cannot be determined. |
 
 
+#### CustomJWTClaim
+
+
+
+CustomJWTClaim specifies a custom claim in a JWT token.
+
+_Appears in:_
+- [JWTClaim](#jwtclaim)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `name` | _string_ |  false  | Name is the name of a custom claim.<br />If it is a nested claim, use a dot (.) separated string as the name to<br />represent the full path to the claim.<br />For example, if the claim is in the "department" field in the "organization" field,<br />the name should be "organization.department". |
+| `valueType` | _[JWTClaimValueType](#jwtclaimvaluetype)_ |  false  | ValueType is the type of the claim value, only meaningful for custom claims. |
+
+
 #### CustomTag
 
 
@@ -2129,9 +2144,9 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `valueType` | _[JWTClaimValueType](#jwtclaimvaluetype)_ |  true  | ValueType is the type of the claim value. |
-| `name` | _string_ |  true  | Name is the name of the claim.<br />If it is a nested claim, use a dot (.) separated string as the name to<br />represent the full path to the claim.<br />For example, if the claim is in the "department" field in the "organization" field,<br />the name should be "organization.department". |
-| `values` | _string array_ |  true  | Values are the values that the claim must match.<br />If the claim is a string type, the specified value must match exactly.<br />If the claim is a string array type, the specified value must match one of the values in the array.<br />If multiple values are specified, one of the values must match for the rule to match. |
+| `wellKnown` | _[WellKnownJWTClaim](#wellknownjwtclaim)_ |  false  | WellKnown specifies a well-known claim in a JWT token.<br />Either `WellKnown` or `Custom` must be specified. |
+| `custom` | _[CustomJWTClaim](#customjwtclaim)_ |  false  | Custom specifies a custom claim in a JWT token.<br />Either `WellKnown` or `Custom` must be specified. |
+| `values` | _string array_ |  true  | Values are the values that the claim must match.<br />If the claim is a string type, the specified value must match exactly.<br />If the claim is a string array type, the specified value must match one of the values in the array.<br />Note: scope claim is treated as a string array type, using space as the delimiter.<br />If multiple values are specified, one of the values must match for the rule to match. |
 
 
 #### JWTClaimValueType
@@ -2141,7 +2156,7 @@ _Underlying type:_ _string_
 
 
 _Appears in:_
-- [JWTClaim](#jwtclaim)
+- [CustomJWTClaim](#customjwtclaim)
 
 | Value | Description |
 | ----- | ----------- |
@@ -3754,6 +3769,28 @@ _Appears in:_
 | ----- | ----------- |
 | `HTTP` | HTTPWasmCodeSourceType allows the user to specify the Wasm code in an HTTP URL.<br /> | 
 | `Image` | ImageWasmCodeSourceType allows the user to specify the Wasm code in an OCI image.<br /> | 
+
+
+#### WellKnownJWTClaim
+
+_Underlying type:_ _string_
+
+WellKnownJWTClaim specifies a well-known claim in a JWT token.
+
+_Appears in:_
+- [JWTClaim](#jwtclaim)
+
+| Value | Description |
+| ----- | ----------- |
+| `scope` |  | 
+| `iss` |  | 
+| `sub` |  | 
+| `name` |  | 
+| `email` |  | 
+| `client_id` |  | 
+| `roles` |  | 
+| `groups` |  | 
+| `entitlements` |  | 
 
 
 #### WithUnderscoresAction

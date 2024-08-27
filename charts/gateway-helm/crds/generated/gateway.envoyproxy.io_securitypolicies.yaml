@@ -123,36 +123,64 @@ spec:
                               items:
                                 description: JWTClaim specifies a claim in a JWT token.
                                 properties:
-                                  name:
+                                  custom:
                                     description: |-
-                                      Name is the name of the claim.
-                                      If it is a nested claim, use a dot (.) separated string as the name to
-                                      represent the full path to the claim.
-                                      For example, if the claim is in the "department" field in the "organization" field,
-                                      the name should be "organization.department".
-                                    type: string
-                                  valueType:
-                                    default: String
-                                    description: ValueType is the type of the claim
-                                      value.
-                                    enum:
-                                    - String
-                                    - StringArray
-                                    type: string
+                                      Custom specifies a custom claim in a JWT token.
+                                      Either `WellKnown` or `Custom` must be specified.
+                                    properties:
+                                      name:
+                                        description: |-
+                                          Name is the name of a custom claim.
+                                          If it is a nested claim, use a dot (.) separated string as the name to
+                                          represent the full path to the claim.
+                                          For example, if the claim is in the "department" field in the "organization" field,
+                                          the name should be "organization.department".
+                                        type: string
+                                      valueType:
+                                        default: String
+                                        description: ValueType is the type of the
+                                          claim value, only meaningful for custom
+                                          claims.
+                                        enum:
+                                        - String
+                                        - StringArray
+                                        type: string
+                                    type: object
                                   values:
                                     description: |-
                                       Values are the values that the claim must match.
                                       If the claim is a string type, the specified value must match exactly.
                                       If the claim is a string array type, the specified value must match one of the values in the array.
+                                      Note: scope claim is treated as a string array type, using space as the delimiter.
                                       If multiple values are specified, one of the values must match for the rule to match.
                                     items:
                                       type: string
                                     type: array
+                                  wellKnown:
+                                    description: |-
+                                      WellKnown specifies a well-known claim in a JWT token.
+                                      Either `WellKnown` or `Custom` must be specified.
+                                    enum:
+                                    - scope
+                                    - iss
+                                    - sub
+                                    - name
+                                    - email
+                                    - client_id
+                                    - roles
+                                    - groups
+                                    - entitlements
+                                    type: string
                                 required:
-                                - name
-                                - valueType
                                 - values
                                 type: object
+                                x-kubernetes-validations:
+                                - message: one of wellKnown or custom must be specified
+                                  rule: (has(self.wellKnown) || has(self.custom))
+                                - message: only one of wellKnown or custom can be
+                                    specified
+                                  rule: (has(self.wellKnown) && !has(self.custom))
+                                    || (!has(self.wellKnown) && has(self.custom))
                               type: array
                           required:
                           - clientCIDRs
