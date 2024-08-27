@@ -18,24 +18,39 @@ import (
 // ApplyBootstrapConfig applies the bootstrap config to the default bootstrap config and return the result config.
 func ApplyBootstrapConfig(boostrapConfig *egv1a1.ProxyBootstrap, defaultBootstrap string) (string, error) {
 	bootstrapType := boostrapConfig.Type
-	if bootstrapType != nil && *bootstrapType == egv1a1.BootstrapTypeMerge {
+	if bootstrapType == nil {
+		// The documentation defines that a nil bootstrapType defaults to the "Replace" operation
+		return *boostrapConfig.Value, nil
+	}
+	switch *bootstrapType {
+	case egv1a1.BootstrapTypeMerge:
 		mergedBootstrap, err := mergeBootstrap(defaultBootstrap, boostrapConfig.Value)
 		if err != nil {
 			return "", err
 		}
 		return mergedBootstrap, nil
+	case egv1a1.BootstrapTypeReplace:
+		return *boostrapConfig.Value, nil
+	case egv1a1.BootstrapTypeJSONPatch:
+		// TODO: Implement
+		return defaultBootstrap, nil
+	default:
+		// This is unreachable code due to the CEL validation on egv1a1.ProxyBootstrap
+		return defaultBootstrap, fmt.Errorf("unsupported bootstrap patch type %s", *bootstrapType)
 	}
-	return boostrapConfig.Value, nil
 }
 
-func mergeBootstrap(base, override string) (string, error) {
+func mergeBootstrap(base string, override *string) (string, error) {
+	if override == nil {
+		return base, nil
+	}
 	dst := &bootstrapv3.Bootstrap{}
 	if err := proto.FromYAML([]byte(base), dst); err != nil {
 		return "", fmt.Errorf("failed to parse default bootstrap config: %w", err)
 	}
 
 	src := &bootstrapv3.Bootstrap{}
-	if err := proto.FromYAML([]byte(override), src); err != nil {
+	if err := proto.FromYAML([]byte(*override), src); err != nil {
 		return "", fmt.Errorf("failed to parse override bootstrap config: %w", err)
 	}
 

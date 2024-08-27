@@ -959,7 +959,7 @@ func addDefaultEnvoyProxy(resources *gatewayapi.Resources) error {
 		},
 		Spec: egv1a1.EnvoyProxySpec{
 			Bootstrap: &egv1a1.ProxyBootstrap{
-				Value: defaultBootstrapStr,
+				Value: &defaultBootstrapStr,
 			},
 		},
 	}

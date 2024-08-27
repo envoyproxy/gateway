@@ -48,7 +48,7 @@ func TestApplyBootstrapConfig(t *testing.T) {
 			in, err := loadData(tc.name, "in")
 			require.NoError(t, err)
 
-			tc.boostrapConfig.Value = in
+			tc.boostrapConfig.Value = &in
 			data, err := ApplyBootstrapConfig(tc.boostrapConfig, tc.defaultBootstrap)
 			require.NoError(t, err)
 

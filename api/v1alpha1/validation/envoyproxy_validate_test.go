@@ -329,7 +329,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Bootstrap: &egv1a1.ProxyBootstrap{
-						Value: validUserBootstrap,
+						Value: &validUserBootstrap,
 					},
 				},
 			},
@@ -345,7 +345,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				Spec: egv1a1.EnvoyProxySpec{
 					Bootstrap: &egv1a1.ProxyBootstrap{
 						Type:  ptr.To(egv1a1.BootstrapTypeMerge),
-						Value: mergeUserBootstrap,
+						Value: &mergeUserBootstrap,
 					},
 				},
 			},
@@ -360,7 +360,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Bootstrap: &egv1a1.ProxyBootstrap{
-						Value: missingAdminAddressUserBootstrap,
+						Value: &missingAdminAddressUserBootstrap,
 					},
 				},
 			},
@@ -375,7 +375,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Bootstrap: &egv1a1.ProxyBootstrap{
-						Value: differentDynamicResourcesUserBootstrap,
+						Value: &differentDynamicResourcesUserBootstrap,
 					},
 				},
 			},
@@ -390,7 +390,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Bootstrap: &egv1a1.ProxyBootstrap{
-						Value: differentXdsClusterAddressBootstrap,
+						Value: &differentXdsClusterAddressBootstrap,
 					},
 				},
 			},
