@@ -45,6 +45,15 @@ const (
 	defaultTick = time.Millisecond * 20
 )
 
+func TestMain(m *testing.M) {
+	// related to https://github.com/kubernetes-sigs/controller-runtime/pull/2902
+	// this is a workaround to skip the name validation for the test
+	skipNameValidation = func() *bool {
+		return ptr.To(true)
+	}
+	os.Exit(m.Run())
+}
+
 func TestProvider(t *testing.T) {
 	// Setup the test environment.
 	testEnv, cliCfg, err := startEnv()

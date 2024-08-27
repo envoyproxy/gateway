@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/discovery"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -43,6 +44,10 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/slice"
 )
+
+var skipNameValidation = func() *bool {
+	return ptr.To(false)
+}
 
 type gatewayAPIReconciler struct {
 	client            client.Client
@@ -104,9 +109,9 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su Updater
 		r.namespaceLabel = cfg.EnvoyGateway.Provider.Kubernetes.Watch.NamespaceSelector
 	}
 
-	c, err := controller.New("gatewayapi", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New("gatewayapi", mgr, controller.Options{Reconciler: r, SkipNameValidation: skipNameValidation()})
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating controller: %w", err)
 	}
 	r.log.Info("created gatewayapi controller")
 
@@ -115,7 +120,7 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su Updater
 
 	// Watch resources
 	if err := r.watchResources(ctx, mgr, c); err != nil {
-		return err
+		return fmt.Errorf("error watching resources: %w", err)
 	}
 	return nil
 }
@@ -1106,7 +1111,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	// process status updates and infrastructure changes. This step is crucial for synchronizing resources
 	// that may have been altered or introduced while there was no elected leader.
 	if err := c.Watch(NewWatchAndReconcileSource(mgr.Elected(), &gwapiv1.GatewayClass{}, handler.EnqueueRequestsFromMapFunc(r.enqueueClass))); err != nil {
-		return err
+		return fmt.Errorf("failed to watch GatewayClass: %w", err)
 	}
 
 	if err := c.Watch(
@@ -1116,7 +1121,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			}),
 			&predicate.TypedGenerationChangedPredicate[*gwapiv1.GatewayClass]{},
 			predicate.NewTypedPredicateFuncs[*gwapiv1.GatewayClass](r.hasMatchingController))); err != nil {
-		return err
+		return fmt.Errorf("failed to watch GatewayClass: %w", err)
 	}
 
 	epPredicates := []predicate.TypedPredicate[*egv1a1.EnvoyProxy]{
@@ -1288,12 +1293,11 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
+	// Watch ServiceImport CRUDs and process affected *Route objects.
 	serviceImportCRDExists := r.serviceImportCRDExists(mgr)
 	if !serviceImportCRDExists {
 		r.log.Info("ServiceImport CRD not found, skipping ServiceImport watch")
 	}
-
-	// Watch ServiceImport CRUDs and process affected *Route objects.
 	if serviceImportCRDExists {
 		if err := c.Watch(
 			source.Kind(mgr.GetCache(), &mcsapiv1a1.ServiceImport{},

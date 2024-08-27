@@ -382,9 +382,3 @@ xdsIR:
           consistentHash:
             sourceIP: true
         name: udproute/default/udp-app-1
-        timeout:
-          http:
-            connectionIdleTimeout: 16s
-            maxConnectionDuration: 17s
-          tcp:
-            connectTimeout: 15s

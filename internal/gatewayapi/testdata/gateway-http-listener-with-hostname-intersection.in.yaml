@@ -33,7 +33,7 @@ httpRoutes:
           sectionName: empty-hostname
       hostnames:
         - "bar.com"
-        - "*.example.com" # request matching is prevented by the isolation wildcard-example-com listener
+        - "*.example.com"  # request matching is prevented by the isolation wildcard-example-com listener
       rules:
         - matches:
             - path:
@@ -53,7 +53,7 @@ httpRoutes:
           namespace: envoy-gateway
           sectionName: wildcard-example-com
       hostnames:
-        - "bar.com" # doesn't match wildcard-example-com listener
+        - "bar.com"  # doesn't match wildcard-example-com listener
         - "*.example.com"
       rules:
         - matches:
