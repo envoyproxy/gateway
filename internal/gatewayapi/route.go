@@ -258,11 +258,6 @@ func processRouteTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 	if rule.Timeouts != nil {
 		rto := &ir.Timeout{}
 
-		// Timeout is translated from multiple resources and may already be partially set
-		if irRoute.Traffic != nil {
-			rto = mergeTimeoutSettings(rto, irRoute.Traffic.Timeout)
-		}
-
 		if rule.Timeouts.Request != nil {
 			d, err := time.ParseDuration(string(*rule.Timeouts.Request))
 			if err != nil {
