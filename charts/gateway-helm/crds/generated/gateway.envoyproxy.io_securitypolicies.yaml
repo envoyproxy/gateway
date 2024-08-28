@@ -333,7 +333,7 @@ spec:
                           properties:
                             failover:
                               description: |-
-                                Failover This indicates whether the backend is designated as a failover.
+                                Failover indicates whether the backend is designated as a failover.
                                 Multiple failover backends can be configured.
                                 It is highly recommended to configure active or passive health checks to ensure that failover can be detected
                                 when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.
@@ -1018,8 +1018,6 @@ spec:
                       rule: has(self.backendRef) || self.backendRefs.size() > 0
                     - message: BackendRefs must be used, backendRef is not supported.
                       rule: '!has(self.backendRef)'
-                    - message: Exactly one backendRef can be specified in backendRefs.
-                      rule: has(self.backendRefs) && self.backendRefs.size()==1
                     - message: BackendRefs only supports Service and Backend kind.
                       rule: 'has(self.backendRefs) ? self.backendRefs.all(f, f.kind
                         == ''Service'' || f.kind == ''Backend'') : true'
@@ -1132,7 +1130,7 @@ spec:
                           properties:
                             failover:
                               description: |-
-                                Failover This indicates whether the backend is designated as a failover.
+                                Failover indicates whether the backend is designated as a failover.
                                 Multiple failover backends can be configured.
                                 It is highly recommended to configure active or passive health checks to ensure that failover can be detected
                                 when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.
@@ -1833,8 +1831,6 @@ spec:
                       rule: has(self.backendRef) || self.backendRefs.size() > 0
                     - message: BackendRefs must be used, backendRef is not supported.
                       rule: '!has(self.backendRef)'
-                    - message: Exactly one backendRef can be specified in backendRefs.
-                      rule: has(self.backendRefs) && self.backendRefs.size()==1
                     - message: BackendRefs only supports Service and Backend kind.
                       rule: 'has(self.backendRefs) ? self.backendRefs.all(f, f.kind
                         == ''Service'' || f.kind == ''Backend'') : true'

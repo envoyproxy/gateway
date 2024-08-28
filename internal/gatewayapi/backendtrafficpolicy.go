@@ -342,11 +342,6 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 
 	ds = translateDNS(policy.Spec.ClusterSettings)
 
-	// Early return if got any errors
-	if errs != nil {
-		return errs
-	}
-
 	// Apply IR to all relevant routes
 	prefix := irRoutePrefix(route)
 
@@ -381,6 +376,14 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 			for _, r := range http.Routes {
 				// Apply if there is a match
 				if strings.HasPrefix(r.Name, prefix) {
+					if errs != nil {
+						// Return a 500 direct response
+						r.DirectResponse = &ir.DirectResponse{
+							StatusCode: 500,
+						}
+						continue
+					}
+
 					r.Traffic = &ir.TrafficFeatures{
 						RateLimit:         rl,
 						LoadBalancer:      lb,
@@ -411,7 +414,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 		}
 	}
 
-	return nil
+	return errs
 }
 
 func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.BackendTrafficPolicy, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, gateway *GatewayContext, xdsIR XdsIRMap) error {
@@ -467,11 +470,6 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	}
 
 	ds = translateDNS(policy.Spec.ClusterSettings)
-
-	// Early return if got any errors
-	if errs != nil {
-		return errs
-	}
 
 	// Apply IR to all the routes within the specific Gateway
 	// If the feature is already set, then skip it, since it must be have
@@ -534,6 +532,14 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 				continue
 			}
 
+			if errs != nil {
+				// Return a 500 direct response
+				r.DirectResponse = &ir.DirectResponse{
+					StatusCode: 500,
+				}
+				continue
+			}
+
 			r.Traffic = &ir.TrafficFeatures{
 				RateLimit:      rl,
 				LoadBalancer:   lb,
@@ -560,7 +566,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		}
 	}
 
-	return nil
+	return errs
 }
 
 func (t *Translator) buildRateLimit(policy *egv1a1.BackendTrafficPolicy) (*ir.RateLimit, error) {

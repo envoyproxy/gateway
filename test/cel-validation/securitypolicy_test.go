@@ -685,7 +685,6 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{
 				"BackendRefs must be used, backendRef is not supported.",
-				"Exactly one backendRef can be specified in backendRefs.",
 			},
 		},
 		{
@@ -782,7 +781,6 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{
 				"BackendRefs must be used, backendRef is not supported.",
-				"Exactly one backendRef can be specified in backendRefs.",
 			},
 		},
 		{

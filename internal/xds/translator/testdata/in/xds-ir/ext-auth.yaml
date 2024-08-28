@@ -39,6 +39,12 @@ http:
                 settings:
                   - addressType: IP
                     endpoints:
+                      - host: 8.8.4.4
+                        port: 9001
+                    protocol: GRPC
+                    weight: 1
+                  - addressType: IP
+                    endpoints:
                       - host: 8.8.8.8
                         port: 9000
                     protocol: GRPC
