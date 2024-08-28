@@ -6,7 +6,6 @@
 package bootstrap
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -65,7 +65,7 @@ func TestApplyBootstrapConfig(t *testing.T) {
 
 			switch *tc.boostrapConfig.Type {
 			case egv1a1.BootstrapTypeJSONPatch:
-				err = json.Unmarshal([]byte(in), &tc.boostrapConfig.JSONPatches)
+				err = yaml.Unmarshal([]byte(in), &tc.boostrapConfig.JSONPatches)
 				require.NoError(t, err)
 			default:
 				tc.boostrapConfig.Value = &in
