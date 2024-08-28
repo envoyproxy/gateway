@@ -43,6 +43,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/slice"
+	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
 var skipNameValidation = func() *bool {
@@ -1648,7 +1649,7 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 
 	r.log.Info("processing envoyproxy", "namespace", ep.Namespace, "name", ep.Name)
 
-	if err := validation.ValidateEnvoyProxy(ep); err != nil {
+	if err := validation.ValidateEnvoyProxy(ep, bootstrap.FetchAndPatchBootstrapFunc); err != nil {
 		return fmt.Errorf("invalid envoyproxy: %w", err)
 	}
 

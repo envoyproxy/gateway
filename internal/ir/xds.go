@@ -8,6 +8,7 @@ package ir
 import (
 	"cmp"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/netip"
 	"reflect"
@@ -1753,12 +1754,42 @@ type JSONPatchConfig struct {
 	Operation JSONPatchOperation `json:"operation" yaml:"operation"`
 }
 
+type JSONPatchOp string
+
+const (
+	JSONPatchOpAdd     JSONPatchOp = "add"
+	JSONPatchOpRemove  JSONPatchOp = "remove"
+	JSONPatchOpReplace JSONPatchOp = "replace"
+	JSONPatchOpCopy    JSONPatchOp = "copy"
+	JSONPatchOpMove    JSONPatchOp = "move"
+	JSONPatchOpTest    JSONPatchOp = "test"
+)
+
+func TranslateJSONPatchOp(op egv1a1.JSONPatchOperationType) JSONPatchOp {
+	switch op {
+	case "add":
+		return JSONPatchOpAdd
+	case "remove":
+		return JSONPatchOpRemove
+	case "replace":
+		return JSONPatchOpReplace
+	case "move":
+		return JSONPatchOpMove
+	case "copy":
+		return JSONPatchOpCopy
+	case "test":
+		return JSONPatchOpTest
+	default:
+		return ""
+	}
+}
+
 // JSONPatchOperation defines the JSON Patch Operation as defined in
 // https://datatracker.ietf.org/doc/html/rfc6902
 // +k8s:deepcopy-gen=true
 type JSONPatchOperation struct {
 	// Op is the type of operation to perform
-	Op string `json:"op" yaml:"op"`
+	Op JSONPatchOp `json:"op" yaml:"op"`
 	// Path is the location of the target document/field where the operation will be performed
 	// Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details.
 	// +optional
@@ -1782,6 +1813,26 @@ func (o *JSONPatchOperation) IsPathNilOrEmpty() bool {
 
 func (o *JSONPatchOperation) IsJSONPathNilOrEmpty() bool {
 	return o.JSONPath == nil || *o.JSONPath == EmptyPath
+}
+
+func (o *JSONPatchOperation) Validate() error {
+	switch o.Op {
+	case JSONPatchOpAdd, JSONPatchOpReplace:
+		if o.Value == nil {
+			return fmt.Errorf("the %s operation requires a value", o.Op)
+		}
+	case JSONPatchOpMove, JSONPatchOpCopy:
+		if o.From == nil {
+			return fmt.Errorf("the %s operation requires a valid from attribute", o.Op)
+		}
+		// Check that value is not nil as well. This case must remain before the default case.
+		fallthrough
+	default:
+		if o.Value != nil {
+			return fmt.Errorf("the value field can not be set for the %s operation", o.Op)
+		}
+	}
+	return nil
 }
 
 // Tracing defines the configuration for tracing a Envoy xDS Resource

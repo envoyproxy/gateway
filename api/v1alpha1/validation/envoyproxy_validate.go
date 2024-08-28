@@ -19,18 +19,18 @@ import (
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/utils/proto"
-	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 	_ "github.com/envoyproxy/gateway/internal/xds/extensions" // register the generated types to support protojson unmarshalling
 )
 
+type FetchAndPatchBootstrapFunc func(*egv1a1.ProxyBootstrap) (*bootstrapv3.Bootstrap, *bootstrapv3.Bootstrap, error)
+
 // ValidateEnvoyProxy validates the provided EnvoyProxy.
-func ValidateEnvoyProxy(proxy *egv1a1.EnvoyProxy) error {
+func ValidateEnvoyProxy(proxy *egv1a1.EnvoyProxy, fetchAndPatchBootstrap FetchAndPatchBootstrapFunc) error {
 	var errs []error
 	if proxy == nil {
 		return errors.New("envoyproxy is nil")
 	}
-	if err := validateEnvoyProxySpec(&proxy.Spec); err != nil {
+	if err := validateEnvoyProxySpec(&proxy.Spec, fetchAndPatchBootstrap); err != nil {
 		errs = append(errs, err)
 	}
 
@@ -38,7 +38,7 @@ func ValidateEnvoyProxy(proxy *egv1a1.EnvoyProxy) error {
 }
 
 // validateEnvoyProxySpec validates the provided EnvoyProxy spec.
-func validateEnvoyProxySpec(spec *egv1a1.EnvoyProxySpec) error {
+func validateEnvoyProxySpec(spec *egv1a1.EnvoyProxySpec, fetchAndPatchBootstrap FetchAndPatchBootstrapFunc) error {
 	var errs []error
 
 	if spec == nil {
@@ -53,7 +53,7 @@ func validateEnvoyProxySpec(spec *egv1a1.EnvoyProxySpec) error {
 
 	// validate bootstrap
 	if spec != nil && spec.Bootstrap != nil {
-		if err := validateBootstrap(spec.Bootstrap); err != nil {
+		if err := validateBootstrap(spec.Bootstrap, fetchAndPatchBootstrap); err != nil {
 			errs = append(errs, err)
 		}
 	}
@@ -156,32 +156,12 @@ func validateService(spec *egv1a1.EnvoyProxySpec) []error {
 	return errs
 }
 
-func validateBootstrap(boostrapConfig *egv1a1.ProxyBootstrap) error {
+func validateBootstrap(boostrapConfig *egv1a1.ProxyBootstrap, fetchAndPatchBootstrap FetchAndPatchBootstrapFunc) error {
 	// Validate user bootstrap config
-	defaultBootstrap := &bootstrapv3.Bootstrap{}
 	// TODO: need validate when enable prometheus?
-	defaultBootstrapStr, err := bootstrap.GetRenderedBootstrapConfig(nil)
+	userBootstrap, defaultBootstrap, err := fetchAndPatchBootstrap(boostrapConfig)
 	if err != nil {
 		return err
-	}
-	if err := proto.FromYAML([]byte(defaultBootstrapStr), defaultBootstrap); err != nil {
-		return fmt.Errorf("unable to unmarshal default bootstrap: %w", err)
-	}
-	if err := defaultBootstrap.Validate(); err != nil {
-		return fmt.Errorf("default bootstrap validation failed: %w", err)
-	}
-
-	// Validate user bootstrap config
-	userBootstrapStr, err := bootstrap.ApplyBootstrapConfig(boostrapConfig, defaultBootstrapStr)
-	if err != nil {
-		return err
-	}
-	userBootstrap := &bootstrapv3.Bootstrap{}
-	if err := proto.FromYAML([]byte(userBootstrapStr), userBootstrap); err != nil {
-		return fmt.Errorf("failed to parse default bootstrap config: %w", err)
-	}
-	if err := userBootstrap.Validate(); err != nil {
-		return fmt.Errorf("validation failed for user bootstrap: %w", err)
 	}
 
 	// Ensure dynamic resources config is same
