@@ -187,14 +187,12 @@ securityPolicies:
           clientCIDRs:
           - 192.168.1.0/24
           - 192.168.2.0/24
-          jwtClaims: null
       - action: Deny
         name: deny-location-2
         principal:
           clientCIDRs:
           - 10.75.1.0/24
           - 10.75.2.0/24
-          jwtClaims: null
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -257,7 +255,6 @@ securityPolicies:
           clientCIDRs:
           - 10.0.1.0/24
           - 10.0.2.0/24
-          jwtClaims: null
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway

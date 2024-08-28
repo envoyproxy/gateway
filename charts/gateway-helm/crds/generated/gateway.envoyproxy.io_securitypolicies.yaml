@@ -111,26 +111,26 @@ spec:
                                 type: string
                               minItems: 1
                               type: array
-                            jwtClaims:
+                            jwt:
                               description: |-
-                                JWTClaims are the claims in a JWT token.
-
-                                If multiple claims are specified, all claims must match for the rule to match.
-                                For example, if there are two claims: one for the audience and one for the issuer,
-                                the rule will match only if both the audience and the issuer match.
+                                JWT authorize the request based on the JWT claims and scopes.
                                 Note: in order to use JWT claims for authorization, you must configure the
                                 JWT authentication in the same `SecurityPolicy`.
-                              items:
-                                description: JWTClaim specifies a claim in a JWT token.
-                                properties:
-                                  custom:
-                                    description: |-
-                                      Custom specifies a custom claim in a JWT token.
-                                      Either `WellKnown` or `Custom` must be specified.
+                              properties:
+                                claims:
+                                  description: |-
+                                    Claims are the claims in a JWT token.
+
+                                    If multiple claims are specified, all claims must match for the rule to match.
+                                    For example, if there are two claims: one for the audience and one for the issuer,
+                                    the rule will match only if both the audience and the issuer match.
+                                  items:
+                                    description: JWTClaim specifies a claim in a JWT
+                                      token.
                                     properties:
                                       name:
                                         description: |-
-                                          Name is the name of a custom claim.
+                                          Name is the name of the claim.
                                           If it is a nested claim, use a dot (.) separated string as the name to
                                           represent the full path to the claim.
                                           For example, if the claim is in the "department" field in the "organization" field,
@@ -138,50 +138,41 @@ spec:
                                         type: string
                                       valueType:
                                         default: String
-                                        description: ValueType is the type of the
-                                          claim value, only meaningful for custom
-                                          claims.
+                                        description: |-
+                                          ValueType is the type of the claim value.
+                                          Only string and string array types are supported for now.
                                         enum:
                                         - String
                                         - StringArray
                                         type: string
+                                      values:
+                                        description: |-
+                                          Values are the values that the claim must match.
+                                          If the claim is a string type, the specified value must match exactly.
+                                          If the claim is a string array type, the specified value must match one of the values in the array.
+                                          If multiple values are specified, one of the values must match for the rule to match.
+                                        items:
+                                          type: string
+                                        type: array
+                                    required:
+                                    - values
                                     type: object
-                                  values:
-                                    description: |-
-                                      Values are the values that the claim must match.
-                                      If the claim is a string type, the specified value must match exactly.
-                                      If the claim is a string array type, the specified value must match one of the values in the array.
-                                      Note: scope claim is treated as a string array type, using space as the delimiter.
-                                      If multiple values are specified, one of the values must match for the rule to match.
-                                    items:
-                                      type: string
-                                    type: array
-                                  wellKnown:
-                                    description: |-
-                                      WellKnown specifies a well-known claim in a JWT token.
-                                      Either `WellKnown` or `Custom` must be specified.
-                                    enum:
-                                    - scope
-                                    - iss
-                                    - sub
-                                    - name
-                                    - email
-                                    - client_id
-                                    - roles
-                                    - groups
-                                    - entitlements
+                                  type: array
+                                scopes:
+                                  description: |-
+                                    Scopes are a special type of claim in a JWT token that represents the permissions of the client.
+
+                                    EG interprets the value of the scope claim as a space-separated string during matching,
+                                    as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749.
+
+                                    If multiple scopes are specified, all scopes must match for the rule to match.
+                                  items:
                                     type: string
-                                required:
-                                - values
-                                type: object
-                                x-kubernetes-validations:
-                                - message: one of wellKnown or custom must be specified
-                                  rule: (has(self.wellKnown) || has(self.custom))
-                                - message: only one of wellKnown or custom can be
-                                    specified
-                                  rule: (has(self.wellKnown) && !has(self.custom))
-                                    || (!has(self.wellKnown) && has(self.custom))
-                              type: array
+                                  type: array
+                              type: object
+                              x-kubernetes-validations:
+                              - message: one of claims or scopes must be specified
+                                rule: (has(self.claims) || has(self.scopes))
                           required:
                           - clientCIDRs
                           type: object

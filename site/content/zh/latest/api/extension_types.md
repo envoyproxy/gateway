@@ -845,21 +845,6 @@ _Appears in:_
 | `failClosed` | _boolean_ |  false  | FailClosed is a switch used to control the flow of traffic when client IP detection<br />fails. If set to true, the listener will respond with 403 Forbidden when the client<br />IP address cannot be determined. |
 
 
-#### CustomJWTClaim
-
-
-
-CustomJWTClaim specifies a custom claim in a JWT token.
-
-_Appears in:_
-- [JWTClaim](#jwtclaim)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `name` | _string_ |  false  | Name is the name of a custom claim.<br />If it is a nested claim, use a dot (.) separated string as the name to<br />represent the full path to the claim.<br />For example, if the claim is in the "department" field in the "organization" field,<br />the name should be "organization.department". |
-| `valueType` | _[JWTClaimValueType](#jwtclaimvaluetype)_ |  false  | ValueType is the type of the claim value, only meaningful for custom claims. |
-
-
 #### CustomTag
 
 
@@ -2140,13 +2125,13 @@ _Appears in:_
 JWTClaim specifies a claim in a JWT token.
 
 _Appears in:_
-- [Principal](#principal)
+- [JWTPrincipal](#jwtprincipal)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `wellKnown` | _[WellKnownJWTClaim](#wellknownjwtclaim)_ |  false  | WellKnown specifies a well-known claim in a JWT token.<br />Either `WellKnown` or `Custom` must be specified. |
-| `custom` | _[CustomJWTClaim](#customjwtclaim)_ |  false  | Custom specifies a custom claim in a JWT token.<br />Either `WellKnown` or `Custom` must be specified. |
-| `values` | _string array_ |  true  | Values are the values that the claim must match.<br />If the claim is a string type, the specified value must match exactly.<br />If the claim is a string array type, the specified value must match one of the values in the array.<br />Note: scope claim is treated as a string array type, using space as the delimiter.<br />If multiple values are specified, one of the values must match for the rule to match. |
+| `name` | _string_ |  false  | Name is the name of the claim.<br />If it is a nested claim, use a dot (.) separated string as the name to<br />represent the full path to the claim.<br />For example, if the claim is in the "department" field in the "organization" field,<br />the name should be "organization.department". |
+| `valueType` | _[JWTClaimValueType](#jwtclaimvaluetype)_ |  false  | ValueType is the type of the claim value.<br />Only string and string array types are supported for now. |
+| `values` | _string array_ |  true  | Values are the values that the claim must match.<br />If the claim is a string type, the specified value must match exactly.<br />If the claim is a string array type, the specified value must match one of the values in the array.<br />If multiple values are specified, one of the values must match for the rule to match. |
 
 
 #### JWTClaimValueType
@@ -2156,7 +2141,7 @@ _Underlying type:_ _string_
 
 
 _Appears in:_
-- [CustomJWTClaim](#customjwtclaim)
+- [JWTClaim](#jwtclaim)
 
 | Value | Description |
 | ----- | ----------- |
@@ -2195,6 +2180,22 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `name` | _string_ |  true  | Name is the HTTP header name to retrieve the token |
 | `valuePrefix` | _string_ |  false  | ValuePrefix is the prefix that should be stripped before extracting the token.<br />The format would be used by Envoy like "\{ValuePrefix\}<TOKEN>".<br />For example, "Authorization: Bearer <TOKEN>", then the ValuePrefix="Bearer " with a space at the end. |
+
+
+#### JWTPrincipal
+
+
+
+JWTPrincipal specifies the client identity of a request based on the JWT claims and scopes.
+Claims and scopes are And-ed together if both are specified.
+
+_Appears in:_
+- [Principal](#principal)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `claims` | _[JWTClaim](#jwtclaim) array_ |  false  | Claims are the claims in a JWT token.<br /><br />If multiple claims are specified, all claims must match for the rule to match.<br />For example, if there are two claims: one for the audience and one for the issuer,<br />the rule will match only if both the audience and the issuer match. |
+| `scopes` | _string array_ |  true  | Scopes are a special type of claim in a JWT token that represents the permissions of the client.<br /><br />EG interprets the value of the scope claim as a space-separated string during matching,<br />as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749.<br /><br />If multiple scopes are specified, all scopes must match for the rule to match. |
 
 
 #### JWTProvider
@@ -3769,28 +3770,6 @@ _Appears in:_
 | ----- | ----------- |
 | `HTTP` | HTTPWasmCodeSourceType allows the user to specify the Wasm code in an HTTP URL.<br /> | 
 | `Image` | ImageWasmCodeSourceType allows the user to specify the Wasm code in an OCI image.<br /> | 
-
-
-#### WellKnownJWTClaim
-
-_Underlying type:_ _string_
-
-WellKnownJWTClaim specifies a well-known claim in a JWT token.
-
-_Appears in:_
-- [JWTClaim](#jwtclaim)
-
-| Value | Description |
-| ----- | ----------- |
-| `scope` |  | 
-| `iss` |  | 
-| `sub` |  | 
-| `name` |  | 
-| `email` |  | 
-| `client_id` |  | 
-| `roles` |  | 
-| `groups` |  | 
-| `entitlements` |  | 
 
 
 #### WithUnderscoresAction

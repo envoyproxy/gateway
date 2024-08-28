@@ -60,63 +60,38 @@ type Principal struct {
 	// +kubebuilder:validation:MinItems=1
 	ClientCIDRs []CIDR `json:"clientCIDRs"`
 
-	// JWTClaims are the claims in a JWT token.
-	//
-	// If multiple claims are specified, all claims must match for the rule to match.
-	// For example, if there are two claims: one for the audience and one for the issuer,
-	// the rule will match only if both the audience and the issuer match.
+	// JWT authorize the request based on the JWT claims and scopes.
 	// Note: in order to use JWT claims for authorization, you must configure the
 	// JWT authentication in the same `SecurityPolicy`.
 	// +optional
 	// +notImplementedHide
-	JWTClaims []JWTClaim `json:"jwtClaims"`
+	JWT *JWTPrincipal `json:"jwt,omitempty"`
+}
+
+// JWTPrincipal specifies the client identity of a request based on the JWT claims and scopes.
+// Claims and scopes are And-ed together if both are specified.
+// +kubebuilder:validation:XValidation:rule="(has(self.claims) || has(self.scopes))",message="one of claims or scopes must be specified"
+type JWTPrincipal struct {
+	// Claims are the claims in a JWT token.
+	//
+	// If multiple claims are specified, all claims must match for the rule to match.
+	// For example, if there are two claims: one for the audience and one for the issuer,
+	// the rule will match only if both the audience and the issuer match.
+	// +optional
+	Claims []JWTClaim `json:"claims,omitempty"`
+
+	// Scopes are a special type of claim in a JWT token that represents the permissions of the client.
+	//
+	// EG interprets the value of the scope claim as a space-separated string during matching,
+	// as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749.
+	//
+	// If multiple scopes are specified, all scopes must match for the rule to match.
+	Scopes []string `json:"scopes,omitempty"`
 }
 
 // JWTClaim specifies a claim in a JWT token.
-// +kubebuilder:validation:XValidation:rule="(has(self.wellKnown) || has(self.custom))",message="one of wellKnown or custom must be specified"
-// +kubebuilder:validation:XValidation:rule="(has(self.wellKnown) && !has(self.custom)) || (!has(self.wellKnown) && has(self.custom))",message="only one of wellKnown or custom can be specified"
 type JWTClaim struct {
-	// WellKnown specifies a well-known claim in a JWT token.
-	// Either `WellKnown` or `Custom` must be specified.
-	//
-	// +kubebuilder:validation:Enum=scope;iss;sub;name;email;client_id;roles;groups;entitlements
-	// +unionDiscriminator
-	// +optional
-	WellKnown *WellKnownJWTClaim `json:"wellKnown,omitempty"`
-
-	// Custom specifies a custom claim in a JWT token.
-	// Either `WellKnown` or `Custom` must be specified.
-	// +optional
-	Custom *CustomJWTClaim `json:"custom,omitempty"`
-
-	// Values are the values that the claim must match.
-	// If the claim is a string type, the specified value must match exactly.
-	// If the claim is a string array type, the specified value must match one of the values in the array.
-	// Note: scope claim is treated as a string array type, using space as the delimiter.
-	// If multiple values are specified, one of the values must match for the rule to match.
-	Values []string `json:"values"`
-}
-
-// WellKnownJWTClaim specifies a well-known claim in a JWT token.
-type WellKnownJWTClaim string
-
-// https://www.iana.org/assignments/jwt/jwt.xhtml#claims
-
-const (
-	WellKnownJWTClaimScope        WellKnownJWTClaim = "scope"
-	WellKnownJWTClaimIss          WellKnownJWTClaim = "iss"
-	WellKnownJWTClaimSub          WellKnownJWTClaim = "sub"
-	WellKnownJWTClaimName         WellKnownJWTClaim = "name"
-	WellKnownJWTClaimEmail        WellKnownJWTClaim = "email"
-	WellKnownJWTClaimClientID     WellKnownJWTClaim = "client_id"
-	WellKnownJWTClaimRoles        WellKnownJWTClaim = "roles"
-	WellKnownJWTClaimGroups       WellKnownJWTClaim = "groups"
-	WellKnownJWTClaimEntitlements WellKnownJWTClaim = "entitlements"
-)
-
-// CustomJWTClaim specifies a custom claim in a JWT token.
-type CustomJWTClaim struct {
-	// Name is the name of a custom claim.
+	// Name is the name of the claim.
 	// If it is a nested claim, use a dot (.) separated string as the name to
 	// represent the full path to the claim.
 	// For example, if the claim is in the "department" field in the "organization" field,
@@ -124,12 +99,19 @@ type CustomJWTClaim struct {
 	// +optional
 	Name string `json:"name"`
 
-	// ValueType is the type of the claim value, only meaningful for custom claims.
+	// ValueType is the type of the claim value.
+	// Only string and string array types are supported for now.
 	// +kubebuilder:validation:Enum=String;StringArray
 	// +kubebuilder:default=String
 	// +unionDiscriminator
 	// +optional
 	ValueType *JWTClaimValueType `json:"valueType,omitempty"`
+
+	// Values are the values that the claim must match.
+	// If the claim is a string type, the specified value must match exactly.
+	// If the claim is a string array type, the specified value must match one of the values in the array.
+	// If multiple values are specified, one of the values must match for the rule to match.
+	Values []string `json:"values"`
 }
 
 type JWTClaimValueType string
