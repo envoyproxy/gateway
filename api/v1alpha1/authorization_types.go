@@ -60,6 +60,9 @@ type Principal struct {
 	// +kubebuilder:validation:MinItems=1
 	ClientCIDRs []CIDR `json:"clientCIDRs"`
 
+	// TODO: Zhaohuabing the MinItems=1 validation can be relaxed to allow empty list
+	// after JWT principal is supported. However, at least one principal type is required
+
 	// JWT authorize the request based on the JWT claims and scopes.
 	// Note: in order to use JWT claims for authorization, you must configure the
 	// JWT authentication in the same `SecurityPolicy`.
