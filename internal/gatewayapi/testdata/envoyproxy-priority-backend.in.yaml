@@ -203,16 +203,16 @@ envoyExtensionPolicies:
               Port: 8000
             - Name: grpc-backend-2
               Port: 9000
-              failover: true
+              fallback: true
             - Name: backend-ip
               Kind: Backend
               Group: gateway.envoyproxy.io
-              failover: true
+              fallback: true
             - Name: backend-ip-tls
               Namespace: envoy-gateway
               Kind: Backend
               Group: gateway.envoyproxy.io
-              failover: true
+              fallback: true
 backends:
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: Backend
