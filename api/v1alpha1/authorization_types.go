@@ -99,7 +99,6 @@ type JWTClaim struct {
 	// represent the full path to the claim.
 	// For example, if the claim is in the "department" field in the "organization" field,
 	// the name should be "organization.department".
-	// +optional
 	Name string `json:"name"`
 
 	// ValueType is the type of the claim value.

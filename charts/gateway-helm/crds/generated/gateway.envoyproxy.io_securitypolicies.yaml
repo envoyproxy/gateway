@@ -140,7 +140,7 @@ spec:
                                         default: String
                                         description: |-
                                           ValueType is the type of the claim value.
-                                          Only string and string array types are supported for now.
+                                          Only String and StringArray types are supported for now.
                                         enum:
                                         - String
                                         - StringArray
@@ -155,6 +155,7 @@ spec:
                                           type: string
                                         type: array
                                     required:
+                                    - name
                                     - values
                                     type: object
                                   type: array
@@ -162,8 +163,8 @@ spec:
                                   description: |-
                                     Scopes are a special type of claim in a JWT token that represents the permissions of the client.
 
-                                    EG interprets the value of the scope claim as a space-separated string during matching,
-                                    as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749.
+                                    The value of the scopes field should be a space delimited string that is expected in the scope parameter,
+                                    as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749#page-23.
 
                                     If multiple scopes are specified, all scopes must match for the rule to match.
                                   items:
