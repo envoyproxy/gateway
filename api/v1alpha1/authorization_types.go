@@ -85,7 +85,7 @@ type JWTPrincipal struct {
 
 	// Scopes are a special type of claim in a JWT token that represents the permissions of the client.
 	//
-	// EG interprets the value of the scope claim as a space-separated string during matching,
+	// The value of the scopes field should be a space delimited string that is expected in the scope parameter,
 	// as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749#page-23.
 	//
 	// If multiple scopes are specified, all scopes must match for the rule to match.
