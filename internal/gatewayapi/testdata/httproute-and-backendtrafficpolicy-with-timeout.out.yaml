@@ -336,5 +336,6 @@ xdsIR:
           timeout:
             http:
               maxConnectionDuration: 22s
+              requestTimeout: 1s
             tcp:
               connectTimeout: 20s
