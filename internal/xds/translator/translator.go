@@ -8,7 +8,6 @@ package translator
 import (
 	"errors"
 	"fmt"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"strings"
 	"time"
 
@@ -25,6 +24,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
