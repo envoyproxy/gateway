@@ -10,13 +10,12 @@ import (
 	_ "embed"
 	"testing"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/stretchr/testify/require"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 var (
-	//go:embed testdata/validate/default-bootstrap.yaml
-	defaultBootstrap string
 	//go:embed testdata/validate/valid-user-bootstrap.yaml
 	validUserBootstrap string
 	//go:embed testdata/validate/missing-admin-address-user-bootstrap.yaml
@@ -28,7 +27,6 @@ var (
 )
 
 func TestValidateBootstrap(t *testing.T) {
-
 	testCases := []struct {
 		name      string
 		bootstrap *egv1a1.ProxyBootstrap
@@ -75,5 +73,4 @@ func TestValidateBootstrap(t *testing.T) {
 			}
 		})
 	}
-
 }

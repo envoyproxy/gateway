@@ -8,13 +8,13 @@ package bootstrap
 import (
 	"fmt"
 
-	"github.com/envoyproxy/gateway/internal/utils/proto"
 	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/protobuf/testing/protocmp"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 	_ "github.com/envoyproxy/gateway/internal/xds/extensions" // DON'T REMOVE: import of all extensions
 )
 
@@ -45,6 +45,10 @@ func fetchAndPatchBootstrap(boostrapConfig *egv1a1.ProxyBootstrap) (*bootstrapv3
 	return patchedBootstrap, defaultBootstrap, err
 }
 
+// Validate ensures that after applying the provided bootstrap configuration, the resulting
+// bootstrap is still OK.
+// This code previously was part of the validate logic in api/v1alpha1/validate, but was moved
+// here to prevent code in the api packages from accessing code from the internal packages.
 func Validate(boostrapConfig *egv1a1.ProxyBootstrap) error {
 	if boostrapConfig == nil {
 		return nil

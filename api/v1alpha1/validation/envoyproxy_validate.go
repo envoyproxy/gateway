@@ -15,7 +15,6 @@ import (
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	_ "github.com/envoyproxy/gateway/internal/xds/extensions" // register the generated types to support protojson unmarshalling
 )
 
 // ValidateEnvoyProxy validates the provided EnvoyProxy.
