@@ -103,7 +103,7 @@ type JWTClaim struct {
 	Name string `json:"name"`
 
 	// ValueType is the type of the claim value.
-	// Only string and string array types are supported for now.
+	// Only String and StringArray types are supported for now.
 	// +kubebuilder:validation:Enum=String;StringArray
 	// +kubebuilder:default=String
 	// +unionDiscriminator
