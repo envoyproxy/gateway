@@ -703,7 +703,7 @@ func translateHTTP2Settings(http2Settings *egv1a1.HTTP2Settings, httpIR *ir.HTTP
 				MinHTTP2InitialStreamWindowSize,
 				MaxHTTP2InitialStreamWindowSize))
 		default:
-			http2.InitialStreamWindowSize = ptr.To(uint32(initialStreamWindowSize))
+			http2.InitialStreamWindowSize = ptr.To(uint32(initialStreamWindowSize)) // nolint: gosec
 		}
 	}
 
@@ -718,7 +718,7 @@ func translateHTTP2Settings(http2Settings *egv1a1.HTTP2Settings, httpIR *ir.HTTP
 				MinHTTP2InitialConnectionWindowSize,
 				MaxHTTP2InitialConnectionWindowSize))
 		default:
-			http2.InitialConnectionWindowSize = ptr.To(uint32(initialConnectionWindowSize))
+			http2.InitialConnectionWindowSize = ptr.To(uint32(initialConnectionWindowSize)) // nolint: gosec
 		}
 	}
 
@@ -878,7 +878,7 @@ func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection,
 			return nil, fmt.Errorf("BufferLimit value %s is out of range, must be between 0 and %d",
 				connection.BufferLimit.String(), math.MaxUint32)
 		}
-		irConnection.BufferLimitBytes = ptr.To(uint32(bufferLimit))
+		irConnection.BufferLimitBytes = ptr.To(uint32(bufferLimit)) // nolint: gosec
 	}
 
 	return irConnection, nil

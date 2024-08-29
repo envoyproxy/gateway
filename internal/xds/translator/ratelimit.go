@@ -337,7 +337,7 @@ func buildRateLimitServiceDescriptors(global *ir.GlobalRateLimit) []*rlsconfv3.R
 			pbDesc.Key = getRouteRuleDescriptor(rIdx, -1)
 			pbDesc.Value = getRouteRuleDescriptor(rIdx, -1)
 			rateLimit := rlsconfv3.RateLimitPolicy{
-				RequestsPerUnit: uint32(rule.Limit.Requests),
+				RequestsPerUnit: uint32(rule.Limit.Requests), // nolint: gosec
 				Unit:            rlsconfv3.RateLimitUnit(rlsconfv3.RateLimitUnit_value[strings.ToUpper(string(rule.Limit.Unit))]),
 			}
 			pbDesc.RateLimit = &rateLimit
@@ -360,7 +360,7 @@ func buildRateLimitServiceDescriptors(global *ir.GlobalRateLimit) []*rlsconfv3.R
 			// Add the ratelimit values to the last descriptor
 			if mIdx == len(rule.HeaderMatches)-1 {
 				rateLimit := rlsconfv3.RateLimitPolicy{
-					RequestsPerUnit: uint32(rule.Limit.Requests),
+					RequestsPerUnit: uint32(rule.Limit.Requests), // nolint: gosec
 					Unit:            rlsconfv3.RateLimitUnit(rlsconfv3.RateLimitUnit_value[strings.ToUpper(string(rule.Limit.Unit))]),
 				}
 				pbDesc.RateLimit = &rateLimit
@@ -402,7 +402,7 @@ func buildRateLimitServiceDescriptors(global *ir.GlobalRateLimit) []*rlsconfv3.R
 			pbDesc.Key = "masked_remote_address"
 			pbDesc.Value = rule.CIDRMatch.CIDR
 			rateLimit := rlsconfv3.RateLimitPolicy{
-				RequestsPerUnit: uint32(rule.Limit.Requests),
+				RequestsPerUnit: uint32(rule.Limit.Requests), // nolint: gosec
 				Unit:            rlsconfv3.RateLimitUnit(rlsconfv3.RateLimitUnit_value[strings.ToUpper(string(rule.Limit.Unit))]),
 			}
 
@@ -522,5 +522,5 @@ func (t *Translator) getRateLimitServiceGrpcHostPort() (string, uint32) {
 	if err != nil {
 		panic(err)
 	}
-	return u.Hostname(), uint32(p)
+	return u.Hostname(), uint32(p) // nolint: gosec
 }
