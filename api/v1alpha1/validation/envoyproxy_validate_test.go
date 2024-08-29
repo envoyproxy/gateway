@@ -6,13 +6,9 @@
 package validation
 
 import (
-	// Register embed
-	_ "embed"
-	"fmt"
 	"reflect"
 	"testing"
 
-	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -21,29 +17,14 @@ import (
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/utils/proto"
 	_ "github.com/envoyproxy/gateway/internal/xds/extensions" // register the generated types to support protojson unmarshalling
-)
-
-var (
-	//go:embed testdata/default-bootstrap.yaml
-	defaultBootstrap string
-	//go:embed testdata/valid-user-bootstrap.yaml
-	validUserBootstrap string
-	//go:embed testdata/missing-admin-address-user-bootstrap.yaml
-	missingAdminAddressUserBootstrap string
-	//go:embed testdata/different-dynamic-resources-user-bootstrap.yaml
-	differentDynamicResourcesUserBootstrap string
-	//go:embed testdata/different-xds-cluster-address-bootstrap.yaml
-	differentXdsClusterAddressBootstrap string
 )
 
 func TestValidateEnvoyProxy(t *testing.T) {
 	testCases := []struct {
-		name            string
-		proxy           *egv1a1.EnvoyProxy
-		resultBootstrap *string
-		expected        bool
+		name     string
+		proxy    *egv1a1.EnvoyProxy
+		expected bool
 	}{
 		{
 			name:     "nil egv1a1.EnvoyProxy",
@@ -324,71 +305,6 @@ func TestValidateEnvoyProxy(t *testing.T) {
 			},
 			expected: false,
 		},
-
-		{
-			name: "valid user bootstrap replace type",
-			proxy: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "test",
-				},
-				Spec: egv1a1.EnvoyProxySpec{
-					Bootstrap: &egv1a1.ProxyBootstrap{
-						Value: &validUserBootstrap,
-					},
-				},
-			},
-			resultBootstrap: &validUserBootstrap,
-			expected:        true,
-		},
-		{
-			name: "user bootstrap with missing admin address",
-			proxy: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "test",
-				},
-				Spec: egv1a1.EnvoyProxySpec{
-					Bootstrap: &egv1a1.ProxyBootstrap{
-						Value: &missingAdminAddressUserBootstrap,
-					},
-				},
-			},
-			resultBootstrap: &missingAdminAddressUserBootstrap,
-			expected:        false,
-		},
-		{
-			name: "user bootstrap with different dynamic resources",
-			proxy: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "test",
-				},
-				Spec: egv1a1.EnvoyProxySpec{
-					Bootstrap: &egv1a1.ProxyBootstrap{
-						Value: &differentDynamicResourcesUserBootstrap,
-					},
-				},
-			},
-			resultBootstrap: &differentDynamicResourcesUserBootstrap,
-			expected:        false,
-		},
-		{
-			name: "user bootstrap with different xds_cluster endpoint",
-			proxy: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "test",
-				},
-				Spec: egv1a1.EnvoyProxySpec{
-					Bootstrap: &egv1a1.ProxyBootstrap{
-						Value: &differentXdsClusterAddressBootstrap,
-					},
-				},
-			},
-			resultBootstrap: &differentXdsClusterAddressBootstrap,
-			expected:        false,
-		},
 		{
 			name: "should invalid when accesslog enabled using Text format, but `text` field being empty",
 			proxy: &egv1a1.EnvoyProxy{
@@ -659,7 +575,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 	for i := range testCases {
 		tc := testCases[i]
 		t.Run(tc.name, func(t *testing.T) {
-			err := ValidateEnvoyProxy(tc.proxy, loadTestBootstrap(tc.resultBootstrap))
+			err := ValidateEnvoyProxy(tc.proxy)
 			if tc.expected {
 				require.NoError(t, err)
 			} else {
@@ -789,29 +705,5 @@ func TestGetEnvoyProxyComponentLevelArgs(t *testing.T) {
 			got := tc.logging.GetEnvoyProxyComponentLevel()
 			require.Equal(t, tc.expected, got)
 		})
-	}
-}
-
-func loadTestBootstrap(resultBootstrap *string) FetchAndPatchBootstrapFunc {
-	return func(*egv1a1.ProxyBootstrap) (*bootstrapv3.Bootstrap, *bootstrapv3.Bootstrap, error) {
-		defBS := &bootstrapv3.Bootstrap{}
-		if err := proto.FromYAML([]byte(defaultBootstrap), defBS); err != nil {
-			return nil, nil, fmt.Errorf("unable to unmarshal default bootstrap: %w", err)
-		}
-		if err := defBS.Validate(); err != nil {
-			return nil, nil, fmt.Errorf("default bootstrap validation failed: %w", err)
-		}
-		patchedBS := &bootstrapv3.Bootstrap{}
-		if resultBootstrap != nil {
-			if err := proto.FromYAML([]byte(*resultBootstrap), patchedBS); err != nil {
-				return nil, nil, fmt.Errorf("unable to unmarshal result bootstrap: %w", err)
-			}
-			if err := patchedBS.Validate(); err != nil {
-				return nil, nil, fmt.Errorf("result bootstrap validation failed: %w", err)
-			}
-		} else {
-			patchedBS = defBS
-		}
-		return defBS, patchedBS, nil
 	}
 }

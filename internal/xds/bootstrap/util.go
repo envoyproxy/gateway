@@ -99,32 +99,3 @@ func jsonPatchBootstrap(baseYAML string, patches []egv1a1.JSONPatchOperation) (s
 	yamlBytes, err := yaml.JSONToYAML(jsonBytes)
 	return string(yamlBytes), err
 }
-
-// FetchAndPatchBootstrapFunc allows avoiding an import cycle between this package and the api/v1alpha1/validation
-// package by keeping everything that should not be known to the validation package out of that package.
-func FetchAndPatchBootstrapFunc(boostrapConfig *egv1a1.ProxyBootstrap) (*bootstrapv3.Bootstrap, *bootstrapv3.Bootstrap, error) {
-	defaultBootstrapStr, err := GetRenderedBootstrapConfig(nil)
-	if err != nil {
-		return nil, nil, err
-	}
-	defaultBootstrap := &bootstrapv3.Bootstrap{}
-	if err := proto.FromYAML([]byte(defaultBootstrapStr), defaultBootstrap); err != nil {
-		return nil, nil, fmt.Errorf("unable to unmarshal default bootstrap: %w", err)
-	}
-	if err := defaultBootstrap.Validate(); err != nil {
-		return nil, nil, fmt.Errorf("default bootstrap validation failed: %w", err)
-	}
-	// Validate user bootstrap config
-	patchedYaml, err := ApplyBootstrapConfig(boostrapConfig, defaultBootstrapStr)
-	if err != nil {
-		return nil, nil, err
-	}
-	patchedBootstrap := &bootstrapv3.Bootstrap{}
-	if err := proto.FromYAML([]byte(patchedYaml), patchedBootstrap); err != nil {
-		return nil, nil, fmt.Errorf("unable to unmarshal user bootstrap: %w", err)
-	}
-	if err := patchedBootstrap.Validate(); err != nil {
-		return nil, nil, fmt.Errorf("validation failed for user bootstrap: %w", err)
-	}
-	return patchedBootstrap, defaultBootstrap, err
-}
