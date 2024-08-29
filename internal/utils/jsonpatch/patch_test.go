@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -41,7 +41,6 @@ const sourceDocument = `
 `
 
 func TestApplyJSONPatches(t *testing.T) {
-
 	testCases := []struct {
 		name           string
 		patchOperation []ir.JSONPatchOperation
@@ -53,7 +52,7 @@ func TestApplyJSONPatches(t *testing.T) {
 				{
 					Op:   "add",
 					Path: ptr.To("/topLevel/newKey"),
-					Value: &apiextv1.JSON{
+					Value: &apiextensionsv1.JSON{
 						Raw: []byte("true"),
 					},
 				},
@@ -66,7 +65,7 @@ func TestApplyJSONPatches(t *testing.T) {
 				{
 					Op:   "add",
 					Path: ptr.To("/topLevel/newKey"),
-					Value: &apiextv1.JSON{
+					Value: &apiextensionsv1.JSON{
 						Raw: []byte("true"),
 					},
 				},
@@ -83,7 +82,7 @@ func TestApplyJSONPatches(t *testing.T) {
 				{
 					Op:   "badbadbad",
 					Path: ptr.To("/topLevel/newKey"),
-					Value: &apiextv1.JSON{
+					Value: &apiextensionsv1.JSON{
 						Raw: []byte("true"),
 					},
 				},
@@ -112,5 +111,4 @@ func TestApplyJSONPatches(t *testing.T) {
 			}
 		})
 	}
-
 }
