@@ -109,7 +109,6 @@ spec:
                                   A CIDR can be an IPv4 address range such as "192.168.1.0/24" or an IPv6 address range such as "2001:0db8:11a3:09d7::/64".
                                 pattern: ((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/([0-9]+))|((([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))\/([0-9]+))
                                 type: string
-                              minItems: 1
                               type: array
                             jwt:
                               description: |-
@@ -172,11 +171,13 @@ spec:
                                   type: array
                               type: object
                               x-kubernetes-validations:
-                              - message: one of claims or scopes must be specified
+                              - message: at least one of claims or scopes must be
+                                  specified
                                 rule: (has(self.claims) || has(self.scopes))
-                          required:
-                          - clientCIDRs
                           type: object
+                          x-kubernetes-validations:
+                          - message: at least one of clientCIDRs or jwt must be specified
+                            rule: (has(self.clientCIDRs) || has(self.jwt))
                       required:
                       - action
                       - principal
@@ -2389,6 +2390,10 @@ spec:
                 ''HTTPRoute'', ''GRPCRoute'']) : true '
             - message: this policy does not yet support the sectionName field
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, !has(ref.sectionName))
+                : true'
+            - message: if authorization.rules.principal.jwt is used, jwt must be defined
+              rule: '(has(self.authorization) && has(self.authorization.rules) &&
+                self.authorization.rules.exists(r, has(r.principal.jwt))) ? has(self.jwt)
                 : true'
           status:
             description: Status defines the current status of SecurityPolicy.

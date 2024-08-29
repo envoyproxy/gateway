@@ -46,6 +46,8 @@ type AuthorizationRule struct {
 // A client identity can be a client IP, a JWT claim, username from the Authorization header,
 // or any other identity that can be extracted from a custom header.
 // Currently, only the client IP is supported.
+//
+// +kubebuilder:validation:XValidation:rule="(has(self.clientCIDRs) || has(self.jwt))",message="at least one of clientCIDRs or jwt must be specified"
 type Principal struct {
 	// ClientCIDRs are the IP CIDR ranges of the client.
 	// Valid examples are "192.168.1.0/24" or "2001:db8::/64"
@@ -57,11 +59,8 @@ type Principal struct {
 	// or the proxy protocol.
 	// You can use the `ClientIPDetection` or the `EnableProxyProtocol` field in
 	// the `ClientTrafficPolicy` to configure how the client IP is detected.
-	// +kubebuilder:validation:MinItems=1
+	// +optional
 	ClientCIDRs []CIDR `json:"clientCIDRs"`
-
-	// TODO: Zhaohuabing the MinItems=1 validation can be relaxed to allow empty list
-	// after JWT principal is supported. However, at least one principal type is required
 
 	// JWT authorize the request based on the JWT claims and scopes.
 	// Note: in order to use JWT claims for authorization, you must configure the
@@ -72,8 +71,10 @@ type Principal struct {
 }
 
 // JWTPrincipal specifies the client identity of a request based on the JWT claims and scopes.
+// At least one of the claims or scopes must be specified.
 // Claims and scopes are And-ed together if both are specified.
-// +kubebuilder:validation:XValidation:rule="(has(self.claims) || has(self.scopes))",message="one of claims or scopes must be specified"
+//
+// +kubebuilder:validation:XValidation:rule="(has(self.claims) || has(self.scopes))",message="at least one of claims or scopes must be specified"
 type JWTPrincipal struct {
 	// Claims are the claims in a JWT token.
 	//
@@ -89,6 +90,7 @@ type JWTPrincipal struct {
 	// as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749#page-23.
 	//
 	// If multiple scopes are specified, all scopes must match for the rule to match.
+	// +optional
 	Scopes []string `json:"scopes,omitempty"`
 }
 
