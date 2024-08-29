@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"strings"
 	"time"
 
@@ -167,13 +168,13 @@ func (t *Translator) notifyExtensionServerAboutListeners(
 	for _, l := range tCtx.XdsResources[resourcev3.ListenerType] {
 		listener := l.(*listenerv3.Listener)
 		policies := []*ir.UnstructuredRef{}
-		alreadyIncludedPolicies := map[utils.NamespacedNameWithGroupKind]bool{}
+		alreadyIncludedPolicies := sets.New[utils.NamespacedNameWithGroupKind]()
 		for _, irListener := range findIRListenersByXDSListener(xdsIR, listener) {
 			for _, pol := range irListener.GetExtensionRefs() {
 				key := utils.GetNamespacedNameWithGroupKind(pol.Object)
-				if _, found := alreadyIncludedPolicies[key]; !found {
+				if !alreadyIncludedPolicies.Has(key) {
 					policies = append(policies, pol)
-					alreadyIncludedPolicies[key] = true
+					alreadyIncludedPolicies.Insert(key)
 				}
 			}
 		}
