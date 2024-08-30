@@ -24,6 +24,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
@@ -167,13 +168,13 @@ func (t *Translator) notifyExtensionServerAboutListeners(
 	for _, l := range tCtx.XdsResources[resourcev3.ListenerType] {
 		listener := l.(*listenerv3.Listener)
 		policies := []*ir.UnstructuredRef{}
-		alreadyIncludedPolicies := map[utils.NamespacedNameWithGroupKind]bool{}
+		alreadyIncludedPolicies := sets.New[utils.NamespacedNameWithGroupKind]()
 		for _, irListener := range findIRListenersByXDSListener(xdsIR, listener) {
 			for _, pol := range irListener.GetExtensionRefs() {
 				key := utils.GetNamespacedNameWithGroupKind(pol.Object)
-				if _, found := alreadyIncludedPolicies[key]; !found {
+				if !alreadyIncludedPolicies.Has(key) {
 					policies = append(policies, pol)
-					alreadyIncludedPolicies[key] = true
+					alreadyIncludedPolicies.Insert(key)
 				}
 			}
 		}
