@@ -54,7 +54,7 @@
               - api
               retryPolicy:
                 numRetries: 2
-                retryOn: connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes,5xx
+                retryOn: 5xx,connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes
               signoutPath:
                 path:
                   exact: /foo/logout
@@ -101,7 +101,7 @@
               - api
               retryPolicy:
                 numRetries: 2
-                retryOn: connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes,5xx
+                retryOn: 5xx,connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes
               signoutPath:
                 path:
                   exact: /bar/logout

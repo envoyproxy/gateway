@@ -140,7 +140,7 @@
               redirectUri: https://www.example.com/foo/oauth2/callback
               retryPolicy:
                 numRetries: 2
-                retryOn: connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes,5xx
+                retryOn: 5xx,connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes
               signoutPath:
                 path:
                   exact: /foo/logout
