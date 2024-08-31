@@ -138,6 +138,9 @@
                 path:
                   exact: /foo/oauth2/callback
               redirectUri: https://www.example.com/foo/oauth2/callback
+              retryPolicy:
+                numRetries: 2
+                retryOn: connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes,5xx
               signoutPath:
                 path:
                   exact: /foo/logout
