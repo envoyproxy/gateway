@@ -597,7 +597,7 @@ func (r *gatewayAPIReconciler) processSecretRef(
 		types.NamespacedName{Namespace: secretNS, Name: string(secretRef.Name)},
 		secret,
 	)
-	if err != nil && !kerrors.IsNotFound(err) {
+	if err != nil && kerrors.IsNotFound(err) {
 		return fmt.Errorf("unable to find the Secret: %s/%s", secretNS, string(secretRef.Name))
 	}
 
@@ -699,7 +699,7 @@ func (r *gatewayAPIReconciler) processConfigMapRef(
 		types.NamespacedName{Namespace: configMapNS, Name: string(configMapRef.Name)},
 		configMap,
 	)
-	if err != nil && !kerrors.IsNotFound(err) {
+	if err != nil && kerrors.IsNotFound(err) {
 		return fmt.Errorf("unable to find the ConfigMap: %s/%s", configMapNS, string(configMapRef.Name))
 	}
 
