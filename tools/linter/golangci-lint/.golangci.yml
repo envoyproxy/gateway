@@ -7,7 +7,7 @@ linters:
     - copyloopvar
     - depguard
     - errorlint
-    - exportloopref
+    - copyloopvar
     - importas
     - gci
     - gofmt

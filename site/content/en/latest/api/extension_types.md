@@ -2265,7 +2265,9 @@ _Appears in:_
 
 
 
-KubernetesPatchSpec defines how to perform the patch operation
+KubernetesPatchSpec defines how to perform the patch operation.
+Note that `value` can be an in-line YAML document, as can be seen in e.g. (the example of patching the Envoy proxy Deployment)[https://gateway.envoyproxy.io/docs/tasks/operations/customize-envoyproxy/#patching-deployment-for-envoyproxy].
+Note also that, currently, strings containing literal JSON are _rejected_.
 
 _Appears in:_
 - [KubernetesDaemonSetSpec](#kubernetesdaemonsetspec)

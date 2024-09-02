@@ -190,7 +190,7 @@ func buildBackendConnection(policy egv1a1.ClusterSettings) (*ir.BackendConnectio
 				return nil, fmt.Errorf("BufferLimit value %s is out of range", bc.BufferLimit.String())
 			}
 
-			bcIR.BufferLimitBytes = ptr.To(uint32(bf))
+			bcIR.BufferLimitBytes = ptr.To(uint32(bf)) // nolint: gosec
 		}
 	}
 
@@ -339,7 +339,7 @@ func buildConsistentHashLoadBalancer(policy egv1a1.LoadBalancer) (*ir.Consistent
 	if policy.ConsistentHash.TableSize != nil {
 		tableSize := policy.ConsistentHash.TableSize
 
-		if *tableSize > MaxConsistentHashTableSize || !big.NewInt(int64(*tableSize)).ProbablyPrime(0) {
+		if *tableSize > MaxConsistentHashTableSize || !big.NewInt(int64(*tableSize)).ProbablyPrime(0) { // nolint: gosec
 			return nil, fmt.Errorf("invalid TableSize value %d", *tableSize)
 		}
 
