@@ -174,12 +174,11 @@ func TestConcurrentMetricAccess(t *testing.T) {
 
 	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
-		i := i
-		go func() {
+		go func(idx int) {
 			defer wg.Done()
-			t.Logf("concurrency metric access at %d", i)
+			t.Logf("concurrency metric access at %d", idx)
 			metricFunc()
-		}()
+		}(i)
 	}
 
 	wg.Wait()
