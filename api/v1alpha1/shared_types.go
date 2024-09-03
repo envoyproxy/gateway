@@ -456,7 +456,9 @@ const (
 	JSONMerge MergeType = "JSONMerge"
 )
 
-// KubernetesPatchSpec defines how to perform the patch operation
+// KubernetesPatchSpec defines how to perform the patch operation.
+// Note that `value` can be an in-line YAML document, as can be seen in e.g. (the example of patching the Envoy proxy Deployment)[https://gateway.envoyproxy.io/docs/tasks/operations/customize-envoyproxy/#patching-deployment-for-envoyproxy].
+// Note also that, currently, strings containing literal JSON are _rejected_.
 type KubernetesPatchSpec struct {
 	// Type is the type of merge operation to perform
 	//
@@ -473,14 +475,15 @@ type BackendRef struct {
 	// BackendObjectReference references a Kubernetes object that represents the backend.
 	// Only Service kind is supported for now.
 	gwapiv1.BackendObjectReference `json:",inline"`
-	// Failover This indicates whether the backend is designated as a failover.
-	// Multiple failover backends can be configured.
+	// Fallback indicates whether the backend is designated as a fallback.
+	// Multiple fallback backends can be configured.
 	// It is highly recommended to configure active or passive health checks to ensure that failover can be detected
 	// when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.
-	// The overprovisioning factor is set to 1.4, meaning the failover backends will only start receiving traffic when
+	// The overprovisioning factor is set to 1.4, meaning the fallback backends will only start receiving traffic when
 	// the health of the active backends falls below 72%.
+	//
 	// +optional
-	Failover *bool `json:"failover,omitempty"`
+	Fallback *bool `json:"fallback,omitempty"`
 }
 
 // BackendCluster contains all the configuration required for configuring access

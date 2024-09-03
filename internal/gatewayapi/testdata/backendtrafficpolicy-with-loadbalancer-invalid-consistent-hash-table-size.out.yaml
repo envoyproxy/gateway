@@ -225,6 +225,8 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+        directResponse:
+          statusCode: 500
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
@@ -245,6 +247,8 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+        directResponse:
+          statusCode: 500
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:

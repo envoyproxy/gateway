@@ -325,7 +325,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 	if policy.Spec.Retry != nil {
 		rt = t.buildRetry(policy)
 	}
-	if to, err = buildTimeout(policy.Spec.ClusterSettings, nil); err != nil {
+	if to, err = buildClusterSettingsTimeout(policy.Spec.ClusterSettings, nil); err != nil {
 		err = perr.WithMessage(err, "Timeout")
 		errs = errors.Join(errs, err)
 	}
@@ -341,11 +341,6 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 	}
 
 	ds = translateDNS(policy.Spec.ClusterSettings)
-
-	// Early return if got any errors
-	if errs != nil {
-		return errs
-	}
 
 	// Apply IR to all relevant routes
 	prefix := irRoutePrefix(route)
@@ -381,6 +376,19 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 			for _, r := range http.Routes {
 				// Apply if there is a match
 				if strings.HasPrefix(r.Name, prefix) {
+					if errs != nil {
+						// Return a 500 direct response
+						r.DirectResponse = &ir.DirectResponse{
+							StatusCode: 500,
+						}
+						continue
+					}
+
+					// Some timeout setting originate from the route.
+					if localTo, err := buildClusterSettingsTimeout(policy.Spec.ClusterSettings, r.Traffic); err == nil {
+						to = localTo
+					}
+
 					r.Traffic = &ir.TrafficFeatures{
 						RateLimit:         rl,
 						LoadBalancer:      lb,
@@ -393,15 +401,11 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 						BackendConnection: bc,
 						HTTP2:             h2,
 						DNS:               ds,
+						Timeout:           to,
 					}
 
 					// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
 					r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
-
-					// Some timeout setting originate from the route.
-					if to, err = buildTimeout(policy.Spec.ClusterSettings, r); err == nil {
-						r.Traffic.Timeout = to
-					}
 
 					if policy.Spec.UseClientProtocol != nil {
 						r.UseClientProtocol = policy.Spec.UseClientProtocol
@@ -411,7 +415,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 		}
 	}
 
-	return nil
+	return errs
 }
 
 func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.BackendTrafficPolicy, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, gateway *GatewayContext, xdsIR XdsIRMap) error {
@@ -457,7 +461,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	if policy.Spec.Retry != nil {
 		rt = t.buildRetry(policy)
 	}
-	if ct, err = buildTimeout(policy.Spec.ClusterSettings, nil); err != nil {
+	if ct, err = buildClusterSettingsTimeout(policy.Spec.ClusterSettings, nil); err != nil {
 		err = perr.WithMessage(err, "Timeout")
 		errs = errors.Join(errs, err)
 	}
@@ -467,11 +471,6 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	}
 
 	ds = translateDNS(policy.Spec.ClusterSettings)
-
-	// Early return if got any errors
-	if errs != nil {
-		return errs
-	}
 
 	// Apply IR to all the routes within the specific Gateway
 	// If the feature is already set, then skip it, since it must be have
@@ -534,6 +533,14 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 				continue
 			}
 
+			if errs != nil {
+				// Return a 500 direct response
+				r.DirectResponse = &ir.DirectResponse{
+					StatusCode: 500,
+				}
+				continue
+			}
+
 			r.Traffic = &ir.TrafficFeatures{
 				RateLimit:      rl,
 				LoadBalancer:   lb,
@@ -550,7 +557,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 			// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
 			r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 
-			if ct, err = buildTimeout(policy.Spec.ClusterSettings, r); err == nil {
+			if ct, err = buildClusterSettingsTimeout(policy.Spec.ClusterSettings, r.Traffic); err == nil {
 				r.Traffic.Timeout = ct
 			}
 
@@ -560,7 +567,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		}
 	}
 
-	return nil
+	return errs
 }
 
 func (t *Translator) buildRateLimit(policy *egv1a1.BackendTrafficPolicy) (*ir.RateLimit, error) {
@@ -766,7 +773,7 @@ func ratelimitUnitToDuration(unit egv1a1.RateLimitUnit) int64 {
 
 func int64ToUint32(in int64) (uint32, bool) {
 	if in >= 0 && in <= math.MaxUint32 {
-		return uint32(in), true
+		return uint32(in), true // nolint: gosec
 	}
 	return 0, false
 }

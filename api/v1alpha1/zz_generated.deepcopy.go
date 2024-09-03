@@ -374,8 +374,8 @@ func (in *BackendList) DeepCopyObject() runtime.Object {
 func (in *BackendRef) DeepCopyInto(out *BackendRef) {
 	*out = *in
 	in.BackendObjectReference.DeepCopyInto(&out.BackendObjectReference)
-	if in.Failover != nil {
-		in, out := &in.Failover, &out.Failover
+	if in.Fallback != nil {
+		in, out := &in.Fallback, &out.Fallback
 		*out = new(bool)
 		**out = **in
 	}
@@ -405,6 +405,11 @@ func (in *BackendSpec) DeepCopyInto(out *BackendSpec) {
 		in, out := &in.AppProtocols, &out.AppProtocols
 		*out = make([]AppProtocolType, len(*in))
 		copy(*out, *in)
+	}
+	if in.Fallback != nil {
+		in, out := &in.Fallback, &out.Fallback
+		*out = new(bool)
+		**out = **in
 	}
 }
 

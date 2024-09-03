@@ -161,6 +161,33 @@ func BackendTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, poli
 	require.NoErrorf(t, waitErr, "error waiting for BackendTrafficPolicy to be accepted")
 }
 
+// BackendTrafficPolicyMustFail waits for an BackendTrafficPolicy to fail with the specified reason.
+func BackendTrafficPolicyMustFail(
+	t *testing.T, client client.Client, policyName types.NamespacedName,
+	controllerName string, ancestorRef gwapiv1a2.ParentReference, message string,
+) {
+	t.Helper()
+
+	policy := &egv1a1.BackendTrafficPolicy{}
+	waitErr := wait.PollUntilContextTimeout(
+		context.Background(), 1*time.Second, 60*time.Second,
+		true, func(ctx context.Context) (bool, error) {
+			err := client.Get(ctx, policyName, policy)
+			if err != nil {
+				return false, fmt.Errorf("error fetching BackendTrafficPolicy: %w", err)
+			}
+
+			if policyFailAcceptedByAncestor(policy.Status.Ancestors, controllerName, ancestorRef, message) {
+				t.Logf("BackendTrafficPolicy has been failed: %v", policy)
+				return true, nil
+			}
+
+			return false, nil
+		})
+
+	require.NoErrorf(t, waitErr, "error waiting for BackendTrafficPolicy to fail with message: %s policy %v", message, policy)
+}
+
 // ClientTrafficPolicyMustBeAccepted waits for the specified ClientTrafficPolicy to be accepted.
 func ClientTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1a2.ParentReference) {
 	t.Helper()

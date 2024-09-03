@@ -254,16 +254,9 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 	return routeRoutes, nil
 }
 
-func processTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
+func processRouteTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 	if rule.Timeouts != nil {
-		var rto *ir.Timeout
-
-		// Timeout is translated from multiple resources and may already be partially set
-		if irRoute.Traffic != nil && irRoute.Traffic.Timeout != nil {
-			rto = irRoute.Traffic.Timeout.DeepCopy()
-		} else {
-			rto = &ir.Timeout{}
-		}
+		rto := &ir.Timeout{}
 
 		if rule.Timeouts.Request != nil {
 			d, err := time.ParseDuration(string(*rule.Timeouts.Request))
@@ -308,7 +301,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 		irRoute := &ir.HTTPRoute{
 			Name: irRouteName(httpRoute, ruleIdx, -1),
 		}
-		processTimeout(irRoute, rule)
+		processRouteTimeout(irRoute, rule)
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
 		ruleRoutes = append(ruleRoutes, irRoute)
 	}
@@ -368,7 +361,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 			Name:               irRouteName(httpRoute, ruleIdx, matchIdx),
 			SessionPersistence: sessionPersistence,
 		}
-		processTimeout(irRoute, rule)
+		processRouteTimeout(irRoute, rule)
 
 		if match.Path != nil {
 			switch PathMatchTypeDerefOr(match.Path.Type, gwapiv1.PathMatchPathPrefix) {

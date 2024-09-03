@@ -3,40 +3,14 @@ backendTrafficPolicies:
   kind: BackendTrafficPolicy
   metadata:
     creationTimestamp: null
-    name: policy-for-gateway
-    namespace: envoy-gateway
+    name: policy-for-http-route-1
+    namespace: default
   spec:
-    rateLimit:
-      local:
-        rules:
-        - limit:
-            requests: 1000
-            unit: Hour
-        - clientSelectors:
-          - headers:
-            - name: x-user-id
-              value: one
-            - name: x-org-id
-              value: foo
-          limit:
-            requests: 10
-            unit: Hour
-        - clientSelectors:
-          - headers:
-            - name: x-user-id
-              value: two
-            - name: x-org-id
-              value: bar
-            sourceCIDR:
-              value: 192.168.0.0/16
-          limit:
-            requests: 10
-            unit: Minute
-      type: Local
     targetRef:
       group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-1
+      kind: HTTPRoute
+      name: httproute-1
+    useClientProtocol: true
   status:
     ancestors:
     - ancestorRef:
@@ -44,12 +18,12 @@ backendTrafficPolicies:
         kind: Gateway
         name: gateway-1
         namespace: envoy-gateway
+        sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: 'RateLimit: local rateLimit rule limit unit must be a multiple of
-          the default limit unit.'
-        reason: Invalid
-        status: "False"
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
@@ -114,6 +88,8 @@ httpRoutes:
       matches:
       - path:
           value: /
+      timeouts:
+        request: 130s
   status:
     parents:
     - conditions:
@@ -178,8 +154,6 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
-        directResponse:
-          statusCode: 500
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
@@ -191,3 +165,8 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
+        traffic:
+          timeout:
+            http:
+              requestTimeout: 2m10s
+        useClientProtocol: true
