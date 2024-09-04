@@ -29,7 +29,7 @@ require (
 	github.com/miekg/dns v1.1.62
 	github.com/ohler55/ojg v1.24.0
 	github.com/prometheus/client_golang v1.20.2
-	github.com/prometheus/common v0.55.0
+	github.com/prometheus/common v0.57.0
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.9.0
@@ -63,8 +63,8 @@ require (
 )
 
 require (
-	github.com/docker/docker v27.1.2+incompatible
-	github.com/replicatedhq/troubleshoot v0.99.0
+	github.com/docker/docker v27.2.0+incompatible
+	github.com/replicatedhq/troubleshoot v0.100.0
 	google.golang.org/grpc v1.65.0
 )
 
