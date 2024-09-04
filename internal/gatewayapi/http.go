@@ -42,7 +42,7 @@ func buildIRHTTP2Settings(http2Settings *egv1a1.HTTP2Settings) (*ir.HTTP2Setting
 				MinHTTP2InitialStreamWindowSize,
 				MaxHTTP2InitialStreamWindowSize))
 		default:
-			http2.InitialStreamWindowSize = ptr.To(uint32(initialStreamWindowSize))
+			http2.InitialStreamWindowSize = ptr.To(uint32(initialStreamWindowSize)) // nolint: gosec
 		}
 	}
 
@@ -57,7 +57,7 @@ func buildIRHTTP2Settings(http2Settings *egv1a1.HTTP2Settings) (*ir.HTTP2Setting
 				MinHTTP2InitialConnectionWindowSize,
 				MaxHTTP2InitialConnectionWindowSize))
 		default:
-			http2.InitialConnectionWindowSize = ptr.To(uint32(initialConnectionWindowSize))
+			http2.InitialConnectionWindowSize = ptr.To(uint32(initialConnectionWindowSize)) // nolint: gosec
 		}
 	}
 

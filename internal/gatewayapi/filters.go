@@ -358,7 +358,7 @@ func (t *Translator) processRedirectFilter(
 	}
 
 	if redirect.StatusCode != nil {
-		redirectCode := int32(*redirect.StatusCode)
+		redirectCode := int32(*redirect.StatusCode) // nolint: gosec
 		// Envoy supports 302, 303, 307, and 308, but gateway API only includes 301 and 302
 		if redirectCode == 301 || redirectCode == 302 {
 			redir.StatusCode = &redirectCode

@@ -598,7 +598,7 @@ func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
 func buildRetryStatusCodes(codes []ir.HTTPStatus) []uint32 {
 	ret := make([]uint32, len(codes))
 	for i, c := range codes {
-		ret[i] = uint32(c)
+		ret[i] = uint32(c) // nolint: gosec
 	}
 	return ret
 }
