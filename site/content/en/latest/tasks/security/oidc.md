@@ -400,6 +400,7 @@ Delete the SecurityPolicy, the secret and the HTTPRoute:
 kubectl delete securitypolicy/oidc-example
 kubectl delete secret/my-app-client-secret
 kubectl delete httproute/myapp
+kubectl delete httproute/foo
 ```
 
 ## Next Steps
