@@ -7,28 +7,28 @@ name = "github.com/AdaLogics/go-fuzz-headers"
 version = "0.0.0-20230811130428-ced1acdcaa24"
 ecosystem = "Go"
 license.override = ["Apache-2.0"]
-reason = "Unknown license since package version is missing in pkg.go.dev"
+reason = "Unidentified license since package version is missing in pkg.go.dev"
 
 [[PackageOverrides]]
 name = "github.com/asaskevich/govalidator"
 version = "0.0.0-20230301143203-a9d515a09cc2"
 ecosystem = "Go"
 license.override = ["MIT"]
-reason = "Unknown license, remove once https://github.com/google/deps.dev/issues/87 is resolved"
+reason = "Unidentified license, remove once https://github.com/google/deps.dev/issues/87 is resolved"
 
 [[PackageOverrides]]
 name = "github.com/containers/storage"
 version = "1.55.0"
 ecosystem = "Go"
 license.override = ["Apache-2.0"]
-reason = "Unknown license, remove once https://github.com/google/deps.dev/issues/104 is resolved"
+reason = "Unidentified license, remove once https://github.com/google/deps.dev/issues/104 is resolved"
 
 [[PackageOverrides]]
 name = "github.com/distribution/distribution/v3"
 version = "3.0.0-beta.1"
 ecosystem = "Go"
 license.override = ["Apache-2.0"]
-reason = "Unknown license, remove once https://github.com/google/deps.dev/issues/105 is resolved"
+reason = "Unidentified license, remove once https://github.com/google/deps.dev/issues/105 is resolved"
 
 [[PackageOverrides]]
 name = "github.com/docker/go-metrics"
@@ -90,7 +90,7 @@ name = "github.com/moby/patternmatcher"
 version = "0.6.0"
 ecosystem = "Go"
 license.override = ["Apache-2.0"]
-reason = "Unknown license, remove once https://github.com/google/deps.dev/issues/106 is resolved"
+reason = "Unidentified license, remove once https://github.com/google/deps.dev/issues/106 is resolved"
 
 [[PackageOverrides]]
 name = "github.com/opencontainers/go-digest"
@@ -111,7 +111,7 @@ reason = "This package has MPL-2.0 which is not approved in CNCF Allowlist, but 
 name = "stdlib"
 ecosystem = "Go"
 license.override = ["BSD-3-Clause"]
-reason = "Unknown license, remove once https://github.com/google/deps.dev/issues/86 is resolved"
+reason = "Unidentified license, remove once https://github.com/google/deps.dev/issues/86 is resolved"
 
 [[PackageOverrides]]
 name = "github.com/grafana/tempo"
