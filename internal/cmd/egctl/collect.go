@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/replicatedhq/troubleshoot/pkg/convert"
 	"github.com/spf13/cobra"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
@@ -73,7 +74,7 @@ func runCollect(collectOpts collectOptions) error {
 	basename := ""
 	if collectOpts.outPath != "" {
 		// use override output path
-		overridePath, err := ValidateOutputPath(collectOpts.outPath)
+		overridePath, err := convert.ValidateOutputPath(collectOpts.outPath)
 		if err != nil {
 			return fmt.Errorf("override output file path: %w", err)
 		}
@@ -99,15 +100,4 @@ func waitForSignal(c context.Context, cancel context.CancelFunc) {
 	case <-sigCh:
 		cancel()
 	}
-}
-
-func ValidateOutputPath(outputPath string) (string, error) {
-	outputPath, err := filepath.Abs(outputPath)
-	if err != nil {
-		return "", err
-	}
-	if _, err := os.Stat(filepath.Dir(outputPath)); err != nil {
-		return "", err
-	}
-	return outputPath, nil
 }
