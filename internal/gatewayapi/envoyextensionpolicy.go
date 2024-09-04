@@ -321,7 +321,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 			if irListener != nil {
 				for _, r := range irListener.Routes {
 					if strings.HasPrefix(r.Name, prefix) {
-						//return 500 and do not use partly configured EnvoyExtensions
+						// return 500 and do not configure EnvoyExtensions in this case
 						if errs != nil {
 							r.DirectResponse = &ir.DirectResponse{
 								StatusCode: 500,
@@ -383,7 +383,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 				continue
 			}
 
-			// return 500 and do not use partly configured EnvoyExtensions
+			// return 500 and do not configure EnvoyExtensions in this case
 			if errs != nil {
 				r.DirectResponse = &ir.DirectResponse{
 					StatusCode: 500,
