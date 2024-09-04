@@ -199,7 +199,7 @@ envoyExtensionPolicies:
     - backendRefs:
       - Name: grpc-backend
         Namespace: envoy-gateway
-        Port: 8000
+        Port: 8005
       processingMode:
         request:
           body: Buffered
