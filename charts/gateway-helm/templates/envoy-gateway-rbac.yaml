@@ -55,7 +55,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: 'envoy-gateway'
-  namespace: '{{ .Release.Namespace }}'
+  namespace: '{{ .Values.namespace | default .Release.Namespace }}'
 {{ else }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -78,5 +78,5 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: 'envoy-gateway'
-  namespace: '{{ .Release.Namespace }}'
+  namespace: '{{ .Values.namespace | default .Release.Namespace }}'
 {{ end }}

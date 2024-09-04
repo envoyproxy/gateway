@@ -1,5 +1,5 @@
 apiVersion: v2
-name: gateway-helm
+name: envoy-gateway
 description: The Helm chart for Envoy Gateway
 type: application
 

@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: {{ include "eg.fullname" . }}-certgen
-  namespace: '{{ .Release.Namespace }}'
+  namespace: '{{ .Values.namespace | default .Release.Namespace }}'
   labels:
   {{- include "eg.labels" . | nindent 4 }}
   annotations:

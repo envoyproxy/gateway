@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: envoy-gateway
-  namespace: '{{ .Release.Namespace }}'
+  namespace: '{{ .Values.namespace | default .Release.Namespace }}'
   labels:
   {{- include "eg.labels" . | nindent 4 }}
 ---
@@ -11,7 +11,7 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: envoy-gateway
-  namespace: '{{ .Release.Namespace }}'
+  namespace: '{{ .Values.namespace | default .Release.Namespace }}'
 spec:
   minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
   selector:
@@ -24,7 +24,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: envoy-gateway
-  namespace: '{{ .Release.Namespace }}'
+  namespace: '{{ .Values.namespace | default .Release.Namespace }}'
   labels:
     control-plane: envoy-gateway
   {{- include "eg.labels" . | nindent 4 }}
