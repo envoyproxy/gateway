@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway"
@@ -43,6 +44,8 @@ func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources)
 		LeaderElectionID:        "5b9825d2.gateway.envoyproxy.io",
 		LeaderElectionNamespace: svr.Namespace,
 	}
+
+	log.SetLogger(mgrOpts.Logger)
 
 	if !ptr.Deref(svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable, false) {
 		mgrOpts.LeaderElection = true
