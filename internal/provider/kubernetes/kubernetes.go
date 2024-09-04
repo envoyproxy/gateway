@@ -45,7 +45,6 @@ func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources)
 		LeaderElectionNamespace: svr.Namespace,
 	}
 
-	// fix [controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
 	log.SetLogger(mgrOpts.Logger)
 
 	if !ptr.Deref(svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable, false) {
