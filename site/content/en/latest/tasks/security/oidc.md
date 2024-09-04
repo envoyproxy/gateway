@@ -290,9 +290,9 @@ three HTTPRoutes associated with it, one with the host `www.example.com` and the
 `www.example.com` and the path `/`, and one with the host `foo.example.com` and the path `/`. Any of these HTTPRoutes 
 can be used to match the `redirectURL` and `logoutPath`.
 
-By default, the ID token cookie is set to the host of the request, excluding subdomains. To allow the ID token cookie to 
-be shared across subdomains and prevent users from having to log in again when switching between subdomains, the 
-`cookieDomain` field needs to be set to the root domain. In this example, the root domain is `example.com`.
+By default, the access token and ID token cookies are set to the host of the request, excluding subdomains. To allow the
+token cookies to be shared across subdomains and prevent users from having to log in again when switching between subdomains, 
+the `cookieDomain` field needs to be set to the root domain. In this example, the root domain is `example.com`.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -388,7 +388,7 @@ login page. After you successfully login, you should see the response from the b
 
 You can also try to access `https://foo.example.com:8443` and `https://www.example.com:8443/bar` addresses. You should
 be able to see the response from the backend service since these HTTPRoutes are also protected by the same OIDC config,
-and the ID token cookie is shared across subdomains.
+and the cookies are shared across subdomains.
 
 ## Clean-Up
 
