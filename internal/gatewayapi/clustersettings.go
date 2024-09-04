@@ -29,7 +29,7 @@ func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatur
 	}
 	ret := &ir.TrafficFeatures{}
 
-	if timeout, err := buildTimeout(*policy, nil); err != nil {
+	if timeout, err := buildClusterSettingsTimeout(*policy, nil); err != nil {
 		return nil, err
 	} else {
 		ret.Timeout = timeout
@@ -81,26 +81,26 @@ func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatur
 	return ret, nil
 }
 
-func buildTimeout(policy egv1a1.ClusterSettings, r *ir.HTTPRoute) (*ir.Timeout, error) {
+func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings, traffic *ir.TrafficFeatures) (*ir.Timeout, error) {
 	if policy.Timeout == nil {
+		if traffic != nil {
+			// Don't lose any existing timeout definitions.
+			return mergeTimeoutSettings(nil, traffic.Timeout), nil
+		}
 		return nil, nil
 	}
 	var (
-		tto  *ir.TCPTimeout
-		hto  *ir.HTTPTimeout
-		terr bool
 		errs error
+		to   = &ir.Timeout{}
+		pto  = policy.Timeout
 	)
-
-	pto := policy.Timeout
 
 	if pto.TCP != nil && pto.TCP.ConnectTimeout != nil {
 		d, err := time.ParseDuration(string(*pto.TCP.ConnectTimeout))
 		if err != nil {
-			terr = true
 			errs = errors.Join(errs, fmt.Errorf("invalid ConnectTimeout value %s", *pto.TCP.ConnectTimeout))
 		} else {
-			tto = &ir.TCPTimeout{
+			to.TCP = &ir.TCPTimeout{
 				ConnectTimeout: ptr.To(metav1.Duration{Duration: d}),
 			}
 		}
@@ -113,7 +113,6 @@ func buildTimeout(policy egv1a1.ClusterSettings, r *ir.HTTPRoute) (*ir.Timeout, 
 		if pto.HTTP.ConnectionIdleTimeout != nil {
 			d, err := time.ParseDuration(string(*pto.HTTP.ConnectionIdleTimeout))
 			if err != nil {
-				terr = true
 				errs = errors.Join(errs, fmt.Errorf("invalid ConnectionIdleTimeout value %s", *pto.HTTP.ConnectionIdleTimeout))
 			} else {
 				cit = ptr.To(metav1.Duration{Duration: d})
@@ -123,51 +122,51 @@ func buildTimeout(policy egv1a1.ClusterSettings, r *ir.HTTPRoute) (*ir.Timeout, 
 		if pto.HTTP.MaxConnectionDuration != nil {
 			d, err := time.ParseDuration(string(*pto.HTTP.MaxConnectionDuration))
 			if err != nil {
-				terr = true
 				errs = errors.Join(errs, fmt.Errorf("invalid MaxConnectionDuration value %s", *pto.HTTP.MaxConnectionDuration))
 			} else {
 				mcd = ptr.To(metav1.Duration{Duration: d})
 			}
 		}
 
-		hto = &ir.HTTPTimeout{
+		to.HTTP = &ir.HTTPTimeout{
 			ConnectionIdleTimeout: cit,
 			MaxConnectionDuration: mcd,
 		}
 	}
 
 	// http request timeout is translated during the gateway-api route resource translation
-	// merge route timeout setting with backendtrafficpolicy timeout settings
-	if terr {
-		if r != nil && r.Traffic != nil && r.Traffic.Timeout != nil {
-			return r.Traffic.Timeout.DeepCopy(), errs
-		}
-	} else {
-		// http request timeout is translated during the gateway-api route resource translation
-		// merge route timeout setting with backendtrafficpolicy timeout settings
-		if r != nil &&
-			r.Traffic != nil &&
-			r.Traffic.Timeout != nil &&
-			r.Traffic.Timeout.HTTP != nil &&
-			r.Traffic.Timeout.HTTP.RequestTimeout != nil {
-			if hto == nil {
-				hto = &ir.HTTPTimeout{
-					RequestTimeout: r.Traffic.Timeout.HTTP.RequestTimeout,
-				}
-			} else {
-				hto.RequestTimeout = r.Traffic.Timeout.HTTP.RequestTimeout
-			}
-		}
-
-		if hto != nil || tto != nil {
-			return &ir.Timeout{
-				TCP:  tto,
-				HTTP: hto,
-			}, nil
-		}
+	// merge route timeout setting with backendtrafficpolicy timeout settings.
+	// Merging is done after the clustersettings definitions are translated so that
+	// clustersettings will override previous settings.
+	if traffic != nil {
+		to = mergeTimeoutSettings(to, traffic.Timeout)
 	}
+	return to, errs
+}
 
-	return nil, errs
+// merge secondary into main if both are not nil, otherwise return the
+// one that is not nil. If both are nil, returns nil
+func mergeTimeoutSettings(main, secondary *ir.Timeout) *ir.Timeout {
+	switch {
+	case main == nil && secondary == nil:
+		return nil
+	case main == nil:
+		return secondary.DeepCopy()
+	case secondary == nil:
+		return main
+	default: // Neither main nor secondary are nil here
+		if secondary.HTTP != nil {
+			setIfNil(&main.HTTP, &ir.HTTPTimeout{})
+			setIfNil(&main.HTTP.RequestTimeout, secondary.HTTP.RequestTimeout)
+			setIfNil(&main.HTTP.ConnectionIdleTimeout, secondary.HTTP.ConnectionIdleTimeout)
+			setIfNil(&main.HTTP.MaxConnectionDuration, secondary.HTTP.MaxConnectionDuration)
+		}
+		if secondary.TCP != nil {
+			setIfNil(&main.TCP, &ir.TCPTimeout{})
+			setIfNil(&main.TCP.ConnectTimeout, secondary.TCP.ConnectTimeout)
+		}
+		return main
+	}
 }
 
 func buildBackendConnection(policy egv1a1.ClusterSettings) (*ir.BackendConnection, error) {
@@ -191,7 +190,7 @@ func buildBackendConnection(policy egv1a1.ClusterSettings) (*ir.BackendConnectio
 				return nil, fmt.Errorf("BufferLimit value %s is out of range", bc.BufferLimit.String())
 			}
 
-			bcIR.BufferLimitBytes = ptr.To(uint32(bf))
+			bcIR.BufferLimitBytes = ptr.To(uint32(bf)) // nolint: gosec
 		}
 	}
 
@@ -340,7 +339,7 @@ func buildConsistentHashLoadBalancer(policy egv1a1.LoadBalancer) (*ir.Consistent
 	if policy.ConsistentHash.TableSize != nil {
 		tableSize := policy.ConsistentHash.TableSize
 
-		if *tableSize > MaxConsistentHashTableSize || !big.NewInt(int64(*tableSize)).ProbablyPrime(0) {
+		if *tableSize > MaxConsistentHashTableSize || !big.NewInt(int64(*tableSize)).ProbablyPrime(0) { // nolint: gosec
 			return nil, fmt.Errorf("invalid TableSize value %d", *tableSize)
 		}
 

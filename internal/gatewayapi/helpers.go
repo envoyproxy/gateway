@@ -513,7 +513,7 @@ func parseCIDR(cidr string) (*ir.CIDRMatch, error) {
 	return &ir.CIDRMatch{
 		CIDR:    ipn.String(),
 		IP:      ip.String(),
-		MaskLen: uint32(mask),
+		MaskLen: uint32(mask), // nolint: gosec
 		IsIPv6:  ip.To4() == nil,
 	}, nil
 }

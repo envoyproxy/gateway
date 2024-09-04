@@ -325,7 +325,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 	if policy.Spec.Retry != nil {
 		rt = t.buildRetry(policy)
 	}
-	if to, err = buildTimeout(policy.Spec.ClusterSettings, nil); err != nil {
+	if to, err = buildClusterSettingsTimeout(policy.Spec.ClusterSettings, nil); err != nil {
 		err = perr.WithMessage(err, "Timeout")
 		errs = errors.Join(errs, err)
 	}
@@ -384,6 +384,11 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 						continue
 					}
 
+					// Some timeout setting originate from the route.
+					if localTo, err := buildClusterSettingsTimeout(policy.Spec.ClusterSettings, r.Traffic); err == nil {
+						to = localTo
+					}
+
 					r.Traffic = &ir.TrafficFeatures{
 						RateLimit:         rl,
 						LoadBalancer:      lb,
@@ -396,15 +401,11 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 						BackendConnection: bc,
 						HTTP2:             h2,
 						DNS:               ds,
+						Timeout:           to,
 					}
 
 					// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
 					r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
-
-					// Some timeout setting originate from the route.
-					if to, err = buildTimeout(policy.Spec.ClusterSettings, r); err == nil {
-						r.Traffic.Timeout = to
-					}
 
 					if policy.Spec.UseClientProtocol != nil {
 						r.UseClientProtocol = policy.Spec.UseClientProtocol
@@ -460,7 +461,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	if policy.Spec.Retry != nil {
 		rt = t.buildRetry(policy)
 	}
-	if ct, err = buildTimeout(policy.Spec.ClusterSettings, nil); err != nil {
+	if ct, err = buildClusterSettingsTimeout(policy.Spec.ClusterSettings, nil); err != nil {
 		err = perr.WithMessage(err, "Timeout")
 		errs = errors.Join(errs, err)
 	}
@@ -556,7 +557,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 			// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
 			r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 
-			if ct, err = buildTimeout(policy.Spec.ClusterSettings, r); err == nil {
+			if ct, err = buildClusterSettingsTimeout(policy.Spec.ClusterSettings, r.Traffic); err == nil {
 				r.Traffic.Timeout = ct
 			}
 
@@ -772,7 +773,7 @@ func ratelimitUnitToDuration(unit egv1a1.RateLimitUnit) int64 {
 
 func int64ToUint32(in int64) (uint32, bool) {
 	if in >= 0 && in <= math.MaxUint32 {
-		return uint32(in), true
+		return uint32(in), true // nolint: gosec
 	}
 	return 0, false
 }

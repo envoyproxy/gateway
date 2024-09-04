@@ -364,7 +364,7 @@ _Appears in:_
 | `name` | _[ObjectName](#objectname)_ |  true  | Name is the name of the referent. |
 | `namespace` | _[Namespace](#namespace)_ |  false  | Namespace is the namespace of the backend. When unspecified, the local<br />namespace is inferred.<br /><br />Note that when a namespace different than the local namespace is specified,<br />a ReferenceGrant object is required in the referent namespace to allow that<br />namespace's owner to accept the reference. See the ReferenceGrant<br />documentation for details.<br /><br />Support: Core |
 | `port` | _[PortNumber](#portnumber)_ |  false  | Port specifies the destination port number to use for this resource.<br />Port is required when the referent is a Kubernetes Service. In this<br />case, the port number is the service port number, not the target port.<br />For other resources, destination port might be derived from the referent<br />resource or this field. |
-| `failover` | _boolean_ |  false  | Failover indicates whether the backend is designated as a failover.<br />Multiple failover backends can be configured.<br />It is highly recommended to configure active or passive health checks to ensure that failover can be detected<br />when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.<br />The overprovisioning factor is set to 1.4, meaning the failover backends will only start receiving traffic when<br />the health of the active backends falls below 72%. |
+| `fallback` | _boolean_ |  false  | Fallback indicates whether the backend is designated as a fallback.<br />Multiple fallback backends can be configured.<br />It is highly recommended to configure active or passive health checks to ensure that failover can be detected<br />when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.<br />The overprovisioning factor is set to 1.4, meaning the fallback backends will only start receiving traffic when<br />the health of the active backends falls below 72%. |
 
 
 #### BackendSpec
@@ -2265,7 +2265,9 @@ _Appears in:_
 
 
 
-KubernetesPatchSpec defines how to perform the patch operation
+KubernetesPatchSpec defines how to perform the patch operation.
+Note that `value` can be an in-line YAML document, as can be seen in e.g. (the example of patching the Envoy proxy Deployment)[https://gateway.envoyproxy.io/docs/tasks/operations/customize-envoyproxy/#patching-deployment-for-envoyproxy].
+Note also that, currently, strings containing literal JSON are _rejected_.
 
 _Appears in:_
 - [KubernetesDaemonSetSpec](#kubernetesdaemonsetspec)
