@@ -2053,8 +2053,8 @@ func (in *ExtProc) DeepCopyInto(out *ExtProc) {
 		*out = new(ExtProcProcessingMode)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.Metadata != nil {
-		in, out := &in.Metadata, &out.Metadata
+	if in.Untyped != nil {
+		in, out := &in.Untyped, &out.Untyped
 		*out = new(MetadataOptions)
 		(*in).DeepCopyInto(*out)
 	}

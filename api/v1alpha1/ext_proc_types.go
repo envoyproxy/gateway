@@ -71,10 +71,10 @@ type ExtProc struct {
 	// +optional
 	ProcessingMode *ExtProcProcessingMode `json:"processingMode,omitempty"`
 
-	// MetadataOptions defines the metadata that should be forwarded to or received from the external processor.
+	// Untyped defines the untyped metadata that should be forwarded to or received from the external processor.
 	//
 	// +optional
-	Metadata *MetadataOptions `json:"metadata,omitempty"`
+	Untyped *MetadataOptions `json:"untyped,omitempty"`
 }
 
 type MetadataOptions struct {

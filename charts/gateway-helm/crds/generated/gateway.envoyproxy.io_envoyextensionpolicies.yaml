@@ -823,25 +823,6 @@ spec:
                         Default: 200ms
                       pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                       type: string
-                    metadata:
-                      description: MetadataOptions defines the metadata that should
-                        be forwarded to or received from the external processor.
-                      properties:
-                        forwardingNamespaces:
-                          description: ForwardingNamespaces is a list of namespaces
-                            from which metadata should be forwarded to the external
-                            processor.
-                          items:
-                            type: string
-                          type: array
-                        receivingNamespaces:
-                          description: ReceivingNamespaces is a list of namespaces
-                            from which metadata should be received from the external
-                            processor.
-                          items:
-                            type: string
-                          type: array
-                      type: object
                     processingMode:
                       description: |-
                         ProcessingMode defines how request and response body is processed
@@ -873,6 +854,25 @@ spec:
                               - BufferedPartial
                               type: string
                           type: object
+                      type: object
+                    untyped:
+                      description: Untyped defines the untyped metadata that should
+                        be forwarded to or received from the external processor.
+                      properties:
+                        forwardingNamespaces:
+                          description: ForwardingNamespaces is a list of namespaces
+                            from which metadata should be forwarded to the external
+                            processor.
+                          items:
+                            type: string
+                          type: array
+                        receivingNamespaces:
+                          description: ReceivingNamespaces is a list of namespaces
+                            from which metadata should be received from the external
+                            processor.
+                          items:
+                            type: string
+                          type: array
                       type: object
                   type: object
                   x-kubernetes-validations:
