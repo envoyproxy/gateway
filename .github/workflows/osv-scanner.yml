@@ -26,6 +26,7 @@ jobs:
       scan-args: |-
         --skip-git
         --recursive
+        --no-call-analysis=go
         ./
 
   scan-pr:
