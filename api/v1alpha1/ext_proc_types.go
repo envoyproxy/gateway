@@ -70,4 +70,16 @@ type ExtProc struct {
 	//
 	// +optional
 	ProcessingMode *ExtProcProcessingMode `json:"processingMode,omitempty"`
+
+	// MetadataOptions defines the metadata that should be forwarded to or received from the external processor.
+	//
+	// +optional
+	Metadata *MetadataOptions `json:"metadata,omitempty"`
+}
+
+type MetadataOptions struct {
+	// ForwardingNamespaces is a list of namespaces from which metadata should be forwarded to the external processor.
+	ForwardingNamespaces []string `json:"forwardingNamespaces,omitempty"`
+	// ReceivingNamespaces is a list of namespaces from which metadata should be received from the external processor.
+	ReceivingNamespaces []string `json:"receivingNamespaces,omitempty"`
 }
