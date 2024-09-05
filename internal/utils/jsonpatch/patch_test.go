@@ -99,6 +99,16 @@ func TestApplyJSONPatches(t *testing.T) {
 			},
 			errorExpected: false,
 		},
+		{
+			name: "invalid jsonpath",
+			patchOperation: []ir.JSONPatchOperation{
+				{
+					Op:       "remove",
+					JSONPath: ptr.To("i'm not a json path string"),
+				},
+			},
+			errorExpected: true,
+		},
 	}
 
 	for _, tc := range testCases {

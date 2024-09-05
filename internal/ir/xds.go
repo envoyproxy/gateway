@@ -1815,22 +1815,33 @@ func (o *JSONPatchOperation) IsJSONPathNilOrEmpty() bool {
 	return o.JSONPath == nil || *o.JSONPath == EmptyPath
 }
 
+// Validate ensures that the appropriate fields are set for each operation type according to RFC 6902:
+// https://www.rfc-editor.org/rfc/rfc6902.html
 func (o *JSONPatchOperation) Validate() error {
+	if o.Path == nil && o.JSONPath == nil {
+		return fmt.Errorf("a patch operation must specify a path or jsonPath")
+	}
 	switch o.Op {
-	case JSONPatchOpAdd, JSONPatchOpReplace:
+	case JSONPatchOpAdd, JSONPatchOpReplace, JSONPatchOpTest:
 		if o.Value == nil {
 			return fmt.Errorf("the %s operation requires a value", o.Op)
+		}
+		if o.From != nil {
+			return fmt.Errorf("the %s operation doesn't support a from attribute", o.Op)
+		}
+	case JSONPatchOpRemove:
+		if o.From != nil || o.Value != nil {
+			return fmt.Errorf("value and from can't be specified with the remove operation")
 		}
 	case JSONPatchOpMove, JSONPatchOpCopy:
 		if o.From == nil {
 			return fmt.Errorf("the %s operation requires a valid from attribute", o.Op)
 		}
-		// Check that value is not nil as well. This case must remain before the default case.
-		fallthrough
-	default:
 		if o.Value != nil {
-			return fmt.Errorf("the value field can not be set for the %s operation", o.Op)
+			return fmt.Errorf("the %s operation doesn't support a value attribute", o.Op)
 		}
+	default:
+		return fmt.Errorf("unsupported JSONPatch operation")
 	}
 	return nil
 }
