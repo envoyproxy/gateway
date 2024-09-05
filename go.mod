@@ -65,7 +65,7 @@ require (
 require (
 	github.com/docker/docker v27.2.0+incompatible
 	github.com/replicatedhq/troubleshoot v0.100.0
-	google.golang.org/grpc v1.65.0
+	google.golang.org/grpc v1.66.0
 )
 
 require (
