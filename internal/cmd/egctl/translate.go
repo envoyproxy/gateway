@@ -326,6 +326,11 @@ func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) (gatewayap
 			msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
 			status.SetGatewayClassAccepted(resources.GatewayClass, false, string(gwapiv1.GatewayClassReasonInvalidParameters), msg)
 		}
+		if err := bootstrap.Validate(resources.EnvoyProxyForGatewayClass.Spec.Bootstrap); err != nil {
+			epInvalid = true
+			msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
+			status.SetGatewayClassAccepted(resources.GatewayClass, false, string(gwapiv1.GatewayClassReasonInvalidParameters), msg)
+		}
 		gRes.EnvoyProxyForGatewayClass = resources.EnvoyProxyForGatewayClass
 	}
 	if !epInvalid {
@@ -959,7 +964,7 @@ func addDefaultEnvoyProxy(resources *gatewayapi.Resources) error {
 		},
 		Spec: egv1a1.EnvoyProxySpec{
 			Bootstrap: &egv1a1.ProxyBootstrap{
-				Value: defaultBootstrapStr,
+				Value: &defaultBootstrapStr,
 			},
 		},
 	}

@@ -507,6 +507,7 @@ _Appears in:_
 | ----- | ----------- |
 | `Merge` | Merge merges the provided bootstrap with the default one. The provided bootstrap can add or override a value<br />within a map, or add a new value to a list.<br />Please note that the provided bootstrap can't override a value within a list.<br /> | 
 | `Replace` | Replace replaces the default bootstrap with the provided one.<br /> | 
+| `JSONPatch` | JSONPatch applies the provided JSONPatches to the default bootstrap.<br /> | 
 
 
 #### CIDR
@@ -2082,6 +2083,7 @@ https://datatracker.ietf.org/doc/html/rfc6902
 
 _Appears in:_
 - [EnvoyJSONPatchConfig](#envoyjsonpatchconfig)
+- [ProxyBootstrap](#proxybootstrap)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -2805,8 +2807,9 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `type` | _[BootstrapType](#bootstraptype)_ |  false  | Type is the type of the bootstrap configuration, it should be either Replace or Merge.<br />If unspecified, it defaults to Replace. |
-| `value` | _string_ |  true  | Value is a YAML string of the bootstrap. |
+| `type` | _[BootstrapType](#bootstraptype)_ |  false  | Type is the type of the bootstrap configuration, it should be either Replace,  Merge, or JSONPatch.<br />If unspecified, it defaults to Replace. |
+| `value` | _string_ |  false  | Value is a YAML string of the bootstrap. |
+| `jsonPatches` | _[JSONPatchOperation](#jsonpatchoperation) array_ |  true  | JSONPatches is an array of JSONPatches to be applied to the default bootstrap. Patches are<br />applied in the order in which they are defined. |
 
 
 #### ProxyLogComponent

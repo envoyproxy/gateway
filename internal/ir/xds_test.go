@@ -13,6 +13,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
@@ -1614,6 +1615,126 @@ func TestValidateHealthCheck(t *testing.T) {
 				require.NoError(t, test.input.Validate())
 			} else {
 				require.EqualError(t, test.input.Validate(), test.want.Error())
+			}
+		})
+	}
+}
+
+func TestJSONPatchOperationValidation(t *testing.T) {
+	tests := []struct {
+		name  string
+		input JSONPatchOperation
+		want  *string
+	}{
+		{
+			name: "no path or jsonpath",
+			input: JSONPatchOperation{
+				Op: TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("remove")),
+			},
+			want: ptr.To("a patch operation must specify a path or jsonPath"),
+		},
+		{
+			name: "replace with from",
+			input: JSONPatchOperation{
+				Op:       TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("replace")),
+				JSONPath: ptr.To("$.some.json[@?name=='lala'].key"),
+				Value: &apiextensionsv1.JSON{
+					Raw: []byte{},
+				},
+				From: ptr.To("/some/from"),
+			},
+			want: ptr.To("the replace operation doesn't support a from attribute"),
+		},
+		{
+			name: "add with no value",
+			input: JSONPatchOperation{
+				Op:       TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("add")),
+				JSONPath: ptr.To("$.some.json[@?name=='lala'].key"),
+			},
+			want: ptr.To("the add operation requires a value"),
+		},
+		{
+			name: "remove with from",
+			input: JSONPatchOperation{
+				Op:       TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("remove")),
+				JSONPath: ptr.To("$.some.json[@?name=='lala'].key"),
+				From:     ptr.To("/some/from"),
+			},
+			want: ptr.To("value and from can't be specified with the remove operation"),
+		},
+		{
+			name: "remove with value",
+			input: JSONPatchOperation{
+				Op:       TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("remove")),
+				JSONPath: ptr.To("$.some.json[@?name=='lala'].key"),
+				Value: &apiextensionsv1.JSON{
+					Raw: []byte{},
+				},
+			},
+			want: ptr.To("value and from can't be specified with the remove operation"),
+		},
+		{
+			name: "move without from",
+			input: JSONPatchOperation{
+				Op:       TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("move")),
+				JSONPath: ptr.To("$.some.json[@?name=='lala'].key"),
+			},
+			want: ptr.To("the move operation requires a valid from attribute"),
+		},
+		{
+			name: "copy with value",
+			input: JSONPatchOperation{
+				Op:       TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("copy")),
+				JSONPath: ptr.To("$.some.json[@?name=='lala'].key"),
+				From:     ptr.To("/some/from"),
+				Value: &apiextensionsv1.JSON{
+					Raw: []byte{},
+				},
+			},
+			want: ptr.To("the copy operation doesn't support a value attribute"),
+		},
+		{
+			name: "invalid operation",
+			input: JSONPatchOperation{
+				Op:   TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("invalid")),
+				Path: ptr.To("/some/path"),
+			},
+			want: ptr.To("unsupported JSONPatch operation"),
+		},
+		{
+			name: "valid test operation",
+			input: JSONPatchOperation{
+				Op:   TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("test")),
+				Path: ptr.To("/some/path"),
+				Value: &apiextensionsv1.JSON{
+					Raw: []byte{},
+				},
+			},
+		},
+		{
+			name: "valid remove operation",
+			input: JSONPatchOperation{
+				Op:   TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("remove")),
+				Path: ptr.To("/some/path"),
+			},
+		},
+		{
+			name: "valid copy operation",
+			input: JSONPatchOperation{
+				Op:   TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("copy")),
+				Path: ptr.To("/some/path"),
+				From: ptr.To("/some/other/path"),
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.input.Validate()
+			if tc.want != nil {
+				require.EqualError(t, err, *tc.want)
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}
