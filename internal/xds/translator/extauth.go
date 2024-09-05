@@ -141,9 +141,10 @@ func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
 
 func httpService(http *ir.HTTPExtAuthService) *extauthv3.HttpService {
 	var (
-		uri              string
-		headersToBackend []*matcherv3.StringMatcher
-		service          *extauthv3.HttpService
+		uri               string
+		headersToBackend  []*matcherv3.StringMatcher
+		headersToMetadata []*matcherv3.StringMatcher
+		service           *extauthv3.HttpService
 	)
 
 	service = &extauthv3.HttpService{
@@ -184,6 +185,25 @@ func httpService(http *ir.HTTPExtAuthService) *extauthv3.HttpService {
 			AllowedUpstreamHeaders: &matcherv3.ListStringMatcher{
 				Patterns: headersToBackend,
 			},
+		}
+	}
+
+	for _, metadata := range http.HeadersToMetadata {
+		headersToMetadata = append(headersToMetadata, &matcherv3.StringMatcher{
+			MatchPattern: &matcherv3.StringMatcher_Exact{
+				Exact: metadata,
+			},
+			IgnoreCase: true,
+		})
+	}
+
+	if len(headersToMetadata) > 0 {
+		if service.AuthorizationResponse == nil {
+			service.AuthorizationResponse = &extauthv3.AuthorizationResponse{}
+		}
+
+		service.AuthorizationResponse.DynamicMetadataFromHeaders = &matcherv3.ListStringMatcher{
+			Patterns: headersToMetadata,
 		}
 	}
 

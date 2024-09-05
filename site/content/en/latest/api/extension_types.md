@@ -1884,6 +1884,7 @@ _Appears in:_
 | `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  | BackendSettings holds configuration for managing the connection<br />to the backend. |
 | `path` | _string_ |  true  | Path is the path of the HTTP External Authorization service.<br />If path is specified, the authorization request will be sent to that path,<br />or else the authorization request will be sent to the root path. |
 | `headersToBackend` | _string array_ |  false  | HeadersToBackend are the authorization response headers that will be added<br />to the original client request before sending it to the backend server.<br />Note that coexisting headers will be overridden.<br />If not specified, no authorization response headers will be added to the<br />original client request. |
+| `headersToMetadata` | _string array_ |  false  | HeadersToMetadata are the authorization response headers that will be emitted<br />as dynamic metadata to be consumed by next filter.<br />Note: this metadata lives in envoy.filters.http.ext_authz and can only be consumed<br />by the next filter if explicitly specified. |
 
 
 #### HTTPStatus

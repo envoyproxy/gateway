@@ -78,4 +78,11 @@ type HTTPExtAuthService struct {
 	// original client request.
 	// +optional
 	HeadersToBackend []string `json:"headersToBackend,omitempty"`
+
+	// HeadersToMetadata are the authorization response headers that will be emitted
+	// as dynamic metadata to be consumed by next filter.
+	// Note: this metadata lives in envoy.filters.http.ext_authz and can only be consumed
+	// by the next filter if explicitly specified.
+	// +optional
+	HeadersToMetadata []string `json:"headersToMetadata,omitempty"`
 }

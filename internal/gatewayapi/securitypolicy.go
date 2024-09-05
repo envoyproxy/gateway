@@ -875,10 +875,11 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Reso
 
 	if http != nil {
 		extAuth.HTTP = &ir.HTTPExtAuthService{
-			Destination:      rd,
-			Authority:        authority,
-			Path:             ptr.Deref(http.Path, ""),
-			HeadersToBackend: http.HeadersToBackend,
+			Destination:       rd,
+			Authority:         authority,
+			Path:              ptr.Deref(http.Path, ""),
+			HeadersToBackend:  http.HeadersToBackend,
+			HeadersToMetadata: http.HeadersToMetadata,
 		}
 	} else {
 		extAuth.GRPC = &ir.GRPCExtAuthService{

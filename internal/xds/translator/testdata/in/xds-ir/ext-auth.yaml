@@ -126,4 +126,7 @@ http:
               headersToBackend:
                 - header1
                 - header2
+              headersToMetadata:
+                - metadata1
+                - metadata2
               path: /auth
