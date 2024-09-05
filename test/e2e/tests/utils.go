@@ -586,6 +586,7 @@ func QueryTraceFromTempo(t *testing.T, c client.Client, tags map[string]string) 
 		return -1, err
 	}
 	if err := json.Unmarshal(data, tempoResponse); err != nil {
+		t.Logf("Failed to unmarshall response: %s", string(data))
 		return -1, err
 	}
 
