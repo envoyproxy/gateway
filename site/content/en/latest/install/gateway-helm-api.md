@@ -58,7 +58,7 @@ The Helm chart for Envoy Gateway
 | global.images.envoyGateway.image | string | `nil` |  |
 | global.images.envoyGateway.pullPolicy | string | `nil` |  |
 | global.images.envoyGateway.pullSecrets | list | `[]` |  |
-| global.images.ratelimit.image | string | `"docker.io/envoyproxy/ratelimit:master"` |  |
+| global.images.ratelimit.image | string | `"docker.io/envoyproxy/ratelimit:26f28d78"` |  |
 | global.images.ratelimit.pullPolicy | string | `"IfNotPresent"` |  |
 | global.images.ratelimit.pullSecrets | list | `[]` |  |
 | kubernetesClusterDomain | string | `"cluster.local"` |  |

@@ -107,8 +107,6 @@ provider:
       container:
         {{- if .Values.global.images.ratelimit.image }}
         image: {{ .Values.global.images.ratelimit.image }}
-        {{- else }}
-        image: "docker.io/envoyproxy/ratelimit:master"
         {{- end }}
       {{- with .Values.global.images.ratelimit.pullSecrets }}
       pod:
