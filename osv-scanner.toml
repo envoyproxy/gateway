@@ -112,11 +112,3 @@ name = "stdlib"
 ecosystem = "Go"
 license.override = ["BSD-3-Clause"]
 reason = "Unidentified license, remove once https://github.com/google/deps.dev/issues/86 is resolved"
-
-[[PackageOverrides]]
-name = "github.com/grafana/tempo"
-version = "1.5.0"
-ecosystem = "Go"
-# Override the license to an allowed one until https://github.com/google/osv-scanner/issues/1124 is resolved and we can skip it from licnese scanning instead
-license.override = ["Apache-2.0"]
-reason = "This package is only used in e2e tests so we can ignore its license"

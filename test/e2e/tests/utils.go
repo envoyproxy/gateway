@@ -22,9 +22,7 @@ import (
 	"fortio.org/fortio/periodic"
 	flog "fortio.org/log"
 	"github.com/go-logfmt/logfmt"
-	"github.com/gogo/protobuf/jsonpb" // nolint: depguard // tempopb use gogo/protobuf
 	"github.com/google/go-cmp/cmp"
-	"github.com/grafana/tempo/pkg/tempopb"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
 	"github.com/stretchr/testify/require"
@@ -42,6 +40,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	tb "github.com/envoyproxy/gateway/internal/troubleshoot"
+	"github.com/envoyproxy/gateway/test/e2e/tempopb"
 )
 
 const defaultServiceStartupTimeout = 5 * time.Minute
@@ -573,13 +572,20 @@ func QueryTraceFromTempo(t *testing.T, c client.Client, tags map[string]string) 
 	if err != nil {
 		return -1, err
 	}
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	if res.StatusCode != http.StatusOK {
 		return -1, fmt.Errorf("failed to query tempo, url=%s, status=%s", tempoURL.String(), res.Status)
 	}
 
 	tempoResponse := &tempopb.SearchResponse{}
-	if err := jsonpb.Unmarshal(res.Body, tempoResponse); err != nil {
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return -1, err
+	}
+	if err := json.Unmarshal(data, tempoResponse); err != nil {
 		return -1, err
 	}
 

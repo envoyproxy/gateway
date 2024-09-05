@@ -26,8 +26,6 @@ jobs:
       scan-args: |-
         --skip-git
         --recursive
-        --config
-        tools/osv-scanner/config.toml
         ./
 
   scan-pr:
