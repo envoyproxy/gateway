@@ -3,12 +3,10 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-//go:build e2e
-// +build e2e
+package tempopb
 
 // this is a package copied from tempo project,
 // EG only use pb struct for testing purpose.
-package tempopb
 
 type SearchResponse struct {
 	Traces  []*TraceSearchMetadata `protobuf:"bytes,1,rep,name=traces,proto3" json:"traces,omitempty"`
