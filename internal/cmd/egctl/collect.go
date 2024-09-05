@@ -15,7 +15,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/replicatedhq/troubleshoot/pkg/convert"
 	"github.com/spf13/cobra"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
@@ -74,7 +73,7 @@ func runCollect(collectOpts collectOptions) error {
 	basename := ""
 	if collectOpts.outPath != "" {
 		// use override output path
-		overridePath, err := convert.ValidateOutputPath(collectOpts.outPath)
+		overridePath, err := tb.ValidateOutputPath(collectOpts.outPath)
 		if err != nil {
 			return fmt.Errorf("override output file path: %w", err)
 		}
