@@ -238,7 +238,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `name` | _string_ |  false  | Name is a user-friendly name for the rule.<br />If not specified, Envoy Gateway will generate a unique name for the rule.n |
+| `name` | _string_ |  false  | Name is a user-friendly name for the rule.<br />If not specified, Envoy Gateway will generate a unique name for the rule. |
 | `action` | _[AuthorizationAction](#authorizationaction)_ |  true  | Action defines the action to be taken if the rule matches. |
 | `principal` | _[Principal](#principal)_ |  true  | Principal specifies the client identity of a request.<br />If there are multiple principal types, all principals must match for the rule to match.<br />For example, if there are two principals: one for client IP and one for JWT claim,<br />the rule will match only if both the client IP and the JWT claim match. |
 
@@ -2198,7 +2198,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `claims` | _[JWTClaim](#jwtclaim) array_ |  false  | Claims are the claims in a JWT token.<br /><br />If multiple claims are specified, all claims must match for the rule to match.<br />For example, if there are two claims: one for the audience and one for the issuer,<br />the rule will match only if both the audience and the issuer match. |
-| `scopes` | _string array_ |  false  | Scopes are a special type of claim in a JWT token that represents the permissions of the client.<br /><br />The value of the scopes field should be a space delimited string that is expected in the scope parameter,<br />as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749#page-23.<br /><br />If multiple scopes are specified, all scopes must match for the rule to match. |
+| `scopes` | _[JWTScope](#jwtscope) array_ |  false  | Scopes are a special type of claim in a JWT token that represents the permissions of the client.<br /><br />The value of the scopes field should be a space delimited string that is expected in the scope parameter,<br />as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749#page-23.<br /><br />If multiple scopes are specified, all scopes must match for the rule to match. |
 
 
 #### JWTProvider
@@ -2219,6 +2219,17 @@ _Appears in:_
 | `claimToHeaders` | _[ClaimToHeader](#claimtoheader) array_ |  false  | ClaimToHeaders is a list of JWT claims that must be extracted into HTTP request headers<br />For examples, following config:<br />The claim must be of type; string, int, double, bool. Array type claims are not supported |
 | `recomputeRoute` | _boolean_ |  false  | RecomputeRoute clears the route cache and recalculates the routing decision.<br />This field must be enabled if the headers generated from the claim are used for<br />route matching decisions. If the recomputation selects a new route, features targeting<br />the new matched route will be applied. |
 | `extractFrom` | _[JWTExtractor](#jwtextractor)_ |  false  | ExtractFrom defines different ways to extract the JWT token from HTTP request.<br />If empty, it defaults to extract JWT token from the Authorization HTTP request header using Bearer schema<br />or access_token from query parameters. |
+
+
+#### JWTScope
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [JWTPrincipal](#jwtprincipal)
+
 
 
 #### KubernetesContainerSpec
