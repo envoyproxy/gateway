@@ -260,16 +260,12 @@ spec:
                       description: |-
                         HTTPHeaderName is the name of an HTTP header.
 
-
                         Valid values include:
-
 
                         * "Authorization"
                         * "Set-Cookie"
 
-
                         Invalid values include:
-
 
                           - ":method" - ":" is an invalid character. This means that HTTP/2 pseudo
                             headers are not currently supported by this type.
@@ -290,10 +286,8 @@ spec:
                         [RFC 5789](https://datatracker.ietf.org/doc/html/rfc5789#section-2).
                         The value is expected in upper case.
 
-
                         Note that values may be added to this enum, implementations
                         must ensure that unknown values will not cause a crash.
-
 
                         Unknown values here must result in the implementation setting the
                         Accepted Condition for the Route to `status: False`, with a
@@ -340,16 +334,12 @@ spec:
                       description: |-
                         HTTPHeaderName is the name of an HTTP header.
 
-
                         Valid values include:
-
 
                         * "Authorization"
                         * "Set-Cookie"
 
-
                         Invalid values include:
-
 
                           - ":method" - ":" is an invalid character. This means that HTTP/2 pseudo
                             headers are not currently supported by this type.
