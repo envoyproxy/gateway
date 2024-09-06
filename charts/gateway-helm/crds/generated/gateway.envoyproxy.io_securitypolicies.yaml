@@ -257,14 +257,58 @@ spec:
                     description: AllowHeaders defines the headers that are allowed
                       to be sent with requests.
                     items:
+                      description: |-
+                        HTTPHeaderName is the name of an HTTP header.
+
+
+                        Valid values include:
+
+
+                        * "Authorization"
+                        * "Set-Cookie"
+
+
+                        Invalid values include:
+
+
+                          - ":method" - ":" is an invalid character. This means that HTTP/2 pseudo
+                            headers are not currently supported by this type.
+                          - "/invalid" - "/ " is an invalid character
+                      maxLength: 256
+                      minLength: 1
+                      pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                       type: string
                     type: array
                   allowMethods:
                     description: AllowMethods defines the methods that are allowed
                       to make requests.
                     items:
+                      description: |-
+                        HTTPMethod describes how to select a HTTP route by matching the HTTP
+                        method as defined by
+                        [RFC 7231](https://datatracker.ietf.org/doc/html/rfc7231#section-4) and
+                        [RFC 5789](https://datatracker.ietf.org/doc/html/rfc5789#section-2).
+                        The value is expected in upper case.
+
+
+                        Note that values may be added to this enum, implementations
+                        must ensure that unknown values will not cause a crash.
+
+
+                        Unknown values here must result in the implementation setting the
+                        Accepted Condition for the Route to `status: False`, with a
+                        Reason of `UnsupportedValue`.
+                      enum:
+                      - GET
+                      - HEAD
+                      - POST
+                      - PUT
+                      - DELETE
+                      - CONNECT
+                      - OPTIONS
+                      - TRACE
+                      - PATCH
                       type: string
-                    minItems: 1
                     type: array
                   allowOrigins:
                     description: AllowOrigins defines the origins that are allowed
@@ -288,12 +332,31 @@ spec:
                       minLength: 1
                       pattern: ^(\*|https?:\/\/(\*|(\*\.)?(([\w-]+\.?)+)?[\w-]+)(:\d{1,5})?)$
                       type: string
-                    minItems: 1
                     type: array
                   exposeHeaders:
                     description: ExposeHeaders defines the headers that can be exposed
                       in the responses.
                     items:
+                      description: |-
+                        HTTPHeaderName is the name of an HTTP header.
+
+
+                        Valid values include:
+
+
+                        * "Authorization"
+                        * "Set-Cookie"
+
+
+                        Invalid values include:
+
+
+                          - ":method" - ":" is an invalid character. This means that HTTP/2 pseudo
+                            headers are not currently supported by this type.
+                          - "/invalid" - "/ " is an invalid character
+                      maxLength: 256
+                      minLength: 1
+                      pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                       type: string
                     type: array
                   maxAge:

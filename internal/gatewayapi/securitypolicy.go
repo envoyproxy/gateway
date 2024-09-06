@@ -535,11 +535,26 @@ func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
 		}
 	}
 
+	allowMethods := make([]string, len(cors.AllowMethods))
+	for i, method := range cors.AllowMethods {
+		allowMethods[i] = string(method)
+	}
+
+	allowHeaders := make([]string, len(cors.AllowHeaders))
+	for i, header := range cors.AllowHeaders {
+		allowHeaders[i] = string(header)
+	}
+
+	exposeHeaders := make([]string, len(cors.ExposeHeaders))
+	for i, header := range cors.ExposeHeaders {
+		exposeHeaders[i] = string(header)
+	}
+
 	return &ir.CORS{
 		AllowOrigins:     allowOrigins,
-		AllowMethods:     cors.AllowMethods,
-		AllowHeaders:     cors.AllowHeaders,
-		ExposeHeaders:    cors.ExposeHeaders,
+		AllowMethods:     allowMethods,
+		AllowHeaders:     allowHeaders,
+		ExposeHeaders:    exposeHeaders,
 		MaxAge:           cors.MaxAge,
 		AllowCredentials: cors.AllowCredentials != nil && *cors.AllowCredentials,
 	}

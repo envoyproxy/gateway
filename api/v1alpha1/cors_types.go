@@ -6,6 +6,7 @@
 package v1alpha1
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 // Origin is defined by the scheme (protocol), hostname (domain), and port of
 // the URL used to access it. The hostname can be "precise" which is just the
@@ -29,18 +30,33 @@ type Origin string
 // CORS defines the configuration for Cross-Origin Resource Sharing (CORS).
 type CORS struct {
 	// AllowOrigins defines the origins that are allowed to make requests.
-	// +kubebuilder:validation:MinItems=1
-	AllowOrigins []Origin `json:"allowOrigins,omitempty" yaml:"allowOrigins"`
+	//
+	// +optional
+	AllowOrigins []Origin `json:"allowOrigins,omitempty"`
+
 	// AllowMethods defines the methods that are allowed to make requests.
-	// +kubebuilder:validation:MinItems=1
-	AllowMethods []string `json:"allowMethods,omitempty" yaml:"allowMethods"`
+	//
+	// +optional
+	AllowMethods []gwapiv1.HTTPMethod `json:"allowMethods,omitempty"`
+
 	// AllowHeaders defines the headers that are allowed to be sent with requests.
-	AllowHeaders []string `json:"allowHeaders,omitempty" yaml:"allowHeaders,omitempty"`
+	//
+	// +optional
+	AllowHeaders []gwapiv1.HTTPHeaderName `json:"allowHeaders,omitempty"`
+
 	// ExposeHeaders defines the headers that can be exposed in the responses.
-	ExposeHeaders []string `json:"exposeHeaders,omitempty" yaml:"exposeHeaders,omitempty"`
+	//
+	// +optional
+	ExposeHeaders []gwapiv1.HTTPHeaderName `json:"exposeHeaders,omitempty"`
+
 	// MaxAge defines how long the results of a preflight request can be cached.
-	MaxAge *metav1.Duration `json:"maxAge,omitempty" yaml:"maxAge,omitempty"`
+	//
+	// +optional
+	MaxAge *metav1.Duration `json:"maxAge,omitempty"`
+
 	// AllowCredentials indicates whether a request can include user credentials
 	// like cookies, authentication headers, or TLS client certificates.
-	AllowCredentials *bool `json:"allowCredentials,omitempty" yaml:"allowCredentials,omitempty"`
+	//
+	// +optional
+	AllowCredentials *bool `json:"allowCredentials,omitempty"`
 }

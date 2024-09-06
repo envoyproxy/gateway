@@ -533,12 +533,12 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `allowOrigins` | _[Origin](#origin) array_ |  true  | AllowOrigins defines the origins that are allowed to make requests. |
-| `allowMethods` | _string array_ |  true  | AllowMethods defines the methods that are allowed to make requests. |
-| `allowHeaders` | _string array_ |  true  | AllowHeaders defines the headers that are allowed to be sent with requests. |
-| `exposeHeaders` | _string array_ |  true  | ExposeHeaders defines the headers that can be exposed in the responses. |
-| `maxAge` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  true  | MaxAge defines how long the results of a preflight request can be cached. |
-| `allowCredentials` | _boolean_ |  true  | AllowCredentials indicates whether a request can include user credentials<br />like cookies, authentication headers, or TLS client certificates. |
+| `allowOrigins` | _[Origin](#origin) array_ |  false  | AllowOrigins defines the origins that are allowed to make requests. |
+| `allowMethods` | _HTTPMethod array_ |  false  | AllowMethods defines the methods that are allowed to make requests. |
+| `allowHeaders` | _HTTPHeaderName array_ |  false  | AllowHeaders defines the headers that are allowed to be sent with requests. |
+| `exposeHeaders` | _HTTPHeaderName array_ |  false  | ExposeHeaders defines the headers that can be exposed in the responses. |
+| `maxAge` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  | MaxAge defines how long the results of a preflight request can be cached. |
+| `allowCredentials` | _boolean_ |  false  | AllowCredentials indicates whether a request can include user credentials<br />like cookies, authentication headers, or TLS client certificates. |
 
 
 
