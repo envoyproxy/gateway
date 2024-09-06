@@ -30,32 +30,28 @@ type ProxyAccessLogSetting struct {
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=50
 	Sinks []ProxyAccessLogSink `json:"sinks"`
-	// Scope defines the scope of component emitting the accesslog, such as envoy listener, TCP proxy, HTTP connection manager.
-	// If not defined, the setting would apply to all scopes supported by envoy gateway
+	// Type defines the component emitting the accesslog, such as Listener and Route.
+	// If not defined, the setting would apply to all accesslog types supported by envoy gateway
 	// +kubebuilder:validation:Enum=Listener
 	// +optional
 	// +notImplementedHide
-	Scope ProxyAccessLogScopeType `json:"scope,omitempty"`
+	Type ProxyAccessLogType `json:"type,omitempty"`
 }
 
-type ProxyAccessLogScopeType string
+type ProxyAccessLogType string
 
 const (
-	// ProxyAccessLogScopeTypeListener defines the listener accesslog scope.
+	// ProxyAccessLogTypeListener defines the accesslog for Listeners.
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto#envoy-v3-api-field-config-listener-v3-listener-access-log
-	ProxyAccessLogScopeTypeListener ProxyAccessLogScopeType = "Listener"
-	// ProxyAccessLogScopeUDPProxy defines the UDP Proxy accesslog scope.
+	ProxyAccessLogTypeListener ProxyAccessLogType = "Listener"
+	// ProxyAccessLogTypeRoute defines the accesslog for HTTP, GRPC, UDP and TCP Routes.
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/udp/udp_proxy/v3/udp_proxy.proto#envoy-v3-api-field-extensions-filters-udp-udp-proxy-v3-udpproxyconfig-access-log
-	ProxyAccessLogScopeUDPProxy ProxyAccessLogScopeType = "UDPProxy"
-	// ProxyAccessLogScopeTCPProxy defines the TCP Proxy accesslog scope.
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/tcp_proxy/v3/tcp_proxy.proto#envoy-v3-api-field-extensions-filters-network-tcp-proxy-v3-tcpproxy-access-log
-	ProxyAccessLogScopeTCPProxy ProxyAccessLogScopeType = "TCPProxy"
-	// ProxyAccessLogScopeHTTPProxy defines the HTTP Proxy accesslog scope.
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-access-log
-	ProxyAccessLogScopeHTTPProxy ProxyAccessLogScopeType = "HTTPProxy"
-	// ProxyAccessLogScopeHTTPUpstream defines the HTTP Upstream accesslog scope.
+	ProxyAccessLogTypeRoute ProxyAccessLogType = "Route"
+	// ProxyAccessLogTypeBackend defines the accesslog for HTTP Backends.
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/router/v3/router.proto#envoy-v3-api-field-extensions-filters-http-router-v3-router-upstream-log
-	ProxyAccessLogScopeHTTPUpstream ProxyAccessLogScopeType = "HTTPUpstream"
+	ProxyAccessLogTypeBackend ProxyAccessLogType = "Backend"
 )
 
 type ProxyAccessLogFormatType string

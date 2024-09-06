@@ -10314,13 +10314,6 @@ spec:
                               items:
                                 type: string
                               type: array
-                            scope:
-                              description: |-
-                                Scope defines the scope of component emitting the accesslog, such as envoy listener, TCP proxy, HTTP connection manager.
-                                If not defined, the setting would apply to all scopes supported by envoy gateway
-                              enum:
-                              - Listener
-                              type: string
                             sinks:
                               description: Sinks defines the sinks of accesslog.
                               items:
@@ -12257,6 +12250,13 @@ spec:
                               maxItems: 50
                               minItems: 1
                               type: array
+                            type:
+                              description: |-
+                                Type defines the component emitting the accesslog, such as Listener and Route.
+                                If not defined, the setting would apply to all accesslog types supported by envoy gateway
+                              enum:
+                              - Listener
+                              type: string
                           required:
                           - sinks
                           type: object
