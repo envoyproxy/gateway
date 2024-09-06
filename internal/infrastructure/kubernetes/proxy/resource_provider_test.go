@@ -529,9 +529,10 @@ func TestDeployment(t *testing.T) {
 
 			replace := egv1a1.BootstrapTypeReplace
 			if tc.bootstrap != "" {
+				bsValue := tc.bootstrap
 				tc.infra.Proxy.Config.Spec.Bootstrap = &egv1a1.ProxyBootstrap{
 					Type:  &replace,
-					Value: tc.bootstrap,
+					Value: &bsValue,
 				}
 			}
 
@@ -963,9 +964,10 @@ func TestDaemonSet(t *testing.T) {
 
 			replace := egv1a1.BootstrapTypeReplace
 			if tc.bootstrap != "" {
+				bsValue := tc.bootstrap
 				tc.infra.Proxy.Config.Spec.Bootstrap = &egv1a1.ProxyBootstrap{
 					Type:  &replace,
-					Value: tc.bootstrap,
+					Value: &bsValue,
 				}
 			}
 

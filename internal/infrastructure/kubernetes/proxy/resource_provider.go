@@ -259,7 +259,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 				Spec: corev1.PodSpec{
 					Containers:                    containers,
 					InitContainers:                deploymentConfig.InitContainers,
-					ServiceAccountName:            ExpectedResourceHashedName(r.infra.Name),
+					ServiceAccountName:            r.Name(),
 					AutomountServiceAccountToken:  ptr.To(false),
 					TerminationGracePeriodSeconds: expectedTerminationGracePeriodSeconds(proxyConfig.Spec.Shutdown),
 					DNSPolicy:                     corev1.DNSClusterFirst,

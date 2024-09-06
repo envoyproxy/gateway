@@ -174,7 +174,6 @@ xdsIR:
           - weight: 1
         directResponse:
           statusCode: 500
-        envoyExtensions: {}
         hostname: '*'
         isHTTP2: false
         metadata:
