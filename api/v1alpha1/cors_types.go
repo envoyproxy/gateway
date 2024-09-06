@@ -5,8 +5,10 @@
 
 package v1alpha1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+)
 
 // Origin is defined by the scheme (protocol), hostname (domain), and port of
 // the URL used to access it. The hostname can be "precise" which is just the
