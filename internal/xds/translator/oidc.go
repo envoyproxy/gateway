@@ -180,13 +180,6 @@ func oauth2Config(oidc *ir.OIDC) (*oauth2v3.OAuth2, error) {
 			Resources:  oidc.Resources,
 
 			PreserveAuthorizationHeader: preserveAuthorizationHeader,
-
-			RetryPolicy: &corev3.RetryPolicy{
-				RetryOn: "5xx," + retryDefaultRetryOn,
-				NumRetries: &wrappers.UInt32Value{
-					Value: retryDefaultNumRetries,
-				},
-			},
 		},
 	}
 

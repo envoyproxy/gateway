@@ -290,6 +290,7 @@ _Appears in:_
 - [ExtProc](#extproc)
 - [GRPCExtAuthService](#grpcextauthservice)
 - [HTTPExtAuthService](#httpextauthservice)
+- [OIDCProvider](#oidcprovider)
 - [OpenTelemetryEnvoyProxyAccessLog](#opentelemetryenvoyproxyaccesslog)
 - [ProxyOpenTelemetrySink](#proxyopentelemetrysink)
 - [TracingProvider](#tracingprovider)
@@ -353,6 +354,7 @@ _Appears in:_
 - [ExtProc](#extproc)
 - [GRPCExtAuthService](#grpcextauthservice)
 - [HTTPExtAuthService](#httpextauthservice)
+- [OIDCProvider](#oidcprovider)
 - [OpenTelemetryEnvoyProxyAccessLog](#opentelemetryenvoyproxyaccesslog)
 - [ProxyOpenTelemetrySink](#proxyopentelemetrysink)
 - [TracingProvider](#tracingprovider)
@@ -717,6 +719,7 @@ _Appears in:_
 - [ExtProc](#extproc)
 - [GRPCExtAuthService](#grpcextauthservice)
 - [HTTPExtAuthService](#httpextauthservice)
+- [OIDCProvider](#oidcprovider)
 - [OpenTelemetryEnvoyProxyAccessLog](#opentelemetryenvoyproxyaccesslog)
 - [ProxyOpenTelemetrySink](#proxyopentelemetrysink)
 - [TracingProvider](#tracingprovider)
@@ -2566,6 +2569,9 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
+| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.BackendObjectReference)_ |  false  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br /><br />Deprecated: Use BackendRefs instead. |
+| `backendRefs` | _[BackendRef](#backendref) array_ |  false  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent. |
+| `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  | BackendSettings holds configuration for managing the connection<br />to the backend. |
 | `issuer` | _string_ |  true  | The OIDC Provider's [issuer identifier](https://openid.net/specs/openid-connect-discovery-1_0.html#IssuerDiscovery).<br />Issuer MUST be a URI RFC 3986 [RFC3986] with a scheme component that MUST<br />be https, a host component, and optionally, port and path components and<br />no query or fragment components. |
 | `authorizationEndpoint` | _string_ |  false  | The OIDC Provider's [authorization endpoint](https://openid.net/specs/openid-connect-core-1_0.html#AuthorizationEndpoint).<br />If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse). |
 | `tokenEndpoint` | _string_ |  false  | The OIDC Provider's [token endpoint](https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint).<br />If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse). |

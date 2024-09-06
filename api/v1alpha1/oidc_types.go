@@ -106,7 +106,17 @@ type OIDC struct {
 }
 
 // OIDCProvider defines the OIDC Provider configuration.
+// +kubebuilder:validation:XValidation:message="BackendRefs must be used, backendRef is not supported.",rule="!has(self.backendRef)"
 type OIDCProvider struct {
+	// BackendCluster defines the backend cluster to be used for the OIDC Provider.
+	// The backend cluster supports the Service and Backend kinds.
+	// If the backend cluster is not specified, a default backend cluster will
+	// be created using the OIDC Provider's token endpoint.
+	//
+	// +optional
+	// +notImplementedHide
+	BackendCluster `json:",inline"`
+
 	// The OIDC Provider's [issuer identifier](https://openid.net/specs/openid-connect-discovery-1_0.html#IssuerDiscovery).
 	// Issuer MUST be a URI RFC 3986 [RFC3986] with a scheme component that MUST
 	// be https, a host component, and optionally, port and path components and

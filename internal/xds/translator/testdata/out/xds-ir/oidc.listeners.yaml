@@ -52,9 +52,6 @@
               redirectUri: https://www.example.com/foo/oauth2/callback
               resources:
               - api
-              retryPolicy:
-                numRetries: 2
-                retryOn: 5xx,connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes
               signoutPath:
                 path:
                   exact: /foo/logout
@@ -99,9 +96,6 @@
               redirectUri: https://www.example.com/bar/oauth2/callback
               resources:
               - api
-              retryPolicy:
-                numRetries: 2
-                retryOn: 5xx,connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes
               signoutPath:
                 path:
                   exact: /bar/logout
