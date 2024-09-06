@@ -1048,10 +1048,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					Authorization: &egv1a1.Authorization{
 						Rules: []egv1a1.AuthorizationRule{
 							{
-								Action: egv1a1.AuthorizationActionAllow,
-								Principal: egv1a1.Principal{
-									JWT: &egv1a1.JWTPrincipal{},
-								},
+								Action:    egv1a1.AuthorizationActionAllow,
+								Principal: egv1a1.Principal{},
 							},
 						},
 					},
@@ -1094,6 +1092,35 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{"if authorization.rules.principal.jwt is used, jwt must be defined"},
+		},
+		{
+			desc: "authorization-jwt-empty-principal",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group: ptr.To(gwapiv1a2.Group("gateway.networking.k8s.io")),
+								Kind:  "HTTPRoute",
+								MatchLabels: map[string]string{
+									"eg/namespace": "reference-apps",
+								},
+							},
+						},
+					},
+					Authorization: &egv1a1.Authorization{
+						Rules: []egv1a1.AuthorizationRule{
+							{
+								Action: egv1a1.AuthorizationActionAllow,
+								Principal: egv1a1.Principal{
+									JWT: &egv1a1.JWTPrincipal{},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"at least one of claims or scopes must be specified"},
 		},
 	}
 
