@@ -111,7 +111,7 @@ type OIDCProvider struct {
 	// BackendCluster defines the backend cluster to be used for the OIDC Provider.
 	// The backend cluster supports the Service and Backend kinds.
 	// If the backend cluster is not specified, a default backend cluster will
-	// be created using the OIDC Provider's token endpoint.
+	// be created using the host and port from the OIDC Provider's token endpoint.
 	//
 	// +optional
 	// +notImplementedHide
