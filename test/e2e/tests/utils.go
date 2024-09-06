@@ -40,7 +40,6 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	tb "github.com/envoyproxy/gateway/internal/troubleshoot"
-	"github.com/envoyproxy/gateway/test/e2e/tempopb"
 )
 
 const defaultServiceStartupTimeout = 5 * time.Minute
@@ -580,19 +579,23 @@ func QueryTraceFromTempo(t *testing.T, c client.Client, tags map[string]string) 
 		return -1, fmt.Errorf("failed to query tempo, url=%s, status=%s", tempoURL.String(), res.Status)
 	}
 
-	tempoResponse := &tempopb.SearchResponse{}
+	resp := &tempoResponse{}
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
 		return -1, err
 	}
-	if err := json.Unmarshal(data, tempoResponse); err != nil {
+	if err := json.Unmarshal(data, &resp); err != nil {
 		t.Logf("Failed to unmarshall response: %s", string(data))
 		return -1, err
 	}
 
-	total := len(tempoResponse.Traces)
-	tlog.Logf(t, "get response from tempo, url=%s, response=%v, total=%d", tempoURL.String(), tempoResponse, total)
+	total := len(resp.Traces)
+	tlog.Logf(t, "get response from tempo, url=%s, response=%v, total=%d", tempoURL.String(), string(data), total)
 	return total, nil
+}
+
+type tempoResponse struct {
+	Traces []map[string]interface{} `json:"traces,omitempty"`
 }
 
 // copy from https://github.com/grafana/tempo/blob/c0127c78c368319433c7c67ca8967adbfed2259e/cmd/tempo-query/tempo/plugin.go#L361
