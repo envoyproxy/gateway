@@ -12,16 +12,9 @@ import (
 	"net/netip"
 
 	"github.com/dominikbraun/graph"
-	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
-	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
-	"github.com/google/go-cmp/cmp"
-	"google.golang.org/protobuf/testing/protocmp"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/utils/proto"
-	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
-	_ "github.com/envoyproxy/gateway/internal/xds/extensions" // register the generated types to support protojson unmarshalling
 )
 
 // ValidateEnvoyProxy validates the provided EnvoyProxy.
@@ -38,6 +31,8 @@ func ValidateEnvoyProxy(proxy *egv1a1.EnvoyProxy) error {
 }
 
 // validateEnvoyProxySpec validates the provided EnvoyProxy spec.
+// This method validates everything except for the bootstrap section, because validating the bootstrap
+// section in this method would require calling into the internal apis, and would cause an import cycle.
 func validateEnvoyProxySpec(spec *egv1a1.EnvoyProxySpec) error {
 	var errs []error
 
@@ -49,13 +44,6 @@ func validateEnvoyProxySpec(spec *egv1a1.EnvoyProxySpec) error {
 	validateProviderErrs := validateProvider(spec)
 	if len(validateProviderErrs) != 0 {
 		errs = append(errs, validateProviderErrs...)
-	}
-
-	// validate bootstrap
-	if spec != nil && spec.Bootstrap != nil {
-		if err := validateBootstrap(spec.Bootstrap); err != nil {
-			errs = append(errs, err)
-		}
 	}
 
 	validateProxyTelemetryErrs := validateProxyTelemetry(spec)
@@ -154,62 +142,6 @@ func validateService(spec *egv1a1.EnvoyProxySpec) []error {
 
 	}
 	return errs
-}
-
-func validateBootstrap(boostrapConfig *egv1a1.ProxyBootstrap) error {
-	// Validate user bootstrap config
-	defaultBootstrap := &bootstrapv3.Bootstrap{}
-	// TODO: need validate when enable prometheus?
-	defaultBootstrapStr, err := bootstrap.GetRenderedBootstrapConfig(nil)
-	if err != nil {
-		return err
-	}
-	if err := proto.FromYAML([]byte(defaultBootstrapStr), defaultBootstrap); err != nil {
-		return fmt.Errorf("unable to unmarshal default bootstrap: %w", err)
-	}
-	if err := defaultBootstrap.Validate(); err != nil {
-		return fmt.Errorf("default bootstrap validation failed: %w", err)
-	}
-
-	// Validate user bootstrap config
-	userBootstrapStr, err := bootstrap.ApplyBootstrapConfig(boostrapConfig, defaultBootstrapStr)
-	if err != nil {
-		return err
-	}
-	userBootstrap := &bootstrapv3.Bootstrap{}
-	if err := proto.FromYAML([]byte(userBootstrapStr), userBootstrap); err != nil {
-		return fmt.Errorf("failed to parse default bootstrap config: %w", err)
-	}
-	if err := userBootstrap.Validate(); err != nil {
-		return fmt.Errorf("validation failed for user bootstrap: %w", err)
-	}
-
-	// Ensure dynamic resources config is same
-	if userBootstrap.DynamicResources == nil ||
-		cmp.Diff(userBootstrap.DynamicResources, defaultBootstrap.DynamicResources, protocmp.Transform()) != "" {
-		return fmt.Errorf("dynamic_resources cannot be modified")
-	}
-
-	// Ensure that the xds_cluster config is same
-	var userXdsCluster, defaultXdsCluster *clusterv3.Cluster
-	for _, cluster := range userBootstrap.StaticResources.Clusters {
-		if cluster.Name == "xds_cluster" {
-			userXdsCluster = cluster
-			break
-		}
-	}
-	for _, cluster := range defaultBootstrap.StaticResources.Clusters {
-		if cluster.Name == "xds_cluster" {
-			defaultXdsCluster = cluster
-			break
-		}
-	}
-	if userXdsCluster == nil ||
-		cmp.Diff(userXdsCluster.LoadAssignment, defaultXdsCluster.LoadAssignment, protocmp.Transform()) != "" {
-		return fmt.Errorf("xds_cluster's loadAssigntment cannot be modified")
-	}
-
-	return nil
 }
 
 func validateProxyTelemetry(spec *egv1a1.EnvoyProxySpec) []error {

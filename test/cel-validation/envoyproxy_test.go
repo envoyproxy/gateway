@@ -1346,6 +1346,65 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			},
 			wantErrors: []string{"cannot use envoyHpa if envoyDaemonSet is used"},
 		},
+		{
+			desc: "mismatched bootstrap patch configured - one",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Bootstrap: &egv1a1.ProxyBootstrap{
+						Type: ptr.To(egv1a1.BootstrapType("Merge")),
+						JSONPatches: []egv1a1.JSONPatchOperation{
+							{
+								Op:   egv1a1.JSONPatchOperationType("remove"),
+								Path: ptr.To("/some/path"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"provided bootstrap patch doesn't match the configured patch type",
+			},
+		},
+		{
+			desc: "mismatched bootstrap patch configured - two",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Bootstrap: &egv1a1.ProxyBootstrap{
+						Type:  ptr.To(egv1a1.BootstrapType("JSONPatch")),
+						Value: ptr.To("some value"),
+					},
+				}
+			},
+			wantErrors: []string{
+				"provided bootstrap patch doesn't match the configured patch type",
+			},
+		},
+		{
+			desc: "missing bootstrap patch - one",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Bootstrap: &egv1a1.ProxyBootstrap{
+						Type: ptr.To(egv1a1.BootstrapType("JSONPatch")),
+					},
+				}
+			},
+			wantErrors: []string{
+				"provided bootstrap patch doesn't match the configured patch type",
+			},
+		},
+		{
+			desc: "missing bootstrap patch - two",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Bootstrap: &egv1a1.ProxyBootstrap{
+						Type: ptr.To(egv1a1.BootstrapType("Merge")),
+					},
+				}
+			},
+			wantErrors: []string{
+				"provided bootstrap patch doesn't match the configured patch type",
+			},
+		},
 	}
 
 	for _, tc := range cases {
