@@ -26,9 +26,9 @@ jobs:
       scan-args: |-
         --skip-git
         --recursive
-        ./
         --config
         tools/osv-scanner/config.toml
+        ./
 
   scan-pr:
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
@@ -38,9 +38,9 @@ jobs:
       contents: read
       security-events: write
     with:
+      # TODO enable call analysis once https://github.com/google/osv-scanner/issues/1220 is resolved
       scan-args: |-
         --skip-git
         --recursive
+        --no-call-analysis=go
         ./
-        --config
-        tools/osv-scanner/config.toml

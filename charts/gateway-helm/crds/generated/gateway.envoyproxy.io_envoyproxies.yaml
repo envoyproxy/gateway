@@ -191,21 +191,69 @@ spec:
                   We strongly recommend using `egctl x translate` to generate a `EnvoyProxy` resource with the `Bootstrap` field set to the default
                   Bootstrap configuration used. You can edit this configuration, and rerun `egctl x translate` to ensure there are no validation errors.
                 properties:
+                  jsonPatches:
+                    description: |-
+                      JSONPatches is an array of JSONPatches to be applied to the default bootstrap. Patches are
+                      applied in the order in which they are defined.
+                    items:
+                      description: |-
+                        JSONPatchOperation defines the JSON Patch Operation as defined in
+                        https://datatracker.ietf.org/doc/html/rfc6902
+                      properties:
+                        from:
+                          description: |-
+                            From is the source location of the value to be copied or moved. Only valid
+                            for move or copy operations
+                            Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details.
+                          type: string
+                        jsonPath:
+                          description: |-
+                            JSONPath specifies the locations of the target document/field where the operation will be performed
+                            Refer to https://datatracker.ietf.org/doc/rfc9535/ for more details.
+                          type: string
+                        op:
+                          description: Op is the type of operation to perform
+                          enum:
+                          - add
+                          - remove
+                          - replace
+                          - move
+                          - copy
+                          - test
+                          type: string
+                        path:
+                          description: |-
+                            Path is the location of the target document/field where the operation will be performed
+                            Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details.
+                          type: string
+                        value:
+                          description: |-
+                            Value is the new value of the path location. The value is only used by
+                            the `add` and `replace` operations.
+                          x-kubernetes-preserve-unknown-fields: true
+                      required:
+                      - op
+                      type: object
+                    type: array
                   type:
                     default: Replace
                     description: |-
-                      Type is the type of the bootstrap configuration, it should be either Replace or Merge.
+                      Type is the type of the bootstrap configuration, it should be either Replace,  Merge, or JSONPatch.
                       If unspecified, it defaults to Replace.
                     enum:
                     - Merge
                     - Replace
+                    - JSONPatch
                     type: string
                   value:
                     description: Value is a YAML string of the bootstrap.
                     type: string
-                required:
-                - value
                 type: object
+                x-kubernetes-validations:
+                - message: provided bootstrap patch doesn't match the configured patch
+                    type
+                  rule: 'self.type == ''JSONPatch'' ? self.jsonPatches.size() > 0
+                    : has(self.value)'
               concurrency:
                 description: |-
                   Concurrency defines the number of worker threads to run. If unset, it defaults to

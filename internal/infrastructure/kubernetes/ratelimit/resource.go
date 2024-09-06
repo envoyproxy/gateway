@@ -71,6 +71,8 @@ const (
 	LogLevelEnvVar = "LOG_LEVEL"
 	// UseStatsdEnvVar is the use statsd.
 	UseStatsdEnvVar = "USE_STATSD"
+	// StatsdPortEnvVar is the use statsd port.
+	StatsdPortEnvVar = "STATSD_PORT"
 	// ForceStartWithoutInitialConfigEnvVar enables start the ratelimit server without initial config.
 	ForceStartWithoutInitialConfigEnvVar = "FORCE_START_WITHOUT_INITIAL_CONFIG"
 	// ConfigTypeEnvVar is the configuration loading method for ratelimit.
@@ -332,8 +334,8 @@ func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 			Value: "true",
 		},
 		{
-			Name:  "STATSD_PORT",
-			Value: "9125",
+			Name:  StatsdPortEnvVar,
+			Value: strconv.Itoa(StatsdPort),
 		},
 		{
 			Name:  ConfigTypeEnvVar,
