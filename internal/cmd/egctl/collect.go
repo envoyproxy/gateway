@@ -20,6 +20,7 @@ import (
 
 	"github.com/envoyproxy/gateway/internal/cmd/options"
 	tb "github.com/envoyproxy/gateway/internal/troubleshoot"
+	"github.com/envoyproxy/gateway/internal/utils/path"
 )
 
 type collectOptions struct {
@@ -73,7 +74,7 @@ func runCollect(collectOpts collectOptions) error {
 	basename := ""
 	if collectOpts.outPath != "" {
 		// use override output path
-		overridePath, err := tb.ValidateOutputPath(collectOpts.outPath)
+		overridePath, err := path.ValidateOutputPath(collectOpts.outPath)
 		if err != nil {
 			return fmt.Errorf("override output file path: %w", err)
 		}
