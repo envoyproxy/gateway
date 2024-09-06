@@ -125,4 +125,12 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-3
-    authorization: {}
+    authorization:
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        principal:
+          jwt:
+            claims:
+            - name: "group"
+              values: ["admin", "superuser"]

@@ -939,6 +939,8 @@ func (t *Translator) buildAuthorization(policy *egv1a1.SecurityPolicy) (*ir.Auth
 			principal.ClientCIDRs = append(principal.ClientCIDRs, cidrMatch)
 		}
 
+		principal.JWT = rule.Principal.JWT
+
 		var name string
 		if rule.Name != nil && *rule.Name != "" {
 			name = *rule.Name

@@ -220,7 +220,16 @@ securityPolicies:
     namespace: default
   spec:
     authorization:
-      defaultAction: null
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        principal:
+          jwt:
+            claims:
+            - name: group
+              values:
+              - admin
+              - superuser
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -323,6 +332,16 @@ xdsIR:
         security:
           authorization:
             defaultAction: Deny
+            rules:
+            - action: Allow
+              name: securitypolicy/default/policy-for-http-route-3/authorization/rule/0
+              principal:
+                jwt:
+                  claims:
+                  - name: group
+                    values:
+                    - admin
+                    - superuser
       - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
