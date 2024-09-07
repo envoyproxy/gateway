@@ -540,11 +540,6 @@ func (in *BackendTrafficPolicySpec) DeepCopyInto(out *BackendTrafficPolicySpec) 
 		*out = new(FaultInjection)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.Retry != nil {
-		in, out := &in.Retry, &out.Retry
-		*out = new(Retry)
-		(*in).DeepCopyInto(*out)
-	}
 	if in.UseClientProtocol != nil {
 		in, out := &in.UseClientProtocol, &out.UseClientProtocol
 		*out = new(bool)
@@ -953,6 +948,11 @@ func (in *ClusterSettings) DeepCopyInto(out *ClusterSettings) {
 	if in.LoadBalancer != nil {
 		in, out := &in.LoadBalancer, &out.LoadBalancer
 		*out = new(LoadBalancer)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.Retry != nil {
+		in, out := &in.Retry, &out.Retry
+		*out = new(Retry)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.ProxyProtocol != nil {

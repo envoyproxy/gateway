@@ -57,11 +57,6 @@ type BackendTrafficPolicySpec struct {
 	// +optional
 	FaultInjection *FaultInjection `json:"faultInjection,omitempty"`
 
-	// Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
-	// If not set, retry will be disabled.
-	// +optional
-	Retry *Retry `json:"retry,omitempty"`
-
 	// UseClientProtocol configures Envoy to prefer sending requests to backends using
 	// the same HTTP protocol that the incoming request used. Defaults to false, which means
 	// that Envoy will use the protocol indicated by the attached BackendRef.
@@ -92,6 +87,11 @@ type ClusterSettings struct {
 	// the backend endpoints. Defaults to `LeastRequest`.
 	// +optional
 	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty"`
+
+	// Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
+	// If not set, retry will be disabled.
+	// +optional
+	Retry *Retry `json:"retry,omitempty"`
 
 	// ProxyProtocol enables the Proxy Protocol when communicating with the backend.
 	// +optional
