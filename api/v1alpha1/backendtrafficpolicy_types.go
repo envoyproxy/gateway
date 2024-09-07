@@ -80,61 +80,6 @@ type BackendTrafficPolicyList struct {
 	Items           []BackendTrafficPolicy `json:"items"`
 }
 
-// ClusterSettings provides the various knobs that can be set to control how traffic to a given
-// backend will be configured.
-type ClusterSettings struct {
-	// LoadBalancer policy to apply when routing traffic from the gateway to
-	// the backend endpoints. Defaults to `LeastRequest`.
-	// +optional
-	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty"`
-
-	// Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
-	// If not set, retry will be disabled.
-	// +optional
-	Retry *Retry `json:"retry,omitempty"`
-
-	// ProxyProtocol enables the Proxy Protocol when communicating with the backend.
-	// +optional
-	ProxyProtocol *ProxyProtocol `json:"proxyProtocol,omitempty"`
-
-	// TcpKeepalive settings associated with the upstream client connection.
-	// Disabled by default.
-	//
-	// +optional
-	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty"`
-
-	// HealthCheck allows gateway to perform active health checking on backends.
-	//
-	// +optional
-	HealthCheck *HealthCheck `json:"healthCheck,omitempty"`
-
-	// Circuit Breaker settings for the upstream connections and requests.
-	// If not set, circuit breakers will be enabled with the default thresholds
-	//
-	// +optional
-	CircuitBreaker *CircuitBreaker `json:"circuitBreaker,omitempty"`
-
-	// Timeout settings for the backend connections.
-	//
-	// +optional
-	Timeout *Timeout `json:"timeout,omitempty"`
-
-	// Connection includes backend connection settings.
-	//
-	// +optional
-	Connection *BackendConnection `json:"connection,omitempty"`
-
-	// DNS includes dns resolution settings.
-	//
-	// +optional
-	DNS *DNS `json:"dns,omitempty"`
-
-	// HTTP2 provides HTTP/2 configuration for backend connections.
-	//
-	// +optional
-	HTTP2 *HTTP2Settings `json:"http2,omitempty"`
-}
-
 func init() {
 	SchemeBuilder.Register(&BackendTrafficPolicy{}, &BackendTrafficPolicyList{})
 }
