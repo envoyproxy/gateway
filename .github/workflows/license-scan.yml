@@ -26,6 +26,3 @@ jobs:
           --experimental-licenses=Apache-2.0,BSD-2-Clause,BSD-2-Clause-FreeBSD,BSD-3-Clause,MIT,ISC,Python-2.0,PostgreSQL,X11,Zlib
           --no-call-analysis=go
           ./
-      # TODO remove once github.com/hashicorp/go-getter gets license exception in CNCF or removed from the project
-      # See https://github.com/cncf/foundation/issues/624
-      continue-on-error: true
