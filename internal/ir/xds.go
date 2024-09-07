@@ -8,6 +8,7 @@ package ir
 import (
 	"cmp"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/netip"
 	"reflect"
@@ -818,6 +819,9 @@ type OIDC struct {
 
 	// CookieNameOverrides can optionally override the generated name of the cookies set by the oauth filter.
 	CookieNameOverrides *egv1a1.OIDCCookieNames `json:"cookieNameOverrides,omitempty"`
+
+	// CookieDomain sets the domain of the cookies set by the oauth filter.
+	CookieDomain *string `json:"cookieDomain,omitempty"`
 }
 
 type OIDCProvider struct {
@@ -1753,12 +1757,42 @@ type JSONPatchConfig struct {
 	Operation JSONPatchOperation `json:"operation" yaml:"operation"`
 }
 
+type JSONPatchOp string
+
+const (
+	JSONPatchOpAdd     JSONPatchOp = "add"
+	JSONPatchOpRemove  JSONPatchOp = "remove"
+	JSONPatchOpReplace JSONPatchOp = "replace"
+	JSONPatchOpCopy    JSONPatchOp = "copy"
+	JSONPatchOpMove    JSONPatchOp = "move"
+	JSONPatchOpTest    JSONPatchOp = "test"
+)
+
+func TranslateJSONPatchOp(op egv1a1.JSONPatchOperationType) JSONPatchOp {
+	switch op {
+	case "add":
+		return JSONPatchOpAdd
+	case "remove":
+		return JSONPatchOpRemove
+	case "replace":
+		return JSONPatchOpReplace
+	case "move":
+		return JSONPatchOpMove
+	case "copy":
+		return JSONPatchOpCopy
+	case "test":
+		return JSONPatchOpTest
+	default:
+		return ""
+	}
+}
+
 // JSONPatchOperation defines the JSON Patch Operation as defined in
 // https://datatracker.ietf.org/doc/html/rfc6902
 // +k8s:deepcopy-gen=true
 type JSONPatchOperation struct {
 	// Op is the type of operation to perform
-	Op string `json:"op" yaml:"op"`
+	Op JSONPatchOp `json:"op" yaml:"op"`
 	// Path is the location of the target document/field where the operation will be performed
 	// Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details.
 	// +optional
@@ -1782,6 +1816,37 @@ func (o *JSONPatchOperation) IsPathNilOrEmpty() bool {
 
 func (o *JSONPatchOperation) IsJSONPathNilOrEmpty() bool {
 	return o.JSONPath == nil || *o.JSONPath == EmptyPath
+}
+
+// Validate ensures that the appropriate fields are set for each operation type according to RFC 6902:
+// https://www.rfc-editor.org/rfc/rfc6902.html
+func (o *JSONPatchOperation) Validate() error {
+	if o.Path == nil && o.JSONPath == nil {
+		return fmt.Errorf("a patch operation must specify a path or jsonPath")
+	}
+	switch o.Op {
+	case JSONPatchOpAdd, JSONPatchOpReplace, JSONPatchOpTest:
+		if o.Value == nil {
+			return fmt.Errorf("the %s operation requires a value", o.Op)
+		}
+		if o.From != nil {
+			return fmt.Errorf("the %s operation doesn't support a from attribute", o.Op)
+		}
+	case JSONPatchOpRemove:
+		if o.From != nil || o.Value != nil {
+			return fmt.Errorf("value and from can't be specified with the remove operation")
+		}
+	case JSONPatchOpMove, JSONPatchOpCopy:
+		if o.From == nil {
+			return fmt.Errorf("the %s operation requires a valid from attribute", o.Op)
+		}
+		if o.Value != nil {
+			return fmt.Errorf("the %s operation doesn't support a value attribute", o.Op)
+		}
+	default:
+		return fmt.Errorf("unsupported JSONPatch operation")
+	}
+	return nil
 }
 
 // Tracing defines the configuration for tracing a Envoy xDS Resource

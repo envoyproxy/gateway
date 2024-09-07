@@ -60,6 +60,7 @@ func TestTranslateXds(t *testing.T) {
 		},
 		"jsonpatch-add-op-empty-jsonpath": {
 			requireEnvoyPatchPolicies: true,
+			errMsg:                    "a patch operation must specify a path or jsonPath",
 		},
 		"jsonpatch-missing-resource": {
 			requireEnvoyPatchPolicies: true,
@@ -74,7 +75,7 @@ func TestTranslateXds(t *testing.T) {
 		},
 		"jsonpatch-move-op-with-value": {
 			requireEnvoyPatchPolicies: true,
-			errMsg:                    "the value field can not be set for the remove operation",
+			errMsg:                    "value and from can't be specified with the remove operation",
 		},
 		"http-route-invalid": {
 			errMsg: "validation failed for xds resource",
