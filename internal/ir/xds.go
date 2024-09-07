@@ -819,6 +819,9 @@ type OIDC struct {
 
 	// CookieNameOverrides can optionally override the generated name of the cookies set by the oauth filter.
 	CookieNameOverrides *egv1a1.OIDCCookieNames `json:"cookieNameOverrides,omitempty"`
+
+	// CookieDomain sets the domain of the cookies set by the oauth filter.
+	CookieDomain *string `json:"cookieDomain,omitempty"`
 }
 
 type OIDCProvider struct {
