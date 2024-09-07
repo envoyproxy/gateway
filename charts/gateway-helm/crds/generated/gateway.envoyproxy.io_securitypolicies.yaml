@@ -2964,6 +2964,9 @@ spec:
                     x-kubernetes-validations:
                     - message: BackendRefs must be used, backendRef is not supported.
                       rule: '!has(self.backendRef)'
+                    - message: Only one backendRefs is allowed.
+                      rule: 'has(self.backendRefs)? self.backendRefs.size() > 1 :
+                        true'
                   redirectURL:
                     description: |-
                       The redirect URL to be used in the OIDC
