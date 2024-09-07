@@ -511,7 +511,6 @@ type BackendCluster struct {
 	BackendSettings *ClusterSettings `json:"backendSettings,omitempty"`
 }
 
-
 // ClusterSettings provides the various knobs that can be set to control how traffic to a given
 // backend will be configured.
 type ClusterSettings struct {
