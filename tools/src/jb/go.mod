@@ -1,6 +1,6 @@
 module github.com/envoyproxy/gateway/tools/src/jb
 
-go 1.22.6
+go 1.22.7
 
 require github.com/jsonnet-bundler/jsonnet-bundler v0.5.1
 
