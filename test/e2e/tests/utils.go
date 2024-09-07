@@ -22,9 +22,7 @@ import (
 	"fortio.org/fortio/periodic"
 	flog "fortio.org/log"
 	"github.com/go-logfmt/logfmt"
-	"github.com/gogo/protobuf/jsonpb" // nolint: depguard // tempopb use gogo/protobuf
 	"github.com/google/go-cmp/cmp"
-	"github.com/grafana/tempo/pkg/tempopb"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
 	"github.com/stretchr/testify/require"
@@ -573,19 +571,31 @@ func QueryTraceFromTempo(t *testing.T, c client.Client, tags map[string]string) 
 	if err != nil {
 		return -1, err
 	}
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	if res.StatusCode != http.StatusOK {
 		return -1, fmt.Errorf("failed to query tempo, url=%s, status=%s", tempoURL.String(), res.Status)
 	}
 
-	tempoResponse := &tempopb.SearchResponse{}
-	if err := jsonpb.Unmarshal(res.Body, tempoResponse); err != nil {
+	resp := &tempoResponse{}
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return -1, err
+	}
+	if err := json.Unmarshal(data, &resp); err != nil {
+		t.Logf("Failed to unmarshall response: %s", string(data))
 		return -1, err
 	}
 
-	total := len(tempoResponse.Traces)
-	tlog.Logf(t, "get response from tempo, url=%s, response=%v, total=%d", tempoURL.String(), tempoResponse, total)
+	total := len(resp.Traces)
+	tlog.Logf(t, "get response from tempo, url=%s, response=%v, total=%d", tempoURL.String(), string(data), total)
 	return total, nil
+}
+
+type tempoResponse struct {
+	Traces []map[string]interface{} `json:"traces,omitempty"`
 }
 
 // copy from https://github.com/grafana/tempo/blob/c0127c78c368319433c7c67ca8967adbfed2259e/cmd/tempo-query/tempo/plugin.go#L361
