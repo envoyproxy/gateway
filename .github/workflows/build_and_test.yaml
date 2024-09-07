@@ -84,7 +84,7 @@ jobs:
     needs: [build]
     strategy:
       matrix:
-        version: [ v1.27.13, v1.28.9, v1.29.4, v1.30.0 ]
+        version: [ v1.28.13, v1.29.8, v1.30.4, v1.31.0 ]
     steps:
     - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
     - uses: ./tools/github-actions/setup-deps
@@ -112,7 +112,7 @@ jobs:
     needs: [build]
     strategy:
       matrix:
-        version: [ v1.27.13, v1.28.9, v1.29.4, v1.30.0 ]
+        version: [ v1.28.13, v1.29.8, v1.30.4, v1.31.0 ]
     steps:
     - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
     - uses: ./tools/github-actions/setup-deps
@@ -150,7 +150,7 @@ jobs:
     # Benchmark
     - name: Run Benchmark tests
       env:
-        KIND_NODE_TAG: v1.28.9
+        KIND_NODE_TAG: v1.28.13
         IMAGE_PULL_POLICY: IfNotPresent
         # Args for benchmark test
         BENCHMARK_RPS: 10000
