@@ -520,7 +520,14 @@ func (t *Translator) translateSecurityPolicyForGateway(
 }
 
 func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
-	var allowOrigins []*ir.StringMatch
+	var (
+		allowOrigins []*ir.StringMatch
+		irCORS       *ir.CORS
+	)
+	irCORS = &ir.CORS{
+		MaxAge:           cors.MaxAge,
+		AllowCredentials: cors.AllowCredentials != nil && *cors.AllowCredentials,
+	}
 
 	for _, origin := range cors.AllowOrigins {
 		if isWildcard(string(origin)) {
@@ -550,14 +557,19 @@ func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
 		exposeHeaders[i] = string(header)
 	}
 
-	return &ir.CORS{
-		AllowOrigins:     allowOrigins,
-		AllowMethods:     allowMethods,
-		AllowHeaders:     allowHeaders,
-		ExposeHeaders:    exposeHeaders,
-		MaxAge:           cors.MaxAge,
-		AllowCredentials: cors.AllowCredentials != nil && *cors.AllowCredentials,
+	if len(allowOrigins) > 0 {
+		irCORS.AllowOrigins = allowOrigins
 	}
+	if len(allowMethods) > 0 {
+		irCORS.AllowMethods = allowMethods
+	}
+	if len(allowHeaders) > 0 {
+		irCORS.AllowHeaders = allowHeaders
+	}
+	if len(exposeHeaders) > 0 {
+		irCORS.ExposeHeaders = exposeHeaders
+	}
+	return irCORS
 }
 
 func isWildcard(s string) bool {
