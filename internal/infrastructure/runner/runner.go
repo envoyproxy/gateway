@@ -38,7 +38,8 @@ func New(cfg *Config) *Runner {
 // Start starts the infrastructure runner
 func (r *Runner) Start(ctx context.Context) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
-	if r.Config.Server.EnvoyGateway.Provider.Custom.Infrastructure == nil {
+	if r.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeCustom &&
+		r.EnvoyGateway.Provider.Custom.Infrastructure == nil {
 		r.Logger.Info("provider is not specified, no provider is available")
 		return nil
 	}
