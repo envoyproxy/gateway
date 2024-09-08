@@ -32,7 +32,7 @@ func TestSources(t *testing.T) {
 		expectedAddresses []string
 		handler           handler.EventHandler
 		mapFunc           handler.MapFunc
-		queue             workqueue.RateLimitingInterface
+		queue             workqueue.TypedRateLimitingInterface[reconcile.Request]
 		expected          bool
 		obj               client.Object
 	}{
@@ -40,7 +40,7 @@ func TestSources(t *testing.T) {
 			name:              "Queue size should increase by one after the condition event triggered",
 			expectedAddresses: []string{},
 			handler:           handler.EnqueueRequestsFromMapFunc(enqueueClass),
-			queue:             workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
+			queue:             workqueue.NewTypedRateLimitingQueue(workqueue.DefaultTypedControllerRateLimiter[reconcile.Request]()),
 			ctx:               context.Background(),
 			obj:               &gwapiv1.GatewayClass{},
 			expected:          true,
@@ -49,7 +49,7 @@ func TestSources(t *testing.T) {
 			name:              "Confirm object is required",
 			expectedAddresses: []string{},
 			handler:           handler.EnqueueRequestsFromMapFunc(enqueueClass),
-			queue:             workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
+			queue:             workqueue.NewTypedRateLimitingQueue(workqueue.DefaultTypedControllerRateLimiter[reconcile.Request]()),
 			ctx:               context.Background(),
 			obj:               nil,
 			expected:          false,

@@ -300,11 +300,6 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 		errs = errors.Join(errs, err)
 	}
 
-	// Early return if got any errors
-	if errs != nil {
-		return errs
-	}
-
 	// Apply IR to all relevant routes
 	prefix := irRoutePrefix(route)
 	parentRefs := GetParentReferences(route)
@@ -326,6 +321,13 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 			if irListener != nil {
 				for _, r := range irListener.Routes {
 					if strings.HasPrefix(r.Name, prefix) {
+						// return 500 and do not configure EnvoyExtensions in this case
+						if errs != nil {
+							r.DirectResponse = &ir.DirectResponse{
+								StatusCode: 500,
+							}
+							continue
+						}
 						r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
 							ExtProcs: extProcs,
 							Wasms:    wasms,
@@ -361,11 +363,6 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 		errs = errors.Join(errs, err)
 	}
 
-	// Early return if got any errors
-	if errs != nil {
-		return errs
-	}
-
 	irKey := t.getIRKey(gateway.Gateway)
 	// Should exist since we've validated this
 	x := xdsIR[irKey]
@@ -386,6 +383,14 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 				continue
 			}
 
+			// return 500 and do not configure EnvoyExtensions in this case
+			if errs != nil {
+				r.DirectResponse = &ir.DirectResponse{
+					StatusCode: 500,
+				}
+				continue
+			}
+
 			r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
 				ExtProcs: extProcs,
 				Wasms:    wasms,
@@ -393,7 +398,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 		}
 	}
 
-	return nil
+	return errs
 }
 
 func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resources *Resources, envoyProxy *egv1a1.EnvoyProxy) ([]ir.ExtProc, error) {
@@ -439,7 +444,7 @@ func (t *Translator) buildExtProc(
 		}
 
 		ds, err = t.processExtServiceDestination(
-			&extProc.BackendRefs[i].BackendObjectReference,
+			&extProc.BackendRefs[i],
 			policyNamespacedName,
 			egv1a1.KindEnvoyExtensionPolicy,
 			ir.GRPC,

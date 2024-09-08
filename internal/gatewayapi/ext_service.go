@@ -21,7 +21,7 @@ import (
 
 // TODO: zhaohuabing combine this function with the one in the route translator
 func (t *Translator) processExtServiceDestination(
-	backendRef *gwapiv1.BackendObjectReference,
+	backendRef *egv1a1.BackendRef,
 	policyNamespacedName types.NamespacedName,
 	policyKind string,
 	protocol ir.AppProtocol,
@@ -37,12 +37,12 @@ func (t *Translator) processExtServiceDestination(
 
 	switch KindDerefOr(backendRef.Kind, KindService) {
 	case KindService:
-		ds = t.processServiceDestinationSetting(*backendRef, backendNamespace, protocol, resources, envoyProxy)
+		ds = t.processServiceDestinationSetting(backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
 	case egv1a1.KindBackend:
 		if !t.BackendEnabled {
 			return nil, fmt.Errorf("resource %s of type Backend cannot be used since Backend is disabled in Envoy Gateway configuration", string(backendRef.Name))
 		}
-		ds = t.processBackendDestinationSetting(*backendRef, backendNamespace, resources)
+		ds = t.processBackendDestinationSetting(backendRef.BackendObjectReference, backendNamespace, resources)
 		ds.Protocol = protocol
 	}
 
@@ -58,7 +58,7 @@ func (t *Translator) processExtServiceDestination(
 	}
 
 	backendTLS = t.applyBackendTLSSetting(
-		*backendRef,
+		backendRef.BackendObjectReference,
 		backendNamespace,
 		// Gateway is not the appropriate parent reference here because the owner
 		// of the BackendRef is the policy, and there is no hierarchy
@@ -78,7 +78,12 @@ func (t *Translator) processExtServiceDestination(
 
 	// TODO: support weighted non-xRoute backends
 	ds.Weight = ptr.To(uint32(1))
-
+	if backendRef.Fallback != nil {
+		// set only the secondary priority, the backend defaults to a primary priority if unset.
+		if ptr.Deref(backendRef.Fallback, false) {
+			ds.Priority = ptr.To(uint32(1))
+		}
+	}
 	return ds, nil
 }
 

@@ -123,6 +123,16 @@ type BackendSpec struct {
 	//
 	// +optional
 	AppProtocols []AppProtocolType `json:"appProtocols,omitempty"`
+
+	// Fallback indicates whether the backend is designated as a fallback.
+	// It is highly recommended to configure active or passive health checks to ensure that failover can be detected
+	// when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.
+	// The overprovisioning factor is set to 1.4, meaning the fallback backends will only start receiving traffic when
+	// the health of the active backends falls below 72%.
+	//
+	// +optional
+	// +notImplementedHide
+	Fallback *bool `json:"fallback,omitempty"`
 }
 
 // BackendConditionType is a type of condition for a backend. This type should be

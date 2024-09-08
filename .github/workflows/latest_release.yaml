@@ -26,12 +26,12 @@ jobs:
     - uses: ./tools/github-actions/setup-deps
 
     - name: Setup Graphviz
-      uses: ts-graphviz/setup-graphviz@v2
+      uses: ts-graphviz/setup-graphviz@b1de5da23ed0a6d14e0aeee8ed52fdd87af2363c  # v2.0.2
 
     # Benchmark
     - name: Run Benchmark tests
       env:
-        KIND_NODE_TAG: v1.28.9
+        KIND_NODE_TAG: v1.28.13
         IMAGE_PULL_POLICY: IfNotPresent
         # Args for benchmark test
         BENCHMARK_RPS: 10000
@@ -46,7 +46,7 @@ jobs:
       run: cd test/benchmark && zip -r benchmark_report.zip benchmark_report
 
     - name: Upload Benchmark Report
-      uses: actions/upload-artifact@v4  # version is better be consistent with actions/download-artifact
+      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874  # v4.4.0
       with:
         name: benchmark_report
         path: test/benchmark/benchmark_report.zip
@@ -65,7 +65,7 @@ jobs:
       run: IMAGE_PULL_POLICY=Always make generate-manifests IMAGE=envoyproxy/gateway-dev TAG=latest OUTPUT_DIR=release-artifacts
 
     - name: Download Benchmark Report
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16  # v4.1.8
       with:
         name: benchmark_report
         path: release-artifacts

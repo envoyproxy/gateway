@@ -103,7 +103,7 @@ func matchLabelsAndExpressions(ls *metav1.LabelSelector, objLabels map[string]st
 }
 
 // validateGatewayForReconcile returns true if the provided object is a Gateway
-// using a GatewayClass matching the configured gatewayclass controller name.
+// using a GatewayClass matching the configured GatewayClass controller name.
 func (r *gatewayAPIReconciler) validateGatewayForReconcile(obj client.Object) bool {
 	gw, ok := obj.(*gwapiv1.Gateway)
 	if !ok {
@@ -114,14 +114,15 @@ func (r *gatewayAPIReconciler) validateGatewayForReconcile(obj client.Object) bo
 	gc := &gwapiv1.GatewayClass{}
 	key := types.NamespacedName{Name: string(gw.Spec.GatewayClassName)}
 	if err := r.client.Get(context.Background(), key, gc); err != nil {
-		r.log.Error(err, "failed to get gatewayclass", "name", gw.Spec.GatewayClassName)
+		r.log.Error(err, "failed to get GatewayClass", "name", gw.Spec.GatewayClassName)
 		return false
 	}
 
 	if gc.Spec.ControllerName != r.classController {
-		r.log.Info("gatewayclass controller name", string(gc.Spec.ControllerName), "class controller name", string(r.classController))
-		r.log.Info("gatewayclass name for gateway doesn't match configured name",
-			"namespace", gw.Namespace, "name", gw.Name)
+		r.log.Info("GatewayClass name for gateway doesn't match configured name",
+			"namespace", gw.Namespace, "name", gw.Name,
+			"GatewayClass controller name", string(gc.Spec.ControllerName),
+			"class controller name", string(r.classController))
 		return false
 	}
 

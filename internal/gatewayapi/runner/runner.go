@@ -159,6 +159,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 						extGKs = append(extGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
 					}
 					t.ExtensionGroupKinds = extGKs
+					r.Logger.Info("extension resources", "GVKs count", len(extGKs))
 				}
 				// Translate to IR
 				result, err := t.Translate(resources)

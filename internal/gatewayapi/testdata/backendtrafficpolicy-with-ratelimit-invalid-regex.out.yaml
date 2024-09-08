@@ -160,6 +160,8 @@ xdsIR:
               port: 8080
             protocol: GRPC
             weight: 1
+        directResponse:
+          statusCode: 500
         hostname: '*'
         isHTTP2: true
         metadata:

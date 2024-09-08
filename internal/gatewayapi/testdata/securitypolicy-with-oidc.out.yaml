@@ -147,6 +147,7 @@ securityPolicies:
         group: null
         kind: null
         name: client2-secret
+      cookieDomain: example.com
       defaultRefreshTokenTTL: 48h0m0s
       defaultTokenTTL: 1h0m0s
       forwardAccessToken: true
@@ -273,6 +274,7 @@ xdsIR:
           oidc:
             clientID: client2.oauth.foo.com
             clientSecret: Y2xpZW50MTpzZWNyZXQK
+            cookieDomain: example.com
             cookieSuffix: 5f93c2e4
             defaultRefreshTokenTTL: 48h0m0s
             defaultTokenTTL: 1h0m0s

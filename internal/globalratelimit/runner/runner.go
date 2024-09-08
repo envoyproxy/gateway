@@ -21,7 +21,6 @@ import (
 	cachev3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	serverv3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
-	testv3 "github.com/envoyproxy/go-control-plane/pkg/test/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
@@ -78,8 +77,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	r.cache = cachev3.NewSnapshotCache(false, cachev3.IDHash{}, r.Logger.Sugar())
 
 	// Register xDS Config server.
-	cb := &testv3.Callbacks{}
-	discoveryv3.RegisterAggregatedDiscoveryServiceServer(r.grpc, serverv3.NewServer(ctx, r.cache, cb))
+	discoveryv3.RegisterAggregatedDiscoveryServiceServer(r.grpc, serverv3.NewServer(ctx, r.cache, serverv3.CallbackFuncs{}))
 
 	// Start and listen xDS gRPC config Server.
 	go r.serveXdsConfigServer(ctx)

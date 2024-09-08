@@ -208,7 +208,6 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.Namespace,
-			Name:      InfraName,
 			Labels:    labels,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -240,6 +239,13 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 			RevisionHistoryLimit:    ptr.To[int32](10),
 			ProgressDeadlineSeconds: ptr.To[int32](600),
 		},
+	}
+
+	// set name
+	if r.rateLimitDeployment.Name != nil {
+		deployment.ObjectMeta.Name = *r.rateLimitDeployment.Name
+	} else {
+		deployment.ObjectMeta.Name = r.Name()
 	}
 
 	if r.ownerReferenceUID != nil {

@@ -72,7 +72,7 @@ func (l Logger) WithName(name string) Logger {
 	return Logger{
 		Logger:        zapr.NewLogger(logger).WithName(name),
 		logging:       l.logging,
-		sugaredLogger: logger.Sugar(),
+		sugaredLogger: logger.Sugar().Named(name),
 	}
 }
 

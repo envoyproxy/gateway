@@ -96,12 +96,6 @@ spec:
       response:
         headers: SKIP
         body: STREAMED
-    attributes:
-      request:
-      - xds.route_metadata
-      - connection.requested_server_name
-      response:
-      - request.path
     messageTimeout: 5s
   targetRef:
     group: gateway.networking.k8s.io

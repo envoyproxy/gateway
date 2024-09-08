@@ -240,7 +240,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `name` | _string_ |  false  | Name is a user-friendly name for the rule.<br />If not specified, Envoy Gateway will generate a unique name for the rule.n |
 | `action` | _[AuthorizationAction](#authorizationaction)_ |  true  | Action defines the action to be taken if the rule matches. |
-| `principal` | _[Principal](#principal)_ |  true  | Principal specifies the client identity of a request. |
+| `principal` | _[Principal](#principal)_ |  true  | Principal specifies the client identity of a request.<br />If there are multiple principal types, all principals must match for the rule to match.<br />For example, if there are two principals: one for client IP and one for JWT claim,<br />the rule will match only if both the client IP and the JWT claim match. |
 
 
 #### BackOffPolicy
@@ -364,6 +364,7 @@ _Appears in:_
 | `name` | _[ObjectName](#objectname)_ |  true  | Name is the name of the referent. |
 | `namespace` | _[Namespace](#namespace)_ |  false  | Namespace is the namespace of the backend. When unspecified, the local<br />namespace is inferred.<br /><br />Note that when a namespace different than the local namespace is specified,<br />a ReferenceGrant object is required in the referent namespace to allow that<br />namespace's owner to accept the reference. See the ReferenceGrant<br />documentation for details.<br /><br />Support: Core |
 | `port` | _[PortNumber](#portnumber)_ |  false  | Port specifies the destination port number to use for this resource.<br />Port is required when the referent is a Kubernetes Service. In this<br />case, the port number is the service port number, not the target port.<br />For other resources, destination port might be derived from the referent<br />resource or this field. |
+| `fallback` | _boolean_ |  false  | Fallback indicates whether the backend is designated as a fallback.<br />Multiple fallback backends can be configured.<br />It is highly recommended to configure active or passive health checks to ensure that failover can be detected<br />when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.<br />The overprovisioning factor is set to 1.4, meaning the fallback backends will only start receiving traffic when<br />the health of the active backends falls below 72%. |
 
 
 #### BackendSpec
@@ -434,8 +435,6 @@ _Appears in:_
 | `status` | _[PolicyStatus](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyStatus)_ |  true  | status defines the current status of BackendTrafficPolicy. |
 
 
-
-
 #### BackendTrafficPolicyList
 
 
@@ -466,7 +465,7 @@ _Appears in:_
 | `targetRef` | _[LocalPolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName)_ |  true  | TargetRef is the name of the resource this policy is being attached to.<br />This policy and the TargetRef MUST be in the same namespace for this<br />Policy to have effect<br /><br />Deprecated: use targetRefs/targetSelectors instead |
 | `targetRefs` | _[LocalPolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName) array_ |  true  | TargetRefs are the names of the Gateway resources this policy<br />is being attached to. |
 | `targetSelectors` | _[TargetSelector](#targetselector) array_ |  true  | TargetSelectors allow targeting resources for this policy based on labels |
-| `loadBalancer` | _[LoadBalancer](#loadbalancer)_ |  false  | LoadBalancer policy to apply when routing traffic from the gateway to<br />the backend endpoints |
+| `loadBalancer` | _[LoadBalancer](#loadbalancer)_ |  false  | LoadBalancer policy to apply when routing traffic from the gateway to<br />the backend endpoints. Defaults to `LeastRequest`. |
 | `proxyProtocol` | _[ProxyProtocol](#proxyprotocol)_ |  false  | ProxyProtocol enables the Proxy Protocol when communicating with the backend. |
 | `tcpKeepalive` | _[TCPKeepalive](#tcpkeepalive)_ |  false  | TcpKeepalive settings associated with the upstream client connection.<br />Disabled by default. |
 | `healthCheck` | _[HealthCheck](#healthcheck)_ |  false  | HealthCheck allows gateway to perform active health checking on backends. |
@@ -508,6 +507,7 @@ _Appears in:_
 | ----- | ----------- |
 | `Merge` | Merge merges the provided bootstrap with the default one. The provided bootstrap can add or override a value<br />within a map, or add a new value to a list.<br />Please note that the provided bootstrap can't override a value within a list.<br /> | 
 | `Replace` | Replace replaces the default bootstrap with the provided one.<br /> | 
+| `JSONPatch` | JSONPatch applies the provided JSONPatches to the default bootstrap.<br /> | 
 
 
 #### CIDR
@@ -723,7 +723,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `loadBalancer` | _[LoadBalancer](#loadbalancer)_ |  false  | LoadBalancer policy to apply when routing traffic from the gateway to<br />the backend endpoints |
+| `loadBalancer` | _[LoadBalancer](#loadbalancer)_ |  false  | LoadBalancer policy to apply when routing traffic from the gateway to<br />the backend endpoints. Defaults to `LeastRequest`. |
 | `proxyProtocol` | _[ProxyProtocol](#proxyprotocol)_ |  false  | ProxyProtocol enables the Proxy Protocol when communicating with the backend. |
 | `tcpKeepalive` | _[TCPKeepalive](#tcpkeepalive)_ |  false  | TcpKeepalive settings associated with the upstream client connection.<br />Disabled by default. |
 | `healthCheck` | _[HealthCheck](#healthcheck)_ |  false  | HealthCheck allows gateway to perform active health checking on backends. |
@@ -2083,6 +2083,7 @@ https://datatracker.ietf.org/doc/html/rfc6902
 
 _Appears in:_
 - [EnvoyJSONPatchConfig](#envoyjsonpatchconfig)
+- [ProxyBootstrap](#proxybootstrap)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -2119,6 +2120,37 @@ _Appears in:_
 | `providers` | _[JWTProvider](#jwtprovider) array_ |  true  | Providers defines the JSON Web Token (JWT) authentication provider type.<br />When multiple JWT providers are specified, the JWT is considered valid if<br />any of the providers successfully validate the JWT. For additional details,<br />see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter.html. |
 
 
+#### JWTClaim
+
+
+
+JWTClaim specifies a claim in a JWT token.
+
+_Appears in:_
+- [JWTPrincipal](#jwtprincipal)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `name` | _string_ |  true  | Name is the name of the claim.<br />If it is a nested claim, use a dot (.) separated string as the name to<br />represent the full path to the claim.<br />For example, if the claim is in the "department" field in the "organization" field,<br />the name should be "organization.department". |
+| `valueType` | _[JWTClaimValueType](#jwtclaimvaluetype)_ |  false  | ValueType is the type of the claim value.<br />Only String and StringArray types are supported for now. |
+| `values` | _string array_ |  true  | Values are the values that the claim must match.<br />If the claim is a string type, the specified value must match exactly.<br />If the claim is a string array type, the specified value must match one of the values in the array.<br />If multiple values are specified, one of the values must match for the rule to match. |
+
+
+#### JWTClaimValueType
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [JWTClaim](#jwtclaim)
+
+| Value | Description |
+| ----- | ----------- |
+| `String` |  | 
+| `StringArray` |  | 
+
+
 #### JWTExtractor
 
 
@@ -2150,6 +2182,23 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `name` | _string_ |  true  | Name is the HTTP header name to retrieve the token |
 | `valuePrefix` | _string_ |  false  | ValuePrefix is the prefix that should be stripped before extracting the token.<br />The format would be used by Envoy like "\{ValuePrefix\}<TOKEN>".<br />For example, "Authorization: Bearer <TOKEN>", then the ValuePrefix="Bearer " with a space at the end. |
+
+
+#### JWTPrincipal
+
+
+
+JWTPrincipal specifies the client identity of a request based on the JWT claims and scopes.
+At least one of the claims or scopes must be specified.
+Claims and scopes are And-ed together if both are specified.
+
+_Appears in:_
+- [Principal](#principal)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `claims` | _[JWTClaim](#jwtclaim) array_ |  false  | Claims are the claims in a JWT token.<br /><br />If multiple claims are specified, all claims must match for the rule to match.<br />For example, if there are two claims: one for the audience and one for the issuer,<br />the rule will match only if both the audience and the issuer match. |
+| `scopes` | _string array_ |  false  | Scopes are a special type of claim in a JWT token that represents the permissions of the client.<br /><br />The value of the scopes field should be a space delimited string that is expected in the scope parameter,<br />as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749#page-23.<br /><br />If multiple scopes are specified, all scopes must match for the rule to match. |
 
 
 #### JWTProvider
@@ -2266,7 +2315,9 @@ _Appears in:_
 
 
 
-KubernetesPatchSpec defines how to perform the patch operation
+KubernetesPatchSpec defines how to perform the patch operation.
+Note that `value` can be an in-line YAML document, as can be seen in e.g. (the example of patching the Envoy proxy Deployment)[https://gateway.envoyproxy.io/docs/tasks/operations/customize-envoyproxy/#patching-deployment-for-envoyproxy].
+Note also that, currently, strings containing literal JSON are _rejected_.
 
 _Appears in:_
 - [KubernetesDaemonSetSpec](#kubernetesdaemonsetspec)
@@ -2665,7 +2716,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `clientCIDRs` | _[CIDR](#cidr) array_ |  true  | ClientCIDRs are the IP CIDR ranges of the client.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64"<br /><br />The client IP is inferred from the X-Forwarded-For header, a custom header,<br />or the proxy protocol.<br />You can use the `ClientIPDetection` or the `EnableProxyProtocol` field in<br />the `ClientTrafficPolicy` to configure how the client IP is detected. |
+| `clientCIDRs` | _[CIDR](#cidr) array_ |  false  | ClientCIDRs are the IP CIDR ranges of the client.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64"<br /><br />If multiple CIDR ranges are specified, one of the CIDR ranges must match<br />the client IP for the rule to match.<br /><br />The client IP is inferred from the X-Forwarded-For header, a custom header,<br />or the proxy protocol.<br />You can use the `ClientIPDetection` or the `EnableProxyProtocol` field in<br />the `ClientTrafficPolicy` to configure how the client IP is detected. |
 
 
 #### ProcessingModeOptions
@@ -2804,8 +2855,9 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `type` | _[BootstrapType](#bootstraptype)_ |  false  | Type is the type of the bootstrap configuration, it should be either Replace or Merge.<br />If unspecified, it defaults to Replace. |
-| `value` | _string_ |  true  | Value is a YAML string of the bootstrap. |
+| `type` | _[BootstrapType](#bootstraptype)_ |  false  | Type is the type of the bootstrap configuration, it should be either Replace,  Merge, or JSONPatch.<br />If unspecified, it defaults to Replace. |
+| `value` | _string_ |  false  | Value is a YAML string of the bootstrap. |
+| `jsonPatches` | _[JSONPatchOperation](#jsonpatchoperation) array_ |  true  | JSONPatches is an array of JSONPatches to be applied to the default bootstrap. Patches are<br />applied in the order in which they are defined. |
 
 
 #### ProxyLogComponent
