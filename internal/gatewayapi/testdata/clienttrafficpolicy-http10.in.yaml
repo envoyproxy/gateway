@@ -40,6 +40,34 @@ clientTrafficPolicies:
       kind: Gateway
       name: gateway-1
       sectionName: http-3
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-gateway-1-section-http-4
+  spec:
+    http1:
+      http10:
+        useDefaultHost: true
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      sectionName: http-4
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-gateway-1-section-http-5
+  spec:
+    http1:
+      http10:
+        useDefaultHost: true
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      sectionName: http-5
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -68,3 +96,57 @@ gateways:
       allowedRoutes:
         namespaces:
           from: Same
+    - name: http-4
+      protocol: HTTP
+      port: 8082
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: http-5
+      protocol: HTTP
+      port: 8083
+      allowedRoutes:
+        namespaces:
+          from: Same
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: envoy-gateway
+      name: httproute-1
+    spec:
+      hostnames:
+        - route.example.com
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http-4
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http-5
+      rules:
+        - matches:
+            - path:
+                value: "/"
+          backendRefs:
+            - name: service-1
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: envoy-gateway
+      name: httproute-2
+    spec:
+      hostnames:
+        - route2.example.com
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http-5
+      rules:
+        - matches:
+            - path:
+                value: "/"
+          backendRefs:
+            - name: service-1
+              port: 8080
