@@ -38,6 +38,11 @@ func New(cfg *Config) *Runner {
 // Start starts the infrastructure runner
 func (r *Runner) Start(ctx context.Context) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
+	if r.Config.Server.EnvoyGateway.Provider.Custom.Infrastructure == nil {
+		r.Logger.Info("provider is not specified, no provider is available")
+		return nil
+	}
+
 	r.mgr, err = infrastructure.NewManager(&r.Config.Server)
 	if err != nil {
 		r.Logger.Error(err, "failed to create new manager")

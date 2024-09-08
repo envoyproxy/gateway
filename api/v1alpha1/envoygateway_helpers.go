@@ -209,9 +209,10 @@ func DefaultEnvoyGatewayAdminAddress() *EnvoyGatewayAdminAddress {
 }
 
 // GetEnvoyGatewayKubeProvider returns the EnvoyGatewayKubernetesProvider of Provider or
-// a default EnvoyGatewayKubernetesProvider if its Infrastructure provider is Kubernetes.
+// a default EnvoyGatewayKubernetesProvider if unspecified. If EnvoyGatewayProvider is not of
+// type "Kubernetes", a nil EnvoyGatewayKubernetesProvider is returned.
 func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubernetesProvider {
-	if !r.CanRunKubernetesInfraProvider() {
+	if r.Type != ProviderTypeKubernetes {
 		return nil
 	}
 
@@ -238,13 +239,6 @@ func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubern
 	}
 
 	return r.Kubernetes
-}
-
-// CanRunKubernetesInfraProvider returns true if the resource provider is "Kubernetes"
-// or "Custom" (but with unspecific infrastructure provider).
-func (r *EnvoyGatewayProvider) CanRunKubernetesInfraProvider() bool {
-	return r.Type == ProviderTypeKubernetes ||
-		(r.Type == ProviderTypeCustom && r.Custom.Infrastructure == nil)
 }
 
 // DefaultEnvoyGatewayLoggingLevel returns a new EnvoyGatewayLogging with default configuration parameters.

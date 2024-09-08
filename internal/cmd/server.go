@@ -9,9 +9,11 @@ import (
 	"github.com/spf13/cobra"
 	ctrl "sigs.k8s.io/controller-runtime"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/admin"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extensionregistry "github.com/envoyproxy/gateway/internal/extension/registry"
+	"github.com/envoyproxy/gateway/internal/extension/types"
 	gatewayapirunner "github.com/envoyproxy/gateway/internal/gatewayapi/runner"
 	ratelimitrunner "github.com/envoyproxy/gateway/internal/globalratelimit/runner"
 	infrarunner "github.com/envoyproxy/gateway/internal/infrastructure/runner"
@@ -108,15 +110,18 @@ func getConfigByPath(cfgPath string) (*config.Server, error) {
 
 // setupRunners starts all the runners required for the Envoy Gateway to
 // fulfill its tasks.
-func setupRunners(cfg *config.Server) error {
+func setupRunners(cfg *config.Server) (err error) {
 	// TODO - Setup a Config Manager
 	// https://github.com/envoyproxy/gateway/issues/43
 	ctx := ctrl.SetupSignalHandler()
 
 	// Setup the Extension Manager
-	extMgr, err := extensionregistry.NewManager(cfg)
-	if err != nil {
-		return err
+	var extMgr types.Manager
+	if cfg.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes {
+		extMgr, err = extensionregistry.NewManager(cfg)
+		if err != nil {
+			return err
+		}
 	}
 
 	pResources := new(message.ProviderResources)
@@ -129,7 +134,7 @@ func setupRunners(cfg *config.Server) error {
 		Server:            *cfg,
 		ProviderResources: pResources,
 	})
-	if err := providerRunner.Start(ctx); err != nil {
+	if err = providerRunner.Start(ctx); err != nil {
 		return err
 	}
 
@@ -145,7 +150,7 @@ func setupRunners(cfg *config.Server) error {
 		InfraIR:           infraIR,
 		ExtensionManager:  extMgr,
 	})
-	if err := gwRunner.Start(ctx); err != nil {
+	if err = gwRunner.Start(ctx); err != nil {
 		return err
 	}
 
@@ -160,7 +165,7 @@ func setupRunners(cfg *config.Server) error {
 		ExtensionManager:  extMgr,
 		ProviderResources: pResources,
 	})
-	if err := xdsTranslatorRunner.Start(ctx); err != nil {
+	if err = xdsTranslatorRunner.Start(ctx); err != nil {
 		return err
 	}
 
@@ -171,7 +176,7 @@ func setupRunners(cfg *config.Server) error {
 		Server:  *cfg,
 		InfraIR: infraIR,
 	})
-	if err := infraRunner.Start(ctx); err != nil {
+	if err = infraRunner.Start(ctx); err != nil {
 		return err
 	}
 
@@ -182,7 +187,7 @@ func setupRunners(cfg *config.Server) error {
 		Server: *cfg,
 		Xds:    xds,
 	})
-	if err := xdsServerRunner.Start(ctx); err != nil {
+	if err = xdsServerRunner.Start(ctx); err != nil {
 		return err
 	}
 
@@ -194,7 +199,7 @@ func setupRunners(cfg *config.Server) error {
 			Server: *cfg,
 			XdsIR:  xdsIR,
 		})
-		if err := rateLimitRunner.Start(ctx); err != nil {
+		if err = rateLimitRunner.Start(ctx); err != nil {
 			return err
 		}
 	}
@@ -209,9 +214,11 @@ func setupRunners(cfg *config.Server) error {
 
 	cfg.Logger.Info("shutting down")
 
-	// Close connections to extension services
-	if mgr, ok := extMgr.(*extensionregistry.Manager); ok {
-		mgr.CleanupHookConns()
+	if extMgr != nil {
+		// Close connections to extension services
+		if mgr, ok := extMgr.(*extensionregistry.Manager); ok {
+			mgr.CleanupHookConns()
+		}
 	}
 
 	return nil

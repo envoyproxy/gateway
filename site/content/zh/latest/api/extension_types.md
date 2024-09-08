@@ -1041,7 +1041,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `resource` | _[EnvoyGatewayResourceProvider](#envoygatewayresourceprovider)_ |  true  | Resource defines the desired resource provider.<br />This provider is used to specify the provider to be used<br />to retrieve the resource configurations such as Gateway API<br />resources |
-| `infrastructure` | _[EnvoyGatewayInfrastructureProvider](#envoygatewayinfrastructureprovider)_ |  false  | Infrastructure defines the desired infrastructure provider.<br />This provider is used to specify the provider to be used<br />to provide an environment to deploy the out resources like<br />the Envoy Proxy data plane.<br /><br />Infrastructure is optional, if no provider is set,<br />The Kubernetes will be used as the default infrastructure provider. |
+| `infrastructure` | _[EnvoyGatewayInfrastructureProvider](#envoygatewayinfrastructureprovider)_ |  false  | Infrastructure defines the desired infrastructure provider.<br />This provider is used to specify the provider to be used<br />to provide an environment to deploy the out resources like<br />the Envoy Proxy data plane.<br /><br />Infrastructure is optional, if provider is not specified,<br />No infrastructure provider is available. |
 
 
 #### EnvoyGatewayFileResourceProvider

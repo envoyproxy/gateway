@@ -272,8 +272,8 @@ type EnvoyGatewayCustomProvider struct {
 	// to provide an environment to deploy the out resources like
 	// the Envoy Proxy data plane.
 	//
-	// Infrastructure is optional, if no provider is set,
-	// The Kubernetes will be used as the default infrastructure provider.
+	// Infrastructure is optional, if provider is not specified,
+	// No infrastructure provider is available.
 	// +optional
 	Infrastructure *EnvoyGatewayInfrastructureProvider `json:"infrastructure,omitempty"`
 }

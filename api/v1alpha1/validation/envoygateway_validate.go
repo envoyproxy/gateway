@@ -85,7 +85,7 @@ func validateEnvoyGatewayKubernetesProvider(provider *egv1a1.EnvoyGatewayKuberne
 
 func validateEnvoyGatewayCustomProvider(provider *egv1a1.EnvoyGatewayCustomProvider) error {
 	if provider == nil {
-		return fmt.Errorf("empty custom provider settings for file provider")
+		return fmt.Errorf("empty custom provider settings")
 	}
 
 	if err := validateEnvoyGatewayCustomResourceProvider(provider.Resource); err != nil {

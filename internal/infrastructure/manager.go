@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	clicfg "sigs.k8s.io/controller-runtime/pkg/client/config"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes"
@@ -36,15 +37,22 @@ type Manager interface {
 func NewManager(cfg *config.Server) (Manager, error) {
 	var mgr Manager
 
-	if cfg.EnvoyGateway.Provider.CanRunKubernetesInfraProvider() {
+	switch cfg.EnvoyGateway.Provider.Type {
+	case egv1a1.ProviderTypeKubernetes:
 		cli, err := client.New(clicfg.GetConfigOrDie(), client.Options{Scheme: envoygateway.GetScheme()})
 		if err != nil {
 			return nil, err
 		}
 		mgr = kubernetes.NewInfra(cli, cfg)
-	} else {
-		// TODO(sh2): implement host infra provider
-		return nil, fmt.Errorf("unsupported infrasture provider")
+	case egv1a1.ProviderTypeCustom:
+		infra := cfg.EnvoyGateway.Provider.Custom.Infrastructure
+		switch infra.Type {
+		case egv1a1.InfrastructureProviderTypeHost:
+			// TODO(sh2): implement host provider
+			return nil, fmt.Errorf("host provider is not available yet")
+		default:
+			return nil, fmt.Errorf("unsupported provider type: %s", infra.Type)
+		}
 	}
 
 	return mgr, nil
