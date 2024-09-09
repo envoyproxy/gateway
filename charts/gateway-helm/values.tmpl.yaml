@@ -77,6 +77,10 @@ certgen:
   job:
     annotations: {}
     resources: {}
+    pod:
+      affinity: {}
+      tolerations: []
+      nodeSelector: {}
     ttlSecondsAfterFinished: 30
   rbac:
     annotations: {}
