@@ -35,7 +35,7 @@ type ProxyAccessLogSetting struct {
 	// +kubebuilder:validation:Enum=Listener
 	// +optional
 	// +notImplementedHide
-	Type ProxyAccessLogType `json:"type,omitempty"`
+	Type *ProxyAccessLogType `json:"type,omitempty"`
 }
 
 type ProxyAccessLogType string
