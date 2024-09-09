@@ -70,7 +70,7 @@ spec:
             requests:
               cpu: 10m
 ---
-apiVersion: gateway.networking.k8s.io/v1
+apiVersion: gate  way.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: example-route

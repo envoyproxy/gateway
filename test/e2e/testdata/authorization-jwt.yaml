@@ -27,10 +27,10 @@ spec:
     name: http-with-authorization-jwt-1
   jwt:
     providers:
-      - name: example
-        issuer：https://foo.bar.com
-        remoteJWKS:
-          uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
+    - name: example
+      issuer: https://foo.bar.com
+      remoteJWKS:
+        uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
   authorization:
     defaultAction: Deny
     rules:
