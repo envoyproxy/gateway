@@ -21,21 +21,23 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 )
 
-//{
-//  "sub": "1234567890",
-//  "name": "John Doe",
-//  "admin": true,
-//  "iat": 1516239022,
-//  "roles": "admin, superuser",
-//  "scope": "read add delete modify"
-//}
+//	{
+//	 "sub": "1234567890",
+//	 "name": "John Doe",
+//	 "admin": true,
+//	 "iat": 1516239022,
+//	 "roles": "admin, superuser",
+//	 "scope": "read add delete modify"
+//	}
+//
+// nolint: gosec
 const jwtToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMiwicm9sZXMiOiJhZG1pbiwgc3VwZXJ1c2VyIiwic2NvcGUiOiJyZWFkIGFkZCBkZWxldGUgbW9kaWZ5In0.aVwLZVK2so7Ur9fQmQ3g_x9Qku7d6RiiVY4-HHPT9VQ"
 
 func init() {
-	ConformanceTests = append(ConformanceTests, AuthorizationClientIPTest)
+	ConformanceTests = append(ConformanceTests, AuthorizationJWTTest)
 }
 
-var AuthorizationClientIPTest = suite.ConformanceTest{
+var AuthorizationJWTTest = suite.ConformanceTest{
 	ShortName:   "Authorization with jwt claims",
 	Description: "Authorization with jwt claims",
 	Manifests:   []string{"testdata/authorization-jwt.yaml"},
@@ -43,7 +45,7 @@ var AuthorizationClientIPTest = suite.ConformanceTest{
 		ns := "gateway-conformance-infra"
 		route1NN := types.NamespacedName{Name: "http-with-authorization-jwt-1", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), route1NN, route2NN)
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), route1NN)
 
 		ancestorRef := gwapiv1a2.ParentReference{
 			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
