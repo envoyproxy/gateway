@@ -41,6 +41,6 @@ spec:
           issuer: https://foo.bar.com
           claims:
           - name: name
-            values: "John Doe"
+            values: ["John Doe"]
           - name: "sub"
-            values: "1234567890"
+            values: ["1234567890"]
