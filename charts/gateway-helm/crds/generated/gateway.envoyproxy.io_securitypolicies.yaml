@@ -1911,7 +1911,7 @@ spec:
                   recomputeRoute:
                     description: |-
                       RecomputeRoute clears the route cache and recalculates the routing decision.
-                      This field must be enabled if the headers generated from the claim are used for
+                      This field must be enabled if the headers added or modified by the ExtAuth are used for
                       route matching decisions. If the recomputation selects a new route, features targeting
                       the new matched route will be applied.
                     type: boolean
