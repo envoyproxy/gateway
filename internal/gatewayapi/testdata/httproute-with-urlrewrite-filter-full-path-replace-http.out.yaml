@@ -146,3 +146,4 @@ xdsIR:
           path:
             fullReplace: /rewrite
             prefixMatchReplace: null
+            regexMatchReplace: null

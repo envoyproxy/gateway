@@ -45,6 +45,7 @@ const (
 	backendEnvoyProxyTelemetryIndex  = "backendEnvoyProxyTelemetryIndex"
 	secretEnvoyProxyIndex            = "secretEnvoyProxyIndex"
 	secretEnvoyExtensionPolicyIndex  = "secretEnvoyExtensionPolicyIndex"
+	httpRouteFilterHTTPRouteIndex    = "httpRouteFilterHTTPRouteIndex"
 )
 
 func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
@@ -70,6 +71,10 @@ func addHTTPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 	}
 
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc); err != nil {
+		return err
+	}
+
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.HTTPRoute{}, httpRouteFilterHTTPRouteIndex, httpRouteFilterHTTPRouteIndexFunc); err != nil {
 		return err
 	}
 
@@ -112,6 +117,26 @@ func backendHTTPRouteIndexFunc(rawObj client.Object) []string {
 		}
 	}
 	return backendRefs
+}
+
+func httpRouteFilterHTTPRouteIndexFunc(rawObj client.Object) []string {
+	httproute := rawObj.(*gwapiv1.HTTPRoute)
+	var httpRouteFilterRefs []string
+	for _, rule := range httproute.Spec.Rules {
+		for _, filter := range rule.Filters {
+			if filter.ExtensionRef != nil && string(filter.ExtensionRef.Kind) == resource.KindHTTPRouteFilter {
+				// If an explicit Backend namespace is not provided, use the HTTPRoute namespace to
+				// lookup the provided Gateway Name.
+				httpRouteFilterRefs = append(httpRouteFilterRefs,
+					types.NamespacedName{
+						Namespace: httproute.Namespace,
+						Name:      string(filter.ExtensionRef.Name),
+					}.String(),
+				)
+			}
+		}
+	}
+	return httpRouteFilterRefs
 }
 
 func secretEnvoyProxyIndexFunc(rawObj client.Object) []string {

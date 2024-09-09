@@ -148,6 +148,9 @@ type resourceMappings struct {
 	// The key is the namespaced name, group and kind of the filter and the value is the
 	// unstructured form of the resource.
 	extensionRefFilters map[utils.NamespacedNameWithGroupKind]unstructured.Unstructured
+	// httpRouteFilters is a map of HTTPRouteFilters, where the key is the namespaced name,
+	// group and kind of the HTTPFilter.
+	httpRouteFilters map[utils.NamespacedNameWithGroupKind]*egv1a1.HTTPRouteFilter
 }
 
 func newResourceMapping() *resourceMappings {
@@ -161,6 +164,7 @@ func newResourceMapping() *resourceMappings {
 		allAssociatedUDPRoutes:    sets.New[string](),
 		allAssociatedBackendRefs:  sets.New[gwapiv1.BackendObjectReference](),
 		extensionRefFilters:       map[utils.NamespacedNameWithGroupKind]unstructured.Unstructured{},
+		httpRouteFilters:          map[utils.NamespacedNameWithGroupKind]*egv1a1.HTTPRouteFilter{},
 	}
 }
 
@@ -1560,6 +1564,27 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			return err
 		}
 		r.log.Info("Watching additional policy resource", "resource", gvk.String())
+	}
+
+	// Watch HTTPRouteFilter CRUDs and process affected HTTPRoute objects.
+	httpRouteFilter := []predicate.TypedPredicate[*egv1a1.HTTPRouteFilter]{
+		predicate.TypedGenerationChangedPredicate[*egv1a1.HTTPRouteFilter]{},
+		predicate.NewTypedPredicateFuncs[*egv1a1.HTTPRouteFilter](func(be *egv1a1.HTTPRouteFilter) bool {
+			return r.validateHTTPRouteFilterForReconcile(be)
+		}),
+	}
+	if r.namespaceLabel != nil {
+		httpRouteFilter = append(httpRouteFilter, predicate.NewTypedPredicateFuncs[*egv1a1.HTTPRouteFilter](func(be *egv1a1.HTTPRouteFilter) bool {
+			return r.hasMatchingNamespaceLabels(be)
+		}))
+	}
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &egv1a1.HTTPRouteFilter{},
+			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, be *egv1a1.HTTPRouteFilter) []reconcile.Request {
+				return r.enqueueClass(ctx, be)
+			}),
+			httpRouteFilter...)); err != nil {
+		return err
 	}
 
 	return nil

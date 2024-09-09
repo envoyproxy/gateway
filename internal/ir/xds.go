@@ -51,8 +51,9 @@ var (
 	ErrDirectResponseStatusInvalid             = errors.New("only HTTP status codes 100 - 599 are supported for DirectResponse")
 	ErrRedirectUnsupportedStatus               = errors.New("only HTTP status codes 301 and 302 are supported for redirect filters")
 	ErrRedirectUnsupportedScheme               = errors.New("only http and https are supported for the scheme in redirect filters")
-	ErrHTTPPathModifierDoubleReplace           = errors.New("redirect filter cannot have a path modifier that supplies both fullPathReplace and prefixMatchReplace")
-	ErrHTTPPathModifierNoReplace               = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace or prefixMatchReplace")
+	ErrHTTPPathModifierDoubleReplace           = errors.New("redirect filter cannot have a path modifier that supplies more than one of fullPathReplace, prefixMatchReplace and regexMatchReplace")
+	ErrHTTPPathModifierNoReplace               = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace, prefixMatchReplace or regexMatchReplace")
+	ErrHTTPPathRegexModifierNoSetting          = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace, prefixMatchReplace or regexMatchReplace")
 	ErrAddHeaderEmptyName                      = errors.New("header modifier filter cannot configure a header without a name to be added")
 	ErrAddHeaderDuplicate                      = errors.New("header modifier filter attempts to add the same header more than once (case insensitive)")
 	ErrRemoveHeaderDuplicate                   = errors.New("header modifier filter attempts to remove the same header more than once (case insensitive)")
@@ -729,6 +730,18 @@ type UnstructuredRef struct {
 	Object *unstructured.Unstructured `json:"object,omitempty" yaml:"object,omitempty"`
 }
 
+// RegexMatchReplace defines the schema for modifying HTTP request path using regex.
+//
+// +k8s:deepcopy-gen=true
+type RegexMatchReplace struct {
+	// Pattern matches a regular expression against the value of the HTTP Path.The regex string must
+	// adhere to the syntax documented in https://github.com/google/re2/wiki/Syntax.
+	Pattern string `json:"pattern" yaml:"pattern"`
+	// Substitution is an expression that replaces the matched portion.The expression may include numbered
+	// capture groups that adhere to syntax documented in https://github.com/google/re2/wiki/Syntax.
+	Substitution string `json:"substitution" yaml:"substitution"`
+}
+
 // CORS holds the Cross-Origin Resource Sharing (CORS) policy for the route.
 //
 // +k8s:deepcopy-gen=true
@@ -1293,7 +1306,7 @@ func (r DirectResponse) Validate() error {
 // +k8s:deepcopy-gen=true
 type URLRewrite struct {
 	// Path contains config for rewriting the path of the request.
-	Path *HTTPPathModifier `json:"path,omitempty" yaml:"path,omitempty"`
+	Path *ExtendedHTTPPathModifier `json:"path,omitempty" yaml:"path,omitempty"`
 	// Hostname configures the replacement of the request's hostname.
 	Hostname *string `json:"hostname,omitempty" yaml:"hostname,omitempty"`
 }
@@ -1369,6 +1382,42 @@ func (r HTTPPathModifier) Validate() error {
 	}
 
 	if r.FullReplace == nil && r.PrefixMatchReplace == nil {
+		errs = errors.Join(errs, ErrHTTPPathModifierNoReplace)
+	}
+
+	return errs
+}
+
+// ExtendedHTTPPathModifier holds instructions for how to modify the path of a request on a redirect response
+// with both core gateway-api and extended envoy gateway capabilities
+// +k8s:deepcopy-gen=true
+type ExtendedHTTPPathModifier struct {
+	HTTPPathModifier `json:",inline" yaml:",inline"`
+	// RegexMatchReplace provides a regex to match an a replacement to perform on the path.
+	RegexMatchReplace *RegexMatchReplace `json:"regexMatchReplace" yaml:"regexMatchReplace"`
+}
+
+// Validate the fields within the HTTPPathModifier structure
+func (r ExtendedHTTPPathModifier) Validate() error {
+	var errs error
+
+	rewrites := []bool{r.RegexMatchReplace != nil, r.PrefixMatchReplace != nil, r.FullReplace != nil}
+	rwc := 0
+	for _, rw := range rewrites {
+		if rw {
+			rwc++
+		}
+	}
+
+	if rwc > 1 {
+		errs = errors.Join(errs, ErrHTTPPathModifierDoubleReplace)
+	}
+
+	if r.FullReplace == nil && r.PrefixMatchReplace == nil && r.RegexMatchReplace == nil {
+		errs = errors.Join(errs, ErrHTTPPathModifierNoReplace)
+	}
+
+	if r.RegexMatchReplace != nil && (r.RegexMatchReplace.Pattern == "" || r.RegexMatchReplace.Substitution == "") {
 		errs = errors.Join(errs, ErrHTTPPathModifierNoReplace)
 	}
 
