@@ -491,6 +491,7 @@ func buildJWTPredicate(jwt egv1a1.JWTPrincipal) ([]*matcherv3.Matcher_MatcherLis
 			})
 		}
 
+		// If there are multiple values for a claim, OR them together.
 		if len(predicateForOneClaim) > 1 {
 			predicateForAllClaims = append(predicateForAllClaims, &matcherv3.Matcher_MatcherList_Predicate{
 				MatchType: &matcherv3.Matcher_MatcherList_Predicate_OrMatcher{

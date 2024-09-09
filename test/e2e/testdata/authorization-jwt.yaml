@@ -1,0 +1,46 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-authorization-jwt-1
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  rules:
+  - matches:
+    - path:
+        type: Exact
+        value: /protected1
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: authorization-jwt-1
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-with-authorization-jwt-1
+  jwt:
+    providers:
+      - name: example
+        issuer：https://foo.bar.com
+        remoteJWKS:
+          uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
+  authorization:
+    defaultAction: Deny
+    rules:
+    - name: "allow"
+      action: Allow
+      principal:
+        jwt:
+          issuer: https://foo.bar.com
+          claims:
+          - name: name
+            values: "John Doe"
+          - name: "sub"
+            values: "1234567890"

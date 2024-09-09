@@ -110,3 +110,12 @@ securityPolicies:
             scopes:
             - "foo"
             - "bar"
+            claims:
+            - name: "sub"
+              values:
+              - "1234567890"
+            - name: "roles"
+              valueType: "StringArray"
+              values:
+              - "admin"
+              - "superuser"

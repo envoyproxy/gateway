@@ -147,6 +147,15 @@ securityPolicies:
         name: allow-scope-foo-bar
         principal:
           jwt:
+            claims:
+            - name: sub
+              values:
+              - "1234567890"
+            - name: roles
+              valueType: StringArray
+              values:
+              - admin
+              - superuser
             issuer: https://two.example.com
             scopes:
             - foo
@@ -276,6 +285,15 @@ xdsIR:
               name: allow-scope-foo-bar
               principal:
                 jwt:
+                  claims:
+                  - name: sub
+                    values:
+                    - "1234567890"
+                  - name: roles
+                    valueType: StringArray
+                    values:
+                    - admin
+                    - superuser
                   issuer: https://two.example.com
                   scopes:
                   - foo
