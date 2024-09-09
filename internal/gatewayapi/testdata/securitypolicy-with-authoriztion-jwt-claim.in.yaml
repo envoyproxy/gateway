@@ -33,25 +33,6 @@ httpRoutes:
       backendRefs:
       - name: service-1
         port: 8080
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
-  metadata:
-    namespace: default
-    name: httproute-2
-  spec:
-    hostnames:
-    - www.example.com
-    parentRefs:
-    - namespace: envoy-gateway
-      name: gateway-1
-      sectionName: http
-    rules:
-    - matches:
-      - path:
-          value: "/bar"
-      backendRefs:
-      - name: service-1
-        port: 8080
 securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
@@ -66,34 +47,6 @@ securityPolicies:
     jwt:
       providers:
       - name: example1
-        issuer: https://one.example.com
-        audiences:
-        - one.foo.com
-        remoteJWKS:
-          uri: https://one.example.com/jwt/public-key/jwks.json
-    authorization:
-      defaultAction: Deny
-      rules:
-      - name: "allow-scope-foo"
-        action: Deny
-        principal:
-          jwt:
-            issuer: https://one.example.com
-            scopes:
-            - "foo"
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: SecurityPolicy
-  metadata:
-    namespace: default
-    name: policy-for-http-route-1
-  spec:
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: httproute-1
-    jwt:
-      providers:
-      - name: example1
         issuer: https://two.example.com
         audiences:
         - two.foo.com
@@ -102,7 +55,7 @@ securityPolicies:
     authorization:
       defaultAction: Deny
       rules:
-      - name: "allow-scope-foo-bar"
+      - name: "allow-jwt-claim"
         action: Deny
         principal:
           jwt:

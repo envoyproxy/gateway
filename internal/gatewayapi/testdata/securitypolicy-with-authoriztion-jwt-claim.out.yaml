@@ -16,7 +16,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 2
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -78,44 +78,6 @@ httpRoutes:
         name: gateway-1
         namespace: envoy-gateway
         sectionName: http
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
-  metadata:
-    creationTimestamp: null
-    name: httproute-2
-    namespace: default
-  spec:
-    hostnames:
-    - www.example.com
-    parentRefs:
-    - name: gateway-1
-      namespace: envoy-gateway
-      sectionName: http
-    rules:
-    - backendRefs:
-      - name: service-1
-        port: 8080
-      matches:
-      - path:
-          value: /bar
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: http
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -137,14 +99,14 @@ securityPolicies:
   kind: SecurityPolicy
   metadata:
     creationTimestamp: null
-    name: policy-for-http-route-1
-    namespace: default
+    name: policy-for-gateway
+    namespace: envoy-gateway
   spec:
     authorization:
       defaultAction: Deny
       rules:
       - action: Deny
-        name: allow-scope-foo-bar
+        name: allow-jwt-claim
         principal:
           jwt:
             claims:
@@ -170,50 +132,6 @@ securityPolicies:
           uri: https://two.example.com/jwt/public-key/jwks.json
     targetRef:
       group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: httproute-1
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: http
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: SecurityPolicy
-  metadata:
-    creationTimestamp: null
-    name: policy-for-gateway
-    namespace: envoy-gateway
-  spec:
-    authorization:
-      defaultAction: Deny
-      rules:
-      - action: Deny
-        name: allow-scope-foo
-        principal:
-          jwt:
-            issuer: https://one.example.com
-            scopes:
-            - foo
-    jwt:
-      providers:
-      - audiences:
-        - one.foo.com
-        issuer: https://one.example.com
-        name: example1
-        remoteJWKS:
-          uri: https://one.example.com/jwt/public-key/jwks.json
-    targetRef:
-      group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
   status:
@@ -229,12 +147,6 @@ securityPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: 'This policy is being overridden by other securityPolicies for these
-          routes: [default/httproute-1]'
-        reason: Overridden
-        status: "True"
-        type: Overridden
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   envoy-gateway/gateway-1:
@@ -282,7 +194,7 @@ xdsIR:
             defaultAction: Deny
             rules:
             - action: Deny
-              name: allow-scope-foo-bar
+              name: allow-jwt-claim
               principal:
                 jwt:
                   claims:
@@ -306,42 +218,3 @@ xdsIR:
               name: example1
               remoteJWKS:
                 uri: https://two.example.com/jwt/public-key/jwks.json
-      - destination:
-          name: httproute/default/httproute-2/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            protocol: HTTP
-            weight: 1
-        hostname: www.example.com
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-2
-          namespace: default
-        name: httproute/default/httproute-2/rule/0/match/0/www_example_com
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /bar
-        security:
-          authorization:
-            defaultAction: Deny
-            rules:
-            - action: Deny
-              name: allow-scope-foo
-              principal:
-                jwt:
-                  issuer: https://one.example.com
-                  scopes:
-                  - foo
-          jwt:
-            providers:
-            - audiences:
-              - one.foo.com
-              issuer: https://one.example.com
-              name: example1
-              remoteJWKS:
-                uri: https://one.example.com/jwt/public-key/jwks.json
