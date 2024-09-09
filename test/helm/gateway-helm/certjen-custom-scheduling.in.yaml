@@ -1,0 +1,22 @@
+global:
+  images:
+    envoyGateway:
+      image: "docker.io/envoyproxy/gateway-dev:latest"
+      pullPolicy: Always
+certgen:
+  job:
+    pod:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: label1
+                operator: In
+                values:
+                - value1
+      tolerations:
+        - key: taint1
+          operator: Equal
+          value: tol1
+          effect: NoSchedule
