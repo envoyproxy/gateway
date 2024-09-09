@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	cncfv3 "github.com/cncf/xds/go/xds/core/v3"
 	matcherv3 "github.com/cncf/xds/go/xds/type/matcher/v3"
@@ -18,6 +19,8 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	networkinput "github.com/envoyproxy/go-control-plane/envoy/extensions/matching/common_inputs/network/v3"
 	ipmatcherv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/matching/input_matchers/ip/v3"
+	metadatav3 "github.com/envoyproxy/go-control-plane/envoy/extensions/matching/input_matchers/metadata/v3"
+	envoymatcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
@@ -124,8 +127,6 @@ func (*rbac) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 		authorization = irRoute.Security.Authorization
 		allowAction   *anypb.Any
 		denyAction    *anypb.Any
-		sourceIPInput *anypb.Any
-		ipMatcher     *anypb.Any
 		matcherList   []*matcherv3.Matcher_MatcherList_FieldMatcher
 		err           error
 	)
@@ -152,27 +153,11 @@ func (*rbac) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	// skipped.
 	// If no matcher matches, the default action will be used.
 	for _, rule := range authorization.Rules {
-		// Build the IPMatcher based on the client CIDRs.
-		ipRangeMatcher := &ipmatcherv3.Ip{
-			StatPrefix: "client_ip",
-		}
-
-		for _, cidr := range rule.Principal.ClientCIDRs {
-			ipRangeMatcher.CidrRanges = append(ipRangeMatcher.CidrRanges, &configv3.CidrRange{
-				AddressPrefix: cidr.IP,
-				PrefixLen: &wrapperspb.UInt32Value{
-					Value: cidr.MaskLen,
-				},
-			})
-		}
-
-		if ipMatcher, err = anypb.New(ipRangeMatcher); err != nil {
-			return err
-		}
-
-		if sourceIPInput, err = anypb.New(&networkinput.SourceIPInput{}); err != nil {
-			return err
-		}
+		var (
+			ipPredicate  *matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_
+			jwtPredicate []*matcherv3.Matcher_MatcherList_Predicate
+			predicate    *matcherv3.Matcher_MatcherList_Predicate
+		)
 
 		// Determine the action for the current rule.
 		ruleAction := allowAction
@@ -180,24 +165,55 @@ func (*rbac) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 			ruleAction = denyAction
 		}
 
-		// Add the matcher generated with the current rule to the matcher list.
-		matcherList = append(matcherList, &matcherv3.Matcher_MatcherList_FieldMatcher{
-			Predicate: &matcherv3.Matcher_MatcherList_Predicate{
-				MatchType: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_{
-					SinglePredicate: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate{
-						Input: &cncfv3.TypedExtensionConfig{
-							Name:        "client_ip",
-							TypedConfig: sourceIPInput,
-						},
-						Matcher: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_CustomMatch{
-							CustomMatch: &cncfv3.TypedExtensionConfig{
-								Name:        "ip_matcher",
-								TypedConfig: ipMatcher,
-							},
-						},
+		if len(rule.Principal.ClientCIDRs) > 0 {
+			if ipPredicate, err = buildIPPredicate(rule.Principal.ClientCIDRs); err != nil {
+				return err
+			}
+		}
+
+		if rule.Principal.JWT != nil {
+			if jwtPredicate, err = buildJWTPredicate(*rule.Principal.JWT); err != nil {
+				return err
+			}
+		}
+
+		switch {
+		case ipPredicate != nil && jwtPredicate != nil:
+			predicates := []*matcherv3.Matcher_MatcherList_Predicate{
+				{
+					MatchType: ipPredicate,
+				},
+			}
+			predicates = append(predicates, jwtPredicate...)
+
+			predicate = &matcherv3.Matcher_MatcherList_Predicate{
+				MatchType: &matcherv3.Matcher_MatcherList_Predicate_AndMatcher{
+					AndMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
+						Predicate: predicates,
 					},
 				},
-			},
+			}
+		case ipPredicate != nil:
+			predicate = &matcherv3.Matcher_MatcherList_Predicate{
+				MatchType: ipPredicate,
+			}
+		case jwtPredicate != nil:
+			if len(jwtPredicate) > 1 {
+				predicate = &matcherv3.Matcher_MatcherList_Predicate{
+					MatchType: &matcherv3.Matcher_MatcherList_Predicate_AndMatcher{
+						AndMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
+							Predicate: jwtPredicate,
+						},
+					},
+				}
+			} else if len(jwtPredicate) == 1 {
+				predicate = jwtPredicate[0]
+			}
+		}
+
+		// Add the matcher generated with the current rule to the matcher list.
+		matcherList = append(matcherList, &matcherv3.Matcher_MatcherList_FieldMatcher{
+			Predicate: predicate,
 			OnMatch: &matcherv3.Matcher_OnMatch{
 				OnMatch: &matcherv3.Matcher_OnMatch_Action{
 					Action: &cncfv3.TypedExtensionConfig{
@@ -260,6 +276,240 @@ func (*rbac) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	route.TypedPerFilterConfig[egv1a1.EnvoyFilterRBAC.String()] = routeCfgAny
 
 	return nil
+}
+
+func buildIPPredicate(clientCIDRs []*ir.CIDRMatch) (*matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_, error) {
+	var (
+		sourceIPInput *anypb.Any
+		ipMatcher     *anypb.Any
+		err           error
+	)
+
+	// Build the IPMatcher based on the client CIDRs.
+	ipRangeMatcher := &ipmatcherv3.Ip{
+		StatPrefix: "client_ip",
+	}
+
+	for _, cidr := range clientCIDRs {
+		ipRangeMatcher.CidrRanges = append(ipRangeMatcher.CidrRanges, &configv3.CidrRange{
+			AddressPrefix: cidr.IP,
+			PrefixLen: &wrapperspb.UInt32Value{
+				Value: cidr.MaskLen,
+			},
+		})
+	}
+
+	if ipMatcher, err = anypb.New(ipRangeMatcher); err != nil {
+		return nil, err
+	}
+
+	if sourceIPInput, err = anypb.New(&networkinput.SourceIPInput{}); err != nil {
+		return nil, err
+	}
+
+	return &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_{
+		SinglePredicate: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate{
+			Input: &cncfv3.TypedExtensionConfig{
+				Name:        "client_ip",
+				TypedConfig: sourceIPInput,
+			},
+			Matcher: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_CustomMatch{
+				CustomMatch: &cncfv3.TypedExtensionConfig{
+					Name:        "ip_matcher",
+					TypedConfig: ipMatcher,
+				},
+			},
+		},
+	}, nil
+}
+
+func buildJWTPredicate(jwt egv1a1.JWTPrincipal) ([]*matcherv3.Matcher_MatcherList_Predicate, error) {
+	jwtPredicate := []*matcherv3.Matcher_MatcherList_Predicate{}
+
+	// Build the scope matchers.
+	// Multiple scopes are ANDed together.
+	for _, scope := range jwt.Scopes {
+		var (
+			inputPb   *anypb.Any
+			matcherPb *anypb.Any
+			err       error
+		)
+
+		input := &networkinput.DynamicMetadataInput{
+			Filter: "envoy.filters.http.jwt_authn",
+			Path: []*networkinput.DynamicMetadataInput_PathSegment{
+				{
+					Segment: &networkinput.DynamicMetadataInput_PathSegment_Key{
+						Key: jwt.Issuer, // The issuer is used as the `payload_in_metadata` in the JWT Authn filter.
+					},
+				},
+				{
+					Segment: &networkinput.DynamicMetadataInput_PathSegment_Key{
+						Key: "scope",
+					},
+				},
+			},
+		}
+
+		scopeMatcher := &metadatav3.Metadata{
+			Value: &envoymatcherv3.ValueMatcher{
+				MatchPattern: &envoymatcherv3.ValueMatcher_StringMatch{
+					StringMatch: &envoymatcherv3.StringMatcher{
+						MatchPattern: &envoymatcherv3.StringMatcher_SafeRegex{
+							SafeRegex: &envoymatcherv3.RegexMatcher{
+								Regex: "\b" + string(scope) + "\b",
+							},
+						},
+					},
+				},
+			},
+		}
+
+		if inputPb, err = anypb.New(input); err != nil {
+			return nil, err
+		}
+
+		if matcherPb, err = anypb.New(scopeMatcher); err != nil {
+			return nil, err
+		}
+
+		scopePredicate := matcherv3.Matcher_MatcherList_Predicate_SinglePredicate{
+			Input: &cncfv3.TypedExtensionConfig{
+				Name:        "scope",
+				TypedConfig: inputPb,
+			},
+			Matcher: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_CustomMatch{
+				CustomMatch: &cncfv3.TypedExtensionConfig{
+					Name:        "scope_matcher",
+					TypedConfig: matcherPb,
+				},
+			},
+		}
+
+		jwtPredicate = append(jwtPredicate,
+			&matcherv3.Matcher_MatcherList_Predicate{
+				MatchType: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_{
+					SinglePredicate: &scopePredicate,
+				},
+			},
+		)
+	}
+
+	// Build the claim matchers.
+	// Multiple claims are ANDed together.
+	// Multiple values for a claim are ORed together.
+	// For example, if we have two claims: "claim1" with values ["value1", "value2"], and "claim2" with values ["value3", "value4"],
+	// the resulting matcher will be: (claim1 == value1 OR claim1 == value2) AND (claim2 == value3 OR claim2 == value4).
+	predicateForAllClaims := []*matcherv3.Matcher_MatcherList_Predicate{}
+	for _, claim := range jwt.Claims {
+		var (
+			inputPb   *anypb.Any
+			matcherPb *anypb.Any
+			err       error
+		)
+
+		path := []*networkinput.DynamicMetadataInput_PathSegment{
+			{
+				Segment: &networkinput.DynamicMetadataInput_PathSegment_Key{
+					Key: jwt.Issuer, // The issuer is used as the `payload_in_metadata` in the JWT Authn filter.
+				},
+			},
+		}
+
+		for _, segment := range strings.Split(claim.Name, ".") {
+			path = append(path, &networkinput.DynamicMetadataInput_PathSegment{
+				Segment: &networkinput.DynamicMetadataInput_PathSegment_Key{
+					Key: segment,
+				},
+			})
+		}
+
+		input := &networkinput.DynamicMetadataInput{
+			Filter: "envoy.filters.http.jwt_authn",
+			Path:   path,
+		}
+
+		if inputPb, err = anypb.New(input); err != nil {
+			return nil, err
+		}
+
+		predicateForOneClaim := []*matcherv3.Matcher_MatcherList_Predicate{}
+		for _, value := range claim.Values {
+			var valueMatcher *envoymatcherv3.ValueMatcher
+
+			if claim.ValueType != nil && *claim.ValueType == egv1a1.JWTClaimValueTypeStringArray {
+				valueMatcher = &envoymatcherv3.ValueMatcher{
+					MatchPattern: &envoymatcherv3.ValueMatcher_ListMatch{
+						ListMatch: &envoymatcherv3.ListMatcher{
+							MatchPattern: &envoymatcherv3.ListMatcher_OneOf{
+								OneOf: &envoymatcherv3.ValueMatcher{
+									MatchPattern: &envoymatcherv3.ValueMatcher_StringMatch{
+										StringMatch: &envoymatcherv3.StringMatcher{
+											MatchPattern: &envoymatcherv3.StringMatcher_Exact{
+												Exact: value,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			} else {
+				valueMatcher = &envoymatcherv3.ValueMatcher{
+					MatchPattern: &envoymatcherv3.ValueMatcher_StringMatch{
+						StringMatch: &envoymatcherv3.StringMatcher{
+							MatchPattern: &envoymatcherv3.StringMatcher_Exact{
+								Exact: value,
+							},
+						},
+					},
+				}
+			}
+
+			if matcherPb, err = anypb.New(&metadatav3.Metadata{
+				Value: valueMatcher,
+			}); err != nil {
+				return nil, err
+			}
+
+			predicateForOneClaim = append(predicateForOneClaim, &matcherv3.Matcher_MatcherList_Predicate{
+				MatchType: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_{
+					SinglePredicate: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate{
+						Input: &cncfv3.TypedExtensionConfig{
+							Name:        "claim",
+							TypedConfig: inputPb,
+						},
+						Matcher: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_CustomMatch{
+							CustomMatch: &cncfv3.TypedExtensionConfig{
+								Name:        "claim_matcher",
+								TypedConfig: matcherPb,
+							},
+						},
+					},
+				},
+			})
+		}
+
+		if len(predicateForOneClaim) > 1 {
+			predicateForAllClaims = append(predicateForAllClaims, &matcherv3.Matcher_MatcherList_Predicate{
+				MatchType: &matcherv3.Matcher_MatcherList_Predicate_OrMatcher{
+					OrMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
+						Predicate: predicateForOneClaim,
+					},
+				},
+			})
+		} else if len(predicateForOneClaim) == 1 {
+			predicateForAllClaims = append(predicateForAllClaims, &matcherv3.Matcher_MatcherList_Predicate{
+				MatchType: predicateForOneClaim[0].MatchType.(*matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_),
+			})
+		}
+	}
+
+	// And all the claims and scopes together.
+	jwtPredicate = append(jwtPredicate, predicateForAllClaims...)
+
+	return jwtPredicate, nil
 }
 
 func (c *rbac) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) error {

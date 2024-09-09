@@ -48,7 +48,8 @@ type AuthorizationRule struct {
 // Principal specifies the client identity of a request.
 // A client identity can be a client IP, a JWT claim, username from the Authorization header,
 // or any other identity that can be extracted from a custom header.
-// Currently, only the client IP is supported.
+
+// If there are multiple principal types, all principals must match for the rule to match.
 //
 // +kubebuilder:validation:XValidation:rule="(has(self.clientCIDRs) || has(self.jwt))",message="at least one of clientCIDRs or jwt must be specified"
 type Principal struct {
@@ -80,6 +81,12 @@ type Principal struct {
 //
 // +kubebuilder:validation:XValidation:rule="(has(self.claims) || has(self.scopes))",message="at least one of claims or scopes must be specified"
 type JWTPrincipal struct {
+	// Issuer must match the issuer field in the JWT authentication configuration.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Issuer string `json:"issuer"`
+
 	// Claims are the claims in a JWT token.
 	//
 	// If multiple claims are specified, all claims must match for the rule to match.

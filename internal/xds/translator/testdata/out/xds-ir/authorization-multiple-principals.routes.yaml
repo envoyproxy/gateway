@@ -1,0 +1,253 @@
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http
+  virtualHosts:
+  - domains:
+    - www.example.com
+    name: envoy-gateway/gateway-1/http/www_example_com
+    routes:
+    - match:
+        pathSeparatedPrefix: /foo
+      name: httproute/default/httproute-1/rule/0/match/0/www_example_com
+      route:
+        cluster: httproute/default/httproute-1/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.rbac:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute
+          rbac:
+            matcher:
+              matcherList:
+                matchers:
+                - onMatch:
+                    action:
+                      name: allow-rule-1
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                        name: ALLOW
+                  predicate:
+                    andMatcher:
+                      predicate:
+                      - singlePredicate:
+                          customMatch:
+                            name: ip_matcher
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.ip.v3.Ip
+                              cidrRanges:
+                              - addressPrefix: 192.168.1.0
+                                prefixLen: 24
+                              - addressPrefix: 192.168.2.0
+                                prefixLen: 24
+                              statPrefix: client_ip
+                          input:
+                            name: client_ip
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput
+                      - singlePredicate:
+                          customMatch:
+                            name: scope_matcher
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.metadata.v3.Metadata
+                              value:
+                                stringMatch:
+                                  safeRegex:
+                                    regex: "\bfoo\b"
+                          input:
+                            name: scope
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
+                              filter: envoy.filters.http.jwt_authn
+                              path:
+                              - key: https://one.example.com
+                              - key: scope
+                      - orMatcher:
+                          predicate:
+                          - singlePredicate:
+                              customMatch:
+                                name: claim_matcher
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.metadata.v3.Metadata
+                                  value:
+                                    listMatch:
+                                      oneOf:
+                                        stringMatch:
+                                          exact: admin
+                              input:
+                                name: claim
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
+                                  filter: envoy.filters.http.jwt_authn
+                                  path:
+                                  - key: https://one.example.com
+                                  - key: roles
+                          - singlePredicate:
+                              customMatch:
+                                name: claim_matcher
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.metadata.v3.Metadata
+                                  value:
+                                    listMatch:
+                                      oneOf:
+                                        stringMatch:
+                                          exact: superuser
+                              input:
+                                name: claim
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
+                                  filter: envoy.filters.http.jwt_authn
+                                  path:
+                                  - key: https://one.example.com
+                                  - key: roles
+                      - singlePredicate:
+                          customMatch:
+                            name: claim_matcher
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.metadata.v3.Metadata
+                              value:
+                                stringMatch:
+                                  exact: engineering
+                          input:
+                            name: claim
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
+                              filter: envoy.filters.http.jwt_authn
+                              path:
+                              - key: https://one.example.com
+                              - key: department
+                - onMatch:
+                    action:
+                      name: allow-rule-2
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                        name: ALLOW
+                  predicate:
+                    andMatcher:
+                      predicate:
+                      - singlePredicate:
+                          customMatch:
+                            name: ip_matcher
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.ip.v3.Ip
+                              cidrRanges:
+                              - addressPrefix: 10.0.1.0
+                                prefixLen: 24
+                              - addressPrefix: 10.0.2.0
+                                prefixLen: 24
+                              statPrefix: client_ip
+                          input:
+                            name: client_ip
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput
+                      - singlePredicate:
+                          customMatch:
+                            name: scope_matcher
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.metadata.v3.Metadata
+                              value:
+                                stringMatch:
+                                  safeRegex:
+                                    regex: "\bfor\b"
+                          input:
+                            name: scope
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
+                              filter: envoy.filters.http.jwt_authn
+                              path:
+                              - key: https://two.example.com
+                              - key: scope
+                      - singlePredicate:
+                          customMatch:
+                            name: scope_matcher
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.metadata.v3.Metadata
+                              value:
+                                stringMatch:
+                                  safeRegex:
+                                    regex: "\bbar\b"
+                          input:
+                            name: scope
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
+                              filter: envoy.filters.http.jwt_authn
+                              path:
+                              - key: https://two.example.com
+                              - key: scope
+                      - orMatcher:
+                          predicate:
+                          - singlePredicate:
+                              customMatch:
+                                name: claim_matcher
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.metadata.v3.Metadata
+                                  value:
+                                    listMatch:
+                                      oneOf:
+                                        stringMatch:
+                                          exact: admin
+                              input:
+                                name: claim
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
+                                  filter: envoy.filters.http.jwt_authn
+                                  path:
+                                  - key: https://two.example.com
+                                  - key: roles
+                          - singlePredicate:
+                              customMatch:
+                                name: claim_matcher
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.metadata.v3.Metadata
+                                  value:
+                                    listMatch:
+                                      oneOf:
+                                        stringMatch:
+                                          exact: superuser
+                              input:
+                                name: claim
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
+                                  filter: envoy.filters.http.jwt_authn
+                                  path:
+                                  - key: https://two.example.com
+                                  - key: roles
+                      - orMatcher:
+                          predicate:
+                          - singlePredicate:
+                              customMatch:
+                                name: claim_matcher
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.metadata.v3.Metadata
+                                  value:
+                                    stringMatch:
+                                      exact: alice
+                              input:
+                                name: claim
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
+                                  filter: envoy.filters.http.jwt_authn
+                                  path:
+                                  - key: https://two.example.com
+                                  - key: name
+                          - singlePredicate:
+                              customMatch:
+                                name: claim_matcher
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.metadata.v3.Metadata
+                                  value:
+                                    stringMatch:
+                                      exact: bob
+                              input:
+                                name: claim
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
+                                  filter: envoy.filters.http.jwt_authn
+                                  path:
+                                  - key: https://two.example.com
+                                  - key: name
+              onNoMatch:
+                action:
+                  name: default
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                    action: DENY
+                    name: DENY

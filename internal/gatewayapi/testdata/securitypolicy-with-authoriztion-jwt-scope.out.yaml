@@ -16,7 +16,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 3
+    - attachedRoutes: 2
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -116,44 +116,6 @@ httpRoutes:
         name: gateway-1
         namespace: envoy-gateway
         sectionName: http
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
-  metadata:
-    creationTimestamp: null
-    name: httproute-3
-    namespace: default
-  spec:
-    hostnames:
-    - www.example.com
-    parentRefs:
-    - name: gateway-1
-      namespace: envoy-gateway
-      sectionName: http
-    rules:
-    - backendRefs:
-      - name: service-1
-        port: 8080
-      matches:
-      - path:
-          value: /test
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: http
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -179,52 +141,28 @@ securityPolicies:
     namespace: default
   spec:
     authorization:
-      defaultAction: Allow
+      defaultAction: Deny
       rules:
       - action: Deny
-        name: deny-location-1
+        name: allow-scope-foo-bar
         principal:
-          clientCIDRs:
-          - 192.168.1.0/24
-          - 192.168.2.0/24
-      - action: Deny
-        name: deny-location-2
-        principal:
-          clientCIDRs:
-          - 10.75.1.0/24
-          - 10.75.2.0/24
+          jwt:
+            issuer: https://two.example.com
+            scopes:
+            - foo
+            - bar
+    jwt:
+      providers:
+      - audiences:
+        - two.foo.com
+        issuer: https://two.example.com
+        name: example1
+        remoteJWKS:
+          uri: https://two.example.com/jwt/public-key/jwks.json
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: http
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: SecurityPolicy
-  metadata:
-    creationTimestamp: null
-    name: policy-for-http-route-3
-    namespace: default
-  spec:
-    authorization:
-      defaultAction: null
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: httproute-3
   status:
     ancestors:
     - ancestorRef:
@@ -250,11 +188,21 @@ securityPolicies:
     authorization:
       defaultAction: Deny
       rules:
-      - action: Allow
+      - action: Deny
+        name: allow-scope-foo
         principal:
-          clientCIDRs:
-          - 10.0.1.0/24
-          - 10.0.2.0/24
+          jwt:
+            issuer: https://one.example.com
+            scopes:
+            - foo
+    jwt:
+      providers:
+      - audiences:
+        - one.foo.com
+        issuer: https://one.example.com
+        name: example1
+        remoteJWKS:
+          uri: https://one.example.com/jwt/public-key/jwks.json
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -274,7 +222,7 @@ securityPolicies:
         type: Accepted
       - lastTransitionTime: null
         message: 'This policy is being overridden by other securityPolicies for these
-          routes: [default/httproute-1 default/httproute-3]'
+          routes: [default/httproute-1]'
         reason: Overridden
         status: "True"
         type: Overridden
@@ -301,29 +249,6 @@ xdsIR:
       port: 10080
       routes:
       - destination:
-          name: httproute/default/httproute-3/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            protocol: HTTP
-            weight: 1
-        hostname: www.example.com
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-3
-          namespace: default
-        name: httproute/default/httproute-3/rule/0/match/0/www_example_com
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /test
-        security:
-          authorization:
-            defaultAction: Deny
-      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -345,36 +270,24 @@ xdsIR:
           prefix: /foo
         security:
           authorization:
-            defaultAction: Allow
+            defaultAction: Deny
             rules:
             - action: Deny
-              name: deny-location-1
+              name: allow-scope-foo-bar
               principal:
-                clientCIDRs:
-                - cidr: 192.168.1.0/24
-                  distinct: false
-                  ip: 192.168.1.0
-                  isIPv6: false
-                  maskLen: 24
-                - cidr: 192.168.2.0/24
-                  distinct: false
-                  ip: 192.168.2.0
-                  isIPv6: false
-                  maskLen: 24
-            - action: Deny
-              name: deny-location-2
-              principal:
-                clientCIDRs:
-                - cidr: 10.75.1.0/24
-                  distinct: false
-                  ip: 10.75.1.0
-                  isIPv6: false
-                  maskLen: 24
-                - cidr: 10.75.2.0/24
-                  distinct: false
-                  ip: 10.75.2.0
-                  isIPv6: false
-                  maskLen: 24
+                jwt:
+                  issuer: https://two.example.com
+                  scopes:
+                  - foo
+                  - bar
+          jwt:
+            providers:
+            - audiences:
+              - two.foo.com
+              issuer: https://two.example.com
+              name: example1
+              remoteJWKS:
+                uri: https://two.example.com/jwt/public-key/jwks.json
       - destination:
           name: httproute/default/httproute-2/rule/0
           settings:
@@ -399,17 +312,18 @@ xdsIR:
           authorization:
             defaultAction: Deny
             rules:
-            - action: Allow
-              name: securitypolicy/envoy-gateway/policy-for-gateway/authorization/rule/0
+            - action: Deny
+              name: allow-scope-foo
               principal:
-                clientCIDRs:
-                - cidr: 10.0.1.0/24
-                  distinct: false
-                  ip: 10.0.1.0
-                  isIPv6: false
-                  maskLen: 24
-                - cidr: 10.0.2.0/24
-                  distinct: false
-                  ip: 10.0.2.0
-                  isIPv6: false
-                  maskLen: 24
+                jwt:
+                  issuer: https://one.example.com
+                  scopes:
+                  - foo
+          jwt:
+            providers:
+            - audiences:
+              - one.foo.com
+              issuer: https://one.example.com
+              name: example1
+              remoteJWKS:
+                uri: https://one.example.com/jwt/public-key/jwks.json

@@ -52,25 +52,6 @@ httpRoutes:
       backendRefs:
       - name: service-1
         port: 8080
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
-  metadata:
-    namespace: default
-    name: httproute-3
-  spec:
-    hostnames:
-    - www.example.com
-    parentRefs:
-    - namespace: envoy-gateway
-      name: gateway-1
-      sectionName: http
-    rules:
-    - matches:
-      - path:
-          value: "/test"
-      backendRefs:
-      - name: service-1
-        port: 8080
 securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
@@ -82,47 +63,50 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
+    jwt:
+      providers:
+      - name: example1
+        issuer: https://one.example.com
+        audiences:
+        - one.foo.com
+        remoteJWKS:
+          uri: https://one.example.com/jwt/public-key/jwks.json
     authorization:
       defaultAction: Deny
       rules:
-      - action: Allow
+      - name: "allow-scope-foo"
+        action: Deny
         principal:
-          clientCIDRs:
-          - 10.0.1.0/24
-          - 10.0.2.0/24
+          jwt:
+            issuer: https://one.example.com
+            scopes:
+            - "foo"
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
     namespace: default
-    name: policy-for-http-route-1   # This policy should attach httproute-1
+    name: policy-for-http-route-1
   spec:
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
+    jwt:
+      providers:
+      - name: example1
+        issuer: https://two.example.com
+        audiences:
+        - two.foo.com
+        remoteJWKS:
+          uri: https://two.example.com/jwt/public-key/jwks.json
     authorization:
-      defaultAction: Allow
+      defaultAction: Deny
       rules:
-      - name: "deny-location-1"
+      - name: "allow-scope-foo-bar"
         action: Deny
         principal:
-          clientCIDRs:
-          - 192.168.1.0/24
-          - 192.168.2.0/24
-      - name: "deny-location-2"
-        action: Deny
-        principal:
-          clientCIDRs:
-          - 10.75.1.0/24
-          - 10.75.2.0/24
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: SecurityPolicy
-  metadata:
-    namespace: default
-    name: policy-for-http-route-3   # This policy should attach httproute-3
-  spec:
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: httproute-3
-    authorization: {}
+          jwt:
+            issuer: https://two.example.com
+            scopes:
+            - "foo"
+            - "bar"

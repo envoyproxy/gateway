@@ -1,0 +1,183 @@
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http
+  virtualHosts:
+  - domains:
+    - www.example.com
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: http
+    name: envoy-gateway/gateway-1/http/www_example_com
+    routes:
+    - match:
+        pathSeparatedPrefix: /foo
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: httproute-1
+              namespace: default
+      name: httproute/default/httproute-1/rule/0/match/0/www_example_com
+      route:
+        cluster: httproute/default/httproute-1/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.jwt_authn:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
+          requirementName: httproute/default/httproute-1/rule/0/match/0/www_example_com
+        envoy.filters.http.rbac:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute
+          rbac:
+            matcher:
+              matcherList:
+                matchers:
+                - onMatch:
+                    action:
+                      name: allow-claim-roles
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                        action: DENY
+                        name: DENY
+                  predicate:
+                    orMatcher:
+                      predicate:
+                      - singlePredicate:
+                          customMatch:
+                            name: claim_matcher
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.metadata.v3.Metadata
+                              value:
+                                stringMatch:
+                                  exact: alice
+                          input:
+                            name: claim
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
+                              filter: envoy.filters.http.jwt_authn
+                              path:
+                              - key: https://two.example.com
+                              - key: name
+                      - singlePredicate:
+                          customMatch:
+                            name: claim_matcher
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.metadata.v3.Metadata
+                              value:
+                                stringMatch:
+                                  exact: bob
+                          input:
+                            name: claim
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
+                              filter: envoy.filters.http.jwt_authn
+                              path:
+                              - key: https://two.example.com
+                              - key: name
+              onNoMatch:
+                action:
+                  name: default
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                    action: DENY
+                    name: DENY
+    - match:
+        pathSeparatedPrefix: /bar
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: httproute-2
+              namespace: default
+      name: httproute/default/httproute-2/rule/0/match/0/www_example_com
+      route:
+        cluster: httproute/default/httproute-2/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.jwt_authn:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
+          requirementName: httproute/default/httproute-2/rule/0/match/0/www_example_com
+        envoy.filters.http.rbac:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute
+          rbac:
+            matcher:
+              matcherList:
+                matchers:
+                - onMatch:
+                    action:
+                      name: allow-claim-roles
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                        action: DENY
+                        name: DENY
+                  predicate:
+                    andMatcher:
+                      predicate:
+                      - orMatcher:
+                          predicate:
+                          - singlePredicate:
+                              customMatch:
+                                name: claim_matcher
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.metadata.v3.Metadata
+                                  value:
+                                    listMatch:
+                                      oneOf:
+                                        stringMatch:
+                                          exact: admin
+                              input:
+                                name: claim
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
+                                  filter: envoy.filters.http.jwt_authn
+                                  path:
+                                  - key: https://two.example.com
+                                  - key: roles
+                          - singlePredicate:
+                              customMatch:
+                                name: claim_matcher
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.metadata.v3.Metadata
+                                  value:
+                                    listMatch:
+                                      oneOf:
+                                        stringMatch:
+                                          exact: superuser
+                              input:
+                                name: claim
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
+                                  filter: envoy.filters.http.jwt_authn
+                                  path:
+                                  - key: https://two.example.com
+                                  - key: roles
+                      - singlePredicate:
+                          customMatch:
+                            name: claim_matcher
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.metadata.v3.Metadata
+                              value:
+                                stringMatch:
+                                  exact: engineering
+                          input:
+                            name: claim
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
+                              filter: envoy.filters.http.jwt_authn
+                              path:
+                              - key: https://two.example.com
+                              - key: department
+              onNoMatch:
+                action:
+                  name: default
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                    action: DENY
+                    name: DENY

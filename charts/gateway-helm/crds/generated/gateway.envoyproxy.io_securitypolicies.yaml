@@ -167,6 +167,12 @@ spec:
                                   maxItems: 16
                                   minItems: 1
                                   type: array
+                                issuer:
+                                  description: Issuer must match the issuer field
+                                    in the JWT authentication configuration.
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
                                 scopes:
                                   description: |-
                                     Scopes are a special type of claim in a JWT token that represents the permissions of the client.
@@ -182,6 +188,8 @@ spec:
                                   maxItems: 16
                                   minItems: 1
                                   type: array
+                              required:
+                              - issuer
                               type: object
                               x-kubernetes-validations:
                               - message: at least one of claims or scopes must be

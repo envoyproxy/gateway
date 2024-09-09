@@ -2197,6 +2197,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
+| `issuer` | _string_ |  true  | Issuer must match the issuer field in the JWT authentication configuration. |
 | `claims` | _[JWTClaim](#jwtclaim) array_ |  false  | Claims are the claims in a JWT token.<br /><br />If multiple claims are specified, all claims must match for the rule to match.<br />For example, if there are two claims: one for the audience and one for the issuer,<br />the rule will match only if both the audience and the issuer match. |
 | `scopes` | _[JWTScope](#jwtscope) array_ |  false  | Scopes are a special type of claim in a JWT token that represents the permissions of the client.<br /><br />The value of the scopes field should be a space delimited string that is expected in the scope parameter,<br />as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749#page-23.<br /><br />If multiple scopes are specified, all scopes must match for the rule to match. |
 
@@ -2717,10 +2718,7 @@ _Appears in:_
 
 
 
-Principal specifies the client identity of a request.
-A client identity can be a client IP, a JWT claim, username from the Authorization header,
-or any other identity that can be extracted from a custom header.
-Currently, only the client IP is supported.
+If there are multiple principal types, all principals must match for the rule to match.
 
 _Appears in:_
 - [AuthorizationRule](#authorizationrule)
