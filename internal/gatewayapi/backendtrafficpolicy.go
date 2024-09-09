@@ -773,7 +773,7 @@ func ratelimitUnitToDuration(unit egv1a1.RateLimitUnit) int64 {
 
 func int64ToUint32(in int64) (uint32, bool) {
 	if in >= 0 && in <= math.MaxUint32 {
-		return uint32(in), true // nolint: gosec
+		return uint32(in), true
 	}
 	return 0, false
 }

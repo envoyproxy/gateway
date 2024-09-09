@@ -63,7 +63,7 @@ func url2Cluster(strURL string) (*urlCluster, error) {
 		}
 	}
 
-	name := clusterName(u.Hostname(), uint32(port)) // nolint: gosec
+	name := clusterName(u.Hostname(), uint32(port))
 
 	if ip, err := netip.ParseAddr(u.Hostname()); err == nil {
 		if ip.Unmap().Is4() {
@@ -74,7 +74,7 @@ func url2Cluster(strURL string) (*urlCluster, error) {
 	return &urlCluster{
 		name:         name,
 		hostname:     u.Hostname(),
-		port:         uint32(port), // nolint: gosec
+		port:         uint32(port),
 		endpointType: epType,
 		tls:          u.Scheme == "https",
 	}, nil
