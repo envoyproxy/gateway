@@ -46,6 +46,7 @@ const jwtToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6ImI1MjBiM2MyYzRiZD
 //
 // nolint: gosec
 const jwtTokenWithoutRequiredValues = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6ImI1MjBiM2MyYzRiZDc1YTEwZTljZWJjOTU3NjkzM2RjIn0.eyJpc3MiOiJodHRwczovL2Zvby5iYXIuY29tIiwic3ViIjoiMTIzNDU2Nzg5MCIsIm5hbWUiOiJBbGljZSIsImFkbWluIjp0cnVlLCJpYXQiOjE1MTYyMzkwMjIsInJvbGVzIjoiZGV2ZWxvcGVyIiwic2NvcGUiOiJyZWFkIGFkZCBkZWxldGUifQ.MjEN1i3dYAiuOyHqdLI42Zulqtu37J1_OXhp0GzXwyes1nRtdyc4YHMWcPzmX2cbWEj87YuTUDz2aYITzG2PB94qQ4ec4VyAcdERH4LhSKf-lPonhFbIpYqefbjmZmnrPh0wG372AEH6jL5RBxhkuoh2TROFYkcM6f1VlAxRVF8gBRpmnDNjw_rtnNju108dcJUnAL5qjzCYwqkzT_uubg0XPApMTNEsjRNJNniIqa3Ae-3BWp1qWBCEV2rpuG5oaBmYuUKtmcaVmBzTUHfpJicxw3k3UcobuCQczTZjbzWpGVXYJ252iLT_6mbiAz2ON2unZCeOWwAEGS-zCH5O62Z6S3QjnJzr1Si0tYdEBoCxHULbXCDOTdMPVKWgY_lSiR1AjwW9NNbeeBaVR0YUnQg8N35WoJvMjVNECnu83_nIE4c7mdEnFSUWeaRr36GYhMX07Vtc5gQdTHIf82NmXSL8wC0jUOq_qI-DuHV-rczvhn2YsUDN3WyyPsuQ3E0L"
+
 func init() {
 	ConformanceTests = append(ConformanceTests, AuthorizationJWTTest)
 }
@@ -60,7 +61,7 @@ var AuthorizationJWTTest = suite.ConformanceTest{
 		route2NN := types.NamespacedName{Name: "http-with-authorization-jwt-scope", Namespace: ns}
 		route3NN := types.NamespacedName{Name: "http-with-authorization-jwt-combined", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), route1NN,route2NN,route3NN)
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), route1NN, route2NN, route3NN)
 
 		ancestorRef := gwapiv1a2.ParentReference{
 			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),

@@ -55,7 +55,7 @@
                               value:
                                 stringMatch:
                                   safeRegex:
-                                    regex: "\bfoo\b"
+                                    regex: (^|.*\s)foo(\s.*|$)
                           input:
                             name: scope
                             typedConfig:
@@ -72,7 +72,7 @@
                               value:
                                 stringMatch:
                                   safeRegex:
-                                    regex: "\bbar\b"
+                                    regex: (^|.*\s)bar(\s.*|$)
                           input:
                             name: scope
                             typedConfig:
@@ -128,7 +128,7 @@
                           value:
                             stringMatch:
                               safeRegex:
-                                regex: "\bfoo\b"
+                                regex: (^|.*\s)foo(\s.*|$)
                       input:
                         name: scope
                         typedConfig:
