@@ -183,15 +183,13 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		}
 	} else if args.loadBalancer.RoundRobin != nil {
 		cluster.LbPolicy = clusterv3.Cluster_ROUND_ROBIN
-		if args.loadBalancer.RoundRobin.SlowStart != nil {
-			if args.loadBalancer.RoundRobin.SlowStart.Window != nil {
-				cluster.LbConfig = &clusterv3.Cluster_RoundRobinLbConfig_{
-					RoundRobinLbConfig: &clusterv3.Cluster_RoundRobinLbConfig{
-						SlowStartConfig: &clusterv3.Cluster_SlowStartConfig{
-							SlowStartWindow: durationpb.New(args.loadBalancer.RoundRobin.SlowStart.Window.Duration),
-						},
+		if args.loadBalancer.RoundRobin.SlowStart != nil && args.loadBalancer.RoundRobin.SlowStart.Window != nil {
+			cluster.LbConfig = &clusterv3.Cluster_RoundRobinLbConfig_{
+				RoundRobinLbConfig: &clusterv3.Cluster_RoundRobinLbConfig{
+					SlowStartConfig: &clusterv3.Cluster_SlowStartConfig{
+						SlowStartWindow: durationpb.New(args.loadBalancer.RoundRobin.SlowStart.Window.Duration),
 					},
-				}
+				},
 			}
 		}
 	} else if args.loadBalancer.Random != nil {
