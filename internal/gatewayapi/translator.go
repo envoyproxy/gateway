@@ -186,9 +186,6 @@ func (t *Translator) Translate(resources *Resources) (*TranslateResult, error) {
 	// Process EnvoyPatchPolicies
 	t.ProcessEnvoyPatchPolicies(resources.EnvoyPatchPolicies, xdsIR)
 
-	// Process ClientTrafficPolicies
-	clientTrafficPolicies := t.ProcessClientTrafficPolicies(resources, gateways, xdsIR, infraIR)
-
 	// Process all Addresses for all relevant Gateways.
 	t.ProcessAddresses(gateways, xdsIR, infraIR, resources)
 
@@ -209,6 +206,9 @@ func (t *Translator) Translate(resources *Resources) (*TranslateResult, error) {
 
 	// Process all relevant UDPRoutes.
 	udpRoutes := t.ProcessUDPRoutes(resources.UDPRoutes, gateways, resources, xdsIR)
+
+	// Process ClientTrafficPolicies
+	clientTrafficPolicies := t.ProcessClientTrafficPolicies(resources, gateways, xdsIR, infraIR)
 
 	// Process BackendTrafficPolicies
 	routes := []RouteContext{}
