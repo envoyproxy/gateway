@@ -1,0 +1,41 @@
+date: September 11, 2024
+
+changes:
+  - area: documentation
+    change: |
+      Bumped Golang version to 1.22.7
+
+
+  - area: conformance
+    change: |
+      Enabled GatewayHTTPListenerIsolation test
+
+
+  - area: testing
+    change: |
+      Fix download URL of envoy proxy WASM examples used in tests
+
+
+  - area: translator
+    change: |
+      Fixed url rewrite to remove trailing slash
+      Isolate HTTP route tables to listener according to Gateway-API specifications
+      Fixed identification of ReferenceGrant when multiple ReferenceGrants exist in a namespace
+      Fixed added header values as a command and space delimited list
+      Fixed assertion on expected status in active HTTP healthcheck
+      Fixed rejection of invalid Backends referenced by xRoutes
+      Fixed support for empty SlowStart configuration when using LeastRequest loadbalancing
+
+
+  - area: infra-manager
+    change: |
+      Pin ratelimit version to 26f28d78
+      Reduce readinessProbe failureThreshold and periodSeconds of proxy
+      Expose ratelimit statsd
+
+
+  - area: providers
+    change: |
+      Fixed error returned when referenced Configmap or Secret is not found
+      Use component name in Envoy Gateway logs
+
