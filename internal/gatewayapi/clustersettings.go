@@ -299,7 +299,11 @@ func buildLoadBalancer(policy egv1a1.ClusterSettings) (*ir.LoadBalancer, error) 
 			ConsistentHash: consistentHash,
 		}
 	case egv1a1.LeastRequestLoadBalancerType:
-		lb = &ir.LoadBalancer{}
+		lb = &ir.LoadBalancer{
+			LeastRequest: &ir.LeastRequest{
+				SlowStart: &ir.SlowStart{},
+			},
+		}
 		if policy.LoadBalancer.SlowStart != nil {
 			if policy.LoadBalancer.SlowStart.Window != nil {
 				lb.LeastRequest = &ir.LeastRequest{
