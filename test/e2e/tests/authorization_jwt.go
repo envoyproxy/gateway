@@ -21,18 +21,18 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 )
 
-//	{
-//	 "sub": "1234567890",
-//	 "name": "John Doe",
-//	 "admin": true,
-//	 "iat": 1516239022,
-//	 "roles": "admin, superuser",
-//	 "scope": "read add delete modify"
-//   "iss": "https://foo.bar.com"
-//	}
+//		{
+//	  "iss": "https://foo.bar.com",
+//		 "sub": "1234567890",
+//		 "name": "John Doe",
+//		 "admin": true,
+//		 "iat": 1516239022,
+//		 "roles": "admin, superuser",
+//		 "scope": "read add delete modify"
+//		}
 //
 // nolint: gosec
-const jwtToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMiwicm9sZXMiOiJhZG1pbiwgc3VwZXJ1c2VyIiwic2NvcGUiOiJyZWFkIGFkZCBkZWxldGUgbW9kaWZ5IiwiaXNzIjoiaHR0cHM6Ly9mb28uYmFyLmNvbSJ9.bxUAAT7yk3hj4Ed_eu2wKJFpffXxgj3eQfTJ2ax1D1c"
+const jwtToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6ImI1MjBiM2MyYzRiZDc1YTEwZTljZWJjOTU3NjkzM2RjIn0.eyJpc3MiOiJodHRwczovL2Zvby5iYXIuY29tIiwic3ViIjoiMTIzNDU2Nzg5MCIsIm5hbWUiOiJKb2huIERvZSIsImFkbWluIjp0cnVlLCJpYXQiOjE1MTYyMzkwMjIsInJvbGVzIjoiYWRtaW4sIHN1cGVydXNlciIsInNjb3BlIjoicmVhZCBhZGQgZGVsZXRlIG1vZGlmeSJ9.KLL_-9NGDZSDr12SQiw4R-MaVp9jGJzT5xWHjBOSqQMr6SAm3QK6wSUJfKWxdnLR6QAYHl5rDRs_89qa96J-QkA5NQHjoXXNO36OEa7G2x-KXzeHRl8vBpsKk55ls48ua2V9CHlR0bSREE_Eq_RTKXcjox71fl2vzC6sGgbFQTi6QFFIlR1O9dK-87PE-D_aoujNcYtuoYQGrouzQ9WDQ5xoKVU4Si7bBzv1kzUOziA0J7SFrEv07Yj_p5nZZwZ3JmSQUrYfjQvXEW9FKI0hhajuWkILeAXUp2Kt5raYJliGhD_qMeFKp2aUGhDDpHj-vJuzDKo8CyF5iv-Jv-NKY_3sDp1fPOH9WoUe9ieujRusrdltfxZPOGFEST4dQreVVdOX8zB3Q0L7OScYZ5m-MdsODH0RGQrGg78iJT6Tj-Aluh9KRVlXvPbOdp7YSkaTMjf2dwY0QhillisS-IdjMjL7A3-gzdBbvU2cJh2NRAAHk9YQylgBdCnn-hmHXy_t"
 
 func init() {
 	ConformanceTests = append(ConformanceTests, AuthorizationJWTTest)

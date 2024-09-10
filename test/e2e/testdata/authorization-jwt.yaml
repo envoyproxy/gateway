@@ -30,7 +30,7 @@ spec:
     - name: example
       issuer: https://foo.bar.com
       remoteJWKS:
-        uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
+        uri: https://raw.githubusercontent.com/zhaohuabing/hugo_blog/master/static/download/jwks.json
   authorization:
     defaultAction: Deny
     rules:
