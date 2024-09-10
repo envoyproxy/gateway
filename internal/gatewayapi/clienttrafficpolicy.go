@@ -683,16 +683,12 @@ func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, httpIR *ir.HTTP
 						defaultHost = ptr.To(theHost)
 					}
 					if numMatchingRoutes > 1 {
-						defaultHost = nil
 						break
 					}
 				}
-			}
-
-			if defaultHost == nil {
 				if numMatchingRoutes == 0 {
 					return fmt.Errorf("cannot set http10 default host on listener with only wildcard hostnames")
-				} else {
+				} else if numMatchingRoutes > 1 {
 					return fmt.Errorf("cannot set http10 default host on listener with only wildcard hostnames and more than one possible default route")
 				}
 			}
