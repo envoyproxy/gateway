@@ -103,6 +103,10 @@ func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
 		config.FailureModeAllow = *extAuth.FailOpen
 	}
 
+	if extAuth.RecomputeRoute != nil {
+		config.ClearRouteCache = *extAuth.RecomputeRoute
+	}
+
 	var headersToExtAuth []*matcherv3.StringMatcher
 	for _, header := range extAuth.HeadersToExtAuth {
 		headersToExtAuth = append(headersToExtAuth, &matcherv3.StringMatcher{

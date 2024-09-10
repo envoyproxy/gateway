@@ -93,3 +93,7 @@ licensecheck: ## Check license headers are present.
 latest-release-check: ## Check if latest release and tag are created properly.
 	@$(LOG_TARGET)
 	sh tools/hack/check-latest-release.sh
+
+.PHONY: lint.markdown
+lint.markdown:
+	markdownlint -c .github/markdown_lint_config.json site/content/*

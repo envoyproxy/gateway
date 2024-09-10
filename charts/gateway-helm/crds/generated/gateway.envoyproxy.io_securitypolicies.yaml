@@ -1908,6 +1908,13 @@ spec:
                         group.
                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
                         == "" || f.group == ''gateway.envoyproxy.io'')) : true'
+                  recomputeRoute:
+                    description: |-
+                      RecomputeRoute clears the route cache and recalculates the routing decision.
+                      This field must be enabled if the headers added or modified by the ExtAuth are used for
+                      route matching decisions. If the recomputation selects a new route, features targeting
+                      the new matched route will be applied.
+                    type: boolean
                 type: object
                 x-kubernetes-validations:
                 - message: one of grpc or http must be specified

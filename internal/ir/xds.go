@@ -819,6 +819,9 @@ type OIDC struct {
 
 	// CookieNameOverrides can optionally override the generated name of the cookies set by the oauth filter.
 	CookieNameOverrides *egv1a1.OIDCCookieNames `json:"cookieNameOverrides,omitempty"`
+
+	// CookieDomain sets the domain of the cookies set by the oauth filter.
+	CookieDomain *string `json:"cookieDomain,omitempty"`
 }
 
 type OIDCProvider struct {
@@ -880,6 +883,13 @@ type ExtAuth struct {
 	// This setting determines whether to prioritize accessibility over strict security in case of authorization service failure.
 	// +optional
 	FailOpen *bool `json:"failOpen,omitempty"`
+
+	// RecomputeRoute clears the route cache and recalculates the routing decision.
+	// This field must be enabled if the headers generated from the claim are used for
+	// route matching decisions. If the recomputation selects a new route, features targeting
+	// the new matched route will be applied.
+	// +optional
+	RecomputeRoute *bool `json:"recomputeRoute,omitempty"`
 }
 
 // HTTPExtAuthService defines the HTTP External Authorization service
