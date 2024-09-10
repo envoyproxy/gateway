@@ -87,6 +87,8 @@ type JWTPrincipal struct {
 	// +kubebuilder:validation:MaxLength=253
 	Issuer string `json:"issuer"`
 
+	// TODO zhaohuabing  JWTProvider.Issuer is optional. Do we need to use JWTProvider.Name instead of Issuer?
+
 	// Claims are the claims in a JWT token.
 	//
 	// If multiple claims are specified, all claims must match for the rule to match.

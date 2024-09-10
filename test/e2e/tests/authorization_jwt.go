@@ -28,10 +28,11 @@ import (
 //	 "iat": 1516239022,
 //	 "roles": "admin, superuser",
 //	 "scope": "read add delete modify"
+//   "iss": "https://foo.bar.com"
 //	}
 //
 // nolint: gosec
-const jwtToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMiwicm9sZXMiOiJhZG1pbiwgc3VwZXJ1c2VyIiwic2NvcGUiOiJyZWFkIGFkZCBkZWxldGUgbW9kaWZ5In0.aVwLZVK2so7Ur9fQmQ3g_x9Qku7d6RiiVY4-HHPT9VQ"
+const jwtToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMiwicm9sZXMiOiJhZG1pbiwgc3VwZXJ1c2VyIiwic2NvcGUiOiJyZWFkIGFkZCBkZWxldGUgbW9kaWZ5IiwiaXNzIjoiaHR0cHM6Ly9mb28uYmFyLmNvbSJ9.bxUAAT7yk3hj4Ed_eu2wKJFpffXxgj3eQfTJ2ax1D1c"
 
 func init() {
 	ConformanceTests = append(ConformanceTests, AuthorizationJWTTest)
@@ -61,7 +62,7 @@ var AuthorizationJWTTest = suite.ConformanceTest{
 					Path: "/protected1",
 				},
 				Response: http.Response{
-					StatusCode: 403,
+					StatusCode: 401,
 				},
 				Namespace: ns,
 			}
