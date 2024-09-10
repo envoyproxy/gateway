@@ -872,6 +872,7 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Reso
 		HeadersToExtAuth: policy.Spec.ExtAuth.HeadersToExtAuth,
 		FailOpen:         policy.Spec.ExtAuth.FailOpen,
 		Traffic:          traffic,
+		RecomputeRoute:   policy.Spec.ExtAuth.RecomputeRoute,
 	}
 
 	if http != nil {
