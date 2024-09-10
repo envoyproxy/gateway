@@ -16,7 +16,7 @@ certgen:
                 values:
                 - value1
       tolerations:
-        - key: taint1
+        - effect: NoSchedule
+          key: taint1
           operator: Equal
           value: tol1
-          effect: NoSchedule

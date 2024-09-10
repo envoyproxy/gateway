@@ -572,10 +572,10 @@ spec:
                 values:
                 - value1
       tolerations:
-      - key: taint1
+      - effect: NoSchedule
+        key: taint1
         operator: Equal
         value: tol1
-        effect: NoSchedule
       restartPolicy: Never
       serviceAccountName: gateway-helm-certgen
   ttlSecondsAfterFinished: 30
