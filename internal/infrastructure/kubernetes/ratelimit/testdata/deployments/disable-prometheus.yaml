@@ -47,7 +47,9 @@ spec:
         - name: LOG_LEVEL
           value: info
         - name: USE_STATSD
-          value: "false"
+          value: "true"
+        - name: STATSD_PORT
+          value: "9125"
         - name: CONFIG_TYPE
           value: GRPC_XDS_SOTW
         - name: CONFIG_GRPC_XDS_SERVER_URL
@@ -84,12 +86,12 @@ spec:
           name: grpc
           protocol: TCP
         readinessProbe:
-          failureThreshold: 3
+          failureThreshold: 1
           httpGet:
             path: /healthcheck
             port: 8080
             scheme: HTTP
-          periodSeconds: 10
+          periodSeconds: 5
           successThreshold: 1
           timeoutSeconds: 1
         resources:

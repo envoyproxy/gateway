@@ -262,12 +262,12 @@ func servicePortToContainerPort(servicePort int32, envoyProxy *egv1a1.EnvoyProxy
 	return servicePort
 }
 
-// computeHosts returns a list of the intersecting hostnames between the route
-// and the listener.
-func computeHosts(routeHostnames []string, listenerHostname *gwapiv1.Hostname) []string {
+// computeHosts returns a list of intersecting listener hostnames and route hostnames
+// that don't intersect with other listener hostnames.
+func computeHosts(routeHostnames []string, listenerContext *ListenerContext) []string {
 	var listenerHostnameVal string
-	if listenerHostname != nil {
-		listenerHostnameVal = string(*listenerHostname)
+	if listenerContext != nil && listenerContext.Hostname != nil {
+		listenerHostnameVal = string(*listenerContext.Hostname)
 	}
 
 	// No route hostnames specified: use the listener hostname if specified,
@@ -280,8 +280,9 @@ func computeHosts(routeHostnames []string, listenerHostname *gwapiv1.Hostname) [
 		return []string{"*"}
 	}
 
-	var hostnames []string
+	hostnamesSet := sets.NewString()
 
+	// Find intersecting hostnames
 	for i := range routeHostnames {
 		routeHostname := routeHostnames[i]
 
@@ -290,28 +291,47 @@ func computeHosts(routeHostnames []string, listenerHostname *gwapiv1.Hostname) [
 		switch {
 		// No listener hostname: use the route hostname.
 		case len(listenerHostnameVal) == 0:
-			hostnames = append(hostnames, routeHostname)
+			hostnamesSet.Insert(routeHostname)
 
 		// Listener hostname matches the route hostname: use it.
 		case listenerHostnameVal == routeHostname:
-			hostnames = append(hostnames, routeHostname)
+			hostnamesSet.Insert(routeHostname)
 
 		// Listener has a wildcard hostname: check if the route hostname matches.
 		case strings.HasPrefix(listenerHostnameVal, "*"):
 			if hostnameMatchesWildcardHostname(routeHostname, listenerHostnameVal) {
-				hostnames = append(hostnames, routeHostname)
+				hostnamesSet.Insert(routeHostname)
 			}
 
 		// Route has a wildcard hostname: check if the listener hostname matches.
 		case strings.HasPrefix(routeHostname, "*"):
 			if hostnameMatchesWildcardHostname(listenerHostnameVal, routeHostname) {
-				hostnames = append(hostnames, listenerHostnameVal)
+				hostnamesSet.Insert(listenerHostnameVal)
 			}
 
 		}
 	}
 
-	return hostnames
+	// Filter out route hostnames that intersect with other listener hostnames
+	var listeners []*ListenerContext
+	if listenerContext != nil && listenerContext.gateway != nil {
+		listeners = listenerContext.gateway.listeners
+	}
+
+	for _, listener := range listeners {
+		if listenerContext == listener {
+			continue
+		}
+		if listenerContext != nil && listenerContext.Port != listener.Port {
+			continue
+		}
+		if listener.Hostname == nil {
+			continue
+		}
+		hostnamesSet.Delete(string(*listener.Hostname))
+	}
+
+	return hostnamesSet.List()
 }
 
 // hostnameMatchesWildcardHostname returns true if hostname has the non-wildcard

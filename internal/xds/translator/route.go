@@ -401,7 +401,10 @@ func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite, pathMa
 			if useRegexRewriteForPrefixMatchReplace(pathMatch, *urlRewrite.Path.PrefixMatchReplace) {
 				routeAction.RegexRewrite = prefix2RegexRewrite(*pathMatch.Prefix)
 			} else {
-				routeAction.PrefixRewrite = *urlRewrite.Path.PrefixMatchReplace
+				// remove trailing / to fix #3989
+				// when the pathMath.Prefix has suffix / but EG has removed it,
+				// and the urlRewrite.Path.PrefixMatchReplace suffix with / the upstream will get unwanted /
+				routeAction.PrefixRewrite = strings.TrimSuffix(*urlRewrite.Path.PrefixMatchReplace, "/")
 			}
 		}
 	}
@@ -435,9 +438,9 @@ func buildXdsRequestMirrorPolicies(mirrorDestinations []*ir.RouteDestination) []
 }
 
 func buildXdsAddedHeaders(headersToAdd []ir.AddHeader) []*corev3.HeaderValueOption {
-	headerValueOptions := make([]*corev3.HeaderValueOption, len(headersToAdd))
+	headerValueOptions := []*corev3.HeaderValueOption{}
 
-	for i, header := range headersToAdd {
+	for _, header := range headersToAdd {
 		var appendAction corev3.HeaderValueOption_HeaderAppendAction
 
 		if header.Append {
@@ -445,18 +448,26 @@ func buildXdsAddedHeaders(headersToAdd []ir.AddHeader) []*corev3.HeaderValueOpti
 		} else {
 			appendAction = corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD
 		}
-
-		headerValueOptions[i] = &corev3.HeaderValueOption{
-			Header: &corev3.HeaderValue{
-				Key:   header.Name,
-				Value: header.Value,
-			},
-			AppendAction: appendAction,
-		}
-
 		// Allow empty headers to be set, but don't add the config to do so unless necessary
-		if header.Value == "" {
-			headerValueOptions[i].KeepEmptyValue = true
+		if len(header.Value) == 0 {
+			headerValueOptions = append(headerValueOptions, &corev3.HeaderValueOption{
+				Header: &corev3.HeaderValue{
+					Key: header.Name,
+				},
+				AppendAction:   appendAction,
+				KeepEmptyValue: true,
+			})
+		} else {
+			for _, val := range header.Value {
+				headerValueOptions = append(headerValueOptions, &corev3.HeaderValueOption{
+					Header: &corev3.HeaderValue{
+						Key:   header.Name,
+						Value: val,
+					},
+					AppendAction:   appendAction,
+					KeepEmptyValue: val == "",
+				})
+			}
 		}
 	}
 

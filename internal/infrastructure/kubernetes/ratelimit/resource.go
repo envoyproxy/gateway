@@ -184,9 +184,9 @@ func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeploymen
 					},
 				},
 				TimeoutSeconds:   1,
-				PeriodSeconds:    10,
+				PeriodSeconds:    5,
 				SuccessThreshold: 1,
-				FailureThreshold: 3,
+				FailureThreshold: 1,
 			},
 		},
 	}
@@ -327,7 +327,11 @@ func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 		},
 		{
 			Name:  UseStatsdEnvVar,
-			Value: "false",
+			Value: "true",
+		},
+		{
+			Name:  "STATSD_PORT",
+			Value: "9125",
 		},
 		{
 			Name:  ConfigTypeEnvVar,
