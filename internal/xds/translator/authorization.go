@@ -351,13 +351,15 @@ func buildJWTPredicate(jwt egv1a1.JWTPrincipal) ([]*matcherv3.Matcher_MatcherLis
 			},
 		}
 
+		// The scope is a space-delimited string, so we use a regex matcher to match the scope.
+		pattern := fmt.Sprintf(`(^|.*\s)%s(\s.*|$)`, scope)
 		scopeMatcher := &metadatav3.Metadata{
 			Value: &envoymatcherv3.ValueMatcher{
 				MatchPattern: &envoymatcherv3.ValueMatcher_StringMatch{
 					StringMatch: &envoymatcherv3.StringMatcher{
 						MatchPattern: &envoymatcherv3.StringMatcher_SafeRegex{
 							SafeRegex: &envoymatcherv3.RegexMatcher{
-								Regex: "\b" + string(scope) + "\b",
+								Regex: pattern,
 							},
 						},
 					},

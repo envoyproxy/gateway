@@ -1,7 +1,7 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: http-with-authorization-jwt-1
+  name: http-with-authorization-jwt-claim
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
@@ -10,7 +10,41 @@ spec:
   - matches:
     - path:
         type: Exact
-        value: /protected1
+        value: /claim-test
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-authorization-jwt-scope
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  rules:
+  - matches:
+    - path:
+        type: Exact
+        value: /scope-test
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-authorization-jwt-combined
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  rules:
+  - matches:
+    - path:
+        type: Exact
+        value: /combined-test
     backendRefs:
     - name: infra-backend-v1
       port: 8080
@@ -18,19 +52,19 @@ spec:
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
 metadata:
-  name: authorization-jwt-1
+  name: authorization-jwt-claim
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
   - group: gateway.networking.k8s.io
     kind: HTTPRoute
-    name: http-with-authorization-jwt-1
+    name: http-with-authorization-jwt-claim
   jwt:
     providers:
     - name: example
       issuer: https://foo.bar.com
       remoteJWKS:
-        uri: https://raw.githubusercontent.com/zhaohuabing/hugo_blog/master/static/download/jwks.json
+        uri: https://www.zhaohuabing.com/download/jwks.json
   authorization:
     defaultAction: Deny
     rules:
@@ -39,6 +73,63 @@ spec:
       principal:
         jwt:
           issuer: https://foo.bar.com
+          claims:
+          - name: name
+            values: ["John Doe"]
+          - name: "sub"
+            values: ["1234567890"]
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: authorization-jwt-scope
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-with-authorization-jwt-scope
+  jwt:
+    providers:
+    - name: example
+      issuer: https://foo.bar.com
+      remoteJWKS:
+        uri: https://www.zhaohuabing.com/download/jwks.json
+  authorization:
+    defaultAction: Deny
+    rules:
+    - name: "allow"
+      action: Allow
+      principal:
+        jwt:
+          issuer: https://foo.bar.com
+          scopes: ["read", "add", "modify"]
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: authorization-jwt-combined
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-with-authorization-jwt-combined
+  jwt:
+    providers:
+    - name: example
+      issuer: https://foo.bar.com
+      remoteJWKS:
+        uri: https://www.zhaohuabing.com/download/jwks.json
+  authorization:
+    defaultAction: Deny
+    rules:
+    - name: "allow"
+      action: Allow
+      principal:
+        jwt:
+          issuer: https://foo.bar.com
+          scopes: ["read", "add", "modify"]
           claims:
           - name: name
             values: ["John Doe"]
