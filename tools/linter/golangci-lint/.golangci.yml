@@ -25,6 +25,9 @@ linters:
     - unparam
 
 linters-settings:
+  gosec:
+    excludes:
+      - G115
   depguard:
     rules:
       Main:
