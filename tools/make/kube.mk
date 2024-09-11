@@ -1,7 +1,9 @@
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION ?= 1.28.0
+# To know the available versions check:
+# - https://github.com/kubernetes-sigs/controller-tools/blob/main/envtest-releases.yaml
+ENVTEST_K8S_VERSION ?= 1.28.3
 # Need run cel validation across multiple versions of k8s
-ENVTEST_K8S_VERSIONS ?= 1.27.1 1.28.0 1.29.0
+ENVTEST_K8S_VERSIONS ?= 1.28.3 1.29.5 1.30.3 1.31.0
 # GATEWAY_API_VERSION refers to the version of Gateway API CRDs.
 # For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api
 GATEWAY_API_VERSION ?= $(shell go list -m -f '{{.Version}}' sigs.k8s.io/gateway-api)
