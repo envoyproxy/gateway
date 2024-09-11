@@ -1,13 +1,30 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-cors-exact
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /cors-exact
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
 metadata:
-  name: cors-example
+  name: cors-exact
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
   - group: gateway.networking.k8s.io
     kind: HTTPRoute
-    name: http-with-cors
+    name: http-with-cors-exact
   cors:
     allowOrigins:
     - "https://www.foo.com"
@@ -30,7 +47,7 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: http-with-cors
+  name: http-with-cors-wildcard
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
@@ -39,7 +56,26 @@ spec:
   - matches:
     - path:
         type: PathPrefix
-        value: /cors
+        value: /cors-wildcard
     backendRefs:
     - name: infra-backend-v1
       port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: cors-wildcard
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-with-cors-wildcard
+  cors:
+    allowOrigins:
+    - "*"
+    allowMethods:
+    - "*"
+    allowHeaders:
+    - "*"
+# TODO: zhaohuabing wildcard for exposeHeaders
