@@ -2865,7 +2865,6 @@ _Appears in:_
 | ----- | ----------- |
 | `Listener` | ProxyAccessLogTypeListener defines the accesslog for Listeners.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto#envoy-v3-api-field-config-listener-v3-listener-access-log<br /> | 
 | `Route` | ProxyAccessLogTypeRoute defines the accesslog for HTTP, GRPC, UDP and TCP Routes.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/udp/udp_proxy/v3/udp_proxy.proto#envoy-v3-api-field-extensions-filters-udp-udp-proxy-v3-udpproxyconfig-access-log<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/tcp_proxy/v3/tcp_proxy.proto#envoy-v3-api-field-extensions-filters-network-tcp-proxy-v3-tcpproxy-access-log<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-access-log<br /> | 
-| `Backend` | ProxyAccessLogTypeBackend defines the accesslog for HTTP Backends.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/router/v3/router.proto#envoy-v3-api-field-extensions-filters-http-router-v3-router-upstream-log<br /> | 
 
 
 #### ProxyBootstrap

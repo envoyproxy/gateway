@@ -31,7 +31,9 @@ type ProxyAccessLogSetting struct {
 	// +kubebuilder:validation:MaxItems=50
 	Sinks []ProxyAccessLogSink `json:"sinks"`
 	// Type defines the component emitting the accesslog, such as Listener and Route.
-	// If not defined, the setting would apply to all accesslog types supported by envoy gateway
+	// If type not defined, the setting would apply to all accesslog types supported by envoy gateway.
+	// If type is defined, the default envoy gateway accesslog configuration for the mentioned component would be
+	// replaced by the user-defined configuration.
 	// +kubebuilder:validation:Enum=Listener
 	// +optional
 	// +notImplementedHide
@@ -49,9 +51,6 @@ const (
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/tcp_proxy/v3/tcp_proxy.proto#envoy-v3-api-field-extensions-filters-network-tcp-proxy-v3-tcpproxy-access-log
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-access-log
 	ProxyAccessLogTypeRoute ProxyAccessLogType = "Route"
-	// ProxyAccessLogTypeBackend defines the accesslog for HTTP Backends.
-	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/router/v3/router.proto#envoy-v3-api-field-extensions-filters-http-router-v3-router-upstream-log
-	ProxyAccessLogTypeBackend ProxyAccessLogType = "Backend"
 )
 
 type ProxyAccessLogFormatType string

@@ -12253,7 +12253,9 @@ spec:
                             type:
                               description: |-
                                 Type defines the component emitting the accesslog, such as Listener and Route.
-                                If not defined, the setting would apply to all accesslog types supported by envoy gateway
+                                If type not defined, the setting would apply to all accesslog types supported by envoy gateway.
+                                If type is defined, the default envoy gateway accesslog configuration for the mentioned component would be
+                                replaced by the user-defined configuration.
                               enum:
                               - Listener
                               type: string
