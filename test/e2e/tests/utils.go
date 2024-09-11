@@ -311,6 +311,30 @@ func EnvoyExtensionPolicyMustBeAccepted(t *testing.T, client client.Client, poli
 	require.NoErrorf(t, waitErr, "error waiting for EnvoyExtensionPolicy to be accepted")
 }
 
+// BackendMustBeAccepted waits for the specified Backend to be accepted.
+func BackendMustBeAccepted(t *testing.T, client client.Client, backendName types.NamespacedName) {
+	t.Helper()
+
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+		backend := &egv1a1.Backend{}
+		err := client.Get(ctx, backendName, backend)
+		if err != nil {
+			return false, fmt.Errorf("error fetching Backend: %w", err)
+		}
+
+		for _, condition := range backend.Status.Conditions {
+			if condition.Type == string(egv1a1.BackendConditionAccepted) && condition.Status == metav1.ConditionTrue {
+				return true, nil
+			}
+		}
+
+		tlog.Logf(t, "Backend not yet accepted: %v", backend)
+		return false, nil
+	})
+
+	require.NoErrorf(t, waitErr, "error waiting for Backend to be accepted")
+}
+
 func ScrapeMetrics(t *testing.T, c client.Client, nn types.NamespacedName, port int32, path string) error {
 	url, err := RetrieveURL(c, nn, port, path)
 	if err != nil {
