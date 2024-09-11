@@ -83,6 +83,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build]
     strategy:
+      fail-fast: false
       matrix:
         version: [ v1.27.13, v1.28.9, v1.29.4, v1.30.0 ]
     steps:
@@ -111,6 +112,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build]
     strategy:
+      fail-fast: false
       matrix:
         version: [ v1.27.13, v1.28.9, v1.29.4, v1.30.0 ]
     steps:
