@@ -12,6 +12,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
 	xdstypes "github.com/envoyproxy/gateway/internal/xds/types"
@@ -29,6 +30,9 @@ type ProviderResources struct {
 
 	// PolicyStatuses is a group of policy statuses maps.
 	PolicyStatuses
+
+	// ExtensionStatuses is a group of gw-api extension resource statuses map.
+	ExtensionStatuses
 }
 
 func (p *ProviderResources) GetResources() []*gatewayapi.Resources {
@@ -102,6 +106,11 @@ type PolicyStatuses struct {
 	BackendTLSPolicyStatuses     watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
 	EnvoyExtensionPolicyStatuses watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
 	ExtensionPolicyStatuses      watchable.Map[NamespacedNameAndGVK, *gwapiv1a2.PolicyStatus]
+}
+
+// ExtensionStatuses contains statuses related to gw-api extension resources
+type ExtensionStatuses struct {
+	BackendStatuses watchable.Map[types.NamespacedName, *egv1a1.BackendStatus]
 }
 
 func (p *PolicyStatuses) Close() {
