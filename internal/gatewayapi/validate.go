@@ -314,6 +314,19 @@ func (t *Translator) validateBackendRefBackend(backendRef *gwapiv1a2.BackendRef,
 		return false
 	}
 
+	if err := validateBackend(backend); err != nil {
+		status.SetRouteStatusCondition(routeStatus,
+			parentRef.routeParentStatusIdx,
+			route.GetGeneration(),
+			gwapiv1.RouteConditionResolvedRefs,
+			metav1.ConditionFalse,
+			"UnsupportedRefAddressFound",
+			fmt.Sprintf("Invalid Backend reference to Backend %s/%s found", backendNamespace,
+				string(backendRef.Name)),
+		)
+		return false
+	}
+
 	for _, bep := range backend.Spec.Endpoints {
 		if bep.Unix != nil {
 			status.SetRouteStatusCondition(routeStatus,

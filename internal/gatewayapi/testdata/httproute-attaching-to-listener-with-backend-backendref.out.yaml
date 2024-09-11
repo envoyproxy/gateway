@@ -272,9 +272,10 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
+        message: Invalid Backend reference to Backend default/backend-ip-localhost
+          found
+        reason: UnsupportedRefAddressFound
+        status: "False"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -309,9 +310,10 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
+        message: Invalid Backend reference to Backend default/backend-fqdn-localhost
+          found
+        reason: UnsupportedRefAddressFound
+        status: "False"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -413,11 +415,9 @@ xdsIR:
       - destination:
           name: httproute/default/httproute-4/rule/0
           settings:
-          - addressType: IP
-            endpoints:
-            - host: 127.0.0.1
-              port: 3001
-            weight: 1
+          - weight: 1
+        directResponse:
+          statusCode: 500
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -432,11 +432,9 @@ xdsIR:
       - destination:
           name: httproute/default/httproute-5/rule/0
           settings:
-          - addressType: FQDN
-            endpoints:
-            - host: localhost
-              port: 3001
-            weight: 1
+          - weight: 1
+        directResponse:
+          statusCode: 500
         hostname: '*'
         isHTTP2: false
         metadata:
