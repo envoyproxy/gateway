@@ -70,6 +70,6 @@ type CORS struct {
 	// TODO zhaohuabing
 	// According to the CORS specification, the following rules should be enforced:
 	// - ExposeHeaders should also allow "*" to expose all headers.
-	// - If AllowCredentials is true, then the "*" shold be treated as a literal.
+	// - If AllowCredentials is true, then the "*" should be treated as a literal.
 	// Blocked by this Envoy issue: https://github.com/envoyproxy/envoy/issues/36066
 }
