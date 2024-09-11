@@ -5,18 +5,17 @@ global:
       pullPolicy: Always
 certgen:
   job:
-    pod:
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: label1
-                operator: In
-                values:
-                - value1
-      tolerations:
-        - effect: NoSchedule
-          key: taint1
-          operator: Equal
-          value: tol1
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+          - matchExpressions:
+            - key: label1
+              operator: In
+              values:
+              - value1
+    tolerations:
+      - effect: NoSchedule
+        key: taint1
+        operator: Equal
+        value: tol1
