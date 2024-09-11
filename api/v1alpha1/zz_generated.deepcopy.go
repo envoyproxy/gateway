@@ -599,17 +599,17 @@ func (in *CORS) DeepCopyInto(out *CORS) {
 	}
 	if in.AllowMethods != nil {
 		in, out := &in.AllowMethods, &out.AllowMethods
-		*out = make([]apisv1.HTTPMethod, len(*in))
+		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
 	if in.AllowHeaders != nil {
 		in, out := &in.AllowHeaders, &out.AllowHeaders
-		*out = make([]apisv1.HTTPHeaderName, len(*in))
+		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
 	if in.ExposeHeaders != nil {
 		in, out := &in.ExposeHeaders, &out.ExposeHeaders
-		*out = make([]apisv1.HTTPHeaderName, len(*in))
+		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
 	if in.MaxAge != nil {
