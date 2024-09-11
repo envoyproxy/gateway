@@ -25,6 +25,7 @@ changes:
       Fixed assertion on expected status in active HTTP healthcheck
       Fixed rejection of invalid Backends referenced by xRoutes
       Fixed support for empty SlowStart configuration when using LeastRequest loadbalancing
+      Fixed update of status for Backends
 
 
   - area: infra-manager
