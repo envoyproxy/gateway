@@ -12,9 +12,13 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/types"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
 )
 
 func init() {
@@ -167,15 +171,15 @@ var CorsTest = suite.ConformanceTest{
 				Request: http.Request{
 					Path: "/cors-exact",
 					Headers: map[string]string{
-						"Origin": "https://foo.bar.com",
-						"Access-control-request-method": "GET",
+						"Origin":                         "https://foo.bar.com",
+						"Access-control-request-method":  "GET",
 						"Access-control-request-headers": "x-header-1, x-header-2",
 					},
 				},
 				Response: http.Response{
 					StatusCode: 200,
 					Headers: map[string]string{
-						"access-control-allow-origin":   "https://foo.bar.com",
+						"access-control-allow-origin":  "https://foo.bar.com",
 						"Access-control-allow-methods": "GET",
 						"Access-control-allow-headers": "x-header-1, x-header-2",
 					},

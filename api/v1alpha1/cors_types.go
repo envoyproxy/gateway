@@ -7,7 +7,6 @@ package v1alpha1
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-
 // Origin is defined by the scheme (protocol), hostname (domain), and port of
 // the URL used to access it. The hostname can be "precise" which is just the
 // domain name or "wildcard" which is a domain name prefixed with a single
@@ -68,7 +67,7 @@ type CORS struct {
 	// +optional
 	AllowCredentials *bool `json:"allowCredentials,omitempty"`
 
-	//TODO zhaohuabing
+	// TODO zhaohuabing
 	// According to the CORS specification, the following rules should be enforced:
 	// - ExposeHeaders should also allow "*" to expose all headers.
 	// - If AllowCredentials is true, then the "*" shold be treated as a literal.
