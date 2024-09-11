@@ -1,10 +1,29 @@
+backends:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    creationTimestamp: null
+    name: backend-fqdn
+    namespace: default
+  spec:
+    endpoints:
+    - fqdn:
+        hostname: primary.foo.com
+        port: 3000
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: The Backend was accepted
+      reason: Accepted
+      status: "True"
+      type: Invalid
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
     creationTimestamp: null
     name: gateway-1
-    namespace: envoy-gateway
+    namespace: default
   spec:
     gatewayClassName: envoy-gateway-class
     listeners:
@@ -48,10 +67,10 @@ httpRoutes:
     namespace: default
   spec:
     hostnames:
-    - www.example.com
+    - www.foo.com
     parentRefs:
     - name: gateway-1
-      namespace: envoy-gateway
+      namespace: default
       sectionName: http
     rules:
     - backendRefs:
@@ -59,7 +78,13 @@ httpRoutes:
         port: 8080
       matches:
       - path:
-          value: /foo
+          value: /foo1
+    - backendRefs:
+      - name: service-2
+        port: 8080
+      matches:
+      - path:
+          value: /foo2
   status:
     parents:
     - conditions:
@@ -76,7 +101,7 @@ httpRoutes:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
-        namespace: envoy-gateway
+        namespace: default
         sectionName: http
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
@@ -86,14 +111,14 @@ httpRoutes:
     namespace: default
   spec:
     hostnames:
-    - www.example.com
+    - www.bar.com
     parentRefs:
     - name: gateway-1
-      namespace: envoy-gateway
+      namespace: default
       sectionName: http
     rules:
     - backendRefs:
-      - name: service-1
+      - name: service-3
         port: 8080
       matches:
       - path:
@@ -114,14 +139,14 @@ httpRoutes:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
-        namespace: envoy-gateway
+        namespace: default
         sectionName: http
 infraIR:
-  envoy-gateway/gateway-1:
+  default/gateway-1:
     proxy:
       listeners:
       - address: null
-        name: envoy-gateway/gateway-1/http
+        name: default/gateway-1/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -130,40 +155,31 @@ infraIR:
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
-          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
-      name: envoy-gateway/gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: default
+      name: default/gateway-1
 securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
     creationTimestamp: null
-    name: policy-for-http-route
+    name: policy-for-http-route-1
     namespace: default
-    uid: 08335a80-83ba-4592-888f-6ac0bba44ce4
   spec:
-    oidc:
-      clientID: client2.oauth.foo.com
-      clientSecret:
-        group: null
-        kind: null
-        name: client2-secret
-      cookieDomain: example.com
-      defaultRefreshTokenTTL: 48h0m0s
-      defaultTokenTTL: 1h0m0s
-      forwardAccessToken: true
-      logoutPath: /foo/logout
-      provider:
-        authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
-        issuer: https://oauth.foo.com
-        tokenEndpoint: https://oauth.foo.com/token
-      redirectURL: https://www.example.com/foo/oauth2/callback
-      refreshToken: true
-      resources:
-      - api
-      scopes:
-      - openid
-      - email
-      - profile
+    extAuth:
+      failOpen: true
+      grpc:
+        backendRefs:
+        - kind: Service
+          name: service-2
+          port: 8080
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-fqdn
+          port: 3000
+      headersToExtAuth:
+      - header1
+      - header2
+      recomputeRoute: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -174,7 +190,7 @@ securityPolicies:
         group: gateway.networking.k8s.io
         kind: Gateway
         name: gateway-1
-        namespace: envoy-gateway
+        namespace: default
         sectionName: http
       conditions:
       - lastTransitionTime: null
@@ -183,54 +199,8 @@ securityPolicies:
         status: "True"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: SecurityPolicy
-  metadata:
-    creationTimestamp: null
-    name: policy-for-gateway
-    namespace: envoy-gateway
-    uid: b8284d0f-de82-4c65-b204-96a0d3f258a1
-  spec:
-    oidc:
-      clientID: client1.apps.googleusercontent.com
-      clientSecret:
-        group: null
-        kind: null
-        name: client1-secret
-      defaultRefreshTokenTTL: 24h0m0s
-      defaultTokenTTL: 30m0s
-      forwardAccessToken: true
-      logoutPath: /bar/logout
-      provider:
-        issuer: https://accounts.google.com
-      redirectURL: https://www.example.com/bar/oauth2/callback
-      refreshToken: true
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-1
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: 'This policy is being overridden by other securityPolicies for these
-          routes: [default/httproute-1]'
-        reason: Overridden
-        status: "True"
-        type: Overridden
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
-  envoy-gateway/gateway-1:
+  default/gateway-1:
     accessLog:
       text:
       - path: /dev/stdout
@@ -242,9 +212,9 @@ xdsIR:
       metadata:
         kind: Gateway
         name: gateway-1
-        namespace: envoy-gateway
+        namespace: default
         sectionName: http
-      name: envoy-gateway/gateway-1/http
+      name: default/gateway-1/http
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -259,41 +229,87 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
-        hostname: www.example.com
+        hostname: www.foo.com
         isHTTP2: false
         metadata:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
-        name: httproute/default/httproute-1/rule/0/match/0/www_example_com
+        name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
         pathMatch:
           distinct: false
           name: ""
-          prefix: /foo
+          prefix: /foo1
         security:
-          oidc:
-            clientID: client2.oauth.foo.com
-            clientSecret: Y2xpZW50MTpzZWNyZXQK
-            cookieDomain: example.com
-            cookieSuffix: 5f93c2e4
-            defaultRefreshTokenTTL: 48h0m0s
-            defaultTokenTTL: 1h0m0s
-            forwardAccessToken: true
-            hmacSecret: qrOYACHXoe7UEDI/raOjNSx+Z9ufXSc/22C3T6X/zPY=
-            logoutPath: /foo/logout
-            name: securitypolicy/default/policy-for-http-route
-            provider:
-              authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
-              tokenEndpoint: https://oauth.foo.com/token
-            redirectPath: /foo/oauth2/callback
-            redirectURL: https://www.example.com/foo/oauth2/callback
-            refreshToken: true
-            resources:
-            - api
-            scopes:
-            - openid
-            - email
-            - profile
+          extAuth:
+            failOpen: true
+            grpc:
+              authority: service-2.default:8080
+              destination:
+                name: securitypolicy/default/policy-for-http-route-1/0
+                settings:
+                - addressType: IP
+                  endpoints:
+                  - host: 7.7.7.7
+                    port: 8080
+                  protocol: GRPC
+                  weight: 1
+                - addressType: FQDN
+                  endpoints:
+                  - host: primary.foo.com
+                    port: 3000
+                  protocol: GRPC
+                  weight: 1
+            headersToExtAuth:
+            - header1
+            - header2
+            name: securitypolicy/default/policy-for-http-route-1
+            recomputeRoute: true
+      - destination:
+          name: httproute/default/httproute-1/rule/1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            protocol: HTTP
+            weight: 1
+        hostname: www.foo.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+        name: httproute/default/httproute-1/rule/1/match/0/www_foo_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /foo2
+        security:
+          extAuth:
+            failOpen: true
+            grpc:
+              authority: service-2.default:8080
+              destination:
+                name: securitypolicy/default/policy-for-http-route-1/0
+                settings:
+                - addressType: IP
+                  endpoints:
+                  - host: 7.7.7.7
+                    port: 8080
+                  protocol: GRPC
+                  weight: 1
+                - addressType: FQDN
+                  endpoints:
+                  - host: primary.foo.com
+                    port: 3000
+                  protocol: GRPC
+                  weight: 1
+            headersToExtAuth:
+            - header1
+            - header2
+            name: securitypolicy/default/policy-for-http-route-1
+            recomputeRoute: true
       - destination:
           name: httproute/default/httproute-2/rule/0
           settings:
@@ -303,33 +319,14 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
-        hostname: www.example.com
+        hostname: www.bar.com
         isHTTP2: false
         metadata:
           kind: HTTPRoute
           name: httproute-2
           namespace: default
-        name: httproute/default/httproute-2/rule/0/match/0/www_example_com
+        name: httproute/default/httproute-2/rule/0/match/0/www_bar_com
         pathMatch:
           distinct: false
           name: ""
           prefix: /bar
-        security:
-          oidc:
-            clientID: client1.apps.googleusercontent.com
-            clientSecret: Y2xpZW50MTpzZWNyZXQK
-            cookieSuffix: b0a1b740
-            defaultRefreshTokenTTL: 24h0m0s
-            defaultTokenTTL: 30m0s
-            forwardAccessToken: true
-            hmacSecret: qrOYACHXoe7UEDI/raOjNSx+Z9ufXSc/22C3T6X/zPY=
-            logoutPath: /bar/logout
-            name: securitypolicy/envoy-gateway/policy-for-gateway
-            provider:
-              authorizationEndpoint: https://accounts.google.com/o/oauth2/v2/auth
-              tokenEndpoint: https://oauth2.googleapis.com/token
-            redirectPath: /bar/oauth2/callback
-            redirectURL: https://www.example.com/bar/oauth2/callback
-            refreshToken: true
-            scopes:
-            - openid
