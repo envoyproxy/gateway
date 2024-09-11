@@ -13,6 +13,9 @@ on:
   schedule:
   - cron: '44 15 * * 5'
 
+permissions:
+  contents: read
+
 jobs:
   scan-scheduled:
     if: ${{ github.event_name == 'push' || github.event_name == 'schedule' }}
