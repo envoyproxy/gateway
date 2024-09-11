@@ -16,7 +16,7 @@ backends:
       message: 'The Backend was not accepted: hostname *.foo.com is not a valid FQDN'
       reason: Accepted
       status: "False"
-      type: Accepted
+      type: Invalid
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
@@ -35,7 +35,7 @@ backends:
         with at least two segments separated by dots'
       reason: Accepted
       status: "False"
-      type: Accepted
+      type: Invalid
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
@@ -54,7 +54,7 @@ backends:
         range is not supported'
       reason: Accepted
       status: "False"
-      type: Accepted
+      type: Invalid
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
@@ -72,6 +72,6 @@ backends:
       message: 'The Backend was not accepted: IP address example.com is invalid'
       reason: Accepted
       status: "False"
-      type: Accepted
+      type: Invalid
 infraIR: {}
 xdsIR: {}
