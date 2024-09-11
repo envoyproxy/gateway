@@ -301,7 +301,7 @@ func restartDeploymentAndWaitForRollout(t *testing.T, timeoutConfig config.Timeo
 		}
 
 		// all pods are rolled
-		if rolled == int32(len(podList.Items)) && rolled >= *dp.Spec.Replicas { // nolint: gosec
+		if rolled == int32(len(podList.Items)) && rolled >= *dp.Spec.Replicas {
 			return true, nil
 		}
 

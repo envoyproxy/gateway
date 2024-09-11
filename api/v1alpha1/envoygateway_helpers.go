@@ -237,6 +237,7 @@ func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubern
 	if r.Kubernetes.ShutdownManager == nil {
 		r.Kubernetes.ShutdownManager = &ShutdownManager{Image: ptr.To(DefaultShutdownManagerImage)}
 	}
+
 	return r.Kubernetes
 }
 

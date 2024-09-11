@@ -661,6 +661,7 @@ func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, httpIR *ir.HTTP
 	if http1Settings.HTTP10 != nil {
 		var defaultHost *string
 		if ptr.Deref(http1Settings.HTTP10.UseDefaultHost, false) {
+			// First level of precedence - the first non-wildcard hostname associated with the listener
 			for _, hostname := range httpIR.Hostnames {
 				if !strings.Contains(hostname, "*") {
 					// make linter happy
@@ -669,8 +670,27 @@ func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, httpIR *ir.HTTP
 					break
 				}
 			}
+			// second level of precedence - try to get a hostname from the HTTPRoutes
+			numMatchingRoutes := 0
 			if defaultHost == nil {
-				return fmt.Errorf("cannot set http10 default host on listener with only wildcard hostnames")
+				// When taken from the routes, a default hostname can only be chosen if there
+				// is exactly one HTTPRoute with a non-wildcard hostname configured.
+				for _, route := range httpIR.Routes {
+					if route.Hostname != "" && !strings.Contains(route.Hostname, "*") {
+						numMatchingRoutes++
+						// make the linter happy
+						theHost := route.Hostname
+						defaultHost = ptr.To(theHost)
+					}
+					if numMatchingRoutes > 1 {
+						break
+					}
+				}
+				if numMatchingRoutes == 0 {
+					return fmt.Errorf("cannot set http10 default host on listener with only wildcard hostnames")
+				} else if numMatchingRoutes > 1 {
+					return fmt.Errorf("cannot set http10 default host on listener with only wildcard hostnames and more than one possible default route")
+				}
 			}
 		}
 		// If useDefaultHost was set, then defaultHost will have the hostname to use.
@@ -703,7 +723,7 @@ func translateHTTP2Settings(http2Settings *egv1a1.HTTP2Settings, httpIR *ir.HTTP
 				MinHTTP2InitialStreamWindowSize,
 				MaxHTTP2InitialStreamWindowSize))
 		default:
-			http2.InitialStreamWindowSize = ptr.To(uint32(initialStreamWindowSize)) // nolint: gosec
+			http2.InitialStreamWindowSize = ptr.To(uint32(initialStreamWindowSize))
 		}
 	}
 
@@ -718,7 +738,7 @@ func translateHTTP2Settings(http2Settings *egv1a1.HTTP2Settings, httpIR *ir.HTTP
 				MinHTTP2InitialConnectionWindowSize,
 				MaxHTTP2InitialConnectionWindowSize))
 		default:
-			http2.InitialConnectionWindowSize = ptr.To(uint32(initialConnectionWindowSize)) // nolint: gosec
+			http2.InitialConnectionWindowSize = ptr.To(uint32(initialConnectionWindowSize))
 		}
 	}
 
@@ -878,7 +898,7 @@ func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection,
 			return nil, fmt.Errorf("BufferLimit value %s is out of range, must be between 0 and %d",
 				connection.BufferLimit.String(), math.MaxUint32)
 		}
-		irConnection.BufferLimitBytes = ptr.To(uint32(bufferLimit)) // nolint: gosec
+		irConnection.BufferLimitBytes = ptr.To(uint32(bufferLimit))
 	}
 
 	return irConnection, nil
