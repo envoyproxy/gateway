@@ -139,7 +139,7 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 				Issuer:              irProvider.Issuer,
 				Audiences:           irProvider.Audiences,
 				JwksSourceSpecifier: remote,
-				PayloadInMetadata:   irProvider.Issuer,
+				PayloadInMetadata:   irProvider.Name,
 				ClaimToHeaders:      claimToHeaders,
 				Forward:             true,
 			}

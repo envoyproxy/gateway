@@ -59,7 +59,7 @@ securityPolicies:
         action: Deny
         principal:
           jwt:
-            issuer: https://two.example.com
+            provider: example1
             scopes:
             - "foo"
             - "bar"

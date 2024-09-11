@@ -340,7 +340,7 @@ func buildJWTPredicate(jwt egv1a1.JWTPrincipal) ([]*matcherv3.Matcher_MatcherLis
 			Path: []*networkinput.DynamicMetadataInput_PathSegment{
 				{
 					Segment: &networkinput.DynamicMetadataInput_PathSegment_Key{
-						Key: jwt.Issuer, // The issuer is used as the `payload_in_metadata` in the JWT Authn filter.
+						Key: jwt.Provider, // The issuer is used as the `payload_in_metadata` in the JWT Authn filter.
 					},
 				},
 				{
@@ -413,7 +413,7 @@ func buildJWTPredicate(jwt egv1a1.JWTPrincipal) ([]*matcherv3.Matcher_MatcherLis
 		path := []*networkinput.DynamicMetadataInput_PathSegment{
 			{
 				Segment: &networkinput.DynamicMetadataInput_PathSegment_Key{
-					Key: jwt.Issuer, // The issuer is used as the `payload_in_metadata` in the JWT Authn filter.
+					Key: jwt.Provider, // The issuer is used as the `payload_in_metadata` in the JWT Authn filter.
 				},
 			},
 		}

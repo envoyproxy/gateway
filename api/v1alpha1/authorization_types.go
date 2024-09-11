@@ -81,11 +81,12 @@ type Principal struct {
 //
 // +kubebuilder:validation:XValidation:rule="(has(self.claims) || has(self.scopes))",message="at least one of claims or scopes must be specified"
 type JWTPrincipal struct {
-	// Issuer must match the issuer field in the JWT authentication configuration.
+	// Provider is the name of the JWT provider that used to verify the JWT token.
+	// The provider must be configured in the JWT authentication.
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	Issuer string `json:"issuer"`
+	Provider string `json:"provider"`
 
 	// TODO zhaohuabing  JWTProvider.Issuer is optional. Do we need to use JWTProvider.Name instead of Issuer?
 

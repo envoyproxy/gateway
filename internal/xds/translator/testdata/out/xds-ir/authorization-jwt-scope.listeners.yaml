@@ -23,7 +23,7 @@
                 - two.foo.com
                 forward: true
                 issuer: https://two.example.com
-                payloadInMetadata: https://two.example.com
+                payloadInMetadata: example1
                 remoteJwks:
                   asyncFetch: {}
                   cacheDuration: 300s
@@ -37,7 +37,7 @@
                 - one.foo.com
                 forward: true
                 issuer: https://one.example.com
-                payloadInMetadata: https://one.example.com
+                payloadInMetadata: example1
                 remoteJwks:
                   asyncFetch: {}
                   cacheDuration: 300s

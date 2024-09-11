@@ -167,9 +167,10 @@ spec:
                                   maxItems: 16
                                   minItems: 1
                                   type: array
-                                issuer:
-                                  description: Issuer must match the issuer field
-                                    in the JWT authentication configuration.
+                                provider:
+                                  description: |-
+                                    Provider is the name of the JWT provider that used to verify the JWT token.
+                                    The provider must be configured in the JWT authentication.
                                   maxLength: 253
                                   minLength: 1
                                   type: string
@@ -189,7 +190,7 @@ spec:
                                   minItems: 1
                                   type: array
                               required:
-                              - issuer
+                              - provider
                               type: object
                               x-kubernetes-validations:
                               - message: at least one of claims or scopes must be

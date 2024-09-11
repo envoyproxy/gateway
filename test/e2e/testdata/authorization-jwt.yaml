@@ -72,7 +72,7 @@ spec:
       action: Allow
       principal:
         jwt:
-          issuer: https://foo.bar.com
+          provider: example
           claims:
           - name: name
             values: ["John Doe"]
@@ -102,7 +102,7 @@ spec:
       action: Allow
       principal:
         jwt:
-          issuer: https://foo.bar.com
+          provider: example
           scopes: ["read", "add", "modify"]
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -128,7 +128,7 @@ spec:
       action: Allow
       principal:
         jwt:
-          issuer: https://foo.bar.com
+          provider: example
           scopes: ["read", "add", "modify"]
           claims:
           - name: name

@@ -2198,7 +2198,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `issuer` | _string_ |  true  | Issuer must match the issuer field in the JWT authentication configuration. |
+| `provider` | _string_ |  true  | Provider is the name of the JWT provider that used to verify the JWT token.<br />The provider must be configured in the JWT authentication. |
 | `claims` | _[JWTClaim](#jwtclaim) array_ |  false  | Claims are the claims in a JWT token.<br /><br />If multiple claims are specified, all claims must match for the rule to match.<br />For example, if there are two claims: one for the audience and one for the issuer,<br />the rule will match only if both the audience and the issuer match. |
 | `scopes` | _[JWTScope](#jwtscope) array_ |  false  | Scopes are a special type of claim in a JWT token that represents the permissions of the client.<br /><br />The value of the scopes field should be a space delimited string that is expected in the scope parameter,<br />as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749#page-23.<br /><br />If multiple scopes are specified, all scopes must match for the rule to match. |
 

@@ -293,6 +293,7 @@ xds:
                       providers:
                         httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com/example:
                           forward: true
+                          payloadInMetadata: example
                           remoteJwks:
                             asyncFetch: {}
                             cacheDuration: 300s

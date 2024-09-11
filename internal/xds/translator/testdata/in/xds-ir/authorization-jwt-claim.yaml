@@ -42,7 +42,7 @@ http:
           name: allow-claim-roles
           principal:
             jwt:
-              issuer: https://two.example.com
+              provider: example1
               claims:
               - name: name
                 values: ["alice", "bob"]
@@ -82,7 +82,7 @@ http:
           name: allow-claim-roles
           principal:
             jwt:
-              issuer: https://two.example.com
+              provider: example1
               claims:
               - name: roles
                 valueType: StringArray

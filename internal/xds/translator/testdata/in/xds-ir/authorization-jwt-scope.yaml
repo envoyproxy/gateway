@@ -42,7 +42,7 @@ http:
           name: allow-scope-foo-bar
           principal:
             jwt:
-              issuer: https://two.example.com
+              provider: example1
               scopes:
               - foo
               - bar
@@ -82,7 +82,7 @@ http:
           name: allow-scope-foo
           principal:
             jwt:
-              issuer: https://one.example.com
+              provider: example1
               scopes:
               - foo
       jwt:

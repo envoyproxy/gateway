@@ -58,7 +58,7 @@
                               '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
                               filter: envoy.filters.http.jwt_authn
                               path:
-                              - key: https://one.example.com
+                              - key: ""
                               - key: scope
                       - orMatcher:
                           predicate:
@@ -78,7 +78,7 @@
                                   '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
                                   filter: envoy.filters.http.jwt_authn
                                   path:
-                                  - key: https://one.example.com
+                                  - key: ""
                                   - key: roles
                           - singlePredicate:
                               customMatch:
@@ -96,7 +96,7 @@
                                   '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
                                   filter: envoy.filters.http.jwt_authn
                                   path:
-                                  - key: https://one.example.com
+                                  - key: ""
                                   - key: roles
                       - singlePredicate:
                           customMatch:
@@ -112,7 +112,7 @@
                               '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
                               filter: envoy.filters.http.jwt_authn
                               path:
-                              - key: https://one.example.com
+                              - key: ""
                               - key: department
                 - onMatch:
                     action:
@@ -153,7 +153,7 @@
                               '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
                               filter: envoy.filters.http.jwt_authn
                               path:
-                              - key: https://two.example.com
+                              - key: ""
                               - key: scope
                       - singlePredicate:
                           customMatch:
@@ -170,7 +170,7 @@
                               '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
                               filter: envoy.filters.http.jwt_authn
                               path:
-                              - key: https://two.example.com
+                              - key: ""
                               - key: scope
                       - orMatcher:
                           predicate:
@@ -190,7 +190,7 @@
                                   '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
                                   filter: envoy.filters.http.jwt_authn
                                   path:
-                                  - key: https://two.example.com
+                                  - key: ""
                                   - key: roles
                           - singlePredicate:
                               customMatch:
@@ -208,7 +208,7 @@
                                   '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
                                   filter: envoy.filters.http.jwt_authn
                                   path:
-                                  - key: https://two.example.com
+                                  - key: ""
                                   - key: roles
                       - orMatcher:
                           predicate:
@@ -226,7 +226,7 @@
                                   '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
                                   filter: envoy.filters.http.jwt_authn
                                   path:
-                                  - key: https://two.example.com
+                                  - key: ""
                                   - key: name
                           - singlePredicate:
                               customMatch:
@@ -242,7 +242,7 @@
                                   '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
                                   filter: envoy.filters.http.jwt_authn
                                   path:
-                                  - key: https://two.example.com
+                                  - key: ""
                                   - key: name
               onNoMatch:
                 action:

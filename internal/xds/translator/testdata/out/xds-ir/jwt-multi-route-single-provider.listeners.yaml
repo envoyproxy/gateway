@@ -48,7 +48,7 @@
                   headerName: first-route-key
                 forward: true
                 issuer: https://www.example.com
-                payloadInMetadata: https://www.example.com
+                payloadInMetadata: example
                 remoteJwks:
                   asyncFetch: {}
                   cacheDuration: 300s
@@ -62,7 +62,7 @@
                 - foo.com
                 forward: true
                 issuer: https://www.example.com
-                payloadInMetadata: https://www.example.com
+                payloadInMetadata: example
                 remoteJwks:
                   asyncFetch: {}
                   cacheDuration: 300s

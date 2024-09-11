@@ -62,7 +62,7 @@
                               '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
                               filter: envoy.filters.http.jwt_authn
                               path:
-                              - key: https://two.example.com
+                              - key: example1
                               - key: scope
                       - singlePredicate:
                           customMatch:
@@ -79,7 +79,7 @@
                               '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
                               filter: envoy.filters.http.jwt_authn
                               path:
-                              - key: https://two.example.com
+                              - key: example1
                               - key: scope
               onNoMatch:
                 action:
@@ -135,7 +135,7 @@
                           '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
                           filter: envoy.filters.http.jwt_authn
                           path:
-                          - key: https://one.example.com
+                          - key: example1
                           - key: scope
               onNoMatch:
                 action:

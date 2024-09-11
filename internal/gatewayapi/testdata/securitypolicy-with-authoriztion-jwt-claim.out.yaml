@@ -118,7 +118,7 @@ securityPolicies:
               values:
               - admin
               - superuser
-            issuer: https://two.example.com
+            provider: example1
             scopes:
             - foo
             - bar
@@ -206,7 +206,7 @@ xdsIR:
                     values:
                     - admin
                     - superuser
-                  issuer: https://two.example.com
+                  provider: example1
                   scopes:
                   - foo
                   - bar
