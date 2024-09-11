@@ -35,6 +35,10 @@ func ValidateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
 		if err := validateEnvoyGatewayKubernetesProvider(eg.Provider.Kubernetes); err != nil {
 			return err
 		}
+	case egv1a1.ProviderTypeCustom:
+		if err := validateEnvoyGatewayCustomProvider(eg.Provider.Custom); err != nil {
+			return err
+		}
 	default:
 		return fmt.Errorf("unsupported provider type")
 	}
@@ -75,6 +79,54 @@ func validateEnvoyGatewayKubernetesProvider(provider *egv1a1.EnvoyGatewayKuberne
 		}
 	default:
 		return fmt.Errorf("envoy gateway watch mode invalid, should be 'Namespaces' or 'NamespaceSelector'")
+	}
+	return nil
+}
+
+func validateEnvoyGatewayCustomProvider(provider *egv1a1.EnvoyGatewayCustomProvider) error {
+	if provider == nil {
+		return fmt.Errorf("empty custom provider settings")
+	}
+
+	if err := validateEnvoyGatewayCustomResourceProvider(provider.Resource); err != nil {
+		return err
+	}
+
+	if err := validateEnvoyGatewayCustomInfrastructureProvider(provider.Infrastructure); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func validateEnvoyGatewayCustomResourceProvider(resource egv1a1.EnvoyGatewayResourceProvider) error {
+	switch resource.Type {
+	case egv1a1.ResourceProviderTypeFile:
+		if resource.File == nil {
+			return fmt.Errorf("field 'file' should be specified when resource type is 'File'")
+		}
+
+		if len(resource.File.Paths) == 0 {
+			return fmt.Errorf("no paths were assigned for file resource provider to watch")
+		}
+	default:
+		return fmt.Errorf("unsupported resource provider: %s", resource.Type)
+	}
+	return nil
+}
+
+func validateEnvoyGatewayCustomInfrastructureProvider(infra *egv1a1.EnvoyGatewayInfrastructureProvider) error {
+	if infra == nil {
+		return nil
+	}
+
+	switch infra.Type {
+	case egv1a1.InfrastructureProviderTypeHost:
+		if infra.Host == nil {
+			return fmt.Errorf("field 'host' should be specified when infrastructure type is 'Host'")
+		}
+	default:
+		return fmt.Errorf("unsupported infrastructure provdier: %s", infra.Type)
 	}
 	return nil
 }

@@ -52,7 +52,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeFile,
+						Type: egv1a1.ProviderTypeCustom,
 					},
 				},
 			},
