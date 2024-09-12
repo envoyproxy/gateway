@@ -6,8 +6,6 @@ metadata:
     app.kubernetes.io/component: ratelimit
     app.kubernetes.io/managed-by: envoy-gateway
     app.kubernetes.io/name: envoy-ratelimit
-    key1: value1
-    key2: value2
   name: envoy-ratelimit
   namespace: envoy-gateway-system
   ownerReferences:
@@ -31,13 +29,13 @@ spec:
         prometheus.io/path: /metrics
         prometheus.io/port: "19001"
         prometheus.io/scrape: "true"
+        key1: value1
+        key2: value2
       creationTimestamp: null
       labels:
         app.kubernetes.io/component: ratelimit
         app.kubernetes.io/managed-by: envoy-gateway
         app.kubernetes.io/name: envoy-ratelimit
-        key1: value1
-        key2: value2
     spec:
       automountServiceAccountToken: false
       containers:
@@ -170,9 +168,6 @@ spec:
           name: statsd-exporter-config
           readOnly: true
       dnsPolicy: ClusterFirst
-      nodeSelector:
-        key1: value1
-        key2: value2
       restartPolicy: Always
       schedulerName: default-scheduler
       serviceAccountName: envoy-ratelimit

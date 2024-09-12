@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -691,8 +692,11 @@ func TestDeployment(t *testing.T) {
 			deploy: &egv1a1.KubernetesDeploymentSpec{
 				Pod: &egv1a1.KubernetesPodSpec{
 					Labels: map[string]string{
-						"key1": "value1",
-						"key2": "value2",
+						"app.kubernetes.io/name":       InfraName,
+						"app.kubernetes.io/component":  "ratelimit",
+						"app.kubernetes.io/managed-by": "envoy-gateway",
+						"key1":                         "value1",
+						"key2":                         "value2",
 					},
 				},
 			},
@@ -710,8 +714,11 @@ func TestDeployment(t *testing.T) {
 			deploy: &egv1a1.KubernetesDeploymentSpec{
 				Pod: &egv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
-						"key1": "value1",
-						"key2": "value2",
+						"prometheus.io/path":   "/metrics",
+						"prometheus.io/port":   strconv.Itoa(PrometheusPort),
+						"prometheus.io/scrape": "true",
+						"key1":                 "value1",
+						"key2":                 "value2",
 					},
 				},
 			},

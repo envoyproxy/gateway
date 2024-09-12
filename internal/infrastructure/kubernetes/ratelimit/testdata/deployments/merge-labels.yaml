@@ -168,9 +168,6 @@ spec:
           name: statsd-exporter-config
           readOnly: true
       dnsPolicy: ClusterFirst
-      nodeSelector:
-        key1: value1
-        key2: value2
       restartPolicy: Always
       schedulerName: default-scheduler
       serviceAccountName: envoy-ratelimit

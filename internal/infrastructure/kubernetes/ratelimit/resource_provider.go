@@ -189,8 +189,9 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	containers := expectedRateLimitContainers(r.rateLimit, r.rateLimitDeployment, r.Namespace)
 	selector := resource.GetSelector(rateLimitLabels())
 
-	var labels map[string]string
+	labels := rateLimitLabels()
 	if r.rateLimitDeployment.Pod.Labels != nil {
+		maps.Copy(labels, r.rateLimitDeployment.Pod.Labels)
 		maps.Copy(labels, rateLimitLabels())
 	}
 
@@ -213,7 +214,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.Namespace,
-			Labels:    labels,
+			Labels:    rateLimitLabels(),
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: r.rateLimitDeployment.Replicas,
@@ -221,7 +222,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 			Selector: selector,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels:      selector.MatchLabels,
+					Labels:      labels,
 					Annotations: annotations,
 				},
 				Spec: corev1.PodSpec{
