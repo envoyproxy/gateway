@@ -825,6 +825,9 @@ type OIDC struct {
 }
 
 type OIDCProvider struct {
+	// Destination defines the destination for the OIDC Provider.
+	Destination RouteDestination `json:"destination"`
+
 	// The OIDC Provider's [authorization endpoint](https://openid.net/specs/openid-connect-core-1_0.html#AuthorizationEndpoint).
 	AuthorizationEndpoint string `json:"authorizationEndpoint,omitempty"`
 

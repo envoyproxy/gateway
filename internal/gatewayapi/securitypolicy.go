@@ -565,11 +565,13 @@ func (t *Translator) buildJWT(jwt *egv1a1.JWT) *ir.JWT {
 func (t *Translator) buildOIDC(
 	policy *egv1a1.SecurityPolicy,
 	resources *Resources,
+	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.OIDC, error) {
 	var (
 		oidc         = policy.Spec.OIDC
 		clientSecret *corev1.Secret
 		provider     *ir.OIDCProvider
+		ds           []*ir.DestinationSetting
 		err          error
 	)
 
@@ -599,6 +601,32 @@ func (t *Translator) buildOIDC(
 	if err = validateTokenEndpoint(provider.TokenEndpoint); err != nil {
 		return nil, err
 	}
+
+	pnn := utils.NamespacedName(policy)
+	for _, backendRef := range oidc.Provider.BackendRefs {
+		if err = t.validateExtServiceBackendReference(&backendRef.BackendObjectReference, policy.Namespace, policy.Kind, resources); err != nil {
+			return nil, err
+		}
+
+		extServiceDest, err := t.processExtServiceDestination(
+			&backendRef,
+			pnn,
+			KindSecurityPolicy,
+			ir.HTTP,
+			resources,
+			envoyProxy,
+		)
+		if err != nil {
+			return nil, err
+		}
+		ds = append(ds, extServiceDest)
+	}
+	rd := ir.RouteDestination{
+		Name:     irIndexedExtServiceDestinationName(pnn, egv1a1.KindSecurityPolicy, 0),
+		Settings: ds,
+	}
+	provider.Destination = rd
+
 	scopes := appendOpenidScopeIfNotExist(oidc.Scopes)
 
 	var (
