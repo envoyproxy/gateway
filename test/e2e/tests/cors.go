@@ -46,7 +46,7 @@ var CorsTest = suite.ConformanceTest{
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
-					Path: "/cors-exact",
+					Path:   "/cors-exact",
 					Method: "OPTIONS",
 					Headers: map[string]string{
 						"Origin": "https://www.foo.com",
@@ -132,7 +132,7 @@ var CorsTest = suite.ConformanceTest{
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
-					Path: "/cors-exact",
+					Path:   "/cors-exact",
 					Method: "OPTIONS",
 					Headers: map[string]string{
 						"Origin": "https://unknown.foo.com",
@@ -182,7 +182,7 @@ var CorsTest = suite.ConformanceTest{
 				Response: http.Response{
 					StatusCode: 200,
 					Headers: map[string]string{
-						"access-control-allow-origin":   "https://foo.bar.com",
+						"access-control-allow-origin":  "https://foo.bar.com",
 						"access-control-allow-headers": "x-header-1, x-header-2",
 					},
 				},
