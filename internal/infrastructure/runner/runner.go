@@ -38,6 +38,12 @@ func New(cfg *Config) *Runner {
 // Start starts the infrastructure runner
 func (r *Runner) Start(ctx context.Context) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
+	if r.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeCustom &&
+		r.EnvoyGateway.Provider.Custom.Infrastructure == nil {
+		r.Logger.Info("provider is not specified, no provider is available")
+		return nil
+	}
+
 	r.mgr, err = infrastructure.NewManager(&r.Config.Server)
 	if err != nil {
 		r.Logger.Error(err, "failed to create new manager")
@@ -56,7 +62,8 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 
 	// When leader election is active, infrastructure initialization occurs only upon acquiring leadership
 	// to avoid multiple EG instances processing envoy proxy infra resources.
-	if !ptr.Deref(r.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable, false) {
+	if r.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes &&
+		!ptr.Deref(r.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable, false) {
 		go func() {
 			select {
 			case <-ctx.Done():

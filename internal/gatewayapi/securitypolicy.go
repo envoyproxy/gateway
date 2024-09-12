@@ -662,6 +662,7 @@ func (t *Translator) buildOIDC(
 		DefaultRefreshTokenTTL: oidc.DefaultRefreshTokenTTL,
 		CookieSuffix:           suffix,
 		CookieNameOverrides:    policy.Spec.OIDC.CookieNames,
+		CookieDomain:           policy.Spec.OIDC.CookieDomain,
 		HMACSecret:             hmacData,
 	}, nil
 }
@@ -871,6 +872,7 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Reso
 		HeadersToExtAuth: policy.Spec.ExtAuth.HeadersToExtAuth,
 		FailOpen:         policy.Spec.ExtAuth.FailOpen,
 		Traffic:          traffic,
+		RecomputeRoute:   policy.Spec.ExtAuth.RecomputeRoute,
 	}
 
 	if http != nil {

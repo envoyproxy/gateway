@@ -78,7 +78,7 @@ backends:
       message: The Backend was accepted
       reason: Accepted
       status: "True"
-      type: Invalid
+      type: Accepted
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
