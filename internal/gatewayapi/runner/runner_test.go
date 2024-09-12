@@ -165,6 +165,10 @@ func TestDeleteStatusKeys(t *testing.T) {
 			Name:      "test7",
 			Namespace: "test-namespace",
 		},
+		{
+			Name:      "test8",
+			Namespace: "test-namespace",
+		},
 	}
 
 	r.ProviderResources.GatewayStatuses.Store(keys[0], &gwapiv1.GatewayStatus{})
@@ -174,6 +178,7 @@ func TestDeleteStatusKeys(t *testing.T) {
 	r.ProviderResources.TCPRouteStatuses.Store(keys[4], &gwapiv1a2.TCPRouteStatus{})
 	r.ProviderResources.UDPRouteStatuses.Store(keys[5], &gwapiv1a2.UDPRouteStatus{})
 	r.ProviderResources.UDPRouteStatuses.Store(keys[6], &gwapiv1a2.UDPRouteStatus{})
+	r.ProviderResources.BackendStatuses.Store(keys[7], &egv1a1.BackendStatus{})
 
 	// Checks that the keys are successfully stored to DeletableStatus and watchable maps
 	ds := r.getAllStatuses()
@@ -185,6 +190,7 @@ func TestDeleteStatusKeys(t *testing.T) {
 	require.True(t, ds.TCPRouteStatusKeys[keys[4]])
 	require.True(t, ds.UDPRouteStatusKeys[keys[5]])
 	require.True(t, ds.UDPRouteStatusKeys[keys[6]])
+	require.True(t, ds.BackendStatusKeys[keys[7]])
 
 	require.Equal(t, 1, r.ProviderResources.GatewayStatuses.Len())
 	require.Equal(t, 1, r.ProviderResources.HTTPRouteStatuses.Len())
@@ -192,6 +198,7 @@ func TestDeleteStatusKeys(t *testing.T) {
 	require.Equal(t, 1, r.ProviderResources.TLSRouteStatuses.Len())
 	require.Equal(t, 1, r.ProviderResources.TCPRouteStatuses.Len())
 	require.Equal(t, 2, r.ProviderResources.UDPRouteStatuses.Len())
+	require.Equal(t, 1, r.ProviderResources.BackendStatuses.Len())
 
 	// Delete all keys except the last UDPRouteStatus key
 	delete(ds.UDPRouteStatusKeys, keys[6])
@@ -203,6 +210,7 @@ func TestDeleteStatusKeys(t *testing.T) {
 	require.Equal(t, 0, r.ProviderResources.TLSRouteStatuses.Len())
 	require.Equal(t, 0, r.ProviderResources.TCPRouteStatuses.Len())
 	require.Equal(t, 1, r.ProviderResources.UDPRouteStatuses.Len())
+	require.Equal(t, 0, r.ProviderResources.BackendStatuses.Len())
 }
 
 func TestDeleteAllStatusKeys(t *testing.T) {
@@ -254,6 +262,10 @@ func TestDeleteAllStatusKeys(t *testing.T) {
 			Name:      "test6",
 			Namespace: "test-namespace",
 		},
+		{
+			Name:      "test7",
+			Namespace: "test-namespace",
+		},
 	}
 
 	r.ProviderResources.GatewayStatuses.Store(keys[0], &gwapiv1.GatewayStatus{})
@@ -262,6 +274,7 @@ func TestDeleteAllStatusKeys(t *testing.T) {
 	r.ProviderResources.TLSRouteStatuses.Store(keys[3], &gwapiv1a2.TLSRouteStatus{})
 	r.ProviderResources.TCPRouteStatuses.Store(keys[4], &gwapiv1a2.TCPRouteStatus{})
 	r.ProviderResources.UDPRouteStatuses.Store(keys[5], &gwapiv1a2.UDPRouteStatus{})
+	r.ProviderResources.BackendStatuses.Store(keys[6], &egv1a1.BackendStatus{})
 
 	// Checks that the keys are successfully stored to DeletableStatus and watchable maps
 	ds := r.getAllStatuses()
@@ -272,6 +285,7 @@ func TestDeleteAllStatusKeys(t *testing.T) {
 	require.True(t, ds.TLSRouteStatusKeys[keys[3]])
 	require.True(t, ds.TCPRouteStatusKeys[keys[4]])
 	require.True(t, ds.UDPRouteStatusKeys[keys[5]])
+	require.True(t, ds.BackendStatusKeys[keys[6]])
 
 	require.Equal(t, 1, r.ProviderResources.GatewayStatuses.Len())
 	require.Equal(t, 1, r.ProviderResources.HTTPRouteStatuses.Len())
@@ -279,6 +293,7 @@ func TestDeleteAllStatusKeys(t *testing.T) {
 	require.Equal(t, 1, r.ProviderResources.TLSRouteStatuses.Len())
 	require.Equal(t, 1, r.ProviderResources.TCPRouteStatuses.Len())
 	require.Equal(t, 1, r.ProviderResources.UDPRouteStatuses.Len())
+	require.Equal(t, 1, r.ProviderResources.BackendStatuses.Len())
 
 	// Delete all keys
 	r.deleteAllStatusKeys()
@@ -288,4 +303,5 @@ func TestDeleteAllStatusKeys(t *testing.T) {
 	require.Equal(t, 0, r.ProviderResources.TLSRouteStatuses.Len())
 	require.Equal(t, 0, r.ProviderResources.TCPRouteStatuses.Len())
 	require.Equal(t, 0, r.ProviderResources.UDPRouteStatuses.Len())
+	require.Equal(t, 0, r.ProviderResources.BackendStatuses.Len())
 }
