@@ -2777,7 +2777,7 @@ _Appears in:_
 
 
 ProxyAccessLogFormat defines the format of accesslog.
-By default accesslogs are written to standard output.
+By default, accesslogs are written to standard output.
 
 _Appears in:_
 - [ProxyAccessLogSetting](#proxyaccesslogsetting)
@@ -2802,6 +2802,7 @@ _Appears in:_
 | ----- | ----------- |
 | `Text` | ProxyAccessLogFormatTypeText defines the text accesslog format.<br /> | 
 | `JSON` | ProxyAccessLogFormatTypeJSON defines the JSON accesslog format.<br /> | 
+| `Mixin` | ProxyAccessLogFormatTypeJSONAndText defines the mixed mode of text and JSON accesslog format.<br />This is used when the accesslog format is a mix of text and JSON format(e.g. OpenTelemetry).<br /> | 
 
 
 #### ProxyAccessLogSetting

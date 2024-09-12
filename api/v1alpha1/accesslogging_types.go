@@ -39,11 +39,13 @@ const (
 	ProxyAccessLogFormatTypeText ProxyAccessLogFormatType = "Text"
 	// ProxyAccessLogFormatTypeJSON defines the JSON accesslog format.
 	ProxyAccessLogFormatTypeJSON ProxyAccessLogFormatType = "JSON"
-	// TODO: support format type "mix" in the future.
+	// ProxyAccessLogFormatTypeJSONAndText defines the mixed mode of text and JSON accesslog format.
+	// This is used when the accesslog format is a mix of text and JSON format(e.g. OpenTelemetry).
+	ProxyAccessLogFormatTypeJSONAndText ProxyAccessLogFormatType = "Mixin"
 )
 
 // ProxyAccessLogFormat defines the format of accesslog.
-// By default accesslogs are written to standard output.
+// By default, accesslogs are written to standard output.
 // +union
 //
 // +kubebuilder:validation:XValidation:rule="self.type == 'Text' ? has(self.text) : !has(self.text)",message="If AccessLogFormat type is Text, text field needs to be set."
