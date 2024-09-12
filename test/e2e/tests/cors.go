@@ -74,7 +74,7 @@ var CorsTest = suite.ConformanceTest{
 						"access-control-expose-headers": "x-header-3, x-header-4",
 					},
 				},
-				Namespace: ns,
+				Namespace: "",
 			}
 
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
@@ -132,7 +132,7 @@ var CorsTest = suite.ConformanceTest{
 						"access-control-expose-headers": "x-header-3, x-header-4",
 					},
 				},
-				Namespace: ns,
+				Namespace: "",
 			}
 
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
@@ -184,7 +184,7 @@ var CorsTest = suite.ConformanceTest{
 				Response: http.Response{
 					AbsentHeaders: []string{"access-control-allow-origin"},
 				},
-				Namespace: ns,
+				Namespace: "",
 			}
 
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
@@ -242,7 +242,7 @@ var CorsTest = suite.ConformanceTest{
 						"access-control-expose-headers": "*",
 					},
 				},
-				Namespace: ns,
+				Namespace: "",
 			}
 
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
