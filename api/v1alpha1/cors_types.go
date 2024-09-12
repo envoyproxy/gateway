@@ -58,18 +58,19 @@ type CORS struct {
 	ExposeHeaders []string `json:"exposeHeaders,omitempty"`
 
 	// MaxAge defines how long the results of a preflight request can be cached.
-	// It specifies the value in the Access-Control-Max-Age header.
+	// It specifies the value in the Access-Control-Max-Age CORS response header..
 	//
 	// +optional
 	MaxAge *metav1.Duration `json:"maxAge,omitempty"`
 
 	// AllowCredentials indicates whether a request can include user credentials
 	// like cookies, authentication headers, or TLS client certificates.
+	// It specifies the value in the Access-Control-Allow-Credentials CORS response header.
 	//
 	// +optional
 	AllowCredentials *bool `json:"allowCredentials,omitempty"`
 
-	// TODO zhaohuabing: according to CORS spec,wildcard should be treated as a literal value
+	// TODO zhaohuabing: according to CORS spec, wildcard should be treated as a literal value
 	// for CORS requests with credentials.
 	// This needs to be supported in the Envoy CORS filter.
 }

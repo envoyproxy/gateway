@@ -252,6 +252,7 @@ spec:
                     description: |-
                       AllowCredentials indicates whether a request can include user credentials
                       like cookies, authentication headers, or TLS client certificates.
+                      It specifies the value in the Access-Control-Allow-Credentials CORS response header.
                     type: boolean
                   allowHeaders:
                     description: |-
@@ -306,7 +307,7 @@ spec:
                   maxAge:
                     description: |-
                       MaxAge defines how long the results of a preflight request can be cached.
-                      It specifies the value in the Access-Control-Max-Age header.
+                      It specifies the value in the Access-Control-Max-Age CORS response header..
                     type: string
                 type: object
               extAuth:
