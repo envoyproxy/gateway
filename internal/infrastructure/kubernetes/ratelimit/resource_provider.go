@@ -7,6 +7,7 @@ package ratelimit
 
 import (
 	_ "embed"
+	"golang.org/x/exp/maps"
 	"strconv"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -186,8 +187,12 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 // Deployment returns the expected rate limit Deployment based on the provided infra.
 func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	containers := expectedRateLimitContainers(r.rateLimit, r.rateLimitDeployment, r.Namespace)
-	labels := rateLimitLabels()
-	selector := resource.GetSelector(labels)
+	selector := resource.GetSelector(rateLimitLabels())
+
+	var labels map[string]string
+	if r.rateLimitDeployment.Pod.Labels != nil {
+		maps.Copy(labels, rateLimitLabels())
+	}
 
 	var annotations map[string]string
 	if enablePrometheus(r.rateLimit) {
@@ -198,7 +203,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		}
 	}
 	if r.rateLimitDeployment.Pod.Annotations != nil {
-		annotations = r.rateLimitDeployment.Pod.Annotations
+		maps.Copy(annotations, r.rateLimitDeployment.Pod.Annotations)
 	}
 
 	deployment := &appsv1.Deployment{
