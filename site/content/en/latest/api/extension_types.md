@@ -26,8 +26,8 @@ API group.
 - [EnvoyPatchPolicy](#envoypatchpolicy)
 - [EnvoyPatchPolicyList](#envoypatchpolicylist)
 - [EnvoyProxy](#envoyproxy)
-- [HTTPFilter](#httpfilter)
 - [HTTPFilterList](#httpfilterlist)
+- [HTTPRouteFilter](#httproutefilter)
 - [SecurityPolicy](#securitypolicy)
 - [SecurityPolicyList](#securitypolicylist)
 
@@ -1893,29 +1893,11 @@ _Appears in:_
 | `headersToBackend` | _string array_ |  false  | HeadersToBackend are the authorization response headers that will be added<br />to the original client request before sending it to the backend server.<br />Note that coexisting headers will be overridden.<br />If not specified, no authorization response headers will be added to the<br />original client request. |
 
 
-#### HTTPFilter
-
-
-
-HTTPFilter is a custom Envoy Gateway HTTPRouteFilter which provides extended
-traffic processing options such as path regex rewrite, direct response and more.
-
-_Appears in:_
-- [HTTPFilterList](#httpfilterlist)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
-| `kind` | _string_ | |`HTTPFilter`
-| `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` | _[HTTPFilterSpec](#httpfilterspec)_ |  true  | Spec defines the desired state of HTTPFilter. |
-
-
 #### HTTPFilterList
 
 
 
-HTTPFilterList contains a list of HTTPFilter resources.
+HTTPFilterList contains a list of HTTPRouteFilter resources.
 
 
 
@@ -1924,21 +1906,7 @@ HTTPFilterList contains a list of HTTPFilter resources.
 | `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
 | `kind` | _string_ | |`HTTPFilterList`
 | `metadata` | _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#listmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `items` | _[HTTPFilter](#httpfilter) array_ |  true  |  |
-
-
-#### HTTPFilterSpec
-
-
-
-HTTPFilterSpec defines the desired state of HTTPFilter.
-
-_Appears in:_
-- [HTTPFilter](#httpfilter)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `urlRewrite` | _[HTTPURLRewriteFilter](#httpurlrewritefilter)_ |  false  |  |
+| `items` | _[HTTPRouteFilter](#httproutefilter) array_ |  true  |  |
 
 
 #### HTTPPathModifier
@@ -1969,6 +1937,38 @@ _Appears in:_
 | ----- | ----------- |
 | `ReplaceRegexMatch` | RegexHTTPPathModifier This type of modifier indicates that the portions of the path that match the specified<br /> regex would be substituted with the specified substitution value<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/type/matcher/v3/regex.proto#type-matcher-v3-regexmatchandsubstitute<br /> | 
 | `ReplaceTemplate` | TemplateHTTPPathModifier This type of modifier indicates that the portions of the path that match the specified<br />pattern would be rewritten according to the specified template<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/path/rewrite/uri_template/v3/uri_template_rewrite.proto#extension-envoy-path-rewrite-uri-template-uri-template-rewriter<br /> | 
+
+
+#### HTTPRouteFilter
+
+
+
+HTTPRouteFilter is a custom Envoy Gateway HTTPRouteFilter which provides extended
+traffic processing options such as path regex rewrite, direct response and more.
+
+_Appears in:_
+- [HTTPFilterList](#httpfilterlist)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
+| `kind` | _string_ | |`HTTPRouteFilter`
+| `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` | _[HTTPRouteFilterSpec](#httproutefilterspec)_ |  true  | Spec defines the desired state of HTTPRouteFilter. |
+
+
+#### HTTPRouteFilterSpec
+
+
+
+HTTPRouteFilterSpec defines the desired state of HTTPRouteFilter.
+
+_Appears in:_
+- [HTTPRouteFilter](#httproutefilter)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `urlRewrite` | _[HTTPURLRewriteFilter](#httpurlrewritefilter)_ |  false  |  |
 
 
 #### HTTPStatus
@@ -2005,7 +2005,7 @@ _Appears in:_
 HTTPURLRewriteFilter define rewrites of HTTP URL components such as path and host
 
 _Appears in:_
-- [HTTPFilterSpec](#httpfilterspec)
+- [HTTPRouteFilterSpec](#httproutefilterspec)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |

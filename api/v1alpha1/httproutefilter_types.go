@@ -10,27 +10,27 @@ import (
 )
 
 const (
-	// KindHTTPFilter is the name of the HTTPFilter kind.
-	KindHTTPFilter = "HTTPFilter"
+	// KindHTTPRouteFilter is the name of the HTTPRouteFilter kind.
+	KindHTTPRouteFilter = "HTTPRouteFilter"
 )
 
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:categories=envoy-gateway,shortName=hf
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
-// HTTPFilter is a custom Envoy Gateway HTTPRouteFilter which provides extended
+// HTTPRouteFilter is a custom Envoy Gateway HTTPRouteFilter which provides extended
 // traffic processing options such as path regex rewrite, direct response and more.
-type HTTPFilter struct {
+type HTTPRouteFilter struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec defines the desired state of HTTPFilter.
-	Spec HTTPFilterSpec `json:"spec"`
+	// Spec defines the desired state of HTTPRouteFilter.
+	Spec HTTPRouteFilterSpec `json:"spec"`
 }
 
-// HTTPFilterSpec defines the desired state of HTTPFilter.
+// HTTPRouteFilterSpec defines the desired state of HTTPRouteFilter.
 // +union
-type HTTPFilterSpec struct {
+type HTTPRouteFilterSpec struct {
 	// +optional
 	URLRewrite HTTPURLRewriteFilter `json:"urlRewrite,omitempty"`
 }
@@ -71,18 +71,18 @@ type HTTPPathModifier struct {
 	// +kubebuilder:validation:Enum=RegexHTTPPathModifier
 	Type HTTPPathModifierType `json:"type"`
 
-	ReplaceRegexMatch ReplaceRegexMatch `json:"replaceRegexMatch,omitempty"`
+	ReplaceRegexMatch *ReplaceRegexMatch `json:"replaceRegexMatch,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// HTTPFilterList contains a list of HTTPFilter resources.
+// HTTPFilterList contains a list of HTTPRouteFilter resources.
 type HTTPFilterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []HTTPFilter `json:"items"`
+	Items           []HTTPRouteFilter `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&HTTPFilter{}, &HTTPFilterList{})
+	SchemeBuilder.Register(&HTTPRouteFilter{}, &HTTPFilterList{})
 }
