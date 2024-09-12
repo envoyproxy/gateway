@@ -10,7 +10,6 @@ envoyExtensionPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:
@@ -36,7 +35,6 @@ envoyExtensionPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:
@@ -46,8 +44,8 @@ envoyExtensionPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Unable to target HTTPRoute, another EnvoyExtensionPolicy has already
-          attached to it
+        message: Unable to target HTTPRoute httproute-1, another EnvoyExtensionPolicy
+          has already attached to it
         reason: Conflicted
         status: "False"
         type: Accepted
@@ -63,7 +61,6 @@ envoyExtensionPolicies:
       group: gateway.networking.k8s.io
       kind: GRPCRoute
       name: grpcroute-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:
@@ -89,7 +86,6 @@ envoyExtensionPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: unknown-httproute
-      namespace: envoy-gateway
   status:
     ancestors: null
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -103,22 +99,8 @@ envoyExtensionPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: not-same-namespace-httproute
-      namespace: another-namespace
   status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: not-same-namespace-gateway
-        namespace: another-namespace
-      conditions:
-      - lastTransitionTime: null
-        message: Namespace:envoy-gateway TargetRef.Namespace:another-namespace, EnvoyExtensionPolicy
-          can only target a resource in the same namespace.
-        reason: Invalid
-        status: "False"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    ancestors: null
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
@@ -130,7 +112,6 @@ envoyExtensionPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:
@@ -162,7 +143,6 @@ envoyExtensionPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:
@@ -172,8 +152,8 @@ envoyExtensionPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Unable to target Gateway, another EnvoyExtensionPolicy has already
-          attached to it
+        message: Unable to target Gateway gateway-1, another EnvoyExtensionPolicy
+          has already attached to it
         reason: Conflicted
         status: "False"
         type: Accepted
@@ -189,7 +169,6 @@ envoyExtensionPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: unknown-gateway
-      namespace: envoy-gateway
   status:
     ancestors: null
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -203,22 +182,8 @@ envoyExtensionPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: not-same-namespace-gateway
-      namespace: another-namespace
   status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: not-same-namespace-gateway
-        namespace: another-namespace
-      conditions:
-      - lastTransitionTime: null
-        message: Namespace:envoy-gateway TargetRef.Namespace:another-namespace, EnvoyExtensionPolicy
-          can only target a resource in the same namespace.
-        reason: Invalid
-        status: "False"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    ancestors: null
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
@@ -560,6 +525,11 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: not-same-namespace-gateway
+        namespace: another-namespace
+        sectionName: http
       name: another-namespace/not-same-namespace-gateway/http
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -574,19 +544,30 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
       name: envoy-gateway/gateway-1/http
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 1
-          valid: 0
+      - destination:
+          name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - weight: 1
         directResponse:
           statusCode: 500
+        envoyExtensions: {}
         hostname: '*'
         isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -601,21 +582,36 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: true
+      metadata:
+        kind: Gateway
+        name: gateway-2
+        namespace: envoy-gateway
+        sectionName: http
       name: envoy-gateway/gateway-2/http
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 1
-          valid: 0
+      - destination:
+          name: grpcroute/envoy-gateway/grpcroute-1/rule/0
+          settings:
+          - weight: 1
         directResponse:
           statusCode: 500
+        envoyExtensions: {}
         headerMatches:
         - distinct: false
           exact: foo
           name: magic
         hostname: '*'
         isHTTP2: true
+        metadata:
+          kind: GRPCRoute
+          name: grpcroute-1
+          namespace: envoy-gateway
         name: grpcroute/envoy-gateway/grpcroute-1/rule/0/match/0/*
+    tcp:
+    - address: 0.0.0.0
+      name: envoy-gateway/gateway-2/tcp
+      port: 10053

@@ -27,7 +27,7 @@
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
-    clusterName: accesslog|otel-collector.default.svc.cluster.local|4317
+    clusterName: accesslog-0
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -38,8 +38,8 @@
         loadBalancingWeight: 1
       loadBalancingWeight: 1
       locality:
-        region: accesslog|otel-collector.default.svc.cluster.local|4317/backend/0
-  name: accesslog|otel-collector.default.svc.cluster.local|4317
+        region: accesslog-0/backend/0
+  name: accesslog-0
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
@@ -50,4 +50,6 @@
     envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
       '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
       explicitHttpConfig:
-        http2ProtocolOptions: {}
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536

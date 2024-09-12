@@ -9,15 +9,15 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	v1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/logging"
 )
 
 var (
-	TLSSecretKind       = v1.Kind("Secret")
-	TLSUnrecognizedKind = v1.Kind("Unrecognized")
+	TLSSecretKind       = gwapiv1.Kind("Secret")
+	TLSUnrecognizedKind = gwapiv1.Kind("Unrecognized")
 )
 
 func TestValidate(t *testing.T) {
@@ -42,10 +42,10 @@ func TestValidate(t *testing.T) {
 		{
 			name: "empty namespace",
 			cfg: &Server{
-				EnvoyGateway: &v1alpha1.EnvoyGateway{
-					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
-						Gateway:  v1alpha1.DefaultGateway(),
-						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
+				EnvoyGateway: &egv1a1.EnvoyGateway{
+					EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+						Gateway:  egv1a1.DefaultGateway(),
+						Provider: egv1a1.DefaultEnvoyGatewayProvider(),
 					},
 				},
 				Namespace: "",
@@ -56,14 +56,13 @@ func TestValidate(t *testing.T) {
 			name: "unspecified envoy gateway",
 			cfg: &Server{
 				Namespace: "test-ns",
-				Logger:    logging.DefaultLogger(v1alpha1.LogLevelInfo),
+				Logger:    logging.DefaultLogger(egv1a1.LogLevelInfo),
 			},
 			expect: false,
 		},
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			err := tc.cfg.Validate()
 			if !tc.expect {

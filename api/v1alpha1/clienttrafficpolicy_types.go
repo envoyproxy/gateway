@@ -6,8 +6,8 @@
 package v1alpha1
 
 import (
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
@@ -34,18 +34,17 @@ type ClientTrafficPolicy struct {
 	Status gwapiv1a2.PolicyStatus `json:"status,omitempty"`
 }
 
+// +kubebuilder:validation:XValidation:rule="(has(self.targetRef) && !has(self.targetRefs)) || (!has(self.targetRef) && has(self.targetRefs)) || (has(self.targetSelectors) && self.targetSelectors.size() > 0) ", message="either targetRef or targetRefs must be used"
+//
+// +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? self.targetRef.group == 'gateway.networking.k8s.io' : true", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
+// +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? self.targetRef.kind == 'Gateway' : true", message="this policy can only have a targetRef.kind of Gateway"
+// +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, ref.group == 'gateway.networking.k8s.io') : true", message="this policy can only have a targetRefs[*].group of gateway.networking.k8s.io"
+// +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind == 'Gateway') : true", message="this policy can only have a targetRefs[*].kind of Gateway"
+//
 // ClientTrafficPolicySpec defines the desired state of ClientTrafficPolicy.
 type ClientTrafficPolicySpec struct {
-	// +kubebuilder:validation:XValidation:rule="self.group == 'gateway.networking.k8s.io'", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
-	// +kubebuilder:validation:XValidation:rule="self.kind == 'Gateway'", message="this policy can only have a targetRef.kind of Gateway"
-	// +kubebuilder:validation:XValidation:rule="!has(self.sectionName)",message="this policy does not yet support the sectionName field"
-	//
-	// TargetRef is the name of the Gateway resource this policy
-	// is being attached to.
-	// This Policy and the TargetRef MUST be in the same namespace
-	// for this Policy to have effect and be applied to the Gateway.
-	// TargetRef
-	TargetRef gwapiv1a2.PolicyTargetReferenceWithSectionName `json:"targetRef"`
+	PolicyTargetReferences `json:",inline"`
+
 	// TcpKeepalive settings associated with the downstream client connection.
 	// If defined, sets SO_KEEPALIVE on the listener socket to enable TCP Keepalives.
 	// Disabled by default.
@@ -82,7 +81,7 @@ type ClientTrafficPolicySpec struct {
 	// Connection includes client connection settings.
 	//
 	// +optional
-	Connection *Connection `json:"connection,omitempty"`
+	Connection *ClientConnection `json:"connection,omitempty"`
 	// HTTP1 provides HTTP/1 configuration on the listener.
 	//
 	// +optional
@@ -95,6 +94,10 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	HTTP3 *HTTP3Settings `json:"http3,omitempty"`
+	// HealthCheck provides configuration for determining whether the HTTP/HTTPS listener is healthy.
+	//
+	// +optional
+	HealthCheck *HealthCheckSettings `json:"healthCheck,omitempty"`
 }
 
 // HeaderSettings provides configuration options for headers on the listener.
@@ -104,10 +107,40 @@ type HeaderSettings struct {
 	// +optional
 	EnableEnvoyHeaders *bool `json:"enableEnvoyHeaders,omitempty"`
 
+	// DisableRateLimitHeaders configures Envoy Proxy to omit the "X-RateLimit-" response headers
+	// when rate limiting is enabled.
+	// +optional
+	DisableRateLimitHeaders *bool `json:"disableRateLimitHeaders,omitempty"`
+
+	// XForwardedClientCert configures how Envoy Proxy handle the x-forwarded-client-cert (XFCC) HTTP header.
+	//
+	// x-forwarded-client-cert (XFCC) is an HTTP header used to forward the certificate
+	// information of part or all of the clients or proxies that a request has flowed through,
+	// on its way from the client to the server.
+	//
+	// Envoy proxy may choose to sanitize/append/forward the XFCC header before proxying the request.
+	//
+	// If not set, the default behavior is sanitizing the XFCC header.
+	// +optional
+	XForwardedClientCert *XForwardedClientCert `json:"xForwardedClientCert,omitempty"`
+
 	// WithUnderscoresAction configures the action to take when an HTTP header with underscores
 	// is encountered. The default action is to reject the request.
 	// +optional
 	WithUnderscoresAction *WithUnderscoresAction `json:"withUnderscoresAction,omitempty"`
+
+	// PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge
+	// (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
+	// It defaults to false.
+	//
+	// +optional
+	PreserveXRequestID *bool `json:"preserveXRequestID,omitempty"`
+
+	// EarlyRequestHeaders defines settings for early request header modification, before envoy performs
+	// routing, tracing and built-in header manipulation.
+	//
+	// +optional
+	EarlyRequestHeaders *gwapiv1.HTTPHeaderFilter `json:"earlyRequestHeaders,omitempty"`
 }
 
 // WithUnderscoresAction configures the action to take when an HTTP header with underscores
@@ -127,6 +160,65 @@ const (
 	WithUnderscoresActionDropHeader WithUnderscoresAction = "DropHeader"
 )
 
+// XForwardedClientCert configures how Envoy Proxy handle the x-forwarded-client-cert (XFCC) HTTP header.
+// +kubebuilder:validation:XValidation:rule="(has(self.certDetailsToAdd) && self.certDetailsToAdd.size() > 0) ? (self.mode == 'AppendForward' || self.mode == 'SanitizeSet') : true",message="certDetailsToAdd can only be set when mode is AppendForward or SanitizeSet"
+type XForwardedClientCert struct {
+	// Mode defines how XFCC header is handled by Envoy Proxy.
+	// If not set, the default mode is `Sanitize`.
+	// +optional
+	Mode *XFCCForwardMode `json:"mode,omitempty"`
+
+	// CertDetailsToAdd specifies the fields in the client certificate to be forwarded in the XFCC header.
+	//
+	// Hash(the SHA 256 digest of the current client certificate) and By(the Subject Alternative Name)
+	// are always included if the client certificate is forwarded.
+	//
+	// This field is only applicable when the mode is set to `AppendForward` or
+	// `SanitizeSet` and the client connection is mTLS.
+	// +kubebuilder:validation:MaxItems=5
+	// +optional
+	CertDetailsToAdd []XFCCCertData `json:"certDetailsToAdd,omitempty"`
+}
+
+// XFCCForwardMode defines how XFCC header is handled by Envoy Proxy.
+// +kubebuilder:validation:Enum=Sanitize;ForwardOnly;AppendForward;SanitizeSet;AlwaysForwardOnly
+type XFCCForwardMode string
+
+const (
+	// XFCCForwardModeSanitize removes the XFCC header from the request. This is the default mode.
+	XFCCForwardModeSanitize XFCCForwardMode = "Sanitize"
+
+	// XFCCForwardModeForwardOnly forwards the XFCC header in the request if the client connection is mTLS.
+	XFCCForwardModeForwardOnly XFCCForwardMode = "ForwardOnly"
+
+	// XFCCForwardModeAppendForward appends the client certificate information to the request’s XFCC header and forward it if the client connection is mTLS.
+	XFCCForwardModeAppendForward XFCCForwardMode = "AppendForward"
+
+	// XFCCForwardModeSanitizeSet resets the XFCC header with the client certificate information and forward it if the client connection is mTLS.
+	// The existing certificate information in the XFCC header is removed.
+	XFCCForwardModeSanitizeSet XFCCForwardMode = "SanitizeSet"
+
+	// XFCCForwardModeAlwaysForwardOnly always forwards the XFCC header in the request, regardless of whether the client connection is mTLS.
+	XFCCForwardModeAlwaysForwardOnly XFCCForwardMode = "AlwaysForwardOnly"
+)
+
+// XFCCCertData specifies the fields in the client certificate to be forwarded in the XFCC header.
+// +kubebuilder:validation:Enum=Subject;Cert;Chain;DNS;URI
+type XFCCCertData string
+
+const (
+	// XFCCCertDataSubject is the Subject field of the current client certificate.
+	XFCCCertDataSubject XFCCCertData = "Subject"
+	// XFCCCertDataCert is the entire client certificate in URL encoded PEM format.
+	XFCCCertDataCert XFCCCertData = "Cert"
+	// XFCCCertDataChain is the entire client certificate chain (including the leaf certificate) in URL encoded PEM format.
+	XFCCCertDataChain XFCCCertData = "Chain"
+	// XFCCCertDataDNS is the DNS type Subject Alternative Name field of the current client certificate.
+	XFCCCertDataDNS XFCCCertData = "DNS"
+	// XFCCCertDataURI is the URI type Subject Alternative Name field of the current client certificate.
+	XFCCCertDataURI XFCCCertData = "URI"
+)
+
 // ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
 //
 // +kubebuilder:validation:XValidation:rule="!(has(self.xForwardedFor) && has(self.customHeader))",message="customHeader cannot be used in conjunction with xForwardedFor"
@@ -136,7 +228,7 @@ type ClientIPDetectionSettings struct {
 	// +optional
 	XForwardedFor *XForwardedForSettings `json:"xForwardedFor,omitempty"`
 	// CustomHeader provides configuration for determining the client IP address for a request based on
-	// a trusted custom HTTP header. This uses the the custom_header original IP detection extension.
+	// a trusted custom HTTP header. This uses the custom_header original IP detection extension.
 	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto
 	// for more details.
 	//
@@ -203,28 +295,12 @@ type HTTP10Settings struct {
 	UseDefaultHost *bool `json:"useDefaultHost,omitempty"`
 }
 
-// HTTP2Settings provides HTTP/2 configuration on the listener.
-type HTTP2Settings struct {
-	// InitialStreamWindowSize sets the initial window size for HTTP/2 streams.
-	// If not set, the default value is 64 KiB(64*1024).
-	//
-	// +kubebuilder:validation:XValidation:rule="type(self) == string ? self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\") : type(self) == int",message="initialStreamWindowSize must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
-	// +optional
-	InitialStreamWindowSize *resource.Quantity `json:"initialStreamWindowSize,omitempty"`
-
-	// InitialConnectionWindowSize sets the initial window size for HTTP/2 connections.
-	// If not set, the default value is 1 MiB.
-	//
-	// +kubebuilder:validation:XValidation:rule="type(self) == string ? self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\") : type(self) == int",message="initialConnectionWindowSize must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
-	// +optional
-	InitialConnectionWindowSize *resource.Quantity `json:"initialConnectionWindowSize,omitempty"`
-
-	// MaxConcurrentStreams sets the maximum number of concurrent streams allowed per connection.
-	// If not set, the default value is 100.
-	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2147483647
-	// +optional
-	MaxConcurrentStreams *uint32 `json:"maxConcurrentStreams,omitempty"`
+// HealthCheckSettings provides HealthCheck configuration on the HTTP/HTTPS listener.
+type HealthCheckSettings struct {
+	// Path specifies the HTTP path to match on for health check requests.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=1024
+	Path string `json:"path"`
 }
 
 const (

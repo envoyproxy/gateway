@@ -10,12 +10,13 @@ http:
   routes:
   - name: "first-route"
     hostname: "*"
-    timeout:
-      tcp:
-        connectTimeout: "31s"
-      http:
-        connectionIdleTimeout: "32s"
-        maxConnectionDuration: "33s"
+    traffic:
+      timeout:
+        tcp:
+          connectTimeout: "31s"
+        http:
+          connectionIdleTimeout: "32s"
+          maxConnectionDuration: "33s"
     destination:
       name: "first-route-dest"
       settings:

@@ -103,7 +103,7 @@ httpRoutes:
     - conditions:
       - lastTransitionTime: null
         message: 'Regex "*.foo.bar.com" is invalid: error parsing regexp: missing
-          argument to repetition operator: `*`'
+          argument to repetition operator: `*`.'
         reason: UnsupportedValue
         status: "False"
         type: Accepted
@@ -152,6 +152,11 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
       name: envoy-gateway/gateway-1/http
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -166,6 +171,11 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-2
+        namespace: envoy-gateway
+        sectionName: http
       name: envoy-gateway/gateway-2/http
       path:
         escapedSlashesAction: UnescapeAndRedirect

@@ -18,59 +18,63 @@ permissions:
 
 jobs:
   lint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b  # v4.1.4
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
     - uses: ./tools/github-actions/setup-deps
-    # Generate the install manifests first so it can checked
+    # Generate the installation manifests first, so it can check
     # for errors while running `make -k lint`
-    - run: make generate-manifests
+    - run: IMAGE_PULL_POLICY=Always make generate-manifests
     - run: make lint-deps
     - run: make -k lint
 
   gen-check:
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b  # v4.1.4
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
     - uses: ./tools/github-actions/setup-deps
     - run: make -k gen-check
 
   license-check:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b  # v4.1.4
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
     - uses: ./tools/github-actions/setup-deps
     - run: make -k licensecheck
 
   coverage-test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read   #  for actions/checkout
+      id-token: write  #  for fetching OIDC token
     steps:
-    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b  # v4.1.4
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
     - uses: ./tools/github-actions/setup-deps
 
     # test
     - name: Run Coverage Tests
       run: make go.test.coverage
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@4fe8c5f003fae66aa5ebb77cfd3e7bfbbda0b6b0  # v3.1.5
+      uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673  # v4.5.0
       with:
-        fail_ci_if_error: false
+        fail_ci_if_error: true
         files: ./coverage.xml
         name: codecov-envoy-gateway
         verbose: true
+        use_oidc: true
 
   build:
     runs-on: ubuntu-latest
     needs: [lint, gen-check, license-check, coverage-test]
     steps:
-    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b  # v4.1.4
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
     - uses: ./tools/github-actions/setup-deps
 
     - name: Build EG Multiarch Binaries
       run: make build-multiarch PLATFORMS="linux_amd64 linux_arm64"
 
     - name: Upload EG Binaries
-      uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808  # v4.3.3
+      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874  # v4.4.0
       with:
         name: envoy-gateway
         path: bin/
@@ -79,14 +83,15 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build]
     strategy:
+      fail-fast: false
       matrix:
-        version: [ v1.26.14, v1.27.11, v1.28.7, v1.29.2 ]
+        version: [ v1.28.13, v1.29.8, v1.30.4, v1.31.0 ]
     steps:
-    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b  # v4.1.4
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
-      uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e  # v4.1.7
+      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16  # v4.1.8
       with:
         name: envoy-gateway
         path: bin/
@@ -107,14 +112,15 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build]
     strategy:
+      fail-fast: false
       matrix:
-        version: [ v1.26.14, v1.27.11, v1.28.7, v1.29.2 ]
+        version: [ v1.28.13, v1.29.8, v1.30.4, v1.31.0 ]
     steps:
-    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b  # v4.1.4
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
-      uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e  # v4.1.7
+      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16  # v4.1.8
       with:
         name: envoy-gateway
         path: bin/
@@ -131,15 +137,44 @@ jobs:
         IMAGE_PULL_POLICY: IfNotPresent
       run: make e2e
 
+  benchmark-test:
+    runs-on: ubuntu-latest
+    # There's a different workflow for benchmark-test on push.
+    if: ${{ ! startsWith(github.event_name, 'push') }}
+    needs: [build]
+    steps:
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
+    - uses: ./tools/github-actions/setup-deps
+
+    - name: Setup Graphviz
+      uses: ts-graphviz/setup-graphviz@b1de5da23ed0a6d14e0aeee8ed52fdd87af2363c  # v2.0.2
+
+    # Benchmark
+    - name: Run Benchmark tests
+      env:
+        KIND_NODE_TAG: v1.28.13
+        IMAGE_PULL_POLICY: IfNotPresent
+        # Args for benchmark test
+        BENCHMARK_RPS: 10000
+        BENCHMARK_CONNECTIONS: 100
+        BENCHMARK_DURATION: 30
+        BENCHMARK_CPU_LIMITS: 1000m
+        BENCHMARK_MEMORY_LIMITS: 2000Mi
+        BENCHMARK_REPORT_DIR: benchmark_report
+      run: make benchmark
+
+    - name: Read Benchmark report
+      run: cat test/benchmark/benchmark_report/benchmark_report.md
+
   publish:
     runs-on: ubuntu-latest
     needs: [conformance-test, e2e-test]
     steps:
-    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b  # v4.1.4
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
-      uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e  # v4.1.7
+      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16  # v4.1.8
       with:
         name: envoy-gateway
         path: bin/
@@ -152,7 +187,7 @@ jobs:
     # build and push image
     - name: Login to DockerHub
       if: github.event_name == 'push'
-      uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20  # v3.1.0
+      uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567  # v3.3.0
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
@@ -174,4 +209,5 @@ jobs:
     - name: Build and Push EG Latest Helm Chart
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       # use `0.0.0` as the default latest version.
-      run: IMAGE_PULL_POLICY=Always OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=v0.0.0-latest TAG=latest make helm-package helm-push
+      # use `Always` image pull policy for latest version.
+      run: IMAGE_PULL_POLICY=Always OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=v0.0.0-latest TAG=latest make helm-push

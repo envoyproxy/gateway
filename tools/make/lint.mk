@@ -5,6 +5,7 @@
 ##@ Lint
 
 GITHUB_ACTION ?=
+LINT_BUILD_TAGS ?= e2e,celvalidation,conformance,experimental,benchmark
 
 .PHONY: lint
 lint: ## Run all linter of code sources, including golint, yamllint, whitenoise lint and codespell.
@@ -14,13 +15,13 @@ lint: ## Run all linter of code sources, including golint, yamllint, whitenoise 
 .PHONY: lint-deps
 lint-deps: ## Everything necessary to lint
 
-GOLANGCI_LINT_FLAGS ?= $(if $(GITHUB_ACTION),--out-format=github-actions)
+GOLANGCI_LINT_FLAGS ?= $(if $(GITHUB_ACTION),--out-format=colored-line-number)
 .PHONY: lint.golint
 lint: lint.golint
 lint-deps: $(tools/golangci-lint)
 lint.golint: $(tools/golangci-lint)
 	@$(LOG_TARGET)
-	$(tools/golangci-lint) run $(GOLANGCI_LINT_FLAGS) --build-tags=e2e,celvalidation --config=tools/linter/golangci-lint/.golangci.yml
+	$(tools/golangci-lint) run $(GOLANGCI_LINT_FLAGS) --build-tags=$(LINT_BUILD_TAGS) --config=tools/linter/golangci-lint/.golangci.yml
 
 .PHONY: lint.yamllint
 lint: lint.yamllint
@@ -68,8 +69,15 @@ lint.shellcheck: $(tools/shellcheck)
 	@$(LOG_TARGET)
 	$(tools/shellcheck) tools/hack/*.sh
 
+.PHONY: lint.fix-golint
+lint-deps: $(tools/gci)
+lint.fix-golint: ## Run all linter of code sources and fix the issues.
+	@$(LOG_TARGET)
+	$(MAKE) lint.golint GOLANGCI_LINT_FLAGS="--fix"
+	find . -name "*.go" | xargs $(tools/gci) write --skip-generated -s Standard -s Default -s "Prefix(github.com/envoyproxy/gateway)" 
+
 .PHONY: gen-check
-gen-check: generate manifests protos go.testdata.complete
+gen-check: format generate manifests protos go.testdata.complete
 	@$(LOG_TARGET)
 	@if [ ! -z "`git status --porcelain`" ]; then \
 		$(call errorlog, ERROR: Some files need to be updated, please run 'make generate', 'make manifests' and 'make protos' to include any changed files to your PR); \
@@ -85,3 +93,7 @@ licensecheck: ## Check license headers are present.
 latest-release-check: ## Check if latest release and tag are created properly.
 	@$(LOG_TARGET)
 	sh tools/hack/check-latest-release.sh
+
+.PHONY: lint.markdown
+lint.markdown:
+	markdownlint -c .github/markdown_lint_config.json site/content/*

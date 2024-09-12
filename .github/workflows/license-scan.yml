@@ -1,0 +1,28 @@
+name: License Scan
+
+on:
+  pull_request:
+    branches:
+    - "main"
+  push:
+    branches:
+    - "main"
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-22.04
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
+    - name: Run scanner
+      uses: google/osv-scanner-action/osv-scanner-action@678a866dcba398c8ed0124a09928d250f187b52a  # v1.8.4
+      with:
+        # TODO enable call analysis once https://github.com/google/osv-scanner/issues/1220 is resolved
+        scan-args: |-
+          --skip-git
+          --experimental-licenses=Apache-2.0,BSD-2-Clause,BSD-2-Clause-FreeBSD,BSD-3-Clause,MIT,ISC,Python-2.0,PostgreSQL,X11,Zlib
+          --no-call-analysis=go
+          ./

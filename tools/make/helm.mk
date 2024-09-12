@@ -1,34 +1,81 @@
 # This is a wrapper to manage helm chart
 #
-# All make targets related to helmß are defined in this file.
+# All make targets related to helms are defined in this file.
 
 include tools/make/env.mk
 
+CHARTS := $(wildcard charts/*)
+
+IMAGE_PULL_POLICY ?= IfNotPresent
 OCI_REGISTRY ?= oci://docker.io/envoyproxy
 CHART_NAME ?= gateway-helm
 CHART_VERSION ?= ${RELEASE_VERSION}
 
 ##@ Helm
+.PHONY: helm-package
+helm-package: ## Package envoy gateway relevant helm charts.
 helm-package:
-helm-package: ## Package envoy gateway helm chart.
-helm-package: helm-generate
-	@$(LOG_TARGET)
+	@for chart in $(CHARTS); do \
+    	$(LOG_TARGET); \
+      	$(MAKE) $(addprefix helm-package., $$(basename $${chart})); \
+	done
+
+.PHONY: helm-package.%
+helm-package.%: helm-generate.%
+	$(eval COMMAND := $(word 1,$(subst ., ,$*)))
+	$(eval CHART_NAME := $(COMMAND))
 	helm package charts/${CHART_NAME} --app-version ${TAG} --version ${CHART_VERSION} --destination ${OUTPUT_DIR}/charts/
 
+.PHONY: helm-push
+helm-push: ## Push envoy gateway relevant helm charts to OCI registry.
 helm-push:
-helm-push: ## Push envoy gateway helm chart to OCI registry.
-	@$(LOG_TARGET)
+	@for chart in $(CHARTS); do \
+		$(LOG_TARGET); \
+		$(MAKE) $(addprefix helm-push., $$(basename $${chart})); \
+	done
+
+.PHONY: helm-push.%
+helm-push.%: helm-package.%
+	$(eval COMMAND := $(word 1,$(subst ., ,$*)))
+	$(eval CHART_NAME := $(COMMAND))
 	helm push ${OUTPUT_DIR}/charts/${CHART_NAME}-${CHART_VERSION}.tgz ${OCI_REGISTRY}
 
-helm-install:
-helm-install: helm-generate ## Install envoy gateway helm chart from OCI registry.
-	@$(LOG_TARGET)
-	helm install eg ${OCI_REGISTRY}/${CHART_NAME} --version ${CHART_VERSION} -n envoy-gateway-system --create-namespace
-
+.PHONY: helm-generate
 helm-generate:
-	ImageRepository=${IMAGE} ImageTag=${TAG} envsubst < charts/gateway-helm/values.tmpl.yaml > ./charts/gateway-helm/values.yaml
-	helm lint charts/gateway-helm
+	@for chart in $(CHARTS); do \
+  		$(LOG_TARGET); \
+  		$(MAKE) $(addprefix helm-generate., $$(basename $${chart})); \
+  	done
 
-helm-template: ## Template envoy gateway helm chart.
-	@$(LOG_TARGET)
-	helm template eg charts/gateway-helm --set deployment.envoyGateway.image.tag=latest > ./test/helm/default.yaml --namespace=envoy-gateway-system
+.PHONY: helm-generate.%
+helm-generate.%: $(tools/jsonnet) $(tools/jb)
+	$(eval COMMAND := $(word 1,$(subst ., ,$*)))
+	$(eval CHART_NAME := $(COMMAND))
+	@if test -f "charts/${CHART_NAME}/values.tmpl.yaml"; then \
+  		GatewayImage=${IMAGE}:${TAG} GatewayImagePullPolicy=${IMAGE_PULL_POLICY} \
+  		envsubst < charts/${CHART_NAME}/values.tmpl.yaml > ./charts/${CHART_NAME}/values.yaml; \
+  	fi
+	helm dependency update charts/${CHART_NAME}
+	helm lint charts/${CHART_NAME}
+
+	# The jb does not support self-assigned jsonnetfile, so entering working dir before executing jb.
+	@if [ ${CHART_NAME} == "gateway-addons-helm" ]; then \
+  		$(call log, "Run jsonnet generate for dashboards in chart: ${CHART_NAME}!"); \
+  		workDir="charts/${CHART_NAME}/dashboards"; \
+  		cd $$workDir && ../../../$(tools/jb) install && cd ../../..; \
+  		for file in $$(find $${workDir} -maxdepth 1 -name '*.libsonnet'); do \
+  		    name=$$(basename $$file .libsonnet); \
+  		    $(tools/jsonnet) -J $${workDir}/vendor $${workDir}/$${name}.libsonnet > $${workDir}/$${name}.gen.json; \
+  		done \
+  	fi
+
+	$(call log, "Run helm template for chart: ${CHART_NAME}!");
+	@for file in $(wildcard test/helm/${CHART_NAME}/*.in.yaml); do \
+  		filename=$$(basename $${file}); \
+  		output="$${filename%.in.*}.out.yaml"; \
+  	  	if [ ${CHART_NAME} == "gateway-addons-helm" ]; then \
+  	  		helm template ${CHART_NAME} charts/${CHART_NAME} -f $${file} > test/helm/${CHART_NAME}/$$output --namespace=monitoring; \
+  	  	else \
+			helm template ${CHART_NAME} charts/${CHART_NAME} -f $${file} > test/helm/${CHART_NAME}/$$output --namespace=envoy-gateway-system; \
+  	  	fi; \
+	done

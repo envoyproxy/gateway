@@ -10,7 +10,7 @@ Envoy Gateway is built using a [make][]-based build system. Our CI is based on [
 
 ### go
 
-* Version: 1.20
+* Version: 1.22
 * Installation Guide: https://go.dev/doc/install
 
 ### make
@@ -145,6 +145,27 @@ verify signature was copied to [JWK Creator][] for generating the JWK. The JWK C
 settings, i.e. `Signing` public key use and the `RS256` algorithm. The generated JWK was wrapped in a JWKS structure
 and is hosted in the repo.
 
+### Benchmarking
+
+Envoy Gateway uses [nighthawk][nighthawk] for benchmarking, and mainly concerned with
+its performance and scalability as a control-plane.
+
+The performance and scalability concerns come from several aspects for control-plane:
+
+- The consumption of memory and CPU.
+- The rate of configuration changes.
+
+The benchmark test is running on a [Kind][Kind] cluster, you can start a Kind cluster and 
+run benchmark test on it by executing `make benchmark-test`.
+
+The benchmark report will be included in the release artifacts, you can learn more by downloading
+the detailed benchmark report, namely `benchmark_report.zip`.
+
+Here are some brief benchmark reports about Envoy Gateway: 
+
+- It will take up nearly 1.3GiB memory and 11s total CPU time for (1 GatewayClass + 1 Gateway + 500 HTTRoutes) settings
+
+
 [Quickstart]: https://github.com/envoyproxy/gateway/blob/main/docs/latest/user/quickstart.md
 [make]: https://www.gnu.org/software/make/
 [Github Actions]: https://docs.github.com/en/actions
@@ -161,3 +182,4 @@ and is hosted in the repo.
 [request authentication]: ../latest/tasks/security/jwt-authentication
 [JWT Debugger]: https://jwt.io/
 [JWK Creator]: https://russelldavies.github.io/jwk-creator/
+[nighthawk]: https://github.com/envoyproxy/nighthawk

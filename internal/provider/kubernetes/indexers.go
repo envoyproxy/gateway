@@ -9,13 +9,15 @@ import (
 	"context"
 
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 )
 
@@ -39,6 +41,9 @@ const (
 	secretCtpIndex                   = "secretCtpIndex"
 	configMapBtlsIndex               = "configMapBtlsIndex"
 	backendEnvoyExtensionPolicyIndex = "backendEnvoyExtensionPolicyIndex"
+	backendEnvoyProxyTelemetryIndex  = "backendEnvoyProxyTelemetryIndex"
+	secretEnvoyProxyIndex            = "secretEnvoyProxyIndex"
+	secretEnvoyExtensionPolicyIndex  = "secretEnvoyExtensionPolicyIndex"
 )
 
 func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
@@ -56,7 +61,7 @@ func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
 }
 
 // addHTTPRouteIndexers adds indexing on HTTPRoute.
-//   - For Service, ServiceImports objects that are referenced in HTTPRoute objects via `.spec.rules.backendRefs`.
+//   - For Service, ServiceImports and Backend objects that are referenced in HTTPRoute objects via `.spec.rules.backendRefs`.
 //     This helps in querying for HTTPRoutes that are affected by a particular Service CRUD.
 func addHTTPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.HTTPRoute{}, gatewayHTTPRouteIndex, gatewayHTTPRouteIndexFunc); err != nil {
@@ -93,7 +98,7 @@ func backendHTTPRouteIndexFunc(rawObj client.Object) []string {
 	var backendRefs []string
 	for _, rule := range httproute.Spec.Rules {
 		for _, backend := range rule.BackendRefs {
-			if backend.Kind == nil || string(*backend.Kind) == gatewayapi.KindService {
+			if backend.Kind == nil || string(*backend.Kind) == gatewayapi.KindService || string(*backend.Kind) == egv1a1.KindBackend {
 				// If an explicit Backend namespace is not provided, use the HTTPRoute namespace to
 				// lookup the provided Gateway Name.
 				backendRefs = append(backendRefs,
@@ -108,15 +113,135 @@ func backendHTTPRouteIndexFunc(rawObj client.Object) []string {
 	return backendRefs
 }
 
+func secretEnvoyProxyIndexFunc(rawObj client.Object) []string {
+	ep := rawObj.(*egv1a1.EnvoyProxy)
+	var secretReferences []string
+	if ep.Spec.BackendTLS != nil {
+		if ep.Spec.BackendTLS.ClientCertificateRef != nil {
+			if *ep.Spec.BackendTLS.ClientCertificateRef.Kind == gatewayapi.KindSecret {
+				secretReferences = append(secretReferences,
+					types.NamespacedName{
+						Namespace: gatewayapi.NamespaceDerefOr(ep.Spec.BackendTLS.ClientCertificateRef.Namespace, ep.Namespace),
+						Name:      string(ep.Spec.BackendTLS.ClientCertificateRef.Name),
+					}.String())
+			}
+		}
+	}
+	return secretReferences
+}
+
+func addEnvoyProxyIndexers(ctx context.Context, mgr manager.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.EnvoyProxy{}, backendEnvoyProxyTelemetryIndex, backendEnvoyProxyTelemetryIndexFunc); err != nil {
+		return err
+	}
+
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.EnvoyProxy{}, secretEnvoyProxyIndex, secretEnvoyProxyIndexFunc); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func backendEnvoyProxyTelemetryIndexFunc(rawObj client.Object) []string {
+	ep := rawObj.(*egv1a1.EnvoyProxy)
+
+	refs := sets.New[string]()
+	refs.Insert(accessLogRefs(ep)...)
+	refs.Insert(metricRefs(ep)...)
+	refs.Insert(traceRefs(ep)...)
+
+	return refs.UnsortedList()
+}
+
+func accessLogRefs(ep *egv1a1.EnvoyProxy) []string {
+	var refs []string
+
+	if ep.Spec.Telemetry == nil || ep.Spec.Telemetry.AccessLog == nil {
+		return refs
+	}
+
+	for _, setting := range ep.Spec.Telemetry.AccessLog.Settings {
+		for _, sink := range setting.Sinks {
+			var backendRefs []egv1a1.BackendRef
+			if sink.OpenTelemetry != nil {
+				backendRefs = append(backendRefs, sink.OpenTelemetry.BackendRefs...)
+			}
+
+			if sink.ALS != nil {
+				backendRefs = append(backendRefs, sink.ALS.BackendRefs...)
+			}
+
+			for _, ref := range backendRefs {
+				if ref.Kind == nil || string(*ref.Kind) == gatewayapi.KindService {
+					refs = append(refs,
+						types.NamespacedName{
+							Namespace: gatewayapi.NamespaceDerefOr(ref.Namespace, ep.Namespace),
+							Name:      string(ref.Name),
+						}.String(),
+					)
+				}
+			}
+		}
+	}
+
+	return refs
+}
+
+func metricRefs(ep *egv1a1.EnvoyProxy) []string {
+	var refs []string
+
+	if ep.Spec.Telemetry == nil || ep.Spec.Telemetry.Metrics == nil {
+		return refs
+	}
+
+	for _, sink := range ep.Spec.Telemetry.Metrics.Sinks {
+		if sink.OpenTelemetry != nil {
+			for _, backend := range sink.OpenTelemetry.BackendRefs {
+				if backend.Kind == nil || string(*backend.Kind) == gatewayapi.KindService {
+					refs = append(refs,
+						types.NamespacedName{
+							Namespace: gatewayapi.NamespaceDerefOr(backend.Namespace, ep.Namespace),
+							Name:      string(backend.Name),
+						}.String(),
+					)
+				}
+			}
+		}
+	}
+
+	return refs
+}
+
+func traceRefs(ep *egv1a1.EnvoyProxy) []string {
+	var refs []string
+
+	if ep.Spec.Telemetry == nil || ep.Spec.Telemetry.Tracing == nil {
+		return refs
+	}
+
+	for _, ref := range ep.Spec.Telemetry.Tracing.Provider.BackendRefs {
+		if ref.Kind == nil || string(*ref.Kind) == gatewayapi.KindService {
+			refs = append(refs,
+				types.NamespacedName{
+					Namespace: gatewayapi.NamespaceDerefOr(ref.Namespace, ep.Namespace),
+					Name:      string(ref.Name),
+				}.String(),
+			)
+		}
+	}
+
+	return refs
+}
+
 // addGRPCRouteIndexers adds indexing on GRPCRoute, for Service objects that are
 // referenced in GRPCRoute objects via `.spec.rules.backendRefs`. This helps in
 // querying for GRPCRoutes that are affected by a particular Service CRUD.
 func addGRPCRouteIndexers(ctx context.Context, mgr manager.Manager) error {
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.GRPCRoute{}, gatewayGRPCRouteIndex, gatewayGRPCRouteIndexFunc); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.GRPCRoute{}, gatewayGRPCRouteIndex, gatewayGRPCRouteIndexFunc); err != nil {
 		return err
 	}
 
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.GRPCRoute{}, backendGRPCRouteIndex, backendGRPCRouteIndexFunc); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.GRPCRoute{}, backendGRPCRouteIndex, backendGRPCRouteIndexFunc); err != nil {
 		return err
 	}
 
@@ -124,7 +249,7 @@ func addGRPCRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 }
 
 func gatewayGRPCRouteIndexFunc(rawObj client.Object) []string {
-	grpcroute := rawObj.(*gwapiv1a2.GRPCRoute)
+	grpcroute := rawObj.(*gwapiv1.GRPCRoute)
 	var gateways []string
 	for _, parent := range grpcroute.Spec.ParentRefs {
 		if parent.Kind == nil || string(*parent.Kind) == gatewayapi.KindGateway {
@@ -142,11 +267,11 @@ func gatewayGRPCRouteIndexFunc(rawObj client.Object) []string {
 }
 
 func backendGRPCRouteIndexFunc(rawObj client.Object) []string {
-	grpcroute := rawObj.(*gwapiv1a2.GRPCRoute)
+	grpcroute := rawObj.(*gwapiv1.GRPCRoute)
 	var backendRefs []string
 	for _, rule := range grpcroute.Spec.Rules {
 		for _, backend := range rule.BackendRefs {
-			if backend.Kind == nil || string(*backend.Kind) == gatewayapi.KindService {
+			if backend.Kind == nil || string(*backend.Kind) == gatewayapi.KindService || string(*backend.Kind) == egv1a1.KindBackend {
 				// If an explicit Backend namespace is not provided, use the GRPCRoute namespace to
 				// lookup the provided Gateway Name.
 				backendRefs = append(backendRefs,
@@ -174,7 +299,7 @@ func addTLSRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 				// lookup the provided Gateway Name.
 				gateways = append(gateways,
 					types.NamespacedName{
-						Namespace: gatewayapi.NamespaceDerefOrAlpha(parent.Namespace, tlsRoute.Namespace),
+						Namespace: gatewayapi.NamespaceDerefOr(parent.Namespace, tlsRoute.Namespace),
 						Name:      string(parent.Name),
 					}.String(),
 				)
@@ -196,12 +321,12 @@ func backendTLSRouteIndexFunc(rawObj client.Object) []string {
 	var backendRefs []string
 	for _, rule := range tlsroute.Spec.Rules {
 		for _, backend := range rule.BackendRefs {
-			if backend.Kind == nil || string(*backend.Kind) == gatewayapi.KindService {
+			if backend.Kind == nil || string(*backend.Kind) == gatewayapi.KindService || string(*backend.Kind) == egv1a1.KindBackend {
 				// If an explicit Backend namespace is not provided, use the TLSRoute namespace to
 				// lookup the provided Gateway Name.
 				backendRefs = append(backendRefs,
 					types.NamespacedName{
-						Namespace: gatewayapi.NamespaceDerefOrAlpha(backend.Namespace, tlsroute.Namespace),
+						Namespace: gatewayapi.NamespaceDerefOr(backend.Namespace, tlsroute.Namespace),
 						Name:      string(backend.Name),
 					}.String(),
 				)
@@ -224,7 +349,7 @@ func addTCPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 				// lookup the provided Gateway Name.
 				gateways = append(gateways,
 					types.NamespacedName{
-						Namespace: gatewayapi.NamespaceDerefOrAlpha(parent.Namespace, tcpRoute.Namespace),
+						Namespace: gatewayapi.NamespaceDerefOr(parent.Namespace, tcpRoute.Namespace),
 						Name:      string(parent.Name),
 					}.String(),
 				)
@@ -246,12 +371,12 @@ func backendTCPRouteIndexFunc(rawObj client.Object) []string {
 	var backendRefs []string
 	for _, rule := range tcpRoute.Spec.Rules {
 		for _, backend := range rule.BackendRefs {
-			if backend.Kind == nil || string(*backend.Kind) == gatewayapi.KindService {
+			if backend.Kind == nil || string(*backend.Kind) == gatewayapi.KindService || string(*backend.Kind) == egv1a1.KindBackend {
 				// If an explicit Backend namespace is not provided, use the TCPRoute namespace to
 				// lookup the provided Gateway Name.
 				backendRefs = append(backendRefs,
 					types.NamespacedName{
-						Namespace: gatewayapi.NamespaceDerefOrAlpha(backend.Namespace, tcpRoute.Namespace),
+						Namespace: gatewayapi.NamespaceDerefOr(backend.Namespace, tcpRoute.Namespace),
 						Name:      string(backend.Name),
 					}.String(),
 				)
@@ -276,7 +401,7 @@ func addUDPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 				// lookup the provided Gateway Name.
 				gateways = append(gateways,
 					types.NamespacedName{
-						Namespace: gatewayapi.NamespaceDerefOrAlpha(parent.Namespace, udpRoute.Namespace),
+						Namespace: gatewayapi.NamespaceDerefOr(parent.Namespace, udpRoute.Namespace),
 						Name:      string(parent.Name),
 					}.String(),
 				)
@@ -298,12 +423,12 @@ func backendUDPRouteIndexFunc(rawObj client.Object) []string {
 	var backendRefs []string
 	for _, rule := range udproute.Spec.Rules {
 		for _, backend := range rule.BackendRefs {
-			if backend.Kind == nil || string(*backend.Kind) == gatewayapi.KindService {
+			if backend.Kind == nil || string(*backend.Kind) == gatewayapi.KindService || string(*backend.Kind) == egv1a1.KindBackend {
 				// If an explicit Backend namespace is not provided, use the UDPRoute namespace to
 				// lookup the provided Gateway Name.
 				backendRefs = append(backendRefs,
 					types.NamespacedName{
-						Namespace: gatewayapi.NamespaceDerefOrAlpha(backend.Namespace, udproute.Namespace),
+						Namespace: gatewayapi.NamespaceDerefOr(backend.Namespace, udproute.Namespace),
 						Name:      string(backend.Name),
 					}.String(),
 				)
@@ -364,13 +489,13 @@ func addSecurityPolicyIndexers(ctx context.Context, mgr manager.Manager) error {
 	var err error
 
 	if err = mgr.GetFieldIndexer().IndexField(
-		ctx, &v1alpha1.SecurityPolicy{}, secretSecurityPolicyIndex,
+		ctx, &egv1a1.SecurityPolicy{}, secretSecurityPolicyIndex,
 		secretSecurityPolicyIndexFunc); err != nil {
 		return err
 	}
 
 	if err = mgr.GetFieldIndexer().IndexField(
-		ctx, &v1alpha1.SecurityPolicy{}, backendSecurityPolicyIndex,
+		ctx, &egv1a1.SecurityPolicy{}, backendSecurityPolicyIndex,
 		backendSecurityPolicyIndexFunc); err != nil {
 		return err
 	}
@@ -379,7 +504,7 @@ func addSecurityPolicyIndexers(ctx context.Context, mgr manager.Manager) error {
 }
 
 func secretSecurityPolicyIndexFunc(rawObj client.Object) []string {
-	securityPolicy := rawObj.(*v1alpha1.SecurityPolicy)
+	securityPolicy := rawObj.(*egv1a1.SecurityPolicy)
 
 	var (
 		secretReferences []gwapiv1b1.SecretObjectReference
@@ -405,15 +530,23 @@ func secretSecurityPolicyIndexFunc(rawObj client.Object) []string {
 }
 
 func backendSecurityPolicyIndexFunc(rawObj client.Object) []string {
-	securityPolicy := rawObj.(*v1alpha1.SecurityPolicy)
+	securityPolicy := rawObj.(*egv1a1.SecurityPolicy)
 
 	var backendRef *gwapiv1.BackendObjectReference
 
 	if securityPolicy.Spec.ExtAuth != nil {
 		if securityPolicy.Spec.ExtAuth.HTTP != nil {
-			backendRef = &securityPolicy.Spec.ExtAuth.HTTP.BackendRef
+			http := securityPolicy.Spec.ExtAuth.HTTP
+			backendRef = http.BackendRef
+			if len(http.BackendRefs) > 0 {
+				backendRef = egv1a1.ToBackendObjectReference(http.BackendRefs[0])
+			}
 		} else if securityPolicy.Spec.ExtAuth.GRPC != nil {
-			backendRef = &securityPolicy.Spec.ExtAuth.GRPC.BackendRef
+			grpc := securityPolicy.Spec.ExtAuth.GRPC
+			backendRef = grpc.BackendRef
+			if len(grpc.BackendRefs) > 0 {
+				backendRef = egv1a1.ToBackendObjectReference(grpc.BackendRefs[0])
+			}
 		}
 	}
 
@@ -434,10 +567,10 @@ func backendSecurityPolicyIndexFunc(rawObj client.Object) []string {
 // referenced in ClientTrafficPolicy objects. This helps in querying for ClientTrafficPolicies that are
 // affected by a particular ConfigMap or Secret CRUD.
 func addCtpIndexers(ctx context.Context, mgr manager.Manager) error {
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &v1alpha1.ClientTrafficPolicy{}, configMapCtpIndex, configMapCtpIndexFunc); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.ClientTrafficPolicy{}, configMapCtpIndex, configMapCtpIndexFunc); err != nil {
 		return err
 	}
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &v1alpha1.ClientTrafficPolicy{}, secretCtpIndex, secretCtpIndexFunc); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.ClientTrafficPolicy{}, secretCtpIndex, secretCtpIndexFunc); err != nil {
 		return err
 	}
 
@@ -445,7 +578,7 @@ func addCtpIndexers(ctx context.Context, mgr manager.Manager) error {
 }
 
 func configMapCtpIndexFunc(rawObj client.Object) []string {
-	ctp := rawObj.(*v1alpha1.ClientTrafficPolicy)
+	ctp := rawObj.(*egv1a1.ClientTrafficPolicy)
 	var configMapReferences []string
 	if ctp.Spec.TLS != nil && ctp.Spec.TLS.ClientValidation != nil {
 		for _, caCertRef := range ctp.Spec.TLS.ClientValidation.CACertificateRefs {
@@ -465,7 +598,7 @@ func configMapCtpIndexFunc(rawObj client.Object) []string {
 }
 
 func secretCtpIndexFunc(rawObj client.Object) []string {
-	ctp := rawObj.(*v1alpha1.ClientTrafficPolicy)
+	ctp := rawObj.(*egv1a1.ClientTrafficPolicy)
 	var secretReferences []string
 	if ctp.Spec.TLS != nil && ctp.Spec.TLS.ClientValidation != nil {
 		for _, caCertRef := range ctp.Spec.TLS.ClientValidation.CACertificateRefs {
@@ -488,7 +621,7 @@ func secretCtpIndexFunc(rawObj client.Object) []string {
 // referenced in BackendTLSPolicy objects. This helps in querying for BackendTLSPolicies that are
 // affected by a particular ConfigMap CRUD.
 func addBtlsIndexers(ctx context.Context, mgr manager.Manager) error {
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.BackendTLSPolicy{}, configMapBtlsIndex, configMapBtlsIndexFunc); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a3.BackendTLSPolicy{}, configMapBtlsIndex, configMapBtlsIndexFunc); err != nil {
 		return err
 	}
 
@@ -496,10 +629,10 @@ func addBtlsIndexers(ctx context.Context, mgr manager.Manager) error {
 }
 
 func configMapBtlsIndexFunc(rawObj client.Object) []string {
-	btls := rawObj.(*gwapiv1a2.BackendTLSPolicy)
+	btls := rawObj.(*gwapiv1a3.BackendTLSPolicy)
 	var configMapReferences []string
-	if btls.Spec.TLS.CACertRefs != nil {
-		for _, caCertRef := range btls.Spec.TLS.CACertRefs {
+	if btls.Spec.Validation.CACertificateRefs != nil {
+		for _, caCertRef := range btls.Spec.Validation.CACertificateRefs {
 			if string(caCertRef.Kind) == gatewayapi.KindConfigMap {
 				configMapReferences = append(configMapReferences,
 					types.NamespacedName{
@@ -521,8 +654,14 @@ func addEnvoyExtensionPolicyIndexers(ctx context.Context, mgr manager.Manager) e
 	var err error
 
 	if err = mgr.GetFieldIndexer().IndexField(
-		ctx, &v1alpha1.EnvoyExtensionPolicy{}, backendEnvoyExtensionPolicyIndex,
+		ctx, &egv1a1.EnvoyExtensionPolicy{}, backendEnvoyExtensionPolicyIndex,
 		backendEnvoyExtensionPolicyIndexFunc); err != nil {
+		return err
+	}
+
+	if err = mgr.GetFieldIndexer().IndexField(
+		ctx, &egv1a1.EnvoyExtensionPolicy{}, secretEnvoyExtensionPolicyIndex,
+		secretEnvoyExtensionPolicyIndexFunc); err != nil {
 		return err
 	}
 
@@ -530,7 +669,7 @@ func addEnvoyExtensionPolicyIndexers(ctx context.Context, mgr manager.Manager) e
 }
 
 func backendEnvoyExtensionPolicyIndexFunc(rawObj client.Object) []string {
-	envoyExtensionPolicy := rawObj.(*v1alpha1.EnvoyExtensionPolicy)
+	envoyExtensionPolicy := rawObj.(*egv1a1.EnvoyExtensionPolicy)
 
 	var ret []string
 
@@ -541,6 +680,25 @@ func backendEnvoyExtensionPolicyIndexFunc(rawObj client.Object) []string {
 				types.NamespacedName{
 					Namespace: gatewayapi.NamespaceDerefOr(backendRef.Namespace, envoyExtensionPolicy.Namespace),
 					Name:      string(backendRef.Name),
+				}.String())
+		}
+	}
+
+	return ret
+}
+
+func secretEnvoyExtensionPolicyIndexFunc(rawObj client.Object) []string {
+	envoyExtensionPolicy := rawObj.(*egv1a1.EnvoyExtensionPolicy)
+
+	var ret []string
+
+	for _, wasm := range envoyExtensionPolicy.Spec.Wasm {
+		if wasm.Code.Image != nil && wasm.Code.Image.PullSecretRef != nil {
+			secretRef := wasm.Code.Image.PullSecretRef
+			ret = append(ret,
+				types.NamespacedName{
+					Namespace: gatewayapi.NamespaceDerefOr(secretRef.Namespace, envoyExtensionPolicy.Namespace),
+					Name:      string(secretRef.Name),
 				}.String())
 		}
 	}

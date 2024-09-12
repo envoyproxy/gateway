@@ -51,6 +51,8 @@ spec:
           value: info
         - name: USE_STATSD
           value: "true"
+        - name: STATSD_PORT
+          value: "9125"
         - name: CONFIG_TYPE
           value: GRPC_XDS_SOTW
         - name: CONFIG_GRPC_XDS_SERVER_URL
@@ -95,12 +97,12 @@ spec:
           name: grpc
           protocol: TCP
         readinessProbe:
-          failureThreshold: 3
+          failureThreshold: 1
           httpGet:
             path: /healthcheck
             port: 8080
             scheme: HTTP
-          periodSeconds: 10
+          periodSeconds: 5
           successThreshold: 1
           timeoutSeconds: 1
         resources:
@@ -112,6 +114,15 @@ spec:
             memory: 1Gi
         securityContext:
           privileged: true
+        startupProbe:
+          failureThreshold: 30
+          httpGet:
+            path: /healthcheck
+            port: 8080
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:
@@ -135,7 +146,22 @@ spec:
         - containerPort: 19001
           name: metrics
           protocol: TCP
-        resources: {}
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          readOnlyRootFilesystem: true
+          runAsGroup: 65534
+          runAsNonRoot: true
+          runAsUser: 65534
+          seccompProfile:
+            type: RuntimeDefault
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:

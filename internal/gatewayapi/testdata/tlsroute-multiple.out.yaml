@@ -129,34 +129,34 @@ xdsIR:
       - path: /dev/stdout
     tcp:
     - address: 0.0.0.0
-      destination:
-        name: tlsroute/default/tlsroute-1/rule/-1
-        settings:
-        - addressType: IP
-          endpoints:
-          - host: 7.7.7.7
-            port: 8080
-          protocol: HTTPS
-          weight: 1
-      name: envoy-gateway/gateway-1/tls/tlsroute-1
+      name: envoy-gateway/gateway-1/tls
       port: 10091
-      tls:
-        passthrough:
-          snis:
-          - foo.com
-    - address: 0.0.0.0
-      destination:
-        name: tlsroute/default/tlsroute-2/rule/-1
-        settings:
-        - addressType: IP
-          endpoints:
-          - host: 7.7.7.7
-            port: 8080
-          protocol: HTTPS
-          weight: 1
-      name: envoy-gateway/gateway-1/tls/tlsroute-2
-      port: 10091
-      tls:
-        passthrough:
-          snis:
-          - bar.com
+      routes:
+      - destination:
+          name: tlsroute/default/tlsroute-1/rule/-1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            protocol: HTTPS
+            weight: 1
+        name: tlsroute/default/tlsroute-1
+        tls:
+          inspector:
+            snis:
+            - foo.com
+      - destination:
+          name: tlsroute/default/tlsroute-2/rule/-1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            protocol: HTTPS
+            weight: 1
+        name: tlsroute/default/tlsroute-2
+        tls:
+          inspector:
+            snis:
+            - bar.com

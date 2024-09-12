@@ -8,16 +8,17 @@ path:
   escapedSlashesAction: UnescapeAndRedirect
 routes:
 - name: "first-route"
-  rateLimit:
-    global:
-      rules:
-      - cidrMatch:
-          cidr: "192.168.0.10/32"
-          ipv6: false
-          maskLen: 32
-        limit:
-          requests: 15
-          unit: Hour
+  traffic:
+    rateLimit:
+      global:
+        rules:
+        - cidrMatch:
+            cidr: "192.168.0.10/32"
+            ipv6: false
+            maskLen: 32
+          limit:
+            requests: 15
+            unit: Hour
   pathMatch:
     exact: "foo/bar"
   destination:
@@ -27,16 +28,17 @@ routes:
       - host: "1.2.3.4"
         port: 50000
 - name: "second-route"
-  rateLimit:
-    global:
-      rules:
-      - cidrMatch:
-          cidr: "192.168.0.10/32"
-          ipv6: false
-          maskLen: 32
-        limit:
-          requests: 300
-          unit: Hour
+  traffic:
+    rateLimit:
+      global:
+        rules:
+        - cidrMatch:
+            cidr: "192.168.0.10/32"
+            ipv6: false
+            maskLen: 32
+          limit:
+            requests: 300
+            unit: Hour
   pathMatch:
     exact: "foo/bar"
   destination:

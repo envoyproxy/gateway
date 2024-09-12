@@ -31,8 +31,9 @@
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/tls
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: https
+        statPrefix: https-10443
         useRemoteAddress: true
+    name: envoy-gateway/gateway-1/tls
     transportSocket:
       name: envoy.transport_sockets.quic
       typedConfig:
@@ -80,8 +81,9 @@
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/tls
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: https
+        statPrefix: https-10443
         useRemoteAddress: true
+    name: envoy-gateway/gateway-1/tls
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:

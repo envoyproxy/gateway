@@ -7,7 +7,6 @@ This document guides maintainers through the process of creating an Envoy Gatewa
 
 - [Release Candidate](#release-candidate)
   - [Prerequisites](#prerequisites)
-  - [Setup cherry picker action](#setup-cherry-picker-action)
 - [Minor Release](#minor-release)
   - [Prerequisites](#prerequisites-1)
 - [Announce the Release](#announce-the-release)
@@ -74,37 +73,6 @@ export GITHUB_REMOTE=origin
 18. Ensure you check the "This is a pre-release" checkbox when editing the GitHub release.
 19. If you find any bugs in this process, please create an issue.
 
-### Setup cherry picker action
-
-After release branch cut, RM (Release Manager) should add job [cherrypick action](https://github.com/envoyproxy/gateway/blob/main/.github/workflows/cherrypick.yaml) for target release.
-
-Configuration looks like following:
-
-```yaml
-  cherry_pick_release_v0_4:
-    runs-on: ubuntu-latest
-    name: Cherry pick into release-v0.4
-    if: ${{ contains(github.event.pull_request.labels.*.name, 'cherrypick/release-v0.4') && github.event.pull_request.merged == true }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
-        with:
-          fetch-depth: 0
-      - name: Cherry pick into release/v0.4
-        uses: carloscastrojumo/github-cherry-pick-action@a145da1b8142e752d3cbc11aaaa46a535690f0c5  # v1.0.9
-        with:
-          branch: release/v0.4
-          title: "[release/v0.4] {old_title}"
-          body: "Cherry picking #{old_pull_request_id} onto release/v0.4"
-          labels: |
-            cherrypick/release-v0.4
-          # put release manager here
-          reviewers: |
-            AliceProxy
-```
-
-Replace `v0.4` with real branch name, and `AliceProxy` with the real name of RM.
-
 ## Minor Release
 
 The following steps should be used for creating a minor release.
@@ -129,34 +97,56 @@ export GITHUB_REMOTE=origin
    1. Create the release notes. Reference previous [release notes][] for additional details. __Note:__  The release
       notes should be an accumulation of the release candidate release notes and any changes since the release
       candidate.
-   2. Create a release announcement. Refer to [PR #635] as an example release announcement.
-   3. Include the release in the compatibility matrix. Refer to [PR #1002] as an example.
-   4. Generate the versioned release docs:
+   1. Create a release announcement. Refer to [PR #635] as an example release announcement.
+   1. Include the release in the compatibility matrix. Refer to [PR #1002] as an example.
+   1. Generate the versioned release docs:
 
-   ``` shell
-      make docs-release TAG=v${MAJOR_VERSION}.${MINOR_VERSION}.0
-   ```
+      ``` shell
+         make docs-release TAG=v${MAJOR_VERSION}.${MINOR_VERSION}.0
+      ```
 
-   5. Update the `Get Started` and `Contributing` button referred link in `site/content/en/_index.md`:
+   1. Update the `Documentation` referred link on the menu in `site/hugo.toml`:
+   
+      **DON'T FORGOT TO MOVE IT UNDER `LATEST`**
 
-   ```shell
-      <a class="btn btn-lg btn-primary me-3 mb-4" href="/v0.5.0">
-      Get Started <i class="fas fa-arrow-alt-circle-right ms-2"></i>
-      </a>
-      <a class="btn btn-lg btn-secondary me-3 mb-4" href="/v0.5.0/contributions">
-      Contributing <i class="fa fa-heartbeat ms-2 "></i>
-      </a>
-   ```
+      ```shell
+      [[menu.main]]
+         name = "Documentation"
+         weight = -101
+         pre = "<i class='fas fa-book pr-2'></i>"
+         url = "/v1.1"
+      ```
 
-   6. Update the `Documentation` referred link on the menu in `site/hugo.toml`:
+   1. Update `site/layouts/shortcodes/helm-version.html` base on latest minor version.
+   
+      ```console
+      {{- $pagePrefix := (index (split $.Page.File.Dir "/") 0) -}}
+      {{- with (eq $pagePrefix "latest") -}}
+      {{- "v0.0.0-latest" -}}
+      {{- end -}}
+      {{- with (strings.HasPrefix $pagePrefix "v1.1") -}}
+      {{- "v1.1.0" -}}
+      {{- end -}}
+      {{- with (strings.HasPrefix $pagePrefix "doc") -}}
+      {{- "v1.1.0" -}}
+      {{- end -}}
+      ```
 
-   ```shell
-   [[menu.main]]
-      name = "Documentation"
-      weight = -101
-      pre = "<i class='fas fa-book pr-2'></i>"
-      url = "/v0.5.0"
-   ```
+   1. Update `site/layouts/shortcodes/yaml-version.html` base on latest minor version.
+      
+      ```console
+      {{- $pagePrefix := (index (split $.Page.File.Dir "/") 0) -}}
+      {{- with (eq $pagePrefix "latest") -}}
+      {{- "latest" -}}
+      {{- end -}}
+      {{- with (strings.HasPrefix $pagePrefix "v1.1") -}}
+      {{- "v1.1.0" -}}
+      {{- end -}}
+      {{- with (strings.HasPrefix $pagePrefix "doc") -}}
+      {{- "v1.1.0" -}}
+      {{- end -}}
+      ```
+
 
 3. Sign, commit, and push your changes to your fork.
 4. Submit a [Pull Request][] to merge the changes into the `main` branch. Do not proceed until all your PRs have merged
@@ -202,7 +192,7 @@ export GITHUB_REMOTE=origin
      git push origin v${MAJOR_VERSION}.${MINOR_VERSION}.0
      ```
 
-9. This will trigger the [release GitHub action][] that generates the release, release artifacts, etc.
+9.  This will trigger the [release GitHub action][] that generates the release, release artifacts, etc.
 10. Confirm that the [release workflow][] completed successfully.
 11. Confirm that the Envoy Gateway [image][] with the correct release tag was published to Docker Hub.
 12. Confirm that the [release][] was created.

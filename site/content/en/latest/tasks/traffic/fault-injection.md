@@ -13,11 +13,12 @@ This instantiated resource can be linked to a [Gateway][], [HTTPRoute][] or [GRP
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
+{{< boilerplate prerequisites >}}
+
 For GRPC - follow the steps from the [GRPC Routing](../grpc-routing) example.
-Before proceeding, you should be able to query the example backend using HTTP or GRPC.
 
 ### Install the hey load testing tool
+
 * The `hey` CLI will be used to generate load and measure response times. Follow the installation instruction from the [Hey project] docs.
 
 ## Configuration
@@ -36,8 +37,8 @@ kind: BackendTrafficPolicy
 metadata:
   name: fault-injection-50-percent-abort
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: foo
   faultInjection:
@@ -50,8 +51,8 @@ kind: BackendTrafficPolicy
 metadata:
   name: fault-injection-delay
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: bar
   faultInjection:
@@ -113,8 +114,8 @@ kind: BackendTrafficPolicy
 metadata:
   name: fault-injection-50-percent-abort
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: foo
   faultInjection:
@@ -127,8 +128,8 @@ kind: BackendTrafficPolicy
 metadata:
   name: fault-injection-delay
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: bar
   faultInjection:
@@ -210,8 +211,8 @@ kind: BackendTrafficPolicy
 metadata:
   name: fault-injection-abort
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: GRPCRoute
     name: yages
   faultInjection:
@@ -250,8 +251,8 @@ kind: BackendTrafficPolicy
 metadata:
   name: fault-injection-abort
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: GRPCRoute
     name: yages
   faultInjection:

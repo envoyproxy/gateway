@@ -93,7 +93,7 @@ httpRoutes:
     - conditions:
       - lastTransitionTime: null
         message: 'Regex "*regex*" is invalid: error parsing regexp: missing argument
-          to repetition operator: `*`'
+          to repetition operator: `*`.'
         reason: UnsupportedValue
         status: "False"
         type: Accepted
@@ -127,6 +127,11 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
       name: envoy-gateway/gateway-1/http
       path:
         escapedSlashesAction: UnescapeAndRedirect

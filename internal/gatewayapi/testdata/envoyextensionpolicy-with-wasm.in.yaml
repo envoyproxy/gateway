@@ -1,3 +1,11 @@
+secrets:
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    namespace: envoy-gateway
+    name: my-pull-secret
+  data:
+    .dockerconfigjson: VGhpc0lzTm90QVJlYWxEb2NrZXJDb25maWdKc29u
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -63,28 +71,34 @@ envoyextensionpolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
     wasm:
     - name: wasm-filter-1
       code:
         type: HTTP
         http:
           url: https://www.example.com/wasm-filter-1.wasm
-        sha256: 746df05c8f3a0b07a46c0967cfbc5cbe5b9d48d0f79b6177eeedf8be6c8b34b5
+          sha256: 746df05c8f3a0b07a46c0967cfbc5cbe5b9d48d0f79b6177eeedf8be6c8b34b5
       config:
         parameter1:
           key1: value1
           key2: value2
         parameter2: value3
     - name: wasm-filter-2
+      rootID: "my-root-id"
       code:
-        type: HTTP
-        http:
-          url: https://www.example.com/wasm-filter-2.wasm
-        sha256: a1efca12ea51069abb123bf9c77889fcc2a31cc5483fc14d115e44fdf07c7980
+        type: Image
+        image:
+          url: oci://www.example.com/wasm-filter-2:v1.0.0
+          pullSecretRef:
+            name: my-pull-secret
+          sha256: a1efca12ea51069abb123bf9c77889fcc2a31cc5483fc14d115e44fdf07c7980
       config:
         parameter1: value1
         parameter2: value2
+    - code:
+        type: Image
+        image:
+          url: www.example.com:8080/wasm-filter-3
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
@@ -95,14 +109,13 @@ envoyextensionpolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
     wasm:
-    - name: wasm-filter-3
+    - name: wasm-filter-4
       code:
         type: HTTP
         http:
-          url: https://www.test.com/wasm-filter-3.wasm
-        sha256: a1f0b78b8c1320690327800e3a5de10e7dbba7b6c752e702193a395a52c727b6
+          url: https://www.test.com/wasm-filter-4.wasm
+          sha256: a1f0b78b8c1320690327800e3a5de10e7dbba7b6c752e702193a395a52c727b6
       config:
         parameter1:
           key1: value1

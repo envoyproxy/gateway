@@ -10,12 +10,11 @@ envoyExtensionPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: default
     wasm:
     - code:
         http:
-          url: https://www.test.com/wasm-filter-3.wasm
-        sha256: a1f0b78b8c1320690327800e3a5de10e7dbba7b6c752e702193a395a52c727b6
+          sha256: a1f0b78b8c1320690327800e3a5de10e7dbba7b6c752e702193a395a52c727b6
+          url: https://www.test.com/wasm-filter-4.wasm
         type: HTTP
       config:
         parameter1:
@@ -24,7 +23,7 @@ envoyExtensionPolicies:
           key2:
             key3: value3
       failOpen: true
-      name: wasm-filter-3
+      name: wasm-filter-4
   status:
     ancestors:
     - ancestorRef:
@@ -51,12 +50,11 @@ envoyExtensionPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
     wasm:
     - code:
         http:
+          sha256: 746df05c8f3a0b07a46c0967cfbc5cbe5b9d48d0f79b6177eeedf8be6c8b34b5
           url: https://www.example.com/wasm-filter-1.wasm
-        sha256: 746df05c8f3a0b07a46c0967cfbc5cbe5b9d48d0f79b6177eeedf8be6c8b34b5
         type: HTTP
       config:
         parameter1:
@@ -65,14 +63,24 @@ envoyExtensionPolicies:
         parameter2: value3
       name: wasm-filter-1
     - code:
-        http:
-          url: https://www.example.com/wasm-filter-2.wasm
-        sha256: a1efca12ea51069abb123bf9c77889fcc2a31cc5483fc14d115e44fdf07c7980
-        type: HTTP
+        image:
+          pullSecretRef:
+            group: null
+            kind: null
+            name: my-pull-secret
+          sha256: a1efca12ea51069abb123bf9c77889fcc2a31cc5483fc14d115e44fdf07c7980
+          url: oci://www.example.com/wasm-filter-2:v1.0.0
+        type: Image
       config:
         parameter1: value1
         parameter2: value2
       name: wasm-filter-2
+      rootID: my-root-id
+    - code:
+        image:
+          sha256: null
+          url: www.example.com:8080/wasm-filter-3
+        type: Image
   status:
     ancestors:
     - ancestorRef:
@@ -237,16 +245,18 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
       name: envoy-gateway/gateway-1/http
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -255,30 +265,33 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+        envoyExtensions:
+          wasms:
+          - config:
+              parameter1:
+                key1: value1
+              parameter2:
+                key2:
+                  key3: value3
+            failOpen: true
+            httpWasmCode:
+              originalDownloadingURL: https://www.test.com/wasm-filter-4.wasm
+              servingURL: https://envoy-gateway:18002/fe571e7b1ef5dc626ceb2c2c86782a134a92989a2643485238951696ae4334c3.wasm
+              sha256: a1f0b78b8c1320690327800e3a5de10e7dbba7b6c752e702193a395a52c727b6
+            name: envoyextensionpolicy/default/policy-for-http-route/wasm/0
+            wasmName: wasm-filter-4
         hostname: www.example.com
         isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
         name: httproute/default/httproute-1/rule/0/match/0/www_example_com
         pathMatch:
           distinct: false
           name: ""
           prefix: /foo
-        wasm:
-        - config:
-            parameter1:
-              key1: value1
-            parameter2:
-              key2:
-                key3: value3
-          failOpen: true
-          httpWasmCode:
-            sha256: a1f0b78b8c1320690327800e3a5de10e7dbba7b6c752e702193a395a52c727b6
-            url: https://www.test.com/wasm-filter-3.wasm
-          name: envoyextensionpolicy/default/policy-for-http-route/0
-          wasmName: wasm-filter-3
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP
@@ -287,31 +300,47 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+        envoyExtensions:
+          wasms:
+          - config:
+              parameter1:
+                key1: value1
+                key2: value2
+              parameter2: value3
+            failOpen: false
+            httpWasmCode:
+              originalDownloadingURL: https://www.example.com/wasm-filter-1.wasm
+              servingURL: https://envoy-gateway:18002/5c90b9a82642ce00a7753923fabead306b9d9a54a7c0bd2463a1af3efcfb110b.wasm
+              sha256: 746df05c8f3a0b07a46c0967cfbc5cbe5b9d48d0f79b6177eeedf8be6c8b34b5
+            name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/0
+            wasmName: wasm-filter-1
+          - config:
+              parameter1: value1
+              parameter2: value2
+            failOpen: false
+            httpWasmCode:
+              originalDownloadingURL: oci://www.example.com/wasm-filter-2:v1.0.0
+              servingURL: https://envoy-gateway:18002/7abf116e5cd5a20389604a5ba0f3bd04fdf76f92181fe67506b42c2ee596d3fd.wasm
+              sha256: 314100af781b98a8ca175d5bf90a8bf76576e20a2f397a88223404edc6ebfd46
+            name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/1
+            rootID: my-root-id
+            wasmName: wasm-filter-2
+          - config: null
+            failOpen: false
+            httpWasmCode:
+              originalDownloadingURL: oci://www.example.com:8080/wasm-filter-3:latest
+              servingURL: https://envoy-gateway:18002/42d30b4a4cc631415e6e48c02d244700da327201eb273f752cacf745715b31d9.wasm
+              sha256: 2a19e4f337e5223d7287e7fccd933fb01905deaff804292e5257f8c681b82bee
+            name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/2
+            wasmName: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/2
         hostname: www.example.com
         isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: default
         name: httproute/default/httproute-2/rule/0/match/0/www_example_com
         pathMatch:
           distinct: false
           name: ""
           prefix: /bar
-        wasm:
-        - config:
-            parameter1:
-              key1: value1
-              key2: value2
-            parameter2: value3
-          failOpen: false
-          httpWasmCode:
-            sha256: 746df05c8f3a0b07a46c0967cfbc5cbe5b9d48d0f79b6177eeedf8be6c8b34b5
-            url: https://www.example.com/wasm-filter-1.wasm
-          name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/0
-          wasmName: wasm-filter-1
-        - config:
-            parameter1: value1
-            parameter2: value2
-          failOpen: false
-          httpWasmCode:
-            sha256: a1efca12ea51069abb123bf9c77889fcc2a31cc5483fc14d115e44fdf07c7980
-            url: https://www.example.com/wasm-filter-2.wasm
-          name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/1
-          wasmName: wasm-filter-2

@@ -287,16 +287,18 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
       name: envoy-gateway/gateway-1/http
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
       routes:
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/envoy-gateway/httproute-2/rule/0
           settings:
           - addressType: IP
@@ -307,6 +309,10 @@ xdsIR:
             weight: 1
         hostname: example.com
         isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/example_com
         pathMatch:
           distinct: false
@@ -316,10 +322,7 @@ xdsIR:
         - distinct: false
           exact: "yes"
           name: debug
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/envoy-gateway/httproute-3/rule/0
           settings:
           - addressType: IP
@@ -330,15 +333,16 @@ xdsIR:
             weight: 1
         hostname: example.com
         isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-3
+          namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-3/rule/0/match/0/example_com
         pathMatch:
           distinct: false
           name: ""
           prefix: /v1/example
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/envoy-gateway/httproute-4/rule/0
           settings:
           - addressType: IP
@@ -353,15 +357,16 @@ xdsIR:
           name: version
         hostname: example.net
         isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-4
+          namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-4/rule/0/match/0/example_net
         pathMatch:
           distinct: false
           name: ""
           prefix: /v1/status
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/envoy-gateway/httproute-5/rule/0
           settings:
           - addressType: IP
@@ -372,15 +377,16 @@ xdsIR:
             weight: 1
         hostname: example.net
         isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-5
+          namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-5/rule/0/match/0/example_net
         pathMatch:
           distinct: false
           name: ""
           prefix: /v1/status
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/envoy-gateway/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -391,15 +397,16 @@ xdsIR:
             weight: 1
         hostname: '*.com'
         isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*_com
         pathMatch:
           distinct: false
           name: ""
           prefix: /foo
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/envoy-gateway/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -410,15 +417,16 @@ xdsIR:
             weight: 1
         hostname: '*.net'
         isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*_net
         pathMatch:
           distinct: false
           name: ""
           prefix: /foo
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
+      - destination:
           name: httproute/envoy-gateway/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -429,6 +437,10 @@ xdsIR:
             weight: 1
         hostname: '*'
         isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false

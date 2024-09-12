@@ -16,23 +16,18 @@ import (
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
-	jsonpatchv5 "github.com/evanphx/json-patch/v5"
 	"google.golang.org/protobuf/encoding/protojson"
 	"sigs.k8s.io/yaml"
 
+	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/status"
+	"github.com/envoyproxy/gateway/internal/utils/jsonpatch"
 	_ "github.com/envoyproxy/gateway/internal/xds/extensions" // register the generated types to support protojson unmarshalling
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 const (
-	AddOperation     = "add"
-	RemoveOperation  = "remove"
-	ReplaceOperation = "replace"
-	CopyOperation    = "copy"
-	MoveOperation    = "move"
-	EmptyPath        = ""
+	EmptyPath = ""
 )
 
 type typedName struct {
@@ -69,24 +64,14 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				err          error
 			)
 
-			switch p.Operation.Op {
-			case AddOperation, ReplaceOperation:
-				if p.Operation.Value == nil {
-					tErr := fmt.Errorf("the %s operation requires a value", p.Operation.Op)
-					tErrs = errors.Join(tErrs, tErr)
-					continue
-				}
-			default:
-				if p.Operation.Value != nil {
-					tErr := fmt.Errorf("the value field can not be set for the %s operation", p.Operation.Op)
-					tErrs = errors.Join(tErrs, tErr)
-					continue
-				}
+			if err := p.Operation.Validate(); err != nil {
+				tErrs = errors.Join(tErrs, err)
+				continue
 			}
 
-			// If Path is "" and op is "add", unmarshal and add the patch as a complete
+			// If Path and JSONPath is "" and op is "add", unmarshal and add the patch as a complete
 			// resource
-			if p.Operation.Op == AddOperation && p.Operation.Path == EmptyPath {
+			if p.Operation.Op == ir.JSONPatchOpAdd && p.Operation.IsPathNilOrEmpty() && p.Operation.IsJSONPathNilOrEmpty() {
 				// Convert patch to JSON
 				// The patch library expects an array so convert it into one
 				y, err := yaml.Marshal(p.Operation.Value)
@@ -106,7 +91,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				case resourcev3.ListenerType:
 					temp := &listenerv3.Listener{}
 					if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
-						tErr := fmt.Errorf(unmarshalErrorMessage(err, p.Operation.Value))
+						tErr := errors.New(unmarshalErrorMessage(err, p.Operation.Value))
 						tErrs = errors.Join(tErrs, tErr)
 						continue
 					}
@@ -119,7 +104,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				case resourcev3.RouteType:
 					temp := &routev3.RouteConfiguration{}
 					if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
-						tErr := fmt.Errorf(unmarshalErrorMessage(err, p.Operation.Value))
+						tErr := errors.New(unmarshalErrorMessage(err, p.Operation.Value))
 						tErrs = errors.Join(tErrs, tErr)
 						continue
 					}
@@ -132,7 +117,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				case resourcev3.ClusterType:
 					temp := &clusterv3.Cluster{}
 					if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
-						tErr := fmt.Errorf(unmarshalErrorMessage(err, p.Operation.Value))
+						tErr := errors.New(unmarshalErrorMessage(err, p.Operation.Value))
 						tErrs = errors.Join(tErrs, tErr)
 						continue
 					}
@@ -145,7 +130,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				case resourcev3.EndpointType:
 					temp := &endpointv3.ClusterLoadAssignment{}
 					if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
-						tErr := fmt.Errorf(unmarshalErrorMessage(err, p.Operation.Value))
+						tErr := errors.New(unmarshalErrorMessage(err, p.Operation.Value))
 						tErrs = errors.Join(tErrs, tErr)
 						continue
 					}
@@ -158,7 +143,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				case resourcev3.SecretType:
 					temp := &tlsv3.Secret{}
 					if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
-						tErr := fmt.Errorf(unmarshalErrorMessage(err, p.Operation.Value))
+						tErr := errors.New(unmarshalErrorMessage(err, p.Operation.Value))
 						tErrs = errors.Join(tErrs, tErr)
 						continue
 					}
@@ -240,34 +225,9 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				}
 			}
 
-			// Convert patch to JSON
-			// The patch library expects an array so convert it into one
-			y, err := yaml.Marshal([]ir.JSONPatchOperation{p.Operation})
+			modifiedJSON, err := jsonpatch.ApplyJSONPatches(resourceJSON, p.Operation)
 			if err != nil {
-				tErr := fmt.Errorf("unable to marshal patch %+v, err: %s", p.Operation, err.Error())
-				tErrs = errors.Join(tErrs, tErr)
-				continue
-			}
-			jsonBytes, err := yaml.YAMLToJSON(y)
-			if err != nil {
-				tErr := fmt.Errorf("unable to convert patch to json %s, err: %s", string(y), err.Error())
-				tErrs = errors.Join(tErrs, tErr)
-				continue
-			}
-			patchObj, err := jsonpatchv5.DecodePatch(jsonBytes)
-			if err != nil {
-				tErr := fmt.Errorf("unable to decode patch %s, err: %s", string(jsonBytes), err.Error())
-				tErrs = errors.Join(tErrs, tErr)
-				continue
-			}
-
-			// Apply patch
-			opts := jsonpatchv5.NewApplyOptions()
-			opts.EnsurePathExistsOnAdd = true
-			modifiedJSON, err := patchObj.ApplyWithOptions(resourceJSON, opts)
-			if err != nil {
-				tErr := fmt.Errorf("unable to apply patch:\n%s on resource:\n%s, err: %s", string(jsonBytes), string(resourceJSON), err.Error())
-				tErrs = errors.Join(tErrs, tErr)
+				tErrs = errors.Join(tErrs, err)
 				continue
 			}
 
@@ -278,7 +238,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 			case resourcev3.ListenerType:
 				temp := &listenerv3.Listener{}
 				if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
-					tErr := fmt.Errorf(unmarshalErrorMessage(err, string(modifiedJSON)))
+					tErr := errors.New(unmarshalErrorMessage(err, string(modifiedJSON)))
 					tErrs = errors.Join(tErrs, tErr)
 					continue
 				}
@@ -295,7 +255,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 			case resourcev3.RouteType:
 				temp := &routev3.RouteConfiguration{}
 				if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
-					tErr := fmt.Errorf(unmarshalErrorMessage(err, string(modifiedJSON)))
+					tErr := errors.New(unmarshalErrorMessage(err, string(modifiedJSON)))
 					tErrs = errors.Join(tErrs, tErr)
 					continue
 				}
@@ -312,7 +272,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 			case resourcev3.ClusterType:
 				temp := &clusterv3.Cluster{}
 				if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
-					tErr := fmt.Errorf(unmarshalErrorMessage(err, string(modifiedJSON)))
+					tErr := errors.New(unmarshalErrorMessage(err, string(modifiedJSON)))
 					tErrs = errors.Join(tErrs, tErr)
 					continue
 				}
@@ -329,7 +289,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 			case resourcev3.EndpointType:
 				temp := &endpointv3.ClusterLoadAssignment{}
 				if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
-					tErr := fmt.Errorf(unmarshalErrorMessage(err, string(modifiedJSON)))
+					tErr := errors.New(unmarshalErrorMessage(err, string(modifiedJSON)))
 					tErrs = errors.Join(tErrs, tErr)
 					continue
 				}
@@ -346,7 +306,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 			case resourcev3.SecretType:
 				temp := &tlsv3.Secret{}
 				if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
-					tErr := fmt.Errorf(unmarshalErrorMessage(err, string(modifiedJSON)))
+					tErr := errors.New(unmarshalErrorMessage(err, string(modifiedJSON)))
 					tErrs = errors.Join(tErrs, tErr)
 					continue
 				}
@@ -361,6 +321,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 					continue
 				}
 			}
+
 		}
 
 		// Set translation errors for every policy ancestor references

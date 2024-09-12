@@ -10,7 +10,6 @@ clientTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway
-      namespace: envoy-gateway
     timeout:
       http:
         requestReceivedTimeout: 5sec
@@ -23,7 +22,7 @@ clientTrafficPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: 'Time: unknown unit "sec" in duration "5sec"'
+        message: 'Timeout: invalid HTTP RequestReceivedTimeout value 5sec.'
         reason: Invalid
         status: "False"
         type: Accepted
@@ -95,6 +94,11 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway
+        namespace: envoy-gateway
+        sectionName: http
       name: envoy-gateway/gateway/http
       path:
         escapedSlashesAction: UnescapeAndRedirect

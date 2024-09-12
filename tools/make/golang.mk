@@ -5,7 +5,6 @@
 VERSION_PACKAGE := github.com/envoyproxy/gateway/internal/cmd/version
 
 GO_LDFLAGS += -X $(VERSION_PACKAGE).envoyGatewayVersion=$(shell cat VERSION) \
-	-X $(VERSION_PACKAGE).shutdownManagerVersion=$(TAG) \
 	-X $(VERSION_PACKAGE).gitCommitID=$(GIT_COMMIT)
 
 GIT_COMMIT:=$(shell git rev-parse HEAD)
@@ -19,7 +18,7 @@ GO_VERSION = $(shell grep -oE "^go [[:digit:]]*\.[[:digit:]]*" go.mod | cut -d' 
 
 # Build the target binary in target platform.
 # The pattern of build.% is `build.{Platform}.{Command}`.
-# If we want to build envoy-gateway in linux amd64 platform, 
+# If we want to build envoy-gateway in linux amd64 platform,
 # just execute make go.build.linux_amd64.envoy-gateway.
 .PHONY: go.build.%
 go.build.%:
@@ -67,7 +66,7 @@ go.test.cel: manifests $(tools/setup-envtest) # Run the CEL validation tests
 	@for ver in $(ENVTEST_K8S_VERSIONS); do \
   		echo "Run CEL Validation on k8s $$ver"; \
         go clean -testcache; \
-        KUBEBUILDER_ASSETS="$(shell $(tools/setup-envtest) use $$ver -p path)" \
+        KUBEBUILDER_ASSETS="$$($(tools/setup-envtest) use $$ver -p path)" \
          go test ./test/cel-validation --tags celvalidation -race; \
     done
 
@@ -76,11 +75,17 @@ go.clean: ## Clean the building output files
 	@$(LOG_TARGET)
 	rm -rf $(OUTPUT_DIR)
 
+.PHONY: go.mod.tidy
+go.mod.tidy: ## Update and check dependences with go mod tidy.
+	@$(LOG_TARGET)
+	go mod tidy -compat=$(GO_VERSION)
+	# run go mod tidy in examples/extension-server directory
+	cd examples/extension-server && go mod tidy -compat=$(GO_VERSION)
+
 .PHONY: go.mod.lint
 lint: go.mod.lint
-go.mod.lint:
+go.mod.lint: go.mod.tidy ## Check if go.mod is clean
 	@$(LOG_TARGET)
-	@go mod tidy -compat=$(GO_VERSION)
 	@if test -n "$$(git status -s -- go.mod go.sum)"; then \
 		git diff --exit-code go.mod; \
 		git diff --exit-code go.sum; \

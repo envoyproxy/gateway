@@ -15,9 +15,8 @@ import (
 	localrlv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/local_ratelimit/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
-	"github.com/golang/protobuf/ptypes/duration"
-	"github.com/golang/protobuf/ptypes/wrappers"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -26,7 +25,6 @@ import (
 )
 
 const (
-	localRateLimitFilter           = "envoy.filters.http.local_ratelimit"
 	localRateLimitFilterStatPrefix = "http_local_rate_limiter"
 	descriptorMaskedRemoteAddress  = "masked_remote_address"
 )
@@ -54,7 +52,7 @@ func (*localRateLimit) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir
 
 	// Return early if filter already exists.
 	for _, httpFilter := range mgr.HttpFilters {
-		if httpFilter.Name == localRateLimitFilter {
+		if httpFilter.Name == egv1a1.EnvoyFilterLocalRateLimit.String() {
 			return nil
 		}
 	}
@@ -72,7 +70,7 @@ func (*localRateLimit) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir
 	// empty filter. The real configuration is done at the route level.
 	// See https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/local_rate_limit_filter
 	filter := &hcmv3.HttpFilter{
-		Name: localRateLimitFilter,
+		Name: egv1a1.EnvoyFilterLocalRateLimit.String(),
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: localRlAny,
 		},
@@ -97,7 +95,10 @@ func listenerContainsLocalRateLimit(irListener *ir.HTTPListener) bool {
 }
 
 func routeContainsLocalRateLimit(irRoute *ir.HTTPRoute) bool {
-	if irRoute == nil || irRoute.RateLimit == nil || irRoute.RateLimit.Local == nil {
+	if irRoute == nil ||
+		irRoute.Traffic == nil ||
+		irRoute.Traffic.RateLimit == nil ||
+		irRoute.Traffic.RateLimit.Local == nil {
 		return false
 	}
 
@@ -114,7 +115,7 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) e
 	routeAction := route.GetRoute()
 
 	// Return early if no rate limit config exists.
-	if irRoute.RateLimit == nil || irRoute.RateLimit.Local == nil || routeAction == nil {
+	if !routeContainsLocalRateLimit(irRoute) || routeAction == nil {
 		return nil
 	}
 
@@ -126,7 +127,7 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) e
 			route.Name)
 	}
 
-	local := irRoute.RateLimit.Local
+	local := irRoute.Traffic.RateLimit.Local
 
 	rateLimits, descriptors, err := buildRouteLocalRateLimits(local)
 	if err != nil {
@@ -135,7 +136,7 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) e
 	routeAction.RateLimits = rateLimits
 
 	filterCfg := route.GetTypedPerFilterConfig()
-	if _, ok := filterCfg[localRateLimitFilter]; ok {
+	if _, ok := filterCfg[egv1a1.EnvoyFilterLocalRateLimit.String()]; ok {
 		// This should not happen since this is the only place where the filter
 		// config is added in a route.
 		return fmt.Errorf(
@@ -169,7 +170,7 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) e
 		// won't consume the default token bucket. This means that a request only
 		// counts towards the default token bucket if it does not match any of the
 		// descriptors.
-		AlwaysConsumeDefaultTokenBucket: &wrappers.BoolValue{
+		AlwaysConsumeDefaultTokenBucket: &wrapperspb.BoolValue{
 			Value: false,
 		},
 	}
@@ -183,7 +184,7 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) e
 		route.TypedPerFilterConfig = make(map[string]*anypb.Any)
 	}
 
-	route.TypedPerFilterConfig[localRateLimitFilter] = localRlAny
+	route.TypedPerFilterConfig[egv1a1.EnvoyFilterLocalRateLimit.String()] = localRlAny
 	return nil
 }
 
@@ -247,8 +248,8 @@ func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
 
 			// Setup MaskedRemoteAddress action
 			mra := &routev3.RateLimit_Action_MaskedRemoteAddress{}
-			maskLen := &wrapperspb.UInt32Value{Value: uint32(rule.CIDRMatch.MaskLen)}
-			if rule.CIDRMatch.IPv6 {
+			maskLen := &wrapperspb.UInt32Value{Value: rule.CIDRMatch.MaskLen}
+			if rule.CIDRMatch.IsIPv6 {
 				mra.V6PrefixMaskLen = maskLen
 			} else {
 				mra.V4PrefixMaskLen = maskLen
@@ -285,7 +286,7 @@ func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
 	return rateLimits, descriptors, nil
 }
 
-func ratelimitUnitToDuration(unit ir.RateLimitUnit) *duration.Duration {
+func ratelimitUnitToDuration(unit ir.RateLimitUnit) *durationpb.Duration {
 	var seconds int64
 
 	switch egv1a1.RateLimitUnit(unit) {
@@ -298,7 +299,7 @@ func ratelimitUnitToDuration(unit ir.RateLimitUnit) *duration.Duration {
 	case egv1a1.RateLimitUnitDay:
 		seconds = 60 * 60 * 24
 	}
-	return &duration.Duration{
+	return &durationpb.Duration{
 		Seconds: seconds,
 	}
 }

@@ -11,14 +11,24 @@ type ProxyAccessLog struct {
 	// Settings defines accesslog settings for managed proxies.
 	// If unspecified, will send default format to stdout.
 	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=50
 	Settings []ProxyAccessLogSetting `json:"settings,omitempty"`
 }
 
 type ProxyAccessLogSetting struct {
 	// Format defines the format of accesslog.
-	Format ProxyAccessLogFormat `json:"format"`
+	// This will be ignored if sink type is ALS.
+	// +optional
+	Format *ProxyAccessLogFormat `json:"format,omitempty"`
+	// Matches defines the match conditions for accesslog in CEL expression.
+	// An accesslog will be emitted only when one or more match conditions are evaluated to true.
+	// Invalid [CEL](https://www.envoyproxy.io/docs/envoy/latest/xds/type/v3/cel.proto.html#common-expression-language-cel-proto) expressions will be ignored.
+	// +notImplementedHide
+	Matches []string `json:"matches,omitempty"`
 	// Sinks defines the sinks of accesslog.
 	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=50
 	Sinks []ProxyAccessLogSink `json:"sinks"`
 }
 
@@ -113,14 +123,13 @@ const (
 // - `x-accesslog-attr` - JSON encoded key/value pairs when a JSON format is used.
 //
 // +kubebuilder:validation:XValidation:rule="self.type == 'HTTP' || !has(self.http)",message="The http field may only be set when type is HTTP."
+// +kubebuilder:validation:XValidation:message="BackendRefs must be used, backendRef is not supported.",rule="!has(self.backendRef)"
+// +kubebuilder:validation:XValidation:message="must have at least one backend in backendRefs",rule="has(self.backendRefs) && self.backendRefs.size() > 0"
+// +kubebuilder:validation:XValidation:message="BackendRefs only supports Service kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service') : true"
+// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core group.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\")) : true"
 type ALSEnvoyProxyAccessLog struct {
-	// BackendRefs references a Kubernetes object that represents the gRPC service to which
-	// the access logs will be sent. Currently only Service is supported.
-	//
-	// +kubebuilder:validation:MinItems=1
-	// +kubebuilder:validation:MaxItems=1
-	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Service kind.",rule="self.all(f, f.kind == 'Service')"
-	BackendRefs []BackendRef `json:"backendRefs"`
+	BackendCluster `json:",inline"`
+
 	// LogName defines the friendly name of the access log to be returned in
 	// StreamAccessLogsMessage.Identifier. This allows the access log server
 	// to differentiate between different access logs coming from the same Envoy.
@@ -156,27 +165,23 @@ type FileEnvoyProxyAccessLog struct {
 // OpenTelemetryEnvoyProxyAccessLog defines the OpenTelemetry access log sink.
 //
 // +kubebuilder:validation:XValidation:message="host or backendRefs needs to be set",rule="has(self.host) || self.backendRefs.size() > 0"
+// +kubebuilder:validation:XValidation:message="BackendRefs must be used, backendRef is not supported.",rule="!has(self.backendRef)"
+// +kubebuilder:validation:XValidation:message="BackendRefs only supports Service kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service') : true"
+// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core group.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\")) : true"
 type OpenTelemetryEnvoyProxyAccessLog struct {
+	BackendCluster `json:",inline"`
 	// Host define the extension service hostname.
-	// Deprecated: Use BackendRef instead.
+	// Deprecated: Use BackendRefs instead.
 	//
 	// +optional
 	Host *string `json:"host,omitempty"`
 	// Port defines the port the extension service is exposed on.
-	// Deprecated: Use BackendRef instead.
+	// Deprecated: Use BackendRefs instead.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:default=4317
 	Port int32 `json:"port,omitempty"`
-	// BackendRefs references a Kubernetes object that represents the
-	// backend server to which the accesslog will be sent.
-	// Only service Kind is supported for now.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxItems=1
-	// +kubebuilder:validation:XValidation:message="only support Service kind.",rule="self.all(f, f.kind == 'Service')"
-	BackendRefs []BackendRef `json:"backendRefs,omitempty"`
 	// Resources is a set of labels that describe the source of a log entry, including envoy node info.
 	// It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).
 	// +optional

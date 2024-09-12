@@ -234,81 +234,78 @@ xdsIR:
       - path: /dev/stdout
     tcp:
     - address: 0.0.0.0
-      circuitBreaker:
-        maxConnections: 2048
-        maxParallelRequests: 4294967295
-        maxParallelRetries: 1024
-        maxPendingRequests: 1
-        maxRequestsPerConnection: 1
-      destination:
-        name: tcproute/default/tls-app-1/rule/-1
-        settings:
-        - addressType: IP
-          endpoints:
-          - host: 7.7.7.7
-            port: 8163
-          protocol: TCP
-          weight: 1
-      healthCheck:
-        active:
-          healthyThreshold: 1
-          http:
-            expectedResponse:
-              binary: RXZlcnl0aGluZyBPSw==
-            expectedStatuses:
-            - 200
-            - 300
-            host: ""
-            method: GET
-            path: /healthz
-          interval: 3s
-          timeout: 500ms
-          unhealthyThreshold: 3
-        passive:
-          baseEjectionTime: 2m40s
-          consecutive5XxErrors: 5
-          consecutiveGatewayErrors: 0
-          consecutiveLocalOriginFailures: 5
-          interval: 2s
-          maxEjectionPercent: 100
-          splitExternalLocalOriginErrors: false
-      loadBalancer:
-        consistentHash:
-          sourceIP: true
-      name: default/tcp-gateway/bar/tls-app-1
+      name: default/tcp-gateway/bar
       port: 8089
-      proxyProtocol:
-        version: V2
-      tcpKeepalive:
-        idleTime: 1200
-        interval: 60
-        probes: 3
-      timeout:
-        http:
-          connectionIdleTimeout: 16s
-          maxConnectionDuration: 17s
-        tcp:
-          connectTimeout: 15s
-      tls: {}
+      routes:
+      - circuitBreaker:
+          maxConnections: 2048
+          maxParallelRequests: 4294967295
+          maxParallelRetries: 1024
+          maxPendingRequests: 1
+          maxRequestsPerConnection: 1
+        destination:
+          name: tcproute/default/tls-app-1/rule/-1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8163
+            protocol: TCP
+            weight: 1
+        healthCheck:
+          active:
+            healthyThreshold: 1
+            http:
+              expectedResponse:
+                binary: RXZlcnl0aGluZyBPSw==
+              expectedStatuses:
+              - 200
+              - 300
+              host: ""
+              method: GET
+              path: /healthz
+            interval: 3s
+            timeout: 500ms
+            unhealthyThreshold: 3
+          passive:
+            baseEjectionTime: 2m40s
+            consecutive5XxErrors: 5
+            consecutiveGatewayErrors: 0
+            consecutiveLocalOriginFailures: 5
+            interval: 2s
+            maxEjectionPercent: 100
+            splitExternalLocalOriginErrors: false
+        loadBalancer:
+          consistentHash:
+            sourceIP: true
+        name: tcproute/default/tls-app-1
+        proxyProtocol:
+          version: V2
+        tcpKeepalive:
+          idleTime: 1200
+          interval: 60
+          probes: 3
+        timeout:
+          http:
+            connectionIdleTimeout: 16s
+            maxConnectionDuration: 17s
+          tcp:
+            connectTimeout: 15s
     udp:
     - address: 0.0.0.0
-      destination:
-        name: udproute/default/udp-app-1/rule/-1
-        settings:
-        - addressType: IP
-          endpoints:
-          - host: 7.7.7.7
-            port: 8162
-          protocol: UDP
-          weight: 1
-      loadBalancer:
-        consistentHash:
-          sourceIP: true
-      name: default/tcp-gateway/foo/udp-app-1
+      name: default/tcp-gateway/foo
       port: 8162
-      timeout:
-        http:
-          connectionIdleTimeout: 16s
-          maxConnectionDuration: 17s
-        tcp:
-          connectTimeout: 15s
+      route:
+        destination:
+          name: udproute/default/udp-app-1/rule/-1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8162
+            protocol: UDP
+            weight: 1
+        loadBalancer:
+          consistentHash:
+            sourceIP: true
+        name: udproute/default/udp-app-1

@@ -17,12 +17,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	ec "github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
-	"github.com/envoyproxy/gateway/internal/status"
 )
 
 // Provider is the scaffolding for the Kubernetes provider. It sets up dependencies
@@ -44,6 +45,8 @@ func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources)
 		LeaderElectionID:        "5b9825d2.gateway.envoyproxy.io",
 		LeaderElectionNamespace: svr.Namespace,
 	}
+
+	log.SetLogger(mgrOpts.Logger)
 
 	if !ptr.Deref(svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable, false) {
 		mgrOpts.LeaderElection = true
@@ -84,7 +87,7 @@ func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources)
 		return nil, fmt.Errorf("failed to create manager: %w", err)
 	}
 
-	updateHandler := status.NewUpdateHandler(mgr.GetLogger(), mgr.GetClient())
+	updateHandler := NewUpdateHandler(mgr.GetLogger(), mgr.GetClient())
 	if err := mgr.Add(updateHandler); err != nil {
 		return nil, fmt.Errorf("failed to add status update handler %w", err)
 	}
@@ -114,6 +117,10 @@ func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources)
 		manager: mgr,
 		client:  mgr.GetClient(),
 	}, nil
+}
+
+func (p *Provider) Type() egv1a1.ProviderType {
+	return egv1a1.ProviderTypeKubernetes
 }
 
 // Start starts the Provider synchronously until a message is received from ctx.

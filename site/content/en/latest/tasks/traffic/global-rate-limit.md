@@ -27,8 +27,7 @@ has its own 100r/s rate limit bucket.
 
 ### Install Envoy Gateway
 
-* Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the HTTPRoute example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+{{< boilerplate prerequisites >}}
 
 ### Install Redis
 
@@ -236,11 +235,10 @@ kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-ratelimit
-    namespace: default
   rateLimit:
     type: Global
     global:
@@ -266,11 +264,10 @@ kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-ratelimit
-    namespace: default
   rateLimit:
     type: Global
     global:
@@ -456,11 +453,10 @@ kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-ratelimit
-    namespace: default
   rateLimit:
     type: Global
     global:
@@ -486,11 +482,10 @@ kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-ratelimit
-    namespace: default
   rateLimit:
     type: Global
     global:
@@ -659,11 +654,10 @@ kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-ratelimit
-    namespace: default
   rateLimit:
     type: Global
     global:
@@ -685,11 +679,10 @@ kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-ratelimit
-    namespace: default
   rateLimit:
     type: Global
     global:
@@ -817,11 +810,10 @@ kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-ratelimit 
-    namespace: default
   rateLimit:
     type: Global
     global:
@@ -867,11 +859,10 @@ kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-ratelimit 
-    namespace: default
   rateLimit:
     type: Global
     global:
@@ -959,8 +950,8 @@ kind: SecurityPolicy
 metadata:
   name: jwt-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: example
   jwt:
@@ -977,8 +968,8 @@ kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: example 
   rateLimit:
@@ -1027,8 +1018,8 @@ kind: SecurityPolicy
 metadata:
   name: jwt-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: example
   jwt:
@@ -1045,8 +1036,8 @@ kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: example 
   rateLimit:

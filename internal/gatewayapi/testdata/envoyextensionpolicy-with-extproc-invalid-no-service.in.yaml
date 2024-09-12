@@ -44,7 +44,6 @@ envoyExtensionPolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: default
     extProc:
     - backendRefs:
       - name: grpc-backend

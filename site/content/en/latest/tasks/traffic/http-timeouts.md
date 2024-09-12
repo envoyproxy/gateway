@@ -2,7 +2,9 @@
 title: "HTTP Timeouts"
 ---
 
-The [HTTPRouteTimeouts][] resource allows users to configure request timeouts and response timeouts for an [HTTPRouteRule][]. This task shows how to configure timeouts.
+The default request timeout is set to 15 seconds in Envoy Proxy.
+The [HTTPRouteTimeouts][] resource allows users to configure request timeouts for an [HTTPRouteRule][].
+This task shows you how to configure timeouts.
 
 The [HTTPRouteTimeouts][] supports two kinds of timeouts:
 - **request**: Request specifies the maximum duration for a gateway to respond to an HTTP request. 
@@ -10,10 +12,9 @@ The [HTTPRouteTimeouts][] supports two kinds of timeouts:
 
 __Note:__  The Request duration must be >= BackendRequest duration
 
-## Installation
+## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+{{< boilerplate prerequisites >}}
 
 ## Verification
 

@@ -14,8 +14,7 @@ client.
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+{{< boilerplate prerequisites >}}
 
 ## Adding Request Headers
 
@@ -443,7 +442,179 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
+## Early Header Modification
+
+In some cases, it could be necessary to modify headers before the proxy performs any sort of processing, routing or tracing. Envoy Gateway supports this functionality using the [ClientTrafficPolicy][] API.
+
+A ClientTrafficPolicy resource can be attached to a Gateway resource to configure early header modifications for all its routes. In the following example we will demonstrate how early header modification can be configured. 
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-headers
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - headers.example
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+      weight: 1
+    filters:
+    - type: RequestHeaderModifier
+      requestHeaderModifier:
+        add:
+          - name: early-added-header
+            value: late
+          - name: early-set-header
+            value: late
+          - name: early-removed-header
+            value: late 
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: enable-early-headers
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  headers:
+    earlyRequestHeaders:
+      add:
+        - name: "early-added-header"
+          value: "early"
+      set:
+        - name: "early-set-header"
+          value: "early"
+      remove:
+        - "early-removed-header"
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-headers
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - headers.example
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: backend
+          port: 3000
+          weight: 1
+      filters:
+        - type: RequestHeaderModifier
+          requestHeaderModifier:
+            add:
+              - name: early-added-header
+                value: late
+              - name: early-set-header
+                value: late
+              - name: early-removed-header
+                value: late
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: enable-early-headers
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  headers:
+    earlyRequestHeaders:
+      add:
+        - name: "early-added-header"
+          value: "early"
+      set:
+        - name: "early-set-header"
+          value: "early"
+      remove:
+        - "early-removed-header"
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+
+Querying `headers.example/get` should result in a `200` response from the example Gateway and the output from the
+example app should indicate that the upstream example app received the following headers:
+- `early-added-header` contains early (ClientTrafficPolicy) and late (RouteFilter) values
+- `early-set-header` contains only early (ClientTrafficPolicy) and late (RouteFilter) values, since the early modification overwritten the client value.
+- `early-removed-header` contains only the late (RouteFilter) value, since the early modification deleted the client value.
+
+```console
+$ curl -vvv --header "Host: headers.example" "http://${GATEWAY_HOST}/get" --header  "early-added-header: client" --header  "early-set-header: client" --header  "early-removed-header: client" 
+...
+> GET /get HTTP/1.1
+> Host: headers.example
+> User-Agent: curl/7.81.0
+> Accept: */*
+> add-header: something
+>
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 200 OK
+< content-type: application/json
+< x-content-type-options: nosniff
+< content-length: 474
+< x-envoy-upstream-service-time: 0
+< server: envoy
+<
+
+ "headers": {
+  "Accept": [
+   "*/*"
+  ],
+  "Early-Added-Header": [
+   "client",
+   "early",
+   "late"
+  ],
+  "Early-Set-Header": [
+   "early",
+   "late"
+  ],
+  "Early-removed-Header": [
+    "late"
+  ]
+...
+```
+
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
 [HTTPRoute filters]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteFilter
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
 [req_filter]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPHeaderFilter
+[ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy

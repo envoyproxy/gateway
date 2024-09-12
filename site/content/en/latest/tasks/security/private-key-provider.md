@@ -14,7 +14,9 @@ This task will walk you through the steps required to configure TLS Termination 
 
 ## Prerequisites
 
-### For QAT
+{{< tabpane text=true >}}
+
+{{% tab header="QAT (Intel QuickAssist Technology)" %}}
 
 - Install Linux kernel 5.17 or similar
 - Ensure the node has QAT devices by checking the QAT physical function devices presented. [Supported Devices](https://intel.github.io/quickassist/qatlib/requirements.html#qat2-0-qatlib-supported-devices)
@@ -88,7 +90,9 @@ This task will walk you through the steps required to configure TLS Termination 
   kubectl get node -o yaml| grep qat.intel.com
   ```
 
-### For CryptoMB:
+{{% /tab %}}
+
+{{% tab header="CryptoMB" %}}
 
 It required the node with 3rd generation Intel Xeon Scalable processor server processors, or later.
 - For kubernetes Cluster, if not all nodes that support Intel® AVX-512 in Kubernetes cluster, you need to add some labels to divide these two kinds of nodes manually or using [NFD](https://github.com/kubernetes-sigs/node-feature-discovery).
@@ -109,6 +113,10 @@ It required the node with 3rd generation Intel Xeon Scalable processor server pr
     ```shell
     cat /proc/cpuinfo |grep avx512f|grep avx512dq|grep avx512bw|grep avx512_vbmi2|grep avx512ifma
     ```
+
+{{% /tab %}}
+
+{{< /tabpane >}}
 
 ## Installation
 
@@ -214,9 +222,13 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-### Change EnvoyProxy configuration for QAT
+## Change EnvoyProxy configuration
 
 Using the envoyproxy image with contrib extensions and add qat resources requesting, ensure the k8s scheduler find out a machine with required resource.
+
+{{< tabpane text=true >}}
+
+{{% tab header="QAT (Intel QuickAssist Technology)" %}}
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -285,7 +297,9 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-### Change EnvoyProxy configuration for CryptoMB
+{{% /tab %}}
+
+{{% tab header="CryptoMB" %}}
 
 Using the envoyproxy image with contrib extensions and add the node affinity to scheduling the Envoy Gateway pod on the machine with required CPU instructions.
 
@@ -386,9 +400,11 @@ spec:
 
 Or using `preferredDuringSchedulingIgnoredDuringExecution` for best effort scheduling, or not doing any node affinity, just doing the random scheduling. The CryptoMB private key provider supports software fallback if the required CPU instructions aren't here.
 
-## Apply EnvoyPatchPolicy to enable private key provider
+{{% /tab %}}
 
-### Benchmark before enabling private key provider
+{{< /tabpane >}}
+
+## Benchmark before enabling private key provider
 
 First follow the instructions in [TLS Termination for TCP](./tls-termination) to do the functionality test.
 
@@ -416,7 +432,11 @@ Benchmark the gateway with fortio.
 fortio load -c 10 -k -qps 0 -t 30s -keepalive=false https://www.example.com:${NODE_PORT}
 ```
 
-### For QAT
+## Apply EnvoyPatchPolicy to enable private key provider
+
+{{< tabpane text=true >}}
+
+{{% tab header="QAT (Intel QuickAssist Technology)" %}}
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -433,7 +453,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
   type: JSONPatch
   jsonPatches:
     - type: "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
@@ -475,7 +494,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
   type: JSONPatch
   jsonPatches:
     - type: "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
@@ -503,7 +521,9 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-### For CryptoMB
+{{% /tab %}}
+
+{{% tab header="CryptoMB" %}}
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -520,7 +540,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
   type: JSONPatch
   jsonPatches:
     - type: "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
@@ -562,7 +581,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
   type: JSONPatch
   jsonPatches:
     - type: "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
@@ -590,7 +608,11 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-### Benchmark after enabling private key provider
+{{% /tab %}}
+
+{{< /tabpane >}}
+
+## Benchmark after enabling private key provider
 
 First follow the instructions in [TLS Termination for TCP](./tls-termination) to do the functionality test again.
 
@@ -600,6 +622,8 @@ Benchmark the gateway with fortio.
 fortio load -c 64 -k -qps 0 -t 30s -keepalive=false https://www.example.com:${NODE_PORT}
 ```
 
+## Benchmark Result
+
 You will see a performance boost after private key provider enabled. For example, you will get results as below.
 
 Without private key provider:
@@ -608,14 +632,26 @@ Without private key provider:
 All done 43069 calls (plus 10 warmup) 6.966 ms avg, 1435.4 qps
 ```
 
-With CryptoMB private key provider, the QPS is over 2 times than without private key provider.
+{{< tabpane text=true >}}
 
-```shell
-All done 93983 calls (plus 128 warmup) 40.880 ms avg, 3130.5 qps
-```
+{{% tab header="QAT (Intel QuickAssist Technology)" %}}
 
 With QAT private key provider, the QPS is over 3 times than without private key provider
 
 ```shell
 All done 134746 calls (plus 128 warmup) 28.505 ms avg, 4489.6 qps
 ```
+
+{{% /tab %}}
+
+{{% tab header="CryptoMB" %}}
+
+With CryptoMB private key provider, the QPS is over 2 times than without private key provider.
+
+```shell
+All done 93983 calls (plus 128 warmup) 40.880 ms avg, 3130.5 qps
+```
+
+{{% /tab %}}
+
+{{< /tabpane >}}

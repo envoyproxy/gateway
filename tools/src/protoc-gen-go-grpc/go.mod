@@ -1,6 +1,6 @@
 module github.com/envoyproxy/gateway/tools/src/protoc-gen-go-grpc
 
-go 1.22.2
+go 1.23.1
 
 require google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.3.0
 

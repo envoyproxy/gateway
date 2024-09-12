@@ -23,7 +23,7 @@ changes:
       Added Custom Envoy Gateway Extensions Framework
       Added Support for Service Method Match in GRPCRoute
 
-  - area: ci-tooling-testing
+  - area: CI tooling testing
     change: |
       Fixed CI Flakes During Helm Install
       Added Test To Ensure Static xDS Cluster Has Same Field Values as Dynamic Cluster

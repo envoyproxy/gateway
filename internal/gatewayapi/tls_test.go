@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 const (
@@ -53,7 +53,7 @@ func TestValidateTLSSecretsData(t *testing.T) {
 		Name        string
 		CertFile    string
 		KeyFile     string
-		Domain      v1.Hostname
+		Domain      gwapiv1.Hostname
 		ExpectedErr error
 	}
 
@@ -159,7 +159,6 @@ func TestValidateTLSSecretsData(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 			secrets := createTestSecrets(t, tc.CertFile, tc.KeyFile)
 			require.NotNil(t, secrets)
@@ -204,7 +203,6 @@ func TestValidateCertificate(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 			certData, err := os.ReadFile(filepath.Join("testdata", "tls", tc.CertFile))
 			require.NoError(t, err)

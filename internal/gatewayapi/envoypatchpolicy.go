@@ -10,13 +10,12 @@ import (
 	"sort"
 
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
-	gwv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/status"
 )
 
 func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.EnvoyPatchPolicy, xdsIR XdsIRMap) {
@@ -28,25 +27,19 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 	for _, policy := range envoyPatchPolicies {
 		var (
 			policy       = policy.DeepCopy()
-			ancestorRefs []gwv1a2.ParentReference
+			ancestorRefs []gwapiv1a2.ParentReference
 			resolveErr   *status.PolicyResolveError
 			targetKind   string
 			irKey        string
 		)
 
-		targetNs := policy.Spec.TargetRef.Namespace
-		// If empty, default to namespace of policy
-		if targetNs == nil {
-			targetNs = ptr.To(gwv1.Namespace(policy.Namespace))
-		}
-
 		if t.MergeGateways {
 			targetKind = KindGatewayClass
 			irKey = string(t.GatewayClassName)
 
-			ancestorRefs = []gwv1a2.ParentReference{
+			ancestorRefs = []gwapiv1a2.ParentReference{
 				{
-					Group: GroupPtr(gwv1.GroupName),
+					Group: GroupPtr(gwapiv1.GroupName),
 					Kind:  KindPtr(targetKind),
 					Name:  policy.Spec.TargetRef.Name,
 				},
@@ -54,13 +47,13 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 		} else {
 			targetKind = KindGateway
 			gatewayNN := types.NamespacedName{
-				Namespace: string(*targetNs),
+				Namespace: policy.Namespace,
 				Name:      string(policy.Spec.TargetRef.Name),
 			}
 			// It must exist since the gateways have already been processed
 			irKey = irStringKey(gatewayNN.Namespace, gatewayNN.Name)
 
-			ancestorRefs = []gwv1a2.ParentReference{
+			ancestorRefs = []gwapiv1a2.ParentReference{
 				getAncestorRefForPolicy(gatewayNN, nil),
 			}
 		}
@@ -96,31 +89,12 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 		}
 
 		// Ensure EnvoyPatchPolicy is targeting to a support type
-		if policy.Spec.TargetRef.Group != gwv1.GroupName || string(policy.Spec.TargetRef.Kind) != targetKind {
+		if policy.Spec.TargetRef.Group != gwapiv1.GroupName || string(policy.Spec.TargetRef.Kind) != targetKind {
 			message := fmt.Sprintf("TargetRef.Group:%s TargetRef.Kind:%s, only TargetRef.Group:%s and TargetRef.Kind:%s is supported.",
-				policy.Spec.TargetRef.Group, policy.Spec.TargetRef.Kind, gwv1.GroupName, targetKind)
+				policy.Spec.TargetRef.Group, policy.Spec.TargetRef.Kind, gwapiv1.GroupName, targetKind)
 
 			resolveErr = &status.PolicyResolveError{
-				Reason:  gwv1a2.PolicyReasonInvalid,
-				Message: message,
-			}
-			status.SetResolveErrorForPolicyAncestors(&policy.Status,
-				ancestorRefs,
-				t.GatewayControllerName,
-				policy.Generation,
-				resolveErr,
-			)
-
-			continue
-		}
-
-		// Ensure EnvoyPatchPolicy and target Gateway are in the same namespace
-		if policy.Namespace != string(*targetNs) {
-			message := fmt.Sprintf("Namespace:%s TargetRef.Namespace:%s, EnvoyPatchPolicy can only target a %s in the same namespace.",
-				policy.Namespace, *targetNs, targetKind)
-
-			resolveErr = &status.PolicyResolveError{
-				Reason:  gwv1a2.PolicyReasonInvalid,
+				Reason:  gwapiv1a2.PolicyReasonInvalid,
 				Message: message,
 			}
 			status.SetResolveErrorForPolicyAncestors(&policy.Status,
@@ -138,8 +112,9 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 			irPatch := ir.JSONPatchConfig{}
 			irPatch.Type = string(patch.Type)
 			irPatch.Name = patch.Name
-			irPatch.Operation.Op = string(patch.Operation.Op)
+			irPatch.Operation.Op = ir.JSONPatchOp(patch.Operation.Op)
 			irPatch.Operation.Path = patch.Operation.Path
+			irPatch.Operation.JSONPath = patch.Operation.JSONPath
 			irPatch.Operation.From = patch.Operation.From
 			irPatch.Operation.Value = patch.Operation.Value
 

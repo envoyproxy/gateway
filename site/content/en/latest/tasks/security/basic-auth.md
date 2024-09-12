@@ -12,8 +12,7 @@ This instantiated resource can be linked to a [Gateway][Gateway], [HTTPRoute][HT
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+{{< boilerplate prerequisites >}}
 
 ## Configuration
 
@@ -110,10 +109,10 @@ kind: SecurityPolicy
 metadata:
   name: basic-auth-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: backend
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
   basicAuth:
     users:
       name: "basic-auth"
@@ -131,10 +130,10 @@ kind: SecurityPolicy
 metadata:
   name: basic-auth-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: backend
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
   basicAuth:
     users:
       name: "basic-auth"
@@ -161,7 +160,7 @@ echo $GATEWAY_HOST
 Send a request to the backend service without `Authentication` header:
 
 ```shell
-curl -v -H "Host: www.example.com" "http://${GATEWAY_HOST}/"
+curl -kv -H "Host: www.example.com" "https://${GATEWAY_HOST}/" 
 ```
 
 You should see `401 Unauthorized` in the response, indicating that the request is not allowed without authentication.
@@ -195,7 +194,6 @@ curl -kv -H "Host: www.example.com" -u 'foo:bar' "https://${GATEWAY_HOST}/"
 
 The request should be allowed and you should see the response from the backend service.
 
-```shell
 
 ## Clean-Up
 

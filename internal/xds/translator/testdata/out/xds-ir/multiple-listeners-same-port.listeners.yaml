@@ -27,8 +27,9 @@
             resourceApiVersion: V3
           routeConfigName: third-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: http-10080
         useRemoteAddress: true
+    name: third-listener
   drainType: MODIFY_ONLY
   filterChains:
   - filterChainMatch:
@@ -58,8 +59,9 @@
             resourceApiVersion: V3
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: https
+        statPrefix: https-10080
         useRemoteAddress: true
+    name: first-listener
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:
@@ -100,8 +102,9 @@
             resourceApiVersion: V3
           routeConfigName: second-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: https
+        statPrefix: https-10080
         useRemoteAddress: true
+    name: second-listener
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:
@@ -123,7 +126,8 @@
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tcp-route-dest
-        statPrefix: passthrough
+        statPrefix: tls-passthrough-10080
+    name: fifth-route
   - filterChainMatch:
       serverNames:
       - bar.net
@@ -132,7 +136,8 @@
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tls-route-dest
-        statPrefix: passthrough
+        statPrefix: tls-passthrough-10080
+    name: sixth-route
   listenerFilters:
   - name: envoy.filters.listener.tls_inspector
     typedConfig:

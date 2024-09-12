@@ -7,13 +7,27 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     headers:
+      earlyRequestHeaders:
+        add:
+        - name: my-added-header
+          value: my-added-header-value
+        - name: my-added-header
+          value: my-added-header-value
+        remove:
+        - my-removed-header
+        - my-removed-header
+        set:
+        - name: my-set-header
+          value: my-set-header-value
+        - name: my-set-header
+          value: my-set-header-value
       enableEnvoyHeaders: true
+      preserveXRequestID: true
       withUnderscoresAction: Allow
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      namespace: envoy-gateway
   status:
     ancestors:
     - ancestorRef:
@@ -129,11 +143,28 @@ xdsIR:
     http:
     - address: 0.0.0.0
       headers:
+        earlyAddRequestHeaders:
+        - append: true
+          name: my-added-header
+          value:
+          - my-added-header-value
+        - append: false
+          name: my-set-header
+          value:
+          - my-set-header-value
+        earlyRemoveRequestHeaders:
+        - my-removed-header
         enableEnvoyHeaders: true
+        preserveXRequestID: true
         withUnderscoresAction: Allow
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-1
       name: envoy-gateway/gateway-1/http-1
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -141,11 +172,28 @@ xdsIR:
       port: 10080
     - address: 0.0.0.0
       headers:
+        earlyAddRequestHeaders:
+        - append: true
+          name: my-added-header
+          value:
+          - my-added-header-value
+        - append: false
+          name: my-set-header
+          value:
+          - my-set-header-value
+        earlyRemoveRequestHeaders:
+        - my-removed-header
         enableEnvoyHeaders: true
+        preserveXRequestID: true
         withUnderscoresAction: Allow
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-2
       name: envoy-gateway/gateway-1/http-2
       path:
         escapedSlashesAction: UnescapeAndRedirect

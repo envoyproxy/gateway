@@ -13,14 +13,7 @@ This instantiated resource can be linked to a [Gateway][Gateway] and [HTTPRoute]
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
-
-Verify the Gateway status:
-
-```shell
-kubectl get gateway/eg -o yaml
-```
+{{< boilerplate prerequisites >}}
 
 ## HTTP External Authorization Service
 
@@ -110,15 +103,15 @@ kind: SecurityPolicy
 metadata:
   name: ext-auth-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: myapp
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: myapp
   extAuth:
     http:
-      backendRef:
-        name: http-ext-auth
-        port: 9002
+      backendRefs:
+        - name: http-ext-auth
+          port: 9002
       headersToBackend: ["x-current-user"]
 EOF
 ```
@@ -134,15 +127,15 @@ kind: SecurityPolicy
 metadata:
   name: ext-auth-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: myapp
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: myapp
   extAuth:
     http:
-      backendRef:
-        name: http-ext-auth
-        port: 9002
+      backendRefs:
+        - name: http-ext-auth
+          port: 9002
       headersToBackend: ["x-current-user"]
 ```
 
@@ -296,15 +289,15 @@ kind: SecurityPolicy
 metadata:
   name: ext-auth-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: myapp
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: myapp
   extAuth:
     grpc:
-      backendRef:
-        name: grpc-ext-auth
-        port: 9002
+      backendRefs:
+        - name: grpc-ext-auth
+          port: 9002
 EOF
 ```
 
@@ -319,15 +312,15 @@ kind: SecurityPolicy
 metadata:
   name: ext-auth-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: myapp
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: myapp
   extAuth:
     grpc:
-      backendRef:
-        name: grpc-ext-auth
-        port: 9002
+      backendRefs:
+        - name: grpc-ext-auth
+          port: 9002
 ```
 
 {{% /tab %}}
@@ -347,18 +340,18 @@ the communication between the Envoy proxy and the gRPC auth service.
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1alpha2
+apiVersion: gateway.networking.k8s.io/v1alpha3
 kind: BackendTLSPolicy
 metadata:
   name: grpc-ext-auth-btls
 spec:
-  targetRef:
-    group: ''
+  targetRefs:
+  - group: ''
     kind: Service
     name: grpc-ext-auth
     sectionName: "9002"
-  tls:
-    caCertRefs:
+  validation:
+    caCertificateRefs:
     - name: grpc-ext-auth-ca
       group: ''
       kind: ConfigMap
@@ -372,18 +365,18 @@ Save and apply the following resource to your cluster:
 
 ```yaml
 ---
-apiVersion: gateway.networking.k8s.io/v1alpha2
+apiVersion: gateway.networking.k8s.io/v1alpha3
 kind: BackendTLSPolicy
 metadata:
   name: grpc-ext-auth-btls
 spec:
-  targetRef:
-    group: ''
+  targetRefs:
+  - group: ''
     kind: Service
     name: grpc-ext-auth
     sectionName: "9002"
-  tls:
-    caCertRefs:
+  validation:
+    caCertificateRefs:
     - name: grpc-ext-auth-ca
       group: ''
       kind: ConfigMap

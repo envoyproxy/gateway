@@ -280,13 +280,18 @@ func TestTranslate(t *testing.T) {
 			to:     "gateway-api",
 			expect: false,
 		},
+		{
+			name:      "no-service-cluster-ip",
+			from:      "gateway-api",
+			to:        "xds",
+			expect:    true,
+			extraArgs: []string{"--add-missing-resources"},
+		},
 	}
 
 	flag.Parse()
 
 	for _, tc := range testCases {
-		tc := tc
-
 		t.Run(tc.name+"|"+tc.resourceType, func(t *testing.T) {
 			b := bytes.NewBufferString("")
 			root := newTranslateCommand()
@@ -349,6 +354,14 @@ func TestTranslate(t *testing.T) {
 			}
 			want := &TranslationResult{}
 			mustUnmarshal(t, requireTestDataOutFile(t, fn), want)
+
+			// Supported features are dynamic, instead of hard-coding them in the output files
+			// we define them here.
+			// Disabled until GatewayClass.Status.SupportedFeatures is stable
+			// if want.GatewayClass != nil {
+			//	want.GatewayClass.Status.SupportedFeatures = status.GatewaySupportedFeatures
+			// }
+
 			opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
 			require.Empty(t, cmp.Diff(want, got, opts))
 		})

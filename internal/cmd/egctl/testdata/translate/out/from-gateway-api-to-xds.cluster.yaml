@@ -44,26 +44,9 @@ xds:
           envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
             '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
             explicitHttpConfig:
-              http2ProtocolOptions: {}
-    - cluster:
-        '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
-        circuitBreakers:
-          thresholds:
-          - maxRetries: 1024
-        commonLbConfig:
-          localityWeightedLbConfig: {}
-        connectTimeout: 10s
-        dnsLookupFamily: V4_ONLY
-        edsClusterConfig:
-          edsConfig:
-            ads: {}
-            resourceApiVersion: V3
-          serviceName: tlsroute/default/backend/rule/-1
-        lbPolicy: LEAST_REQUEST
-        name: tlsroute/default/backend/rule/-1
-        outlierDetection: {}
-        perConnectionBufferLimitBytes: 32768
-        type: EDS
+              http2ProtocolOptions:
+                initialConnectionWindowSize: 1048576
+                initialStreamWindowSize: 65536
     - cluster:
         '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
         circuitBreakers:
@@ -80,6 +63,25 @@ xds:
           serviceName: tcproute/default/backend/rule/-1
         lbPolicy: LEAST_REQUEST
         name: tcproute/default/backend/rule/-1
+        outlierDetection: {}
+        perConnectionBufferLimitBytes: 32768
+        type: EDS
+    - cluster:
+        '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+        circuitBreakers:
+          thresholds:
+          - maxRetries: 1024
+        commonLbConfig:
+          localityWeightedLbConfig: {}
+        connectTimeout: 10s
+        dnsLookupFamily: V4_ONLY
+        edsClusterConfig:
+          edsConfig:
+            ads: {}
+            resourceApiVersion: V3
+          serviceName: tlsroute/default/backend/rule/-1
+        lbPolicy: LEAST_REQUEST
+        name: tlsroute/default/backend/rule/-1
         outlierDetection: {}
         perConnectionBufferLimitBytes: 32768
         type: EDS

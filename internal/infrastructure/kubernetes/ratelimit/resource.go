@@ -71,6 +71,8 @@ const (
 	LogLevelEnvVar = "LOG_LEVEL"
 	// UseStatsdEnvVar is the use statsd.
 	UseStatsdEnvVar = "USE_STATSD"
+	// StatsdPortEnvVar is the use statsd port.
+	StatsdPortEnvVar = "STATSD_PORT"
 	// ForceStartWithoutInitialConfigEnvVar enables start the ratelimit server without initial config.
 	ForceStartWithoutInitialConfigEnvVar = "FORCE_START_WITHOUT_INITIAL_CONFIG"
 	// ConfigTypeEnvVar is the configuration loading method for ratelimit.
@@ -158,11 +160,11 @@ func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeploymen
 			Env:                      expectedRateLimitContainerEnv(rateLimit, rateLimitDeployment, namespace),
 			Ports:                    ports,
 			Resources:                *rateLimitDeployment.Container.Resources,
-			SecurityContext:          rateLimitDeployment.Container.SecurityContext,
+			SecurityContext:          expectedRateLimitContainerSecurityContext(rateLimitDeployment),
 			VolumeMounts:             expectedContainerVolumeMounts(rateLimit, rateLimitDeployment),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
-			ReadinessProbe: &corev1.Probe{
+			StartupProbe: &corev1.Probe{
 				ProbeHandler: corev1.ProbeHandler{
 					HTTPGet: &corev1.HTTPGetAction{
 						Path:   ReadinessPath,
@@ -173,7 +175,20 @@ func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeploymen
 				TimeoutSeconds:   1,
 				PeriodSeconds:    10,
 				SuccessThreshold: 1,
-				FailureThreshold: 3,
+				FailureThreshold: 30,
+			},
+			ReadinessProbe: &corev1.Probe{
+				ProbeHandler: corev1.ProbeHandler{
+					HTTPGet: &corev1.HTTPGetAction{
+						Path:   ReadinessPath,
+						Port:   intstr.IntOrString{Type: intstr.Int, IntVal: ReadinessPort},
+						Scheme: corev1.URISchemeHTTP,
+					},
+				},
+				TimeoutSeconds:   1,
+				PeriodSeconds:    5,
+				SuccessThreshold: 1,
+				FailureThreshold: 1,
 			},
 		},
 	}
@@ -216,6 +231,8 @@ func promStatsdExporterContainer() corev1.Container {
 		},
 		TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 		TerminationMessagePath:   "/dev/termination-log",
+		SecurityContext:          defaultSecurityContext(),
+		Resources:                *egv1a1.DefaultResourceRequirements(),
 	}
 }
 
@@ -314,7 +331,11 @@ func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 		},
 		{
 			Name:  UseStatsdEnvVar,
-			Value: "false",
+			Value: "true",
+		},
+		{
+			Name:  StatsdPortEnvVar,
+			Value: strconv.Itoa(StatsdPort),
 		},
 		{
 			Name:  ConfigTypeEnvVar,
@@ -489,4 +510,19 @@ func checkTraceEndpointScheme(url string) string {
 	}
 
 	return fmt.Sprintf("%s%s", httpScheme, url)
+}
+
+func expectedRateLimitContainerSecurityContext(rateLimitDeployment *egv1a1.KubernetesDeploymentSpec) *corev1.SecurityContext {
+	if rateLimitDeployment.Container.SecurityContext != nil {
+		return rateLimitDeployment.Container.SecurityContext
+	}
+	return defaultSecurityContext()
+}
+
+func defaultSecurityContext() *corev1.SecurityContext {
+	defaultSC := resource.DefaultSecurityContext()
+	// run as non-root user
+	defaultSC.RunAsGroup = ptr.To(int64(65534))
+	defaultSC.RunAsUser = ptr.To(int64(65534))
+	return defaultSC
 }

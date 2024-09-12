@@ -81,9 +81,9 @@ tcpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: One and only one backend is supported
-        reason: InvalidBackend
-        status: "False"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -94,3 +94,24 @@ xdsIR:
     accessLog:
       text:
       - path: /dev/stdout
+    tcp:
+    - address: 0.0.0.0
+      name: envoy-gateway/gateway-1/tcp
+      port: 10080
+      routes:
+      - destination:
+          name: tcproute/default/tcproute-1/rule/-1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            protocol: TCP
+            weight: 50
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            protocol: TCP
+            weight: 50
+        name: tcproute/default/tcproute-1

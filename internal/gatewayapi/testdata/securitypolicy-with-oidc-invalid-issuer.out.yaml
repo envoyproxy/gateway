@@ -85,8 +85,8 @@ securityPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: 'Error fetching endpoints from issuer: invalid character ''<'' looking
-          for beginning of value'
+        message: 'OIDC: error fetching endpoints from issuer: invalid character ''<''
+          looking for beginning of value.'
         reason: Invalid
         status: "False"
         type: Accepted
@@ -101,6 +101,11 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+        sectionName: http
       name: default/gateway-1/http
       path:
         escapedSlashesAction: UnescapeAndRedirect

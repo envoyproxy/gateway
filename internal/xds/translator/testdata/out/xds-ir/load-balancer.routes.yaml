@@ -50,3 +50,43 @@
         cluster: sixth-route-dest
         upgradeConfigs:
         - upgradeType: websocket
+    - match:
+        prefix: /
+      name: seventh-route
+      route:
+        cluster: seventh-route-dest
+        hashPolicy:
+        - header:
+            headerName: name
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: eighth-route
+      route:
+        cluster: eighth-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: ninth-route
+      route:
+        cluster: ninth-route-dest
+        hashPolicy:
+        - cookie:
+            name: test
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: tenth-route
+      route:
+        cluster: tenth-route-dest
+        hashPolicy:
+        - cookie:
+            attributes:
+            - name: foo
+              value: bar
+            name: test
+        upgradeConfigs:
+        - upgradeType: websocket

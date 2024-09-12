@@ -84,7 +84,6 @@ securityPolicies:
         group: gateway.networking.k8s.io
         kind: HTTPRoute
         name: httproute-1
-        namespace: default
       basicAuth:
         users:
           name: "users-secret1"
@@ -99,7 +98,6 @@ securityPolicies:
         group: gateway.networking.k8s.io
         kind: Gateway
         name: gateway-1
-        namespace: default
       basicAuth:
         users:
           name: "users-secret2"

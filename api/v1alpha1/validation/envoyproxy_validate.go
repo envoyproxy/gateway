@@ -11,16 +11,10 @@ import (
 	"net"
 	"net/netip"
 
-	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
-	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
-	"github.com/google/go-cmp/cmp"
-	"google.golang.org/protobuf/testing/protocmp"
+	"github.com/dominikbraun/graph"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/utils/proto"
-	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
-	_ "github.com/envoyproxy/gateway/internal/xds/extensions" // register the generated types to support protojson unmarshalling
 )
 
 // ValidateEnvoyProxy validates the provided EnvoyProxy.
@@ -37,6 +31,8 @@ func ValidateEnvoyProxy(proxy *egv1a1.EnvoyProxy) error {
 }
 
 // validateEnvoyProxySpec validates the provided EnvoyProxy spec.
+// This method validates everything except for the bootstrap section, because validating the bootstrap
+// section in this method would require calling into the internal apis, and would cause an import cycle.
 func validateEnvoyProxySpec(spec *egv1a1.EnvoyProxySpec) error {
 	var errs []error
 
@@ -50,16 +46,16 @@ func validateEnvoyProxySpec(spec *egv1a1.EnvoyProxySpec) error {
 		errs = append(errs, validateProviderErrs...)
 	}
 
-	// validate bootstrap
-	if spec != nil && spec.Bootstrap != nil {
-		if err := validateBootstrap(spec.Bootstrap); err != nil {
-			errs = append(errs, err)
-		}
-	}
-
 	validateProxyTelemetryErrs := validateProxyTelemetry(spec)
 	if len(validateProxyTelemetryErrs) != 0 {
 		errs = append(errs, validateProxyTelemetryErrs...)
+	}
+
+	// validate filter order
+	if spec != nil && spec.FilterOrder != nil {
+		if err := validateFilterOrder(spec.FilterOrder); err != nil {
+			errs = append(errs, err)
+		}
 	}
 
 	return utilerrors.NewAggregate(errs)
@@ -122,7 +118,7 @@ func validateService(spec *egv1a1.EnvoyProxySpec) []error {
 
 			for _, serviceLoadBalancerSourceRange := range serviceLoadBalancerSourceRanges {
 				if ip, _, err := net.ParseCIDR(serviceLoadBalancerSourceRange); err != nil || ip.To4() == nil {
-					errs = append(errs, fmt.Errorf("loadBalancerSourceRange:%s is an invalid IPv4 subnet", serviceLoadBalancerSourceRange))
+					errs = append(errs, fmt.Errorf("loadBalancerSourceRange:%s is an invalid IP subnet", serviceLoadBalancerSourceRange))
 				}
 			}
 		}
@@ -132,7 +128,7 @@ func validateService(spec *egv1a1.EnvoyProxySpec) []error {
 			}
 
 			if ip, err := netip.ParseAddr(*serviceLoadBalancerIP); err != nil || !ip.Unmap().Is4() {
-				errs = append(errs, fmt.Errorf("loadBalancerIP:%s is an invalid IPv4 address", *serviceLoadBalancerIP))
+				errs = append(errs, fmt.Errorf("loadBalancerIP:%s is an invalid IP address", *serviceLoadBalancerIP))
 			}
 		}
 		if patch := spec.Provider.Kubernetes.EnvoyService.Patch; patch != nil {
@@ -146,62 +142,6 @@ func validateService(spec *egv1a1.EnvoyProxySpec) []error {
 
 	}
 	return errs
-}
-
-func validateBootstrap(boostrapConfig *egv1a1.ProxyBootstrap) error {
-	// Validate user bootstrap config
-	defaultBootstrap := &bootstrapv3.Bootstrap{}
-	// TODO: need validate when enable prometheus?
-	defaultBootstrapStr, err := bootstrap.GetRenderedBootstrapConfig(nil)
-	if err != nil {
-		return err
-	}
-	if err := proto.FromYAML([]byte(defaultBootstrapStr), defaultBootstrap); err != nil {
-		return fmt.Errorf("unable to unmarshal default bootstrap: %w", err)
-	}
-	if err := defaultBootstrap.Validate(); err != nil {
-		return fmt.Errorf("default bootstrap validation failed: %w", err)
-	}
-
-	// Validate user bootstrap config
-	userBootstrapStr, err := bootstrap.ApplyBootstrapConfig(boostrapConfig, defaultBootstrapStr)
-	if err != nil {
-		return err
-	}
-	userBootstrap := &bootstrapv3.Bootstrap{}
-	if err := proto.FromYAML([]byte(userBootstrapStr), userBootstrap); err != nil {
-		return fmt.Errorf("failed to parse default bootstrap config: %w", err)
-	}
-	if err := userBootstrap.Validate(); err != nil {
-		return fmt.Errorf("validation failed for user bootstrap: %w", err)
-	}
-
-	// Ensure dynamic resources config is same
-	if userBootstrap.DynamicResources == nil ||
-		cmp.Diff(userBootstrap.DynamicResources, defaultBootstrap.DynamicResources, protocmp.Transform()) != "" {
-		return fmt.Errorf("dynamic_resources cannot be modified")
-	}
-
-	// Ensure that the xds_cluster config is same
-	var userXdsCluster, defaultXdsCluster *clusterv3.Cluster
-	for _, cluster := range userBootstrap.StaticResources.Clusters {
-		if cluster.Name == "xds_cluster" {
-			userXdsCluster = cluster
-			break
-		}
-	}
-	for _, cluster := range defaultBootstrap.StaticResources.Clusters {
-		if cluster.Name == "xds_cluster" {
-			defaultXdsCluster = cluster
-			break
-		}
-	}
-	if userXdsCluster == nil ||
-		cmp.Diff(userXdsCluster.LoadAssignment, defaultXdsCluster.LoadAssignment, protocmp.Transform()) != "" {
-		return fmt.Errorf("xds_cluster's loadAssigntment cannot be modified")
-	}
-
-	return nil
 }
 
 func validateProxyTelemetry(spec *egv1a1.EnvoyProxySpec) []error {
@@ -238,16 +178,18 @@ func validateProxyAccessLog(accessLog *egv1a1.ProxyAccessLog) []error {
 	var errs []error
 
 	for _, setting := range accessLog.Settings {
-		switch setting.Format.Type {
-		case egv1a1.ProxyAccessLogFormatTypeText:
-			if setting.Format.Text == nil {
-				err := fmt.Errorf("unable to configure access log when using Text format but \"text\" field being empty")
-				errs = append(errs, err)
-			}
-		case egv1a1.ProxyAccessLogFormatTypeJSON:
-			if setting.Format.JSON == nil {
-				err := fmt.Errorf("unable to configure access log when using JSON format but \"json\" field being empty")
-				errs = append(errs, err)
+		if setting.Format != nil {
+			switch setting.Format.Type {
+			case egv1a1.ProxyAccessLogFormatTypeText:
+				if setting.Format.Text == nil {
+					err := fmt.Errorf("unable to configure access log when using Text format but \"text\" field being empty")
+					errs = append(errs, err)
+				}
+			case egv1a1.ProxyAccessLogFormatTypeJSON:
+				if setting.Format.JSON == nil {
+					err := fmt.Errorf("unable to configure access log when using JSON format but \"json\" field being empty")
+					errs = append(errs, err)
+				}
 			}
 		}
 
@@ -268,4 +210,37 @@ func validateProxyAccessLog(accessLog *egv1a1.ProxyAccessLog) []error {
 	}
 
 	return errs
+}
+
+func validateFilterOrder(filterOrder []egv1a1.FilterPosition) error {
+	g := graph.New(graph.StringHash, graph.Directed(), graph.PreventCycles())
+
+	for _, filter := range filterOrder {
+		// Ignore the error since the same filter can be added multiple times
+		_ = g.AddVertex(string(filter.Name))
+		if filter.Before != nil {
+			_ = g.AddVertex(string(*filter.Before))
+		}
+		if filter.After != nil {
+			_ = g.AddVertex(string(*filter.After))
+		}
+	}
+
+	for _, filter := range filterOrder {
+		var from, to string
+		if filter.Before != nil {
+			from = string(filter.Name)
+			to = string(*filter.Before)
+		} else {
+			from = string(*filter.After)
+			to = string(filter.Name)
+		}
+		if err := g.AddEdge(from, to); err != nil {
+			if errors.Is(err, graph.ErrEdgeCreatesCycle) {
+				return fmt.Errorf("there is a cycle in the filter order: %s -> %s", from, to)
+			}
+		}
+	}
+
+	return nil
 }

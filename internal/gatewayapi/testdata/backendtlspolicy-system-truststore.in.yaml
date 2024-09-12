@@ -69,7 +69,6 @@ services:
           protocol: TCP
           targetPort: 8080
 
-
 endpointSlices:
   - apiVersion: discovery.k8s.io/v1
     kind: EndpointSlice
@@ -95,11 +94,11 @@ backendTLSPolicies:
       name: policy-btls
       namespace: default
     spec:
-      targetRef:
-        group: ''
-        kind: Service
-        name: http-backend
-        sectionName: "8080"
-      tls:
-        wellKnownCACerts: System
+      targetRefs:
+        - group: ""
+          kind: Service
+          name: http-backend
+          sectionName: "8080"
+      validation:
+        wellKnownCACertificates: System
         hostname: example.com

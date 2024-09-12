@@ -4,8 +4,6 @@ title: "Use egctl"
 
 `egctl` is a command line tool to provide additional functionality for Envoy Gateway users.
 
-
-
 ## egctl experimental translate
 
 This subcommand allows users to translate from an input configuration type to an output configuration type.
@@ -768,9 +766,11 @@ display the latest condition, or add `--verbose` to display more details about c
 
 {{% alert title="Note" color="primary" %}}
 
-Currently, this subcommand only supports: `GatewayClass`, `Gateway`, `HTTPRoute`, `GRPCRoute`,
-`TLSRoute`, `TCPRoute`, `UDPRoute`, `BackendTLSPolicy`, 
-`BackendTrafficPolicy`, `ClientTrafficPolicy`, `EnvoyPatchPolicy`, `SecurityPolicy` resource types and `all`.
+The resource types that this subcommand currently supports:
+
+- `xRoute`, `HTTPRoute`, `GRPCRoute`, `TLSRoute`, `TCPRoute`, `UDPRoute`
+- `xPolicy`, `BackendTLSPolicy`, `BackendTrafficPolicy`, `ClientTrafficPolicy`, `EnvoyPatchPolicy`, `SecurityPolicy`
+- `all`, `GatewayClass`, `Gateway`
 
 {{% /alert %}}
 
@@ -801,11 +801,11 @@ marketing   gateway/eg   Programmed   True      Programmed
 product     gateway/eg   Programmed   True      Programmed
                          Accepted     True      Accepted
 
-NAMESPACE   NAME                TYPE           STATUS    REASON
-marketing   httproute/backend   ResolvedRefs   True      ResolvedRefs
-                                Accepted       True      Accepted
-product     httproute/backend   ResolvedRefs   True      ResolvedRefs
-                                Accepted       True      Accepted
+NAMESPACE   NAME                PARENT       TYPE           STATUS    REASON
+marketing   httproute/backend   gateway/eg   ResolvedRefs   True      ResolvedRefs
+                                             Accepted       True      Accepted
+product     httproute/backend   gateway/eg   ResolvedRefs   True      ResolvedRefs
+                                             Accepted       True      Accepted
 ```
 
 - Show the summary of all the Gateways with details under all namespaces.
@@ -820,7 +820,7 @@ product     eg        Programmed   True      Programmed   Address assigned to th
                       Accepted     True      Accepted     The Gateway has been scheduled by Envoy Gateway                            1                     2024-02-01 17:52:42 +0800 CST
 ```
 
-- Show the summary of latest Gateways condition under `product` namespace.
+- Show the summary of the latest Gateways condition under `product` namespace.
 
 ```console
 ~ egctl x status gateway --quiet -n product
@@ -834,11 +834,10 @@ eg        Programmed   True      Programmed
 ```console
 ~ egctl x status httproute --quiet --all-namespaces
 
-NAMESPACE   NAME      TYPE           STATUS    REASON
-marketing   backend   ResolvedRefs   True      ResolvedRefs
-product     backend   ResolvedRefs   True      ResolvedRefs
+NAMESPACE   NAME      PARENT       TYPE           STATUS    REASON
+marketing   backend   gateway/eg   ResolvedRefs   True      ResolvedRefs
+product     backend   gateway/eg   ResolvedRefs   True      ResolvedRefs
 ```
-
 
 [Multi-tenancy]: ../deployment-mode#multi-tenancy
 [EnvoyProxy]: ../../../api/extension_types#envoyproxy

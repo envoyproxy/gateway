@@ -51,7 +51,7 @@
         grpcService:
           envoyGrpc:
             authority: otel-collector.default.svc.cluster.local
-            clusterName: accesslog|otel-collector.default.svc.cluster.local|4317
+            clusterName: accesslog-0
         logName: otel_envoy_accesslog
         transportApiVersion: V3
       resourceAttributes:
@@ -109,7 +109,7 @@
               grpcService:
                 envoyGrpc:
                   authority: otel-collector.default.svc.cluster.local
-                  clusterName: accesslog|otel-collector.default.svc.cluster.local|4317
+                  clusterName: accesslog-0
               logName: otel_envoy_accesslog
               transportApiVersion: V3
             resourceAttributes:
@@ -137,8 +137,9 @@
             resourceApiVersion: V3
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: http-10080
         useRemoteAddress: true
+    name: first-listener
   drainType: MODIFY_ONLY
   name: first-listener
   perConnectionBufferLimitBytes: 32768

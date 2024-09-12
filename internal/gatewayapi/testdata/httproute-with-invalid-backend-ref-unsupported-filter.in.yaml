@@ -32,8 +32,8 @@ httpRoutes:
       - name: service-1
         port: 8080
         filters:
-        - type: ResponseHeaderModifier
-          responseHeaderModifier:
-            set:
-            - name: "set-header-1"
-              value: "some-value"
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301
+            hostname: "redirected.com"

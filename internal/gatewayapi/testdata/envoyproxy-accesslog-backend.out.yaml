@@ -136,8 +136,14 @@ xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
       openTelemetry:
-      - host: otel-collector.monitoring.svc
-        port: 4317
+      - destination:
+          name: accesslog_otel_0_1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 8.7.6.5
+              port: 4317
+            protocol: GRPC
         resources:
           k8s.cluster.name: cluster-1
         text: |
@@ -151,6 +157,11 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
       name: envoy-gateway/gateway-1/http
       path:
         escapedSlashesAction: UnescapeAndRedirect

@@ -68,6 +68,11 @@ type EnvoyProxySpec struct {
 	// +optional
 	Concurrency *int32 `json:"concurrency,omitempty"`
 
+	// RoutingType can be set to "Service" to use the Service Cluster IP for routing to the backend,
+	// or it can be set to "Endpoint" to use Endpoint routing. The default is "Endpoint".
+	// +optional
+	RoutingType *RoutingType `json:"routingType,omitempty"`
+
 	// ExtraArgs defines additional command line options that are provided to Envoy.
 	// More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options
 	// Note: some command line options are used internally(e.g. --log-level) so they cannot be provided here.
@@ -89,8 +94,11 @@ type EnvoyProxySpec struct {
 	Shutdown *ShutdownConfig `json:"shutdown,omitempty"`
 
 	// FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.
+	// The FilterPosition in the list will be applied in the order they are defined.
 	// If unspecified, the default filter order is applied.
 	// Default filter order is:
+	//
+	// - envoy.filters.http.health_check
 	//
 	// - envoy.filters.http.fault
 	//
@@ -98,15 +106,19 @@ type EnvoyProxySpec struct {
 	//
 	// - envoy.filters.http.ext_authz
 	//
-	// - envoy.filters.http.basic_authn
+	// - envoy.filters.http.basic_auth
 	//
 	// - envoy.filters.http.oauth2
 	//
 	// - envoy.filters.http.jwt_authn
 	//
+	// - envoy.filters.http.stateful_session
+	//
 	// - envoy.filters.http.ext_proc
 	//
 	// - envoy.filters.http.wasm
+	//
+	// - envoy.filters.http.rbac
 	//
 	// - envoy.filters.http.local_ratelimit
 	//
@@ -114,8 +126,9 @@ type EnvoyProxySpec struct {
 	//
 	// - envoy.filters.http.router
 	//
+	// Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain.
+	//
 	// +optional
-	// +notImplementedHide
 	FilterOrder []FilterPosition `json:"filterOrder,omitempty"`
 	// BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.
 	// These settings are applied on backends for which TLS policies are specified.
@@ -123,11 +136,22 @@ type EnvoyProxySpec struct {
 	BackendTLS *BackendTLSConfig `json:"backendTLS,omitempty"`
 }
 
+// RoutingType defines the type of routing of this Envoy proxy.
+type RoutingType string
+
+const (
+	// ServiceRoutingType is the RoutingType for Service Cluster IP routing.
+	ServiceRoutingType RoutingType = "Service"
+	// EndpointRoutingType is the RoutingType for Endpoint routing.
+	EndpointRoutingType RoutingType = "Endpoint"
+)
+
 // BackendTLSConfig describes the BackendTLS configuration for Envoy Proxy.
 type BackendTLSConfig struct {
 	// ClientCertificateRef defines the reference to a Kubernetes Secret that contains
 	// the client certificate and private key for Envoy to use when connecting to
 	// backend services and external services, such as ExtAuth, ALS, OpenTelemetry, etc.
+	// This secret should be located within the same namespace as the Envoy proxy resource that references it.
 	// +optional
 	ClientCertificateRef *gwapiv1.SecretObjectReference `json:"clientCertificateRef,omitempty"`
 	TLSSettings          `json:",inline"`
@@ -138,7 +162,7 @@ type BackendTLSConfig struct {
 // +kubebuilder:validation:XValidation:rule="(has(self.before) && !has(self.after)) || (!has(self.before) && has(self.after))",message="only one of before or after can be specified"
 type FilterPosition struct {
 	// Name of the filter.
-	Name EnvoyFilter `json:"filter"`
+	Name EnvoyFilter `json:"name"`
 
 	// Before defines the filter that should come before the filter.
 	// Only one of Before or After must be set.
@@ -150,20 +174,24 @@ type FilterPosition struct {
 }
 
 // EnvoyFilter defines the type of Envoy HTTP filter.
-// +kubebuilder:validation:Enum=envoy.filters.http.cors;envoy.filters.http.ext_authz;envoy.filters.http.basic_authn;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.fault;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.wasm;envoy.filters.http.ext_proc
+// +kubebuilder:validation:Enum=envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.ext_authz;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit
 type EnvoyFilter string
 
 const (
+	// EnvoyFilterHealthCheck defines the Envoy HTTP health check filter.
+	EnvoyFilterHealthCheck EnvoyFilter = "envoy.filters.http.health_check"
+
 	// EnvoyFilterFault defines the Envoy HTTP fault filter.
 	EnvoyFilterFault EnvoyFilter = "envoy.filters.http.fault"
+
 	// EnvoyFilterCORS defines the Envoy HTTP CORS filter.
 	EnvoyFilterCORS EnvoyFilter = "envoy.filters.http.cors"
 
 	// EnvoyFilterExtAuthz defines the Envoy HTTP external authorization filter.
 	EnvoyFilterExtAuthz EnvoyFilter = "envoy.filters.http.ext_authz"
 
-	// EnvoyFilterBasicAuthn defines the Envoy HTTP basic authentication filter.
-	EnvoyFilterBasicAuthn EnvoyFilter = "envoy.filters.http.basic_authn"
+	// EnvoyFilterBasicAuth defines the Envoy HTTP basic authentication filter.
+	EnvoyFilterBasicAuth EnvoyFilter = "envoy.filters.http.basic_auth"
 
 	// EnvoyFilterOAuth2 defines the Envoy HTTP OAuth2 filter.
 	EnvoyFilterOAuth2 EnvoyFilter = "envoy.filters.http.oauth2"
@@ -171,11 +199,17 @@ const (
 	// EnvoyFilterJWTAuthn defines the Envoy HTTP JWT authentication filter.
 	EnvoyFilterJWTAuthn EnvoyFilter = "envoy.filters.http.jwt_authn"
 
+	// EnvoyFilterSessionPersistence defines the Envoy HTTP session persistence filter.
+	EnvoyFilterSessionPersistence EnvoyFilter = "envoy.filters.http.stateful_session"
+
 	// EnvoyFilterExtProc defines the Envoy HTTP external process filter.
 	EnvoyFilterExtProc EnvoyFilter = "envoy.filters.http.ext_proc"
 
 	// EnvoyFilterWasm defines the Envoy HTTP WebAssembly filter.
 	EnvoyFilterWasm EnvoyFilter = "envoy.filters.http.wasm"
+
+	// EnvoyFilterRBAC defines the Envoy RBAC filter.
+	EnvoyFilterRBAC EnvoyFilter = "envoy.filters.http.rbac"
 
 	// EnvoyFilterLocalRateLimit defines the Envoy HTTP local rate limit filter.
 	EnvoyFilterLocalRateLimit EnvoyFilter = "envoy.filters.http.local_ratelimit"
@@ -264,6 +298,17 @@ type EnvoyProxyKubernetesProvider struct {
 	//
 	// +optional
 	EnvoyHpa *KubernetesHorizontalPodAutoscalerSpec `json:"envoyHpa,omitempty"`
+
+	// UseListenerPortAsContainerPort disables the port shifting feature in the Envoy Proxy.
+	// When set to false (default value), if the service port is a privileged port (1-1023), add a constant to the value converting it into an ephemeral port.
+	// This allows the container to bind to the port without needing a CAP_NET_BIND_SERVICE capability.
+	//
+	// +optional
+	UseListenerPortAsContainerPort *bool `json:"useListenerPortAsContainerPort,omitempty"`
+
+	// EnvoyPDB allows to control the pod disruption budget of an Envoy Proxy.
+	// +optional
+	EnvoyPDB *KubernetesPodDisruptionBudgetSpec `json:"envoyPDB,omitempty"`
 }
 
 // ProxyLogging defines logging parameters for managed proxies.
@@ -313,19 +358,27 @@ const (
 )
 
 // ProxyBootstrap defines Envoy Bootstrap configuration.
+// +union
+// +kubebuilder:validation:XValidation:rule="self.type == 'JSONPatch' ? self.jsonPatches.size() > 0 : has(self.value)", message="provided bootstrap patch doesn't match the configured patch type"
 type ProxyBootstrap struct {
-	// Type is the type of the bootstrap configuration, it should be either Replace or Merge.
+	// Type is the type of the bootstrap configuration, it should be either Replace,  Merge, or JSONPatch.
 	// If unspecified, it defaults to Replace.
 	// +optional
 	// +kubebuilder:default=Replace
+	// +unionDiscriminator
 	Type *BootstrapType `json:"type"`
 
 	// Value is a YAML string of the bootstrap.
-	Value string `json:"value"`
+	// +optional
+	Value *string `json:"value,omitempty"`
+
+	// JSONPatches is an array of JSONPatches to be applied to the default bootstrap. Patches are
+	// applied in the order in which they are defined.
+	JSONPatches []JSONPatchOperation `json:"jsonPatches,omitempty"`
 }
 
 // BootstrapType defines the types of bootstrap supported by Envoy Gateway.
-// +kubebuilder:validation:Enum=Merge;Replace
+// +kubebuilder:validation:Enum=Merge;Replace;JSONPatch
 type BootstrapType string
 
 const (
@@ -336,6 +389,9 @@ const (
 
 	// Replace replaces the default bootstrap with the provided one.
 	BootstrapTypeReplace BootstrapType = "Replace"
+
+	// JSONPatch applies the provided JSONPatches to the default bootstrap.
+	BootstrapTypeJSONPatch BootstrapType = "JSONPatch"
 )
 
 // EnvoyProxyStatus defines the observed state of EnvoyProxy. This type is not implemented

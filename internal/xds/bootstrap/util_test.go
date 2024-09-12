@@ -14,6 +14,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -35,9 +36,23 @@ func TestApplyBootstrapConfig(t *testing.T) {
 			defaultBootstrap: str,
 		},
 		{
+			name: "merge-user-bootstrap",
+			boostrapConfig: &egv1a1.ProxyBootstrap{
+				Type: ptr.To(egv1a1.BootstrapTypeMerge),
+			},
+			defaultBootstrap: str,
+		},
+		{
 			name: "stats_sinks",
 			boostrapConfig: &egv1a1.ProxyBootstrap{
 				Type: ptr.To(egv1a1.BootstrapTypeMerge),
+			},
+			defaultBootstrap: str,
+		},
+		{
+			name: "patch-global-config",
+			boostrapConfig: &egv1a1.ProxyBootstrap{
+				Type: ptr.To(egv1a1.BootstrapTypeJSONPatch),
 			},
 			defaultBootstrap: str,
 		},
@@ -48,7 +63,14 @@ func TestApplyBootstrapConfig(t *testing.T) {
 			in, err := loadData(tc.name, "in")
 			require.NoError(t, err)
 
-			tc.boostrapConfig.Value = in
+			switch *tc.boostrapConfig.Type {
+			case egv1a1.BootstrapTypeJSONPatch:
+				err = yaml.Unmarshal([]byte(in), &tc.boostrapConfig.JSONPatches)
+				require.NoError(t, err)
+			default:
+				tc.boostrapConfig.Value = &in
+			}
+
 			data, err := ApplyBootstrapConfig(tc.boostrapConfig, tc.defaultBootstrap)
 			require.NoError(t, err)
 

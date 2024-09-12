@@ -13,17 +13,18 @@ import (
 	wasmfilterv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/wasm/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	wasmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/wasm/v3"
-	"github.com/golang/protobuf/ptypes/duration"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 const (
-	wasmFilter  = "envoy.filters.http.wasm"
-	vmRuntimeV8 = "envoy.wasm.runtime.v8"
+	vmRuntimeV8           = "envoy.wasm.runtime.v8"
+	wasmHTTPServerCluster = "wasm_cluster"
 )
 
 func init() {
@@ -52,7 +53,7 @@ func (*wasm) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListe
 		if !routeContainsWasm(route) {
 			continue
 		}
-		for _, ep := range route.Wasms {
+		for _, ep := range route.EnvoyExtensions.Wasms {
 			if hcmContainsFilter(mgr, wasmFilterName(ep)) {
 				continue
 			}
@@ -98,22 +99,16 @@ func buildHCMWasmFilter(wasm ir.Wasm) (*hcmv3.HttpFilter, error) {
 }
 
 func wasmFilterName(wasm ir.Wasm) string {
-	return perRouteFilterName(wasmFilter, wasm.Name)
+	return perRouteFilterName(egv1a1.EnvoyFilterWasm, wasm.Name)
 }
 
 func wasmConfig(wasm ir.Wasm) (*wasmfilterv3.Wasm, error) {
 	var (
-		uc           *urlCluster
 		pluginConfig = ""
 		configAny    *anypb.Any
 		filterConfig *wasmfilterv3.Wasm
 		err          error
 	)
-
-	// We only support HTTP Wasm code source for now
-	if uc, err = url2Cluster(wasm.HTTPWasmCode.URL); err != nil {
-		return nil, err
-	}
 
 	if wasm.Config != nil {
 		pluginConfig = string(wasm.Config.Raw)
@@ -134,15 +129,15 @@ func wasmConfig(wasm ir.Wasm) (*wasmfilterv3.Wasm, error) {
 						Specifier: &corev3.AsyncDataSource_Remote{
 							Remote: &corev3.RemoteDataSource{
 								HttpUri: &corev3.HttpUri{
-									Uri: wasm.HTTPWasmCode.URL,
+									Uri: wasm.Code.ServingURL,
 									HttpUpstreamType: &corev3.HttpUri_Cluster{
-										Cluster: uc.name,
+										Cluster: wasmHTTPServerCluster,
 									},
-									Timeout: &duration.Duration{
+									Timeout: &durationpb.Duration{
 										Seconds: defaultExtServiceRequestTimeout,
 									},
 								},
-								Sha256: wasm.HTTPWasmCode.SHA256,
+								Sha256: wasm.Code.SHA256,
 							},
 						},
 					},
@@ -166,31 +161,15 @@ func routeContainsWasm(irRoute *ir.HTTPRoute) bool {
 		return false
 	}
 
-	return len(irRoute.Wasms) > 0
+	return irRoute.EnvoyExtensions != nil && len(irRoute.EnvoyExtensions.Wasms) > 0
 }
 
 // patchResources patches the cluster resources for the http wasm code source.
-func (*wasm) patchResources(tCtx *types.ResourceVersionTable,
-	routes []*ir.HTTPRoute,
-) error {
-	if tCtx == nil || tCtx.XdsResources == nil {
-		return errors.New("xds resource table is nil")
-	}
-
-	var err, errs error
-	for _, route := range routes {
-		if !routeContainsWasm(route) {
-			continue
-		}
-
-		for _, w := range route.Wasms {
-			if err = addClusterFromURL(w.HTTPWasmCode.URL, tCtx); err != nil {
-				errs = errors.Join(errs, err)
-			}
-		}
-	}
-
-	return errs
+func (*wasm) patchResources(_ *types.ResourceVersionTable, _ []*ir.HTTPRoute) error {
+	// EG always serves the Wasm module through the built-in HTTP server, which
+	// has been configured in the bootstrap configuration. So we don't need to
+	// create a cluster for the Wasm module.
+	return nil
 }
 
 // patchRoute patches the provided route with the wasm config if applicable.
@@ -202,8 +181,11 @@ func (*wasm) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	if irRoute == nil {
 		return errors.New("ir route is nil")
 	}
+	if irRoute.EnvoyExtensions == nil {
+		return nil
+	}
 
-	for _, ep := range irRoute.Wasms {
+	for _, ep := range irRoute.EnvoyExtensions.Wasms {
 		filterName := wasmFilterName(ep)
 		if err := enableFilterOnRoute(route, filterName); err != nil {
 			return err

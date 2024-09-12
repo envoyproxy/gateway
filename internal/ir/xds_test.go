@@ -13,6 +13,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
@@ -22,133 +23,186 @@ import (
 var (
 	// HTTPListener
 	happyHTTPListener = HTTPListener{
-		Name:      "happy",
-		Address:   "0.0.0.0",
-		Port:      80,
+		CoreListenerDetails: CoreListenerDetails{
+			Name:    "happy",
+			Address: "0.0.0.0",
+			Port:    80,
+		},
 		Hostnames: []string{"example.com"},
 		Routes:    []*HTTPRoute{&happyHTTPRoute},
 	}
 	happyHTTPSListener = HTTPListener{
-		Name:      "happy",
-		Address:   "0.0.0.0",
-		Port:      80,
+		CoreListenerDetails: CoreListenerDetails{
+			Name:    "happy",
+			Address: "0.0.0.0",
+			Port:    80,
+		},
 		Hostnames: []string{"example.com"},
 		TLS: &TLSConfig{
 			Certificates: []TLSCertificate{{
-				Name:              "happy",
-				ServerCertificate: []byte{1, 2, 3},
-				PrivateKey:        []byte{1, 2, 3},
+				Name:        "happy",
+				Certificate: []byte{1, 2, 3},
+				PrivateKey:  []byte{1, 2, 3},
 			}},
 		},
 		Routes: []*HTTPRoute{&happyHTTPRoute},
 	}
 	redactedHappyHTTPSListener = HTTPListener{
-		Name:      "happy",
-		Address:   "0.0.0.0",
-		Port:      80,
+		CoreListenerDetails: CoreListenerDetails{
+			Name:    "happy",
+			Address: "0.0.0.0",
+			Port:    80,
+		},
 		Hostnames: []string{"example.com"},
 		TLS: &TLSConfig{
 			Certificates: []TLSCertificate{{
-				Name:              "happy",
-				ServerCertificate: []byte{1, 2, 3},
-				PrivateKey:        redacted,
+				Name:        "happy",
+				Certificate: []byte{1, 2, 3},
+				PrivateKey:  redacted,
 			}},
 		},
 		Routes: []*HTTPRoute{&happyHTTPRoute},
 	}
 	invalidAddrHTTPListener = HTTPListener{
-		Name:      "invalid-addr",
-		Address:   "1.0.0",
-		Port:      80,
+		CoreListenerDetails: CoreListenerDetails{
+			Name:    "invalid-addr",
+			Address: "1.0.0",
+			Port:    80,
+		},
 		Hostnames: []string{"example.com"},
 		Routes:    []*HTTPRoute{&happyHTTPRoute},
 	}
 	invalidBackendHTTPListener = HTTPListener{
-		Name:      "invalid-backend-match",
-		Address:   "0.0.0.0",
-		Port:      80,
+		CoreListenerDetails: CoreListenerDetails{
+			Name:    "invalid-backend-match",
+			Address: "0.0.0.0",
+			Port:    80,
+		},
 		Hostnames: []string{"example.com"},
 		Routes:    []*HTTPRoute{&invalidBackendHTTPRoute},
 	}
 	weightedInvalidBackendsHTTPListener = HTTPListener{
-		Name:      "weighted-invalid-backends-match",
-		Address:   "0.0.0.0",
-		Port:      80,
+		CoreListenerDetails: CoreListenerDetails{
+			Name:    "weighted-invalid-backends-match",
+			Address: "0.0.0.0",
+			Port:    80,
+		},
 		Hostnames: []string{"example.com"},
 		Routes:    []*HTTPRoute{&weightedInvalidBackendsHTTPRoute},
 	}
 
 	// TCPListener
 	happyTCPListenerTLSPassthrough = TCPListener{
-		Name:        "happy",
-		Address:     "0.0.0.0",
-		Port:        80,
-		TLS:         &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
-		Destination: &happyRouteDestination,
+		CoreListenerDetails: CoreListenerDetails{
+			Name:    "happy",
+			Address: "0.0.0.0",
+			Port:    80,
+		},
+		Routes: []*TCPRoute{&happyTCPRouteTLSPassthrough},
 	}
 
 	happyTCPListenerTLSTerminate = TCPListener{
-		Name:    "happy",
-		Address: "0.0.0.0",
-		Port:    80,
-		TLS: &TLS{Terminate: &TLSConfig{
-			Certificates: []TLSCertificate{{
-				Name:              "happy",
-				ServerCertificate: []byte("server-cert"),
-				PrivateKey:        []byte("priv-key"),
-			}},
-		}},
-		Destination: &happyRouteDestination,
+		CoreListenerDetails: CoreListenerDetails{
+			Name:    "happy",
+			Address: "0.0.0.0",
+			Port:    80,
+		},
+		Routes: []*TCPRoute{&happyTCPRouteTLSTermination},
 	}
 
 	emptySNITCPListenerTLSPassthrough = TCPListener{
-		Name:        "empty-sni",
-		Address:     "0.0.0.0",
-		Port:        80,
-		Destination: &happyRouteDestination,
+		CoreListenerDetails: CoreListenerDetails{
+			Name:    "empty-sni",
+			Address: "0.0.0.0",
+			Port:    80,
+		},
+		Routes: []*TCPRoute{&emptySNITCPRoute},
 	}
 	invalidNameTCPListenerTLSPassthrough = TCPListener{
-		Address:     "0.0.0.0",
-		Port:        80,
-		TLS:         &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
-		Destination: &happyRouteDestination,
+		CoreListenerDetails: CoreListenerDetails{
+			Address: "0.0.0.0",
+			Port:    80,
+		},
+		Routes: []*TCPRoute{&happyTCPRouteTLSPassthrough},
 	}
 	invalidAddrTCPListenerTLSPassthrough = TCPListener{
-		Name:        "invalid-addr",
-		Address:     "1.0.0",
-		Port:        80,
-		TLS:         &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
-		Destination: &happyRouteDestination,
+		CoreListenerDetails: CoreListenerDetails{
+			Name:    "invalid-addr",
+			Address: "1.0.0",
+			Port:    80,
+		},
+		Routes: []*TCPRoute{&happyTCPRouteTLSPassthrough},
 	}
 	invalidSNITCPListenerTLSPassthrough = TCPListener{
-		Address:     "0.0.0.0",
-		Port:        80,
-		TLS:         &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{}}},
+		CoreListenerDetails: CoreListenerDetails{
+			Address: "0.0.0.0",
+			Port:    80,
+		},
+		Routes: []*TCPRoute{&invalidSNITCPRoute},
+	}
+
+	// TCPRoute
+	happyTCPRouteTLSPassthrough = TCPRoute{
+		Name:        "happy-tls-passthrough",
+		TLS:         &TLS{TLSInspectorConfig: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
+		Destination: &happyRouteDestination,
+	}
+	happyTCPRouteTLSTermination = TCPRoute{
+		Name: "happy-tls-termination",
+		TLS: &TLS{Terminate: &TLSConfig{Certificates: []TLSCertificate{{
+			Name:        "happy",
+			Certificate: []byte("server-cert"),
+			PrivateKey:  []byte("priv-key"),
+		}}}},
+		Destination: &happyRouteDestination,
+	}
+	emptySNITCPRoute = TCPRoute{
+		Name:        "empty-sni",
+		Destination: &happyRouteDestination,
+	}
+
+	invalidSNITCPRoute = TCPRoute{
+		Name:        "invalid-sni",
+		TLS:         &TLS{TLSInspectorConfig: &TLSInspectorConfig{SNIs: []string{}}},
 		Destination: &happyRouteDestination,
 	}
 
 	// UDPListener
 	happyUDPListener = UDPListener{
-		Name:        "happy",
-		Address:     "0.0.0.0",
-		Port:        80,
-		Destination: &happyRouteDestination,
+		CoreListenerDetails: CoreListenerDetails{
+			Name:    "happy",
+			Address: "0.0.0.0",
+			Port:    80,
+		},
+		Route: &happyUDPRoute,
 	}
 	invalidNameUDPListener = UDPListener{
-		Address:     "0.0.0.0",
-		Port:        80,
-		Destination: &happyRouteDestination,
+		CoreListenerDetails: CoreListenerDetails{
+			Address: "0.0.0.0",
+			Port:    80,
+		},
+		Route: &happyUDPRoute,
 	}
 	invalidAddrUDPListener = UDPListener{
-		Name:        "invalid-addr",
-		Address:     "1.0.0",
-		Port:        80,
-		Destination: &happyRouteDestination,
+		CoreListenerDetails: CoreListenerDetails{
+			Name:    "invalid-addr",
+			Address: "1.0.0",
+			Port:    80,
+		},
+		Route: &happyUDPRoute,
 	}
 	invalidPortUDPListenerT = UDPListener{
-		Name:        "invalid-port",
-		Address:     "0.0.0.0",
-		Port:        0,
+		CoreListenerDetails: CoreListenerDetails{
+			Name:    "invalid-port",
+			Address: "0.0.0.0",
+			Port:    0,
+		},
+		Route: &happyUDPRoute,
+	}
+
+	// UDPRoute
+	happyUDPRoute = UDPRoute{
+		Name:        "happy",
 		Destination: &happyRouteDestination,
 	}
 
@@ -167,9 +221,6 @@ var (
 		PathMatch: &StringMatch{
 			Exact: ptr.To("invalid-backend"),
 		},
-		BackendWeights: BackendWeights{
-			Invalid: 1,
-		},
 	}
 	weightedInvalidBackendsHTTPRoute = HTTPRoute{
 		Name:     "weighted-invalid-backends",
@@ -178,10 +229,6 @@ var (
 			Exact: ptr.To("invalid-backends"),
 		},
 		Destination: &happyRouteDestination,
-		BackendWeights: BackendWeights{
-			Invalid: 1,
-			Valid:   1,
-		},
 	}
 
 	redirectHTTPRoute = HTTPRoute{
@@ -208,7 +255,6 @@ var (
 			Exact: ptr.To("filter-error"),
 		},
 		DirectResponse: &DirectResponse{
-			Body:       ptr.To("invalid filter type"),
 			StatusCode: uint32(500),
 		},
 	}
@@ -251,7 +297,6 @@ var (
 			Exact: ptr.To("redirect"),
 		},
 		DirectResponse: &DirectResponse{
-			Body:       ptr.To("invalid filter type"),
 			StatusCode: uint32(799),
 		},
 	}
@@ -294,17 +339,16 @@ var (
 		AddRequestHeaders: []AddHeader{
 			{
 				Name:   "example-header",
-				Value:  "example-value",
+				Value:  []string{"example-value"},
 				Append: true,
 			},
 			{
 				Name:   "example-header-2",
-				Value:  "example-value-2",
+				Value:  []string{"example-value-2"},
 				Append: false,
 			},
 			{
 				Name:   "empty-header",
-				Value:  "",
 				Append: false,
 			},
 		},
@@ -332,12 +376,12 @@ var (
 		AddRequestHeaders: []AddHeader{
 			{
 				Name:   "example-header",
-				Value:  "example-value",
+				Value:  []string{"example-value"},
 				Append: true,
 			},
 			{
 				Name:   "example-header",
-				Value:  "example-value-2",
+				Value:  []string{"example-value-2"},
 				Append: false,
 			},
 		},
@@ -357,7 +401,7 @@ var (
 		AddRequestHeaders: []AddHeader{
 			{
 				Name:   "",
-				Value:  "example-value",
+				Value:  []string{"example-value"},
 				Append: true,
 			},
 		},
@@ -372,17 +416,16 @@ var (
 		AddResponseHeaders: []AddHeader{
 			{
 				Name:   "example-header",
-				Value:  "example-value",
+				Value:  []string{"example-value"},
 				Append: true,
 			},
 			{
 				Name:   "example-header-2",
-				Value:  "example-value-2",
+				Value:  []string{"example-value-2"},
 				Append: false,
 			},
 			{
 				Name:   "empty-header",
-				Value:  "",
 				Append: false,
 			},
 		},
@@ -410,12 +453,12 @@ var (
 		AddResponseHeaders: []AddHeader{
 			{
 				Name:   "example-header",
-				Value:  "example-value",
+				Value:  []string{"example-value"},
 				Append: true,
 			},
 			{
 				Name:   "example-header",
-				Value:  "example-value-2",
+				Value:  []string{"example-value-2"},
 				Append: false,
 			},
 		},
@@ -435,7 +478,7 @@ var (
 		AddResponseHeaders: []AddHeader{
 			{
 				Name:   "",
-				Value:  "example-value",
+				Value:  []string{"example-value"},
 				Append: true,
 			},
 		},
@@ -535,7 +578,6 @@ func TestValidateXds(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
 				require.NoError(t, test.input.Validate())
@@ -563,8 +605,10 @@ func TestValidateHTTPListener(t *testing.T) {
 		{
 			name: "invalid name",
 			input: HTTPListener{
-				Address:   "0.0.0.0",
-				Port:      80,
+				CoreListenerDetails: CoreListenerDetails{
+					Address: "0.0.0.0",
+					Port:    80,
+				},
 				Hostnames: []string{"example.com"},
 				Routes:    []*HTTPRoute{&happyHTTPRoute},
 			},
@@ -578,15 +622,16 @@ func TestValidateHTTPListener(t *testing.T) {
 		{
 			name: "invalid port and hostnames",
 			input: HTTPListener{
-				Name:    "invalid-port-and-hostnames",
-				Address: "1.0.0",
-				Routes:  []*HTTPRoute{&happyHTTPRoute},
+				CoreListenerDetails: CoreListenerDetails{
+					Name:    "invalid-port-and-hostnames",
+					Address: "1.0.0",
+				},
+				Routes: []*HTTPRoute{&happyHTTPRoute},
 			},
 			want: []error{ErrListenerPortInvalid, ErrHTTPListenerHostnamesEmpty},
 		},
 	}
 	for _, test := range tests {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
 				require.NoError(t, test.input.Validate())
@@ -612,6 +657,11 @@ func TestValidateTCPListener(t *testing.T) {
 			want:  nil,
 		},
 		{
+			name:  "tls terminate happy",
+			input: happyTCPListenerTLSTerminate,
+			want:  nil,
+		},
+		{
 			name:  "tcp empty SNIs",
 			input: emptySNITCPListenerTLSPassthrough,
 			want:  nil,
@@ -629,11 +679,10 @@ func TestValidateTCPListener(t *testing.T) {
 		{
 			name:  "tls passthrough empty SNIs",
 			input: invalidSNITCPListenerTLSPassthrough,
-			want:  []error{ErrTCPListenerSNIsEmpty},
+			want:  []error{ErrTCPRouteSNIsEmpty},
 		},
 	}
 	for _, test := range tests {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
 				require.NoError(t, test.input.Validate())
@@ -657,8 +706,8 @@ func TestValidateTLSListenerConfig(t *testing.T) {
 			name: "happy",
 			input: TLSConfig{
 				Certificates: []TLSCertificate{{
-					ServerCertificate: []byte("server-cert"),
-					PrivateKey:        []byte("priv-key"),
+					Certificate: []byte("server-cert"),
+					PrivateKey:  []byte("priv-key"),
 				}},
 			},
 			want: nil,
@@ -676,14 +725,13 @@ func TestValidateTLSListenerConfig(t *testing.T) {
 			name: "invalid private key",
 			input: TLSConfig{
 				Certificates: []TLSCertificate{{
-					ServerCertificate: []byte("server-cert"),
+					Certificate: []byte("server-cert"),
 				}},
 			},
 			want: ErrTLSPrivateKey,
 		},
 	}
 	for _, test := range tests {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
 				require.NoError(t, test.input.Validate())
@@ -705,14 +753,14 @@ func TestEqualXds(t *testing.T) {
 			desc: "out of order tcp listeners are equal",
 			a: &Xds{
 				TCP: []*TCPListener{
-					{Name: "listener-1"},
-					{Name: "listener-2"},
+					{CoreListenerDetails: CoreListenerDetails{Name: "listener-1"}},
+					{CoreListenerDetails: CoreListenerDetails{Name: "listener-2"}},
 				},
 			},
 			b: &Xds{
 				TCP: []*TCPListener{
-					{Name: "listener-2"},
-					{Name: "listener-1"},
+					{CoreListenerDetails: CoreListenerDetails{Name: "listener-2"}},
+					{CoreListenerDetails: CoreListenerDetails{Name: "listener-1"}},
 				},
 			},
 			equal: true,
@@ -722,7 +770,7 @@ func TestEqualXds(t *testing.T) {
 			a: &Xds{
 				HTTP: []*HTTPListener{
 					{
-						Name: "listener-1",
+						CoreListenerDetails: CoreListenerDetails{Name: "listener-1"},
 						Routes: []*HTTPRoute{
 							{Name: "route-1"},
 							{Name: "route-2"},
@@ -733,7 +781,7 @@ func TestEqualXds(t *testing.T) {
 			b: &Xds{
 				HTTP: []*HTTPListener{
 					{
-						Name: "listener-1",
+						CoreListenerDetails: CoreListenerDetails{Name: "listener-1"},
 						Routes: []*HTTPRoute{
 							{Name: "route-2"},
 							{Name: "route-1"},
@@ -747,14 +795,14 @@ func TestEqualXds(t *testing.T) {
 			desc: "out of order udp listeners are equal",
 			a: &Xds{
 				UDP: []*UDPListener{
-					{Name: "listener-1"},
-					{Name: "listener-2"},
+					{CoreListenerDetails: CoreListenerDetails{Name: "listener-1"}},
+					{CoreListenerDetails: CoreListenerDetails{Name: "listener-2"}},
 				},
 			},
 			b: &Xds{
 				UDP: []*UDPListener{
-					{Name: "listener-2"},
-					{Name: "listener-1"},
+					{CoreListenerDetails: CoreListenerDetails{Name: "listener-2"}},
+					{CoreListenerDetails: CoreListenerDetails{Name: "listener-1"}},
 				},
 			},
 			equal: true,
@@ -796,7 +844,6 @@ func TestValidateUDPListener(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
 				require.NoError(t, test.input.Validate())
@@ -830,7 +877,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 				Destination: &happyRouteDestination,
 			},
-			want: []error{ErrHTTPRouteNameEmpty},
+			want: []error{ErrRouteNameEmpty},
 		},
 		{
 			name: "invalid hostname",
@@ -860,7 +907,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				HeaderMatches: []*StringMatch{ptr.To(StringMatch{})},
 				Destination:   &happyRouteDestination,
 			},
-			want: []error{ErrHTTPRouteNameEmpty, ErrStringMatchConditionInvalid},
+			want: []error{ErrRouteNameEmpty, ErrStringMatchConditionInvalid},
 		},
 		{
 			name:  "redirect-httproute",
@@ -948,7 +995,6 @@ func TestValidateHTTPRoute(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
 				require.NoError(t, test.input.Validate())
@@ -956,6 +1002,47 @@ func TestValidateHTTPRoute(t *testing.T) {
 				got := test.input.Validate()
 				for _, w := range test.want {
 					require.ErrorContains(t, got, w.Error())
+				}
+			}
+		})
+	}
+}
+
+func TestValidateTCPRoute(t *testing.T) {
+	tests := []struct {
+		name  string
+		input TCPRoute
+		want  []error
+	}{
+		{
+			name:  "tls passthrough happy",
+			input: happyTCPRouteTLSPassthrough,
+			want:  nil,
+		},
+		{
+			name:  "tls terminatation happy",
+			input: happyTCPRouteTLSTermination,
+			want:  nil,
+		},
+		{
+			name:  "empty sni",
+			input: emptySNITCPRoute,
+			want:  nil,
+		},
+		{
+			name:  "invalid sni",
+			input: invalidSNITCPRoute,
+			want:  []error{ErrTCPRouteSNIsEmpty},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if test.want == nil {
+				require.NoError(t, test.input.Validate())
+			} else {
+				got := test.input.Validate()
+				for _, w := range test.want {
+					assert.ErrorContains(t, got, w.Error())
 				}
 			}
 		})
@@ -1074,7 +1161,6 @@ func TestValidateRouteDestination(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
 				require.NoError(t, test.input.Validate())
@@ -1114,7 +1200,6 @@ func TestValidateStringMatch(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
 				require.NoError(t, test.input.Validate())
@@ -1181,7 +1266,7 @@ func TestValidateLoadBalancer(t *testing.T) {
 			want: nil,
 		},
 		{
-			name: "consistent hash",
+			name: "consistent hash with source IP hash policy",
 			input: LoadBalancer{
 				ConsistentHash: &ConsistentHash{
 					SourceIP: ptr.To(true),
@@ -1189,7 +1274,17 @@ func TestValidateLoadBalancer(t *testing.T) {
 			},
 			want: nil,
 		},
-
+		{
+			name: "consistent hash with header hash policy",
+			input: LoadBalancer{
+				ConsistentHash: &ConsistentHash{
+					Header: &Header{
+						Name: "name",
+					},
+				},
+			},
+			want: nil,
+		},
 		{
 			name: "least request and random set",
 			input: LoadBalancer{
@@ -1242,7 +1337,6 @@ func TestPrintable(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			assert.Equal(t, *test.want, *test.input.Printable())
 		})
@@ -1521,6 +1615,126 @@ func TestValidateHealthCheck(t *testing.T) {
 				require.NoError(t, test.input.Validate())
 			} else {
 				require.EqualError(t, test.input.Validate(), test.want.Error())
+			}
+		})
+	}
+}
+
+func TestJSONPatchOperationValidation(t *testing.T) {
+	tests := []struct {
+		name  string
+		input JSONPatchOperation
+		want  *string
+	}{
+		{
+			name: "no path or jsonpath",
+			input: JSONPatchOperation{
+				Op: TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("remove")),
+			},
+			want: ptr.To("a patch operation must specify a path or jsonPath"),
+		},
+		{
+			name: "replace with from",
+			input: JSONPatchOperation{
+				Op:       TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("replace")),
+				JSONPath: ptr.To("$.some.json[@?name=='lala'].key"),
+				Value: &apiextensionsv1.JSON{
+					Raw: []byte{},
+				},
+				From: ptr.To("/some/from"),
+			},
+			want: ptr.To("the replace operation doesn't support a from attribute"),
+		},
+		{
+			name: "add with no value",
+			input: JSONPatchOperation{
+				Op:       TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("add")),
+				JSONPath: ptr.To("$.some.json[@?name=='lala'].key"),
+			},
+			want: ptr.To("the add operation requires a value"),
+		},
+		{
+			name: "remove with from",
+			input: JSONPatchOperation{
+				Op:       TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("remove")),
+				JSONPath: ptr.To("$.some.json[@?name=='lala'].key"),
+				From:     ptr.To("/some/from"),
+			},
+			want: ptr.To("value and from can't be specified with the remove operation"),
+		},
+		{
+			name: "remove with value",
+			input: JSONPatchOperation{
+				Op:       TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("remove")),
+				JSONPath: ptr.To("$.some.json[@?name=='lala'].key"),
+				Value: &apiextensionsv1.JSON{
+					Raw: []byte{},
+				},
+			},
+			want: ptr.To("value and from can't be specified with the remove operation"),
+		},
+		{
+			name: "move without from",
+			input: JSONPatchOperation{
+				Op:       TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("move")),
+				JSONPath: ptr.To("$.some.json[@?name=='lala'].key"),
+			},
+			want: ptr.To("the move operation requires a valid from attribute"),
+		},
+		{
+			name: "copy with value",
+			input: JSONPatchOperation{
+				Op:       TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("copy")),
+				JSONPath: ptr.To("$.some.json[@?name=='lala'].key"),
+				From:     ptr.To("/some/from"),
+				Value: &apiextensionsv1.JSON{
+					Raw: []byte{},
+				},
+			},
+			want: ptr.To("the copy operation doesn't support a value attribute"),
+		},
+		{
+			name: "invalid operation",
+			input: JSONPatchOperation{
+				Op:   TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("invalid")),
+				Path: ptr.To("/some/path"),
+			},
+			want: ptr.To("unsupported JSONPatch operation"),
+		},
+		{
+			name: "valid test operation",
+			input: JSONPatchOperation{
+				Op:   TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("test")),
+				Path: ptr.To("/some/path"),
+				Value: &apiextensionsv1.JSON{
+					Raw: []byte{},
+				},
+			},
+		},
+		{
+			name: "valid remove operation",
+			input: JSONPatchOperation{
+				Op:   TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("remove")),
+				Path: ptr.To("/some/path"),
+			},
+		},
+		{
+			name: "valid copy operation",
+			input: JSONPatchOperation{
+				Op:   TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("copy")),
+				Path: ptr.To("/some/path"),
+				From: ptr.To("/some/other/path"),
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.input.Validate()
+			if tc.want != nil {
+				require.EqualError(t, err, *tc.want)
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}

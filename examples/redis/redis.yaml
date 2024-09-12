@@ -64,6 +64,7 @@ data:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     extensionApis:
       enableEnvoyPatchPolicy: true
+      enableBackend: true
     rateLimit:
       backend:
         type: Redis

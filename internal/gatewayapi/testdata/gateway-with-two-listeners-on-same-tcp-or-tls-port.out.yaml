@@ -46,11 +46,6 @@ gateways:
     - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
-        message: Only one TCP/TLS listener is allowed in a given port
-        reason: ProtocolConflict
-        status: "True"
-        type: Conflicted
-      - lastTransitionTime: null
         message: Listener must have TLS set when protocol is TLS.
         reason: Invalid
         status: "False"
@@ -121,15 +116,16 @@ xdsIR:
       - path: /dev/stdout
     tcp:
     - address: 0.0.0.0
-      destination:
-        name: tcproute/default/tcproute-1/rule/-1
-        settings:
-        - addressType: IP
-          endpoints:
-          - host: 7.7.7.7
-            port: 8163
-          protocol: TCP
-          weight: 1
-      name: envoy-gateway/gateway-1/tcp1/tcproute-1
+      name: envoy-gateway/gateway-1/tcp1
       port: 10162
-      tls: {}
+      routes:
+      - destination:
+          name: tcproute/default/tcproute-1/rule/-1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8163
+            protocol: TCP
+            weight: 1
+        name: tcproute/default/tcproute-1
