@@ -49,7 +49,7 @@ var CorsTest = suite.ConformanceTest{
 					Path:   "/cors-exact",
 					Method: "OPTIONS",
 					Headers: map[string]string{
-						"Origin": "https://www.foo.com",
+						"Origin":                         "https://www.foo.com",
 						"access-control-request-method":  "GET",
 						"access-control-request-headers": "x-header-1, x-header-2",
 					},
@@ -107,7 +107,7 @@ var CorsTest = suite.ConformanceTest{
 					Path:   "/cors-exact",
 					Method: "OPTIONS",
 					Headers: map[string]string{
-						"Origin": "https://anydomain.foobar.com",
+						"Origin":                         "https://anydomain.foobar.com",
 						"access-control-request-method":  "GET",
 						"access-control-request-headers": "x-header-1, x-header-2",
 					},
@@ -165,7 +165,7 @@ var CorsTest = suite.ConformanceTest{
 					Path:   "/cors-exact",
 					Method: "OPTIONS",
 					Headers: map[string]string{
-						"Origin": "https://unknown.foo.com",
+						"Origin":                         "https://unknown.foo.com",
 						"access-control-request-method":  "GET",
 						"access-control-request-headers": "x-header-1, x-header-2",
 					},
