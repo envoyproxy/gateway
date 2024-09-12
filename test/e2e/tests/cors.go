@@ -60,7 +60,7 @@ var CorsTest = suite.ConformanceTest{
 				ExpectedRequest: &http.ExpectedRequest{
 					Request: http.Request{
 						Host:    "",
-						Method:  OPTIONS,
+						Method:  "OPTIONS",
 						Path:    "",
 						Headers: nil,
 					},
@@ -118,7 +118,7 @@ var CorsTest = suite.ConformanceTest{
 				ExpectedRequest: &http.ExpectedRequest{
 					Request: http.Request{
 						Host:    "",
-						Method:  OPTIONS,
+						Method:  "OPTIONS",
 						Path:    "",
 						Headers: nil,
 					},
@@ -176,7 +176,7 @@ var CorsTest = suite.ConformanceTest{
 				ExpectedRequest: &http.ExpectedRequest{
 					Request: http.Request{
 						Host:    "",
-						Method:  OPTIONS,
+						Method:  "OPTIONS",
 						Path:    "",
 						Headers: nil,
 					},
@@ -228,7 +228,7 @@ var CorsTest = suite.ConformanceTest{
 				ExpectedRequest: &http.ExpectedRequest{
 					Request: http.Request{
 						Host:    "",
-						Method:  OPTIONS,
+						Method:  "OPTIONS",
 						Path:    "",
 						Headers: nil,
 					},
