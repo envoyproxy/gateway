@@ -29,7 +29,6 @@
         statPrefix: http-8081
         useRemoteAddress: true
     name: first-listener
-  drainType: MODIFY_ONLY
   name: first-listener
   perConnectionBufferLimitBytes: 32768
 - address:
@@ -62,6 +61,5 @@
         statPrefix: http-8082
         useRemoteAddress: true
     name: second-listener
-  drainType: MODIFY_ONLY
   name: second-listener
   perConnectionBufferLimitBytes: 32768
