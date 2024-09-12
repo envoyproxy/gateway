@@ -187,6 +187,7 @@ var CorsTest = suite.ConformanceTest{
 						"access-control-allow-headers":  "x-header-1, x-header-2",
 						"access-control-expose-headers": "*",
 					},
+					Path: "", // The path is empty because the request is a preflight request
 				},
 				Namespace: ns,
 			}
