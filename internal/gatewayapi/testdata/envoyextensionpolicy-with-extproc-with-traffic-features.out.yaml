@@ -80,7 +80,7 @@ backends:
       message: The Backend was accepted
       reason: Accepted
       status: "True"
-      type: Invalid
+      type: Accepted
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
@@ -98,7 +98,7 @@ backends:
       message: The Backend was accepted
       reason: Accepted
       status: "True"
-      type: Invalid
+      type: Accepted
 envoyExtensionPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy

@@ -202,7 +202,7 @@ var ALSTest = suite.ConformanceTest{
 func runLogTest(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string,
 	expectedResponse httputils.ExpectedResponse, expectedLabels map[string]string, expectedMatch string, expectedDelta int,
 ) {
-	if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
+	if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, 3*time.Minute, true,
 		func(ctx context.Context) (bool, error) {
 			// query log count from loki
 			preCount, err := QueryLogCountFromLoki(t, suite.Client, expectedLabels, expectedMatch)
@@ -215,7 +215,7 @@ func runLogTest(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string,
 
 			// it will take some time for fluent-bit to collect the log and send to loki
 			// let's wait for a while
-			if err := wait.PollUntilContextTimeout(ctx, 500*time.Millisecond, 15*time.Second, true, func(_ context.Context) (bool, error) {
+			if err := wait.PollUntilContextTimeout(ctx, time.Second, 1*time.Minute, true, func(_ context.Context) (bool, error) {
 				count, err := QueryLogCountFromLoki(t, suite.Client, expectedLabels, expectedMatch)
 				if err != nil {
 					tlog.Logf(t, "failed to get log count from loki: %v", err)

@@ -15,7 +15,7 @@ backends:
       message: The Backend was accepted
       reason: Accepted
       status: "True"
-      type: Invalid
+      type: Accepted
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
@@ -33,7 +33,7 @@ backends:
       message: The Backend was accepted
       reason: Accepted
       status: "True"
-      type: Invalid
+      type: Accepted
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
@@ -51,7 +51,7 @@ backends:
       message: The Backend was accepted
       reason: Accepted
       status: "True"
-      type: Invalid
+      type: Accepted
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
@@ -70,7 +70,7 @@ backends:
         range is not supported'
       reason: Accepted
       status: "False"
-      type: Accepted
+      type: Invalid
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
@@ -89,7 +89,7 @@ backends:
         with at least two segments separated by dots'
       reason: Accepted
       status: "False"
-      type: Accepted
+      type: Invalid
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
