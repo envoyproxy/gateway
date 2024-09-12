@@ -204,7 +204,11 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		}
 	}
 	if r.rateLimitDeployment.Pod.Annotations != nil {
-		maps.Copy(annotations, r.rateLimitDeployment.Pod.Annotations)
+		if annotations != nil {
+			maps.Copy(annotations, r.rateLimitDeployment.Pod.Annotations)
+		} else {
+			annotations = r.rateLimitDeployment.Pod.Annotations
+		}
 	}
 
 	deployment := &appsv1.Deployment{
