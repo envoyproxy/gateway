@@ -182,8 +182,10 @@ var CorsTest = suite.ConformanceTest{
 				Response: http.Response{
 					StatusCode: 200,
 					Headers: map[string]string{
-						"access-control-allow-origin":  "https://foo.bar.com",
-						"access-control-allow-headers": "x-header-1, x-header-2",
+						"access-control-allow-origin":   "https://foo.bar.com",
+						"access-control-allow-methods":  "GET",
+						"access-control-allow-headers":  "x-header-1, x-header-2",
+						"access-control-expose-headers": "*",
 					},
 				},
 				Namespace: ns,

@@ -29,28 +29,30 @@ type Origin string
 // CORS defines the configuration for Cross-Origin Resource Sharing (CORS).
 type CORS struct {
 	// AllowOrigins defines the origins that are allowed to make requests.
-	// It specifies the allowed origins in the Access-Control-Allow-Origin header.
+	// It specifies the allowed origins in the Access-Control-Allow-Origin CORS response header.
 	// The value "*" allows any origin to make requests.
 	//
 	// +optional
 	AllowOrigins []Origin `json:"allowOrigins,omitempty"`
 
 	// AllowMethods defines the methods that are allowed to make requests.
-	// It specifies the allowed methods in the Access-Control-Allow-Methods header.
+	// It specifies the allowed methods in the Access-Control-Allow-Methods CORS response header..
 	// The value "*" allows any method to be used.
 	//
 	// +optional
 	AllowMethods []string `json:"allowMethods,omitempty"`
 
 	// AllowHeaders defines the headers that are allowed to be sent with requests.
-	// It specifies the allowed headers in the Access-Control-Allow-Headers header.
+	// It specifies the allowed headers in the Access-Control-Allow-Headers CORS response header..
 	// The value "*" allows any header to be sent.
 	//
 	// +optional
 	AllowHeaders []string `json:"allowHeaders,omitempty"`
 
-	// ExposeHeaders defines the headers that can be exposed in the responses.
-	// It specifies the headers in the Access-Control-Expose-Headers header.
+	// ExposeHeaders defines which response headers should be made accessible to
+	// scripts running in the browser.
+	// It specifies the headers in the Access-Control-Expose-Headers CORS response header..
+	// The value "*" allows any header to be exposed.
 	//
 	// +optional
 	ExposeHeaders []string `json:"exposeHeaders,omitempty"`
@@ -67,9 +69,7 @@ type CORS struct {
 	// +optional
 	AllowCredentials *bool `json:"allowCredentials,omitempty"`
 
-	// TODO zhaohuabing
-	// According to the CORS specification, the following rules should be enforced:
-	// - ExposeHeaders should also allow "*" to expose all headers.
-	// - If AllowCredentials is true, then the "*" should be treated as a literal.
-	// Blocked by this Envoy issue: https://github.com/envoyproxy/envoy/issues/36066
+	// TODO zhaohuabing: according to CORS spec,wildcard should be treated as a literal value
+	// for CORS requests with credentials.
+	// This needs to be supported in the Envoy CORS filter.
 }

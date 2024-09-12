@@ -78,4 +78,5 @@ spec:
     - "*"
     allowHeaders:
     - "*"
-# TODO: zhaohuabing wildcard for exposeHeaders
+    exposeHeaders:
+    - "*"

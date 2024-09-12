@@ -256,7 +256,7 @@ spec:
                   allowHeaders:
                     description: |-
                       AllowHeaders defines the headers that are allowed to be sent with requests.
-                      It specifies the allowed headers in the Access-Control-Allow-Headers header.
+                      It specifies the allowed headers in the Access-Control-Allow-Headers CORS response header..
                       The value "*" allows any header to be sent.
                     items:
                       type: string
@@ -264,7 +264,7 @@ spec:
                   allowMethods:
                     description: |-
                       AllowMethods defines the methods that are allowed to make requests.
-                      It specifies the allowed methods in the Access-Control-Allow-Methods header.
+                      It specifies the allowed methods in the Access-Control-Allow-Methods CORS response header..
                       The value "*" allows any method to be used.
                     items:
                       type: string
@@ -272,7 +272,7 @@ spec:
                   allowOrigins:
                     description: |-
                       AllowOrigins defines the origins that are allowed to make requests.
-                      It specifies the allowed origins in the Access-Control-Allow-Origin header.
+                      It specifies the allowed origins in the Access-Control-Allow-Origin CORS response header.
                       The value "*" allows any origin to make requests.
                     items:
                       description: |-
@@ -296,8 +296,10 @@ spec:
                     type: array
                   exposeHeaders:
                     description: |-
-                      ExposeHeaders defines the headers that can be exposed in the responses.
-                      It specifies the headers in the Access-Control-Expose-Headers header.
+                      ExposeHeaders defines which response headers should be made accessible to
+                      scripts running in the browser.
+                      It specifies the headers in the Access-Control-Expose-Headers CORS response header..
+                      The value "*" allows any header to be exposed.
                     items:
                       type: string
                     type: array
