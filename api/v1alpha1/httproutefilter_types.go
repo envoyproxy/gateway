@@ -89,13 +89,13 @@ type HTTPPathModifier struct {
 
 //+kubebuilder:object:root=true
 
-// HTTPFilterList contains a list of HTTPRouteFilter resources.
-type HTTPFilterList struct {
+// HTTPRouteFilterList contains a list of HTTPRouteFilter resources.
+type HTTPRouteFilterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []HTTPRouteFilter `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&HTTPRouteFilter{}, &HTTPFilterList{})
+	SchemeBuilder.Register(&HTTPRouteFilter{}, &HTTPRouteFilterList{})
 }

@@ -26,8 +26,8 @@ API group.
 - [EnvoyPatchPolicy](#envoypatchpolicy)
 - [EnvoyPatchPolicyList](#envoypatchpolicylist)
 - [EnvoyProxy](#envoyproxy)
-- [HTTPFilterList](#httpfilterlist)
 - [HTTPRouteFilter](#httproutefilter)
+- [HTTPRouteFilterList](#httproutefilterlist)
 - [SecurityPolicy](#securitypolicy)
 - [SecurityPolicyList](#securitypolicylist)
 
@@ -1893,22 +1893,6 @@ _Appears in:_
 | `headersToBackend` | _string array_ |  false  | HeadersToBackend are the authorization response headers that will be added<br />to the original client request before sending it to the backend server.<br />Note that coexisting headers will be overridden.<br />If not specified, no authorization response headers will be added to the<br />original client request. |
 
 
-#### HTTPFilterList
-
-
-
-HTTPFilterList contains a list of HTTPRouteFilter resources.
-
-
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
-| `kind` | _string_ | |`HTTPFilterList`
-| `metadata` | _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#listmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `items` | _[HTTPRouteFilter](#httproutefilter) array_ |  true  |  |
-
-
 #### HTTPPathModifier
 
 
@@ -1946,7 +1930,7 @@ HTTPRouteFilter is a custom Envoy Gateway HTTPRouteFilter which provides extende
 traffic processing options such as path regex rewrite, direct response and more.
 
 _Appears in:_
-- [HTTPFilterList](#httpfilterlist)
+- [HTTPRouteFilterList](#httproutefilterlist)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -1954,6 +1938,22 @@ _Appears in:_
 | `kind` | _string_ | |`HTTPRouteFilter`
 | `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` | _[HTTPRouteFilterSpec](#httproutefilterspec)_ |  true  | Spec defines the desired state of HTTPRouteFilter. |
+
+
+#### HTTPRouteFilterList
+
+
+
+HTTPRouteFilterList contains a list of HTTPRouteFilter resources.
+
+
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
+| `kind` | _string_ | |`HTTPRouteFilterList`
+| `metadata` | _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#listmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` | _[HTTPRouteFilter](#httproutefilter) array_ |  true  |  |
 
 
 #### HTTPRouteFilterSpec
