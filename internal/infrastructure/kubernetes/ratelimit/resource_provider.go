@@ -189,25 +189,25 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	containers := expectedRateLimitContainers(r.rateLimit, r.rateLimitDeployment, r.Namespace)
 	selector := resource.GetSelector(rateLimitLabels())
 
-	labels := rateLimitLabels()
+	podLabels := rateLimitLabels()
 	if r.rateLimitDeployment.Pod.Labels != nil {
-		maps.Copy(labels, r.rateLimitDeployment.Pod.Labels)
-		maps.Copy(labels, rateLimitLabels())
+		maps.Copy(podLabels, r.rateLimitDeployment.Pod.Labels)
+		maps.Copy(podLabels, rateLimitLabels())
 	}
 
-	var annotations map[string]string
+	var podAnnotations map[string]string
 	if enablePrometheus(r.rateLimit) {
-		annotations = map[string]string{
+		podAnnotations = map[string]string{
 			"prometheus.io/path":   "/metrics",
 			"prometheus.io/port":   strconv.Itoa(PrometheusPort),
 			"prometheus.io/scrape": "true",
 		}
 	}
 	if r.rateLimitDeployment.Pod.Annotations != nil {
-		if annotations != nil {
-			maps.Copy(annotations, r.rateLimitDeployment.Pod.Annotations)
+		if podAnnotations != nil {
+			maps.Copy(podAnnotations, r.rateLimitDeployment.Pod.Annotations)
 		} else {
-			annotations = r.rateLimitDeployment.Pod.Annotations
+			podAnnotations = r.rateLimitDeployment.Pod.Annotations
 		}
 	}
 
@@ -226,8 +226,8 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 			Selector: selector,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels:      labels,
-					Annotations: annotations,
+					Labels:      podLabels,
+					Annotations: podAnnotations,
 				},
 				Spec: corev1.PodSpec{
 					Containers:                    containers,
