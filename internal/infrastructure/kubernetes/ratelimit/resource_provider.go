@@ -7,9 +7,11 @@ package ratelimit
 
 import (
 	_ "embed"
-	"golang.org/x/exp/maps"
 	"strconv"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
+	"golang.org/x/exp/maps"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
@@ -18,9 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
-
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 )
 
 // ResourceKind indicates the main resources of envoy-ratelimit,
