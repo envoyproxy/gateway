@@ -824,6 +824,9 @@ type OIDC struct {
 	CookieDomain *string `json:"cookieDomain,omitempty"`
 }
 
+// OIDCProvider defines the schema for the OIDC Provider.
+//
+// +k8s:deepcopy-gen=true
 type OIDCProvider struct {
 	// Destination defines the destination for the OIDC Provider.
 	Destination RouteDestination `json:"destination"`

@@ -328,7 +328,6 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	var (
 		cors          *ir.CORS
 		jwt           *ir.JWT
-		oidc          *ir.OIDC
 		basicAuth     *ir.BasicAuth
 		authorization *ir.Authorization
 		err, errs     error
@@ -340,15 +339,6 @@ func (t *Translator) translateSecurityPolicyForRoute(
 
 	if policy.Spec.JWT != nil {
 		jwt = t.buildJWT(policy.Spec.JWT)
-	}
-
-	if policy.Spec.OIDC != nil {
-		if oidc, err = t.buildOIDC(
-			policy,
-			resources); err != nil {
-			err = perr.WithMessage(err, "OIDC")
-			errs = errors.Join(errs, err)
-		}
 	}
 
 	if policy.Spec.BasicAuth != nil {
@@ -387,6 +377,18 @@ func (t *Translator) translateSecurityPolicyForRoute(
 				errs = errors.Join(errs, err)
 			}
 		}
+
+		var oidc *ir.OIDC
+		if policy.Spec.OIDC != nil {
+			if oidc, err = t.buildOIDC(
+				policy,
+				resources,
+				gtwCtx.envoyProxy); err != nil {
+				err = perr.WithMessage(err, "OIDC")
+				errs = errors.Join(errs, err)
+			}
+		}
+
 		irKey := t.getIRKey(gtwCtx.Gateway)
 		for _, listener := range parentRefCtx.listeners {
 			irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
@@ -444,7 +446,8 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	if policy.Spec.OIDC != nil {
 		if oidc, err = t.buildOIDC(
 			policy,
-			resources); err != nil {
+			resources,
+			gateway.envoyProxy); err != nil {
 			err = perr.WithMessage(err, "OIDC")
 			errs = errors.Join(errs, err)
 		}
