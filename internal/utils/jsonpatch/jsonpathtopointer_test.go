@@ -87,6 +87,29 @@ const case3Route string = `{
   "ignore_port_in_host_matching": true
 }`
 
+const case4Escaping string = `{
+    "values": [{
+		"name": "test1",
+		"dotted.key": "Hello"
+	},
+	{
+		"name": "test2",
+		"dotted.key": "there"
+	},
+	{
+		"name": "test3",
+		"~abc": "tilde"
+	},
+	{
+		"name": "test4",
+		"//abc": "slash"
+	},
+	{
+		"name": "test5",
+		"~/abc/~": "mixed"
+	}]
+}`
+
 func Test(t *testing.T) {
 	tests := []struct {
 		// Json Document
@@ -101,6 +124,11 @@ func Test(t *testing.T) {
 		// List of expected pointers
 		expected []string
 	}{
+		{
+			doc:      case1Simple,
+			jsonPath: "$.xyz",
+			expected: []string{},
+		},
 		{
 			doc:      case1Simple,
 			jsonPath: "$.a",
@@ -297,21 +325,57 @@ func Test(t *testing.T) {
 				"/virtual_hosts/1/routes/0/",
 			},
 		},
+		{
+			doc:      case4Escaping,
+			jsonPath: "$.values[?(@.name =~ 'test2')]",
+			path:     "dotted.key",
+			expected: []string{
+				"/values/1/dotted.key",
+			},
+		},
+		{
+			doc:      case4Escaping,
+			jsonPath: "$.values[?(@.name =~ 'test2')]['dotted.key']",
+			expected: []string{
+				"/values/1/dotted.key",
+			},
+		},
+		{
+			doc:      case4Escaping,
+			jsonPath: "$.values[?(@.name =~ 'test3')].~abc",
+			expected: []string{
+				"/values/2/~0abc",
+			},
+		},
+		{
+			doc:      case4Escaping,
+			jsonPath: "$.values[?(@.name =~ 'test4')]['//abc']",
+			expected: []string{
+				"/values/3/~1~1abc",
+			},
+		},
+		{
+			doc:      case4Escaping,
+			jsonPath: "$.values[?(@.name =~ 'test5')]['~/abc/~']",
+			expected: []string{
+				"/values/4/~0~1abc~1~0",
+			},
+		},
 	}
 
 	for i, test := range tests {
-
 		testCasePrefix := "TestCase " + strconv.Itoa(i+1)
-		pointers, err := ConvertPathToPointers([]byte(test.doc), test.jsonPath, test.path)
-		if err != nil {
-			t.Error(testCasePrefix + ": Error during conversion:\n" + err.Error())
-			continue
-		}
+		t.Run(testCasePrefix, func(t *testing.T) {
+			pointers, err := ConvertPathToPointers([]byte(test.doc), test.jsonPath, test.path)
+			if err != nil {
+				t.Error(testCasePrefix + ": Error during conversion:\n" + err.Error())
+			}
 
-		expectedAsString := asString(test.expected)
-		pointersAsString := asString(pointers)
+			expectedAsString := asString(test.expected)
+			pointersAsString := asString(pointers)
 
-		require.Equal(t, expectedAsString, pointersAsString)
+			require.Equal(t, expectedAsString, pointersAsString)
+		})
 	}
 }
 
@@ -347,15 +411,15 @@ func TestException(t *testing.T) {
 	}
 
 	for i, test := range tests {
-
 		testCasePrefix := "TestCase " + strconv.Itoa(i+1)
-		_, err := ConvertPathToPointers([]byte(test.doc), test.jsonPath, test.path)
-		if err == nil {
-			t.Error(testCasePrefix + ": Error expected, but no error found!")
-			continue
-		}
+		t.Run(testCasePrefix, func(t *testing.T) {
+			_, err := ConvertPathToPointers([]byte(test.doc), test.jsonPath, test.path)
+			if err == nil {
+				t.Error(testCasePrefix + ": Error expected, but no error found!")
+			}
 
-		require.ErrorContains(t, err, test.expected)
+			require.ErrorContains(t, err, test.expected)
+		})
 	}
 }
 

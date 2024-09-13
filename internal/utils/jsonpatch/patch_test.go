@@ -6,6 +6,7 @@
 package jsonpatch
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -40,14 +41,43 @@ const sourceDocument = `
 }
 `
 
+const sourceDotEscape = `
+   {
+		"otherLevel": {
+			"dot.key": "oldValue",
+			"~my": "file",
+			"/other/": "zip"
+		}
+   }
+`
+
+var expectedDotEscapeCase1 = `{
+	"otherLevel": {
+		"dot.key": "newValue",
+		"~my": "file",
+		"/other/": "zip"
+	}
+}`
+
+var expectedDotEscapeCase2 = `{
+	"otherLevel": {
+		"dot.key": "oldValue",
+		"~my": "folder",
+		"/other/": "tar"
+	}
+}`
+
 func TestApplyJSONPatches(t *testing.T) {
 	testCases := []struct {
+		doc            string
 		name           string
 		patchOperation []ir.JSONPatchOperation
 		errorExpected  bool
+		expectedDoc    *string
 	}{
 		{
 			name: "simple add with single patch",
+			doc:  sourceDocument,
 			patchOperation: []ir.JSONPatchOperation{
 				{
 					Op:   "add",
@@ -61,6 +91,7 @@ func TestApplyJSONPatches(t *testing.T) {
 		},
 		{
 			name: "two operations in a set",
+			doc:  sourceDocument,
 			patchOperation: []ir.JSONPatchOperation{
 				{
 					Op:   "add",
@@ -78,6 +109,7 @@ func TestApplyJSONPatches(t *testing.T) {
 		},
 		{
 			name: "invalid operation",
+			doc:  sourceDocument,
 			patchOperation: []ir.JSONPatchOperation{
 				{
 					Op:   "badbadbad",
@@ -91,6 +123,7 @@ func TestApplyJSONPatches(t *testing.T) {
 		},
 		{
 			name: "jsonpath affecting two places",
+			doc:  sourceDocument,
 			patchOperation: []ir.JSONPatchOperation{
 				{
 					Op:       "remove",
@@ -101,6 +134,7 @@ func TestApplyJSONPatches(t *testing.T) {
 		},
 		{
 			name: "invalid jsonpath",
+			doc:  sourceDocument,
 			patchOperation: []ir.JSONPatchOperation{
 				{
 					Op:       "remove",
@@ -109,16 +143,100 @@ func TestApplyJSONPatches(t *testing.T) {
 			},
 			errorExpected: true,
 		},
+		{
+			name: "dot escaped json path",
+			doc:  sourceDotEscape,
+			patchOperation: []ir.JSONPatchOperation{
+				{
+					Op:       "replace",
+					JSONPath: ptr.To("$.otherLevel['dot.key']"),
+					Value: &apiextensionsv1.JSON{
+						Raw: []byte("\"newValue\""),
+					},
+				},
+			},
+			expectedDoc:   &expectedDotEscapeCase1,
+			errorExpected: false,
+		},
+		{
+			name: "dot escaped json path combined with path",
+			doc:  sourceDotEscape,
+			patchOperation: []ir.JSONPatchOperation{
+				{
+					Op:       "replace",
+					Path:     ptr.To("dot.key"),
+					JSONPath: ptr.To("$.otherLevel"),
+					Value: &apiextensionsv1.JSON{
+						Raw: []byte("\"newValue\""),
+					},
+				},
+			},
+			expectedDoc:   &expectedDotEscapeCase1,
+			errorExpected: false,
+		},
+		{
+			name: "json pointer chars which need to be escaped",
+			doc:  sourceDotEscape,
+			patchOperation: []ir.JSONPatchOperation{
+				{
+					Op:       "replace",
+					JSONPath: ptr.To("$.otherLevel['~my']"),
+					Value: &apiextensionsv1.JSON{
+						Raw: []byte("\"folder\""),
+					},
+				},
+				{
+					Op:       "replace",
+					JSONPath: ptr.To("$.otherLevel['/other/']"),
+					Value: &apiextensionsv1.JSON{
+						Raw: []byte("\"tar\""),
+					},
+				},
+			},
+			expectedDoc:   &expectedDotEscapeCase2,
+			errorExpected: false,
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := ApplyJSONPatches([]byte(sourceDocument), tc.patchOperation...)
+			jDoc, err := ApplyJSONPatches([]byte(tc.doc), tc.patchOperation...)
 			if tc.errorExpected {
 				require.Error(t, err)
 			} else {
+				if tc.expectedDoc != nil {
+					resultData, err := jDoc.MarshalJSON()
+					if err != nil {
+						t.Error(err)
+					}
+
+					resultJson, err := formatJson(resultData)
+					if err != nil {
+						t.Error(err)
+					}
+
+					expectedJson, err := formatJson([]byte(*tc.expectedDoc))
+					if err != nil {
+						t.Error(err)
+					}
+
+					require.Equal(t, expectedJson, resultJson)
+				}
 				require.NoError(t, err)
 			}
 		})
 	}
+}
+
+func formatJson(s []byte) (string, error) {
+	var obj map[string]interface{}
+	err := json.Unmarshal(s, &obj)
+	if err != nil {
+		return "", err
+	}
+	buf, err := json.MarshalIndent(obj, "", "    ")
+	if err != nil {
+		return "", err
+	}
+	return string(buf), nil
 }
