@@ -1936,7 +1936,6 @@ _Appears in:_
 | Value | Description |
 | ----- | ----------- |
 | `ReplaceRegexMatch` | RegexHTTPPathModifier This type of modifier indicates that the portions of the path that match the specified<br /> regex would be substituted with the specified substitution value<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/type/matcher/v3/regex.proto#type-matcher-v3-regexmatchandsubstitute<br /> | 
-| `ReplaceTemplate` | TemplateHTTPPathModifier This type of modifier indicates that the portions of the path that match the specified<br />pattern would be rewritten according to the specified template<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/path/rewrite/uri_template/v3/uri_template_rewrite.proto#extension-envoy-path-rewrite-uri-template-uri-template-rewriter<br /> | 
 
 
 #### HTTPRouteFilter

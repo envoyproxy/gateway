@@ -32,7 +32,7 @@ type HTTPRouteFilter struct {
 // +union
 type HTTPRouteFilterSpec struct {
 	// +optional
-	URLRewrite HTTPURLRewriteFilter `json:"urlRewrite,omitempty"`
+	URLRewrite *HTTPURLRewriteFilter `json:"urlRewrite,omitempty"`
 }
 
 // HTTPURLRewriteFilter define rewrites of HTTP URL components such as path and host
@@ -51,11 +51,6 @@ const (
 	//  regex would be substituted with the specified substitution value
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/type/matcher/v3/regex.proto#type-matcher-v3-regexmatchandsubstitute
 	RegexHTTPPathModifier HTTPPathModifierType = "ReplaceRegexMatch"
-
-	// TemplateHTTPPathModifier This type of modifier indicates that the portions of the path that match the specified
-	// pattern would be rewritten according to the specified template
-	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/path/rewrite/uri_template/v3/uri_template_rewrite.proto#extension-envoy-path-rewrite-uri-template-uri-template-rewriter
-	TemplateHTTPPathModifier HTTPPathModifierType = "ReplaceTemplate"
 )
 
 type ReplaceRegexMatch struct {
