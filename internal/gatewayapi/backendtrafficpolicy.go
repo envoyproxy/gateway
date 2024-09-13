@@ -20,6 +20,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
@@ -33,7 +34,7 @@ const (
 func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv1a1.BackendTrafficPolicy,
 	gateways []*GatewayContext,
 	routes []RouteContext,
-	xdsIR XdsIRMap,
+	xdsIR resource.XdsIRMap,
 ) []*egv1a1.BackendTrafficPolicy {
 	res := []*egv1a1.BackendTrafficPolicy{}
 
@@ -281,7 +282,7 @@ func resolveBTPolicyRouteTargetRef(policy *egv1a1.BackendTrafficPolicy, target g
 	return route.RouteContext, nil
 }
 
-func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.BackendTrafficPolicy, route RouteContext, xdsIR XdsIRMap) error {
+func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.BackendTrafficPolicy, route RouteContext, xdsIR resource.XdsIRMap) error {
 	var (
 		rl        *ir.RateLimit
 		lb        *ir.LoadBalancer
@@ -418,7 +419,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 	return errs
 }
 
-func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.BackendTrafficPolicy, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, gateway *GatewayContext, xdsIR XdsIRMap) error {
+func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.BackendTrafficPolicy, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, gateway *GatewayContext, xdsIR resource.XdsIRMap) error {
 	var (
 		rl        *ir.RateLimit
 		lb        *ir.LoadBalancer

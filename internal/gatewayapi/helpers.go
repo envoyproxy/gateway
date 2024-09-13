@@ -24,6 +24,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
@@ -442,7 +443,7 @@ func irTLSCACertName(namespace, name string) string {
 	return fmt.Sprintf("%s/%s/%s", namespace, name, caCertKey)
 }
 
-func IsMergeGatewaysEnabled(resources *Resources) bool {
+func IsMergeGatewaysEnabled(resources *resource.Resources) bool {
 	return resources.EnvoyProxyForGatewayClass != nil && resources.EnvoyProxyForGatewayClass.Spec.MergeGateways != nil && *resources.EnvoyProxyForGatewayClass.Spec.MergeGateways
 }
 

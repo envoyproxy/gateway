@@ -35,6 +35,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
@@ -51,9 +52,9 @@ const (
 )
 
 type TranslationResult struct {
-	gatewayapi.Resources
-	XdsIR   gatewayapi.XdsIRMap    `json:"xdsIR,omitempty" yaml:"xdsIR,omitempty"`
-	InfraIR gatewayapi.InfraIRMap  `json:"infraIR,omitempty" yaml:"infraIR,omitempty"`
+	resource.Resources
+	XdsIR   resource.XdsIRMap      `json:"xdsIR,omitempty" yaml:"xdsIR,omitempty"`
+	InfraIR resource.InfraIRMap    `json:"infraIR,omitempty" yaml:"infraIR,omitempty"`
 	Xds     map[string]interface{} `json:"xds,omitempty"`
 }
 
@@ -276,7 +277,7 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 	return fmt.Errorf("unable to find translate from input type %s to output type %s", inType, outTypes)
 }
 
-func translateGatewayAPIToIR(resources *gatewayapi.Resources) (*gatewayapi.TranslateResult, error) {
+func translateGatewayAPIToIR(resources *resource.Resources) (*gatewayapi.TranslateResult, error) {
 	if resources.GatewayClass == nil {
 		return nil, fmt.Errorf("the GatewayClass resource is required")
 	}
@@ -303,9 +304,9 @@ func translateGatewayAPIToIR(resources *gatewayapi.Resources) (*gatewayapi.Trans
 	return result, nil
 }
 
-func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) (gatewayapi.Resources, error) {
+func translateGatewayAPIToGatewayAPI(resources *resource.Resources) (resource.Resources, error) {
 	if resources.GatewayClass == nil {
-		return gatewayapi.Resources{}, fmt.Errorf("the GatewayClass resource is required")
+		return resource.Resources{}, fmt.Errorf("the GatewayClass resource is required")
 	}
 
 	// Translate from Gateway API to Xds IR
@@ -341,7 +342,7 @@ func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) (gatewayap
 	return gRes.Resources, nil
 }
 
-func translateGatewayAPIToXds(namespace, dnsDomain string, resourceType string, resources *gatewayapi.Resources) (map[string]any, error) {
+func translateGatewayAPIToXds(namespace, dnsDomain string, resourceType string, resources *resource.Resources) (map[string]any, error) {
 	if resources.GatewayClass == nil {
 		return nil, fmt.Errorf("the GatewayClass resource is required")
 	}
@@ -437,7 +438,7 @@ func printOutput(w io.Writer, result TranslationResult, output string) error {
 }
 
 // constructConfigDump constructs configDump from ResourceVersionTable and BootstrapConfig
-func constructConfigDump(resources *gatewayapi.Resources, tCtx *xds_types.ResourceVersionTable) (*adminv3.ConfigDump, error) {
+func constructConfigDump(resources *resource.Resources, tCtx *xds_types.ResourceVersionTable) (*adminv3.ConfigDump, error) {
 	globalConfigs := &adminv3.ConfigDump{}
 	bootstrapConfigs := &adminv3.BootstrapConfigDump{}
 	proxyBootstrap := &bootstrapv3.Bootstrap{}
@@ -641,8 +642,8 @@ func addMissingServices(requiredServices map[string]*corev1.Service, obj interfa
 }
 
 // kubernetesYAMLToResources converts a Kubernetes YAML string into GatewayAPI Resources
-func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayapi.Resources, error) {
-	resources := gatewayapi.NewResources()
+func kubernetesYAMLToResources(str string, addMissingResources bool) (*resource.Resources, error) {
+	resources := resource.NewResources()
 	var useDefaultNamespace bool
 	providedNamespaceMap := sets.New[string]()
 	requiredNamespaceMap := sets.New[string]()
@@ -946,7 +947,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 	return resources, nil
 }
 
-func addDefaultEnvoyProxy(resources *gatewayapi.Resources) error {
+func addDefaultEnvoyProxy(resources *resource.Resources) error {
 	if resources.GatewayClass == nil {
 		return fmt.Errorf("the GatewayClass resource is required")
 	}

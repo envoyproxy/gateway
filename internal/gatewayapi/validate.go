@@ -20,11 +20,12 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 )
 
 func (t *Translator) validateBackendRef(backendRefContext BackendRefContext, parentRef *RouteParentContext, route RouteContext,
-	resources *Resources, backendNamespace string, routeKind gwapiv1.Kind,
+	resources *resource.Resources, backendNamespace string, routeKind gwapiv1.Kind,
 ) bool {
 	backendRef := GetBackendRef(backendRefContext)
 
@@ -144,7 +145,7 @@ func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, par
 }
 
 func (t *Translator) validateBackendNamespace(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, route RouteContext,
-	resources *Resources, routeKind gwapiv1.Kind,
+	resources *resource.Resources, routeKind gwapiv1.Kind,
 ) bool {
 	if backendRef.Namespace != nil && string(*backendRef.Namespace) != "" && string(*backendRef.Namespace) != route.GetNamespace() {
 		if !t.validateCrossNamespaceRef(
@@ -196,7 +197,7 @@ func (t *Translator) validateBackendPort(backendRef *gwapiv1a2.BackendRef, paren
 	return true
 }
 
-func validateBackendService(backendRef gwapiv1a2.BackendObjectReference, resources *Resources,
+func validateBackendService(backendRef gwapiv1a2.BackendObjectReference, resources *resource.Resources,
 	serviceNamespace string, protocol corev1.Protocol,
 ) error {
 	service := resources.GetService(serviceNamespace, string(backendRef.Name))
@@ -223,7 +224,7 @@ func validateBackendService(backendRef gwapiv1a2.BackendObjectReference, resourc
 	return nil
 }
 
-func (t *Translator) validateBackendServiceImport(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, resources *Resources,
+func (t *Translator) validateBackendServiceImport(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, resources *resource.Resources,
 	serviceImportNamespace string, route RouteContext, protocol corev1.Protocol,
 ) bool {
 	serviceImport := resources.GetServiceImport(serviceImportNamespace, string(backendRef.Name))
@@ -268,7 +269,7 @@ func (t *Translator) validateBackendServiceImport(backendRef *gwapiv1a2.BackendR
 	return true
 }
 
-func (t *Translator) validateBackendRefBackend(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, resources *Resources,
+func (t *Translator) validateBackendRefBackend(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, resources *resource.Resources,
 	backendNamespace string, route RouteContext, kind gwapiv1.Kind,
 ) bool {
 	// TODO: support additional route kinds
@@ -428,7 +429,7 @@ func (t *Translator) validateAllowedNamespaces(listener *ListenerContext) {
 	}
 }
 
-func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerContext, resources *Resources) []*corev1.Secret {
+func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerContext, resources *resource.Resources) []*corev1.Secret {
 	if len(listener.TLS.CertificateRefs) == 0 {
 		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
 			listener.listenerStatusIdx,
@@ -547,7 +548,7 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerCon
 	return secrets
 }
 
-func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resources *Resources) {
+func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resources *resource.Resources) {
 	switch listener.Protocol {
 	case gwapiv1.HTTPProtocolType, gwapiv1.UDPProtocolType, gwapiv1.TCPProtocolType:
 		if listener.TLS != nil {
@@ -914,7 +915,7 @@ func (t *Translator) validateSecretRef(
 	allowCrossNamespace bool,
 	from crossNamespaceFrom,
 	secretObjRef gwapiv1b1.SecretObjectReference,
-	resources *Resources,
+	resources *resource.Resources,
 ) (*corev1.Secret, error) {
 	if err := t.validateSecretObjectRef(allowCrossNamespace, from, secretObjRef, resources); err != nil {
 		return nil, err
@@ -938,7 +939,7 @@ func (t *Translator) validateConfigMapRef(
 	allowCrossNamespace bool,
 	from crossNamespaceFrom,
 	secretObjRef gwapiv1b1.SecretObjectReference,
-	resources *Resources,
+	resources *resource.Resources,
 ) (*corev1.ConfigMap, error) {
 	if err := t.validateSecretObjectRef(allowCrossNamespace, from, secretObjRef, resources); err != nil {
 		return nil, err
@@ -962,7 +963,7 @@ func (t *Translator) validateSecretObjectRef(
 	allowCrossNamespace bool,
 	from crossNamespaceFrom,
 	secretRef gwapiv1b1.SecretObjectReference,
-	resources *Resources,
+	resources *resource.Resources,
 ) error {
 	var kind string
 	if secretRef.Group != nil && string(*secretRef.Group) != "" {
@@ -1024,7 +1025,7 @@ func (t *Translator) validateExtServiceBackendReference(
 	backendRef *gwapiv1.BackendObjectReference,
 	ownerNamespace string,
 	policyKind string,
-	resources *Resources,
+	resources *resource.Resources,
 ) error {
 	// These are sanity checks, they should never happen because the API server
 	// should have caught them

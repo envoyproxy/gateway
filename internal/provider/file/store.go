@@ -9,7 +9,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/go-logr/logr"
 
-	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/message"
 )
 
@@ -46,7 +46,7 @@ func (r *resourcesStore) HandleEvent(event fsnotify.Event, files, dirs []string)
 
 // LoadAndStore loads and stores all resources from files and directories.
 func (r *resourcesStore) LoadAndStore(files, dirs []string) error {
-	rs, err := loadFromFilesAndDirs(files, dirs)
+	resources, err := loadFromFilesAndDirs(files, dirs)
 	if err != nil {
 		return err
 	}
@@ -61,10 +61,10 @@ func (r *resourcesStore) LoadAndStore(files, dirs []string) error {
 
 	// We cannot make sure by the time the Write event was triggered, whether the GatewayClass exist,
 	// so here we just simply Store the first gatewayapi.Resources that has GatewayClass.
-	gwcResources := make(gatewayapi.ControllerResources, 0, 1)
-	for _, resource := range rs {
-		if resource.GatewayClass != nil {
-			gwcResources = append(gwcResources, resource)
+	gwcResources := make(resource.ControllerResources, 0, 1)
+	for _, res := range resources {
+		if res.GatewayClass != nil {
+			gwcResources = append(gwcResources, res)
 		}
 	}
 	if len(gwcResources) == 0 {

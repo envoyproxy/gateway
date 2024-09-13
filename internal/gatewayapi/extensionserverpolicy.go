@@ -17,6 +17,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
@@ -24,7 +25,7 @@ import (
 
 func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unstructured,
 	gateways []*GatewayContext,
-	xdsIR XdsIRMap,
+	xdsIR resource.XdsIRMap,
 ) ([]unstructured.Unstructured, error) {
 	res := []unstructured.Unstructured{}
 
@@ -137,7 +138,7 @@ func (t *Translator) translateExtServerPolicyForGateway(
 	policy *unstructured.Unstructured,
 	gateway *GatewayContext,
 	target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
-	xdsIR XdsIRMap,
+	xdsIR resource.XdsIRMap,
 ) bool {
 	irKey := t.getIRKey(gateway.Gateway)
 	gwIR := xdsIR[irKey]

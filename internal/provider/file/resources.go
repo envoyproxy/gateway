@@ -24,11 +24,12 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
 
 // loadFromFilesAndDirs loads resources from specific files and directories.
-func loadFromFilesAndDirs(files, dirs []string) ([]*gatewayapi.Resources, error) {
-	var rs []*gatewayapi.Resources
+func loadFromFilesAndDirs(files, dirs []string) ([]*resource.Resources, error) {
+	var rs []*resource.Resources
 
 	for _, file := range files {
 		r, err := loadFromFile(file)
@@ -50,7 +51,7 @@ func loadFromFilesAndDirs(files, dirs []string) ([]*gatewayapi.Resources, error)
 }
 
 // loadFromFile loads resources from a specific file.
-func loadFromFile(path string) (*gatewayapi.Resources, error) {
+func loadFromFile(path string) (*resource.Resources, error) {
 	if _, err := os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
 			return nil, fmt.Errorf("file %s is not exist", path)
@@ -67,13 +68,13 @@ func loadFromFile(path string) (*gatewayapi.Resources, error) {
 }
 
 // loadFromDir loads resources from all the files under a specific directory excluding subdirectories.
-func loadFromDir(path string) ([]*gatewayapi.Resources, error) {
+func loadFromDir(path string) ([]*resource.Resources, error) {
 	entries, err := os.ReadDir(path)
 	if err != nil {
 		return nil, err
 	}
 
-	var rs []*gatewayapi.Resources
+	var rs []*resource.Resources
 	for _, entry := range entries {
 		// Ignoring subdirectories and all hidden files and directories.
 		if entry.IsDir() || strings.HasPrefix(entry.Name(), ".") {
@@ -94,13 +95,13 @@ func loadFromDir(path string) ([]*gatewayapi.Resources, error) {
 // TODO(sh2): This function is copied and updated from internal/cmd/egctl/translate.go.
 // This function should be able to process arbitrary number of resources, so we
 // need to come up with a way to extend the GatewayClass and EnvoyProxy field to array
-// instead of single variable in gatewayapi.Resources structure.
+// instead of single variable in resource.Resources structure.
 //
 // - This issue is tracked by https://github.com/envoyproxy/gateway/issues/3207
 //
 // convertKubernetesYAMLToResources converts a Kubernetes YAML string into GatewayAPI Resources.
-func convertKubernetesYAMLToResources(str string) (*gatewayapi.Resources, error) {
-	resources := gatewayapi.NewResources()
+func convertKubernetesYAMLToResources(str string) (*resource.Resources, error) {
+	resources := resource.NewResources()
 	var useDefaultNamespace bool
 	providedNamespaceMap := sets.New[string]()
 	requiredNamespaceMap := sets.New[string]()

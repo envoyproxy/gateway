@@ -21,6 +21,7 @@ import (
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/regex"
@@ -42,14 +43,14 @@ var (
 )
 
 type RoutesTranslator interface {
-	ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*HTTPRouteContext
-	ProcessGRPCRoutes(grpcRoutes []*gwapiv1.GRPCRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*GRPCRouteContext
-	ProcessTLSRoutes(tlsRoutes []*gwapiv1a2.TLSRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*TLSRouteContext
-	ProcessTCPRoutes(tcpRoutes []*gwapiv1a2.TCPRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*TCPRouteContext
-	ProcessUDPRoutes(udpRoutes []*gwapiv1a2.UDPRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*UDPRouteContext
+	ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*HTTPRouteContext
+	ProcessGRPCRoutes(grpcRoutes []*gwapiv1.GRPCRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*GRPCRouteContext
+	ProcessTLSRoutes(tlsRoutes []*gwapiv1a2.TLSRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TLSRouteContext
+	ProcessTCPRoutes(tcpRoutes []*gwapiv1a2.TCPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TCPRouteContext
+	ProcessUDPRoutes(udpRoutes []*gwapiv1a2.UDPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*UDPRouteContext
 }
 
-func (t *Translator) ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*HTTPRouteContext {
+func (t *Translator) ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*HTTPRouteContext {
 	var relevantHTTPRoutes []*HTTPRouteContext
 
 	for _, h := range httpRoutes {
@@ -77,7 +78,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways
 	return relevantHTTPRoutes
 }
 
-func (t *Translator) ProcessGRPCRoutes(grpcRoutes []*gwapiv1.GRPCRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*GRPCRouteContext {
+func (t *Translator) ProcessGRPCRoutes(grpcRoutes []*gwapiv1.GRPCRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*GRPCRouteContext {
 	var relevantGRPCRoutes []*GRPCRouteContext
 
 	for _, g := range grpcRoutes {
@@ -105,7 +106,7 @@ func (t *Translator) ProcessGRPCRoutes(grpcRoutes []*gwapiv1.GRPCRoute, gateways
 	return relevantGRPCRoutes
 }
 
-func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, resources *Resources, xdsIR XdsIRMap) {
+func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, resources *resource.Resources, xdsIR resource.XdsIRMap) {
 	for _, parentRef := range httpRoute.ParentRefs {
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
@@ -172,7 +173,7 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 	}
 }
 
-func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRef *RouteParentContext, resources *Resources) ([]*ir.HTTPRoute, error) {
+func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRef *RouteParentContext, resources *resource.Resources) ([]*ir.HTTPRoute, error) {
 	var routeRoutes []*ir.HTTPRoute
 	var envoyProxy *egv1a1.EnvoyProxy
 
@@ -462,7 +463,7 @@ func applyHTTPFiltersContextToIRRoute(httpFiltersContext *HTTPFiltersContext, ir
 	}
 }
 
-func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, resources *Resources, xdsIR XdsIRMap) {
+func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, resources *resource.Resources, xdsIR resource.XdsIRMap) {
 	for _, parentRef := range grpcRoute.ParentRefs {
 
 		// Need to compute Route rules within the parentRef loop because
@@ -528,7 +529,7 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 	}
 }
 
-func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRef *RouteParentContext, resources *Resources) ([]*ir.HTTPRoute, error) {
+func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRef *RouteParentContext, resources *resource.Resources) ([]*ir.HTTPRoute, error) {
 	var routeRoutes []*ir.HTTPRoute
 
 	// compute matches, filters, backends
@@ -686,7 +687,7 @@ func (t *Translator) processGRPCRouteMethodRegularExpression(method *gwapiv1.GRP
 	}
 }
 
-func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, routeRoutes []*ir.HTTPRoute, parentRef *RouteParentContext, xdsIR XdsIRMap) bool {
+func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, routeRoutes []*ir.HTTPRoute, parentRef *RouteParentContext, xdsIR resource.XdsIRMap) bool {
 	var hasHostnameIntersection bool
 
 	for _, listener := range parentRef.listeners {
@@ -785,7 +786,7 @@ func filterEGPrefix(in map[string]string) map[string]string {
 	return out
 }
 
-func (t *Translator) ProcessTLSRoutes(tlsRoutes []*gwapiv1a2.TLSRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*TLSRouteContext {
+func (t *Translator) ProcessTLSRoutes(tlsRoutes []*gwapiv1a2.TLSRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TLSRouteContext {
 	var relevantTLSRoutes []*TLSRouteContext
 
 	for _, tls := range tlsRoutes {
@@ -813,7 +814,7 @@ func (t *Translator) ProcessTLSRoutes(tlsRoutes []*gwapiv1a2.TLSRoute, gateways 
 	return relevantTLSRoutes
 }
 
-func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resources *Resources, xdsIR XdsIRMap) {
+func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resources *resource.Resources, xdsIR resource.XdsIRMap) {
 	for _, parentRef := range tlsRoute.ParentRefs {
 
 		// Need to compute Route rules within the parentRef loop because
@@ -912,8 +913,8 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 	}
 }
 
-func (t *Translator) ProcessUDPRoutes(udpRoutes []*gwapiv1a2.UDPRoute, gateways []*GatewayContext, resources *Resources,
-	xdsIR XdsIRMap,
+func (t *Translator) ProcessUDPRoutes(udpRoutes []*gwapiv1a2.UDPRoute, gateways []*GatewayContext, resources *resource.Resources,
+	xdsIR resource.XdsIRMap,
 ) []*UDPRouteContext {
 	var relevantUDPRoutes []*UDPRouteContext
 
@@ -942,7 +943,7 @@ func (t *Translator) ProcessUDPRoutes(udpRoutes []*gwapiv1a2.UDPRoute, gateways 
 	return relevantUDPRoutes
 }
 
-func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resources *Resources, xdsIR XdsIRMap) {
+func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resources *resource.Resources, xdsIR resource.XdsIRMap) {
 	for _, parentRef := range udpRoute.ParentRefs {
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
@@ -1045,8 +1046,8 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 	}
 }
 
-func (t *Translator) ProcessTCPRoutes(tcpRoutes []*gwapiv1a2.TCPRoute, gateways []*GatewayContext, resources *Resources,
-	xdsIR XdsIRMap,
+func (t *Translator) ProcessTCPRoutes(tcpRoutes []*gwapiv1a2.TCPRoute, gateways []*GatewayContext, resources *resource.Resources,
+	xdsIR resource.XdsIRMap,
 ) []*TCPRouteContext {
 	var relevantTCPRoutes []*TCPRouteContext
 
@@ -1075,7 +1076,7 @@ func (t *Translator) ProcessTCPRoutes(tcpRoutes []*gwapiv1a2.TCPRoute, gateways 
 	return relevantTCPRoutes
 }
 
-func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resources *Resources, xdsIR XdsIRMap) {
+func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resources *resource.Resources, xdsIR resource.XdsIRMap) {
 	for _, parentRef := range tcpRoute.ParentRefs {
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
@@ -1194,7 +1195,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 // returns the weight for the backend so that 500 error responses can be returned for invalid backends in
 // the same proportion as the backend would have otherwise received
 func (t *Translator) processDestination(backendRefContext BackendRefContext,
-	parentRef *RouteParentContext, route RouteContext, resources *Resources,
+	parentRef *RouteParentContext, route RouteContext, resources *resource.Resources,
 ) (ds *ir.DestinationSetting) {
 	routeType := GetRouteType(route)
 	weight := uint32(1)
@@ -1328,7 +1329,7 @@ func (t *Translator) processServiceDestinationSetting(
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
 	protocol ir.AppProtocol,
-	resources *Resources,
+	resources *resource.Resources,
 	envoyProxy *egv1a1.EnvoyProxy,
 ) *ir.DestinationSetting {
 	var (
@@ -1390,7 +1391,7 @@ func getBackendFilters(routeType gwapiv1.Kind, backendRefContext BackendRefConte
 	return nil
 }
 
-func (t *Translator) processDestinationFilters(routeType gwapiv1.Kind, backendRefContext BackendRefContext, parentRef *RouteParentContext, route RouteContext, resources *Resources) *ir.DestinationFilters {
+func (t *Translator) processDestinationFilters(routeType gwapiv1.Kind, backendRefContext BackendRefContext, parentRef *RouteParentContext, route RouteContext, resources *resource.Resources) *ir.DestinationFilters {
 	backendFilters := getBackendFilters(routeType, backendRefContext)
 	if backendFilters == nil {
 		return nil
@@ -1445,7 +1446,7 @@ func inspectAppProtocolByRouteKind(kind gwapiv1.Kind) ir.AppProtocol {
 // processAllowedListenersForParentRefs finds out if the route attaches to one of our
 // Gateways' listeners, and if so, gets the list of listeners that allow it to
 // attach for each parentRef.
-func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteContext, gateways []*GatewayContext, resources *Resources) bool {
+func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteContext, gateways []*GatewayContext, resources *resource.Resources) bool {
 	var relevantRoute bool
 	ns := gwapiv1.Namespace(routeContext.GetNamespace())
 	for _, parentRef := range GetParentReferences(routeContext) {
@@ -1615,7 +1616,7 @@ func getTargetBackendReference(backendRef gwapiv1a2.BackendObjectReference) gwap
 	return ref
 }
 
-func (t *Translator) processBackendDestinationSetting(backendRef gwapiv1.BackendObjectReference, backendNamespace string, resources *Resources) *ir.DestinationSetting {
+func (t *Translator) processBackendDestinationSetting(backendRef gwapiv1.BackendObjectReference, backendNamespace string, resources *resource.Resources) *ir.DestinationSetting {
 	var (
 		dstEndpoints []*ir.DestinationEndpoint
 		dstAddrType  *ir.DestinationAddressType

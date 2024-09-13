@@ -25,6 +25,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
@@ -382,7 +383,7 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			}, defaultWait, defaultTick)
 
 			// Process the test case httproutes.
-			resourceTree := gatewayapi.NewResources()
+			resourceTree := resource.NewResources()
 			resourceMap := newResourceMapping()
 			err := r.processHTTPRoutes(ctx, gwNsName, resourceMap, resourceTree)
 			if tc.expected {
@@ -524,7 +525,7 @@ func TestProcessGRPCRoutes(t *testing.T) {
 				Build()
 
 			// Process the test case httproutes.
-			resourceTree := gatewayapi.NewResources()
+			resourceTree := resource.NewResources()
 			resourceMap := newResourceMapping()
 			err := r.processGRPCRoutes(ctx, gwNsName, resourceMap, resourceTree)
 			if tc.expected {

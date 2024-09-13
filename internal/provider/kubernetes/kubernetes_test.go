@@ -35,6 +35,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes/test"
 	"github.com/envoyproxy/gateway/internal/utils"
@@ -1600,7 +1601,7 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 	}, defaultWait, defaultTick)
 }
 
-func waitUntilGatewayClassResourcesAreReady(resources *message.ProviderResources, gatewayClassName string) (*gatewayapi.Resources, bool) {
+func waitUntilGatewayClassResourcesAreReady(resources *message.ProviderResources, gatewayClassName string) (*resource.Resources, bool) {
 	res := resources.GetResourcesByGatewayClass(gatewayClassName)
 	if res == nil {
 		return nil, false
