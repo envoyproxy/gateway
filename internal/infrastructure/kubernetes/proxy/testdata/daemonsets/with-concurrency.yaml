@@ -40,6 +40,7 @@ spec:
         - --config-yaml test bootstrap config
         - --log-level warn
         - --cpuset-threads
+        - --drain-strategy immediate
         - --concurrency 4
         command:
         - envoy

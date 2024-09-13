@@ -65,6 +65,5 @@
         statPrefix: http
         useRemoteAddress: true
     name: default/gateway-1/http
-  drainType: MODIFY_ONLY
   name: default/gateway-1/http
   perConnectionBufferLimitBytes: 32768
