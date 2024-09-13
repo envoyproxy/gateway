@@ -15,7 +15,7 @@ const (
 )
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:categories=envoy-gateway,shortName=hf
+// +kubebuilder:resource:categories=envoy-gateway,shortName=hrf
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // HTTPRouteFilter is a custom Envoy Gateway HTTPRouteFilter which provides extended
