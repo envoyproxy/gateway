@@ -754,7 +754,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 		irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
 
 		if irListener != nil {
-			if GetRouteType(route) == KindGRPCRoute {
+			if GetRouteType(route) == resource.KindGRPCRoute {
 				irListener.IsHTTP2 = true
 			}
 			irListener.Routes = append(irListener.Routes, perHostRoutes...)
@@ -1226,8 +1226,8 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 		addrType  *ir.DestinationAddressType
 	)
 	protocol := inspectAppProtocolByRouteKind(routeType)
-	switch KindDerefOr(backendRef.Kind, KindService) {
-	case KindServiceImport:
+	switch KindDerefOr(backendRef.Kind, resource.KindService) {
+	case resource.KindServiceImport:
 		serviceImport := resources.GetServiceImport(backendNamespace, string(backendRef.Name))
 		var servicePort mcsapiv1a1.ServicePort
 		for _, port := range serviceImport.Spec.Ports {
@@ -1238,7 +1238,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 		}
 
 		if !t.IsEnvoyServiceRouting(envoyProxy) {
-			endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, KindService))
+			endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, resource.KindService))
 			endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
 		} else {
 			backendIps := resources.GetServiceImport(backendNamespace, string(backendRef.Name)).Spec.IPs
@@ -1256,7 +1256,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 			Endpoints:   endpoints,
 			AddressType: addrType,
 		}
-	case KindService:
+	case resource.KindService:
 		ds = t.processServiceDestinationSetting(backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
 
 		ds.TLS = t.applyBackendTLSSetting(
@@ -1311,12 +1311,12 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 
 func validateDestinationSettings(destinationSettings *ir.DestinationSetting, endpointRoutingDisabled bool, kind *gwapiv1.Kind) error {
 	// TODO: support mixed endpointslice address type for the same backendRef
-	switch KindDerefOr(kind, KindService) {
+	switch KindDerefOr(kind, resource.KindService) {
 	case egv1a1.KindBackend:
 		if destinationSettings.AddressType != nil && *destinationSettings.AddressType == ir.MIXED {
 			return fmt.Errorf("mixed FQDN and IP or Unix address type for the same backendRef is not supported")
 		}
-	case KindService, KindServiceImport:
+	case resource.KindService, resource.KindServiceImport:
 		if !endpointRoutingDisabled && destinationSettings.AddressType != nil && *destinationSettings.AddressType == ir.MIXED {
 			return fmt.Errorf("mixed endpointslice address type for the same backendRef is not supported")
 		}
@@ -1358,7 +1358,7 @@ func (t *Translator) processServiceDestinationSetting(
 
 	// Route to endpoints by default
 	if !t.IsEnvoyServiceRouting(envoyProxy) {
-		endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, KindService))
+		endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, resource.KindService))
 		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
 	} else {
 		// Fall back to Service ClusterIP routing
@@ -1378,11 +1378,11 @@ func (t *Translator) processServiceDestinationSetting(
 func getBackendFilters(routeType gwapiv1.Kind, backendRefContext BackendRefContext) (backendFilters any) {
 	filters := GetFilters(backendRefContext)
 	switch routeType {
-	case KindHTTPRoute:
+	case resource.KindHTTPRoute:
 		if len(filters.([]gwapiv1.HTTPRouteFilter)) > 0 {
 			return filters.([]gwapiv1.HTTPRouteFilter)
 		}
-	case KindGRPCRoute:
+	case resource.KindGRPCRoute:
 		if len(filters.([]gwapiv1.GRPCRouteFilter)) > 0 {
 			return filters.([]gwapiv1.GRPCRouteFilter)
 		}
@@ -1429,15 +1429,15 @@ func applyHTTPFiltersContextToDestinationFilters(httpFiltersContext *HTTPFilters
 
 func inspectAppProtocolByRouteKind(kind gwapiv1.Kind) ir.AppProtocol {
 	switch kind {
-	case KindUDPRoute:
+	case resource.KindUDPRoute:
 		return ir.UDP
-	case KindHTTPRoute:
+	case resource.KindHTTPRoute:
 		return ir.HTTP
-	case KindTCPRoute:
+	case resource.KindTCPRoute:
 		return ir.TCP
-	case KindGRPCRoute:
+	case resource.KindGRPCRoute:
 		return ir.GRPC
-	case KindTLSRoute:
+	case resource.KindTLSRoute:
 		return ir.HTTPS
 	}
 	return ir.TCP

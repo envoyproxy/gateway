@@ -22,26 +22,6 @@ import (
 )
 
 const (
-	KindConfigMap            = "ConfigMap"
-	KindClientTrafficPolicy  = "ClientTrafficPolicy"
-	KindBackendTrafficPolicy = "BackendTrafficPolicy"
-	KindBackendTLSPolicy     = "BackendTLSPolicy"
-	KindEnvoyPatchPolicy     = "EnvoyPatchPolicy"
-	KindEnvoyExtensionPolicy = "EnvoyExtensionPolicy"
-	KindSecurityPolicy       = "SecurityPolicy"
-	KindEnvoyProxy           = "EnvoyProxy"
-	KindGateway              = "Gateway"
-	KindGatewayClass         = "GatewayClass"
-	KindGRPCRoute            = "GRPCRoute"
-	KindHTTPRoute            = "HTTPRoute"
-	KindNamespace            = "Namespace"
-	KindTLSRoute             = "TLSRoute"
-	KindTCPRoute             = "TCPRoute"
-	KindUDPRoute             = "UDPRoute"
-	KindService              = "Service"
-	KindServiceImport        = "ServiceImport"
-	KindSecret               = "Secret"
-
 	GroupMultiClusterService = "multicluster.x-k8s.io"
 	// OwningGatewayNamespaceLabel is the owner reference label used for managed infra.
 	// The value should be the namespace of the accepted Envoy Gateway.

@@ -211,7 +211,7 @@ func GetRouteType(route RouteContext) gwapiv1.Kind {
 func GetHostnames(route RouteContext) []string {
 	rv := reflect.ValueOf(route).Elem()
 	kind := rv.FieldByName("Kind").String()
-	if kind == KindTCPRoute || kind == KindUDPRoute {
+	if kind == resource.KindTCPRoute || kind == resource.KindUDPRoute {
 		return nil
 	}
 

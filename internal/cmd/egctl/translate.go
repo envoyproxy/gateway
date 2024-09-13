@@ -595,7 +595,7 @@ func addMissingServices(requiredServices map[string]*corev1.Service, obj interfa
 	}
 
 	for _, ref := range refs {
-		if ref.Kind == nil || *ref.Kind != gatewayapi.KindService {
+		if ref.Kind == nil || *ref.Kind != resource.KindService {
 			continue
 		}
 
@@ -686,7 +686,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*resource.
 		spec := kobjVal.FieldByName("Spec")
 
 		switch gvk.Kind {
-		case gatewayapi.KindEnvoyProxy:
+		case resource.KindEnvoyProxy:
 			typedSpec := spec.Interface()
 			envoyProxy := &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
@@ -696,7 +696,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*resource.
 				Spec: typedSpec.(egv1a1.EnvoyProxySpec),
 			}
 			resources.EnvoyProxyForGatewayClass = envoyProxy
-		case gatewayapi.KindGatewayClass:
+		case resource.KindGatewayClass:
 			typedSpec := spec.Interface()
 			gatewayClass := &gwapiv1.GatewayClass{
 				ObjectMeta: metav1.ObjectMeta{
@@ -710,7 +710,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*resource.
 				gatewayClass.Spec.ControllerName = egv1a1.GatewayControllerName
 			}
 			resources.GatewayClass = gatewayClass
-		case gatewayapi.KindGateway:
+		case resource.KindGateway:
 			typedSpec := spec.Interface()
 			gateway := &gwapiv1.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
@@ -720,11 +720,11 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*resource.
 				Spec: typedSpec.(gwapiv1.GatewaySpec),
 			}
 			resources.Gateways = append(resources.Gateways, gateway)
-		case gatewayapi.KindTCPRoute:
+		case resource.KindTCPRoute:
 			typedSpec := spec.Interface()
 			tcpRoute := &gwapiv1a2.TCPRoute{
 				TypeMeta: metav1.TypeMeta{
-					Kind: gatewayapi.KindTCPRoute,
+					Kind: resource.KindTCPRoute,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -733,11 +733,11 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*resource.
 				Spec: typedSpec.(gwapiv1a2.TCPRouteSpec),
 			}
 			resources.TCPRoutes = append(resources.TCPRoutes, tcpRoute)
-		case gatewayapi.KindUDPRoute:
+		case resource.KindUDPRoute:
 			typedSpec := spec.Interface()
 			udpRoute := &gwapiv1a2.UDPRoute{
 				TypeMeta: metav1.TypeMeta{
-					Kind: gatewayapi.KindUDPRoute,
+					Kind: resource.KindUDPRoute,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -746,11 +746,11 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*resource.
 				Spec: typedSpec.(gwapiv1a2.UDPRouteSpec),
 			}
 			resources.UDPRoutes = append(resources.UDPRoutes, udpRoute)
-		case gatewayapi.KindTLSRoute:
+		case resource.KindTLSRoute:
 			typedSpec := spec.Interface()
 			tlsRoute := &gwapiv1a2.TLSRoute{
 				TypeMeta: metav1.TypeMeta{
-					Kind: gatewayapi.KindTLSRoute,
+					Kind: resource.KindTLSRoute,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -759,11 +759,11 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*resource.
 				Spec: typedSpec.(gwapiv1a2.TLSRouteSpec),
 			}
 			resources.TLSRoutes = append(resources.TLSRoutes, tlsRoute)
-		case gatewayapi.KindHTTPRoute:
+		case resource.KindHTTPRoute:
 			typedSpec := spec.Interface()
 			httpRoute := &gwapiv1.HTTPRoute{
 				TypeMeta: metav1.TypeMeta{
-					Kind: gatewayapi.KindHTTPRoute,
+					Kind: resource.KindHTTPRoute,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -772,11 +772,11 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*resource.
 				Spec: typedSpec.(gwapiv1.HTTPRouteSpec),
 			}
 			resources.HTTPRoutes = append(resources.HTTPRoutes, httpRoute)
-		case gatewayapi.KindGRPCRoute:
+		case resource.KindGRPCRoute:
 			typedSpec := spec.Interface()
 			grpcRoute := &gwapiv1.GRPCRoute{
 				TypeMeta: metav1.TypeMeta{
-					Kind: gatewayapi.KindGRPCRoute,
+					Kind: resource.KindGRPCRoute,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -785,7 +785,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*resource.
 				Spec: typedSpec.(gwapiv1.GRPCRouteSpec),
 			}
 			resources.GRPCRoutes = append(resources.GRPCRoutes, grpcRoute)
-		case gatewayapi.KindNamespace:
+		case resource.KindNamespace:
 			namespace := &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: name,
@@ -793,7 +793,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*resource.
 			}
 			resources.Namespaces = append(resources.Namespaces, namespace)
 			providedNamespaceMap.Insert(name)
-		case gatewayapi.KindService:
+		case resource.KindService:
 			typedSpec := spec.Interface()
 			service := &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
@@ -973,7 +973,7 @@ func addDefaultEnvoyProxy(resources *resource.Resources) error {
 	ns := gwapiv1.Namespace(namespace)
 	resources.GatewayClass.Spec.ParametersRef = &gwapiv1.ParametersReference{
 		Group:     gwapiv1.Group(egv1a1.GroupVersion.Group),
-		Kind:      gatewayapi.KindEnvoyProxy,
+		Kind:      resource.KindEnvoyProxy,
 		Name:      defaultEnvoyProxyName,
 		Namespace: &ns,
 	}

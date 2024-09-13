@@ -806,7 +806,7 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 	if tlsParams.ClientValidation != nil {
 		from := crossNamespaceFrom{
 			group:     egv1a1.GroupName,
-			kind:      KindClientTrafficPolicy,
+			kind:      resource.KindClientTrafficPolicy,
 			namespace: policy.Namespace,
 		}
 
@@ -815,7 +815,7 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 		}
 
 		for _, caCertRef := range tlsParams.ClientValidation.CACertificateRefs {
-			if caCertRef.Kind == nil || string(*caCertRef.Kind) == KindSecret { // nolint
+			if caCertRef.Kind == nil || string(*caCertRef.Kind) == resource.KindSecret { // nolint
 				secret, err := t.validateSecretRef(false, from, caCertRef, resources)
 				if err != nil {
 					return irTLSConfig, err
@@ -834,7 +834,7 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 
 				irCACert.Certificate = append(irCACert.Certificate, secretBytes...)
 
-			} else if string(*caCertRef.Kind) == KindConfigMap {
+			} else if string(*caCertRef.Kind) == resource.KindConfigMap {
 				configMap, err := t.validateConfigMapRef(false, from, caCertRef, resources)
 				if err != nil {
 					return irTLSConfig, err

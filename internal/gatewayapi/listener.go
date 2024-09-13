@@ -58,21 +58,21 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 				if listener.TLS != nil {
 					switch *listener.TLS.Mode {
 					case gwapiv1.TLSModePassthrough:
-						t.validateAllowedRoutes(listener, KindTLSRoute)
+						t.validateAllowedRoutes(listener, resource.KindTLSRoute)
 					case gwapiv1.TLSModeTerminate:
-						t.validateAllowedRoutes(listener, KindTCPRoute)
+						t.validateAllowedRoutes(listener, resource.KindTCPRoute)
 					default:
-						t.validateAllowedRoutes(listener, KindTCPRoute, KindTLSRoute)
+						t.validateAllowedRoutes(listener, resource.KindTCPRoute, resource.KindTLSRoute)
 					}
 				} else {
-					t.validateAllowedRoutes(listener, KindTCPRoute, KindTLSRoute)
+					t.validateAllowedRoutes(listener, resource.KindTCPRoute, resource.KindTLSRoute)
 				}
 			case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
-				t.validateAllowedRoutes(listener, KindHTTPRoute, KindGRPCRoute)
+				t.validateAllowedRoutes(listener, resource.KindHTTPRoute, resource.KindGRPCRoute)
 			case gwapiv1.TCPProtocolType:
-				t.validateAllowedRoutes(listener, KindTCPRoute)
+				t.validateAllowedRoutes(listener, resource.KindTCPRoute)
 			case gwapiv1.UDPProtocolType:
-				t.validateAllowedRoutes(listener, KindUDPRoute)
+				t.validateAllowedRoutes(listener, resource.KindUDPRoute)
 			default:
 				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
 					listener.listenerStatusIdx,
@@ -478,8 +478,8 @@ func (t *Translator) processBackendRefs(backendCluster egv1a1.BackendCluster, na
 	result := make([]*ir.DestinationSetting, 0, len(backendCluster.BackendRefs))
 	for _, ref := range backendCluster.BackendRefs {
 		ns := NamespaceDerefOr(ref.Namespace, namespace)
-		kind := KindDerefOr(ref.Kind, KindService)
-		if kind != KindService {
+		kind := KindDerefOr(ref.Kind, resource.KindService)
+		if kind != resource.KindService {
 			return nil, nil, errors.New("only service kind is supported for backendRefs")
 		}
 		if err := validateBackendService(ref.BackendObjectReference, resources, ns, corev1.ProtocolTCP); err != nil {

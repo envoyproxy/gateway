@@ -794,7 +794,7 @@ func (t *Translator) processRequestMirrorFilter(
 	filterNs := filterContext.Route.GetNamespace()
 	serviceNamespace := NamespaceDerefOr(mirrorBackend.Namespace, filterNs)
 	if !t.validateBackendRef(mirrorBackendRef, filterContext.ParentRef, filterContext.Route,
-		resources, serviceNamespace, KindHTTPRoute) {
+		resources, serviceNamespace, resource.KindHTTPRoute) {
 		return
 	}
 

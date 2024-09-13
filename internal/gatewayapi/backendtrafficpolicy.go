@@ -74,7 +74,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, routes)
 		for _, currTarget := range targetRefs {
-			if currTarget.Kind != KindGateway {
+			if currTarget.Kind != resource.KindGateway {
 				policy, found := handledPolicies[policyName]
 				if !found {
 					policy = currPolicy.DeepCopy()
@@ -94,7 +94,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv
 				parentRefs := GetParentReferences(route)
 				ancestorRefs := make([]gwapiv1a2.ParentReference, 0, len(parentRefs))
 				for _, p := range parentRefs {
-					if p.Kind == nil || *p.Kind == KindGateway {
+					if p.Kind == nil || *p.Kind == resource.KindGateway {
 						namespace := route.GetNamespace()
 						if p.Namespace != nil {
 							namespace = string(*p.Namespace)
@@ -148,7 +148,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways)
 		for _, currTarget := range targetRefs {
-			if currTarget.Kind == KindGateway {
+			if currTarget.Kind == resource.KindGateway {
 				policy, found := handledPolicies[policyName]
 				if !found {
 					policy = currPolicy.DeepCopy()

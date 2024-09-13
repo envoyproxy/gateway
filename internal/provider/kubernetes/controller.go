@@ -333,9 +333,9 @@ func (r *gatewayAPIReconciler) processEnvoyProxySecretRef(ctx context.Context, g
 			ctx,
 			newResourceMapping(),
 			gwcResource,
-			gatewayapi.KindGateway,
+			resource.KindGateway,
 			gwcResource.EnvoyProxyForGatewayClass.Namespace,
-			gatewayapi.KindEnvoyProxy,
+			resource.KindEnvoyProxy,
 			*certRef); err != nil {
 			r.log.Error(err,
 				"failed to process TLS SecretRef for EnvoyProxy",
@@ -378,13 +378,13 @@ func (r *gatewayAPIReconciler) managedGatewayClasses(ctx context.Context) ([]*gw
 // - Backends
 func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResource *resource.Resources, resourceMappings *resourceMappings) {
 	for backendRef := range resourceMappings.allAssociatedBackendRefs {
-		backendRefKind := gatewayapi.KindDerefOr(backendRef.Kind, gatewayapi.KindService)
+		backendRefKind := gatewayapi.KindDerefOr(backendRef.Kind, resource.KindService)
 		r.log.Info("processing Backend", "kind", backendRefKind, "namespace", string(*backendRef.Namespace),
 			"name", string(backendRef.Name))
 
 		var endpointSliceLabelKey string
 		switch backendRefKind {
-		case gatewayapi.KindService:
+		case resource.KindService:
 			service := new(corev1.Service)
 			err := r.client.Get(ctx, types.NamespacedName{Namespace: string(*backendRef.Namespace), Name: string(backendRef.Name)}, service)
 			if err != nil {
@@ -398,7 +398,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 			}
 			endpointSliceLabelKey = discoveryv1.LabelServiceName
 
-		case gatewayapi.KindServiceImport:
+		case resource.KindServiceImport:
 			serviceImport := new(mcsapiv1a1.ServiceImport)
 			err := r.client.Get(ctx, types.NamespacedName{Namespace: string(*backendRef.Namespace), Name: string(backendRef.Name)}, serviceImport)
 			if err != nil {
@@ -473,7 +473,7 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 				ctx,
 				resourceMap,
 				resourceTree,
-				gatewayapi.KindSecurityPolicy,
+				resource.KindSecurityPolicy,
 				policy.Namespace,
 				policy.Name,
 				oidc.ClientSecret); err != nil {
@@ -490,7 +490,7 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 				ctx,
 				resourceMap,
 				resourceTree,
-				gatewayapi.KindSecurityPolicy,
+				resource.KindSecurityPolicy,
 				policy.Namespace,
 				policy.Name,
 				basicAuth.Users); err != nil {
@@ -530,12 +530,12 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 
 			if backendNamespace != policy.Namespace {
 				from := ObjectKindNamespacedName{
-					kind:      gatewayapi.KindSecurityPolicy,
+					kind:      resource.KindSecurityPolicy,
 					namespace: policy.Namespace,
 					name:      policy.Name,
 				}
 				to := ObjectKindNamespacedName{
-					kind:      gatewayapi.KindDerefOr(backendRef.Kind, gatewayapi.KindService),
+					kind:      gatewayapi.KindDerefOr(backendRef.Kind, resource.KindService),
 					namespace: backendNamespace,
 					name:      string(backendRef.Name),
 				}
@@ -613,7 +613,7 @@ func (r *gatewayAPIReconciler) processSecretRef(
 			name:      ownerName,
 		}
 		to := ObjectKindNamespacedName{
-			kind:      gatewayapi.KindSecret,
+			kind:      resource.KindSecret,
 			namespace: secretNS,
 			name:      secret.Name,
 		}
@@ -648,12 +648,12 @@ func (r *gatewayAPIReconciler) processCtpConfigMapRefs(
 
 		if tls != nil && tls.ClientValidation != nil {
 			for _, caCertRef := range tls.ClientValidation.CACertificateRefs {
-				if caCertRef.Kind != nil && string(*caCertRef.Kind) == gatewayapi.KindConfigMap {
+				if caCertRef.Kind != nil && string(*caCertRef.Kind) == resource.KindConfigMap {
 					if err := r.processConfigMapRef(
 						ctx,
 						resourceMap,
 						resourceTree,
-						gatewayapi.KindClientTrafficPolicy,
+						resource.KindClientTrafficPolicy,
 						policy.Namespace,
 						policy.Name,
 						caCertRef); err != nil {
@@ -667,12 +667,12 @@ func (r *gatewayAPIReconciler) processCtpConfigMapRefs(
 							"failed to process CACertificateRef for ClientTrafficPolicy",
 							"policy", policy, "caCertificateRef", caCertRef.Name)
 					}
-				} else if caCertRef.Kind == nil || string(*caCertRef.Kind) == gatewayapi.KindSecret {
+				} else if caCertRef.Kind == nil || string(*caCertRef.Kind) == resource.KindSecret {
 					if err := r.processSecretRef(
 						ctx,
 						resourceMap,
 						resourceTree,
-						gatewayapi.KindClientTrafficPolicy,
+						resource.KindClientTrafficPolicy,
 						policy.Namespace,
 						policy.Name,
 						caCertRef); err != nil {
@@ -715,7 +715,7 @@ func (r *gatewayAPIReconciler) processConfigMapRef(
 			name:      ownerName,
 		}
 		to := ObjectKindNamespacedName{
-			kind:      gatewayapi.KindConfigMap,
+			kind:      resource.KindConfigMap,
 			namespace: configMapNS,
 			name:      configMap.Name,
 		}
@@ -845,7 +845,7 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 							ctx,
 							resourceMap,
 							resourceTree,
-							gatewayapi.KindGateway,
+							resource.KindGateway,
 							gtw.Namespace,
 							gtw.Name,
 							certRef); err != nil {
@@ -1604,7 +1604,7 @@ func (r *gatewayAPIReconciler) processGatewayParamsRef(ctx context.Context, gtw 
 				ctx,
 				resourceMap,
 				resourceTree,
-				gatewayapi.KindGateway,
+				resource.KindGateway,
 				gtw.Namespace,
 				gtw.Name,
 				*certRef); err != nil {
@@ -1713,8 +1713,8 @@ func (r *gatewayAPIReconciler) serviceImportCRDExists(mgr manager.Manager) bool 
 	}
 	serviceImportFound := false
 	for _, list := range apiResourceList {
-		for _, resource := range list.APIResources {
-			if list.GroupVersion == mcsapiv1a1.GroupVersion.String() && resource.Kind == gatewayapi.KindServiceImport {
+		for _, res := range list.APIResources {
+			if list.GroupVersion == mcsapiv1a1.GroupVersion.String() && res.Kind == resource.KindServiceImport {
 				serviceImportFound = true
 				break
 			}
@@ -1735,8 +1735,8 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicyRefs(
 		if tls.CACertificateRefs != nil {
 			for _, caCertRef := range tls.CACertificateRefs {
 				// if kind is not Secret or ConfigMap, we skip early to avoid further calculation overhead
-				if string(caCertRef.Kind) == gatewayapi.KindConfigMap ||
-					string(caCertRef.Kind) == gatewayapi.KindSecret {
+				if string(caCertRef.Kind) == resource.KindConfigMap ||
+					string(caCertRef.Kind) == resource.KindSecret {
 
 					var err error
 					caRefNew := gwapiv1b1.SecretObjectReference{
@@ -1746,22 +1746,22 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicyRefs(
 						Namespace: gatewayapi.NamespacePtr(policy.Namespace),
 					}
 					switch string(caCertRef.Kind) {
-					case gatewayapi.KindConfigMap:
+					case resource.KindConfigMap:
 						err = r.processConfigMapRef(
 							ctx,
 							resourceMap,
 							resourceTree,
-							gatewayapi.KindBackendTLSPolicy,
+							resource.KindBackendTLSPolicy,
 							policy.Namespace,
 							policy.Name,
 							caRefNew)
 
-					case gatewayapi.KindSecret:
+					case resource.KindSecret:
 						err = r.processSecretRef(
 							ctx,
 							resourceMap,
 							resourceTree,
-							gatewayapi.KindBackendTLSPolicy,
+							resource.KindBackendTLSPolicy,
 							policy.Namespace,
 							policy.Name,
 							caRefNew)
@@ -1869,12 +1869,12 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
 
 				if backendNamespace != policy.Namespace {
 					from := ObjectKindNamespacedName{
-						kind:      gatewayapi.KindHTTPRoute,
+						kind:      resource.KindHTTPRoute,
 						namespace: policy.Namespace,
 						name:      policy.Name,
 					}
 					to := ObjectKindNamespacedName{
-						kind:      gatewayapi.KindDerefOr(backendRef.Kind, gatewayapi.KindService),
+						kind:      gatewayapi.KindDerefOr(backendRef.Kind, resource.KindService),
 						namespace: backendNamespace,
 						name:      string(backendRef.Name),
 					}
@@ -1901,7 +1901,7 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
 					ctx,
 					resourceMap,
 					resourceTree,
-					gatewayapi.KindSecurityPolicy,
+					resource.KindSecurityPolicy,
 					policy.Namespace,
 					policy.Name,
 					*wasm.Code.Image.PullSecretRef); err != nil {

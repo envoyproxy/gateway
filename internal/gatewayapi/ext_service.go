@@ -36,8 +36,8 @@ func (t *Translator) processExtServiceDestination(
 
 	backendNamespace := NamespaceDerefOr(backendRef.Namespace, policyNamespacedName.Namespace)
 
-	switch KindDerefOr(backendRef.Kind, KindService) {
-	case KindService:
+	switch KindDerefOr(backendRef.Kind, resource.KindService) {
+	case resource.KindService:
 		ds = t.processServiceDestinationSetting(backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
 	case egv1a1.KindBackend:
 		if !t.BackendEnabled {

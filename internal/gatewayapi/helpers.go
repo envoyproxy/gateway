@@ -115,7 +115,7 @@ func IsRefToGateway(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.ParentRe
 		return false
 	}
 
-	if parentRef.Kind != nil && string(*parentRef.Kind) != KindGateway {
+	if parentRef.Kind != nil && string(*parentRef.Kind) != resource.KindGateway {
 		return false
 	}
 
@@ -459,7 +459,7 @@ func protocolSliceToStringSlice(protocols []gwapiv1.ProtocolType) []string {
 func getAncestorRefForPolicy(gatewayNN types.NamespacedName, sectionName *gwapiv1a2.SectionName) gwapiv1a2.ParentReference {
 	return gwapiv1a2.ParentReference{
 		Group:       GroupPtr(gwapiv1.GroupName),
-		Kind:        KindPtr(KindGateway),
+		Kind:        KindPtr(resource.KindGateway),
 		Namespace:   NamespacePtr(gatewayNN.Namespace),
 		Name:        gwapiv1.ObjectName(gatewayNN.Name),
 		SectionName: sectionName,

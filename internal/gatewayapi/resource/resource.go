@@ -164,9 +164,9 @@ func (r *Resources) GetEndpointSlicesForBackend(svcNamespace, svcName string, ba
 	for _, endpointSlice := range r.EndpointSlices {
 		var backendSelectorLabel string
 		switch backendKind {
-		case "Service":
+		case KindService:
 			backendSelectorLabel = discoveryv1.LabelServiceName
-		case "ServiceImport":
+		case KindServiceImport:
 			backendSelectorLabel = mcsapiv1a1.LabelServiceName
 		}
 		if svcNamespace == endpointSlice.Namespace &&

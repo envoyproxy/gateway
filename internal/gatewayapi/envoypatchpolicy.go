@@ -35,7 +35,7 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 		)
 
 		if t.MergeGateways {
-			targetKind = KindGatewayClass
+			targetKind = resource.KindGatewayClass
 			irKey = string(t.GatewayClassName)
 
 			ancestorRefs = []gwapiv1a2.ParentReference{
@@ -46,7 +46,7 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 				},
 			}
 		} else {
-			targetKind = KindGateway
+			targetKind = resource.KindGateway
 			gatewayNN := types.NamespacedName{
 				Namespace: policy.Namespace,
 				Name:      string(policy.Spec.TargetRef.Name),

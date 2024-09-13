@@ -178,7 +178,7 @@ func getBackendTLSBundle(backendTLSPolicy *gwapiv1a3.BackendTLSPolicy, resources
 		kind := string(caRef.Kind)
 
 		switch kind {
-		case KindConfigMap:
+		case resource.KindConfigMap:
 			for _, cmap := range resources.ConfigMaps {
 				if cmap.Name == string(caRef.Name) {
 					if crt, dataOk := cmap.Data["ca.crt"]; dataOk {
@@ -191,7 +191,7 @@ func getBackendTLSBundle(backendTLSPolicy *gwapiv1a3.BackendTLSPolicy, resources
 					}
 				}
 			}
-		case KindSecret:
+		case resource.KindSecret:
 			for _, secret := range resources.Secrets {
 				if secret.Name == string(caRef.Name) {
 					if crt, dataOk := secret.Data["ca.crt"]; dataOk {

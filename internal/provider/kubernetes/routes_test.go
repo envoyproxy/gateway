@@ -108,7 +108,7 @@ func TestProcessHTTPRoutes(t *testing.T) {
 										BackendRef: gwapiv1.BackendRef{
 											BackendObjectReference: gwapiv1.BackendObjectReference{
 												Group: gatewayapi.GroupPtr(corev1.GroupName),
-												Kind:  gatewayapi.KindPtr(gatewayapi.KindService),
+												Kind:  gatewayapi.KindPtr(resource.KindService),
 												Name:  "test",
 											},
 										},
@@ -170,7 +170,7 @@ func TestProcessHTTPRoutes(t *testing.T) {
 										BackendRef: gwapiv1.BackendRef{
 											BackendObjectReference: gwapiv1.BackendObjectReference{
 												Group: gatewayapi.GroupPtr(corev1.GroupName),
-												Kind:  gatewayapi.KindPtr(gatewayapi.KindService),
+												Kind:  gatewayapi.KindPtr(resource.KindService),
 												Name:  "test",
 											},
 										},
@@ -258,7 +258,7 @@ func TestProcessHTTPRoutes(t *testing.T) {
 										BackendRef: gwapiv1.BackendRef{
 											BackendObjectReference: gwapiv1.BackendObjectReference{
 												Group: gatewayapi.GroupPtr(corev1.GroupName),
-												Kind:  gatewayapi.KindPtr(gatewayapi.KindService),
+												Kind:  gatewayapi.KindPtr(resource.KindService),
 												Name:  "test",
 											},
 										},
@@ -321,7 +321,7 @@ func TestProcessHTTPRoutes(t *testing.T) {
 										BackendRef: gwapiv1.BackendRef{
 											BackendObjectReference: gwapiv1.BackendObjectReference{
 												Group: gatewayapi.GroupPtr(corev1.GroupName),
-												Kind:  gatewayapi.KindPtr(gatewayapi.KindService),
+												Kind:  gatewayapi.KindPtr(resource.KindService),
 												Name:  "test",
 											},
 										},
@@ -479,7 +479,7 @@ func TestProcessGRPCRoutes(t *testing.T) {
 										BackendRef: gwapiv1.BackendRef{
 											BackendObjectReference: gwapiv1.BackendObjectReference{
 												Group: gatewayapi.GroupPtr(corev1.GroupName),
-												Kind:  gatewayapi.KindPtr(gatewayapi.KindService),
+												Kind:  gatewayapi.KindPtr(resource.KindService),
 												Name:  "test",
 											},
 										},

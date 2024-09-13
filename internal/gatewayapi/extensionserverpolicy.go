@@ -56,7 +56,7 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 			continue
 		}
 		for _, currTarget := range targetRefs {
-			if currTarget.Kind != KindGateway {
+			if currTarget.Kind != resource.KindGateway {
 				errs = errors.Join(errs, fmt.Errorf("extension policy %s doesn't target a Gateway", policy.GetName()))
 				continue
 			}
