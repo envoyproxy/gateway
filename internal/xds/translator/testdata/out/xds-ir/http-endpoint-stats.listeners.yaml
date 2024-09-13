@@ -30,6 +30,5 @@
         statPrefix: http
         useRemoteAddress: true
     name: listener-enable-endpoint-stats
-  drainType: MODIFY_ONLY
   name: listener-enable-endpoint-stats
   perConnectionBufferLimitBytes: 32768

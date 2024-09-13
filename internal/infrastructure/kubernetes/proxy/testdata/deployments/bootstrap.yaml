@@ -44,6 +44,7 @@ spec:
         - --config-yaml test bootstrap config
         - --log-level warn
         - --cpuset-threads
+        - --drain-strategy immediate
         command:
         - envoy
         env:
