@@ -571,18 +571,27 @@ func (t *Translator) buildOIDC(
 	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.OIDC, error) {
 	var (
-		oidc         = policy.Spec.OIDC
-		clientSecret *corev1.Secret
-		provider     *ir.OIDCProvider
-		ds           []*ir.DestinationSetting
-		err          error
+		oidc               = policy.Spec.OIDC
+		provider           *ir.OIDCProvider
+		clientSecret       *corev1.Secret
+		redirectURL        = defaultRedirectURL
+		redirectPath       = defaultRedirectPath
+		logoutPath         = defaultLogoutPath
+		forwardAccessToken = defaultForwardAccessToken
+		refreshToken       = defaultRefreshToken
+		err                error
 	)
+
+	if provider, err = t.buildOIDCProvider(policy, resources, envoyProxy); err != nil {
+		return nil, err
+	}
 
 	from := crossNamespaceFrom{
 		group:     egv1a1.GroupName,
 		kind:      KindSecurityPolicy,
 		namespace: policy.Namespace,
 	}
+
 	if clientSecret, err = t.validateSecretRef(
 		false, from, oidc.ClientSecret, resources); err != nil {
 		return nil, err
@@ -595,50 +604,7 @@ func (t *Translator) buildOIDC(
 			clientSecret.Namespace, clientSecret.Name)
 	}
 
-	// Discover the token and authorization endpoints from the issuer's
-	// well-known url if not explicitly specified
-	if provider, err = discoverEndpointsFromIssuer(&oidc.Provider); err != nil {
-		return nil, err
-	}
-
-	if err = validateTokenEndpoint(provider.TokenEndpoint); err != nil {
-		return nil, err
-	}
-
-	pnn := utils.NamespacedName(policy)
-	for _, backendRef := range oidc.Provider.BackendRefs {
-		if err = t.validateExtServiceBackendReference(&backendRef.BackendObjectReference, policy.Namespace, policy.Kind, resources); err != nil {
-			return nil, err
-		}
-
-		extServiceDest, err := t.processExtServiceDestination(
-			&backendRef,
-			pnn,
-			KindSecurityPolicy,
-			ir.HTTP,
-			resources,
-			envoyProxy,
-		)
-		if err != nil {
-			return nil, err
-		}
-		ds = append(ds, extServiceDest)
-	}
-	rd := ir.RouteDestination{
-		Name:     irIndexedExtServiceDestinationName(pnn, egv1a1.KindSecurityPolicy, 0),
-		Settings: ds,
-	}
-	provider.Destination = rd
-
 	scopes := appendOpenidScopeIfNotExist(oidc.Scopes)
-
-	var (
-		redirectURL        = defaultRedirectURL
-		redirectPath       = defaultRedirectPath
-		logoutPath         = defaultLogoutPath
-		forwardAccessToken = defaultForwardAccessToken
-		refreshToken       = defaultRefreshToken
-	)
 
 	if oidc.RedirectURL != nil {
 		path, err := extractRedirectPath(*oidc.RedirectURL)
@@ -698,6 +664,84 @@ func (t *Translator) buildOIDC(
 	}, nil
 }
 
+func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources *Resources, envoyProxy *egv1a1.EnvoyProxy) (*ir.OIDCProvider, error) {
+	var (
+		provider              = policy.Spec.OIDC.Provider
+		tokenEndpoint         string
+		authorizationEndpoint string
+		protocol              ir.AppProtocol
+		ds                    []*ir.DestinationSetting
+		rd                    *ir.RouteDestination
+		traffic               *ir.TrafficFeatures
+		err                   error
+	)
+
+	// Discover the token and authorization endpoints from the issuer's
+	// well-known url if not explicitly specified
+	if provider.TokenEndpoint == nil || provider.AuthorizationEndpoint == nil {
+		tokenEndpoint, authorizationEndpoint, err = fetchEndpointsFromIssuer(provider.Issuer)
+		if err != nil {
+			return nil, fmt.Errorf("error fetching endpoints from issuer: %w", err)
+		}
+	} else {
+		tokenEndpoint = *provider.TokenEndpoint
+		authorizationEndpoint = *provider.AuthorizationEndpoint
+	}
+
+	if err = validateTokenEndpoint(tokenEndpoint); err != nil {
+		return nil, err
+	}
+
+	u, err := url.Parse(tokenEndpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	if u.Scheme == "https" {
+		protocol = ir.HTTPS
+	} else {
+		protocol = ir.HTTP
+	}
+
+	pnn := utils.NamespacedName(policy)
+	for _, backendRef := range provider.BackendRefs {
+		if err = t.validateExtServiceBackendReference(&backendRef.BackendObjectReference, policy.Namespace, policy.Kind, resources); err != nil {
+			return nil, err
+		}
+
+		extServiceDest, err := t.processExtServiceDestination(
+			&backendRef,
+			pnn,
+			KindSecurityPolicy,
+			protocol,
+			resources,
+			envoyProxy,
+		)
+		if err != nil {
+			return nil, err
+		}
+		ds = append(ds, extServiceDest)
+	}
+
+	if len(ds) > 0 {
+		rd = &ir.RouteDestination{
+			Name:     irIndexedExtServiceDestinationName(pnn, egv1a1.KindSecurityPolicy, 0),
+			Settings: ds,
+		}
+	}
+
+	if traffic, err = translateTrafficFeatures(provider.BackendSettings); err != nil {
+		return nil, err
+	}
+
+	return &ir.OIDCProvider{
+		Destination:           rd,
+		Traffic:               traffic,
+		AuthorizationEndpoint: authorizationEndpoint,
+		TokenEndpoint:         tokenEndpoint,
+	}, nil
+}
+
 func extractRedirectPath(redirectURL string) (string, error) {
 	schemeDelimiter := strings.Index(redirectURL, "://")
 	if schemeDelimiter <= 0 {
@@ -740,26 +784,6 @@ func appendOpenidScopeIfNotExist(scopes []string) []string {
 type OpenIDConfig struct {
 	TokenEndpoint         string `json:"token_endpoint"`
 	AuthorizationEndpoint string `json:"authorization_endpoint"`
-}
-
-// discoverEndpointsFromIssuer discovers the token and authorization endpoints from the issuer's well-known url
-// return error if failed to fetch the well-known configuration
-func discoverEndpointsFromIssuer(provider *egv1a1.OIDCProvider) (*ir.OIDCProvider, error) {
-	if provider.TokenEndpoint == nil || provider.AuthorizationEndpoint == nil {
-		tokenEndpoint, authorizationEndpoint, err := fetchEndpointsFromIssuer(provider.Issuer)
-		if err != nil {
-			return nil, fmt.Errorf("error fetching endpoints from issuer: %w", err)
-		}
-		return &ir.OIDCProvider{
-			TokenEndpoint:         tokenEndpoint,
-			AuthorizationEndpoint: authorizationEndpoint,
-		}, nil
-	}
-
-	return &ir.OIDCProvider{
-		TokenEndpoint:         *provider.TokenEndpoint,
-		AuthorizationEndpoint: *provider.AuthorizationEndpoint,
-	}, nil
 }
 
 func fetchEndpointsFromIssuer(issuerURL string) (string, string, error) {

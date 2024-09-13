@@ -18,7 +18,7 @@ const (
 	// HTTP2 declares that the port carries HTTP/2 traffic.
 	HTTP2 AppProtocol = "HTTP2"
 	// HTTPS declares that the port carries HTTPS traffic.
-HTTPS AppProtocol = "HTTPS"
+	HTTPS AppProtocol = "HTTPS"
 	// TCP declares the port uses TCP.
 	// This is the default protocol for a service port.
 	TCP AppProtocol = "TCP"

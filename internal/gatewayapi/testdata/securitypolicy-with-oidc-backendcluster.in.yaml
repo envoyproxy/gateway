@@ -78,6 +78,13 @@ securityPolicies:
           kind: Backend
           name: backend-fqdn
           port: 443
+        backendSettings:
+          retry:
+            numRetries: 3
+            perRetry:
+              backOff:
+                baseInterval: 1s
+                maxInterval: 5s
         issuer: "https://oauth.foo.com"
         authorizationEndpoint: "https://oauth.foo.com/oauth2/v2/auth"
         tokenEndpoint: "https://oauth.foo.com/token"

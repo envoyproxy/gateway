@@ -139,6 +139,13 @@ securityPolicies:
           kind: Backend
           name: backend-fqdn
           port: 443
+        backendSettings:
+          retry:
+            numRetries: 3
+            perRetry:
+              backOff:
+                baseInterval: 1s
+                maxInterval: 5s
         issuer: https://oauth.foo.com
         tokenEndpoint: https://oauth.foo.com/token
       redirectURL: https://www.example.com/bar/oauth2/callback
@@ -222,9 +229,16 @@ xdsIR:
                   endpoints:
                   - host: oauth.foo.com
                     port: 443
-                  protocol: HTTP
+                  protocol: HTTPS
                   weight: 1
               tokenEndpoint: https://oauth.foo.com/token
+              traffic:
+                retry:
+                  numRetries: 3
+                  perRetry:
+                    backOff:
+                      baseInterval: 1s
+                      maxInterval: 5s
             redirectPath: /bar/oauth2/callback
             redirectURL: https://www.example.com/bar/oauth2/callback
             refreshToken: true
