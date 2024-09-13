@@ -1921,7 +1921,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `type` | _[HTTPPathModifierType](#httppathmodifiertype)_ |  true  |  |
-| `replaceRegexMatch` | _[ReplaceRegexMatch](#replaceregexmatch)_ |  true  |  |
+| `replaceRegexMatch` | _[ReplaceRegexMatch](#replaceregexmatch)_ |  true  | ReplaceRegexMatch defines a path regex rewrite. The path portions matched by the regex pattern are replaced by the defined substitution.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-regex-rewrite<br />Some examples:<br />(1) replaceRegexMatch:<br />      pattern: ^/service/([^/]+)(/.*)$<br />      substitution: \2/instance/\1<br />    Would transform /service/foo/v1/api into /v1/api/instance/foo.<br />(2) replaceRegexMatch:<br />      pattern: one<br />      substitution: two<br />    Would transform /xxx/one/yyy/one/zzz into /xxx/two/yyy/two/zzz.<br />(3) replaceRegexMatch:<br />      pattern: ^(.*?)one(.*)$<br />      substitution: \1two\2<br />    Would transform /xxx/one/yyy/one/zzz into /xxx/two/yyy/one/zzz.<br />(3) replaceRegexMatch:<br />      pattern: (?i)/xxx/<br />      substitution: /yyy/<br />    Would transform path /aaa/XxX/bbb into /aaa/yyy/bbb (case-insensitive). |
 
 
 #### HTTPPathModifierType
@@ -3392,8 +3392,8 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `regex` | _string_ |  true  | Regex matches a regular expression against the value of the HTTP Path.The regex string must<br />adhere to the syntax documented in https://github.com/google/re2/wiki/Syntax. |
-| `replacement` | _string_ |  true  | Replacement is an expression that replaces the matched portion.The expression may include numbered<br />capture groups that adhere to syntax documented in https://github.com/google/re2/wiki/Syntax. |
+| `pattern` | _string_ |  true  | Pattern matches a regular expression against the value of the HTTP Path.The regex string must<br />adhere to the syntax documented in https://github.com/google/re2/wiki/Syntax. |
+| `substitution` | _string_ |  true  | Substitution is an expression that replaces the matched portion.The expression may include numbered<br />capture groups that adhere to syntax documented in https://github.com/google/re2/wiki/Syntax. |
 
 
 #### RequestHeaderCustomTag
