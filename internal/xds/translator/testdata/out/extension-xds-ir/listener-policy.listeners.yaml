@@ -30,7 +30,6 @@
         statPrefix: http-10081
         useRemoteAddress: true
     name: policyextension-listener
-  drainType: MODIFY_ONLY
   name: policyextension-listener
   perConnectionBufferLimitBytes: 32768
   statPrefix: from-the-policy
