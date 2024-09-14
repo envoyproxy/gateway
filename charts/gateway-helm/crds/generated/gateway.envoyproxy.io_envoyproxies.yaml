@@ -14200,6 +14200,7 @@ spec:
                             enum:
                             - OpenTelemetry
                             - Zipkin
+                            - Datadog
                             type: string
                           zipkin:
                             description: Zipkin defines the Zipkin tracing provider
