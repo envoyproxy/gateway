@@ -16,6 +16,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
 
 // GatewayContext wraps a Gateway and provides helper methods for
@@ -29,7 +30,7 @@ type GatewayContext struct {
 
 // ResetListeners resets the listener statuses and re-generates the GatewayContext
 // ListenerContexts from the Gateway spec.
-func (g *GatewayContext) ResetListeners(resource *Resources) {
+func (g *GatewayContext) ResetListeners(resource *resource.Resources) {
 	numListeners := len(g.Spec.Listeners)
 	g.Status.Listeners = make([]gwapiv1.ListenerStatus, numListeners)
 	g.listeners = make([]*ListenerContext, numListeners)
@@ -46,7 +47,7 @@ func (g *GatewayContext) ResetListeners(resource *Resources) {
 	g.attachEnvoyProxy(resource)
 }
 
-func (g *GatewayContext) attachEnvoyProxy(resources *Resources) {
+func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources) {
 	if g.Spec.Infrastructure != nil && g.Spec.Infrastructure.ParametersRef != nil && !IsMergeGatewaysEnabled(resources) {
 		ref := g.Spec.Infrastructure.ParametersRef
 		if string(ref.Group) == egv1a1.GroupVersion.Group && ref.Kind == egv1a1.KindEnvoyProxy {
@@ -210,7 +211,7 @@ func GetRouteType(route RouteContext) gwapiv1.Kind {
 func GetHostnames(route RouteContext) []string {
 	rv := reflect.ValueOf(route).Elem()
 	kind := rv.FieldByName("Kind").String()
-	if kind == KindTCPRoute || kind == KindUDPRoute {
+	if kind == resource.KindTCPRoute || kind == resource.KindUDPRoute {
 		return nil
 	}
 

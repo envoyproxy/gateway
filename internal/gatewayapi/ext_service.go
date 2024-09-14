@@ -16,6 +16,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -25,7 +26,7 @@ func (t *Translator) processExtServiceDestination(
 	policyNamespacedName types.NamespacedName,
 	policyKind string,
 	protocol ir.AppProtocol,
-	resources *Resources,
+	resources *resource.Resources,
 	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.DestinationSetting, error) {
 	var (
@@ -35,8 +36,8 @@ func (t *Translator) processExtServiceDestination(
 
 	backendNamespace := NamespaceDerefOr(backendRef.Namespace, policyNamespacedName.Namespace)
 
-	switch KindDerefOr(backendRef.Kind, KindService) {
-	case KindService:
+	switch KindDerefOr(backendRef.Kind, resource.KindService) {
+	case resource.KindService:
 		ds = t.processServiceDestinationSetting(backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
 	case egv1a1.KindBackend:
 		if !t.BackendEnabled {
