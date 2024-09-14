@@ -24,7 +24,7 @@ type ProxyAccessLogSetting struct {
 	// Matches defines the match conditions for accesslog in CEL expression.
 	// An accesslog will be emitted only when one or more match conditions are evaluated to true.
 	// Invalid [CEL](https://www.envoyproxy.io/docs/envoy/latest/xds/type/v3/cel.proto.html#common-expression-language-cel-proto) expressions will be ignored.
-	// +notImplementedHide
+	// +kubebuilder:validation:MaxItems=10
 	Matches []string `json:"matches,omitempty"`
 	// Sinks defines the sinks of accesslog.
 	// +kubebuilder:validation:MinItems=1
