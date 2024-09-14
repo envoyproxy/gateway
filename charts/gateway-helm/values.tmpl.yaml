@@ -19,8 +19,7 @@ global:
       # List of secrets in the same namespace of the component that can be used to pull images from private repositories.
       pullSecrets: []
 podDisruptionBudget:
-  minAvailable: 1
-  # -- Maximum unavailable pods set in PodDisruptionBudget. If set, 'minAvailable' is ignored.
+  minAvailable: 0
   # maxUnavailable: 1
 
 deployment:

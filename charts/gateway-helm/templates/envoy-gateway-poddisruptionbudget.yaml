@@ -1,13 +1,14 @@
-{{- if gt ( .Values.deployment.replicas | int) 1 }}
+{{- if or (and .Values.podDisruptionBudget.minAvailable (ge (int .Values.podDisruptionBudget.minAvailable) 1) ) (and .Values.podDisruptionBudget.maxUnavailable (ge (int .Values.podDisruptionBudget.maxUnavailable) 1) )}}
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: envoy-gateway
   namespace: '{{ .Release.Namespace }}'
 spec:
-  {{- if and .Values.podDisruptionBudget.minAvailable (not (hasKey .Values.podDisruptionBudget "maxUnavailable")) }}
+  {{- if and .Values.podDisruptionBudget.minAvailable }}
   minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
-  {{- else if .Values.podDisruptionBudget.maxUnavailable }}
+  {{- end }}
+  {{- if .Values.podDisruptionBudget.maxUnavailable }}
   maxUnavailable: {{ .Values.podDisruptionBudget.maxUnavailable }}
   {{- end }}
   selector:
