@@ -3217,8 +3217,6 @@ spec:
                     - message: Only one backendRefs is allowed.
                       rule: 'has(self.backendRefs)? self.backendRefs.size() > 1 :
                         true'
-                    - message: Retry timeout is not supported.
-                      rule: has(self.backendSettings.retry.perRetry.timeout)
                   redirectURL:
                     description: |-
                       The redirect URL to be used in the OIDC

@@ -108,7 +108,6 @@ type OIDC struct {
 // OIDCProvider defines the OIDC Provider configuration.
 // +kubebuilder:validation:XValidation:rule="!has(self.backendRef)",message="BackendRefs must be used, backendRef is not supported."
 // +kubebuilder:validation:XValidation:rule="has(self.backendRefs)? self.backendRefs.size() > 1 : true",message="Only one backendRefs is allowed."
-// +kubebuilder:validation:XValidation:rule="has(self.backendSettings.retry.perRetry.timeout)",message="Retry timeout is not supported."
 type OIDCProvider struct {
 	// BackendRefs is used to specify the address of the OIDC Provider.
 	// If the BackendRefs is not specified, The host and port of the OIDC Provider's token endpoint
