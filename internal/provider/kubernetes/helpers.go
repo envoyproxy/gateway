@@ -18,6 +18,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
 
 const (
@@ -141,7 +142,7 @@ func terminatesTLS(listener *gwapiv1.Listener) bool {
 // refsSecret returns true if ref refers to a Secret.
 func refsSecret(ref *gwapiv1.SecretObjectReference) bool {
 	return (ref.Group == nil || *ref.Group == corev1.GroupName) &&
-		(ref.Kind == nil || *ref.Kind == gatewayapi.KindSecret)
+		(ref.Kind == nil || *ref.Kind == resource.KindSecret)
 }
 
 // validateBackendRef validates that ref is a reference to a local Service.
@@ -155,9 +156,9 @@ func validateBackendRef(ref *gwapiv1.BackendRef) error {
 		return nil
 	case gatewayapi.GroupDerefOr(ref.Group, corev1.GroupName) != corev1.GroupName && gatewayapi.GroupDerefOr(ref.Group, corev1.GroupName) != mcsapiv1a1.GroupName && gatewayapi.GroupDerefOr(ref.Group, corev1.GroupName) != egv1a1.GroupName:
 		return fmt.Errorf("invalid group; must be nil, empty string %q or %q", mcsapiv1a1.GroupName, egv1a1.GroupName)
-	case gatewayapi.KindDerefOr(ref.Kind, gatewayapi.KindService) != gatewayapi.KindService && gatewayapi.KindDerefOr(ref.Kind, gatewayapi.KindService) != gatewayapi.KindServiceImport && gatewayapi.KindDerefOr(ref.Kind, gatewayapi.KindService) != egv1a1.KindBackend:
+	case gatewayapi.KindDerefOr(ref.Kind, resource.KindService) != resource.KindService && gatewayapi.KindDerefOr(ref.Kind, resource.KindService) != resource.KindServiceImport && gatewayapi.KindDerefOr(ref.Kind, resource.KindService) != egv1a1.KindBackend:
 		return fmt.Errorf("invalid kind %q; must be %q, %q or %q",
-			*ref.BackendObjectReference.Kind, gatewayapi.KindService, gatewayapi.KindServiceImport, egv1a1.KindBackend)
+			*ref.BackendObjectReference.Kind, resource.KindService, resource.KindServiceImport, egv1a1.KindBackend)
 	}
 
 	return nil

@@ -17,13 +17,14 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 // processTLSRoutes finds TLSRoutes corresponding to a gatewayNamespaceName, further checks for
 // the backend references and pushes the TLSRoutes to the resourceTree.
 func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayNamespaceName string,
-	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources,
+	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) error {
 	tlsRouteList := &gwapiv1a2.TLSRouteList{}
 	if err := r.client.List(ctx, tlsRouteList, &client.ListOptions{
@@ -69,8 +70,8 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 				})
 
 				if backendNamespace != tlsRoute.Namespace {
-					from := ObjectKindNamespacedName{kind: gatewayapi.KindTLSRoute, namespace: tlsRoute.Namespace, name: tlsRoute.Name}
-					to := ObjectKindNamespacedName{kind: gatewayapi.KindDerefOr(backendRef.Kind, gatewayapi.KindService), namespace: backendNamespace, name: string(backendRef.Name)}
+					from := ObjectKindNamespacedName{kind: resource.KindTLSRoute, namespace: tlsRoute.Namespace, name: tlsRoute.Name}
+					to := ObjectKindNamespacedName{kind: gatewayapi.KindDerefOr(backendRef.Kind, resource.KindService), namespace: backendNamespace, name: string(backendRef.Name)}
 					refGrant, err := r.findReferenceGrant(ctx, from, to)
 					switch {
 					case err != nil:
@@ -101,7 +102,7 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 // processGRPCRoutes finds GRPCRoutes corresponding to a gatewayNamespaceName, further checks for
 // the backend references and pushes the GRPCRoutes to the resourceTree.
 func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNamespaceName string,
-	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources,
+	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) error {
 	grpcRouteList := &gwapiv1.GRPCRouteList{}
 
@@ -148,12 +149,12 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 
 				if backendNamespace != grpcRoute.Namespace {
 					from := ObjectKindNamespacedName{
-						kind:      gatewayapi.KindGRPCRoute,
+						kind:      resource.KindGRPCRoute,
 						namespace: grpcRoute.Namespace,
 						name:      grpcRoute.Name,
 					}
 					to := ObjectKindNamespacedName{
-						kind:      gatewayapi.KindDerefOr(backendRef.Kind, gatewayapi.KindService),
+						kind:      gatewayapi.KindDerefOr(backendRef.Kind, resource.KindService),
 						namespace: backendNamespace,
 						name:      string(backendRef.Name),
 					}
@@ -226,7 +227,7 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 // processHTTPRoutes finds HTTPRoutes corresponding to a gatewayNamespaceName, further checks for
 // the backend references and pushes the HTTPRoutes to the resourceTree.
 func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNamespaceName string,
-	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources,
+	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) error {
 	httpRouteList := &gwapiv1.HTTPRouteList{}
 
@@ -282,12 +283,12 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 
 				if backendNamespace != httpRoute.Namespace {
 					from := ObjectKindNamespacedName{
-						kind:      gatewayapi.KindHTTPRoute,
+						kind:      resource.KindHTTPRoute,
 						namespace: httpRoute.Namespace,
 						name:      httpRoute.Name,
 					}
 					to := ObjectKindNamespacedName{
-						kind:      gatewayapi.KindDerefOr(backendRef.Kind, gatewayapi.KindService),
+						kind:      gatewayapi.KindDerefOr(backendRef.Kind, resource.KindService),
 						namespace: backendNamespace,
 						name:      string(backendRef.Name),
 					}
@@ -349,12 +350,12 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 
 					if backendNamespace != httpRoute.Namespace {
 						from := ObjectKindNamespacedName{
-							kind:      gatewayapi.KindHTTPRoute,
+							kind:      resource.KindHTTPRoute,
 							namespace: httpRoute.Namespace,
 							name:      httpRoute.Name,
 						}
 						to := ObjectKindNamespacedName{
-							kind:      gatewayapi.KindDerefOr(mirrorBackendRef.Kind, gatewayapi.KindService),
+							kind:      gatewayapi.KindDerefOr(mirrorBackendRef.Kind, resource.KindService),
 							namespace: backendNamespace,
 							name:      string(mirrorBackendRef.Name),
 						}
@@ -413,7 +414,7 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 // processTCPRoutes finds TCPRoutes corresponding to a gatewayNamespaceName, further checks for
 // the backend references and pushes the TCPRoutes to the resourceTree.
 func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayNamespaceName string,
-	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources,
+	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) error {
 	tcpRouteList := &gwapiv1a2.TCPRouteList{}
 	if err := r.client.List(ctx, tcpRouteList, &client.ListOptions{
@@ -459,8 +460,8 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 				})
 
 				if backendNamespace != tcpRoute.Namespace {
-					from := ObjectKindNamespacedName{kind: gatewayapi.KindTCPRoute, namespace: tcpRoute.Namespace, name: tcpRoute.Name}
-					to := ObjectKindNamespacedName{kind: gatewayapi.KindDerefOr(backendRef.Kind, gatewayapi.KindService), namespace: backendNamespace, name: string(backendRef.Name)}
+					from := ObjectKindNamespacedName{kind: resource.KindTCPRoute, namespace: tcpRoute.Namespace, name: tcpRoute.Name}
+					to := ObjectKindNamespacedName{kind: gatewayapi.KindDerefOr(backendRef.Kind, resource.KindService), namespace: backendNamespace, name: string(backendRef.Name)}
 					refGrant, err := r.findReferenceGrant(ctx, from, to)
 					switch {
 					case err != nil:
@@ -491,7 +492,7 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 // processUDPRoutes finds UDPRoutes corresponding to a gatewayNamespaceName, further checks for
 // the backend references and pushes the UDPRoutes to the resourceTree.
 func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayNamespaceName string,
-	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources,
+	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) error {
 	udpRouteList := &gwapiv1a2.UDPRouteList{}
 	if err := r.client.List(ctx, udpRouteList, &client.ListOptions{
@@ -537,8 +538,8 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 				})
 
 				if backendNamespace != udpRoute.Namespace {
-					from := ObjectKindNamespacedName{kind: gatewayapi.KindUDPRoute, namespace: udpRoute.Namespace, name: udpRoute.Name}
-					to := ObjectKindNamespacedName{kind: gatewayapi.KindDerefOr(backendRef.Kind, gatewayapi.KindService), namespace: backendNamespace, name: string(backendRef.Name)}
+					from := ObjectKindNamespacedName{kind: resource.KindUDPRoute, namespace: udpRoute.Namespace, name: udpRoute.Name}
+					to := ObjectKindNamespacedName{kind: gatewayapi.KindDerefOr(backendRef.Kind, resource.KindService), namespace: backendNamespace, name: string(backendRef.Name)}
 					refGrant, err := r.findReferenceGrant(ctx, from, to)
 					switch {
 					case err != nil:
