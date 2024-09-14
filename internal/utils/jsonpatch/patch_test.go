@@ -73,6 +73,7 @@ func TestApplyJSONPatches(t *testing.T) {
 		name           string
 		patchOperation []ir.JSONPatchOperation
 		errorExpected  bool
+		errorContains  *string
 		expectedDoc    *string
 	}{
 		{
@@ -120,6 +121,7 @@ func TestApplyJSONPatches(t *testing.T) {
 				},
 			},
 			errorExpected: true,
+			errorContains: ptr.To("unsupported JSONPatch operation"),
 		},
 		{
 			name: "jsonpath affecting two places",
@@ -142,6 +144,7 @@ func TestApplyJSONPatches(t *testing.T) {
 				},
 			},
 			errorExpected: true,
+			errorContains: ptr.To("unable to convert jsonPath"),
 		},
 		{
 			name: "dot escaped json path",
@@ -196,6 +199,21 @@ func TestApplyJSONPatches(t *testing.T) {
 			expectedDoc:   &expectedDotEscapeCase2,
 			errorExpected: false,
 		},
+		{
+			name: "jsonPath returns no jsonPointer",
+			doc:  sourceDocument,
+			patchOperation: []ir.JSONPatchOperation{
+				{
+					Op:       "replace",
+					JSONPath: ptr.To("$.secondLevel.doesNotExist"),
+					Value: &apiextensionsv1.JSON{
+						Raw: []byte("\"folder\""),
+					},
+				},
+			},
+			errorExpected: true,
+			errorContains: ptr.To("no jsonPointers were found"),
+		},
 	}
 
 	for _, tc := range testCases {
@@ -203,6 +221,9 @@ func TestApplyJSONPatches(t *testing.T) {
 			jDoc, err := ApplyJSONPatches([]byte(tc.doc), tc.patchOperation...)
 			if tc.errorExpected {
 				require.Error(t, err)
+				if tc.errorContains != nil {
+					require.ErrorContains(t, err, *tc.errorContains)
+				}
 			} else {
 				if tc.expectedDoc != nil {
 					resultData, err := jDoc.MarshalJSON()
@@ -210,17 +231,17 @@ func TestApplyJSONPatches(t *testing.T) {
 						t.Error(err)
 					}
 
-					resultJson, err := formatJson(resultData)
+					resultJSON, err := formatJSON(resultData)
 					if err != nil {
 						t.Error(err)
 					}
 
-					expectedJson, err := formatJson([]byte(*tc.expectedDoc))
+					expectedJSON, err := formatJSON([]byte(*tc.expectedDoc))
 					if err != nil {
 						t.Error(err)
 					}
 
-					require.Equal(t, expectedJson, resultJson)
+					require.Equal(t, expectedJSON, resultJSON)
 				}
 				require.NoError(t, err)
 			}
@@ -228,7 +249,7 @@ func TestApplyJSONPatches(t *testing.T) {
 	}
 }
 
-func formatJson(s []byte) (string, error) {
+func formatJSON(s []byte) (string, error) {
 	var obj map[string]interface{}
 	err := json.Unmarshal(s, &obj)
 	if err != nil {

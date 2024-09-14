@@ -7,7 +7,6 @@ package jsonpatch
 
 import (
 	"sort"
-	"strconv"
 	"testing"
 
 	"github.com/ohler55/ojg/jp"
@@ -111,7 +110,9 @@ const case4Escaping string = `{
 }`
 
 func Test(t *testing.T) {
-	tests := []struct {
+	testCases := []struct {
+		name string
+
 		// Json Document
 		doc string
 
@@ -125,11 +126,20 @@ func Test(t *testing.T) {
 		expected []string
 	}{
 		{
+			name:     "TestCase-01",
 			doc:      case1Simple,
 			jsonPath: "$.xyz",
 			expected: []string{},
 		},
 		{
+			name:     "TestCase-02",
+			doc:      case1Simple,
+			jsonPath: "$.xyz",
+			path:     "doesnotexist",
+			expected: []string{},
+		},
+		{
+			name:     "TestCase-03",
 			doc:      case1Simple,
 			jsonPath: "$.a",
 			expected: []string{
@@ -137,6 +147,7 @@ func Test(t *testing.T) {
 			},
 		},
 		{
+			name:     "TestCase-04",
 			doc:      case2Nested,
 			jsonPath: "$.v[?(@.x=='test2')]",
 			expected: []string{
@@ -144,6 +155,7 @@ func Test(t *testing.T) {
 			},
 		},
 		{
+			name:     "TestCase-05",
 			doc:      case2Nested,
 			jsonPath: "..v[?(@.x=='test1')].y",
 			expected: []string{
@@ -151,6 +163,7 @@ func Test(t *testing.T) {
 			},
 		},
 		{
+			name:     "TestCase-06",
 			doc:      case2Nested,
 			jsonPath: "$.v[?(@.x=='test2')].y",
 			expected: []string{
@@ -158,6 +171,7 @@ func Test(t *testing.T) {
 			},
 		},
 		{
+			name:     "TestCase-07",
 			doc:      case2Nested,
 			jsonPath: "$.v[?(@.x=='test1')].y",
 			expected: []string{
@@ -165,6 +179,7 @@ func Test(t *testing.T) {
 			},
 		},
 		{
+			name:     "TestCase-08",
 			doc:      case2Nested,
 			jsonPath: "$.v[*].y",
 			expected: []string{
@@ -173,11 +188,13 @@ func Test(t *testing.T) {
 			},
 		},
 		{
+			name:     "TestCase-09",
 			doc:      case2Nested,
 			jsonPath: "$.v[?(@.x=='UNKNOWN')].y",
 			expected: []string{},
 		},
 		{
+			name:     "TestCase-10",
 			doc:      case1Simple,
 			jsonPath: ".a",
 			expected: []string{
@@ -185,6 +202,7 @@ func Test(t *testing.T) {
 			},
 		},
 		{
+			name:     "TestCase-11",
 			doc:      case1Simple,
 			jsonPath: "a",
 			expected: []string{
@@ -192,6 +210,7 @@ func Test(t *testing.T) {
 			},
 		},
 		{
+			name:     "TestCase-12",
 			doc:      case2Nested,
 			jsonPath: "f.w",
 			expected: []string{
@@ -199,6 +218,7 @@ func Test(t *testing.T) {
 			},
 		},
 		{
+			name:     "TestCase-13",
 			doc:      case2Nested,
 			jsonPath: "f.*",
 			expected: []string{
@@ -208,6 +228,7 @@ func Test(t *testing.T) {
 			},
 		},
 		{
+			name:     "TestCase-14",
 			doc:      case2Nested,
 			jsonPath: "v.*",
 			expected: []string{
@@ -216,6 +237,7 @@ func Test(t *testing.T) {
 			},
 		},
 		{
+			name:     "TestCase-15",
 			doc:      case2Nested,
 			jsonPath: "v.**",
 			expected: []string{
@@ -226,6 +248,7 @@ func Test(t *testing.T) {
 			},
 		},
 		{
+			name:     "TestCase-16",
 			doc:      case2Nested,
 			jsonPath: "$..y",
 			expected: []string{
@@ -236,6 +259,7 @@ func Test(t *testing.T) {
 			},
 		},
 		{
+			name:     "TestCase-17",
 			doc:      case2Nested,
 			jsonPath: "..y",
 			expected: []string{
@@ -246,6 +270,7 @@ func Test(t *testing.T) {
 			},
 		},
 		{
+			name:     "TestCase-18",
 			doc:      case2Nested,
 			jsonPath: "**.y",
 			expected: []string{
@@ -254,6 +279,7 @@ func Test(t *testing.T) {
 			},
 		},
 		{
+			name:     "TestCase-19",
 			doc:      case3Route,
 			jsonPath: "..routes[?(@.name =~ 'www_example_com')]",
 			expected: []string{
@@ -261,6 +287,7 @@ func Test(t *testing.T) {
 			},
 		},
 		{
+			name:     "TestCase-20",
 			doc:      case3Route,
 			jsonPath: "..routes[?(@.name =~ 'www_test_com')]",
 			expected: []string{
@@ -268,6 +295,7 @@ func Test(t *testing.T) {
 			},
 		},
 		{
+			name:     "TestCase-21",
 			doc:      case3Route,
 			jsonPath: "..routes[?(@.name =~ 'www')]",
 			expected: []string{
@@ -276,6 +304,7 @@ func Test(t *testing.T) {
 			},
 		},
 		{
+			name:     "TestCase-22",
 			doc:      case3Route,
 			jsonPath: "..routes[?(@.name =~ 'www')].route.cluster",
 			expected: []string{
@@ -284,6 +313,7 @@ func Test(t *testing.T) {
 			},
 		},
 		{
+			name:     "TestCase-23",
 			doc:      case3Route,
 			jsonPath: "..routes[?(@.name =~ 'www')]['route']['cluster']",
 			expected: []string{
@@ -292,6 +322,7 @@ func Test(t *testing.T) {
 			},
 		},
 		{
+			name:     "TestCase-24",
 			doc:      case3Route,
 			jsonPath: "..routes[?(@.name=='httproute/default/backend/rule/1/match/1/www_example_com')].route.upgrade_configs",
 			expected: []string{
@@ -299,6 +330,7 @@ func Test(t *testing.T) {
 			},
 		},
 		{
+			name:     "TestCase-25",
 			doc:      case3Route,
 			jsonPath: "..routes[?(@.name =~ 'www')]",
 			path:     "/abc",
@@ -308,6 +340,7 @@ func Test(t *testing.T) {
 			},
 		},
 		{
+			name:     "TestCase-26",
 			doc:      case3Route,
 			jsonPath: "..routes[?(@.name =~ 'www')]",
 			path:     "abc",
@@ -317,6 +350,7 @@ func Test(t *testing.T) {
 			},
 		},
 		{
+			name:     "TestCase-27",
 			doc:      case3Route,
 			jsonPath: "..routes[?(@.name =~ 'www')]",
 			path:     "/",
@@ -326,6 +360,7 @@ func Test(t *testing.T) {
 			},
 		},
 		{
+			name:     "TestCase-28",
 			doc:      case4Escaping,
 			jsonPath: "$.values[?(@.name =~ 'test2')]",
 			path:     "dotted.key",
@@ -334,6 +369,7 @@ func Test(t *testing.T) {
 			},
 		},
 		{
+			name:     "TestCase-29",
 			doc:      case4Escaping,
 			jsonPath: "$.values[?(@.name =~ 'test2')]['dotted.key']",
 			expected: []string{
@@ -341,6 +377,7 @@ func Test(t *testing.T) {
 			},
 		},
 		{
+			name:     "TestCase-30",
 			doc:      case4Escaping,
 			jsonPath: "$.values[?(@.name =~ 'test3')].~abc",
 			expected: []string{
@@ -348,6 +385,7 @@ func Test(t *testing.T) {
 			},
 		},
 		{
+			name:     "TestCase-31",
 			doc:      case4Escaping,
 			jsonPath: "$.values[?(@.name =~ 'test4')]['//abc']",
 			expected: []string{
@@ -355,6 +393,7 @@ func Test(t *testing.T) {
 			},
 		},
 		{
+			name:     "TestCase-32",
 			doc:      case4Escaping,
 			jsonPath: "$.values[?(@.name =~ 'test5')]['~/abc/~']",
 			expected: []string{
@@ -363,15 +402,14 @@ func Test(t *testing.T) {
 		},
 	}
 
-	for i, test := range tests {
-		testCasePrefix := "TestCase " + strconv.Itoa(i+1)
-		t.Run(testCasePrefix, func(t *testing.T) {
-			pointers, err := ConvertPathToPointers([]byte(test.doc), test.jsonPath, test.path)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			pointers, err := ConvertPathToPointers([]byte(tc.doc), tc.jsonPath, tc.path)
 			if err != nil {
-				t.Error(testCasePrefix + ": Error during conversion:\n" + err.Error())
+				require.NoError(t, err)
 			}
 
-			expectedAsString := asString(test.expected)
+			expectedAsString := asString(tc.expected)
 			pointersAsString := asString(pointers)
 
 			require.Equal(t, expectedAsString, pointersAsString)
@@ -381,6 +419,8 @@ func Test(t *testing.T) {
 
 func TestException(t *testing.T) {
 	tests := []struct {
+		name string
+
 		// Json Document
 		doc string
 
@@ -394,30 +434,31 @@ func TestException(t *testing.T) {
 		expected string
 	}{
 		{
+			name:     "TestCaseEx-01",
 			doc:      case1Simple,
 			jsonPath: ".$",
 			expected: "Error during parsing jpath",
 		},
 		{
+			name:     "TestCaseEx-02",
 			doc:      case1Simple,
 			jsonPath: "$",
 			expected: "only Root",
 		},
 		{
+			name:     "TestCaseEx-03",
 			doc:      "{",
 			jsonPath: ".$",
 			expected: "Error during parsing json",
 		},
 	}
 
-	for i, test := range tests {
-		testCasePrefix := "TestCase " + strconv.Itoa(i+1)
-		t.Run(testCasePrefix, func(t *testing.T) {
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
 			_, err := ConvertPathToPointers([]byte(test.doc), test.jsonPath, test.path)
 			if err == nil {
-				t.Error(testCasePrefix + ": Error expected, but no error found!")
+				require.Error(t, err)
 			}
-
 			require.ErrorContains(t, err, test.expected)
 		})
 	}
