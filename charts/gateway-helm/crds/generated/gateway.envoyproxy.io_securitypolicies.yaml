@@ -3215,8 +3215,14 @@ spec:
                     - message: BackendRefs must be used, backendRef is not supported.
                       rule: '!has(self.backendRef)'
                     - message: Only one backendRefs is allowed.
-                      rule: 'has(self.backendRefs)? self.backendRefs.size() > 1 :
+                      rule: 'has(self.backendRefs)? self.backendRefs.size() == 1 :
                         true'
+                    - message: Retry timeout is not supported.
+                      rule: has(self.backendSettings)? (has(self.backendSettings.retry)?(has(self.backendSettings.retry.perRetry)?
+                        !has(self.backendSettings.retry.perRetry.timeout):true):true):true
+                    - message: RetryOn is not supported.
+                      rule: has(self.backendSettings)?(has(self.backendSettings.retry)?
+                        !has(self.backendSettings.retry.retryOn):true):true
                   redirectURL:
                     description: |-
                       The redirect URL to be used in the OIDC
