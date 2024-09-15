@@ -7,15 +7,17 @@ package gatewayapi
 
 import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
 
 var _ AddressesTranslator = (*Translator)(nil)
 
 type AddressesTranslator interface {
-	ProcessAddresses(gateways []*GatewayContext, xdsIR XdsIRMap, infraIR InfraIRMap, resources *Resources)
+	ProcessAddresses(gateways []*GatewayContext, xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap)
 }
 
-func (t *Translator) ProcessAddresses(gateways []*GatewayContext, xdsIR XdsIRMap, infraIR InfraIRMap, resources *Resources) {
+func (t *Translator) ProcessAddresses(gateways []*GatewayContext, xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap) {
 	for _, gateway := range gateways {
 		// Infra IR already exist
 		irKey := t.getIRKey(gateway.Gateway)

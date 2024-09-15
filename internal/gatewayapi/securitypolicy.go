@@ -26,6 +26,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
@@ -46,8 +47,8 @@ const (
 func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.SecurityPolicy,
 	gateways []*GatewayContext,
 	routes []RouteContext,
-	resources *Resources,
-	xdsIR XdsIRMap,
+	resources *resource.Resources,
+	xdsIR resource.XdsIRMap,
 ) []*egv1a1.SecurityPolicy {
 	var res []*egv1a1.SecurityPolicy
 
@@ -87,7 +88,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, routes)
 		for _, currTarget := range targetRefs {
-			if currTarget.Kind != KindGateway {
+			if currTarget.Kind != resource.KindGateway {
 				var (
 					targetedRoute  RouteContext
 					parentGateways []gwapiv1a2.ParentReference
@@ -114,7 +115,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 				// The parent gateways are also used to set the status of the policy.
 				parentRefs := GetParentReferences(targetedRoute)
 				for _, p := range parentRefs {
-					if p.Kind == nil || *p.Kind == KindGateway {
+					if p.Kind == nil || *p.Kind == resource.KindGateway {
 						namespace := targetedRoute.GetNamespace()
 						if p.Namespace != nil {
 							namespace = string(*p.Namespace)
@@ -165,7 +166,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways)
 		for _, currTarget := range targetRefs {
-			if currTarget.Kind == KindGateway {
+			if currTarget.Kind == resource.KindGateway {
 				var (
 					targetedGateway *GatewayContext
 					resolveErr      *status.PolicyResolveError
@@ -322,7 +323,7 @@ func resolveSecurityPolicyRouteTargetRef(
 
 func (t *Translator) translateSecurityPolicyForRoute(
 	policy *egv1a1.SecurityPolicy, route RouteContext,
-	resources *Resources, xdsIR XdsIRMap,
+	resources *resource.Resources, xdsIR resource.XdsIRMap,
 ) error {
 	// Build IR
 	var (
@@ -421,8 +422,8 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	policy *egv1a1.SecurityPolicy,
 	gateway *GatewayContext,
 	target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
-	resources *Resources,
-	xdsIR XdsIRMap,
+	resources *resource.Resources,
+	xdsIR resource.XdsIRMap,
 ) error {
 	// Build IR
 	var (
@@ -567,7 +568,7 @@ func (t *Translator) buildJWT(jwt *egv1a1.JWT) *ir.JWT {
 
 func (t *Translator) buildOIDC(
 	policy *egv1a1.SecurityPolicy,
-	resources *Resources,
+	resources *resource.Resources,
 	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.OIDC, error) {
 	var (
@@ -588,7 +589,7 @@ func (t *Translator) buildOIDC(
 
 	from := crossNamespaceFrom{
 		group:     egv1a1.GroupName,
-		kind:      KindSecurityPolicy,
+		kind:      resource.KindSecurityPolicy,
 		namespace: policy.Namespace,
 	}
 
@@ -664,7 +665,7 @@ func (t *Translator) buildOIDC(
 	}, nil
 }
 
-func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources *Resources, envoyProxy *egv1a1.EnvoyProxy) (*ir.OIDCProvider, error) {
+func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) (*ir.OIDCProvider, error) {
 	var (
 		provider              = policy.Spec.OIDC.Provider
 		tokenEndpoint         string
@@ -712,7 +713,7 @@ func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources 
 		extServiceDest, err := t.processExtServiceDestination(
 			&backendRef,
 			pnn,
-			KindSecurityPolicy,
+			resource.KindSecurityPolicy,
 			protocol,
 			resources,
 			envoyProxy,
@@ -828,7 +829,7 @@ func validateTokenEndpoint(tokenEndpoint string) error {
 
 func (t *Translator) buildBasicAuth(
 	policy *egv1a1.SecurityPolicy,
-	resources *Resources,
+	resources *resource.Resources,
 ) (*ir.BasicAuth, error) {
 	var (
 		basicAuth   = policy.Spec.BasicAuth
@@ -838,7 +839,7 @@ func (t *Translator) buildBasicAuth(
 
 	from := crossNamespaceFrom{
 		group:     egv1a1.GroupName,
-		kind:      KindSecurityPolicy,
+		kind:      resource.KindSecurityPolicy,
 		namespace: policy.Namespace,
 	}
 	if usersSecret, err = t.validateSecretRef(
@@ -859,7 +860,7 @@ func (t *Translator) buildBasicAuth(
 	}, nil
 }
 
-func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Resources, envoyProxy *egv1a1.EnvoyProxy) (*ir.ExtAuth, error) {
+func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) (*ir.ExtAuth, error) {
 	var (
 		http      = policy.Spec.ExtAuth.HTTP
 		grpc      = policy.Spec.ExtAuth.GRPC
@@ -904,7 +905,7 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Reso
 		extServiceDest, err := t.processExtServiceDestination(
 			&backendRef,
 			pnn,
-			KindSecurityPolicy,
+			resource.KindSecurityPolicy,
 			protocol,
 			resources,
 			envoyProxy,
@@ -915,7 +916,7 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Reso
 		ds = append(ds, extServiceDest)
 	}
 	rd := ir.RouteDestination{
-		Name:     irIndexedExtServiceDestinationName(pnn, egv1a1.KindSecurityPolicy, 0),
+		Name:     irIndexedExtServiceDestinationName(pnn, resource.KindSecurityPolicy, 0),
 		Settings: ds,
 	}
 
@@ -946,14 +947,14 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *Reso
 	return extAuth, nil
 }
 
-func backendRefAuthority(resources *Resources, backendRef *gwapiv1.BackendObjectReference, policy *egv1a1.SecurityPolicy) string {
+func backendRefAuthority(resources *resource.Resources, backendRef *gwapiv1.BackendObjectReference, policy *egv1a1.SecurityPolicy) string {
 	if backendRef == nil {
 		return ""
 	}
 
 	backendNamespace := NamespaceDerefOr(backendRef.Namespace, policy.Namespace)
-	backendKind := KindDerefOr(backendRef.Kind, KindService)
-	if backendKind == egv1a1.KindBackend {
+	backendKind := KindDerefOr(backendRef.Kind, resource.KindService)
+	if backendKind == resource.KindBackend {
 		backend := resources.GetBackend(backendNamespace, string(backendRef.Name))
 		if backend != nil {
 			// TODO: exists multi FQDN endpoints?

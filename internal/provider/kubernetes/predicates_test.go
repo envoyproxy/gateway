@@ -24,6 +24,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes/test"
@@ -221,7 +222,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 			configs: []client.Object{
 				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 				test.GetSecureGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc", test.GroupKindNamespacedName{
-					Kind: gatewayapi.KindSecret,
+					Kind: resource.KindSecret,
 					Name: "secret",
 				}),
 			},
@@ -233,7 +234,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 			configs: []client.Object{
 				test.GetGatewayClass("test-gc", "not.configured/controller", nil),
 				test.GetSecureGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc", test.GroupKindNamespacedName{
-					Kind: gatewayapi.KindSecret,
+					Kind: resource.KindSecret,
 					Name: "secret",
 				}),
 			},

@@ -13,7 +13,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 	xdstypes "github.com/envoyproxy/gateway/internal/xds/types"
 )
@@ -22,7 +22,7 @@ import (
 type ProviderResources struct {
 	// GatewayAPIResources is a map from a GatewayClass name to
 	// a group of gateway API and other related resources.
-	GatewayAPIResources watchable.Map[string, *gatewayapi.ControllerResources]
+	GatewayAPIResources watchable.Map[string, *resource.ControllerResources]
 
 	// GatewayAPIStatuses is a group of gateway api
 	// resource statuses maps.
@@ -35,7 +35,7 @@ type ProviderResources struct {
 	ExtensionStatuses
 }
 
-func (p *ProviderResources) GetResources() []*gatewayapi.Resources {
+func (p *ProviderResources) GetResources() []*resource.Resources {
 	if p.GatewayAPIResources.Len() == 0 {
 		return nil
 	}
@@ -47,7 +47,7 @@ func (p *ProviderResources) GetResources() []*gatewayapi.Resources {
 	return nil
 }
 
-func (p *ProviderResources) GetResourcesByGatewayClass(name string) *gatewayapi.Resources {
+func (p *ProviderResources) GetResourcesByGatewayClass(name string) *resource.Resources {
 	for _, r := range p.GetResources() {
 		if r != nil && r.GatewayClass != nil && r.GatewayClass.Name == name {
 			return r

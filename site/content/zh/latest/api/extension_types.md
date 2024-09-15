@@ -26,6 +26,8 @@ API group.
 - [EnvoyPatchPolicy](#envoypatchpolicy)
 - [EnvoyPatchPolicyList](#envoypatchpolicylist)
 - [EnvoyProxy](#envoyproxy)
+- [HTTPRouteFilter](#httproutefilter)
+- [HTTPRouteFilterList](#httproutefilterlist)
 - [SecurityPolicy](#securitypolicy)
 - [SecurityPolicyList](#securitypolicylist)
 
@@ -1891,6 +1893,83 @@ _Appears in:_
 | `headersToBackend` | _string array_ |  false  | HeadersToBackend are the authorization response headers that will be added<br />to the original client request before sending it to the backend server.<br />Note that coexisting headers will be overridden.<br />If not specified, no authorization response headers will be added to the<br />original client request. |
 
 
+#### HTTPPathModifier
+
+
+
+
+
+_Appears in:_
+- [HTTPURLRewriteFilter](#httpurlrewritefilter)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `type` | _[HTTPPathModifierType](#httppathmodifiertype)_ |  true  |  |
+| `replaceRegexMatch` | _[ReplaceRegexMatch](#replaceregexmatch)_ |  true  | ReplaceRegexMatch defines a path regex rewrite. The path portions matched by the regex pattern are replaced by the defined substitution.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-regex-rewrite<br />Some examples:<br />(1) replaceRegexMatch:<br />      pattern: ^/service/([^/]+)(/.*)$<br />      substitution: \2/instance/\1<br />    Would transform /service/foo/v1/api into /v1/api/instance/foo.<br />(2) replaceRegexMatch:<br />      pattern: one<br />      substitution: two<br />    Would transform /xxx/one/yyy/one/zzz into /xxx/two/yyy/two/zzz.<br />(3) replaceRegexMatch:<br />      pattern: ^(.*?)one(.*)$<br />      substitution: \1two\2<br />    Would transform /xxx/one/yyy/one/zzz into /xxx/two/yyy/one/zzz.<br />(3) replaceRegexMatch:<br />      pattern: (?i)/xxx/<br />      substitution: /yyy/<br />    Would transform path /aaa/XxX/bbb into /aaa/yyy/bbb (case-insensitive). |
+
+
+#### HTTPPathModifierType
+
+_Underlying type:_ _string_
+
+HTTPPathModifierType defines the type of path redirect or rewrite.
+
+_Appears in:_
+- [HTTPPathModifier](#httppathmodifier)
+
+| Value | Description |
+| ----- | ----------- |
+| `ReplaceRegexMatch` | RegexHTTPPathModifier This type of modifier indicates that the portions of the path that match the specified<br /> regex would be substituted with the specified substitution value<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/type/matcher/v3/regex.proto#type-matcher-v3-regexmatchandsubstitute<br /> | 
+
+
+#### HTTPRouteFilter
+
+
+
+HTTPRouteFilter is a custom Envoy Gateway HTTPRouteFilter which provides extended
+traffic processing options such as path regex rewrite, direct response and more.
+
+_Appears in:_
+- [HTTPRouteFilterList](#httproutefilterlist)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
+| `kind` | _string_ | |`HTTPRouteFilter`
+| `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` | _[HTTPRouteFilterSpec](#httproutefilterspec)_ |  true  | Spec defines the desired state of HTTPRouteFilter. |
+
+
+#### HTTPRouteFilterList
+
+
+
+HTTPRouteFilterList contains a list of HTTPRouteFilter resources.
+
+
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
+| `kind` | _string_ | |`HTTPRouteFilterList`
+| `metadata` | _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#listmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` | _[HTTPRouteFilter](#httproutefilter) array_ |  true  |  |
+
+
+#### HTTPRouteFilterSpec
+
+
+
+HTTPRouteFilterSpec defines the desired state of HTTPRouteFilter.
+
+_Appears in:_
+- [HTTPRouteFilter](#httproutefilter)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `urlRewrite` | _[HTTPURLRewriteFilter](#httpurlrewritefilter)_ |  false  |  |
+
+
 #### HTTPStatus
 
 _Underlying type:_ _integer_
@@ -1916,6 +1995,20 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `connectionIdleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.<br />Default: 1 hour. |
 | `maxConnectionDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | The maximum duration of an HTTP connection.<br />Default: unlimited. |
+
+
+#### HTTPURLRewriteFilter
+
+
+
+HTTPURLRewriteFilter define rewrites of HTTP URL components such as path and host
+
+_Appears in:_
+- [HTTPRouteFilterSpec](#httproutefilterspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `path` | _[HTTPPathModifier](#httppathmodifier)_ |  false  | Path defines a path rewrite. |
 
 
 #### HTTPWasmCodeSource
@@ -2816,6 +2909,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `format` | _[ProxyAccessLogFormat](#proxyaccesslogformat)_ |  false  | Format defines the format of accesslog.<br />This will be ignored if sink type is ALS. |
+| `matches` | _string array_ |  true  | Matches defines the match conditions for accesslog in CEL expression.<br />An accesslog will be emitted only when one or more match conditions are evaluated to true.<br />Invalid [CEL](https://www.envoyproxy.io/docs/envoy/latest/xds/type/v3/cel.proto.html#common-expression-language-cel-proto) expressions will be ignored. |
 | `sinks` | _[ProxyAccessLogSink](#proxyaccesslogsink) array_ |  true  | Sinks defines the sinks of accesslog. |
 
 
@@ -3286,6 +3380,21 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `uri` | _string_ |  true  | URI is the HTTPS URI to fetch the JWKS. Envoy's system trust bundle is used to<br />validate the server certificate. |
+
+
+#### ReplaceRegexMatch
+
+
+
+
+
+_Appears in:_
+- [HTTPPathModifier](#httppathmodifier)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `pattern` | _string_ |  true  | Pattern matches a regular expression against the value of the HTTP Path.The regex string must<br />adhere to the syntax documented in https://github.com/google/re2/wiki/Syntax. |
+| `substitution` | _string_ |  true  | Substitution is an expression that replaces the matched portion.The expression may include numbered<br />capture groups that adhere to syntax documented in https://github.com/google/re2/wiki/Syntax. |
 
 
 #### RequestHeaderCustomTag

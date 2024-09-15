@@ -156,7 +156,7 @@ The performance and scalability concerns come from several aspects for control-p
 - The rate of configuration changes.
 
 The benchmark test is running on a [Kind][Kind] cluster, you can start a Kind cluster and 
-run benchmark test on it by executing `make benchmark-test`.
+run benchmark test on it by executing `make benchmark`.
 
 The benchmark report will be included in the release artifacts, you can learn more by downloading
 the detailed benchmark report, namely `benchmark_report.zip`.

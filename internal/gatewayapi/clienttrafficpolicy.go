@@ -22,6 +22,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
@@ -37,10 +38,10 @@ func hasSectionName(target *gwapiv1a2.LocalPolicyTargetReferenceWithSectionName)
 }
 
 func (t *Translator) ProcessClientTrafficPolicies(
-	resources *Resources,
+	resources *resource.Resources,
 	gateways []*GatewayContext,
-	xdsIR XdsIRMap,
-	infraIR InfraIRMap,
+	xdsIR resource.XdsIRMap,
+	infraIR resource.InfraIRMap,
 ) []*egv1a1.ClientTrafficPolicy {
 	var res []*egv1a1.ClientTrafficPolicy
 
@@ -366,7 +367,7 @@ func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds, 
 }
 
 func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.ClientTrafficPolicy, l *ListenerContext,
-	xdsIR XdsIRMap, infraIR InfraIRMap, resources *Resources,
+	xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap, resources *resource.Resources,
 ) error {
 	// Find IR
 	irKey := t.getIRKey(l.gateway.Gateway)
@@ -758,7 +759,7 @@ func translateHealthCheckSettings(healthCheckSettings *egv1a1.HealthCheckSetting
 }
 
 func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPolicy,
-	irTLSConfig *ir.TLSConfig, resources *Resources,
+	irTLSConfig *ir.TLSConfig, resources *resource.Resources,
 ) (*ir.TLSConfig, error) {
 	// Return if this listener isn't a TLS listener. There has to be
 	// at least one certificate defined, which would cause httpIR/tcpIR to
@@ -805,7 +806,7 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 	if tlsParams.ClientValidation != nil {
 		from := crossNamespaceFrom{
 			group:     egv1a1.GroupName,
-			kind:      KindClientTrafficPolicy,
+			kind:      resource.KindClientTrafficPolicy,
 			namespace: policy.Namespace,
 		}
 
@@ -814,7 +815,7 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 		}
 
 		for _, caCertRef := range tlsParams.ClientValidation.CACertificateRefs {
-			if caCertRef.Kind == nil || string(*caCertRef.Kind) == KindSecret { // nolint
+			if caCertRef.Kind == nil || string(*caCertRef.Kind) == resource.KindSecret { // nolint
 				secret, err := t.validateSecretRef(false, from, caCertRef, resources)
 				if err != nil {
 					return irTLSConfig, err
@@ -833,7 +834,7 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 
 				irCACert.Certificate = append(irCACert.Certificate, secretBytes...)
 
-			} else if string(*caCertRef.Kind) == KindConfigMap {
+			} else if string(*caCertRef.Kind) == resource.KindConfigMap {
 				configMap, err := t.validateConfigMapRef(false, from, caCertRef, resources)
 				if err != nil {
 					return irTLSConfig, err
