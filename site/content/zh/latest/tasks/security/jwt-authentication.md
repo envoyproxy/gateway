@@ -87,7 +87,7 @@ curl -sS -o /dev/null -H "Host: www.example.com" -w "%{http_code}\n" http://$GAT
 获取用于测试请求身份验证的 JWT：
 
 ```shell
-TOKEN=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/test.jwt -s) && echo "$TOKEN" | cut -d '.' -f2 - | base64 --decode -
+TOKEN=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/test.jwt -s) && echo "$TOKEN" | cut -d '.' -f2 - | base64 --decode
 ```
 
 **注意：**上述命令解码并返回令牌的有效内容。您可以将 `f2` 替换为 `f1` 来查看令牌的标头。
@@ -123,7 +123,7 @@ Error invoking method "yages.Echo/Ping": rpc error: code = Unauthenticated desc 
 获取用于测试请求身份验证的 JWT：
 
 ```shell
-TOKEN=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/test.jwt -s) && echo "$TOKEN" | cut -d '.' -f2 - | base64 --decode -
+TOKEN=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/test.jwt -s) && echo "$TOKEN" | cut -d '.' -f2 - | base64 --decode
 ```
 
 **注意：**上述命令解码并返回令牌的有效内容。您可以将 `f2` 替换为 `f1` 来查看令牌的标头。
