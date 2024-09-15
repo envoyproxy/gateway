@@ -1140,11 +1140,11 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					},
 					OIDC: &egv1a1.OIDC{
 						Provider: egv1a1.OIDCProvider{
-							BackendCluster:        egv1a1.BackendCluster{
+							BackendCluster: egv1a1.BackendCluster{
 								BackendSettings: &egv1a1.ClusterSettings{
 									Retry: &egv1a1.Retry{
 										NumRetries: ptr.To(int32(3)),
-										PerRetry:    &egv1a1.PerRetryPolicy{
+										PerRetry: &egv1a1.PerRetryPolicy{
 											BackOff: &egv1a1.BackOffPolicy{
 												BaseInterval: &metav1.Duration{
 													Duration: time.Second * 1,
@@ -1187,11 +1187,11 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					},
 					OIDC: &egv1a1.OIDC{
 						Provider: egv1a1.OIDCProvider{
-							BackendCluster:        egv1a1.BackendCluster{
+							BackendCluster: egv1a1.BackendCluster{
 								BackendSettings: &egv1a1.ClusterSettings{
 									Retry: &egv1a1.Retry{
 										NumRetries: ptr.To(int32(3)),
-										PerRetry:    &egv1a1.PerRetryPolicy{
+										PerRetry: &egv1a1.PerRetryPolicy{
 											Timeout: &metav1.Duration{
 												Duration: time.Second * 10,
 											},

@@ -11,38 +11,6 @@ http:
   - name: "first-route"
     hostname: "*"
     pathMatch:
-      exact: "foo"
-    destination:
-      name: "first-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-    security:
-      oidc:
-        name: securitypolicy/default/policy-for-first-route
-        clientID: client.oauth.foo.com
-        clientSecret: Y2xpZW50MTpzZWNyZXQK
-        hmacSecret: qrOYACHXoe7UEDI/raOjNSx+Z9ufXSc/22C3T6X/zPY=
-        provider:
-          authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
-          tokenEndpoint: https://oauth.foo.com/token
-        scopes:
-        - openid
-        - email
-        - profile
-        resources:
-        - api
-        redirectURL: "https://www.example.com/foo/oauth2/callback"
-        redirectPath: "/foo/oauth2/callback"
-        logoutPath: "/foo/logout"
-        cookieSuffix: 5F93C2E4
-        forwardAccessToken: true
-        defaultTokenTTL: 1h
-        refreshToken: true
-        defaultRefreshTokenTTL: 48h
-    hostname: "*"
-    pathMatch:
       exact: "baz"
     destination:
       name: "third-route-dest"

@@ -49,16 +49,16 @@ httpRoutes:
       - name: service-1
         port: 8080
 backends:
-  - apiVersion: gateway.envoyproxy.io/v1alpha1
-    kind: Backend
-    metadata:
-      name: backend-fqdn
-      namespace: envoy-gateway
-    spec:
-      endpoints:
-        - fqdn:
-            hostname: 'oauth.foo.com'
-            port: 443
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    name: backend-fqdn
+    namespace: envoy-gateway
+  spec:
+    endpoints:
+    - fqdn:
+        hostname: 'oauth.foo.com'
+        port: 443
 securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
