@@ -671,7 +671,6 @@ func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources 
 		tokenEndpoint         string
 		authorizationEndpoint string
 		protocol              ir.AppProtocol
-		ds                    []*ir.DestinationSetting
 		rd                    *ir.RouteDestination
 		traffic               *ir.TrafficFeatures
 		err                   error
@@ -704,30 +703,9 @@ func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources 
 		protocol = ir.HTTP
 	}
 
-	pnn := utils.NamespacedName(policy)
-	for _, backendRef := range provider.BackendRefs {
-		if err = t.validateExtServiceBackendReference(&backendRef.BackendObjectReference, policy.Namespace, policy.Kind, resources); err != nil {
+	if len(provider.BackendRefs) > 0 {
+		if rd, err = t.transalteExtServiceBackendRefs(policy, provider.BackendRefs, protocol, resources, envoyProxy, 0); err != nil {
 			return nil, err
-		}
-
-		extServiceDest, err := t.processExtServiceDestination(
-			&backendRef,
-			pnn,
-			resource.KindSecurityPolicy,
-			protocol,
-			resources,
-			envoyProxy,
-		)
-		if err != nil {
-			return nil, err
-		}
-		ds = append(ds, extServiceDest)
-	}
-
-	if len(ds) > 0 {
-		rd = &ir.RouteDestination{
-			Name:     irIndexedExtServiceDestinationName(pnn, egv1a1.KindSecurityPolicy, 0),
-			Settings: ds,
 		}
 	}
 
@@ -866,7 +844,7 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *reso
 		grpc      = policy.Spec.ExtAuth.GRPC
 		backends  *egv1a1.BackendCluster
 		protocol  ir.AppProtocol
-		ds        []*ir.DestinationSetting
+		rd        *ir.RouteDestination
 		authority string
 		err       error
 		traffic   *ir.TrafficFeatures
@@ -888,12 +866,12 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *reso
 		backends = &grpc.BackendCluster
 		protocol = ir.GRPC
 	}
-	pnn := utils.NamespacedName(policy)
-	for _, backendRef := range backends.BackendRefs {
-		if err = t.validateExtServiceBackendReference(&backendRef.BackendObjectReference, policy.Namespace, policy.Kind, resources); err != nil {
-			return nil, err
-		}
 
+	if rd, err = t.transalteExtServiceBackendRefs(policy, backends.BackendRefs, protocol, resources, envoyProxy, 0); err != nil {
+		return nil, err
+	}
+
+	for _, backendRef := range backends.BackendRefs {
 		// Authority is the calculated hostname that will be used as the Authority header.
 		// If there are multiple backend referenced, simply use the first one - there are no good answers here.
 		// When translated to XDS, the authority is used on the filter level not on the cluster level.
@@ -901,23 +879,6 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *reso
 		if authority == "" {
 			authority = backendRefAuthority(resources, &backendRef.BackendObjectReference, policy)
 		}
-
-		extServiceDest, err := t.processExtServiceDestination(
-			&backendRef,
-			pnn,
-			resource.KindSecurityPolicy,
-			protocol,
-			resources,
-			envoyProxy,
-		)
-		if err != nil {
-			return nil, err
-		}
-		ds = append(ds, extServiceDest)
-	}
-	rd := ir.RouteDestination{
-		Name:     irIndexedExtServiceDestinationName(pnn, resource.KindSecurityPolicy, 0),
-		Settings: ds,
 	}
 
 	if traffic, err = translateTrafficFeatures(backends.BackendSettings); err != nil {
@@ -933,14 +894,14 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *reso
 
 	if http != nil {
 		extAuth.HTTP = &ir.HTTPExtAuthService{
-			Destination:      rd,
+			Destination:      *rd,
 			Authority:        authority,
 			Path:             ptr.Deref(http.Path, ""),
 			HeadersToBackend: http.HeadersToBackend,
 		}
 	} else {
 		extAuth.GRPC = &ir.GRPCExtAuthService{
-			Destination: rd,
+			Destination: *rd,
 			Authority:   authority,
 		}
 	}

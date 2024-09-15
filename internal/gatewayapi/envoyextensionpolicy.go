@@ -411,7 +411,7 @@ func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resource
 
 	for idx, ep := range policy.Spec.ExtProc {
 		name := irConfigNameForExtProc(policy, idx)
-		extProcIR, err := t.buildExtProc(name, utils.NamespacedName(policy), ep, idx, resources, envoyProxy)
+		extProcIR, err := t.buildExtProc(name, policy, ep, idx, resources, envoyProxy)
 		if err != nil {
 			return nil, err
 		}
@@ -422,59 +422,33 @@ func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resource
 
 func (t *Translator) buildExtProc(
 	name string,
-	policyNamespacedName types.NamespacedName,
+	policy *egv1a1.EnvoyExtensionPolicy,
 	extProc egv1a1.ExtProc,
 	extProcIdx int,
 	resources *resource.Resources,
 	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.ExtProc, error) {
 	var (
-		ds        *ir.DestinationSetting
+		rd        *ir.RouteDestination
 		authority string
 		err       error
 	)
 
-	var dsl []*ir.DestinationSetting
-	for i := range extProc.BackendRefs {
-		if err = t.validateExtServiceBackendReference(
-			&extProc.BackendRefs[i].BackendObjectReference,
-			policyNamespacedName.Namespace,
-			egv1a1.KindEnvoyExtensionPolicy,
-			resources); err != nil {
-			return nil, err
-		}
-
-		ds, err = t.processExtServiceDestination(
-			&extProc.BackendRefs[i],
-			policyNamespacedName,
-			egv1a1.KindEnvoyExtensionPolicy,
-			ir.GRPC,
-			resources,
-			envoyProxy,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		dsl = append(dsl, ds)
-	}
-
-	rd := ir.RouteDestination{
-		Name:     irIndexedExtServiceDestinationName(policyNamespacedName, egv1a1.KindEnvoyExtensionPolicy, extProcIdx),
-		Settings: dsl,
+	if rd, err = t.transalteExtServiceBackendRefs(policy, extProc.BackendRefs, ir.GRPC, resources, envoyProxy, extProcIdx); err != nil {
+		return nil, err
 	}
 
 	if extProc.BackendRefs[0].Port != nil {
 		authority = fmt.Sprintf(
 			"%s.%s:%d",
 			extProc.BackendRefs[0].Name,
-			NamespaceDerefOr(extProc.BackendRefs[0].Namespace, policyNamespacedName.Namespace),
+			NamespaceDerefOr(extProc.BackendRefs[0].Namespace, policy.Namespace),
 			*extProc.BackendRefs[0].Port)
 	} else {
 		authority = fmt.Sprintf(
 			"%s.%s",
 			extProc.BackendRefs[0].Name,
-			NamespaceDerefOr(extProc.BackendRefs[0].Namespace, policyNamespacedName.Namespace))
+			NamespaceDerefOr(extProc.BackendRefs[0].Namespace, policy.Namespace))
 	}
 
 	traffic, err := translateTrafficFeatures(extProc.BackendCluster.BackendSettings)
@@ -484,7 +458,7 @@ func (t *Translator) buildExtProc(
 
 	extProcIR := &ir.ExtProc{
 		Name:        name,
-		Destination: rd,
+		Destination: *rd,
 		Traffic:     traffic,
 		Authority:   authority,
 	}

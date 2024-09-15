@@ -297,7 +297,7 @@ func createOAuthServerClusters(tCtx *types.ResourceVersionTable,
 		oidc := route.Security.OIDC
 
 		// If the OIDC provider has a destination, use it.
-		if oidc.Provider.Destination != nil {
+		if oidc.Provider.Destination != nil && len(oidc.Provider.Destination.Settings) > 0 {
 			if err := createExtServiceXDSCluster(
 				oidc.Provider.Destination, oidc.Provider.Traffic, tCtx); err != nil && !errors.Is(
 				err, ErrXdsClusterExists) {
