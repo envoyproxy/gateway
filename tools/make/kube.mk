@@ -43,6 +43,8 @@ CONTROLLERGEN_OBJECT_FLAGS :=  object:headerFile="$(ROOT_DIR)/tools/boilerplate/
 manifests: $(tools/controller-gen) generate-gwapi-manifests ## Generate WebhookConfiguration and CustomResourceDefinition objects.
 	@$(LOG_TARGET)
 	$(tools/controller-gen) crd:allowDangerousTypes=true paths="./api/..." output:crd:artifacts:config=charts/gateway-helm/crds/generated
+	# save a copy of generated crds for resources local validator
+	cp charts/gateway-helm/crds/generated/* internal/gatewayapi/resource/crds
 
 .PHONY: generate-gwapi-manifests
 generate-gwapi-manifests:
@@ -51,6 +53,8 @@ generate-gwapi-manifests: ## Generate GWAPI manifests and make it consistent wit
 	@mkdir -p $(OUTPUT_DIR)/
 	curl -sLo $(OUTPUT_DIR)/gatewayapi-crds.yaml ${GATEWAY_RELEASE_URL}
 	mv $(OUTPUT_DIR)/gatewayapi-crds.yaml charts/gateway-helm/crds/gatewayapi-crds.yaml
+	# save a copy of crd for resources local validator
+	cp charts/gateway-helm/crds/gatewayapi-crds.yaml internal/gatewayapi/resource/crds
 
 .PHONY: kube-generate
 kube-generate: $(tools/controller-gen) ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
