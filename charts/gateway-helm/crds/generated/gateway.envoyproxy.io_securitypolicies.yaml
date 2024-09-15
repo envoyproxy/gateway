@@ -3217,9 +3217,9 @@ spec:
                     - message: Retry timeout is not supported.
                       rule: has(self.backendSettings)? (has(self.backendSettings.retry)?(has(self.backendSettings.retry.perRetry)?
                         !has(self.backendSettings.retry.perRetry.timeout):true):true):true
-                    - message: RetryOn is not supported.
-                      rule: has(self.backendSettings)?(has(self.backendSettings.retry)?
-                        !has(self.backendSettings.retry.retryOn):true):true
+                    - message: HTTPStatusCodes is not supported.
+                      rule: has(self.backendSettings)? (has(self.backendSettings.retry)?(has(self.backendSettings.retry.retryOn)?
+                        !has(self.backendSettings.retry.retryOn.httpStatusCodes):true):true):true
                   redirectURL:
                     description: |-
                       The redirect URL to be used in the OIDC

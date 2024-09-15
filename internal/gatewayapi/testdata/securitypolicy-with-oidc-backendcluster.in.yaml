@@ -85,6 +85,8 @@ securityPolicies:
               backOff:
                 baseInterval: 1s
                 maxInterval: 5s
+            retryOn:
+              triggers: ["5xx", "gateway-error", "reset"]
         issuer: "https://oauth.foo.com"
         authorizationEndpoint: "https://oauth.foo.com/oauth2/v2/auth"
         tokenEndpoint: "https://oauth.foo.com/token"

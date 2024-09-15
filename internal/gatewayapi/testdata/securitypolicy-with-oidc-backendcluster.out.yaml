@@ -146,6 +146,11 @@ securityPolicies:
               backOff:
                 baseInterval: 1s
                 maxInterval: 5s
+            retryOn:
+              triggers:
+              - 5xx
+              - gateway-error
+              - reset
         issuer: https://oauth.foo.com
         tokenEndpoint: https://oauth.foo.com/token
       redirectURL: https://www.example.com/bar/oauth2/callback
@@ -239,6 +244,11 @@ xdsIR:
                     backOff:
                       baseInterval: 1s
                       maxInterval: 5s
+                  retryOn:
+                    triggers:
+                    - 5xx
+                    - gateway-error
+                    - reset
             redirectPath: /bar/oauth2/callback
             redirectURL: https://www.example.com/bar/oauth2/callback
             refreshToken: true

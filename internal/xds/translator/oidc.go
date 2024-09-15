@@ -211,36 +211,51 @@ func oauth2Config(oidc *ir.OIDC) (*oauth2v3.OAuth2, error) {
 
 	// Set the retry policy if it exists.
 	if oidc.Provider.Traffic != nil && oidc.Provider.Traffic.Retry != nil {
-		retry := oidc.Provider.Traffic.Retry
-
-		rp := &corev3.RetryPolicy{
-			RetryOn: retryDefaultRetryOn,
+		var rp *corev3.RetryPolicy
+		if rp, err = buildNonRouteRetryPolicy(oidc.Provider.Traffic.Retry); err != nil {
+			return nil, err
 		}
-
-		// These fields in the RetryPolicy are just for route-level retries, they are not used in the OAuth2 filter.
-		// retry.PerRetry.Timeout
-		// retry.RetryOn
-
-		if retry.PerRetry != nil && retry.PerRetry.BackOff != nil {
-			rp.RetryBackOff = &corev3.BackoffStrategy{
-				BaseInterval: &durationpb.Duration{
-					Seconds: int64(retry.PerRetry.BackOff.BaseInterval.Seconds()),
-				},
-				MaxInterval: &durationpb.Duration{
-					Seconds: int64(retry.PerRetry.BackOff.MaxInterval.Seconds()),
-				},
-			}
-		}
-
-		if retry.NumRetries != nil {
-			rp.NumRetries = &wrappers.UInt32Value{
-				Value: *retry.NumRetries,
-			}
-		}
-
 		oauth2.Config.RetryPolicy = rp
 	}
 	return oauth2, nil
+}
+
+func buildNonRouteRetryPolicy(rr *ir.Retry) (*corev3.RetryPolicy, error) {
+	rp := &corev3.RetryPolicy{
+		RetryOn: retryDefaultRetryOn,
+	}
+
+	// These two fields in the RetryPolicy are just for route-level retries, they are not used for non-route retries.
+	// retry.PerRetry.Timeout
+	// retry.RetryOn.HTTPStatusCodes
+
+	if rr.PerRetry != nil && rr.PerRetry.BackOff != nil {
+		rp.RetryBackOff = &corev3.BackoffStrategy{
+			BaseInterval: &durationpb.Duration{
+				Seconds: int64(rr.PerRetry.BackOff.BaseInterval.Seconds()),
+			},
+			MaxInterval: &durationpb.Duration{
+				Seconds: int64(rr.PerRetry.BackOff.MaxInterval.Seconds()),
+			},
+		}
+	}
+
+	if rr.NumRetries != nil {
+		rp.NumRetries = &wrappers.UInt32Value{
+			Value: *rr.NumRetries,
+		}
+	}
+
+	if rr.RetryOn != nil {
+		if len(rr.RetryOn.Triggers) > 0 {
+			if ro, err := buildRetryOn(rr.RetryOn.Triggers); err == nil {
+				rp.RetryOn = ro
+			} else {
+				return nil, err
+			}
+		}
+	}
+	return rp, nil
 }
 
 // routeContainsOIDC returns true if OIDC exists for the provided route.

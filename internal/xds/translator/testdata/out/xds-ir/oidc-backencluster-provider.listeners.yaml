@@ -53,7 +53,7 @@
                 retryBackOff:
                   baseInterval: 1s
                   maxInterval: 5s
-                retryOn: connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes
+                retryOn: 5xx,gateway-error,reset
               signoutPath:
                 path:
                   exact: /bar/logout
@@ -78,6 +78,5 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: first-listener
-  drainType: MODIFY_ONLY
   name: first-listener
   perConnectionBufferLimitBytes: 32768

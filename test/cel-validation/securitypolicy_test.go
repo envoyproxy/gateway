@@ -1154,6 +1154,11 @@ func TestSecurityPolicyTarget(t *testing.T) {
 												},
 											},
 										},
+										RetryOn: &egv1a1.RetryOn{
+											Triggers: []egv1a1.TriggerEnum{
+												egv1a1.Error5XX, egv1a1.GatewayError, egv1a1.Reset,
+											},
+										},
 									},
 								},
 							},
@@ -1213,7 +1218,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"Retry timeout is not supported", "RetryOn is not supported"},
+			wantErrors: []string{"Retry timeout is not supported", "HTTPStatusCodes is not supported"},
 		},
 	}
 
