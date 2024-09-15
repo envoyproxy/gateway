@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: {{ include "eg.fullname" . }}-certgen
-  namespace: '{{ .Release.Namespace }}'
+  namespace:  '{{ .Values.namespace | default .Release.Namespace }}'
   labels:
   {{- include "eg.labels" . | nindent 4 }}
   {{- if .Values.certgen.rbac.labels }}
@@ -18,7 +18,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: {{ include "eg.fullname" . }}-certgen
-  namespace: '{{ .Release.Namespace }}'
+  namespace: '{{ .Values.namespace | default .Release.Namespace }}'
   labels:
   {{- include "eg.labels" . | nindent 4 }}
   {{- if .Values.certgen.rbac.labels }}
@@ -43,7 +43,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: {{ include "eg.fullname" . }}-certgen
-  namespace: '{{ .Release.Namespace }}'
+  namespace: '{{ .Values.namespace | default .Release.Namespace }}'
   labels:
   {{- include "eg.labels" . | nindent 4 }}
   {{- if .Values.certgen.rbac.labels }}
@@ -61,4 +61,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: '{{ include "eg.fullname" . }}-certgen'
-  namespace: '{{ .Release.Namespace }}'
+  namespace: '{{ .Values.namespace | default .Release.Namespace }}'
