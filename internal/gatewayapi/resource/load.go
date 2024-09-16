@@ -46,7 +46,7 @@ func LoadResourcesFromYAMLString(yamlStr string, addMissingResources bool) (*Res
 // TODO: add support for kind:
 //   - Backend (gateway.envoyproxy.io/v1alpha1)
 //   - EnvoyExtensionPolicy (gateway.envoyproxy.io/v1alpha1)
-//   - HTTPRouteFilter (gateway.networking.k8s.io/v1alpha1)
+//   - HTTPRouteFilter (gateway.envoyproxy.io/v1alpha1)
 //   - BackendLPPolicy (gateway.networking.k8s.io/v1alpha2)
 //   - BackendTLSPolicy (gateway.networking.k8s.io/v1alpha3)
 //   - ReferenceGrant (gateway.networking.k8s.io/v1alpha2)

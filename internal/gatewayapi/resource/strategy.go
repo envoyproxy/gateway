@@ -111,7 +111,7 @@ func getVersionedCreateStrategyForCRD(crd *apiextensionsv1.CustomResourceDefinit
 	if validationSchema != nil {
 		internalValidationSchema = &apiextensionsinternal.CustomResourceValidation{}
 		if err = apiextensionsv1.Convert_v1_CustomResourceValidation_To_apiextensions_CustomResourceValidation(validationSchema, internalValidationSchema, nil); err != nil {
-			return nil, fmt.Errorf("failed to convert CRD validation to internal version: %v", err)
+			return nil, fmt.Errorf("failed to convert CRD validation to internal version: %w", err)
 		}
 		internalSchemaProps = internalValidationSchema.OpenAPIV3Schema
 	}
@@ -130,7 +130,7 @@ func getVersionedCreateStrategyForCRD(crd *apiextensionsv1.CustomResourceDefinit
 	if subResources != nil && subResources.Status != nil {
 		statusSpec = &apiextensionsinternal.CustomResourceSubresourceStatus{}
 		if err = apiextensionsv1.Convert_v1_CustomResourceSubresourceStatus_To_apiextensions_CustomResourceSubresourceStatus(subResources.Status, statusSpec, nil); err != nil {
-			return nil, fmt.Errorf("failed converting CRD status subresource to internal version: %v", err)
+			return nil, fmt.Errorf("failed converting CRD status subresource to internal version: %w", err)
 		}
 		// for the status subresource, validate only against the status schema
 		if internalValidationSchema != nil && internalValidationSchema.OpenAPIV3Schema != nil && internalValidationSchema.OpenAPIV3Schema.Properties != nil {
@@ -147,7 +147,7 @@ func getVersionedCreateStrategyForCRD(crd *apiextensionsv1.CustomResourceDefinit
 	if subResources != nil && subResources.Scale != nil {
 		scaleSpec = &apiextensionsinternal.CustomResourceSubresourceScale{}
 		if err = apiextensionsv1.Convert_v1_CustomResourceSubresourceScale_To_apiextensions_CustomResourceSubresourceScale(subResources.Scale, scaleSpec, nil); err != nil {
-			return nil, fmt.Errorf("failed converting CRD status subresource to internal version: %v", err)
+			return nil, fmt.Errorf("failed converting CRD status subresource to internal version: %w", err)
 		}
 	}
 
@@ -174,16 +174,16 @@ func getStructuralSchema(crd *apiextensionsv1.CustomResourceDefinition) (*struct
 
 	internalValidation := &apiextensionsinternal.CustomResourceValidation{}
 	if err = apiextensionsv1.Convert_v1_CustomResourceValidation_To_apiextensions_CustomResourceValidation(val, internalValidation, nil); err != nil {
-		return nil, fmt.Errorf("failed converting CRD validation to internal version: %v", err)
+		return nil, fmt.Errorf("failed converting CRD validation to internal version: %w", err)
 	}
 
 	s, err := structuralschema.NewStructural(internalValidation.OpenAPIV3Schema)
-	if crd.Spec.PreserveUnknownFields == false && err != nil {
+	if !crd.Spec.PreserveUnknownFields && err != nil {
 		// This should never happen. If it does, it is a programming error.
 		return nil, fmt.Errorf("the server could not properly serve the CR schema") // validation should avoid this
 	}
 
-	if crd.Spec.PreserveUnknownFields == false {
+	if !crd.Spec.PreserveUnknownFields {
 		// we don't own s completely, e.g. defaults are not deep-copied. So better make a copy here.
 		s = s.DeepCopy()
 
