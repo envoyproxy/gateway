@@ -6,11 +6,15 @@
 package resource
 
 import (
+	"bytes"
 	"fmt"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -27,12 +31,10 @@ import (
 const dummyClusterIP = "1.2.3.4"
 
 // LoadResourcesFromYAMLString will load Resources from given Kubernetes YAML string.
-// TODO: This function should be able to process arbitrary number of resources,
-//
-//	tracked by https://github.com/envoyproxy/gateway/issues/3207
+// TODO: This function should be able to process arbitrary number of resources, tracked by https://github.com/envoyproxy/gateway/issues/3207.
 func LoadResourcesFromYAMLString(yamlStr string, addMissingResources bool) (*Resources, error) {
-	// TODO(sh2): Add local validations
-	r, err := kubernetesYAMLToResources(yamlStr, addMissingResources)
+	strategyMap := getCreateStrategyMapForCRDs()
+	r, err := kubernetesYAMLToResources(yamlStr, addMissingResources, strategyMap)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +43,15 @@ func LoadResourcesFromYAMLString(yamlStr string, addMissingResources bool) (*Res
 }
 
 // kubernetesYAMLToResources converts a Kubernetes YAML string into GatewayAPI Resources.
-func kubernetesYAMLToResources(str string, addMissingResources bool) (*Resources, error) {
+// TODO: add support for kind:
+//   - Backend (gateway.envoyproxy.io/v1alpha1)
+//   - EnvoyExtensionPolicy (gateway.envoyproxy.io/v1alpha1)
+//   - HTTPRouteFilter (gateway.networking.k8s.io/v1alpha1)
+//   - BackendLPPolicy (gateway.networking.k8s.io/v1alpha2)
+//   - BackendTLSPolicy (gateway.networking.k8s.io/v1alpha3)
+//   - ReferenceGrant (gateway.networking.k8s.io/v1alpha2)
+//   - TLSRoute (gateway.networking.k8s.io/v1alpha2)
+func kubernetesYAMLToResources(str string, addMissingResources bool, strategyMap versionedCreateStrategyMap) (*Resources, error) {
 	resources := NewResources()
 	var useDefaultNamespace bool
 	providedNamespaceMap := sets.New[string]()
@@ -61,12 +71,34 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*Resources
 		un := unstructured.Unstructured{Object: obj}
 		gvk := un.GroupVersionKind()
 		name, namespace := un.GetName(), un.GetNamespace()
-		if namespace == "" {
-			// When kubectl applies a resource in yaml which doesn't have a namespace,
-			// the current namespace is applied. Here we do the same thing before translating
-			// the GatewayAPI resource. Otherwise, the resource can't pass the namespace validation
+		if createStrategy, ok := strategyMap[gvk.Kind]; ok {
+			if createStrategy.NamespaceScoped() && len(namespace) == 0 {
+				// When kubectl applies a resource in yaml which doesn't have a namespace,
+				// the current namespace is applied. Here we do the same thing before translating
+				// the GatewayAPI resource. Otherwise, the resource can't pass the namespace validation
+				useDefaultNamespace = true
+				namespace = config.DefaultNamespace
+			} else if !createStrategy.NamespaceScoped() {
+				// Remove namespace for non-namespace scoped resource.
+				namespace = ""
+			}
+		} else if len(namespace) == 0 {
 			useDefaultNamespace = true
 			namespace = config.DefaultNamespace
+		}
+
+		// Validate resource before going on, immediate return error if got any.
+		if err = strategyMap.Validate(gvk.Kind, &unstructured.Unstructured{
+			Object: map[string]interface{}{
+				"apiVersion": obj["apiVersion"],
+				"metadata": map[string]interface{}{
+					"name":      name,
+					"namespace": namespace,
+				},
+				"spec": obj["spec"],
+			},
+		}); err != nil {
+			return nil, err
 		}
 
 		requiredNamespaceMap.Insert(namespace)
@@ -90,6 +122,9 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*Resources
 		case KindEnvoyProxy:
 			typedSpec := spec.Interface()
 			envoyProxy := &egv1a1.EnvoyProxy{
+				TypeMeta: metav1.TypeMeta{
+					Kind: KindEnvoyProxy,
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -101,6 +136,9 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*Resources
 		case KindGatewayClass:
 			typedSpec := spec.Interface()
 			gatewayClass := &gwapiv1.GatewayClass{
+				TypeMeta: metav1.TypeMeta{
+					Kind: KindGatewayClass,
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -115,6 +153,9 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*Resources
 		case KindGateway:
 			typedSpec := spec.Interface()
 			gateway := &gwapiv1.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					Kind: KindGateway,
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -213,12 +254,11 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*Resources
 			typedSpec := spec.Interface()
 			envoyPatchPolicy := &egv1a1.EnvoyPatchPolicy{
 				TypeMeta: metav1.TypeMeta{
-					Kind:       egv1a1.KindEnvoyPatchPolicy,
-					APIVersion: egv1a1.GroupVersion.String(),
+					Kind: egv1a1.KindEnvoyPatchPolicy,
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: namespace,
 					Name:      name,
+					Namespace: namespace,
 				},
 				Spec: typedSpec.(egv1a1.EnvoyPatchPolicySpec),
 			}
@@ -227,12 +267,11 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*Resources
 			typedSpec := spec.Interface()
 			clientTrafficPolicy := &egv1a1.ClientTrafficPolicy{
 				TypeMeta: metav1.TypeMeta{
-					Kind:       KindClientTrafficPolicy,
-					APIVersion: egv1a1.GroupVersion.String(),
+					Kind: KindClientTrafficPolicy,
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: namespace,
 					Name:      name,
+					Namespace: namespace,
 				},
 				Spec: typedSpec.(egv1a1.ClientTrafficPolicySpec),
 			}
@@ -241,12 +280,11 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*Resources
 			typedSpec := spec.Interface()
 			backendTrafficPolicy := &egv1a1.BackendTrafficPolicy{
 				TypeMeta: metav1.TypeMeta{
-					Kind:       KindBackendTrafficPolicy,
-					APIVersion: egv1a1.GroupVersion.String(),
+					Kind: KindBackendTrafficPolicy,
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: namespace,
 					Name:      name,
+					Namespace: namespace,
 				},
 				Spec: typedSpec.(egv1a1.BackendTrafficPolicySpec),
 			}
@@ -255,12 +293,11 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*Resources
 			typedSpec := spec.Interface()
 			securityPolicy := &egv1a1.SecurityPolicy{
 				TypeMeta: metav1.TypeMeta{
-					Kind:       KindSecurityPolicy,
-					APIVersion: egv1a1.GroupVersion.String(),
+					Kind: KindSecurityPolicy,
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: namespace,
 					Name:      name,
+					Namespace: namespace,
 				},
 				Spec: typedSpec.(egv1a1.SecurityPolicySpec),
 			}
@@ -465,4 +502,44 @@ func addDefaultEnvoyProxy(resources *Resources) error {
 		Namespace: &ns,
 	}
 	return nil
+}
+
+// loadCRDsFromPath loads all valid CRDs from files under the given path.
+func loadCRDsFromPath(path string) ([]*apiextensionsv1.CustomResourceDefinition, error) {
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]*apiextensionsv1.CustomResourceDefinition, 0)
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".yaml" {
+			continue
+		}
+
+		fn := filepath.Join(path, entry.Name())
+		bs, err := fsCRDs.ReadFile(fn)
+		if err != nil {
+			return nil, err
+		}
+
+		yamlb := bytes.Split(bs, []byte("\n---"))
+		for _, yb := range yamlb {
+			if len(bytes.TrimSpace(yb)) == 0 {
+				continue
+			}
+
+			var crd apiextensionsv1.CustomResourceDefinition
+			if err = yaml.Unmarshal(yb, &crd); err != nil {
+				return nil, err
+			}
+
+			if len(crd.Spec.Names.Kind) == 0 {
+				continue
+			}
+			out = append(out, &crd)
+		}
+	}
+
+	return out, err
 }

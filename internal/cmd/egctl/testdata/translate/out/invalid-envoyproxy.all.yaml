@@ -1,4 +1,5 @@
 envoyProxyForGatewayClass:
+  kind: EnvoyProxy
   metadata:
     creationTimestamp: null
     name: example
@@ -20,6 +21,7 @@ envoyProxyForGatewayClass:
     logging: {}
   status: {}
 gatewayClass:
+  kind: GatewayClass
   metadata:
     creationTimestamp: null
     name: eg
@@ -39,7 +41,8 @@ gatewayClass:
       status: "False"
       type: Accepted
 gateways:
-- metadata:
+- kind: Gateway
+  metadata:
     creationTimestamp: null
     name: eg
     namespace: default
