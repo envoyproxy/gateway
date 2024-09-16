@@ -1,5 +1,5 @@
 ---
-# Source: gateway-helm/templates/envoy-gateway-deployment.yaml
+# Source: gateway-helm/templates/envoy-gateway-serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
