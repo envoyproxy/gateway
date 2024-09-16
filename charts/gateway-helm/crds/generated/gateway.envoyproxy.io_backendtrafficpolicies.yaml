@@ -151,6 +151,73 @@ spec:
                       Note that when the suffix is not provided, the value is interpreted as bytes.
                     x-kubernetes-int-or-string: true
                 type: object
+              customErrorResponse:
+                description: CustomErrorResponse defines the configuration to override
+                  specific responses with a custom one.
+                items:
+                  description: CustomErrorResponse defines the configuration to override
+                    specific responses with a custom one.
+                  properties:
+                    match:
+                      description: Match configuration.
+                      properties:
+                        statusCodes:
+                          description: Status codes to match on. A match is successful
+                            if any of the status codes match.
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - statusCodes
+                      type: object
+                    response:
+                      description: Response configuration.
+                      properties:
+                        body:
+                          description: Body of the Custom Response
+                          properties:
+                            valueRef:
+                              description: |-
+                                ValueRef contains the contents of the body.
+                                Only a reference to ConfigMap is supported.
+                              properties:
+                                group:
+                                  description: |-
+                                    Group is the group of the referent. For example, "gateway.networking.k8s.io".
+                                    When unspecified or empty string, core API group is inferred.
+                                  maxLength: 253
+                                  pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                  type: string
+                                kind:
+                                  description: Kind is kind of the referent. For example
+                                    "HTTPRoute" or "Service".
+                                  maxLength: 63
+                                  minLength: 1
+                                  pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                                  type: string
+                                name:
+                                  description: Name is the name of the referent.
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - group
+                              - kind
+                              - name
+                              type: object
+                          type: object
+                        contentType:
+                          description: Content Type of the response. This will be
+                            set in the Content-Type header.
+                          type: string
+                      required:
+                      - body
+                      type: object
+                  required:
+                  - match
+                  - response
+                  type: object
+                type: array
               dns:
                 description: DNS includes dns resolution settings.
                 properties:

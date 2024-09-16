@@ -834,6 +834,35 @@ _Appears in:_
 | `attributes` | _object (keys:string, values:string)_ |  false  | Additional Attributes to set for the generated cookie. |
 
 
+#### CustomErrorResponse
+
+
+
+CustomErrorResponse defines the configuration to override specific responses with a custom one.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `match` | _[CustomErrorResponseMatch](#customerrorresponsematch)_ |  true  | Match configuration. |
+| `response` | _[CustomResponse](#customresponse)_ |  true  | Response configuration. |
+
+
+#### CustomErrorResponseMatch
+
+
+
+CustomErrorResponseMatch defines the configuration for matching a user response to return a custom one.
+
+_Appears in:_
+- [CustomErrorResponse](#customerrorresponse)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `statusCodes` | _string array_ |  true  | Status codes to match on. A match is successful if any of the status codes match. |
+
+
 #### CustomHeaderExtensionSettings
 
 
@@ -850,6 +879,35 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `name` | _string_ |  true  | Name of the header containing the original downstream remote address, if present. |
 | `failClosed` | _boolean_ |  false  | FailClosed is a switch used to control the flow of traffic when client IP detection<br />fails. If set to true, the listener will respond with 403 Forbidden when the client<br />IP address cannot be determined. |
+
+
+#### CustomResponse
+
+
+
+CustomResponse defines the configuration for returning a custom response.
+
+_Appears in:_
+- [CustomErrorResponse](#customerrorresponse)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `contentType` | _string_ |  false  | Content Type of the response. This will be set in the Content-Type header. |
+| `body` | _[CustomResponseBody](#customresponsebody)_ |  true  | Body of the Custom Response |
+
+
+#### CustomResponseBody
+
+
+
+CustomResponseBody
+
+_Appears in:_
+- [CustomResponse](#customresponse)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `valueRef` | _[LocalObjectReference](#localobjectreference)_ |  true  | ValueRef contains the contents of the body.<br />Only a reference to ConfigMap is supported. |
 
 
 #### CustomTag

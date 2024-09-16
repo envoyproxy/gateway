@@ -609,3 +609,35 @@ type HTTP2Settings struct {
 	// +optional
 	OnInvalidMessage *InvalidMessageAction `json:"onInvalidMessage,omitempty"`
 }
+
+// CustomErrorResponse defines the configuration to override specific responses with a custom one.
+type CustomErrorResponse struct {
+	// Match configuration.
+	Match CustomErrorResponseMatch `json:"match"`
+	// Response configuration.
+	Response CustomResponse `json:"response"`
+}
+
+// CustomErrorResponseMatch defines the configuration for matching a user response to return a custom one.
+type CustomErrorResponseMatch struct {
+	// Status codes to match on. A match is successful if any of the status codes match.
+	StatusCodes []string `json:"statusCodes"`
+}
+
+// CustomResponse defines the configuration for returning a custom response.
+type CustomResponse struct {
+	// Content Type of the response. This will be set in the Content-Type header.
+	//
+	// +optional
+	ContentType *string `json:"contentType,omitempty"`
+
+	// Body of the Custom Response
+	Body CustomResponseBody `json:"body"`
+}
+
+// CustomResponseBody
+type CustomResponseBody struct {
+	// ValueRef contains the contents of the body.
+	// Only a reference to ConfigMap is supported.
+	ValueRef *gwapiv1.LocalObjectReference `json:"valueRef,omitempty"`
+}
