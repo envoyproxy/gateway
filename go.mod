@@ -5,7 +5,7 @@ go 1.23.1
 replace github.com/imdario/mergo => github.com/imdario/mergo v0.3.16
 
 require (
-	fortio.org/fortio v1.66.2
+	fortio.org/fortio v1.66.3
 	fortio.org/log v1.16.0
 	github.com/Masterminds/semver/v3 v3.3.0
 	github.com/cncf/xds/go v0.0.0-20240423153145-555b57ec207b
@@ -64,7 +64,7 @@ require (
 require (
 	github.com/docker/docker v27.2.0+incompatible
 	github.com/replicatedhq/troubleshoot v0.100.0
-	google.golang.org/grpc v1.66.0
+	google.golang.org/grpc v1.66.2
 )
 
 require (
