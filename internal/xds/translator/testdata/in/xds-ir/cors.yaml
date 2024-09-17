@@ -30,6 +30,7 @@ http:
         allowMethods:
         - GET
         - POST
+        - "*"
         allowHeaders:
         - "x-header-1"
         - "x-header-2"
