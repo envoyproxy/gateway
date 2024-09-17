@@ -59,9 +59,22 @@ func kubernetesYAMLToResources(str string, addMissingResources bool, strategyMap
 	yamls := strings.Split(str, "\n---")
 	combinedScheme := envoygateway.GetScheme()
 	for _, y := range yamls {
+		// Ignore empty string.
 		if strings.TrimSpace(y) == "" {
 			continue
 		}
+		// Ignore string that full of comments.
+		commentRows := 0
+		rows := strings.Split(y, "\n")
+		for _, row := range rows {
+			if strings.HasPrefix(row, "#") {
+				commentRows++
+			}
+		}
+		if commentRows == len(rows) {
+			continue
+		}
+
 		var obj map[string]interface{}
 		err := yaml.Unmarshal([]byte(y), &obj)
 		if err != nil {
@@ -375,7 +388,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool, strategyMap
 			}
 		}
 
-		// Add EnvoyProxy if it does not exist
+		// Add EnvoyProxy if it does not exist.
 		if resources.EnvoyProxyForGatewayClass == nil {
 			if err := addDefaultEnvoyProxy(resources); err != nil {
 				return nil, err
