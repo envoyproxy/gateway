@@ -77,8 +77,7 @@ func RenderReport(writer io.Writer, name, description string, titleLevel int, re
 	writeSection(writer, "Metrics", titleLevel+1, "")
 	renderMetricsTable(writer, reports)
 
-	writeSection(writer, "Profiles", titleLevel+1, "")
-	renderProfilesTable(writer, "Memory", "heap", titleLevel+2, reports)
+	writeSection(writer, "Profiles", titleLevel+1, renderProfilesContent())
 
 	return nil
 }
@@ -149,15 +148,17 @@ func renderMetricsTable(writer io.Writer, reports []*BenchmarkReport) {
 	_ = table.Flush()
 }
 
-func renderProfilesTable(writer io.Writer, target, key string, titleLevel int, reports []*BenchmarkReport) {
-	writeSection(writer, target, titleLevel, "")
+func renderProfilesContent() string {
+	return fmt.Sprintf(`The profiles at different scales are stored under %s directory in report, with name %s.
 
-	for _, report := range reports {
-		// The image is not be rendered yet, so it is a placeholder for the path.
-		// The image will be rendered after the test has finished.
-		writeSection(writer, report.Name, titleLevel+1,
-			fmt.Sprintf("![%s-%s](%s.png)", key, report.Name, report.ProfilesPath[key]))
-	}
+You can visualize them by running:
+
+%s
+
+Currently, the supported profile types are:
+- heap
+
+`, "`/profiles`", "`{ProfileType}.{TestCase}.pprof`", "```shell\ngo tool pprof -http=: path/to/your.pprof\n```")
 }
 
 // writeSection writes one section in Markdown style, content is optional.

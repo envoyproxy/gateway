@@ -172,12 +172,6 @@ run-benchmark: install-benchmark-server ## Run benchmark tests
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/benchmark/config/gatewayclass.yaml
 	go test -v -tags benchmark -timeout $(BENCHMARK_TIMEOUT) ./test/benchmark --rps=$(BENCHMARK_RPS) --connections=$(BENCHMARK_CONNECTIONS) --duration=$(BENCHMARK_DURATION) --report-save-dir=$(BENCHMARK_REPORT_DIR)
-	# render benchmark profiles into image
-	dot -V
-	@for profile in $(wildcard test/benchmark/$(BENCHMARK_REPORT_DIR)/profiles/*.pprof); do \
-		$(call log, "Rendering profile image for: $${profile}"); \
-		go tool pprof -png $${profile} > $${profile}.png; \
-	done
 
 .PHONY: install-benchmark-server
 install-benchmark-server: ## Install nighthawk server for benchmark test

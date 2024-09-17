@@ -16,7 +16,6 @@ import (
 	"os"
 	"path"
 	"strconv"
-	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,7 +30,6 @@ type BenchmarkReport struct {
 	Name              string
 	Result            []byte
 	Metrics           map[string]float64 // metricTableHeaderName:metricValue
-	ProfilesPath      map[string]string  // profileKey:profileFilepath
 	ProfilesOutputDir string
 
 	kubeClient kube.CLIClient
@@ -46,7 +44,6 @@ func NewBenchmarkReport(name, profilesOutputDir string, kubeClient kube.CLIClien
 	return &BenchmarkReport{
 		Name:              name,
 		Metrics:           make(map[string]float64),
-		ProfilesPath:      make(map[string]string),
 		ProfilesOutputDir: profilesOutputDir,
 		kubeClient:        kubeClient,
 		promClient:        promClient,
@@ -143,11 +140,6 @@ func (r *BenchmarkReport) GetProfiles(ctx context.Context) error {
 	if err = os.WriteFile(heapProfPath, heapProf, 0o600); err != nil {
 		return fmt.Errorf("failed to write profiles %s: %w", heapProfPath, err)
 	}
-
-	// Remove parent output report dir.
-	splits := strings.SplitN(heapProfPath, "/", 2)[0]
-	heapProfPath = strings.TrimPrefix(heapProfPath, splits+"/")
-	r.ProfilesPath["heap"] = heapProfPath
 
 	return nil
 }
