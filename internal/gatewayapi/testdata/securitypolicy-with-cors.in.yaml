@@ -95,6 +95,25 @@ httpRoutes:
       backendRefs:
       - name: service-2
         port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-3
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-3
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/"
+      backendRefs:
+      - name: service-2
+        port: 8080
 securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
@@ -167,4 +186,21 @@ securityPolicies:
       exposeHeaders:
       - "x-header-7"
       - "x-header-8"
+      maxAge: 2000s
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route-3
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-3
+    cors:
+      allowRegexOrigins:
+      - "https://foobar.com:3[0-9]{3}"
+      allowMethods:
+      - GET
+      - POST
       maxAge: 2000s
