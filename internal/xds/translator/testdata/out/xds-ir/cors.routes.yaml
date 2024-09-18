@@ -17,7 +17,7 @@
           '@type': type.googleapis.com/envoy.extensions.filters.http.cors.v3.CorsPolicy
           allowCredentials: true
           allowHeaders: x-header-1, x-header-2
-          allowMethods: GET, POST
+          allowMethods: '*'
           allowOriginStringMatch:
           - safeRegex:
               regex: '*.example.com'

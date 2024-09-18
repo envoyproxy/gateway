@@ -20,6 +20,8 @@ global:
       pullSecrets: []
 podDisruptionBudget:
   minAvailable: 0
+  # maxUnavailable: 1
+
 deployment:
   envoyGateway:
     image:

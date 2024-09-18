@@ -10313,6 +10313,7 @@ spec:
                                 Invalid [CEL](https://www.envoyproxy.io/docs/envoy/latest/xds/type/v3/cel.proto.html#common-expression-language-cel-proto) expressions will be ignored.
                               items:
                                 type: string
+                              maxItems: 10
                               type: array
                             sinks:
                               description: Sinks defines the sinks of accesslog.

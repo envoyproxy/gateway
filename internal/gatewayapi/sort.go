@@ -8,6 +8,7 @@ package gatewayapi
 import (
 	"sort"
 
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -81,7 +82,7 @@ func (x XdsIRRoutes) Less(i, j int) bool {
 // sortXdsIR sorts the xdsIR based on the match precedence
 // defined in the Gateway API spec.
 // https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.HTTPRouteRule
-func sortXdsIRMap(xdsIR XdsIRMap) {
+func sortXdsIRMap(xdsIR resource.XdsIRMap) {
 	for _, irItem := range xdsIR {
 		for _, http := range irItem.HTTP {
 			// descending order

@@ -17,7 +17,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
-	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/logging"
 )
 
@@ -226,7 +226,7 @@ func TestProcessExtensionPolicies(t *testing.T) {
 				WithObjects(objs...).
 				Build()
 
-			resourceTree := gatewayapi.NewResources()
+			resourceTree := resource.NewResources()
 			err := r.processExtensionServerPolicies(ctx, resourceTree)
 			if !tc.errorExpected {
 				require.NoError(t, err)
