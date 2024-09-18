@@ -1105,6 +1105,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	// Watch HTTPRoute CRUDs and process affected Gateways.
 	httprPredicates := []predicate.TypedPredicate[*gwapiv1.HTTPRoute]{
 		predicate.TypedGenerationChangedPredicate[*gwapiv1.HTTPRoute]{},
+		predicate.TypedLabelChangedPredicate[*gwapiv1.HTTPRoute]{},
 	}
 	if r.namespaceLabel != nil {
 		httprPredicates = append(httprPredicates, predicate.NewTypedPredicateFuncs(func(hr *gwapiv1.HTTPRoute) bool {
