@@ -299,14 +299,12 @@ func buildLoadBalancer(policy egv1a1.ClusterSettings) (*ir.LoadBalancer, error) 
 			ConsistentHash: consistentHash,
 		}
 	case egv1a1.LeastRequestLoadBalancerType:
-		lb = &ir.LoadBalancer{}
-		if policy.LoadBalancer.SlowStart != nil {
-			if policy.LoadBalancer.SlowStart.Window != nil {
-				lb.LeastRequest = &ir.LeastRequest{
-					SlowStart: &ir.SlowStart{
-						Window: policy.LoadBalancer.SlowStart.Window,
-					},
-				}
+		lb = &ir.LoadBalancer{
+			LeastRequest: &ir.LeastRequest{},
+		}
+		if policy.LoadBalancer.SlowStart != nil && policy.LoadBalancer.SlowStart.Window != nil {
+			lb.LeastRequest.SlowStart = &ir.SlowStart{
+				Window: policy.LoadBalancer.SlowStart.Window,
 			}
 		}
 	case egv1a1.RandomLoadBalancerType:
@@ -315,17 +313,11 @@ func buildLoadBalancer(policy egv1a1.ClusterSettings) (*ir.LoadBalancer, error) 
 		}
 	case egv1a1.RoundRobinLoadBalancerType:
 		lb = &ir.LoadBalancer{
-			RoundRobin: &ir.RoundRobin{
-				SlowStart: &ir.SlowStart{},
-			},
+			RoundRobin: &ir.RoundRobin{},
 		}
-		if policy.LoadBalancer.SlowStart != nil {
-			if policy.LoadBalancer.SlowStart.Window != nil {
-				lb.RoundRobin = &ir.RoundRobin{
-					SlowStart: &ir.SlowStart{
-						Window: policy.LoadBalancer.SlowStart.Window,
-					},
-				}
+		if policy.LoadBalancer.SlowStart != nil && policy.LoadBalancer.SlowStart.Window != nil {
+			lb.RoundRobin.SlowStart = &ir.SlowStart{
+				Window: policy.LoadBalancer.SlowStart.Window,
 			}
 		}
 	}

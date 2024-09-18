@@ -1,6 +1,6 @@
 module local
 
-go 1.22.7
+go 1.23.1
 
 require github.com/daixiang0/gci v0.13.4
 

@@ -31,11 +31,11 @@ func UpdateBackendStatusAcceptedCondition(be *egv1a1.Backend, accepted bool, msg
 func computeBackendAcceptedCondition(be *egv1a1.Backend, accepted bool, msg string) metav1.Condition {
 	switch accepted {
 	case true:
-		return newCondition(string(egv1a1.BackendReasonInvalid), metav1.ConditionTrue,
+		return newCondition(string(egv1a1.BackendReasonAccepted), metav1.ConditionTrue,
 			string(egv1a1.BackendConditionAccepted),
 			"The Backend was accepted", time.Now(), be.Generation)
 	default:
-		return newCondition(string(egv1a1.BackendReasonAccepted), metav1.ConditionFalse,
+		return newCondition(string(egv1a1.BackendReasonInvalid), metav1.ConditionFalse,
 			string(egv1a1.BackendConditionAccepted),
 			msg, time.Now(), be.Generation)
 	}

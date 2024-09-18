@@ -212,6 +212,7 @@ spec:
                 max_active_downstream_connections: 50000
         - --log-level warn
         - --cpuset-threads
+        - --drain-strategy immediate
         - --drain-time-s 30
         command:
         - envoy
