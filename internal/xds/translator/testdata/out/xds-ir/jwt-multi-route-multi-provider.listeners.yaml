@@ -26,6 +26,9 @@
                   headerName: one-route-example-key1
                 forward: true
                 issuer: https://www.example.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scopes
                 payloadInMetadata: example
                 remoteJwks:
                   asyncFetch: {}
@@ -47,6 +50,9 @@
                 clearRouteCache: true
                 forward: true
                 issuer: https://www.two.example.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scopes
                 payloadInMetadata: example2
                 remoteJwks:
                   asyncFetch: {}
@@ -64,6 +70,9 @@
                   headerName: second-route-example-key1
                 forward: true
                 issuer: https://www.example.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scopes
                 payloadInMetadata: example
                 remoteJwks:
                   asyncFetch: {}
@@ -79,6 +88,9 @@
                 - two.foo.com
                 forward: true
                 issuer: https://www.two.example.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scopes
                 payloadInMetadata: example2
                 remoteJwks:
                   asyncFetch: {}

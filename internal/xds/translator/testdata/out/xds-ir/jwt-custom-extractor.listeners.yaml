@@ -30,6 +30,9 @@
                 fromParams:
                 - token
                 issuer: https://www.example.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scopes
                 payloadInMetadata: example
                 remoteJwks:
                   asyncFetch: {}

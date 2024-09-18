@@ -142,6 +142,10 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 				PayloadInMetadata:   irProvider.Name,
 				ClaimToHeaders:      claimToHeaders,
 				Forward:             true,
+				NormalizePayloadInMetadata: &jwtauthnv3.JwtProvider_NormalizePayload{
+					// Normalize the scopes to facilitate matching in Authorization.
+					SpaceDelimitedClaims: []string{"scopes"},
+				},
 			}
 
 			if irProvider.RecomputeRoute != nil {

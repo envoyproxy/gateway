@@ -23,6 +23,9 @@
                 - two.foo.com
                 forward: true
                 issuer: https://two.example.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scopes
                 payloadInMetadata: example1
                 remoteJwks:
                   asyncFetch: {}
@@ -37,6 +40,9 @@
                 - one.foo.com
                 forward: true
                 issuer: https://one.example.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scopes
                 payloadInMetadata: example1
                 remoteJwks:
                   asyncFetch: {}
@@ -70,6 +76,5 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: envoy-gateway/gateway-1/http
-  drainType: MODIFY_ONLY
   name: envoy-gateway/gateway-1/http
   perConnectionBufferLimitBytes: 32768

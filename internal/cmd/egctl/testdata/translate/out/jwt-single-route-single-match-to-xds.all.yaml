@@ -293,6 +293,9 @@ xds:
                       providers:
                         httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com/example:
                           forward: true
+                          normalizePayloadInMetadata:
+                            spaceDelimitedClaims:
+                            - scopes
                           payloadInMetadata: example
                           remoteJwks:
                             asyncFetch: {}

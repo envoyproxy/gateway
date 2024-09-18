@@ -49,9 +49,10 @@
                             typedConfig:
                               '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.metadata.v3.Metadata
                               value:
-                                stringMatch:
-                                  safeRegex:
-                                    regex: (^|.*\s)foo(\s.*|$)
+                                listMatch:
+                                  oneOf:
+                                    stringMatch:
+                                      exact: foo
                           input:
                             name: scope
                             typedConfig:
@@ -144,9 +145,10 @@
                             typedConfig:
                               '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.metadata.v3.Metadata
                               value:
-                                stringMatch:
-                                  safeRegex:
-                                    regex: (^|.*\s)for(\s.*|$)
+                                listMatch:
+                                  oneOf:
+                                    stringMatch:
+                                      exact: for
                           input:
                             name: scope
                             typedConfig:
@@ -161,9 +163,10 @@
                             typedConfig:
                               '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.metadata.v3.Metadata
                               value:
-                                stringMatch:
-                                  safeRegex:
-                                    regex: (^|.*\s)bar(\s.*|$)
+                                listMatch:
+                                  oneOf:
+                                    stringMatch:
+                                      exact: bar
                           input:
                             name: scope
                             typedConfig:

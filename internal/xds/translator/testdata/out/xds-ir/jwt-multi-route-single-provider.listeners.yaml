@@ -48,6 +48,9 @@
                   headerName: first-route-key
                 forward: true
                 issuer: https://www.example.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scopes
                 payloadInMetadata: example
                 remoteJwks:
                   asyncFetch: {}
@@ -62,6 +65,9 @@
                 - foo.com
                 forward: true
                 issuer: https://www.example.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scopes
                 payloadInMetadata: example
                 remoteJwks:
                   asyncFetch: {}
