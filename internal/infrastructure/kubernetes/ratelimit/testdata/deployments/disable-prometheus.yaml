@@ -47,9 +47,7 @@ spec:
         - name: LOG_LEVEL
           value: info
         - name: USE_STATSD
-          value: "true"
-        - name: STATSD_PORT
-          value: "9125"
+          value: "false"
         - name: CONFIG_TYPE
           value: GRPC_XDS_SOTW
         - name: CONFIG_GRPC_XDS_SERVER_URL

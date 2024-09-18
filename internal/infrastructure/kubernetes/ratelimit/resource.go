@@ -193,47 +193,7 @@ func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeploymen
 		},
 	}
 
-	if enablePrometheus(rateLimit) {
-		containers = append(containers, promStatsdExporterContainer())
-	}
-
 	return containers
-}
-
-func promStatsdExporterContainer() corev1.Container {
-	return corev1.Container{
-		Name:            "prom-statsd-exporter",
-		Image:           "prom/statsd-exporter:v0.18.0",
-		ImagePullPolicy: corev1.PullIfNotPresent,
-		Command: []string{
-			"/bin/statsd_exporter",
-			fmt.Sprintf("--web.listen-address=:%d", PrometheusPort),
-			"--statsd.mapping-config=/etc/statsd-exporter/conf.yaml",
-		},
-		Ports: []corev1.ContainerPort{
-			{
-				Name:          "statsd",
-				ContainerPort: StatsdPort,
-				Protocol:      corev1.ProtocolTCP,
-			},
-			{
-				Name:          "metrics",
-				ContainerPort: PrometheusPort,
-				Protocol:      corev1.ProtocolTCP,
-			},
-		},
-		VolumeMounts: []corev1.VolumeMount{
-			{
-				Name:      "statsd-exporter-config",
-				ReadOnly:  true,
-				MountPath: "/etc/statsd-exporter",
-			},
-		},
-		TerminationMessagePolicy: corev1.TerminationMessageReadFile,
-		TerminationMessagePath:   "/dev/termination-log",
-		SecurityContext:          defaultSecurityContext(),
-		Resources:                *egv1a1.DefaultResourceRequirements(),
-	}
 }
 
 // expectedContainerVolumeMounts returns expected rateLimit container volume mounts.
@@ -331,11 +291,7 @@ func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 		},
 		{
 			Name:  UseStatsdEnvVar,
-			Value: "true",
-		},
-		{
-			Name:  StatsdPortEnvVar,
-			Value: strconv.Itoa(StatsdPort),
+			Value: "false",
 		},
 		{
 			Name:  ConfigTypeEnvVar,
@@ -418,6 +374,16 @@ func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 				},
 			}...)
 		}
+	}
+
+	if enablePrometheus(rateLimit) {
+		env = append(env, corev1.EnvVar{
+			Name:  "USE_PROMETHEUS",
+			Value: "true",
+		}, corev1.EnvVar{
+			Name:  "PROMETHEUS_ADDR",
+			Value: ":19001",
+		})
 	}
 
 	if enableTracing(rateLimit) {
