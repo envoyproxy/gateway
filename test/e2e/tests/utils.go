@@ -483,6 +483,35 @@ func ALSLogCount(suite *suite.ConformanceTestSuite) (int, error) {
 	return total, nil
 }
 
+func OverLimitCount(suite *suite.ConformanceTestSuite) (int, error) {
+	metricPath, err := RetrieveURL(suite.Client, types.NamespacedName{
+		Namespace: "envoy-gateway-system",
+		Name:      "envoy-ratelimit",
+	}, 19001, "/metrics")
+	if err != nil {
+		return -1, err
+	}
+
+	countMetric, err := RetrieveMetric(metricPath, "ratelimit_service_rate_limit_over_limit", time.Second)
+	if err != nil {
+		return -1, err
+	}
+
+	// metric not found or empty
+	if countMetric == nil {
+		return 0, nil
+	}
+
+	total := 0
+	for _, m := range countMetric.Metric {
+		if m.Counter != nil && m.Counter.Value != nil {
+			total += int(*m.Counter.Value)
+		}
+	}
+
+	return total, nil
+}
+
 // QueryLogCountFromLoki queries log count from loki
 func QueryLogCountFromLoki(t *testing.T, c client.Client, keyValues map[string]string, match string) (int, error) {
 	svc := corev1.Service{}

@@ -207,6 +207,14 @@ func expectedContainerVolumeMounts(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 		ReadOnly:  true,
 	})
 
+	if enablePrometheus(rateLimit) {
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "statsd-exporter-config",
+			MountPath: "/etc/statsd-exporter",
+			ReadOnly:  true,
+		})
+	}
+
 	if rateLimit.Backend.Redis.TLS != nil {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      "redis-certs",
@@ -383,6 +391,9 @@ func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 		}, corev1.EnvVar{
 			Name:  "PROMETHEUS_ADDR",
 			Value: ":19001",
+		}, corev1.EnvVar{
+			Name:  "PROMETHEUS_MAPPER_YAML",
+			Value: "/etc/statsd-exporter/conf.yaml",
 		})
 	}
 

@@ -96,6 +96,9 @@ var RateLimitHeaderMatchTest = suite.ConformanceTest{
 				"x-user-org": "acme",
 			}
 
+			preCount, err := OverLimitCount(suite)
+			require.NoError(t, err)
+
 			ratelimitHeader := make(map[string]string)
 			expectOkResp := http.ExpectedResponse{
 				Request: http.Request{
@@ -135,6 +138,10 @@ var RateLimitHeaderMatchTest = suite.ConformanceTest{
 			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
 				t.Errorf("failed to get expected response for the last (fourth) request: %v", err)
 			}
+
+			curCount, err := OverLimitCount(suite)
+			require.NoError(t, err)
+			require.Greater(t, curCount, preCount)
 		})
 
 		t.Run("only one matched header cannot got limited", func(t *testing.T) {
