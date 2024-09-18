@@ -70,13 +70,6 @@ license.override = ["Apache-2.0"]
 reason = "This package has MPL-2.0 which is not approved in CNCF Allowlist, but it has an exception. See https://github.com/cncf/foundation/blob/main/license-exceptions/CNCF-licensing-exceptions.csv"
 
 [[PackageOverrides]]
-name = "github.com/moby/patternmatcher"
-version = "0.6.0"
-ecosystem = "Go"
-license.override = ["Apache-2.0"]
-reason = "Unidentified license, remove once https://github.com/google/deps.dev/issues/106 is resolved"
-
-[[PackageOverrides]]
 name = "github.com/opencontainers/go-digest"
 version = "1.0.0"
 ecosystem = "Go"
