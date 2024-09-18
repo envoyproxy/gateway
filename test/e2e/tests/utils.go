@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/envoyproxy/gateway/internal/kubernetes"
 	"io"
 	"net"
 	"net/http"
@@ -484,15 +485,23 @@ func ALSLogCount(suite *suite.ConformanceTestSuite) (int, error) {
 }
 
 func OverLimitCount(suite *suite.ConformanceTestSuite) (int, error) {
-	metricPath, err := RetrieveURL(suite.Client, types.NamespacedName{
-		Namespace: "envoy-gateway-system",
-		Name:      "envoy-ratelimit",
-	}, 19001, "/metrics")
+	cli, err := kubernetes.NewForRestConfig(suite.RestConfig)
 	if err != nil {
 		return -1, err
 	}
+	fwd, err := kubernetes.NewLocalPortForwarder(cli, types.NamespacedName{
+		Namespace: "envoy-gateway-system",
+		Name:      "envoy-ratelimit",
+	}, 0, 19001)
+	if err != nil {
+		return -1, err
+	}
+	if err := fwd.Start(); err != nil {
+		return -1, err
+	}
+	defer fwd.Stop()
 
-	countMetric, err := RetrieveMetric(metricPath, "ratelimit_service_rate_limit_over_limit", time.Second)
+	countMetric, err := RetrieveMetric(fmt.Sprintf("%s/metrics", fwd.Address()), "ratelimit_service_rate_limit_over_limit", time.Second)
 	if err != nil {
 		return -1, err
 	}
