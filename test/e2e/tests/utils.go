@@ -511,7 +511,7 @@ func OverLimitCount(suite *suite.ConformanceTestSuite) (int, error) {
 	}
 	defer fwd.Stop()
 
-	countMetric, err := RetrieveMetric(fmt.Sprintf("%s/metrics", fwd.Address()), "ratelimit_service_rate_limit_over_limit", time.Second)
+	countMetric, err := RetrieveMetric(fmt.Sprintf("http://%s/metrics", fwd.Address()), "ratelimit_service_rate_limit_over_limit", time.Second)
 	if err != nil {
 		return -1, err
 	}
