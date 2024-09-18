@@ -28,6 +28,8 @@ spec:
     metadata:
       annotations:
         prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "19001"
       creationTimestamp: null
       labels:
         app.kubernetes.io/component: ratelimit
