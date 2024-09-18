@@ -53,7 +53,7 @@ var (
 func getCreateStrategyMapForCRDs() versionedCreateStrategyMap {
 	once.Do(func() {
 		// This error should never happen. If it does, stop loading strategy map.
-		crds, _ := loadCRDsFromPath("crds")
+		crds, _ := loadCRDs()
 		if len(crds) == 0 {
 			return
 		}

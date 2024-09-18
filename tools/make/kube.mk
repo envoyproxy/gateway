@@ -43,8 +43,13 @@ CONTROLLERGEN_OBJECT_FLAGS :=  object:headerFile="$(ROOT_DIR)/tools/boilerplate/
 manifests: $(tools/controller-gen) generate-gwapi-manifests ## Generate WebhookConfiguration and CustomResourceDefinition objects.
 	@$(LOG_TARGET)
 	$(tools/controller-gen) crd:allowDangerousTypes=true paths="./api/..." output:crd:artifacts:config=charts/gateway-helm/crds/generated
-	# save a copy of generated crds for resources local validator
-	cp charts/gateway-helm/crds/generated/* internal/gatewayapi/resource/crds
+	# save a copy of all crds and generate a literal string variable in go.
+	# replace ` with ~ to avoid conflicts in go string ``, and remove any line starts with #.
+	find charts/gateway-helm/crds -name "*.yaml" -exec cat {} + | sed 's/`/~/g' | sed '/^#/d' > internal/gatewayapi/resource/zz_generated.crd.yaml
+	sed -e '/{{CRD}}/r internal/gatewayapi/resource/zz_generated.crd.yaml' \
+		-e '/{{CRD}}/d' \
+		internal/gatewayapi/resource/zz_generated.crd.template > internal/gatewayapi/resource/zz_generated.crd.go
+	rm  internal/gatewayapi/resource/zz_generated.crd.yaml
 
 .PHONY: generate-gwapi-manifests
 generate-gwapi-manifests:
@@ -53,8 +58,6 @@ generate-gwapi-manifests: ## Generate GWAPI manifests and make it consistent wit
 	@mkdir -p $(OUTPUT_DIR)/
 	curl -sLo $(OUTPUT_DIR)/gatewayapi-crds.yaml ${GATEWAY_RELEASE_URL}
 	mv $(OUTPUT_DIR)/gatewayapi-crds.yaml charts/gateway-helm/crds/gatewayapi-crds.yaml
-	# save a copy of crd for resources local validator
-	cp charts/gateway-helm/crds/gatewayapi-crds.yaml internal/gatewayapi/resource/crds
 
 .PHONY: kube-generate
 kube-generate: $(tools/controller-gen) ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
