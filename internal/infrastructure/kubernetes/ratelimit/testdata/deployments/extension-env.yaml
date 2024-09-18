@@ -83,6 +83,8 @@ spec:
           value: "true"
         - name: PROMETHEUS_ADDR
           value: :19001
+        - name: PROMETHEUS_MAPPER_YAML
+          value: /etc/statsd-exporter/conf.yaml
         - name: env_a
           value: env_a_value
         - name: env_b
@@ -126,6 +128,9 @@ spec:
         volumeMounts:
         - mountPath: /certs
           name: certs
+          readOnly: true
+        - mountPath: /etc/statsd-exporter
+          name: statsd-exporter-config
           readOnly: true
       dnsPolicy: ClusterFirst
       restartPolicy: Always

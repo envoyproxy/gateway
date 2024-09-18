@@ -83,6 +83,8 @@ spec:
           value: "true"
         - name: PROMETHEUS_ADDR
           value: :19001
+        - name: PROMETHEUS_MAPPER_YAML
+          value: /etc/statsd-exporter/conf.yaml
         image: custom-image
         imagePullPolicy: IfNotPresent
         name: envoy-ratelimit
@@ -122,6 +124,9 @@ spec:
         volumeMounts:
         - mountPath: /certs
           name: certs
+          readOnly: true
+        - mountPath: /etc/statsd-exporter
+          name: statsd-exporter-config
           readOnly: true
       dnsPolicy: ClusterFirst
       restartPolicy: Always
