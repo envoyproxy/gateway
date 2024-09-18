@@ -9,12 +9,15 @@
 package tests
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
@@ -139,9 +142,14 @@ var RateLimitHeaderMatchTest = suite.ConformanceTest{
 				t.Errorf("failed to get expected response for the last (fourth) request: %v", err)
 			}
 
-			curCount, err := OverLimitCount(suite)
+			err = wait.PollUntilContextTimeout(context.TODO(), time.Second, 1*time.Minute, true, func(_ context.Context) (bool, error) {
+				curCount, err := OverLimitCount(suite)
+				if err != nil {
+					return false, err
+				}
+				return curCount > preCount, nil
+			})
 			require.NoError(t, err)
-			require.Greater(t, curCount, preCount)
 		})
 
 		t.Run("only one matched header cannot got limited", func(t *testing.T) {
