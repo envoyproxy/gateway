@@ -710,8 +710,9 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 				fallthrough
 			case *header.Type == egv1a1.HeaderMatchExact && header.Value != nil:
 				m := &ir.StringMatch{
-					Name:  header.Name,
-					Exact: header.Value,
+					Name:   header.Name,
+					Exact:  header.Value,
+					Invert: header.Invert,
 				}
 				irRule.HeaderMatches = append(irRule.HeaderMatches, m)
 			case *header.Type == egv1a1.HeaderMatchRegularExpression && header.Value != nil:
@@ -721,9 +722,14 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 				m := &ir.StringMatch{
 					Name:      header.Name,
 					SafeRegex: header.Value,
+					Invert:    header.Invert,
 				}
 				irRule.HeaderMatches = append(irRule.HeaderMatches, m)
 			case *header.Type == egv1a1.HeaderMatchDistinct && header.Value == nil:
+				if header.Invert != nil && *header.Invert {
+					return nil, fmt.Errorf("unable to translate rateLimit." +
+						"Invert is not applicable for distinct header match type")
+				}
 				m := &ir.StringMatch{
 					Name:     header.Name,
 					Distinct: true,
