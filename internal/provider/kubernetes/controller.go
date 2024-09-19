@@ -1081,6 +1081,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	// Watch Gateway CRUDs and reconcile affected GatewayClass.
 	gPredicates := []predicate.TypedPredicate[*gwapiv1.Gateway]{
 		predicate.TypedGenerationChangedPredicate[*gwapiv1.Gateway]{},
+		predicate.TypedLabelChangedPredicate[*gwapiv1.Gateway]{},
 		predicate.NewTypedPredicateFuncs(func(gtw *gwapiv1.Gateway) bool {
 			return r.validateGatewayForReconcile(gtw)
 		}),
@@ -1127,6 +1128,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	// Watch GRPCRoute CRUDs and process affected Gateways.
 	grpcrPredicates := []predicate.TypedPredicate[*gwapiv1.GRPCRoute]{
 		predicate.TypedGenerationChangedPredicate[*gwapiv1.GRPCRoute]{},
+		predicate.TypedLabelChangedPredicate[*gwapiv1.GRPCRoute]{},
 	}
 	if r.namespaceLabel != nil {
 		grpcrPredicates = append(grpcrPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1.GRPCRoute](func(grpc *gwapiv1.GRPCRoute) bool {
@@ -1148,6 +1150,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	// Watch TLSRoute CRUDs and process affected Gateways.
 	tlsrPredicates := []predicate.TypedPredicate[*gwapiv1a2.TLSRoute]{
 		predicate.TypedGenerationChangedPredicate[*gwapiv1a2.TLSRoute]{},
+		predicate.TypedLabelChangedPredicate[*gwapiv1a2.TLSRoute]{},
 	}
 	if r.namespaceLabel != nil {
 		tlsrPredicates = append(tlsrPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1a2.TLSRoute](func(route *gwapiv1a2.TLSRoute) bool {
@@ -1169,6 +1172,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	// Watch UDPRoute CRUDs and process affected Gateways.
 	udprPredicates := []predicate.TypedPredicate[*gwapiv1a2.UDPRoute]{
 		predicate.TypedGenerationChangedPredicate[*gwapiv1a2.UDPRoute]{},
+		predicate.TypedLabelChangedPredicate[*gwapiv1a2.UDPRoute]{},
 	}
 	if r.namespaceLabel != nil {
 		udprPredicates = append(udprPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1a2.UDPRoute](func(route *gwapiv1a2.UDPRoute) bool {
@@ -1190,6 +1194,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	// Watch TCPRoute CRUDs and process affected Gateways.
 	tcprPredicates := []predicate.TypedPredicate[*gwapiv1a2.TCPRoute]{
 		predicate.TypedGenerationChangedPredicate[*gwapiv1a2.TCPRoute]{},
+		predicate.TypedLabelChangedPredicate[*gwapiv1a2.TCPRoute]{},
 	}
 	if r.namespaceLabel != nil {
 		tcprPredicates = append(tcprPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1a2.TCPRoute](func(route *gwapiv1a2.TCPRoute) bool {
