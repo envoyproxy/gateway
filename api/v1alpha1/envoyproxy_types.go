@@ -256,12 +256,12 @@ type EnvoyProxyProvider struct {
 // ShutdownConfig defines configuration for graceful envoy shutdown process.
 type ShutdownConfig struct {
 	// DrainTimeout defines the graceful drain timeout. This should be less than the pod's terminationGracePeriodSeconds.
-	// If unspecified, defaults to 600 seconds.
+	// If unspecified, defaults to 60 seconds.
 	//
 	// +optional
 	DrainTimeout *metav1.Duration `json:"drainTimeout,omitempty"`
 	// MinDrainDuration defines the minimum drain duration allowing time for endpoint deprogramming to complete.
-	// If unspecified, defaults to 5 seconds.
+	// If unspecified, defaults to 10 seconds.
 	//
 	// +optional
 	MinDrainDuration *metav1.Duration `json:"minDrainDuration,omitempty"`

@@ -218,6 +218,7 @@ spec:
         - --log-level warn
         - --cpuset-threads
         - --drain-strategy immediate
+        - --drain-time-s 60
         command:
         - envoy
         env:
@@ -361,7 +362,7 @@ spec:
       restartPolicy: Always
       schedulerName: default-scheduler
       serviceAccountName: envoy-default-37a8eec1
-      terminationGracePeriodSeconds: 900
+      terminationGracePeriodSeconds: 360
       volumes:
       - name: certs
         secret:
