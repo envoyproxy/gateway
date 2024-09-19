@@ -17,6 +17,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes"
 	"github.com/envoyproxy/gateway/internal/ir"
+
+	kube "github.com/envoyproxy/gateway/internal/kubernetes"
 )
 
 var _ Manager = (*kubernetes.Infra)(nil)
@@ -39,7 +41,7 @@ func NewManager(cfg *config.Server) (Manager, error) {
 
 	switch cfg.EnvoyGateway.Provider.Type {
 	case egv1a1.ProviderTypeKubernetes:
-		cli, err := client.New(clicfg.GetConfigOrDie(), client.Options{Scheme: envoygateway.GetScheme()})
+		cli, err := client.New(kube.ProtobufConfig(clicfg.GetConfigOrDie()), client.Options{Scheme: envoygateway.GetScheme()})
 		if err != nil {
 			return nil, err
 		}

@@ -13,16 +13,12 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	kubescheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/remotecommand"
-
-	"github.com/envoyproxy/gateway/internal/envoygateway"
 )
 
 type CLIClient interface {
@@ -82,30 +78,6 @@ func newClientInternal(restCfg *rest.Config) (*client, error) {
 	}
 
 	return &c, err
-}
-
-func setRestDefaults(config *rest.Config) *rest.Config {
-	if config.GroupVersion == nil || config.GroupVersion.Empty() {
-		config.GroupVersion = &corev1.SchemeGroupVersion
-	}
-	if len(config.APIPath) == 0 {
-		if len(config.GroupVersion.Group) == 0 {
-			config.APIPath = "/api"
-		} else {
-			config.APIPath = "/apis"
-		}
-	}
-	if len(config.ContentType) == 0 {
-		config.ContentType = runtime.ContentTypeJSON
-	}
-	if config.NegotiatedSerializer == nil {
-		// This codec factory ensures the resources are not converted. Therefore, resources
-		// will not be round-tripped through internal versions. Defaulting does not happen
-		// on the client.
-		config.NegotiatedSerializer = serializer.NewCodecFactory(envoygateway.GetScheme()).WithoutConversion()
-	}
-
-	return config
 }
 
 func (c *client) RESTConfig() *rest.Config {

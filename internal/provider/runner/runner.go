@@ -13,6 +13,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	kube "github.com/envoyproxy/gateway/internal/kubernetes"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/provider"
 	"github.com/envoyproxy/gateway/internal/provider/file"
@@ -75,7 +76,7 @@ func (r *Runner) createKubernetesProvider() (*kubernetes.Provider, error) {
 		return nil, fmt.Errorf("failed to get kubeconfig: %w", err)
 	}
 
-	p, err := kubernetes.New(cfg, &r.Config.Server, r.ProviderResources)
+	p, err := kubernetes.New(kube.ProtobufConfig(cfg), &r.Config.Server, r.ProviderResources)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create provider %s: %w", egv1a1.ProviderTypeKubernetes, err)
 	}
