@@ -122,6 +122,7 @@
                   idToken: IdToken-5F93C2E4
                   oauthExpires: OauthExpires-5F93C2E4
                   oauthHmac: OauthHMAC-5F93C2E4
+                  oauthNonce: OauthNonce-5F93C2E4
                   refreshToken: RefreshToken-5F93C2E4
                 hmacSecret:
                   name: oauth2/hmac_secret/securitypolicy/default/policy-for-gateway-2

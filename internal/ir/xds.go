@@ -7,6 +7,7 @@ package ir
 
 import (
 	"cmp"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -174,6 +175,11 @@ func (x Xds) GetUDPListener(name string) *UDPListener {
 func (x Xds) YAMLString() string {
 	y, _ := yaml.Marshal(x.Printable())
 	return string(y)
+}
+
+func (x Xds) JSONString() string {
+	j, _ := json.MarshalIndent(x.Printable(), "", "\t")
+	return string(j)
 }
 
 // Printable returns a deep copy of the resource that can be safely logged.
