@@ -58,6 +58,10 @@ func TestTranslateXds(t *testing.T) {
 		"jsonpatch-with-jsonpath": {
 			requireEnvoyPatchPolicies: true,
 		},
+		"jsonpatch-with-jsonpath-invalid": {
+			requireEnvoyPatchPolicies: true,
+			errMsg:                    "no jsonPointers were found while evaluating the jsonPath",
+		},
 		"jsonpatch-add-op-empty-jsonpath": {
 			requireEnvoyPatchPolicies: true,
 			errMsg:                    "a patch operation must specify a path or jsonPath",

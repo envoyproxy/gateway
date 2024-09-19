@@ -46,6 +46,13 @@ func ApplyJSONPatches(document json.RawMessage, patches ...ir.JSONPatchOperation
 				tErrs = errors.Join(tErrs, tErr)
 				continue
 			}
+			if len(jsonPointers) == 0 {
+				tErr := fmt.Errorf("no jsonPointers were found while evaluating the jsonPath: '%s'. "+
+					"Ensure the elements you are trying to select with the jsonPath exist in the document. "+
+					"If you need to add a non-existing property, use the 'path' attribute", *p.JSONPath)
+				tErrs = errors.Join(tErrs, tErr)
+				continue
+			}
 		} else {
 			jsonPointers = []string{*p.Path}
 		}
