@@ -99,9 +99,6 @@ var RateLimitHeaderMatchTest = suite.ConformanceTest{
 				"x-user-org": "acme",
 			}
 
-			preCount, err := OverLimitCount(suite)
-			require.NoError(t, err)
-
 			ratelimitHeader := make(map[string]string)
 			expectOkResp := http.ExpectedResponse{
 				Request: http.Request{
@@ -141,15 +138,6 @@ var RateLimitHeaderMatchTest = suite.ConformanceTest{
 			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
 				t.Errorf("failed to get expected response for the last (fourth) request: %v", err)
 			}
-
-			err = wait.PollUntilContextTimeout(context.TODO(), time.Second, 1*time.Minute, true, func(_ context.Context) (bool, error) {
-				curCount, err := OverLimitCount(suite)
-				if err != nil {
-					return false, err
-				}
-				return curCount > preCount, nil
-			})
-			require.NoError(t, err)
 		})
 
 		t.Run("only one matched header cannot got limited", func(t *testing.T) {
@@ -282,6 +270,9 @@ var RateLimitBasedJwtClaimsTest = suite.ConformanceTest{
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
+			preCount, err := OverLimitCount(suite)
+			require.NoError(t, err)
+
 			expectOkResp := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/foo",
@@ -388,6 +379,15 @@ var RateLimitBasedJwtClaimsTest = suite.ConformanceTest{
 			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, noTokenReq, noTokenResp); err != nil {
 				t.Errorf("failed to get expected response: %v", err)
 			}
+
+			err = wait.PollUntilContextTimeout(context.TODO(), time.Second, 1*time.Minute, true, func(_ context.Context) (bool, error) {
+				curCount, err := OverLimitCount(suite)
+				if err != nil {
+					return false, err
+				}
+				return curCount > preCount, nil
+			})
+			require.NoError(t, err)
 		})
 	},
 }
