@@ -17,7 +17,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes"
 	"github.com/envoyproxy/gateway/internal/ir"
-
 	kube "github.com/envoyproxy/gateway/internal/kubernetes"
 )
 
