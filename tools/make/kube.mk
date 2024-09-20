@@ -174,10 +174,7 @@ run-benchmark: install-benchmark-server ## Run benchmark tests
 	go test -v -tags benchmark -timeout $(BENCHMARK_TIMEOUT) ./test/benchmark --rps=$(BENCHMARK_RPS) --connections=$(BENCHMARK_CONNECTIONS) --duration=$(BENCHMARK_DURATION) --report-save-dir=$(BENCHMARK_REPORT_DIR)
 	# render benchmark profiles into image
 	dot -V
-	@for profile in $(wildcard test/benchmark/$(BENCHMARK_REPORT_DIR)/profiles/*.pprof); do \
-		$(call log, "Rendering profile image for: $${profile}"); \
-		go tool pprof -png $${profile} > $${profile}.png; \
-	done
+	find test/benchmark/$(BENCHMARK_REPORT_DIR)/profiles -name "*.pprof" -type f -exec sh -c 'go tool pprof -png "$$1" > "$${1%.pprof}.png"' _ {} \;
 
 .PHONY: install-benchmark-server
 install-benchmark-server: ## Install nighthawk server for benchmark test
