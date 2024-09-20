@@ -30,6 +30,7 @@
                   idToken: IdToken-b0a1b740
                   oauthExpires: OauthExpires-b0a1b740
                   oauthHmac: OauthHMAC-b0a1b740
+                  oauthNonce: OauthNonce-b0a1b740
                   refreshToken: RefreshToken-b0a1b740
                 hmacSecret:
                   name: oauth2/hmac_secret/securitypolicy/envoy-gateway/policy-for-gateway
