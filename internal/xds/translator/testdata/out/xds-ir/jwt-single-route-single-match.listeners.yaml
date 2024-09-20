@@ -25,7 +25,7 @@
                 issuer: https://www.example.com
                 normalizePayloadInMetadata:
                   spaceDelimitedClaims:
-                  - scopes
+                  - scope
                 payloadInMetadata: example
                 remoteJwks:
                   asyncFetch: {}

@@ -75,7 +75,7 @@
                 issuer: https://one.example.com
                 normalizePayloadInMetadata:
                   spaceDelimitedClaims:
-                  - scopes
+                  - scope
                 payloadInMetadata: example1
                 remoteJwks:
                   asyncFetch: {}
@@ -95,7 +95,7 @@
                 issuer: http://two.example.com
                 normalizePayloadInMetadata:
                   spaceDelimitedClaims:
-                  - scopes
+                  - scope
                 payloadInMetadata: example2
                 remoteJwks:
                   asyncFetch: {}

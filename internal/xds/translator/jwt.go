@@ -144,7 +144,7 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 				Forward:             true,
 				NormalizePayloadInMetadata: &jwtauthnv3.JwtProvider_NormalizePayload{
 					// Normalize the scopes to facilitate matching in Authorization.
-					SpaceDelimitedClaims: []string{"scopes"},
+					SpaceDelimitedClaims: []string{"scope"},
 				},
 			}
 
