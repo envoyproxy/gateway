@@ -44,7 +44,7 @@ http:
             jwt:
               provider: example1
               claims:
-              - name: name
+              - name: user.name
                 values: ["alice", "bob"]
       jwt:
         providers:

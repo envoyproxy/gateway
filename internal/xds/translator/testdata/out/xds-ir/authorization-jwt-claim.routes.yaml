@@ -62,6 +62,7 @@
                               filter: envoy.filters.http.jwt_authn
                               path:
                               - key: example1
+                              - key: user
                               - key: name
                       - singlePredicate:
                           customMatch:
@@ -78,6 +79,7 @@
                               filter: envoy.filters.http.jwt_authn
                               path:
                               - key: example1
+                              - key: user
                               - key: name
               onNoMatch:
                 action:
