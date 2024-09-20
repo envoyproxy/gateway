@@ -152,5 +152,61 @@ var HTTPBackendExtAuthTest = suite.ConformanceTest{
 				t.Errorf("failed to compare request and response: %v", err)
 			}
 		})
+
+		t.Run("route base on headersToBackend", func(t *testing.T) {
+			v2ExpectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "www.example.com",
+					Path: "/myapp",
+					Headers: map[string]string{
+						"Authorization": "Bearer token2",
+					},
+				},
+				Backend: "infra-backend-v2",
+				// Verify that the http headers returned by the ext auth service
+				// are added to the original request before sending it to the backend
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Host: "www.example.com",
+						Path: "/myapp",
+						Headers: map[string]string{
+							"x-current-user": "user2",
+						},
+					},
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, v2ExpectedResponse)
+
+			v3ExpectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "www.example.com",
+					Path: "/myapp",
+					Headers: map[string]string{
+						"Authorization": "Bearer token3",
+					},
+				},
+				// Verify that the http headers returned by the ext auth service
+				// are added to the original request before sending it to the backend
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Host: "www.example.com",
+						Path: "/myapp",
+						Headers: map[string]string{
+							"x-current-user": "user3",
+						},
+					},
+				},
+				Backend: "infra-backend-v3",
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, v3ExpectedResponse)
+		})
 	},
 }
