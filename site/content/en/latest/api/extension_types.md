@@ -610,6 +610,9 @@ _Appears in:_
 | `ecdhCurves` | _string array_ |  false  | ECDHCurves specifies the set of supported ECDH curves.<br />In non-FIPS Envoy Proxy builds the default curves are:<br />- X25519<br />- P-256<br />In builds using BoringSSL FIPS the default curve is:<br />- P-256 |
 | `signatureAlgorithms` | _string array_ |  false  | SignatureAlgorithms specifies which signature algorithms the listener should<br />support. |
 | `alpnProtocols` | _[ALPNProtocol](#alpnprotocol) array_ |  false  | ALPNProtocols supplies the list of ALPN protocols that should be<br />exposed by the listener. By default h2 and http/1.1 are enabled.<br />Supported values are:<br />- http/1.0<br />- http/1.1<br />- h2 |
+| `sessionTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | SessionTimeout determines the maximum lifetime of a TLS session.<br />https://commondatastorage.googleapis.com/chromium-boringssl-docs/ssl.h.html#SSL_DEFAULT_SESSION_TIMEOUT<br />Default: 7200s |
+| `statelessSessionResumption` | _[StatelessSessionResumptionSettings](#statelesssessionresumptionsettings)_ |  false  | StatelessSessionResumption defines setting for stateless (session-ticket based) session resumption |
+| `statefulSessionResumptionSettings` | _[StatefulSessionResumptionSettings](#statefulsessionresumptionsettings)_ |  false  | StatefulSessionResumption defines setting for stateful (session-id based) session resumption |
 
 
 #### ClientTimeout
@@ -3630,6 +3633,35 @@ _Appears in:_
 | ----- | ----------- |
 | `Exact` | SourceMatchExact All IP Addresses within the specified Source IP CIDR are treated as a single client selector<br />and share the same rate limit bucket.<br /> | 
 | `Distinct` | SourceMatchDistinct Each IP Address within the specified Source IP CIDR is treated as a distinct client selector<br />and uses a separate rate limit bucket/counter.<br />Note: This is only supported for Global Rate Limits.<br /> | 
+
+
+#### StatefulSessionResumptionSettings
+
+
+
+StatefulSessionResumptionSettings defines setting for stateful (session-id based) session resumption
+
+_Appears in:_
+- [ClientTLSSettings](#clienttlssettings)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `enabled` | _boolean_ |  false  | Enabled determines if stateful session resumption is supported. When Envoy Proxy is deployed with more than<br />one replica, session caches are not synchronized between instances, possibly leading to resumption failures.<br />Note that envoy does not re-validate client certificates upon session resumption.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-routematch-tlscontextmatchoptions<br />Default: true |
+
+
+#### StatelessSessionResumptionSettings
+
+
+
+StatelessSessionResumptionSettings defines setting for stateless (session-ticket based) session resumption
+
+_Appears in:_
+- [ClientTLSSettings](#clienttlssettings)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `enabled` | _boolean_ |  true  | Enabled determines if stateless session resumption is supported. When Envoy Proxy is deployed with more than<br />one replica, session ticket encryption keys are not synchronized between instances, possibly leading to resumption<br />failures. Users can synchronize session ticket encryption keys be storing them in a secret and using the<br />sessionTicketKeysRef option.<br />Note that improper handling of session ticket encryption keys may result in loss of secrecy.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlssessionticketkeys<br />Default: true |
+| `sessionTicketKeysRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference) array_ |  false  | SessionTicketKeysRef is a reference to the secret containing the keys to use for encryption and decryption<br />of session tickets. The first keys is used for encryption and all keys are candidate for decryption.<br />Users are responsible for securely generating, storing and rotating keys.<br />If empty, each Envoy Proxy instance will use local in-memory keys.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlssessionticketkeys |
 
 
 #### StringMatch

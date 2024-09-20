@@ -808,6 +808,13 @@ spec:
                     - "1.2"
                     - "1.3"
                     type: string
+                  sessionTimeout:
+                    description: |-
+                      SessionTimeout determines the maximum lifetime of a TLS session.
+                      https://commondatastorage.googleapis.com/chromium-boringssl-docs/ssl.h.html#SSL_DEFAULT_SESSION_TIMEOUT
+                      Default: 7200s
+                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                    type: string
                   signatureAlgorithms:
                     description: |-
                       SignatureAlgorithms specifies which signature algorithms the listener should
@@ -815,6 +822,99 @@ spec:
                     items:
                       type: string
                     type: array
+                  statefulSessionResumptionSettings:
+                    description: StatefulSessionResumption defines setting for stateful
+                      (session-id based) session resumption
+                    properties:
+                      enabled:
+                        description: |-
+                          Enabled determines if stateful session resumption is supported. When Envoy Proxy is deployed with more than
+                          one replica, session caches are not synchronized between instances, possibly leading to resumption failures.
+                          Note that envoy does not re-validate client certificates upon session resumption.
+                          https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-routematch-tlscontextmatchoptions
+                          Default: true
+                        type: boolean
+                    type: object
+                  statelessSessionResumption:
+                    description: StatelessSessionResumption defines setting for stateless
+                      (session-ticket based) session resumption
+                    properties:
+                      enabled:
+                        description: |-
+                          Enabled determines if stateless session resumption is supported. When Envoy Proxy is deployed with more than
+                          one replica, session ticket encryption keys are not synchronized between instances, possibly leading to resumption
+                          failures. Users can synchronize session ticket encryption keys be storing them in a secret and using the
+                          sessionTicketKeysRef option.
+                          Note that improper handling of session ticket encryption keys may result in loss of secrecy.
+                          https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlssessionticketkeys
+                          Default: true
+                        type: boolean
+                      sessionTicketKeysRef:
+                        description: |-
+                          SessionTicketKeysRef is a reference to the secret containing the keys to use for encryption and decryption
+                          of session tickets. The first keys is used for encryption and all keys are candidate for decryption.
+                          Users are responsible for securely generating, storing and rotating keys.
+                          If empty, each Envoy Proxy instance will use local in-memory keys.
+                          https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlssessionticketkeys
+                        items:
+                          description: |-
+                            SecretObjectReference identifies an API object including its namespace,
+                            defaulting to Secret.
+
+                            The API object must be valid in the cluster; the Group and Kind must
+                            be registered in the cluster for this reference to be valid.
+
+                            References to objects with invalid Group and Kind are not valid, and must
+                            be rejected by the implementation, with appropriate Conditions set
+                            on the containing object.
+                          properties:
+                            group:
+                              default: ""
+                              description: |-
+                                Group is the group of the referent. For example, "gateway.networking.k8s.io".
+                                When unspecified or empty string, core API group is inferred.
+                              maxLength: 253
+                              pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                              type: string
+                            kind:
+                              default: Secret
+                              description: Kind is kind of the referent. For example
+                                "Secret".
+                              maxLength: 63
+                              minLength: 1
+                              pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                              type: string
+                            name:
+                              description: Name is the name of the referent.
+                              maxLength: 253
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace is the namespace of the referenced object. When unspecified, the local
+                                namespace is inferred.
+
+                                Note that when a namespace different than the local namespace is specified,
+                                a ReferenceGrant object is required in the referent namespace to allow that
+                                namespace's owner to accept the reference. See the ReferenceGrant
+                                documentation for details.
+
+                                Support: Core
+                              maxLength: 63
+                              minLength: 1
+                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        maxItems: 16
+                        type: array
+                    type: object
+                    x-kubernetes-validations:
+                    - message: sessionTicketKeysRef can only be set when enabled is
+                        true
+                      rule: (self.enabled == false && self.sessionTicketKeysRef.size()
+                        > 0)
                 type: object
                 x-kubernetes-validations:
                 - message: setting ciphers has no effect if the minimum possible TLS
