@@ -124,11 +124,35 @@ func (*rbac) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	}
 
 	var (
-		authorization = irRoute.Security.Authorization
-		allowAction   *anypb.Any
-		denyAction    *anypb.Any
-		matcherList   []*matcherv3.Matcher_MatcherList_FieldMatcher
-		err           error
+		rbacPerRoute *rbacv3.RBACPerRoute
+		cfgAny       *anypb.Any
+		err          error
+	)
+
+	if rbacPerRoute, err = buildRBACPerRoute(irRoute.Security.Authorization); err != nil {
+		return err
+	}
+
+	if cfgAny, err = anypb.New(rbacPerRoute); err != nil {
+		return err
+	}
+
+	if filterCfg == nil {
+		route.TypedPerFilterConfig = make(map[string]*anypb.Any)
+	}
+
+	route.TypedPerFilterConfig[egv1a1.EnvoyFilterRBAC.String()] = cfgAny
+
+	return nil
+}
+
+func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, error) {
+	var (
+		rbac        *rbacv3.RBACPerRoute
+		allowAction *anypb.Any
+		denyAction  *anypb.Any
+		matcherList []*matcherv3.Matcher_MatcherList_FieldMatcher
+		err         error
 	)
 
 	allow := &rbacconfigv3.Action{
@@ -136,7 +160,7 @@ func (*rbac) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 		Action: rbacconfigv3.RBAC_ALLOW,
 	}
 	if allowAction, err = anypb.New(allow); err != nil {
-		return err
+		return nil, err
 	}
 
 	deny := &rbacconfigv3.Action{
@@ -144,7 +168,7 @@ func (*rbac) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 		Action: rbacconfigv3.RBAC_DENY,
 	}
 	if denyAction, err = anypb.New(deny); err != nil {
-		return err
+		return nil, err
 	}
 
 	// Build a list of matchers based on the rules.
@@ -167,17 +191,19 @@ func (*rbac) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 
 		if len(rule.Principal.ClientCIDRs) > 0 {
 			if ipPredicate, err = buildIPPredicate(rule.Principal.ClientCIDRs); err != nil {
-				return err
+				return nil, err
 			}
 		}
 
 		if rule.Principal.JWT != nil {
 			if jwtPredicate, err = buildJWTPredicate(*rule.Principal.JWT); err != nil {
-				return err
+				return nil, err
 			}
 		}
 
+		// Build the predicate for the current rule.
 		switch {
+		// If both IP and JWT predicates are present, AND them together.
 		case ipPredicate != nil && jwtPredicate != nil:
 			predicates := []*matcherv3.Matcher_MatcherList_Predicate{
 				{
@@ -198,6 +224,7 @@ func (*rbac) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 				MatchType: ipPredicate,
 			}
 		case jwtPredicate != nil:
+			// If there are multiple JWT predicates, AND them together.
 			if len(jwtPredicate) > 1 {
 				predicate = &matcherv3.Matcher_MatcherList_Predicate{
 					MatchType: &matcherv3.Matcher_MatcherList_Predicate_AndMatcher{
@@ -212,6 +239,7 @@ func (*rbac) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 		}
 
 		// Add the matcher generated with the current rule to the matcher list.
+		// The first matcher that matches will be used to determine the action.
 		matcherList = append(matcherList, &matcherv3.Matcher_MatcherList_FieldMatcher{
 			Predicate: predicate,
 			OnMatch: &matcherv3.Matcher_OnMatch{
@@ -231,7 +259,7 @@ func (*rbac) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 		defaultAction = allowAction
 	}
 
-	routeCfgProto := &rbacv3.RBACPerRoute{
+	rbac = &rbacv3.RBACPerRoute{
 		Rbac: &rbacv3.RBAC{
 			Matcher: &matcherv3.Matcher{
 				MatcherType: &matcherv3.Matcher_MatcherList_{
@@ -256,26 +284,15 @@ func (*rbac) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	// Setting the matcher type to nil since Proto validation will fail if the list
 	// is empty.
 	if len(matcherList) == 0 {
-		routeCfgProto.Rbac.Matcher.MatcherType = nil
+		rbac.Rbac.Matcher.MatcherType = nil
 	}
 
 	// We need to validate the RBACPerRoute message before converting it to an Any.
-	if err = routeCfgProto.ValidateAll(); err != nil {
-		return err
+	if err = rbac.ValidateAll(); err != nil {
+		return nil, err
 	}
 
-	routeCfgAny, err := anypb.New(routeCfgProto)
-	if err != nil {
-		return err
-	}
-
-	if filterCfg == nil {
-		route.TypedPerFilterConfig = make(map[string]*anypb.Any)
-	}
-
-	route.TypedPerFilterConfig[egv1a1.EnvoyFilterRBAC.String()] = routeCfgAny
-
-	return nil
+	return rbac, nil
 }
 
 func buildIPPredicate(clientCIDRs []*ir.CIDRMatch) (*matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_, error) {
@@ -340,7 +357,7 @@ func buildJWTPredicate(jwt egv1a1.JWTPrincipal) ([]*matcherv3.Matcher_MatcherLis
 			Path: []*networkinput.DynamicMetadataInput_PathSegment{
 				{
 					Segment: &networkinput.DynamicMetadataInput_PathSegment_Key{
-						Key: jwt.Provider, // The issuer is used as the `payload_in_metadata` in the JWT Authn filter.
+						Key: jwt.Provider, // The name of the jwt provider is used as the `payload_in_metadata` in the JWT Authn filter.
 					},
 				},
 				{
@@ -351,7 +368,7 @@ func buildJWTPredicate(jwt egv1a1.JWTPrincipal) ([]*matcherv3.Matcher_MatcherLis
 			},
 		}
 
-		// The scope claim has already been normalized to a string array in the JWT Authn filter.
+		// The scope has already been normalized to a string array in the JWT Authn filter.
 		scopeMatcher := &metadatav3.Metadata{
 			Value: &envoymatcherv3.ValueMatcher{
 				MatchPattern: &envoymatcherv3.ValueMatcher_ListMatch{
@@ -418,11 +435,12 @@ func buildJWTPredicate(jwt egv1a1.JWTPrincipal) ([]*matcherv3.Matcher_MatcherLis
 		path := []*networkinput.DynamicMetadataInput_PathSegment{
 			{
 				Segment: &networkinput.DynamicMetadataInput_PathSegment_Key{
-					Key: jwt.Provider, // The issuer is used as the `payload_in_metadata` in the JWT Authn filter.
+					Key: jwt.Provider, // The name of the jwt provider is used as the `payload_in_metadata` in the JWT Authn filter.
 				},
 			},
 		}
 
+		// A nested claim is represented as a dot-separated string, e.g., "user.email".
 		for _, segment := range strings.Split(claim.Name, ".") {
 			path = append(path, &networkinput.DynamicMetadataInput_PathSegment{
 				Segment: &networkinput.DynamicMetadataInput_PathSegment_Key{
@@ -498,6 +516,7 @@ func buildJWTPredicate(jwt egv1a1.JWTPrincipal) ([]*matcherv3.Matcher_MatcherLis
 			})
 		}
 
+		// For a claim to match, one of the values must match.
 		// If there are multiple values for a claim, OR them together.
 		if len(predicateForOneClaim) > 1 {
 			predicateForAllClaims = append(predicateForAllClaims, &matcherv3.Matcher_MatcherList_Predicate{
@@ -514,6 +533,7 @@ func buildJWTPredicate(jwt egv1a1.JWTPrincipal) ([]*matcherv3.Matcher_MatcherLis
 		}
 	}
 
+	// For a JWT principal to match, all the specified claims and scopes must match.
 	// And all the claims and scopes together.
 	jwtPredicate = append(jwtPredicate, predicateForAllClaims...)
 
