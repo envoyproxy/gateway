@@ -74,10 +74,13 @@ spec:
         jwt:
           provider: example
           claims:
-          - name: name
+          - name: user.name
             values: ["John Doe"]
-          - name: "sub"
+          - name: sub
             values: ["1234567890"]
+          - name: user.roles
+            valueType: StringArray
+            values: ["admin"]
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
@@ -131,7 +134,10 @@ spec:
           provider: example
           scopes: ["read", "add", "modify"]
           claims:
-          - name: name
+          - name: user.name
             values: ["John Doe"]
-          - name: "sub"
+          - name: sub
             values: ["1234567890"]
+          - name: user.roles
+            valueType: StringArray
+            values: ["admin"]
