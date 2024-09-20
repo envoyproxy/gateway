@@ -170,7 +170,8 @@ spec:
                                 provider:
                                   description: |-
                                     Provider is the name of the JWT provider that used to verify the JWT token.
-                                    The provider must be configured in the JWT authentication.
+                                    In order to use JWT claims for authorization, you must configure the JWT
+                                    authentication with the same provider in the same `SecurityPolicy`.
                                   maxLength: 253
                                   minLength: 1
                                   type: string

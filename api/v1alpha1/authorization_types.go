@@ -82,7 +82,8 @@ type Principal struct {
 // +kubebuilder:validation:XValidation:rule="(has(self.claims) || has(self.scopes))",message="at least one of claims or scopes must be specified"
 type JWTPrincipal struct {
 	// Provider is the name of the JWT provider that used to verify the JWT token.
-	// The provider must be configured in the JWT authentication.
+	// In order to use JWT claims for authorization, you must configure the JWT
+	// authentication with the same provider in the same `SecurityPolicy`.
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
