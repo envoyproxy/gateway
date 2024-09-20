@@ -115,6 +115,20 @@ func nthToPointer(f jp.Nth) ([]byte, error) {
 	return buf, nil
 }
 
-func toPointer(f jp.Frag) ([]byte, error) {
-	return f.Append(nil, false, true), nil
+func toPointer(f jp.Child) ([]byte, error) {
+	var buf []byte
+
+	// JSONPointer escaping https://datatracker.ietf.org/doc/html/rfc6901#section-3
+	for _, b := range []byte(string(f)) {
+		switch b {
+		case '~':
+			buf = append(buf, "~0"...)
+		case '/':
+			buf = append(buf, "~1"...)
+		default:
+			buf = append(buf, b)
+		}
+	}
+
+	return buf, nil
 }
