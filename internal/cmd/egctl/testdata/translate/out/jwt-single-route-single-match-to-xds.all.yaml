@@ -295,7 +295,7 @@ xds:
                           forward: true
                           normalizePayloadInMetadata:
                             spaceDelimitedClaims:
-                            - scopes
+                            - scope
                           payloadInMetadata: example
                           remoteJwks:
                             asyncFetch: {}
