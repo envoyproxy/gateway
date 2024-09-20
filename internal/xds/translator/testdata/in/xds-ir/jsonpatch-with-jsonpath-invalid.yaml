@@ -1,0 +1,68 @@
+envoyPatchPolicies:
+- status:
+    ancestors:
+    - ancestorRef:
+        group: "gateway.networking.k8s.io"
+        kind: "Gateway"
+        namespace: "default"
+        name: "foobar"
+  name: "first-policy"
+  namespace: "default"
+  jsonPatches:
+  - type: "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
+    name: "first-route-dest"
+    operation:
+      op: "replace"
+      jsonPath: "..doesNotExists"
+      value: "50"
+http:
+- name: "first-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  tls:
+    alpnProtocols:
+    - h2
+    - http/1.1
+    certificates:
+    - name: secret-1
+      # byte slice representation of "key-data"
+      serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+      # byte slice representation of "key-data"
+      privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+    - name: secret-2
+      serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+      privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    headerMatches:
+    - name: user
+      stringMatch:
+      exact: "jason"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "second-route"
+    hostname: "*"
+    headerMatches:
+    - name: user
+      stringMatch:
+      exact: "james"
+    - name: country
+      stringMatch:
+      exact: "US"
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "4.5.6.7"
+          port: 60000
+
