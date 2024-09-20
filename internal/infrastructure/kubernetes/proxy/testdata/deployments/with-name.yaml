@@ -225,7 +225,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.name
-        image: envoyproxy/envoy:distroless-v1.31.0
+        image: envoyproxy/envoy:distroless-v1.31.2
         imagePullPolicy: IfNotPresent
         lifecycle:
           preStop:
