@@ -50,6 +50,7 @@ func TestE2E(t *testing.T) {
 		SkipTests: []string{
 			tests.GatewayInfraResourceTest.ShortName, // https://github.com/envoyproxy/gateway/issues/3191
 		},
+		AllowCRDsMismatch: *flags.AllowCRDsMismatch,
 	})
 	if err != nil {
 		t.Fatalf("Failed to create ConformanceTestSuite: %v", err)
