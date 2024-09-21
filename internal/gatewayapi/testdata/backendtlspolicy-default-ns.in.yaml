@@ -33,7 +33,11 @@ httpRoutes:
             - name: http-backend
               namespace: default
               port: 8080
-            - name: backend-ip-tls
+            - name: backend-ip-tls-1
+              namespace: default
+              kind: Backend
+              group: gateway.envoyproxy.io
+            - name: backend-ip-tls-2
               namespace: default
               kind: Backend
               group: gateway.envoyproxy.io
@@ -140,13 +144,30 @@ backendTLSPolicies:
   - apiVersion: gateway.networking.k8s.io/v1alpha2
     kind: BackendTLSPolicy
     metadata:
-      name: policy-btls-backend-ip
+      name: policy-btls-backend-ip-1
       namespace: default
     spec:
       targetRefs:
         - group: gateway.envoyproxy.io
           kind: Backend
-          name: backend-ip-tls
+          name: backend-ip-tls-1
+      validation:
+        caCertificateRefs:
+          - name: ca-cmap
+            group: ''
+            kind: ConfigMap
+        hostname: ip-backend
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: BackendTLSPolicy
+    metadata:
+      name: policy-btls-backend-ip-2
+      namespace: default
+    spec:
+      targetRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-ip-tls-2
+          sectionName: 3443
       validation:
         caCertificateRefs:
           - name: ca-cmap
@@ -157,10 +178,20 @@ backends:
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: Backend
     metadata:
-      name: backend-ip-tls
+      name: backend-ip-tls-1
       namespace: default
     spec:
       endpoints:
         - ip:
             address: 2.2.2.2
+            port: 3443
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-ip-tls-2
+      namespace: default
+    spec:
+      endpoints:
+        - ip:
+            address: 3.3.3.3
             port: 3443
