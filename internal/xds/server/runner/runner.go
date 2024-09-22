@@ -30,6 +30,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 	"github.com/envoyproxy/gateway/internal/xds/cache"
@@ -51,10 +52,11 @@ const (
 )
 
 type Config struct {
-	config.Server
-	Xds   *message.Xds
-	grpc  *grpc.Server
-	cache cache.SnapshotCacheWithCallbacks
+	ServerCfg *config.Server
+	Xds       *message.Xds
+	grpc      *grpc.Server
+	cache     cache.SnapshotCacheWithCallbacks
+	Logger    logging.Logger
 }
 
 type Runner struct {
@@ -71,7 +73,7 @@ func (r *Runner) Name() string {
 
 // Start starts the xds-server runner
 func (r *Runner) Start(ctx context.Context) (err error) {
-	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
+	r.Logger = r.ServerCfg.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 
 	// Set up the gRPC server and register the xDS handler.
 	// Create SnapshotCache before start subscribeAndTranslate,

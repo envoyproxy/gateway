@@ -111,7 +111,7 @@ func TestTLSConfig(t *testing.T) {
 	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
 
 	cfg := &Config{
-		Server: config.Server{
+		ServerCfg: &config.Server{
 			Logger: logger,
 		},
 	}
@@ -202,7 +202,7 @@ func TestServeXdsServerListenFailed(t *testing.T) {
 
 	cfg, _ := config.New()
 	r := New(&Config{
-		Server: *cfg,
+		ServerCfg: cfg,
 	})
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 	// Don't crash in this function

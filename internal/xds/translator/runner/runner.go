@@ -16,16 +16,18 @@ import (
 	extension "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/xds/translator"
 )
 
 type Config struct {
-	config.Server
+	ServerCfg         *config.Server
 	XdsIR             *message.XdsIR
 	Xds               *message.Xds
 	ExtensionManager  extension.Manager
 	ProviderResources *message.ProviderResources
+	Logger            logging.Logger
 }
 
 type Runner struct {
@@ -42,7 +44,7 @@ func (r *Runner) Name() string {
 
 // Start starts the xds-translator runner
 func (r *Runner) Start(ctx context.Context) (err error) {
-	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
+	r.Logger = r.ServerCfg.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 	go r.subscribeAndTranslate(ctx)
 	r.Logger.Info("started")
 	return
@@ -70,13 +72,13 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				}
 
 				// Set the rate limit service URL if global rate limiting is enabled.
-				if r.EnvoyGateway.RateLimit != nil {
+				if r.ServerCfg.EnvoyGateway.RateLimit != nil {
 					t.GlobalRateLimit = &translator.GlobalRateLimitSettings{
-						ServiceURL: ratelimit.GetServiceURL(r.Namespace, r.DNSDomain),
-						FailClosed: r.EnvoyGateway.RateLimit.FailClosed,
+						ServiceURL: ratelimit.GetServiceURL(r.ServerCfg.Namespace, r.ServerCfg.DNSDomain),
+						FailClosed: r.ServerCfg.EnvoyGateway.RateLimit.FailClosed,
 					}
-					if r.EnvoyGateway.RateLimit.Timeout != nil {
-						t.GlobalRateLimit.Timeout = r.EnvoyGateway.RateLimit.Timeout.Duration
+					if r.ServerCfg.EnvoyGateway.RateLimit.Timeout != nil {
+						t.GlobalRateLimit.Timeout = r.ServerCfg.EnvoyGateway.RateLimit.Timeout.Duration
 					}
 				}
 

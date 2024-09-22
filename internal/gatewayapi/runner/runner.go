@@ -31,6 +31,7 @@ import (
 	extension "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/wasm"
@@ -44,11 +45,12 @@ const (
 )
 
 type Config struct {
-	config.Server
+	ServerCfg         *config.Server
 	ProviderResources *message.ProviderResources
 	XdsIR             *message.XdsIR
 	InfraIR           *message.InfraIR
 	ExtensionManager  extension.Manager
+	Logger            logging.Logger
 }
 
 type Runner struct {
@@ -74,7 +76,7 @@ func (r *Runner) Name() string {
 
 // Start starts the gateway-api translator runner
 func (r *Runner) Start(ctx context.Context) (err error) {
-	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
+	r.Logger = r.ServerCfg.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 
 	go r.startWasmCache(ctx)
 	go r.subscribeAndTranslate(ctx)
@@ -86,7 +88,7 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 	// Start the wasm cache server
 	// EG reuse the OIDC HMAC secret as a hash salt to generate an unguessable
 	// downloading path for the Wasm module.
-	salt, err := hmac(ctx, r.Namespace)
+	salt, err := hmac(ctx, r.ServerCfg.Namespace)
 	if err != nil {
 		r.Logger.Error(err, "failed to get hmac secret")
 		return
@@ -120,7 +122,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			r.Logger.Info("received an update")
 			val := update.Value
 			// There is only 1 key which is the controller name
-			// so when a delete is triggered, delete all IR keys
+			// so when delete is triggered, delete all IR keys
 			if update.Delete || val == nil {
 				r.deleteAllIRKeys()
 				r.deleteAllStatusKeys()
@@ -143,20 +145,20 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			for _, resources := range *val {
 				// Translate and publish IRs.
 				t := &gatewayapi.Translator{
-					GatewayControllerName:   r.Server.EnvoyGateway.Gateway.ControllerName,
+					GatewayControllerName:   r.ServerCfg.EnvoyGateway.Gateway.ControllerName,
 					GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
-					GlobalRateLimitEnabled:  r.EnvoyGateway.RateLimit != nil,
-					EnvoyPatchPolicyEnabled: r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
-					BackendEnabled:          r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
-					Namespace:               r.Namespace,
+					GlobalRateLimitEnabled:  r.ServerCfg.EnvoyGateway.RateLimit != nil,
+					EnvoyPatchPolicyEnabled: r.ServerCfg.EnvoyGateway.ExtensionAPIs != nil && r.ServerCfg.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
+					BackendEnabled:          r.ServerCfg.EnvoyGateway.ExtensionAPIs != nil && r.ServerCfg.EnvoyGateway.ExtensionAPIs.EnableBackend,
+					Namespace:               r.ServerCfg.Namespace,
 					MergeGateways:           gatewayapi.IsMergeGatewaysEnabled(resources),
 					WasmCache:               r.wasmCache,
 				}
 
 				// If an extension is loaded, pass its supported groups/kinds to the translator
-				if r.EnvoyGateway.ExtensionManager != nil {
+				if r.ServerCfg.EnvoyGateway.ExtensionManager != nil {
 					var extGKs []schema.GroupKind
-					for _, gvk := range r.EnvoyGateway.ExtensionManager.Resources {
+					for _, gvk := range r.ServerCfg.EnvoyGateway.ExtensionManager.Resources {
 						extGKs = append(extGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
 					}
 					t.ExtensionGroupKinds = extGKs

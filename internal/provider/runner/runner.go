@@ -13,6 +13,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/provider"
 	"github.com/envoyproxy/gateway/internal/provider/file"
@@ -20,8 +21,9 @@ import (
 )
 
 type Config struct {
-	config.Server
+	ServerCfg         *config.Server
 	ProviderResources *message.ProviderResources
+	Logger            logging.Logger
 }
 
 type Runner struct {
@@ -38,10 +40,10 @@ func (r *Runner) Name() string {
 
 // Start the provider runner
 func (r *Runner) Start(ctx context.Context) (err error) {
-	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
+	r.Logger = r.ServerCfg.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 
 	var p provider.Provider
-	switch r.EnvoyGateway.Provider.Type {
+	switch r.ServerCfg.EnvoyGateway.Provider.Type {
 	case egv1a1.ProviderTypeKubernetes:
 		p, err = r.createKubernetesProvider()
 		if err != nil {
@@ -56,13 +58,13 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 
 	default:
 		// Unsupported provider.
-		return fmt.Errorf("unsupported provider type %v", r.EnvoyGateway.Provider.Type)
+		return fmt.Errorf("unsupported provider type %v", r.ServerCfg.EnvoyGateway.Provider.Type)
 	}
 
 	r.Logger.Info("Running provider", "type", p.Type())
 	go func() {
 		if err = p.Start(ctx); err != nil {
-			r.Logger.Error(err, "unable to start provider")
+			r.ServerCfg.Logger.Error(err, "unable to start provider")
 		}
 	}()
 
@@ -70,12 +72,12 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 }
 
 func (r *Runner) createKubernetesProvider() (*kubernetes.Provider, error) {
-	cfg, err := ctrl.GetConfig()
+	rest, err := ctrl.GetConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get kubeconfig: %w", err)
 	}
 
-	p, err := kubernetes.New(cfg, &r.Config.Server, r.ProviderResources)
+	p, err := kubernetes.New(rest, r.ServerCfg, r.ProviderResources)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create provider %s: %w", egv1a1.ProviderTypeKubernetes, err)
 	}
@@ -84,13 +86,12 @@ func (r *Runner) createKubernetesProvider() (*kubernetes.Provider, error) {
 }
 
 func (r *Runner) createCustomResourceProvider() (p provider.Provider, err error) {
-	switch r.EnvoyGateway.Provider.Custom.Resource.Type {
+	switch r.ServerCfg.EnvoyGateway.Provider.Custom.Resource.Type {
 	case egv1a1.ResourceProviderTypeFile:
-		p, err = file.New(&r.Config.Server, r.ProviderResources)
+		p, err = file.New(r.ServerCfg, r.ProviderResources)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create provider %s: %w", egv1a1.ProviderTypeCustom, err)
 		}
-
 	default:
 		return nil, fmt.Errorf("unsupported resource provider type")
 	}

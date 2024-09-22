@@ -111,11 +111,9 @@ func getConfigByPath(cfgPath string) (*config.Server, error) {
 // setupRunners starts all the runners required for the Envoy Gateway to
 // fulfill its tasks.
 func setupRunners(cfg *config.Server) (err error) {
-	// TODO - Setup a Config Manager
-	// https://github.com/envoyproxy/gateway/issues/43
 	ctx := ctrl.SetupSignalHandler()
 
-	// Setup the Extension Manager
+	// Set up the Extension Manager
 	var extMgr types.Manager
 	if cfg.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes {
 		extMgr, err = extensionregistry.NewManager(cfg)
@@ -131,7 +129,7 @@ func setupRunners(cfg *config.Server) (err error) {
 	// It also subscribes to status resources and once it receives
 	// a status resource back, it writes it out.
 	providerRunner := providerrunner.New(&providerrunner.Config{
-		Server:            *cfg,
+		ServerCfg:         cfg,
 		ProviderResources: pResources,
 	})
 	if err = providerRunner.Start(ctx); err != nil {
@@ -144,7 +142,7 @@ func setupRunners(cfg *config.Server) (err error) {
 	// It subscribes to the provider resources, translates it to xDS IR
 	// and infra IR resources and publishes them.
 	gwRunner := gatewayapirunner.New(&gatewayapirunner.Config{
-		Server:            *cfg,
+		ServerCfg:         cfg,
 		ProviderResources: pResources,
 		XdsIR:             xdsIR,
 		InfraIR:           infraIR,
@@ -159,7 +157,7 @@ func setupRunners(cfg *config.Server) (err error) {
 	// It subscribes to the xdsIR, translates it into xds Resources and publishes it.
 	// It also computes the EnvoyPatchPolicy statuses and publishes it.
 	xdsTranslatorRunner := xdstranslatorrunner.New(&xdstranslatorrunner.Config{
-		Server:            *cfg,
+		ServerCfg:         cfg,
 		XdsIR:             xdsIR,
 		Xds:               xds,
 		ExtensionManager:  extMgr,
@@ -173,8 +171,8 @@ func setupRunners(cfg *config.Server) (err error) {
 	// It subscribes to the infraIR, translates it into Envoy Proxy infrastructure
 	// resources such as K8s deployment and services.
 	infraRunner := infrarunner.New(&infrarunner.Config{
-		Server:  *cfg,
-		InfraIR: infraIR,
+		ServerCfg: cfg,
+		InfraIR:   infraIR,
 	})
 	if err = infraRunner.Start(ctx); err != nil {
 		return err
@@ -184,8 +182,8 @@ func setupRunners(cfg *config.Server) (err error) {
 	// It subscribes to the xds Resources and configures the remote Envoy Proxy
 	// via the xDS Protocol.
 	xdsServerRunner := xdsserverrunner.New(&xdsserverrunner.Config{
-		Server: *cfg,
-		Xds:    xds,
+		ServerCfg: cfg,
+		Xds:       xds,
 	})
 	if err = xdsServerRunner.Start(ctx); err != nil {
 		return err

@@ -14,12 +14,14 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
 )
 
 type Config struct {
-	config.Server
-	InfraIR *message.InfraIR
+	ServerCfg *config.Server
+	InfraIR   *message.InfraIR
+	Logger    logging.Logger
 }
 
 type Runner struct {
@@ -37,14 +39,14 @@ func New(cfg *Config) *Runner {
 
 // Start starts the infrastructure runner
 func (r *Runner) Start(ctx context.Context) (err error) {
-	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
-	if r.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeCustom &&
-		r.EnvoyGateway.Provider.Custom.Infrastructure == nil {
+	r.Logger = r.ServerCfg.Logger.WithName(r.Name()).WithValues("runner", r.Name())
+	if r.ServerCfg.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeCustom &&
+		r.ServerCfg.EnvoyGateway.Provider.Custom.Infrastructure == nil {
 		r.Logger.Info("provider is not specified, no provider is available")
 		return nil
 	}
 
-	r.mgr, err = infrastructure.NewManager(&r.Config.Server)
+	r.mgr, err = infrastructure.NewManager(r.ServerCfg)
 	if err != nil {
 		r.Logger.Error(err, "failed to create new manager")
 		return err
@@ -54,7 +56,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		go r.subscribeToProxyInfraIR(ctx)
 
 		// Enable global ratelimit if it has been configured.
-		if r.EnvoyGateway.RateLimit != nil {
+		if r.ServerCfg.EnvoyGateway.RateLimit != nil {
 			go r.enableRateLimitInfra(ctx)
 		}
 		r.Logger.Info("started")
@@ -62,13 +64,13 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 
 	// When leader election is active, infrastructure initialization occurs only upon acquiring leadership
 	// to avoid multiple EG instances processing envoy proxy infra resources.
-	if r.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes &&
-		!ptr.Deref(r.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable, false) {
+	if r.ServerCfg.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes &&
+		!ptr.Deref(r.ServerCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable, false) {
 		go func() {
 			select {
 			case <-ctx.Done():
 				return
-			case <-r.Elected:
+			case <-r.ServerCfg.Elected:
 				initInfra()
 			}
 		}()

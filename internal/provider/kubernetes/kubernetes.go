@@ -35,7 +35,7 @@ type Provider struct {
 }
 
 // New creates a new Provider from the provided EnvoyGateway.
-func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources) (*Provider, error) {
+func New(rest *rest.Config, svr *ec.Server, resources *message.ProviderResources) (*Provider, error) {
 	// TODO: Decide which mgr opts should be exposed through envoygateway.provider.kubernetes API.
 
 	mgrOpts := manager.Options{
@@ -82,7 +82,7 @@ func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources)
 			mgrOpts.Cache.DefaultNamespaces[watchNS] = cache.Config{}
 		}
 	}
-	mgr, err := ctrl.NewManager(cfg, mgrOpts)
+	mgr, err := ctrl.NewManager(rest, mgrOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create manager: %w", err)
 	}
