@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"sync"
 
 	"github.com/docker/docker/pkg/fileutils"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -27,6 +28,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/common"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extension "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -44,6 +46,8 @@ const (
 	serveTLSCaFilename   = "/certs/ca.crt"
 )
 
+var _ common.Runner = &Runner{}
+
 type Config struct {
 	ServerCfg         *config.Server
 	ProviderResources *message.ProviderResources
@@ -56,6 +60,7 @@ type Config struct {
 type Runner struct {
 	Config
 	wasmCache wasm.Cache
+	m         sync.Mutex
 }
 
 func New(cfg *Config) *Runner {
@@ -76,12 +81,23 @@ func (r *Runner) Name() string {
 
 // Start starts the gateway-api translator runner
 func (r *Runner) Start(ctx context.Context) (err error) {
-	r.Logger = r.ServerCfg.Logger.WithName(r.Name()).WithValues("runner", r.Name())
+	r.Logger = r.ServerCfg.Logger.WithName(r.Name())
 
 	go r.startWasmCache(ctx)
 	go r.subscribeAndTranslate(ctx)
 	r.Logger.Info("started")
 	return
+}
+
+func (r *Runner) Reload(serverCfg *config.Server) error {
+	r.m.Lock()
+	defer r.m.Unlock()
+
+	r.Logger = serverCfg.Logger.WithName(r.Name())
+	r.ServerCfg = serverCfg
+	r.Logger.Info("reloaded")
+	// TODO: trigger a reload
+	return nil
 }
 
 func (r *Runner) startWasmCache(ctx context.Context) {

@@ -25,9 +25,11 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/common"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/xds/translator"
 	"github.com/envoyproxy/gateway/internal/xds/types"
@@ -44,37 +46,36 @@ const (
 	rateLimitTLSCACertFilename = "/certs/ca.crt"
 )
 
-type Config struct {
-	config.Server
-	XdsIR           *message.XdsIR
+var _ common.Runner = &Runner{}
+
+type Runner struct {
+	xdsIR           *message.XdsIR
 	grpc            *grpc.Server
 	cache           cachev3.SnapshotCache
 	snapshotVersion int64
-}
-
-type Runner struct {
-	Config
+	logger          logging.Logger
 }
 
 func (r *Runner) Name() string {
 	return string(egv1a1.LogComponentGlobalRateLimitRunner)
 }
 
-func New(cfg *Config) *Runner {
-	return &Runner{Config: *cfg}
+func New(logger logging.Logger, xds *message.XdsIR) *Runner {
+	return &Runner{
+		xdsIR:  xds,
+		logger: logger.WithName(string(egv1a1.LogComponentGlobalRateLimitRunner)),
+	}
 }
 
 // Start starts the infrastructure runner
 func (r *Runner) Start(ctx context.Context) (err error) {
-	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
-
 	// Set up the gRPC server and register the xDS handler.
 	// Create SnapshotCache before start subscribeAndTranslate,
 	// prevent panics in case cache is nil.
 	cfg := r.tlsConfig(rateLimitTLSCertFilename, rateLimitTLSKeyFilename, rateLimitTLSCACertFilename)
 	r.grpc = grpc.NewServer(grpc.Creds(credentials.NewTLS(cfg)))
 
-	r.cache = cachev3.NewSnapshotCache(false, cachev3.IDHash{}, r.Logger.Sugar())
+	r.cache = cachev3.NewSnapshotCache(false, cachev3.IDHash{}, r.logger.Sugar())
 
 	// Register xDS Config server.
 	discoveryv3.RegisterAggregatedDiscoveryServiceServer(r.grpc, serverv3.NewServer(ctx, r.cache, serverv3.CallbackFuncs{}))
@@ -85,26 +86,33 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	// Start message Subscription.
 	go r.subscribeAndTranslate(ctx)
 
-	r.Logger.Info("started")
+	r.logger.Info("started")
 	return
+}
+
+func (r *Runner) Reload(serverCfg *config.Server) error {
+	r.logger = serverCfg.Logger.WithName(string(egv1a1.LogComponentGlobalRateLimitRunner))
+	r.logger.Info("reloaded")
+	// TODO: trigger a reload
+	return nil
 }
 
 func (r *Runner) serveXdsConfigServer(ctx context.Context) {
 	addr := net.JoinHostPort(XdsGrpcSotwConfigServerAddress, strconv.Itoa(ratelimit.XdsGrpcSotwConfigServerPort))
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
-		r.Logger.Error(err, "failed to listen on address", "address", addr)
+		r.logger.Error(err, "failed to listen on address", "address", addr)
 		return
 	}
 
 	go func() {
 		<-ctx.Done()
-		r.Logger.Info("grpc server shutting down")
+		r.logger.Info("grpc server shutting down")
 		r.grpc.Stop()
 	}()
 
 	if err = r.grpc.Serve(l); err != nil {
-		r.Logger.Error(err, "failed to start grpc based xds config server")
+		r.logger.Error(err, "failed to start grpc based xds config server")
 	}
 }
 
@@ -122,9 +130,9 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	rateLimitConfigsCache := map[string][]cachetype.Resource{}
 
 	// Subscribe to resources.
-	message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentGlobalRateLimitRunner), Message: "xds-ir"}, r.XdsIR.Subscribe(ctx),
+	message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentGlobalRateLimitRunner), Message: "xds-ir"}, r.xdsIR.Subscribe(ctx),
 		func(update message.Update[string, *ir.Xds], errChan chan error) {
-			r.Logger.Info("received a notification")
+			r.logger.Info("received a notification")
 
 			if update.Delete {
 				delete(rateLimitConfigsCache, update.Key)
@@ -133,7 +141,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				// Translate to ratelimit xDS Config.
 				rvt, err := r.translate(update.Value)
 				if err != nil {
-					r.Logger.Error(err, "failed to translate an updated xds-ir to ratelimit xDS Config")
+					r.logger.Error(err, "failed to translate an updated xds-ir to ratelimit xDS Config")
 					errChan <- err
 				}
 
@@ -146,7 +154,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			}
 		},
 	)
-	r.Logger.Info("subscriber shutting down")
+	r.logger.Info("subscriber shutting down")
 }
 
 func (r *Runner) translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, error) {
@@ -166,12 +174,12 @@ func (r *Runner) translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, error) {
 
 func (r *Runner) updateSnapshot(ctx context.Context, resource types.XdsResources) {
 	if r.cache == nil {
-		r.Logger.Error(nil, "failed to init the snapshot cache")
+		r.logger.Error(nil, "failed to init the snapshot cache")
 		return
 	}
 
 	if err := r.addNewSnapshot(ctx, resource); err != nil {
-		r.Logger.Error(err, "failed to update the snapshot cache")
+		r.logger.Error(err, "failed to update the snapshot cache")
 	}
 }
 
@@ -221,9 +229,9 @@ func (r *Runner) tlsConfig(cert, key, ca string) *tls.Config {
 
 	// Attempt to load certificates and key to catch configuration errors early.
 	if _, lerr := loadConfig(); lerr != nil {
-		r.Logger.Error(lerr, "failed to load certificate and key")
+		r.logger.Error(lerr, "failed to load certificate and key")
 	}
-	r.Logger.Info("loaded TLS certificate and key")
+	r.logger.Info("loaded TLS certificate and key")
 
 	return &tls.Config{
 		MinVersion: tls.VersionTLS13,

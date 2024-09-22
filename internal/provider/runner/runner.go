@@ -12,6 +12,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/common"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
@@ -19,6 +20,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/provider/file"
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes"
 )
+
+var _ common.Runner = &Runner{}
 
 type Config struct {
 	ServerCfg         *config.Server
@@ -40,7 +43,7 @@ func (r *Runner) Name() string {
 
 // Start the provider runner
 func (r *Runner) Start(ctx context.Context) (err error) {
-	r.Logger = r.ServerCfg.Logger.WithName(r.Name()).WithValues("runner", r.Name())
+	r.Logger = r.ServerCfg.Logger.WithName(r.Name())
 
 	var p provider.Provider
 	switch r.ServerCfg.EnvoyGateway.Provider.Type {
@@ -64,10 +67,19 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	r.Logger.Info("Running provider", "type", p.Type())
 	go func() {
 		if err = p.Start(ctx); err != nil {
-			r.ServerCfg.Logger.Error(err, "unable to start provider")
+			r.Logger.Error(err, "unable to start provider")
 		}
 	}()
 
+	return nil
+}
+
+func (r *Runner) Reload(serverCfg *config.Server) error {
+	r.Logger = serverCfg.Logger.WithName(r.Name())
+	r.ServerCfg = serverCfg
+
+	r.Logger.Info("reloaded")
+	// TODO: how to trigger a reload of provider, stop and recreate the provider?
 	return nil
 }
 

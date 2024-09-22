@@ -40,7 +40,7 @@ func New(rest *rest.Config, svr *ec.Server, resources *message.ProviderResources
 
 	mgrOpts := manager.Options{
 		Scheme:                  envoygateway.GetScheme(),
-		Logger:                  svr.Logger.Logger,
+		Logger:                  svr.Logger.Logger.WithName("kubernetes-provider"),
 		HealthProbeBindAddress:  ":8081",
 		LeaderElectionID:        "5b9825d2.gateway.envoyproxy.io",
 		LeaderElectionNamespace: svr.Namespace,
@@ -110,7 +110,7 @@ func New(rest *rest.Config, svr *ec.Server, resources *message.ProviderResources
 	// Emit elected & continue with deployment of infra resources
 	go func() {
 		<-mgr.Elected()
-		close(svr.Elected)
+		svr.Elected <- struct{}{}
 	}()
 
 	return &Provider{

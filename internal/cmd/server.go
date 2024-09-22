@@ -6,12 +6,15 @@
 package cmd
 
 import (
+	"context"
+
 	"github.com/spf13/cobra"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/admin"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config/loader"
 	extensionregistry "github.com/envoyproxy/gateway/internal/extension/registry"
 	"github.com/envoyproxy/gateway/internal/extension/types"
 	gatewayapirunner "github.com/envoyproxy/gateway/internal/gatewayapi/runner"
@@ -51,6 +54,12 @@ func server() error {
 		return err
 	}
 
+	ctx := ctrl.SetupSignalHandler()
+	l := loader.New(cfgPath, cfg)
+	if err := l.Start(ctx); err != nil {
+		return err
+	}
+
 	// Init eg admin servers.
 	if err := admin.Init(cfg); err != nil {
 		return err
@@ -61,7 +70,7 @@ func server() error {
 	}
 
 	// init eg runners.
-	if err := setupRunners(cfg); err != nil {
+	if err := setupRunners(ctx, cfg, l); err != nil {
 		return err
 	}
 
@@ -110,9 +119,7 @@ func getConfigByPath(cfgPath string) (*config.Server, error) {
 
 // setupRunners starts all the runners required for the Envoy Gateway to
 // fulfill its tasks.
-func setupRunners(cfg *config.Server) (err error) {
-	ctx := ctrl.SetupSignalHandler()
-
+func setupRunners(ctx context.Context, cfg *config.Server, l *loader.Loader) (err error) {
 	// Set up the Extension Manager
 	var extMgr types.Manager
 	if cfg.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes {
@@ -121,6 +128,15 @@ func setupRunners(cfg *config.Server) (err error) {
 			return err
 		}
 	}
+	l.RegisterHooks("extension-manager", func(cfg *config.Server) error {
+		if cfg.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes {
+			extMgr, err = extensionregistry.NewManager(cfg)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 
 	pResources := new(message.ProviderResources)
 	// Start the Provider Service
@@ -135,6 +151,7 @@ func setupRunners(cfg *config.Server) (err error) {
 	if err = providerRunner.Start(ctx); err != nil {
 		return err
 	}
+	l.RegisterHooks(providerRunner.Name(), providerRunner.Reload)
 
 	xdsIR := new(message.XdsIR)
 	infraIR := new(message.InfraIR)
@@ -151,6 +168,7 @@ func setupRunners(cfg *config.Server) (err error) {
 	if err = gwRunner.Start(ctx); err != nil {
 		return err
 	}
+	l.RegisterHooks(gwRunner.Name(), gwRunner.Reload)
 
 	xds := new(message.Xds)
 	// Start the Xds Translator Service
@@ -166,41 +184,33 @@ func setupRunners(cfg *config.Server) (err error) {
 	if err = xdsTranslatorRunner.Start(ctx); err != nil {
 		return err
 	}
+	l.RegisterHooks(xdsTranslatorRunner.Name(), xdsTranslatorRunner.Reload)
 
 	// Start the Infra Manager Runner
 	// It subscribes to the infraIR, translates it into Envoy Proxy infrastructure
 	// resources such as K8s deployment and services.
-	infraRunner := infrarunner.New(&infrarunner.Config{
-		ServerCfg: cfg,
-		InfraIR:   infraIR,
-	})
+	infraRunner := infrarunner.New(cfg, infraIR)
 	if err = infraRunner.Start(ctx); err != nil {
 		return err
 	}
+	l.RegisterHooks(infraRunner.Name(), infraRunner.Reload)
 
 	// Start the xDS Server
 	// It subscribes to the xds Resources and configures the remote Envoy Proxy
 	// via the xDS Protocol.
-	xdsServerRunner := xdsserverrunner.New(&xdsserverrunner.Config{
-		ServerCfg: cfg,
-		Xds:       xds,
-	})
+	xdsServerRunner := xdsserverrunner.New(cfg.Logger, xds)
 	if err = xdsServerRunner.Start(ctx); err != nil {
 		return err
 	}
+	l.RegisterHooks(xdsServerRunner.Name(), xdsServerRunner.Reload)
 
-	// Start the global rateLimit if it has been enabled through the config
-	if cfg.EnvoyGateway.RateLimit != nil {
-		// Start the Global RateLimit xDS Server
-		// It subscribes to the xds Resources and translates it to Envoy Ratelimit configuration.
-		rateLimitRunner := ratelimitrunner.New(&ratelimitrunner.Config{
-			Server: *cfg,
-			XdsIR:  xdsIR,
-		})
-		if err = rateLimitRunner.Start(ctx); err != nil {
-			return err
-		}
+	// Start the Global RateLimit xDS Server
+	// It subscribes to the xds Resources and translates it to Envoy Ratelimit configuration.
+	rateLimitRunner := ratelimitrunner.New(cfg.Logger, xdsIR)
+	if err = rateLimitRunner.Start(ctx); err != nil {
+		return err
 	}
+	l.RegisterHooks(rateLimitRunner.Name(), rateLimitRunner.Reload)
 
 	// Wait until done
 	<-ctx.Done()
@@ -211,7 +221,6 @@ func setupRunners(cfg *config.Server) (err error) {
 	xds.Close()
 
 	cfg.Logger.Info("shutting down")
-
 	if extMgr != nil {
 		// Close connections to extension services
 		if mgr, ok := extMgr.(*extensionregistry.Manager); ok {

@@ -29,6 +29,7 @@ import (
 	"google.golang.org/grpc/keepalive"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/common"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
@@ -51,20 +52,21 @@ const (
 	xdsTLSCaFilename = "/certs/ca.crt"
 )
 
-type Config struct {
-	ServerCfg *config.Server
-	Xds       *message.Xds
-	grpc      *grpc.Server
-	cache     cache.SnapshotCacheWithCallbacks
-	Logger    logging.Logger
-}
+var _ common.Runner = &Runner{}
 
 type Runner struct {
-	Config
+	xds    *message.Xds
+	grpc   *grpc.Server
+	cache  cache.SnapshotCacheWithCallbacks
+	logger logging.Logger
 }
 
-func New(cfg *Config) *Runner {
-	return &Runner{Config: *cfg}
+func New(logger logging.Logger, xds *message.Xds) *Runner {
+	r := &Runner{
+		xds:    xds,
+		logger: logger.WithName("xds-server-runner"),
+	}
+	return r
 }
 
 func (r *Runner) Name() string {
@@ -73,8 +75,6 @@ func (r *Runner) Name() string {
 
 // Start starts the xds-server runner
 func (r *Runner) Start(ctx context.Context) (err error) {
-	r.Logger = r.ServerCfg.Logger.WithName(r.Name()).WithValues("runner", r.Name())
-
 	// Set up the gRPC server and register the xDS handler.
 	// Create SnapshotCache before start subscribeAndTranslate,
 	// prevent panics in case cache is nil.
@@ -84,7 +84,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		PermitWithoutStream: true,
 	}))
 
-	r.cache = cache.NewSnapshotCache(true, r.Logger)
+	r.cache = cache.NewSnapshotCache(true, r.logger)
 	registerServer(serverv3.NewServer(ctx, r.cache, r.cache), r.grpc)
 
 	// Start and listen xDS gRPC Server.
@@ -92,21 +92,29 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 
 	// Start message Subscription.
 	go r.subscribeAndTranslate(ctx)
-	r.Logger.Info("started")
+	r.logger.Info("started")
 	return
+}
+
+func (r *Runner) Reload(serverCfg *config.Server) error {
+	r.logger = serverCfg.Logger.WithName("xds-server-runner")
+	r.logger.Info("reloaded")
+
+	// TODO: Implement reload logic
+	return nil
 }
 
 func (r *Runner) serveXdsServer(ctx context.Context) {
 	addr := net.JoinHostPort(XdsServerAddress, strconv.Itoa(bootstrap.DefaultXdsServerPort))
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
-		r.Logger.Error(err, "failed to listen on address", "address", addr)
+		r.logger.Error(err, "failed to listen on address", "address", addr)
 		return
 	}
 
 	go func() {
 		<-ctx.Done()
-		r.Logger.Info("grpc server shutting down")
+		r.logger.Info("grpc server shutting down")
 		// We don't use GracefulStop here because envoy
 		// has long-lived hanging xDS requests. There's no
 		// mechanism to make those pending requests fail,
@@ -115,7 +123,7 @@ func (r *Runner) serveXdsServer(ctx context.Context) {
 	}()
 
 	if err = r.grpc.Serve(l); err != nil {
-		r.Logger.Error(err, "failed to start grpc based xds server")
+		r.logger.Error(err, "failed to start grpc based xds server")
 	}
 }
 
@@ -134,18 +142,18 @@ func registerServer(srv serverv3.Server, g *grpc.Server) {
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources
-	message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentXdsServerRunner), Message: "xds"}, r.Xds.Subscribe(ctx),
+	message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentXdsServerRunner), Message: "xds"}, r.xds.Subscribe(ctx),
 		func(update message.Update[string, *xdstypes.ResourceVersionTable], errChan chan error) {
 			key := update.Key
 			val := update.Value
 
-			r.Logger.Info("received an update")
+			r.logger.Info("received an update")
 			var err error
 			if update.Delete {
 				err = r.cache.GenerateNewSnapshot(key, nil)
 			} else if val != nil && val.XdsResources != nil {
 				if r.cache == nil {
-					r.Logger.Error(err, "failed to init snapshot cache")
+					r.logger.Error(err, "failed to init snapshot cache")
 					errChan <- err
 				} else {
 					// Update snapshot cache
@@ -153,13 +161,13 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				}
 			}
 			if err != nil {
-				r.Logger.Error(err, "failed to generate a snapshot")
+				r.logger.Error(err, "failed to generate a snapshot")
 				errChan <- err
 			}
 		},
 	)
 
-	r.Logger.Info("subscriber shutting down")
+	r.logger.Info("subscriber shutting down")
 }
 
 func (r *Runner) tlsConfig(cert, key, ca string) *tls.Config {
@@ -190,9 +198,9 @@ func (r *Runner) tlsConfig(cert, key, ca string) *tls.Config {
 
 	// Attempt to load certificates and key to catch configuration errors early.
 	if _, lerr := loadConfig(); lerr != nil {
-		r.Logger.Error(lerr, "failed to load certificate and key")
+		r.logger.Error(lerr, "failed to load certificate and key")
 	}
-	r.Logger.Info("loaded TLS certificate and key")
+	r.logger.Info("loaded TLS certificate and key")
 
 	return &tls.Config{
 		MinVersion: tls.VersionTLS13,
