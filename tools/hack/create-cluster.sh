@@ -12,6 +12,8 @@ NUM_WORKERS=${NUM_WORKERS:-""}
 KIND_CFG=$(cat <<-EOM
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
+networking:
+  ipFamily: dual
 nodes:
 - role: control-plane
 EOM
@@ -53,10 +55,22 @@ kubectl rollout status -n metallb-system deployment/controller --timeout 5m
 kubectl rollout status -n metallb-system daemonset/speaker --timeout 5m
 
 # Apply config with addresses based on docker network IPAM.
-subnet=$(docker network inspect kind | jq -r '.[].IPAM.Config[].Subnet | select(contains(":") | not)')
-# Assume default kind network subnet prefix of 16, and choose addresses in that range.
-address_first_octets=$(echo "${subnet}" | awk -F. '{printf "%s.%s",$1,$2}')
-address_range="${address_first_octets}.255.200-${address_first_octets}.255.250"
+subnet_v4=$(docker network inspect kind | jq -r '.[].IPAM.Config[] | select(.Subnet | contains(":") | not) | .Subnet')
+subnet_v6=$(docker network inspect kind | jq -r '.[].IPAM.Config[] | select(.Subnet | contains(":")) | .Subnet')
+
+# Extract the first three octets for IPv4 (e.g., 192.168.228.0/24 -> 192.168.228)
+address_prefix_v4=$(echo "${subnet_v4}" | awk -F. '{print $1"."$2"."$3}')
+address_range_v4="${address_prefix_v4}.200-${address_prefix_v4}.250"
+
+# Set IPv6 address range
+ipv6_prefix="${subnet_v6%::*}"
+address_range_v6="${ipv6_prefix}::200-${ipv6_prefix}::250"
+
+# Print out the address ranges for verification
+echo "IPv4 address range: ${address_range_v4}"
+echo "IPv6 address range: ${address_range_v6}"
+
+# Apply MetalLB IPAddressPool and L2Advertisement
 kubectl apply -f - <<EOF
 apiVersion: metallb.io/v1beta1
 kind: IPAddressPool
@@ -65,7 +79,8 @@ metadata:
   name: kube-services
 spec:
   addresses:
-  - ${address_range}
+  - ${address_range_v4}
+  - ${address_range_v6}
 ---
 apiVersion: metallb.io/v1beta1
 kind: L2Advertisement
