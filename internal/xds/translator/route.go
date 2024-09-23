@@ -363,7 +363,10 @@ func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite, pathMa
 			if useRegexRewriteForPrefixMatchReplace(pathMatch, *urlRewrite.Path.PrefixMatchReplace) {
 				routeAction.RegexRewrite = prefix2RegexRewrite(*pathMatch.Prefix)
 			} else {
-				routeAction.PrefixRewrite = *urlRewrite.Path.PrefixMatchReplace
+				// remove trailing / to fix #3989
+				// when the pathMath.Prefix has suffix / but EG has removed it,
+				// and the urlRewrite.Path.PrefixMatchReplace suffix with / the upstream will get unwanted /
+				routeAction.PrefixRewrite = strings.TrimSuffix(*urlRewrite.Path.PrefixMatchReplace, "/")
 			}
 		}
 	}

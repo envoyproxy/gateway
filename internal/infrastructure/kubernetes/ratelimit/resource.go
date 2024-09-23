@@ -149,7 +149,7 @@ func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeploymen
 			VolumeMounts:             expectedContainerVolumeMounts(rateLimit, rateLimitDeployment),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
-			ReadinessProbe: &corev1.Probe{
+			StartupProbe: &corev1.Probe{
 				ProbeHandler: corev1.ProbeHandler{
 					HTTPGet: &corev1.HTTPGetAction{
 						Path:   ReadinessPath,
@@ -160,7 +160,20 @@ func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeploymen
 				TimeoutSeconds:   1,
 				PeriodSeconds:    10,
 				SuccessThreshold: 1,
-				FailureThreshold: 3,
+				FailureThreshold: 30,
+			},
+			ReadinessProbe: &corev1.Probe{
+				ProbeHandler: corev1.ProbeHandler{
+					HTTPGet: &corev1.HTTPGetAction{
+						Path:   ReadinessPath,
+						Port:   intstr.IntOrString{Type: intstr.Int, IntVal: ReadinessPort},
+						Scheme: corev1.URISchemeHTTP,
+					},
+				},
+				TimeoutSeconds:   1,
+				PeriodSeconds:    5,
+				SuccessThreshold: 1,
+				FailureThreshold: 1,
 			},
 		},
 	}
@@ -305,7 +318,11 @@ func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 		},
 		{
 			Name:  UseStatsdEnvVar,
-			Value: "false",
+			Value: "true",
+		},
+		{
+			Name:  "STATSD_PORT",
+			Value: "9125",
 		},
 		{
 			Name:  ConfigTypeEnvVar,
