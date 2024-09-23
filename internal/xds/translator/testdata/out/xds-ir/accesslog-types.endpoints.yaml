@@ -1,0 +1,72 @@
+- clusterName: accesslog_als_0_1
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 10.240.0.10
+            portValue: 9090
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: accesslog_als_0_1/backend/0
+- clusterName: accesslog_als_0_2
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 10.240.0.10
+            portValue: 9090
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: accesslog_als_0_2/backend/0
+- clusterName: accesslog_als_1_1
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 10.240.0.10
+            portValue: 9090
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: accesslog_als_1_1/backend/0
+- clusterName: accesslog_als_1_2
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 10.240.0.10
+            portValue: 9090
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: accesslog_als_1_2/backend/0
+- clusterName: accesslog_als_2_1
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 10.240.0.10
+            portValue: 9090
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: accesslog_als_2_1/backend/0
+- clusterName: accesslog_als_2_2
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 10.240.0.10
+            portValue: 9090
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: accesslog_als_2_2/backend/0

@@ -249,3 +249,49 @@ Envoy Gateway provides additional metadata about the K8s resources that were tra
 For example, details about the `HTTPRoute` and `GRPCRoute` (kind, group, name, namespace and annotations) are available
 for access log formatter using the `METADATA` operator. To enrich logs, users can add log operator such as:
 `%METADATA(ROUTE:envoy-gateway:resources)%` to their access log format. 
+
+## Access Log Types
+
+Envoy Gateway supports configuration of different access log settings for Routes and Listeners. By default, Access Logs
+settings would be used by Routes and Listener (when no route is matched). Users that wish to define different Access Log
+settings for Listeners and Routes can use the Access Log Type field. 
+
+For example, you can emit logs about connections and transport 
+
+```shell 
+kubectl apply -f - <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: otel-access-logging
+    namespace: envoy-gateway-system
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: otel-access-logging
+  namespace: envoy-gateway-system
+spec:
+  telemetry:
+    accessLog:
+      settings:
+        - type: Listener 
+          format:
+            type: Text
+            text: |
+              [%START_TIME%] %DOWNSTREAM_REMOTE_ADDRESS% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DOWNSTREAM_TRANSPORT_FAILURE_REASON%
+          sinks:
+            - type: OpenTelemetry
+              openTelemetry:
+                host: otel-collector.monitoring.svc.cluster.local
+                port: 4317
+                resources:
+                  k8s.cluster.name: "cluster-1"
+EOF
+```

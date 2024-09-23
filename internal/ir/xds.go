@@ -1733,6 +1733,13 @@ type RateLimitValue struct {
 	Unit RateLimitUnit `json:"unit" yaml:"unit"`
 }
 
+type ProxyAccessLogType egv1a1.ProxyAccessLogType
+
+const (
+	ProxyAccessLogTypeRoute    = ProxyAccessLogType(egv1a1.ProxyAccessLogTypeRoute)
+	ProxyAccessLogTypeListener = ProxyAccessLogType(egv1a1.ProxyAccessLogTypeListener)
+)
+
 // AccessLog holds the access logging configuration.
 // +k8s:deepcopy-gen=true
 type AccessLog struct {
@@ -1745,17 +1752,19 @@ type AccessLog struct {
 // TextAccessLog holds the configuration for text access logging.
 // +k8s:deepcopy-gen=true
 type TextAccessLog struct {
-	CELMatches []string `json:"celMatches,omitempty" yaml:"celMatches,omitempty"`
-	Format     *string  `json:"format,omitempty" yaml:"format,omitempty"`
-	Path       string   `json:"path" yaml:"path"`
+	CELMatches []string            `json:"celMatches,omitempty" yaml:"celMatches,omitempty"`
+	Format     *string             `json:"format,omitempty" yaml:"format,omitempty"`
+	Path       string              `json:"path" yaml:"path"`
+	LogType    *ProxyAccessLogType `json:"logType,omitempty" yaml:"logType,omitempty"`
 }
 
 // JSONAccessLog holds the configuration for JSON access logging.
 // +k8s:deepcopy-gen=true
 type JSONAccessLog struct {
-	CELMatches []string          `json:"celMatches,omitempty" yaml:"celMatches,omitempty"`
-	JSON       map[string]string `json:"json,omitempty" yaml:"json,omitempty"`
-	Path       string            `json:"path" yaml:"path"`
+	CELMatches []string            `json:"celMatches,omitempty" yaml:"celMatches,omitempty"`
+	JSON       map[string]string   `json:"json,omitempty" yaml:"json,omitempty"`
+	Path       string              `json:"path" yaml:"path"`
+	LogType    *ProxyAccessLogType `json:"logType,omitempty" yaml:"logType,omitempty"`
 }
 
 // ALSAccessLog holds the configuration for gRPC ALS access logging.
@@ -1769,6 +1778,7 @@ type ALSAccessLog struct {
 	Text        *string                           `json:"text,omitempty" yaml:"text,omitempty"`
 	Attributes  map[string]string                 `json:"attributes,omitempty" yaml:"attributes,omitempty"`
 	HTTP        *ALSAccessLogHTTP                 `json:"http,omitempty" yaml:"http,omitempty"`
+	LogType     *ProxyAccessLogType               `json:"logType,omitempty" yaml:"logType,omitempty"`
 }
 
 // ALSAccessLogHTTP holds the configuration for HTTP ALS access logging.
@@ -1782,13 +1792,14 @@ type ALSAccessLogHTTP struct {
 // OpenTelemetryAccessLog holds the configuration for OpenTelemetry access logging.
 // +k8s:deepcopy-gen=true
 type OpenTelemetryAccessLog struct {
-	CELMatches  []string          `json:"celMatches,omitempty" yaml:"celMatches,omitempty"`
-	Authority   string            `json:"authority,omitempty" yaml:"authority,omitempty"`
-	Text        *string           `json:"text,omitempty" yaml:"text,omitempty"`
-	Attributes  map[string]string `json:"attributes,omitempty" yaml:"attributes,omitempty"`
-	Resources   map[string]string `json:"resources,omitempty" yaml:"resources,omitempty"`
-	Destination RouteDestination  `json:"destination,omitempty" yaml:"destination,omitempty"`
-	Traffic     *TrafficFeatures  `json:"traffic,omitempty" yaml:"traffic,omitempty"`
+	CELMatches  []string            `json:"celMatches,omitempty" yaml:"celMatches,omitempty"`
+	Authority   string              `json:"authority,omitempty" yaml:"authority,omitempty"`
+	Text        *string             `json:"text,omitempty" yaml:"text,omitempty"`
+	Attributes  map[string]string   `json:"attributes,omitempty" yaml:"attributes,omitempty"`
+	Resources   map[string]string   `json:"resources,omitempty" yaml:"resources,omitempty"`
+	Destination RouteDestination    `json:"destination,omitempty" yaml:"destination,omitempty"`
+	Traffic     *TrafficFeatures    `json:"traffic,omitempty" yaml:"traffic,omitempty"`
+	LogType     *ProxyAccessLogType `json:"logType,omitempty" yaml:"logType,omitempty"`
 }
 
 // EnvoyPatchPolicy defines the intermediate representation of the EnvoyPatchPolicy resource.

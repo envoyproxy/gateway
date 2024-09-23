@@ -241,7 +241,6 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 			},
 		}, nil
 	}
-
 	if envoyproxy.Spec.Telemetry.AccessLog.Disable {
 		return nil, nil
 	}
@@ -249,6 +248,16 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 	irAccessLog := &ir.AccessLog{}
 	// translate the access log configuration to the IR
 	for i, accessLog := range envoyproxy.Spec.Telemetry.AccessLog.Settings {
+		var accessLogType *ir.ProxyAccessLogType
+		if accessLog.Type != nil {
+			switch *accessLog.Type {
+			case egv1a1.ProxyAccessLogTypeRoute:
+				accessLogType = ptr.To(ir.ProxyAccessLogTypeRoute)
+			case egv1a1.ProxyAccessLogTypeListener:
+				accessLogType = ptr.To(ir.ProxyAccessLogTypeListener)
+			}
+		}
+
 		var format egv1a1.ProxyAccessLogFormat
 		if accessLog.Format != nil {
 			format = *accessLog.Format
@@ -287,6 +296,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 						Format:     format.Text,
 						Path:       sink.File.Path,
 						CELMatches: validExprs,
+						LogType:    accessLogType,
 					}
 					irAccessLog.Text = append(irAccessLog.Text, al)
 				case egv1a1.ProxyAccessLogFormatTypeJSON:
@@ -299,6 +309,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 						JSON:       format.JSON,
 						Path:       sink.File.Path,
 						CELMatches: validExprs,
+						LogType:    accessLogType,
 					}
 					irAccessLog.JSON = append(irAccessLog.JSON, al)
 				}
@@ -329,6 +340,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					Traffic:    traffic,
 					Type:       sink.ALS.Type,
 					CELMatches: validExprs,
+					LogType:    accessLogType,
 				}
 
 				if al.Type == egv1a1.ALSEnvoyProxyAccessLogTypeHTTP && sink.ALS.HTTP != nil {
@@ -339,7 +351,6 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					}
 					al.HTTP = http
 				}
-
 				switch format.Type {
 				case egv1a1.ProxyAccessLogFormatTypeJSON:
 					al.Attributes = format.JSON
@@ -367,6 +378,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 						Settings: ds,
 					},
 					Traffic: traffic,
+					LogType: accessLogType,
 				}
 
 				if len(ds) == 0 {
@@ -391,7 +403,6 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 			}
 		}
 	}
-
 	return irAccessLog, nil
 }
 
