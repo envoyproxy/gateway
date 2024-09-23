@@ -8,8 +8,7 @@ type = "docs"
 +++
 
 This document provides details for Envoy Gateway releases. Envoy Gateway follows the Semantic Versioning [v2.0.0 spec][]
-for release versioning. Since Envoy Gateway is a new project, minor releases are the only defined releases. Envoy
-Gateway maintainers will establish additional release details, e.g. patch releases, at a future date.
+for release versioning.
 
 ## Stable Releases
 
