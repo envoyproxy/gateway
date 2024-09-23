@@ -10,7 +10,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.3.0
 	github.com/cncf/xds/go v0.0.0-20240423153145-555b57ec207b
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
-	github.com/docker/cli v27.2.0+incompatible
+	github.com/docker/cli v27.3.1+incompatible
 	github.com/dominikbraun/graph v0.23.0
 	github.com/envoyproxy/go-control-plane v0.13.1-0.20240917224354-20d038a70568
 	github.com/envoyproxy/ratelimit v1.4.1-0.20230427142404-e2a87f41d3a7
@@ -26,7 +26,7 @@ require (
 	github.com/google/go-containerregistry v0.20.2
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/miekg/dns v1.1.62
-	github.com/ohler55/ojg v1.24.0
+	github.com/ohler55/ojg v1.24.1
 	github.com/prometheus/client_golang v1.20.3
 	github.com/prometheus/common v0.59.1
 	github.com/spf13/cobra v1.8.1
