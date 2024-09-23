@@ -233,6 +233,11 @@ type ProxyTelemetry struct {
 
 	// Metrics defines metrics configuration for managed proxies.
 	Metrics *ProxyMetrics `json:"metrics,omitempty"`
+
+	// If request_response_sizes is true, then the histograms tracking header and body sizes of requests and responses will be published.
+	//
+	// +optional
+	EnableRequestResponseSizesStats bool `json:"enableRequestResponseSizesStats,omitempty"`
 }
 
 // EnvoyProxyProvider defines the desired state of a resource provider.

@@ -467,6 +467,7 @@ func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy, resources *re
 	return &ir.Metrics{
 		EnableVirtualHostStats: envoyproxy.Spec.Telemetry.Metrics.EnableVirtualHostStats,
 		EnablePerEndpointStats: envoyproxy.Spec.Telemetry.Metrics.EnablePerEndpointStats,
+		EnableRequestResponseSizesStats: envoyproxy.Spec.Telemetry.Metrics.EnableRequestResponseSizesStats,
 	}, nil
 }
 
