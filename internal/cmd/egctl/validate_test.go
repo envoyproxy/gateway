@@ -23,17 +23,20 @@ func TestRunValidate(t *testing.T) {
 			output: `apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
-  name: eg
+  name: eg1
   namespace: default
 spec:
-  gatewayClassName: eg
-  listeners:
-    - name: http
-      protocol: HTTP
-      port: 88888
-------
-spec.listeners[0].port: Invalid value: 88888: spec.listeners[0].port in body should be less than or equal to 65535
-spec.listeners: Invalid value: "array": invalid data, expected int, got float64 evaluating rule: Combination of port, protocol and hostname must be unique for each listener
+...
+local validation error: Gateway.gateway.networking.k8s.io "eg1" is invalid: spec.listeners[0].port: Invalid value: 88888: spec.listeners[0].port in body should be less than or equal to 65535
+
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: eg2
+  namespace: default
+spec:
+...
+local validation error: Gateway.gateway.networking.k8s.io "eg2" is invalid: [spec.listeners[1]: Duplicate value: map[string]interface {}{"name":"tcp"}, spec.listeners: Invalid value: "array": Listener name must be unique within the Gateway, spec.listeners: Invalid value: "array": Combination of port, protocol and hostname must be unique for each listener]
 
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -41,26 +44,8 @@ metadata:
   name: backend
   namespace: default
 spec:
-  parentRefs:
-    - name: eg
-  hostnames:
-    - ".;'.';[]"
-  rules:
-    - backendRefs:
-        - group: ""
-          kind: Service
-          name: backend
-          port: 3000
-          weight: 1
-      matches:
-        - path:
-            type: PathPrefix
-            value: /
-------
-spec.hostnames[0]: Invalid value: ".;'.';[]": spec.hostnames[0] in body should match '^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
-spec.parentRefs: Invalid value: "array": no such key: group evaluating rule: sectionName or port must be specified when parentRefs includes 2 or more references to the same parent
-spec.parentRefs: Invalid value: "array": no such key: group evaluating rule: sectionName or port must be unique when parentRefs includes 2 or more references to the same parent
-spec.rules[0].backendRefs[0]: Invalid value: "object": invalid data, expected int, got float64 evaluating rule: Must have port for Service reference
+...
+local validation error: HTTPRoute.gateway.networking.k8s.io "backend" is invalid: spec.hostnames[0]: Invalid value: ".;'.';[]": spec.hostnames[0] in body should match '^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
 
 `,
 		},

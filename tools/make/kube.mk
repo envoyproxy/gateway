@@ -43,13 +43,8 @@ CONTROLLERGEN_OBJECT_FLAGS :=  object:headerFile="$(ROOT_DIR)/tools/boilerplate/
 manifests: $(tools/controller-gen) generate-gwapi-manifests ## Generate WebhookConfiguration and CustomResourceDefinition objects.
 	@$(LOG_TARGET)
 	$(tools/controller-gen) crd:allowDangerousTypes=true paths="./api/..." output:crd:artifacts:config=charts/gateway-helm/crds/generated
-	# save a copy of all crds and generate a literal string variable in go.
-	# replace ` with ~ to avoid conflicts in go string ``, and remove any line starts with #.
-	find charts/gateway-helm/crds -name "*.yaml" -exec cat {} + | sed 's/`/~/g' | sed '/^#/d' > internal/gatewayapi/resource/zz_generated.crd.yaml
-	sed -e '/{{CRD}}/r internal/gatewayapi/resource/zz_generated.crd.yaml' \
-		-e '/{{CRD}}/d' \
-		internal/gatewayapi/resource/zz_generated.crd.template > internal/gatewayapi/resource/zz_generated.crd.go
-	rm  internal/gatewayapi/resource/zz_generated.crd.yaml
+	# save a copy of all crds for local resource validator.
+	find charts/gateway-helm/crds -name "*.yaml" -exec cat {} + > internal/gatewayapi/resource/crd/gateway-crds.yaml
 
 .PHONY: generate-gwapi-manifests
 generate-gwapi-manifests:

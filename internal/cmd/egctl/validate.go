@@ -6,12 +6,11 @@
 package egctl
 
 import (
-	"errors"
+	"bytes"
 	"fmt"
 	"io"
 
 	"github.com/spf13/cobra"
-	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
@@ -49,25 +48,23 @@ func runValidate(w io.Writer, inFile string) error {
 	}
 
 	noErr := true
-	_ = resource.IterYAMLBytes(inBytes, func(yamlByte []byte, i int) error {
+	_ = resource.IterYAMLBytes(inBytes, func(yamlByte []byte) error {
 		// Passing each resource as YAML string and get all their errors from local validator.
 		_, err = resource.LoadResourcesFromYAMLBytes(yamlByte, false)
 		if err != nil {
 			noErr = false
-			errMsg := err.Error()
-			if errList, ok := err.(utilerrors.Aggregate); ok {
-				errMsg = errors.Join(errList.Errors()...).Error()
+			yamlRows := bytes.Split(yamlByte, []byte("\n"))
+			if len(yamlRows) > 6 {
+				yamlRows = append(yamlRows[:6], []byte("..."))
 			}
-			_, err = fmt.Fprintln(w, fmt.Sprintf(`%s
-------
-%s
-`, string(yamlByte), errMsg))
+			_, err = fmt.Fprintf(w, "%s\n%s\n\n",
+				bytes.Join(yamlRows, []byte("\n")), err.Error())
 		}
 		return nil
 	})
 
 	if noErr {
-		_, err = fmt.Fprintln(w, "all resources are valid!")
+		_, err = fmt.Fprintln(w, "\033[32mOK\033[0m")
 	}
 
 	return err

@@ -8,14 +8,49 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
-  name: eg
+  name: eg1
   namespace: default
 spec:
   gatewayClassName: eg
   listeners:
     - name: http
       protocol: HTTP
-      port: 88888
+      port: 88888  # invalid port
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: eg2
+  namespace: default
+spec:
+  gatewayClassName: eg
+  listeners:
+    - name: tcp
+      protocol: TCP
+      port: 1234
+    - name: tcp
+      protocol: TCP
+      port: 1234
+    - name: tls-passthrough
+      protocol: TLS
+      port: 8443
+      hostname: foo.com
+      tls:
+        mode: Passthrough
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        kinds:
+          - kind: HTTPRoute
+            group: gateway.networking.k8s.io
+    - name: grpc
+      protocol: HTTP
+      port: 8080
+      allowedRoutes:
+        kinds:
+          - kind: GRPCRoute
+            group: gateway.networking.k8s.io
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -43,7 +78,6 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyPatchPolicy
 metadata:
   name: ratelimit-patch-policy
-#  namespace: default
 spec:
   targetRef:
     group: gateway.networking.k8s.io

@@ -11,6 +11,7 @@ ignore: |
   test/helm/
   examples/extension-server/charts/extension-server
   site/node_modules/
+  internal/gatewayapi/resource/crd/
 
 rules:
   braces:

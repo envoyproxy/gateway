@@ -7,7 +7,7 @@ envoyProxyForGatewayClass:
   spec:
     bootstrap:
       type: Replace
-      value: |-
+      value: |
         admin:
           access_log:
           - name: envoy.access_loggers.file

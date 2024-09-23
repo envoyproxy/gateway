@@ -9,13 +9,14 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
+	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/yaml"
@@ -32,9 +33,7 @@ const dummyClusterIP = "1.2.3.4"
 // LoadResourcesFromYAMLBytes will load Resources from given Kubernetes YAML string.
 // TODO: This function should be able to process arbitrary number of resources, tracked by https://github.com/envoyproxy/gateway/issues/3207.
 func LoadResourcesFromYAMLBytes(yamlBytes []byte, addMissingResources bool) (*Resources, error) {
-	strategyMap := getCreateStrategyMapForCRDs()
-
-	r, err := loadKubernetesYAMLToResources(yamlBytes, addMissingResources, strategyMap)
+	r, err := loadKubernetesYAMLToResources(yamlBytes, addMissingResources)
 	if err != nil {
 		return nil, err
 	}
@@ -51,14 +50,14 @@ func LoadResourcesFromYAMLBytes(yamlBytes []byte, addMissingResources bool) (*Re
 //   - BackendTLSPolicy (gateway.networking.k8s.io/v1alpha3)
 //   - ReferenceGrant (gateway.networking.k8s.io/v1alpha2)
 //   - TLSRoute (gateway.networking.k8s.io/v1alpha2)
-func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, strategyMap versionedCreateStrategyMap) (*Resources, error) {
+func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Resources, error) {
 	resources := NewResources()
 	var useDefaultNamespace bool
 	providedNamespaceMap := sets.New[string]()
 	requiredNamespaceMap := sets.New[string]()
 	combinedScheme := envoygateway.GetScheme()
 
-	if err := IterYAMLBytes(input, func(yamlByte []byte, _ int) error {
+	if err := IterYAMLBytes(input, func(yamlByte []byte) error {
 		var obj map[string]interface{}
 		err := yaml.Unmarshal(yamlByte, &obj)
 		if err != nil {
@@ -68,34 +67,16 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, strat
 		un := unstructured.Unstructured{Object: obj}
 		gvk := un.GroupVersionKind()
 		name, namespace := un.GetName(), un.GetNamespace()
-		if createStrategy, ok := strategyMap[gvk.Kind]; ok {
-			if createStrategy.NamespaceScoped() && len(namespace) == 0 {
-				// When kubectl applies a resource in yaml which doesn't have a namespace,
-				// the current namespace is applied. Here we do the same thing before translating
-				// the GatewayAPI resource. Otherwise, the resource can't pass the namespace validation
-				useDefaultNamespace = true
-				namespace = config.DefaultNamespace
-			} else if !createStrategy.NamespaceScoped() {
-				// Remove namespace for non-namespace scoped resource.
-				namespace = ""
-			}
-		} else if len(namespace) == 0 {
+		if len(namespace) == 0 {
 			useDefaultNamespace = true
 			namespace = config.DefaultNamespace
 		}
 
-		// Validate resource before going on, immediate return error if got any.
-		if err = strategyMap.Validate(gvk.Kind, &unstructured.Unstructured{
-			Object: map[string]interface{}{
-				"apiVersion": obj["apiVersion"],
-				"metadata": map[string]interface{}{
-					"name":      name,
-					"namespace": namespace,
-				},
-				"spec": obj["spec"],
-			},
-		}); err != nil {
-			return err
+		// Perform local validation for gateway-api related resources only.
+		if gvk.Group == egv1a1.GroupName || gvk.Group == gwapiv1.GroupName {
+			if err = defaultValidator.Validate(yamlByte); err != nil {
+				return fmt.Errorf("local validation error: %w", err)
+			}
 		}
 
 		requiredNamespaceMap.Insert(namespace)
@@ -505,65 +486,20 @@ func addDefaultEnvoyProxy(resources *Resources) error {
 	return nil
 }
 
-// loadCRDs loads all valid CRDs from crdBytes in zz_generated.crd.go.
-func loadCRDs() ([]*apiextensionsv1.CustomResourceDefinition, error) {
-	crds := make([]*apiextensionsv1.CustomResourceDefinition, 0)
-
-	if err := IterYAMLBytes(_crdBytes, func(yamlByte []byte, _ int) error {
-		var crd apiextensionsv1.CustomResourceDefinition
-		if err := yaml.UnmarshalStrict(yamlByte, &crd, yaml.DisallowUnknownFields); err != nil {
-			return err
-		}
-
-		if len(crd.Spec.Names.Kind) > 0 {
-			crds = append(crds, &crd)
-		}
-		return nil
-	}); err != nil {
-		return nil, err
-	}
-
-	return crds, nil
-}
-
 // IterYAMLBytes iters every valid YAML resource from YAML bytes
 // and process each of them by calling `handle` callback.
-func IterYAMLBytes(input []byte, handle func([]byte, int) error) error {
-	reader := bytes.NewReader(input)
-	buffer := bytes.NewBuffer([]byte{})
-	scanner := bufio.NewScanner(reader)
-	i := 0
-	for scanner.Scan() {
-		row := scanner.Bytes()
-		if bytes.Equal(row, []byte("---")) {
-			b := bytes.TrimSpace(buffer.Bytes())
-			if len(b) == 0 {
-				continue
-			}
-
-			if err := handle(b, i); err != nil {
-				return err
-			}
-
-			i++
-			buffer.Reset()
-		} else if len(row) == 0 {
-			continue
-		} else {
-			buffer.Write(append(scanner.Bytes(), '\n'))
+func IterYAMLBytes(input []byte, handle func([]byte) error) error {
+	reader := utilyaml.NewYAMLReader(bufio.NewReader(bytes.NewBuffer(input)))
+	for {
+		yamlBytes, err := reader.Read()
+		if err == io.EOF || len(yamlBytes) == 0 {
+			break
+		} else if err != nil {
+			return err
 		}
-	}
-
-	// Scan last yaml bytes.
-	if b := bytes.TrimSpace(buffer.Bytes()); len(b) > 0 {
-		if err := handle(b, i); err != nil {
+		if err = handle(yamlBytes); err != nil {
 			return err
 		}
 	}
-
-	if err := scanner.Err(); err != nil {
-		return err
-	}
-
 	return nil
 }

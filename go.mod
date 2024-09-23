@@ -54,7 +54,7 @@ require (
 	k8s.io/cli-runtime v0.31.1
 	k8s.io/client-go v0.31.1
 	k8s.io/kubectl v0.31.1
-	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8
+	k8s.io/utils v0.0.0-20240821151609-f90d01438635
 	sigs.k8s.io/controller-runtime v0.19.0
 	sigs.k8s.io/gateway-api v1.1.0
 	sigs.k8s.io/mcs-api v0.1.0
@@ -66,6 +66,7 @@ require (
 	github.com/replicatedhq/troubleshoot v0.100.0
 	google.golang.org/grpc v1.66.2
 	k8s.io/apiserver v0.31.1
+	sigs.k8s.io/kubectl-validate v0.0.5-0.20240827210056-ce13d95db263
 )
 
 require (
@@ -181,7 +182,7 @@ require (
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.7.0 // indirect
 	github.com/spf13/viper v1.19.0 // indirect
-	github.com/stoewer/go-strcase v1.2.0 // indirect
+	github.com/stoewer/go-strcase v1.3.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/sylabs/sif/v2 v2.18.0 // indirect
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635 // indirect
