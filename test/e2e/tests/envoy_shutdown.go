@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -80,7 +81,7 @@ var EnvoyShutdownTest = suite.ConformanceTest{
 			aborter.Abort(false) // abort the load either way
 
 			if err != nil {
-				t.Errorf("Failed to rollout proxy deployment")
+				t.Errorf("Failed to rollout proxy deployment %v", err)
 			}
 
 			// Wait for the goroutine to finish
@@ -139,6 +140,7 @@ func restartProxyAndWaitForRollout(t *testing.T, timeoutConfig config.TimeoutCon
 	}
 
 	if err := c.Update(ctx, &ep); err != nil {
+		tlog.Errorf(t, "failed updating deployment: %v", err)
 		return err
 	}
 
@@ -152,13 +154,18 @@ func restartProxyAndWaitForRollout(t *testing.T, timeoutConfig config.TimeoutCon
 
 		err := c.List(ctx, podList, listOpts...)
 		if err != nil {
+			tlog.Errorf(t, "failed listing pods: %v", err)
 			return false, err
 		}
 
+		tlog.Logf(t, "listed pods: %d", len(podList.Items))
+
 		rolled := int32(0)
 		for _, rs := range podList.Items {
+			tlog.Logf(t, "found pod: %s", rs.String())
 			if rs.Annotations[egRestartAnnotation] == restartTime {
 				rolled++
+				tlog.Logf(t, "rolled pods: %d", rolled)
 			}
 		}
 
