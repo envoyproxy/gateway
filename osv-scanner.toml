@@ -41,7 +41,7 @@ reason = "This package has dual license - the code is licensed under the Apache 
 name = "github.com/go-sql-driver/mysql"
 version = "1.8.1"
 ecosystem = "Go"
-# Override the license to an allowed one until https://github.com/google/osv-scanner/issues/1124 is resolved and we can skip it from licnese scanning instead
+# Override the license to an allowed one until https://github.com/google/osv-scanner/issues/1124 is resolved and we can skip it from license scanning instead
 license.override = ["Apache-2.0"]
 reason = "This package has MPL-2.0 which is not approved in CNCF Allowlist, but it has an exception. See https://github.com/cncf/foundation/blob/main/license-exceptions/CNCF-licensing-exceptions.csv"
 
@@ -49,15 +49,7 @@ reason = "This package has MPL-2.0 which is not approved in CNCF Allowlist, but 
 name = "github.com/hashicorp/errwrap"
 version = "1.1.0"
 ecosystem = "Go"
-# Override the license to an allowed one until https://github.com/google/osv-scanner/issues/1124 is resolved and we can skip it from licnese scanning instead
-license.override = ["Apache-2.0"]
-reason = "This package has MPL-2.0 which is not approved in CNCF Allowlist, but it has an exception. See https://github.com/cncf/foundation/blob/main/license-exceptions/CNCF-licensing-exceptions.csv"
-
-[[PackageOverrides]]
-name = "github.com/hashicorp/go-cleanhttp"
-version = "0.5.2"
-ecosystem = "Go"
-# Override the license to an allowed one until https://github.com/google/osv-scanner/issues/1124 is resolved and we can skip it from licnese scanning instead
+# Override the license to an allowed one until https://github.com/google/osv-scanner/issues/1124 is resolved and we can skip it from license scanning instead
 license.override = ["Apache-2.0"]
 reason = "This package has MPL-2.0 which is not approved in CNCF Allowlist, but it has an exception. See https://github.com/cncf/foundation/blob/main/license-exceptions/CNCF-licensing-exceptions.csv"
 
@@ -65,15 +57,7 @@ reason = "This package has MPL-2.0 which is not approved in CNCF Allowlist, but 
 name = "github.com/hashicorp/go-multierror"
 version = "1.1.1"
 ecosystem = "Go"
-# Override the license to an allowed one until https://github.com/google/osv-scanner/issues/1124 is resolved and we can skip it from licnese scanning instead
-license.override = ["Apache-2.0"]
-reason = "This package has MPL-2.0 which is not approved in CNCF Allowlist, but it has an exception. See https://github.com/cncf/foundation/blob/main/license-exceptions/CNCF-licensing-exceptions.csv"
-
-[[PackageOverrides]]
-name = "github.com/hashicorp/go-version"
-version = "1.7.0"
-ecosystem = "Go"
-# Override the license to an allowed one until https://github.com/google/osv-scanner/issues/1124 is resolved and we can skip it from licnese scanning instead
+# Override the license to an allowed one until https://github.com/google/osv-scanner/issues/1124 is resolved and we can skip it from license scanning instead
 license.override = ["Apache-2.0"]
 reason = "This package has MPL-2.0 which is not approved in CNCF Allowlist, but it has an exception. See https://github.com/cncf/foundation/blob/main/license-exceptions/CNCF-licensing-exceptions.csv"
 
@@ -81,16 +65,9 @@ reason = "This package has MPL-2.0 which is not approved in CNCF Allowlist, but 
 name = "github.com/hashicorp/hcl"
 version = "1.0.0"
 ecosystem = "Go"
-# Override the license to an allowed one until https://github.com/google/osv-scanner/issues/1124 is resolved and we can skip it from licnese scanning instead
+# Override the license to an allowed one until https://github.com/google/osv-scanner/issues/1124 is resolved and we can skip it from license scanning instead
 license.override = ["Apache-2.0"]
 reason = "This package has MPL-2.0 which is not approved in CNCF Allowlist, but it has an exception. See https://github.com/cncf/foundation/blob/main/license-exceptions/CNCF-licensing-exceptions.csv"
-
-[[PackageOverrides]]
-name = "github.com/moby/patternmatcher"
-version = "0.6.0"
-ecosystem = "Go"
-license.override = ["Apache-2.0"]
-reason = "Unidentified license, remove once https://github.com/google/deps.dev/issues/106 is resolved"
 
 [[PackageOverrides]]
 name = "github.com/opencontainers/go-digest"
@@ -103,7 +80,7 @@ reason = "This package has dual license - the code is licensed under the Apache 
 name = "github.com/shoenig/go-m1cpu"
 version = "0.1.6"
 ecosystem = "Go"
-# Override the license to an allowed one until https://github.com/google/osv-scanner/issues/1124 is resolved and we can skip it from licnese scanning instead
+# Override the license to an allowed one until https://github.com/google/osv-scanner/issues/1124 is resolved and we can skip it from license scanning instead
 license.override = ["Apache-2.0"]
 reason = "This package has MPL-2.0 which is not approved in CNCF Allowlist, but it has an exception. See https://github.com/cncf/foundation/blob/main/license-exceptions/cncf-exceptions-2023-08-31.spdx"
 
@@ -112,11 +89,3 @@ name = "stdlib"
 ecosystem = "Go"
 license.override = ["BSD-3-Clause"]
 reason = "Unidentified license, remove once https://github.com/google/deps.dev/issues/86 is resolved"
-
-[[PackageOverrides]]
-name = "github.com/grafana/tempo"
-version = "1.5.0"
-ecosystem = "Go"
-# Override the license to an allowed one until https://github.com/google/osv-scanner/issues/1124 is resolved and we can skip it from licnese scanning instead
-license.override = ["Apache-2.0"]
-reason = "This package is only used in e2e tests so we can ignore its license"

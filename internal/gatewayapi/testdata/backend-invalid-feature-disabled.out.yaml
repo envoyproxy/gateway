@@ -17,7 +17,7 @@ backends:
         Gateway Config
       reason: Accepted
       status: "False"
-      type: Accepted
+      type: Invalid
 envoyExtensionPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy

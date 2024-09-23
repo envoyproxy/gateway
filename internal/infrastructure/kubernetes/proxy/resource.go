@@ -171,6 +171,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		fmt.Sprintf("--config-yaml %s", bootstrapConfigurations),
 		fmt.Sprintf("--log-level %s", logging.DefaultEnvoyProxyLoggingLevel()),
 		"--cpuset-threads",
+		"--drain-strategy immediate",
 	}
 
 	if infra.Config != nil &&
@@ -182,9 +183,12 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		args = append(args, fmt.Sprintf("--component-log-level %s", componentsLogLevel))
 	}
 
+	// Default
+	drainTimeout := 60.0
 	if shutdownConfig != nil && shutdownConfig.DrainTimeout != nil {
-		args = append(args, fmt.Sprintf("--drain-time-s %.0f", shutdownConfig.DrainTimeout.Seconds()))
+		drainTimeout = shutdownConfig.DrainTimeout.Seconds()
 	}
+	args = append(args, fmt.Sprintf("--drain-time-s %.0f", drainTimeout))
 
 	if infra.Config != nil {
 		args = append(args, infra.Config.Spec.ExtraArgs...)

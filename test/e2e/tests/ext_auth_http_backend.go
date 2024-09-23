@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
 
 func init() {
@@ -40,7 +41,7 @@ var HTTPBackendExtAuthTest = suite.ConformanceTest{
 
 		ancestorRef := gwapiv1a2.ParentReference{
 			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-			Kind:      gatewayapi.KindPtr(gatewayapi.KindGateway),
+			Kind:      gatewayapi.KindPtr(resource.KindGateway),
 			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
@@ -150,6 +151,62 @@ var HTTPBackendExtAuthTest = suite.ConformanceTest{
 			if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
 				t.Errorf("failed to compare request and response: %v", err)
 			}
+		})
+
+		t.Run("route base on headersToBackend", func(t *testing.T) {
+			v2ExpectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "www.example.com",
+					Path: "/myapp",
+					Headers: map[string]string{
+						"Authorization": "Bearer token2",
+					},
+				},
+				Backend: "infra-backend-v2",
+				// Verify that the http headers returned by the ext auth service
+				// are added to the original request before sending it to the backend
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Host: "www.example.com",
+						Path: "/myapp",
+						Headers: map[string]string{
+							"x-current-user": "user2",
+						},
+					},
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, v2ExpectedResponse)
+
+			v3ExpectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "www.example.com",
+					Path: "/myapp",
+					Headers: map[string]string{
+						"Authorization": "Bearer token3",
+					},
+				},
+				// Verify that the http headers returned by the ext auth service
+				// are added to the original request before sending it to the backend
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Host: "www.example.com",
+						Path: "/myapp",
+						Headers: map[string]string{
+							"x-current-user": "user3",
+						},
+					},
+				},
+				Backend: "infra-backend-v3",
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, v3ExpectedResponse)
 		})
 	},
 }

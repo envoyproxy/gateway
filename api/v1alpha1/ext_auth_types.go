@@ -42,6 +42,14 @@ type ExtAuth struct {
 	// +optional
 	// +kubebuilder:default=false
 	FailOpen *bool `json:"failOpen,omitempty"`
+
+	// RecomputeRoute clears the route cache and recalculates the routing decision.
+	// This field must be enabled if the headers added or modified by the ExtAuth are used for
+	// route matching decisions. If the recomputation selects a new route, features targeting
+	// the new matched route will be applied.
+	//
+	// +optional
+	RecomputeRoute *bool `json:"recomputeRoute,omitempty"`
 }
 
 // GRPCExtAuthService defines the gRPC External Authorization service
