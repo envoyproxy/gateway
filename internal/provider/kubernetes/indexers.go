@@ -105,8 +105,6 @@ func backendHTTPRouteIndexFunc(rawObj client.Object) []string {
 	for _, rule := range httproute.Spec.Rules {
 		for _, backend := range rule.BackendRefs {
 			if backend.Kind == nil || string(*backend.Kind) == resource.KindService || string(*backend.Kind) == egv1a1.KindBackend {
-				// If an explicit Backend namespace is not provided, use the HTTPRoute namespace to
-				// lookup the provided Gateway Name.
 				backendRefs = append(backendRefs,
 					types.NamespacedName{
 						Namespace: gatewayapi.NamespaceDerefOr(backend.Namespace, httproute.Namespace),

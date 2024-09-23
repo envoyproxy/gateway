@@ -1394,7 +1394,7 @@ func (r HTTPPathModifier) Validate() error {
 type ExtendedHTTPPathModifier struct {
 	HTTPPathModifier `json:",inline" yaml:",inline"`
 	// RegexMatchReplace provides a regex to match an a replacement to perform on the path.
-	RegexMatchReplace *RegexMatchReplace `json:"regexMatchReplace" yaml:"regexMatchReplace"`
+	RegexMatchReplace *RegexMatchReplace `json:"regexMatchReplace,omitempty" yaml:"regexMatchReplace,omitempty"`
 }
 
 // Validate the fields within the HTTPPathModifier structure
