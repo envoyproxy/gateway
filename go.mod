@@ -10,7 +10,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.3.0
 	github.com/cncf/xds/go v0.0.0-20240423153145-555b57ec207b
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
-	github.com/docker/cli v27.2.0+incompatible
+	github.com/docker/cli v27.3.1+incompatible
 	github.com/dominikbraun/graph v0.23.0
 	github.com/envoyproxy/go-control-plane v0.13.1-0.20240917224354-20d038a70568
 	github.com/envoyproxy/ratelimit v1.4.1-0.20230427142404-e2a87f41d3a7
