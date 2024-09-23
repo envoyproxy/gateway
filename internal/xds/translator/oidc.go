@@ -172,6 +172,7 @@ func oauth2Config(oidc *ir.OIDC) (*oauth2v3.OAuth2, error) {
 					OauthExpires: fmt.Sprintf("OauthExpires-%s", oidc.CookieSuffix),
 					IdToken:      fmt.Sprintf("IdToken-%s", oidc.CookieSuffix),
 					RefreshToken: fmt.Sprintf("RefreshToken-%s", oidc.CookieSuffix),
+					OauthNonce:   fmt.Sprintf("OauthNonce-%s", oidc.CookieSuffix),
 				},
 			},
 			// every OIDC provider supports basic auth
