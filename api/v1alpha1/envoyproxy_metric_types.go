@@ -32,6 +32,11 @@ type ProxyMetrics struct {
 	// EnablePerEndpointStats enables per endpoint envoy stats metrics.
 	// Please use with caution.
 	EnablePerEndpointStats bool `json:"enablePerEndpointStats,omitempty"`
+
+	// EnableRequestResponseSizesStats enables publishing of histograms tracking header and body sizes of requests and responses.
+	//
+	// +optional
+	EnableRequestResponseSizesStats bool `json:"enableRequestResponseSizesStats,omitempty"`
 }
 
 // ProxyMetricSink defines the sink of metrics.
