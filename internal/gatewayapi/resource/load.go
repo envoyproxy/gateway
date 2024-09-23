@@ -8,6 +8,7 @@ package resource
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"reflect"
@@ -492,7 +493,7 @@ func IterYAMLBytes(input []byte, handle func([]byte) error) error {
 	reader := utilyaml.NewYAMLReader(bufio.NewReader(bytes.NewBuffer(input)))
 	for {
 		yamlBytes, err := reader.Read()
-		if err == io.EOF || len(yamlBytes) == 0 {
+		if errors.Is(err, io.EOF) || len(yamlBytes) == 0 {
 			break
 		} else if err != nil {
 			return err
