@@ -68,7 +68,7 @@ fi
 if [ "${IP_FAMILY}" = "ipv6" ] || [ "${IP_FAMILY}" = "dual" ]; then
     subnet_v6=$(docker network inspect kind | jq -r '.[].IPAM.Config[] | select(.Subnet | contains(":")) | .Subnet')
     ipv6_prefix="${subnet_v6%::*}"
-    address_range_v6="${ipv6_prefix}::200-${ipv6_prefix}::250"
+    address_range_v6="${ipv6_prefix}::c8-${ipv6_prefix}::fa"
     echo "IPv6 address range: ${address_range_v6}"
     [ -n "${address_ranges}" ] && address_ranges+="\n"
     address_ranges+="- ${address_range_v6}"
