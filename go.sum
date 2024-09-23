@@ -1197,8 +1197,6 @@ k8s.io/metrics v0.31.1 h1:h4I4dakgh/zKflWYAOQhwf0EXaqy8LxAIyE/GBvxqRc=
 k8s.io/metrics v0.31.1/go.mod h1:JuH1S9tJiH9q1VCY0yzSCawi7kzNLsDzlWDJN4xR+iA=
 k8s.io/utils v0.0.0-20200324210504-a9aa75ae1b89/go.mod h1:sZAwmy6armz5eXlNoLmJcl4F1QuKu7sr+mFQ0byX7Ew=
 k8s.io/utils v0.0.0-20200603063816-c1c6865ac451/go.mod h1:jPW/WVKK9YHAvNhRxK0md/EJ228hCsBRufyofKtW8HA=
-k8s.io/utils v0.0.0-20240711033017-18e509b52bc8 h1:pUdcCO1Lk/tbT5ztQWOBi5HBgbBP1J8+AsQnQCKsi8A=
-k8s.io/utils v0.0.0-20240711033017-18e509b52bc8/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
 k8s.io/utils v0.0.0-20240821151609-f90d01438635 h1:2wThSvJoW/Ncn9TmQEYXRnevZXi2duqHWf5OX9S3zjI=
 k8s.io/utils v0.0.0-20240821151609-f90d01438635/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
 oras.land/oras-go v1.2.6 h1:z8cmxQXBU8yZ4mkytWqXfo6tZcamPwjsuxYU81xJ8Lk=
@@ -1217,8 +1215,6 @@ sigs.k8s.io/gateway-api v1.1.0/go.mod h1:ZH4lHrL2sDi0FHZ9jjneb8kKnGzFWyrTya35sWU
 sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd h1:EDPBXCAspyGV4jQlpZSudPeMmr1bNJefnuqLsRAsHZo=
 sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd/go.mod h1:B8JuhiUyNFVKdsE8h686QcCxMaH6HrOAZj4vswFpcB0=
 sigs.k8s.io/kind v0.8.1/go.mod h1:oNKTxUVPYkV9lWzY6CVMNluVq8cBsyq+UgPJdvA3uu4=
-sigs.k8s.io/kubectl-validate v0.0.4 h1:tGKuv0awYHn11Cb6KPsZKxUmHgavF46K3NvVH0Nse9U=
-sigs.k8s.io/kubectl-validate v0.0.4/go.mod h1:JTm3G+JZLPISqABh73uV7s/sW28q2zZqnTghOzahEKA=
 sigs.k8s.io/kubectl-validate v0.0.5-0.20240827210056-ce13d95db263 h1:ju7xWt2VnWuZPh0ffWJtsC40ki1BW/pLy6DZRyoEB30=
 sigs.k8s.io/kubectl-validate v0.0.5-0.20240827210056-ce13d95db263/go.mod h1:ex3aZREdgXoEH7+v6azT7Xm0J9rpWIDr1micQCzdomY=
 sigs.k8s.io/kustomize/api v0.17.2 h1:E7/Fjk7V5fboiuijoZHgs4aHuexi5Y2loXlVOAVAG5g=

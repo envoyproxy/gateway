@@ -65,7 +65,6 @@ require (
 	github.com/docker/docker v27.2.0+incompatible
 	github.com/replicatedhq/troubleshoot v0.102.0
 	google.golang.org/grpc v1.66.2
-	k8s.io/apiserver v0.31.1
 	sigs.k8s.io/kubectl-validate v0.0.5-0.20240827210056-ce13d95db263
 )
 
@@ -208,6 +207,7 @@ require (
 	golang.org/x/crypto/x509roots/fallback v0.0.0-20240904212608-c9da6b9a4008 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
+	k8s.io/apiserver v0.31.1 // indirect
 	k8s.io/metrics v0.31.1 // indirect
 	oras.land/oras-go v1.2.6 // indirect
 	periph.io/x/host/v3 v3.8.2 // indirect
