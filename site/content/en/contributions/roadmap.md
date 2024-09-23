@@ -63,7 +63,7 @@ contributing to the project.
 - Add TrafficPolicy APIs for advanced features [Issue #1492][1492].
 - Envoy Gateway meets readiness criteria [Issue #1160][1160]. 
 
-### [v1.0.0][v1.0]: Envoy Gateway goes GA
+### [v1.0.0][v1.0.0]: Envoy Gateway goes GA
 
 Visit the [milestones][milestones] page to learn more about the future roadmap.
 
