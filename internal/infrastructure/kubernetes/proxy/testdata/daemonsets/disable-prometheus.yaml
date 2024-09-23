@@ -232,7 +232,9 @@ spec:
             drop:
             - ALL
           privileged: false
+          runAsGroup: 65532
           runAsNonRoot: true
+          runAsUser: 65532
           seccompProfile:
             type: RuntimeDefault
         startupProbe:
@@ -306,7 +308,9 @@ spec:
             drop:
             - ALL
           privileged: false
+          runAsGroup: 65532
           runAsNonRoot: true
+          runAsUser: 65532
           seccompProfile:
             type: RuntimeDefault
         startupProbe:
