@@ -63,6 +63,10 @@ contributing to the project.
 - Add TrafficPolicy APIs for advanced features [Issue #1492][1492].
 - Envoy Gateway meets readiness criteria [Issue #1160][1160]. 
 
+### [v1.0.0][v1.0]: Envoy Gateway goes GA
+
+Visit the [milestones][milestones] page to learn more about the future roadmap.
+
 [issue]: https://github.com/envoyproxy/gateway/issues
 [meeting]: https://docs.google.com/document/d/1leqwsHX8N-XxNEyTflYjRur462ukFxd19Rnk3Uzy55I/edit?usp=sharing
 [pr]: https://github.com/envoyproxy/gateway/compare
@@ -72,6 +76,7 @@ contributing to the project.
 [v0.4.0]: https://github.com/envoyproxy/gateway/milestone/12
 [v0.5.0]: https://github.com/envoyproxy/gateway/milestone/13
 [v0.6.0]: https://github.com/envoyproxy/gateway/milestone/15
+[v1.0.0]: https://github.com/envoyproxy/gateway/milestone/18
 [17]: https://github.com/envoyproxy/gateway/issues/17
 [20]: https://github.com/envoyproxy/gateway/issues/20
 [24]: https://github.com/envoyproxy/gateway/issues/24
