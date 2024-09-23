@@ -14,5 +14,4 @@
   name: first-route-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
-  trackClusterStats: {}
   type: EDS

@@ -96,7 +96,7 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 	cluster.ConnectTimeout = buildConnectTimeout(args.timeout)
 
 	// Initialize TrackClusterStats if any metrics are enabled
-	if args.metrics != nil {
+	if args.metrics != nil && (args.metrics.EnablePerEndpointStats || args.metrics.EnableRequestResponseSizesStats) {
 		cluster.TrackClusterStats = &clusterv3.TrackClusterStats{}
 
 		// Set per endpoint stats if enabled
