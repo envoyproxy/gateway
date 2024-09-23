@@ -10,6 +10,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -180,6 +181,9 @@ func peekError(conn net.Conn) error {
 	_ = conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
 	_, err := conn.Read(make([]byte, 1))
 	if err != nil {
+		if errors.Is(err, io.EOF) {
+			return nil
+		}
 		var netErr net.Error
 		if !errors.As(netErr, &netErr) || !netErr.Timeout() {
 			return err
