@@ -63,13 +63,13 @@ spec:
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
 metadata:
-  name: oidc-test-backendcluster       # Test OIDC Provider represented by a backend cluster
+  name: oidc-test       # Test OIDC Provider represented by a backend cluster
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
   - group: gateway.networking.k8s.io
     kind: HTTPRoute
-    name: http-with-oidc-backendcluster
+    name: http-with-oidc
   oidc:
     provider:
       backendRefs:

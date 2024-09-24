@@ -21,7 +21,7 @@ func init() {
 // OIDCTest tests OIDC authentication for an http route with OIDC configured.
 // The http route points to an application to verify that OIDC authentication works on application/http path level.
 var OIDCBackendClusterTest = suite.ConformanceTest{
-	ShortName:   "OIDC",
+	ShortName:   "OIDC with BackendCluster",
 	Description: "Test OIDC authentication",
 	Manifests:   []string{"testdata/oidc-keycloak.yaml", "testdata/oidc-securitypolicy-backendcluster.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
@@ -31,7 +31,7 @@ var OIDCBackendClusterTest = suite.ConformanceTest{
 				CollectAndDump(t, suite.RestConfig)
 			})
 
-			testOIDC(t, suite, "oidc-test-backendcluster")
+			testOIDC(t, suite)
 		})
 	},
 }

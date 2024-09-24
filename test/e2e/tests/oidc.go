@@ -54,7 +54,7 @@ var OIDCTest = suite.ConformanceTest{
 				CollectAndDump(t, suite.RestConfig)
 			})
 
-			testOIDC(t, suite, "oidc-test")
+			testOIDC(t, suite)
 		})
 
 		t.Run("http route without oidc authentication", func(t *testing.T) {
@@ -98,11 +98,12 @@ var OIDCTest = suite.ConformanceTest{
 	},
 }
 
-func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, sp string) {
+func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite) {
 	var (
 		testURL   = "http://www.example.com/myapp"
 		logoutURL = "http://www.example.com/myapp/logout"
 		route     = "http-with-oidc"
+		sp        = "oidc-test"
 		ns        = "gateway-conformance-infra"
 	)
 
