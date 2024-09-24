@@ -56,14 +56,17 @@ const (
 type ReplaceRegexMatch struct {
 	// Pattern matches a regular expression against the value of the HTTP Path.The regex string must
 	// adhere to the syntax documented in https://github.com/google/re2/wiki/Syntax.
+	// +kubebuilder:validation:MinLength=1
 	Pattern string `json:"pattern"`
 	// Substitution is an expression that replaces the matched portion.The expression may include numbered
 	// capture groups that adhere to syntax documented in https://github.com/google/re2/wiki/Syntax.
 	Substitution string `json:"substitution"`
 }
 
+// +kubebuilder:validation:XValidation:rule="self.type == 'ReplaceRegexMatch' ? has(self.replaceRegexMatch) : !has(self.replaceRegexMatch)",message="If HTTPPathModifier type is ReplaceRegexMatch, replaceRegexMatch field needs to be set."
 type HTTPPathModifier struct {
-	// +kubebuilder:validation:Enum=RegexHTTPPathModifier
+	// +kubebuilder:validation:Enum=ReplaceRegexMatch
+	// +kubebuilder:validation:Required
 	Type HTTPPathModifierType `json:"type"`
 	// ReplaceRegexMatch defines a path regex rewrite. The path portions matched by the regex pattern are replaced by the defined substitution.
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-regex-rewrite
@@ -84,6 +87,7 @@ type HTTPPathModifier struct {
 	//       pattern: (?i)/xxx/
 	//       substitution: /yyy/
 	//     Would transform path /aaa/XxX/bbb into /aaa/yyy/bbb (case-insensitive).
+	// +optional
 	ReplaceRegexMatch *ReplaceRegexMatch `json:"replaceRegexMatch,omitempty"`
 }
 

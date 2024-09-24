@@ -107,8 +107,8 @@ func GetSecret(nsName types.NamespacedName) *corev1.Secret {
 }
 
 // GetHTTPRoute returns a sample HTTPRoute with a parent reference.
-func GetHTTPRoute(nsName types.NamespacedName, parent string, serviceName types.NamespacedName, port int32) *gwapiv1.HTTPRoute {
-	return &gwapiv1.HTTPRoute{
+func GetHTTPRoute(nsName types.NamespacedName, parent string, serviceName types.NamespacedName, port int32, httpRouteFilterName string) *gwapiv1.HTTPRoute {
+	httpRoute := &gwapiv1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: nsName.Namespace,
 			Name:      nsName.Name,
@@ -135,6 +135,21 @@ func GetHTTPRoute(nsName types.NamespacedName, parent string, serviceName types.
 			},
 		},
 	}
+
+	if httpRouteFilterName != "" {
+		httpRoute.Spec.Rules[0].Filters = []gwapiv1.HTTPRouteFilter{
+			{
+				Type: gwapiv1.HTTPRouteFilterExtensionRef,
+				ExtensionRef: &gwapiv1.LocalObjectReference{
+					Group: egv1a1.GroupName,
+					Kind:  egv1a1.KindHTTPRouteFilter,
+					Name:  gwapiv1.ObjectName(httpRouteFilterName),
+				},
+			},
+		}
+	}
+
+	return httpRoute
 }
 
 // GetGRPCRoute returns a sample GRPCRoute with a parent reference.
@@ -325,6 +340,27 @@ func GetEndpointSlice(nsName types.NamespacedName, svcName string) *discoveryv1.
 				Name:     &[]string{"dummy"}[0],
 				Port:     &[]int32{8080}[0],
 				Protocol: &[]corev1.Protocol{corev1.ProtocolTCP}[0],
+			},
+		},
+	}
+}
+
+// GetHTTPRouteFilter returns a sample Service with labels and ports.
+func GetHTTPRouteFilter(nsName types.NamespacedName) *egv1a1.HTTPRouteFilter {
+	return &egv1a1.HTTPRouteFilter{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      nsName.Name,
+			Namespace: nsName.Namespace,
+		},
+		Spec: egv1a1.HTTPRouteFilterSpec{
+			URLRewrite: &egv1a1.HTTPURLRewriteFilter{
+				Path: &egv1a1.HTTPPathModifier{
+					Type: egv1a1.RegexHTTPPathModifier,
+					ReplaceRegexMatch: &egv1a1.ReplaceRegexMatch{
+						Pattern:      "foo",
+						Substitution: "bar",
+					},
+				},
 			},
 		},
 	}

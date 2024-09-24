@@ -16,6 +16,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/utils"
@@ -231,6 +232,15 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 ) error {
 	httpRouteList := &gwapiv1.HTTPRouteList{}
 
+	httpFilters, err := r.getHTTPRouteFilters(ctx)
+	if err != nil {
+		return err
+	}
+	for i := range httpFilters {
+		filter := httpFilters[i]
+		resourceMap.httpRouteFilters[utils.GetNamespacedNameWithGroupKind(&filter)] = &filter
+	}
+
 	extensionRefFilters, err := r.getExtensionRefFilters(ctx)
 	if err != nil {
 		return err
@@ -385,17 +395,29 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 							Kind:  string(filter.ExtensionRef.Kind),
 						},
 					}
-					extRefFilter, ok := resourceMap.extensionRefFilters[key]
-					if !ok {
-						r.log.Error(
-							errors.New("filter not found; bypassing rule"),
-							"Filter not found; bypassing rule",
-							"name", filter.ExtensionRef.Name,
-							"index", i)
-						continue
-					}
 
-					resourceTree.ExtensionRefFilters = append(resourceTree.ExtensionRefFilters, extRefFilter)
+					switch string(filter.ExtensionRef.Kind) {
+					case egv1a1.KindHTTPRouteFilter:
+						httpFilter, ok := resourceMap.httpRouteFilters[key]
+						if !ok {
+							r.log.Error(err, "HTTPRouteFilters not found; bypassing rule", "index", i)
+							continue
+						}
+
+						resourceTree.HTTPRouteFilters = append(resourceTree.HTTPRouteFilters, httpFilter)
+					default:
+						extRefFilter, ok := resourceMap.extensionRefFilters[key]
+						if !ok {
+							r.log.Error(
+								errors.New("filter not found; bypassing rule"),
+								"Filter not found; bypassing rule",
+								"name", filter.ExtensionRef.Name,
+								"index", i)
+							continue
+						}
+
+						resourceTree.ExtensionRefFilters = append(resourceTree.ExtensionRefFilters, extRefFilter)
+					}
 				}
 			}
 		}

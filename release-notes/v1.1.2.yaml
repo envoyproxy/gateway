@@ -1,0 +1,16 @@
+date: September 24, 2024
+
+changes:
+  - area: translator
+    change: |
+      Fixed handling of sectionName in BackendTLSPolicy for Backend resource
+
+
+  - area: infra-manager
+    change: |
+      Pin Envoy Proxy version to v1.32.2
+      Change Envoy listener drain strategy from gradual to immediate
+
+  - area: providers
+    change: |
+      Fixed reconciliation of HTTPRoutes when labels change

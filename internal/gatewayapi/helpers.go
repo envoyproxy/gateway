@@ -179,6 +179,9 @@ func ValidateHTTPRouteFilter(filter *gwapiv1.HTTPRouteFilter, extGKs ...schema.G
 		switch {
 		case filter.ExtensionRef == nil:
 			return errors.New("extensionRef field must be specified for an extended filter")
+		case string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
+			string(filter.ExtensionRef.Kind) == egv1a1.KindHTTPRouteFilter:
+			return nil
 		default:
 			for _, gk := range extGKs {
 				if filter.ExtensionRef.Group == gwapiv1.Group(gk.Group) &&
