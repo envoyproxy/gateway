@@ -73,7 +73,10 @@
                   headerName: one-route-example-key
                 forward: true
                 issuer: https://one.example.com
-                payloadInMetadata: https://one.example.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scope
+                payloadInMetadata: example1
                 remoteJwks:
                   asyncFetch: {}
                   cacheDuration: 300s
@@ -90,7 +93,10 @@
                   headerName: two-route-example-key
                 forward: true
                 issuer: http://two.example.com
-                payloadInMetadata: http://two.example.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scope
+                payloadInMetadata: example2
                 remoteJwks:
                   asyncFetch: {}
                   cacheDuration: 300s
