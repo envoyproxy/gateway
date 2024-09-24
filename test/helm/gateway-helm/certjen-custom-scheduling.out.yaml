@@ -127,6 +127,7 @@ rules:
   - securitypolicies
   - envoyextensionpolicies
   - backends
+  - httproutefilters
   verbs:
   - get
   - list
