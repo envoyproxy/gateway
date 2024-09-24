@@ -157,9 +157,6 @@ func buildXdsTCPListener(name, address string, port uint32, keepalive *ir.TCPKee
 				},
 			},
 		},
-		// Remove /healthcheck/fail from endpoints that trigger a drain of listeners for better control
-		// over the drain process while still allowing the healthcheck to be failed during pod shutdown.
-		DrainType: listenerv3.Listener_MODIFY_ONLY,
 	}
 }
 
