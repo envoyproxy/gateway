@@ -31,10 +31,11 @@ type ProxyAccessLogSetting struct {
 	// +kubebuilder:validation:MaxItems=50
 	Sinks []ProxyAccessLogSink `json:"sinks"`
 	// Type defines the component emitting the accesslog, such as Listener and Route.
-	// If type not defined, the setting would apply to all accesslog types supported by envoy gateway.
-	// If type is defined, the default envoy gateway accesslog configuration for the mentioned component would be
-	// replaced by the user-defined configuration.
-	// +kubebuilder:validation:Enum=Listener
+	// If type not defined, the setting would apply to:
+	// (1) All Routes.
+	// (2) Listeners if and only if Envoy does not find a matching route for a request.
+	// If type is defined, the accesslog settings would apply to the relevant component (as-is).
+	// +kubebuilder:validation:Enum=Listener;Route
 	// +optional
 	// +notImplementedHide
 	Type *ProxyAccessLogType `json:"type,omitempty"`
