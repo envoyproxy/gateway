@@ -59,7 +59,7 @@
                 path:
                   exact: /bar/logout
               tokenEndpoint:
-                cluster: oauth_foo_com_443
+                cluster: securitypolicy/envoy-gateway/policy-for-gateway/0
                 timeout: 10s
                 uri: https://oauth.foo.com/token
               useRefreshToken: true

@@ -102,14 +102,24 @@ func oauth2FilterName(oidc *ir.OIDC) string {
 }
 
 func oauth2Config(oidc *ir.OIDC) (*oauth2v3.OAuth2, error) {
-	cluster, err := url2Cluster(oidc.Provider.TokenEndpoint)
-	if err != nil {
-		return nil, err
-	}
-	if cluster.endpointType == EndpointTypeStatic {
-		return nil, fmt.Errorf(
-			"static IP cluster is not allowed: %s",
-			oidc.Provider.TokenEndpoint)
+	var (
+		tokenEndpointCluster string
+		err                  error
+	)
+
+	if oidc.Provider.Destination != nil && len(oidc.Provider.Destination.Settings) > 0 {
+		tokenEndpointCluster = oidc.Provider.Destination.Name
+	} else {
+		var cluster *urlCluster
+		if cluster, err = url2Cluster(oidc.Provider.TokenEndpoint); err != nil {
+			return nil, err
+		}
+		if cluster.endpointType == EndpointTypeStatic {
+			return nil, fmt.Errorf(
+				"static IP cluster is not allowed: %s",
+				oidc.Provider.TokenEndpoint)
+		}
+		tokenEndpointCluster = cluster.name
 	}
 
 	// Envoy OAuth2 filter deletes the HTTP authorization header by default, which surprises users.
@@ -126,7 +136,7 @@ func oauth2Config(oidc *ir.OIDC) (*oauth2v3.OAuth2, error) {
 			TokenEndpoint: &corev3.HttpUri{
 				Uri: oidc.Provider.TokenEndpoint,
 				HttpUpstreamType: &corev3.HttpUri_Cluster{
-					Cluster: cluster.name,
+					Cluster: tokenEndpointCluster,
 				},
 				Timeout: &durationpb.Duration{
 					Seconds: defaultExtServiceRequestTimeout,
