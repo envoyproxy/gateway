@@ -30,6 +30,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extension "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/wasm"
@@ -115,7 +116,7 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentGatewayAPIRunner), Message: "provider-resources"}, r.ProviderResources.GatewayAPIResources.Subscribe(ctx),
-		func(update message.Update[string, *gatewayapi.ControllerResources], errChan chan error) {
+		func(update message.Update[string, *resource.ControllerResources], errChan chan error) {
 			r.Logger.Info("received an update")
 			val := update.Value
 			// There is only 1 key which is the controller name
@@ -171,7 +172,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				// Publish the IRs.
 				// Also validate the ir before sending it.
 				for key, val := range result.InfraIR {
-					r.Logger.WithValues("infra-ir", key).Info(val.YAMLString())
+					r.Logger.WithValues("infra-ir", key).Info(val.JSONString())
 					if err := val.Validate(); err != nil {
 						r.Logger.Error(err, "unable to validate infra ir, skipped sending it")
 						errChan <- err
@@ -182,7 +183,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				}
 
 				for key, val := range result.XdsIR {
-					r.Logger.WithValues("xds-ir", key).Info(val.YAMLString())
+					r.Logger.WithValues("xds-ir", key).Info(val.JSONString())
 					if err := val.Validate(); err != nil {
 						r.Logger.Error(err, "unable to validate xds ir, skipped sending it")
 						errChan <- err

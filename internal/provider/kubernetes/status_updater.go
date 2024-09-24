@@ -23,7 +23,7 @@ import (
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/metrics"
 )
 
@@ -318,35 +318,35 @@ func kindOf(obj interface{}) string {
 	var kind string
 	switch o := obj.(type) {
 	case *gwapiv1.GatewayClass:
-		kind = gatewayapi.KindGatewayClass
+		kind = resource.KindGatewayClass
 	case *gwapiv1.Gateway:
-		kind = gatewayapi.KindGateway
+		kind = resource.KindGateway
 	case *gwapiv1.HTTPRoute:
-		kind = gatewayapi.KindHTTPRoute
+		kind = resource.KindHTTPRoute
 	case *gwapiv1a2.TLSRoute:
-		kind = gatewayapi.KindTLSRoute
+		kind = resource.KindTLSRoute
 	case *gwapiv1a2.TCPRoute:
-		kind = gatewayapi.KindTCPRoute
+		kind = resource.KindTCPRoute
 	case *gwapiv1a2.UDPRoute:
-		kind = gatewayapi.KindUDPRoute
+		kind = resource.KindUDPRoute
 	case *gwapiv1.GRPCRoute:
-		kind = gatewayapi.KindGRPCRoute
+		kind = resource.KindGRPCRoute
 	case *egv1a1.EnvoyPatchPolicy:
-		kind = gatewayapi.KindEnvoyPatchPolicy
+		kind = resource.KindEnvoyPatchPolicy
 	case *egv1a1.ClientTrafficPolicy:
-		kind = gatewayapi.KindClientTrafficPolicy
+		kind = resource.KindClientTrafficPolicy
 	case *egv1a1.BackendTrafficPolicy:
-		kind = gatewayapi.KindBackendTrafficPolicy
+		kind = resource.KindBackendTrafficPolicy
 	case *egv1a1.SecurityPolicy:
-		kind = gatewayapi.KindSecurityPolicy
+		kind = resource.KindSecurityPolicy
 	case *egv1a1.EnvoyExtensionPolicy:
-		kind = gatewayapi.KindEnvoyExtensionPolicy
+		kind = resource.KindEnvoyExtensionPolicy
 	case *gwapiv1a3.BackendTLSPolicy:
-		kind = gatewayapi.KindBackendTLSPolicy
+		kind = resource.KindBackendTLSPolicy
 	case *unstructured.Unstructured:
 		kind = o.GetKind()
 	case *egv1a1.Backend:
-		kind = egv1a1.KindBackend
+		kind = resource.KindBackend
 	default:
 		kind = "Unknown"
 	}

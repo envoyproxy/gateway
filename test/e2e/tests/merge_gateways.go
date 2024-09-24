@@ -22,6 +22,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
 
 func init() {
@@ -103,7 +104,7 @@ var MergeGatewaysTest = suite.ConformanceTest{
 			// Create Gateway first to make sure there's no HTTPRoute attach to it.
 			conflictedGateway := gwapiv1.Gateway{
 				TypeMeta: metav1.TypeMeta{
-					Kind:       gatewayapi.KindGateway,
+					Kind:       resource.KindGateway,
 					APIVersion: gwapiv1.GroupVersion.String(),
 				},
 				ObjectMeta: metav1.ObjectMeta{
@@ -136,11 +137,11 @@ var MergeGatewaysTest = suite.ConformanceTest{
 				SupportedKinds: []gwapiv1.RouteGroupKind{
 					{
 						Group: gatewayapi.GroupPtr(gwapiv1.GroupName),
-						Kind:  gatewayapi.KindHTTPRoute,
+						Kind:  resource.KindHTTPRoute,
 					},
 					{
 						Group: gatewayapi.GroupPtr(gwapiv1.GroupName),
-						Kind:  gatewayapi.KindGRPCRoute,
+						Kind:  resource.KindGRPCRoute,
 					},
 				},
 				Conditions: []metav1.Condition{{
@@ -155,7 +156,7 @@ var MergeGatewaysTest = suite.ConformanceTest{
 			// Create HTTPRoute at last to make sure it will be referenced by the conflicted listener in Gateway.
 			conflictedHTTPRoute := gwapiv1.HTTPRoute{
 				TypeMeta: metav1.TypeMeta{
-					Kind:       gatewayapi.KindHTTPRoute,
+					Kind:       resource.KindHTTPRoute,
 					APIVersion: gwapiv1.GroupVersion.String(),
 				},
 				ObjectMeta: metav1.ObjectMeta{
@@ -180,7 +181,7 @@ var MergeGatewaysTest = suite.ConformanceTest{
 									BackendRef: gwapiv1.BackendRef{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Group: gatewayapi.GroupPtr(""),
-											Kind:  gatewayapi.KindPtr(gatewayapi.KindService),
+											Kind:  gatewayapi.KindPtr(resource.KindService),
 											Name:  "infra-backend-v3",
 											Port:  gatewayapi.PortNumPtr(8080),
 										},

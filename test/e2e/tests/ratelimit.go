@@ -9,12 +9,15 @@
 package tests
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
@@ -267,6 +270,9 @@ var RateLimitBasedJwtClaimsTest = suite.ConformanceTest{
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
+			preCount, err := OverLimitCount(suite)
+			require.NoError(t, err)
+
 			expectOkResp := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/foo",
@@ -373,6 +379,15 @@ var RateLimitBasedJwtClaimsTest = suite.ConformanceTest{
 			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, noTokenReq, noTokenResp); err != nil {
 				t.Errorf("failed to get expected response: %v", err)
 			}
+
+			err = wait.PollUntilContextTimeout(context.TODO(), time.Second, 1*time.Minute, true, func(_ context.Context) (bool, error) {
+				curCount, err := OverLimitCount(suite)
+				if err != nil {
+					return false, err
+				}
+				return curCount > preCount, nil
+			})
+			require.NoError(t, err)
 		})
 	},
 }
