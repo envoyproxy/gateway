@@ -27,16 +27,20 @@ type ProxyMetrics struct {
 	Matches []StringMatch `json:"matches,omitempty"`
 
 	// EnableVirtualHostStats enables envoy stat metrics for virtual hosts.
-	EnableVirtualHostStats bool `json:"enableVirtualHostStats,omitempty"`
+	//
+	// +optional
+	EnableVirtualHostStats *bool `json:"enableVirtualHostStats,omitempty"`
 
 	// EnablePerEndpointStats enables per endpoint envoy stats metrics.
 	// Please use with caution.
-	EnablePerEndpointStats bool `json:"enablePerEndpointStats,omitempty"`
+	//
+	// +optional
+	EnablePerEndpointStats *bool `json:"enablePerEndpointStats,omitempty"`
 
 	// EnableRequestResponseSizesStats enables publishing of histograms tracking header and body sizes of requests and responses.
 	//
 	// +optional
-	EnableRequestResponseSizesStats bool `json:"enableRequestResponseSizesStats,omitempty"`
+	EnableRequestResponseSizesStats *bool `json:"enableRequestResponseSizesStats,omitempty"`
 }
 
 // ProxyMetricSink defines the sink of metrics.
