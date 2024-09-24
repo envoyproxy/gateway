@@ -647,3 +647,29 @@ func (r *gatewayAPIReconciler) isExtensionPolicyReferencingSecret(nsName *types.
 
 	return len(eepList.Items) > 0
 }
+
+// isRouteReferencingHTTPRouteFilter returns true if the HTTPRouteFilter is referenced by an HTTPRoute
+func (r *gatewayAPIReconciler) isRouteReferencingHTTPRouteFilter(nsName *types.NamespacedName) bool {
+	ctx := context.Background()
+	httpRouteList := &gwapiv1.HTTPRouteList{}
+	if err := r.client.List(ctx, httpRouteList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(httpRouteFilterHTTPRouteIndex, nsName.String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated HTTPRoutes")
+		return false
+	}
+
+	return len(httpRouteList.Items) != 0
+}
+
+// validateHTTPRouteFilterForReconcile tries finding the referencing HTTPRoute of the filter
+func (r *gatewayAPIReconciler) validateHTTPRouteFilterForReconcile(obj client.Object) bool {
+	hrf, ok := obj.(*egv1a1.HTTPRouteFilter)
+	if !ok {
+		r.log.Info("unexpected object type, bypassing reconciliation", "object", obj)
+		return false
+	}
+
+	nsName := utils.NamespacedName(hrf)
+	return r.isRouteReferencingHTTPRouteFilter(&nsName)
+}
