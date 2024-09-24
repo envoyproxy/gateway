@@ -36,6 +36,7 @@ communications with the Envoy Gateway community, and the mechanics of the releas
 | 2023 Q4 |    Arko Dasgupta ([arkodg](https://github.com/arkodg))         |
 | 2024 Q1 |    Xunzhuo Liu ([Xunzhuo](https://github.com/Xunzhuo))         |
 | 2024 Q2 |    Guy Daich ([guydc](https://github.com/guydc))               |
+| 2024 Q3 |    Huabing Zhao ([zhaohuabing](https://github.com/zhaohuabing))|
 
 ## Release Schedule
 

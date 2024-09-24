@@ -36,6 +36,8 @@ Envoy Gateway 的稳定版本包括：
 | 2023 Q3 |    Arko Dasgupta ([arkodg](https://github.com/arkodg))         |
 | 2023 Q4 |    Arko Dasgupta ([arkodg](https://github.com/arkodg))         |
 | 2024 Q1 |    Xunzhuo Liu ([Xunzhuo](https://github.com/Xunzhuo))         |
+| 2024 Q2 |    Guy Daich ([guydc](https://github.com/guydc))               |
+| 2024 Q3 |    Huabing Zhao ([zhaohuabing](https://github.com/zhaohuabing))|
 
 ## 发布时间表 {#release-schedule}
 
