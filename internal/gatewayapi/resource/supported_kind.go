@@ -26,4 +26,5 @@ const (
 	KindService              = "Service"
 	KindServiceImport        = "ServiceImport"
 	KindSecret               = "Secret"
+	KindHTTPRouteFilter      = "HTTPRouteFilter"
 )
