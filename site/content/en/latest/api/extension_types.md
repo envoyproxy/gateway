@@ -26,6 +26,8 @@ API group.
 - [EnvoyPatchPolicy](#envoypatchpolicy)
 - [EnvoyPatchPolicyList](#envoypatchpolicylist)
 - [EnvoyProxy](#envoyproxy)
+- [HTTPRouteFilter](#httproutefilter)
+- [HTTPRouteFilterList](#httproutefilterlist)
 - [SecurityPolicy](#securitypolicy)
 - [SecurityPolicyList](#securitypolicylist)
 
@@ -535,12 +537,12 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `allowOrigins` | _[Origin](#origin) array_ |  true  | AllowOrigins defines the origins that are allowed to make requests. |
-| `allowMethods` | _string array_ |  true  | AllowMethods defines the methods that are allowed to make requests. |
-| `allowHeaders` | _string array_ |  true  | AllowHeaders defines the headers that are allowed to be sent with requests. |
-| `exposeHeaders` | _string array_ |  true  | ExposeHeaders defines the headers that can be exposed in the responses. |
-| `maxAge` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  true  | MaxAge defines how long the results of a preflight request can be cached. |
-| `allowCredentials` | _boolean_ |  true  | AllowCredentials indicates whether a request can include user credentials<br />like cookies, authentication headers, or TLS client certificates. |
+| `allowOrigins` | _[Origin](#origin) array_ |  false  | AllowOrigins defines the origins that are allowed to make requests.<br />It specifies the allowed origins in the Access-Control-Allow-Origin CORS response header.<br />The value "*" allows any origin to make requests. |
+| `allowMethods` | _string array_ |  false  | AllowMethods defines the methods that are allowed to make requests.<br />It specifies the allowed methods in the Access-Control-Allow-Methods CORS response header..<br />The value "*" allows any method to be used. |
+| `allowHeaders` | _string array_ |  false  | AllowHeaders defines the headers that are allowed to be sent with requests.<br />It specifies the allowed headers in the Access-Control-Allow-Headers CORS response header..<br />The value "*" allows any header to be sent. |
+| `exposeHeaders` | _string array_ |  false  | ExposeHeaders defines which response headers should be made accessible to<br />scripts running in the browser.<br />It specifies the headers in the Access-Control-Expose-Headers CORS response header..<br />The value "*" allows any header to be exposed. |
+| `maxAge` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  | MaxAge defines how long the results of a preflight request can be cached.<br />It specifies the value in the Access-Control-Max-Age CORS response header.. |
+| `allowCredentials` | _boolean_ |  false  | AllowCredentials indicates whether a request can include user credentials<br />like cookies, authentication headers, or TLS client certificates.<br />It specifies the value in the Access-Control-Allow-Credentials CORS response header. |
 
 
 
@@ -1891,6 +1893,83 @@ _Appears in:_
 | `headersToBackend` | _string array_ |  false  | HeadersToBackend are the authorization response headers that will be added<br />to the original client request before sending it to the backend server.<br />Note that coexisting headers will be overridden.<br />If not specified, no authorization response headers will be added to the<br />original client request. |
 
 
+#### HTTPPathModifier
+
+
+
+
+
+_Appears in:_
+- [HTTPURLRewriteFilter](#httpurlrewritefilter)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `type` | _[HTTPPathModifierType](#httppathmodifiertype)_ |  true  |  |
+| `replaceRegexMatch` | _[ReplaceRegexMatch](#replaceregexmatch)_ |  false  | ReplaceRegexMatch defines a path regex rewrite. The path portions matched by the regex pattern are replaced by the defined substitution.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-regex-rewrite<br />Some examples:<br />(1) replaceRegexMatch:<br />      pattern: ^/service/([^/]+)(/.*)$<br />      substitution: \2/instance/\1<br />    Would transform /service/foo/v1/api into /v1/api/instance/foo.<br />(2) replaceRegexMatch:<br />      pattern: one<br />      substitution: two<br />    Would transform /xxx/one/yyy/one/zzz into /xxx/two/yyy/two/zzz.<br />(3) replaceRegexMatch:<br />      pattern: ^(.*?)one(.*)$<br />      substitution: \1two\2<br />    Would transform /xxx/one/yyy/one/zzz into /xxx/two/yyy/one/zzz.<br />(3) replaceRegexMatch:<br />      pattern: (?i)/xxx/<br />      substitution: /yyy/<br />    Would transform path /aaa/XxX/bbb into /aaa/yyy/bbb (case-insensitive). |
+
+
+#### HTTPPathModifierType
+
+_Underlying type:_ _string_
+
+HTTPPathModifierType defines the type of path redirect or rewrite.
+
+_Appears in:_
+- [HTTPPathModifier](#httppathmodifier)
+
+| Value | Description |
+| ----- | ----------- |
+| `ReplaceRegexMatch` | RegexHTTPPathModifier This type of modifier indicates that the portions of the path that match the specified<br /> regex would be substituted with the specified substitution value<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/type/matcher/v3/regex.proto#type-matcher-v3-regexmatchandsubstitute<br /> | 
+
+
+#### HTTPRouteFilter
+
+
+
+HTTPRouteFilter is a custom Envoy Gateway HTTPRouteFilter which provides extended
+traffic processing options such as path regex rewrite, direct response and more.
+
+_Appears in:_
+- [HTTPRouteFilterList](#httproutefilterlist)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
+| `kind` | _string_ | |`HTTPRouteFilter`
+| `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` | _[HTTPRouteFilterSpec](#httproutefilterspec)_ |  true  | Spec defines the desired state of HTTPRouteFilter. |
+
+
+#### HTTPRouteFilterList
+
+
+
+HTTPRouteFilterList contains a list of HTTPRouteFilter resources.
+
+
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
+| `kind` | _string_ | |`HTTPRouteFilterList`
+| `metadata` | _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#listmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` | _[HTTPRouteFilter](#httproutefilter) array_ |  true  |  |
+
+
+#### HTTPRouteFilterSpec
+
+
+
+HTTPRouteFilterSpec defines the desired state of HTTPRouteFilter.
+
+_Appears in:_
+- [HTTPRouteFilter](#httproutefilter)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `urlRewrite` | _[HTTPURLRewriteFilter](#httpurlrewritefilter)_ |  false  |  |
+
+
 #### HTTPStatus
 
 _Underlying type:_ _integer_
@@ -1916,6 +1995,20 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `connectionIdleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.<br />Default: 1 hour. |
 | `maxConnectionDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | The maximum duration of an HTTP connection.<br />Default: unlimited. |
+
+
+#### HTTPURLRewriteFilter
+
+
+
+HTTPURLRewriteFilter define rewrites of HTTP URL components such as path and host
+
+_Appears in:_
+- [HTTPRouteFilterSpec](#httproutefilterspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `path` | _[HTTPPathModifier](#httppathmodifier)_ |  false  | Path defines a path rewrite. |
 
 
 #### HTTPWasmCodeSource
@@ -2093,8 +2186,8 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `op` | _[JSONPatchOperationType](#jsonpatchoperationtype)_ |  true  | Op is the type of operation to perform |
-| `path` | _string_ |  false  | Path is the location of the target document/field where the operation will be performed<br />Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details. |
-| `jsonPath` | _string_ |  false  | JSONPath specifies the locations of the target document/field where the operation will be performed<br />Refer to https://datatracker.ietf.org/doc/rfc9535/ for more details. |
+| `path` | _string_ |  false  | Path is a JSONPointer expression. Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details.<br />It specifies the location of the target document/field where the operation will be performed |
+| `jsonPath` | _string_ |  false  | JSONPath is a JSONPath expression. Refer to https://datatracker.ietf.org/doc/rfc9535/ for more details.<br />It produces one or more JSONPointer expressions based on the given JSON document.<br />If no JSONPointer is found, it will result in an error.<br />If the 'Path' property is also set, it will be appended to the resulting JSONPointer expressions from the JSONPath evaluation.<br />This is useful when creating a property that does not yet exist in the JSON document.<br />The final JSONPointer expressions specifies the locations in the target document/field where the operation will be applied. |
 | `from` | _string_ |  false  | From is the source location of the value to be copied or moved. Only valid<br />for move or copy operations<br />Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details. |
 | `value` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#json-v1-apiextensions-k8s-io)_ |  false  | Value is the new value of the path location. The value is only used by<br />the `add` and `replace` operations. |
 
@@ -2816,6 +2909,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `format` | _[ProxyAccessLogFormat](#proxyaccesslogformat)_ |  false  | Format defines the format of accesslog.<br />This will be ignored if sink type is ALS. |
+| `matches` | _string array_ |  true  | Matches defines the match conditions for accesslog in CEL expression.<br />An accesslog will be emitted only when one or more match conditions are evaluated to true.<br />Invalid [CEL](https://www.envoyproxy.io/docs/envoy/latest/xds/type/v3/cel.proto.html#common-expression-language-cel-proto) expressions will be ignored. |
 | `sinks` | _[ProxyAccessLogSink](#proxyaccesslogsink) array_ |  true  | Sinks defines the sinks of accesslog. |
 
 
@@ -3303,6 +3397,21 @@ _Appears in:_
 | `uri` | _string_ |  true  | URI is the HTTPS URI to fetch the JWKS. Envoy's system trust bundle is used to<br />validate the server certificate. |
 
 
+#### ReplaceRegexMatch
+
+
+
+
+
+_Appears in:_
+- [HTTPPathModifier](#httppathmodifier)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `pattern` | _string_ |  true  | Pattern matches a regular expression against the value of the HTTP Path.The regex string must<br />adhere to the syntax documented in https://github.com/google/re2/wiki/Syntax. |
+| `substitution` | _string_ |  true  | Substitution is an expression that replaces the matched portion.The expression may include numbered<br />capture groups that adhere to syntax documented in https://github.com/google/re2/wiki/Syntax. |
+
+
 #### RequestHeaderCustomTag
 
 
@@ -3465,8 +3574,8 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `drainTimeout` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  | DrainTimeout defines the graceful drain timeout. This should be less than the pod's terminationGracePeriodSeconds.<br />If unspecified, defaults to 600 seconds. |
-| `minDrainDuration` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  | MinDrainDuration defines the minimum drain duration allowing time for endpoint deprogramming to complete.<br />If unspecified, defaults to 5 seconds. |
+| `drainTimeout` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  | DrainTimeout defines the graceful drain timeout. This should be less than the pod's terminationGracePeriodSeconds.<br />If unspecified, defaults to 60 seconds. |
+| `minDrainDuration` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  | MinDrainDuration defines the minimum drain duration allowing time for endpoint deprogramming to complete.<br />If unspecified, defaults to 10 seconds. |
 
 
 #### ShutdownManager

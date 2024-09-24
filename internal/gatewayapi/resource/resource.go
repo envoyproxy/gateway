@@ -3,7 +3,7 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-package gatewayapi
+package resource
 
 import (
 	"cmp"
@@ -63,6 +63,7 @@ type Resources struct {
 	EnvoyExtensionPolicies  []*egv1a1.EnvoyExtensionPolicy `json:"envoyExtensionPolicies,omitempty" yaml:"envoyExtensionPolicies,omitempty"`
 	ExtensionServerPolicies []unstructured.Unstructured    `json:"extensionServerPolicies,omitempty" yaml:"extensionServerPolicies,omitempty"`
 	Backends                []*egv1a1.Backend              `json:"backends,omitempty" yaml:"backends,omitempty"`
+	HTTPRouteFilters        []*egv1a1.HTTPRouteFilter      `json:"httpFilters,omitempty" yaml:"httpFilters,omitempty"`
 }
 
 func NewResources() *Resources {
@@ -86,6 +87,7 @@ func NewResources() *Resources {
 		EnvoyExtensionPolicies:  []*egv1a1.EnvoyExtensionPolicy{},
 		ExtensionServerPolicies: []unstructured.Unstructured{},
 		Backends:                []*egv1a1.Backend{},
+		HTTPRouteFilters:        []*egv1a1.HTTPRouteFilter{},
 	}
 }
 

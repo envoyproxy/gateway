@@ -691,7 +691,6 @@
                     ],
                     "name": "default/eg/http"
                   },
-                  "drainType": "MODIFY_ONLY",
                   "name": "default/eg/http",
                   "perConnectionBufferLimitBytes": 32768
                 }
@@ -797,7 +796,6 @@
                     ],
                     "name": "default/eg/grpc"
                   },
-                  "drainType": "MODIFY_ONLY",
                   "name": "default/eg/grpc",
                   "perConnectionBufferLimitBytes": 32768
                 }
@@ -834,7 +832,6 @@
                       "portValue": 1234
                     }
                   },
-                  "drainType": "MODIFY_ONLY",
                   "filterChains": [
                     {
                       "filters": [
@@ -900,7 +897,6 @@
                       "portValue": 8443
                     }
                   },
-                  "drainType": "MODIFY_ONLY",
                   "filterChains": [
                     {
                       "filterChainMatch": {

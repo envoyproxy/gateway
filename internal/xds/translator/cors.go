@@ -134,8 +134,18 @@ func (*cors) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 		allowOrigins = append(allowOrigins, buildXdsStringMatcher(origin))
 	}
 
-	allowMethods = strings.Join(c.AllowMethods, ", ")
-	allowHeaders = strings.Join(c.AllowHeaders, ", ")
+	// Envoy only supports a single "*" for matching all, and treats the "*" in "*, GET" as a literal.
+	// https://github.com/envoyproxy/envoy/blob/eb61f368690cae173502f80549b7e2169ec24766/source/extensions/filters/http/cors/cors_filter.cc#L140-L159
+	if hasWildcard(c.AllowMethods) {
+		allowMethods = "*"
+	} else {
+		allowMethods = strings.Join(c.AllowMethods, ", ")
+	}
+	if hasWildcard(c.AllowHeaders) {
+		allowHeaders = "*"
+	} else {
+		allowHeaders = strings.Join(c.AllowHeaders, ", ")
+	}
 	exposeHeaders = strings.Join(c.ExposeHeaders, ", ")
 	if c.MaxAge != nil {
 		maxAge = strconv.Itoa(int(c.MaxAge.Seconds()))
@@ -164,6 +174,15 @@ func (*cors) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	route.TypedPerFilterConfig[wellknown.CORS] = routeCfgAny
 
 	return nil
+}
+
+func hasWildcard(array []string) bool {
+	for _, s := range array {
+		if s == "*" {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *cors) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) error {

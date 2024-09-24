@@ -1,5 +1,5 @@
 ---
-# Source: gateway-helm/templates/envoy-gateway-deployment.yaml
+# Source: gateway-helm/templates/envoy-gateway-poddisruptionbudget.yaml
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
@@ -7,13 +7,14 @@ metadata:
   namespace: 'envoy-gateway-system'
 spec:
   minAvailable: 1
+  maxUnavailable: 1
   selector:
     matchLabels:
       control-plane: envoy-gateway
       app.kubernetes.io/name: gateway-helm
       app.kubernetes.io/instance: gateway-helm
 ---
-# Source: gateway-helm/templates/envoy-gateway-deployment.yaml
+# Source: gateway-helm/templates/envoy-gateway-serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -141,6 +142,7 @@ rules:
   - securitypolicies
   - envoyextensionpolicies
   - backends
+  - httproutefilters
   verbs:
   - get
   - list
@@ -442,6 +444,8 @@ spec:
             - ALL
           privileged: false
           runAsNonRoot: true
+          runAsGroup: 65532
+          runAsUser: 65532
           seccompProfile:
             type: RuntimeDefault
         volumeMounts:

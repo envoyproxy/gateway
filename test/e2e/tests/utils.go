@@ -39,6 +39,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/kubernetes"
 	tb "github.com/envoyproxy/gateway/internal/troubleshoot"
 )
 
@@ -464,6 +465,53 @@ func ALSLogCount(suite *suite.ConformanceTestSuite) (int, error) {
 	}
 
 	countMetric, err := RetrieveMetric(metricPath, "log_count", time.Second)
+	if err != nil {
+		return -1, err
+	}
+
+	// metric not found or empty
+	if countMetric == nil {
+		return 0, nil
+	}
+
+	total := 0
+	for _, m := range countMetric.Metric {
+		if m.Counter != nil && m.Counter.Value != nil {
+			total += int(*m.Counter.Value)
+		}
+	}
+
+	return total, nil
+}
+
+func OverLimitCount(suite *suite.ConformanceTestSuite) (int, error) {
+	cli, err := kubernetes.NewForRestConfig(suite.RestConfig)
+	if err != nil {
+		return -1, err
+	}
+
+	pods, err := cli.PodsForSelector("envoy-gateway-system", "app.kubernetes.io/name=envoy-ratelimit")
+	if err != nil {
+		return -1, err
+	}
+
+	if len(pods.Items) == 0 {
+		return -1, fmt.Errorf("no envoy-ratelimit pod found")
+	}
+
+	fwd, err := kubernetes.NewLocalPortForwarder(cli, types.NamespacedName{
+		Namespace: "envoy-gateway-system",
+		Name:      pods.Items[0].Name,
+	}, 0, 19001)
+	if err != nil {
+		return -1, err
+	}
+	if err := fwd.Start(); err != nil {
+		return -1, err
+	}
+	defer fwd.Stop()
+
+	countMetric, err := RetrieveMetric(fmt.Sprintf("http://%s/metrics", fwd.Address()), "ratelimit_service_rate_limit_over_limit", time.Second)
 	if err != nil {
 		return -1, err
 	}

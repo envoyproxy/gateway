@@ -208,8 +208,12 @@ spec:
                           type: string
                         jsonPath:
                           description: |-
-                            JSONPath specifies the locations of the target document/field where the operation will be performed
-                            Refer to https://datatracker.ietf.org/doc/rfc9535/ for more details.
+                            JSONPath is a JSONPath expression. Refer to https://datatracker.ietf.org/doc/rfc9535/ for more details.
+                            It produces one or more JSONPointer expressions based on the given JSON document.
+                            If no JSONPointer is found, it will result in an error.
+                            If the 'Path' property is also set, it will be appended to the resulting JSONPointer expressions from the JSONPath evaluation.
+                            This is useful when creating a property that does not yet exist in the JSON document.
+                            The final JSONPointer expressions specifies the locations in the target document/field where the operation will be applied.
                           type: string
                         op:
                           description: Op is the type of operation to perform
@@ -223,8 +227,8 @@ spec:
                           type: string
                         path:
                           description: |-
-                            Path is the location of the target document/field where the operation will be performed
-                            Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details.
+                            Path is a JSONPointer expression. Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details.
+                            It specifies the location of the target document/field where the operation will be performed
                           type: string
                         value:
                           description: |-
@@ -10244,12 +10248,12 @@ spec:
                   drainTimeout:
                     description: |-
                       DrainTimeout defines the graceful drain timeout. This should be less than the pod's terminationGracePeriodSeconds.
-                      If unspecified, defaults to 600 seconds.
+                      If unspecified, defaults to 60 seconds.
                     type: string
                   minDrainDuration:
                     description: |-
                       MinDrainDuration defines the minimum drain duration allowing time for endpoint deprogramming to complete.
-                      If unspecified, defaults to 5 seconds.
+                      If unspecified, defaults to 10 seconds.
                     type: string
                 type: object
               telemetry:
@@ -10313,6 +10317,7 @@ spec:
                                 Invalid [CEL](https://www.envoyproxy.io/docs/envoy/latest/xds/type/v3/cel.proto.html#common-expression-language-cel-proto) expressions will be ignored.
                               items:
                                 type: string
+                              maxItems: 10
                               type: array
                             sinks:
                               description: Sinks defines the sinks of accesslog.
