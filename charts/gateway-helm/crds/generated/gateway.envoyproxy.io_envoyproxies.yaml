@@ -10248,12 +10248,12 @@ spec:
                   drainTimeout:
                     description: |-
                       DrainTimeout defines the graceful drain timeout. This should be less than the pod's terminationGracePeriodSeconds.
-                      If unspecified, defaults to 600 seconds.
+                      If unspecified, defaults to 60 seconds.
                     type: string
                   minDrainDuration:
                     description: |-
                       MinDrainDuration defines the minimum drain duration allowing time for endpoint deprogramming to complete.
-                      If unspecified, defaults to 5 seconds.
+                      If unspecified, defaults to 10 seconds.
                     type: string
                 type: object
               telemetry:

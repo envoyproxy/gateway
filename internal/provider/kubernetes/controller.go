@@ -148,6 +148,9 @@ type resourceMappings struct {
 	// The key is the namespaced name, group and kind of the filter and the value is the
 	// unstructured form of the resource.
 	extensionRefFilters map[utils.NamespacedNameWithGroupKind]unstructured.Unstructured
+	// httpRouteFilters is a map of HTTPRouteFilters, where the key is the namespaced name,
+	// group and kind of the HTTPFilter.
+	httpRouteFilters map[utils.NamespacedNameWithGroupKind]*egv1a1.HTTPRouteFilter
 }
 
 func newResourceMapping() *resourceMappings {
@@ -161,6 +164,7 @@ func newResourceMapping() *resourceMappings {
 		allAssociatedUDPRoutes:    sets.New[string](),
 		allAssociatedBackendRefs:  sets.New[gwapiv1.BackendObjectReference](),
 		extensionRefFilters:       map[utils.NamespacedNameWithGroupKind]unstructured.Unstructured{},
+		httpRouteFilters:          map[utils.NamespacedNameWithGroupKind]*egv1a1.HTTPRouteFilter{},
 	}
 }
 
@@ -1080,7 +1084,8 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch Gateway CRUDs and reconcile affected GatewayClass.
 	gPredicates := []predicate.TypedPredicate[*gwapiv1.Gateway]{
-		predicate.TypedGenerationChangedPredicate[*gwapiv1.Gateway]{},
+		predicate.Or(predicate.TypedGenerationChangedPredicate[*gwapiv1.Gateway]{},
+			predicate.TypedLabelChangedPredicate[*gwapiv1.Gateway]{}),
 		predicate.NewTypedPredicateFuncs(func(gtw *gwapiv1.Gateway) bool {
 			return r.validateGatewayForReconcile(gtw)
 		}),
@@ -1104,7 +1109,8 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch HTTPRoute CRUDs and process affected Gateways.
 	httprPredicates := []predicate.TypedPredicate[*gwapiv1.HTTPRoute]{
-		predicate.TypedGenerationChangedPredicate[*gwapiv1.HTTPRoute]{},
+		predicate.Or(predicate.TypedGenerationChangedPredicate[*gwapiv1.HTTPRoute]{},
+			predicate.TypedLabelChangedPredicate[*gwapiv1.HTTPRoute]{}),
 	}
 	if r.namespaceLabel != nil {
 		httprPredicates = append(httprPredicates, predicate.NewTypedPredicateFuncs(func(hr *gwapiv1.HTTPRoute) bool {
@@ -1113,8 +1119,8 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &gwapiv1.HTTPRoute{},
-			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, t *gwapiv1.HTTPRoute) []reconcile.Request {
-				return r.enqueueClass(ctx, t)
+			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1.HTTPRoute) []reconcile.Request {
+				return r.enqueueClass(ctx, route)
 			}),
 			httprPredicates...)); err != nil {
 		return err
@@ -1125,7 +1131,8 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch GRPCRoute CRUDs and process affected Gateways.
 	grpcrPredicates := []predicate.TypedPredicate[*gwapiv1.GRPCRoute]{
-		predicate.TypedGenerationChangedPredicate[*gwapiv1.GRPCRoute]{},
+		predicate.Or(predicate.TypedGenerationChangedPredicate[*gwapiv1.GRPCRoute]{},
+			predicate.TypedLabelChangedPredicate[*gwapiv1.GRPCRoute]{}),
 	}
 	if r.namespaceLabel != nil {
 		grpcrPredicates = append(grpcrPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1.GRPCRoute](func(grpc *gwapiv1.GRPCRoute) bool {
@@ -1146,7 +1153,8 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch TLSRoute CRUDs and process affected Gateways.
 	tlsrPredicates := []predicate.TypedPredicate[*gwapiv1a2.TLSRoute]{
-		predicate.TypedGenerationChangedPredicate[*gwapiv1a2.TLSRoute]{},
+		predicate.Or(predicate.TypedGenerationChangedPredicate[*gwapiv1a2.TLSRoute]{},
+			predicate.TypedLabelChangedPredicate[*gwapiv1a2.TLSRoute]{}),
 	}
 	if r.namespaceLabel != nil {
 		tlsrPredicates = append(tlsrPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1a2.TLSRoute](func(route *gwapiv1a2.TLSRoute) bool {
@@ -1167,7 +1175,8 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch UDPRoute CRUDs and process affected Gateways.
 	udprPredicates := []predicate.TypedPredicate[*gwapiv1a2.UDPRoute]{
-		predicate.TypedGenerationChangedPredicate[*gwapiv1a2.UDPRoute]{},
+		predicate.Or(predicate.TypedGenerationChangedPredicate[*gwapiv1a2.UDPRoute]{},
+			predicate.TypedLabelChangedPredicate[*gwapiv1a2.UDPRoute]{}),
 	}
 	if r.namespaceLabel != nil {
 		udprPredicates = append(udprPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1a2.UDPRoute](func(route *gwapiv1a2.UDPRoute) bool {
@@ -1188,7 +1197,8 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch TCPRoute CRUDs and process affected Gateways.
 	tcprPredicates := []predicate.TypedPredicate[*gwapiv1a2.TCPRoute]{
-		predicate.TypedGenerationChangedPredicate[*gwapiv1a2.TCPRoute]{},
+		predicate.Or(predicate.TypedGenerationChangedPredicate[*gwapiv1a2.TCPRoute]{},
+			predicate.TypedLabelChangedPredicate[*gwapiv1a2.TCPRoute]{}),
 	}
 	if r.namespaceLabel != nil {
 		tcprPredicates = append(tcprPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1a2.TCPRoute](func(route *gwapiv1a2.TCPRoute) bool {
@@ -1560,6 +1570,27 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			return err
 		}
 		r.log.Info("Watching additional policy resource", "resource", gvk.String())
+	}
+
+	// Watch HTTPRouteFilter CRUDs and process affected HTTPRoute objects.
+	httpRouteFilter := []predicate.TypedPredicate[*egv1a1.HTTPRouteFilter]{
+		predicate.TypedGenerationChangedPredicate[*egv1a1.HTTPRouteFilter]{},
+		predicate.NewTypedPredicateFuncs[*egv1a1.HTTPRouteFilter](func(be *egv1a1.HTTPRouteFilter) bool {
+			return r.validateHTTPRouteFilterForReconcile(be)
+		}),
+	}
+	if r.namespaceLabel != nil {
+		httpRouteFilter = append(httpRouteFilter, predicate.NewTypedPredicateFuncs[*egv1a1.HTTPRouteFilter](func(be *egv1a1.HTTPRouteFilter) bool {
+			return r.hasMatchingNamespaceLabels(be)
+		}))
+	}
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &egv1a1.HTTPRouteFilter{},
+			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, be *egv1a1.HTTPRouteFilter) []reconcile.Request {
+				return r.enqueueClass(ctx, be)
+			}),
+			httpRouteFilter...)); err != nil {
+		return err
 	}
 
 	return nil
