@@ -132,3 +132,30 @@ spec:
                         socket_address:
                           address: ratelimit.svc.cluster.local
                           port_value: 8081
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-1
+  namespace: default
+spec:
+  endpoints:
+    - ip:
+        address: a.b.c.d
+        port: 3001
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-2
+  namespace: default
+spec:
+  endpoints:
+    - ip:
+        address: 1.1.1.1
+        port: 3001
+    - unix:
+        path: test.sock
+    - fqdn:
+        hostname: foo.bar
+        port: 8080

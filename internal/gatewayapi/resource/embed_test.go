@@ -35,9 +35,13 @@ func TestReadGatewayCRDsDirFS(t *testing.T) {
 	require.Len(t, dirEntries, 1)
 
 	dirEntry := dirEntries[0]
+	require.Equal(t, fs.FileMode(0o444), dirEntry.Type())
+
 	fileInfo, err := dirEntry.Info()
 	require.NoError(t, err)
 	require.Equal(t, "gateway-crds.yaml", fileInfo.Name())
+	require.NotNil(t, fileInfo.ModTime())
+	require.Nil(t, fileInfo.Sys())
 	require.False(t, fileInfo.IsDir())
 
 	fileBytes, err := fs.ReadFile(gatewayCRDsFS, fileInfo.Name())

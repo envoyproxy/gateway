@@ -7,6 +7,8 @@ package egctl
 
 import (
 	"bytes"
+	"context"
+	"io"
 	"path"
 	"testing"
 
@@ -47,17 +49,46 @@ spec:
 ...
 local validation error: HTTPRoute.gateway.networking.k8s.io "backend" is invalid: spec.hostnames[0]: Invalid value: ".;'.';[]": spec.hostnames[0] in body should match '^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
 
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-1
+  namespace: default
+spec:
+...
+local validation error: Backend.gateway.envoyproxy.io "backend-1" is invalid: spec.endpoints[0].ip.address: Invalid value: "a.b.c.d": spec.endpoints[0].ip.address in body should match '^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
+
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-2
+  namespace: default
+spec:
+...
+local validation error: Backend.gateway.envoyproxy.io "backend-2" is invalid: spec.endpoints: Invalid value: "array": fqdn addresses cannot be mixed with other address types
+
 `,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			var out bytes.Buffer
+			b := bytes.NewBufferString("")
+			root := newValidateCommand()
+			root.SetOut(b)
+			root.SetErr(b)
+			args := []string{
+				"--file",
+				path.Join("testdata", "validate", tc.name+".yaml"),
+			}
 
-			err := runValidate(&out, path.Join("testdata", "validate", tc.name+".yaml"))
+			root.SetArgs(args)
+			err := root.ExecuteContext(context.Background())
 			require.NoError(t, err)
-			require.Equal(t, tc.output, out.String())
+
+			out, err := io.ReadAll(b)
+			require.NoError(t, err)
+			require.Equal(t, tc.output, string(out))
 		})
 	}
 }

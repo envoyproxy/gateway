@@ -18625,6 +18625,7 @@ spec:
                             description: |-
                               Pattern matches a regular expression against the value of the HTTP Path.The regex string must
                               adhere to the syntax documented in https://github.com/google/re2/wiki/Syntax.
+                            minLength: 1
                             type: string
                           substitution:
                             description: |-
@@ -18639,11 +18640,16 @@ spec:
                         description: HTTPPathModifierType defines the type of path
                           redirect or rewrite.
                         enum:
-                        - RegexHTTPPathModifier
+                        - ReplaceRegexMatch
                         type: string
                     required:
                     - type
                     type: object
+                    x-kubernetes-validations:
+                    - message: If HTTPPathModifier type is ReplaceRegexMatch, replaceRegexMatch
+                        field needs to be set.
+                      rule: 'self.type == ''ReplaceRegexMatch'' ? has(self.replaceRegexMatch)
+                        : !has(self.replaceRegexMatch)'
                 type: object
             type: object
         required:
