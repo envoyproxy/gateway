@@ -42,6 +42,7 @@ spec:
         - --cpuset-threads
         - --drain-strategy immediate
         - --component-log-level filter:info
+        - --drain-time-s 60
         command:
         - envoy
         env:
@@ -93,7 +94,9 @@ spec:
             drop:
             - ALL
           privileged: false
+          runAsGroup: 65532
           runAsNonRoot: true
+          runAsUser: 65532
           seccompProfile:
             type: RuntimeDefault
         startupProbe:
@@ -167,7 +170,9 @@ spec:
             drop:
             - ALL
           privileged: false
+          runAsGroup: 65532
           runAsNonRoot: true
+          runAsUser: 65532
           seccompProfile:
             type: RuntimeDefault
         startupProbe:
@@ -185,7 +190,7 @@ spec:
       restartPolicy: Always
       schedulerName: default-scheduler
       serviceAccountName: envoy-default-37a8eec1
-      terminationGracePeriodSeconds: 900
+      terminationGracePeriodSeconds: 360
       volumes:
       - name: certs
         secret:
