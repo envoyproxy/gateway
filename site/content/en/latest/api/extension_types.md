@@ -834,35 +834,6 @@ _Appears in:_
 | `attributes` | _object (keys:string, values:string)_ |  false  | Additional Attributes to set for the generated cookie. |
 
 
-#### CustomErrorResponse
-
-
-
-CustomErrorResponse defines the configuration to override specific responses with a custom one.
-
-_Appears in:_
-- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `match` | _[CustomErrorResponseMatch](#customerrorresponsematch)_ |  true  | Match configuration. |
-| `response` | _[CustomResponse](#customresponse)_ |  true  | Response configuration. |
-
-
-#### CustomErrorResponseMatch
-
-
-
-CustomErrorResponseMatch defines the configuration for matching a user response to return a custom one.
-
-_Appears in:_
-- [CustomErrorResponse](#customerrorresponse)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `statusCodes` | _string array_ |  true  | Status codes to match on. A match is successful if any of the status codes match. |
-
-
 #### CustomHeaderExtensionSettings
 
 
@@ -888,7 +859,7 @@ _Appears in:_
 CustomResponse defines the configuration for returning a custom response.
 
 _Appears in:_
-- [CustomErrorResponse](#customerrorresponse)
+- [ResponseOverride](#responseoverride)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -907,7 +878,23 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `valueRef` | _[LocalObjectReference](#localobjectreference)_ |  true  | ValueRef contains the contents of the body.<br />Only a reference to ConfigMap is supported. |
+| `type` | _[ResponseValueType](#responsevaluetype)_ |  true  | Type is the type of method to use to read the body value. |
+| `inline` | _string_ |  false  | Inline contains the value as an inline string. |
+| `valueRef` | _[LocalObjectReference](#localobjectreference)_ |  false  | ValueRef contains the contents of the body<br />specified as a local object reference.<br />Only a reference to ConfigMap is supported. |
+
+
+#### CustomResponseMatch
+
+
+
+CustomResponseMatch defines the configuration for matching a user response to return a custom one.
+
+_Appears in:_
+- [ResponseOverride](#responseoverride)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `statusCode` | _[StatusCodeMatch](#statuscodematch) array_ |  true  | Status code to match on. The match evaluates to true if any of the matches are successful. |
 
 
 #### CustomTag
@@ -3484,6 +3471,32 @@ _Appears in:_
 | `File` | ResourceProviderTypeFile defines the "File" provider.<br /> | 
 
 
+#### ResponseOverride
+
+
+
+ResponseOverride defines the configuration to override specific responses with a custom one.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `match` | _[CustomResponseMatch](#customresponsematch)_ |  true  | Match configuration. |
+| `response` | _[CustomResponse](#customresponse)_ |  true  | Response configuration. |
+
+
+#### ResponseValueType
+
+_Underlying type:_ _string_
+
+ResponseValueType defines the types of values for the response body supported by Envoy Gateway.
+
+_Appears in:_
+- [CustomResponseBody](#customresponsebody)
+
+
+
 
 
 #### RetryOn
@@ -3664,6 +3677,48 @@ _Appears in:_
 | ----- | ----------- |
 | `Exact` | SourceMatchExact All IP Addresses within the specified Source IP CIDR are treated as a single client selector<br />and share the same rate limit bucket.<br /> | 
 | `Distinct` | SourceMatchDistinct Each IP Address within the specified Source IP CIDR is treated as a distinct client selector<br />and uses a separate rate limit bucket/counter.<br />Note: This is only supported for Global Rate Limits.<br /> | 
+
+
+#### StatusCodeMatch
+
+
+
+
+
+_Appears in:_
+- [CustomResponseMatch](#customresponsematch)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `type` | _[StatusCodeValueType](#statuscodevaluetype)_ |  true  | Type is the type of value. |
+| `value` | _string_ |  false  | Value contains the value of the status code. |
+| `range` | _[StatusCodeRange](#statuscoderange)_ |  false  | ValueRef contains the contents of the body<br />specified as a local object reference.<br />Only a reference to ConfigMap is supported. |
+
+
+#### StatusCodeRange
+
+
+
+StatusCodeRange defines the configuration for define a range of status codes.
+
+_Appears in:_
+- [StatusCodeMatch](#statuscodematch)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `start` | _integer_ |  true  | Start of the range, including the start value. |
+| `end` | _integer_ |  true  | End of the range, including the end value. |
+
+
+#### StatusCodeValueType
+
+_Underlying type:_ _string_
+
+StatusCodeValueType defines the types of values for the status code match supported by Envoy Gateway.
+
+_Appears in:_
+- [StatusCodeMatch](#statuscodematch)
+
 
 
 #### StringMatch

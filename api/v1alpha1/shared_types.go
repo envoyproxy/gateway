@@ -610,18 +610,49 @@ type HTTP2Settings struct {
 	OnInvalidMessage *InvalidMessageAction `json:"onInvalidMessage,omitempty"`
 }
 
-// CustomErrorResponse defines the configuration to override specific responses with a custom one.
-type CustomErrorResponse struct {
+// ResponseOverride defines the configuration to override specific responses with a custom one.
+type ResponseOverride struct {
 	// Match configuration.
-	Match CustomErrorResponseMatch `json:"match"`
+	Match CustomResponseMatch `json:"match"`
 	// Response configuration.
 	Response CustomResponse `json:"response"`
 }
 
-// CustomErrorResponseMatch defines the configuration for matching a user response to return a custom one.
-type CustomErrorResponseMatch struct {
-	// Status codes to match on. A match is successful if any of the status codes match.
-	StatusCodes []string `json:"statusCodes"`
+// CustomResponseMatch defines the configuration for matching a user response to return a custom one.
+type CustomResponseMatch struct {
+	// Status code to match on. The match evaluates to true if any of the matches are successful.
+	StatusCode []StatusCodeMatch `json:"statusCode"`
+}
+
+// StatusCodeValueType defines the types of values for the status code match supported by Envoy Gateway.
+// +kubebuilder:validation:Enum=Value;Range
+type StatusCodeValueType string
+
+type StatusCodeMatch struct {
+	// Type is the type of value.
+	//
+	// +kubebuilder:default=Value
+	// +unionDiscriminator
+	Type *StatusCodeValueType `json:"type"`
+
+	// Value contains the value of the status code.
+	//
+	// +optional
+	Value *string `json:"value,omitempty"`
+	// ValueRef contains the contents of the body
+	// specified as a local object reference.
+	// Only a reference to ConfigMap is supported.
+	//
+	// +optional
+	Range *StatusCodeRange `json:"range,omitempty"`
+}
+
+// StatusCodeRange defines the configuration for define a range of status codes.
+type StatusCodeRange struct {
+	// Start of the range, including the start value.
+	Start int `json:"start"`
+	// End of the range, including the end value.
+	End int `json:"end"`
 }
 
 // CustomResponse defines the configuration for returning a custom response.
@@ -635,9 +666,25 @@ type CustomResponse struct {
 	Body CustomResponseBody `json:"body"`
 }
 
+// ResponseValueType defines the types of values for the response body supported by Envoy Gateway.
+// +kubebuilder:validation:Enum=Inline;ValueRef
+type ResponseValueType string
+
 // CustomResponseBody
 type CustomResponseBody struct {
-	// ValueRef contains the contents of the body.
+	// Type is the type of method to use to read the body value.
+	//
+	// +unionDiscriminator
+	Type *ResponseValueType `json:"type"`
+
+	// Inline contains the value as an inline string.
+	//
+	// +optional
+	Inline *string `json:"inline,omitempty"`
+	// ValueRef contains the contents of the body
+	// specified as a local object reference.
 	// Only a reference to ConfigMap is supported.
+	//
+	// +optional
 	ValueRef *gwapiv1.LocalObjectReference `json:"valueRef,omitempty"`
 }

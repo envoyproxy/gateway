@@ -70,11 +70,12 @@ type BackendTrafficPolicySpec struct {
 	// +notImplementedHide
 	Compression []*Compression `json:"compression,omitempty"`
 
-	// CustomErrorResponse defines the configuration to override specific responses with a custom one.
+	// ResponseOverride defines the configuration to override specific responses with a custom one.
+	// If multiple configurations are specified, the first one to match wins.
 	//
 	// +optional
 	// +notImplementedHide
-	CustomErrorResponse []*CustomErrorResponse `json:"customErrorResponse,omitempty"`
+	ResponseOverride []*ResponseOverride `json:"responseOverride,omitempty"`
 }
 
 // +kubebuilder:object:root=true
