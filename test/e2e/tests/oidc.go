@@ -68,7 +68,7 @@ var OIDCTest = suite.ConformanceTest{
 			t.Cleanup(func() {
 				CollectAndDump(t, suite.RestConfig)
 			})
-			
+
 			testOIDC(
 				t,
 				suite,
