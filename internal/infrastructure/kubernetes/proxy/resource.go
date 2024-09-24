@@ -447,6 +447,11 @@ func expectedEnvoySecurityContext(containerSpec *egv1a1.KubernetesContainerSpec)
 	}
 
 	sc := resource.DefaultSecurityContext()
+
+	// run as non-root user
+	sc.RunAsGroup = ptr.To(int64(65532))
+	sc.RunAsUser = ptr.To(int64(65532))
+
 	// Envoy container needs to write to the log file/UDS socket.
 	sc.ReadOnlyRootFilesystem = nil
 	return sc
@@ -454,6 +459,11 @@ func expectedEnvoySecurityContext(containerSpec *egv1a1.KubernetesContainerSpec)
 
 func expectedShutdownManagerSecurityContext() *corev1.SecurityContext {
 	sc := resource.DefaultSecurityContext()
+
+	// run as non-root user
+	sc.RunAsGroup = ptr.To(int64(65532))
+	sc.RunAsUser = ptr.To(int64(65532))
+
 	// ShutdownManger creates a file to indicate the connection drain process is completed,
 	// so it needs file write permission.
 	sc.ReadOnlyRootFilesystem = nil
