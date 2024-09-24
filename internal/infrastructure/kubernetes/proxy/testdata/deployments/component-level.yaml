@@ -44,6 +44,7 @@ spec:
         - --config-yaml test bootstrap config
         - --log-level error
         - --cpuset-threads
+        - --drain-strategy immediate
         - --component-log-level filter:info
         command:
         - envoy

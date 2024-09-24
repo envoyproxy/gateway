@@ -30,7 +30,6 @@
         statPrefix: http
         useRemoteAddress: true
     name: third-listener
-  drainType: MODIFY_ONLY
   filterChains:
   - filterChainMatch:
       serverNames:

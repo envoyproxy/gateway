@@ -171,6 +171,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		fmt.Sprintf("--config-yaml %s", bootstrapConfigurations),
 		fmt.Sprintf("--log-level %s", logging.DefaultEnvoyProxyLoggingLevel()),
 		"--cpuset-threads",
+		"--drain-strategy immediate",
 	}
 
 	if infra.Config != nil &&

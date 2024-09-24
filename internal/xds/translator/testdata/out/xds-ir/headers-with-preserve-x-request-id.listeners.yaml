@@ -29,7 +29,6 @@
         statPrefix: http
         useRemoteAddress: true
     name: first-listener
-  drainType: MODIFY_ONLY
   name: first-listener
   perConnectionBufferLimitBytes: 32768
 - address:
@@ -62,6 +61,5 @@
         statPrefix: http
         useRemoteAddress: true
     name: second-listener
-  drainType: MODIFY_ONLY
   name: second-listener
   perConnectionBufferLimitBytes: 32768

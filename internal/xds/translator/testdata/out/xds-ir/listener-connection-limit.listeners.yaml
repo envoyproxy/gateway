@@ -30,7 +30,6 @@
         statPrefix: http
         useRemoteAddress: true
     name: first-listener
-  drainType: MODIFY_ONLY
   name: first-listener
   perConnectionBufferLimitBytes: 32768
 - address:
@@ -70,20 +69,17 @@
         statPrefix: http
         useRemoteAddress: true
     name: second-listener
-  drainType: MODIFY_ONLY
   name: second-listener
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
       address: 0.0.0.0
       portValue: 10082
-  drainType: MODIFY_ONLY
   name: third-listener
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
       address: 0.0.0.0
       portValue: 10083
-  drainType: MODIFY_ONLY
   name: fourth-listener
   perConnectionBufferLimitBytes: 32768
