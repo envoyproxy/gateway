@@ -1430,26 +1430,20 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 		require.NoError(t, cli.Delete(ctx, nonWatchedSvc))
 	}()
 
-	watchedHTTPRoute := test.GetHTTPRoute(
-		types.NamespacedName{
-			Namespace: watchedNS.Name,
-			Name:      "watched-http-route",
-		},
-		watchedGateway.Name,
-		types.NamespacedName{Name: watchedSvc.Name}, 80)
+	watchedHTTPRoute := test.GetHTTPRoute(types.NamespacedName{
+		Namespace: watchedNS.Name,
+		Name:      "watched-http-route",
+	}, watchedGateway.Name, types.NamespacedName{Name: watchedSvc.Name}, 80, "")
 
 	require.NoError(t, cli.Create(ctx, watchedHTTPRoute))
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, watchedHTTPRoute))
 	}()
 
-	nonWatchedHTTPRoute := test.GetHTTPRoute(
-		types.NamespacedName{
-			Namespace: nonWatchedNS.Name,
-			Name:      "non-watched-http-route",
-		},
-		nonWatchedGateway.Name,
-		types.NamespacedName{Name: nonWatchedSvc.Name}, 8001)
+	nonWatchedHTTPRoute := test.GetHTTPRoute(types.NamespacedName{
+		Namespace: nonWatchedNS.Name,
+		Name:      "non-watched-http-route",
+	}, nonWatchedGateway.Name, types.NamespacedName{Name: nonWatchedSvc.Name}, 8001, "")
 	require.NoError(t, cli.Create(ctx, nonWatchedHTTPRoute))
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, nonWatchedHTTPRoute))

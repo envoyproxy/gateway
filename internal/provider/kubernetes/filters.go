@@ -10,6 +10,8 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 func (r *gatewayAPIReconciler) getExtensionRefFilters(ctx context.Context) ([]unstructured.Unstructured, error) {
@@ -42,4 +44,13 @@ func (r *gatewayAPIReconciler) getExtensionRefFilters(ctx context.Context) ([]un
 	}
 
 	return resourceItems, nil
+}
+
+func (r *gatewayAPIReconciler) getHTTPRouteFilters(ctx context.Context) ([]egv1a1.HTTPRouteFilter, error) {
+	httpFilterList := new(egv1a1.HTTPRouteFilterList)
+	if err := r.client.List(ctx, httpFilterList); err != nil {
+		return nil, fmt.Errorf("failed to list HTTPRouteFilters: %w", err)
+	}
+
+	return httpFilterList.Items, nil
 }
