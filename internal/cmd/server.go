@@ -21,8 +21,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/metrics"
 	providerrunner "github.com/envoyproxy/gateway/internal/provider/runner"
-	xdsserverrunner "github.com/envoyproxy/gateway/internal/xds/server/runner"
-	xdstranslatorrunner "github.com/envoyproxy/gateway/internal/xds/translator/runner"
+	xdsrunner "github.com/envoyproxy/gateway/internal/xds/runner"
 )
 
 // cfgPath is the path to the EnvoyGateway configuration file.
@@ -154,18 +153,17 @@ func setupRunners(cfg *config.Server) (err error) {
 		return err
 	}
 
-	xds := new(message.Xds)
-	// Start the Xds Translator Service
-	// It subscribes to the xdsIR, translates it into xds Resources and publishes it.
+	// Start the Xds Service
+	// It subscribes to the xdsIR, translates it into xds Resources and
+	// updates the xds control plane cache.
 	// It also computes the EnvoyPatchPolicy statuses and publishes it.
-	xdsTranslatorRunner := xdstranslatorrunner.New(&xdstranslatorrunner.Config{
+	xdsRunner := xdsrunner.New(&xdsrunner.Config{
 		Server:            *cfg,
 		XdsIR:             xdsIR,
-		Xds:               xds,
 		ExtensionManager:  extMgr,
 		ProviderResources: pResources,
 	})
-	if err = xdsTranslatorRunner.Start(ctx); err != nil {
+	if err = xdsRunner.Start(ctx); err != nil {
 		return err
 	}
 
@@ -177,17 +175,6 @@ func setupRunners(cfg *config.Server) (err error) {
 		InfraIR: infraIR,
 	})
 	if err = infraRunner.Start(ctx); err != nil {
-		return err
-	}
-
-	// Start the xDS Server
-	// It subscribes to the xds Resources and configures the remote Envoy Proxy
-	// via the xDS Protocol.
-	xdsServerRunner := xdsserverrunner.New(&xdsserverrunner.Config{
-		Server: *cfg,
-		Xds:    xds,
-	})
-	if err = xdsServerRunner.Start(ctx); err != nil {
 		return err
 	}
 
@@ -210,7 +197,6 @@ func setupRunners(cfg *config.Server) (err error) {
 	pResources.Close()
 	xdsIR.Close()
 	infraIR.Close()
-	xds.Close()
 
 	cfg.Logger.Info("shutting down")
 

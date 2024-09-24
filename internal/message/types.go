@@ -15,7 +15,6 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
-	xdstypes "github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 // ProviderResources message
@@ -130,9 +129,4 @@ type XdsIR struct {
 // InfraIR message
 type InfraIR struct {
 	watchable.Map[string, *ir.Infra]
-}
-
-// Xds message
-type Xds struct {
-	watchable.Map[string, *xdstypes.ResourceVersionTable]
 }
