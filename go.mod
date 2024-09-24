@@ -62,7 +62,7 @@ require (
 )
 
 require (
-	github.com/docker/docker v27.2.0+incompatible
+	github.com/docker/docker v27.3.1+incompatible
 	github.com/replicatedhq/troubleshoot v0.102.0
 	google.golang.org/grpc v1.66.2
 )
