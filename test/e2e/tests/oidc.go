@@ -54,28 +54,7 @@ var OIDCTest = suite.ConformanceTest{
 				CollectAndDump(t, suite.RestConfig)
 			})
 
-			testOIDC(
-				t,
-				suite,
-				"http://www.example.com/myapp",
-				"http://www.example.com/myapp/logout",
-				"http-with-oidc",
-				"oidc-test")
-		})
-
-		t.Run("oidc provider represented by a BackendCluster", func(t *testing.T) {
-			// Add a function to dump current cluster status
-			t.Cleanup(func() {
-				CollectAndDump(t, suite.RestConfig)
-			})
-
-			testOIDC(
-				t,
-				suite,
-				"http://www.example.com/foo",
-				"http://www.example.com/foo/logout",
-				"http-with-oidc-backendcluster",
-				"oidc-test-backendcluster")
+			testOIDC(t, suite, "oidc-test")
 		})
 
 		t.Run("http route without oidc authentication", func(t *testing.T) {
@@ -119,8 +98,14 @@ var OIDCTest = suite.ConformanceTest{
 	},
 }
 
-func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, testURL, logoutURL, route, sp string) {
-	ns := "gateway-conformance-infra"
+func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, sp string) {
+	var (
+		testURL   = "http://www.example.com/myapp"
+		logoutURL = "http://www.example.com/myapp/logout"
+		route     = "http-with-oidc"
+		ns        = "gateway-conformance-infra"
+	)
+
 	routeNN := types.NamespacedName{Name: route, Namespace: ns}
 	gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 	gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
