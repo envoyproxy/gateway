@@ -42,27 +42,6 @@ data:
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
 metadata:
-  name: oidc-test
-  namespace: gateway-conformance-infra
-spec:
-  targetRefs:
-  - group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: http-with-oidc
-  oidc:
-    provider:
-      issuer: "http://keycloak.gateway-conformance-infra/realms/master"
-      authorizationEndpoint: "http://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/auth"
-      tokenEndpoint: "http://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/token"
-    clientID: "oidctest"
-    clientSecret:
-      name: "oidctest-secret"
-    redirectURL: "http://www.example.com/myapp/oauth2/callback"
-    logoutPath: "/myapp/logout"
----
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: SecurityPolicy
-metadata:
   name: oidc-test       # Test OIDC Provider represented by a backend cluster
   namespace: gateway-conformance-infra
 spec:
