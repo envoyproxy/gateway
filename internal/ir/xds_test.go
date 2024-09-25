@@ -309,8 +309,10 @@ var (
 		},
 		URLRewrite: &URLRewrite{
 			Hostname: ptr.To("rewrite.example.com"),
-			Path: &HTTPPathModifier{
-				FullReplace: ptr.To("/rewrite"),
+			Path: &ExtendedHTTPPathModifier{
+				HTTPPathModifier: HTTPPathModifier{
+					FullReplace: ptr.To("/rewrite"),
+				},
 			},
 		},
 	}
@@ -323,9 +325,11 @@ var (
 		},
 		URLRewrite: &URLRewrite{
 			Hostname: ptr.To("rewrite.example.com"),
-			Path: &HTTPPathModifier{
-				FullReplace:        ptr.To("/rewrite"),
-				PrefixMatchReplace: ptr.To("/rewrite"),
+			Path: &ExtendedHTTPPathModifier{
+				HTTPPathModifier: HTTPPathModifier{
+					FullReplace:        ptr.To("/rewrite"),
+					PrefixMatchReplace: ptr.To("/rewrite"),
+				},
 			},
 		},
 	}

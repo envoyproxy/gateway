@@ -40,10 +40,10 @@ func getShutdownCommand() *cobra.Command {
 		},
 	}
 
-	cmd.PersistentFlags().DurationVar(&drainTimeout, "drain-timeout", 600*time.Second,
+	cmd.PersistentFlags().DurationVar(&drainTimeout, "drain-timeout", 60*time.Second,
 		"Graceful shutdown timeout. This should be less than the pod's terminationGracePeriodSeconds.")
 
-	cmd.PersistentFlags().DurationVar(&minDrainDuration, "min-drain-duration", 5*time.Second,
+	cmd.PersistentFlags().DurationVar(&minDrainDuration, "min-drain-duration", 10*time.Second,
 		"Minimum drain duration allowing time for endpoint deprogramming to complete.")
 
 	cmd.PersistentFlags().IntVar(&exitAtConnections, "exit-at-connections", 0,

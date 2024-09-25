@@ -183,9 +183,12 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		args = append(args, fmt.Sprintf("--component-log-level %s", componentsLogLevel))
 	}
 
+	// Default
+	drainTimeout := 60.0
 	if shutdownConfig != nil && shutdownConfig.DrainTimeout != nil {
-		args = append(args, fmt.Sprintf("--drain-time-s %.0f", shutdownConfig.DrainTimeout.Seconds()))
+		drainTimeout = shutdownConfig.DrainTimeout.Seconds()
 	}
+	args = append(args, fmt.Sprintf("--drain-time-s %.0f", drainTimeout))
 
 	if infra.Config != nil {
 		args = append(args, infra.Config.Spec.ExtraArgs...)
@@ -444,6 +447,11 @@ func expectedEnvoySecurityContext(containerSpec *egv1a1.KubernetesContainerSpec)
 	}
 
 	sc := resource.DefaultSecurityContext()
+
+	// run as non-root user
+	sc.RunAsGroup = ptr.To(int64(65532))
+	sc.RunAsUser = ptr.To(int64(65532))
+
 	// Envoy container needs to write to the log file/UDS socket.
 	sc.ReadOnlyRootFilesystem = nil
 	return sc
@@ -451,6 +459,11 @@ func expectedEnvoySecurityContext(containerSpec *egv1a1.KubernetesContainerSpec)
 
 func expectedShutdownManagerSecurityContext() *corev1.SecurityContext {
 	sc := resource.DefaultSecurityContext()
+
+	// run as non-root user
+	sc.RunAsGroup = ptr.To(int64(65532))
+	sc.RunAsUser = ptr.To(int64(65532))
+
 	// ShutdownManger creates a file to indicate the connection drain process is completed,
 	// so it needs file write permission.
 	sc.ReadOnlyRootFilesystem = nil
