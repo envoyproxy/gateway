@@ -3109,7 +3109,7 @@ func (in *JWTPrincipal) DeepCopyInto(out *JWTPrincipal) {
 	}
 	if in.Scopes != nil {
 		in, out := &in.Scopes, &out.Scopes
-		*out = make([]string, len(*in))
+		*out = make([]JWTScope, len(*in))
 		copy(*out, *in)
 	}
 }
