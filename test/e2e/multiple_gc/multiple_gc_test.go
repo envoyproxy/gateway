@@ -27,7 +27,6 @@ import (
 
 func TestMultipleGC(t *testing.T) {
 	flag.Parse()
-
 	c, cfg := kubetest.NewClient(t)
 
 	if flags.RunTest != nil && *flags.RunTest != "" {
@@ -76,6 +75,7 @@ func TestMultipleGC(t *testing.T) {
 		privateGatewaySuiteGatewayClassName := "private"
 		privateGatewaySuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 			Client:               c,
+			RestConfig:           cfg,
 			GatewayClassName:     privateGatewaySuiteGatewayClassName,
 			Debug:                *flags.ShowDebug,
 			CleanupBaseResources: *flags.CleanupBaseResources,
