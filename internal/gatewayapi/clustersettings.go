@@ -109,6 +109,7 @@ func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings, traffic *ir.Traf
 	if pto.HTTP != nil {
 		var cit *metav1.Duration
 		var mcd *metav1.Duration
+		var rt *metav1.Duration
 
 		if pto.HTTP.ConnectionIdleTimeout != nil {
 			d, err := time.ParseDuration(string(*pto.HTTP.ConnectionIdleTimeout))
@@ -128,9 +129,19 @@ func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings, traffic *ir.Traf
 			}
 		}
 
+		if pto.HTTP.RequestTimeout != nil {
+			d, err := time.ParseDuration(string(*pto.HTTP.RequestTimeout))
+			if err != nil {
+				errs = errors.Join(errs, fmt.Errorf("invalid RequestTimeout value %s", *pto.HTTP.RequestTimeout))
+			} else {
+				rt = ptr.To(metav1.Duration{Duration: d})
+			}
+		}
+
 		to.HTTP = &ir.HTTPTimeout{
 			ConnectionIdleTimeout: cit,
 			MaxConnectionDuration: mcd,
+			RequestTimeout:        rt,
 		}
 	}
 
