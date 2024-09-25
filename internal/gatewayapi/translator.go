@@ -32,6 +32,10 @@ const (
 	// The value should be the name of the accepted Envoy Gateway.
 	OwningGatewayNameLabel = "gateway.envoyproxy.io/owning-gateway-name"
 
+	// GEP-1762: must label all generated resources with the name of the Gateway resource
+	// https://gateway-api.sigs.k8s.io/geps/gep-1762/
+	GatewayAPIGatewayNameLabel = "gateway.networking.k8s.io/gateway-name"
+
 	// minEphemeralPort is the first port in the ephemeral port range.
 	minEphemeralPort = 1024
 	// wellKnownPortShift is the constant added to the well known port (1-1023)
@@ -282,11 +286,13 @@ func (t *Translator) InitIRs(gateways []*GatewayContext) (map[string]*ir.Xds, ma
 			irKey = string(t.GatewayClassName)
 
 			maps.Copy(labels, GatewayClassOwnerLabel(string(t.GatewayClassName)))
+			maps.Copy(labels, GatewayNameLabelForMergeGateways(gateways))
 			gwInfraIR.Proxy.GetProxyMetadata().Labels = labels
 		} else {
 			irKey = irStringKey(gateway.Gateway.Namespace, gateway.Gateway.Name)
 
 			maps.Copy(labels, GatewayOwnerLabels(gateway.Namespace, gateway.Name))
+			maps.Copy(labels, GatewayNameLabel(gateway.Name))
 			gwInfraIR.Proxy.GetProxyMetadata().Labels = labels
 		}
 

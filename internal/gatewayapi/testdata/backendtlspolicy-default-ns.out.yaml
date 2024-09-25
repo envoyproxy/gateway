@@ -220,6 +220,7 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-btls
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+          gateway.networking.k8s.io/gateway-name: gateway-btls
       name: envoy-gateway/gateway-btls
 xdsIR:
   envoy-gateway/gateway-btls:

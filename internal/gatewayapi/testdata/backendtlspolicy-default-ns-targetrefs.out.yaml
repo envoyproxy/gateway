@@ -244,6 +244,7 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-btls
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+          gateway.networking.k8s.io/gateway-name: gateway-btls
       name: envoy-gateway/gateway-btls
   envoy-gateway/gateway-btls2:
     proxy:
@@ -259,6 +260,7 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-btls2
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+          gateway.networking.k8s.io/gateway-name: gateway-btls2
       name: envoy-gateway/gateway-btls2
 xdsIR:
   envoy-gateway/gateway-btls:

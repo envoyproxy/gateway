@@ -138,6 +138,7 @@ infraIR:
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gatewayclass: envoy-gateway-class
+          gateway.networking.k8s.io/gateway-name: gateway-1,gateway-2
       name: envoy-gateway-class
 xdsIR:
   envoy-gateway-class:

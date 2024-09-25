@@ -220,6 +220,7 @@ infraIR:
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gatewayclass: envoy-gateway-class
+          gateway.networking.k8s.io/gateway-name: gateway-1,mfqjpuycbgjrtdww
       name: envoy-gateway-class
 securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
