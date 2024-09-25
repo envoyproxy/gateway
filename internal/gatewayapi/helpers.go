@@ -247,15 +247,15 @@ func OwnerLabels(gateway *gwapiv1.Gateway, mergeGateways bool) map[string]string
 	return GatewayOwnerLabels(gateway.Namespace, gateway.Name)
 }
 
-func GatewayNameLabel(name string) map[string]string {
+func GatewayNameLabel(gateway string) map[string]string {
 	return map[string]string{
-		GatewayAPIGatewayNameLabel: name,
+		GatewayAPIGatewayNameLabel: gateway,
 	}
 }
 
 // All gateway names are concatenated and stored in a single label if mergeGateways is enabled.
 // Probably not the best way to do this, should revisit this and come up with a better solution upstream.
-func GatewayNameLabelForMergeGateways(gateways []*GatewayContext) map[string]string {
+func GatewayNameLabelForMergedGateways(gateways []*GatewayContext) map[string]string {
 	var owningGatewayNames string
 	for _, gateway := range gateways {
 		owningGatewayNames = owningGatewayNames + gateway.Name + ","
