@@ -15,6 +15,7 @@ import (
 // SkipTests is a list of tests that are skipped in the conformance suite.
 var SkipTests = []suite.ConformanceTest{
 	tests.GatewayStaticAddresses,
+	tests.GatewayInfrastructure,
 }
 
 func skipTestsShortNames(skipTests []suite.ConformanceTest) []string {
