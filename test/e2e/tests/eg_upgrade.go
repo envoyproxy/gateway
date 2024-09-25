@@ -53,7 +53,7 @@ var EGUpgradeTest = suite.ConformanceTest{
 			depNS := "envoy-gateway-system"
 			lastVersionTag := os.Getenv("last_version_tag")
 			if lastVersionTag == "" {
-				lastVersionTag = "v1.0.2" // Default version tag if not specified
+				lastVersionTag = "v1.1.0" // Default version tag if not specified
 			}
 
 			// Uninstall the current version of EG
@@ -280,7 +280,7 @@ func migrateChartCRDs(actionConfig *action.Configuration, gatewayChart *chart.Ch
 				return err
 			}
 			// https://gateway-api.sigs.k8s.io/guides/?h=upgrade#v11-upgrade-notes
-			if newVersion == "v1.1.0" {
+			if newVersion == "v1.2.0-rc1" {
 				helper := resource.NewHelper(crd.Client, crd.Mapping)
 				existingCRD, err := helper.Get(crd.Namespace, crd.Name)
 				if kerrors.IsNotFound(err) {
@@ -292,8 +292,7 @@ func migrateChartCRDs(actionConfig *action.Configuration, gatewayChart *chart.Ch
 				if err != nil {
 					return err
 				}
-
-				if existingVersion == "v1.0.0" {
+				if existingVersion == "v1.1.0" {
 					// Delete the existing instance of the BTLS CRD
 					_, errs := actionConfig.KubeClient.Delete([]*resource.Info{crd})
 					if errs != nil {
