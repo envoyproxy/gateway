@@ -29,13 +29,12 @@ const (
 var ExtendedFeatures = sets.New[features.FeatureName]()
 
 func init() {
-	for _, feature := range features.GatewayExtendedFeatures.UnsortedList() {
-		ExtendedFeatures.Insert(feature.Name)
-	}
-	for _, feature := range features.HTTPRouteExtendedFeatures.UnsortedList() {
-		ExtendedFeatures.Insert(feature.Name)
-	}
-	for _, feature := range features.MeshExtendedFeatures.UnsortedList() {
+	featureLists := sets.New[features.Feature]().
+		Insert(features.GatewayExtendedFeatures.UnsortedList()...).
+		Insert(features.HTTPRouteExtendedFeatures.UnsortedList()...).
+		Insert(features.MeshExtendedFeatures.UnsortedList()...)
+
+	for _, feature := range featureLists.UnsortedList() {
 		ExtendedFeatures.Insert(feature.Name)
 	}
 }
