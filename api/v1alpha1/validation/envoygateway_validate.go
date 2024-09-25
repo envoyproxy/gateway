@@ -141,8 +141,7 @@ func validateEnvoyGatewayLogging(logging *egv1a1.EnvoyGatewayLogging) error {
 		case egv1a1.LogComponentGatewayDefault,
 			egv1a1.LogComponentProviderRunner,
 			egv1a1.LogComponentGatewayAPIRunner,
-			egv1a1.LogComponentXdsTranslatorRunner,
-			egv1a1.LogComponentXdsServerRunner,
+			egv1a1.LogComponentXdsRunner,
 			egv1a1.LogComponentInfrastructureRunner,
 			egv1a1.LogComponentGlobalRateLimitRunner:
 			switch logLevel {

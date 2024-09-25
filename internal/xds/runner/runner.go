@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"reflect"
 	"strconv"
 	"time"
 
@@ -27,13 +28,17 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
+	ktypes "k8s.io/apimachinery/pkg/types"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	extension "github.com/envoyproxy/gateway/internal/extension/types"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
+	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 	"github.com/envoyproxy/gateway/internal/xds/cache"
-	xdstypes "github.com/envoyproxy/gateway/internal/xds/types"
+	"github.com/envoyproxy/gateway/internal/xds/translator"
 )
 
 const (
@@ -52,9 +57,11 @@ const (
 
 type Config struct {
 	config.Server
-	Xds   *message.Xds
-	grpc  *grpc.Server
-	cache cache.SnapshotCacheWithCallbacks
+	XdsIR             *message.XdsIR
+	ExtensionManager  extension.Manager
+	ProviderResources *message.ProviderResources
+	grpc              *grpc.Server
+	cache             cache.SnapshotCacheWithCallbacks
 }
 
 type Runner struct {
@@ -66,10 +73,10 @@ func New(cfg *Config) *Runner {
 }
 
 func (r *Runner) Name() string {
-	return string(egv1a1.LogComponentXdsServerRunner)
+	return string(egv1a1.LogComponentXdsRunner)
 }
 
-// Start starts the xds-server runner
+// Start starts the xds runner
 func (r *Runner) Start(ctx context.Context) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 
@@ -88,10 +95,105 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	// Start and listen xDS gRPC Server.
 	go r.serveXdsServer(ctx)
 
-	// Start message Subscription.
 	go r.subscribeAndTranslate(ctx)
 	r.Logger.Info("started")
 	return
+}
+
+func (r *Runner) subscribeAndTranslate(ctx context.Context) {
+	// Subscribe to resources
+	message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentXdsRunner), Message: "xds-ir"}, r.XdsIR.Subscribe(ctx),
+		func(update message.Update[string, *ir.Xds], errChan chan error) {
+			r.Logger.Info("received an update")
+			key := update.Key
+			val := update.Value
+
+			if update.Delete {
+				err := r.cache.GenerateNewSnapshot(key, nil)
+				if err != nil {
+					r.Logger.Error(err, "failed to clear snapshot")
+					errChan <- err
+				}
+			} else {
+				// Translate to xds resources
+				t := &translator.Translator{
+					FilterOrder: val.FilterOrder,
+				}
+
+				// Set the extension manager if an extension is loaded
+				if r.ExtensionManager != nil {
+					t.ExtensionManager = &r.ExtensionManager
+				}
+
+				// Set the rate limit service URL if global rate limiting is enabled.
+				if r.EnvoyGateway.RateLimit != nil {
+					t.GlobalRateLimit = &translator.GlobalRateLimitSettings{
+						ServiceURL: ratelimit.GetServiceURL(r.Namespace, r.DNSDomain),
+						FailClosed: r.EnvoyGateway.RateLimit.FailClosed,
+					}
+					if r.EnvoyGateway.RateLimit.Timeout != nil {
+						t.GlobalRateLimit.Timeout = r.EnvoyGateway.RateLimit.Timeout.Duration
+					}
+				}
+
+				result, err := t.Translate(val)
+				if err != nil {
+					r.Logger.Error(err, "failed to translate xds ir")
+					errChan <- err
+				}
+
+				// xDS translation is done in a best-effort manner, so the result
+				// may contain partial resources even if there are errors.
+				if result == nil || result.XdsResources == nil {
+					r.Logger.Info("no xds resources to publish")
+					return
+				}
+
+				if r.cache == nil {
+					r.Logger.Error(err, "failed to init snapshot cache")
+					errChan <- err
+				} else {
+					// Update snapshot cache
+					err = r.cache.GenerateNewSnapshot(key, result.XdsResources)
+					if err != nil {
+						r.Logger.Error(err, "failed to generate a snapshot")
+						errChan <- err
+					}
+				}
+
+				// Get all status keys from watchable and save them in the map statusesToDelete.
+				// Iterating through result.EnvoyPatchPolicyStatuses, any valid keys will be removed from statusesToDelete.
+				// Remaining keys will be deleted from watchable before we exit this function.
+				statusesToDelete := make(map[ktypes.NamespacedName]bool)
+				for key := range r.ProviderResources.EnvoyPatchPolicyStatuses.LoadAll() {
+					statusesToDelete[key] = true
+				}
+
+				// Publish EnvoyPatchPolicyStatus
+				for _, e := range result.EnvoyPatchPolicyStatuses {
+					key := ktypes.NamespacedName{
+						Name:      e.Name,
+						Namespace: e.Namespace,
+					}
+					// Skip updating status for policies with empty status
+					// They may have been skipped in this translation because
+					// their target is not found (not relevant)
+					if !(reflect.ValueOf(e.Status).IsZero()) {
+						r.ProviderResources.EnvoyPatchPolicyStatuses.Store(key, e.Status)
+					}
+					delete(statusesToDelete, key)
+				}
+				// Discard the EnvoyPatchPolicyStatuses to reduce memory footprint
+				result.EnvoyPatchPolicyStatuses = nil
+
+				// Delete all the deletable status keys
+				for key := range statusesToDelete {
+					r.ProviderResources.EnvoyPatchPolicyStatuses.Delete(key)
+				}
+			}
+		},
+	)
+	r.Logger.Info("subscriber shutting down")
 }
 
 func (r *Runner) serveXdsServer(ctx context.Context) {
@@ -128,36 +230,6 @@ func registerServer(srv serverv3.Server, g *grpc.Server) {
 	listenerv3.RegisterListenerDiscoveryServiceServer(g, srv)
 	routev3.RegisterRouteDiscoveryServiceServer(g, srv)
 	runtimev3.RegisterRuntimeDiscoveryServiceServer(g, srv)
-}
-
-func (r *Runner) subscribeAndTranslate(ctx context.Context) {
-	// Subscribe to resources
-	message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentXdsServerRunner), Message: "xds"}, r.Xds.Subscribe(ctx),
-		func(update message.Update[string, *xdstypes.ResourceVersionTable], errChan chan error) {
-			key := update.Key
-			val := update.Value
-
-			r.Logger.Info("received an update")
-			var err error
-			if update.Delete {
-				err = r.cache.GenerateNewSnapshot(key, nil)
-			} else if val != nil && val.XdsResources != nil {
-				if r.cache == nil {
-					r.Logger.Error(err, "failed to init snapshot cache")
-					errChan <- err
-				} else {
-					// Update snapshot cache
-					err = r.cache.GenerateNewSnapshot(key, val.XdsResources)
-				}
-			}
-			if err != nil {
-				r.Logger.Error(err, "failed to generate a snapshot")
-				errChan <- err
-			}
-		},
-	)
-
-	r.Logger.Info("subscriber shutting down")
 }
 
 func (r *Runner) tlsConfig(cert, key, ca string) *tls.Config {

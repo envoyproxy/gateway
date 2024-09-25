@@ -137,11 +137,8 @@ const (
 	// LogComponentGatewayAPIRunner defines the "gateway-api" runner component.
 	LogComponentGatewayAPIRunner EnvoyGatewayLogComponent = "gateway-api"
 
-	// LogComponentXdsTranslatorRunner defines the "xds-translator" runner component.
-	LogComponentXdsTranslatorRunner EnvoyGatewayLogComponent = "xds-translator"
-
-	// LogComponentXdsServerRunner defines the "xds-server" runner component.
-	LogComponentXdsServerRunner EnvoyGatewayLogComponent = "xds-server"
+	// LogComponentXdsRunner defines the "xds" runner component.
+	LogComponentXdsRunner EnvoyGatewayLogComponent = "xds"
 
 	// LogComponentInfrastructureRunner defines the "infrastructure" runner component.
 	LogComponentInfrastructureRunner EnvoyGatewayLogComponent = "infrastructure"
