@@ -46,7 +46,7 @@ func TestE2E(t *testing.T) {
 		RunTest:              *flags.RunTest,
 		// SupportedFeatures cannot be empty, so we set it to SupportGateway
 		// All e2e tests should leave Features empty.
-		SupportedFeatures: sets.New[features.SupportedFeature](features.SupportGateway),
+		SupportedFeatures: sets.New[features.FeatureName](features.SupportGateway),
 		SkipTests: []string{
 			tests.GatewayInfraResourceTest.ShortName, // https://github.com/envoyproxy/gateway/issues/3191
 		},
