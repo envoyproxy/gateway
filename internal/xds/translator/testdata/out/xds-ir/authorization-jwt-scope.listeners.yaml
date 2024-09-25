@@ -18,36 +18,48 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
             providers:
-              first-route/example:
+              httproute/default/httproute-1/rule/0/match/0/www_example_com/example1:
                 audiences:
-                - foo.com
+                - two.foo.com
                 forward: true
-                fromCookies:
-                - session_access_token
-                fromHeaders:
-                - name: Authorization
-                  valuePrefix: 'Bearer '
-                fromParams:
-                - token
-                issuer: https://www.example.com
+                issuer: https://two.example.com
                 normalizePayloadInMetadata:
                   spaceDelimitedClaims:
                   - scope
-                payloadInMetadata: example
+                payloadInMetadata: example1
                 remoteJwks:
                   asyncFetch: {}
                   cacheDuration: 300s
                   httpUri:
-                    cluster: localhost_443
+                    cluster: two_example_com_443
                     timeout: 10s
-                    uri: https://localhost/jwt/public-key/jwks.json
+                    uri: https://two.example.com/jwt/public-key/jwks.json
+                  retryPolicy: {}
+              httproute/default/httproute-2/rule/0/match/0/www_example_com/example1:
+                audiences:
+                - one.foo.com
+                forward: true
+                issuer: https://one.example.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scope
+                payloadInMetadata: example1
+                remoteJwks:
+                  asyncFetch: {}
+                  cacheDuration: 300s
+                  httpUri:
+                    cluster: one_example_com_443
+                    timeout: 10s
+                    uri: https://one.example.com/jwt/public-key/jwks.json
                   retryPolicy: {}
             requirementMap:
-              first-route:
-                requiresAny:
-                  requirements:
-                  - providerName: first-route/example
-                  - allowMissing: {}
+              httproute/default/httproute-1/rule/0/match/0/www_example_com:
+                providerName: httproute/default/httproute-1/rule/0/match/0/www_example_com/example1
+              httproute/default/httproute-2/rule/0/match/0/www_example_com:
+                providerName: httproute/default/httproute-2/rule/0/match/0/www_example_com/example1
+        - name: envoy.filters.http.rbac
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBAC
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -59,10 +71,10 @@
           configSource:
             ads: {}
             resourceApiVersion: V3
-          routeConfigName: first-listener
+          routeConfigName: envoy-gateway/gateway-1/http
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-10080
         useRemoteAddress: true
-    name: first-listener
-  name: first-listener
+    name: envoy-gateway/gateway-1/http
+  name: envoy-gateway/gateway-1/http
   perConnectionBufferLimitBytes: 32768

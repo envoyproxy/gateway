@@ -23,7 +23,10 @@
                 - foo.com
                 forward: true
                 issuer: https://www.example.com
-                payloadInMetadata: https://www.example.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scope
+                payloadInMetadata: example
                 remoteJwks:
                   asyncFetch: {}
                   cacheDuration: 300s

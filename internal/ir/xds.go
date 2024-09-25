@@ -987,6 +987,8 @@ type AuthorizationRule struct {
 type Principal struct {
 	// ClientCIDRs defines the client CIDRs to be matched.
 	ClientCIDRs []*CIDRMatch `json:"clientCIDRs,omitempty"`
+	// JWT defines the JWT principal to be matched.
+	JWT *egv1a1.JWTPrincipal `json:"jwt,omitempty"`
 }
 
 // FaultInjection defines the schema for injecting faults into requests.
