@@ -827,7 +827,13 @@ spec:
                       required:
                       - type
                       type: object
+                    maxItems: 2
                     type: array
+                    x-kubernetes-validations:
+                    - message: Stateful resumption cannot be repeated
+                      rule: self.filter(f, f.type == 'Stateful').size() <= 1
+                    - message: Stateless resumption cannot be repeated
+                      rule: self.filter(f, f.type == 'Stateless').size() <= 1
                   sessionTimeout:
                     description: |-
                       SessionTimeout determines the maximum lifetime of a TLS session.

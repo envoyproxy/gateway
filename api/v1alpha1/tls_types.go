@@ -27,6 +27,9 @@ type ClientTLSSettings struct {
 	// By default, Envoy Gateway does not support session resumption. Users can enable stateful
 	// and stateless session resumption by including them in the sessionResumption list.
 	// +notImplementedHide
+	// +kubebuilder:validation:XValidation:message="Stateful resumption cannot be repeated",rule="self.filter(f, f.type == 'Stateful').size() <= 1"
+	// +kubebuilder:validation:XValidation:message="Stateless resumption cannot be repeated",rule="self.filter(f, f.type == 'Stateless').size() <= 1"
+	// +kubebuilder:validation:MaxItems=2
 	SessionResumptionSettings []SessionResumptionSettings `json:"sessionResumption,omitempty"`
 }
 
@@ -146,7 +149,6 @@ type ClientValidationContext struct {
 	// +optional
 	CACertificateRefs []gwapiv1.SecretObjectReference `json:"caCertificateRefs,omitempty"`
 }
-
 
 // TLSSessionResumptionType defines the type of TLS session resumption
 type TLSSessionResumptionType string
