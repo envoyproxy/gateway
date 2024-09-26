@@ -34,6 +34,9 @@ var metricsLogger log.Logger
 
 // Init initializes and registers the global metrics server.
 func Init(cfg *config.Server) error {
+	metricsLogger = cfg.Logger.WithName("metrics")
+	otel.SetLogger(metricsLogger.Logger)
+
 	options, err := newOptions(cfg)
 	if err != nil {
 		return err
@@ -45,8 +48,6 @@ func Init(cfg *config.Server) error {
 	}
 
 	if !options.pullOptions.disable {
-		metricsLogger = cfg.Logger.WithName("metrics")
-		otel.SetLogger(metricsLogger.Logger)
 		return start(options.address, handler)
 	}
 
