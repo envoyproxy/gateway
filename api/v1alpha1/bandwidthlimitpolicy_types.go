@@ -7,6 +7,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // AppProtocolType defines various backend applications protocols supported by Envoy Gateway
@@ -30,6 +31,11 @@ type BandwidthLimitPolicy struct {
 
 	// Status defines the current status of Backend.
 	Status BandwidthLimitStatus `json:"status,omitempty"`
+}
+
+func (b BandwidthLimitPolicy) DeepCopyObject() runtime.Object {
+	//TODO implement me
+	panic("implement me")
 }
 
 // BackendSpec describes the desired state of BackendSpec.
@@ -58,6 +64,11 @@ type BandwidthLimitPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []BandwidthLimitPolicy `json:"items"`
+}
+
+func (b BandwidthLimitPolicyList) DeepCopyObject() runtime.Object {
+	//TODO implement me
+	panic("implement me")
 }
 
 func init() {
