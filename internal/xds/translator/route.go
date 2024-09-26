@@ -88,7 +88,9 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 		}
 		router.Action = &routev3.Route_Route{Route: routeAction}
 	}
-
+	if err := patchRouteWithBandWidthLimit(router, httpRoute); err != nil {
+		return nil, err
+	}
 	// Hash Policy
 	if router.GetRoute() != nil {
 		router.GetRoute().HashPolicy = buildHashPolicy(httpRoute)

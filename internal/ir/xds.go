@@ -8,6 +8,8 @@ package ir
 import (
 	"cmp"
 	"errors"
+	"github.com/golang/protobuf/ptypes/duration"
+	"github.com/golang/protobuf/ptypes/wrappers"
 	"net/http"
 	"net/netip"
 	"reflect"
@@ -562,6 +564,14 @@ type HTTPRoute struct {
 	Security *SecurityFeatures `json:"security,omitempty" yaml:"security,omitempty"`
 	// UseClientProtocol enables using the same protocol upstream that was used downstream
 	UseClientProtocol *bool `json:"useClientProtocol,omitempty" yaml:"useClientProtocol,omitempty"`
+	BandWidthLimit    *BandWidthLimit
+}
+
+type BandWidthLimit struct {
+	Mode     string
+	Interval *duration.Duration
+	Limit    *wrappers.UInt64Value
+	Enable   *wrappers.BoolValue
 }
 
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.
