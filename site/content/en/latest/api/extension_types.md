@@ -240,7 +240,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `name` | _string_ |  false  | Name is a user-friendly name for the rule.<br />If not specified, Envoy Gateway will generate a unique name for the rule.n |
+| `name` | _string_ |  false  | Name is a user-friendly name for the rule.<br />If not specified, Envoy Gateway will generate a unique name for the rule. |
 | `action` | _[AuthorizationAction](#authorizationaction)_ |  true  | Action defines the action to be taken if the rule matches. |
 | `principal` | _[Principal](#principal)_ |  true  | Principal specifies the client identity of a request.<br />If there are multiple principal types, all principals must match for the rule to match.<br />For example, if there are two principals: one for client IP and one for JWT claim,<br />the rule will match only if both the client IP and the JWT claim match. |
 
@@ -850,6 +850,51 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `name` | _string_ |  true  | Name of the header containing the original downstream remote address, if present. |
 | `failClosed` | _boolean_ |  false  | FailClosed is a switch used to control the flow of traffic when client IP detection<br />fails. If set to true, the listener will respond with 403 Forbidden when the client<br />IP address cannot be determined. |
+
+
+#### CustomResponse
+
+
+
+CustomResponse defines the configuration for returning a custom response.
+
+_Appears in:_
+- [ResponseOverride](#responseoverride)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `contentType` | _string_ |  false  | Content Type of the response. This will be set in the Content-Type header. |
+| `body` | _[CustomResponseBody](#customresponsebody)_ |  true  | Body of the Custom Response |
+
+
+#### CustomResponseBody
+
+
+
+CustomResponseBody
+
+_Appears in:_
+- [CustomResponse](#customresponse)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `type` | _[ResponseValueType](#responsevaluetype)_ |  true  | Type is the type of method to use to read the body value. |
+| `inline` | _string_ |  false  | Inline contains the value as an inline string. |
+| `valueRef` | _[LocalObjectReference](#localobjectreference)_ |  false  | ValueRef contains the contents of the body<br />specified as a local object reference.<br />Only a reference to ConfigMap is supported. |
+
+
+#### CustomResponseMatch
+
+
+
+CustomResponseMatch defines the configuration for matching a user response to return a custom one.
+
+_Appears in:_
+- [ResponseOverride](#responseoverride)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `statusCode` | _[StatusCodeMatch](#statuscodematch) array_ |  true  | Status code to match on. The match evaluates to true if any of the matches are successful. |
 
 
 #### CustomTag
@@ -2295,8 +2340,9 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
+| `provider` | _string_ |  true  | Provider is the name of the JWT provider that used to verify the JWT token.<br />In order to use JWT claims for authorization, you must configure the JWT<br />authentication with the same provider in the same `SecurityPolicy`. |
 | `claims` | _[JWTClaim](#jwtclaim) array_ |  false  | Claims are the claims in a JWT token.<br /><br />If multiple claims are specified, all claims must match for the rule to match.<br />For example, if there are two claims: one for the audience and one for the issuer,<br />the rule will match only if both the audience and the issuer match. |
-| `scopes` | _string array_ |  false  | Scopes are a special type of claim in a JWT token that represents the permissions of the client.<br /><br />The value of the scopes field should be a space delimited string that is expected in the scope parameter,<br />as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749#page-23.<br /><br />If multiple scopes are specified, all scopes must match for the rule to match. |
+| `scopes` | _[JWTScope](#jwtscope) array_ |  false  | Scopes are a special type of claim in a JWT token that represents the permissions of the client.<br /><br />The value of the scopes field should be a space delimited string that is expected in the scope parameter,<br />as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749#page-23.<br /><br />If multiple scopes are specified, all scopes must match for the rule to match. |
 
 
 #### JWTProvider
@@ -2317,6 +2363,17 @@ _Appears in:_
 | `claimToHeaders` | _[ClaimToHeader](#claimtoheader) array_ |  false  | ClaimToHeaders is a list of JWT claims that must be extracted into HTTP request headers<br />For examples, following config:<br />The claim must be of type; string, int, double, bool. Array type claims are not supported |
 | `recomputeRoute` | _boolean_ |  false  | RecomputeRoute clears the route cache and recalculates the routing decision.<br />This field must be enabled if the headers generated from the claim are used for<br />route matching decisions. If the recomputation selects a new route, features targeting<br />the new matched route will be applied. |
 | `extractFrom` | _[JWTExtractor](#jwtextractor)_ |  false  | ExtractFrom defines different ways to extract the JWT token from HTTP request.<br />If empty, it defaults to extract JWT token from the Authorization HTTP request header using Bearer schema<br />or access_token from query parameters. |
+
+
+#### JWTScope
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [JWTPrincipal](#jwtprincipal)
+
 
 
 #### KubernetesContainerSpec
@@ -2807,10 +2864,7 @@ _Appears in:_
 
 
 
-Principal specifies the client identity of a request.
-A client identity can be a client IP, a JWT claim, username from the Authorization header,
-or any other identity that can be extracted from a custom header.
-Currently, only the client IP is supported.
+If there are multiple principal types, all principals must match for the rule to match.
 
 _Appears in:_
 - [AuthorizationRule](#authorizationrule)
@@ -2944,6 +2998,21 @@ _Appears in:_
 | `ALS` | ProxyAccessLogSinkTypeALS defines the gRPC Access Log Service (ALS) sink.<br />The service must implement the Envoy gRPC Access Log Service streaming API:<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/accesslog/v3/als.proto<br /> | 
 | `File` | ProxyAccessLogSinkTypeFile defines the file accesslog sink.<br /> | 
 | `OpenTelemetry` | ProxyAccessLogSinkTypeOpenTelemetry defines the OpenTelemetry accesslog sink.<br />When the provider is Kubernetes, EnvoyGateway always sends `k8s.namespace.name`<br />and `k8s.pod.name` as additional attributes.<br /> | 
+
+
+#### ProxyAccessLogType
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [ProxyAccessLogSetting](#proxyaccesslogsetting)
+
+| Value | Description |
+| ----- | ----------- |
+| `Listener` | ProxyAccessLogTypeListener defines the accesslog for Listeners.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto#envoy-v3-api-field-config-listener-v3-listener-access-log<br /> | 
+| `Route` | ProxyAccessLogTypeRoute defines the accesslog for HTTP, GRPC, UDP and TCP Routes.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/udp/udp_proxy/v3/udp_proxy.proto#envoy-v3-api-field-extensions-filters-udp-udp-proxy-v3-udpproxyconfig-access-log<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/tcp_proxy/v3/tcp_proxy.proto#envoy-v3-api-field-extensions-filters-network-tcp-proxy-v3-tcpproxy-access-log<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-access-log<br /> | 
 
 
 #### ProxyBootstrap
@@ -3427,6 +3496,32 @@ _Appears in:_
 | `File` | ResourceProviderTypeFile defines the "File" provider.<br /> | 
 
 
+#### ResponseOverride
+
+
+
+ResponseOverride defines the configuration to override specific responses with a custom one.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `match` | _[CustomResponseMatch](#customresponsematch)_ |  true  | Match configuration. |
+| `response` | _[CustomResponse](#customresponse)_ |  true  | Response configuration. |
+
+
+#### ResponseValueType
+
+_Underlying type:_ _string_
+
+ResponseValueType defines the types of values for the response body supported by Envoy Gateway.
+
+_Appears in:_
+- [CustomResponseBody](#customresponsebody)
+
+
+
 
 
 #### RetryOn
@@ -3607,6 +3702,48 @@ _Appears in:_
 | ----- | ----------- |
 | `Exact` | SourceMatchExact All IP Addresses within the specified Source IP CIDR are treated as a single client selector<br />and share the same rate limit bucket.<br /> | 
 | `Distinct` | SourceMatchDistinct Each IP Address within the specified Source IP CIDR is treated as a distinct client selector<br />and uses a separate rate limit bucket/counter.<br />Note: This is only supported for Global Rate Limits.<br /> | 
+
+
+#### StatusCodeMatch
+
+
+
+
+
+_Appears in:_
+- [CustomResponseMatch](#customresponsematch)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `type` | _[StatusCodeValueType](#statuscodevaluetype)_ |  true  | Type is the type of value. |
+| `value` | _string_ |  false  | Value contains the value of the status code. |
+| `range` | _[StatusCodeRange](#statuscoderange)_ |  false  | ValueRef contains the contents of the body<br />specified as a local object reference.<br />Only a reference to ConfigMap is supported. |
+
+
+#### StatusCodeRange
+
+
+
+StatusCodeRange defines the configuration for define a range of status codes.
+
+_Appears in:_
+- [StatusCodeMatch](#statuscodematch)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `start` | _integer_ |  true  | Start of the range, including the start value. |
+| `end` | _integer_ |  true  | End of the range, including the end value. |
+
+
+#### StatusCodeValueType
+
+_Underlying type:_ _string_
+
+StatusCodeValueType defines the types of values for the status code match supported by Envoy Gateway.
+
+_Appears in:_
+- [StatusCodeMatch](#statuscodematch)
+
 
 
 #### StringMatch
