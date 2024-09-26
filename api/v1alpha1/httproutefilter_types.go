@@ -33,6 +33,8 @@ type HTTPRouteFilter struct {
 type HTTPRouteFilterSpec struct {
 	// +optional
 	URLRewrite *HTTPURLRewriteFilter `json:"urlRewrite,omitempty"`
+	// +optional
+	DirectResponse *HTTPDirectResponseFilter `json:"directResponse,omitempty"`
 }
 
 // HTTPURLRewriteFilter define rewrites of HTTP URL components such as path and host
@@ -47,6 +49,11 @@ type HTTPURLRewriteFilter struct {
 	//
 	// +optional
 	Path *HTTPPathModifier `json:"path,omitempty"`
+}
+
+// HTTPDirectResponseFilter defines the configuration to return a fixed response.
+type HTTPDirectResponseFilter struct {
+	CustomResponse `json:",inline"`
 }
 
 // HTTPPathModifierType defines the type of path redirect or rewrite.

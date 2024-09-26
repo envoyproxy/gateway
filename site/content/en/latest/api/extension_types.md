@@ -860,12 +860,14 @@ _Appears in:_
 CustomResponse defines the configuration for returning a custom response.
 
 _Appears in:_
+- [HTTPDirectResponseFilter](#httpdirectresponsefilter)
 - [ResponseOverride](#responseoverride)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `contentType` | _string_ |  false  | Content Type of the response. This will be set in the Content-Type header. |
-| `body` | _[CustomResponseBody](#customresponsebody)_ |  true  | Body of the Custom Response |
+| `body` | _[CustomResponseBody](#customresponsebody)_ |  false  | Body of the Custom Response |
+| `statusCode` | _string_ |  false  | Status Code of the HTTP response |
 
 
 #### CustomResponseBody
@@ -876,6 +878,7 @@ CustomResponseBody
 
 _Appears in:_
 - [CustomResponse](#customresponse)
+- [HTTPDirectResponseFilter](#httpdirectresponsefilter)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -1921,6 +1924,22 @@ _Appears in:_
 | `idleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | IdleTimeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.<br />Default: 1 hour. |
 
 
+#### HTTPDirectResponseFilter
+
+
+
+HTTPDirectResponseFilter defines the configuration to return a fixed response.
+
+_Appears in:_
+- [HTTPRouteFilterSpec](#httproutefilterspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `contentType` | _string_ |  false  | Content Type of the response. This will be set in the Content-Type header. |
+| `body` | _[CustomResponseBody](#customresponsebody)_ |  false  | Body of the Custom Response |
+| `statusCode` | _string_ |  false  | Status Code of the HTTP response |
+
+
 #### HTTPExtAuthService
 
 
@@ -2044,6 +2063,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `urlRewrite` | _[HTTPURLRewriteFilter](#httpurlrewritefilter)_ |  false  |  |
+| `directResponse` | _[HTTPDirectResponseFilter](#httpdirectresponsefilter)_ |  false  |  |
 
 
 #### HTTPStatus
