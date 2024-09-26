@@ -23,11 +23,14 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	log "github.com/envoyproxy/gateway/internal/logging"
 )
 
 const (
 	defaultEndpoint = "/metrics"
 )
+
+var metricsLogger log.Logger
 
 // Init initializes and registers the global metrics server.
 func Init(cfg *config.Server) error {
@@ -42,6 +45,8 @@ func Init(cfg *config.Server) error {
 	}
 
 	if !options.pullOptions.disable {
+		metricsLogger = cfg.Logger.WithName("metrics")
+		otel.SetLogger(metricsLogger.Logger)
 		return start(options.address, handler)
 	}
 
