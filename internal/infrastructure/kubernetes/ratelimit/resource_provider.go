@@ -192,6 +192,8 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	podLabels := rateLimitLabels()
 	if r.rateLimitDeployment.Pod.Labels != nil {
 		maps.Copy(podLabels, r.rateLimitDeployment.Pod.Labels)
+		// Copy overwrites values in the dest map if they exist in the src map https://pkg.go.dev/maps#Copy
+		// It's applied again with the rateLimitLabels that are used as deployment selector to ensure those are not overwritten by user input
 		maps.Copy(podLabels, rateLimitLabels())
 	}
 
