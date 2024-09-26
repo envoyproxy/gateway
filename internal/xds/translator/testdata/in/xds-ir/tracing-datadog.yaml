@@ -17,17 +17,15 @@ tracing:
       requestHeader:
         name: "X-Request-Id"
         defaultValue: "-"
-  authority: "awesome-agent.default.svc.cluster.local"
+  authority: "datadog-agent.default.svc.cluster.local"
   destination:
     name: "tracing-0"
     settings:
       - endpoints:
-          - host: "awesome-agent.default.svc.cluster.local"
-            port: 1357
+          - host: "datadog-agent.default.svc.cluster.local"
+            port: 8126
   provider:
-    host: awesome-agent.monitoring.svc.cluster.local
-    port: 1357
-    type: AwesomeTelemetry
+    type: Datadog
 http:
   - name: "first-listener"
     address: "0.0.0.0"
