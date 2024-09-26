@@ -53,7 +53,7 @@ var EGUpgradeTest = suite.ConformanceTest{
 			depNS := "envoy-gateway-system"
 			lastVersionTag := os.Getenv("last_version_tag")
 			if lastVersionTag == "" {
-				lastVersionTag = "v1.1.0" // Default version tag if not specified
+				lastVersionTag = "v1.0.2" // Default version tag if not specified
 			}
 
 			// Uninstall the current version of EG
@@ -281,28 +281,15 @@ func migrateChartCRDs(actionConfig *action.Configuration, gatewayChart *chart.Ch
 			}
 			// https://gateway-api.sigs.k8s.io/guides/?h=upgrade#v11-upgrade-notes
 			if newVersion == "v1.2.0-rc1" {
-				helper := resource.NewHelper(crd.Client, crd.Mapping)
-				existingCRD, err := helper.Get(crd.Namespace, crd.Name)
-				if kerrors.IsNotFound(err) {
-					continue
+				// Delete the existing instance of the BTLS CRD as it is not compatible with the new version
+				_, errs := actionConfig.KubeClient.Delete([]*resource.Info{crd})
+				if errs != nil {
+					return fmt.Errorf("failed to delete backendtlspolicies: %s", util.MultipleErrors("", errs))
 				}
 
-				// previous version exists
-				existingVersion, err := getGWAPIVersion(existingCRD)
-				if err != nil {
-					return err
-				}
-				if existingVersion == "v1.1.0" {
-					// Delete the existing instance of the BTLS CRD
-					_, errs := actionConfig.KubeClient.Delete([]*resource.Info{crd})
-					if errs != nil {
-						return fmt.Errorf("failed to delete backendtlspolicies: %s", util.MultipleErrors("", errs))
-					}
-
-					if kubeClient, ok := actionConfig.KubeClient.(kube.InterfaceExt); ok {
-						if err := kubeClient.WaitForDelete([]*resource.Info{crd}, timeout); err != nil {
-							return fmt.Errorf("failed to wait for backendtlspolicies deletion: %s", err.Error())
-						}
+				if kubeClient, ok := actionConfig.KubeClient.(kube.InterfaceExt); ok {
+					if err := kubeClient.WaitForDelete([]*resource.Info{crd}, timeout); err != nil {
+						return fmt.Errorf("failed to wait for backendtlspolicies deletion: %s", err.Error())
 					}
 				}
 			}
