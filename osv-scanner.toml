@@ -91,7 +91,7 @@ license.override = ["BSD-3-Clause"]
 reason = "Unidentified license, remove once https://github.com/google/deps.dev/issues/86 is resolved"
 
 [[PackageOverrides]]
-name = "github.com/kubernetes-sigs/gateway-api"
+name = "sigs.k8s.io/gateway-api"
 version = "1.2.0-rc1"
 ecosystem = "Go"
 license.override = ["Apache-2.0"]
