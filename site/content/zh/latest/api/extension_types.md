@@ -3784,6 +3784,7 @@ _Appears in:_
 | `OpenTelemetry` |  | 
 | `OpenTelemetry` |  | 
 | `Zipkin` |  | 
+| `Datadog` |  | 
 
 
 #### TriggerEnum
