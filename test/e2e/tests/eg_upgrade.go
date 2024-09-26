@@ -53,7 +53,8 @@ var EGUpgradeTest = suite.ConformanceTest{
 			depNS := "envoy-gateway-system"
 			lastVersionTag := os.Getenv("last_version_tag")
 			if lastVersionTag == "" {
-				lastVersionTag = "v1.1.2" // Default version tag if not specified
+				// Use v1.0.2 instead of v1.1.2 due to https://github.com/envoyproxy/gateway/issues/4336
+				lastVersionTag = "v1.0.2" // Default version tag if not specified
 			}
 
 			// Uninstall the current version of EG
@@ -280,7 +281,7 @@ func migrateChartCRDs(actionConfig *action.Configuration, gatewayChart *chart.Ch
 				return err
 			}
 			// https://gateway-api.sigs.k8s.io/guides/?h=upgrade#v11-upgrade-notes
-			if newVersion == "v1.1.0" {
+			if newVersion == "v1.2.0-rc1" {
 				helper := resource.NewHelper(crd.Client, crd.Mapping)
 				existingCRD, err := helper.Get(crd.Namespace, crd.Name)
 				if kerrors.IsNotFound(err) {
