@@ -1,0 +1,6 @@
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10080
+  name: tcp-route-enable-req-resp-sizes-stats
+  perConnectionBufferLimitBytes: 32768
