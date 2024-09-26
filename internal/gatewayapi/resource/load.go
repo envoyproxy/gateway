@@ -265,6 +265,20 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*Resources
 				Spec: typedSpec.(egv1a1.SecurityPolicySpec),
 			}
 			resources.SecurityPolicies = append(resources.SecurityPolicies, securityPolicy)
+		case KindHTTPRouteFilter:
+			typedSpec := spec.Interface()
+			httpRouteFilter := &egv1a1.HTTPRouteFilter{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       KindHTTPRouteFilter,
+					APIVersion: egv1a1.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: namespace,
+					Name:      name,
+				},
+				Spec: typedSpec.(egv1a1.HTTPRouteFilterSpec),
+			}
+			resources.HTTPRouteFilters = append(resources.HTTPRouteFilters, httpRouteFilter)
 		}
 	}
 

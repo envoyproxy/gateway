@@ -1,0 +1,18 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - gateway.envoyproxy.io
+    name: first-listener/gateway_envoyproxy_io
+    routes:
+    - match:
+        pathSeparatedPrefix: /origin
+      name: rewrite-route
+      route:
+        cluster: rewrite-route
+        regexRewrite:
+          pattern:
+            regex: ^/service/([^/]+)(/.*)$
+          substitution: \2/instance/\1
+        upgradeConfigs:
+        - upgradeType: websocket

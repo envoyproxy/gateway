@@ -3109,7 +3109,7 @@ func (in *JWTPrincipal) DeepCopyInto(out *JWTPrincipal) {
 	}
 	if in.Scopes != nil {
 		in, out := &in.Scopes, &out.Scopes
-		*out = make([]string, len(*in))
+		*out = make([]JWTScope, len(*in))
 		copy(*out, *in)
 	}
 }
@@ -4038,6 +4038,11 @@ func (in *ProxyAccessLogSetting) DeepCopyInto(out *ProxyAccessLogSetting) {
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
+	}
+	if in.Type != nil {
+		in, out := &in.Type, &out.Type
+		*out = new(ProxyAccessLogType)
+		**out = **in
 	}
 }
 

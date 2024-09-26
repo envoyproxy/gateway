@@ -76,7 +76,7 @@ EOF
 We now have to patch the example Gateway to reference cert-manager:
 
 ```console
-$ kubectl patch gateway/eg --patch-file - <<EOF
+$ kubectl patch gateway/eg --patch '
 metadata:
   annotations:
     cert-manager.io/cluster-issuer: selfsigned
@@ -92,7 +92,7 @@ spec:
       certificateRefs:
       - kind: Secret
         name: eg-https
-EOF
+' --type=merge
 ```
 
 You could instead create a new Gateway serving HTTPS, if you'd prefer.
