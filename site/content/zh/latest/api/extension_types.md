@@ -3098,8 +3098,9 @@ _Appears in:_
 | `prometheus` | _[ProxyPrometheusProvider](#proxyprometheusprovider)_ |  true  | Prometheus defines the configuration for Admin endpoint `/stats/prometheus`. |
 | `sinks` | _[ProxyMetricSink](#proxymetricsink) array_ |  true  | Sinks defines the metric sinks where metrics are sent to. |
 | `matches` | _[StringMatch](#stringmatch) array_ |  true  | Matches defines configuration for selecting specific metrics instead of generating all metrics stats<br />that are enabled by default. This helps reduce CPU and memory overhead in Envoy, but eliminating some stats<br />may after critical functionality. Here are the stats that we strongly recommend not disabling:<br />`cluster_manager.warming_clusters`, `cluster.<cluster_name>.membership_total`,`cluster.<cluster_name>.membership_healthy`,<br />`cluster.<cluster_name>.membership_degraded`，reference  https://github.com/envoyproxy/envoy/issues/9856,<br />https://github.com/envoyproxy/envoy/issues/14610 |
-| `enableVirtualHostStats` | _boolean_ |  true  | EnableVirtualHostStats enables envoy stat metrics for virtual hosts. |
-| `enablePerEndpointStats` | _boolean_ |  true  | EnablePerEndpointStats enables per endpoint envoy stats metrics.<br />Please use with caution. |
+| `enableVirtualHostStats` | _boolean_ |  false  | EnableVirtualHostStats enables envoy stat metrics for virtual hosts. |
+| `enablePerEndpointStats` | _boolean_ |  false  | EnablePerEndpointStats enables per endpoint envoy stats metrics.<br />Please use with caution. |
+| `enableRequestResponseSizesStats` | _boolean_ |  false  | EnableRequestResponseSizesStats enables publishing of histograms tracking header and body sizes of requests and responses. |
 
 
 #### ProxyOpenTelemetrySink

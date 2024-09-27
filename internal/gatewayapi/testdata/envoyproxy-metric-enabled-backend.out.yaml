@@ -101,6 +101,9 @@ infraIR:
             type: Kubernetes
           telemetry:
             metrics:
+              enablePerEndpointStats: true
+              enableRequestResponseSizesStats: true
+              enableVirtualHostStats: true
               sinks:
               - openTelemetry:
                   backendRefs:
@@ -143,6 +146,6 @@ xdsIR:
         mergeSlashes: true
       port: 10080
     metrics:
-      enablePerEndpointStats: false
-      enableRequestResponseSizesStats: false
-      enableVirtualHostStats: false
+      enablePerEndpointStats: true
+      enableRequestResponseSizesStats: true
+      enableVirtualHostStats: true
