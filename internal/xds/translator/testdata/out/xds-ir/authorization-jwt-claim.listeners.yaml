@@ -1,0 +1,80 @@
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.jwt_authn
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
+            providers:
+              httproute/default/httproute-1/rule/0/match/0/www_example_com/example1:
+                audiences:
+                - two.foo.com
+                forward: true
+                issuer: https://two.example.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scope
+                payloadInMetadata: example1
+                remoteJwks:
+                  asyncFetch: {}
+                  cacheDuration: 300s
+                  httpUri:
+                    cluster: two_example_com_443
+                    timeout: 10s
+                    uri: https://two.example.com/jwt/public-key/jwks.json
+                  retryPolicy: {}
+              httproute/default/httproute-2/rule/0/match/0/www_example_com/example1:
+                audiences:
+                - one.foo.com
+                forward: true
+                issuer: https://one.example.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scope
+                payloadInMetadata: example1
+                remoteJwks:
+                  asyncFetch: {}
+                  cacheDuration: 300s
+                  httpUri:
+                    cluster: one_example_com_443
+                    timeout: 10s
+                    uri: https://one.example.com/jwt/public-key/jwks.json
+                  retryPolicy: {}
+            requirementMap:
+              httproute/default/httproute-1/rule/0/match/0/www_example_com:
+                providerName: httproute/default/httproute-1/rule/0/match/0/www_example_com/example1
+              httproute/default/httproute-2/rule/0/match/0/www_example_com:
+                providerName: httproute/default/httproute-2/rule/0/match/0/www_example_com/example1
+        - name: envoy.filters.http.rbac
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBAC
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: envoy-gateway/gateway-1/http
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10080
+        useRemoteAddress: true
+    name: envoy-gateway/gateway-1/http
+  name: envoy-gateway/gateway-1/http
+  perConnectionBufferLimitBytes: 32768

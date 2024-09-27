@@ -12255,6 +12255,17 @@ spec:
                               maxItems: 50
                               minItems: 1
                               type: array
+                            type:
+                              description: |-
+                                Type defines the component emitting the accesslog, such as Listener and Route.
+                                If type not defined, the setting would apply to:
+                                (1) All Routes.
+                                (2) Listeners if and only if Envoy does not find a matching route for a request.
+                                If type is defined, the accesslog settings would apply to the relevant component (as-is).
+                              enum:
+                              - Listener
+                              - Route
+                              type: string
                           required:
                           - sinks
                           type: object
@@ -12270,6 +12281,11 @@ spec:
                         description: |-
                           EnablePerEndpointStats enables per endpoint envoy stats metrics.
                           Please use with caution.
+                        type: boolean
+                      enableRequestResponseSizesStats:
+                        description: EnableRequestResponseSizesStats enables publishing
+                          of histograms tracking header and body sizes of requests
+                          and responses.
                         type: boolean
                       enableVirtualHostStats:
                         description: EnableVirtualHostStats enables envoy stat metrics

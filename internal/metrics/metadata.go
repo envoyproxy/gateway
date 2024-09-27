@@ -12,21 +12,10 @@ import (
 	"go.opentelemetry.io/otel"
 	api "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
-
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	log "github.com/envoyproxy/gateway/internal/logging"
 )
 
-var (
-	meter = func() api.Meter {
-		return otel.GetMeterProvider().Meter("envoy-gateway")
-	}
-
-	metricsLogger = log.DefaultLogger(egv1a1.LogLevelInfo).WithName("metrics")
-)
-
-func init() {
-	otel.SetLogger(metricsLogger.Logger)
+var meter = func() api.Meter {
+	return otel.GetMeterProvider().Meter("envoy-gateway")
 }
 
 // MetricType is the type of a metric.
@@ -56,7 +45,7 @@ type Metadata struct {
 	Bounds      []float64
 }
 
-// metrics stores stores metrics
+// metrics stores metrics
 type store struct {
 	started bool
 	mu      sync.Mutex
