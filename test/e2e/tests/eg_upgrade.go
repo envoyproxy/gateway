@@ -281,7 +281,7 @@ func migrateChartCRDs(actionConfig *action.Configuration, gatewayChart *chart.Ch
 				return err
 			}
 			// https://gateway-api.sigs.k8s.io/guides/?h=upgrade#v11-upgrade-notes
-			if newVersion == "v1.2.0-rc1" {
+			if newVersion == "v1.2.0-rc2" {
 				helper := resource.NewHelper(crd.Client, crd.Mapping)
 				existingCRD, err := helper.Get(crd.Namespace, crd.Name)
 				if kerrors.IsNotFound(err) {
