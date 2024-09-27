@@ -7,15 +7,15 @@ package resource
 
 import (
 	"bytes"
-	_ "embed"
 	"io"
 	"io/fs"
 	"time"
+
+	gateway "github.com/envoyproxy/gateway"
 )
 
 var (
-	//go:embed crd/gateway-crds.yaml
-	gatewayCRDs   []byte
+	// gatewayCRDsFS is a virtual/mocked FS used for OpenAPI client.
 	gatewayCRDsFS = memGatewayCRDsFS{}
 
 	_ fs.FS          = memGatewayCRDsFS{}
@@ -24,7 +24,7 @@ var (
 	_ fs.DirEntry    = memGatewayCRDsDirEntry{}
 )
 
-// memGatewayCRDsFS is a mocked fs.FS for openapi to read gatewayCRDs from.
+// memGatewayCRDsFS is a mocked fs.FS for OpenAPI to read gatewayCRDs from.
 type memGatewayCRDsFS struct{}
 
 func (m memGatewayCRDsFS) Open(_ string) (fs.File, error) {
@@ -45,7 +45,7 @@ func (m memGatewayCRDsFile) Close() error {
 func (m memGatewayCRDsFile) Read(b []byte) (int, error) {
 	fi, _ := m.Stat()
 	if int64(len(b)) >= fi.Size() {
-		return bytes.NewReader(gatewayCRDs).Read(b)
+		return bytes.NewReader(gateway.GatewayCRDs).Read(b)
 	}
 	return 0, io.EOF
 }
@@ -66,7 +66,7 @@ func (m memGatewayCRDsDirEntry) Info() (fs.FileInfo, error) { return &memGateway
 type memGatewayCRDsFileInfo struct{}
 
 func (m memGatewayCRDsFileInfo) Name() string       { return "gateway-crds.yaml" }
-func (m memGatewayCRDsFileInfo) Size() int64        { return int64(len(gatewayCRDs)) }
+func (m memGatewayCRDsFileInfo) Size() int64        { return int64(len(gateway.GatewayCRDs)) }
 func (m memGatewayCRDsFileInfo) Mode() fs.FileMode  { return 0o444 }
 func (m memGatewayCRDsFileInfo) ModTime() time.Time { return time.Now() }
 func (m memGatewayCRDsFileInfo) IsDir() bool        { return false }

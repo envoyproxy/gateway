@@ -17,4 +17,3 @@ bin
 */testdata/*.yaml
 ./site/public/*
 ./site/node_modules/*
-./internal/gatewayapi/resource/crd/*.yaml

@@ -19,6 +19,8 @@ test: foo2
 ---
 # This is comment.
 test: foo3
+---
+---
 `
 
 	names := make([]string, 0)
@@ -27,7 +29,9 @@ test: foo3
 		err := yaml.Unmarshal(bytes, &obj)
 		require.NoError(t, err)
 
-		names = append(names, obj["test"])
+		if name, ok := obj["test"]; ok {
+			names = append(names, name)
+		}
 		return nil
 	})
 	require.NoError(t, err)
