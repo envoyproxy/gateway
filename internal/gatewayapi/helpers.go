@@ -258,9 +258,9 @@ func GatewayNameLabel(gateway string) map[string]string {
 func GatewayNameLabelForMergedGateways(gateways []*GatewayContext) map[string]string {
 	var owningGatewayNames string
 	for _, gateway := range gateways {
-		owningGatewayNames = owningGatewayNames + gateway.Name + ","
+		owningGatewayNames = owningGatewayNames + gateway.Name + "-"
 	}
-	owningGatewayNames = strings.TrimSuffix(owningGatewayNames, ",")
+	owningGatewayNames = strings.TrimSuffix(owningGatewayNames, "-")
 	return map[string]string{
 		GatewayAPIGatewayNameLabel: owningGatewayNames,
 	}
