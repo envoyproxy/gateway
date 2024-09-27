@@ -77,8 +77,7 @@ type ListenerContext struct {
 
 func (l *ListenerContext) SetSupportedKinds(kinds ...gwapiv1.RouteGroupKind) {
 	l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds = make([]gwapiv1.RouteGroupKind, 0, len(kinds))
-	l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds =
-		append(l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds, kinds...)
+	l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds = append(l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds, kinds...)
 }
 
 func (l *ListenerContext) IncrementAttachedRoutes() {
