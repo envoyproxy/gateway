@@ -76,4 +76,12 @@ type HTTPClientTimeout struct {
 	//
 	// +optional
 	IdleTimeout *gwapiv1.Duration `json:"idleTimeout,omitempty"`
+	// The stream idle timeout for connections managed by the connection manager.
+	// If not specified, this defaults to 5 minutes. The default value was selected
+	// so as not to interfere with any smaller configured timeouts that may have
+	// existed in configurations prior to the introduction of this feature, while
+	// introducing robustness to TCP connections that terminate without a FIN.
+	//
+	// +optional
+	StreamIdleTimeout *gwapiv1.Duration `json:"streamIdleTimeout,omitempty"`
 }

@@ -608,6 +608,15 @@ func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout,
 				Duration: d,
 			}
 		}
+		if clientTimeout.HTTP.StreamIdleTimeout != nil {
+			d, err := time.ParseDuration(string(*clientTimeout.HTTP.StreamIdleTimeout))
+			if err != nil {
+				return nil, fmt.Errorf("invalid HTTP StreamIdleTimeout value %s", *clientTimeout.HTTP.StreamIdleTimeout)
+			}
+			irHTTPTimeout.StreamIdleTimeout = &metav1.Duration{
+				Duration: d,
+			}
+		}
 		irClientTimeout.HTTP = irHTTPTimeout
 	}
 
