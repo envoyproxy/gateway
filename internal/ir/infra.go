@@ -30,13 +30,13 @@ type Infra struct {
 	Proxy *ProxyInfra `json:"proxy" yaml:"proxy"`
 }
 
-func (i Infra) YAMLString() string {
-	y, _ := yaml.Marshal(&i)
+func (i *Infra) YAMLString() string {
+	y, _ := yaml.Marshal(i)
 	return string(y)
 }
 
-func (i Infra) JSONString() string {
-	j, _ := json.MarshalIndent(&i, "", "\t")
+func (i *Infra) JSONString() string {
+	j, _ := json.MarshalIndent(i, "", "\t")
 	return string(j)
 }
 
