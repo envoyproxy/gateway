@@ -34,7 +34,8 @@ gateways:
         status: "True"
         type: ResolvedRefs
       name: unsupported
-      supportedKinds: null
+      supportedKinds:
+      - kind: InvalidKind
 httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
