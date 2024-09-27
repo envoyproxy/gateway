@@ -92,6 +92,7 @@ reason = "Unidentified license, remove once https://github.com/google/deps.dev/i
 
 [[PackageOverrides]]
 name = "sigs.k8s.io/gateway-api"
-version = "1.2.0-rc1"
+version = "1.2.0-rc2"
 ecosystem = "Go"
 license.override = ["Apache-2.0"]
+reason = "https://github.com/envoyproxy/gateway/actions/runs/11065210699/job/30744231458?pr=4270"
