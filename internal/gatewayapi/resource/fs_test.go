@@ -9,8 +9,9 @@ import (
 	"io/fs"
 	"testing"
 
-	gateway "github.com/envoyproxy/gateway"
 	"github.com/stretchr/testify/require"
+
+	"github.com/envoyproxy/gateway" // nolint:goimports
 )
 
 func TestOpenAndReadGatewayCRDsFS(t *testing.T) {
@@ -18,10 +19,10 @@ func TestOpenAndReadGatewayCRDsFS(t *testing.T) {
 	require.NoError(t, err)
 	defer crds.Close()
 
-	buf := make([]byte, len(gateway.GatewayCRDs))
+	buf := make([]byte, len(envoygateway.GatewayCRDs))
 	cur, err := crds.Read(buf)
 	require.NoError(t, err)
-	require.Greater(t, cur, 0)
+	require.Positive(t, cur)
 }
 
 func TestReadGatewayCRDsDirFS(t *testing.T) {

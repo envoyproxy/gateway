@@ -11,7 +11,7 @@ import (
 	"io/fs"
 	"time"
 
-	gateway "github.com/envoyproxy/gateway"
+	"github.com/envoyproxy/gateway" // nolint:goimports
 )
 
 var (
@@ -45,7 +45,7 @@ func (m memGatewayCRDsFile) Close() error {
 func (m memGatewayCRDsFile) Read(b []byte) (int, error) {
 	fi, _ := m.Stat()
 	if int64(len(b)) >= fi.Size() {
-		return bytes.NewReader(gateway.GatewayCRDs).Read(b)
+		return bytes.NewReader(envoygateway.GatewayCRDs).Read(b)
 	}
 	return 0, io.EOF
 }
@@ -66,7 +66,7 @@ func (m memGatewayCRDsDirEntry) Info() (fs.FileInfo, error) { return &memGateway
 type memGatewayCRDsFileInfo struct{}
 
 func (m memGatewayCRDsFileInfo) Name() string       { return "gateway-crds.yaml" }
-func (m memGatewayCRDsFileInfo) Size() int64        { return int64(len(gateway.GatewayCRDs)) }
+func (m memGatewayCRDsFileInfo) Size() int64        { return int64(len(envoygateway.GatewayCRDs)) }
 func (m memGatewayCRDsFileInfo) Mode() fs.FileMode  { return 0o444 }
 func (m memGatewayCRDsFileInfo) ModTime() time.Time { return time.Now() }
 func (m memGatewayCRDsFileInfo) IsDir() bool        { return false }
