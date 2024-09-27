@@ -57,6 +57,9 @@ type BackendTrafficPolicySpec struct {
 	// +optional
 	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty"`
 
+	// +optional
+	BandwidthLimit *BandwidthLimit `json:"bandwidthLimit,omitempty"`
+
 	// ProxyProtocol enables the Proxy Protocol when communicating with the backend.
 	// +optional
 	ProxyProtocol *ProxyProtocol `json:"proxyProtocol,omitempty"`

@@ -180,24 +180,24 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 	for ruleIdx, rule := range httpRoute.Spec.Rules {
 		httpFiltersContext := t.ProcessHTTPFilters(parentRef, httpRoute, rule.Filters, ruleIdx, resources)
 		for _, extensionRef := range httpFiltersContext.ExtensionRefs {
-			policy := egv1a1.BandwidthLimitPolicy{}
+			policy := egv1a1.BackendTrafficPolicy{}
 			// unstructObj
 			err := runtime.DefaultUnstructuredConverter.FromUnstructured(extensionRef.Object.UnstructuredContent(), policy)
-			if err == nil {
+			if err == nil && policy.Spec.BandwidthLimit != nil {
 				limit := wrappers.UInt64Value{}
-				limit.Value = uint64(policy.Spec.Limit)
+				limit.Value = uint64(policy.Spec.BandwidthLimit.Limit)
 				bandWidthLimit.Limit = &limit
 				enable := wrappers.BoolValue{}
-				enable.Value = policy.Spec.Enable
+				enable.Value = policy.Spec.BandwidthLimit.Enable
 				bandWidthLimit.Enable = &enable
 				dura := duration.Duration{}
-				_duration, err := time.ParseDuration(fmt.Sprint(policy.Spec.Interval))
+				_duration, err := time.ParseDuration(fmt.Sprint(policy.Spec.BandwidthLimit.Interval))
 				if err != nil {
 					continue
 				}
 				dura.Seconds = int64(_duration.Seconds())
 				bandWidthLimit.Interval = &dura
-				bandWidthLimit.Mode = policy.Spec.Mode
+				bandWidthLimit.Mode = policy.Spec.BandwidthLimit.Mode
 
 			}
 

@@ -35,6 +35,12 @@ type LoadBalancer struct {
 	// +optional
 	SlowStart *SlowStart `json:"slowStart,omitempty"`
 }
+type BandwidthLimit struct {
+	Mode     string `json:"mode"`
+	Interval int32  `json:"interval"`
+	Limit    int32  `json:"limit"`
+	Enable   bool   `json:"enable"`
+}
 
 // LoadBalancerType specifies the types of LoadBalancer.
 // +kubebuilder:validation:Enum=ConsistentHash;LeastRequest;Random;RoundRobin
