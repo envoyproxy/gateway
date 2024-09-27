@@ -253,8 +253,9 @@ func GatewayNameLabel(gateway string) map[string]string {
 	}
 }
 
-// All gateway names are concatenated and stored in a single label if mergeGateways is enabled.
+// TODO: zhaohuabing all gateway names are concatenated and stored in a single label if mergeGateways is enabled.
 // Probably not the best way to do this, should revisit this and come up with a better solution upstream.
+// https://github.com/kubernetes-sigs/gateway-api/issues/3365
 func GatewayNameLabelForMergedGateways(gateways []*GatewayContext) map[string]string {
 	var owningGatewayNames string
 	for _, gateway := range gateways {
