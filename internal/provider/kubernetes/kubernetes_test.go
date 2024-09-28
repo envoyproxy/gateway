@@ -35,6 +35,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes/test"
 	"github.com/envoyproxy/gateway/internal/utils"
@@ -1429,26 +1430,20 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 		require.NoError(t, cli.Delete(ctx, nonWatchedSvc))
 	}()
 
-	watchedHTTPRoute := test.GetHTTPRoute(
-		types.NamespacedName{
-			Namespace: watchedNS.Name,
-			Name:      "watched-http-route",
-		},
-		watchedGateway.Name,
-		types.NamespacedName{Name: watchedSvc.Name}, 80)
+	watchedHTTPRoute := test.GetHTTPRoute(types.NamespacedName{
+		Namespace: watchedNS.Name,
+		Name:      "watched-http-route",
+	}, watchedGateway.Name, types.NamespacedName{Name: watchedSvc.Name}, 80, "")
 
 	require.NoError(t, cli.Create(ctx, watchedHTTPRoute))
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, watchedHTTPRoute))
 	}()
 
-	nonWatchedHTTPRoute := test.GetHTTPRoute(
-		types.NamespacedName{
-			Namespace: nonWatchedNS.Name,
-			Name:      "non-watched-http-route",
-		},
-		nonWatchedGateway.Name,
-		types.NamespacedName{Name: nonWatchedSvc.Name}, 8001)
+	nonWatchedHTTPRoute := test.GetHTTPRoute(types.NamespacedName{
+		Namespace: nonWatchedNS.Name,
+		Name:      "non-watched-http-route",
+	}, nonWatchedGateway.Name, types.NamespacedName{Name: nonWatchedSvc.Name}, 8001, "")
 	require.NoError(t, cli.Create(ctx, nonWatchedHTTPRoute))
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, nonWatchedHTTPRoute))
@@ -1600,7 +1595,7 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 	}, defaultWait, defaultTick)
 }
 
-func waitUntilGatewayClassResourcesAreReady(resources *message.ProviderResources, gatewayClassName string) (*gatewayapi.Resources, bool) {
+func waitUntilGatewayClassResourcesAreReady(resources *message.ProviderResources, gatewayClassName string) (*resource.Resources, bool) {
 	res := resources.GetResourcesByGatewayClass(gatewayClassName)
 	if res == nil {
 		return nil, false

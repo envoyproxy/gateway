@@ -20,6 +20,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
@@ -33,7 +34,7 @@ const (
 func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv1a1.BackendTrafficPolicy,
 	gateways []*GatewayContext,
 	routes []RouteContext,
-	xdsIR XdsIRMap,
+	xdsIR resource.XdsIRMap,
 ) []*egv1a1.BackendTrafficPolicy {
 	res := []*egv1a1.BackendTrafficPolicy{}
 
@@ -73,7 +74,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, routes)
 		for _, currTarget := range targetRefs {
-			if currTarget.Kind != KindGateway {
+			if currTarget.Kind != resource.KindGateway {
 				policy, found := handledPolicies[policyName]
 				if !found {
 					policy = currPolicy.DeepCopy()
@@ -93,7 +94,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv
 				parentRefs := GetParentReferences(route)
 				ancestorRefs := make([]gwapiv1a2.ParentReference, 0, len(parentRefs))
 				for _, p := range parentRefs {
-					if p.Kind == nil || *p.Kind == KindGateway {
+					if p.Kind == nil || *p.Kind == resource.KindGateway {
 						namespace := route.GetNamespace()
 						if p.Namespace != nil {
 							namespace = string(*p.Namespace)
@@ -147,7 +148,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways)
 		for _, currTarget := range targetRefs {
-			if currTarget.Kind == KindGateway {
+			if currTarget.Kind == resource.KindGateway {
 				policy, found := handledPolicies[policyName]
 				if !found {
 					policy = currPolicy.DeepCopy()
@@ -281,7 +282,7 @@ func resolveBTPolicyRouteTargetRef(policy *egv1a1.BackendTrafficPolicy, target g
 	return route.RouteContext, nil
 }
 
-func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.BackendTrafficPolicy, route RouteContext, xdsIR XdsIRMap) error {
+func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.BackendTrafficPolicy, route RouteContext, xdsIR resource.XdsIRMap) error {
 	var (
 		rl        *ir.RateLimit
 		lb        *ir.LoadBalancer
@@ -325,7 +326,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 	if policy.Spec.Retry != nil {
 		rt = t.buildRetry(policy)
 	}
-	if to, err = buildTimeout(policy.Spec.ClusterSettings, nil); err != nil {
+	if to, err = buildClusterSettingsTimeout(policy.Spec.ClusterSettings, nil); err != nil {
 		err = perr.WithMessage(err, "Timeout")
 		errs = errors.Join(errs, err)
 	}
@@ -384,6 +385,11 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 						continue
 					}
 
+					// Some timeout setting originate from the route.
+					if localTo, err := buildClusterSettingsTimeout(policy.Spec.ClusterSettings, r.Traffic); err == nil {
+						to = localTo
+					}
+
 					r.Traffic = &ir.TrafficFeatures{
 						RateLimit:         rl,
 						LoadBalancer:      lb,
@@ -396,15 +402,11 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 						BackendConnection: bc,
 						HTTP2:             h2,
 						DNS:               ds,
+						Timeout:           to,
 					}
 
 					// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
 					r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
-
-					// Some timeout setting originate from the route.
-					if to, err = buildTimeout(policy.Spec.ClusterSettings, r); err == nil {
-						r.Traffic.Timeout = to
-					}
 
 					if policy.Spec.UseClientProtocol != nil {
 						r.UseClientProtocol = policy.Spec.UseClientProtocol
@@ -417,7 +419,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 	return errs
 }
 
-func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.BackendTrafficPolicy, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, gateway *GatewayContext, xdsIR XdsIRMap) error {
+func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.BackendTrafficPolicy, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, gateway *GatewayContext, xdsIR resource.XdsIRMap) error {
 	var (
 		rl        *ir.RateLimit
 		lb        *ir.LoadBalancer
@@ -460,7 +462,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	if policy.Spec.Retry != nil {
 		rt = t.buildRetry(policy)
 	}
-	if ct, err = buildTimeout(policy.Spec.ClusterSettings, nil); err != nil {
+	if ct, err = buildClusterSettingsTimeout(policy.Spec.ClusterSettings, nil); err != nil {
 		err = perr.WithMessage(err, "Timeout")
 		errs = errors.Join(errs, err)
 	}
@@ -556,7 +558,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 			// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
 			r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 
-			if ct, err = buildTimeout(policy.Spec.ClusterSettings, r); err == nil {
+			if ct, err = buildClusterSettingsTimeout(policy.Spec.ClusterSettings, r.Traffic); err == nil {
 				r.Traffic.Timeout = ct
 			}
 

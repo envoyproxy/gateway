@@ -24,6 +24,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
@@ -114,7 +115,7 @@ func IsRefToGateway(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.ParentRe
 		return false
 	}
 
-	if parentRef.Kind != nil && string(*parentRef.Kind) != KindGateway {
+	if parentRef.Kind != nil && string(*parentRef.Kind) != resource.KindGateway {
 		return false
 	}
 
@@ -178,6 +179,9 @@ func ValidateHTTPRouteFilter(filter *gwapiv1.HTTPRouteFilter, extGKs ...schema.G
 		switch {
 		case filter.ExtensionRef == nil:
 			return errors.New("extensionRef field must be specified for an extended filter")
+		case string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
+			string(filter.ExtensionRef.Kind) == egv1a1.KindHTTPRouteFilter:
+			return nil
 		default:
 			for _, gk := range extGKs {
 				if filter.ExtensionRef.Group == gwapiv1.Group(gk.Group) &&
@@ -442,7 +446,7 @@ func irTLSCACertName(namespace, name string) string {
 	return fmt.Sprintf("%s/%s/%s", namespace, name, caCertKey)
 }
 
-func IsMergeGatewaysEnabled(resources *Resources) bool {
+func IsMergeGatewaysEnabled(resources *resource.Resources) bool {
 	return resources.EnvoyProxyForGatewayClass != nil && resources.EnvoyProxyForGatewayClass.Spec.MergeGateways != nil && *resources.EnvoyProxyForGatewayClass.Spec.MergeGateways
 }
 
@@ -458,7 +462,7 @@ func protocolSliceToStringSlice(protocols []gwapiv1.ProtocolType) []string {
 func getAncestorRefForPolicy(gatewayNN types.NamespacedName, sectionName *gwapiv1a2.SectionName) gwapiv1a2.ParentReference {
 	return gwapiv1a2.ParentReference{
 		Group:       GroupPtr(gwapiv1.GroupName),
-		Kind:        KindPtr(KindGateway),
+		Kind:        KindPtr(resource.KindGateway),
 		Namespace:   NamespacePtr(gatewayNN.Namespace),
 		Name:        gwapiv1.ObjectName(gatewayNN.Name),
 		SectionName: sectionName,

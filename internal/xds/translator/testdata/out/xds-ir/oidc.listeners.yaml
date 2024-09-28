@@ -32,6 +32,7 @@
                   idToken: IdToken-5F93C2E4
                   oauthExpires: OauthExpires-5F93C2E4
                   oauthHmac: OauthHMAC-5F93C2E4
+                  oauthNonce: OauthNonce-5F93C2E4
                   refreshToken: RefreshToken-5F93C2E4
                 hmacSecret:
                   name: oauth2/hmac_secret/securitypolicy/default/policy-for-first-route
@@ -73,11 +74,13 @@
               authorizationEndpoint: https://oauth.bar.com/oauth2/v2/auth
               credentials:
                 clientId: client.oauth.bar.com
+                cookieDomain: example.com
                 cookieNames:
                   bearerToken: CustomAccessTokenOverride
                   idToken: CustomIdTokenOverride
                   oauthExpires: OauthExpires-5f93c2e4
                   oauthHmac: OauthHMAC-5f93c2e4
+                  oauthNonce: OauthNonce-5f93c2e4
                   refreshToken: RefreshToken-5f93c2e4
                 hmacSecret:
                   name: oauth2/hmac_secret/securitypolicy/default/policy-for-second-route
@@ -120,6 +123,5 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: first-listener
-  drainType: MODIFY_ONLY
   name: first-listener
   perConnectionBufferLimitBytes: 32768

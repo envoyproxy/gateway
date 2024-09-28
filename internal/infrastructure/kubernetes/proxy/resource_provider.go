@@ -259,7 +259,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 				Spec: corev1.PodSpec{
 					Containers:                    containers,
 					InitContainers:                deploymentConfig.InitContainers,
-					ServiceAccountName:            ExpectedResourceHashedName(r.infra.Name),
+					ServiceAccountName:            r.Name(),
 					AutomountServiceAccountToken:  ptr.To(false),
 					TerminationGracePeriodSeconds: expectedTerminationGracePeriodSeconds(proxyConfig.Spec.Shutdown),
 					DNSPolicy:                     corev1.DNSClusterFirst,
@@ -442,7 +442,7 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 }
 
 func expectedTerminationGracePeriodSeconds(cfg *egv1a1.ShutdownConfig) *int64 {
-	s := 900 // default
+	s := 360 // default
 	if cfg != nil && cfg.DrainTimeout != nil {
 		s = int(cfg.DrainTimeout.Seconds() + 300) // 5 minutes longer than drain timeout
 	}

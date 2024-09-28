@@ -13,10 +13,13 @@ on:
   schedule:
   - cron: '44 15 * * 5'
 
+permissions:
+  contents: read
+
 jobs:
   scan-scheduled:
     if: ${{ github.event_name == 'push' || github.event_name == 'schedule' }}
-    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@678a866dcba398c8ed0124a09928d250f187b52a"  # v1.8.4
+    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@f0e6719deb666cd19a0b56bc56d01161bd848b4f"  # v1.8.5
     permissions:
       actions: read
       contents: read
@@ -27,20 +30,17 @@ jobs:
         --skip-git
         --recursive
         ./
-        --config
-        tools/osv-scanner/config.toml
 
   scan-pr:
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
-    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@678a866dcba398c8ed0124a09928d250f187b52a"  # v1.8.4
+    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@f0e6719deb666cd19a0b56bc56d01161bd848b4f"  # v1.8.5
     permissions:
       actions: read
       contents: read
       security-events: write
     with:
+      # TODO enable call analysis once https://github.com/google/osv-scanner/issues/1220 is resolved
       scan-args: |-
         --skip-git
         --recursive
         ./
-        --config
-        tools/osv-scanner/config.toml

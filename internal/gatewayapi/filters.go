@@ -7,11 +7,14 @@ package gatewayapi
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
@@ -27,8 +30,8 @@ type HTTPFiltersTranslator interface {
 	processRedirectFilter(redirect *gwapiv1.HTTPRequestRedirectFilter, filterContext *HTTPFiltersContext)
 	processRequestHeaderModifierFilter(headerModifier *gwapiv1.HTTPHeaderFilter, filterContext *HTTPFiltersContext)
 	processResponseHeaderModifierFilter(headerModifier *gwapiv1.HTTPHeaderFilter, filterContext *HTTPFiltersContext)
-	processRequestMirrorFilter(filterIdx int, mirror *gwapiv1.HTTPRequestMirrorFilter, filterContext *HTTPFiltersContext, resources *Resources)
-	processExtensionRefHTTPFilter(extRef *gwapiv1.LocalObjectReference, filterContext *HTTPFiltersContext, resources *Resources)
+	processRequestMirrorFilter(filterIdx int, mirror *gwapiv1.HTTPRequestMirrorFilter, filterContext *HTTPFiltersContext, resources *resource.Resources)
+	processExtensionRefHTTPFilter(extRef *gwapiv1.LocalObjectReference, filterContext *HTTPFiltersContext, resources *resource.Resources)
 	processUnsupportedHTTPFilter(filterType string, filterContext *HTTPFiltersContext)
 }
 
@@ -64,7 +67,7 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 	route RouteContext,
 	filters []gwapiv1.HTTPRouteFilter,
 	ruleIdx int,
-	resources *Resources,
+	resources *resource.Resources,
 ) *HTTPFiltersContext {
 	httpFiltersContext := &HTTPFiltersContext{
 		ParentRef:    parentRef,
@@ -108,7 +111,7 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 	route RouteContext,
 	filters []gwapiv1.GRPCRouteFilter,
-	resources *Resources,
+	resources *resource.Resources,
 ) *HTTPFiltersContext {
 	httpFiltersContext := &HTTPFiltersContext{
 		ParentRef: parentRef,
@@ -149,16 +152,20 @@ func (t *Translator) processURLRewriteFilter(
 	filterContext *HTTPFiltersContext,
 ) {
 	if filterContext.URLRewrite != nil {
-		routeStatus := GetRouteStatus(filterContext.Route)
-		status.SetRouteStatusCondition(routeStatus,
-			filterContext.ParentRef.routeParentStatusIdx,
-			filterContext.Route.GetGeneration(),
-			gwapiv1.RouteConditionAccepted,
-			metav1.ConditionFalse,
-			gwapiv1.RouteReasonUnsupportedValue,
-			"Cannot configure multiple urlRewrite filters for a single HTTPRouteRule",
-		)
-		return
+		if filterContext.URLRewrite.Hostname != nil ||
+			filterContext.URLRewrite.Path.FullReplace != nil ||
+			filterContext.URLRewrite.Path.PrefixMatchReplace != nil {
+			routeStatus := GetRouteStatus(filterContext.Route)
+			status.SetRouteStatusCondition(routeStatus,
+				filterContext.ParentRef.routeParentStatusIdx,
+				filterContext.Route.GetGeneration(),
+				gwapiv1.RouteConditionAccepted,
+				metav1.ConditionFalse,
+				gwapiv1.RouteReasonUnsupportedValue,
+				"Cannot configure multiple urlRewrite filters for a single HTTPRouteRule",
+			)
+			return
+		}
 	}
 
 	if rewrite == nil {
@@ -214,8 +221,10 @@ func (t *Translator) processURLRewriteFilter(
 				return
 			}
 			if rewrite.Path.ReplaceFullPath != nil {
-				newURLRewrite.Path = &ir.HTTPPathModifier{
-					FullReplace: rewrite.Path.ReplaceFullPath,
+				newURLRewrite.Path = &ir.ExtendedHTTPPathModifier{
+					HTTPPathModifier: ir.HTTPPathModifier{
+						FullReplace: rewrite.Path.ReplaceFullPath,
+					},
 				}
 			}
 		case gwapiv1.PrefixMatchHTTPPathModifier:
@@ -246,8 +255,10 @@ func (t *Translator) processURLRewriteFilter(
 				return
 			}
 			if rewrite.Path.ReplacePrefixMatch != nil {
-				newURLRewrite.Path = &ir.HTTPPathModifier{
-					PrefixMatchReplace: rewrite.Path.ReplacePrefixMatch,
+				newURLRewrite.Path = &ir.ExtendedHTTPPathModifier{
+					HTTPPathModifier: ir.HTTPPathModifier{
+						PrefixMatchReplace: rewrite.Path.ReplacePrefixMatch,
+					},
 				}
 			}
 		default:
@@ -730,13 +741,91 @@ func (t *Translator) processResponseHeaderModifierFilter(
 	}
 }
 
-func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjectReference, filterContext *HTTPFiltersContext, resources *Resources) {
+func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjectReference, filterContext *HTTPFiltersContext, resources *resource.Resources) {
 	// Make sure the config actually exists.
 	if extFilter == nil {
 		return
 	}
 
 	filterNs := filterContext.Route.GetNamespace()
+
+	if string(extFilter.Kind) == egv1a1.KindHTTPRouteFilter {
+		for _, hrf := range resources.HTTPRouteFilters {
+			if hrf.Namespace == filterNs && hrf.Name == string(extFilter.Name) &&
+				hrf.Spec.URLRewrite.Path.Type == egv1a1.RegexHTTPPathModifier {
+
+				if hrf.Spec.URLRewrite.Path.ReplaceRegexMatch == nil ||
+					hrf.Spec.URLRewrite.Path.ReplaceRegexMatch.Pattern == "" {
+					errMsg := "ReplaceRegexMatch Pattern must be set when rewrite path type is \"ReplaceRegexMatch\""
+					routeStatus := GetRouteStatus(filterContext.Route)
+					status.SetRouteStatusCondition(routeStatus,
+						filterContext.ParentRef.routeParentStatusIdx,
+						filterContext.Route.GetGeneration(),
+						gwapiv1.RouteConditionAccepted,
+						metav1.ConditionFalse,
+						gwapiv1.RouteReasonUnsupportedValue,
+						errMsg,
+					)
+					return
+				} else if _, err := regexp.Compile(hrf.Spec.URLRewrite.Path.ReplaceRegexMatch.Pattern); err != nil {
+					// Avoid envoy NACKs due to invalid regex.
+					// Golang's regexp is almost identical to RE2: https://pkg.go.dev/regexp/syntax
+					errMsg := "ReplaceRegexMatch must be a valid RE2 regular expression"
+					routeStatus := GetRouteStatus(filterContext.Route)
+					status.SetRouteStatusCondition(routeStatus,
+						filterContext.ParentRef.routeParentStatusIdx,
+						filterContext.Route.GetGeneration(),
+						gwapiv1.RouteConditionAccepted,
+						metav1.ConditionFalse,
+						gwapiv1.RouteReasonUnsupportedValue,
+						errMsg,
+					)
+					return
+				}
+
+				rmr := &ir.RegexMatchReplace{
+					Pattern:      hrf.Spec.URLRewrite.Path.ReplaceRegexMatch.Pattern,
+					Substitution: hrf.Spec.URLRewrite.Path.ReplaceRegexMatch.Substitution,
+				}
+
+				if filterContext.HTTPFilterIR.URLRewrite != nil {
+					// If path IR is already set - check for a conflict
+					if filterContext.HTTPFilterIR.URLRewrite.Path != nil {
+						path := filterContext.HTTPFilterIR.URLRewrite.Path
+						if path.RegexMatchReplace != nil || path.PrefixMatchReplace != nil || path.FullReplace != nil {
+							routeStatus := GetRouteStatus(filterContext.Route)
+							status.SetRouteStatusCondition(routeStatus,
+								filterContext.ParentRef.routeParentStatusIdx,
+								filterContext.Route.GetGeneration(),
+								gwapiv1.RouteConditionAccepted,
+								metav1.ConditionFalse,
+								gwapiv1.RouteReasonUnsupportedValue,
+								"Cannot configure multiple urlRewrite filters for a single HTTPRouteRule",
+							)
+							return
+						}
+					} else { // no path
+						filterContext.HTTPFilterIR.URLRewrite.Path = &ir.ExtendedHTTPPathModifier{
+							RegexMatchReplace: rmr,
+						}
+						return
+					}
+				} else { // no url rewrite
+					filterContext.HTTPFilterIR.URLRewrite = &ir.URLRewrite{
+						Path: &ir.ExtendedHTTPPathModifier{
+							RegexMatchReplace: rmr,
+						},
+					}
+					return
+				}
+			}
+		}
+		errMsg := fmt.Sprintf("Unable to translate HTTPRouteFilter: %s/%s", filterNs,
+			extFilter.Name)
+		t.processUnresolvedHTTPFilter(errMsg, filterContext)
+		return
+	}
+
 	// This list of resources will be empty unless an extension is loaded (and introduces resources)
 	for _, res := range resources.ExtensionRefFilters {
 		if res.GetKind() == string(extFilter.Kind) && res.GetName() == string(extFilter.Name) && res.GetNamespace() == filterNs {
@@ -752,9 +841,9 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 			}
 			group := apiVers[:idx]
 			if group == string(extFilter.Group) {
-				resource := res // Capture loop variable
+				res := res // Capture loop variable
 				filterContext.ExtensionRefs = append(filterContext.ExtensionRefs, &ir.UnstructuredRef{
-					Object: &resource,
+					Object: &res,
 				})
 				return
 			}
@@ -771,7 +860,7 @@ func (t *Translator) processRequestMirrorFilter(
 	filterIdx int,
 	mirrorFilter *gwapiv1.HTTPRequestMirrorFilter,
 	filterContext *HTTPFiltersContext,
-	resources *Resources,
+	resources *resource.Resources,
 ) {
 	// Make sure the config actually exists
 	if mirrorFilter == nil {
@@ -793,7 +882,7 @@ func (t *Translator) processRequestMirrorFilter(
 	filterNs := filterContext.Route.GetNamespace()
 	serviceNamespace := NamespaceDerefOr(mirrorBackend.Namespace, filterNs)
 	if !t.validateBackendRef(mirrorBackendRef, filterContext.ParentRef, filterContext.Route,
-		resources, serviceNamespace, KindHTTPRoute) {
+		resources, serviceNamespace, resource.KindHTTPRoute) {
 		return
 	}
 

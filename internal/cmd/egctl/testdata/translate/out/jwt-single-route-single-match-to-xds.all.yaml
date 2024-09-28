@@ -293,6 +293,10 @@ xds:
                       providers:
                         httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com/example:
                           forward: true
+                          normalizePayloadInMetadata:
+                            spaceDelimitedClaims:
+                            - scope
+                          payloadInMetadata: example
                           remoteJwks:
                             asyncFetch: {}
                             cacheDuration: 300s
@@ -320,7 +324,6 @@ xds:
                   statPrefix: http-10080
                   useRemoteAddress: true
               name: envoy-gateway-system/eg/http
-            drainType: MODIFY_ONLY
             name: envoy-gateway-system/eg/http
             perConnectionBufferLimitBytes: 32768
     - '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump

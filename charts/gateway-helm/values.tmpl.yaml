@@ -20,6 +20,8 @@ global:
       pullSecrets: []
 podDisruptionBudget:
   minAvailable: 0
+  # maxUnavailable: 1
+
 deployment:
   envoyGateway:
     image:
@@ -56,6 +58,7 @@ deployment:
     labels: {}
     topologySpreadConstraints: []
     tolerations: []
+    nodeSelector: {}
 
 config:
   envoyGateway:
@@ -76,6 +79,9 @@ certgen:
   job:
     annotations: {}
     resources: {}
+    affinity: {}
+    tolerations: []
+    nodeSelector: {}
     ttlSecondsAfterFinished: 30
   rbac:
     annotations: {}

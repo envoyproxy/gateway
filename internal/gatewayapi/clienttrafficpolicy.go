@@ -22,6 +22,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
@@ -37,10 +38,10 @@ func hasSectionName(target *gwapiv1a2.LocalPolicyTargetReferenceWithSectionName)
 }
 
 func (t *Translator) ProcessClientTrafficPolicies(
-	resources *Resources,
+	resources *resource.Resources,
 	gateways []*GatewayContext,
-	xdsIR XdsIRMap,
-	infraIR InfraIRMap,
+	xdsIR resource.XdsIRMap,
+	infraIR resource.InfraIRMap,
 ) []*egv1a1.ClientTrafficPolicy {
 	var res []*egv1a1.ClientTrafficPolicy
 
@@ -366,7 +367,7 @@ func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds, 
 }
 
 func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.ClientTrafficPolicy, l *ListenerContext,
-	xdsIR XdsIRMap, infraIR InfraIRMap, resources *Resources,
+	xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap, resources *resource.Resources,
 ) error {
 	// Find IR
 	irKey := t.getIRKey(l.gateway.Gateway)
@@ -661,6 +662,7 @@ func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, httpIR *ir.HTTP
 	if http1Settings.HTTP10 != nil {
 		var defaultHost *string
 		if ptr.Deref(http1Settings.HTTP10.UseDefaultHost, false) {
+			// First level of precedence - the first non-wildcard hostname associated with the listener
 			for _, hostname := range httpIR.Hostnames {
 				if !strings.Contains(hostname, "*") {
 					// make linter happy
@@ -669,8 +671,27 @@ func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, httpIR *ir.HTTP
 					break
 				}
 			}
+			// second level of precedence - try to get a hostname from the HTTPRoutes
+			numMatchingRoutes := 0
 			if defaultHost == nil {
-				return fmt.Errorf("cannot set http10 default host on listener with only wildcard hostnames")
+				// When taken from the routes, a default hostname can only be chosen if there
+				// is exactly one HTTPRoute with a non-wildcard hostname configured.
+				for _, route := range httpIR.Routes {
+					if route.Hostname != "" && !strings.Contains(route.Hostname, "*") {
+						numMatchingRoutes++
+						// make the linter happy
+						theHost := route.Hostname
+						defaultHost = ptr.To(theHost)
+					}
+					if numMatchingRoutes > 1 {
+						break
+					}
+				}
+				if numMatchingRoutes == 0 {
+					return fmt.Errorf("cannot set http10 default host on listener with only wildcard hostnames")
+				} else if numMatchingRoutes > 1 {
+					return fmt.Errorf("cannot set http10 default host on listener with only wildcard hostnames and more than one possible default route")
+				}
 			}
 		}
 		// If useDefaultHost was set, then defaultHost will have the hostname to use.
@@ -738,7 +759,7 @@ func translateHealthCheckSettings(healthCheckSettings *egv1a1.HealthCheckSetting
 }
 
 func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPolicy,
-	irTLSConfig *ir.TLSConfig, resources *Resources,
+	irTLSConfig *ir.TLSConfig, resources *resource.Resources,
 ) (*ir.TLSConfig, error) {
 	// Return if this listener isn't a TLS listener. There has to be
 	// at least one certificate defined, which would cause httpIR/tcpIR to
@@ -785,7 +806,7 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 	if tlsParams.ClientValidation != nil {
 		from := crossNamespaceFrom{
 			group:     egv1a1.GroupName,
-			kind:      KindClientTrafficPolicy,
+			kind:      resource.KindClientTrafficPolicy,
 			namespace: policy.Namespace,
 		}
 
@@ -794,7 +815,7 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 		}
 
 		for _, caCertRef := range tlsParams.ClientValidation.CACertificateRefs {
-			if caCertRef.Kind == nil || string(*caCertRef.Kind) == KindSecret { // nolint
+			if caCertRef.Kind == nil || string(*caCertRef.Kind) == resource.KindSecret { // nolint
 				secret, err := t.validateSecretRef(false, from, caCertRef, resources)
 				if err != nil {
 					return irTLSConfig, err
@@ -813,7 +834,7 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 
 				irCACert.Certificate = append(irCACert.Certificate, secretBytes...)
 
-			} else if string(*caCertRef.Kind) == KindConfigMap {
+			} else if string(*caCertRef.Kind) == resource.KindConfigMap {
 				configMap, err := t.validateConfigMapRef(false, from, caCertRef, resources)
 				if err != nil {
 					return irTLSConfig, err

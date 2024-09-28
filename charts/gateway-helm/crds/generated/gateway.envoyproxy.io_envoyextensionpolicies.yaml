@@ -136,13 +136,13 @@ spec:
                         description: BackendRef defines how an ObjectReference that
                           is specific to BackendRef.
                         properties:
-                          failover:
+                          fallback:
                             description: |-
-                              Failover indicates whether the backend is designated as a failover.
-                              Multiple failover backends can be configured.
+                              Fallback indicates whether the backend is designated as a fallback.
+                              Multiple fallback backends can be configured.
                               It is highly recommended to configure active or passive health checks to ensure that failover can be detected
                               when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.
-                              The overprovisioning factor is set to 1.4, meaning the failover backends will only start receiving traffic when
+                              The overprovisioning factor is set to 1.4, meaning the fallback backends will only start receiving traffic when
                               the health of the active backends falls below 72%.
                             type: boolean
                           group:
@@ -752,6 +752,86 @@ spec:
                               type: string
                           required:
                           - version
+                          type: object
+                        retry:
+                          description: |-
+                            Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
+                            If not set, retry will be disabled.
+                          properties:
+                            numRetries:
+                              default: 2
+                              description: NumRetries is the number of retries to
+                                be attempted. Defaults to 2.
+                              format: int32
+                              minimum: 0
+                              type: integer
+                            perRetry:
+                              description: PerRetry is the retry policy to be applied
+                                per retry attempt.
+                              properties:
+                                backOff:
+                                  description: |-
+                                    Backoff is the backoff policy to be applied per retry attempt. gateway uses a fully jittered exponential
+                                    back-off algorithm for retries. For additional details,
+                                    see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#config-http-filters-router-x-envoy-max-retries
+                                  properties:
+                                    baseInterval:
+                                      description: BaseInterval is the base interval
+                                        between retries.
+                                      format: duration
+                                      type: string
+                                    maxInterval:
+                                      description: |-
+                                        MaxInterval is the maximum interval between retries. This parameter is optional, but must be greater than or equal to the base_interval if set.
+                                        The default is 10 times the base_interval
+                                      format: duration
+                                      type: string
+                                  type: object
+                                timeout:
+                                  description: Timeout is the timeout per retry attempt.
+                                  format: duration
+                                  type: string
+                              type: object
+                            retryOn:
+                              description: |-
+                                RetryOn specifies the retry trigger condition.
+
+                                If not specified, the default is to retry on connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes(503).
+                              properties:
+                                httpStatusCodes:
+                                  description: |-
+                                    HttpStatusCodes specifies the http status codes to be retried.
+                                    The retriable-status-codes trigger must also be configured for these status codes to trigger a retry.
+                                  items:
+                                    description: HTTPStatus defines the http status
+                                      code.
+                                    exclusiveMaximum: true
+                                    maximum: 600
+                                    minimum: 100
+                                    type: integer
+                                  type: array
+                                triggers:
+                                  description: Triggers specifies the retry trigger
+                                    condition(Http/Grpc).
+                                  items:
+                                    description: TriggerEnum specifies the conditions
+                                      that trigger retries.
+                                    enum:
+                                    - 5xx
+                                    - gateway-error
+                                    - reset
+                                    - connect-failure
+                                    - retriable-4xx
+                                    - refused-stream
+                                    - retriable-status-codes
+                                    - cancelled
+                                    - deadline-exceeded
+                                    - internal
+                                    - resource-exhausted
+                                    - unavailable
+                                    type: string
+                                  type: array
+                              type: object
                           type: object
                         tcpKeepalive:
                           description: |-

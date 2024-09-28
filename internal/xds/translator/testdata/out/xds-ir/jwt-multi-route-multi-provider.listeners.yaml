@@ -26,7 +26,10 @@
                   headerName: one-route-example-key1
                 forward: true
                 issuer: https://www.example.com
-                payloadInMetadata: https://www.example.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scope
+                payloadInMetadata: example
                 remoteJwks:
                   asyncFetch: {}
                   cacheDuration: 300s
@@ -47,7 +50,10 @@
                 clearRouteCache: true
                 forward: true
                 issuer: https://www.two.example.com
-                payloadInMetadata: https://www.two.example.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scope
+                payloadInMetadata: example2
                 remoteJwks:
                   asyncFetch: {}
                   cacheDuration: 300s
@@ -64,7 +70,10 @@
                   headerName: second-route-example-key1
                 forward: true
                 issuer: https://www.example.com
-                payloadInMetadata: https://www.example.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scope
+                payloadInMetadata: example
                 remoteJwks:
                   asyncFetch: {}
                   cacheDuration: 300s
@@ -79,7 +88,10 @@
                 - two.foo.com
                 forward: true
                 issuer: https://www.two.example.com
-                payloadInMetadata: https://www.two.example.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scope
+                payloadInMetadata: example2
                 remoteJwks:
                   asyncFetch: {}
                   cacheDuration: 300s
@@ -115,6 +127,5 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: first-listener
-  drainType: MODIFY_ONLY
   name: first-listener
   perConnectionBufferLimitBytes: 32768

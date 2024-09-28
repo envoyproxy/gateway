@@ -19,6 +19,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
 
 func TestWriteStatus(t *testing.T) {
@@ -40,7 +41,7 @@ func TestWriteStatus(t *testing.T) {
 			name:               "egctl x status gc -v, but no resources",
 			resourceList:       &gwapiv1.GatewayClassList{},
 			resourceNamespaced: false,
-			resourceKind:       gatewayapi.KindGatewayClass,
+			resourceKind:       resource.KindGatewayClass,
 			quiet:              false,
 			verbose:            true,
 			allNamespaces:      false,
@@ -80,7 +81,7 @@ func TestWriteStatus(t *testing.T) {
 				},
 			},
 			resourceNamespaced: false,
-			resourceKind:       gatewayapi.KindGatewayClass,
+			resourceKind:       resource.KindGatewayClass,
 			quiet:              false,
 			verbose:            false,
 			allNamespaces:      false,
@@ -122,7 +123,7 @@ gc        foobar2   test-status-2   test reason 2
 				},
 			},
 			resourceNamespaced: false,
-			resourceKind:       gatewayapi.KindGatewayClass,
+			resourceKind:       resource.KindGatewayClass,
 			quiet:              false,
 			verbose:            true,
 			allNamespaces:      false,
@@ -164,7 +165,7 @@ gc        foobar2   test-status-2   test reason 2   test message 2   123457     
 				},
 			},
 			resourceNamespaced: false,
-			resourceKind:       gatewayapi.KindGatewayClass,
+			resourceKind:       resource.KindGatewayClass,
 			quiet:              true,
 			verbose:            true,
 			allNamespaces:      false,
@@ -177,7 +178,7 @@ gc        foobar2   test-status-2   test reason 2   test message 2   123457     
 			name:               "egctl x status gtw -v -A, no resources",
 			resourceList:       &gwapiv1.GatewayList{},
 			resourceNamespaced: true,
-			resourceKind:       gatewayapi.KindGateway,
+			resourceKind:       resource.KindGateway,
 			quiet:              false,
 			verbose:            true,
 			allNamespaces:      true,
@@ -218,7 +219,7 @@ gc        foobar2   test-status-2   test reason 2   test message 2   123457     
 				},
 			},
 			resourceNamespaced: true,
-			resourceKind:       gatewayapi.KindGateway,
+			resourceKind:       resource.KindGateway,
 			quiet:              false,
 			verbose:            true,
 			allNamespaces:      true,
@@ -287,7 +288,7 @@ default     gtw       foobar2   test-status-2   test reason 2   test message 2  
 				},
 			},
 			resourceNamespaced: true,
-			resourceKind:       gatewayapi.KindGateway,
+			resourceKind:       resource.KindGateway,
 			quiet:              true,
 			verbose:            true,
 			allNamespaces:      true,
@@ -311,7 +312,7 @@ default2    gtw2      foobar4   test-status-4   test reason 4   test message 4  
 								Parents: []gwapiv1.RouteParentStatus{
 									{
 										ParentRef: gwapiv1.ParentReference{
-											Kind: gatewayapi.KindPtr(gatewayapi.KindGateway),
+											Kind: gatewayapi.KindPtr(resource.KindGateway),
 											Name: gwapiv1.ObjectName("test-1"),
 										},
 										Conditions: []metav1.Condition{
@@ -347,7 +348,7 @@ default2    gtw2      foobar4   test-status-4   test reason 4   test message 4  
 								Parents: []gwapiv1.RouteParentStatus{
 									{
 										ParentRef: gwapiv1.ParentReference{
-											Kind: gatewayapi.KindPtr(gatewayapi.KindGateway),
+											Kind: gatewayapi.KindPtr(resource.KindGateway),
 											Name: gwapiv1.ObjectName("test-2"),
 										},
 										Conditions: []metav1.Condition{
@@ -376,7 +377,7 @@ default2    gtw2      foobar4   test-status-4   test reason 4   test message 4  
 				},
 			},
 			resourceNamespaced: true,
-			resourceKind:       gatewayapi.KindHTTPRoute,
+			resourceKind:       resource.KindHTTPRoute,
 			quiet:              false,
 			verbose:            false,
 			allNamespaces:      true,
@@ -402,7 +403,7 @@ default2    http2     gateway/test-2   foobar4   test-status-4   test reason 4
 								Parents: []gwapiv1.RouteParentStatus{
 									{
 										ParentRef: gwapiv1.ParentReference{
-											Kind: gatewayapi.KindPtr(gatewayapi.KindGateway),
+											Kind: gatewayapi.KindPtr(resource.KindGateway),
 											Name: gwapiv1.ObjectName("test-1"),
 										},
 										Conditions: []metav1.Condition{
@@ -438,7 +439,7 @@ default2    http2     gateway/test-2   foobar4   test-status-4   test reason 4
 								Parents: []gwapiv1.RouteParentStatus{
 									{
 										ParentRef: gwapiv1.ParentReference{
-											Kind: gatewayapi.KindPtr(gatewayapi.KindGateway),
+											Kind: gatewayapi.KindPtr(resource.KindGateway),
 											Name: gwapiv1.ObjectName("test-2"),
 										},
 										Conditions: []metav1.Condition{
@@ -467,7 +468,7 @@ default2    http2     gateway/test-2   foobar4   test-status-4   test reason 4
 				},
 			},
 			resourceNamespaced: true,
-			resourceKind:       gatewayapi.KindHTTPRoute,
+			resourceKind:       resource.KindHTTPRoute,
 			quiet:              true,
 			verbose:            false,
 			allNamespaces:      false,
@@ -491,7 +492,7 @@ http2     gateway/test-2   foobar4   test-status-4   test reason 4
 							Ancestors: []gwapiv1a2.PolicyAncestorStatus{
 								{
 									AncestorRef: gwapiv1.ParentReference{
-										Kind: gatewayapi.KindPtr(gatewayapi.KindGateway),
+										Kind: gatewayapi.KindPtr(resource.KindGateway),
 										Name: gwapiv1.ObjectName("test"),
 									},
 									Conditions: []metav1.Condition{
@@ -519,7 +520,7 @@ http2     gateway/test-2   foobar4   test-status-4   test reason 4
 				},
 			},
 			resourceNamespaced: true,
-			resourceKind:       gatewayapi.KindBackendTLSPolicy,
+			resourceKind:       resource.KindBackendTLSPolicy,
 			quiet:              false,
 			verbose:            false,
 			allNamespaces:      false,
@@ -543,7 +544,7 @@ btls      gateway/test         foobar2   test-status-2   test reason 2
 								Parents: []gwapiv1.RouteParentStatus{
 									{
 										ParentRef: gwapiv1.ParentReference{
-											Kind: gatewayapi.KindPtr(gatewayapi.KindGateway),
+											Kind: gatewayapi.KindPtr(resource.KindGateway),
 											Name: gwapiv1.ObjectName("test-1"),
 										},
 										Conditions: []metav1.Condition{
@@ -567,7 +568,7 @@ btls      gateway/test         foobar2   test-status-2   test reason 2
 									},
 									{
 										ParentRef: gwapiv1.ParentReference{
-											Kind: gatewayapi.KindPtr(gatewayapi.KindGateway),
+											Kind: gatewayapi.KindPtr(resource.KindGateway),
 											Name: gwapiv1.ObjectName("test-2"),
 										},
 										Conditions: []metav1.Condition{
@@ -603,7 +604,7 @@ btls      gateway/test         foobar2   test-status-2   test reason 2
 								Parents: []gwapiv1.RouteParentStatus{
 									{
 										ParentRef: gwapiv1.ParentReference{
-											Kind: gatewayapi.KindPtr(gatewayapi.KindGateway),
+											Kind: gatewayapi.KindPtr(resource.KindGateway),
 											Name: gwapiv1.ObjectName("test-3"),
 										},
 										Conditions: []metav1.Condition{
@@ -627,7 +628,7 @@ btls      gateway/test         foobar2   test-status-2   test reason 2
 									},
 									{
 										ParentRef: gwapiv1.ParentReference{
-											Kind: gatewayapi.KindPtr(gatewayapi.KindGateway),
+											Kind: gatewayapi.KindPtr(resource.KindGateway),
 											Name: gwapiv1.ObjectName("test-4"),
 										},
 										Conditions: []metav1.Condition{
@@ -656,7 +657,7 @@ btls      gateway/test         foobar2   test-status-2   test reason 2
 				},
 			},
 			resourceNamespaced: true,
-			resourceKind:       gatewayapi.KindHTTPRoute,
+			resourceKind:       resource.KindHTTPRoute,
 			quiet:              false,
 			verbose:            false,
 			allNamespaces:      true,
@@ -685,7 +686,7 @@ default2    http2     gateway/test-3   foobar6   test-status-6   test reason 6
 							Ancestors: []gwapiv1a2.PolicyAncestorStatus{
 								{
 									AncestorRef: gwapiv1.ParentReference{
-										Kind: gatewayapi.KindPtr(gatewayapi.KindGateway),
+										Kind: gatewayapi.KindPtr(resource.KindGateway),
 										Name: gwapiv1.ObjectName("test-1"),
 									},
 									Conditions: []metav1.Condition{
@@ -709,7 +710,7 @@ default2    http2     gateway/test-3   foobar6   test-status-6   test reason 6
 								},
 								{
 									AncestorRef: gwapiv1.ParentReference{
-										Kind: gatewayapi.KindPtr(gatewayapi.KindHTTPRoute),
+										Kind: gatewayapi.KindPtr(resource.KindHTTPRoute),
 										Name: gwapiv1.ObjectName("test-2"),
 									},
 									Conditions: []metav1.Condition{
@@ -743,7 +744,7 @@ default2    http2     gateway/test-3   foobar6   test-status-6   test reason 6
 							Ancestors: []gwapiv1a2.PolicyAncestorStatus{
 								{
 									AncestorRef: gwapiv1.ParentReference{
-										Kind: gatewayapi.KindPtr(gatewayapi.KindGateway),
+										Kind: gatewayapi.KindPtr(resource.KindGateway),
 										Name: gwapiv1.ObjectName("test-3"),
 									},
 									Conditions: []metav1.Condition{
@@ -767,7 +768,7 @@ default2    http2     gateway/test-3   foobar6   test-status-6   test reason 6
 								},
 								{
 									AncestorRef: gwapiv1.ParentReference{
-										Kind: gatewayapi.KindPtr(gatewayapi.KindGRPCRoute),
+										Kind: gatewayapi.KindPtr(resource.KindGRPCRoute),
 										Name: gwapiv1.ObjectName("test-4"),
 									},
 									Conditions: []metav1.Condition{
@@ -795,7 +796,7 @@ default2    http2     gateway/test-3   foobar6   test-status-6   test reason 6
 				},
 			},
 			resourceNamespaced: true,
-			resourceKind:       gatewayapi.KindBackendTrafficPolicy,
+			resourceKind:       resource.KindBackendTrafficPolicy,
 			quiet:              false,
 			verbose:            false,
 			allNamespaces:      false,

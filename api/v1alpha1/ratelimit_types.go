@@ -138,6 +138,13 @@ type SourceMatch struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
 	Value string `json:"value"`
+
+	// Invert specifies whether the value match result will be inverted.
+	//
+	// +optional
+	// +kubebuilder:default=false
+	// +notImplementedHide
+	Invert *bool `json:"invert,omitempty"`
 }
 
 // HeaderMatch defines the match attributes within the HTTP Headers of the request.
@@ -161,6 +168,15 @@ type HeaderMatch struct { // TODO: zhaohuabing this type could be replaced with 
 	// +optional
 	// +kubebuilder:validation:MaxLength=1024
 	Value *string `json:"value,omitempty"`
+
+	// Invert specifies whether the value match result will be inverted.
+	// Do not set this field when Type="Distinct", implying matching on any/all unique
+	// values within the header.
+	//
+	// +optional
+	// +kubebuilder:default=false
+	// +notImplementedHide
+	Invert *bool `json:"invert,omitempty"`
 }
 
 // HeaderMatchType specifies the semantics of how HTTP header values should be compared.

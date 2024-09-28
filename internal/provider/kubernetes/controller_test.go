@@ -19,6 +19,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/logging"
 )
 
@@ -274,7 +275,7 @@ func TestProcessGatewayClassParamsRef(t *testing.T) {
 			}
 
 			// Process the test case gatewayclasses.
-			resourceTree := gatewayapi.NewResources()
+			resourceTree := resource.NewResources()
 			resourceMap := newResourceMapping()
 			err := r.processGatewayClassParamsRef(context.Background(), tc.gc, resourceMap, resourceTree)
 			if tc.expected {

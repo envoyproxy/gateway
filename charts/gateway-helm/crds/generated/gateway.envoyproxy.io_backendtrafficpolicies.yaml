@@ -693,6 +693,13 @@ spec:
                                       description: HeaderMatch defines the match attributes
                                         within the HTTP Headers of the request.
                                       properties:
+                                        invert:
+                                          default: false
+                                          description: |-
+                                            Invert specifies whether the value match result will be inverted.
+                                            Do not set this field when Type="Distinct", implying matching on any/all unique
+                                            values within the header.
+                                          type: boolean
                                         name:
                                           description: Name of the HTTP header.
                                           maxLength: 256
@@ -728,6 +735,11 @@ spec:
                                       SourceCIDR is the client IP Address range to match on.
                                       At least one of headers or sourceCIDR condition must be specified.
                                     properties:
+                                      invert:
+                                        default: false
+                                        description: Invert specifies whether the
+                                          value match result will be inverted.
+                                        type: boolean
                                       type:
                                         default: Exact
                                         enum:
@@ -824,6 +836,13 @@ spec:
                                       description: HeaderMatch defines the match attributes
                                         within the HTTP Headers of the request.
                                       properties:
+                                        invert:
+                                          default: false
+                                          description: |-
+                                            Invert specifies whether the value match result will be inverted.
+                                            Do not set this field when Type="Distinct", implying matching on any/all unique
+                                            values within the header.
+                                          type: boolean
                                         name:
                                           description: Name of the HTTP header.
                                           maxLength: 256
@@ -859,6 +878,11 @@ spec:
                                       SourceCIDR is the client IP Address range to match on.
                                       At least one of headers or sourceCIDR condition must be specified.
                                     properties:
+                                      invert:
+                                        default: false
+                                        description: Invert specifies whether the
+                                          value match result will be inverted.
+                                        type: boolean
                                       type:
                                         default: Exact
                                         enum:
@@ -921,6 +945,120 @@ spec:
                 required:
                 - type
                 type: object
+              responseOverride:
+                description: |-
+                  ResponseOverride defines the configuration to override specific responses with a custom one.
+                  If multiple configurations are specified, the first one to match wins.
+                items:
+                  description: ResponseOverride defines the configuration to override
+                    specific responses with a custom one.
+                  properties:
+                    match:
+                      description: Match configuration.
+                      properties:
+                        statusCode:
+                          description: Status code to match on. The match evaluates
+                            to true if any of the matches are successful.
+                          items:
+                            properties:
+                              range:
+                                description: |-
+                                  ValueRef contains the contents of the body
+                                  specified as a local object reference.
+                                  Only a reference to ConfigMap is supported.
+                                properties:
+                                  end:
+                                    description: End of the range, including the end
+                                      value.
+                                    type: integer
+                                  start:
+                                    description: Start of the range, including the
+                                      start value.
+                                    type: integer
+                                required:
+                                - end
+                                - start
+                                type: object
+                              type:
+                                default: Value
+                                description: Type is the type of value.
+                                enum:
+                                - Value
+                                - Range
+                                type: string
+                              value:
+                                description: Value contains the value of the status
+                                  code.
+                                type: string
+                            required:
+                            - type
+                            type: object
+                          type: array
+                      required:
+                      - statusCode
+                      type: object
+                    response:
+                      description: Response configuration.
+                      properties:
+                        body:
+                          description: Body of the Custom Response
+                          properties:
+                            inline:
+                              description: Inline contains the value as an inline
+                                string.
+                              type: string
+                            type:
+                              description: Type is the type of method to use to read
+                                the body value.
+                              enum:
+                              - Inline
+                              - ValueRef
+                              type: string
+                            valueRef:
+                              description: |-
+                                ValueRef contains the contents of the body
+                                specified as a local object reference.
+                                Only a reference to ConfigMap is supported.
+                              properties:
+                                group:
+                                  description: |-
+                                    Group is the group of the referent. For example, "gateway.networking.k8s.io".
+                                    When unspecified or empty string, core API group is inferred.
+                                  maxLength: 253
+                                  pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                  type: string
+                                kind:
+                                  description: Kind is kind of the referent. For example
+                                    "HTTPRoute" or "Service".
+                                  maxLength: 63
+                                  minLength: 1
+                                  pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                                  type: string
+                                name:
+                                  description: Name is the name of the referent.
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - group
+                              - kind
+                              - name
+                              type: object
+                          required:
+                          - type
+                          type: object
+                        contentType:
+                          description: Content Type of the response. This will be
+                            set in the Content-Type header.
+                          type: string
+                      required:
+                      - body
+                      type: object
+                  required:
+                  - match
+                  - response
+                  type: object
+                type: array
               retry:
                 description: |-
                   Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.

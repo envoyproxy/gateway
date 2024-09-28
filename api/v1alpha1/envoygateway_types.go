@@ -174,7 +174,7 @@ type ExtensionAPISettings struct {
 // EnvoyGatewayProvider defines the desired configuration of a provider.
 // +union
 type EnvoyGatewayProvider struct {
-	// Type is the type of provider to use. Supported types are "Kubernetes".
+	// Type is the type of provider to use. Supported types are "Kubernetes", "Custom".
 	//
 	// +unionDiscriminator
 	Type ProviderType `json:"type"`
@@ -186,7 +186,7 @@ type EnvoyGatewayProvider struct {
 	Kubernetes *EnvoyGatewayKubernetesProvider `json:"kubernetes,omitempty"`
 
 	// Custom defines the configuration for the Custom provider. This provider
-	// allows you to define a specific resource provider and a infrastructure
+	// allows you to define a specific resource provider and an infrastructure
 	// provider.
 	//
 	// +optional
@@ -271,7 +271,11 @@ type EnvoyGatewayCustomProvider struct {
 	// This provider is used to specify the provider to be used
 	// to provide an environment to deploy the out resources like
 	// the Envoy Proxy data plane.
-	Infrastructure EnvoyGatewayInfrastructureProvider `json:"infrastructure"`
+	//
+	// Infrastructure is optional, if provider is not specified,
+	// No infrastructure provider is available.
+	// +optional
+	Infrastructure *EnvoyGatewayInfrastructureProvider `json:"infrastructure,omitempty"`
 }
 
 // ResourceProviderType defines the types of custom resource providers supported by Envoy Gateway.
@@ -300,7 +304,7 @@ type EnvoyGatewayResourceProvider struct {
 // EnvoyGatewayFileResourceProvider defines configuration for the File Resource provider.
 type EnvoyGatewayFileResourceProvider struct {
 	// Paths are the paths to a directory or file containing the resource configuration.
-	// Recursive sub directories are not currently supported.
+	// Recursive subdirectories are not currently supported.
 	Paths []string `json:"paths"`
 }
 

@@ -6,8 +6,6 @@
 package validation
 
 import (
-	// Register embed
-	_ "embed"
 	"reflect"
 	"testing"
 
@@ -19,19 +17,6 @@ import (
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-)
-
-var (
-	//go:embed testdata/valid-user-bootstrap.yaml
-	validUserBootstrap string
-	//go:embed testdata/merge-user-bootstrap.yaml
-	mergeUserBootstrap string
-	//go:embed testdata/missing-admin-address-user-bootstrap.yaml
-	missingAdminAddressUserBootstrap string
-	//go:embed testdata/different-dynamic-resources-user-bootstrap.yaml
-	differentDynamicResourcesUserBootstrap string
-	//go:embed testdata/different-xds-cluster-address-bootstrap.yaml
-	differentXdsClusterAddressBootstrap string
 )
 
 func TestValidateEnvoyProxy(t *testing.T) {
@@ -67,7 +52,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeFile,
+						Type: egv1a1.ProviderTypeCustom,
 					},
 				},
 			},
@@ -314,83 +299,6 @@ func TestValidateEnvoyProxy(t *testing.T) {
 								LoadBalancerIP: ptr.To("2001:db8::68"),
 							},
 						},
-					},
-				},
-			},
-			expected: false,
-		},
-
-		{
-			name: "valid user bootstrap replace type",
-			proxy: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "test",
-				},
-				Spec: egv1a1.EnvoyProxySpec{
-					Bootstrap: &egv1a1.ProxyBootstrap{
-						Value: validUserBootstrap,
-					},
-				},
-			},
-			expected: true,
-		},
-		{
-			name: "valid user bootstrap merge type",
-			proxy: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "test",
-				},
-				Spec: egv1a1.EnvoyProxySpec{
-					Bootstrap: &egv1a1.ProxyBootstrap{
-						Type:  ptr.To(egv1a1.BootstrapTypeMerge),
-						Value: mergeUserBootstrap,
-					},
-				},
-			},
-			expected: true,
-		},
-		{
-			name: "user bootstrap with missing admin address",
-			proxy: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "test",
-				},
-				Spec: egv1a1.EnvoyProxySpec{
-					Bootstrap: &egv1a1.ProxyBootstrap{
-						Value: missingAdminAddressUserBootstrap,
-					},
-				},
-			},
-			expected: false,
-		},
-		{
-			name: "user bootstrap with different dynamic resources",
-			proxy: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "test",
-				},
-				Spec: egv1a1.EnvoyProxySpec{
-					Bootstrap: &egv1a1.ProxyBootstrap{
-						Value: differentDynamicResourcesUserBootstrap,
-					},
-				},
-			},
-			expected: false,
-		},
-		{
-			name: "user bootstrap with different xds_cluster endpoint",
-			proxy: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "test",
-				},
-				Spec: egv1a1.EnvoyProxySpec{
-					Bootstrap: &egv1a1.ProxyBootstrap{
-						Value: differentXdsClusterAddressBootstrap,
 					},
 				},
 			},

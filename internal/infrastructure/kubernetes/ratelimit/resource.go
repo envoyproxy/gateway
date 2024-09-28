@@ -71,6 +71,8 @@ const (
 	LogLevelEnvVar = "LOG_LEVEL"
 	// UseStatsdEnvVar is the use statsd.
 	UseStatsdEnvVar = "USE_STATSD"
+	// StatsdPortEnvVar is the use statsd port.
+	StatsdPortEnvVar = "STATSD_PORT"
 	// ForceStartWithoutInitialConfigEnvVar enables start the ratelimit server without initial config.
 	ForceStartWithoutInitialConfigEnvVar = "FORCE_START_WITHOUT_INITIAL_CONFIG"
 	// ConfigTypeEnvVar is the configuration loading method for ratelimit.
@@ -191,47 +193,7 @@ func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeploymen
 		},
 	}
 
-	if enablePrometheus(rateLimit) {
-		containers = append(containers, promStatsdExporterContainer())
-	}
-
 	return containers
-}
-
-func promStatsdExporterContainer() corev1.Container {
-	return corev1.Container{
-		Name:            "prom-statsd-exporter",
-		Image:           "prom/statsd-exporter:v0.18.0",
-		ImagePullPolicy: corev1.PullIfNotPresent,
-		Command: []string{
-			"/bin/statsd_exporter",
-			fmt.Sprintf("--web.listen-address=:%d", PrometheusPort),
-			"--statsd.mapping-config=/etc/statsd-exporter/conf.yaml",
-		},
-		Ports: []corev1.ContainerPort{
-			{
-				Name:          "statsd",
-				ContainerPort: StatsdPort,
-				Protocol:      corev1.ProtocolTCP,
-			},
-			{
-				Name:          "metrics",
-				ContainerPort: PrometheusPort,
-				Protocol:      corev1.ProtocolTCP,
-			},
-		},
-		VolumeMounts: []corev1.VolumeMount{
-			{
-				Name:      "statsd-exporter-config",
-				ReadOnly:  true,
-				MountPath: "/etc/statsd-exporter",
-			},
-		},
-		TerminationMessagePolicy: corev1.TerminationMessageReadFile,
-		TerminationMessagePath:   "/dev/termination-log",
-		SecurityContext:          defaultSecurityContext(),
-		Resources:                *egv1a1.DefaultResourceRequirements(),
-	}
 }
 
 // expectedContainerVolumeMounts returns expected rateLimit container volume mounts.
@@ -244,6 +206,14 @@ func expectedContainerVolumeMounts(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 		MountPath: "/certs",
 		ReadOnly:  true,
 	})
+
+	if enablePrometheus(rateLimit) {
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "statsd-exporter-config",
+			MountPath: "/etc/statsd-exporter",
+			ReadOnly:  true,
+		})
+	}
 
 	if rateLimit.Backend.Redis.TLS != nil {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
@@ -329,11 +299,7 @@ func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 		},
 		{
 			Name:  UseStatsdEnvVar,
-			Value: "true",
-		},
-		{
-			Name:  "STATSD_PORT",
-			Value: "9125",
+			Value: "false",
 		},
 		{
 			Name:  ConfigTypeEnvVar,
@@ -416,6 +382,19 @@ func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 				},
 			}...)
 		}
+	}
+
+	if enablePrometheus(rateLimit) {
+		env = append(env, corev1.EnvVar{
+			Name:  "USE_PROMETHEUS",
+			Value: "true",
+		}, corev1.EnvVar{
+			Name:  "PROMETHEUS_ADDR",
+			Value: ":19001",
+		}, corev1.EnvVar{
+			Name:  "PROMETHEUS_MAPPER_YAML",
+			Value: "/etc/statsd-exporter/conf.yaml",
+		})
 	}
 
 	if enableTracing(rateLimit) {

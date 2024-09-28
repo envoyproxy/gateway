@@ -5,13 +5,15 @@ set -euo pipefail
 # Setup default values
 CLUSTER_NAME=${CLUSTER_NAME:-"envoy-gateway"}
 METALLB_VERSION=${METALLB_VERSION:-"v0.13.10"}
-KIND_NODE_TAG=${KIND_NODE_TAG:-"v1.28.0"}
+KIND_NODE_TAG=${KIND_NODE_TAG:-"v1.31.0"}
 NUM_WORKERS=${NUM_WORKERS:-""}
-
+IP_FAMILY=${IP_FAMILY:-"ipv4"}
 
 KIND_CFG=$(cat <<-EOM
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
+networking:
+  ipFamily: ${IP_FAMILY}
 nodes:
 - role: control-plane
 EOM
@@ -53,10 +55,31 @@ kubectl rollout status -n metallb-system deployment/controller --timeout 5m
 kubectl rollout status -n metallb-system daemonset/speaker --timeout 5m
 
 # Apply config with addresses based on docker network IPAM.
-subnet=$(docker network inspect kind | jq -r '.[].IPAM.Config[].Subnet | select(contains(":") | not)')
-# Assume default kind network subnet prefix of 16, and choose addresses in that range.
-address_first_octets=$(echo "${subnet}" | awk -F. '{printf "%s.%s",$1,$2}')
-address_range="${address_first_octets}.255.200-${address_first_octets}.255.250"
+address_ranges=""
+
+if [ "${IP_FAMILY}" = "ipv4" ] || [ "${IP_FAMILY}" = "dual" ]; then
+    subnet_v4=$(docker network inspect kind | jq -r '.[].IPAM.Config[] | select(.Subnet | contains(":") | not) | .Subnet')
+    address_prefix_v4=$(echo "${subnet_v4}" | awk -F. '{print $1"."$2"."$3}')
+    address_range_v4="${address_prefix_v4}.200-${address_prefix_v4}.250"
+    echo "IPv4 address range: ${address_range_v4}"
+    address_ranges+="- ${address_range_v4}"
+fi
+
+if [ "${IP_FAMILY}" = "ipv6" ] || [ "${IP_FAMILY}" = "dual" ]; then
+    subnet_v6=$(docker network inspect kind | jq -r '.[].IPAM.Config[] | select(.Subnet | contains(":")) | .Subnet')
+    ipv6_prefix="${subnet_v6%::*}"
+    address_range_v6="${ipv6_prefix}::c8-${ipv6_prefix}::fa"
+    echo "IPv6 address range: ${address_range_v6}"
+    [ -n "${address_ranges}" ] && address_ranges+="\n"
+    address_ranges+="- ${address_range_v6}"
+fi
+
+if [ -z "${address_ranges}" ]; then
+    echo "Error: No valid IP ranges found for IP_FAMILY=${IP_FAMILY}"
+    exit 1
+fi
+
+# Apply MetalLB IPAddressPool and L2Advertisement
 kubectl apply -f - <<EOF
 apiVersion: metallb.io/v1beta1
 kind: IPAddressPool
@@ -65,7 +88,7 @@ metadata:
   name: kube-services
 spec:
   addresses:
-  - ${address_range}
+$(echo -e "${address_ranges}" | sed 's/^/    /')
 ---
 apiVersion: metallb.io/v1beta1
 kind: L2Advertisement

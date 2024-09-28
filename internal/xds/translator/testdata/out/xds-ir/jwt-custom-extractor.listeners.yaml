@@ -30,7 +30,10 @@
                 fromParams:
                 - token
                 issuer: https://www.example.com
-                payloadInMetadata: https://www.example.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scope
+                payloadInMetadata: example
                 remoteJwks:
                   asyncFetch: {}
                   cacheDuration: 300s
@@ -58,6 +61,5 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: first-listener
-  drainType: MODIFY_ONLY
   name: first-listener
   perConnectionBufferLimitBytes: 32768

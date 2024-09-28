@@ -256,12 +256,12 @@ type EnvoyProxyProvider struct {
 // ShutdownConfig defines configuration for graceful envoy shutdown process.
 type ShutdownConfig struct {
 	// DrainTimeout defines the graceful drain timeout. This should be less than the pod's terminationGracePeriodSeconds.
-	// If unspecified, defaults to 600 seconds.
+	// If unspecified, defaults to 60 seconds.
 	//
 	// +optional
 	DrainTimeout *metav1.Duration `json:"drainTimeout,omitempty"`
 	// MinDrainDuration defines the minimum drain duration allowing time for endpoint deprogramming to complete.
-	// If unspecified, defaults to 5 seconds.
+	// If unspecified, defaults to 10 seconds.
 	//
 	// +optional
 	MinDrainDuration *metav1.Duration `json:"minDrainDuration,omitempty"`
@@ -358,19 +358,27 @@ const (
 )
 
 // ProxyBootstrap defines Envoy Bootstrap configuration.
+// +union
+// +kubebuilder:validation:XValidation:rule="self.type == 'JSONPatch' ? self.jsonPatches.size() > 0 : has(self.value)", message="provided bootstrap patch doesn't match the configured patch type"
 type ProxyBootstrap struct {
-	// Type is the type of the bootstrap configuration, it should be either Replace or Merge.
+	// Type is the type of the bootstrap configuration, it should be either Replace,  Merge, or JSONPatch.
 	// If unspecified, it defaults to Replace.
 	// +optional
 	// +kubebuilder:default=Replace
+	// +unionDiscriminator
 	Type *BootstrapType `json:"type"`
 
 	// Value is a YAML string of the bootstrap.
-	Value string `json:"value"`
+	// +optional
+	Value *string `json:"value,omitempty"`
+
+	// JSONPatches is an array of JSONPatches to be applied to the default bootstrap. Patches are
+	// applied in the order in which they are defined.
+	JSONPatches []JSONPatchOperation `json:"jsonPatches,omitempty"`
 }
 
 // BootstrapType defines the types of bootstrap supported by Envoy Gateway.
-// +kubebuilder:validation:Enum=Merge;Replace
+// +kubebuilder:validation:Enum=Merge;Replace;JSONPatch
 type BootstrapType string
 
 const (
@@ -381,6 +389,9 @@ const (
 
 	// Replace replaces the default bootstrap with the provided one.
 	BootstrapTypeReplace BootstrapType = "Replace"
+
+	// JSONPatch applies the provided JSONPatches to the default bootstrap.
+	BootstrapTypeJSONPatch BootstrapType = "JSONPatch"
 )
 
 // EnvoyProxyStatus defines the observed state of EnvoyProxy. This type is not implemented

@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/utils/field"
 	"github.com/envoyproxy/gateway/internal/utils/file"
 	"github.com/envoyproxy/gateway/internal/wasm"
@@ -68,7 +69,7 @@ func TestTranslate(t *testing.T) {
 			input, err := os.ReadFile(inputFile)
 			require.NoError(t, err)
 
-			resources := &Resources{}
+			resources := &resource.Resources{}
 			mustUnmarshal(t, input, resources)
 			envoyPatchPolicyEnabled := true
 			backendEnabled := true
@@ -334,7 +335,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 			input, err := os.ReadFile(inputFile)
 			require.NoError(t, err)
 
-			resources := &Resources{}
+			resources := &resource.Resources{}
 			mustUnmarshal(t, input, resources)
 
 			translator := &Translator{

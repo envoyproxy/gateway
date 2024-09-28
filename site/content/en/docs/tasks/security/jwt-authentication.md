@@ -91,7 +91,7 @@ A `401` HTTP response code should be returned.
 Get the JWT used for testing request authentication:
 
 ```shell
-TOKEN=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/test.jwt -s) && echo "$TOKEN" | cut -d '.' -f2 - | base64 --decode -
+TOKEN=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/test.jwt -s) && echo "$TOKEN" | cut -d '.' -f2 - | base64 --decode
 ```
 
 __Note:__ The above command decodes and returns the token's payload. You can replace `f2` with `f1` to view the token's
@@ -128,7 +128,7 @@ Error invoking method "yages.Echo/Ping": rpc error: code = Unauthenticated desc 
 Get the JWT used for testing request authentication:
 
 ```shell
-TOKEN=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/test.jwt -s) && echo "$TOKEN" | cut -d '.' -f2 - | base64 --decode -
+TOKEN=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/test.jwt -s) && echo "$TOKEN" | cut -d '.' -f2 - | base64 --decode
 ```
 
 __Note:__ The above command decodes and returns the token's payload. You can replace `f2` with `f1` to view the token's

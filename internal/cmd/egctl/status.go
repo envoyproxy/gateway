@@ -23,22 +23,22 @@ import (
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
 
 var (
 	supportedXRouteTypes = []string{
-		gatewayapi.KindHTTPRoute, gatewayapi.KindGRPCRoute, gatewayapi.KindTCPRoute,
-		gatewayapi.KindUDPRoute, gatewayapi.KindTLSRoute,
+		resource.KindHTTPRoute, resource.KindGRPCRoute, resource.KindTCPRoute,
+		resource.KindUDPRoute, resource.KindTLSRoute,
 	}
 
 	supportedXPolicyTypes = []string{
-		gatewayapi.KindBackendTLSPolicy, gatewayapi.KindBackendTrafficPolicy, gatewayapi.KindClientTrafficPolicy,
-		gatewayapi.KindSecurityPolicy, gatewayapi.KindEnvoyPatchPolicy, gatewayapi.KindEnvoyExtensionPolicy,
+		resource.KindBackendTLSPolicy, resource.KindBackendTrafficPolicy, resource.KindClientTrafficPolicy,
+		resource.KindSecurityPolicy, resource.KindEnvoyPatchPolicy, resource.KindEnvoyExtensionPolicy,
 	}
 
 	supportedAllTypes = []string{
-		gatewayapi.KindGatewayClass, gatewayapi.KindGateway,
+		resource.KindGatewayClass, resource.KindGateway,
 	}
 )
 
@@ -156,7 +156,7 @@ func runStatus(ctx context.Context, cli client.Client, inputResourceType, namesp
 			return err
 		}
 		resourcesList = &gc
-		resourceKind = gatewayapi.KindGatewayClass
+		resourceKind = resource.KindGatewayClass
 
 	case "gtw", "gateway":
 		gtw := gwapiv1.GatewayList{}
@@ -164,7 +164,7 @@ func runStatus(ctx context.Context, cli client.Client, inputResourceType, namesp
 			return err
 		}
 		resourcesList = &gtw
-		resourceKind = gatewayapi.KindGateway
+		resourceKind = resource.KindGateway
 
 	case "httproute":
 		httproute := gwapiv1.HTTPRouteList{}
@@ -172,7 +172,7 @@ func runStatus(ctx context.Context, cli client.Client, inputResourceType, namesp
 			return err
 		}
 		resourcesList = &httproute
-		resourceKind = gatewayapi.KindHTTPRoute
+		resourceKind = resource.KindHTTPRoute
 
 	case "grpcroute":
 		grpcroute := gwapiv1.GRPCRouteList{}
@@ -180,7 +180,7 @@ func runStatus(ctx context.Context, cli client.Client, inputResourceType, namesp
 			return err
 		}
 		resourcesList = &grpcroute
-		resourceKind = gatewayapi.KindGRPCRoute
+		resourceKind = resource.KindGRPCRoute
 
 	case "tcproute":
 		tcproute := gwapiv1a2.TCPRouteList{}
@@ -188,7 +188,7 @@ func runStatus(ctx context.Context, cli client.Client, inputResourceType, namesp
 			return err
 		}
 		resourcesList = &tcproute
-		resourceKind = gatewayapi.KindTCPRoute
+		resourceKind = resource.KindTCPRoute
 
 	case "udproute":
 		udproute := gwapiv1a2.UDPRouteList{}
@@ -196,7 +196,7 @@ func runStatus(ctx context.Context, cli client.Client, inputResourceType, namesp
 			return err
 		}
 		resourcesList = &udproute
-		resourceKind = gatewayapi.KindUDPRoute
+		resourceKind = resource.KindUDPRoute
 
 	case "tlsroute":
 		tlsroute := gwapiv1a2.TLSRouteList{}
@@ -204,7 +204,7 @@ func runStatus(ctx context.Context, cli client.Client, inputResourceType, namesp
 			return err
 		}
 		resourcesList = &tlsroute
-		resourceKind = gatewayapi.KindTLSRoute
+		resourceKind = resource.KindTLSRoute
 
 	case "btlspolicy", "backendtlspolicy":
 		btlspolicy := gwapiv1a3.BackendTLSPolicyList{}
@@ -212,7 +212,7 @@ func runStatus(ctx context.Context, cli client.Client, inputResourceType, namesp
 			return err
 		}
 		resourcesList = &btlspolicy
-		resourceKind = gatewayapi.KindBackendTLSPolicy
+		resourceKind = resource.KindBackendTLSPolicy
 
 	case "btp", "backendtrafficpolicy":
 		btp := egv1a1.BackendTrafficPolicyList{}
@@ -220,7 +220,7 @@ func runStatus(ctx context.Context, cli client.Client, inputResourceType, namesp
 			return err
 		}
 		resourcesList = &btp
-		resourceKind = gatewayapi.KindBackendTrafficPolicy
+		resourceKind = resource.KindBackendTrafficPolicy
 
 	case "ctp", "clienttrafficpolicy":
 		ctp := egv1a1.ClientTrafficPolicyList{}
@@ -228,7 +228,7 @@ func runStatus(ctx context.Context, cli client.Client, inputResourceType, namesp
 			return err
 		}
 		resourcesList = &ctp
-		resourceKind = gatewayapi.KindClientTrafficPolicy
+		resourceKind = resource.KindClientTrafficPolicy
 
 	case "epp", "envoypatchpolicy":
 		epp := egv1a1.EnvoyPatchPolicyList{}
@@ -236,7 +236,7 @@ func runStatus(ctx context.Context, cli client.Client, inputResourceType, namesp
 			return err
 		}
 		resourcesList = &epp
-		resourceKind = gatewayapi.KindEnvoyPatchPolicy
+		resourceKind = resource.KindEnvoyPatchPolicy
 
 	case "eep", "envoyextensionpolicy":
 		eep := egv1a1.EnvoyExtensionPolicyList{}
@@ -244,7 +244,7 @@ func runStatus(ctx context.Context, cli client.Client, inputResourceType, namesp
 			return err
 		}
 		resourcesList = &eep
-		resourceKind = gatewayapi.KindEnvoyExtensionPolicy
+		resourceKind = resource.KindEnvoyExtensionPolicy
 
 	case "sp", "securitypolicy":
 		sp := egv1a1.SecurityPolicyList{}
@@ -252,7 +252,7 @@ func runStatus(ctx context.Context, cli client.Client, inputResourceType, namesp
 			return err
 		}
 		resourcesList = &sp
-		resourceKind = gatewayapi.KindSecurityPolicy
+		resourceKind = resource.KindSecurityPolicy
 
 	default:
 		return fmt.Errorf("unknown input resource type: %s, supported input types are: %s",
