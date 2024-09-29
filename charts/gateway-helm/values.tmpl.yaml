@@ -60,6 +60,9 @@ deployment:
     tolerations: []
     nodeSelector: {}
 
+service:
+  annotations: {}
+
 config:
   envoyGateway:
     gateway:
