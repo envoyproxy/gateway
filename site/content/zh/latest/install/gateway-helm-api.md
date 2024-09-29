@@ -65,4 +65,5 @@ The Helm chart for Envoy Gateway
 | global.images.ratelimit.pullSecrets | list | `[]` |  |
 | kubernetesClusterDomain | string | `"cluster.local"` |  |
 | podDisruptionBudget.minAvailable | int | `0` |  |
+| service.annotations | object | `{}` |  |
 
