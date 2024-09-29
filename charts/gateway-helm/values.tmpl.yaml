@@ -49,6 +49,7 @@ deployment:
     - name: metrics
       port: 19001
       targetPort: 19001
+  priorityClassName: null
   replicas: 1
   pod:
     affinity: {}

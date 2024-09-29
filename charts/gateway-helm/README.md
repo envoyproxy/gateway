@@ -91,6 +91,7 @@ To uninstall the chart:
 | deployment.ports[3].name | string | `"metrics"` |  |
 | deployment.ports[3].port | int | `19001` |  |
 | deployment.ports[3].targetPort | int | `19001` |  |
+| deployment.priorityClassName | string | `nil` |  |
 | deployment.replicas | int | `1` |  |
 | global.images.envoyGateway.image | string | `nil` |  |
 | global.images.envoyGateway.pullPolicy | string | `nil` |  |
