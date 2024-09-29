@@ -1,0 +1,2 @@
+deployment:
+  priorityClassName: system-cluster-critical
