@@ -21,10 +21,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 )
 
-//nolint:gocritic
 var _ ResourceRender = &proxy.ResourceRender{}
 
-//nolint:gocritic
 var _ ResourceRender = &ratelimit.ResourceRender{}
 
 // ResourceRender renders Kubernetes infrastructure resources
