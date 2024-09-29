@@ -499,6 +499,12 @@
                                 "providers": {
                                   "httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com/example": {
                                     "forward": true,
+                                    "normalizePayloadInMetadata": {
+                                      "spaceDelimitedClaims": [
+                                        "scope"
+                                      ]
+                                    },
+                                    "payloadInMetadata": "example",
                                     "remoteJwks": {
                                       "asyncFetch": {},
                                       "cacheDuration": "300s",
@@ -569,7 +575,7 @@
                         "envoy-gateway": {
                           "resources": [
                             {
-                              "kind": "",
+                              "kind": "Gateway",
                               "name": "eg",
                               "namespace": "envoy-gateway-system",
                               "sectionName": "http"

@@ -127,6 +127,7 @@ rules:
   - securitypolicies
   - envoyextensionpolicies
   - backends
+  - httproutefilters
   verbs:
   - get
   - list
@@ -428,6 +429,8 @@ spec:
             - ALL
           privileged: false
           runAsNonRoot: true
+          runAsGroup: 65532
+          runAsUser: 65532
           seccompProfile:
             type: RuntimeDefault
         volumeMounts:
