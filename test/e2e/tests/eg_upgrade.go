@@ -275,7 +275,8 @@ func migrateChartCRDs(actionConfig *action.Configuration, gatewayChart *chart.Ch
 	}
 
 	for _, crd := range crds {
-		if crd.Name == "backendtlspolicies.gateway.networking.k8s.io" {
+		if crd.Name == "backendtlspolicies.gateway.networking.k8s.io" ||
+			crd.Name == "grpcroutes.gateway.networking.k8s.io" {
 			newVersion, err := getGWAPIVersion(crd.Object)
 			if err != nil {
 				return err
@@ -295,7 +296,7 @@ func migrateChartCRDs(actionConfig *action.Configuration, gatewayChart *chart.Ch
 				}
 
 				if existingVersion == "v1.0.0" {
-					// Delete the existing instance of the BTLS CRD
+					// Delete the existing instance of the BTLS and GRPCRoute CRDs
 					_, errs := actionConfig.KubeClient.Delete([]*resource.Info{crd})
 					if errs != nil {
 						return fmt.Errorf("failed to delete backendtlspolicies: %s", util.MultipleErrors("", errs))
