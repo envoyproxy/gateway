@@ -28,6 +28,7 @@ import (
 const (
 	envoyOpenTelemetry = "envoy.tracers.opentelemetry"
 	envoyZipkin        = "envoy.traces.zipkin"
+	envoyDatadog       = "envoy.tracers.datadog"
 )
 
 type typConfigGen func() (*anypb.Any, error)
@@ -41,6 +42,16 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 	var providerConfig typConfigGen
 
 	switch tracing.Provider.Type {
+	case egv1a1.TracingProviderTypeDatadog:
+		providerName = envoyDatadog
+
+		providerConfig = func() (*anypb.Any, error) {
+			config := &tracecfg.DatadogConfig{
+				ServiceName:      tracing.ServiceName,
+				CollectorCluster: tracing.Destination.Name,
+			}
+			return protocov.ToAnyWithError(config)
+		}
 	case egv1a1.TracingProviderTypeOpenTelemetry:
 		providerName = envoyOpenTelemetry
 

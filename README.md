@@ -7,6 +7,8 @@
 [![OSV-Scanner](https://github.com/envoyproxy/gateway/actions/workflows/osv-scanner.yml/badge.svg)](https://github.com/envoyproxy/gateway/actions/workflows/osv-scanner.yml)
 [![Trivy](https://github.com/envoyproxy/gateway/actions/workflows/trivy.yml/badge.svg)](https://github.com/envoyproxy/gateway/actions/workflows/trivy.yml)
 
+![Envoy Gateway Logo](https://github.com/cncf/artwork/blob/main/projects/envoy/envoy-gateway/horizontal/color/envoy-gateway-horizontal-color.svg)
+
 Envoy Gateway is an open source project for managing Envoy Proxy as a standalone or
 Kubernetes-based application gateway.
 [Gateway API](https://gateway-api.sigs.k8s.io) resources are used to dynamically provision and configure the managed Envoy Proxies.

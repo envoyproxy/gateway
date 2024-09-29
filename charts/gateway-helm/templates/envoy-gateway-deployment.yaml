@@ -94,6 +94,9 @@ spec:
           name: certs
           readOnly: true
       {{- include "eg.image.pullSecrets" . | nindent 6 }}
+      {{- with .Values.deployment.priorityClassName }}
+      priorityClassName: {{ . | quote }}
+      {{- end }}
       serviceAccountName: envoy-gateway
       terminationGracePeriodSeconds: 10
       volumes:

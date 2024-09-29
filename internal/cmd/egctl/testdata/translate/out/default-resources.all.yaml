@@ -178,6 +178,7 @@ envoyProxyForGatewayClass:
     logging: {}
   status: {}
 gatewayClass:
+  kind: GatewayClass
   metadata:
     creationTimestamp: null
     name: eg
@@ -197,7 +198,8 @@ gatewayClass:
       status: "True"
       type: Accepted
 gateways:
-- metadata:
+- kind: Gateway
+  metadata:
     creationTimestamp: null
     name: eg
     namespace: default
@@ -1133,7 +1135,7 @@ xds:
               filterMetadata:
                 envoy-gateway:
                   resources:
-                  - kind: ""
+                  - kind: Gateway
                     name: eg
                     namespace: default
                     sectionName: http
@@ -1164,7 +1166,7 @@ xds:
               filterMetadata:
                 envoy-gateway:
                   resources:
-                  - kind: ""
+                  - kind: Gateway
                     name: eg
                     namespace: default
                     sectionName: grpc

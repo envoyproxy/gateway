@@ -12,6 +12,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/logging"
 )
 
 func TestInitAdminServer(t *testing.T) {
@@ -20,6 +21,8 @@ func TestInitAdminServer(t *testing.T) {
 			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{},
 		},
 	}
+
+	svrConfig.Logger = logging.NewLogger(egv1a1.DefaultEnvoyGatewayLogging())
 	err := Init(svrConfig)
 	require.NoError(t, err)
 }

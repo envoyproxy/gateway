@@ -3,6 +3,10 @@ kind: Service
 metadata:
   name: envoy-gateway
   namespace: '{{ .Release.Namespace }}'
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   labels:
     control-plane: envoy-gateway
   {{- include "eg.labels" . | nindent 4 }}

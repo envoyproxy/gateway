@@ -12,12 +12,8 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
-	"github.com/envoyproxy/gateway/internal/logging"
 )
-
-var adminLogger = logging.DefaultLogger(egv1a1.LogLevelInfo).WithName("admin")
 
 func Init(cfg *config.Server) error {
 	if cfg.EnvoyGateway.GetEnvoyGatewayAdmin().EnableDumpConfig {
@@ -34,6 +30,7 @@ func start(cfg *config.Server) error {
 	address := cfg.EnvoyGateway.GetEnvoyGatewayAdminAddress()
 	enablePprof := cfg.EnvoyGateway.GetEnvoyGatewayAdmin().EnablePprof
 
+	adminLogger := cfg.Logger.WithName("admin")
 	adminLogger.Info("starting admin server", "address", address, "enablePprof", enablePprof)
 
 	if enablePprof {
@@ -57,7 +54,7 @@ func start(cfg *config.Server) error {
 	// Listen And Serve Admin Server.
 	go func() {
 		if err := adminServer.ListenAndServe(); err != nil {
-			cfg.Logger.Error(err, "start admin server failed")
+			adminLogger.Error(err, "start admin server failed")
 		}
 	}()
 

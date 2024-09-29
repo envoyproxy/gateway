@@ -1,4 +1,5 @@
 envoyProxyForGatewayClass:
+  kind: EnvoyProxy
   metadata:
     creationTimestamp: null
     name: example
@@ -13,6 +14,7 @@ envoyProxyForGatewayClass:
       type: Kubernetes
   status: {}
 gatewayClass:
+  kind: GatewayClass
   metadata:
     creationTimestamp: null
     name: eg
@@ -32,7 +34,8 @@ gatewayClass:
       status: "True"
       type: Accepted
 gateways:
-- metadata:
+- kind: Gateway
+  metadata:
     creationTimestamp: null
     name: eg
     namespace: default

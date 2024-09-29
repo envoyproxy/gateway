@@ -12282,6 +12282,11 @@ spec:
                           EnablePerEndpointStats enables per endpoint envoy stats metrics.
                           Please use with caution.
                         type: boolean
+                      enableRequestResponseSizesStats:
+                        description: EnableRequestResponseSizesStats enables publishing
+                          of histograms tracking header and body sizes of requests
+                          and responses.
+                        type: boolean
                       enableVirtualHostStats:
                         description: EnableVirtualHostStats enables envoy stat metrics
                           for virtual hosts.
@@ -14215,6 +14220,7 @@ spec:
                             enum:
                             - OpenTelemetry
                             - Zipkin
+                            - Datadog
                             type: string
                           zipkin:
                             description: Zipkin defines the Zipkin tracing provider

@@ -51,7 +51,7 @@ func loadFromFile(path string) (*resource.Resources, error) {
 		return nil, err
 	}
 
-	return resource.LoadResourcesFromYAMLString(string(bytes), false)
+	return resource.LoadResourcesFromYAMLBytes(bytes, false)
 }
 
 // loadFromDir loads resources from all the files under a specific directory excluding subdirectories.

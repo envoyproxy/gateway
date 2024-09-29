@@ -26,6 +26,7 @@ type TracingProviderType string
 const (
 	TracingProviderTypeOpenTelemetry TracingProviderType = "OpenTelemetry"
 	TracingProviderTypeZipkin        TracingProviderType = "Zipkin"
+	TracingProviderTypeDatadog       TracingProviderType = "Datadog"
 )
 
 // TracingProvider defines the tracing provider configuration.
@@ -37,7 +38,7 @@ const (
 type TracingProvider struct {
 	BackendCluster `json:",inline"`
 	// Type defines the tracing provider type.
-	// +kubebuilder:validation:Enum=OpenTelemetry;Zipkin
+	// +kubebuilder:validation:Enum=OpenTelemetry;Zipkin;Datadog
 	// +kubebuilder:default=OpenTelemetry
 	Type TracingProviderType `json:"type"`
 	// Host define the provider service hostname.

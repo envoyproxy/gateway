@@ -106,7 +106,7 @@ func TestTranslateXds(t *testing.T) {
 			errMsg: "validation failed for xds resource",
 		},
 		"tracing-unknown-provider-type": {
-			errMsg: "unknown tracing provider type: Datadog",
+			errMsg: "unknown tracing provider type: AwesomeTelemetry",
 		},
 	}
 

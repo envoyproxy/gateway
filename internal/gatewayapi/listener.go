@@ -74,6 +74,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			case gwapiv1.UDPProtocolType:
 				t.validateAllowedRoutes(listener, resource.KindUDPRoute)
 			default:
+				listener.SetSupportedKinds()
 				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
 					listener.listenerStatusIdx,
 					gwapiv1.ListenerConditionAccepted,
@@ -465,8 +466,9 @@ func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy, resources *re
 	}
 
 	return &ir.Metrics{
-		EnableVirtualHostStats: envoyproxy.Spec.Telemetry.Metrics.EnableVirtualHostStats,
-		EnablePerEndpointStats: envoyproxy.Spec.Telemetry.Metrics.EnablePerEndpointStats,
+		EnableVirtualHostStats:          envoyproxy.Spec.Telemetry.Metrics.EnableVirtualHostStats != nil && *envoyproxy.Spec.Telemetry.Metrics.EnableVirtualHostStats,
+		EnablePerEndpointStats:          envoyproxy.Spec.Telemetry.Metrics.EnablePerEndpointStats != nil && *envoyproxy.Spec.Telemetry.Metrics.EnablePerEndpointStats,
+		EnableRequestResponseSizesStats: envoyproxy.Spec.Telemetry.Metrics.EnableRequestResponseSizesStats != nil && *envoyproxy.Spec.Telemetry.Metrics.EnableRequestResponseSizesStats,
 	}, nil
 }
 
