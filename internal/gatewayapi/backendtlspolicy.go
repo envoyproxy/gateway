@@ -19,8 +19,11 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func (t *Translator) applyBackendTLSSetting(backendRef gwapiv1.BackendObjectReference, backendNamespace string, parent gwapiv1a2.ParentReference, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) *ir.TLSUpstreamConfig {
-	upstreamConfig, policy := t.processBackendTLSPolicy(backendRef, backendNamespace, parent, resources, envoyProxy)
+func (t *Translator) applyBackendTLSSetting(backendRef gwapiv1.BackendObjectReference, backendNamespace string, parent gwapiv1a2.ParentReference, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) (*ir.TLSUpstreamConfig, error) {
+	upstreamConfig, policy, err := t.processBackendTLSPolicy(backendRef, backendNamespace, parent, resources, envoyProxy)
+	if err != nil {
+		return nil, err
+	}
 	return t.applyEnvoyProxyBackendTLSSetting(policy, upstreamConfig, resources, parent, envoyProxy)
 }
 
@@ -30,15 +33,15 @@ func (t *Translator) processBackendTLSPolicy(
 	parent gwapiv1a2.ParentReference,
 	resources *resource.Resources,
 	envoyProxy *egv1a1.EnvoyProxy,
-) (*ir.TLSUpstreamConfig, *gwapiv1a3.BackendTLSPolicy) {
+) (*ir.TLSUpstreamConfig, *gwapiv1a3.BackendTLSPolicy, error) {
 	policy := getBackendTLSPolicy(resources.BackendTLSPolicies, backendRef, backendNamespace)
 	if policy == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	tlsBundle, err := getBackendTLSBundle(policy, resources)
 	if err == nil && tlsBundle == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	ancestorRefs := getAncestorRefs(policy)
@@ -51,7 +54,7 @@ func (t *Translator) processBackendTLSPolicy(
 			policy.Generation,
 			status.Error2ConditionMsg(err),
 		)
-		return nil, nil
+		return nil, nil, err
 	}
 
 	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
@@ -81,12 +84,12 @@ func (t *Translator) processBackendTLSPolicy(
 			}
 		}
 	}
-	return tlsBundle, policy
+	return tlsBundle, policy, nil
 }
 
-func (t *Translator) applyEnvoyProxyBackendTLSSetting(policy *gwapiv1a3.BackendTLSPolicy, tlsConfig *ir.TLSUpstreamConfig, resources *resource.Resources, parent gwapiv1a2.ParentReference, ep *egv1a1.EnvoyProxy) *ir.TLSUpstreamConfig {
+func (t *Translator) applyEnvoyProxyBackendTLSSetting(policy *gwapiv1a3.BackendTLSPolicy, tlsConfig *ir.TLSUpstreamConfig, resources *resource.Resources, parent gwapiv1a2.ParentReference, ep *egv1a1.EnvoyProxy) (*ir.TLSUpstreamConfig, error) {
 	if ep == nil || ep.Spec.BackendTLS == nil || tlsConfig == nil {
-		return tlsConfig
+		return tlsConfig, nil
 	}
 
 	if len(ep.Spec.BackendTLS.Ciphers) > 0 {
@@ -115,28 +118,31 @@ func (t *Translator) applyEnvoyProxyBackendTLSSetting(policy *gwapiv1a3.BackendT
 		ancestorRefs := []gwapiv1a2.ParentReference{
 			parent,
 		}
+		var err error
 		if ns != ep.Namespace {
+			err = fmt.Errorf("client authentication TLS secret is not located in the same namespace as Envoyproxy. Secret namespace: %s does not match Envoyproxy namespace: %s", ns, ep.Namespace)
 			status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 				ancestorRefs,
 				t.GatewayControllerName,
 				policy.Generation,
-				status.Error2ConditionMsg(fmt.Errorf("client authentication TLS secret is not located in the same namespace as Envoyproxy. Secret namespace: %s does not match Envoyproxy namespace: %s", ns, ep.Namespace)))
-			return tlsConfig
+				status.Error2ConditionMsg(err))
+			return tlsConfig, err
 		}
 		secret := resources.GetSecret(ns, string(ep.Spec.BackendTLS.ClientCertificateRef.Name))
 		if secret == nil {
+			err = fmt.Errorf("failed to locate TLS secret for client auth: %s in namespace: %s", ep.Spec.BackendTLS.ClientCertificateRef.Name, ns)
 			status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 				ancestorRefs,
 				t.GatewayControllerName,
 				policy.Generation,
-				status.Error2ConditionMsg(fmt.Errorf("failed to locate TLS secret for client auth: %s in namespace: %s", ep.Spec.BackendTLS.ClientCertificateRef.Name, ns)),
+				status.Error2ConditionMsg(err),
 			)
-			return tlsConfig
+			return tlsConfig, err
 		}
 		tlsConf := irTLSConfigs(secret)
 		tlsConfig.ClientCertificates = tlsConf.Certificates
 	}
-	return tlsConfig
+	return tlsConfig, nil
 }
 
 func backendTLSTargetMatched(policy gwapiv1a3.BackendTLSPolicy, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, backendNamespace string) bool {
