@@ -112,13 +112,14 @@ func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 	route RouteContext,
 	filters []gwapiv1.GRPCRouteFilter,
 	resources *resource.Resources,
-) *HTTPFiltersContext {
+) (*HTTPFiltersContext, error) {
 	httpFiltersContext := &HTTPFiltersContext{
 		ParentRef: parentRef,
 		Route:     route,
 
 		HTTPFilterIR: &HTTPFilterIR{},
 	}
+
 	for i := range filters {
 		filter := filters[i]
 		// If an invalid filter type has been configured then skip processing any more filters
@@ -136,7 +137,10 @@ func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 		case gwapiv1.GRPCRouteFilterResponseHeaderModifier:
 			t.processResponseHeaderModifierFilter(filter.ResponseHeaderModifier, httpFiltersContext)
 		case gwapiv1.GRPCRouteFilterRequestMirror:
-			t.processRequestMirrorFilter(i, filter.RequestMirror, httpFiltersContext, resources)
+			err := t.processRequestMirrorFilter(i, filter.RequestMirror, httpFiltersContext, resources)
+			if err != nil {
+				return nil, err
+			}
 		case gwapiv1.GRPCRouteFilterExtensionRef:
 			t.processExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources)
 		default:
@@ -144,7 +148,7 @@ func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 		}
 	}
 
-	return httpFiltersContext
+	return httpFiltersContext, nil
 }
 
 func (t *Translator) processURLRewriteFilter(

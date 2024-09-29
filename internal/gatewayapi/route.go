@@ -542,8 +542,10 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 
 	// compute matches, filters, backends
 	for ruleIdx, rule := range grpcRoute.Spec.Rules {
-		httpFiltersContext := t.ProcessGRPCFilters(parentRef, grpcRoute, rule.Filters, resources)
-
+		httpFiltersContext, err := t.ProcessGRPCFilters(parentRef, grpcRoute, rule.Filters, resources)
+		if err != nil {
+			return nil, err
+		}
 		// A rule is matched if any one of its matches
 		// is satisfied (i.e. a logical "OR"), so generate
 		// a unique Xds IR HTTPRoute per match.
@@ -1430,7 +1432,10 @@ func (t *Translator) processDestinationFilters(routeType gwapiv1.Kind, backendRe
 		httpFiltersContext, err = t.ProcessHTTPFilters(parentRef, route, filters, 0, resources)
 
 	case []gwapiv1.GRPCRouteFilter:
-		httpFiltersContext = t.ProcessGRPCFilters(parentRef, route, filters, resources)
+		httpFiltersContext, err = t.ProcessGRPCFilters(parentRef, route, filters, resources)
+		if err != nil {
+			return &destFilters, err
+		}
 	}
 	applyHTTPFiltersContextToDestinationFilters(httpFiltersContext, &destFilters)
 
