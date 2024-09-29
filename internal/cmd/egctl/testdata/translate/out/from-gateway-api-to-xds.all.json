@@ -1034,7 +1034,7 @@
                         "envoy-gateway": {
                           "resources": [
                             {
-                              "kind": "",
+                              "kind": "Gateway",
                               "name": "eg",
                               "namespace": "default",
                               "sectionName": "http"
@@ -1092,7 +1092,7 @@
                         "envoy-gateway": {
                           "resources": [
                             {
-                              "kind": "",
+                              "kind": "Gateway",
                               "name": "eg",
                               "namespace": "default",
                               "sectionName": "grpc"

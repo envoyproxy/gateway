@@ -614,7 +614,7 @@ xds:
               filterMetadata:
                 envoy-gateway:
                   resources:
-                  - kind: ""
+                  - kind: Gateway
                     name: eg
                     namespace: default
                     sectionName: http
@@ -645,7 +645,7 @@ xds:
               filterMetadata:
                 envoy-gateway:
                   resources:
-                  - kind: ""
+                  - kind: Gateway
                     name: eg
                     namespace: default
                     sectionName: grpc

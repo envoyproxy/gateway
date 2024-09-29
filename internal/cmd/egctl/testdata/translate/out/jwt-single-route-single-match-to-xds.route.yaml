@@ -13,7 +13,7 @@ xds:
             filterMetadata:
               envoy-gateway:
                 resources:
-                - kind: ""
+                - kind: Gateway
                   name: eg
                   namespace: envoy-gateway-system
                   sectionName: http
