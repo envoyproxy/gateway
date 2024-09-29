@@ -242,32 +242,8 @@ xdsIR:
         mergeSlashes: true
       port: 10443
       routes:
-      - destination:
-          name: httproute/envoy-gateway/httproute-tls/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 10.244.0.11
-              port: 443
-            protocol: HTTP
-            tls:
-              alpnProtocols:
-              - HTTP/1.1
-              - HTTP/2
-              ciphers:
-              - ECDHE-RSA-AES128-GCM-SHA256
-              - ECDHE-ECDSA-AES256-GCM-SHA384
-              ecdhCurves:
-              - ECDHE-RSA-AES128-GCM-SHA256
-              - ECDHE-ECDSA-AES256-GCM-SHA384
-              maxVersion: tls1.3
-              minVersion: tls1.2
-              signatureAlgorithms:
-              - RSA-PSS-RSAE-SHA256
-              - ECDSA-SECP256R1-SHA256
-              sni: example.com
-              useSystemTrustStore: true
-            weight: 1
+      - directResponse:
+          statusCode: 500
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -310,7 +286,6 @@ xdsIR:
               - ECDSA-SECP256R1-SHA256
               sni: example.com
               useSystemTrustStore: true
-            weight: 1
         name: tcproute/envoy-gateway/envoy-gateway
         tls:
           terminate:

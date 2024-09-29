@@ -1291,6 +1291,9 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 			resources,
 			envoyProxy,
 		)
+		if err != nil {
+			return ds, err
+		}
 		ds.Filters, err = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
 	case egv1a1.KindBackend:
 		ds = t.processBackendDestinationSetting(backendRef.BackendObjectReference, backendNamespace, resources)
@@ -1309,6 +1312,9 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 			resources,
 			envoyProxy,
 		)
+		if err != nil {
+			return ds, err
+		}
 		ds.Filters, err = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
 	}
 
