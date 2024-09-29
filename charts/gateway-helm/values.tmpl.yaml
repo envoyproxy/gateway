@@ -49,6 +49,7 @@ deployment:
     - name: metrics
       port: 19001
       targetPort: 19001
+  priorityClassName: null
   replicas: 1
   pod:
     affinity: {}
@@ -59,6 +60,9 @@ deployment:
     topologySpreadConstraints: []
     tolerations: []
     nodeSelector: {}
+
+service:
+  annotations: {}
 
 config:
   envoyGateway:
