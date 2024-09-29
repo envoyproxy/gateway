@@ -891,7 +891,6 @@ func (t *Translator) processRequestMirrorFilter(
 	}
 
 	ds, err := t.processDestination(mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources)
-
 	if err != nil {
 		return err
 	}
