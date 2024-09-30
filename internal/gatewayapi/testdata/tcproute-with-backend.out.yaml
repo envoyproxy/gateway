@@ -121,7 +121,3 @@ xdsIR:
     - address: 0.0.0.0
       name: envoy-gateway/gateway-1/tcp
       port: 10090
-      routes:
-      - destination:
-          name: tcproute/default/tcproute-1/rule/-1
-        name: tcproute/default/tcproute-1

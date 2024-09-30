@@ -996,6 +996,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 					gwapiv1.RouteReasonNotAllowedByListeners,
 					err.Error(),
 				)
+				return
 			}
 			if ds == nil {
 				continue
@@ -1141,6 +1142,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 					gwapiv1.RouteReasonNotAllowedByListeners,
 					err.Error(),
 				)
+				return
 			}
 
 			if ds == nil {
