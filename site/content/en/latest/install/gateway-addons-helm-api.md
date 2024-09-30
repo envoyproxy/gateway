@@ -63,6 +63,7 @@ An Add-ons Helm chart for Envoy Gateway
 | grafana.enabled | bool | `true` |  |
 | grafana.fullnameOverride | string | `"grafana"` |  |
 | grafana.service.type | string | `"LoadBalancer"` |  |
+| grafana.testFramework.enabled | bool | `false` |  |
 | loki.backend.replicas | int | `0` |  |
 | loki.deploymentMode | string | `"SingleBinary"` |  |
 | loki.enabled | bool | `true` |  |

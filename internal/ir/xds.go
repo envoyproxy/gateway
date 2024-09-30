@@ -126,7 +126,7 @@ func (x *Xds) sort() {
 }
 
 // Validate the fields within the Xds structure.
-func (x Xds) Validate() error {
+func (x *Xds) Validate() error {
 	var errs error
 	for _, http := range x.HTTP {
 		if err := http.Validate(); err != nil {
@@ -146,7 +146,7 @@ func (x Xds) Validate() error {
 	return errs
 }
 
-func (x Xds) GetHTTPListener(name string) *HTTPListener {
+func (x *Xds) GetHTTPListener(name string) *HTTPListener {
 	for _, listener := range x.HTTP {
 		if listener.Name == name {
 			return listener
@@ -155,7 +155,7 @@ func (x Xds) GetHTTPListener(name string) *HTTPListener {
 	return nil
 }
 
-func (x Xds) GetTCPListener(name string) *TCPListener {
+func (x *Xds) GetTCPListener(name string) *TCPListener {
 	for _, listener := range x.TCP {
 		if listener.Name == name {
 			return listener
@@ -164,7 +164,7 @@ func (x Xds) GetTCPListener(name string) *TCPListener {
 	return nil
 }
 
-func (x Xds) GetUDPListener(name string) *UDPListener {
+func (x *Xds) GetUDPListener(name string) *UDPListener {
 	for _, listener := range x.UDP {
 		if listener.Name == name {
 			return listener
@@ -173,18 +173,18 @@ func (x Xds) GetUDPListener(name string) *UDPListener {
 	return nil
 }
 
-func (x Xds) YAMLString() string {
+func (x *Xds) YAMLString() string {
 	y, _ := yaml.Marshal(x.Printable())
 	return string(y)
 }
 
-func (x Xds) JSONString() string {
+func (x *Xds) JSONString() string {
 	j, _ := json.MarshalIndent(x.Printable(), "", "\t")
 	return string(j)
 }
 
 // Printable returns a deep copy of the resource that can be safely logged.
-func (x Xds) Printable() *Xds {
+func (x *Xds) Printable() *Xds {
 	out := x.DeepCopy()
 	for _, listener := range out.HTTP {
 		// Omit field

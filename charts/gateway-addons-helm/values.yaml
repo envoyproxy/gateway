@@ -10,6 +10,8 @@ grafana:
           type: prometheus
           url: http://prometheus
   adminPassword: admin
+  testFramework:
+    enabled: false
   service:
     type: LoadBalancer
   dashboardProviders:
