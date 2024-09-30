@@ -993,7 +993,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 					udpRoute.GetGeneration(),
 					gwapiv1.RouteConditionPartiallyInvalid,
 					metav1.ConditionFalse,
-					"Failed processing udp route associated settings",
+					"Failed to process the settings associated with the UDP route.",
 					err.Error(),
 				)
 				return
@@ -1139,7 +1139,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 					tcpRoute.GetGeneration(),
 					gwapiv1.RouteConditionPartiallyInvalid,
 					metav1.ConditionFalse,
-					"Failed to process the settings associated with the UDP route.",
+					"Failed to process the settings associated with the TCP route.",
 					err.Error(),
 				)
 				return
