@@ -4,6 +4,8 @@ go 1.23.1
 
 replace github.com/imdario/mergo => github.com/imdario/mergo v0.3.16
 
+replace github.com/envoyproxy/go-control-plane => github.com/zhaohuabing/envoy-control-plane-demo v0.0.0-20240930111903-29ca7f2438b7
+
 require (
 	fortio.org/fortio v1.66.3
 	fortio.org/log v1.16.0
