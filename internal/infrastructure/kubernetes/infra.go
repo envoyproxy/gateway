@@ -17,7 +17,13 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 )
+
+var _ ResourceRender = &proxy.ResourceRender{}
+
+var _ ResourceRender = &ratelimit.ResourceRender{}
 
 // ResourceRender renders Kubernetes infrastructure resources
 // based on Infra IR resources.
