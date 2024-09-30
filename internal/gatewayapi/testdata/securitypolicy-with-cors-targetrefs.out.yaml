@@ -144,7 +144,7 @@ grpcRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Service envoy-gateway/service-1 not found
+        message: service envoy-gateway/service-1 not found
         reason: BackendNotFound
         status: "False"
         type: ResolvedRefs
@@ -183,7 +183,7 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Service envoy-gateway/service-1 not found
+        message: service envoy-gateway/service-1 not found
         reason: BackendNotFound
         status: "False"
         type: ResolvedRefs
@@ -221,7 +221,7 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Service envoy-gateway/service-2 not found
+        message: service envoy-gateway/service-2 not found
         reason: BackendNotFound
         status: "False"
         type: ResolvedRefs
@@ -354,11 +354,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - destination:
-          name: grpcroute/envoy-gateway/grpcroute-1/rule/0
-          settings:
-          - weight: 1
-        directResponse:
+      - directResponse:
           statusCode: 500
         hostname: '*'
         isHTTP2: true

@@ -67,7 +67,7 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: TCP Port 8888 not found on service default/service-1
+        message: port 8888 not found on service default/service-1 with protocol TCP
         reason: BackendNotFound
         status: "False"
         type: ResolvedRefs

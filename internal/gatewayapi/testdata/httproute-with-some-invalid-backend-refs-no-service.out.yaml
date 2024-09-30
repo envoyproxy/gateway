@@ -71,7 +71,7 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Service default/service-that-doesnt-exist-2 not found
+        message: service default/service-that-doesnt-exist-2 not found
         reason: BackendNotFound
         status: "False"
         type: ResolvedRefs

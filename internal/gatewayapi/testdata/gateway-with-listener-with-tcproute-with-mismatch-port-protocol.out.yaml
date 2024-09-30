@@ -77,7 +77,7 @@ tcpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: TCP Port 8081 not found on service default/service-1
+        message: port 8081 not found on service default/service-1 with protocol TCP
         reason: BackendNotFound
         status: "False"
         type: ResolvedRefs
@@ -97,6 +97,4 @@ xdsIR:
       routes:
       - destination:
           name: tcproute/default/tcproute-1/rule/-1
-          settings:
-          - weight: 1
         name: tcproute/default/tcproute-1

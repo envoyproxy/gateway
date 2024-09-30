@@ -17,7 +17,7 @@ gateways:
   status:
     conditions:
     - lastTransitionTime: null
-      message: 'Invalid metrics backendRefs: Service monitoring/service-not-found
+      message: 'Invalid metrics backendRefs: service monitoring/service-not-found
         not found'
       reason: Invalid
       status: "False"
