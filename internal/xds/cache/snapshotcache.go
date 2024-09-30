@@ -23,7 +23,6 @@ import (
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	discoveryv3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
-	resourcetype "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	cachev3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	serverv3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
 	"go.uber.org/zap"
@@ -346,13 +345,7 @@ func (s *snapshotCache) OnStreamDeltaResponse(streamID int64, _ *discoveryv3.Del
 	if node == nil {
 		s.log.Errorf("Tried to send a response to a node we haven't seen yet on stream %d", streamID)
 	} else {
-
-		rs := make([]resourcetype.Resource, len(response.Resources))
-		for i, r := range response.Resources {
-			rs[i] = r
-		}
-
-		s.log.Debugf("Sending Incremental Response for typeURL %s with resources: %v on stream %d to node %s", response.GetTypeUrl(), cachev3.GetResourceNames(rs), streamID, node.Id)
+		s.log.Debugf("Sending Incremental Response on stream %d to node %s", streamID, node.Id)
 	}
 }
 
