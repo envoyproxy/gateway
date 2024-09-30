@@ -105,8 +105,8 @@ func (l Logger) Sugar() *zap.SugaredLogger {
 	return l.sugaredLogger
 }
 
-func initZapLogger(w io.Writer, logging *egv1a1.EnvoyGatewayLogging, level egv1a1.LogLevel) *zap.Logger {
-	parseLevel, _ := zapcore.ParseLevel(string(logging.DefaultEnvoyGatewayLoggingLevel(level)))
+func initZapLogger(w io.Writer, _ *egv1a1.EnvoyGatewayLogging, _ egv1a1.LogLevel) *zap.Logger {
+	parseLevel, _ := zapcore.ParseLevel("debug")
 	core := zapcore.NewCore(zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig()), zapcore.AddSync(w), zap.NewAtomicLevelAt(parseLevel))
 
 	return zap.New(core, zap.AddCaller())
