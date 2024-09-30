@@ -984,10 +984,20 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 		}
 
 		for _, backendRef := range udpRoute.Spec.Rules[0].BackendRefs {
-			// Consider if we want to configure something that will be dropping UDP Packets in case of errors.
-			// When packets are dropped, the client won’t receive a response and will eventually time out.
 			ds, err := t.processDestination(backendRef, parentRef, udpRoute, resources)
-			if ds == nil || err != nil {
+			// skip adding the route and provide the reason via route status.
+			if err != nil {
+				routeStatus := GetRouteStatus(udpRoute)
+				status.SetRouteStatusCondition(routeStatus,
+					parentRef.routeParentStatusIdx,
+					udpRoute.GetGeneration(),
+					gwapiv1.RouteConditionPartiallyInvalid,
+					metav1.ConditionFalse,
+					gwapiv1.RouteReasonNotAllowedByListeners,
+					err.Error(),
+				)
+			}
+			if ds == nil {
 				continue
 			}
 
@@ -1119,12 +1129,24 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 		}
 
 		for _, backendRef := range tcpRoute.Spec.Rules[0].BackendRefs {
-			// currently we do not block invalid tcp routes, as direct response is something we normally have only for http
-			// we could consider to add a fault injection to reset connections with an extra envoy filter that will do a TCP RST.
 			ds, err := t.processDestination(backendRef, parentRef, tcpRoute, resources)
-			if ds == nil || err != nil {
+			// skip adding the route and provide the reason via route status.
+			if err != nil {
+				routeStatus := GetRouteStatus(tcpRoute)
+				status.SetRouteStatusCondition(routeStatus,
+					parentRef.routeParentStatusIdx,
+					tcpRoute.GetGeneration(),
+					gwapiv1.RouteConditionPartiallyInvalid,
+					metav1.ConditionFalse,
+					gwapiv1.RouteReasonNotAllowedByListeners,
+					err.Error(),
+				)
+			}
+
+			if ds == nil {
 				continue
 			}
+
 			destSettings = append(destSettings, ds)
 		}
 
