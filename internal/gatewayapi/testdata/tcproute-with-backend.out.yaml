@@ -102,6 +102,12 @@ tcpRoutes:
         reason: UnsupportedValue
         status: "False"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: 'backend reference validation failed: backend is not supported for
+          route kind: TCPRoute'
+        reason: NotAllowedByListeners
+        status: "False"
+        type: PartiallyInvalid
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1

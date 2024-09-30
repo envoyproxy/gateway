@@ -72,13 +72,13 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Backend service validation failed: service default/service-unknown
+        message: 'Backend service validation failed: Service default/service-unknown
           not found.'
         reason: UnsupportedValue
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: service default/service-unknown not found
+        message: Service default/service-unknown not found
         reason: BackendNotFound
         status: "False"
         type: ResolvedRefs

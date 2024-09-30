@@ -77,10 +77,16 @@ tcpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: port 8081 not found on service default/service-1 with protocol TCP
+        message: TCP Port 8081 not found on service default/service-1
         reason: BackendNotFound
         status: "False"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: 'backend service validation failed: TCP Port 8081 not found on service
+          default/service-1'
+        reason: NotAllowedByListeners
+        status: "False"
+        type: PartiallyInvalid
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1

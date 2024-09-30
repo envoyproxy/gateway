@@ -116,7 +116,7 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: service envoy-gateway/service-1 not found
+        message: Service envoy-gateway/service-1 not found
         reason: BackendNotFound
         status: "False"
         type: ResolvedRefs

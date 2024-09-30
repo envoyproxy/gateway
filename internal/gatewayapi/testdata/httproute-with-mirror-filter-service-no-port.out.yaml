@@ -77,7 +77,8 @@ httpRoutes:
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: A valid port number must be specified
+        message: A valid port number corresponding to a port on the Service must be
+          specified
         reason: PortNotSpecified
         status: "False"
         type: ResolvedRefs

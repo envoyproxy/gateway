@@ -74,7 +74,7 @@ httpRoutes:
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: service envoy-gateway-system/backend not found
+        message: Service envoy-gateway-system/backend not found
         reason: BackendNotFound
         status: "False"
         type: ResolvedRefs
