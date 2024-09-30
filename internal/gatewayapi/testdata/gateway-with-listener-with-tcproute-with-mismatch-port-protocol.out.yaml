@@ -84,7 +84,7 @@ tcpRoutes:
       - lastTransitionTime: null
         message: 'backend service validation failed: TCP Port 8081 not found on service
           default/service-1'
-        reason: NotAllowedByListeners
+        reason: Failed to process the settings associated with the UDP route.
         status: "False"
         type: PartiallyInvalid
       controllerName: gateway.envoyproxy.io/gatewayclass-controller

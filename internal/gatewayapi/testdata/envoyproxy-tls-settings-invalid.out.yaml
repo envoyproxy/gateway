@@ -215,7 +215,7 @@ tcpRoutes:
       - lastTransitionTime: null
         message: 'failed to locate TLS secret for client auth: client-auth-not-found
           in namespace: envoy-gateway-system'
-        reason: NotAllowedByListeners
+        reason: Failed to process the settings associated with the UDP route.
         status: "False"
         type: PartiallyInvalid
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
