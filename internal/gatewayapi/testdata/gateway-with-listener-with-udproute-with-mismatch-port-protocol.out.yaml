@@ -84,7 +84,7 @@ udpRoutes:
       - lastTransitionTime: null
         message: 'backend service validation failed: UDP Port 8080 not found on service
           default/service-1'
-        reason: Failed processing udp route associated settings
+        reason: Failed to process the settings associated with the UDP route.
         status: "False"
         type: PartiallyInvalid
       controllerName: gateway.envoyproxy.io/gatewayclass-controller

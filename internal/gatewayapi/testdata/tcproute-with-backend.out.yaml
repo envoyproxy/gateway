@@ -105,7 +105,7 @@ tcpRoutes:
       - lastTransitionTime: null
         message: 'backend reference validation failed: backend is not supported for
           route kind: TCPRoute'
-        reason: Failed to process the settings associated with the UDP route.
+        reason: Failed to process the settings associated with the TCP route.
         status: "False"
         type: PartiallyInvalid
       controllerName: gateway.envoyproxy.io/gatewayclass-controller

@@ -217,7 +217,7 @@ tcpRoutes:
         message: 'client authentication TLS secret is not located in the same namespace
           as Envoyproxy. Secret namespace: envoy-gateway-user-ns does not match Envoyproxy
           namespace: envoy-gateway-system'
-        reason: Failed to process the settings associated with the UDP route.
+        reason: Failed to process the settings associated with the TCP route.
         status: "False"
         type: PartiallyInvalid
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
