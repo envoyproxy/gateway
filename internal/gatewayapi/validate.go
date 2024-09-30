@@ -25,23 +25,24 @@ import (
 )
 
 func (t *Translator) validateBackendRef(backendRefContext BackendRefContext, parentRef *RouteParentContext, route RouteContext,
-	resources *resource.Resources, backendNamespace string, routeKind gwapiv1.Kind) error {
+	resources *resource.Resources, backendNamespace string, routeKind gwapiv1.Kind,
+) error {
 	backendRef := GetBackendRef(backendRefContext)
 
 	if err := t.validateBackendRefFilters(backendRefContext, parentRef, route, routeKind); err != nil {
-		return fmt.Errorf("error validating backend filters: %v", err)
+		return fmt.Errorf("error validating backend filters: %w", err)
 	}
 	if err := t.validateBackendRefGroup(backendRef, parentRef, route); err != nil {
-		return fmt.Errorf("error validating backend group: %v", err)
+		return fmt.Errorf("error validating backend group: %w", err)
 	}
 	if err := t.validateBackendRefKind(backendRef, parentRef, route); err != nil {
-		return fmt.Errorf("error validating backend kind: %v", err)
+		return fmt.Errorf("error validating backend kind: %w", err)
 	}
 	if err := t.validateBackendNamespace(backendRef, parentRef, route, resources, routeKind); err != nil {
-		return fmt.Errorf("error validating backend namespace: %v", err)
+		return fmt.Errorf("error validating backend namespace: %w", err)
 	}
 	if err := t.validateBackendPort(backendRef, parentRef, route); err != nil {
-		return fmt.Errorf("error validating backend port: %v", err)
+		return fmt.Errorf("error validating backend port: %w", err)
 	}
 
 	protocol := corev1.ProtocolTCP
@@ -62,15 +63,15 @@ func (t *Translator) validateBackendRef(backendRefContext BackendRefContext, par
 				gwapiv1.RouteReasonBackendNotFound,
 				err.Error(),
 			)
-			return fmt.Errorf("backend service validation failed: %v", err)
+			return fmt.Errorf("backend service validation failed: %w", err)
 		}
 	case resource.KindServiceImport:
 		if err := t.validateBackendServiceImport(backendRef, parentRef, resources, backendNamespace, route, protocol); err != nil {
-			return fmt.Errorf("backend service import validation failed: %v", err)
+			return fmt.Errorf("backend service import validation failed: %w", err)
 		}
 	case egv1a1.KindBackend:
 		if err := t.validateBackendRefBackend(backendRef, parentRef, resources, backendNamespace, route, routeKind); err != nil {
-			return fmt.Errorf("backend reference validation failed: %v", err)
+			return fmt.Errorf("backend reference validation failed: %w", err)
 		}
 	}
 	return nil
@@ -146,7 +147,8 @@ func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, par
 }
 
 func (t *Translator) validateBackendNamespace(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, route RouteContext,
-	resources *resource.Resources, routeKind gwapiv1.Kind) error {
+	resources *resource.Resources, routeKind gwapiv1.Kind,
+) error {
 	if backendRef.Namespace != nil && string(*backendRef.Namespace) != "" && string(*backendRef.Namespace) != route.GetNamespace() {
 		if !t.validateCrossNamespaceRef(
 			crossNamespaceFrom{
@@ -224,7 +226,8 @@ func validateBackendService(backendRef gwapiv1a2.BackendObjectReference, resourc
 }
 
 func (t *Translator) validateBackendServiceImport(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, resources *resource.Resources,
-	serviceImportNamespace string, route RouteContext, protocol corev1.Protocol) error {
+	serviceImportNamespace string, route RouteContext, protocol corev1.Protocol,
+) error {
 	serviceImport := resources.GetServiceImport(serviceImportNamespace, string(backendRef.Name))
 	if serviceImport == nil {
 		routeStatus := GetRouteStatus(route)
@@ -270,7 +273,8 @@ func (t *Translator) validateBackendServiceImport(backendRef *gwapiv1a2.BackendR
 }
 
 func (t *Translator) validateBackendRefBackend(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, resources *resource.Resources,
-	backendNamespace string, route RouteContext, kind gwapiv1.Kind) error {
+	backendNamespace string, route RouteContext, kind gwapiv1.Kind,
+) error {
 	routeStatus := GetRouteStatus(route)
 
 	if !t.BackendEnabled {
@@ -323,7 +327,7 @@ func (t *Translator) validateBackendRefBackend(backendRef *gwapiv1a2.BackendRef,
 			fmt.Sprintf("Invalid Backend reference to Backend %s/%s found", backendNamespace,
 				string(backendRef.Name)),
 		)
-		return fmt.Errorf("invalid backend reference: %v", err)
+		return fmt.Errorf("invalid backend reference: %w", err)
 	}
 
 	for _, bep := range backend.Spec.Endpoints {
@@ -343,6 +347,7 @@ func (t *Translator) validateBackendRefBackend(backendRef *gwapiv1a2.BackendRef,
 
 	return nil
 }
+
 func (t *Translator) validateListenerConditions(listener *ListenerContext) (isReady bool) {
 	lConditions := listener.GetConditions()
 	if len(lConditions) == 0 {

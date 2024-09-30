@@ -205,7 +205,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			}
 
 			for _, route := range ruleRoutes {
-				//disable associated routes to a backend ref in case some of its config was invalid
+				// disable associated routes to a backend ref in case some of its config was invalid
 				if err != nil {
 					route.DirectResponse = &ir.DirectResponse{
 						StatusCode: 500,
@@ -568,7 +568,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 					continue
 				}
 
-				//disable associated routes to a backend ref in case some of its config was invalid
+				//  disable associated routes to a backend ref in case some of its config was invalid
 				if err != nil {
 					route.DirectResponse = &ir.DirectResponse{
 						StatusCode: 500,
