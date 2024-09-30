@@ -50,7 +50,6 @@ func (t *Translator) validateBackendRef(backendRefContext BackendRefContext, par
 	}
 
 	backendRefKind := KindDerefOr(backendRef.Kind, resource.KindService)
-
 	switch backendRefKind {
 	case resource.KindService:
 		if err := validateBackendService(backendRef.BackendObjectReference, resources, backendNamespace, protocol); err != nil {
@@ -86,7 +85,7 @@ func (t *Translator) validateBackendRefGroup(backendRef *gwapiv1a2.BackendRef, p
 			gwapiv1.RouteConditionResolvedRefs,
 			metav1.ConditionFalse,
 			gwapiv1.RouteReasonInvalidKind,
-			fmt.Sprintf("Invalid group, only the core API group, %s, and %s are supported", GroupMultiClusterService, egv1a1.GroupName),
+			fmt.Sprintf("Group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string), %s and %s are supported", GroupMultiClusterService, egv1a1.GroupName),
 		)
 		return fmt.Errorf("unsupported backend reference group: %s", *backendRef.Group)
 	}
@@ -231,7 +230,8 @@ func (t *Translator) validateBackendServiceImport(backendRef *gwapiv1a2.BackendR
 			gwapiv1.RouteConditionResolvedRefs,
 			metav1.ConditionFalse,
 			gwapiv1.RouteReasonBackendNotFound,
-			fmt.Sprintf("ServiceImport %s/%s not found", NamespaceDerefOr(backendRef.Namespace, route.GetNamespace()), backendRef.Name),
+			fmt.Sprintf("ServiceImport %s/%s not found", NamespaceDerefOr(backendRef.Namespace, route.GetNamespace()),
+				string(backendRef.Name)),
 		)
 		return fmt.Errorf("service import %s/%s not found", serviceImportNamespace, backendRef.Name)
 	}
@@ -256,7 +256,8 @@ func (t *Translator) validateBackendServiceImport(backendRef *gwapiv1a2.BackendR
 			gwapiv1.RouteConditionResolvedRefs,
 			metav1.ConditionFalse,
 			"PortNotFound",
-			fmt.Sprintf("%s Port %d not found on ServiceImport %s/%s", string(protocol), *backendRef.Port, serviceImportNamespace, backendRef.Name),
+			fmt.Sprintf(string(protocol)+" Port %d not found on ServiceImport %s/%s", *backendRef.Port, serviceImportNamespace,
+				string(backendRef.Name)),
 		)
 		return fmt.Errorf("%s port %d not found on service import %s/%s", string(protocol), *backendRef.Port, serviceImportNamespace, backendRef.Name)
 	}
@@ -275,7 +276,8 @@ func (t *Translator) validateBackendRefBackend(backendRef *gwapiv1a2.BackendRef,
 			gwapiv1.RouteConditionResolvedRefs,
 			metav1.ConditionFalse,
 			gwapiv1.RouteReasonUnsupportedValue,
-			fmt.Sprintf("Backend usage is disabled in Envoy Gateway configuration, backend %s/%s cannot be used", NamespaceDerefOr(backendRef.Namespace, route.GetNamespace()), backendRef.Name),
+			fmt.Sprintf("Resource %s/%s of type Backend cannot be used since Backend is disabled in Envoy Gateway configuration",
+				NamespaceDerefOr(backendRef.Namespace, route.GetNamespace()), string(backendRef.Name)),
 		)
 		return errors.New("backend is disabled in Envoy Gateway configuration")
 	}
@@ -287,7 +289,8 @@ func (t *Translator) validateBackendRefBackend(backendRef *gwapiv1a2.BackendRef,
 			gwapiv1.RouteConditionResolvedRefs,
 			metav1.ConditionFalse,
 			gwapiv1.RouteReasonUnsupportedValue,
-			fmt.Sprintf("Backend %s/%s is not supported for route kind %s", NamespaceDerefOr(backendRef.Namespace, route.GetNamespace()), backendRef.Name, kind),
+			fmt.Sprintf("Resource %s/%s of type Backend is not supported for %s routes", NamespaceDerefOr(backendRef.Namespace, route.GetNamespace()),
+				string(backendRef.Name), kind),
 		)
 		return fmt.Errorf("backend is not supported for route kind: %s", kind)
 	}
@@ -300,7 +303,8 @@ func (t *Translator) validateBackendRefBackend(backendRef *gwapiv1a2.BackendRef,
 			gwapiv1.RouteConditionResolvedRefs,
 			metav1.ConditionFalse,
 			gwapiv1.RouteReasonBackendNotFound,
-			fmt.Sprintf("Backend %s/%s not found", NamespaceDerefOr(backendRef.Namespace, route.GetNamespace()), backendRef.Name),
+			fmt.Sprintf("Backend %s/%s not found", NamespaceDerefOr(backendRef.Namespace, route.GetNamespace()),
+				string(backendRef.Name)),
 		)
 		return fmt.Errorf("backend %s/%s not found", backendNamespace, backendRef.Name)
 	}
@@ -312,7 +316,8 @@ func (t *Translator) validateBackendRefBackend(backendRef *gwapiv1a2.BackendRef,
 			gwapiv1.RouteConditionResolvedRefs,
 			metav1.ConditionFalse,
 			"UnsupportedRefAddressFound",
-			fmt.Sprintf("Invalid backend reference to %s/%s found", backendNamespace, backendRef.Name),
+			fmt.Sprintf("Invalid Backend reference to Backend %s/%s found", backendNamespace,
+				string(backendRef.Name)),
 		)
 		return fmt.Errorf("invalid backend reference: %v", err)
 	}
@@ -325,7 +330,8 @@ func (t *Translator) validateBackendRefBackend(backendRef *gwapiv1a2.BackendRef,
 				gwapiv1.RouteConditionResolvedRefs,
 				metav1.ConditionFalse,
 				"UnsupportedRefAddressFound",
-				fmt.Sprintf("Unix domain socket found in backend %s/%s is not supported", backendNamespace, backendRef.Name),
+				fmt.Sprintf("Unix domain socket found in Backend %s/%s is not supported for xRoute backendRefs", backendNamespace,
+					string(backendRef.Name)),
 			)
 			return errors.New("unix domain sockets are not supported in backend references")
 		}
