@@ -208,16 +208,11 @@ tcpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
         message: 'failed to locate TLS secret for client auth: client-auth-not-found
           in namespace: envoy-gateway-system'
         reason: Failed to process the settings associated with the TCP route.
         status: "False"
-        type: PartiallyInvalid
+        type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-tls

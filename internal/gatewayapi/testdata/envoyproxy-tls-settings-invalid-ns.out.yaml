@@ -209,17 +209,12 @@ tcpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
         message: 'client authentication TLS secret is not located in the same namespace
           as Envoyproxy. Secret namespace: envoy-gateway-user-ns does not match Envoyproxy
           namespace: envoy-gateway-system'
         reason: Failed to process the settings associated with the TCP route.
         status: "False"
-        type: PartiallyInvalid
+        type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-tls

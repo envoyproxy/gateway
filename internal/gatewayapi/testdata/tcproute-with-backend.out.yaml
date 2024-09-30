@@ -92,9 +92,10 @@ tcpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
+        message: 'backend reference validation failed: backend is not supported for
+          route kind: TCPRoute'
+        reason: Failed to process the settings associated with the TCP route.
+        status: "False"
         type: Accepted
       - lastTransitionTime: null
         message: Resource default/backend-ip of type Backend is not supported for
@@ -102,12 +103,6 @@ tcpRoutes:
         reason: UnsupportedValue
         status: "False"
         type: ResolvedRefs
-      - lastTransitionTime: null
-        message: 'backend reference validation failed: backend is not supported for
-          route kind: TCPRoute'
-        reason: Failed to process the settings associated with the TCP route.
-        status: "False"
-        type: PartiallyInvalid
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
