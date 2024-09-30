@@ -885,9 +885,10 @@ func (t *Translator) processRequestMirrorFilter(
 	// This sets the status on the HTTPRoute, should the usage be changed so that the status message reflects that the backendRef is from the filter?
 	filterNs := filterContext.Route.GetNamespace()
 	serviceNamespace := NamespaceDerefOr(mirrorBackend.Namespace, filterNs)
-	if !t.validateBackendRef(mirrorBackendRef, filterContext.ParentRef, filterContext.Route,
-		resources, serviceNamespace, resource.KindHTTPRoute) {
-		return nil
+	err := t.validateBackendRef(mirrorBackendRef, filterContext.ParentRef, filterContext.Route,
+		resources, serviceNamespace, resource.KindHTTPRoute)
+	if err != nil {
+		return err
 	}
 
 	ds, err := t.processDestination(mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources)

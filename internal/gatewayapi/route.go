@@ -205,6 +205,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			}
 
 			for _, route := range ruleRoutes {
+				//disable associated routes to a backend ref in case some of its config was invalid
 				if err != nil {
 					route.DirectResponse = &ir.DirectResponse{
 						StatusCode: 500,
@@ -567,6 +568,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 					continue
 				}
 
+				//disable associated routes to a backend ref in case some of its config was invalid
 				if err != nil {
 					route.DirectResponse = &ir.DirectResponse{
 						StatusCode: 500,
@@ -1211,9 +1213,9 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 	}
 }
 
-// processDestination takes a backendRef and translates it into destination setting or sets error statuses and
-// returns the weight for the backend so that 500 error responses can be returned for invalid backends in
-// the same proportion as the backend would have otherwise received
+// processDestination translate a backendRef into a destination settings.
+// If an error occurs during this conversion, an error is returned, and the associated routes are expected to become inactive.
+// This will result in a direct 500 response for HTTP-based requests.
 func (t *Translator) processDestination(backendRefContext BackendRefContext,
 	parentRef *RouteParentContext, route RouteContext, resources *resource.Resources,
 ) (ds *ir.DestinationSetting, err error) {
@@ -1225,9 +1227,12 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 	}
 
 	backendNamespace := NamespaceDerefOr(backendRef.Namespace, route.GetNamespace())
-	if !t.validateBackendRef(backendRefContext, parentRef, route, resources, backendNamespace, routeType) {
-		// return with empty endpoint means the backend is invalid
-		return &ir.DestinationSetting{Weight: &weight}, nil
+	err = t.validateBackendRef(backendRefContext, parentRef, route, resources, backendNamespace, routeType)
+	{
+		// return with empty endpoint means the backend is invalid and an error to fail the associated route.
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Skip processing backends with 0 weight
@@ -1278,7 +1283,6 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 		}
 	case resource.KindService:
 		ds = t.processServiceDestinationSetting(backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
-
 		ds.TLS, err = t.applyBackendTLSSetting(
 			backendRef.BackendObjectReference,
 			backendNamespace,
@@ -1297,9 +1301,11 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 			return ds, err
 		}
 		ds.Filters, err = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
+		if err != nil {
+			return ds, err
+		}
 	case egv1a1.KindBackend:
 		ds = t.processBackendDestinationSetting(backendRef.BackendObjectReference, backendNamespace, resources)
-
 		ds.TLS, err = t.applyBackendTLSSetting(
 			backendRef.BackendObjectReference,
 			backendNamespace,
@@ -1318,6 +1324,9 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 			return ds, err
 		}
 		ds.Filters, err = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
+		if err != nil {
+			return ds, err
+		}
 	}
 
 	if err := validateDestinationSettings(ds, t.IsEnvoyServiceRouting(envoyProxy), backendRef.Kind); err != nil {
@@ -1329,10 +1338,11 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 			metav1.ConditionFalse,
 			gwapiv1.RouteReasonResolvedRefs,
 			err.Error())
+		return ds, err
 	}
 
 	ds.Weight = &weight
-	return ds, err
+	return ds, nil
 }
 
 func validateDestinationSettings(destinationSettings *ir.DestinationSetting, endpointRoutingDisabled bool, kind *gwapiv1.Kind) error {
