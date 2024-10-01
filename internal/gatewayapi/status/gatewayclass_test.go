@@ -80,63 +80,76 @@ func TestGetSupportedFeatures(t *testing.T) {
 		{
 			name: "No exempt features",
 			gatewaySuite: suite.ConformanceOptions{
-				SupportedFeatures: sets.New[features.SupportedFeature]("Gateway", "HTTPRoute"),
-				ExemptFeatures:    sets.New[features.SupportedFeature](),
+				SupportedFeatures: sets.New[features.FeatureName]("Gateway", "HTTPRoute"),
+				ExemptFeatures:    sets.New[features.FeatureName](),
 			},
-			expectedResult: []gwapiv1.SupportedFeature{"Gateway", "HTTPRoute"},
+			expectedResult: []gwapiv1.SupportedFeature{
+				{Name: "Gateway"},
+				{Name: "HTTPRoute"},
+			},
 		},
 		{
 			name: "All features exempt",
 			gatewaySuite: suite.ConformanceOptions{
-				SupportedFeatures: sets.New[features.SupportedFeature]("Gateway", "HTTPRoute"),
-				ExemptFeatures:    sets.New[features.SupportedFeature]("Gateway", "HTTPRoute"),
+				SupportedFeatures: sets.New[features.FeatureName]("Gateway", "HTTPRoute"),
+				ExemptFeatures:    sets.New[features.FeatureName]("Gateway", "HTTPRoute"),
 			},
 			expectedResult: []gwapiv1.SupportedFeature{},
 		},
 		{
 			name: "Some features exempt",
 			gatewaySuite: suite.ConformanceOptions{
-				SupportedFeatures: sets.New[features.SupportedFeature]("Gateway", "HTTPRoute", "GRPCRoute"),
-				ExemptFeatures:    sets.New[features.SupportedFeature]("GRPCRoute"),
+				SupportedFeatures: sets.New[features.FeatureName]("Gateway", "HTTPRoute", "GRPCRoute"),
+				ExemptFeatures:    sets.New[features.FeatureName]("GRPCRoute"),
 			},
-			expectedResult: []gwapiv1.SupportedFeature{"Gateway", "HTTPRoute"},
+			expectedResult: []gwapiv1.SupportedFeature{
+				{Name: "Gateway"},
+				{Name: "HTTPRoute"},
+			},
 		},
 		{
 			name: "Some features exempt with skipped tests",
 			gatewaySuite: suite.ConformanceOptions{
-				SupportedFeatures: sets.New[features.SupportedFeature]("Gateway", "HTTPRoute", "GRPCRoute"),
-				ExemptFeatures:    sets.New[features.SupportedFeature]("GRPCRoute"),
+				SupportedFeatures: sets.New[features.FeatureName]("Gateway", "HTTPRoute", "GRPCRoute"),
+				ExemptFeatures:    sets.New[features.FeatureName]("GRPCRoute"),
 			},
 			skippedTests: []suite.ConformanceTest{
 				{
-					Features: []features.SupportedFeature{"HTTPRoute"},
+					Features: []features.FeatureName{"HTTPRoute"},
 				},
 			},
-			expectedResult: []gwapiv1.SupportedFeature{"Gateway"},
+			expectedResult: []gwapiv1.SupportedFeature{
+				{Name: "Gateway"},
+			},
 		},
 		{
 			name: "Core features remain supported with skipped extended tests",
 			gatewaySuite: suite.ConformanceOptions{
-				SupportedFeatures: sets.New[features.SupportedFeature]("Gateway", "HTTPRoute", "GatewayHTTPListenerIsolation"),
+				SupportedFeatures: sets.New[features.FeatureName]("Gateway", "HTTPRoute", "GatewayHTTPListenerIsolation"),
 			},
 			skippedTests: []suite.ConformanceTest{
 				{
-					Features: []features.SupportedFeature{"Gateway", "GatewayHTTPListenerIsolation", "HTTPRoute"},
+					Features: []features.FeatureName{"Gateway", "GatewayHTTPListenerIsolation", "HTTPRoute"},
 				},
 			},
-			expectedResult: []gwapiv1.SupportedFeature{"Gateway", "HTTPRoute"},
+			expectedResult: []gwapiv1.SupportedFeature{
+				{Name: "Gateway"},
+				{Name: "HTTPRoute"},
+			},
 		},
 		{
 			name: "Core feature removed when skipping core test",
 			gatewaySuite: suite.ConformanceOptions{
-				SupportedFeatures: sets.New[features.SupportedFeature]("Gateway", "HTTPRoute"),
+				SupportedFeatures: sets.New[features.FeatureName]("Gateway", "HTTPRoute"),
 			},
 			skippedTests: []suite.ConformanceTest{
 				{
-					Features: []features.SupportedFeature{"HTTPRoute"},
+					Features: []features.FeatureName{"HTTPRoute"},
 				},
 			},
-			expectedResult: []gwapiv1.SupportedFeature{"Gateway"},
+			expectedResult: []gwapiv1.SupportedFeature{
+				{Name: "Gateway"},
+			},
 		},
 	}
 
