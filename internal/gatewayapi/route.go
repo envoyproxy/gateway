@@ -847,19 +847,15 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 				// skip adding the route and provide the reason via route status.
 				if err != nil {
 					routeStatus := GetRouteStatus(tlsRoute)
-					parentStatus := routeStatus.Parents[parentRef.routeParentStatusIdx]
-					if isAccepted(parentStatus) {
-						status.SetRouteStatusCondition(routeStatus,
-							parentRef.routeParentStatusIdx,
-							tlsRoute.GetGeneration(),
-							gwapiv1.RouteConditionAccepted,
-							metav1.ConditionFalse,
-							"Failed to process the settings associated with the TLS route.",
-							err.Error(),
-						)
-						return
-					}
-
+					status.SetRouteStatusCondition(routeStatus,
+						parentRef.routeParentStatusIdx,
+						tlsRoute.GetGeneration(),
+						gwapiv1.RouteConditionAccepted,
+						metav1.ConditionFalse,
+						"Failed to process the settings associated with the TLS route.",
+						err.Error(),
+					)
+					return
 				}
 
 				if ds != nil {
@@ -1005,18 +1001,15 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			// skip adding the route and provide the reason via route status.
 			if err != nil {
 				routeStatus := GetRouteStatus(udpRoute)
-				parentStatus := routeStatus.Parents[parentRef.routeParentStatusIdx]
-				if isAccepted(parentStatus) {
-					status.SetRouteStatusCondition(routeStatus,
-						parentRef.routeParentStatusIdx,
-						udpRoute.GetGeneration(),
-						gwapiv1.RouteConditionAccepted,
-						metav1.ConditionFalse,
-						"Failed to process the settings associated with the UDP route.",
-						err.Error(),
-					)
-					return
-				}
+				status.SetRouteStatusCondition(routeStatus,
+					parentRef.routeParentStatusIdx,
+					udpRoute.GetGeneration(),
+					gwapiv1.RouteConditionAccepted,
+					metav1.ConditionFalse,
+					"Failed to process the settings associated with the UDP route.",
+					err.Error(),
+				)
+				return
 			}
 			if ds == nil {
 				continue
@@ -1154,18 +1147,15 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			// skip adding the route and provide the reason via route status.
 			if err != nil {
 				routeStatus := GetRouteStatus(tcpRoute)
-				parentStatus := routeStatus.Parents[parentRef.routeParentStatusIdx]
-				if isAccepted(parentStatus) {
-					status.SetRouteStatusCondition(routeStatus,
-						parentRef.routeParentStatusIdx,
-						tcpRoute.GetGeneration(),
-						gwapiv1.RouteConditionAccepted,
-						metav1.ConditionFalse,
-						"Failed to process the settings associated with the TCP route.",
-						err.Error(),
-					)
-					return
-				}
+				status.SetRouteStatusCondition(routeStatus,
+					parentRef.routeParentStatusIdx,
+					tcpRoute.GetGeneration(),
+					gwapiv1.RouteConditionAccepted,
+					metav1.ConditionFalse,
+					"Failed to process the settings associated with the TCP route.",
+					err.Error(),
+				)
+				return
 			}
 
 			if ds == nil {
@@ -1764,16 +1754,4 @@ func (t *Translator) processBackendDestinationSetting(backendRef gwapiv1.Backend
 		Endpoints:   dstEndpoints,
 		AddressType: dstAddrType,
 	}
-}
-
-func isAccepted(rs gwapiv1.RouteParentStatus) bool {
-	for _, condition := range rs.Conditions {
-		if condition.Type == string(gwapiv1.RouteConditionAccepted) {
-			if condition.Status == metav1.ConditionTrue {
-				return true
-			}
-			return false
-		}
-	}
-	return false
 }
