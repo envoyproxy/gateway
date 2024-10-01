@@ -82,6 +82,7 @@ var (
 	PathMatchTypeDerefOr       = ptr.Deref[gwapiv1.PathMatchType]
 	GRPCMethodMatchTypeDerefOr = ptr.Deref[gwapiv1.GRPCMethodMatchType]
 	HeaderMatchTypeDerefOr     = ptr.Deref[gwapiv1.HeaderMatchType]
+	GRPCHeaderMatchTypeDerefOr = ptr.Deref[gwapiv1.GRPCHeaderMatchType]
 	QueryParamMatchTypeDerefOr = ptr.Deref[gwapiv1.QueryParamMatchType]
 )
 

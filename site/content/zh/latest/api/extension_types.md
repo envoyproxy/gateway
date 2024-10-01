@@ -852,6 +852,51 @@ _Appears in:_
 | `failClosed` | _boolean_ |  false  | FailClosed is a switch used to control the flow of traffic when client IP detection<br />fails. If set to true, the listener will respond with 403 Forbidden when the client<br />IP address cannot be determined. |
 
 
+#### CustomResponse
+
+
+
+CustomResponse defines the configuration for returning a custom response.
+
+_Appears in:_
+- [ResponseOverride](#responseoverride)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `contentType` | _string_ |  false  | Content Type of the response. This will be set in the Content-Type header. |
+| `body` | _[CustomResponseBody](#customresponsebody)_ |  true  | Body of the Custom Response |
+
+
+#### CustomResponseBody
+
+
+
+CustomResponseBody
+
+_Appears in:_
+- [CustomResponse](#customresponse)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `type` | _[ResponseValueType](#responsevaluetype)_ |  true  | Type is the type of method to use to read the body value. |
+| `inline` | _string_ |  false  | Inline contains the value as an inline string. |
+| `valueRef` | _[LocalObjectReference](#localobjectreference)_ |  false  | ValueRef contains the contents of the body<br />specified as a local object reference.<br />Only a reference to ConfigMap is supported. |
+
+
+#### CustomResponseMatch
+
+
+
+CustomResponseMatch defines the configuration for matching a user response to return a custom one.
+
+_Appears in:_
+- [ResponseOverride](#responseoverride)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `statusCode` | _[StatusCodeMatch](#statuscodematch) array_ |  true  | Status code to match on. The match evaluates to true if any of the matches are successful. |
+
+
 #### CustomTag
 
 
@@ -2955,6 +3000,21 @@ _Appears in:_
 | `OpenTelemetry` | ProxyAccessLogSinkTypeOpenTelemetry defines the OpenTelemetry accesslog sink.<br />When the provider is Kubernetes, EnvoyGateway always sends `k8s.namespace.name`<br />and `k8s.pod.name` as additional attributes.<br /> | 
 
 
+#### ProxyAccessLogType
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [ProxyAccessLogSetting](#proxyaccesslogsetting)
+
+| Value | Description |
+| ----- | ----------- |
+| `Listener` | ProxyAccessLogTypeListener defines the accesslog for Listeners.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto#envoy-v3-api-field-config-listener-v3-listener-access-log<br /> | 
+| `Route` | ProxyAccessLogTypeRoute defines the accesslog for HTTP, GRPC, UDP and TCP Routes.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/udp/udp_proxy/v3/udp_proxy.proto#envoy-v3-api-field-extensions-filters-udp-udp-proxy-v3-udpproxyconfig-access-log<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/tcp_proxy/v3/tcp_proxy.proto#envoy-v3-api-field-extensions-filters-network-tcp-proxy-v3-tcpproxy-access-log<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-access-log<br /> | 
+
+
 #### ProxyBootstrap
 
 
@@ -3038,8 +3098,9 @@ _Appears in:_
 | `prometheus` | _[ProxyPrometheusProvider](#proxyprometheusprovider)_ |  true  | Prometheus defines the configuration for Admin endpoint `/stats/prometheus`. |
 | `sinks` | _[ProxyMetricSink](#proxymetricsink) array_ |  true  | Sinks defines the metric sinks where metrics are sent to. |
 | `matches` | _[StringMatch](#stringmatch) array_ |  true  | Matches defines configuration for selecting specific metrics instead of generating all metrics stats<br />that are enabled by default. This helps reduce CPU and memory overhead in Envoy, but eliminating some stats<br />may after critical functionality. Here are the stats that we strongly recommend not disabling:<br />`cluster_manager.warming_clusters`, `cluster.<cluster_name>.membership_total`,`cluster.<cluster_name>.membership_healthy`,<br />`cluster.<cluster_name>.membership_degraded`，reference  https://github.com/envoyproxy/envoy/issues/9856,<br />https://github.com/envoyproxy/envoy/issues/14610 |
-| `enableVirtualHostStats` | _boolean_ |  true  | EnableVirtualHostStats enables envoy stat metrics for virtual hosts. |
-| `enablePerEndpointStats` | _boolean_ |  true  | EnablePerEndpointStats enables per endpoint envoy stats metrics.<br />Please use with caution. |
+| `enableVirtualHostStats` | _boolean_ |  false  | EnableVirtualHostStats enables envoy stat metrics for virtual hosts. |
+| `enablePerEndpointStats` | _boolean_ |  false  | EnablePerEndpointStats enables per endpoint envoy stats metrics.<br />Please use with caution. |
+| `enableRequestResponseSizesStats` | _boolean_ |  false  | EnableRequestResponseSizesStats enables publishing of histograms tracking header and body sizes of requests and responses. |
 
 
 #### ProxyOpenTelemetrySink
@@ -3435,6 +3496,32 @@ _Appears in:_
 | `File` | ResourceProviderTypeFile defines the "File" provider.<br /> | 
 
 
+#### ResponseOverride
+
+
+
+ResponseOverride defines the configuration to override specific responses with a custom one.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `match` | _[CustomResponseMatch](#customresponsematch)_ |  true  | Match configuration. |
+| `response` | _[CustomResponse](#customresponse)_ |  true  | Response configuration. |
+
+
+#### ResponseValueType
+
+_Underlying type:_ _string_
+
+ResponseValueType defines the types of values for the response body supported by Envoy Gateway.
+
+_Appears in:_
+- [CustomResponseBody](#customresponsebody)
+
+
+
 
 
 #### RetryOn
@@ -3617,6 +3704,48 @@ _Appears in:_
 | `Distinct` | SourceMatchDistinct Each IP Address within the specified Source IP CIDR is treated as a distinct client selector<br />and uses a separate rate limit bucket/counter.<br />Note: This is only supported for Global Rate Limits.<br /> | 
 
 
+#### StatusCodeMatch
+
+
+
+
+
+_Appears in:_
+- [CustomResponseMatch](#customresponsematch)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `type` | _[StatusCodeValueType](#statuscodevaluetype)_ |  true  | Type is the type of value. |
+| `value` | _string_ |  false  | Value contains the value of the status code. |
+| `range` | _[StatusCodeRange](#statuscoderange)_ |  false  | ValueRef contains the contents of the body<br />specified as a local object reference.<br />Only a reference to ConfigMap is supported. |
+
+
+#### StatusCodeRange
+
+
+
+StatusCodeRange defines the configuration for define a range of status codes.
+
+_Appears in:_
+- [StatusCodeMatch](#statuscodematch)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `start` | _integer_ |  true  | Start of the range, including the start value. |
+| `end` | _integer_ |  true  | End of the range, including the end value. |
+
+
+#### StatusCodeValueType
+
+_Underlying type:_ _string_
+
+StatusCodeValueType defines the types of values for the status code match supported by Envoy Gateway.
+
+_Appears in:_
+- [StatusCodeMatch](#statuscodematch)
+
+
+
 #### StringMatch
 
 
@@ -3793,6 +3922,7 @@ _Appears in:_
 | `OpenTelemetry` |  | 
 | `OpenTelemetry` |  | 
 | `Zipkin` |  | 
+| `Datadog` |  | 
 
 
 #### TriggerEnum

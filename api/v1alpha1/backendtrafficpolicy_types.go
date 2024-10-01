@@ -69,6 +69,13 @@ type BackendTrafficPolicySpec struct {
 	// +optional
 	// +notImplementedHide
 	Compression []*Compression `json:"compression,omitempty"`
+
+	// ResponseOverride defines the configuration to override specific responses with a custom one.
+	// If multiple configurations are specified, the first one to match wins.
+	//
+	// +optional
+	// +notImplementedHide
+	ResponseOverride []*ResponseOverride `json:"responseOverride,omitempty"`
 }
 
 // +kubebuilder:object:root=true

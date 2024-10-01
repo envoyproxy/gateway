@@ -686,9 +686,9 @@ func createTagsQueryParam(tags map[string]string) (string, error) {
 // CollectAndDump collects and dumps the cluster data for troubleshooting and log.
 // This function should be call within t.Cleanup.
 func CollectAndDump(t *testing.T, rest *rest.Config) {
-	result := tb.CollectResult(context.TODO(), rest, "", "envoy-gateway")
+	result := tb.CollectResult(context.TODO(), rest, "", "envoy-gateway-system")
 	for r, data := range result {
-		tlog.Logf(t, "filename: %s", r)
-		tlog.Logf(t, "data: \n%s", data)
+		tlog.Logf(t, "\nfilename: %s", r)
+		tlog.Logf(t, "\ndata: \n%s", data)
 	}
 }
