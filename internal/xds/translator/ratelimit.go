@@ -332,7 +332,7 @@ func buildRateLimitServiceDescriptors(global *ir.GlobalRateLimit) []*rlsconfv3.R
 	// Descriptors for matches are built corresponding to ratelimit actions.
 	for rIdx, rule := range global.Rules {
 		var head, cur *rlsconfv3.RateLimitDescriptor
-		var rateLimitPolicy = &rlsconfv3.RateLimitPolicy{
+		rateLimitPolicy := &rlsconfv3.RateLimitPolicy{
 			RequestsPerUnit: uint32(rule.Limit.Requests),
 			Unit:            rlsconfv3.RateLimitUnit(rlsconfv3.RateLimitUnit_value[strings.ToUpper(string(rule.Limit.Unit))]),
 		}
