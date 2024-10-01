@@ -15,7 +15,6 @@ metadata:
     uid: test-owner-reference-uid-for-deployment
 spec:
   progressDeadlineSeconds: 600
-  replicas: 2
   revisionHistoryLimit: 10
   selector:
     matchLabels:
@@ -27,6 +26,8 @@ spec:
   template:
     metadata:
       annotations:
+        key1: value1
+        key2: value2
         prometheus.io/path: /metrics
         prometheus.io/port: "19001"
         prometheus.io/scrape: "true"
@@ -52,7 +53,7 @@ spec:
         - name: LOG_LEVEL
           value: info
         - name: USE_STATSD
-          value: "true"
+          value: "false"
         - name: CONFIG_TYPE
           value: GRPC_XDS_SOTW
         - name: CONFIG_GRPC_XDS_SERVER_URL
@@ -87,7 +88,7 @@ spec:
           value: :19001
         - name: PROMETHEUS_MAPPER_YAML
           value: /etc/statsd-exporter/conf.yaml
-        image: custom-image
+        image: envoyproxy/ratelimit:master
         imagePullPolicy: IfNotPresent
         name: envoy-ratelimit
         ports:
@@ -104,14 +105,21 @@ spec:
           successThreshold: 1
           timeoutSeconds: 1
         resources:
-          limits:
-            cpu: 400m
-            memory: 2Gi
           requests:
-            cpu: 200m
-            memory: 1Gi
+            cpu: 100m
+            memory: 512Mi
         securityContext:
-          privileged: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          readOnlyRootFilesystem: true
+          runAsGroup: 65534
+          runAsNonRoot: true
+          runAsUser: 65534
+          seccompProfile:
+            type: RuntimeDefault
         startupProbe:
           failureThreshold: 30
           httpGet:
@@ -133,8 +141,6 @@ spec:
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
-      securityContext:
-        runAsUser: 1000
       serviceAccountName: envoy-ratelimit
       terminationGracePeriodSeconds: 300
       volumes:
