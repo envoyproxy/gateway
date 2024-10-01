@@ -844,7 +844,22 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 		for _, rule := range tlsRoute.Spec.Rules {
 			for _, backendRef := range rule.BackendRefs {
 				// Consider if we want to use tcp reset or TLS Alert Protocol to cancel a connection in case of errors here.
-				ds, _ := t.processDestination(backendRef, parentRef, tlsRoute, resources)
+				ds, err := t.processDestination(backendRef, parentRef, tlsRoute, resources)
+
+				// skip adding the route and provide the reason via route status.
+				if err != nil {
+					routeStatus := GetRouteStatus(tlsRoute)
+					status.SetRouteStatusCondition(routeStatus,
+						parentRef.routeParentStatusIdx,
+						tlsRoute.GetGeneration(),
+						gwapiv1.RouteConditionAccepted,
+						metav1.ConditionFalse,
+						"Failed to process the settings associated with the TLS route.",
+						err.Error(),
+					)
+					return
+				}
+
 				if ds != nil {
 					destSettings = append(destSettings, ds)
 				}
