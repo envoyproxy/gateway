@@ -843,9 +843,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 		// compute backends
 		for _, rule := range tlsRoute.Spec.Rules {
 			for _, backendRef := range rule.BackendRefs {
-				// Consider if we want to use tcp reset or TLS Alert Protocol to cancel a connection in case of errors here.
 				ds, err := t.processDestination(backendRef, parentRef, tlsRoute, resources)
-
 				// skip adding the route and provide the reason via route status.
 				if err != nil {
 					routeStatus := GetRouteStatus(tlsRoute)
