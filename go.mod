@@ -5,7 +5,7 @@ go 1.23.1
 replace github.com/imdario/mergo => github.com/imdario/mergo v0.3.16
 
 require (
-	fortio.org/fortio v1.66.3
+	fortio.org/fortio v1.67.0
 	fortio.org/log v1.16.0
 	github.com/Masterminds/semver/v3 v3.3.0
 	github.com/cncf/xds/go v0.0.0-20240723142845-024c85f92f20
@@ -64,7 +64,7 @@ require (
 require (
 	github.com/docker/docker v27.3.1+incompatible
 	github.com/replicatedhq/troubleshoot v0.105.1
-	google.golang.org/grpc v1.66.2
+	google.golang.org/grpc v1.67.0
 	sigs.k8s.io/kubectl-validate v0.0.5-0.20240827210056-ce13d95db263
 )
 
@@ -74,6 +74,7 @@ require (
 	filippo.io/edwards25519 v1.1.0 // indirect
 	fortio.org/cli v1.9.0 // indirect
 	fortio.org/dflag v1.7.2 // indirect
+	fortio.org/safecast v1.0.0 // indirect
 	fortio.org/scli v1.15.2 // indirect
 	fortio.org/sets v1.2.0 // indirect
 	fortio.org/struct2env v0.4.1 // indirect
