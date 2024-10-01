@@ -1,0 +1,36 @@
+name: "first-listener"
+address: "0.0.0.0"
+port: 10080
+hostnames:
+- "*"
+path:
+  mergeSlashes: true
+  escapedSlashesAction: UnescapeAndRedirect
+routes:
+- name: "first-route"
+  traffic:
+    rateLimit:
+      global:
+        rules:
+        - headerMatches:
+          - name: "x-user-id"
+            exact: "one"
+          - name: "x-user-id"
+            exact: "two"
+          cidrMatch:
+            cidr: 0.0.0.0/0
+            ip: 0.0.0.0
+            maskLen: 0
+            isIPv6: false
+            distinct: false
+          limit:
+            requests: 5
+            unit: second
+  pathMatch:
+    exact: "foo/bar"
+  destination:
+    name: "first-route-dest"
+    settings:
+    - endpoints:
+      - host: "1.2.3.4"
+        port: 50000
