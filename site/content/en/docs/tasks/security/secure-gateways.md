@@ -513,8 +513,88 @@ Since the multiple certificates are configured on the same Gateway listener, Env
 {{% /tab %}}
 {{< /tabpane >}}
 
+## Customize Gateway TLS Parameters
+
+In addition to enablement of TLS with Gateway-API, Envoy Gateway supports customizing TLS parameters.
+To achieve this, the [ClientTrafficPolicy][] resource can be used to specify TLS parameters. 
+We will customize the minimum supported TLS version in this example to TLSv1.3.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: enforce-tls-13
+  namespace: default
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  tls:
+    minVersion: "1.3"
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: enforce-tls-13
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
+  tls:
+    minVersion: "1.3"
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+
+## Testing TLS Parameters
+
+Attempt to connecting using an unsupported TLS version:
+
+```shell
+curl -v -HHost:www.sample.com --resolve "www.sample.com:8443:127.0.0.1" \
+--cacert sample.com.crt --tlsv1.2 --tls-max 1.2 https://www.sample.com:8443/get -I
+
+[...]
+
+* ALPN: curl offers h2,http/1.1
+* (304) (OUT), TLS handshake, Client hello (1):
+* LibreSSL/3.3.6: error:1404B42E:SSL routines:ST_CONNECT:tlsv1 alert protocol version
+* Closing connection
+curl: (35) LibreSSL/3.3.6: error:1404B42E:SSL routines:ST_CONNECT:tlsv1 alert protocol version
+```
+
+The output shows that the connection fails due to an unsupported TLS protocol version used by the client. Now, connect
+to the Gateway without specifying a client version, and note that the connection is established with TLSv1.3. 
+
+```shell
+curl -v -HHost:www.sample.com --resolve "www.sample.com:8443:127.0.0.1" \
+--cacert sample.com.crt https://www.sample.com:8443/get -I
+
+[...]
+
+* SSL connection using TLSv1.3 / AEAD-CHACHA20-POLY1305-SHA256 / [blank] / UNDEF
+```
+
 ## Next Steps
 
 Checkout the [Developer Guide](../../../contributions/develop) to get involved in the project.
 
 [ReferenceGrant]: https://gateway-api.sigs.k8s.io/api-types/referencegrant/
+[ClientTrafficPolicy]: ../../api/extension_types#clienttrafficpolicy

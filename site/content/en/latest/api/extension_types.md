@@ -610,6 +610,8 @@ _Appears in:_
 | `ecdhCurves` | _string array_ |  false  | ECDHCurves specifies the set of supported ECDH curves.<br />In non-FIPS Envoy Proxy builds the default curves are:<br />- X25519<br />- P-256<br />In builds using BoringSSL FIPS the default curve is:<br />- P-256 |
 | `signatureAlgorithms` | _string array_ |  false  | SignatureAlgorithms specifies which signature algorithms the listener should<br />support. |
 | `alpnProtocols` | _[ALPNProtocol](#alpnprotocol) array_ |  false  | ALPNProtocols supplies the list of ALPN protocols that should be<br />exposed by the listener. By default h2 and http/1.1 are enabled.<br />Supported values are:<br />- http/1.0<br />- http/1.1<br />- h2 |
+| `sessionTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | SessionTimeout determines the maximum lifetime of a TLS session.<br />https://commondatastorage.googleapis.com/chromium-boringssl-docs/ssl.h.html#SSL_DEFAULT_SESSION_TIMEOUT<br />Default: 7200s |
+| `sessionResumption` | _[SessionResumptionSettings](#sessionresumptionsettings)_ |  false  | SessionResumptionSettings determine the proxy's supported TLS session resumption option.<br />By default, Envoy Gateway does not enable session resumption. Use sessionResumption to<br />enable stateful and stateless session resumption. Users should consider security impacts<br />of different resumption methods. Performance gains from resumption are diminished when<br />Envoy proxy is deployed with more than one replica. |
 
 
 #### ClientTimeout
@@ -3655,7 +3657,8 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `type` | _[TLSSessionResumptionType](#tlssessionresumptiontype)_ |  true  |  |
+| `statelessSessionResumption` | _[StatelessTLSSessionResumption](#statelesstlssessionresumption)_ |  false  | StatelessSessionResumption defines setting for stateless (session-ticket based) session resumption |
+| `statefulSessionResumption` | _[StatefulTLSSessionResumption](#statefultlssessionresumption)_ |  false  | StatefulSessionResumption defines setting for stateful (session-id based) session resumption |
 
 
 #### ShutdownConfig
@@ -3716,6 +3719,37 @@ _Appears in:_
 | ----- | ----------- |
 | `Exact` | SourceMatchExact All IP Addresses within the specified Source IP CIDR are treated as a single client selector<br />and share the same rate limit bucket.<br /> | 
 | `Distinct` | SourceMatchDistinct Each IP Address within the specified Source IP CIDR is treated as a distinct client selector<br />and uses a separate rate limit bucket/counter.<br />Note: This is only supported for Global Rate Limits.<br /> | 
+
+
+#### StatefulTLSSessionResumption
+
+
+
+StatefulTLSSessionResumption defines the stateful (session-id based) type of TLS session resumption.
+Note: When Envoy Proxy is deployed with more than one replica, session caches are not synchronized
+between instances, possibly leading to resumption failures.
+Envoy does not re-validate client certificates upon session resumption.
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-routematch-tlscontextmatchoptions
+
+_Appears in:_
+- [SessionResumptionSettings](#sessionresumptionsettings)
+
+
+
+#### StatelessTLSSessionResumption
+
+
+
+StatelessTLSSessionResumption defines the stateless (session-ticket based) type of TLS session resumption.
+Note: When Envoy Proxy is deployed with more than one replica, session ticket encryption keys are not
+synchronized between instances, possibly leading to resumption failures.
+In-memory session ticket encryption keys are rotated every 48 hours.
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlssessionticketkeys
+https://commondatastorage.googleapis.com/chromium-boringssl-docs/ssl.h.html#Session-tickets
+
+_Appears in:_
+- [SessionResumptionSettings](#sessionresumptionsettings)
+
 
 
 #### StatusCodeMatch
@@ -3838,21 +3872,6 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `connectTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | The timeout for network connection establishment, including TCP and TLS handshakes.<br />Default: 10 seconds. |
-
-
-#### TLSSessionResumptionType
-
-_Underlying type:_ _string_
-
-TLSSessionResumptionType defines the type of TLS session resumption
-
-_Appears in:_
-- [SessionResumptionSettings](#sessionresumptionsettings)
-
-| Value | Description |
-| ----- | ----------- |
-| `Stateful` | StatefulTLSSessionResumption defines the stateful (session-id based) type of TLS session resumption.<br />Note: When Envoy Proxy is deployed with more than one replica, session caches are not synchronized<br />between instances, possibly leading to resumption failures.<br />Envoy does not re-validate client certificates upon session resumption.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-routematch-tlscontextmatchoptions<br /> | 
-| `Stateless` | StatelessTLSSessionResumption defines the stateless (session-ticket based) type of TLS session resumption.<br />Note: When Envoy Proxy is deployed with more than one replica, session ticket encryption keys are not<br />synchronized between instances, possibly leading to resumption failures.<br />In-memory session ticket encryption keys are rotated every 48 hours.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlssessionticketkeys<br />https://commondatastorage.googleapis.com/chromium-boringssl-docs/ssl.h.html#Session-tickets<br /> | 
 
 
 #### TLSSettings

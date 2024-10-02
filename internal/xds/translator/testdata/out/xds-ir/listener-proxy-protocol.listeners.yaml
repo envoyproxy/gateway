@@ -50,6 +50,8 @@
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
+        disableStatefulSessionResumption: true
+        disableStatelessSessionResumption: true
   listenerFilters:
   - name: envoy.filters.listener.proxy_protocol
     typedConfig:

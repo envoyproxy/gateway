@@ -10,10 +10,13 @@ package tests
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -73,6 +76,79 @@ var ClientMTLSTest = suite.ConformanceTest{
 
 			WaitForConsistentMTLSResponse(t, suite.RoundTripper, req, expected, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency, cPem, keyPem, "mtls.example.com")
 		})
+
+		t.Run("Client TLS Settings Enforced", func(t *testing.T) {
+			depNS := "envoy-gateway-system"
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "http-client-tls-settings", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "client-mtls-gateway", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			certNN := types.NamespacedName{Name: "client-tls-settings-certificate", Namespace: ns}
+			kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{depNS})
+
+			const serverName = "tls-settings.example.com"
+
+			expected := http.ExpectedResponse{
+				Request: http.Request{
+					Host: serverName,
+					Path: "/client-tls-settings",
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Host: serverName,
+						Path: "/client-tls-settings",
+					},
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+
+			req := http.MakeRequest(t, &expected, gwAddr, "HTTPS", "https")
+
+			// added but not used, as these are required by test utils when for SNI to be added
+			cPem, keyPem, err := GetTLSSecret(suite.Client, certNN)
+			if err != nil {
+				t.Fatalf("unexpected error finding TLS secret: %v", err)
+			}
+
+			WaitForConsistentMTLSResponse(t, suite.RoundTripper, req, expected, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency, cPem, keyPem, serverName)
+
+			gwAddr = fmt.Sprintf("%s:443", serverName)
+
+			certPool := x509.NewCertPool()
+			if !certPool.AppendCertsFromPEM(cPem) {
+				t.Errorf("Error setting Root CAs: %v", err)
+			}
+
+			// nolint: gosec
+			baseTLSConfig := &tls.Config{
+				ServerName: serverName,
+				RootCAs:    certPool,
+			}
+
+			// Check positive and negative TLS versions
+			dialWithTLSVersion(t, gwAddr, baseTLSConfig, tls.VersionTLS10, true)
+			dialWithTLSVersion(t, gwAddr, baseTLSConfig, tls.VersionTLS11, false)
+			dialWithTLSVersion(t, gwAddr, baseTLSConfig, tls.VersionTLS12, false)
+			dialWithTLSVersion(t, gwAddr, baseTLSConfig, tls.VersionTLS13, true)
+
+			// check positive and negative ciphers
+			dialWithCipher(t, gwAddr, baseTLSConfig, tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, false)
+			dialWithCipher(t, gwAddr, baseTLSConfig, tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384, true)
+
+			// check positive and negative curves
+			dialWithCurve(t, gwAddr, baseTLSConfig, tls.CurveP256, false)
+			dialWithCurve(t, gwAddr, baseTLSConfig, tls.X25519, false)
+			dialWithCurve(t, gwAddr, baseTLSConfig, tls.CurveP521, true)
+
+			// Check ALPN
+			dialAndExpectALPN(t, gwAddr, baseTLSConfig, "http/1.1")
+
+			// Check that tickets are not assigned as per EG defaults
+			dialAndCheckSessionTicketAssignment(t, gwAddr, baseTLSConfig, 0)
+		})
 	},
 }
 
@@ -114,4 +190,100 @@ func GetTLSSecret(client client.Client, secretName types.NamespacedName) ([]byte
 	key = secret.Data["tls.key"]
 
 	return cert, key, nil
+}
+
+func dialWithTLSVersion(t *testing.T, gwAddr string, baseTLSConfig *tls.Config, version uint16, expectedError bool) {
+	tlsConfig := baseTLSConfig.Clone()
+	tlsConfig.MinVersion = version
+	tlsConfig.MaxVersion = version
+	tlsConfig.CipherSuites = []uint16{tls.TLS_RSA_WITH_AES_128_CBC_SHA, tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256}
+
+	conn, err := tls.Dial("tcp", gwAddr, tlsConfig)
+
+	if expectedError {
+		require.Error(t, err, "protocol version not supported")
+	} else { // not error
+		require.NoError(t, err)
+		require.NotNil(t, conn)
+		require.Equal(t, conn.ConnectionState().Version, version)
+		_ = conn.Close()
+	}
+}
+
+func dialAndExpectALPN(t *testing.T, gwAddr string, baseTLSConfig *tls.Config, expectedALPN string) {
+	tlsConfig := baseTLSConfig.Clone()
+	tlsConfig.NextProtos = []string{"h2", "http/1.1"}
+
+	conn, err := tls.Dial("tcp", gwAddr, tlsConfig)
+
+	require.NoError(t, err)
+	require.NotNil(t, conn)
+	require.Equal(t, expectedALPN, conn.ConnectionState().NegotiatedProtocol)
+	_ = conn.Close()
+}
+
+func dialWithCipher(t *testing.T, gwAddr string, baseTLSConfig *tls.Config, cipher uint16, expectedError bool) {
+	tlsConfig := baseTLSConfig.Clone()
+	tlsConfig.CipherSuites = []uint16{cipher}
+	conn, err := tls.Dial("tcp", gwAddr, tlsConfig)
+
+	if expectedError {
+		require.Error(t, err, "remote error: tls: handshake failure")
+	} else { // not error
+		require.NoError(t, err)
+		require.NotNil(t, conn)
+		require.Equal(t, cipher, conn.ConnectionState().CipherSuite)
+		_ = conn.Close()
+	}
+}
+
+func dialWithCurve(t *testing.T, gwAddr string, baseTLSConfig *tls.Config, curve tls.CurveID, expectedError bool) {
+	tlsConfig := baseTLSConfig.Clone()
+	tlsConfig.CurvePreferences = []tls.CurveID{curve}
+	conn, err := tls.Dial("tcp", gwAddr, tlsConfig)
+
+	if expectedError {
+		require.Error(t, err, "remote error: tls: handshake failure")
+	} else { // not error
+		require.NoError(t, err)
+		require.NotNil(t, conn)
+		_ = conn.Close()
+	}
+}
+
+func dialAndCheckSessionTicketAssignment(t *testing.T, gwAddr string, baseTLSConfig *tls.Config, expectedSessionTickets int) {
+	tlsConfig := baseTLSConfig.Clone()
+	sessionCache := newClientSessionCache(tls.NewLRUClientSessionCache(100))
+	tlsConfig.ClientSessionCache = sessionCache
+	conn, err := tls.Dial("tcp", gwAddr, tlsConfig)
+
+	require.NoError(t, err)
+	require.NotNil(t, conn)
+	require.Equal(t, expectedSessionTickets, sessionCache.writes)
+	_ = conn.Close()
+}
+
+type clientSessionCache struct {
+	cache  tls.ClientSessionCache
+	writes int
+}
+
+func newClientSessionCache(cache tls.ClientSessionCache) *clientSessionCache {
+	return &clientSessionCache{
+		cache:  cache,
+		writes: 0,
+	}
+}
+
+func (c *clientSessionCache) Get(sessionKey string) (*tls.ClientSessionState, bool) {
+	return c.cache.Get(sessionKey)
+}
+
+func (c *clientSessionCache) Put(sessionKey string, cs *tls.ClientSessionState) {
+	c.cache.Put(sessionKey, cs)
+	c.writes++
+}
+
+func (c *clientSessionCache) Writes() int {
+	return c.writes
 }

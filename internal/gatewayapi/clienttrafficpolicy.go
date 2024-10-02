@@ -864,6 +864,23 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 		}
 	}
 
+	if tlsParams.SessionResumptionSettings != nil {
+		if tlsParams.SessionResumptionSettings.StatelessSessionResumption != nil {
+			irTLSConfig.StatelessSessionResumption = true
+		}
+		if tlsParams.SessionResumptionSettings.StatefulSessionResumption != nil {
+			irTLSConfig.StatefulSessionResumption = true
+		}
+	}
+
+	if tlsParams.SessionTimeout != nil {
+		d, err := time.ParseDuration(string(*tlsParams.SessionTimeout))
+		if err != nil {
+			return nil, fmt.Errorf("invalid TLS SessionTimeout value %s", *tlsParams.SessionTimeout)
+		}
+		irTLSConfig.SessionTimeout = ptr.To(metav1.Duration{Duration: d})
+	}
+
 	return irTLSConfig, nil
 }
 

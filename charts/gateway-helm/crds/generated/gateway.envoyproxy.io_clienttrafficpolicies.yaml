@@ -811,29 +811,20 @@ spec:
                   sessionResumption:
                     description: |-
                       SessionResumptionSettings determine the proxy's supported TLS session resumption option.
-                      By default, Envoy Gateway does not support session resumption. Users can enable stateful
-                      and stateless session resumption by including them in the sessionResumption list.
-                    items:
-                      description: SessionResumptionSettings defines supported tls
-                        session resumption methods and their associated configuration.
-                      properties:
-                        type:
-                          description: TLSSessionResumptionType defines the type of
-                            TLS session resumption
-                          enum:
-                          - Stateful
-                          - Stateless
-                          type: string
-                      required:
-                      - type
-                      type: object
-                    maxItems: 2
-                    type: array
-                    x-kubernetes-validations:
-                    - message: Stateful resumption cannot be repeated
-                      rule: self.filter(f, f.type == 'Stateful').size() <= 1
-                    - message: Stateless resumption cannot be repeated
-                      rule: self.filter(f, f.type == 'Stateless').size() <= 1
+                      By default, Envoy Gateway does not enable session resumption. Use sessionResumption to
+                      enable stateful and stateless session resumption. Users should consider security impacts
+                      of different resumption methods. Performance gains from resumption are diminished when
+                      Envoy proxy is deployed with more than one replica.
+                    properties:
+                      statefulSessionResumption:
+                        description: StatefulSessionResumption defines setting for
+                          stateful (session-id based) session resumption
+                        type: object
+                      statelessSessionResumption:
+                        description: StatelessSessionResumption defines setting for
+                          stateless (session-ticket based) session resumption
+                        type: object
+                    type: object
                   sessionTimeout:
                     description: |-
                       SessionTimeout determines the maximum lifetime of a TLS session.
