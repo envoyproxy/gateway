@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -62,6 +63,7 @@ type snapshotCache struct {
 	deltaStreamDuration streamDurationMap
 	snapshotVersion     int64
 	lastSnapshot        snapshotMap
+	lastRejected        int64
 	log                 *zap.SugaredLogger
 	mu                  sync.Mutex
 }
@@ -231,6 +233,25 @@ func (s *snapshotCache) OnStreamRequest(streamID int64, req *discoveryv3.Discove
 		nodeID, nodeVersion, req.ResourceNames, req.GetTypeUrl(),
 		errorCode, errorMessage)
 
+	if strings.Contains(errorMessage, "rejected") {
+		now := time.Now().Unix()
+		if now-s.lastRejected > 10 {
+			s.log.Warnf("Envoy rejected the last update, resending the snapshot to node %s", nodeID)
+			if err := s.reSendXDS(nodeID, cluster); err != nil {
+				s.log.Errorf("Failed to resend the snapshot to node %s: %v", nodeID, err)
+			}
+			s.lastRejected = now
+		}
+	}
+
+	return nil
+}
+
+func (s *snapshotCache) reSendXDS(nodeID, cluster string) error {
+	err := s.SetSnapshot(context.TODO(), nodeID, s.lastSnapshot[cluster])
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -335,7 +356,16 @@ func (s *snapshotCache) OnStreamDeltaRequest(streamID int64, req *discoveryv3.De
 		req.ResourceNamesSubscribe, req.ResourceNamesUnsubscribe,
 		req.GetTypeUrl(),
 		errorCode, errorMessage)
-
+	if strings.Contains(errorMessage, "rejected") {
+		now := time.Now().Unix()
+		if now-s.lastRejected > 10 {
+			s.log.Warnf("Envoy rejected the last update, resending the snapshot to node %s", nodeID)
+			if err := s.reSendXDS(nodeID, cluster); err != nil {
+				s.log.Errorf("Failed to resend the snapshot to node %s: %v", nodeID, err)
+			}
+			s.lastRejected = now
+		}
+	}
 	return nil
 }
 
