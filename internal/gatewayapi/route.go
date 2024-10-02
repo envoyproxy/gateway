@@ -112,7 +112,7 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
 		routeRoutes, err := t.processHTTPRouteRules(httpRoute, parentRef, resources)
-		if err != nil {
+		if err != nil && !parentRef.HasCondition(httpRoute, gwapiv1.RouteConditionAccepted, metav1.ConditionFalse) {
 			routeStatus := GetRouteStatus(httpRoute)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
@@ -479,7 +479,7 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
 		routeRoutes, err := t.processGRPCRouteRules(grpcRoute, parentRef, resources)
-		if err != nil {
+		if err != nil && !parentRef.HasCondition(grpcRoute, gwapiv1.RouteConditionAccepted, metav1.ConditionFalse) {
 			routeStatus := GetRouteStatus(grpcRoute)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
@@ -845,8 +845,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 			for _, backendRef := range rule.BackendRefs {
 				// currently we keep the tcp route, as today, there seem to be
 				ds, err := t.processDestination(backendRef, parentRef, tlsRoute, resources)
-
-				if err != nil {
+				if err != nil && !parentRef.HasCondition(tlsRoute, gwapiv1.RouteConditionAccepted, metav1.ConditionFalse) {
 					routeStatus := GetRouteStatus(tlsRoute)
 					status.SetRouteStatusCondition(routeStatus,
 						parentRef.routeParentStatusIdx,
@@ -991,7 +990,8 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 		for _, backendRef := range udpRoute.Spec.Rules[0].BackendRefs {
 			ds, err := t.processDestination(backendRef, parentRef, udpRoute, resources)
 			// skip adding the route and provide the reason via route status.
-			if err != nil {
+
+			if err != nil && !parentRef.HasCondition(udpRoute, gwapiv1.RouteConditionAccepted, metav1.ConditionFalse) {
 				routeStatus := GetRouteStatus(udpRoute)
 				status.SetRouteStatusCondition(routeStatus,
 					parentRef.routeParentStatusIdx,
@@ -1133,7 +1133,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 		for _, backendRef := range tcpRoute.Spec.Rules[0].BackendRefs {
 			ds, err := t.processDestination(backendRef, parentRef, tcpRoute, resources)
 			// skip adding the route and provide the reason via route status.
-			if err != nil {
+			if err != nil && !parentRef.HasCondition(tcpRoute, gwapiv1.RouteConditionAccepted, metav1.ConditionFalse) {
 				routeStatus := GetRouteStatus(tcpRoute)
 				status.SetRouteStatusCondition(routeStatus,
 					parentRef.routeParentStatusIdx,
