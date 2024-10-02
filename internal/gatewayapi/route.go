@@ -843,7 +843,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 		// compute backends
 		for _, rule := range tlsRoute.Spec.Rules {
 			for _, backendRef := range rule.BackendRefs {
-				//please see to do below, requires some more effort as something does not align with the conformance test (TLSRouteInvalidReferenceGrant)
+				// not yet handled, requires to align with the conformance test - TLSRouteInvalidReferenceGrant.
 				ds, _ := t.processDestination(backendRef, parentRef, tlsRoute, resources)
 				if ds != nil {
 					destSettings = append(destSettings, ds)
