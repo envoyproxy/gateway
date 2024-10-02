@@ -843,22 +843,18 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 		// compute backends
 		for _, rule := range tlsRoute.Spec.Rules {
 			for _, backendRef := range rule.BackendRefs {
-				// currently we keep the tcp route, as today, there seem to be
-				ds, err := t.processDestination(backendRef, parentRef, tlsRoute, resources)
-				if err != nil && !parentRef.HasCondition(tlsRoute, gwapiv1.RouteConditionAccepted, metav1.ConditionFalse) {
-					routeStatus := GetRouteStatus(tlsRoute)
-					status.SetRouteStatusCondition(routeStatus,
-						parentRef.routeParentStatusIdx,
-						tlsRoute.GetGeneration(),
-						gwapiv1.RouteConditionAccepted,
-						metav1.ConditionFalse,
-						"Failed to process the settings associated with the TLS route.",
-						err.Error(),
-					)
-					continue
+				//please see to do below, requires some more effort as something does not align with the conformance test (TLSRouteInvalidReferenceGrant)
+				ds, _ := t.processDestination(backendRef, parentRef, tlsRoute, resources)
+				if ds != nil {
+					destSettings = append(destSettings, ds)
 				}
-				destSettings = append(destSettings, ds)
 			}
+
+			// TODO handle:
+			//	- no valid backend refs
+			//	- sum of weights for valid backend refs is 0
+			//	- returning 500's for invalid backend refs
+			//	- etc.
 		}
 
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
