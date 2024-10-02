@@ -95,9 +95,10 @@ tlsRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
+        message: 'backend reference validation failed: backend is not supported for
+          route kind: TLSRoute'
+        reason: Failed to process the settings associated with the TLS route.
+        status: "False"
         type: Accepted
       - lastTransitionTime: null
         message: Resource default/backend-ip of type Backend is not supported for
@@ -118,11 +119,3 @@ xdsIR:
     - address: 0.0.0.0
       name: envoy-gateway/gateway-1/tls
       port: 10090
-      routes:
-      - destination:
-          name: tlsroute/default/tlsroute-1/rule/-1
-        name: tlsroute/default/tlsroute-1
-        tls:
-          inspector:
-            snis:
-            - foo.com

@@ -213,6 +213,11 @@ tcpRoutes:
         reason: Failed to process the settings associated with the TCP route.
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-tls
