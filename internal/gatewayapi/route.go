@@ -844,8 +844,17 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 		for _, rule := range tlsRoute.Spec.Rules {
 			for _, backendRef := range rule.BackendRefs {
 				ds, err := t.processDestination(backendRef, parentRef, tlsRoute, resources)
-				// skip adding the route
+				// skip adding the route and provide the reason via route status.
 				if err != nil {
+					routeStatus := GetRouteStatus(tlsRoute)
+					status.SetRouteStatusCondition(routeStatus,
+						parentRef.routeParentStatusIdx,
+						tlsRoute.GetGeneration(),
+						gwapiv1.RouteConditionAccepted,
+						metav1.ConditionFalse,
+						"Failed to process the settings associated with the TLS route.",
+						err.Error(),
+					)
 					return
 				}
 
@@ -989,8 +998,17 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 
 		for _, backendRef := range udpRoute.Spec.Rules[0].BackendRefs {
 			ds, err := t.processDestination(backendRef, parentRef, udpRoute, resources)
-			// skip adding the route
+			// skip adding the route and provide the reason via route status.
 			if err != nil {
+				routeStatus := GetRouteStatus(udpRoute)
+				status.SetRouteStatusCondition(routeStatus,
+					parentRef.routeParentStatusIdx,
+					udpRoute.GetGeneration(),
+					gwapiv1.RouteConditionAccepted,
+					metav1.ConditionFalse,
+					"Failed to process the settings associated with the UDP route.",
+					err.Error(),
+				)
 				return
 			}
 			if ds == nil {
@@ -1126,8 +1144,17 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 
 		for _, backendRef := range tcpRoute.Spec.Rules[0].BackendRefs {
 			ds, err := t.processDestination(backendRef, parentRef, tcpRoute, resources)
-			// skip adding the route
+			// skip adding the route and provide the reason via route status.
 			if err != nil {
+				routeStatus := GetRouteStatus(tcpRoute)
+				status.SetRouteStatusCondition(routeStatus,
+					parentRef.routeParentStatusIdx,
+					tcpRoute.GetGeneration(),
+					gwapiv1.RouteConditionAccepted,
+					metav1.ConditionFalse,
+					"Failed to process the settings associated with the TCP route.",
+					err.Error(),
+				)
 				return
 			}
 
