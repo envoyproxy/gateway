@@ -46,7 +46,7 @@ func TestEGUpgrade(t *testing.T) {
 		ManifestFS:           []fs.FS{e2e.UpgradeManifests},
 		RunTest:              *flags.RunTest,
 		BaseManifests:        "upgrade/manifests.yaml",
-		SupportedFeatures:    sets.New[features.SupportedFeature](features.SupportGateway),
+		SupportedFeatures:    sets.New[features.FeatureName](features.SupportGateway),
 		SkipTests:            []string{},
 	})
 	if err != nil {

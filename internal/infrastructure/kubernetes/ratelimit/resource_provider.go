@@ -9,6 +9,7 @@ import (
 	_ "embed"
 	"strconv"
 
+	"golang.org/x/exp/maps"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
@@ -196,19 +197,30 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 
 	containers := expectedRateLimitContainers(r.rateLimit, r.rateLimitDeployment, r.Namespace)
-	labels := rateLimitLabels()
-	selector := resource.GetSelector(labels)
+	selector := resource.GetSelector(rateLimitLabels())
 
-	var annotations map[string]string
+	podLabels := rateLimitLabels()
+	if r.rateLimitDeployment.Pod.Labels != nil {
+		maps.Copy(podLabels, r.rateLimitDeployment.Pod.Labels)
+		// Copy overwrites values in the dest map if they exist in the src map https://pkg.go.dev/maps#Copy
+		// It's applied again with the rateLimitLabels that are used as deployment selector to ensure those are not overwritten by user input
+		maps.Copy(podLabels, rateLimitLabels())
+	}
+
+	var podAnnotations map[string]string
 	if enablePrometheus(r.rateLimit) {
-		annotations = map[string]string{
+		podAnnotations = map[string]string{
 			"prometheus.io/path":   "/metrics",
 			"prometheus.io/port":   strconv.Itoa(PrometheusPort),
 			"prometheus.io/scrape": "true",
 		}
 	}
 	if r.rateLimitDeployment.Pod.Annotations != nil {
-		annotations = r.rateLimitDeployment.Pod.Annotations
+		if podAnnotations != nil {
+			maps.Copy(podAnnotations, r.rateLimitDeployment.Pod.Annotations)
+		} else {
+			podAnnotations = r.rateLimitDeployment.Pod.Annotations
+		}
 	}
 
 	deployment := &appsv1.Deployment{
@@ -218,7 +230,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.Namespace,
-			Labels:    labels,
+			Labels:    rateLimitLabels(),
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: r.rateLimitDeployment.Replicas,
@@ -226,8 +238,8 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 			Selector: selector,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels:      selector.MatchLabels,
-					Annotations: annotations,
+					Labels:      podLabels,
+					Annotations: podAnnotations,
 				},
 				Spec: corev1.PodSpec{
 					Containers:                    containers,

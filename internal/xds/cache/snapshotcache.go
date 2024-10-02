@@ -356,10 +356,10 @@ func (s *snapshotCache) OnStreamDeltaRequest(streamID int64, req *discoveryv3.De
 		req.ResourceNamesSubscribe, req.ResourceNamesUnsubscribe,
 		req.GetTypeUrl(),
 		errorCode, errorMessage)
-	if strings.Contains(errorMessage, "rejected") {
+	if strings.Contains(errorMessage, "unknown cluster") {
 		now := time.Now().Unix()
 		if now-s.lastRejected > 10 {
-			s.log.Warnf("Envoy rejected the last update, resending the snapshot to node %s", nodeID)
+			s.log.Warnf("Envoy rejected the last update due to incorrect resource order, resending the snapshot to node %s", nodeID)
 			if err := s.reSendXDS(nodeID, cluster); err != nil {
 				s.log.Errorf("Failed to resend the snapshot to node %s: %v", nodeID, err)
 			}
