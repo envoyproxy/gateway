@@ -843,19 +843,23 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 		// compute backends
 		for _, rule := range tlsRoute.Spec.Rules {
 			for _, backendRef := range rule.BackendRefs {
-				ds, _ := t.processDestination(backendRef, parentRef, tlsRoute, resources)
-				// skip adding the route and provide the reason via route status.
+				// currently we keep the tcp route, as today, there seem to be
+				ds, err := t.processDestination(backendRef, parentRef, tlsRoute, resources)
 
-				if ds != nil {
-					destSettings = append(destSettings, ds)
+				if err != nil {
+					routeStatus := GetRouteStatus(tlsRoute)
+					status.SetRouteStatusCondition(routeStatus,
+						parentRef.routeParentStatusIdx,
+						tlsRoute.GetGeneration(),
+						gwapiv1.RouteConditionAccepted,
+						metav1.ConditionFalse,
+						"Failed to process the settings associated with the TLS route.",
+						err.Error(),
+					)
+					continue
 				}
+				destSettings = append(destSettings, ds)
 			}
-
-			// TODO handle:
-			//	- no valid backend refs
-			//	- sum of weights for valid backend refs is 0
-			//	- returning 500's for invalid backend refs
-			//	- etc.
 		}
 
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
@@ -997,12 +1001,8 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 					"Failed to process the settings associated with the UDP route.",
 					err.Error(),
 				)
-				return
-			}
-			if ds == nil {
 				continue
 			}
-
 			destSettings = append(destSettings, ds)
 		}
 
@@ -1143,13 +1143,8 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 					"Failed to process the settings associated with the TCP route.",
 					err.Error(),
 				)
-				return
-			}
-
-			if ds == nil {
 				continue
 			}
-
 			destSettings = append(destSettings, ds)
 		}
 
@@ -1323,11 +1318,11 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 			envoyProxy,
 		)
 		if err != nil {
-			return ds, err
+			return nil, err
 		}
 		ds.Filters, err = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
 		if err != nil {
-			return ds, err
+			return nil, err
 		}
 	case egv1a1.KindBackend:
 		ds = t.processBackendDestinationSetting(backendRef.BackendObjectReference, backendNamespace, resources)
@@ -1346,11 +1341,11 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 			envoyProxy,
 		)
 		if err != nil {
-			return ds, err
+			return nil, err
 		}
 		ds.Filters, err = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
 		if err != nil {
-			return ds, err
+			return nil, err
 		}
 	}
 
@@ -1363,7 +1358,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 			metav1.ConditionFalse,
 			gwapiv1.RouteReasonResolvedRefs,
 			err.Error())
-		return ds, err
+		return nil, err
 	}
 
 	ds.Weight = &weight
