@@ -32,6 +32,7 @@ import (
 type Provider struct {
 	client  client.Client
 	manager manager.Manager
+	cancel  context.CancelFunc
 }
 
 // New creates a new Provider from the provided EnvoyGateway.
@@ -125,9 +126,11 @@ func (p *Provider) Type() egv1a1.ProviderType {
 
 // Start starts the Provider synchronously until a message is received from ctx.
 func (p *Provider) Start(ctx context.Context) error {
+	c, cancel := context.WithCancel(ctx)
+	p.cancel = cancel
 	errChan := make(chan error)
 	go func() {
-		errChan <- p.manager.Start(ctx)
+		errChan <- p.manager.Start(c)
 	}()
 
 	// Wait for the manager to exit or an explicit stop.
@@ -137,4 +140,8 @@ func (p *Provider) Start(ctx context.Context) error {
 	case err := <-errChan:
 		return err
 	}
+}
+
+func (p *Provider) Stop() {
+	p.cancel()
 }

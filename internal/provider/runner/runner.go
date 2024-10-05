@@ -31,6 +31,8 @@ type Config struct {
 
 type Runner struct {
 	Config
+	p   provider.Provider
+	ctx context.Context
 }
 
 func New(cfg *Config) *Runner {
@@ -44,29 +46,27 @@ func (r *Runner) Name() string {
 // Start the provider runner
 func (r *Runner) Start(ctx context.Context) (err error) {
 	r.Logger = r.ServerCfg.Logger.WithName(r.Name())
+	r.ctx = ctx
 
-	var p provider.Provider
 	switch r.ServerCfg.EnvoyGateway.Provider.Type {
 	case egv1a1.ProviderTypeKubernetes:
-		p, err = r.createKubernetesProvider()
+		r.p, err = r.createKubernetesProvider()
 		if err != nil {
 			return fmt.Errorf("failed to create kubernetes provider: %w", err)
 		}
-
 	case egv1a1.ProviderTypeCustom:
-		p, err = r.createCustomResourceProvider()
+		r.p, err = r.createCustomResourceProvider()
 		if err != nil {
 			return fmt.Errorf("failed to create custom provider: %w", err)
 		}
-
 	default:
 		// Unsupported provider.
 		return fmt.Errorf("unsupported provider type %v", r.ServerCfg.EnvoyGateway.Provider.Type)
 	}
 
-	r.Logger.Info("Running provider", "type", p.Type())
+	r.Logger.Info("Running provider", "type", r.p.Type())
 	go func() {
-		if err = p.Start(ctx); err != nil {
+		if err = r.p.Start(ctx); err != nil {
 			r.Logger.Error(err, "unable to start provider")
 		}
 	}()
@@ -79,8 +79,8 @@ func (r *Runner) Reload(serverCfg *config.Server) error {
 	r.ServerCfg = serverCfg
 
 	r.Logger.Info("reloaded")
-	// TODO: how to trigger a reload of provider, stop and recreate the provider?
-	return nil
+	r.p.Stop()
+	return r.Start(r.ctx)
 }
 
 func (r *Runner) createKubernetesProvider() (*kubernetes.Provider, error) {

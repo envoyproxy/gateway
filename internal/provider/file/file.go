@@ -129,3 +129,5 @@ func (p *Provider) startHealthProbeServer(ctx context.Context) {
 		p.logger.Error(err, "failed to start health probe server")
 	}
 }
+
+func (p *Provider) Stop() {}
