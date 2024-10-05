@@ -12,12 +12,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
@@ -115,7 +115,7 @@ var EGUpgradeTest = suite.ConformanceTest{
 			// let's make sure the gateway is up and running
 			ns := "gateway-upgrade-infra"
 			gwNN := types.NamespacedName{Name: "ha-gateway", Namespace: ns}
-			gwAddr, err := kubernetes.WaitForGatewayAddress(t, suite.Client, suite.TimeoutConfig, kubernetes.GatewayRef{
+			_, err = kubernetes.WaitForGatewayAddress(t, suite.Client, suite.TimeoutConfig, kubernetes.GatewayRef{
 				NamespacedName: gwNN,
 			})
 			require.NoErrorf(t, err, "timed out waiting for Gateway address to be assigned")
@@ -128,7 +128,7 @@ var EGUpgradeTest = suite.ConformanceTest{
 
 			// wait for everything to startup
 			routeNN := types.NamespacedName{Name: "http-backend-eg-upgrade", Namespace: ns}
-			gwAddr = kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
 			kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{depNS})
 			expectOkResp := http.ExpectedResponse{
