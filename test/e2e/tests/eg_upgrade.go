@@ -12,7 +12,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -54,7 +56,7 @@ var EGUpgradeTest = suite.ConformanceTest{
 			lastVersionTag := os.Getenv("last_version_tag")
 			if lastVersionTag == "" {
 				// Use v1.0.2 instead of v1.1.2 due to https://github.com/envoyproxy/gateway/issues/4336
-				lastVersionTag = "v1.1.2" // Default version tag if not specified
+				lastVersionTag = "v1.0.2" // Default version tag if not specified
 			}
 
 			// Uninstall the current version of EG
@@ -267,46 +269,61 @@ func updateChartCRDs(actionConfig *action.Configuration, gatewayChart *chart.Cha
 	return err
 }
 
-// TODO: proper migration framework required
-func migrateChartCRDs(actionConfig *action.Configuration, gatewayChart *chart.Chart, timeout time.Duration) error {
+func migrateChartCRDs(actionConfig *action.Configuration, gatewayChart *chart.Chart, _ time.Duration) error {
 	crds, err := extractCRDs(actionConfig, gatewayChart)
 	if err != nil {
 		return err
 	}
 
+	// https: //gateway-api.sigs.k8s.io/guides/?h=upgrade#v12-upgrade-notes
+	storedVersionsMap := map[string]string{
+		"referencegrants.gateway.networking.k8s.io": "v1beta1",
+		"grpcroutes.gateway.networking.k8s.io":      "v1",
+	}
+
+	restCfg, err := actionConfig.RESTClientGetter.ToRESTConfig()
+	if err != nil {
+		return err
+	}
+
+	cli, err := client.New(restCfg, client.Options{})
+	if err != nil {
+		return err
+	}
+
 	for _, crd := range crds {
-		if crd.Name == "backendtlspolicies.gateway.networking.k8s.io" ||
-			crd.Name == "grpcroutes.gateway.networking.k8s.io" {
-			newVersion, err := getGWAPIVersion(crd.Object)
+		storedVersion, ok := storedVersionsMap[crd.Name]
+		if ok {
+			continue
+		}
+
+		newVersion, err := getGWAPIVersion(crd.Object)
+		if err != nil {
+			return err
+		}
+
+		if strings.HasPrefix(newVersion, "v1.2.0") {
+			helper := resource.NewHelper(crd.Client, crd.Mapping)
+			existingCRD, err := helper.Get(crd.Namespace, crd.Name)
+			if kerrors.IsNotFound(err) {
+				continue
+			}
+
+			// previous version exists
+			existingVersion, err := getGWAPIVersion(existingCRD)
 			if err != nil {
 				return err
 			}
-			// https://gateway-api.sigs.k8s.io/guides/?h=upgrade#v11-upgrade-notes
-			if newVersion == "v1.2.0-rc2" {
-				helper := resource.NewHelper(crd.Client, crd.Mapping)
-				existingCRD, err := helper.Get(crd.Namespace, crd.Name)
-				if kerrors.IsNotFound(err) {
-					continue
+
+			if existingVersion == "v1.0.0" {
+				crdObj, ok := existingCRD.(*apiextensionsv1.CustomResourceDefinition)
+				if !ok {
+					return fmt.Errorf("failed to convert existing CRD to CustomResourceDefinition")
 				}
+				crdObj.Status.StoredVersions = []string{storedVersion}
 
-				// previous version exists
-				existingVersion, err := getGWAPIVersion(existingCRD)
-				if err != nil {
-					return err
-				}
-
-				if existingVersion == "v1.0.0" {
-					// Delete the existing instance of the BTLS and GRPCRoute CRDs
-					_, errs := actionConfig.KubeClient.Delete([]*resource.Info{crd})
-					if errs != nil {
-						return fmt.Errorf("failed to delete backendtlspolicies: %s", util.MultipleErrors("", errs))
-					}
-
-					if kubeClient, ok := actionConfig.KubeClient.(kube.InterfaceExt); ok {
-						if err := kubeClient.WaitForDelete([]*resource.Info{crd}, timeout); err != nil {
-							return fmt.Errorf("failed to wait for backendtlspolicies deletion: %s", err.Error())
-						}
-					}
+				if err := cli.Status().Patch(context.Background(), crdObj, client.MergeFrom(crdObj)); err != nil {
+					return fmt.Errorf("failed to patch CRD: %s", err.Error())
 				}
 			}
 		}
