@@ -81,11 +81,11 @@ func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatur
 	return ret, nil
 }
 
-func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings, traffic *ir.TrafficFeatures) (*ir.Timeout, error) {
+func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings, routeTrafficFeatures *ir.TrafficFeatures) (*ir.Timeout, error) {
 	if policy.Timeout == nil {
-		if traffic != nil {
+		if routeTrafficFeatures != nil {
 			// Don't lose any existing timeout definitions.
-			return mergeTimeoutSettings(nil, traffic.Timeout), nil
+			return mergeTimeoutSettings(nil, routeTrafficFeatures.Timeout), nil
 		}
 		return nil, nil
 	}
@@ -145,13 +145,11 @@ func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings, traffic *ir.Traf
 		}
 	}
 
-	// http request timeout is translated during the gateway-api route resource translation
-	// merge route timeout setting with backendtrafficpolicy timeout settings.
-	// Merging is done after the clustersettings definitions are translated so that
-	// clustersettings will override previous settings.
-	if traffic != nil {
-		to = mergeTimeoutSettings(to, traffic.Timeout)
+	// The timeout from route's TrafficFeatures takes precedence over the timeout in BTP
+	if routeTrafficFeatures != nil {
+		to = mergeTimeoutSettings(routeTrafficFeatures.Timeout, to)
 	}
+
 	return to, errs
 }
 
