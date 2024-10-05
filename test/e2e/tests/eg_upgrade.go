@@ -51,10 +51,11 @@ var EGUpgradeTest = suite.ConformanceTest{
 			chartPath := "../../../charts/gateway-helm"
 			relName := "eg"
 			depNS := "envoy-gateway-system"
-			lastVersionTag := os.Getenv("last_version_tag")
+			lastVersionTag := os.Getenv("LAST_VERSION_TAG")
 			if lastVersionTag == "" {
 				lastVersionTag = "v1.1.2" // Default version tag if not specified
 			}
+			t.Logf("last version tag: %s", lastVersionTag)
 
 			// Uninstall the current version of EG
 			relNamespace := "envoy-gateway-system"
