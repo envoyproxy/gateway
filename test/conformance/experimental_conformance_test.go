@@ -15,6 +15,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/gateway-api/conformance"
 	conformancev1 "sigs.k8s.io/gateway-api/conformance/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
@@ -27,6 +29,7 @@ import (
 
 func TestExperimentalConformance(t *testing.T) {
 	flag.Parse()
+	log.SetLogger(zap.New(zap.WriteTo(os.Stderr), zap.UseDevMode(true)))
 
 	opts := conformance.DefaultOptions(t)
 	opts.SkipTests = internalconf.EnvoyGatewaySuite.SkipTests
