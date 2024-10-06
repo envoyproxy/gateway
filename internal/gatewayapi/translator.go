@@ -286,7 +286,6 @@ func (t *Translator) InitIRs(gateways []*GatewayContext) (map[string]*ir.Xds, ma
 			irKey = string(t.GatewayClassName)
 
 			maps.Copy(labels, GatewayClassOwnerLabel(string(t.GatewayClassName)))
-			maps.Copy(labels, GatewayNameLabelForMergedGateways(gateways))
 			gwInfraIR.Proxy.GetProxyMetadata().Labels = labels
 		} else {
 			irKey = irStringKey(gateway.Gateway.Namespace, gateway.Gateway.Name)

@@ -253,20 +253,6 @@ func GatewayNameLabel(gateway string) map[string]string {
 	}
 }
 
-// TODO: zhaohuabing all gateway names are concatenated and stored in a single label if mergeGateways is enabled.
-// Probably not the best way to do this, should revisit this and come up with a better solution upstream.
-// https://github.com/kubernetes-sigs/gateway-api/issues/3365
-func GatewayNameLabelForMergedGateways(gateways []*GatewayContext) map[string]string {
-	var owningGatewayNames string
-	for _, gateway := range gateways {
-		owningGatewayNames = owningGatewayNames + gateway.Name + "_"
-	}
-	owningGatewayNames = strings.TrimSuffix(owningGatewayNames, "_")
-	return map[string]string{
-		GatewayAPIGatewayNameLabel: owningGatewayNames,
-	}
-}
-
 // servicePortToContainerPort translates a service port into an ephemeral
 // container port.
 func servicePortToContainerPort(servicePort int32, envoyProxy *egv1a1.EnvoyProxy) int32 {
