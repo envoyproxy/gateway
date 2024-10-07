@@ -361,7 +361,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 		rt = t.buildRetry(policy)
 	}
 	if policy.Spec.Timeout != nil {
-		if to, err = t.buildTimeout(policy, nil); err != nil {
+		if to, err = t.buildTimeout(*policy, nil); err != nil {
 			err = perr.WithMessage(err, "Timeout")
 			errs = errors.Join(errs, err)
 		}
@@ -411,6 +411,11 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 
 		for _, http := range x.HTTP {
 			for _, r := range http.Routes {
+				// Some timeout setting originate from the route.
+				if localTo, err := t.buildTimeout(*policy, r.Traffic); err == nil {
+					to = localTo
+				}
+
 				// Apply if there is a match
 				if strings.HasPrefix(r.Name, prefix) {
 					r.Traffic = &ir.TrafficFeatures{
@@ -423,17 +428,11 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 						TCPKeepalive:      ka,
 						Retry:             rt,
 						BackendConnection: bc,
+						Timeout:           to,
 					}
 
 					// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
 					r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
-
-					// Some timeout setting originate from the route.
-					if policy.Spec.Timeout != nil {
-						if to, err = t.buildTimeout(policy, r); err == nil {
-							r.Traffic.Timeout = to
-						}
-					}
 
 					if policy.Spec.UseClientProtocol != nil {
 						r.UseClientProtocol = policy.Spec.UseClientProtocol
@@ -498,7 +497,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		rt = t.buildRetry(policy)
 	}
 	if policy.Spec.Timeout != nil {
-		if ct, err = t.buildTimeout(policy, nil); err != nil {
+		if ct, err = t.buildTimeout(*policy, nil); err != nil {
 			err = perr.WithMessage(err, "Timeout")
 			errs = errors.Join(errs, err)
 		}
@@ -596,10 +595,8 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 			// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
 			r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 
-			if policy.Spec.Timeout != nil {
-				if ct, err = t.buildTimeout(policy, r); err == nil {
-					r.Traffic.Timeout = ct
-				}
+			if ct, err = t.buildTimeout(*policy, r.Traffic); err == nil {
+				r.Traffic.Timeout = ct
 			}
 
 			if policy.Spec.UseClientProtocol != nil {
@@ -1069,23 +1066,26 @@ func (t *Translator) buildCircuitBreaker(policy *egv1a1.BackendTrafficPolicy) (*
 	return cb, nil
 }
 
-func (t *Translator) buildTimeout(policy *egv1a1.BackendTrafficPolicy, r *ir.HTTPRoute) (*ir.Timeout, error) {
+func (t *Translator) buildTimeout(policy egv1a1.BackendTrafficPolicy, traffic *ir.TrafficFeatures) (*ir.Timeout, error) {
+	if policy.Spec.Timeout == nil {
+		if traffic != nil {
+			// Don't lose any existing timeout definitions.
+			return mergeTimeoutSettings(nil, traffic.Timeout), nil
+		}
+		return nil, nil
+	}
 	var (
-		tto  *ir.TCPTimeout
-		hto  *ir.HTTPTimeout
-		terr bool
 		errs error
+		to   = &ir.Timeout{}
+		pto  = policy.Spec.Timeout
 	)
-
-	pto := policy.Spec.Timeout
 
 	if pto.TCP != nil && pto.TCP.ConnectTimeout != nil {
 		d, err := time.ParseDuration(string(*pto.TCP.ConnectTimeout))
 		if err != nil {
-			terr = true
 			errs = errors.Join(errs, fmt.Errorf("invalid ConnectTimeout value %s", *pto.TCP.ConnectTimeout))
 		} else {
-			tto = &ir.TCPTimeout{
+			to.TCP = &ir.TCPTimeout{
 				ConnectTimeout: ptr.To(metav1.Duration{Duration: d}),
 			}
 		}
@@ -1098,7 +1098,6 @@ func (t *Translator) buildTimeout(policy *egv1a1.BackendTrafficPolicy, r *ir.HTT
 		if pto.HTTP.ConnectionIdleTimeout != nil {
 			d, err := time.ParseDuration(string(*pto.HTTP.ConnectionIdleTimeout))
 			if err != nil {
-				terr = true
 				errs = errors.Join(errs, fmt.Errorf("invalid ConnectionIdleTimeout value %s", *pto.HTTP.ConnectionIdleTimeout))
 			} else {
 				cit = ptr.To(metav1.Duration{Duration: d})
@@ -1108,51 +1107,51 @@ func (t *Translator) buildTimeout(policy *egv1a1.BackendTrafficPolicy, r *ir.HTT
 		if pto.HTTP.MaxConnectionDuration != nil {
 			d, err := time.ParseDuration(string(*pto.HTTP.MaxConnectionDuration))
 			if err != nil {
-				terr = true
 				errs = errors.Join(errs, fmt.Errorf("invalid MaxConnectionDuration value %s", *pto.HTTP.MaxConnectionDuration))
 			} else {
 				mcd = ptr.To(metav1.Duration{Duration: d})
 			}
 		}
 
-		hto = &ir.HTTPTimeout{
+		to.HTTP = &ir.HTTPTimeout{
 			ConnectionIdleTimeout: cit,
 			MaxConnectionDuration: mcd,
 		}
 	}
 
 	// http request timeout is translated during the gateway-api route resource translation
-	// merge route timeout setting with backendtrafficpolicy timeout settings
-	if terr {
-		if r != nil && r.Traffic != nil && r.Traffic.Timeout != nil {
-			return r.Traffic.Timeout.DeepCopy(), errs
-		}
-	} else {
-		// http request timeout is translated during the gateway-api route resource translation
-		// merge route timeout setting with backendtrafficpolicy timeout settings
-		if r != nil &&
-			r.Traffic != nil &&
-			r.Traffic.Timeout != nil &&
-			r.Traffic.Timeout.HTTP != nil &&
-			r.Traffic.Timeout.HTTP.RequestTimeout != nil {
-			if hto == nil {
-				hto = &ir.HTTPTimeout{
-					RequestTimeout: r.Traffic.Timeout.HTTP.RequestTimeout,
-				}
-			} else {
-				hto.RequestTimeout = r.Traffic.Timeout.HTTP.RequestTimeout
-			}
-		}
-
-		if hto != nil || tto != nil {
-			return &ir.Timeout{
-				TCP:  tto,
-				HTTP: hto,
-			}, nil
-		}
+	// merge route timeout setting with backendtrafficpolicy timeout settings.
+	// Merging is done after the clustersettings definitions are translated so that
+	// clustersettings will override previous settings.
+	if traffic != nil {
+		to = mergeTimeoutSettings(to, traffic.Timeout)
 	}
+	return to, errs
+}
 
-	return nil, errs
+// merge secondary into main if both are not nil, otherwise return the
+// one that is not nil. If both are nil, returns nil
+func mergeTimeoutSettings(main, secondary *ir.Timeout) *ir.Timeout {
+	switch {
+	case main == nil && secondary == nil:
+		return nil
+	case main == nil:
+		return secondary.DeepCopy()
+	case secondary == nil:
+		return main
+	default: // Neither main nor secondary are nil here
+		if secondary.HTTP != nil {
+			setIfNil(&main.HTTP, &ir.HTTPTimeout{})
+			setIfNil(&main.HTTP.RequestTimeout, secondary.HTTP.RequestTimeout)
+			setIfNil(&main.HTTP.ConnectionIdleTimeout, secondary.HTTP.ConnectionIdleTimeout)
+			setIfNil(&main.HTTP.MaxConnectionDuration, secondary.HTTP.MaxConnectionDuration)
+		}
+		if secondary.TCP != nil {
+			setIfNil(&main.TCP, &ir.TCPTimeout{})
+			setIfNil(&main.TCP.ConnectTimeout, secondary.TCP.ConnectTimeout)
+		}
+		return main
+	}
 }
 
 func int64ToUint32(in int64) (uint32, bool) {
