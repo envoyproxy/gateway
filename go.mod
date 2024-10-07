@@ -63,7 +63,7 @@ require (
 
 require (
 	github.com/docker/docker v27.3.1+incompatible
-	github.com/replicatedhq/troubleshoot v0.105.1
+	github.com/replicatedhq/troubleshoot v0.105.2
 	google.golang.org/grpc v1.66.2
 	sigs.k8s.io/kubectl-validate v0.0.5-0.20240827210056-ce13d95db263
 )
