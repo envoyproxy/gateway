@@ -1,0 +1,95 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: infra-backend-v1-clusterip-ipv6
+  namespace: gateway-conformance-infra
+spec:
+  clusterIP: fd00:10:96::1411
+  ipFamilies:
+    - IPv6
+  ports:
+    - port: 8080
+      targetPort: 3000
+  selector:
+    app: infra-backend-v1
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-to-backend-ipv6
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /backend-ipv6
+      backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-ipv6
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-ipv6
+  namespace: gateway-conformance-infra
+spec:
+  endpoints:
+    - ip:
+        address: "fd00:10:96::1411"
+        port: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: infra-backend-v1-clusterip-dualstack
+  namespace: gateway-conformance-infra
+spec:
+  clusterIP: 10.96.0.100
+  clusterIPs:
+    - 10.96.0.100
+    - fd00:10:96::100
+  ipFamilies:
+    - IPv4
+    - IPv6
+  ipFamilyPolicy: RequireDualStack
+  ports:
+    - port: 8080
+      targetPort: 3000
+  selector:
+    app: infra-backend-v1
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-to-backend-dualstack
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /backend-dualstack
+      backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-dualstack
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-dualstack
+  namespace: gateway-conformance-infra
+spec:
+  endpoints:
+    - ip:
+        address: "10.96.0.100"
+        port: 8080
+    - ip:
+        address: "fd00:10:96::100"
+        port: 8080

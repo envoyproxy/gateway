@@ -1,0 +1,65 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ipv6-only-route
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - backendRefs:
+        - name: infra-backend-v1-clusterip-ipv6
+          port: 8080
+      matches:
+        - path:
+            type: PathPrefix
+            value: /ipv6-only
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: dual-stack-route
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - backendRefs:
+        - name: infra-backend-v1-clusterip-dualstack
+          port: 8080
+      matches:
+        - path:
+            type: PathPrefix
+            value: /dual-stack
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ipv4-only-route
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - backendRefs:
+        - name: infra-backend-v1-clusterip-ipv4
+          port: 8080
+      matches:
+        - path:
+            type: PathPrefix
+            value: /ipv4-only
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: infra-backend-v1-clusterip-ipv4
+  namespace: gateway-conformance-infra
+spec:
+  ipFamilies:
+    - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+    - port: 8080
+      targetPort: 3000
+  selector:
+    app: infra-backend-v1
