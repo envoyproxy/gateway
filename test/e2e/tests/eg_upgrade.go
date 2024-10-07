@@ -320,18 +320,10 @@ func migrateChartCRDs(actionConfig *action.Configuration, gatewayChart *chart.Ch
 				return fmt.Errorf("failed to get CRD: %s", err.Error())
 			}
 
-			// previous version exists
-			existingVersion, err := getGWAPIVersion(existingCRD)
-			if err != nil {
-				return err
-			}
+			existingCRD.Status.StoredVersions = []string{storedVersion}
 
-			if existingVersion == "v1.0.0" {
-				existingCRD.Status.StoredVersions = []string{storedVersion}
-
-				if err := cli.Status().Patch(context.Background(), existingCRD, client.MergeFrom(existingCRD)); err != nil {
-					return fmt.Errorf("failed to patch CRD: %s", err.Error())
-				}
+			if err := cli.Status().Patch(context.Background(), existingCRD, client.MergeFrom(existingCRD)); err != nil {
+				return fmt.Errorf("failed to patch CRD: %s", err.Error())
 			}
 		}
 	}
