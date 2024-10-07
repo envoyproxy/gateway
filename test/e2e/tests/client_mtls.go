@@ -115,8 +115,6 @@ var ClientMTLSTest = suite.ConformanceTest{
 
 			WaitForConsistentMTLSResponse(t, suite.RoundTripper, req, expected, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency, cPem, keyPem, serverName)
 
-			gwAddr = fmt.Sprintf("%s:443", serverName)
-
 			certPool := x509.NewCertPool()
 			if !certPool.AppendCertsFromPEM(cPem) {
 				t.Errorf("Error setting Root CAs: %v", err)
