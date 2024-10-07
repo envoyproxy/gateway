@@ -377,6 +377,16 @@ spec:
                     rule: (has(self.before) && !has(self.after)) || (!has(self.before)
                       && has(self.after))
                 type: array
+              ipFamily:
+                default: ipv4
+                description: |-
+                  IPFamily specifies the IP family for the EnvoyProxy.
+                  It can be ipv4, ipv6, or dual.
+                enum:
+                - ipv4
+                - ipv6
+                - dual
+                type: string
               logging:
                 default:
                   level:

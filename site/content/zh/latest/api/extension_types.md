@@ -1478,6 +1478,7 @@ _Appears in:_
 | `shutdown` | _[ShutdownConfig](#shutdownconfig)_ |  false  | Shutdown defines configuration for graceful envoy shutdown process. |
 | `filterOrder` | _[FilterPosition](#filterposition) array_ |  false  | FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.<br />The FilterPosition in the list will be applied in the order they are defined.<br />If unspecified, the default filter order is applied.<br />Default filter order is:<br /><br />- envoy.filters.http.health_check<br /><br />- envoy.filters.http.fault<br /><br />- envoy.filters.http.cors<br /><br />- envoy.filters.http.ext_authz<br /><br />- envoy.filters.http.basic_auth<br /><br />- envoy.filters.http.oauth2<br /><br />- envoy.filters.http.jwt_authn<br /><br />- envoy.filters.http.stateful_session<br /><br />- envoy.filters.http.ext_proc<br /><br />- envoy.filters.http.wasm<br /><br />- envoy.filters.http.rbac<br /><br />- envoy.filters.http.local_ratelimit<br /><br />- envoy.filters.http.ratelimit<br /><br />- envoy.filters.http.router<br /><br />Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain. |
 | `backendTLS` | _[BackendTLSConfig](#backendtlsconfig)_ |  false  | BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.<br />These settings are applied on backends for which TLS policies are specified. |
+| `ipFamily` | _[IPFamily](#ipfamily)_ |  false  | IPFamily specifies the IP family for the EnvoyProxy.<br />It can be ipv4, ipv6, or dual. |
 
 
 #### EnvoyProxyStatus
@@ -2155,6 +2156,22 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `address` | _string_ |  true  | Address defines the IP address of the backend endpoint. |
 | `port` | _integer_ |  true  | Port defines the port of the backend endpoint. |
+
+
+#### IPFamily
+
+_Underlying type:_ _string_
+
+IPFamily defines the IP family to use for the Envoy proxy.
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Value | Description |
+| ----- | ----------- |
+| `IPv4` | IPv4 defines the IPv4 family.<br /> | 
+| `IPv6` | IPv6 defines the IPv6 family.<br /> | 
+| `DualStack` | DualStack defines the dual-stack family.<br /> | 
 
 
 #### ImagePullPolicy
