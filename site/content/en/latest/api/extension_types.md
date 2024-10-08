@@ -2070,6 +2070,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `connectionIdleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.<br />Default: 1 hour. |
 | `maxConnectionDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | The maximum duration of an HTTP connection.<br />Default: unlimited. |
+| `requestTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | RequestTimeout is the time until which entire response is received from the upstream. |
 
 
 #### HTTPURLRewriteFilter

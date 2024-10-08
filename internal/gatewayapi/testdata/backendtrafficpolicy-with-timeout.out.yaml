@@ -197,11 +197,11 @@ httpRoutes:
     - backendRefs:
       - name: service-1
         port: 8080
-      timeouts:
-        request: 1s
       matches:
       - path:
           value: /
+      timeouts:
+        request: 1s
   status:
     parents:
     - conditions:
@@ -341,6 +341,6 @@ xdsIR:
             http:
               connectionIdleTimeout: 21s
               maxConnectionDuration: 22s
-              requestTimeout: 1s # Overwritten by the request timeout in HTTPRoute
+              requestTimeout: 1s
             tcp:
               connectTimeout: 20s
