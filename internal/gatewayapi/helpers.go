@@ -248,6 +248,12 @@ func OwnerLabels(gateway *gwapiv1.Gateway, mergeGateways bool) map[string]string
 	return GatewayOwnerLabels(gateway.Namespace, gateway.Name)
 }
 
+func GatewayNameLabel(gateway string) map[string]string {
+	return map[string]string{
+		GatewayAPIGatewayNameLabel: gateway,
+	}
+}
+
 // servicePortToContainerPort translates a service port into an ephemeral
 // container port.
 func servicePortToContainerPort(servicePort int32, envoyProxy *egv1a1.EnvoyProxy) int32 {

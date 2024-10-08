@@ -79,6 +79,7 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+          gateway.networking.k8s.io/gateway-name: gateway-1
       name: envoy-gateway/gateway-1
 udpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2

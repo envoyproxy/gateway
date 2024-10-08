@@ -83,6 +83,7 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+          gateway.networking.k8s.io/gateway-name: gateway
       name: envoy-gateway/gateway
 xdsIR:
   envoy-gateway/gateway:

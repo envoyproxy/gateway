@@ -93,6 +93,7 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: default
+          gateway.networking.k8s.io/gateway-name: gateway-1
       name: default/gateway-1
 securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1

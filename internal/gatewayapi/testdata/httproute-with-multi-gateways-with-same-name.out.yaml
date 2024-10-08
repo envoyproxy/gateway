@@ -127,6 +127,7 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: default
+          gateway.networking.k8s.io/gateway-name: gateway-1
       name: default/gateway-1
   envoy-gateway/gateway-1:
     proxy:
@@ -142,6 +143,7 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+          gateway.networking.k8s.io/gateway-name: gateway-1
       name: envoy-gateway/gateway-1
 xdsIR:
   default/gateway-1:

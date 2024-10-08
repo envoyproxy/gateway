@@ -233,6 +233,7 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: tcp-gateway
           gateway.envoyproxy.io/owning-gateway-namespace: default
+          gateway.networking.k8s.io/gateway-name: tcp-gateway
       name: default/tcp-gateway
 tcpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
