@@ -120,8 +120,6 @@ securityPolicies:
       name: httproute-1
     oidc:
       provider:
-        backendRefs:
-
         issuer: "https://oauth.foo.com"
         authorizationEndpoint: "https://oauth.foo.com/oauth2/v2/auth"
         tokenEndpoint: "https://oauth.foo.com/token"
