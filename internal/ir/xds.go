@@ -848,7 +848,7 @@ type OIDC struct {
 // +k8s:deepcopy-gen=true
 type OIDCProvider struct {
 	// Destination defines the destination for the OIDC Provider.
-	Destination *RouteDestination `json:"destination"`
+	Destination *RouteDestination `json:"destination,omitempty"`
 
 	// Traffic contains configuration for traffic features for the OIDC Provider
 	Traffic *TrafficFeatures `json:"traffic,omitempty"`

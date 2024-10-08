@@ -188,7 +188,6 @@ xdsIR:
             name: securitypolicy/envoy-gateway/policy-for-gateway
             provider:
               authorizationEndpoint: https://accounts.google.com/o/oauth2/v2/auth
-              destination: null
               tokenEndpoint: https://oauth2.googleapis.com/token
             redirectPath: /bar/oauth2/callback
             redirectURL: https://www.example.com/bar/oauth2/callback

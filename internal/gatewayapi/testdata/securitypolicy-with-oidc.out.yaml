@@ -286,7 +286,6 @@ xdsIR:
             name: securitypolicy/default/policy-for-http-route
             provider:
               authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
-              destination: null
               tokenEndpoint: https://oauth.foo.com/token
             redirectPath: /foo/oauth2/callback
             redirectURL: https://www.example.com/foo/oauth2/callback
@@ -330,7 +329,6 @@ xdsIR:
             name: securitypolicy/envoy-gateway/policy-for-gateway
             provider:
               authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
-              destination: null
               tokenEndpoint: https://oauth.foo.com/token
             redirectPath: /bar/oauth2/callback
             redirectURL: https://www.example.com/bar/oauth2/callback
