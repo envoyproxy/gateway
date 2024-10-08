@@ -40,9 +40,8 @@ type HTTPURLRewriteFilter struct {
 	// Hostname is the value to be used to replace the Host header value during
 	// forwarding.
 	//
-	// Support: Extended
-	//
 	// +optional
+	// +notImplementedHide
 	Hostname *HTTPHostnameModifier `json:"hostname,omitempty"`
 	// Path defines a path rewrite.
 	//
@@ -64,7 +63,11 @@ const (
 type HTTPHostnameModifierType string
 
 const (
-	HeaderHTTPHostnameModifier  HTTPHostnameModifierType = "SetFromHeader"
+	// HeaderHTTPHostnameModifier indicates that the Host header value would be replaced with the value of the header specified in setFromHeader.
+	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-host-rewrite-header
+	HeaderHTTPHostnameModifier HTTPHostnameModifierType = "SetFromHeader"
+	// BackendHTTPHostnameModifier indicates that the Host header value would be replaced by the DNS name of the backend if it exists.
+	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-auto-host-rewrite
 	BackendHTTPHostnameModifier HTTPHostnameModifierType = "SetFromBackend"
 )
 
@@ -108,22 +111,14 @@ type HTTPPathModifier struct {
 
 // +kubebuilder:validation:XValidation:message="setFromHeader must be nil if the type is not SetFromHeader",rule="!(has(self.setFromHeader) && self.type != 'SetFromHeader')"
 // +kubebuilder:validation:XValidation:message="setFromHeader must be specified for SetFromHeader type",rule="!(!has(self.setFromHeader) && self.type == 'SetFromHeader')"
-// +kubebuilder:validation:XValidation:message="setFromBackend must be nil if the type is not SetFromBackend",rule="!(has(self.setFromBackend) && self.type != 'SetFromBackend')"
-// +kubebuilder:validation:XValidation:message="setFromBackend must be specified for SetFromBackend type",rule="!(!has(self.setFromBackend) && self.type == 'SetFromBackend')"
 type HTTPHostnameModifier struct {
 	// +kubebuilder:validation:Enum=SetFromHeader;SetFromBackend
 	// +kubebuilder:validation:Required
 	Type HTTPHostnameModifierType `json:"type"`
 
-	// SetFromHeader indicates that the Host header value would be replaced with the value of the header specified in setFromHeader.
-	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-host-rewrite-header
+	// SetFromHeader is the name of the header whose value would be used to rewrite the Host header
 	// +optional
 	SetFromHeader *string `json:"setFromHeader,omitempty"`
-
-	// SetFromBackend indicates that the Host header value would be replaced by the DNS name of the backend if it exists.
-	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-auto-host-rewrite
-	// +optional
-	SetFromBackend *bool `json:"setFromBackend,omitempty"`
 }
 
 //+kubebuilder:object:root=true

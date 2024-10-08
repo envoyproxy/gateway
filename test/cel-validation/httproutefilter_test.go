@@ -106,8 +106,7 @@ func TestHTTPRouteFilter(t *testing.T) {
 				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
 					URLRewrite: &egv1a1.HTTPURLRewriteFilter{
 						Hostname: &egv1a1.HTTPHostnameModifier{
-							Type:           egv1a1.BackendHTTPHostnameModifier,
-							SetFromBackend: ptr.To(true),
+							Type: egv1a1.BackendHTTPHostnameModifier,
 						},
 					},
 				}
@@ -128,19 +127,6 @@ func TestHTTPRouteFilter(t *testing.T) {
 			wantErrors: []string{"spec.urlRewrite.hostname: Invalid value: \"object\": setFromHeader must be specified for SetFromHeader type"},
 		},
 		{
-			desc: "invalid SetFromBackend missing settings",
-			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
-				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
-					URLRewrite: &egv1a1.HTTPURLRewriteFilter{
-						Hostname: &egv1a1.HTTPHostnameModifier{
-							Type: egv1a1.BackendHTTPHostnameModifier,
-						},
-					},
-				}
-			},
-			wantErrors: []string{"spec.urlRewrite.hostname: Invalid value: \"object\": setFromBackend must be specified for SetFromBackend type"},
-		},
-		{
 			desc: "invalid SetFromBackend type",
 			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
 				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
@@ -152,21 +138,7 @@ func TestHTTPRouteFilter(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"spec.urlRewrite.hostname: Invalid value: \"object\": setFromHeader must be nil if the type is not SetFromHeader, spec.urlRewrite.hostname: Invalid value: \"object\": setFromBackend must be specified for SetFromBackend type"},
-		},
-		{
-			desc: "invalid SetFromHeader type",
-			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
-				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
-					URLRewrite: &egv1a1.HTTPURLRewriteFilter{
-						Hostname: &egv1a1.HTTPHostnameModifier{
-							Type:           egv1a1.HeaderHTTPHostnameModifier,
-							SetFromBackend: ptr.To(true),
-						},
-					},
-				}
-			},
-			wantErrors: []string{"spec.urlRewrite.hostname: Invalid value: \"object\": setFromHeader must be specified for SetFromHeader type, spec.urlRewrite.hostname: Invalid value: \"object\": setFromBackend must be nil if the type is not SetFromBackend]"},
+			wantErrors: []string{"spec.urlRewrite.hostname: Invalid value: \"object\": setFromHeader must be nil if the type is not SetFromHeader"},
 		},
 	}
 
