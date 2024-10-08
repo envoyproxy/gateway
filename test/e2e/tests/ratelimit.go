@@ -508,10 +508,9 @@ var RateLimitHeadersAndCIDRMatchTest = suite.ConformanceTest{
 			}
 		})
 
-		t.Run("only matched headers cannot got limited", func(t *testing.T) {
+		t.Run("only partly matched headers cannot got limited", func(t *testing.T) {
 			requestHeaders := map[string]string{
-				"x-user-id":  "one",
-				"x-user-org": "acme",
+				"x-user-id": "one",
 			}
 
 			// it does not require any rate limit header, since this request never be rate limited.
