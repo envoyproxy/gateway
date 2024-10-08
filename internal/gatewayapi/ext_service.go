@@ -23,7 +23,7 @@ import (
 )
 
 // translateExtServiceBackendRefs translates external service backend references to route destinations.
-func (t *Translator) transalteExtServiceBackendRefs(
+func (t *Translator) translateExtServiceBackendRefs(
 	policy client.Object,
 	backendRefs []egv1a1.BackendRef,
 	protocol ir.AppProtocol,
