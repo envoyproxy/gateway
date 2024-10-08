@@ -18,7 +18,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938  # v4.2.0
     - name: Run scanner
-      uses: google/osv-scanner-action/osv-scanner-action@f0e6719deb666cd19a0b56bc56d01161bd848b4f  # v1.8.5
+      uses: google/osv-scanner-action/osv-scanner-action@19ec1116569a47416e11a45848722b1af31a857b  # v1.9.0
       with:
         # TODO enable call analysis once https://github.com/google/osv-scanner/issues/1220 is resolved
         scan-args: |-

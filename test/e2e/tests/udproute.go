@@ -6,7 +6,6 @@
 // This file contains code derived from upstream gateway-api, it will be moved to upstream.
 
 //go:build e2e
-// +build e2e
 
 package tests
 
