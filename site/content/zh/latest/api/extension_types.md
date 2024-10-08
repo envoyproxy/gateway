@@ -611,7 +611,7 @@ _Appears in:_
 | `signatureAlgorithms` | _string array_ |  false  | SignatureAlgorithms specifies which signature algorithms the listener should<br />support. |
 | `alpnProtocols` | _[ALPNProtocol](#alpnprotocol) array_ |  false  | ALPNProtocols supplies the list of ALPN protocols that should be<br />exposed by the listener. By default h2 and http/1.1 are enabled.<br />Supported values are:<br />- http/1.0<br />- http/1.1<br />- h2 |
 | `sessionTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | SessionTimeout determines the maximum lifetime of a TLS session.<br />https://commondatastorage.googleapis.com/chromium-boringssl-docs/ssl.h.html#SSL_DEFAULT_SESSION_TIMEOUT<br />Default: 7200s |
-| `sessionResumption` | _[SessionResumptionSettings](#sessionresumptionsettings)_ |  false  | SessionResumptionSettings determine the proxy's supported TLS session resumption option.<br />By default, Envoy Gateway does not enable session resumption. Use sessionResumption to<br />enable stateful and stateless session resumption. Users should consider security impacts<br />of different resumption methods. Performance gains from resumption are diminished when<br />Envoy proxy is deployed with more than one replica. |
+| `sessionResumption` | _[SessionResumption](#sessionresumption)_ |  false  | SessionResumptionSettings determine the proxy's supported TLS session resumption option.<br />By default, Envoy Gateway does not enable session resumption. Use sessionResumption to<br />enable stateful and stateless session resumption. Users should consider security impacts<br />of different resumption methods. Performance gains from resumption are diminished when<br />Envoy proxy is deployed with more than one replica. |
 
 
 #### ClientTimeout
@@ -3646,11 +3646,11 @@ _Appears in:_
 | `NodePort` | ServiceTypeNodePort means a service will be exposed on each Kubernetes Node<br />at a static Port, common across all Nodes.<br /> | 
 
 
-#### SessionResumptionSettings
+#### SessionResumption
 
 
 
-SessionResumptionSettings defines supported tls session resumption methods and their associated configuration.
+SessionResumption defines supported tls session resumption methods and their associated configuration.
 
 _Appears in:_
 - [ClientTLSSettings](#clienttlssettings)
@@ -3732,7 +3732,7 @@ Envoy does not re-validate client certificates upon session resumption.
 https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-routematch-tlscontextmatchoptions
 
 _Appears in:_
-- [SessionResumptionSettings](#sessionresumptionsettings)
+- [SessionResumption](#sessionresumption)
 
 
 
@@ -3748,7 +3748,7 @@ https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/
 https://commondatastorage.googleapis.com/chromium-boringssl-docs/ssl.h.html#Session-tickets
 
 _Appears in:_
-- [SessionResumptionSettings](#sessionresumptionsettings)
+- [SessionResumption](#sessionresumption)
 
 
 

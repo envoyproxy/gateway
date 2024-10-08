@@ -28,7 +28,7 @@ type ClientTLSSettings struct {
 	// of different resumption methods. Performance gains from resumption are diminished when
 	// Envoy proxy is deployed with more than one replica.
 	// +optional
-	SessionResumptionSettings *SessionResumptionSettings `json:"sessionResumption,omitempty"`
+	SessionResumptionSettings *SessionResumption `json:"sessionResumption,omitempty"`
 }
 
 // +kubebuilder:validation:XValidation:rule="has(self.minVersion) && self.minVersion == '1.3' ? !has(self.ciphers) : true", message="setting ciphers has no effect if the minimum possible TLS version is 1.3"
@@ -148,8 +148,8 @@ type ClientValidationContext struct {
 	CACertificateRefs []gwapiv1.SecretObjectReference `json:"caCertificateRefs,omitempty"`
 }
 
-// SessionResumptionSettings defines supported tls session resumption methods and their associated configuration.
-type SessionResumptionSettings struct {
+// SessionResumption defines supported tls session resumption methods and their associated configuration.
+type SessionResumption struct {
 	// StatelessSessionResumption defines setting for stateless (session-ticket based) session resumption
 	// +optional
 	StatelessSessionResumption *StatelessTLSSessionResumption `json:"statelessSessionResumption,omitempty"`
