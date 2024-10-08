@@ -2,25 +2,26 @@ module local
 
 go 1.23.1
 
-require github.com/bufbuild/buf v1.42.0
+require github.com/bufbuild/buf v1.44.0
 
 require (
-	buf.build/gen/go/bufbuild/bufplugin/protocolbuffers/go v1.34.2-20240904181154-a0be11449112.2 // indirect
-	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.34.2-20240717164558-a6c49f84cc0f.2 // indirect
-	buf.build/gen/go/bufbuild/registry/connectrpc/go v1.16.2-20240821192916-45ba72cdd479.1 // indirect
-	buf.build/gen/go/bufbuild/registry/protocolbuffers/go v1.34.2-20240821192916-45ba72cdd479.2 // indirect
+	buf.build/gen/go/bufbuild/bufplugin/protocolbuffers/go v1.34.2-20240928190436-5e8abcfd7a7e.2 // indirect
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.34.2-20240920164238-5a7b106cbb87.2 // indirect
+	buf.build/gen/go/bufbuild/registry/connectrpc/go v1.17.0-20240925012807-1610ffa05635.1 // indirect
+	buf.build/gen/go/bufbuild/registry/protocolbuffers/go v1.34.2-20240925012807-1610ffa05635.2 // indirect
 	buf.build/gen/go/pluginrpc/pluginrpc/protocolbuffers/go v1.34.2-20240828222655-5345c0a56177.2 // indirect
-	buf.build/go/bufplugin v0.2.0 // indirect
+	buf.build/go/bufplugin v0.5.0 // indirect
 	buf.build/go/protoyaml v0.2.0 // indirect
-	connectrpc.com/connect v1.16.2 // indirect
+	buf.build/go/spdx v0.2.0 // indirect
+	connectrpc.com/connect v1.17.0 // indirect
 	connectrpc.com/otelconnect v0.7.1 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
-	github.com/Microsoft/hcsshim v0.12.6 // indirect
+	github.com/Microsoft/hcsshim v0.12.7 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	github.com/bufbuild/protocompile v0.14.1 // indirect
 	github.com/bufbuild/protoplugin v0.0.0-20240911180120-7bb73e41a54a // indirect
-	github.com/bufbuild/protovalidate-go v0.6.5 // indirect
+	github.com/bufbuild/protovalidate-go v0.7.1 // indirect
 	github.com/containerd/cgroups/v3 v3.0.3 // indirect
 	github.com/containerd/containerd v1.7.22 // indirect
 	github.com/containerd/continuity v0.4.3 // indirect
@@ -30,11 +31,11 @@ require (
 	github.com/containerd/stargz-snapshotter/estargz v0.15.1 // indirect
 	github.com/containerd/ttrpc v1.2.5 // indirect
 	github.com/containerd/typeurl/v2 v2.2.0 // indirect
-	github.com/cpuguy83/go-md2man/v2 v2.0.4 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.5 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
-	github.com/docker/cli v27.2.1+incompatible // indirect
+	github.com/docker/cli v27.3.1+incompatible // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
-	github.com/docker/docker v27.2.1+incompatible // indirect
+	github.com/docker/docker v27.3.1+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.8.2 // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
@@ -45,17 +46,16 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/gofrs/flock v0.12.1 // indirect
-	github.com/gofrs/uuid/v5 v5.3.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/cel-go v0.21.0 // indirect
 	github.com/google/go-containerregistry v0.20.2 // indirect
-	github.com/google/pprof v0.0.0-20240910150728-a0b0bb1d4134 // indirect
+	github.com/google/pprof v0.0.0-20240929191954-255acd752d31 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.20.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jdx/go-netrc v1.0.0 // indirect
-	github.com/klauspost/compress v1.17.9 // indirect
+	github.com/klauspost/compress v1.17.10 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
@@ -81,11 +81,18 @@ require (
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/rs/cors v1.11.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
+	github.com/segmentio/asm v1.2.0 // indirect
+	github.com/segmentio/encoding v0.4.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/cobra v1.8.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/stoewer/go-strcase v1.3.0 // indirect
-	github.com/vbatts/tar-split v0.11.5 // indirect
+	github.com/tetratelabs/wazero v1.8.0 // indirect
+	github.com/vbatts/tar-split v0.11.6 // indirect
+	go.lsp.dev/jsonrpc2 v0.10.0 // indirect
+	go.lsp.dev/pkg v0.0.0-20210717090340-384b27a52fb2 // indirect
+	go.lsp.dev/protocol v0.12.0 // indirect
+	go.lsp.dev/uri v0.3.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.55.0 // indirect
 	go.opentelemetry.io/otel v1.30.0 // indirect
@@ -106,10 +113,10 @@ require (
 	golang.org/x/term v0.24.0 // indirect
 	golang.org/x/text v0.18.0 // indirect
 	golang.org/x/tools v0.25.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240903143218-8af14fe29dc1 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240903143218-8af14fe29dc1 // indirect
-	google.golang.org/grpc v1.66.2 // indirect
-	google.golang.org/protobuf v1.34.3-0.20240816073751-94ecbc261689 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20240924160255-9d4c2d233b61 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240924160255-9d4c2d233b61 // indirect
+	google.golang.org/grpc v1.67.0 // indirect
+	google.golang.org/protobuf v1.34.3-0.20240906163944-03df6c145d96 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	pluginrpc.com/pluginrpc v0.3.0 // indirect
+	pluginrpc.com/pluginrpc v0.5.0 // indirect
 )
