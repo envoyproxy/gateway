@@ -704,7 +704,7 @@ func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources 
 	}
 
 	if len(provider.BackendRefs) > 0 {
-		if rd, err = t.transalteExtServiceBackendRefs(policy, provider.BackendRefs, protocol, resources, envoyProxy, 0); err != nil {
+		if rd, err = t.translateExtServiceBackendRefs(policy, provider.BackendRefs, protocol, resources, envoyProxy, 0); err != nil {
 			return nil, err
 		}
 	}
@@ -867,7 +867,7 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *reso
 		protocol = ir.GRPC
 	}
 
-	if rd, err = t.transalteExtServiceBackendRefs(policy, backends.BackendRefs, protocol, resources, envoyProxy, 0); err != nil {
+	if rd, err = t.translateExtServiceBackendRefs(policy, backends.BackendRefs, protocol, resources, envoyProxy, 0); err != nil {
 		return nil, err
 	}
 
