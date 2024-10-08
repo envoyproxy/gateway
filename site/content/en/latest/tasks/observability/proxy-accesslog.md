@@ -252,11 +252,19 @@ for access log formatter using the `METADATA` operator. To enrich logs, users ca
 
 ## Access Log Types
 
-Envoy Gateway supports configuration of different access log settings for Routes and Listeners. By default, Access Logs
-settings would be used by Routes and Listener (when no route is matched). Users that wish to define different Access Log
-settings for Listeners and Routes can use the Access Log Type field. 
+By default, Access Log settings would apply to:
+- All Routes
+- If traffic is not matched by any Route known to Envoy, the Listener would emit the access log instead 
 
-For example, you can emit logs about connections and transport 
+Users may wish to customize this behavior:
+- Emit Access Logs by all Listeners for all traffic with specific settings
+- Do not emit Route-oriented access logs when a route is not matched.
+
+To achieve this, users can select if Access Log settings follow the default behavior or apply specifically to 
+Routes or Listeners. 
+
+For example, you can emit logs about connections and transport-level failures at the Listener level, and emit 
+HTTP-specific logs at the Route level.
 
 ```shell 
 kubectl apply -f - <<EOF
@@ -281,6 +289,20 @@ spec:
   telemetry:
     accessLog:
       settings:
+        - type: Route 
+          format:
+            type: Text
+            text: |
+              [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
+          matches:
+            - "'x-envoy-logged' in request.headers"
+          sinks:
+            - type: OpenTelemetry
+              openTelemetry:
+                host: otel-collector.monitoring.svc.cluster.local
+                port: 4317
+                resources:
+                  k8s.cluster.name: "cluster-1"    
         - type: Listener 
           format:
             type: Text
