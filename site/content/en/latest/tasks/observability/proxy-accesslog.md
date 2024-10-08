@@ -261,7 +261,8 @@ Users may wish to customize this behavior:
 - Do not emit Route-oriented access logs when a route is not matched.
 
 To achieve this, users can select if Access Log settings follow the default behavior or apply specifically to 
-Routes or Listeners. 
+Routes or Listeners by specifying the setting's type. When users define their own Access Log settings (with or without a type),
+the default Envoy Gateway file access log is no longer emitted.   
 
 For example, you can emit logs about connections and transport-level failures at the Listener level, and emit 
 HTTP-specific logs at the Route level.
