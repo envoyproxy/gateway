@@ -53,6 +53,43 @@ spec:
                 description: HTTPURLRewriteFilter define rewrites of HTTP URL components
                   such as path and host
                 properties:
+                  hostname:
+                    description: |-
+                      Hostname is the value to be used to replace the Host header value during
+                      forwarding.
+
+                      Support: Extended
+                    properties:
+                      setFromBackend:
+                        description: |-
+                          SetFromBackend indicates that the Host header value would be replaced by the DNS name of the backend if it exists.
+                          https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-auto-host-rewrite
+                        type: boolean
+                      setFromHeader:
+                        description: |-
+                          SetFromHeader indicates that the Host header value would be replaced with the value of the header specified in setFromHeader.
+                          https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-host-rewrite-header
+                        type: string
+                      type:
+                        description: HTTPPathModifierType defines the type of Hostname
+                          rewrite.
+                        enum:
+                        - SetFromHeader
+                        - SetFromBackend
+                        type: string
+                    required:
+                    - type
+                    type: object
+                    x-kubernetes-validations:
+                    - message: setFromHeader must be nil if the type is not SetFromHeader
+                      rule: '!(has(self.setFromHeader) && self.type != ''SetFromHeader'')'
+                    - message: setFromHeader must be specified for SetFromHeader type
+                      rule: '!(!has(self.setFromHeader) && self.type == ''SetFromHeader'')'
+                    - message: setFromBackend must be nil if the type is not SetFromBackend
+                      rule: '!(has(self.setFromBackend) && self.type != ''SetFromBackend'')'
+                    - message: setFromBackend must be specified for SetFromBackend
+                        type
+                      rule: '!(!has(self.setFromBackend) && self.type == ''SetFromBackend'')'
                   path:
                     description: Path defines a path rewrite.
                     properties:
