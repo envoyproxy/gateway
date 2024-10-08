@@ -192,7 +192,7 @@ securityPolicies:
     uid: b8284d0f-de82-4c65-b204-96a0d3f258a1
   spec:
     oidc:
-      clientID: client1.oauth.foo.com
+      clientID: client1.apps.googleusercontent.com
       clientSecret:
         group: null
         kind: null
@@ -202,9 +202,7 @@ securityPolicies:
       forwardAccessToken: true
       logoutPath: /bar/logout
       provider:
-        authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
-        issuer: https://oauth.foo.com
-        tokenEndpoint: https://oauth.foo.com/token
+        issuer: https://accounts.google.com
       redirectURL: https://www.example.com/bar/oauth2/callback
       refreshToken: true
     targetRef:
@@ -318,7 +316,7 @@ xdsIR:
           prefix: /bar
         security:
           oidc:
-            clientID: client1.oauth.foo.com
+            clientID: client1.apps.googleusercontent.com
             clientSecret: Y2xpZW50MTpzZWNyZXQK
             cookieSuffix: b0a1b740
             defaultRefreshTokenTTL: 24h0m0s
@@ -328,8 +326,8 @@ xdsIR:
             logoutPath: /bar/logout
             name: securitypolicy/envoy-gateway/policy-for-gateway
             provider:
-              authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
-              tokenEndpoint: https://oauth.foo.com/token
+              authorizationEndpoint: https://accounts.google.com/o/oauth2/v2/auth
+              tokenEndpoint: https://oauth2.googleapis.com/token
             redirectPath: /bar/oauth2/callback
             redirectURL: https://www.example.com/bar/oauth2/callback
             refreshToken: true

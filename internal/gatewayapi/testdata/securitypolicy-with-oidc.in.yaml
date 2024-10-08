@@ -95,10 +95,8 @@ securityPolicies:
       name: gateway-1
     oidc:
       provider:
-        issuer: "https://oauth.foo.com"
-        authorizationEndpoint: "https://oauth.foo.com/oauth2/v2/auth"
-        tokenEndpoint: "https://oauth.foo.com/token"
-      clientID: "client1.oauth.foo.com"
+        issuer: "https://accounts.google.com"
+      clientID: "client1.apps.googleusercontent.com"
       clientSecret:
         name: "client1-secret"
       redirectURL: "https://www.example.com/bar/oauth2/callback"
