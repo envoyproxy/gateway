@@ -213,6 +213,7 @@ func (r *Runner) tlsConfig(cert, key, ca string) *tls.Config {
 
 		return &tls.Config{
 			Certificates: []tls.Certificate{cert},
+			NextProtos:   []string{"h2"},
 			ClientAuth:   tls.RequireAndVerifyClientCert,
 			ClientCAs:    certPool,
 			MinVersion:   tls.VersionTLS13,
