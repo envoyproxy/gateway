@@ -1229,7 +1229,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 	}
 }
 
-// processDestination translate a backendRef into a destination settings.
+// processDestination translates a backendRef into a destination settings.
 // If an error occurs during this conversion, an error is returned, and the associated routes are expected to become inactive.
 // This will result in a direct 500 response for HTTP-based requests.
 func (t *Translator) processDestination(backendRefContext BackendRefContext,
