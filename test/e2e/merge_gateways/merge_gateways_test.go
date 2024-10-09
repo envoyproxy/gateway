@@ -4,7 +4,6 @@
 // the root of the repo.
 
 //go:build e2e
-// +build e2e
 
 package mergegateways
 
@@ -47,7 +46,7 @@ func TestMergeGateways(t *testing.T) {
 		RunTest:              *flags.RunTest,
 		// SupportedFeatures cannot be empty, so we set it to SupportGateway
 		// All e2e tests should leave Features empty.
-		SupportedFeatures: sets.New[features.SupportedFeature](features.SupportGateway),
+		SupportedFeatures: sets.New[features.FeatureName](features.SupportGateway),
 		SkipTests:         []string{},
 	})
 	if err != nil {

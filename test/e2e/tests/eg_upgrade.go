@@ -4,7 +4,6 @@
 // the root of the repo.
 
 //go:build e2e
-// +build e2e
 
 package tests
 
@@ -53,6 +52,7 @@ var EGUpgradeTest = suite.ConformanceTest{
 			depNS := "envoy-gateway-system"
 			lastVersionTag := os.Getenv("last_version_tag")
 			if lastVersionTag == "" {
+				// Use v1.0.2 instead of v1.1.2 due to https://github.com/envoyproxy/gateway/issues/4336
 				lastVersionTag = "v1.0.2" // Default version tag if not specified
 			}
 
@@ -274,13 +274,14 @@ func migrateChartCRDs(actionConfig *action.Configuration, gatewayChart *chart.Ch
 	}
 
 	for _, crd := range crds {
-		if crd.Name == "backendtlspolicies.gateway.networking.k8s.io" {
+		if crd.Name == "backendtlspolicies.gateway.networking.k8s.io" ||
+			crd.Name == "grpcroutes.gateway.networking.k8s.io" {
 			newVersion, err := getGWAPIVersion(crd.Object)
 			if err != nil {
 				return err
 			}
 			// https://gateway-api.sigs.k8s.io/guides/?h=upgrade#v11-upgrade-notes
-			if newVersion == "v1.1.0" {
+			if newVersion == "v1.2.0-rc2" {
 				helper := resource.NewHelper(crd.Client, crd.Mapping)
 				existingCRD, err := helper.Get(crd.Namespace, crd.Name)
 				if kerrors.IsNotFound(err) {
@@ -294,7 +295,7 @@ func migrateChartCRDs(actionConfig *action.Configuration, gatewayChart *chart.Ch
 				}
 
 				if existingVersion == "v1.0.0" {
-					// Delete the existing instance of the BTLS CRD
+					// Delete the existing instance of the BTLS and GRPCRoute CRDs
 					_, errs := actionConfig.KubeClient.Delete([]*resource.Info{crd})
 					if errs != nil {
 						return fmt.Errorf("failed to delete backendtlspolicies: %s", util.MultipleErrors("", errs))

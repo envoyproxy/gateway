@@ -4,16 +4,18 @@
 // the root of the repo.
 
 //go:build e2e
-// +build e2e
 
 package e2e
 
 import (
 	"flag"
 	"io/fs"
+	"os"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/util/sets"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
@@ -25,6 +27,7 @@ import (
 
 func TestE2E(t *testing.T) {
 	flag.Parse()
+	log.SetLogger(zap.New(zap.WriteTo(os.Stderr), zap.UseDevMode(true)))
 
 	c, cfg := kubetest.NewClient(t)
 
@@ -46,7 +49,7 @@ func TestE2E(t *testing.T) {
 		RunTest:              *flags.RunTest,
 		// SupportedFeatures cannot be empty, so we set it to SupportGateway
 		// All e2e tests should leave Features empty.
-		SupportedFeatures: sets.New[features.SupportedFeature](features.SupportGateway),
+		SupportedFeatures: sets.New[features.FeatureName](features.SupportGateway),
 		SkipTests: []string{
 			tests.GatewayInfraResourceTest.ShortName, // https://github.com/envoyproxy/gateway/issues/3191
 		},

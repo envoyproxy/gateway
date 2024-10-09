@@ -4,7 +4,6 @@
 // the root of the repo.
 
 //go:build e2e
-// +build e2e
 
 package multiplegc
 
@@ -27,7 +26,6 @@ import (
 
 func TestMultipleGC(t *testing.T) {
 	flag.Parse()
-
 	c, cfg := kubetest.NewClient(t)
 
 	if flags.RunTest != nil && *flags.RunTest != "" {
@@ -50,7 +48,7 @@ func TestMultipleGC(t *testing.T) {
 			RunTest:              *flags.RunTest,
 			// SupportedFeatures cannot be empty, so we set it to SupportGateway
 			// All e2e tests should leave Features empty.
-			SupportedFeatures: sets.New[features.SupportedFeature](features.SupportGateway),
+			SupportedFeatures: sets.New[features.FeatureName](features.SupportGateway),
 			SkipTests:         []string{},
 		})
 		if err != nil {
@@ -76,13 +74,14 @@ func TestMultipleGC(t *testing.T) {
 		privateGatewaySuiteGatewayClassName := "private"
 		privateGatewaySuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 			Client:               c,
+			RestConfig:           cfg,
 			GatewayClassName:     privateGatewaySuiteGatewayClassName,
 			Debug:                *flags.ShowDebug,
 			CleanupBaseResources: *flags.CleanupBaseResources,
 			RunTest:              *flags.RunTest,
 			// SupportedFeatures cannot be empty, so we set it to SupportGateway
 			// All e2e tests should leave Features empty.
-			SupportedFeatures: sets.New[features.SupportedFeature](features.SupportGateway),
+			SupportedFeatures: sets.New[features.FeatureName](features.SupportGateway),
 			SkipTests:         []string{},
 		})
 		if err != nil {

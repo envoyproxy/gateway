@@ -1,0 +1,14 @@
+- ignorePortInHostMatching: true
+  name: listener-enable-req-resp-sizes-stats
+  virtualHosts:
+  - domains:
+    - '*'
+    name: listener-enable-req-resp-sizes-stats/*
+    routes:
+    - match:
+        prefix: /
+      name: first-route
+      route:
+        cluster: first-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

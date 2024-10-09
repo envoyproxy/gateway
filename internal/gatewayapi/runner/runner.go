@@ -564,6 +564,7 @@ func (r *Runner) tlsConfig() (*tls.Config, error) {
 	// Configure the server to require client certificates
 	return &tls.Config{
 		Certificates: []tls.Certificate{serverCert},
+		NextProtos:   []string{"h2"},
 		ClientAuth:   tls.RequireAndVerifyClientCert,
 		ClientCAs:    caCertPool,
 		MinVersion:   tls.VersionTLS13,

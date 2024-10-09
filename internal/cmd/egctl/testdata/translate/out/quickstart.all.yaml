@@ -1,5 +1,6 @@
 gateways:
-- metadata:
+- kind: Gateway
+  metadata:
     creationTimestamp: null
     name: eg
     namespace: envoy-gateway-system
@@ -99,6 +100,7 @@ xdsIR:
       - '*'
       isHTTP2: false
       metadata:
+        kind: Gateway
         name: eg
         namespace: envoy-gateway-system
         sectionName: http

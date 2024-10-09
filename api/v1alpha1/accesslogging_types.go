@@ -30,7 +30,29 @@ type ProxyAccessLogSetting struct {
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=50
 	Sinks []ProxyAccessLogSink `json:"sinks"`
+	// Type defines the component emitting the accesslog, such as Listener and Route.
+	// If type not defined, the setting would apply to:
+	// (1) All Routes.
+	// (2) Listeners if and only if Envoy does not find a matching route for a request.
+	// If type is defined, the accesslog settings would apply to the relevant component (as-is).
+	// +kubebuilder:validation:Enum=Listener;Route
+	// +optional
+	// +notImplementedHide
+	Type *ProxyAccessLogType `json:"type,omitempty"`
 }
+
+type ProxyAccessLogType string
+
+const (
+	// ProxyAccessLogTypeListener defines the accesslog for Listeners.
+	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto#envoy-v3-api-field-config-listener-v3-listener-access-log
+	ProxyAccessLogTypeListener ProxyAccessLogType = "Listener"
+	// ProxyAccessLogTypeRoute defines the accesslog for HTTP, GRPC, UDP and TCP Routes.
+	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/udp/udp_proxy/v3/udp_proxy.proto#envoy-v3-api-field-extensions-filters-udp-udp-proxy-v3-udpproxyconfig-access-log
+	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/tcp_proxy/v3/tcp_proxy.proto#envoy-v3-api-field-extensions-filters-network-tcp-proxy-v3-tcpproxy-access-log
+	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-access-log
+	ProxyAccessLogTypeRoute ProxyAccessLogType = "Route"
+)
 
 type ProxyAccessLogFormatType string
 
