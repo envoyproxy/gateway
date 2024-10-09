@@ -11,6 +11,7 @@ metadata:
     control-plane: envoy-gateway
   {{- include "eg.labels" . | nindent 4 }}
 spec:
+  type: {{ .Values.service.type }}
   selector:
     control-plane: envoy-gateway
   {{- include "eg.selectorLabels" . | nindent 4 }}

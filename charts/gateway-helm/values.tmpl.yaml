@@ -62,6 +62,7 @@ deployment:
     nodeSelector: {}
 
 service:
+  type: ClusterIP
   annotations: {}
 
 config:
