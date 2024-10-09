@@ -16,7 +16,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 0
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -39,6 +39,42 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-1
+    namespace: envoy-gateway
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          type: Exact
+          value: /exact
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Service envoy-gateway/service-1 not found
+        reason: BackendNotFound
+        status: "False"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -102,6 +138,10 @@ infraIR:
           telemetry:
             accessLog:
               settings:
+              - sinks: null
+                type: Route
+              - sinks: null
+                type: Listener
               - format:
                   text: |
                     this is a route log
@@ -231,72 +271,6 @@ xdsIR:
     accessLog:
       als:
       - destination:
-          name: accesslog_als_0_1
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 10.240.0.10
-              port: 9090
-            protocol: GRPC
-        http:
-          requestHeaders:
-          - x-client-ip-address
-          responseHeaders:
-          - cache-control
-          responseTrailers:
-          - expires
-        logType: Route
-        name: accesslog
-        text: |
-          this is a route log
-        type: HTTP
-      - destination:
-          name: accesslog_als_0_2
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 10.240.0.10
-              port: 9090
-            protocol: GRPC
-        logType: Route
-        name: envoy-gateway-system/test
-        text: |
-          this is a route log
-        type: TCP
-      - destination:
-          name: accesslog_als_1_1
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 10.240.0.10
-              port: 9090
-            protocol: GRPC
-        http:
-          requestHeaders:
-          - x-client-ip-address
-          responseHeaders:
-          - cache-control
-          responseTrailers:
-          - expires
-        logType: Listener
-        name: accesslog
-        text: |
-          this is a listener log
-        type: HTTP
-      - destination:
-          name: accesslog_als_1_2
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 10.240.0.10
-              port: 9090
-            protocol: GRPC
-        logType: Listener
-        name: envoy-gateway-system/test
-        text: |
-          this is a listener log
-        type: TCP
-      - destination:
           name: accesslog_als_2_1
           settings:
           - addressType: IP
@@ -311,12 +285,78 @@ xdsIR:
           - cache-control
           responseTrailers:
           - expires
+        logType: Route
+        name: accesslog
+        text: |
+          this is a route log
+        type: HTTP
+      - destination:
+          name: accesslog_als_2_2
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 10.240.0.10
+              port: 9090
+            protocol: GRPC
+        logType: Route
+        name: envoy-gateway-system/test
+        text: |
+          this is a route log
+        type: TCP
+      - destination:
+          name: accesslog_als_3_1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 10.240.0.10
+              port: 9090
+            protocol: GRPC
+        http:
+          requestHeaders:
+          - x-client-ip-address
+          responseHeaders:
+          - cache-control
+          responseTrailers:
+          - expires
+        logType: Listener
+        name: accesslog
+        text: |
+          this is a listener log
+        type: HTTP
+      - destination:
+          name: accesslog_als_3_2
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 10.240.0.10
+              port: 9090
+            protocol: GRPC
+        logType: Listener
+        name: envoy-gateway-system/test
+        text: |
+          this is a listener log
+        type: TCP
+      - destination:
+          name: accesslog_als_4_1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 10.240.0.10
+              port: 9090
+            protocol: GRPC
+        http:
+          requestHeaders:
+          - x-client-ip-address
+          responseHeaders:
+          - cache-control
+          responseTrailers:
+          - expires
         name: accesslog
         text: |
           this is a Global log
         type: HTTP
       - destination:
-          name: accesslog_als_2_2
+          name: accesslog_als_4_2
           settings:
           - addressType: IP
             endpoints:
@@ -330,7 +370,7 @@ xdsIR:
       openTelemetry:
       - authority: otel-collector.monitoring.svc.cluster.local
         destination:
-          name: accesslog_otel_0_3
+          name: accesslog_otel_2_3
           settings:
           - endpoints:
             - host: otel-collector.monitoring.svc.cluster.local
@@ -344,7 +384,7 @@ xdsIR:
           this is a route log
       - authority: otel-collector.monitoring.svc.cluster.local
         destination:
-          name: accesslog_otel_1_3
+          name: accesslog_otel_3_3
           settings:
           - endpoints:
             - host: otel-collector.monitoring.svc.cluster.local
@@ -358,7 +398,7 @@ xdsIR:
           this is a listener log
       - authority: otel-collector.monitoring.svc.cluster.local
         destination:
-          name: accesslog_otel_2_3
+          name: accesslog_otel_4_3
           settings:
           - endpoints:
             - host: otel-collector.monitoring.svc.cluster.local
@@ -370,6 +410,10 @@ xdsIR:
         text: |
           this is a Global log
       text:
+      - logType: Route
+        path: /dev/stdout
+      - logType: Listener
+        path: /dev/stdout
       - format: |
           this is a route log
         logType: Route
@@ -396,3 +440,21 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
+      routes:
+      - destination:
+          name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - weight: 1
+        directResponse:
+          statusCode: 500
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: envoy-gateway
+        name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          exact: /exact
+          name: ""

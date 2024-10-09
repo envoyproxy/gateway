@@ -283,6 +283,16 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 			return nil, utilerrors.NewAggregate(errs)
 		}
 
+		if len(accessLog.Sinks) == 0 {
+			al := &ir.TextAccessLog{
+				Format:     format.Text,
+				CELMatches: validExprs,
+				LogType:    accessLogType,
+				Path:       "/dev/stdout",
+			}
+			irAccessLog.Text = append(irAccessLog.Text, al)
+		}
+
 		for j, sink := range accessLog.Sinks {
 			switch sink.Type {
 			case egv1a1.ProxyAccessLogSinkTypeFile:

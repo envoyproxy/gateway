@@ -9,6 +9,8 @@ envoyProxyForGatewayClass:
       accessLog:
         settings:
         - type: Route
+        - type: Listener
+        - type: Route
           format:
             type: Text
             text: |
@@ -181,6 +183,24 @@ gateways:
       allowedRoutes:
         namespaces:
           from: Same
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: envoy-gateway
+    name: httproute-1
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+    rules:
+    - matches:
+      - path:
+          type: Exact
+          value: "/exact"
+      backendRefs:
+      - name: service-1
+        port: 8080
 services:
 - apiVersion: v1
   kind: Service

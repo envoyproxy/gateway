@@ -261,11 +261,14 @@ Users may wish to customize this behavior:
 - Do not emit Route-oriented access logs when a route is not matched.
 
 To achieve this, users can select if Access Log settings follow the default behavior or apply specifically to 
-Routes or Listeners by specifying the setting's type. When users define their own Access Log settings (with or without a type),
-the default Envoy Gateway file access log is no longer emitted.   
+Routes or Listeners by specifying the setting's type. 
 
-For example, you can emit logs about connections and transport-level failures at the Listener level, and emit 
-HTTP-specific logs at the Route level.
+**Note**: When users define their own Access Log settings (with or without a type), the default Envoy Gateway 
+file access log is no longer configured. It can be re-enabled explicitly by adding empty settings for the desired components. 
+
+In the following example:
+- Route Access logs would use the default Envoy Gateway format and sink 
+- Listener Access logs are customized to report transport-level failures and connection attributes
 
 ```shell 
 kubectl apply -f - <<EOF
@@ -290,21 +293,8 @@ spec:
   telemetry:
     accessLog:
       settings:
-        - type: Route 
-          format:
-            type: Text
-            text: |
-              [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
-          matches:
-            - "'x-envoy-logged' in request.headers"
-          sinks:
-            - type: OpenTelemetry
-              openTelemetry:
-                host: otel-collector.monitoring.svc.cluster.local
-                port: 4317
-                resources:
-                  k8s.cluster.name: "cluster-1"    
-        - type: Listener 
+        - type: Route # re-enable default access log for route
+        - type: Listener # configure specific access log for listeners
           format:
             type: Text
             text: |
