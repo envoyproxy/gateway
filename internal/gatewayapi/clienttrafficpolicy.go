@@ -603,6 +603,15 @@ func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout,
 				Duration: d,
 			}
 		}
+		if clientTimeout.HTTP.DelayedCloseTimeout != nil {
+			d, err := time.ParseDuration(string(*clientTimeout.HTTP.DelayedCloseTimeout))
+			if err != nil {
+				return nil, fmt.Errorf("invalid HTTP DelayedCloseTimeout value %s", *clientTimeout.HTTP.DelayedCloseTimeout)
+			}
+			irHTTPTimeout.DelayedCloseTimeout = &metav1.Duration{
+				Duration: d,
+			}
+		}
 		irClientTimeout.HTTP = irHTTPTimeout
 	}
 
