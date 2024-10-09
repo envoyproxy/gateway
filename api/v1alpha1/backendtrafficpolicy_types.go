@@ -74,7 +74,6 @@ type BackendTrafficPolicySpec struct {
 	// If multiple configurations are specified, the first one to match wins.
 	//
 	// +optional
-	// +notImplementedHide
 	ResponseOverride []*ResponseOverride `json:"responseOverride,omitempty"`
 }
 
