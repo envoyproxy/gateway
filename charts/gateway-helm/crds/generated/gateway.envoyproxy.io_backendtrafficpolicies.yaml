@@ -960,12 +960,11 @@ spec:
                           description: Status code to match on. The match evaluates
                             to true if any of the matches are successful.
                           items:
+                            description: StatusCodeMatch defines the configuration
+                              for matching a status code.
                             properties:
                               range:
-                                description: |-
-                                  ValueRef contains the contents of the body
-                                  specified as a local object reference.
-                                  Only a reference to ConfigMap is supported.
+                                description: Range contains the range of status codes.
                                 properties:
                                   end:
                                     description: End of the range, including the end
@@ -981,7 +980,9 @@ spec:
                                 type: object
                               type:
                                 default: Value
-                                description: Type is the type of value.
+                                description: |-
+                                  Type is the type of value.
+                                  Valid values are Value and Range, default is Value.
                                 enum:
                                 - Value
                                 - Range
@@ -1008,8 +1009,10 @@ spec:
                                 string.
                               type: string
                             type:
-                              description: Type is the type of method to use to read
-                                the body value.
+                              default: Inline
+                              description: |-
+                                Type is the type of method to use to read the body value.
+                                Valid values are Inline and ValueRef, default is Inline.
                               enum:
                               - Inline
                               - ValueRef
@@ -1019,6 +1022,9 @@ spec:
                                 ValueRef contains the contents of the body
                                 specified as a local object reference.
                                 Only a reference to ConfigMap is supported.
+
+                                The contents of the ConfigMap must have a key-value pair where
+                                the key is `response.body` and the value is the body content.
                               properties:
                                 group:
                                   description: |-

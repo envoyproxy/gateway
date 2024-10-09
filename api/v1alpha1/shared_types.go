@@ -634,8 +634,18 @@ type CustomResponseMatch struct {
 // +kubebuilder:validation:Enum=Value;Range
 type StatusCodeValueType string
 
+const (
+	// StatusCodeValueTypeValue defines the "Value" status code match type.
+	StatusCodeValueTypeValue StatusCodeValueType = "Value"
+
+	// StatusCodeValueTypeRange defines the "Range" status code match type.
+	StatusCodeValueTypeRange StatusCodeValueType = "Range"
+)
+
+// StatusCodeMatch defines the configuration for matching a status code.
 type StatusCodeMatch struct {
 	// Type is the type of value.
+	// Valid values are Value and Range, default is Value.
 	//
 	// +kubebuilder:default=Value
 	// +unionDiscriminator
@@ -645,9 +655,8 @@ type StatusCodeMatch struct {
 	//
 	// +optional
 	Value *string `json:"value,omitempty"`
-	// ValueRef contains the contents of the body
-	// specified as a local object reference.
-	// Only a reference to ConfigMap is supported.
+
+	// Range contains the range of status codes.
 	//
 	// +optional
 	Range *StatusCodeRange `json:"range,omitempty"`
@@ -676,10 +685,20 @@ type CustomResponse struct {
 // +kubebuilder:validation:Enum=Inline;ValueRef
 type ResponseValueType string
 
+const (
+	// ResponseValueTypeInline defines the "Inline" response body type.
+	ResponseValueTypeInline ResponseValueType = "Inline"
+
+	// ResponseValueTypeValueRef defines the "ValueRef" response body type.
+	ResponseValueTypeValueRef ResponseValueType = "ValueRef"
+)
+
 // CustomResponseBody
 type CustomResponseBody struct {
 	// Type is the type of method to use to read the body value.
+	// Valid values are Inline and ValueRef, default is Inline.
 	//
+	// +kubebuilder:default=Inline
 	// +unionDiscriminator
 	Type *ResponseValueType `json:"type"`
 
@@ -687,9 +706,13 @@ type CustomResponseBody struct {
 	//
 	// +optional
 	Inline *string `json:"inline,omitempty"`
+
 	// ValueRef contains the contents of the body
 	// specified as a local object reference.
 	// Only a reference to ConfigMap is supported.
+	//
+	// The contents of the ConfigMap must have a key-value pair where
+	// the key is `response.body` and the value is the body content.
 	//
 	// +optional
 	ValueRef *gwapiv1.LocalObjectReference `json:"valueRef,omitempty"`

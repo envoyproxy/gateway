@@ -482,6 +482,7 @@ _Appears in:_
 | `rateLimit` | _[RateLimitSpec](#ratelimitspec)_ |  false  | RateLimit allows the user to limit the number of incoming requests<br />to a predefined value based on attributes within the traffic flow. |
 | `faultInjection` | _[FaultInjection](#faultinjection)_ |  false  | FaultInjection defines the fault injection policy to be applied. This configuration can be used to<br />inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
 | `useClientProtocol` | _boolean_ |  false  | UseClientProtocol configures Envoy to prefer sending requests to backends using<br />the same HTTP protocol that the incoming request used. Defaults to false, which means<br />that Envoy will use the protocol indicated by the attached BackendRef. |
+| `responseOverride` | _[ResponseOverride](#responseoverride) array_ |  false  | ResponseOverride defines the configuration to override specific responses with a custom one.<br />If multiple configurations are specified, the first one to match wins. |
 
 
 #### BasicAuth
@@ -878,9 +879,9 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `type` | _[ResponseValueType](#responsevaluetype)_ |  true  | Type is the type of method to use to read the body value. |
+| `type` | _[ResponseValueType](#responsevaluetype)_ |  true  | Type is the type of method to use to read the body value.<br />Valid values are Inline and ValueRef, default is Inline. |
 | `inline` | _string_ |  false  | Inline contains the value as an inline string. |
-| `valueRef` | _[LocalObjectReference](#localobjectreference)_ |  false  | ValueRef contains the contents of the body<br />specified as a local object reference.<br />Only a reference to ConfigMap is supported. |
+| `valueRef` | _[LocalObjectReference](#localobjectreference)_ |  false  | ValueRef contains the contents of the body<br />specified as a local object reference.<br />Only a reference to ConfigMap is supported.<br /><br />The contents of the ConfigMap must have a key-value pair where<br />the key is `response.body` and the value is the body content. |
 
 
 #### CustomResponseMatch
@@ -3552,6 +3553,10 @@ ResponseValueType defines the types of values for the response body supported by
 _Appears in:_
 - [CustomResponseBody](#customresponsebody)
 
+| Value | Description |
+| ----- | ----------- |
+| `Inline` | ResponseValueTypeInline defines the "Inline" response body type.<br /> | 
+| `ValueRef` | ResponseValueTypeValueRef defines the "ValueRef" response body type.<br /> | 
 
 
 
@@ -3740,16 +3745,16 @@ _Appears in:_
 
 
 
-
+StatusCodeMatch defines the configuration for matching a status code.
 
 _Appears in:_
 - [CustomResponseMatch](#customresponsematch)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `type` | _[StatusCodeValueType](#statuscodevaluetype)_ |  true  | Type is the type of value. |
+| `type` | _[StatusCodeValueType](#statuscodevaluetype)_ |  true  | Type is the type of value.<br />Valid values are Value and Range, default is Value. |
 | `value` | _string_ |  false  | Value contains the value of the status code. |
-| `range` | _[StatusCodeRange](#statuscoderange)_ |  false  | ValueRef contains the contents of the body<br />specified as a local object reference.<br />Only a reference to ConfigMap is supported. |
+| `range` | _[StatusCodeRange](#statuscoderange)_ |  false  | Range contains the range of status codes. |
 
 
 #### StatusCodeRange
@@ -3776,6 +3781,10 @@ StatusCodeValueType defines the types of values for the status code match suppor
 _Appears in:_
 - [StatusCodeMatch](#statuscodematch)
 
+| Value | Description |
+| ----- | ----------- |
+| `Value` | StatusCodeValueTypeValue defines the "Value" status code match type.<br /> | 
+| `Range` | StatusCodeValueTypeRange defines the "Range" status code match type.<br /> | 
 
 
 #### StringMatch

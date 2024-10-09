@@ -473,6 +473,56 @@ type HTTP2Settings struct {
 	ResetStreamOnError *bool `json:"resetStreamOnError,omitempty" yaml:"resetStreamOnError,omitempty"`
 }
 
+// ResponseOverride defines the configuration to override specific responses with a custom one.
+// +k8s:deepcopy-gen=true
+type ResponseOverride struct {
+	Rules []ResponseOverrideRule `json:"rules,omitempty"`
+}
+
+// ResponseOverrideRule defines the configuration for overriding a response.
+// +k8s:deepcopy-gen=true
+type ResponseOverrideRule struct {
+	// Match configuration.
+	Match CustomResponseMatch `json:"match"`
+	// Response configuration.
+	Response CustomResponse `json:"response"`
+}
+
+// CustomResponseMatch defines the configuration for matching a user response to return a custom one.
+// +k8s:deepcopy-gen=true
+type CustomResponseMatch struct {
+	// Status code to match on. The match evaluates to true if any of the matches are successful.
+	StatusCode []StatusCodeMatch `json:"statusCode"`
+}
+
+// StatusCodeMatch defines the configuration for matching a status code.
+// +k8s:deepcopy-gen=true
+type StatusCodeMatch struct {
+	// Value contains the value of the status code.
+	Value *string `json:"value,omitempty"`
+
+	// Range contains a range of status codes.
+	Range *StatusCodeRange `json:"range,omitempty"`
+}
+
+// StatusCodeRange defines the configuration for define a range of status codes.
+type StatusCodeRange struct {
+	// Start of the range, including the start value.
+	Start int `json:"start"`
+	// End of the range, including the end value.
+	End int `json:"end"`
+}
+
+// CustomResponse defines the configuration for returning a custom response.
+// +k8s:deepcopy-gen=true
+type CustomResponse struct {
+	// Content Type of the response. This will be set in the Content-Type header.
+	ContentType *string `json:"contentType,omitempty"`
+
+	// Body of the Custom Response
+	Body string `json:"body"`
+}
+
 // HealthCheckSettings provides HealthCheck configuration on the HTTP/HTTPS listener.
 // +k8s:deepcopy-gen=true
 type HealthCheckSettings egv1a1.HealthCheckSettings
@@ -653,6 +703,8 @@ type TrafficFeatures struct {
 	HTTP2 *HTTP2Settings `json:"http2,omitempty" yaml:"http2,omitempty"`
 	// DNS is used to configure how DNS resolution is handled by the Envoy Proxy cluster
 	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
+	// ResponseOverride defines the schema for overriding the response.
+	ResponseOverride *ResponseOverride `json:"responseOverride,omitempty" yaml:"responseOverride,omitempty"`
 }
 
 func (b *TrafficFeatures) Validate() error {
