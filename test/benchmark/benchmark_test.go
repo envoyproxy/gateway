@@ -4,7 +4,6 @@
 // the root of the repo.
 
 //go:build benchmark
-// +build benchmark
 
 package benchmark
 
