@@ -99,7 +99,7 @@ reason = "https://github.com/envoyproxy/gateway/actions/runs/11065210699/job/307
 
 [[PackageOverrides]]
 name = "sigs.k8s.io/json"
-version = "v0.0.0-20221116044647-bc3834ca7abd"
+version = "0.0.0-20221116044647-bc3834ca7abd"
 ecosystem = "Go"
 license.override = ["Apache-2.0"]
 reason = "https://github.com/kubernetes-sigs/json/blob/main/LICENSE"
