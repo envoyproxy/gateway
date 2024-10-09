@@ -19,6 +19,15 @@ import (
 )
 
 func init() {
+	ipFamily := os.Getenv("IP_FAMILY")
+	if ipFamily == "" {
+		HTTPRouteDualStackTest = suite.ConformanceTest{
+			ShortName: "HTTPRouteDualStack",
+			Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+				t.Skip("Skipping IP Version Routing test as IP_FAMILY is not set")
+			},
+		}
+	}
 	ConformanceTests = append(ConformanceTests, HTTPRouteDualStackTest)
 }
 
@@ -27,64 +36,65 @@ var HTTPRouteDualStackTest = suite.ConformanceTest{
 	Description: "Test HTTPRoute support for IPv6 only, dual-stack, and IPv4 only services",
 	Manifests:   []string{"testdata/httproute-dualstack.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		ipFamily := os.Getenv("IP_FAMILY")
-		if ipFamily == "ipv4" {
-			t.Skip("Skipping IP Version Routing test as IP_FAMILY is set to 'ipv4'")
-			return
-		}
-
 		ns := "gateway-conformance-infra"
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+		ipFamily := os.Getenv("IP_FAMILY")
 
-		t.Run("HTTPRoute to IPv6 only service", func(t *testing.T) {
-			routeNN := types.NamespacedName{Name: "infra-backend-v1-httproute-ipv6", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+		if ipFamily == "ipv6" || ipFamily == "dual" {
+			t.Run("HTTPRoute to IPv6 only service", func(t *testing.T) {
+				routeNN := types.NamespacedName{Name: "infra-backend-v1-httproute-ipv6", Namespace: ns}
+				gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
-			expectedResponse := http.ExpectedResponse{
-				Request: http.Request{
-					Path: "/ipv6-only",
-				},
-				Response: http.Response{
-					StatusCode: 200,
-				},
-				Namespace: ns,
-			}
+				expectedResponse := http.ExpectedResponse{
+					Request: http.Request{
+						Path: "/ipv6-only",
+					},
+					Response: http.Response{
+						StatusCode: 200,
+					},
+					Namespace: ns,
+				}
 
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
-		})
+				http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+			})
+		}
 
-		t.Run("HTTPRoute to Dual-stack service", func(t *testing.T) {
-			routeNN := types.NamespacedName{Name: "infra-backend-v1-httproute-dualstack", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+		if ipFamily == "dual" {
+			t.Run("HTTPRoute to Dual-stack service", func(t *testing.T) {
+				routeNN := types.NamespacedName{Name: "infra-backend-v1-httproute-dualstack", Namespace: ns}
+				gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
-			expectedResponse := http.ExpectedResponse{
-				Request: http.Request{
-					Path: "/dual-stack",
-				},
-				Response: http.Response{
-					StatusCode: 200,
-				},
-				Namespace: ns,
-			}
+				expectedResponse := http.ExpectedResponse{
+					Request: http.Request{
+						Path: "/dual-stack",
+					},
+					Response: http.Response{
+						StatusCode: 200,
+					},
+					Namespace: ns,
+				}
 
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
-		})
+				http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+			})
+		}
 
-		t.Run("HTTPRoute to IPv4 only service", func(t *testing.T) {
-			routeNN := types.NamespacedName{Name: "infra-backend-v1-httproute-ipv4", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+		if ipFamily == "ipv4" || ipFamily == "dual" {
+			t.Run("HTTPRoute to IPv4 only service", func(t *testing.T) {
+				routeNN := types.NamespacedName{Name: "infra-backend-v1-httproute-ipv4", Namespace: ns}
+				gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
-			expectedResponse := http.ExpectedResponse{
-				Request: http.Request{
-					Path: "/ipv4-only",
-				},
-				Response: http.Response{
-					StatusCode: 200,
-				},
-				Namespace: ns,
-			}
+				expectedResponse := http.ExpectedResponse{
+					Request: http.Request{
+						Path: "/ipv4-only",
+					},
+					Response: http.Response{
+						StatusCode: 200,
+					},
+					Namespace: ns,
+				}
 
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
-		})
+				http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+			})
+		}
 	},
 }
