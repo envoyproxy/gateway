@@ -37,7 +37,7 @@ var BackendDualStackTest = suite.ConformanceTest{
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 
 		t.Run("IPv6 Backend", func(t *testing.T) {
-			routeNN := types.NamespacedName{Name: "httproute-to-backend-ipv6", Namespace: ns}
+			routeNN := types.NamespacedName{Name: "infra-backend-v1-route-ipv6", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
 			expectedResponse := http.ExpectedResponse{
@@ -54,7 +54,7 @@ var BackendDualStackTest = suite.ConformanceTest{
 		})
 
 		t.Run("Dual Stack Backend", func(t *testing.T) {
-			routeNN := types.NamespacedName{Name: "httproute-to-backend-dualstack", Namespace: ns}
+			routeNN := types.NamespacedName{Name: "infra-backend-v1-route-dualstack", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
 			expectedResponse := http.ExpectedResponse{

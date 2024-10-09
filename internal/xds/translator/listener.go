@@ -147,6 +147,34 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 	return extensionConfig
 }
 
+func setAddressByIPFamily(socketAddress *corev3.SocketAddress, ipFamily ir.IPFamily, port uint32) []*listenerv3.AdditionalAddress {
+	switch ipFamily {
+	case ir.IPv4:
+		socketAddress.Address = "0.0.0.0"
+	case ir.IPv6:
+		socketAddress.Address = "::"
+	case ir.Dual:
+		socketAddress.Address = "0.0.0.0"
+		socketAddress.Ipv4Compat = true
+		return []*listenerv3.AdditionalAddress{
+			{
+				Address: &corev3.Address{
+					Address: &corev3.Address_SocketAddress{
+						SocketAddress: &corev3.SocketAddress{
+							Protocol: socketAddress.Protocol,
+							Address:  "::",
+							PortSpecifier: &corev3.SocketAddress_PortValue{
+								PortValue: port,
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+	return nil
+}
+
 // buildXdsTCPListener creates a xds Listener resource
 // TODO: Improve function parameters
 func buildXdsTCPListener(name, address string, port uint32, ipFamily ir.IPFamily, keepalive *ir.TCPKeepalive, connection *ir.ClientConnection, accesslog *ir.AccessLog) *listenerv3.Listener {
@@ -171,26 +199,8 @@ func buildXdsTCPListener(name, address string, port uint32, ipFamily ir.IPFamily
 		},
 	}
 
-	if ipFamily == ir.Dual {
-		socketAddress := listener.Address.GetSocketAddress()
-		socketAddress.Ipv4Compat = true
-		listener.AdditionalAddresses = []*listenerv3.AdditionalAddress{
-			{
-				Address: &corev3.Address{
-					Address: &corev3.Address_SocketAddress{
-						SocketAddress: &corev3.SocketAddress{
-							Protocol: corev3.SocketAddress_TCP,
-							Address:  "::",
-							PortSpecifier: &corev3.SocketAddress_PortValue{
-								PortValue: port,
-							},
-						},
-					},
-				},
-			},
-		}
-	}
-
+	socketAddress := listener.Address.GetSocketAddress()
+	listener.AdditionalAddresses = setAddressByIPFamily(socketAddress, ipFamily, port)
 	return listener
 }
 
@@ -221,31 +231,11 @@ func buildXdsQuicListener(name, address string, port uint32, ipFamily ir.IPFamil
 			DownstreamSocketConfig: &corev3.UdpSocketConfig{},
 			QuicOptions:            &listenerv3.QuicProtocolOptions{},
 		},
-		// Remove /healthcheck/fail from endpoints that trigger a drain of listeners for better control
-		// over the drain process while still allowing the healthcheck to be failed during pod shutdown.
 		DrainType: listenerv3.Listener_MODIFY_ONLY,
 	}
 
-	if ipFamily == ir.Dual {
-		socketAddress := xdsListener.Address.GetSocketAddress()
-		socketAddress.Ipv4Compat = true
-		xdsListener.AdditionalAddresses = []*listenerv3.AdditionalAddress{
-			{
-				Address: &corev3.Address{
-					Address: &corev3.Address_SocketAddress{
-						SocketAddress: &corev3.SocketAddress{
-							Protocol: corev3.SocketAddress_UDP,
-							Address:  "::",
-							PortSpecifier: &corev3.SocketAddress_PortValue{
-								PortValue: port,
-							},
-						},
-					},
-				},
-			},
-		}
-	}
-
+	socketAddress := xdsListener.Address.GetSocketAddress()
+	xdsListener.AdditionalAddresses = setAddressByIPFamily(socketAddress, ipFamily, port)
 	return xdsListener
 }
 

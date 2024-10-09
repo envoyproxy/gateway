@@ -228,13 +228,13 @@ type CoreListenerDetails struct {
 	IPFamily IPFamily `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
 }
 
-// IPFamily represents the IP address family for the gattype IPFamily {eway.
+// IPFamily specifies the IP address family used by the Gateway for its listening ports.
 type IPFamily string
 
 const (
-	IPv4 IPFamily = "ipv4"
-	IPv6 IPFamily = "ipv6"
-	Dual IPFamily = "dual"
+	IPv4 IPFamily = "IPv4"
+	IPv6 IPFamily = "IPv6"
+	Dual IPFamily = "DualStack"
 )
 
 func (l CoreListenerDetails) GetName() string {

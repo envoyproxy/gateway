@@ -135,10 +135,20 @@ type EnvoyProxySpec struct {
 	// +optional
 	BackendTLS *BackendTLSConfig `json:"backendTLS,omitempty"`
 
-	// IPFamily specifies the IP family for the EnvoyProxy.
-	// It can be ipv4, ipv6, or dual.
-	// +kubebuilder:default=ipv4
-	// +kubebuilder:validation:Enum=ipv4;ipv6;dual
+	// IPFamily specifies the IP family for the Envoy proxy's Gateway listener ports.
+	// This setting only affects the Gateway listener ports and does not impact
+	// other aspects of the Envoy proxy configuration.
+	//
+	// If not specified, the behavior depends on the environment:
+	// - In IPv4-only environments, it defaults to IPv4.
+	// - In dual-stack environments, it will use both IPv4 and IPv6 (equivalent to DualStack).
+	// - In IPv6-only environments, it defaults to IPv6.
+	//
+	// It's recommended to explicitly set this field to ensure consistent behavior
+	// across different environments.
+	//
+	// +kubebuilder:default=IPv4
+	// +kubebuilder:validation:Enum=IPv4;IPv6;DualStack
 	// +optional
 	IPFamily *IPFamily `json:"ipFamily,omitempty"`
 }
@@ -426,6 +436,8 @@ const (
 	// IPv6 defines the IPv6 family.
 	IPv6 IPFamily = "IPv6"
 	// DualStack defines the dual-stack family.
+	// When set to DualStack, Envoy proxy will listen on both IPv4 and IPv6 addresses
+	// for incoming client traffic, enabling support for both IP protocol versions.
 	DualStack IPFamily = "DualStack"
 )
 

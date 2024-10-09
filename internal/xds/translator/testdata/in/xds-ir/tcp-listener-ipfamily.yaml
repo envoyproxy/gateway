@@ -2,7 +2,7 @@ tcp:
   - name: tcp-listener-dual
     address: 0.0.0.0
     port: 8082
-    ipFamily: dual
+    ipFamily: DualStack
     routes:
       - name: tcp-route-dual
         destination:

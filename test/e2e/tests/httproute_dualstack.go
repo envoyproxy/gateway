@@ -37,7 +37,7 @@ var HTTPRouteDualStackTest = suite.ConformanceTest{
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 
 		t.Run("HTTPRoute to IPv6 only service", func(t *testing.T) {
-			routeNN := types.NamespacedName{Name: "ipv6-only-route", Namespace: ns}
+			routeNN := types.NamespacedName{Name: "infra-backend-v1-httproute-ipv6", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
 			expectedResponse := http.ExpectedResponse{
@@ -54,7 +54,7 @@ var HTTPRouteDualStackTest = suite.ConformanceTest{
 		})
 
 		t.Run("HTTPRoute to Dual-stack service", func(t *testing.T) {
-			routeNN := types.NamespacedName{Name: "dual-stack-route", Namespace: ns}
+			routeNN := types.NamespacedName{Name: "infra-backend-v1-httproute-dualstack", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
 			expectedResponse := http.ExpectedResponse{
@@ -71,7 +71,7 @@ var HTTPRouteDualStackTest = suite.ConformanceTest{
 		})
 
 		t.Run("HTTPRoute to IPv4 only service", func(t *testing.T) {
-			routeNN := types.NamespacedName{Name: "ipv4-only-route", Namespace: ns}
+			routeNN := types.NamespacedName{Name: "infra-backend-v1-httproute-ipv4", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
 			expectedResponse := http.ExpectedResponse{
