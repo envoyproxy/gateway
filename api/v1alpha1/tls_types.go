@@ -16,19 +16,9 @@ type ClientTLSSettings struct {
 	ClientValidation *ClientValidationContext `json:"clientValidation,omitempty"`
 	TLSSettings      `json:",inline"`
 
-	// SessionTimeout determines the maximum lifetime of a TLS session.
-	// https://commondatastorage.googleapis.com/chromium-boringssl-docs/ssl.h.html#SSL_DEFAULT_SESSION_TIMEOUT
-	// Default: 7200s
+	// Session defines setting related to TLS session management.
 	// +optional
-	SessionTimeout *gwapiv1.Duration `json:"sessionTimeout,omitempty"`
-
-	// SessionResumptionSettings determine the proxy's supported TLS session resumption option.
-	// By default, Envoy Gateway does not enable session resumption. Use sessionResumption to
-	// enable stateful and stateless session resumption. Users should consider security impacts
-	// of different resumption methods. Performance gains from resumption are diminished when
-	// Envoy proxy is deployed with more than one replica.
-	// +optional
-	SessionResumptionSettings *SessionResumption `json:"sessionResumption,omitempty"`
+	Session *Session `json:"session,omitempty"`
 }
 
 // +kubebuilder:validation:XValidation:rule="has(self.minVersion) && self.minVersion == '1.3' ? !has(self.ciphers) : true", message="setting ciphers has no effect if the minimum possible TLS version is 1.3"
@@ -148,15 +138,26 @@ type ClientValidationContext struct {
 	CACertificateRefs []gwapiv1.SecretObjectReference `json:"caCertificateRefs,omitempty"`
 }
 
+// Session defines setting related to TLS session management.
+type Session struct {
+	// Resumption determine the proxy's supported TLS session resumption option.
+	// By default, Envoy Gateway does not enable session resumption. Use sessionResumption to
+	// enable stateful and stateless session resumption. Users should consider security impacts
+	// of different resumption methods. Performance gains from resumption are diminished when
+	// Envoy proxy is deployed with more than one replica.
+	// +optional
+	Resumption *SessionResumption `json:"resumption,omitempty"`
+}
+
 // SessionResumption defines supported tls session resumption methods and their associated configuration.
 type SessionResumption struct {
-	// StatelessSessionResumption defines setting for stateless (session-ticket based) session resumption
+	// Stateless defines setting for stateless (session-ticket based) session resumption
 	// +optional
-	StatelessSessionResumption *StatelessTLSSessionResumption `json:"statelessSessionResumption,omitempty"`
+	Stateless *StatelessTLSSessionResumption `json:"stateless,omitempty"`
 
-	// StatefulSessionResumption defines setting for stateful (session-id based) session resumption
+	// Stateful defines setting for stateful (session-id based) session resumption
 	// +optional
-	StatefulSessionResumption *StatefulTLSSessionResumption `json:"statefulSessionResumption,omitempty"`
+	Stateful *StatefulTLSSessionResumption `json:"stateful,omitempty"`
 }
 
 // StatefulTLSSessionResumption defines the stateful (session-id based) type of TLS session resumption.

@@ -71,7 +71,6 @@
             tlsMaximumProtocolVersion: TLSv1_2
             tlsMinimumProtocolVersion: TLSv1_0
         disableStatelessSessionResumption: true
-        sessionTimeout: 30s
   listenerFilters:
   - name: envoy.filters.listener.tls_inspector
     typedConfig:
@@ -124,6 +123,5 @@
             tlsMaximumProtocolVersion: TLSv1_2
             tlsMinimumProtocolVersion: TLSv1_0
         disableStatefulSessionResumption: true
-        sessionTimeout: 60s
   name: second-listener
   perConnectionBufferLimitBytes: 32768

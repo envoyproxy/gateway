@@ -808,30 +808,27 @@ spec:
                     - "1.2"
                     - "1.3"
                     type: string
-                  sessionResumption:
-                    description: |-
-                      SessionResumptionSettings determine the proxy's supported TLS session resumption option.
-                      By default, Envoy Gateway does not enable session resumption. Use sessionResumption to
-                      enable stateful and stateless session resumption. Users should consider security impacts
-                      of different resumption methods. Performance gains from resumption are diminished when
-                      Envoy proxy is deployed with more than one replica.
+                  session:
+                    description: Session defines setting related to TLS session management.
                     properties:
-                      statefulSessionResumption:
-                        description: StatefulSessionResumption defines setting for
-                          stateful (session-id based) session resumption
-                        type: object
-                      statelessSessionResumption:
-                        description: StatelessSessionResumption defines setting for
-                          stateless (session-ticket based) session resumption
+                      resumption:
+                        description: |-
+                          Resumption determine the proxy's supported TLS session resumption option.
+                          By default, Envoy Gateway does not enable session resumption. Use sessionResumption to
+                          enable stateful and stateless session resumption. Users should consider security impacts
+                          of different resumption methods. Performance gains from resumption are diminished when
+                          Envoy proxy is deployed with more than one replica.
+                        properties:
+                          stateful:
+                            description: Stateful defines setting for stateful (session-id
+                              based) session resumption
+                            type: object
+                          stateless:
+                            description: Stateless defines setting for stateless (session-ticket
+                              based) session resumption
+                            type: object
                         type: object
                     type: object
-                  sessionTimeout:
-                    description: |-
-                      SessionTimeout determines the maximum lifetime of a TLS session.
-                      https://commondatastorage.googleapis.com/chromium-boringssl-docs/ssl.h.html#SSL_DEFAULT_SESSION_TIMEOUT
-                      Default: 7200s
-                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
-                    type: string
                   signatureAlgorithms:
                     description: |-
                       SignatureAlgorithms specifies which signature algorithms the listener should

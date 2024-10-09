@@ -610,8 +610,7 @@ _Appears in:_
 | `ecdhCurves` | _string array_ |  false  | ECDHCurves specifies the set of supported ECDH curves.<br />In non-FIPS Envoy Proxy builds the default curves are:<br />- X25519<br />- P-256<br />In builds using BoringSSL FIPS the default curve is:<br />- P-256 |
 | `signatureAlgorithms` | _string array_ |  false  | SignatureAlgorithms specifies which signature algorithms the listener should<br />support. |
 | `alpnProtocols` | _[ALPNProtocol](#alpnprotocol) array_ |  false  | ALPNProtocols supplies the list of ALPN protocols that should be<br />exposed by the listener. By default h2 and http/1.1 are enabled.<br />Supported values are:<br />- http/1.0<br />- http/1.1<br />- h2 |
-| `sessionTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | SessionTimeout determines the maximum lifetime of a TLS session.<br />https://commondatastorage.googleapis.com/chromium-boringssl-docs/ssl.h.html#SSL_DEFAULT_SESSION_TIMEOUT<br />Default: 7200s |
-| `sessionResumption` | _[SessionResumption](#sessionresumption)_ |  false  | SessionResumptionSettings determine the proxy's supported TLS session resumption option.<br />By default, Envoy Gateway does not enable session resumption. Use sessionResumption to<br />enable stateful and stateless session resumption. Users should consider security impacts<br />of different resumption methods. Performance gains from resumption are diminished when<br />Envoy proxy is deployed with more than one replica. |
+| `session` | _[Session](#session)_ |  false  | Session defines setting related to TLS session management. |
 
 
 #### ClientTimeout
@@ -3646,6 +3645,20 @@ _Appears in:_
 | `NodePort` | ServiceTypeNodePort means a service will be exposed on each Kubernetes Node<br />at a static Port, common across all Nodes.<br /> | 
 
 
+#### Session
+
+
+
+Session defines setting related to TLS session management.
+
+_Appears in:_
+- [ClientTLSSettings](#clienttlssettings)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `resumption` | _[SessionResumption](#sessionresumption)_ |  false  | Resumption determine the proxy's supported TLS session resumption option.<br />By default, Envoy Gateway does not enable session resumption. Use sessionResumption to<br />enable stateful and stateless session resumption. Users should consider security impacts<br />of different resumption methods. Performance gains from resumption are diminished when<br />Envoy proxy is deployed with more than one replica. |
+
+
 #### SessionResumption
 
 
@@ -3653,12 +3666,12 @@ _Appears in:_
 SessionResumption defines supported tls session resumption methods and their associated configuration.
 
 _Appears in:_
-- [ClientTLSSettings](#clienttlssettings)
+- [Session](#session)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `statelessSessionResumption` | _[StatelessTLSSessionResumption](#statelesstlssessionresumption)_ |  false  | StatelessSessionResumption defines setting for stateless (session-ticket based) session resumption |
-| `statefulSessionResumption` | _[StatefulTLSSessionResumption](#statefultlssessionresumption)_ |  false  | StatefulSessionResumption defines setting for stateful (session-id based) session resumption |
+| `stateless` | _[StatelessTLSSessionResumption](#statelesstlssessionresumption)_ |  false  | Stateless defines setting for stateless (session-ticket based) session resumption |
+| `stateful` | _[StatefulTLSSessionResumption](#statefultlssessionresumption)_ |  false  | Stateful defines setting for stateful (session-id based) session resumption |
 
 
 #### ShutdownConfig

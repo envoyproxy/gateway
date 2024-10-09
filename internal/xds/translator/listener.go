@@ -682,10 +682,6 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 }
 
 func setDownstreamTLSSessionSettings(tlsConfig *ir.TLSConfig, tlsCtx *tlsv3.DownstreamTlsContext) {
-	if tlsConfig.SessionTimeout != nil {
-		tlsCtx.SessionTimeout = durationpb.New(tlsConfig.SessionTimeout.Duration)
-	}
-
 	if !tlsConfig.StatefulSessionResumption {
 		tlsCtx.DisableStatefulSessionResumption = true
 	}
