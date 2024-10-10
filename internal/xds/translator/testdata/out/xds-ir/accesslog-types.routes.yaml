@@ -1,2 +1,20 @@
 - ignorePortInHostMatching: true
   name: envoy-gateway/gateway-1/http
+  virtualHosts:
+  - domains:
+    - '*'
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: http
+    name: envoy-gateway/gateway-1/http/*
+    routes:
+    - directResponse:
+        status: 500
+      match:
+        prefix: /
+      name: direct-route

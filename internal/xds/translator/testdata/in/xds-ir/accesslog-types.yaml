@@ -170,3 +170,15 @@ http:
       escapedSlashesAction: UnescapeAndRedirect
       mergeSlashes: true
     port: 10080
+    routes:
+      - name: "direct-route"
+        hostname: "*"
+        destination:
+          name: "direct-route-dest"
+          settings:
+            - endpoints:
+                - host: "1.2.3.4"
+                  port: 50000
+        directResponse:
+          body: "Unknown custom filter type: UnsupportedType"
+          statusCode: 500
