@@ -11213,6 +11213,13 @@ spec:
                                                       Default: unlimited.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                  requestTimeout:
+                                                    description: RequestTimeout is
+                                                      the time until which entire
+                                                      response is received from the
+                                                      upstream.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
                                                 type: object
                                               tcp:
                                                 description: Timeout settings for
@@ -12181,6 +12188,13 @@ spec:
                                                     description: |-
                                                       The maximum duration of an HTTP connection.
                                                       Default: unlimited.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  requestTimeout:
+                                                    description: RequestTimeout is
+                                                      the time until which entire
+                                                      response is received from the
+                                                      upstream.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                 type: object
@@ -13213,6 +13227,12 @@ spec:
                                                 Default: unlimited.
                                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
+                                            requestTimeout:
+                                              description: RequestTimeout is the time
+                                                until which entire response is received
+                                                from the upstream.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
                                           type: object
                                         tcp:
                                           description: Timeout settings for TCP.
@@ -14186,6 +14206,12 @@ spec:
                                         description: |-
                                           The maximum duration of an HTTP connection.
                                           Default: unlimited.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                      requestTimeout:
+                                        description: RequestTimeout is the time until
+                                          which entire response is received from the
+                                          upstream.
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                     type: object

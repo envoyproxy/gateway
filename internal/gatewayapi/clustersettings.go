@@ -81,11 +81,11 @@ func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatur
 	return ret, nil
 }
 
-func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings, traffic *ir.TrafficFeatures) (*ir.Timeout, error) {
+func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings, routeTrafficFeatures *ir.TrafficFeatures) (*ir.Timeout, error) {
 	if policy.Timeout == nil {
-		if traffic != nil {
+		if routeTrafficFeatures != nil {
 			// Don't lose any existing timeout definitions.
-			return mergeTimeoutSettings(nil, traffic.Timeout), nil
+			return mergeTimeoutSettings(nil, routeTrafficFeatures.Timeout), nil
 		}
 		return nil, nil
 	}
@@ -109,6 +109,7 @@ func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings, traffic *ir.Traf
 	if pto.HTTP != nil {
 		var cit *metav1.Duration
 		var mcd *metav1.Duration
+		var rt *metav1.Duration
 
 		if pto.HTTP.ConnectionIdleTimeout != nil {
 			d, err := time.ParseDuration(string(*pto.HTTP.ConnectionIdleTimeout))
@@ -128,19 +129,27 @@ func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings, traffic *ir.Traf
 			}
 		}
 
+		if pto.HTTP.RequestTimeout != nil {
+			d, err := time.ParseDuration(string(*pto.HTTP.RequestTimeout))
+			if err != nil {
+				errs = errors.Join(errs, fmt.Errorf("invalid RequestTimeout value %s", *pto.HTTP.RequestTimeout))
+			} else {
+				rt = ptr.To(metav1.Duration{Duration: d})
+			}
+		}
+
 		to.HTTP = &ir.HTTPTimeout{
 			ConnectionIdleTimeout: cit,
 			MaxConnectionDuration: mcd,
+			RequestTimeout:        rt,
 		}
 	}
 
-	// http request timeout is translated during the gateway-api route resource translation
-	// merge route timeout setting with backendtrafficpolicy timeout settings.
-	// Merging is done after the clustersettings definitions are translated so that
-	// clustersettings will override previous settings.
-	if traffic != nil {
-		to = mergeTimeoutSettings(to, traffic.Timeout)
+	// The timeout from route's TrafficFeatures takes precedence over the timeout in BTP
+	if routeTrafficFeatures != nil {
+		to = mergeTimeoutSettings(routeTrafficFeatures.Timeout, to)
 	}
+
 	return to, errs
 }
 
