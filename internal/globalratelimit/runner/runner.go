@@ -25,12 +25,12 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/common"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
+	"github.com/envoyproxy/gateway/internal/runner"
 	"github.com/envoyproxy/gateway/internal/xds/translator"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
@@ -46,7 +46,7 @@ const (
 	rateLimitTLSCACertFilename = "/certs/ca.crt"
 )
 
-var _ common.Runner = &Runner{}
+var _ runner.Runner = &Runner{}
 
 type Runner struct {
 	xdsIR           *message.XdsIR

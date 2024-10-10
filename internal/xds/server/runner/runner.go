@@ -29,10 +29,10 @@ import (
 	"google.golang.org/grpc/keepalive"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/common"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
+	"github.com/envoyproxy/gateway/internal/runner"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 	"github.com/envoyproxy/gateway/internal/xds/cache"
 	xdstypes "github.com/envoyproxy/gateway/internal/xds/types"
@@ -52,7 +52,7 @@ const (
 	xdsTLSCaFilename = "/certs/ca.crt"
 )
 
-var _ common.Runner = &Runner{}
+var _ runner.Runner = &Runner{}
 
 type Runner struct {
 	xds    *message.Xds

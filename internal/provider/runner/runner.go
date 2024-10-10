@@ -12,16 +12,16 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/common"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/provider"
 	"github.com/envoyproxy/gateway/internal/provider/file"
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes"
+	"github.com/envoyproxy/gateway/internal/runner"
 )
 
-var _ common.Runner = &Runner{}
+var _ runner.Runner = &Runner{}
 
 type Config struct {
 	ServerCfg         *config.Server
