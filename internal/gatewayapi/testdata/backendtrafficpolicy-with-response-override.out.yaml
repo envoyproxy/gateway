@@ -331,6 +331,7 @@ xdsIR:
             - match:
                 statusCode:
                 - value: "404"
+              name: backendtrafficpolicy/default/policy-for-gateway/responseoverride/rule/0
               response:
                 body: gateway-1 Not Found
                 contentType: text/plain
@@ -340,6 +341,7 @@ xdsIR:
                 - range:
                     end: 511
                     start: 501
+              name: backendtrafficpolicy/default/policy-for-gateway/responseoverride/rule/1
               response:
                 body: |
                   {
@@ -393,6 +395,7 @@ xdsIR:
             - match:
                 statusCode:
                 - value: "404"
+              name: backendtrafficpolicy/default/policy-for-route/responseoverride/rule/0
               response:
                 body: httproute-1 Not Found
                 contentType: text/plain
@@ -402,6 +405,7 @@ xdsIR:
                 - range:
                     end: 511
                     start: 501
+              name: backendtrafficpolicy/default/policy-for-route/responseoverride/rule/1
               response:
                 body: |
                   {

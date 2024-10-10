@@ -62,6 +62,7 @@ require (
 )
 
 require (
+	cel.dev/expr v0.16.0
 	github.com/docker/docker v27.3.1+incompatible
 	github.com/replicatedhq/troubleshoot v0.107.0
 	google.golang.org/grpc v1.67.1
@@ -69,7 +70,6 @@ require (
 )
 
 require (
-	cel.dev/expr v0.16.0 // indirect
 	dario.cat/mergo v1.0.1 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
 	fortio.org/cli v1.9.2 // indirect

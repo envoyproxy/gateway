@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strconv"
 	"strings"
 
 	perr "github.com/pkg/errors"
@@ -931,7 +932,7 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, configMaps []*co
 	}
 
 	rules := make([]ir.ResponseOverrideRule, 0, len(policy.Spec.ResponseOverride))
-	for _, ro := range policy.Spec.ResponseOverride {
+	for index, ro := range policy.Spec.ResponseOverride {
 		match := ir.CustomResponseMatch{
 			StatusCode: make([]ir.StatusCodeMatch, 0, len(ro.Match.StatusCode)),
 		}
@@ -975,12 +976,20 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, configMaps []*co
 		}
 
 		rules = append(rules, ir.ResponseOverrideRule{
+			Name:     defaultResponseOverrideRuleName(policy, index),
 			Match:    match,
 			Response: response,
 		})
 	}
 	return &ir.ResponseOverride{
-		Name: irConfigName(policy),
+		Name:  irConfigName(policy),
 		Rules: rules,
 	}, nil
+}
+
+func defaultResponseOverrideRuleName(policy *egv1a1.BackendTrafficPolicy, index int) string {
+	return fmt.Sprintf(
+		"%s/responseoverride/rule/%s",
+		irConfigName(policy),
+		strconv.Itoa(index))
 }

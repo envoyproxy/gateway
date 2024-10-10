@@ -476,12 +476,19 @@ type HTTP2Settings struct {
 // ResponseOverride defines the configuration to override specific responses with a custom one.
 // +k8s:deepcopy-gen=true
 type ResponseOverride struct {
+	// Name is a unique name for a ResponseOverride configuration.
+	// The xds translator only generates one CustomResponse filter for each unique name.
+	Name string `json:"name" yaml:"name"`
+
+	// Rules contains the list of rules to override responses.
 	Rules []ResponseOverrideRule `json:"rules,omitempty"`
 }
 
 // ResponseOverrideRule defines the configuration for overriding a response.
 // +k8s:deepcopy-gen=true
 type ResponseOverrideRule struct {
+	// Name is a generated name for the rule.
+	Name string `json:"name"`
 	// Match configuration.
 	Match CustomResponseMatch `json:"match"`
 	// Response configuration.
