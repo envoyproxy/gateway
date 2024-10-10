@@ -31,7 +31,7 @@ func TestRunner(t *testing.T) {
 	cfg, err := config.New()
 	require.NoError(t, err)
 	r := New(&Config{
-		Server:            *cfg,
+		ServerCfg:         cfg,
 		ProviderResources: pResource,
 		XdsIR:             xdsIR,
 		Xds:               xds,
@@ -111,7 +111,7 @@ func TestRunner_withExtensionManager(t *testing.T) {
 	cfg, err := config.New()
 	require.NoError(t, err)
 	r := New(&Config{
-		Server:            *cfg,
+		ServerCfg:         cfg,
 		ProviderResources: pResource,
 		XdsIR:             xdsIR,
 		Xds:               xds,

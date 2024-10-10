@@ -212,11 +212,8 @@ func Test_subscribeAndTranslate(t *testing.T) {
 			cfg, err := config.New()
 			require.NoError(t, err)
 
-			r := New(&Config{
-				Server: *cfg,
-				XdsIR:  xdsIR,
-				cache:  cachev3.NewSnapshotCache(false, cachev3.IDHash{}, nil),
-			})
+			r := New(cfg.Logger, xdsIR)
+			r.cache = cachev3.NewSnapshotCache(false, cachev3.IDHash{}, nil)
 
 			go r.subscribeAndTranslate(ctx)
 

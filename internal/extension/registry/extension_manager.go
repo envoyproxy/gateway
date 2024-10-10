@@ -47,7 +47,7 @@ var _ extTypes.Manager = (*Manager)(nil)
 type Manager struct {
 	k8sClient          k8scli.Client
 	namespace          string
-	extension          egv1a1.ExtensionManager
+	extension          *egv1a1.ExtensionManager
 	extensionConnCache *grpc.ClientConn
 }
 
@@ -58,20 +58,15 @@ func NewManager(cfg *config.Server) (extTypes.Manager, error) {
 		return nil, err
 	}
 
-	var extension *egv1a1.ExtensionManager
+	var extMgr *egv1a1.ExtensionManager
 	if cfg.EnvoyGateway != nil {
-		extension = cfg.EnvoyGateway.ExtensionManager
-	}
-
-	// Setup an empty default in the case that no config was provided
-	if extension == nil {
-		extension = &egv1a1.ExtensionManager{}
+		extMgr = cfg.EnvoyGateway.ExtensionManager
 	}
 
 	return &Manager{
 		k8sClient: cli,
 		namespace: cfg.Namespace,
-		extension: *extension,
+		extension: extMgr,
 	}, nil
 }
 
@@ -102,16 +97,18 @@ func NewInMemoryManager(cfg egv1a1.ExtensionManager, server extension.EnvoyGatew
 
 	return &Manager{
 		extensionConnCache: conn,
-		extension:          cfg,
+		extension:          &cfg,
 	}, c, nil
 }
 
 // HasExtension checks to see whether a given Group and Kind has an
 // associated extension registered for it.
 func (m *Manager) HasExtension(g gwapiv1.Group, k gwapiv1.Kind) bool {
-	extension := m.extension
+	if m.extension == nil {
+		return false
+	}
 	// TODO: not currently checking the version since extensionRef only supports group and kind.
-	for _, gvk := range extension.Resources {
+	for _, gvk := range m.extension.Resources {
 		if g == gwapiv1.Group(gvk.Group) && k == gwapiv1.Kind(gvk.Kind) {
 			return true
 		}
@@ -141,6 +138,9 @@ func getExtensionServerAddress(service *egv1a1.ExtensionService) string {
 func (m *Manager) GetPreXDSHookClient(xdsHookType egv1a1.XDSTranslatorHook) extTypes.XDSHookClient {
 	ctx := context.Background()
 	ext := m.extension
+	if ext == nil {
+		return nil
+	}
 
 	if ext.Hooks == nil {
 		return nil
@@ -163,7 +163,7 @@ func (m *Manager) GetPreXDSHookClient(xdsHookType egv1a1.XDSTranslatorHook) extT
 	if m.extensionConnCache == nil {
 		serverAddr := getExtensionServerAddress(ext.Service)
 
-		opts, err := setupGRPCOpts(ctx, m.k8sClient, &ext, m.namespace)
+		opts, err := setupGRPCOpts(ctx, m.k8sClient, ext, m.namespace)
 		if err != nil {
 			return nil
 		}
@@ -190,6 +190,9 @@ func (m *Manager) GetPreXDSHookClient(xdsHookType egv1a1.XDSTranslatorHook) extT
 func (m *Manager) GetPostXDSHookClient(xdsHookType egv1a1.XDSTranslatorHook) extTypes.XDSHookClient {
 	ctx := context.Background()
 	ext := m.extension
+	if ext == nil {
+		return nil
+	}
 
 	if ext.Hooks == nil {
 		return nil
@@ -212,7 +215,7 @@ func (m *Manager) GetPostXDSHookClient(xdsHookType egv1a1.XDSTranslatorHook) ext
 	if m.extensionConnCache == nil {
 		serverAddr := getExtensionServerAddress(ext.Service)
 
-		opts, err := setupGRPCOpts(ctx, m.k8sClient, &ext, m.namespace)
+		opts, err := setupGRPCOpts(ctx, m.k8sClient, ext, m.namespace)
 		if err != nil {
 			return nil
 		}

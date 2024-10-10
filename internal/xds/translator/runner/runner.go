@@ -8,6 +8,7 @@ package runner
 import (
 	"context"
 	"reflect"
+	"sync"
 
 	ktypes "k8s.io/apimachinery/pkg/types"
 
@@ -16,20 +17,26 @@ import (
 	extension "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
+	"github.com/envoyproxy/gateway/internal/runner"
 	"github.com/envoyproxy/gateway/internal/xds/translator"
 )
 
+var _ runner.Runner = &Runner{}
+
 type Config struct {
-	config.Server
+	ServerCfg         *config.Server
 	XdsIR             *message.XdsIR
 	Xds               *message.Xds
 	ExtensionManager  extension.Manager
 	ProviderResources *message.ProviderResources
+	Logger            logging.Logger
 }
 
 type Runner struct {
 	Config
+	m sync.Mutex
 }
 
 func New(cfg *Config) *Runner {
@@ -42,10 +49,21 @@ func (r *Runner) Name() string {
 
 // Start starts the xds-translator runner
 func (r *Runner) Start(ctx context.Context) (err error) {
-	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
+	r.Logger = r.ServerCfg.Logger.WithName(r.Name())
 	go r.subscribeAndTranslate(ctx)
 	r.Logger.Info("started")
 	return
+}
+
+func (r *Runner) Reload(serverCfg *config.Server) error {
+	r.m.Lock()
+	r.ServerCfg = serverCfg
+	r.Logger = serverCfg.Logger.WithName(r.Name())
+	r.m.Unlock()
+
+	r.Logger.Info("reloaded")
+	// TODO: trigger a reload
+	return nil
 }
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
@@ -69,16 +87,18 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					t.ExtensionManager = &r.ExtensionManager
 				}
 
+				r.m.Lock()
 				// Set the rate limit service URL if global rate limiting is enabled.
-				if r.EnvoyGateway.RateLimit != nil {
+				if r.ServerCfg.EnvoyGateway.RateLimit != nil {
 					t.GlobalRateLimit = &translator.GlobalRateLimitSettings{
-						ServiceURL: ratelimit.GetServiceURL(r.Namespace, r.DNSDomain),
-						FailClosed: r.EnvoyGateway.RateLimit.FailClosed,
+						ServiceURL: ratelimit.GetServiceURL(r.ServerCfg.Namespace, r.ServerCfg.DNSDomain),
+						FailClosed: r.ServerCfg.EnvoyGateway.RateLimit.FailClosed,
 					}
-					if r.EnvoyGateway.RateLimit.Timeout != nil {
-						t.GlobalRateLimit.Timeout = r.EnvoyGateway.RateLimit.Timeout.Duration
+					if r.ServerCfg.EnvoyGateway.RateLimit.Timeout != nil {
+						t.GlobalRateLimit.Timeout = r.ServerCfg.EnvoyGateway.RateLimit.Timeout.Duration
 					}
 				}
+				r.m.Unlock()
 
 				result, err := t.Translate(val)
 				if err != nil {

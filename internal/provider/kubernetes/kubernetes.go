@@ -32,15 +32,16 @@ import (
 type Provider struct {
 	client  client.Client
 	manager manager.Manager
+	cancel  context.CancelFunc
 }
 
 // New creates a new Provider from the provided EnvoyGateway.
-func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources) (*Provider, error) {
+func New(rest *rest.Config, svr *ec.Server, resources *message.ProviderResources) (*Provider, error) {
 	// TODO: Decide which mgr opts should be exposed through envoygateway.provider.kubernetes API.
 
 	mgrOpts := manager.Options{
 		Scheme:                  envoygateway.GetScheme(),
-		Logger:                  svr.Logger.Logger,
+		Logger:                  svr.Logger.Logger.WithName("kubernetes-provider"),
 		HealthProbeBindAddress:  ":8081",
 		LeaderElectionID:        "5b9825d2.gateway.envoyproxy.io",
 		LeaderElectionNamespace: svr.Namespace,
@@ -82,7 +83,7 @@ func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources)
 			mgrOpts.Cache.DefaultNamespaces[watchNS] = cache.Config{}
 		}
 	}
-	mgr, err := ctrl.NewManager(cfg, mgrOpts)
+	mgr, err := ctrl.NewManager(rest, mgrOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create manager: %w", err)
 	}
@@ -110,7 +111,7 @@ func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources)
 	// Emit elected & continue with deployment of infra resources
 	go func() {
 		<-mgr.Elected()
-		close(svr.Elected)
+		svr.Elected <- struct{}{}
 	}()
 
 	return &Provider{
@@ -125,9 +126,11 @@ func (p *Provider) Type() egv1a1.ProviderType {
 
 // Start starts the Provider synchronously until a message is received from ctx.
 func (p *Provider) Start(ctx context.Context) error {
+	c, cancel := context.WithCancel(ctx)
+	p.cancel = cancel
 	errChan := make(chan error)
 	go func() {
-		errChan <- p.manager.Start(ctx)
+		errChan <- p.manager.Start(c)
 	}()
 
 	// Wait for the manager to exit or an explicit stop.
@@ -137,4 +140,8 @@ func (p *Provider) Start(ctx context.Context) error {
 	case err := <-errChan:
 		return err
 	}
+}
+
+func (p *Provider) Stop() {
+	p.cancel()
 }

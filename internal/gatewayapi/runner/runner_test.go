@@ -36,7 +36,7 @@ func TestRunner(t *testing.T) {
 	require.NoError(t, err)
 	defer closeFunc()
 	r := New(&Config{
-		Server:            *cfg,
+		ServerCfg:         cfg,
 		ProviderResources: pResources,
 		XdsIR:             xdsIR,
 		InfraIR:           infraIR,
@@ -122,7 +122,7 @@ func TestDeleteStatusKeys(t *testing.T) {
 	require.NoError(t, err)
 	defer closeFunc()
 	r := New(&Config{
-		Server:            *cfg,
+		ServerCfg:         cfg,
 		ProviderResources: pResources,
 		XdsIR:             xdsIR,
 		InfraIR:           infraIR,
@@ -223,7 +223,7 @@ func TestDeleteAllStatusKeys(t *testing.T) {
 	require.NoError(t, err)
 	defer closeFunc()
 	r := New(&Config{
-		Server:            *cfg,
+		ServerCfg:         cfg,
 		ProviderResources: pResources,
 		XdsIR:             xdsIR,
 		InfraIR:           infraIR,

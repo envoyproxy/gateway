@@ -17,4 +17,7 @@ type Provider interface {
 
 	// Type returns the type of resource provider.
 	Type() egv1a1.ProviderType
+
+	// Stop stops the resource provider.
+	Stop()
 }
