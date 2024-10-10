@@ -138,9 +138,9 @@ type ClientValidationContext struct {
 	CACertificateRefs []gwapiv1.SecretObjectReference `json:"caCertificateRefs,omitempty"`
 }
 
-// Session defines setting related to TLS session management.
+// Session defines settings related to TLS session management.
 type Session struct {
-	// Resumption determine the proxy's supported TLS session resumption option.
+	// Resumption determines the proxy's supported TLS session resumption option.
 	// By default, Envoy Gateway does not enable session resumption. Use sessionResumption to
 	// enable stateful and stateless session resumption. Users should consider security impacts
 	// of different resumption methods. Performance gains from resumption are diminished when

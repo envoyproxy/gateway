@@ -3649,14 +3649,14 @@ _Appears in:_
 
 
 
-Session defines setting related to TLS session management.
+Session defines settings related to TLS session management.
 
 _Appears in:_
 - [ClientTLSSettings](#clienttlssettings)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `resumption` | _[SessionResumption](#sessionresumption)_ |  false  | Resumption determine the proxy's supported TLS session resumption option.<br />By default, Envoy Gateway does not enable session resumption. Use sessionResumption to<br />enable stateful and stateless session resumption. Users should consider security impacts<br />of different resumption methods. Performance gains from resumption are diminished when<br />Envoy proxy is deployed with more than one replica. |
+| `resumption` | _[SessionResumption](#sessionresumption)_ |  false  | Resumption determines the proxy's supported TLS session resumption option.<br />By default, Envoy Gateway does not enable session resumption. Use sessionResumption to<br />enable stateful and stateless session resumption. Users should consider security impacts<br />of different resumption methods. Performance gains from resumption are diminished when<br />Envoy proxy is deployed with more than one replica. |
 
 
 #### SessionResumption

@@ -30,7 +30,6 @@ http:
     minVersion: "1.0"
     alpnProtocols:
     - some-other-protocol
-    sessionTimeout: 30s
     statefulSessionResumption: true
     certificates:
     - name: secret-1
@@ -109,7 +108,6 @@ tcp:
         minVersion: "1.0"
         alpnProtocols:
         - some-other-protocol
-        sessionTimeout: 60s
         statelessSessionResumption: true
         certificates:
         - name: secret-3
