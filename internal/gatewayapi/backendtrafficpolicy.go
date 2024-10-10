@@ -980,6 +980,7 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, configMaps []*co
 		})
 	}
 	return &ir.ResponseOverride{
+		Name: irConfigName(policy),
 		Rules: rules,
 	}, nil
 }

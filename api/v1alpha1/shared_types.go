@@ -694,6 +694,7 @@ const (
 )
 
 // CustomResponseBody
+// TODO: zhaohuabing add CEL validation for the ValueRef
 type CustomResponseBody struct {
 	// Type is the type of method to use to read the body value.
 	// Valid values are Inline and ValueRef, default is Inline.
