@@ -240,11 +240,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - destination:
-          name: httproute/envoy-gateway/httproute-1/rule/0
-          settings:
-          - weight: 1
-        directResponse:
+      - directResponse:
           statusCode: 500
         envoyExtensions:
           wasms:
