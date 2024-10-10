@@ -16,7 +16,7 @@ type ClientTLSSettings struct {
 	ClientValidation *ClientValidationContext `json:"clientValidation,omitempty"`
 	TLSSettings      `json:",inline"`
 
-	// Session defines setting related to TLS session management.
+	// Session defines settings related to TLS session management.
 	// +optional
 	Session *Session `json:"session,omitempty"`
 }
