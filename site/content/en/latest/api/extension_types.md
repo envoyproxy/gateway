@@ -1544,6 +1544,7 @@ _Appears in:_
 | `messageTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | MessageTimeout is the timeout for a response to be returned from the external processor<br />Default: 200ms |
 | `failOpen` | _boolean_ |  false  | FailOpen defines if requests or responses that cannot be processed due to connectivity to the<br />external processor are terminated or passed-through.<br />Default: false |
 | `processingMode` | _[ExtProcProcessingMode](#extprocprocessingmode)_ |  false  | ProcessingMode defines how request and response body is processed<br />Default: header and body are not sent to the external processor |
+| `untyped` | _[MetadataOptions](#metadataoptions)_ |  false  | Untyped defines the untyped metadata that should be forwarded to or received from the external processor. |
 
 
 #### ExtProcBodyProcessingMode
@@ -2683,6 +2684,21 @@ _Appears in:_
 | `error` | LogLevelError defines the "Error" logging level.<br /> | 
 
 
+
+
+#### MetadataOptions
+
+
+
+
+
+_Appears in:_
+- [ExtProc](#extproc)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `forwardingNamespaces` | _string array_ |  true  | ForwardingNamespaces is a list of namespaces from which metadata should be forwarded to the external processor. |
+| `receivingNamespaces` | _string array_ |  true  | ReceivingNamespaces is a list of namespaces from which metadata should be received from the external processor. |
 
 
 #### MetricSinkType
