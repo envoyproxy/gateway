@@ -70,3 +70,78 @@ func getXdsClusterObjFromBootstrap(t *testing.T) *clusterv3.Cluster {
 
 	return nil
 }
+
+func TestGetDNSLookupFamily(t *testing.T) {
+	tests := []struct {
+		name     string
+		settings []*ir.DestinationSetting
+		expected clusterv3.Cluster_DnsLookupFamily
+	}{
+		{
+			name: "IPv4 only",
+			settings: []*ir.DestinationSetting{
+				{Endpoints: []*ir.DestinationEndpoint{{Host: "192.0.2.1"}}},
+			},
+			expected: clusterv3.Cluster_V4_ONLY,
+		},
+		{
+			name: "IPv6 only",
+			settings: []*ir.DestinationSetting{
+				{Endpoints: []*ir.DestinationEndpoint{{Host: "2001:db8::1"}}},
+			},
+			expected: clusterv3.Cluster_V6_ONLY,
+		},
+		{
+			name: "Dual stack",
+			settings: []*ir.DestinationSetting{
+				{Endpoints: []*ir.DestinationEndpoint{{Host: "192.0.2.1"}}},
+				{Endpoints: []*ir.DestinationEndpoint{{Host: "2001:db8::1"}}},
+			},
+			expected: clusterv3.Cluster_ALL,
+		},
+		{
+			name:     "No settings",
+			settings: nil,
+			expected: clusterv3.Cluster_V4_ONLY,
+		},
+		{
+			name: "FQDN only",
+			settings: []*ir.DestinationSetting{
+				{Endpoints: []*ir.DestinationEndpoint{{Host: "example.com"}}},
+			},
+			expected: clusterv3.Cluster_V4_ONLY,
+		},
+		{
+			name: "Mixed IPv4 and FQDN",
+			settings: []*ir.DestinationSetting{
+				{Endpoints: []*ir.DestinationEndpoint{{Host: "192.0.2.1"}}},
+				{Endpoints: []*ir.DestinationEndpoint{{Host: "example.com"}}},
+			},
+			expected: clusterv3.Cluster_V4_ONLY,
+		},
+		{
+			name: "Mixed IPv6 and FQDN",
+			settings: []*ir.DestinationSetting{
+				{Endpoints: []*ir.DestinationEndpoint{{Host: "2001:db8::1"}}},
+				{Endpoints: []*ir.DestinationEndpoint{{Host: "example.com"}}},
+			},
+			expected: clusterv3.Cluster_V6_ONLY,
+		},
+		{
+			name: "Mixed IPv4, IPv6 and FQDN",
+			settings: []*ir.DestinationSetting{
+				{Endpoints: []*ir.DestinationEndpoint{{Host: "192.0.2.1"}}},
+				{Endpoints: []*ir.DestinationEndpoint{{Host: "2001:db8::1"}}},
+				{Endpoints: []*ir.DestinationEndpoint{{Host: "example.com"}}},
+			},
+			expected: clusterv3.Cluster_ALL,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getDNSLookupFamily(tt.settings)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}

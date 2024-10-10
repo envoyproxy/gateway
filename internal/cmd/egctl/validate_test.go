@@ -56,7 +56,7 @@ metadata:
   namespace: default
 spec:
 ...
-local validation error: Backend.gateway.envoyproxy.io "backend-1" is invalid: spec.endpoints[0].ip.address: Invalid value: "a.b.c.d": spec.endpoints[0].ip.address in body should match '^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
+local validation error: Backend.gateway.envoyproxy.io "backend-1" is invalid: spec.endpoints[0].ip.address: Invalid value: "a.b.c.d": spec.endpoints[0].ip.address in body should match '^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$|^(([0-9a-fA-F]{1,4}:){1,7}[0-9a-fA-F]{1,4}|::|(([0-9a-fA-F]{1,4}:){0,5})?(:[0-9a-fA-F]{1,4}){1,2})$'
 
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: Backend
