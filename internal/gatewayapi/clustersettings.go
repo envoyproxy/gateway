@@ -71,6 +71,8 @@ func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatur
 		ret.HTTP2 = h2
 	}
 
+	ret.Retry = buildRetry(policy.Retry)
+
 	// If nothing was set in any of the above calls, return nil instead of an empty
 	// container
 	var empty ir.TrafficFeatures
@@ -497,4 +499,65 @@ func translateDNS(policy egv1a1.ClusterSettings) *ir.DNS {
 		RespectDNSTTL:  policy.DNS.RespectDNSTTL,
 		DNSRefreshRate: policy.DNS.DNSRefreshRate,
 	}
+}
+
+func buildRetry(r *egv1a1.Retry) *ir.Retry {
+	if r == nil {
+		return nil
+	}
+
+	rt := &ir.Retry{}
+
+	if r.NumRetries != nil {
+		rt.NumRetries = ptr.To(uint32(*r.NumRetries))
+	}
+
+	if r.RetryOn != nil {
+		ro := &ir.RetryOn{}
+		bro := false
+		if r.RetryOn.HTTPStatusCodes != nil {
+			ro.HTTPStatusCodes = makeIrStatusSet(r.RetryOn.HTTPStatusCodes)
+			bro = true
+		}
+
+		if r.RetryOn.Triggers != nil {
+			ro.Triggers = makeIrTriggerSet(r.RetryOn.Triggers)
+			bro = true
+		}
+
+		if bro {
+			rt.RetryOn = ro
+		}
+	}
+
+	if r.PerRetry != nil {
+		pr := &ir.PerRetryPolicy{}
+		bpr := false
+
+		if r.PerRetry.Timeout != nil {
+			pr.Timeout = r.PerRetry.Timeout
+			bpr = true
+		}
+
+		if r.PerRetry.BackOff != nil {
+			if r.PerRetry.BackOff.MaxInterval != nil || r.PerRetry.BackOff.BaseInterval != nil {
+				bop := &ir.BackOffPolicy{}
+				if r.PerRetry.BackOff.MaxInterval != nil {
+					bop.MaxInterval = r.PerRetry.BackOff.MaxInterval
+				}
+
+				if r.PerRetry.BackOff.BaseInterval != nil {
+					bop.BaseInterval = r.PerRetry.BackOff.BaseInterval
+				}
+				pr.BackOff = bop
+				bpr = true
+			}
+		}
+
+		if bpr {
+			rt.PerRetry = pr
+		}
+	}
+
+	return rt
 }
