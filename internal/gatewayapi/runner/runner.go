@@ -138,7 +138,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			r.Logger.Info("received an update")
 			val := update.Value
 			// There is only 1 key which is the controller name
-			// so when delete is triggered, delete all IR keys
+			// so when a delete is triggered, delete all IR keys
 			if update.Delete || val == nil {
 				r.deleteAllIRKeys()
 				r.deleteAllStatusKeys()

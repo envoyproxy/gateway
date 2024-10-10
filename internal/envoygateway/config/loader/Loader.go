@@ -51,7 +51,7 @@ func (r *Loader) Start(ctx context.Context) error {
 		r.logger.Error(err, "failed to create fsnotify watcher")
 		return err
 	}
-	r.logger.Info("watch file changes", "path", r.cfgPath)
+	r.logger.Info("watching for changes to the EnvoyGateway configuration", "path", r.cfgPath)
 
 	if err := w.Add(r.cfgPath); err != nil {
 		r.logger.Error(err, "failed to add config file to watcher")
@@ -68,13 +68,14 @@ func (r *Loader) Start(ctx context.Context) error {
 				}
 
 				for _, e := range events {
-					r.logger.Info("receive fsnotify events", "name", e.Name, "op", e.Op.String())
+					r.logger.Info("received fsnotify events", "name", e.Name, "op", e.Op.String())
 				}
 
 				// Load the config file.
 				eg, err := config.Decode(r.cfgPath)
 				if err != nil {
-					r.logger.Error(err, "failed to decode config file", "name", r.cfgPath)
+					r.logger.Info("failed to decode config file", "name", r.cfgPath, "error", err)
+					// TODO: add a metric for this?
 					continue
 				}
 				// Set defaults for unset fields
