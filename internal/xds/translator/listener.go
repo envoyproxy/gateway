@@ -624,6 +624,8 @@ func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSConfig) (*corev3.Transp
 		}
 	}
 
+	setDownstreamTLSSessionSettings(tlsConfig, tlsCtx.DownstreamTlsContext)
+
 	tlsCtxAny, err := anypb.New(tlsCtx)
 	if err != nil {
 		return nil, err
@@ -664,6 +666,8 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 		}
 	}
 
+	setDownstreamTLSSessionSettings(tlsConfig, tlsCtx)
+
 	tlsCtxAny, err := anypb.New(tlsCtx)
 	if err != nil {
 		return nil, err
@@ -675,6 +679,18 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 			TypedConfig: tlsCtxAny,
 		},
 	}, nil
+}
+
+func setDownstreamTLSSessionSettings(tlsConfig *ir.TLSConfig, tlsCtx *tlsv3.DownstreamTlsContext) {
+	if !tlsConfig.StatefulSessionResumption {
+		tlsCtx.DisableStatefulSessionResumption = true
+	}
+
+	if !tlsConfig.StatelessSessionResumption {
+		tlsCtx.SessionTicketKeysType = &tlsv3.DownstreamTlsContext_DisableStatelessSessionResumption{
+			DisableStatelessSessionResumption: true,
+		}
+	}
 }
 
 func buildTLSParams(tlsConfig *ir.TLSConfig) *tlsv3.TlsParameters {

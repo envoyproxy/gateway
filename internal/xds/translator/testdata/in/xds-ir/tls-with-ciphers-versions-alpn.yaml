@@ -30,6 +30,7 @@ http:
     minVersion: "1.0"
     alpnProtocols:
     - some-other-protocol
+    statefulSessionResumption: true
     certificates:
     - name: secret-1
       # byte slice representation of "key-data"
@@ -107,6 +108,7 @@ tcp:
         minVersion: "1.0"
         alpnProtocols:
         - some-other-protocol
+        statelessSessionResumption: true
         certificates:
         - name: secret-3
           # byte slice representation of "key-data"

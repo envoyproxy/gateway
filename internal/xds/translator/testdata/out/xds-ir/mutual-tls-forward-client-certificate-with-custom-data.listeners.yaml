@@ -52,6 +52,8 @@
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
+        disableStatefulSessionResumption: true
+        disableStatelessSessionResumption: true
         requireClientCertificate: false
   name: first-listener
   perConnectionBufferLimitBytes: 32768
@@ -110,6 +112,8 @@
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
+        disableStatefulSessionResumption: true
+        disableStatelessSessionResumption: true
         requireClientCertificate: false
   name: second-listener
   perConnectionBufferLimitBytes: 32768
@@ -170,6 +174,8 @@
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
+        disableStatefulSessionResumption: true
+        disableStatelessSessionResumption: true
         requireClientCertificate: false
   name: third-listener
   perConnectionBufferLimitBytes: 32768
@@ -232,6 +238,8 @@
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
+        disableStatefulSessionResumption: true
+        disableStatelessSessionResumption: true
         requireClientCertificate: false
   name: fourth-listener
   perConnectionBufferLimitBytes: 32768
@@ -296,6 +304,8 @@
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
+        disableStatefulSessionResumption: true
+        disableStatelessSessionResumption: true
         requireClientCertificate: false
   name: fifth-listener
   perConnectionBufferLimitBytes: 32768

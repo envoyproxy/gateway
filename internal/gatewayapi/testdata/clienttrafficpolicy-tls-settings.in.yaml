@@ -22,6 +22,10 @@ clientTrafficPolicies:
       signatureAlgorithms:
       - sig1
       - sig2
+      session:
+        resumption:
+          stateless: {}
+          stateful: {}
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
