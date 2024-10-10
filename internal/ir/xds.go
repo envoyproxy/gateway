@@ -47,6 +47,7 @@ var (
 	ErrDestEndpointUDSPortInvalid              = errors.New("field Port must not be specified for Unix Domain Socket address")
 	ErrDestEndpointUDSHostInvalid              = errors.New("field Host must not be specified for Unix Domain Socket address")
 	ErrStringMatchConditionInvalid             = errors.New("only one of the Exact, Prefix, SafeRegex or Distinct fields must be set")
+	ErrStringMatchInvertDistinctInvalid        = errors.New("only one of the Invert or Distinct fields can be set")
 	ErrStringMatchNameIsEmpty                  = errors.New("field Name must be specified")
 	ErrDirectResponseStatusInvalid             = errors.New("only HTTP status codes 100 - 599 are supported for DirectResponse")
 	ErrRedirectUnsupportedStatus               = errors.New("only HTTP status codes 301 and 302 are supported for redirect filters")
@@ -1443,6 +1444,8 @@ type StringMatch struct {
 	// Distinct match condition.
 	// Used to match any and all possible unique values encountered within the Name field.
 	Distinct bool `json:"distinct" yaml:"distinct"`
+	// Invert inverts the final match decision
+	Invert *bool `json:"invert,omitempty" yaml:"invert,omitempty"`
 }
 
 // Validate the fields within the StringMatch structure
@@ -1464,6 +1467,9 @@ func (s StringMatch) Validate() error {
 	if s.Distinct {
 		if s.Name == "" {
 			errs = errors.Join(errs, ErrStringMatchNameIsEmpty)
+		}
+		if s.Invert != nil && *s.Invert {
+			errs = errors.Join(errs, ErrStringMatchInvertDistinctInvalid)
 		}
 		matchCount++
 	}

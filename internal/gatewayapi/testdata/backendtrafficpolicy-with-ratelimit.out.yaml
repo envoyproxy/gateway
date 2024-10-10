@@ -52,6 +52,9 @@ backendTrafficPolicies:
               value: one
             - name: x-org-id
               type: Distinct
+            - invert: true
+              name: x-org-id
+              value: admin
           limit:
             requests: 10
             unit: Hour
@@ -305,6 +308,10 @@ xdsIR:
                   exact: one
                   name: x-user-id
                 - distinct: true
+                  name: x-org-id
+                - distinct: false
+                  exact: admin
+                  invert: true
                   name: x-org-id
                 limit:
                   requests: 10
