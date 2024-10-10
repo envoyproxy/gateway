@@ -2996,6 +2996,7 @@ _Appears in:_
 | `format` | _[ProxyAccessLogFormat](#proxyaccesslogformat)_ |  false  | Format defines the format of accesslog.<br />This will be ignored if sink type is ALS. |
 | `matches` | _string array_ |  true  | Matches defines the match conditions for accesslog in CEL expression.<br />An accesslog will be emitted only when one or more match conditions are evaluated to true.<br />Invalid [CEL](https://www.envoyproxy.io/docs/envoy/latest/xds/type/v3/cel.proto.html#common-expression-language-cel-proto) expressions will be ignored. |
 | `sinks` | _[ProxyAccessLogSink](#proxyaccesslogsink) array_ |  true  | Sinks defines the sinks of accesslog. |
+| `type` | _[ProxyAccessLogType](#proxyaccesslogtype)_ |  false  | Type defines the component emitting the accesslog, such as Listener and Route.<br />If type not defined, the setting would apply to:<br />(1) All Routes.<br />(2) Listeners if and only if Envoy does not find a matching route for a request.<br />If type is defined, the accesslog settings would apply to the relevant component (as-is). |
 
 
 #### ProxyAccessLogSink
