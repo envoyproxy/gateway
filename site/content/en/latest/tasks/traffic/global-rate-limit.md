@@ -870,7 +870,7 @@ spec:
       - clientSelectors:
         - sourceCIDR: 
             value: 0.0.0.0/0
-            type: distinct
+            type: Distinct
         limit:
           requests: 3
           unit: Hour
