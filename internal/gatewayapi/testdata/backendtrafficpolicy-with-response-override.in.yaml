@@ -1,0 +1,145 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: default
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: default
+    name: gateway-2
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+grpcRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: GRPCRoute
+  metadata:
+    namespace: default
+    name: grpcroute-1
+  spec:
+    parentRefs:
+    - namespace: default
+      name: gateway-1
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: default
+      name: gateway-2
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
+configMaps:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: response-override-config
+      namespace: default
+    data:
+      response.body: |
+        {
+          "error": "Internal Server Error"
+        }
+backendTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-for-gateway
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+    responseOverride:
+    - match:
+        statusCode:
+        - type: value
+          value: 404
+      response:
+        contentType: text/plain
+        body:
+          type: Inline
+          inline: "gateway-1 Not Found"
+    - match:
+        statusCode:
+        - type: value
+          value: 500
+        - type: Range
+          range:
+            start: 501
+            end: 511
+      response:
+        contentType: application/json
+        body:
+          type: ValueRef
+          valueRef:
+            kind: ConfigMap
+            name: response-override-config
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+    responseOverride:
+    - match:
+        statusCode:
+        - value: 404
+      response:
+        contentType: text/plain
+        body:
+          inline: "httproute-1 Not Found"
+    - match:
+        statusCode:
+        - value: 500
+        - type: Range
+          range:
+            start: 501
+            end: 511
+      response:
+        contentType: application/json
+        body:
+          type: ValueRef
+          valueRef:
+            kind: ConfigMap
+            name: response-override-config
+
+
