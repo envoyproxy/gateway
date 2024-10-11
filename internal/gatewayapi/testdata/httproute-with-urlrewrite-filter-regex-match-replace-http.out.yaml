@@ -308,7 +308,8 @@ xdsIR:
           name: ""
           prefix: /host-and-regex-path
         urlRewrite:
-          hostname: rewrite.com
+          host:
+            name: rewrite.com
           path:
             fullReplace: null
             prefixMatchReplace: null
@@ -336,7 +337,8 @@ xdsIR:
           name: ""
           prefix: /regex-path-and-host
         urlRewrite:
-          hostname: rewrite.com
+          host:
+            name: rewrite.com
       - destination:
           name: httproute/default/httproute-1/rule/0
           settings:

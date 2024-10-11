@@ -45,7 +45,7 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
-    name: httproute-invalid-pattern
+    name: httproute-invalid-header
     namespace: default
   spec:
     hostnames:
@@ -62,16 +62,16 @@ httpRoutes:
       - extensionRef:
           group: gateway.envoyproxy.io
           kind: HTTPRouteFilter
-          name: invalid-pattern
+          name: invalid-header
         type: ExtensionRef
       matches:
       - path:
-          value: /invalid-pattern
+          value: /invalid-header
   status:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: ReplaceRegexMatch must be a valid RE2 regular expression
+        message: Header must be set when rewrite path type is "Header"
         reason: UnsupportedValue
         status: "False"
         type: Accepted
@@ -89,7 +89,7 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
-    name: httproute-missing-pattern
+    name: httproute-multiple-host-rewrites-1
     namespace: default
   spec:
     hostnames:
@@ -106,57 +106,11 @@ httpRoutes:
       - extensionRef:
           group: gateway.envoyproxy.io
           kind: HTTPRouteFilter
-          name: missing-pattern
-        type: ExtensionRef
-      matches:
-      - path:
-          value: /missing-pattern
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: ReplaceRegexMatch Pattern must be set when rewrite path type is "ReplaceRegexMatch"
-        reason: UnsupportedValue
-        status: "False"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: http
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
-  metadata:
-    creationTimestamp: null
-    name: httproute-multiple-path-rewrites-1
-    namespace: default
-  spec:
-    hostnames:
-    - gateway.envoyproxy.io
-    parentRefs:
-    - name: gateway-1
-      namespace: envoy-gateway
-      sectionName: http
-    rules:
-    - backendRefs:
-      - name: service-1
-        port: 8080
-      filters:
-      - extensionRef:
-          group: gateway.envoyproxy.io
-          kind: HTTPRouteFilter
-          name: valid
+          name: valid-header
         type: ExtensionRef
       - type: URLRewrite
         urlRewrite:
-          path:
-            replacePrefixMatch: /rewrite
-            type: ReplacePrefixMatch
+          hostname: rewrite.com
       matches:
       - path:
           value: /ext-first
@@ -198,13 +152,11 @@ httpRoutes:
       filters:
       - type: URLRewrite
         urlRewrite:
-          path:
-            replacePrefixMatch: /rewrite
-            type: ReplacePrefixMatch
+          hostname: rewrite.com
       - extensionRef:
           group: gateway.envoyproxy.io
           kind: HTTPRouteFilter
-          name: valid
+          name: valid-header
         type: ExtensionRef
       matches:
       - path:
@@ -231,7 +183,7 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
-    name: httproute-multiple-regex-path-rewrites
+    name: httproute-multiple-header-host-rewrites
     namespace: default
   spec:
     hostnames:
@@ -248,16 +200,16 @@ httpRoutes:
       - extensionRef:
           group: gateway.envoyproxy.io
           kind: HTTPRouteFilter
-          name: valid
+          name: valid-header
         type: ExtensionRef
       - extensionRef:
           group: gateway.envoyproxy.io
           kind: HTTPRouteFilter
-          name: valid-2
+          name: valid-header-2
         type: ExtensionRef
       matches:
       - path:
-          value: /two-regex
+          value: /two-headers
   status:
     parents:
     - conditions:
@@ -280,7 +232,7 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
-    name: httproute-not-found
+    name: httproute-multiple-header-host-rewrites
     namespace: default
   spec:
     hostnames:
@@ -297,23 +249,77 @@ httpRoutes:
       - extensionRef:
           group: gateway.envoyproxy.io
           kind: HTTPRouteFilter
-          name: notfound
+          name: valid-backend
+        type: ExtensionRef
+      - extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: valid-backend-2
         type: ExtensionRef
       matches:
       - path:
-          value: /notfound
+          value: /two-backends
   status:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Unable to translate HTTPRouteFilter: default/notfound'
+        message: Cannot configure multiple urlRewrite filters for a single HTTPRouteRule
         reason: UnsupportedValue
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: 'Unable to translate HTTPRouteFilter: default/notfound'
-        reason: BackendNotFound
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-header-and-backend-host-rewrites
+    namespace: default
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      filters:
+      - extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: valid-header
+        type: ExtensionRef
+      - extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: valid-header
+        type: ExtensionRef
+      matches:
+      - path:
+          value: /header-and-backend
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Cannot configure multiple urlRewrite filters for a single HTTPRouteRule
+        reason: UnsupportedValue
         status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
