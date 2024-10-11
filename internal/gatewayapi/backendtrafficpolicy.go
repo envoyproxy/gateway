@@ -969,7 +969,7 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, configMaps []*co
 				}
 			}
 			if response.Body == "" {
-				return nil, fmt.Errorf("can't find the refrenced configmap %s", ro.Response.Body.ValueRef.Name)
+				return nil, fmt.Errorf("can't find the referenced configmap %s", ro.Response.Body.ValueRef.Name)
 			}
 		} else {
 			response.Body = *ro.Response.Body.Inline
