@@ -90,15 +90,24 @@ var (
 	}
 )
 
-func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLog {
+func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) []*accesslog.AccessLog {
 	if al == nil {
 		return nil
 	}
 
 	totalLen := len(al.Text) + len(al.JSON) + len(al.OpenTelemetry)
 	accessLogs := make([]*accesslog.AccessLog, 0, totalLen)
+
 	// handle text file access logs
 	for _, text := range al.Text {
+		// Filter out logs that are not Global or match the desired access log type
+		if !(text.LogType == nil || *text.LogType == accessLogType) {
+			continue
+		}
+
+		// NR is only added to listener logs originating from a global log configuration
+		defaultLogTypeForListener := accessLogType == ir.ProxyAccessLogTypeListener && text.LogType == nil
+
 		filelog := &fileaccesslog.FileAccessLog{
 			Path: text.Path,
 		}
@@ -131,11 +140,19 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 			ConfigType: &accesslog.AccessLog_TypedConfig{
 				TypedConfig: accesslogAny,
 			},
-			Filter: buildAccessLogFilter(text.CELMatches, forListener),
+			Filter: buildAccessLogFilter(text.CELMatches, defaultLogTypeForListener),
 		})
 	}
 	// handle json file access logs
 	for _, json := range al.JSON {
+		// Filter out logs that are not Global or match the desired access log type
+		if !(json.LogType == nil || *json.LogType == accessLogType) {
+			continue
+		}
+
+		// NR is only added to listener logs originating from a global log configuration
+		defaultLogTypeForListener := accessLogType == ir.ProxyAccessLogTypeListener && json.LogType == nil
+
 		jsonFormat := &structpb.Struct{
 			Fields: make(map[string]*structpb.Value, len(json.JSON)),
 		}
@@ -174,11 +191,19 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 			ConfigType: &accesslog.AccessLog_TypedConfig{
 				TypedConfig: accesslogAny,
 			},
-			Filter: buildAccessLogFilter(json.CELMatches, forListener),
+			Filter: buildAccessLogFilter(json.CELMatches, defaultLogTypeForListener),
 		})
 	}
 	// handle ALS access logs
 	for _, als := range al.ALS {
+		// Filter out logs that are not Global or match the desired access log type
+		if !(als.LogType == nil || *als.LogType == accessLogType) {
+			continue
+		}
+
+		// NR is only added to listener logs originating from a global log configuration
+		defaultLogTypeForListener := accessLogType == ir.ProxyAccessLogTypeListener && als.LogType == nil
+
 		cc := &grpcaccesslog.CommonGrpcAccessLogConfig{
 			LogName: als.LogName,
 			GrpcService: &cfgcore.GrpcService{
@@ -209,7 +234,7 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 				ConfigType: &accesslog.AccessLog_TypedConfig{
 					TypedConfig: accesslogAny,
 				},
-				Filter: buildAccessLogFilter(als.CELMatches, forListener),
+				Filter: buildAccessLogFilter(als.CELMatches, defaultLogTypeForListener),
 			})
 		case egv1a1.ALSEnvoyProxyAccessLogTypeTCP:
 			alCfg := &grpcaccesslog.TcpGrpcAccessLogConfig{
@@ -222,12 +247,20 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 				ConfigType: &accesslog.AccessLog_TypedConfig{
 					TypedConfig: accesslogAny,
 				},
-				Filter: buildAccessLogFilter(als.CELMatches, forListener),
+				Filter: buildAccessLogFilter(als.CELMatches, defaultLogTypeForListener),
 			})
 		}
 	}
 	// handle open telemetry access logs
 	for _, otel := range al.OpenTelemetry {
+		// Filter out logs that are not Global or match the desired access log type
+		if !(otel.LogType == nil || *otel.LogType == accessLogType) {
+			continue
+		}
+
+		// NR is only added to listener logs originating from a global log configuration
+		defaultLogTypeForListener := accessLogType == ir.ProxyAccessLogTypeListener && otel.LogType == nil
+
 		al := &otelaccesslog.OpenTelemetryAccessLogConfig{
 			CommonConfig: &grpcaccesslog.CommonGrpcAccessLogConfig{
 				LogName: otelLogName,
@@ -270,7 +303,7 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 			ConfigType: &accesslog.AccessLog_TypedConfig{
 				TypedConfig: accesslogAny,
 			},
-			Filter: buildAccessLogFilter(otel.CELMatches, forListener),
+			Filter: buildAccessLogFilter(otel.CELMatches, defaultLogTypeForListener),
 		})
 	}
 
@@ -292,13 +325,13 @@ func celAccessLogFilter(expr string) *accesslog.AccessLogFilter {
 	}
 }
 
-func buildAccessLogFilter(exprs []string, forListener bool) *accesslog.AccessLogFilter {
+func buildAccessLogFilter(exprs []string, withNoRouteMatchFilter bool) *accesslog.AccessLogFilter {
 	// add filter for access logs
 	var filters []*accesslog.AccessLogFilter
 	for _, expr := range exprs {
 		filters = append(filters, celAccessLogFilter(expr))
 	}
-	if forListener {
+	if withNoRouteMatchFilter {
 		filters = append(filters, listenerAccessLogFilter)
 	}
 

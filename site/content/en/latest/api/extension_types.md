@@ -1938,6 +1938,36 @@ _Appears in:_
 | `headersToBackend` | _string array_ |  false  | HeadersToBackend are the authorization response headers that will be added<br />to the original client request before sending it to the backend server.<br />Note that coexisting headers will be overridden.<br />If not specified, no authorization response headers will be added to the<br />original client request. |
 
 
+#### HTTPHostnameModifier
+
+
+
+
+
+_Appears in:_
+- [HTTPURLRewriteFilter](#httpurlrewritefilter)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `type` | _[HTTPHostnameModifierType](#httphostnamemodifiertype)_ |  true  |  |
+| `setFromHeader` | _string_ |  false  | SetFromHeader is the name of the header whose value would be used to rewrite the Host header |
+
+
+#### HTTPHostnameModifierType
+
+_Underlying type:_ _string_
+
+HTTPPathModifierType defines the type of Hostname rewrite.
+
+_Appears in:_
+- [HTTPHostnameModifier](#httphostnamemodifier)
+
+| Value | Description |
+| ----- | ----------- |
+| `SetFromHeader` | HeaderHTTPHostnameModifier indicates that the Host header value would be replaced with the value of the header specified in setFromHeader.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-host-rewrite-header<br /> | 
+| `SetFromBackend` | BackendHTTPHostnameModifier indicates that the Host header value would be replaced by the DNS name of the backend if it exists.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-auto-host-rewrite<br /> | 
+
+
 #### HTTPPathModifier
 
 
@@ -2965,6 +2995,7 @@ _Appears in:_
 | `format` | _[ProxyAccessLogFormat](#proxyaccesslogformat)_ |  false  | Format defines the format of accesslog.<br />This will be ignored if sink type is ALS. |
 | `matches` | _string array_ |  true  | Matches defines the match conditions for accesslog in CEL expression.<br />An accesslog will be emitted only when one or more match conditions are evaluated to true.<br />Invalid [CEL](https://www.envoyproxy.io/docs/envoy/latest/xds/type/v3/cel.proto.html#common-expression-language-cel-proto) expressions will be ignored. |
 | `sinks` | _[ProxyAccessLogSink](#proxyaccesslogsink) array_ |  true  | Sinks defines the sinks of accesslog. |
+| `type` | _[ProxyAccessLogType](#proxyaccesslogtype)_ |  false  | Type defines the component emitting the accesslog, such as Listener and Route.<br />If type not defined, the setting would apply to:<br />(1) All Routes.<br />(2) Listeners if and only if Envoy does not find a matching route for a request.<br />If type is defined, the accesslog settings would apply to the relevant component (as-is). |
 
 
 #### ProxyAccessLogSink
