@@ -1,0 +1,124 @@
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - disabled: true
+          name: envoy.filters.http.custom_response/backendtrafficpolicy/default/policy-for-gateway
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.custom_response.v3.CustomResponse
+            customResponseMatcher:
+              matcherList:
+                matchers:
+                - onMatch:
+                    action:
+                      name: backendtrafficpolicy/default/policy-for-gateway/responseoverride/rule/0
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.extensions.http.custom_response.local_response_policy.v3.LocalResponsePolicy
+                        body:
+                          inlineString: gateway-1 Not Found
+                        bodyFormat:
+                          contentType: text/plain
+                  predicate:
+                    singlePredicate:
+                      input:
+                        name: http-response-status-code-match-input
+                        typedConfig:
+                          '@type': type.googleapis.com/envoy.type.matcher.v3.HttpResponseStatusCodeMatchInput
+                      valueMatch:
+                        exact: "404"
+                - onMatch:
+                    action:
+                      name: backendtrafficpolicy/default/policy-for-gateway/responseoverride/rule/1
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.extensions.http.custom_response.local_response_policy.v3.LocalResponsePolicy
+                        body:
+                          inlineString: |
+                            {
+                              "error": "Internal Server Error"
+                            }
+                        bodyFormat:
+                          contentType: application/json
+                  predicate:
+                    orMatcher:
+                      predicate:
+                      - singlePredicate:
+                          input:
+                            name: http-response-status-code-match-input
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpResponseStatusCodeMatchInput
+                          valueMatch:
+                            exact: "500"
+                      - singlePredicate:
+                          customMatch:
+                            name: cel-matcher
+                            typedConfig:
+                              '@type': type.googleapis.com/xds.type.matcher.v3.CelMatcher
+                              exprMatch:
+                                celExprParsed:
+                                  expr:
+                                    callExpr:
+                                      args:
+                                      - callExpr:
+                                          args:
+                                          - id: "2"
+                                            selectExpr:
+                                              field: code
+                                              operand:
+                                                id: "1"
+                                                identExpr:
+                                                  name: response
+                                          - constExpr:
+                                              int64Value: "501"
+                                            id: "4"
+                                          function: _>=_
+                                        id: "3"
+                                      - callExpr:
+                                          args:
+                                          - id: "6"
+                                            selectExpr:
+                                              field: code
+                                              operand:
+                                                id: "5"
+                                                identExpr:
+                                                  name: response
+                                          - constExpr:
+                                              int64Value: "511"
+                                            id: "8"
+                                          function: _<=_
+                                        id: "7"
+                                      function: _&&_
+                                    id: "9"
+                          input:
+                            name: http-attributes-cel-match-input
+                            typedConfig:
+                              '@type': type.googleapis.com/xds.type.matcher.v3.HttpAttributesCelMatchInput
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: default/gateway-1/http
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10080
+        useRemoteAddress: true
+    name: default/gateway-1/http
+  name: default/gateway-1/http
+  perConnectionBufferLimitBytes: 32768

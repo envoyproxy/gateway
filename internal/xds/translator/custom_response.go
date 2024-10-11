@@ -282,7 +282,7 @@ func (c *customResponse) buildStatusCodeCELMatcher(codeRange ir.StatusCodeRange)
 									Id: 3,
 									ExprKind: &expr.Expr_CallExpr{
 										CallExpr: &expr.Expr_Call{
-											Function: "_>_",
+											Function: "_>=_",
 											Args: []*expr.Expr{
 												{
 													Id: 2,
@@ -318,7 +318,7 @@ func (c *customResponse) buildStatusCodeCELMatcher(codeRange ir.StatusCodeRange)
 									Id: 7,
 									ExprKind: &expr.Expr_CallExpr{
 										CallExpr: &expr.Expr_Call{
-											Function: "_<_",
+											Function: "_<=_",
 											Args: []*expr.Expr{
 												{
 													Id: 6,
