@@ -8,6 +8,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/api/meta"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -439,21 +440,16 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 	return r.isEnvoyExtensionPolicyReferencingBackend(&nsName)
 }
 
-// validateDeploymentForReconcile tries finding the owning Gateway of the Deployment
+// validateObjecttForReconcile tries finding the owning Gateway of the Deployment or Daemonset
 // if it exists, finds the Gateway's Service, and further updates the Gateway
-// status Ready condition. No Deployments are pushed for reconciliation.
-func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object) bool {
+// status Ready condition. No Deployments or Daemonsets are pushed for reconciliation.
+func (r *gatewayAPIReconciler) validateObjecttForReconcile(obj client.Object) bool {
 	ctx := context.Background()
-	deployment, ok := obj.(*appsv1.Deployment)
-	if !ok {
-		r.log.Info("unexpected object type, bypassing reconciliation", "object", obj)
-		return false
-	}
-	labels := deployment.GetLabels()
+	labels := obj.GetLabels()
 
-	// Only deployments in the configured namespace should be reconciled.
-	if deployment.Namespace == r.namespace {
-		// Check if the deployment belongs to a Gateway, if so, update the Gateway status.
+	// Only objects in the configured namespace should be reconciled.
+	if obj.GetNamespace() == r.namespace {
+		// Check if the obj belongs to a Gateway, if so, update the Gateway status.
 		gtw := r.findOwningGateway(ctx, labels)
 		if gtw != nil {
 			r.updateStatusForGateway(ctx, gtw)
@@ -471,27 +467,77 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 		return false
 	}
 
-	// There is no need to reconcile the Deployment any further.
+	// There is no need to reconcile the object any further.
 	return false
 }
 
-// envoyDeploymentForGateway returns the Envoy Deployment, returning nil if the Deployment doesn't exist.
-func (r *gatewayAPIReconciler) envoyDeploymentForGateway(ctx context.Context, gateway *gwapiv1.Gateway) (*appsv1.Deployment, error) {
+// envoyObjectForGateway returns the Envoy Deployment, returning nil if the Deployment doesn't exist.
+func (r *gatewayAPIReconciler) envoyObjectForGateway(ctx context.Context, gateway *gwapiv1.Gateway) (client.Object, error) {
+	labelSelector := labels.SelectorFromSet(gatewayapi.OwnerLabels(gateway, r.mergeGateways.Has(string(gateway.Spec.GatewayClassName))))
+
+	// Check for deployment
 	var deployments appsv1.DeploymentList
-	labelSelector := labels.SelectorFromSet(labels.Set(gatewayapi.OwnerLabels(gateway, r.mergeGateways.Has(string(gateway.Spec.GatewayClassName)))))
 	if err := r.client.List(ctx, &deployments, &client.ListOptions{
 		LabelSelector: labelSelector,
 		Namespace:     r.namespace,
 	}); err != nil {
-		if kerrors.IsNotFound(err) {
+		if !kerrors.IsNotFound(err) {
+			return nil, err
+		}
+	}
+	if len(deployments.Items) > 0 {
+		return &deployments.Items[0], nil
+	}
+
+	// Check for daemonset
+	var daemonsets appsv1.DaemonSetList
+	if err := r.client.List(ctx, &daemonsets, &client.ListOptions{
+		LabelSelector: labelSelector,
+		Namespace:     r.namespace,
+	}); err != nil {
+		if !kerrors.IsNotFound(err) {
+			return nil, err
+		}
+	}
+
+	if len(daemonsets.Items) > 0 {
+		return &daemonsets.Items[0], nil
+	}
+	return nil, nil
+}
+
+func (r *gatewayAPIReconciler) envoyObjectForGateways(ctx context.Context, gateway *gwapiv1.Gateway) (client.Object, error) {
+
+	// Helper func to list and return the first object from results
+	listResource := func(list client.ObjectList) (client.Object, error) {
+		if err := r.client.List(ctx, list, &client.ListOptions{
+			LabelSelector: labels.SelectorFromSet(gatewayapi.OwnerLabels(gateway, r.mergeGateways.Has(string(gateway.Spec.GatewayClassName)))),
+			Namespace:     r.namespace,
+		}); err != nil {
+			if !kerrors.IsNotFound(err) {
+				return nil, err
+			}
+		}
+		items, err := meta.ExtractList(list)
+		if err != nil || len(items) == 0 {
 			return nil, nil
 		}
-		return nil, err
+		return items[0].(client.Object), nil
 	}
-	if len(deployments.Items) == 0 {
-		return nil, nil
+
+	// Check for Deployment
+	deployments := &appsv1.DeploymentList{}
+	if obj, err := listResource(deployments); obj != nil || err != nil {
+		return obj, err
 	}
-	return &deployments.Items[0], nil
+
+	// Check for DaemonSet
+	daemonsets := &appsv1.DaemonSetList{}
+	if obj, err := listResource(daemonsets); obj != nil || err != nil {
+		return obj, err
+	}
+
+	return nil, nil
 }
 
 // envoyServiceForGateway returns the Envoy service, returning nil if the service doesn't exist.

@@ -859,7 +859,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 	}
 }
 
-// TestValidateDeploymentForReconcile tests the validateDeploymentForReconcile
+// TestValidateDeploymentForReconcile tests the validateObjecttForReconcile
 // predicate function.
 func TestValidateDeploymentForReconcile(t *testing.T) {
 	sampleGateway := test.GetGateway(types.NamespacedName{Namespace: "default", Name: "scheduled-status-test"}, "test-gc", 8080)
@@ -938,7 +938,7 @@ func TestValidateDeploymentForReconcile(t *testing.T) {
 	for _, tc := range testCases {
 		r.client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.configs...).Build()
 		t.Run(tc.name, func(t *testing.T) {
-			res := r.validateDeploymentForReconcile(tc.deployment)
+			res := r.validateObjecttForReconcile(tc.deployment)
 			require.Equal(t, tc.expect, res)
 		})
 	}

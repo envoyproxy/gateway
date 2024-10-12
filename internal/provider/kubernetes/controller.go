@@ -1386,13 +1386,13 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch Deployment CRUDs and process affected Gateways.
-	dPredicates := []predicate.TypedPredicate[*appsv1.Deployment]{
+	deploymentPredicates := []predicate.TypedPredicate[*appsv1.Deployment]{
 		predicate.NewTypedPredicateFuncs[*appsv1.Deployment](func(deploy *appsv1.Deployment) bool {
-			return r.validateDeploymentForReconcile(deploy)
+			return r.validateObjecttForReconcile(deploy)
 		}),
 	}
 	if r.namespaceLabel != nil {
-		dPredicates = append(dPredicates, predicate.NewTypedPredicateFuncs[*appsv1.Deployment](func(deploy *appsv1.Deployment) bool {
+		deploymentPredicates = append(deploymentPredicates, predicate.NewTypedPredicateFuncs[*appsv1.Deployment](func(deploy *appsv1.Deployment) bool {
 			return r.hasMatchingNamespaceLabels(deploy)
 		}))
 	}
@@ -1401,7 +1401,27 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, deploy *appsv1.Deployment) []reconcile.Request {
 				return r.enqueueClass(ctx, deploy)
 			}),
-			dPredicates...)); err != nil {
+			deploymentPredicates...)); err != nil {
+		return err
+	}
+
+	// Watch Daemonset CRUDs and process affected Gateways.
+	daemonsetPredicates := []predicate.TypedPredicate[*appsv1.DaemonSet]{
+		predicate.NewTypedPredicateFuncs[*appsv1.DaemonSet](func(daemonset *appsv1.DaemonSet) bool {
+			return r.validateObjecttForReconcile(daemonset)
+		}),
+	}
+	if r.namespaceLabel != nil {
+		daemonsetPredicates = append(daemonsetPredicates, predicate.NewTypedPredicateFuncs[*appsv1.DaemonSet](func(daemonset *appsv1.DaemonSet) bool {
+			return r.hasMatchingNamespaceLabels(daemonset)
+		}))
+	}
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &appsv1.DaemonSet{},
+			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, daemonset *appsv1.DaemonSet) []reconcile.Request {
+				return r.enqueueClass(ctx, daemonset)
+			}),
+			daemonsetPredicates...)); err != nil {
 		return err
 	}
 
