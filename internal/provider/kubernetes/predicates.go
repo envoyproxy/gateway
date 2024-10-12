@@ -8,12 +8,12 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/api/meta"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -473,41 +473,6 @@ func (r *gatewayAPIReconciler) validateObjectForReconcile(obj client.Object) boo
 
 // envoyObjectForGateway returns the Envoy Deployment or Daemonset, returning nil if neither exists.
 func (r *gatewayAPIReconciler) envoyObjectForGateway(ctx context.Context, gateway *gwapiv1.Gateway) (client.Object, error) {
-	labelSelector := labels.SelectorFromSet(gatewayapi.OwnerLabels(gateway, r.mergeGateways.Has(string(gateway.Spec.GatewayClassName))))
-
-	// Check for envoyObjects
-	var deployments appsv1.DeploymentList
-	if err := r.client.List(ctx, &deployments, &client.ListOptions{
-		LabelSelector: labelSelector,
-		Namespace:     r.namespace,
-	}); err != nil {
-		if !kerrors.IsNotFound(err) {
-			return nil, err
-		}
-	}
-	if len(deployments.Items) > 0 {
-		return &deployments.Items[0], nil
-	}
-
-	// Check for daemonset
-	var daemonsets appsv1.DaemonSetList
-	if err := r.client.List(ctx, &daemonsets, &client.ListOptions{
-		LabelSelector: labelSelector,
-		Namespace:     r.namespace,
-	}); err != nil {
-		if !kerrors.IsNotFound(err) {
-			return nil, err
-		}
-	}
-
-	if len(daemonsets.Items) > 0 {
-		return &daemonsets.Items[0], nil
-	}
-	return nil, nil
-}
-
-func (r *gatewayAPIReconciler) envoyObjectForGateways(ctx context.Context, gateway *gwapiv1.Gateway) (client.Object, error) {
-
 	// Helper func to list and return the first object from results
 	listResource := func(list client.ObjectList) (client.Object, error) {
 		if err := r.client.List(ctx, list, &client.ListOptions{
