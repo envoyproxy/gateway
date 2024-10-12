@@ -161,14 +161,14 @@ func updateGatewayProgrammedCondition(gw *gwapiv1.Gateway, envoyObj client.Objec
 	// Check for available Envoy replicas and if found mark the gateway as ready.
 	switch obj := envoyObj.(type) {
 	case *appsv1.Deployment:
-		if obj.Status.AvailableReplicas > 0 {
+		if obj != nil && obj.Status.AvailableReplicas > 0 {
 			gw.Status.Conditions = MergeConditions(gw.Status.Conditions,
 				newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionTrue, string(gwapiv1.GatewayConditionProgrammed),
 					fmt.Sprintf(messageFmtProgrammed, obj.Status.AvailableReplicas, obj.Status.Replicas), time.Now(), gw.Generation))
 			return
 		}
 	case *appsv1.DaemonSet:
-		if obj.Status.NumberAvailable > 0 {
+		if obj != nil && obj.Status.NumberAvailable > 0 {
 			gw.Status.Conditions = MergeConditions(gw.Status.Conditions,
 				newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionTrue, string(gwapiv1.GatewayConditionProgrammed),
 					fmt.Sprintf(messageFmtProgrammed, obj.Status.NumberAvailable, obj.Status.CurrentNumberScheduled), time.Now(), gw.Generation))
