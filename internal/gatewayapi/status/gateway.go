@@ -158,23 +158,25 @@ func updateGatewayProgrammedCondition(gw *gwapiv1.Gateway, envoyObj client.Objec
 		return
 	}
 
-	// If there are no available replicas for the Envoy Deployment, don't
-	// mark the Gateway as ready yet.
-	dep, okDep := envoyObj.(*appsv1.Deployment)
-	if okDep && dep.Status.AvailableReplicas > 0 {
-		gw.Status.Conditions = MergeConditions(gw.Status.Conditions,
-			newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionTrue, string(gwapiv1.GatewayConditionProgrammed),
-				fmt.Sprintf(messageFmtProgrammed, dep.Status.AvailableReplicas, dep.Status.Replicas), time.Now(), gw.Generation))
-		return
-	}
-	daemon, okDaemon := envoyObj.(*appsv1.DaemonSet)
-	if okDaemon && daemon.Status.NumberAvailable > 0 {
-		gw.Status.Conditions = MergeConditions(gw.Status.Conditions,
-			newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionTrue, string(gwapiv1.GatewayConditionProgrammed),
-				fmt.Sprintf(messageFmtProgrammed, daemon.Status.NumberAvailable, daemon.Status.CurrentNumberScheduled), time.Now(), gw.Generation))
-		return
+	// Check for available Envoy replicas and if found mark the gateway as ready.
+	switch obj := envoyObj.(type) {
+	case *appsv1.Deployment:
+		if obj.Status.AvailableReplicas > 0 {
+			gw.Status.Conditions = MergeConditions(gw.Status.Conditions,
+				newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionTrue, string(gwapiv1.GatewayConditionProgrammed),
+					fmt.Sprintf(messageFmtProgrammed, obj.Status.AvailableReplicas, obj.Status.Replicas), time.Now(), gw.Generation))
+			return
+		}
+	case *appsv1.DaemonSet:
+		if obj.Status.NumberAvailable > 0 {
+			gw.Status.Conditions = MergeConditions(gw.Status.Conditions,
+				newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionTrue, string(gwapiv1.GatewayConditionProgrammed),
+					fmt.Sprintf(messageFmtProgrammed, obj.Status.NumberAvailable, obj.Status.CurrentNumberScheduled), time.Now(), gw.Generation))
+			return
+		}
 	}
 
+	// If there are no available Envoy replicas, don't mark the Gateway as ready yet.
 	gw.Status.Conditions = MergeConditions(gw.Status.Conditions,
 		newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionFalse, string(gwapiv1.GatewayReasonNoResources),
 			messageNoResources, time.Now(), gw.Generation))
