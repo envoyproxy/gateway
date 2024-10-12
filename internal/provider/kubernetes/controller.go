@@ -1388,7 +1388,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	// Watch Deployment CRUDs and process affected Gateways.
 	deploymentPredicates := []predicate.TypedPredicate[*appsv1.Deployment]{
 		predicate.NewTypedPredicateFuncs[*appsv1.Deployment](func(deploy *appsv1.Deployment) bool {
-			return r.validateObjecttForReconcile(deploy)
+			return r.validateObjectForReconcile(deploy)
 		}),
 	}
 	if r.namespaceLabel != nil {
@@ -1408,7 +1408,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	// Watch Daemonset CRUDs and process affected Gateways.
 	daemonsetPredicates := []predicate.TypedPredicate[*appsv1.DaemonSet]{
 		predicate.NewTypedPredicateFuncs[*appsv1.DaemonSet](func(daemonset *appsv1.DaemonSet) bool {
-			return r.validateObjecttForReconcile(daemonset)
+			return r.validateObjectForReconcile(daemonset)
 		}),
 	}
 	if r.namespaceLabel != nil {

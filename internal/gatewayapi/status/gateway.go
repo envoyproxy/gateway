@@ -31,7 +31,7 @@ func UpdateGatewayStatusAcceptedCondition(gw *gwapiv1.Gateway, accepted bool) *g
 
 // UpdateGatewayStatusProgrammedCondition updates the status addresses for the provided gateway
 // based on the status IP/Hostname of svc and updates the Programmed condition based on the
-// service and deployment state.
+// service and deployment or daemonset state.
 func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1.Gateway, svc *corev1.Service, envoyObj client.Object, nodeAddresses ...string) {
 	var addresses, hostnames []string
 	// Update the status addresses field.
@@ -133,12 +133,12 @@ func computeGatewayAcceptedCondition(gw *gwapiv1.Gateway, accepted bool) metav1.
 const (
 	messageAddressNotAssigned  = "No addresses have been assigned to the Gateway"
 	messageFmtTooManyAddresses = "Too many addresses (%d) have been assigned to the Gateway, the maximum number of addresses is 16"
-	messageNoResources         = "Deployment replicas unavailable"
+	messageNoResources         = "Envoy replicas unavailable"
 	messageFmtProgrammed       = "Address assigned to the Gateway, %d/%d envoy Deployment replicas available"
 )
 
 // updateGatewayProgrammedCondition computes the Gateway Programmed status condition.
-// Programmed condition surfaces true when the Envoy Deployment status is ready.
+// Programmed condition surfaces true when the Envoy Deployment or Daemonset status is ready.
 func updateGatewayProgrammedCondition(gw *gwapiv1.Gateway, envoyObj client.Object) {
 	if len(gw.Status.Addresses) == 0 {
 		gw.Status.Conditions = MergeConditions(gw.Status.Conditions,
@@ -176,7 +176,8 @@ func updateGatewayProgrammedCondition(gw *gwapiv1.Gateway, envoyObj client.Objec
 		}
 	}
 
-	// If there are no available Envoy replicas, don't mark the Gateway as ready yet.
+	// If there are no available replicas for the Envoy Deployment or
+	// Envoy Daemonset, don't mark the Gateway as ready yet.
 	gw.Status.Conditions = MergeConditions(gw.Status.Conditions,
 		newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionFalse, string(gwapiv1.GatewayReasonNoResources),
 			messageNoResources, time.Now(), gw.Generation))

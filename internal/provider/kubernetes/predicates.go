@@ -440,10 +440,10 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 	return r.isEnvoyExtensionPolicyReferencingBackend(&nsName)
 }
 
-// validateObjecttForReconcile tries finding the owning Gateway of the Deployment or Daemonset
+// validateObjectForReconcile tries finding the owning Gateway of the Deployment or Daemonset
 // if it exists, finds the Gateway's Service, and further updates the Gateway
 // status Ready condition. No Deployments or Daemonsets are pushed for reconciliation.
-func (r *gatewayAPIReconciler) validateObjecttForReconcile(obj client.Object) bool {
+func (r *gatewayAPIReconciler) validateObjectForReconcile(obj client.Object) bool {
 	ctx := context.Background()
 	labels := obj.GetLabels()
 
@@ -471,11 +471,11 @@ func (r *gatewayAPIReconciler) validateObjecttForReconcile(obj client.Object) bo
 	return false
 }
 
-// envoyObjectForGateway returns the Envoy Deployment, returning nil if the Deployment doesn't exist.
+// envoyObjectForGateway returns the Envoy Deployment or Daemonset, returning nil if neither exists.
 func (r *gatewayAPIReconciler) envoyObjectForGateway(ctx context.Context, gateway *gwapiv1.Gateway) (client.Object, error) {
 	labelSelector := labels.SelectorFromSet(gatewayapi.OwnerLabels(gateway, r.mergeGateways.Has(string(gateway.Spec.GatewayClassName))))
 
-	// Check for deployment
+	// Check for envoyObjects
 	var deployments appsv1.DeploymentList
 	if err := r.client.List(ctx, &deployments, &client.ListOptions{
 		LabelSelector: labelSelector,

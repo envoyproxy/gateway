@@ -475,7 +475,7 @@ func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *
 		return
 	}
 
-	// Get deployment
+	// Get envoyObjects
 	envoyObj, err := r.envoyObjectForGateway(ctx, gtw)
 	if err != nil {
 		r.log.Info("failed to get Deployment for gateway",

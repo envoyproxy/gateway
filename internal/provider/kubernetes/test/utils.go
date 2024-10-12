@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -271,7 +272,7 @@ func GetUDPRoute(nsName types.NamespacedName, parent string, serviceName types.N
 }
 
 // GetGatewayDeployment returns a sample Deployment for a Gateway object.
-func GetGatewayDeployment(nsName types.NamespacedName, labels map[string]string) *appsv1.Deployment {
+func GetGatewayDeployment(nsName types.NamespacedName, labels map[string]string) client.Object {
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: nsName.Namespace,
@@ -279,6 +280,34 @@ func GetGatewayDeployment(nsName types.NamespacedName, labels map[string]string)
 			Labels:    labels,
 		},
 		Spec: appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{MatchLabels: labels},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: labels,
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{{
+						Name:  "dummy",
+						Image: "dummy",
+						Ports: []corev1.ContainerPort{{
+							ContainerPort: 8080,
+						}},
+					}},
+				},
+			},
+		},
+	}
+}
+
+// GetGatewayDaemonset returns a sample Daemonset for a Gateway object.
+func GetGatewayDaemonset(nsName types.NamespacedName, labels map[string]string) client.Object {
+	return &appsv1.DaemonSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: nsName.Namespace,
+			Name:      nsName.Name,
+			Labels:    labels,
+		},
+		Spec: appsv1.DaemonSetSpec{
 			Selector: &metav1.LabelSelector{MatchLabels: labels},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{

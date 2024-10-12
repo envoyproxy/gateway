@@ -281,7 +281,7 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 	deploy := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: gw.Namespace,
-			Name:      gw.Name + "-deployment",
+			Name:      gw.Name + "-envoyObjects",
 			Labels:    labels,
 		},
 		Spec: appsv1.DeploymentSpec{
