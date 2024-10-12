@@ -7,7 +7,6 @@ package ratelimit
 
 import (
 	_ "embed"
-	"k8s.io/apimachinery/pkg/labels"
 	"strconv"
 
 	"golang.org/x/exp/maps"
@@ -16,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
