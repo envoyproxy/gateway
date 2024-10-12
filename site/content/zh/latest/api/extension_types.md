@@ -2429,7 +2429,7 @@ _Appears in:_
 
 
 
-KubernetesDaemonsetSpec defines the desired state of the Kubernetes daemonset resource.
+KubernetesDaemonSetSpec defines the desired state of the Kubernetes daemonset resource.
 
 _Appears in:_
 - [EnvoyProxyKubernetesProvider](#envoyproxykubernetesprovider)
