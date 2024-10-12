@@ -8,6 +8,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -395,7 +396,11 @@ func (i *Infra) deleteServiceAccount(ctx context.Context, r ResourceRender) (err
 		}
 	}()
 
-	return i.Client.Delete(ctx, sa)
+	return i.Client.DeleteAllOf(ctx, sa, &client.DeleteAllOfOptions{
+		ListOptions: client.ListOptions{
+			LabelSelector: r.LabelSelector(),
+		},
+	})
 }
 
 // deleteDeployment deletes the Envoy Deployment in the kube api server, if it exists.
@@ -430,7 +435,11 @@ func (i *Infra) deleteDeployment(ctx context.Context, r ResourceRender) (err err
 		}
 	}()
 
-	return i.Client.Delete(ctx, deployment)
+	return i.Client.DeleteAllOf(ctx, deployment, &client.DeleteAllOfOptions{
+		ListOptions: client.ListOptions{
+			LabelSelector: r.LabelSelector(),
+		},
+	})
 }
 
 // deleteDaemonSet deletes the Envoy DaemonSet in the kube api server, if it exists.
@@ -465,7 +474,11 @@ func (i *Infra) deleteDaemonSet(ctx context.Context, r ResourceRender) (err erro
 		}
 	}()
 
-	return i.Client.Delete(ctx, daemonSet)
+	return i.Client.DeleteAllOf(ctx, daemonSet, &client.DeleteAllOfOptions{
+		ListOptions: client.ListOptions{
+			LabelSelector: r.LabelSelector(),
+		},
+	})
 }
 
 // deleteConfigMap deletes the ConfigMap in the kube api server, if it exists.
@@ -495,7 +508,11 @@ func (i *Infra) deleteConfigMap(ctx context.Context, r ResourceRender) (err erro
 		}
 	}()
 
-	return i.Client.Delete(ctx, cm)
+	return i.Client.DeleteAllOf(ctx, cm, &client.DeleteAllOfOptions{
+		ListOptions: client.ListOptions{
+			LabelSelector: r.LabelSelector(),
+		},
+	})
 }
 
 // deleteService deletes the Service in the kube api server, if it exists.
@@ -525,7 +542,11 @@ func (i *Infra) deleteService(ctx context.Context, r ResourceRender) (err error)
 		}
 	}()
 
-	return i.Client.Delete(ctx, svc)
+	return i.Client.DeleteAllOf(ctx, svc, &client.DeleteAllOfOptions{
+		ListOptions: client.ListOptions{
+			LabelSelector: r.LabelSelector(),
+		},
+	})
 }
 
 // deleteHpa deletes the Horizontal Pod Autoscaler associated to its renderer, if it exists.
@@ -560,7 +581,11 @@ func (i *Infra) deleteHPA(ctx context.Context, r ResourceRender) (err error) {
 		}
 	}()
 
-	return i.Client.Delete(ctx, hpa)
+	return i.Client.DeleteAllOf(ctx, hpa, &client.DeleteAllOfOptions{
+		ListOptions: client.ListOptions{
+			LabelSelector: r.LabelSelector(),
+		},
+	})
 }
 
 // deletePDB deletes the PodDistribution budget associated to its renderer, if it exists.
@@ -595,5 +620,9 @@ func (i *Infra) deletePDB(ctx context.Context, r ResourceRender) (err error) {
 		}
 	}()
 
-	return i.Client.Delete(ctx, pdb)
+	return i.Client.DeleteAllOf(ctx, pdb, &client.DeleteAllOfOptions{
+		ListOptions: client.ListOptions{
+			LabelSelector: r.LabelSelector(),
+		},
+	})
 }

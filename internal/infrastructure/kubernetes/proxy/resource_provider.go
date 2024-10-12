@@ -7,6 +7,7 @@ package proxy
 
 import (
 	"fmt"
+	"k8s.io/apimachinery/pkg/labels"
 	"strconv"
 
 	"golang.org/x/exp/maps"
@@ -44,6 +45,10 @@ func NewResourceRender(ns string, infra *ir.ProxyInfra, gateway *egv1a1.EnvoyGat
 
 func (r *ResourceRender) Name() string {
 	return ExpectedResourceHashedName(r.infra.Name)
+}
+
+func (r *ResourceRender) LabelSelector() labels.Selector {
+	return labels.SelectorFromSet(envoyLabels(r.infra.GetProxyMetadata().Labels))
 }
 
 // ServiceAccount returns the expected proxy serviceAccount.

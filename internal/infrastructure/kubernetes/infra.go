@@ -8,6 +8,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/labels"
 
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
@@ -29,6 +30,7 @@ var _ ResourceRender = &ratelimit.ResourceRender{}
 // based on Infra IR resources.
 type ResourceRender interface {
 	Name() string
+	LabelSelector() labels.Selector
 	ServiceAccount() (*corev1.ServiceAccount, error)
 	Service() (*corev1.Service, error)
 	ConfigMap() (*corev1.ConfigMap, error)

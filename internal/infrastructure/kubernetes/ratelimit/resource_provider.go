@@ -7,6 +7,7 @@ package ratelimit
 
 import (
 	_ "embed"
+	"k8s.io/apimachinery/pkg/labels"
 	"strconv"
 
 	"golang.org/x/exp/maps"
@@ -58,6 +59,10 @@ func NewResourceRender(ns string, gateway *egv1a1.EnvoyGateway, ownerReferenceUI
 
 func (r *ResourceRender) Name() string {
 	return InfraName
+}
+
+func (r *ResourceRender) LabelSelector() labels.Selector {
+	return labels.SelectorFromSet(rateLimitLabels())
 }
 
 func enablePrometheus(rl *egv1a1.RateLimit) bool {
