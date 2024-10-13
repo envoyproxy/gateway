@@ -440,9 +440,9 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 	return r.isEnvoyExtensionPolicyReferencingBackend(&nsName)
 }
 
-// validateObjectForReconcile tries finding the owning Gateway of the Deployment or Daemonset
+// validateObjectForReconcile tries finding the owning Gateway of the Deployment or DaemonSet
 // if it exists, finds the Gateway's Service, and further updates the Gateway
-// status Ready condition. No Deployments or Daemonsets are pushed for reconciliation.
+// status Ready condition. No Deployments or DaemonSets are pushed for reconciliation.
 func (r *gatewayAPIReconciler) validateObjectForReconcile(obj client.Object) bool {
 	ctx := context.Background()
 	labels := obj.GetLabels()
@@ -471,7 +471,7 @@ func (r *gatewayAPIReconciler) validateObjectForReconcile(obj client.Object) boo
 	return false
 }
 
-// envoyObjectForGateway returns the Envoy Deployment or Daemonset, returning nil if neither exists.
+// envoyObjectForGateway returns the Envoy Deployment or DaemonSet, returning nil if neither exists.
 func (r *gatewayAPIReconciler) envoyObjectForGateway(ctx context.Context, gateway *gwapiv1.Gateway) (client.Object, error) {
 	// Helper func to list and return the first object from results
 	listResource := func(list client.ObjectList) (client.Object, error) {

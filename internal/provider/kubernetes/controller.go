@@ -1405,7 +1405,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
-	// Watch Daemonset CRUDs and process affected Gateways.
+	// Watch DaemonSet CRUDs and process affected Gateways.
 	daemonsetPredicates := []predicate.TypedPredicate[*appsv1.DaemonSet]{
 		predicate.NewTypedPredicateFuncs[*appsv1.DaemonSet](func(daemonset *appsv1.DaemonSet) bool {
 			return r.validateObjectForReconcile(daemonset)

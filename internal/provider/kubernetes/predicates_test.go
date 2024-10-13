@@ -556,7 +556,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			configs: []client.Object{
 				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 				sampleGateway,
-				test.GetGatewayDaemonset(types.NamespacedName{Name: proxy.ExpectedResourceHashedName("default/scheduled-status-test")}, nil),
+				test.GetGatewayDaemonSet(types.NamespacedName{Name: proxy.ExpectedResourceHashedName("default/scheduled-status-test")}, nil),
 			},
 			service: test.GetService(types.NamespacedName{Name: "service"}, map[string]string{
 				gatewayapi.OwningGatewayNameLabel:      "scheduled-status-test",
@@ -887,7 +887,7 @@ func TestValidateObjectForReconcile(t *testing.T) {
 		expect       bool
 	}{
 		{
-			// No config should lead to a reconciliation of a Deployment or Daemonset object. The main
+			// No config should lead to a reconciliation of a Deployment or DaemonSet object. The main
 			// purpose of the watcher is just for updating Gateway object statuses.
 			name: "gateway deployment or daemonset also exist",
 			configs: []client.Object{
@@ -902,7 +902,7 @@ func TestValidateObjectForReconcile(t *testing.T) {
 				test.GetGatewayDeployment(types.NamespacedName{Name: "deployment"}, map[string]string{
 					gatewayapi.OwningGatewayNameLabel:      "scheduled-status-test",
 					gatewayapi.OwningGatewayNamespaceLabel: "default",
-				}), test.GetGatewayDaemonset(types.NamespacedName{Name: "daemonset"}, map[string]string{
+				}), test.GetGatewayDaemonSet(types.NamespacedName{Name: "daemonset"}, map[string]string{
 					gatewayapi.OwningGatewayNameLabel:      "scheduled-status-test",
 					gatewayapi.OwningGatewayNamespaceLabel: "default",
 				}),
@@ -924,7 +924,7 @@ func TestValidateObjectForReconcile(t *testing.T) {
 				test.GetGatewayDeployment(types.NamespacedName{Name: "deployment"}, map[string]string{
 					gatewayapi.OwningGatewayClassLabel: "test-mg",
 				}),
-				test.GetGatewayDaemonset(types.NamespacedName{Name: "daemonset"}, map[string]string{
+				test.GetGatewayDaemonSet(types.NamespacedName{Name: "daemonset"}, map[string]string{
 					gatewayapi.OwningGatewayClassLabel: "test-mg",
 				}),
 			},
@@ -948,7 +948,7 @@ func TestValidateObjectForReconcile(t *testing.T) {
 				test.GetGatewayDeployment(types.NamespacedName{Name: "deployment"}, map[string]string{
 					gatewayapi.OwningGatewayClassLabel: "test-mg",
 				}),
-				test.GetGatewayDaemonset(types.NamespacedName{Name: "daemonset"}, map[string]string{
+				test.GetGatewayDaemonSet(types.NamespacedName{Name: "daemonset"}, map[string]string{
 					gatewayapi.OwningGatewayClassLabel: "test-mg",
 				}),
 			},

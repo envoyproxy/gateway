@@ -299,8 +299,8 @@ func GetGatewayDeployment(nsName types.NamespacedName, labels map[string]string)
 	}
 }
 
-// GetGatewayDaemonset returns a sample Daemonset for a Gateway object.
-func GetGatewayDaemonset(nsName types.NamespacedName, labels map[string]string) client.Object {
+// GetGatewayDaemonSet returns a sample DaemonSet for a Gateway object.
+func GetGatewayDaemonSet(nsName types.NamespacedName, labels map[string]string) client.Object {
 	return &appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: nsName.Namespace,
