@@ -132,7 +132,7 @@ spec:
           readOnly: true
       dnsPolicy: ClusterFirst
       restartPolicy: Always
-      schedulerName: default-scheduler
+      schedulerName: custom-scheduler
       securityContext:
         runAsUser: 1000
       serviceAccountName: envoy-ratelimit

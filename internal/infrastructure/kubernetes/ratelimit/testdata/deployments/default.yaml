@@ -138,7 +138,6 @@ spec:
           readOnly: true
       dnsPolicy: ClusterFirst
       restartPolicy: Always
-      schedulerName: default-scheduler
       serviceAccountName: envoy-ratelimit
       terminationGracePeriodSeconds: 300
       volumes:

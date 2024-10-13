@@ -289,6 +289,7 @@ func TestDeployment(t *testing.T) {
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsUser: ptr.To[int64](1000),
 					},
+					SchedulerName: "custom-scheduler",
 				},
 				Container: &egv1a1.KubernetesContainerSpec{
 					Image: ptr.To("custom-image"),

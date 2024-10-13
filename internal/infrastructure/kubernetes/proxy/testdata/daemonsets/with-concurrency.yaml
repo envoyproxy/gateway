@@ -188,7 +188,6 @@ spec:
         terminationMessagePolicy: File
       dnsPolicy: ClusterFirst
       restartPolicy: Always
-      schedulerName: default-scheduler
       serviceAccountName: envoy-default-37a8eec1
       terminationGracePeriodSeconds: 360
       volumes:

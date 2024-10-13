@@ -356,7 +356,6 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       hostNetwork: true
       restartPolicy: Always
-      schedulerName: default-scheduler
       serviceAccountName: envoy-default-37a8eec1
       terminationGracePeriodSeconds: 360
       volumes:

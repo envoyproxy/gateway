@@ -181,6 +181,13 @@ type KubernetesPodSpec struct {
 	//
 	// +optional
 	TopologySpreadConstraints []corev1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
+
+	// SchedulerName is the kubernetes scheduler that should be used for this pod.
+	// If specified, the pod will be dispatched by specified scheduler.
+	// If not specified, the pod will be dispatched by default scheduler.
+	//
+	// +optional
+	SchedulerName string `json:"schedulerName,omitempty"`
 }
 
 // KubernetesContainerSpec defines the desired state of the Kubernetes container resource.

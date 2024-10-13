@@ -369,7 +369,6 @@ spec:
         terminationMessagePolicy: File
       dnsPolicy: ClusterFirst
       restartPolicy: Always
-      schedulerName: default-scheduler
       securityContext:
         runAsUser: 1000
       serviceAccountName: envoy-default-37a8eec1

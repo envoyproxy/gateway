@@ -141,7 +141,6 @@ spec:
         key1: value1
         key2: value2
       restartPolicy: Always
-      schedulerName: default-scheduler
       serviceAccountName: envoy-ratelimit
       terminationGracePeriodSeconds: 300
       volumes:
