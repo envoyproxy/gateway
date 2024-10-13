@@ -269,6 +269,12 @@ type KubernetesServiceSpec struct {
 	// +optional
 	Annotations map[string]string `json:"annotations,omitempty"`
 
+	// Labels that should be appended to the service.
+	// By default, no labels are appended.
+	//
+	// +optional
+	Labels map[string]string `json:"labels,omitempty"`
+
 	// Type determines how the Service is exposed. Defaults to LoadBalancer.
 	// Valid options are ClusterIP, LoadBalancer and NodePort.
 	// "LoadBalancer" means a service will be exposed via an external load balancer (if the cloud provider supports it).
