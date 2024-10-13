@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -68,20 +67,6 @@ func createEnvoyGatewayDeployment(t *testing.T, client client.Client, ns string)
 	require.NoError(t, err)
 }
 
-func createEnvoyGatewayDaemonset(t *testing.T, client client.Client, ns string) {
-	err := client.Create(context.Background(), &appsv1.DaemonSet{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Daemonset",
-			APIVersion: "apps/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "envoy-gateway",
-			Namespace: ns,
-		},
-	})
-	require.NoError(t, err)
-}
-
 func createEnvoyGatewayServiceAccount(t *testing.T, client client.Client, ns string) {
 	err := client.Create(context.Background(), &corev1.ServiceAccount{
 		TypeMeta: metav1.TypeMeta{
@@ -107,15 +92,6 @@ func TestCreateRateLimitInfra(t *testing.T) {
 			ownerReferences: []string{
 				ratelimit.ResourceKindService,
 				ratelimit.ResourceKindDeployment,
-				ratelimit.ResourceKindServiceAccount,
-			},
-			expect: true,
-		},
-		{
-			name: "daemonset",
-			ownerReferences: []string{
-				ratelimit.ResourceKindService,
-				ratelimit.ResourceKindDaemonset,
 				ratelimit.ResourceKindServiceAccount,
 			},
 			expect: true,
@@ -162,8 +138,6 @@ func TestCreateRateLimitInfra(t *testing.T) {
 					createEnvoyGatewayService(t, kube.Client.Client, kube.Namespace)
 				case ratelimit.ResourceKindDeployment:
 					createEnvoyGatewayDeployment(t, kube.Client.Client, kube.Namespace)
-				case ratelimit.ResourceKindDaemonset:
-					createEnvoyGatewayDaemonset(t, kube.Client.Client, kube.Namespace)
 				case ratelimit.ResourceKindServiceAccount:
 					createEnvoyGatewayServiceAccount(t, kube.Client.Client, kube.Namespace)
 				}
@@ -186,26 +160,14 @@ func TestCreateRateLimitInfra(t *testing.T) {
 				}
 				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(sa), sa))
 
-				// Check for either a Deployment or DaemonSet
 				deploy := &appsv1.Deployment{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: kube.Namespace,
 						Name:      ratelimit.InfraName,
 					},
 				}
-				daemonset := &appsv1.DaemonSet{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: kube.Namespace,
-						Name:      ratelimit.InfraName,
-					},
-				}
-				err = kube.Client.Get(context.Background(), client.ObjectKeyFromObject(deploy), deploy)
-				if kerrors.IsNotFound(err) {
-					err = kube.Client.Get(context.Background(), client.ObjectKeyFromObject(daemonset), daemonset)
-					require.NoError(t, err)
-				} else {
-					require.NoError(t, err)
-				}
+				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(deploy), deploy))
+
 				svc := &corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: kube.Namespace,
