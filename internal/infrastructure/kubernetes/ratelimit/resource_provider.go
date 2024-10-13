@@ -313,7 +313,7 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 	if r.rateLimitDaemonset.Pod.Labels != nil {
 		maps.Copy(podLabels, r.rateLimitDaemonset.Pod.Labels)
 		// Copy overwrites values in the dest map if they exist in the src map https://pkg.go.dev/maps#Copy
-		// It's applied again with the rateLimitLabels that are used as deployment selector to ensure those are not overwritten by user input
+		// It's applied again with the rateLimitLabels that are used as daemonset selector to ensure those are not overwritten by user input
 		maps.Copy(podLabels, rateLimitLabels())
 	}
 
@@ -389,7 +389,7 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 		}
 	}
 
-	// apply merge patch to deployment
+	// apply merge patch to daemonset
 	var err error
 	if daemonset, err = r.rateLimitDaemonset.ApplyMergePatch(daemonset); err != nil {
 		return nil, err

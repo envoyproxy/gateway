@@ -134,7 +134,7 @@ const (
 	messageAddressNotAssigned  = "No addresses have been assigned to the Gateway"
 	messageFmtTooManyAddresses = "Too many addresses (%d) have been assigned to the Gateway, the maximum number of addresses is 16"
 	messageNoResources         = "Envoy replicas unavailable"
-	messageFmtProgrammed       = "Address assigned to the Gateway, %d/%d envoy Deployment replicas available"
+	messageFmtProgrammed       = "Address assigned to the Gateway, %d/%d envoy replicas available"
 )
 
 // updateGatewayProgrammedCondition computes the Gateway Programmed status condition.
