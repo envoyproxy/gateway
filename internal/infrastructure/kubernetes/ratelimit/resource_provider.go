@@ -27,6 +27,7 @@ import (
 // but also the key for the uid of their ownerReference.
 const (
 	ResourceKindService        = "Service"
+	ResourceKindDaemonset      = "Daemonset"
 	ResourceKindDeployment     = "Deployment"
 	ResourceKindServiceAccount = "ServiceAccount"
 	appsAPIVersion             = "apps/v1"
@@ -41,6 +42,7 @@ type ResourceRender struct {
 
 	rateLimit           *egv1a1.RateLimit
 	rateLimitDeployment *egv1a1.KubernetesDeploymentSpec
+	rateLimitDaemonset  *egv1a1.KubernetesDaemonSetSpec
 
 	// ownerReferenceUID store the uid of its owner reference.
 	ownerReferenceUID map[string]types.UID
@@ -196,7 +198,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		return nil, er
 	}
 
-	containers := expectedRateLimitContainers(r.rateLimit, r.rateLimitDeployment, r.Namespace)
+	containers := expectedRateLimitContainers(r.rateLimit, r.rateLimitDeployment.Container, r.Namespace)
 	selector := resource.GetSelector(rateLimitLabels())
 
 	podLabels := rateLimitLabels()
@@ -250,7 +252,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					SchedulerName:                 "default-scheduler",
 					SecurityContext:               r.rateLimitDeployment.Pod.SecurityContext,
-					Volumes:                       expectedDeploymentVolumes(r.rateLimit, r.rateLimitDeployment),
+					Volumes:                       expectedDeploymentVolumes(r.rateLimit, r.rateLimitDeployment.Pod),
 					Affinity:                      r.rateLimitDeployment.Pod.Affinity,
 					Tolerations:                   r.rateLimitDeployment.Pod.Tolerations,
 					ImagePullSecrets:              r.rateLimitDeployment.Pod.ImagePullSecrets,
@@ -294,12 +296,106 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 
 // DaemonSetSpec returns the `DaemonSet` sets spec.
 func (r *ResourceRender) DaemonSetSpec() (*egv1a1.KubernetesDaemonSetSpec, error) {
-	return nil, nil
+	return r.rateLimitDaemonset, nil
 }
 
-// TODO: implement this method
 func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
-	return nil, nil
+	// If daemonset config is nil,ignore Daemonset.
+	if daemonsetConfig, er := r.DaemonSetSpec(); daemonsetConfig == nil {
+		return nil, er
+	}
+
+	containers := expectedRateLimitContainers(r.rateLimit, r.rateLimitDaemonset.Container, r.Namespace)
+	selector := resource.GetSelector(rateLimitLabels())
+
+	podLabels := rateLimitLabels()
+	if r.rateLimitDaemonset.Pod.Labels != nil {
+		maps.Copy(podLabels, r.rateLimitDaemonset.Pod.Labels)
+		// Copy overwrites values in the dest map if they exist in the src map https://pkg.go.dev/maps#Copy
+		// It's applied again with the rateLimitLabels that are used as deployment selector to ensure those are not overwritten by user input
+		maps.Copy(podLabels, rateLimitLabels())
+	}
+
+	var podAnnotations map[string]string
+	if enablePrometheus(r.rateLimit) {
+		podAnnotations = map[string]string{
+			"prometheus.io/path":   "/metrics",
+			"prometheus.io/port":   strconv.Itoa(PrometheusPort),
+			"prometheus.io/scrape": "true",
+		}
+	}
+	if r.rateLimitDaemonset.Pod.Annotations != nil {
+		if podAnnotations != nil {
+			maps.Copy(podAnnotations, r.rateLimitDaemonset.Pod.Annotations)
+		} else {
+			podAnnotations = r.rateLimitDaemonset.Pod.Annotations
+		}
+	}
+
+	daemonset := &appsv1.DaemonSet{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       ResourceKindDaemonset,
+			APIVersion: appsAPIVersion,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: r.Namespace,
+			Labels:    rateLimitLabels(),
+		},
+		Spec: appsv1.DaemonSetSpec{
+			UpdateStrategy: *r.rateLimitDaemonset.Strategy,
+			Selector:       selector,
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels:      podLabels,
+					Annotations: podAnnotations,
+				},
+				Spec: corev1.PodSpec{
+					Containers:                    containers,
+					ServiceAccountName:            InfraName,
+					AutomountServiceAccountToken:  ptr.To(false),
+					TerminationGracePeriodSeconds: ptr.To[int64](300),
+					DNSPolicy:                     corev1.DNSClusterFirst,
+					RestartPolicy:                 corev1.RestartPolicyAlways,
+					SchedulerName:                 "default-scheduler",
+					SecurityContext:               r.rateLimitDaemonset.Pod.SecurityContext,
+					Volumes:                       expectedDeploymentVolumes(r.rateLimit, r.rateLimitDaemonset.Pod),
+					Affinity:                      r.rateLimitDaemonset.Pod.Affinity,
+					Tolerations:                   r.rateLimitDaemonset.Pod.Tolerations,
+					ImagePullSecrets:              r.rateLimitDaemonset.Pod.ImagePullSecrets,
+					NodeSelector:                  r.rateLimitDaemonset.Pod.NodeSelector,
+				},
+			},
+			RevisionHistoryLimit: ptr.To[int32](10),
+		},
+	}
+
+	// set name
+	if r.rateLimitDaemonset.Name != nil {
+		daemonset.ObjectMeta.Name = *r.rateLimitDaemonset.Name
+	} else {
+		daemonset.ObjectMeta.Name = r.Name()
+	}
+
+	if r.ownerReferenceUID != nil {
+		if uid, ok := r.ownerReferenceUID[ResourceKindDaemonset]; ok {
+			daemonset.OwnerReferences = []metav1.OwnerReference{
+				{
+					Kind:       ResourceKindDaemonset,
+					APIVersion: appsAPIVersion,
+					Name:       "envoy-gateway",
+					UID:        uid,
+				},
+			}
+		}
+	}
+
+	// apply merge patch to deployment
+	var err error
+	if daemonset, err = r.rateLimitDaemonset.ApplyMergePatch(daemonset); err != nil {
+		return nil, err
+	}
+
+	return daemonset, nil
 }
 
 // HorizontalPodAutoscalerSpec returns the `HorizontalPodAutoscaler` sets spec.

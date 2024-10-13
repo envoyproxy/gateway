@@ -10,7 +10,9 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 )
@@ -34,11 +36,26 @@ func (i *Infra) CreateOrUpdateRateLimitInfra(ctx context.Context) error {
 	}
 	ownerReferenceUID[ratelimit.ResourceKindService] = serviceUID
 
-	deploymentUID, err := i.Client.GetUID(ctx, key, &appsv1.Deployment{})
+	var uid types.UID
+	for _, obj := range []client.Object{&appsv1.Deployment{}, &appsv1.DaemonSet{}} {
+		uid, err = i.Client.GetUID(ctx, key, obj)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				continue
+			}
+			return err
+		}
+		switch obj.(type) {
+		case *appsv1.Deployment:
+			ownerReferenceUID[ratelimit.ResourceKindDeployment] = uid
+		case *appsv1.DaemonSet:
+			ownerReferenceUID[ratelimit.ResourceKindDaemonset] = uid
+		}
+		break
+	}
 	if err != nil {
 		return err
 	}
-	ownerReferenceUID[ratelimit.ResourceKindDeployment] = deploymentUID
 
 	serviceAccountUID, err := i.Client.GetUID(ctx, key, &corev1.ServiceAccount{})
 	if err != nil {
