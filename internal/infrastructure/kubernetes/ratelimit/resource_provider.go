@@ -196,7 +196,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		return nil, er
 	}
 
-	containers := expectedRateLimitContainers(r.rateLimit, r.rateLimitDeployment.Container, r.Namespace)
+	containers := expectedRateLimitContainers(r.rateLimit, r.rateLimitDeployment, r.Namespace)
 	selector := resource.GetSelector(rateLimitLabels())
 
 	podLabels := rateLimitLabels()
@@ -250,7 +250,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					SchedulerName:                 "default-scheduler",
 					SecurityContext:               r.rateLimitDeployment.Pod.SecurityContext,
-					Volumes:                       expectedDeploymentVolumes(r.rateLimit, r.rateLimitDeployment.Pod),
+					Volumes:                       expectedDeploymentVolumes(r.rateLimit, r.rateLimitDeployment),
 					Affinity:                      r.rateLimitDeployment.Pod.Affinity,
 					Tolerations:                   r.rateLimitDeployment.Pod.Tolerations,
 					ImagePullSecrets:              r.rateLimitDeployment.Pod.ImagePullSecrets,

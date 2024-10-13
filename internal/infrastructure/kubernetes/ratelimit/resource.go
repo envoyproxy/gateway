@@ -138,7 +138,7 @@ func rateLimitLabels() map[string]string {
 }
 
 // expectedRateLimitContainers returns expected rateLimit containers.
-func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitContainerSpec *egv1a1.KubernetesContainerSpec,
+func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeployment *egv1a1.KubernetesDeploymentSpec,
 	namespace string,
 ) []corev1.Container {
 	ports := []corev1.ContainerPort{
@@ -152,16 +152,16 @@ func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitContainer
 	containers := []corev1.Container{
 		{
 			Name:            InfraName,
-			Image:           *rateLimitContainerSpec.Image,
+			Image:           *rateLimitDeployment.Container.Image,
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			Command: []string{
 				"/bin/ratelimit",
 			},
-			Env:                      expectedRateLimitContainerEnv(rateLimit, rateLimitContainerSpec, namespace),
+			Env:                      expectedRateLimitContainerEnv(rateLimit, rateLimitDeployment, namespace),
 			Ports:                    ports,
-			Resources:                *rateLimitContainerSpec.Resources,
-			SecurityContext:          expectedRateLimitContainerSecurityContext(rateLimitContainerSpec),
-			VolumeMounts:             expectedContainerVolumeMounts(rateLimit, rateLimitContainerSpec),
+			Resources:                *rateLimitDeployment.Container.Resources,
+			SecurityContext:          expectedRateLimitContainerSecurityContext(rateLimitDeployment),
+			VolumeMounts:             expectedContainerVolumeMounts(rateLimit, rateLimitDeployment),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
 			StartupProbe: &corev1.Probe{
@@ -197,7 +197,7 @@ func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitContainer
 }
 
 // expectedContainerVolumeMounts returns expected rateLimit container volume mounts.
-func expectedContainerVolumeMounts(rateLimit *egv1a1.RateLimit, rateLimitContainerSpec *egv1a1.KubernetesContainerSpec) []corev1.VolumeMount {
+func expectedContainerVolumeMounts(rateLimit *egv1a1.RateLimit, rateLimitDeployment *egv1a1.KubernetesDeploymentSpec) []corev1.VolumeMount {
 	var volumeMounts []corev1.VolumeMount
 
 	// mount the cert
@@ -223,11 +223,11 @@ func expectedContainerVolumeMounts(rateLimit *egv1a1.RateLimit, rateLimitContain
 		})
 	}
 
-	return resource.ExpectedContainerVolumeMounts(rateLimitContainerSpec, volumeMounts)
+	return resource.ExpectedContainerVolumeMounts(rateLimitDeployment.Container, volumeMounts)
 }
 
 // expectedDeploymentVolumes returns expected rateLimit deployment volumes.
-func expectedDeploymentVolumes(rateLimit *egv1a1.RateLimit, rateLimitPodSpec *egv1a1.KubernetesPodSpec) []corev1.Volume {
+func expectedDeploymentVolumes(rateLimit *egv1a1.RateLimit, rateLimitDeployment *egv1a1.KubernetesDeploymentSpec) []corev1.Volume {
 	var volumes []corev1.Volume
 
 	if rateLimit.Backend.Redis != nil &&
@@ -269,11 +269,11 @@ func expectedDeploymentVolumes(rateLimit *egv1a1.RateLimit, rateLimitPodSpec *eg
 		})
 	}
 
-	return resource.ExpectedVolumes(rateLimitPodSpec, volumes)
+	return resource.ExpectedVolumes(rateLimitDeployment.Pod, volumes)
 }
 
 // expectedRateLimitContainerEnv returns expected rateLimit container envs.
-func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitContainerSpec *egv1a1.KubernetesContainerSpec,
+func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeployment *egv1a1.KubernetesDeploymentSpec,
 	namespace string,
 ) []corev1.EnvVar {
 	env := []corev1.EnvVar{
@@ -445,7 +445,7 @@ func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitContain
 		env = append(env, tracingEnvs...)
 	}
 
-	return resource.ExpectedContainerEnv(rateLimitContainerSpec, env)
+	return resource.ExpectedContainerEnv(rateLimitDeployment.Container, env)
 }
 
 // Validate the ratelimit tls secret validating.
@@ -489,9 +489,9 @@ func checkTraceEndpointScheme(url string) string {
 	return fmt.Sprintf("%s%s", httpScheme, url)
 }
 
-func expectedRateLimitContainerSecurityContext(rateLimitContainerSpec *egv1a1.KubernetesContainerSpec) *corev1.SecurityContext {
-	if rateLimitContainerSpec.SecurityContext != nil {
-		return rateLimitContainerSpec.SecurityContext
+func expectedRateLimitContainerSecurityContext(rateLimitDeployment *egv1a1.KubernetesDeploymentSpec) *corev1.SecurityContext {
+	if rateLimitDeployment.Container.SecurityContext != nil {
+		return rateLimitDeployment.Container.SecurityContext
 	}
 	return defaultSecurityContext()
 }

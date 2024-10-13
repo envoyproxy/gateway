@@ -228,20 +228,11 @@ func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubern
 		r.Kubernetes.LeaderElection = DefaultLeaderElection()
 	}
 
-	// if RateLimitDeployment and RateLimitDaemonset are both nil, use RateLimitDeployment
-	if r.Kubernetes.RateLimitDeployment == nil && r.Kubernetes.RateLimitDaemonset == nil {
+	if r.Kubernetes.RateLimitDeployment == nil {
 		r.Kubernetes.RateLimitDeployment = DefaultKubernetesDeployment(DefaultRateLimitImage)
 	}
 
-	// if use RateLimitDeployment, set default values
-	if r.Kubernetes.RateLimitDeployment != nil {
-		r.Kubernetes.RateLimitDeployment.defaultKubernetesDeploymentSpec(DefaultRateLimitImage)
-	}
-
-	// if use RateLimitDaemonset, set default values
-	if r.Kubernetes.RateLimitDaemonset != nil {
-		r.Kubernetes.RateLimitDaemonset.defaultKubernetesDaemonSetSpec(DefaultRateLimitImage)
-	}
+	r.Kubernetes.RateLimitDeployment.defaultKubernetesDeploymentSpec(DefaultRateLimitImage)
 
 	if r.Kubernetes.ShutdownManager == nil {
 		r.Kubernetes.ShutdownManager = &ShutdownManager{Image: ptr.To(DefaultShutdownManagerImage)}

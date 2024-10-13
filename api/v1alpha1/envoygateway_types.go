@@ -202,13 +202,6 @@ type EnvoyGatewayKubernetesProvider struct {
 	// +optional
 	RateLimitDeployment *KubernetesDeploymentSpec `json:"rateLimitDeployment,omitempty"`
 
-	// RateLimitDaemonset defines the desired state of the Envoy ratelimit daemonset resource.
-	// If unspecified, default settings for the managed Envoy ratelimit daemonset resource
-	// are applied.
-	//
-	// +optional
-	RateLimitDaemonset *KubernetesDaemonSetSpec `json:"rateLimitDaemonset,omitempty"`
-
 	// Watch holds configuration of which input resources should be watched and reconciled.
 	// +optional
 	Watch *KubernetesWatchMode `json:"watch,omitempty"`
