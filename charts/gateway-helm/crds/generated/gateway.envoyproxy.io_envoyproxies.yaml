@@ -1899,6 +1899,12 @@ spec:
                                   Selector which must match a node's labels for the pod to be scheduled on that node.
                                   More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
                                 type: object
+                              schedulerName:
+                                description: |-
+                                  SchedulerName is the kubernetes scheduler that should be used for this pod.
+                                  If specified, the pod will be dispatched by specified scheduler.
+                                  If not specified, the pod will be dispatched by default scheduler.
+                                type: string
                               securityContext:
                                 description: |-
                                   SecurityContext holds pod-level security attributes and common container settings.
@@ -7149,6 +7155,12 @@ spec:
                                   Selector which must match a node's labels for the pod to be scheduled on that node.
                                   More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
                                 type: object
+                              schedulerName:
+                                description: |-
+                                  SchedulerName is the kubernetes scheduler that should be used for this pod.
+                                  If specified, the pod will be dispatched by specified scheduler.
+                                  If not specified, the pod will be dispatched by default scheduler.
+                                type: string
                               securityContext:
                                 description: |-
                                   SecurityContext holds pod-level security attributes and common container settings.
