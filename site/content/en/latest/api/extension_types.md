@@ -1147,6 +1147,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `rateLimitDeployment` | _[KubernetesDeploymentSpec](#kubernetesdeploymentspec)_ |  false  | RateLimitDeployment defines the desired state of the Envoy ratelimit deployment resource.<br />If unspecified, default settings for the managed Envoy ratelimit deployment resource<br />are applied. |
+| `rateLimitDaemonset` | _[KubernetesDaemonSetSpec](#kubernetesdaemonsetspec)_ |  false  | RateLimitDaemonset defines the desired state of the Envoy ratelimit daemonset resource.<br />If unspecified, default settings for the managed Envoy ratelimit daemonset resource<br />are applied. |
 | `watch` | _[KubernetesWatchMode](#kuberneteswatchmode)_ |  false  | Watch holds configuration of which input resources should be watched and reconciled. |
 | `deploy` | _[KubernetesDeployMode](#kubernetesdeploymode)_ |  false  | Deploy holds configuration of how output managed resources such as the Envoy Proxy data plane<br />should be deployed |
 | `overwriteControlPlaneCerts` | _boolean_ |  false  | OverwriteControlPlaneCerts updates the secrets containing the control plane certs, when set. |
@@ -2432,6 +2433,7 @@ _Appears in:_
 KubernetesDaemonsetSpec defines the desired state of the Kubernetes daemonset resource.
 
 _Appears in:_
+- [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
 - [EnvoyProxyKubernetesProvider](#envoyproxykubernetesprovider)
 
 | Field | Type | Required | Description |

@@ -53,6 +53,7 @@ func NewResourceRender(ns string, gateway *egv1a1.EnvoyGateway, ownerReferenceUI
 	return &ResourceRender{
 		Namespace:           ns,
 		rateLimit:           gateway.RateLimit,
+		rateLimitDaemonset:  gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDaemonset,
 		rateLimitDeployment: gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment,
 		ownerReferenceUID:   ownerReferenceUID,
 	}
@@ -365,7 +366,6 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 					NodeSelector:                  r.rateLimitDaemonset.Pod.NodeSelector,
 				},
 			},
-			RevisionHistoryLimit: ptr.To[int32](10),
 		},
 	}
 

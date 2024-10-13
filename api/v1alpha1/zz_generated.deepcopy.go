@@ -1516,6 +1516,11 @@ func (in *EnvoyGatewayKubernetesProvider) DeepCopyInto(out *EnvoyGatewayKubernet
 		*out = new(KubernetesDeploymentSpec)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.RateLimitDaemonset != nil {
+		in, out := &in.RateLimitDaemonset, &out.RateLimitDaemonset
+		*out = new(KubernetesDaemonSetSpec)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.Watch != nil {
 		in, out := &in.Watch, &out.Watch
 		*out = new(KubernetesWatchMode)
