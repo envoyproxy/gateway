@@ -1,0 +1,62 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: response-override
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: response-override-config
+  namespace: gateway-conformance-infra
+data:
+  response.body: '{"error": "Internal Server Error"}'
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: response-override
+  namespace: gateway-conformance-infra
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: response-override
+  responseOverride:
+    - match:
+        statusCode:
+          - type: Value
+            value: 404
+      response:
+        contentType: text/plain
+        body:
+          type: Inline
+          inline: "Oops! Your request is not found."
+    - match:
+        statusCode:
+          - type: Value
+            value: 500
+          - type: Range
+            range:
+              start: 501
+              end: 511
+      response:
+        contentType: application/json
+        body:
+          type: ValueRef
+          valueRef:
+            group: ""
+            kind: ConfigMap
+            name: response-override-config

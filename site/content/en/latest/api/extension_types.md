@@ -3755,7 +3755,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `type` | _[StatusCodeValueType](#statuscodevaluetype)_ |  true  | Type is the type of value.<br />Valid values are Value and Range, default is Value. |
-| `value` | _string_ |  false  | Value contains the value of the status code. |
+| `value` | _integer_ |  false  | Value contains the value of the status code. |
 | `range` | _[StatusCodeRange](#statuscoderange)_ |  false  | Range contains the range of status codes. |
 
 

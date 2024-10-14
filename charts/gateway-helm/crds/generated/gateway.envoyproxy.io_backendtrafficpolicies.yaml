@@ -990,7 +990,7 @@ spec:
                               value:
                                 description: Value contains the value of the status
                                   code.
-                                type: string
+                                type: integer
                             required:
                             - type
                             type: object

@@ -36,14 +36,14 @@ http:
             rules:
               - match:
                   statusCode:
-                    - value: "404"
+                    - value: 404
                 name: backendtrafficpolicy/default/policy-for-gateway/responseoverride/rule/0
                 response:
                   body: gateway-1 Not Found
                   contentType: text/plain
               - match:
                   statusCode:
-                    - value: "500"
+                    - value: 500
                     - range:
                         end: 511
                         start: 501

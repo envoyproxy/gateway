@@ -87,7 +87,7 @@ backendTrafficPolicies:
       responseOverride:
         - match:
             statusCode:
-              - type: value
+              - type: Value
                 value: 404
           response:
             contentType: text/plain
@@ -96,7 +96,7 @@ backendTrafficPolicies:
               inline: "gateway-1 Not Found"
         - match:
             statusCode:
-              - type: value
+              - type: Value
                 value: 500
               - type: Range
                 range:
@@ -107,6 +107,7 @@ backendTrafficPolicies:
             body:
               type: ValueRef
               valueRef:
+                group: ""
                 kind: ConfigMap
                 name: response-override-config
   - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -139,5 +140,6 @@ backendTrafficPolicies:
             body:
               type: ValueRef
               valueRef:
+                group: ""
                 kind: ConfigMap
                 name: response-override-config

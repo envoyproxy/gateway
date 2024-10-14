@@ -577,7 +577,7 @@ func (r *gatewayAPIReconciler) handleNode(obj client.Object) bool {
 	return true
 }
 
-// validateConfigMapForReconcile checks whether the ConfigMap belongs to a valid ClientTrafficPolicy.
+// validateConfigMapForReconcile checks whether the ConfigMap belongs to a valid EG resource.
 func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) bool {
 	configMap, ok := obj.(*corev1.ConfigMap)
 	if !ok {
@@ -593,8 +593,8 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 		return false
 	}
 
-	if len(ctpList.Items) == 0 {
-		return false
+	if len(ctpList.Items) > 0 {
+		return true
 	}
 
 	btlsList := &gwapiv1a3.BackendTLSPolicyList{}
@@ -605,8 +605,20 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 		return false
 	}
 
-	if len(btlsList.Items) == 0 {
+	if len(btlsList.Items) > 0 {
+		return true
+	}
+
+	btpList := &egv1a1.BackendTrafficPolicyList{}
+	if err := r.client.List(context.Background(), btpList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(configMapBtpIndex, utils.NamespacedName(configMap).String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated BackendTrafficPolicy")
 		return false
+	}
+
+	if len(btpList.Items) > 0 {
+		return true
 	}
 
 	return true

@@ -10,7 +10,7 @@ backendTrafficPolicies:
     - match:
         statusCode:
         - type: null
-          value: "404"
+          value: 404
       response:
         body:
           inline: httproute-1 Not Found
@@ -19,7 +19,7 @@ backendTrafficPolicies:
     - match:
         statusCode:
         - type: null
-          value: "500"
+          value: 500
         - range:
             end: 511
             start: 501
@@ -61,8 +61,8 @@ backendTrafficPolicies:
     responseOverride:
     - match:
         statusCode:
-        - type: value
-          value: "404"
+        - type: Value
+          value: 404
       response:
         body:
           inline: gateway-1 Not Found
@@ -70,8 +70,8 @@ backendTrafficPolicies:
         contentType: text/plain
     - match:
         statusCode:
-        - type: value
-          value: "500"
+        - type: Value
+          value: 500
         - range:
             end: 511
             start: 501
@@ -330,14 +330,14 @@ xdsIR:
             rules:
             - match:
                 statusCode:
-                - value: "404"
+                - value: 404
               name: backendtrafficpolicy/default/policy-for-gateway/responseoverride/rule/0
               response:
                 body: gateway-1 Not Found
                 contentType: text/plain
             - match:
                 statusCode:
-                - value: "500"
+                - value: 500
                 - range:
                     end: 511
                     start: 501
@@ -394,14 +394,14 @@ xdsIR:
             rules:
             - match:
                 statusCode:
-                - value: "404"
+                - value: 404
               name: backendtrafficpolicy/default/policy-for-route/responseoverride/rule/0
               response:
                 body: httproute-1 Not Found
                 contentType: text/plain
             - match:
                 statusCode:
-                - value: "500"
+                - value: 500
                 - range:
                     end: 511
                     start: 501

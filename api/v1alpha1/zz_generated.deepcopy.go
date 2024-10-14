@@ -5047,7 +5047,7 @@ func (in *StatusCodeMatch) DeepCopyInto(out *StatusCodeMatch) {
 	}
 	if in.Value != nil {
 		in, out := &in.Value, &out.Value
-		*out = new(string)
+		*out = new(int)
 		**out = **in
 	}
 	if in.Range != nil {

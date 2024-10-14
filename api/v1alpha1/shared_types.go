@@ -656,7 +656,7 @@ type StatusCodeMatch struct {
 	// Value contains the value of the status code.
 	//
 	// +optional
-	Value *string `json:"value,omitempty"`
+	Value *int `json:"value,omitempty"`
 
 	// Range contains the range of status codes.
 	//

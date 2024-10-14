@@ -28,8 +28,11 @@
                         '@type': type.googleapis.com/envoy.extensions.http.custom_response.local_response_policy.v3.LocalResponsePolicy
                         body:
                           inlineString: gateway-1 Not Found
-                        bodyFormat:
-                          contentType: text/plain
+                        responseHeadersToAdd:
+                        - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
+                          header:
+                            key: Content-Type
+                            value: text/plain
                   predicate:
                     singlePredicate:
                       input:
@@ -48,8 +51,11 @@
                             {
                               "error": "Internal Server Error"
                             }
-                        bodyFormat:
-                          contentType: application/json
+                        responseHeadersToAdd:
+                        - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
+                          header:
+                            key: Content-Type
+                            value: application/json
                   predicate:
                     orMatcher:
                       predicate:
@@ -66,7 +72,7 @@
                             typedConfig:
                               '@type': type.googleapis.com/xds.type.matcher.v3.CelMatcher
                               exprMatch:
-                                celExprParsed:
+                                parsedExpr:
                                   expr:
                                     callExpr:
                                       args:

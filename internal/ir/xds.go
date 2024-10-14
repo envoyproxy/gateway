@@ -506,7 +506,7 @@ type CustomResponseMatch struct {
 // +k8s:deepcopy-gen=true
 type StatusCodeMatch struct {
 	// Value contains the value of the status code.
-	Value *string `json:"value,omitempty"`
+	Value *int `json:"value,omitempty"`
 
 	// Range contains a range of status codes.
 	Range *StatusCodeRange `json:"range,omitempty"`
