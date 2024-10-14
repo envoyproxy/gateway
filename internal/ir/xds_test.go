@@ -1182,9 +1182,17 @@ func TestValidateStringMatch(t *testing.T) {
 		want  error
 	}{
 		{
-			name: "happy",
+			name: "happy exact",
 			input: StringMatch{
 				Exact: ptr.To("example"),
+			},
+			want: nil,
+		},
+		{
+			name: "happy distinct",
+			input: StringMatch{
+				Distinct: true,
+				Name:     "example",
 			},
 			want: nil,
 		},
@@ -1201,6 +1209,15 @@ func TestValidateStringMatch(t *testing.T) {
 				Prefix: ptr.To("example"),
 			},
 			want: ErrStringMatchConditionInvalid,
+		},
+		{
+			name: "both invert and distinct fields are set",
+			input: StringMatch{
+				Distinct: true,
+				Name:     "example",
+				Invert:   ptr.To(true),
+			},
+			want: ErrStringMatchInvertDistinctInvalid,
 		},
 	}
 	for _, test := range tests {

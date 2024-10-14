@@ -179,7 +179,7 @@ func setAddressByIPFamily(socketAddress *corev3.SocketAddress, ipFamily ir.IPFam
 // TODO: Improve function parameters
 func buildXdsTCPListener(name, address string, port uint32, ipFamily ir.IPFamily, keepalive *ir.TCPKeepalive, connection *ir.ClientConnection, accesslog *ir.AccessLog) *listenerv3.Listener {
 	socketOptions := buildTCPSocketOptions(keepalive)
-	al := buildXdsAccessLog(accesslog, true)
+	al := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeListener)
 	bufferLimitBytes := buildPerConnectionBufferLimitBytes(connection)
 	listener := &listenerv3.Listener{
 		Name:                          name,
@@ -215,7 +215,7 @@ func buildPerConnectionBufferLimitBytes(connection *ir.ClientConnection) *wrappe
 func buildXdsQuicListener(name, address string, port uint32, ipFamily ir.IPFamily, accesslog *ir.AccessLog) *listenerv3.Listener {
 	xdsListener := &listenerv3.Listener{
 		Name:      name + "-quic",
-		AccessLog: buildXdsAccessLog(accesslog, true),
+		AccessLog: buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeListener),
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{
 				SocketAddress: &corev3.SocketAddress{
@@ -252,7 +252,7 @@ func buildXdsQuicListener(name, address string, port uint32, ipFamily ir.IPFamil
 func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irListener *ir.HTTPListener,
 	accesslog *ir.AccessLog, tracing *ir.Tracing, http3Listener bool, connection *ir.ClientConnection,
 ) error {
-	al := buildXdsAccessLog(accesslog, false)
+	al := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute)
 
 	hcmTracing, err := buildHCMTracing(tracing)
 	if err != nil {
@@ -526,7 +526,7 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute
 	statPrefix = strings.Join([]string{statPrefix, strconv.Itoa(int(xdsListener.Address.GetSocketAddress().GetPortValue()))}, "-")
 
 	mgr := &tcpv3.TcpProxy{
-		AccessLog:  buildXdsAccessLog(accesslog, false),
+		AccessLog:  buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute),
 		StatPrefix: statPrefix,
 		ClusterSpecifier: &tcpv3.TcpProxy_Cluster{
 			Cluster: clusterName,
@@ -805,7 +805,7 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener, access
 
 	udpProxy := &udpv3.UdpProxyConfig{
 		StatPrefix: statPrefix,
-		AccessLog:  buildXdsAccessLog(accesslog, false),
+		AccessLog:  buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute),
 		RouteSpecifier: &udpv3.UdpProxyConfig_Matcher{
 			Matcher: &matcher.Matcher{
 				OnNoMatch: &matcher.Matcher_OnMatch{
@@ -826,7 +826,7 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener, access
 
 	xdsListener := &listenerv3.Listener{
 		Name:      udpListener.Name,
-		AccessLog: buildXdsAccessLog(accesslog, true),
+		AccessLog: buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeListener),
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{
 				SocketAddress: &corev3.SocketAddress{

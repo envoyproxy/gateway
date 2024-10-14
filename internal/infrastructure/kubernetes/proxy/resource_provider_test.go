@@ -1051,6 +1051,9 @@ func TestService(t *testing.T) {
 			caseName: "custom",
 			infra:    newTestInfra(),
 			service: &egv1a1.KubernetesServiceSpec{
+				Labels: map[string]string{
+					"key1": "value1",
+				},
 				Annotations: map[string]string{
 					"key1": "value1",
 				},
@@ -1076,6 +1079,31 @@ func TestService(t *testing.T) {
 			service: &egv1a1.KubernetesServiceSpec{
 				Annotations: map[string]string{
 					"anno1": "value1-override",
+				},
+			},
+		},
+		{
+			caseName: "with-svc-labels",
+			infra:    newTestInfra(),
+			service: &egv1a1.KubernetesServiceSpec{
+				Labels: map[string]string{
+					"label1": "value1",
+					"label2": "value2",
+				},
+			},
+		},
+		{
+			caseName: "override-labels",
+			infra: newTestInfraWithAnnotationsAndLabels(map[string]string{
+				"anno1": "value1",
+				"anno2": "value2",
+			}, map[string]string{
+				"label1": "value1",
+				"label2": "value2",
+			}),
+			service: &egv1a1.KubernetesServiceSpec{
+				Labels: map[string]string{
+					"label1": "value1-override",
 				},
 			},
 		},

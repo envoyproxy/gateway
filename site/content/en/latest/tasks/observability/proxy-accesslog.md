@@ -249,3 +249,62 @@ Envoy Gateway provides additional metadata about the K8s resources that were tra
 For example, details about the `HTTPRoute` and `GRPCRoute` (kind, group, name, namespace and annotations) are available
 for access log formatter using the `METADATA` operator. To enrich logs, users can add log operator such as:
 `%METADATA(ROUTE:envoy-gateway:resources)%` to their access log format. 
+
+## Access Log Types
+
+By default, Access Log settings would apply to:
+- All Routes
+- If traffic is not matched by any Route known to Envoy, the Listener would emit the access log instead 
+
+Users may wish to customize this behavior:
+- Emit Access Logs by all Listeners for all traffic with specific settings
+- Do not emit Route-oriented access logs when a route is not matched.
+
+To achieve this, users can select if Access Log settings follow the default behavior or apply specifically to 
+Routes or Listeners by specifying the setting's type. 
+
+**Note**: When users define their own Access Log settings (with or without a type), the default Envoy Gateway 
+file access log is no longer configured. It can be re-enabled explicitly by adding empty settings for the desired components. 
+
+In the following example:
+- Route Access logs would use the default Envoy Gateway format and sink 
+- Listener Access logs are customized to report transport-level failures and connection attributes
+
+```shell 
+kubectl apply -f - <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: otel-access-logging
+    namespace: envoy-gateway-system
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: otel-access-logging
+  namespace: envoy-gateway-system
+spec:
+  telemetry:
+    accessLog:
+      settings:
+        - type: Route # re-enable default access log for route
+        - type: Listener # configure specific access log for listeners
+          format:
+            type: Text
+            text: |
+              [%START_TIME%] %DOWNSTREAM_REMOTE_ADDRESS% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DOWNSTREAM_TRANSPORT_FAILURE_REASON%
+          sinks:
+            - type: OpenTelemetry
+              openTelemetry:
+                host: otel-collector.monitoring.svc.cluster.local
+                port: 4317
+                resources:
+                  k8s.cluster.name: "cluster-1"
+EOF
+```

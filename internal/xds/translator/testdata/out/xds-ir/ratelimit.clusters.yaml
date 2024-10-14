@@ -56,6 +56,23 @@
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: fourth-route-dest
+  lbPolicy: LEAST_REQUEST
+  name: fourth-route-dest
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:

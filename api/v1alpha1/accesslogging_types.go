@@ -37,7 +37,6 @@ type ProxyAccessLogSetting struct {
 	// If type is defined, the accesslog settings would apply to the relevant component (as-is).
 	// +kubebuilder:validation:Enum=Listener;Route
 	// +optional
-	// +notImplementedHide
 	Type *ProxyAccessLogType `json:"type,omitempty"`
 }
 

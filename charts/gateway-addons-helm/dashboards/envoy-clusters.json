@@ -259,7 +259,7 @@
             "uid": "$datasource"
           },
           "editorMode": "builder",
-          "expr": "SUM(envoy_server_memory_allocated{})",
+          "expr": "sum(envoy_server_memory_allocated{})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "",
@@ -339,7 +339,7 @@
             "uid": "$datasource"
           },
           "editorMode": "code",
-          "expr": "SUM(envoy_server_memory_heap_size)",
+          "expr": "sum(envoy_server_memory_heap_size)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "",

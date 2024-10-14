@@ -20,7 +20,6 @@ jobs:
     - name: Run scanner
       uses: google/osv-scanner-action/osv-scanner-action@19ec1116569a47416e11a45848722b1af31a857b  # v1.9.0
       with:
-        # TODO enable call analysis once https://github.com/google/osv-scanner/issues/1220 is resolved
         scan-args: |-
           --skip-git
           --experimental-licenses=Apache-2.0,BSD-2-Clause,BSD-2-Clause-FreeBSD,BSD-3-Clause,MIT,ISC,Python-2.0,PostgreSQL,X11,Zlib
