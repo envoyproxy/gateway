@@ -248,7 +248,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					TerminationGracePeriodSeconds: ptr.To[int64](300),
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					RestartPolicy:                 corev1.RestartPolicyAlways,
-					SchedulerName:                 r.rateLimitDeployment.Pod.SchedulerName,
+					SchedulerName:                 ptr.Deref(r.rateLimitDeployment.Pod.SchedulerName, ""),
 					SecurityContext:               r.rateLimitDeployment.Pod.SecurityContext,
 					Volumes:                       expectedDeploymentVolumes(r.rateLimit, r.rateLimitDeployment),
 					Affinity:                      r.rateLimitDeployment.Pod.Affinity,

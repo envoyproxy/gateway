@@ -187,7 +187,7 @@ type KubernetesPodSpec struct {
 	// If not specified, the pod will be dispatched by default scheduler.
 	//
 	// +optional
-	SchedulerName string `json:"schedulerName,omitempty"`
+	SchedulerName *string `json:"schedulerName,omitempty"`
 }
 
 // KubernetesContainerSpec defines the desired state of the Kubernetes container resource.
