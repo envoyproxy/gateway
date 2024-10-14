@@ -10134,6 +10134,13 @@ spec:
                             - Local
                             - Cluster
                             type: string
+                          labels:
+                            additionalProperties:
+                              type: string
+                            description: |-
+                              Labels that should be appended to the service.
+                              By default, no labels are appended.
+                            type: object
                           loadBalancerClass:
                             description: |-
                               LoadBalancerClass, when specified, allows for choosing the LoadBalancer provider
