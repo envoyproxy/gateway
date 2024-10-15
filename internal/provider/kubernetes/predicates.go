@@ -621,7 +621,7 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 		return true
 	}
 
-	return true
+	return false
 }
 
 func (r *gatewayAPIReconciler) isEnvoyExtensionPolicyReferencingBackend(nsName *types.NamespacedName) bool {
