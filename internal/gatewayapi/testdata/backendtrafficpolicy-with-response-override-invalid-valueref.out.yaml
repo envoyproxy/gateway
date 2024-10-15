@@ -97,7 +97,8 @@ backendTrafficPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: 'ResponseOverride: can''t find the referenced configmap response-override-config.'
+        message: 'ResponseOverride: can''t find the key response.body in the referenced
+          configmap response-override-config.'
         reason: Invalid
         status: "False"
         type: Accepted

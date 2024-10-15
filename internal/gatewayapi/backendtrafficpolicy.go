@@ -957,18 +957,18 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, configMaps []*co
 		}
 
 		if ro.Response.Body.Type != nil && *ro.Response.Body.Type == egv1a1.ResponseValueTypeValueRef {
+			foundCM := false
 			for _, cm := range configMaps {
 				if cm.Namespace == policy.Namespace && cm.Name == string(ro.Response.Body.ValueRef.Name) {
+					foundCM = true
 					if body, dataOk := cm.Data["response.body"]; dataOk {
-						if body != "" {
-							response.Body = body
-						} else {
-							return nil, fmt.Errorf("no response.body found in configmap %s", cm.Name)
-						}
+						response.Body = body
+					} else {
+						return nil, fmt.Errorf("can't find the key response.body in the referenced configmap %s", ro.Response.Body.ValueRef.Name)
 					}
 				}
 			}
-			if response.Body == "" {
+			if !foundCM {
 				return nil, fmt.Errorf("can't find the referenced configmap %s", ro.Response.Body.ValueRef.Name)
 			}
 		} else {

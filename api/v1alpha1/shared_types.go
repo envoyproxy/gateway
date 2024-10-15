@@ -652,6 +652,7 @@ type StatusCodeMatch struct {
 	// Valid values are Value and Range, default is Value.
 	//
 	// +kubebuilder:default=Value
+	// +kubebuilder:validation:Enum=Value;Range
 	// +unionDiscriminator
 	Type *StatusCodeValueType `json:"type"`
 
@@ -707,6 +708,7 @@ type CustomResponseBody struct {
 	// Valid values are Inline and ValueRef, default is Inline.
 	//
 	// +kubebuilder:default=Inline
+	// +kubebuilder:validation:Enum=Inline;ValueRef
 	// +unionDiscriminator
 	Type *ResponseValueType `json:"type"`
 

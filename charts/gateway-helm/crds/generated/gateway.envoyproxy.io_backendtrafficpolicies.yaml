@@ -982,13 +982,17 @@ spec:
                                 - message: end must be greater than start
                                   rule: self.end > self.start
                               type:
+                                allOf:
+                                - enum:
+                                  - Value
+                                  - Range
+                                - enum:
+                                  - Value
+                                  - Range
                                 default: Value
                                 description: |-
                                   Type is the type of value.
                                   Valid values are Value and Range, default is Value.
-                                enum:
-                                - Value
-                                - Range
                                 type: string
                               value:
                                 description: Value contains the value of the status
@@ -1021,13 +1025,17 @@ spec:
                                 string.
                               type: string
                             type:
+                              allOf:
+                              - enum:
+                                - Inline
+                                - ValueRef
+                              - enum:
+                                - Inline
+                                - ValueRef
                               default: Inline
                               description: |-
                                 Type is the type of method to use to read the body value.
                                 Valid values are Inline and ValueRef, default is Inline.
-                              enum:
-                              - Inline
-                              - ValueRef
                               type: string
                             valueRef:
                               description: |-

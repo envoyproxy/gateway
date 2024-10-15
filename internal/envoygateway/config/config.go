@@ -47,7 +47,7 @@ func New() (*Server, error) {
 		Namespace:    env.Lookup("ENVOY_GATEWAY_NAMESPACE", DefaultNamespace),
 		DNSDomain:    env.Lookup("KUBERNETES_CLUSTER_DOMAIN", DefaultDNSDomain),
 		// the default logger
-		Logger:  logging.DefaultLogger(egv1a1.LogLevelDebug),
+		Logger:  logging.DefaultLogger(egv1a1.LogLevelInfo),
 		Elected: make(chan struct{}),
 	}, nil
 }
