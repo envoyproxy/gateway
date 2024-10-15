@@ -873,7 +873,6 @@ _Appears in:_
 
 
 CustomResponseBody
-TODO: zhaohuabing add CEL validation for the ValueRef
 
 _Appears in:_
 - [CustomResponse](#customresponse)

@@ -645,6 +645,8 @@ const (
 )
 
 // StatusCodeMatch defines the configuration for matching a status code.
+// +kubebuilder:validation:XValidation:message="value must be set for type Value",rule="(!has(self.type) || self.type == 'Value')? has(self.value) : true"
+// +kubebuilder:validation:XValidation:message="range must be set for type Range",rule="(has(self.type) && self.type == 'Range')? has(self.range) : true"
 type StatusCodeMatch struct {
 	// Type is the type of value.
 	// Valid values are Value and Range, default is Value.
@@ -665,6 +667,7 @@ type StatusCodeMatch struct {
 }
 
 // StatusCodeRange defines the configuration for define a range of status codes.
+// +kubebuilder:validation:XValidation: message="end must be greater than start",rule="self.end > self.start"
 type StatusCodeRange struct {
 	// Start of the range, including the start value.
 	Start int `json:"start"`
@@ -696,7 +699,9 @@ const (
 )
 
 // CustomResponseBody
-// TODO: zhaohuabing add CEL validation for the ValueRef
+// +kubebuilder:validation:XValidation:message="inline must be set for type Inline",rule="(!has(self.type) || self.type == 'Inline')? has(self.inline) : true"
+// +kubebuilder:validation:XValidation:message="valueRef must be set for type ValueRef",rule="(has(self.type) && self.type == 'ValueRef')? has(self.valueRef) : true"
+// +kubebuilder:validation:XValidation:message="only ConfigMap is supported for ValueRef",rule="has(self.valueRef) ? self.valueRef.kind == 'ConfigMap' : true"
 type CustomResponseBody struct {
 	// Type is the type of method to use to read the body value.
 	// Valid values are Inline and ValueRef, default is Inline.
