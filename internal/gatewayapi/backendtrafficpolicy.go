@@ -966,7 +966,7 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, configMaps []*co
 						return nil, fmt.Errorf("can't find the key response.body in the referenced configmap %s", ro.Response.Body.ValueRef.Name)
 					}
 					foundCM = true
-					break;
+					break
 				}
 			}
 			if !foundCM {

@@ -1451,7 +1451,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 							Response: egv1a1.CustomResponse{
 								Body: egv1a1.CustomResponseBody{
-									Type: ptr.To(egv1a1.ResponseValueTypeValueRef),
+									Type:   ptr.To(egv1a1.ResponseValueTypeValueRef),
 									Inline: ptr.To("foo"),
 								},
 							},
