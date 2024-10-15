@@ -808,6 +808,27 @@ spec:
                     - "1.2"
                     - "1.3"
                     type: string
+                  session:
+                    description: Session defines settings related to TLS session management.
+                    properties:
+                      resumption:
+                        description: |-
+                          Resumption determines the proxy's supported TLS session resumption option.
+                          By default, Envoy Gateway does not enable session resumption. Use sessionResumption to
+                          enable stateful and stateless session resumption. Users should consider security impacts
+                          of different resumption methods. Performance gains from resumption are diminished when
+                          Envoy proxy is deployed with more than one replica.
+                        properties:
+                          stateful:
+                            description: Stateful defines setting for stateful (session-id
+                              based) session resumption
+                            type: object
+                          stateless:
+                            description: Stateless defines setting for stateless (session-ticket
+                              based) session resumption
+                            type: object
+                        type: object
+                    type: object
                   signatureAlgorithms:
                     description: |-
                       SignatureAlgorithms specifies which signature algorithms the listener should
