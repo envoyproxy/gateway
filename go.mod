@@ -47,7 +47,7 @@ require (
 	golang.org/x/sys v0.26.0
 	google.golang.org/protobuf v1.35.1
 	gopkg.in/yaml.v3 v3.0.1
-	helm.sh/helm/v3 v3.16.1
+	helm.sh/helm/v3 v3.16.2
 	k8s.io/api v0.31.1
 	k8s.io/apiextensions-apiserver v0.31.1
 	k8s.io/apimachinery v0.31.1
@@ -63,7 +63,7 @@ require (
 
 require (
 	github.com/docker/docker v27.3.1+incompatible
-	github.com/replicatedhq/troubleshoot v0.105.2
+	github.com/replicatedhq/troubleshoot v0.107.0
 	google.golang.org/grpc v1.67.1
 	sigs.k8s.io/kubectl-validate v0.0.5-0.20240827210056-ce13d95db263
 )
