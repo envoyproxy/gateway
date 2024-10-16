@@ -17,6 +17,16 @@ metadata:
 spec:
   gatewayClassName: "{GATEWAY_CLASS_NAME}"
   listeners:
+    - name: tls-settings
+      port: 443
+      protocol: HTTPS
+      hostname: tls-settings.example.com
+      tls:
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: client-tls-settings-certificate
+        mode: Terminate
     - name: mtls
       port: 443
       protocol: HTTPS
@@ -69,3 +79,71 @@ spec:
         - kind: "Secret"
           group: ""
           name: "client-mtls-certificate"
+---
+# openssl req -x509 -sha256 -nodes -days 3650 -newkey rsa:2048 -subj '/O=example Inc./CN=example.com' -keyout ca.key -out ca.crt
+# cat > openssl.conf  <<EOF
+# [req]
+#   req_extensions = v3_req
+#   prompt = no
+#
+# [v3_req]
+#   keyUsage = keyEncipherment, digitalSignature
+#   extendedKeyUsage = serverAuth
+#   subjectAltName = @alt_names
+# [alt_names]
+#   DNS.1 = tls-settings.example.com
+# EOF
+# openssl req -out tls-settings.example.com.csr -newkey rsa:2048 -nodes -keyout tls-settings.example.com.key -subj "/CN=tls-settings.example.com/O=example organization"
+# openssl x509 -req -days 3650 -CA ca.crt -CAkey ca.key -set_serial 0 -in tls-settings.example.com.csr -out tls-settings.example.com.crt -extfile openssl.conf -extensions v3_req
+apiVersion: v1
+data:
+  tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2QUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktZd2dnU2lBZ0VBQW9JQkFRREVjUWNWTnM3bmduWjIKZHoycTdibmc5WWFBZEVJaDFQQzBzbGVXcFNxMWVMYm5ualV4TTNmemZKbTE5RGI1OTZ5N1pzVUdoQWJjOGFaYQpIMU5vOVVhVGZFNVl3bDRVU0Rvb1ZOS0M0VWw0aGp4NDk5TSt5MXFEY0pkOE80R2J6UjUvdWMvWjJuem9WRzdqCnFwMGpnOWJhditjcThiZmh0NENOd1NhUmc5ZzZNeDFIZ2xaS3QxcUFiSVVBMGMzbUszRVJzcWVTaUdSZld5c2IKaUZranNOR1dHSjI0ZzZGbWxzKzVWczRvWnMvOEZFcmJKMHZHYTZpSkorYWFTemRoY3krVHNmRXU1ZkJncHJhUQpNU3YzZU80c2k4Z1ArRFZieC9hbldudGNDZHFtNTlONzBOYnUzSGxEVmVhMkFYb2I3RHk0VngzSzBNOGNreThmClNRSzNUUG1GQWdNQkFBRUNnZ0VBQkFjNFVkcmQ1cWJJNXVGK2NPb0tqRm4vKzRyWkRRaFdhL3ROaHBKRFJXZTgKVkxrMW4ySnBqZEVLMGJ0bUN3L1RCUTNDYUhoblpwL1J5eEQwVDA1YTNDMEZNMFJrT1VWU0NOYm5BM3F4MDNYcApnbFE4cGorSHhlQ1dremV6VHZEQzlNOHhsdmtEbXNVSG5Lb0txbDd6c2NRQnQxbENOc3NZK3dGMC9YbXdRczZuCnhwZDV1QjdKeTdZYkE0dFZJWmVlVHhTaVR3ZHFBK3FQbVRVTXcrbHBxUzVPVUpiRkNrSWFUNXBQYVJERWN0K3UKZUwwRVV0U1BrczFyQit4WFVGQlkxL1dXYStBUm0wVXJxYTZLdGQ4Vkx6ZmovYkNUU2JsYkhqM2hkWWpKZFFaQwpkYjhNdHhlNVZTdC81R2JxUjJJRlBCZXE4bE9hWUpFYzJCaXdScXo3WVFLQmdRRDRuWE50RXhEd29XcFVxZXlhClBRSkhJZDBZN25saG92ZkYreU81WUVERytVSkVhRysreGdRR1Rzc1lTZ1pNaVR5bGQ2VWIrWkdRbHllT3djSVkKRDZJSXl0YXovaGJicy93TXJtMXZtbzNtcnR5V3VQcUkzend3U2VZOHBrcEtPQzhaSS9UUmM3dmVqZFZabXgydwo4QUtSdHN4aTNXYUJPUVVIMkZpcGpEQ3Y1UUtCZ1FES1J0VVpUOVBTS0k2WmE5dTBmUFFKR2JTZmpvWlJZVUgwClJVSkhsanJtbzdxQkFtdzRzbUpqaUQxRUswTEdFUVZJMmpVUFYvNXZPdUxsZHpFVHRmK1o5Ynl1V3o0a0JQRE4KN1M2cmEwQktiT0xyUEw2eGd2S2FMRURMWUhhZFN1YmwxNWJDQnRaUU5NMkJNcG9TY0xtbUNDQXB5YVFiVmVMVQpoNjNsM1laSklRS0JnR0hxQ1BLMVpwK093d1R6STRjZmJnMDd6Z3NxcU0yR1ZKVTVzcmtvcW5weTR1RjBURVpUClVIUjNoYzljSUJ6Mms5Y0xSeEM4ZXRMNlpRNzVTb3NWWlJpWFluWGpKWGVEN0VuR1RMMStubEp6SGRlU3BNRlIKUWpBMmVxSDZVQm5wQk11ZStLV2hNaVdWc0tnb3lrbk1UUWE4ZXNTWk0rekMyek5heHBpSDZRanRBb0dBRTlDawpoM28rY2RQdlJEQkFzWW1jRGxncVRZY1V1VndocmVBckFnQkJmTjZGSXFZdUc4Kzl1NnBZOWhpV3pmaFU0RElnCkNJVENNL3M4eHVYS05QZ2JOZVhRdWZQT1BwRU5WZDdxTjNpbUw2UkRCbkJJN2ZLNStVaGtnSWZPbHRJRGxIaHUKR0V1N0t0aEJXV3F2bFNiZHlObjY3SjBJS25WYlp4NXpkcFVnMW9FQ2dZQmtvVVlKNTcxSGRkMGdlMStHcGE0QgpEd250VkpwNzlGbEx3WEdJc2JHeDVycnhNbWRkbU9mMXdQa1FrdEp3YXAwNmNSOGR0RSthZElYeFBHbzBMVzVQCm5jUG1IN0NwbmZuZjFJRnZMbDk0WEhzNktpZDJhVGkxK0h4UlVYb3lzaHM1TDFvOCtWR1VHTnFxeUFPZGgzSzEKRW9DcXVQS205ZGNMVGhqMUxLRjdsZz09Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURkVENDQWwyZ0F3SUJBZ0lCQURBTkJna3Foa2lHOXcwQkFRc0ZBREF0TVJVd0V3WURWUVFLREF4bGVHRnQKY0d4bElFbHVZeTR4RkRBU0JnTlZCQU1NQzJWNFlXMXdiR1V1WTI5dE1CNFhEVEkwTURreU56RTBNVGN6TjFvWApEVE0wTURreU5URTBNVGN6TjFvd1FqRWhNQjhHQTFVRUF3d1lkR3h6TFhObGRIUnBibWR6TG1WNFlXMXdiR1V1ClkyOXRNUjB3R3dZRFZRUUtEQlJsZUdGdGNHeGxJRzl5WjJGdWFYcGhkR2x2YmpDQ0FTSXdEUVlKS29aSWh2Y04KQVFFQkJRQURnZ0VQQURDQ0FRb0NnZ0VCQU1SeEJ4VTJ6dWVDZG5aM1BhcnR1ZUQxaG9CMFFpSFU4TFN5VjVhbApLclY0dHVlZU5URXpkL044bWJYME52bjNyTHRteFFhRUJ0enhwbG9mVTJqMVJwTjhUbGpDWGhSSU9paFUwb0xoClNYaUdQSGozMHo3TFdvTndsM3c3Z1p2TkhuKzV6OW5hZk9oVWJ1T3FuU09EMXRxLzV5cnh0K0czZ0kzQkpwR0QKMkRvekhVZUNWa3EzV29Cc2hRRFJ6ZVlyY1JHeXA1S0laRjliS3h1SVdTT3cwWllZbmJpRG9XYVd6N2xXemlobQp6L3dVU3RzblM4WnJxSWtuNXBwTE4yRnpMNU94OFM3bDhHQ210cEF4Sy9kNDdpeUx5QS80TlZ2SDlxZGFlMXdKCjJxYm4wM3ZRMXU3Y2VVTlY1cllCZWh2c1BMaFhIY3JRenh5VEx4OUpBcmRNK1lVQ0F3RUFBYU9CaWpDQmh6QUwKQmdOVkhROEVCQU1DQmFBd0V3WURWUjBsQkF3d0NnWUlLd1lCQlFVSEF3RXdJd1lEVlIwUkJCd3dHb0lZZEd4egpMWE5sZEhScGJtZHpMbVY0WVcxd2JHVXVZMjl0TUIwR0ExVWREZ1FXQkJRTjMwZ3dUaGpVY3JXeFlXRmtyQmFaCm9FZGI3REFmQmdOVkhTTUVHREFXZ0JTdW00S3ZVbENvL3BUS0pOa0tFNGovTkZ1c2NqQU5CZ2txaGtpRzl3MEIKQVFzRkFBT0NBUUVBRVJWMVM5U2ZCQk4rV1hJRlkvNXdvdzFMSlBDM3BIV1JRbDY1MFdLb2h2T1Y2OHpCaTJwKwpjK1dlaitYTWJ1cDVvc3hJa1p6bUt5VkJtSlBCaVU4NE4rOGxTazZYc2xkbVpRK2tNSTRIbDM2SnRXTTIwei9FCkFJaG5oLzRJTVFNQ0RiL0ZPSW0zaURZQmJQNmZVYmQ3SlAzMXlwMU5DcGE4MGF3R1pjQ2dHMDJhY2hqVGJWZ08KTk9WRGJhcDFGTjNoVno1UjRQdUJBdXUrVnJzZFJKTEZ5S0pEL1pIY2hCVURZaXF6OUJOZ1ltbE5aTEs0dHNWeQoyWTlzVlRjbWdFVlpub0JpQWk0OEhzTGJLQWxVRFhpdkdDT1F2NUVwWkNzV0VIbU0reGMyVjJ0c3hURWJOTHlnCmRxVnlnOG5ZZXZHU29vNmJ2emxvbWl1ZlkzNFBCdEpzMGc9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+  ca.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURPekNDQWlPZ0F3SUJBZ0lVZGMwUW5hV09WVjQwRWhtcUdwNHdZMjZKOFFnd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0xURVZNQk1HQTFVRUNnd01aWGhoYlhCc1pTQkpibU11TVJRd0VnWURWUVFEREF0bGVHRnRjR3hsTG1OdgpiVEFlRncweU5EQTVNamN4TkRFMk5UTmFGdzB6TkRBNU1qVXhOREUyTlROYU1DMHhGVEFUQmdOVkJBb01ER1Y0CllXMXdiR1VnU1c1akxqRVVNQklHQTFVRUF3d0xaWGhoYlhCc1pTNWpiMjB3Z2dFaU1BMEdDU3FHU0liM0RRRUIKQVFVQUE0SUJEd0F3Z2dFS0FvSUJBUUMvMmxGdktkc25ZNDRRTWsyVUlDRGpvb1JkSFlQd0V3WCtaM0ZOcUgveQpRMG44VHNXSnhQa3J1S2dyK0lzRW5UaGQ1UGFQVFZLWVFJTEZtazhIQ2JMSnpta0ZBSVkrRlFka1phTVJVaWxRCjV4d3JOUk15MTFGbndhYUlYL2U5Zm1sZnBRU0E1Rm8wZHFoZE04N0hLVnpBdlRLaGFHTmdiem9RWlRYdkZYR3MKbjBTYVZCcGJQQzd4c2o2OHYzZ3NuckdZazlERmkzeTVyVnVGT3pPeFp3dkxXMEg5RmFEUkN6T3crZ0NPWGpWRQplSVJ5WldGd0YzN1BQdHljcG05anhxRkM5dW1IVEd0Y00rcHREVnUxY0dvcGZWT1hPR0xDbW1OZS80SG5oUnRaCmtrWnhOUzAvWkhsN0F3ZWFiNlFrK0hLNHQvdU8wUGpMencxK08yczdTYUFuQWdNQkFBR2pVekJSTUIwR0ExVWQKRGdRV0JCU3VtNEt2VWxDby9wVEtKTmtLRTRqL05GdXNjakFmQmdOVkhTTUVHREFXZ0JTdW00S3ZVbENvL3BUSwpKTmtLRTRqL05GdXNjakFQQmdOVkhSTUJBZjhFQlRBREFRSC9NQTBHQ1NxR1NJYjNEUUVCQ3dVQUE0SUJBUUFvCmRObVZJTWNwa3QwbEdlbDlCYXVKWUZBNkdRa0NiNFpOVEVDSzJ6dTBVRnNiZUtic3NMOXpyczFGM2FkRUlvZVkKMkhUeldHaEs1NzBYYktwNTlQUjRVU0c3MlJtM0NsWStjclN1bk83ZEZaWnptMEZ1Ri8vOVBMTlRyS3AxNWIwYgpsdHQvanNMZGlDWUdxOXlBclhUR3ZnTzZGNFV0N1FoYm9XWEpDU1RNNHBYVmt4SFpVUXFMMmJydnpsZ1lHcUY3Ck5EL3NTNFJENWdCQldGUWVidFpiY1A4ckEvNGY0eXpGNTBwbFJGdUNWQUltOWVaZjV6NGl5bE1lYTJxS2xJaGoKa0RyS3YrZTJuY2syZ25TVkZJQnBYdXdMa2VNMGcxeXZhbHRJMkVYZEt1aWxUcTlJTGRJOGFvandyenVWZnNPSQpkd3ZEcFU2OW0zMW5FSTZ6dkZWTQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+kind: Secret
+metadata:
+  name: client-tls-settings-certificate
+  namespace: gateway-conformance-infra
+type: kubernetes.io/tls
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-client-tls-settings
+  namespace: gateway-conformance-infra
+spec:
+  hostnames:
+    - tls-settings.example.com
+  parentRefs:
+    - name: client-mtls-gateway
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /client-tls-settings
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: ctp-client-tls-settings
+  namespace: gateway-conformance-infra
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: client-mtls-gateway
+    sectionName: tls-settings
+  tls:
+    minVersion: "1.1"
+    maxVersion: "1.2"
+    ciphers:
+      - ECDHE-RSA-AES128-GCM-SHA256
+      - AES128-SHA
+    ecdhCurves:
+      - X25519
+      - P-256
+    alpnProtocols:
+      - http/1.1

@@ -43,6 +43,7 @@ apiGroups:
 - apps
 resources:
 - deployments
+- daemonsets
 verbs:
 - get
 - list

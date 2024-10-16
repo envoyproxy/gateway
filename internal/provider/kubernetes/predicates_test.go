@@ -525,7 +525,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 		expect  bool
 	}{
 		{
-			name: "gateway service but deployment does not exist",
+			name: "gateway service but deployment or daemonset does not exist",
 			configs: []client.Object{
 				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 				sampleGateway,
@@ -547,7 +547,22 @@ func TestValidateServiceForReconcile(t *testing.T) {
 				gatewayapi.OwningGatewayNameLabel:      "scheduled-status-test",
 				gatewayapi.OwningGatewayNamespaceLabel: "default",
 			}, nil),
-			// Note that in case when a deployment exists, the Service is just processed for Gateway status
+			// Note that in case when a envoyObjects exists, the Service is just processed for Gateway status
+			// updates and not reconciled further.
+			expect: false,
+		},
+		{
+			name: "gateway service daemonset also exist",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				sampleGateway,
+				test.GetGatewayDaemonSet(types.NamespacedName{Name: proxy.ExpectedResourceHashedName("default/scheduled-status-test")}, nil),
+			},
+			service: test.GetService(types.NamespacedName{Name: "service"}, map[string]string{
+				gatewayapi.OwningGatewayNameLabel:      "scheduled-status-test",
+				gatewayapi.OwningGatewayNamespaceLabel: "default",
+			}, nil),
+			// Note that in case when a envoyObjects exists, the Service is just processed for Gateway status
 			// updates and not reconciled further.
 			expect: false,
 		},
@@ -859,34 +874,39 @@ func TestValidateServiceForReconcile(t *testing.T) {
 	}
 }
 
-// TestValidateDeploymentForReconcile tests the validateDeploymentForReconcile
+// TestValidateObjectForReconcile tests the validateObjectForReconcile
 // predicate function.
-func TestValidateDeploymentForReconcile(t *testing.T) {
+func TestValidateObjectForReconcile(t *testing.T) {
 	sampleGateway := test.GetGateway(types.NamespacedName{Namespace: "default", Name: "scheduled-status-test"}, "test-gc", 8080)
 	mergeGatewaysConfig := test.GetEnvoyProxy(types.NamespacedName{Namespace: "default", Name: "merge-gateways-config"}, true)
 
 	testCases := []struct {
-		name       string
-		configs    []client.Object
-		deployment client.Object
-		expect     bool
+		name         string
+		configs      []client.Object
+		envoyObjects []client.Object
+		expect       bool
 	}{
 		{
-			// No config should lead to a reconciliation of a Deployment object. The main
-			// purpose of the Deployment watcher is just for update Gateway object statuses.
-			name: "gateway deployment deployment also exist",
+			// No config should lead to a reconciliation of a Deployment or DaemonSet object. The main
+			// purpose of the watcher is just for updating Gateway object statuses.
+			name: "gateway deployment or daemonset also exist",
 			configs: []client.Object{
 				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 				sampleGateway,
-				test.GetService(types.NamespacedName{Name: "deployment"}, map[string]string{
+				test.GetService(types.NamespacedName{Name: "envoyObjects"}, map[string]string{
 					gatewayapi.OwningGatewayNameLabel:      "scheduled-status-test",
 					gatewayapi.OwningGatewayNamespaceLabel: "default",
 				}, nil),
 			},
-			deployment: test.GetGatewayDeployment(types.NamespacedName{Name: "deployment"}, map[string]string{
-				gatewayapi.OwningGatewayNameLabel:      "scheduled-status-test",
-				gatewayapi.OwningGatewayNamespaceLabel: "default",
-			}),
+			envoyObjects: []client.Object{
+				test.GetGatewayDeployment(types.NamespacedName{Name: "deployment"}, map[string]string{
+					gatewayapi.OwningGatewayNameLabel:      "scheduled-status-test",
+					gatewayapi.OwningGatewayNamespaceLabel: "default",
+				}), test.GetGatewayDaemonSet(types.NamespacedName{Name: "daemonset"}, map[string]string{
+					gatewayapi.OwningGatewayNameLabel:      "scheduled-status-test",
+					gatewayapi.OwningGatewayNamespaceLabel: "default",
+				}),
+			},
 			expect: false,
 		},
 		{
@@ -900,9 +920,14 @@ func TestValidateDeploymentForReconcile(t *testing.T) {
 				}),
 				mergeGatewaysConfig,
 			},
-			deployment: test.GetGatewayDeployment(types.NamespacedName{Name: "deployment"}, map[string]string{
-				gatewayapi.OwningGatewayClassLabel: "test-mg",
-			}),
+			envoyObjects: []client.Object{
+				test.GetGatewayDeployment(types.NamespacedName{Name: "deployment"}, map[string]string{
+					gatewayapi.OwningGatewayClassLabel: "test-mg",
+				}),
+				test.GetGatewayDaemonSet(types.NamespacedName{Name: "daemonset"}, map[string]string{
+					gatewayapi.OwningGatewayClassLabel: "test-mg",
+				}),
+			},
 			expect: false,
 		},
 		{
@@ -919,9 +944,14 @@ func TestValidateDeploymentForReconcile(t *testing.T) {
 				test.GetGateway(types.NamespacedName{Name: "merged-gateway-2", Namespace: "default"}, "test-mg", 8082),
 				test.GetGateway(types.NamespacedName{Name: "merged-gateway-3", Namespace: "default"}, "test-mg", 8083),
 			},
-			deployment: test.GetGatewayDeployment(types.NamespacedName{Name: "deployment"}, map[string]string{
-				gatewayapi.OwningGatewayClassLabel: "test-mg",
-			}),
+			envoyObjects: []client.Object{
+				test.GetGatewayDeployment(types.NamespacedName{Name: "deployment"}, map[string]string{
+					gatewayapi.OwningGatewayClassLabel: "test-mg",
+				}),
+				test.GetGatewayDaemonSet(types.NamespacedName{Name: "daemonset"}, map[string]string{
+					gatewayapi.OwningGatewayClassLabel: "test-mg",
+				}),
+			},
 			expect: false,
 		},
 	}
@@ -938,8 +968,10 @@ func TestValidateDeploymentForReconcile(t *testing.T) {
 	for _, tc := range testCases {
 		r.client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.configs...).Build()
 		t.Run(tc.name, func(t *testing.T) {
-			res := r.validateDeploymentForReconcile(tc.deployment)
-			require.Equal(t, tc.expect, res)
+			for _, obj := range tc.envoyObjects {
+				res := r.validateObjectForReconcile(obj)
+				require.Equal(t, tc.expect, res)
+			}
 		})
 	}
 }
