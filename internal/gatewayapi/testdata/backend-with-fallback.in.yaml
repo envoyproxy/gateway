@@ -54,5 +54,5 @@ backends:
       fallback: true
       endpoints:
         - ip:
-            address: 2.2.2.2 
+            address: 2.2.2.2
             port: 3001
