@@ -860,7 +860,6 @@ _Appears in:_
 CustomResponse defines the configuration for returning a custom response.
 
 _Appears in:_
-- [HTTPDirectResponseFilter](#httpdirectresponsefilter)
 - [ResponseOverride](#responseoverride)
 
 | Field | Type | Required | Description |
@@ -1936,8 +1935,8 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `contentType` | _string_ |  false  | Content Type of the response. This will be set in the Content-Type header. |
-| `body` | _[CustomResponseBody](#customresponsebody)_ |  false  | Body of the Custom Response |
-| `statusCode` | _string_ |  false  | Status Code of the HTTP response |
+| `body` | _[CustomResponseBody](#customresponsebody)_ |  false  | Body of the Response |
+| `statusCode` | _string_ |  false  | Status Code of the HTTP response<br />If unset, defaults to 200. |
 
 
 #### HTTPExtAuthService

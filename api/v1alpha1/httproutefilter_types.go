@@ -53,7 +53,20 @@ type HTTPURLRewriteFilter struct {
 
 // HTTPDirectResponseFilter defines the configuration to return a fixed response.
 type HTTPDirectResponseFilter struct {
-	CustomResponse `json:",inline"`
+	// Content Type of the response. This will be set in the Content-Type header.
+	//
+	// +optional
+	ContentType *string `json:"contentType,omitempty"`
+
+	// Body of the Response
+	//
+	// +optional
+	Body *CustomResponseBody `json:"body,omitempty"`
+
+	// Status Code of the HTTP response
+	// If unset, defaults to 200.
+	// +optional
+	StatusCode *string `json:"statusCode,omitempty"`
 }
 
 // HTTPPathModifierType defines the type of path redirect or rewrite.
