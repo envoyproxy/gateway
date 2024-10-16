@@ -15,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 
@@ -44,6 +45,10 @@ func NewResourceRender(ns string, infra *ir.ProxyInfra, gateway *egv1a1.EnvoyGat
 
 func (r *ResourceRender) Name() string {
 	return ExpectedResourceHashedName(r.infra.Name)
+}
+
+func (r *ResourceRender) LabelSelector() labels.Selector {
+	return labels.SelectorFromSet(r.stableSelector().MatchLabels)
 }
 
 // ServiceAccount returns the expected proxy serviceAccount.
