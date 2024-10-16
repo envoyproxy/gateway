@@ -960,11 +960,20 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, configMaps []*co
 			foundCM := false
 			for _, cm := range configMaps {
 				if cm.Namespace == policy.Namespace && cm.Name == string(ro.Response.Body.ValueRef.Name) {
-					if body, dataOk := cm.Data["response.body"]; dataOk {
+					body, dataOk := cm.Data["response.body"]
+					switch {
+					case dataOk:
 						response.Body = body
-					} else {
+					case len(cm.Data) > 0: // Fallback to the first key if response.body is not found
+						for _, value := range cm.Data {
+							body = value
+							break
+						}
+						response.Body = body
+					default:
 						return nil, fmt.Errorf("can't find the key response.body in the referenced configmap %s", ro.Response.Body.ValueRef.Name)
 					}
+
 					foundCM = true
 					break
 				}

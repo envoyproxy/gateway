@@ -881,7 +881,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `type` | _[ResponseValueType](#responsevaluetype)_ |  true  | Type is the type of method to use to read the body value.<br />Valid values are Inline and ValueRef, default is Inline. |
 | `inline` | _string_ |  false  | Inline contains the value as an inline string. |
-| `valueRef` | _[LocalObjectReference](#localobjectreference)_ |  false  | ValueRef contains the contents of the body<br />specified as a local object reference.<br />Only a reference to ConfigMap is supported.<br /><br />The contents of the ConfigMap must have a key-value pair where<br />the key is `response.body` and the value is the body content. |
+| `valueRef` | _[LocalObjectReference](#localobjectreference)_ |  false  | ValueRef contains the contents of the body<br />specified as a local object reference.<br />Only a reference to ConfigMap is supported.<br /><br />The value of key `response.body` in the ConfigMap will be used as the response body.<br />If the key is not found, the first value in the ConfigMap will be used. |
 
 
 #### CustomResponseMatch

@@ -721,8 +721,8 @@ type CustomResponseBody struct {
 	// specified as a local object reference.
 	// Only a reference to ConfigMap is supported.
 	//
-	// The contents of the ConfigMap must have a key-value pair where
-	// the key is `response.body` and the value is the body content.
+	// The value of key `response.body` in the ConfigMap will be used as the response body.
+	// If the key is not found, the first value in the ConfigMap will be used.
 	//
 	// +optional
 	ValueRef *gwapiv1.LocalObjectReference `json:"valueRef,omitempty"`

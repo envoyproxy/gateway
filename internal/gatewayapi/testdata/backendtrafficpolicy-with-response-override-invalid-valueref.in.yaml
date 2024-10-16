@@ -68,11 +68,7 @@ configMaps:
     metadata:
       name: response-override-config
       namespace: default
-    data:
-      response.body.invalid.key: |
-        {
-          "error": "Internal Server Error"
-        }
+    data: {}
 backendTrafficPolicies:
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: BackendTrafficPolicy
