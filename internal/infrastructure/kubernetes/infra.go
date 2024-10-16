@@ -13,6 +13,7 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -29,6 +30,7 @@ var _ ResourceRender = &ratelimit.ResourceRender{}
 // based on Infra IR resources.
 type ResourceRender interface {
 	Name() string
+	LabelSelector() labels.Selector
 	ServiceAccount() (*corev1.ServiceAccount, error)
 	Service() (*corev1.Service, error)
 	ConfigMap() (*corev1.ConfigMap, error)
