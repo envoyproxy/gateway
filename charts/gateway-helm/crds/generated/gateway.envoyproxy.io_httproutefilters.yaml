@@ -54,7 +54,7 @@ spec:
                   return a fixed response.
                 properties:
                   body:
-                    description: Body of the Custom Response
+                    description: Body of the Response
                     properties:
                       inline:
                         description: Inline contains the value as an inline string.
@@ -104,8 +104,10 @@ spec:
                       the Content-Type header.
                     type: string
                   statusCode:
-                    description: Status Code of the HTTP response
-                    type: string
+                    description: |-
+                      Status Code of the HTTP response
+                      If unset, defaults to 200.
+                    type: integer
                 type: object
               urlRewrite:
                 description: HTTPURLRewriteFilter define rewrites of HTTP URL components

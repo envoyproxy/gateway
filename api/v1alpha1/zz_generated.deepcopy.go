@@ -2712,7 +2712,7 @@ func (in *HTTPDirectResponseFilter) DeepCopyInto(out *HTTPDirectResponseFilter) 
 	}
 	if in.StatusCode != nil {
 		in, out := &in.StatusCode, &out.StatusCode
-		*out = new(string)
+		*out = new(int)
 		**out = **in
 	}
 }

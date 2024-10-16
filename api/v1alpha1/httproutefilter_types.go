@@ -66,7 +66,7 @@ type HTTPDirectResponseFilter struct {
 	// Status Code of the HTTP response
 	// If unset, defaults to 200.
 	// +optional
-	StatusCode *string `json:"statusCode,omitempty"`
+	StatusCode *int `json:"statusCode,omitempty"`
 }
 
 // HTTPPathModifierType defines the type of path redirect or rewrite.

@@ -1936,7 +1936,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `contentType` | _string_ |  false  | Content Type of the response. This will be set in the Content-Type header. |
 | `body` | _[CustomResponseBody](#customresponsebody)_ |  false  | Body of the Response |
-| `statusCode` | _string_ |  false  | Status Code of the HTTP response<br />If unset, defaults to 200. |
+| `statusCode` | _integer_ |  false  | Status Code of the HTTP response<br />If unset, defaults to 200. |
 
 
 #### HTTPExtAuthService
