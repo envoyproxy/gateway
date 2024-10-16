@@ -153,9 +153,8 @@ func setAddressByIPFamily(socketAddress *corev3.SocketAddress, ipFamily ir.IPFam
 		socketAddress.Address = "0.0.0.0"
 	case ir.IPv6:
 		socketAddress.Address = "::"
-	case ir.Dual:
+	case ir.Dualstack:
 		socketAddress.Address = "0.0.0.0"
-		socketAddress.Ipv4Compat = true
 		return []*listenerv3.AdditionalAddress{
 			{
 				Address: &corev3.Address{
@@ -212,7 +211,7 @@ func buildPerConnectionBufferLimitBytes(connection *ir.ClientConnection) *wrappe
 }
 
 // buildXdsQuicListener creates a xds Listener resource for quic
-func buildXdsQuicListener(name, address string, port uint32, ipFamily ir.IPFamily, accesslog *ir.AccessLog) *listenerv3.Listener {
+func buildXdsQuicListener(name, address string, port uint32, accesslog *ir.AccessLog) *listenerv3.Listener {
 	xdsListener := &listenerv3.Listener{
 		Name:      name + "-quic",
 		AccessLog: buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeListener),
@@ -234,8 +233,6 @@ func buildXdsQuicListener(name, address string, port uint32, ipFamily ir.IPFamil
 		DrainType: listenerv3.Listener_MODIFY_ONLY,
 	}
 
-	socketAddress := xdsListener.Address.GetSocketAddress()
-	xdsListener.AdditionalAddresses = setAddressByIPFamily(socketAddress, ipFamily, port)
 	return xdsListener
 }
 

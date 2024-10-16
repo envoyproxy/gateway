@@ -217,7 +217,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		case !xdsListenerOnSameAddressPortExists:
 			// Create a new UDP(QUIC) listener for HTTP3 traffic if HTTP3 is enabled
 			if http3Enabled {
-				quicXDSListener = buildXdsQuicListener(httpListener.Name, httpListener.Address, httpListener.Port, httpListener.IPFamily, accessLog)
+				quicXDSListener = buildXdsQuicListener(httpListener.Name, httpListener.Address, httpListener.Port, accessLog)
 				if err = tCtx.AddXdsResource(resourcev3.ListenerType, quicXDSListener); err != nil {
 					errs = errors.Join(errs, err)
 					continue

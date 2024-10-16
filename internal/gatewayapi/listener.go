@@ -110,6 +110,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 						Address:  "0.0.0.0",
 						Port:     uint32(containerPort),
 						Metadata: buildListenerMetadata(listener, gateway),
+						IPFamily: ir.Dualstack,
 					},
 					TLS: irTLSConfigs(listener.tlsSecrets...),
 					Path: ir.PathSettings{
@@ -129,9 +130,10 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			case gwapiv1.TCPProtocolType, gwapiv1.TLSProtocolType:
 				irListener := &ir.TCPListener{
 					CoreListenerDetails: ir.CoreListenerDetails{
-						Name:    irListenerName(listener),
-						Address: "0.0.0.0",
-						Port:    uint32(containerPort),
+						Name:     irListenerName(listener),
+						Address:  "0.0.0.0",
+						Port:     uint32(containerPort),
+						IPFamily: ir.Dualstack,
 					},
 
 					// Gateway is processed firstly, then ClientTrafficPolicy, then xRoute.

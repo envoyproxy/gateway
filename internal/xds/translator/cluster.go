@@ -29,6 +29,7 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/utils/ptr"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -56,6 +57,7 @@ type xdsClusterArgs struct {
 	backendConnection *ir.BackendConnection
 	dns               *ir.DNS
 	useClientProtocol bool
+	ipFamily          *egv1a1.IPFamily
 }
 
 type EndpointType int
@@ -82,9 +84,13 @@ func buildEndpointType(settings []*ir.DestinationSetting) EndpointType {
 }
 
 func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
+	dnsLookupFamily := clusterv3.Cluster_V4_ONLY
+	if args.ipFamily != nil && *args.ipFamily == egv1a1.DualStack {
+		dnsLookupFamily = clusterv3.Cluster_ALL
+	}
 	cluster := &clusterv3.Cluster{
 		Name:            args.name,
-		DnsLookupFamily: getDNSLookupFamily(args.settings),
+		DnsLookupFamily: dnsLookupFamily,
 		CommonLbConfig: &clusterv3.Cluster_CommonLbConfig{
 			LocalityConfigSpecifier: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig_{
 				LocalityWeightedLbConfig: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig{},

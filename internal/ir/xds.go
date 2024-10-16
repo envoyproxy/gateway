@@ -233,9 +233,9 @@ type CoreListenerDetails struct {
 type IPFamily string
 
 const (
-	IPv4 IPFamily = "IPv4"
-	IPv6 IPFamily = "IPv6"
-	Dual IPFamily = "DualStack"
+	IPv4      IPFamily = "IPv4"
+	IPv6      IPFamily = "IPv6"
+	Dualstack IPFamily = "DualStack"
 )
 
 func (l CoreListenerDetails) GetName() string {
