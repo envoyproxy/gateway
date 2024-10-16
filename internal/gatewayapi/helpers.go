@@ -421,7 +421,7 @@ func irRouteDestinationName(route RouteContext, ruleIdx int) string {
 	return fmt.Sprintf("%srule/%d", irRoutePrefix(route), ruleIdx)
 }
 
-func irTLSConfigs(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
+func irTLSConfigs(protocol gwapiv1.ProtocolType, tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
 	if len(tlsSecrets) == 0 {
 		return nil
 	}
@@ -436,6 +436,11 @@ func irTLSConfigs(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
 			PrivateKey:  tlsSecret.Data[corev1.TLSPrivateKeyKey],
 		}
 	}
+
+	if protocol != gwapiv1.HTTPSProtocolType {
+		tlsListenerConfigs.ALPNDisabled = true
+	}
+
 	return tlsListenerConfigs
 }
 

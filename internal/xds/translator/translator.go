@@ -897,7 +897,7 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.
 	}
 
 	if len(tlsConfig.ALPNProtocols) > 0 {
-		tlsCtx.CommonTlsContext.AlpnProtocols = buildALPNProtocols(tlsConfig.ALPNProtocols)
+		tlsCtx.CommonTlsContext.AlpnProtocols = buildALPNProtocols(tlsConfig.ALPNProtocols, tlsConfig.ALPNDisabled)
 	}
 
 	if len(tlsConfig.ClientCertificates) > 0 {

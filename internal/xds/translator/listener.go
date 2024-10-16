@@ -642,7 +642,7 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 	tlsCtx := &tlsv3.DownstreamTlsContext{
 		CommonTlsContext: &tlsv3.CommonTlsContext{
 			TlsParams:                      buildTLSParams(tlsConfig),
-			AlpnProtocols:                  buildALPNProtocols(tlsConfig.ALPNProtocols),
+			AlpnProtocols:                  buildALPNProtocols(tlsConfig.ALPNProtocols, tlsConfig.ALPNDisabled),
 			TlsCertificateSdsSecretConfigs: []*tlsv3.SdsSecretConfig{},
 		},
 	}
@@ -735,7 +735,10 @@ func buildTLSVersion(version *ir.TLSVersion) tlsv3.TlsParameters_TlsProtocol {
 	return tlsv3.TlsParameters_TLS_AUTO
 }
 
-func buildALPNProtocols(alpn []string) []string {
+func buildALPNProtocols(alpn []string, disabled bool) []string {
+	if disabled {
+		return []string{}
+	}
 	if len(alpn) == 0 {
 		out := []string{"h2", "http/1.1"}
 		return out

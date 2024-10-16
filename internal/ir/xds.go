@@ -355,6 +355,8 @@ type TLSConfig struct {
 	StatelessSessionResumption bool `json:"statelessSessionResumption,omitempty" yaml:"statelessSessionResumption,omitempty"`
 	// StatefulSessionResumption determines if stateful (session-id based) session resumption is enabled
 	StatefulSessionResumption bool `json:"statefulSessionResumption,omitempty" yaml:"statefulSessionResumption,omitempty"`
+	// ALPNDisabled determined if ALPN extension is disabled
+	ALPNDisabled bool `json:"alpnDisabled,omitempty" yaml:"alpnDisabled,omitempty"`
 }
 
 // TLSCertificate holds a single certificate's details
