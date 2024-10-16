@@ -13,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
@@ -30,8 +31,8 @@ func UpdateGatewayStatusAcceptedCondition(gw *gwapiv1.Gateway, accepted bool) *g
 
 // UpdateGatewayStatusProgrammedCondition updates the status addresses for the provided gateway
 // based on the status IP/Hostname of svc and updates the Programmed condition based on the
-// service and deployment state.
-func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1.Gateway, svc *corev1.Service, deployment *appsv1.Deployment, nodeAddresses ...string) {
+// service and deployment or daemonset state.
+func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1.Gateway, svc *corev1.Service, envoyObj client.Object, nodeAddresses ...string) {
 	var addresses, hostnames []string
 	// Update the status addresses field.
 	if svc != nil {
@@ -98,7 +99,7 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1.Gateway, svc *corev1.Ser
 	}
 
 	// Update the programmed condition.
-	updateGatewayProgrammedCondition(gw, deployment)
+	updateGatewayProgrammedCondition(gw, envoyObj)
 }
 
 func SetGatewayListenerStatusCondition(gateway *gwapiv1.Gateway, listenerStatusIdx int,
@@ -132,13 +133,13 @@ func computeGatewayAcceptedCondition(gw *gwapiv1.Gateway, accepted bool) metav1.
 const (
 	messageAddressNotAssigned  = "No addresses have been assigned to the Gateway"
 	messageFmtTooManyAddresses = "Too many addresses (%d) have been assigned to the Gateway, the maximum number of addresses is 16"
-	messageNoResources         = "Deployment replicas unavailable"
-	messageFmtProgrammed       = "Address assigned to the Gateway, %d/%d envoy Deployment replicas available"
+	messageNoResources         = "Envoy replicas unavailable"
+	messageFmtProgrammed       = "Address assigned to the Gateway, %d/%d envoy replicas available"
 )
 
 // updateGatewayProgrammedCondition computes the Gateway Programmed status condition.
-// Programmed condition surfaces true when the Envoy Deployment status is ready.
-func updateGatewayProgrammedCondition(gw *gwapiv1.Gateway, deployment *appsv1.Deployment) {
+// Programmed condition surfaces true when the Envoy Deployment or DaemonSet status is ready.
+func updateGatewayProgrammedCondition(gw *gwapiv1.Gateway, envoyObj client.Object) {
 	if len(gw.Status.Addresses) == 0 {
 		gw.Status.Conditions = MergeConditions(gw.Status.Conditions,
 			newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionFalse, string(gwapiv1.GatewayReasonAddressNotAssigned),
@@ -157,17 +158,27 @@ func updateGatewayProgrammedCondition(gw *gwapiv1.Gateway, deployment *appsv1.De
 		return
 	}
 
-	// If there are no available replicas for the Envoy Deployment, don't
-	// mark the Gateway as ready yet.
-
-	if deployment == nil || deployment.Status.AvailableReplicas == 0 {
-		gw.Status.Conditions = MergeConditions(gw.Status.Conditions,
-			newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionFalse, string(gwapiv1.GatewayReasonNoResources),
-				messageNoResources, time.Now(), gw.Generation))
-		return
+	// Check for available Envoy replicas and if found mark the gateway as ready.
+	switch obj := envoyObj.(type) {
+	case *appsv1.Deployment:
+		if obj != nil && obj.Status.AvailableReplicas > 0 {
+			gw.Status.Conditions = MergeConditions(gw.Status.Conditions,
+				newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionTrue, string(gwapiv1.GatewayConditionProgrammed),
+					fmt.Sprintf(messageFmtProgrammed, obj.Status.AvailableReplicas, obj.Status.Replicas), time.Now(), gw.Generation))
+			return
+		}
+	case *appsv1.DaemonSet:
+		if obj != nil && obj.Status.NumberAvailable > 0 {
+			gw.Status.Conditions = MergeConditions(gw.Status.Conditions,
+				newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionTrue, string(gwapiv1.GatewayConditionProgrammed),
+					fmt.Sprintf(messageFmtProgrammed, obj.Status.NumberAvailable, obj.Status.CurrentNumberScheduled), time.Now(), gw.Generation))
+			return
+		}
 	}
 
+	// If there are no available replicas for the Envoy Deployment or
+	// Envoy DaemonSet, don't mark the Gateway as ready yet.
 	gw.Status.Conditions = MergeConditions(gw.Status.Conditions,
-		newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionTrue, string(gwapiv1.GatewayConditionProgrammed),
-			fmt.Sprintf(messageFmtProgrammed, deployment.Status.AvailableReplicas, deployment.Status.Replicas), time.Now(), gw.Generation))
+		newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionFalse, string(gwapiv1.GatewayReasonNoResources),
+			messageNoResources, time.Now(), gw.Generation))
 }

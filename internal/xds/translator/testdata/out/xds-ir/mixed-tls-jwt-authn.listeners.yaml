@@ -43,5 +43,7 @@
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
+        disableStatefulSessionResumption: true
+        disableStatelessSessionResumption: true
   name: first-listener
   perConnectionBufferLimitBytes: 32768
