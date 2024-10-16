@@ -136,7 +136,7 @@ type EnvoyProxySpec struct {
 	BackendTLS *BackendTLSConfig `json:"backendTLS,omitempty"`
 
 	// IPFamily specifies the IP family for the EnvoyProxy fleet.
-	// This setting only affects the EnvoyProxy fleet and does not impact
+	// This setting only affects the Gateway listener port and does not impact
 	// other aspects of the Envoy proxy configuration.
 	// If not specified, the system will operate as follows:
 	// - It defaults to IPv4 only.
