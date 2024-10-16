@@ -48,7 +48,7 @@ func (r *ResourceRender) Name() string {
 }
 
 func (r *ResourceRender) LabelSelector() labels.Selector {
-	return labels.SelectorFromSet(envoyLabels(r.infra.GetProxyMetadata().Labels))
+	return labels.SelectorFromSet(r.stableSelector().MatchLabels)
 }
 
 // ServiceAccount returns the expected proxy serviceAccount.
