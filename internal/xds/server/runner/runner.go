@@ -100,7 +100,6 @@ func (r *Runner) Reload(serverCfg *config.Server) error {
 	r.logger = serverCfg.Logger.WithName("xds-server-runner")
 	r.logger.Info("reloaded")
 
-	// TODO: Implement reload logic
 	return nil
 }
 
