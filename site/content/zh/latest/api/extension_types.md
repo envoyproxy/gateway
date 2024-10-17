@@ -4004,6 +4004,7 @@ _Appears in:_
 | `code` | _[WasmCodeSource](#wasmcodesource)_ |  true  | Code is the Wasm code for the extension. |
 | `config` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#json-v1-apiextensions-k8s-io)_ |  false  | Config is the configuration for the Wasm extension.<br />This configuration will be passed as a JSON string to the Wasm extension. |
 | `failOpen` | _boolean_ |  false  | FailOpen is a switch used to control the behavior when a fatal error occurs<br />during the initialization or the execution of the Wasm extension.<br />If FailOpen is set to true, the system bypasses the Wasm extension and<br />allows the traffic to pass through. Otherwise, if it is set to false or<br />not set (defaulting to false), the system blocks the traffic and returns<br />an HTTP 5xx error. |
+| `env` | _[WasmEnv](#wasmenv)_ |  false  | Env configures the environment for the Wasm extension |
 
 
 #### WasmCodeSource
@@ -4036,6 +4037,20 @@ _Appears in:_
 | ----- | ----------- |
 | `HTTP` | HTTPWasmCodeSourceType allows the user to specify the Wasm code in an HTTP URL.<br /> | 
 | `Image` | ImageWasmCodeSourceType allows the user to specify the Wasm code in an OCI image.<br /> | 
+
+
+#### WasmEnv
+
+
+
+WasmEnv defines the environment variables for the VM of a Wasm extension
+
+_Appears in:_
+- [Wasm](#wasm)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `hostKeys` | _string array_ |  false  | HostKeys is a list of keys for environment variables from the host envoy process<br />that should be passed into the Wasm VM. This is useful for passing secrets to to Wasm extensions. |
 
 
 #### WithUnderscoresAction

@@ -675,6 +675,10 @@ func (t *Translator) buildWasm(
 		Code:     code,
 	}
 
+	if config.Env != nil && len(config.Env.HostKeys) > 0 {
+		wasmIR.HostKeys = config.Env.HostKeys
+	}
+
 	return wasmIR, nil
 }
 
