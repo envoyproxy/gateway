@@ -20,10 +20,9 @@ import (
 )
 
 func newWatchFile(t *testing.T) string {
-
 	watchDir := t.TempDir()
 	watchFile := path.Join(watchDir, "test.conf")
-	err := os.WriteFile(watchFile, []byte("foo: bar\n"), 0o640)
+	err := os.WriteFile(watchFile, []byte("foo: bar\n"), 0o600)
 	require.NoError(t, err)
 
 	return watchFile
@@ -42,11 +41,11 @@ func newTwoWatchFile(t *testing.T) (string, string) {
 	watchDir := t.TempDir()
 
 	watchFile1 := path.Join(watchDir, "test1.conf")
-	err := os.WriteFile(watchFile1, []byte("foo: bar\n"), 0o640)
+	err := os.WriteFile(watchFile1, []byte("foo: bar\n"), 0o600)
 	require.NoError(t, err)
 
 	watchFile2 := path.Join(watchDir, "test2.conf")
-	err = os.WriteFile(watchFile2, []byte("foo: baz\n"), 0o640)
+	err = os.WriteFile(watchFile2, []byte("foo: baz\n"), 0o600)
 	require.NoError(t, err)
 
 	return watchFile1, watchFile2
@@ -74,28 +73,27 @@ func newSymlinkedWatchFile(t *testing.T) (string, string) {
 
 	realTestFile := path.Join(dataDir1, "test.conf")
 	t.Logf("Real test file location: %s\n", realTestFile)
-	err = os.WriteFile(realTestFile, []byte("foo: bar\n"), 0o640)
+	err = os.WriteFile(realTestFile, []byte("foo: bar\n"), 0o600)
 	require.NoError(t, err)
 
 	// Now, symlink the tmp `data1` dir to `data` in the baseDir
-	os.Symlink(dataDir1, path.Join(watchDir, "data"))
+	require.NoError(t, os.Symlink(dataDir1, path.Join(watchDir, "data")))
 	// And link the `<watchdir>/datadir/test.conf` to `<watchdir>/test.conf`
 	watchFile := path.Join(watchDir, "test.conf")
-	os.Symlink(path.Join(watchDir, "data", "test.conf"), watchFile)
-	fmt.Printf("Watch file location: %s\n", path.Join(watchDir, "test.conf"))
+	require.NoError(t, os.Symlink(path.Join(watchDir, "data", "test.conf"), watchFile))
+	t.Logf("Watch file location: %s\n", path.Join(watchDir, "test.conf"))
 	return watchDir, watchFile
 }
 
 func TestWatchFile(t *testing.T) {
 	t.Run("file content changed", func(t *testing.T) {
-
 		// Given a file being watched
 		watchFile := newWatchFile(t)
 		_, err := os.Stat(watchFile)
 		require.NoError(t, err)
 
 		w := NewWatcher()
-		w.Add(watchFile)
+		require.NoError(t, w.Add(watchFile))
 		events := w.Events(watchFile)
 
 		wg := sync.WaitGroup{}
@@ -106,7 +104,7 @@ func TestWatchFile(t *testing.T) {
 		}()
 
 		// Overwriting the file and waiting its event to be received.
-		err = os.WriteFile(watchFile, []byte("foo: baz\n"), 0o640)
+		err = os.WriteFile(watchFile, []byte("foo: baz\n"), 0o600)
 		require.NoError(t, err)
 		wg.Wait()
 
@@ -122,7 +120,7 @@ func TestWatchFile(t *testing.T) {
 		watchDir, watchFile := newSymlinkedWatchFile(t)
 
 		w := NewWatcher()
-		w.Add(watchFile)
+		require.NoError(t, w.Add(watchFile))
 		events := w.Events(watchFile)
 
 		wg := sync.WaitGroup{}
@@ -138,7 +136,7 @@ func TestWatchFile(t *testing.T) {
 		require.NoError(t, err)
 
 		watchFile2 := path.Join(dataDir2, "test.conf")
-		err = os.WriteFile(watchFile2, []byte("foo: baz\n"), 0o640)
+		err = os.WriteFile(watchFile2, []byte("foo: baz\n"), 0o600)
 		require.NoError(t, err)
 
 		// change the symlink using the `ln -sfn` command
@@ -152,12 +150,11 @@ func TestWatchFile(t *testing.T) {
 	})
 
 	t.Run("file added later", func(t *testing.T) {
-
 		// Given a file being watched
 		watchFile := newWatchFileThatDoesNotExist(t)
 
 		w := NewWatcher()
-		w.Add(watchFile)
+		require.NoError(t, w.Add(watchFile))
 		events := w.Events(watchFile)
 
 		wg := sync.WaitGroup{}
@@ -168,7 +165,7 @@ func TestWatchFile(t *testing.T) {
 		}()
 
 		// Overwriting the file and waiting its event to be received.
-		err := os.WriteFile(watchFile, []byte("foo: baz\n"), 0o640)
+		err := os.WriteFile(watchFile, []byte("foo: baz\n"), 0o600)
 		require.NoError(t, err)
 		wg.Wait()
 
@@ -177,7 +174,6 @@ func TestWatchFile(t *testing.T) {
 }
 
 func TestWatcherLifecycle(t *testing.T) {
-
 	watchFile1, watchFile2 := newTwoWatchFile(t)
 
 	w := NewWatcher()
