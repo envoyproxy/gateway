@@ -15,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -1568,6 +1569,9 @@ func getIREndpointsFromEndpointSlices(endpointSlices []*discoveryv1.EndpointSlic
 
 func getIREndpointsFromEndpointSlice(endpointSlice *discoveryv1.EndpointSlice, portName string, portProtocol corev1.Protocol) []*ir.DestinationEndpoint {
 	var endpoints []*ir.DestinationEndpoint
+
+	addresses := sets.Set[string]{}
+
 	for _, endpoint := range endpointSlice.Endpoints {
 		for _, endpointPort := range endpointSlice.Ports {
 			// Check if the endpoint port matches the service port
@@ -1577,6 +1581,13 @@ func getIREndpointsFromEndpointSlice(endpointSlice *discoveryv1.EndpointSlice, p
 				// Unknown state (nil) should be interpreted as Ready, see https://pkg.go.dev/k8s.io/api/discovery/v1#EndpointConditions
 				(endpoint.Conditions.Ready == nil || *endpoint.Conditions.Ready) {
 				for _, address := range endpoint.Addresses {
+					// filter the same endpoint
+					addressPort := fmt.Sprintf("%s%d", address, endpointPort.Port)
+					if addresses.Has(addressPort) {
+						continue
+					}
+					addresses.Insert(addressPort)
+
 					ep := ir.NewDestEndpoint(
 						address,
 						uint32(*endpointPort.Port))
