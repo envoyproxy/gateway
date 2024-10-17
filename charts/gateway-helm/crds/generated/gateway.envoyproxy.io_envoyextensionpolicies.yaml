@@ -1242,6 +1242,13 @@ spec:
                         not set (defaulting to false), the system blocks the traffic and returns
                         an HTTP 5xx error.
                       type: boolean
+                    hostEnvKeys:
+                      description: |-
+                        HostEnvKeys is a list of keys for environment variables from the host envoy process
+                        that should be passed into the Wasm VM. This is useful for passing secrets to to Wasm extensions.
+                      items:
+                        type: string
+                      type: array
                     name:
                       description: |-
                         Name is a unique name for this Wasm extension. It is used to identify the
