@@ -141,4 +141,5 @@ xdsIR:
           name: ""
           prefix: /
         urlRewrite:
-          hostname: rewrite.com
+          host:
+            name: rewrite.com

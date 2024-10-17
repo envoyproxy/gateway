@@ -19,3 +19,31 @@
         prefixRewrite: /rewrite
         upgradeConfigs:
         - upgradeType: websocket
+    - match:
+        headers:
+        - name: :authority
+          stringMatch:
+            exact: gateway.envoyproxy.io
+        pathSeparatedPrefix: /host-header
+      name: rewrite-host-header
+      route:
+        appendXForwardedHost: true
+        cluster: rewrite-route-dest
+        hostRewriteHeader: foo
+        prefixRewrite: /rewrite
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        headers:
+        - name: :authority
+          stringMatch:
+            exact: gateway.envoyproxy.io
+        pathSeparatedPrefix: /host-backend
+      name: rewrite-host-backend
+      route:
+        appendXForwardedHost: true
+        autoHostRewrite: true
+        cluster: rewrite-route-dest
+        prefixRewrite: /rewrite
+        upgradeConfigs:
+        - upgradeType: websocket
