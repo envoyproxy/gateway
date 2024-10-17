@@ -131,7 +131,6 @@ type BackendSpec struct {
 	// the health of the active backends falls below 72%.
 	//
 	// +optional
-	// +notImplementedHide
 	Fallback *bool `json:"fallback,omitempty"`
 }
 
