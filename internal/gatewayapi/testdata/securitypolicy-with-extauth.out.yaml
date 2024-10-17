@@ -191,6 +191,9 @@ securityPolicies:
         headersToBackend:
         - header1
         - header2
+        headersToMetadata:
+        - metadata1
+        - metadata2
         path: /auth
     targetRef:
       group: gateway.networking.k8s.io
@@ -350,5 +353,8 @@ xdsIR:
               headersToBackend:
               - header1
               - header2
+              headersToMetadata:
+              - metadata1
+              - metadata2
               path: /auth
             name: securitypolicy/default/policy-for-gateway-1
