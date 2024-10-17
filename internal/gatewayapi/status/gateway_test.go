@@ -178,6 +178,70 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 				return
 			}(),
 		},
+		{
+			name: "LoadBalancer svc with IPv6 ingress ip",
+			args: args{
+				gw: &gwapiv1.Gateway{},
+				svc: &corev1.Service{
+					Spec: corev1.ServiceSpec{
+						Type: corev1.ServiceTypeLoadBalancer,
+					},
+					Status: corev1.ServiceStatus{
+						LoadBalancer: corev1.LoadBalancerStatus{
+							Ingress: []corev1.LoadBalancerIngress{
+								{IP: "2001:db8::1"},
+							},
+						},
+					},
+				},
+			},
+			wantAddresses: []gwapiv1.GatewayStatusAddress{
+				{
+					Type:  ptr.To(gwapiv1.IPAddressType),
+					Value: "2001:db8::1",
+				},
+			},
+		},
+		{
+			name: "ClusterIP svc with IPv6",
+			args: args{
+				gw: &gwapiv1.Gateway{},
+				svc: &corev1.Service{
+					Spec: corev1.ServiceSpec{
+						ClusterIPs: []string{"2001:db8::2"},
+						Type:       corev1.ServiceTypeClusterIP,
+					},
+				},
+			},
+			wantAddresses: []gwapiv1.GatewayStatusAddress{
+				{
+					Type:  ptr.To(gwapiv1.IPAddressType),
+					Value: "2001:db8::2",
+				},
+			},
+		},
+		{
+			name: "Nodeport svc with IPv6 node addresses",
+			args: args{
+				gw:            &gwapiv1.Gateway{},
+				nodeAddresses: []string{"2001:db8::3", "2001:db8::4"},
+				svc: &corev1.Service{
+					Spec: corev1.ServiceSpec{
+						Type: corev1.ServiceTypeNodePort,
+					},
+				},
+			},
+			wantAddresses: []gwapiv1.GatewayStatusAddress{
+				{
+					Type:  ptr.To(gwapiv1.IPAddressType),
+					Value: "2001:db8::3",
+				},
+				{
+					Type:  ptr.To(gwapiv1.IPAddressType),
+					Value: "2001:db8::4",
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

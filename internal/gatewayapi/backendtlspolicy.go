@@ -157,6 +157,20 @@ func backendTLSTargetMatched(policy gwapiv1a3.BackendTLSPolicy, target gwapiv1a2
 	return false
 }
 
+func getIPFamily(envoyProxy *egv1a1.EnvoyProxy) ir.IPFamily {
+	if envoyProxy == nil || envoyProxy.Spec.IPFamily == nil {
+		return ir.IPv4
+	}
+	switch *envoyProxy.Spec.IPFamily {
+	case egv1a1.IPv6:
+		return ir.IPv6
+	case egv1a1.DualStack:
+		return ir.Dualstack
+	default:
+		return ir.IPv4
+	}
+}
+
 func getBackendTLSPolicy(policies []*gwapiv1a3.BackendTLSPolicy, backendRef gwapiv1a2.BackendObjectReference, backendNamespace string) *gwapiv1a3.BackendTLSPolicy {
 	target := getTargetBackendReference(backendRef)
 	for _, policy := range policies {

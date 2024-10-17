@@ -8,6 +8,7 @@ package translator
 import (
 	"encoding/hex"
 	"fmt"
+	"net"
 	"sort"
 	"time"
 
@@ -28,6 +29,7 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/utils/ptr"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -55,6 +57,7 @@ type xdsClusterArgs struct {
 	backendConnection *ir.BackendConnection
 	dns               *ir.DNS
 	useClientProtocol bool
+	ipFamily          *egv1a1.IPFamily
 }
 
 type EndpointType int
@@ -81,9 +84,13 @@ func buildEndpointType(settings []*ir.DestinationSetting) EndpointType {
 }
 
 func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
+	dnsLookupFamily := clusterv3.Cluster_V4_ONLY
+	if args.ipFamily != nil && *args.ipFamily == egv1a1.DualStack {
+		dnsLookupFamily = clusterv3.Cluster_ALL
+	}
 	cluster := &clusterv3.Cluster{
 		Name:            args.name,
-		DnsLookupFamily: clusterv3.Cluster_V4_ONLY,
+		DnsLookupFamily: dnsLookupFamily,
 		CommonLbConfig: &clusterv3.Cluster_CommonLbConfig{
 			LocalityConfigSpecifier: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig_{
 				LocalityWeightedLbConfig: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig{},
@@ -783,4 +790,43 @@ func buildHTTP2Settings(opts *ir.HTTP2Settings) *corev3.Http2ProtocolOptions {
 	}
 
 	return out
+}
+
+func getDNSLookupFamily(settings []*ir.DestinationSetting) clusterv3.Cluster_DnsLookupFamily {
+	if len(settings) == 0 {
+		return clusterv3.Cluster_V4_ONLY
+	}
+
+	hasIPv4 := false
+	hasIPv6 := false
+
+	for _, setting := range settings {
+		for _, endpoint := range setting.Endpoints {
+			switch {
+			case isIPv4(endpoint.Host):
+				hasIPv4 = true
+			case isIPv6(endpoint.Host):
+				hasIPv6 = true
+			}
+		}
+	}
+
+	switch {
+	case hasIPv4 && hasIPv6:
+		return clusterv3.Cluster_ALL
+	case hasIPv6:
+		return clusterv3.Cluster_V6_ONLY
+	case hasIPv4:
+		return clusterv3.Cluster_V4_ONLY
+	default:
+		return clusterv3.Cluster_V4_ONLY
+	}
+}
+
+func isIPv4(host string) bool {
+	return net.ParseIP(host) != nil && net.ParseIP(host).To4() != nil
+}
+
+func isIPv6(host string) bool {
+	return net.ParseIP(host) != nil && net.ParseIP(host).To4() == nil
 }
