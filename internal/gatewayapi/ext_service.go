@@ -12,15 +12,66 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
-// TODO: zhaohuabing combine this function with the one in the route translator
+// translateExtServiceBackendRefs translates external service backend references to route destinations.
+func (t *Translator) translateExtServiceBackendRefs(
+	policy client.Object,
+	backendRefs []egv1a1.BackendRef,
+	protocol ir.AppProtocol,
+	resources *resource.Resources,
+	envoyProxy *egv1a1.EnvoyProxy,
+	index int, // index is used to differentiate between multiple external services in the same policy
+) (*ir.RouteDestination, error) {
+	var (
+		rs  *ir.RouteDestination
+		ds  []*ir.DestinationSetting
+		err error
+	)
+
+	if len(backendRefs) == 0 {
+		return nil, errors.New("no backendRefs found for external service")
+	}
+
+	pnn := utils.NamespacedName(policy)
+	for _, backendRef := range backendRefs {
+		if err = t.validateExtServiceBackendReference(
+			&backendRef.BackendObjectReference,
+			policy.GetNamespace(),
+			policy.GetObjectKind().GroupVersionKind().Kind,
+			resources); err != nil {
+			return nil, err
+		}
+
+		var extServiceDest *ir.DestinationSetting
+		if extServiceDest, err = t.processExtServiceDestination(
+			&backendRef,
+			pnn,
+			policy.GetObjectKind().GroupVersionKind().Kind,
+			protocol,
+			resources,
+			envoyProxy,
+		); err != nil {
+			return nil, err
+		}
+		ds = append(ds, extServiceDest)
+	}
+
+	rs = &ir.RouteDestination{
+		Name:     irIndexedExtServiceDestinationName(pnn, policy.GetObjectKind().GroupVersionKind().Kind, index),
+		Settings: ds,
+	}
+	return rs, nil
+}
+
 func (t *Translator) processExtServiceDestination(
 	backendRef *egv1a1.BackendRef,
 	policyNamespacedName types.NamespacedName,

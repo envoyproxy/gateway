@@ -329,7 +329,6 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	var (
 		cors          *ir.CORS
 		jwt           *ir.JWT
-		oidc          *ir.OIDC
 		basicAuth     *ir.BasicAuth
 		authorization *ir.Authorization
 		err, errs     error
@@ -341,15 +340,6 @@ func (t *Translator) translateSecurityPolicyForRoute(
 
 	if policy.Spec.JWT != nil {
 		jwt = t.buildJWT(policy.Spec.JWT)
-	}
-
-	if policy.Spec.OIDC != nil {
-		if oidc, err = t.buildOIDC(
-			policy,
-			resources); err != nil {
-			err = perr.WithMessage(err, "OIDC")
-			errs = errors.Join(errs, err)
-		}
 	}
 
 	if policy.Spec.BasicAuth != nil {
@@ -388,6 +378,18 @@ func (t *Translator) translateSecurityPolicyForRoute(
 				errs = errors.Join(errs, err)
 			}
 		}
+
+		var oidc *ir.OIDC
+		if policy.Spec.OIDC != nil {
+			if oidc, err = t.buildOIDC(
+				policy,
+				resources,
+				gtwCtx.envoyProxy); err != nil {
+				err = perr.WithMessage(err, "OIDC")
+				errs = errors.Join(errs, err)
+			}
+		}
+
 		irKey := t.getIRKey(gtwCtx.Gateway)
 		for _, listener := range parentRefCtx.listeners {
 			irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
@@ -445,7 +447,8 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	if policy.Spec.OIDC != nil {
 		if oidc, err = t.buildOIDC(
 			policy,
-			resources); err != nil {
+			resources,
+			gateway.envoyProxy); err != nil {
 			err = perr.WithMessage(err, "OIDC")
 			errs = errors.Join(errs, err)
 		}
@@ -566,19 +569,30 @@ func (t *Translator) buildJWT(jwt *egv1a1.JWT) *ir.JWT {
 func (t *Translator) buildOIDC(
 	policy *egv1a1.SecurityPolicy,
 	resources *resource.Resources,
+	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.OIDC, error) {
 	var (
-		oidc         = policy.Spec.OIDC
-		clientSecret *corev1.Secret
-		provider     *ir.OIDCProvider
-		err          error
+		oidc               = policy.Spec.OIDC
+		provider           *ir.OIDCProvider
+		clientSecret       *corev1.Secret
+		redirectURL        = defaultRedirectURL
+		redirectPath       = defaultRedirectPath
+		logoutPath         = defaultLogoutPath
+		forwardAccessToken = defaultForwardAccessToken
+		refreshToken       = defaultRefreshToken
+		err                error
 	)
+
+	if provider, err = t.buildOIDCProvider(policy, resources, envoyProxy); err != nil {
+		return nil, err
+	}
 
 	from := crossNamespaceFrom{
 		group:     egv1a1.GroupName,
 		kind:      resource.KindSecurityPolicy,
 		namespace: policy.Namespace,
 	}
+
 	if clientSecret, err = t.validateSecretRef(
 		false, from, oidc.ClientSecret, resources); err != nil {
 		return nil, err
@@ -591,24 +605,7 @@ func (t *Translator) buildOIDC(
 			clientSecret.Namespace, clientSecret.Name)
 	}
 
-	// Discover the token and authorization endpoints from the issuer's
-	// well-known url if not explicitly specified
-	if provider, err = discoverEndpointsFromIssuer(&oidc.Provider); err != nil {
-		return nil, err
-	}
-
-	if err = validateTokenEndpoint(provider.TokenEndpoint); err != nil {
-		return nil, err
-	}
 	scopes := appendOpenidScopeIfNotExist(oidc.Scopes)
-
-	var (
-		redirectURL        = defaultRedirectURL
-		redirectPath       = defaultRedirectPath
-		logoutPath         = defaultLogoutPath
-		forwardAccessToken = defaultForwardAccessToken
-		refreshToken       = defaultRefreshToken
-	)
 
 	if oidc.RedirectURL != nil {
 		path, err := extractRedirectPath(*oidc.RedirectURL)
@@ -668,6 +665,62 @@ func (t *Translator) buildOIDC(
 	}, nil
 }
 
+func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) (*ir.OIDCProvider, error) {
+	var (
+		provider              = policy.Spec.OIDC.Provider
+		tokenEndpoint         string
+		authorizationEndpoint string
+		protocol              ir.AppProtocol
+		rd                    *ir.RouteDestination
+		traffic               *ir.TrafficFeatures
+		err                   error
+	)
+
+	// Discover the token and authorization endpoints from the issuer's
+	// well-known url if not explicitly specified
+	if provider.TokenEndpoint == nil || provider.AuthorizationEndpoint == nil {
+		tokenEndpoint, authorizationEndpoint, err = fetchEndpointsFromIssuer(provider.Issuer)
+		if err != nil {
+			return nil, fmt.Errorf("error fetching endpoints from issuer: %w", err)
+		}
+	} else {
+		tokenEndpoint = *provider.TokenEndpoint
+		authorizationEndpoint = *provider.AuthorizationEndpoint
+	}
+
+	if err = validateTokenEndpoint(tokenEndpoint); err != nil {
+		return nil, err
+	}
+
+	u, err := url.Parse(tokenEndpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	if u.Scheme == "https" {
+		protocol = ir.HTTPS
+	} else {
+		protocol = ir.HTTP
+	}
+
+	if len(provider.BackendRefs) > 0 {
+		if rd, err = t.translateExtServiceBackendRefs(policy, provider.BackendRefs, protocol, resources, envoyProxy, 0); err != nil {
+			return nil, err
+		}
+	}
+
+	if traffic, err = translateTrafficFeatures(provider.BackendSettings); err != nil {
+		return nil, err
+	}
+
+	return &ir.OIDCProvider{
+		Destination:           rd,
+		Traffic:               traffic,
+		AuthorizationEndpoint: authorizationEndpoint,
+		TokenEndpoint:         tokenEndpoint,
+	}, nil
+}
+
 func extractRedirectPath(redirectURL string) (string, error) {
 	schemeDelimiter := strings.Index(redirectURL, "://")
 	if schemeDelimiter <= 0 {
@@ -710,26 +763,6 @@ func appendOpenidScopeIfNotExist(scopes []string) []string {
 type OpenIDConfig struct {
 	TokenEndpoint         string `json:"token_endpoint"`
 	AuthorizationEndpoint string `json:"authorization_endpoint"`
-}
-
-// discoverEndpointsFromIssuer discovers the token and authorization endpoints from the issuer's well-known url
-// return error if failed to fetch the well-known configuration
-func discoverEndpointsFromIssuer(provider *egv1a1.OIDCProvider) (*ir.OIDCProvider, error) {
-	if provider.TokenEndpoint == nil || provider.AuthorizationEndpoint == nil {
-		tokenEndpoint, authorizationEndpoint, err := fetchEndpointsFromIssuer(provider.Issuer)
-		if err != nil {
-			return nil, fmt.Errorf("error fetching endpoints from issuer: %w", err)
-		}
-		return &ir.OIDCProvider{
-			TokenEndpoint:         tokenEndpoint,
-			AuthorizationEndpoint: authorizationEndpoint,
-		}, nil
-	}
-
-	return &ir.OIDCProvider{
-		TokenEndpoint:         *provider.TokenEndpoint,
-		AuthorizationEndpoint: *provider.AuthorizationEndpoint,
-	}, nil
 }
 
 func fetchEndpointsFromIssuer(issuerURL string) (string, string, error) {
@@ -811,7 +844,7 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *reso
 		grpc      = policy.Spec.ExtAuth.GRPC
 		backends  *egv1a1.BackendCluster
 		protocol  ir.AppProtocol
-		ds        []*ir.DestinationSetting
+		rd        *ir.RouteDestination
 		authority string
 		err       error
 		traffic   *ir.TrafficFeatures
@@ -833,12 +866,12 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *reso
 		backends = &grpc.BackendCluster
 		protocol = ir.GRPC
 	}
-	pnn := utils.NamespacedName(policy)
-	for _, backendRef := range backends.BackendRefs {
-		if err = t.validateExtServiceBackendReference(&backendRef.BackendObjectReference, policy.Namespace, policy.Kind, resources); err != nil {
-			return nil, err
-		}
 
+	if rd, err = t.translateExtServiceBackendRefs(policy, backends.BackendRefs, protocol, resources, envoyProxy, 0); err != nil {
+		return nil, err
+	}
+
+	for _, backendRef := range backends.BackendRefs {
 		// Authority is the calculated hostname that will be used as the Authority header.
 		// If there are multiple backend referenced, simply use the first one - there are no good answers here.
 		// When translated to XDS, the authority is used on the filter level not on the cluster level.
@@ -846,23 +879,6 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *reso
 		if authority == "" {
 			authority = backendRefAuthority(resources, &backendRef.BackendObjectReference, policy)
 		}
-
-		extServiceDest, err := t.processExtServiceDestination(
-			&backendRef,
-			pnn,
-			resource.KindSecurityPolicy,
-			protocol,
-			resources,
-			envoyProxy,
-		)
-		if err != nil {
-			return nil, err
-		}
-		ds = append(ds, extServiceDest)
-	}
-	rd := ir.RouteDestination{
-		Name:     irIndexedExtServiceDestinationName(pnn, resource.KindSecurityPolicy, 0),
-		Settings: ds,
 	}
 
 	if traffic, err = translateTrafficFeatures(backends.BackendSettings); err != nil {
@@ -878,14 +894,14 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *reso
 
 	if http != nil {
 		extAuth.HTTP = &ir.HTTPExtAuthService{
-			Destination:      rd,
+			Destination:      *rd,
 			Authority:        authority,
 			Path:             ptr.Deref(http.Path, ""),
 			HeadersToBackend: http.HeadersToBackend,
 		}
 	} else {
 		extAuth.GRPC = &ir.GRPCExtAuthService{
-			Destination: rd,
+			Destination: *rd,
 			Authority:   authority,
 		}
 	}
