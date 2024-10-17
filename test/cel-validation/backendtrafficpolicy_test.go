@@ -1273,7 +1273,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					ResponseOverride: []*egv1a1.ResponseOverride{
 						{
 							Match: egv1a1.CustomResponseMatch{
-								StatusCode: []egv1a1.StatusCodeMatch{
+								StatusCodes: []egv1a1.StatusCodeMatch{
 									{
 										Type: ptr.To(egv1a1.StatusCodeValueTypeValue),
 										Range: &egv1a1.StatusCodeRange{
@@ -1307,7 +1307,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					ResponseOverride: []*egv1a1.ResponseOverride{
 						{
 							Match: egv1a1.CustomResponseMatch{
-								StatusCode: []egv1a1.StatusCodeMatch{
+								StatusCodes: []egv1a1.StatusCodeMatch{
 									{
 										Range: &egv1a1.StatusCodeRange{
 											Start: 100,
@@ -1340,7 +1340,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					ResponseOverride: []*egv1a1.ResponseOverride{
 						{
 							Match: egv1a1.CustomResponseMatch{
-								StatusCode: []egv1a1.StatusCodeMatch{
+								StatusCodes: []egv1a1.StatusCodeMatch{
 									{
 										Type:  ptr.To(egv1a1.StatusCodeValueTypeRange),
 										Value: ptr.To(100),
@@ -1371,7 +1371,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					ResponseOverride: []*egv1a1.ResponseOverride{
 						{
 							Match: egv1a1.CustomResponseMatch{
-								StatusCode: []egv1a1.StatusCodeMatch{
+								StatusCodes: []egv1a1.StatusCodeMatch{
 									{
 										Type: ptr.To(egv1a1.StatusCodeValueTypeRange),
 										Range: &egv1a1.StatusCodeRange{
@@ -1405,7 +1405,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					ResponseOverride: []*egv1a1.ResponseOverride{
 						{
 							Match: egv1a1.CustomResponseMatch{
-								StatusCode: []egv1a1.StatusCodeMatch{
+								StatusCodes: []egv1a1.StatusCodeMatch{
 									{
 										Value: ptr.To(100),
 									},
@@ -1443,7 +1443,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					ResponseOverride: []*egv1a1.ResponseOverride{
 						{
 							Match: egv1a1.CustomResponseMatch{
-								StatusCode: []egv1a1.StatusCodeMatch{
+								StatusCodes: []egv1a1.StatusCodeMatch{
 									{
 										Value: ptr.To(100),
 									},
@@ -1479,7 +1479,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					ResponseOverride: []*egv1a1.ResponseOverride{
 						{
 							Match: egv1a1.CustomResponseMatch{
-								StatusCode: []egv1a1.StatusCodeMatch{
+								StatusCodes: []egv1a1.StatusCodeMatch{
 									{
 										Value: ptr.To(100),
 									},
