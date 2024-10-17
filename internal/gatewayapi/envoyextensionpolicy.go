@@ -691,12 +691,13 @@ func (t *Translator) buildWasm(
 		wasmName = *config.Name
 	}
 	wasmIR := &ir.Wasm{
-		Name:     name,
-		RootID:   config.RootID,
-		WasmName: wasmName,
-		Config:   config.Config,
-		FailOpen: failOpen,
-		Code:     code,
+		Name:        name,
+		RootID:      config.RootID,
+		WasmName:    wasmName,
+		Config:      config.Config,
+		FailOpen:    failOpen,
+		Code:        code,
+		HostEnvKeys: config.HostEnvKeys,
 	}
 
 	return wasmIR, nil
