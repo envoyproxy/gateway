@@ -1,5 +1,6 @@
 ---
 title: "Envoy Gateway Extension Server"
+linkTitle: "Extension Server"
 ---
 
 This task explains how to extend Envoy Gateway using an Extension Server. Envoy Gateway

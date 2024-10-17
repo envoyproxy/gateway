@@ -12,3 +12,12 @@ $dark: #280C53;
 .td-content .highlight pre{
   margin-bottom: 1rem !important;
 }
+
+nav.foldable-nav .with-child, nav.foldable-nav .without-child {
+  position: relative;
+  padding-left: 1.0em !important;
+}
+
+nav.foldable-nav .ul-1 .with-child > label:before {
+  padding-left: 0 !important;
+}
