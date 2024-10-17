@@ -6,12 +6,15 @@
 package cmd
 
 import (
+	"context"
+
 	"github.com/spf13/cobra"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/admin"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config/loader"
 	extensionregistry "github.com/envoyproxy/gateway/internal/extension/registry"
 	"github.com/envoyproxy/gateway/internal/extension/types"
 	gatewayapirunner "github.com/envoyproxy/gateway/internal/gatewayapi/runner"
@@ -51,6 +54,20 @@ func server() error {
 		return err
 	}
 
+	ctx := ctrl.SetupSignalHandler()
+	hook := func(c context.Context, cfg *config.Server) error {
+		cfg.Logger.Info("Setup runners")
+		if err := setupRunners(c, cfg); err != nil {
+			cfg.Logger.Error(err, "failed to setup runners")
+			return err
+		}
+		return nil
+	}
+	l := loader.New(cfgPath, cfg, hook)
+	if err := l.Start(ctx); err != nil {
+		return err
+	}
+
 	// Init eg admin servers.
 	if err := admin.Init(cfg); err != nil {
 		return err
@@ -60,10 +77,10 @@ func server() error {
 		return err
 	}
 
-	// init eg runners.
-	if err := setupRunners(cfg); err != nil {
-		return err
-	}
+	// Wait exit signal
+	<-ctx.Done()
+
+	cfg.Logger.Info("shutting down")
 
 	return nil
 }
@@ -110,11 +127,7 @@ func getConfigByPath(cfgPath string) (*config.Server, error) {
 
 // setupRunners starts all the runners required for the Envoy Gateway to
 // fulfill its tasks.
-func setupRunners(cfg *config.Server) (err error) {
-	// TODO - Setup a Config Manager
-	// https://github.com/envoyproxy/gateway/issues/43
-	ctx := ctrl.SetupSignalHandler()
-
+func setupRunners(ctx context.Context, cfg *config.Server) (err error) {
 	// Setup the Extension Manager
 	var extMgr types.Manager
 	if cfg.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes {
@@ -212,7 +225,7 @@ func setupRunners(cfg *config.Server) (err error) {
 	infraIR.Close()
 	xds.Close()
 
-	cfg.Logger.Info("shutting down")
+	cfg.Logger.Info("runners are shutting down")
 
 	if extMgr != nil {
 		// Close connections to extension services

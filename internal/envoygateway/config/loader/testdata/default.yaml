@@ -1,0 +1,24 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyGateway
+gateway:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+logging:
+  level:
+    default: info
+provider:
+  kubernetes:
+    rateLimitDeployment:
+      container:
+        image: docker.io/envoyproxy/ratelimit:master
+      patch:
+        type: StrategicMerge
+        value:
+          spec:
+            template:
+              spec:
+                containers:
+                  - imagePullPolicy: IfNotPresent
+                    name: envoy-ratelimit
+    shutdownManager:
+      image: docker.io/envoyproxy/gateway-dev:latest
+  type: Kubernetes
