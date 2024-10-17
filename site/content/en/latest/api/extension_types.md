@@ -896,7 +896,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `statusCode` | _[StatusCodeMatch](#statuscodematch) array_ |  true  | Status code to match on. The match evaluates to true if any of the matches are successful. |
+| `statusCodes` | _[StatusCodeMatch](#statuscodematch) array_ |  true  | Status code to match on. The match evaluates to true if any of the matches are successful. |
 
 
 #### CustomTag

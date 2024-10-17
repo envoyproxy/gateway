@@ -82,7 +82,7 @@ backendTrafficPolicies:
         name: gateway-1
       responseOverride:
         - match:
-            statusCode:
+            statusCodes:
               - type: Value
                 value: 404
           response:
@@ -91,7 +91,7 @@ backendTrafficPolicies:
               type: Inline
               inline: "gateway-1 Not Found"
         - match:
-            statusCode:
+            statusCodes:
               - type: Value
                 value: 500
               - type: Range
@@ -118,14 +118,14 @@ backendTrafficPolicies:
         name: httproute-1
       responseOverride:
         - match:
-            statusCode:
+            statusCodes:
               - value: 404
           response:
             contentType: text/plain
             body:
               inline: "httproute-1 Not Found"
         - match:
-            statusCode:
+            statusCodes:
               - value: 500
               - type: Range
                 range:

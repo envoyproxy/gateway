@@ -934,19 +934,19 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, configMaps []*co
 	rules := make([]ir.ResponseOverrideRule, 0, len(policy.Spec.ResponseOverride))
 	for index, ro := range policy.Spec.ResponseOverride {
 		match := ir.CustomResponseMatch{
-			StatusCode: make([]ir.StatusCodeMatch, 0, len(ro.Match.StatusCode)),
+			StatusCodes: make([]ir.StatusCodeMatch, 0, len(ro.Match.StatusCodes)),
 		}
 
-		for _, code := range ro.Match.StatusCode {
+		for _, code := range ro.Match.StatusCodes {
 			if code.Type != nil && *code.Type == egv1a1.StatusCodeValueTypeRange {
-				match.StatusCode = append(match.StatusCode, ir.StatusCodeMatch{
+				match.StatusCodes = append(match.StatusCodes, ir.StatusCodeMatch{
 					Range: &ir.StatusCodeRange{
 						Start: code.Range.Start,
 						End:   code.Range.End,
 					},
 				})
 			} else {
-				match.StatusCode = append(match.StatusCode, ir.StatusCodeMatch{
+				match.StatusCodes = append(match.StatusCodes, ir.StatusCodeMatch{
 					Value: code.Value,
 				})
 			}

@@ -35,14 +35,14 @@ http:
             name: backendtrafficpolicy/default/policy-for-gateway
             rules:
               - match:
-                  statusCode:
+                  statusCodes:
                     - value: 404
                 name: backendtrafficpolicy/default/policy-for-gateway/responseoverride/rule/0
                 response:
                   body: gateway-1 Not Found
                   contentType: text/plain
               - match:
-                  statusCode:
+                  statusCodes:
                     - value: 500
                     - range:
                         end: 511

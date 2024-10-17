@@ -118,11 +118,11 @@ func (c *customResponse) customResponseConfig(ro *ir.ResponseOverride) (*respv3.
 		}
 
 		switch {
-		case len(r.Match.StatusCode) == 0:
+		case len(r.Match.StatusCodes) == 0:
 			// This is just a sanity check, as the CRD validation should have caught this.
 			return nil, fmt.Errorf("missing status code in response override rule")
-		case len(r.Match.StatusCode) == 1:
-			if predicate, err = c.buildSinglePredicate(r.Match.StatusCode[0]); err != nil {
+		case len(r.Match.StatusCodes) == 1:
+			if predicate, err = c.buildSinglePredicate(r.Match.StatusCodes[0]); err != nil {
 				return nil, err
 			}
 
@@ -134,10 +134,10 @@ func (c *customResponse) customResponseConfig(ro *ir.ResponseOverride) (*respv3.
 			}
 
 			matchers = append(matchers, matcher)
-		case len(r.Match.StatusCode) > 1:
+		case len(r.Match.StatusCodes) > 1:
 			var predicates []*matcherv3.Matcher_MatcherList_Predicate
 
-			for _, codeMatch := range r.Match.StatusCode {
+			for _, codeMatch := range r.Match.StatusCodes {
 				if predicate, err = c.buildSinglePredicate(codeMatch); err != nil {
 					return nil, err
 				}

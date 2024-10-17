@@ -629,7 +629,7 @@ type CustomResponseMatch struct {
 	// Status code to match on. The match evaluates to true if any of the matches are successful.
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=50
-	StatusCode []StatusCodeMatch `json:"statusCode"`
+	StatusCodes []StatusCodeMatch `json:"statusCodes"`
 }
 
 // StatusCodeValueType defines the types of values for the status code match supported by Envoy Gateway.

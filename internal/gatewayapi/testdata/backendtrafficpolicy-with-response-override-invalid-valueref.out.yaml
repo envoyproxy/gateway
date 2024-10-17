@@ -8,7 +8,7 @@ backendTrafficPolicies:
   spec:
     responseOverride:
     - match:
-        statusCode:
+        statusCodes:
         - type: null
           value: 404
       response:
@@ -17,7 +17,7 @@ backendTrafficPolicies:
           type: null
         contentType: text/plain
     - match:
-        statusCode:
+        statusCodes:
         - type: null
           value: 500
         - range:
@@ -60,7 +60,7 @@ backendTrafficPolicies:
   spec:
     responseOverride:
     - match:
-        statusCode:
+        statusCodes:
         - type: Value
           value: 404
       response:
@@ -69,7 +69,7 @@ backendTrafficPolicies:
           type: Inline
         contentType: text/plain
     - match:
-        statusCode:
+        statusCodes:
         - type: Value
           value: 500
         - range:

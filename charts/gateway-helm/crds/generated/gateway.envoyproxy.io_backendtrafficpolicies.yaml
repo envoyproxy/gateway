@@ -956,7 +956,7 @@ spec:
                     match:
                       description: Match configuration.
                       properties:
-                        statusCode:
+                        statusCodes:
                           description: Status code to match on. The match evaluates
                             to true if any of the matches are successful.
                           items:
@@ -1012,7 +1012,7 @@ spec:
                           minItems: 1
                           type: array
                       required:
-                      - statusCode
+                      - statusCodes
                       type: object
                     response:
                       description: Response configuration.

@@ -503,7 +503,7 @@ type ResponseOverrideRule struct {
 // +k8s:deepcopy-gen=true
 type CustomResponseMatch struct {
 	// Status code to match on. The match evaluates to true if any of the matches are successful.
-	StatusCode []StatusCodeMatch `json:"statusCode"`
+	StatusCodes []StatusCodeMatch `json:"statusCodes"`
 }
 
 // StatusCodeMatch defines the configuration for matching a status code.
