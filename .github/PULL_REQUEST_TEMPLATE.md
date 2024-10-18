@@ -26,6 +26,6 @@ Fixes #
 
 <!--
 For most cases, you need to provide a brief description of the PR changes in the release notes.
-Please add the description to include release-notes/current.yaml file and include this file in the PR.
+Please add the description to the release-notes/current.yaml file and include this file in the PR.
 -->
 Release Notes: Yes/No
