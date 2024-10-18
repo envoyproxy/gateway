@@ -63,7 +63,7 @@ func (p *Provider) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to load resources into store: %w", err)
 	}
 
-	// aggregate all path channel int one
+	// aggregate all path channel into one
 	aggCh := make(chan fsnotify.Event)
 	for _, path := range p.paths {
 		if err := p.watcher.Add(path); err != nil {
