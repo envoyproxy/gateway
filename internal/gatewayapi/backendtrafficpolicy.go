@@ -18,7 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -333,7 +332,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 		errs = errors.Join(errs, err)
 	}
 	if policy.Spec.Retry != nil {
-		rt = t.buildRetry(policy)
+		rt = buildRetry(policy.Spec.Retry)
 	}
 	if to, err = buildClusterSettingsTimeout(policy.Spec.ClusterSettings, nil); err != nil {
 		err = perr.WithMessage(err, "Timeout")
@@ -482,7 +481,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 		errs = errors.Join(errs, err)
 	}
 	if policy.Spec.Retry != nil {
-		rt = t.buildRetry(policy)
+		rt = buildRetry(policy.Spec.Retry)
 	}
 	if ct, err = buildClusterSettingsTimeout(policy.Spec.ClusterSettings, nil); err != nil {
 		err = perr.WithMessage(err, "Timeout")
@@ -837,67 +836,6 @@ func (t *Translator) buildFaultInjection(policy *egv1a1.BackendTrafficPolicy) *i
 		}
 	}
 	return fi
-}
-
-func (t *Translator) buildRetry(policy *egv1a1.BackendTrafficPolicy) *ir.Retry {
-	var rt *ir.Retry
-	if policy.Spec.Retry != nil {
-		prt := policy.Spec.Retry
-		rt = &ir.Retry{}
-
-		if prt.NumRetries != nil {
-			rt.NumRetries = ptr.To(uint32(*prt.NumRetries))
-		}
-
-		if prt.RetryOn != nil {
-			ro := &ir.RetryOn{}
-			bro := false
-			if prt.RetryOn.HTTPStatusCodes != nil {
-				ro.HTTPStatusCodes = makeIrStatusSet(prt.RetryOn.HTTPStatusCodes)
-				bro = true
-			}
-
-			if prt.RetryOn.Triggers != nil {
-				ro.Triggers = makeIrTriggerSet(prt.RetryOn.Triggers)
-				bro = true
-			}
-
-			if bro {
-				rt.RetryOn = ro
-			}
-		}
-
-		if prt.PerRetry != nil {
-			pr := &ir.PerRetryPolicy{}
-			bpr := false
-
-			if prt.PerRetry.Timeout != nil {
-				pr.Timeout = prt.PerRetry.Timeout
-				bpr = true
-			}
-
-			if prt.PerRetry.BackOff != nil {
-				if prt.PerRetry.BackOff.MaxInterval != nil || prt.PerRetry.BackOff.BaseInterval != nil {
-					bop := &ir.BackOffPolicy{}
-					if prt.PerRetry.BackOff.MaxInterval != nil {
-						bop.MaxInterval = prt.PerRetry.BackOff.MaxInterval
-					}
-
-					if prt.PerRetry.BackOff.BaseInterval != nil {
-						bop.BaseInterval = prt.PerRetry.BackOff.BaseInterval
-					}
-					pr.BackOff = bop
-					bpr = true
-				}
-			}
-
-			if bpr {
-				rt.PerRetry = pr
-			}
-		}
-	}
-
-	return rt
 }
 
 func makeIrStatusSet(in []egv1a1.HTTPStatus) []ir.HTTPStatus {
