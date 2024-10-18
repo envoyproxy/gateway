@@ -124,6 +124,8 @@ type EnvoyProxySpec struct {
 	//
 	// - envoy.filters.http.ratelimit
 	//
+	// - envoy.filters.http.custom_response
+	//
 	// - envoy.filters.http.router
 	//
 	// Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain.
@@ -174,7 +176,7 @@ type FilterPosition struct {
 }
 
 // EnvoyFilter defines the type of Envoy HTTP filter.
-// +kubebuilder:validation:Enum=envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.ext_authz;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit
+// +kubebuilder:validation:Enum=envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.ext_authz;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.custom_response
 type EnvoyFilter string
 
 const (
@@ -216,6 +218,9 @@ const (
 
 	// EnvoyFilterRateLimit defines the Envoy HTTP rate limit filter.
 	EnvoyFilterRateLimit EnvoyFilter = "envoy.filters.http.ratelimit"
+
+	// EnvoyFilterCustomResponse defines the Envoy HTTP custom response filter.
+	EnvoyFilterCustomResponse EnvoyFilter = "envoy.filters.http.custom_response"
 
 	// EnvoyFilterRouter defines the Envoy HTTP router filter.
 	EnvoyFilterRouter EnvoyFilter = "envoy.filters.http.router"

@@ -239,7 +239,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		}
 
 		// Add all BackendTrafficPolicies to the resourceTree
-		if err = r.processBackendTrafficPolicies(ctx, gwcResource); err != nil {
+		if err = r.processBackendTrafficPolicies(ctx, gwcResource, resourceMappings); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -748,6 +748,39 @@ func (r *gatewayAPIReconciler) processConfigMapRef(
 	return nil
 }
 
+// processBtpConfigMapRefs adds the referenced ConfigMaps in BackendTrafficPolicies
+// to the resourceTree
+func (r *gatewayAPIReconciler) processBtpConfigMapRefs(
+	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
+) {
+	for _, policy := range resourceTree.BackendTrafficPolicies {
+		for _, ro := range policy.Spec.ResponseOverride {
+			if ro.Response.Body.ValueRef != nil && string(ro.Response.Body.ValueRef.Kind) == resource.KindConfigMap {
+				configMap := new(corev1.ConfigMap)
+				err := r.client.Get(ctx,
+					types.NamespacedName{Namespace: policy.Namespace, Name: string(ro.Response.Body.ValueRef.Name)},
+					configMap,
+				)
+				// we don't return an error here, because we want to continue
+				// reconciling the rest of the BackendTrafficPolicies despite that this
+				// reference is invalid.
+				// This BackendTrafficPolicies will be marked as invalid in its status
+				// when translating to IR because the referenced configmap can't be
+				// found.
+				if err != nil {
+					r.log.Error(err,
+						"failed to process ResponseOverride ValueRef for BackendTrafficPolicy",
+						"policy", policy, "ValueRef", ro.Response.Body.ValueRef.Name)
+				}
+
+				resourceMap.allAssociatedNamespaces.Insert(policy.Namespace)
+				resourceTree.ConfigMaps = append(resourceTree.ConfigMaps, configMap)
+				r.log.Info("processing ConfigMap", "namespace", policy.Namespace, "name", string(ro.Response.Body.ValueRef.Name))
+			}
+		}
+	}
+}
+
 func (r *gatewayAPIReconciler) getNamespace(ctx context.Context, name string) (*corev1.Namespace, error) {
 	nsKey := types.NamespacedName{Name: name}
 	ns := new(corev1.Namespace)
@@ -942,7 +975,8 @@ func (r *gatewayAPIReconciler) processClientTrafficPolicies(
 }
 
 // processBackendTrafficPolicies adds BackendTrafficPolicies to the resourceTree
-func (r *gatewayAPIReconciler) processBackendTrafficPolicies(ctx context.Context, resourceTree *resource.Resources) error {
+func (r *gatewayAPIReconciler) processBackendTrafficPolicies(ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
+) error {
 	backendTrafficPolicies := egv1a1.BackendTrafficPolicyList{}
 	if err := r.client.List(ctx, &backendTrafficPolicies); err != nil {
 		return fmt.Errorf("error listing BackendTrafficPolicies: %w", err)
@@ -955,6 +989,7 @@ func (r *gatewayAPIReconciler) processBackendTrafficPolicies(ctx context.Context
 		policy.Status = gwapiv1a2.PolicyStatus{}
 		resourceTree.BackendTrafficPolicies = append(resourceTree.BackendTrafficPolicies, &policy)
 	}
+	r.processBtpConfigMapRefs(ctx, resourceTree, resourceMap)
 	return nil
 }
 
@@ -1348,7 +1383,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
-	// Watch ConfigMap CRUDs and process affected ClienTraffiPolicies and BackendTLSPolicies.
+	// Watch ConfigMap CRUDs and process affected EG Resources.
 	configMapPredicates := []predicate.TypedPredicate[*corev1.ConfigMap]{
 		predicate.NewTypedPredicateFuncs[*corev1.ConfigMap](func(cm *corev1.ConfigMap) bool {
 			return r.validateConfigMapForReconcile(cm)
@@ -1489,6 +1524,10 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 				return r.enqueueClass(ctx, btp)
 			}),
 			btpPredicates...)); err != nil {
+		return err
+	}
+
+	if err := addBtpIndexers(ctx, mgr); err != nil {
 		return err
 	}
 

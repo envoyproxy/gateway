@@ -305,6 +305,8 @@ spec:
 
                   - envoy.filters.http.ratelimit
 
+                  - envoy.filters.http.custom_response
+
                   - envoy.filters.http.router
 
                   Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain.
@@ -330,6 +332,7 @@ spec:
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
+                      - envoy.filters.http.custom_response
                       type: string
                     before:
                       description: |-
@@ -349,6 +352,7 @@ spec:
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
+                      - envoy.filters.http.custom_response
                       type: string
                     name:
                       description: Name of the filter.
@@ -366,6 +370,7 @@ spec:
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
+                      - envoy.filters.http.custom_response
                       type: string
                   required:
                   - name
