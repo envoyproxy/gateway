@@ -940,6 +940,25 @@ spec:
                               type: string
                           type: object
                       type: object
+                    untyped:
+                      description: Untyped defines the untyped metadata that should
+                        be forwarded to or received from the external processor.
+                      properties:
+                        forwardingNamespaces:
+                          description: ForwardingNamespaces is a list of namespaces
+                            from which metadata should be forwarded to the external
+                            processor.
+                          items:
+                            type: string
+                          type: array
+                        receivingNamespaces:
+                          description: ReceivingNamespaces is a list of namespaces
+                            from which metadata should be received from the external
+                            processor.
+                          items:
+                            type: string
+                          type: array
+                      type: object
                   type: object
                   x-kubernetes-validations:
                   - message: BackendRefs must be used, backendRef is not supported.
