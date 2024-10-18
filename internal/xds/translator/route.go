@@ -417,9 +417,21 @@ func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite, pathMa
 		}
 	}
 
-	if urlRewrite.Hostname != nil {
-		routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewriteLiteral{
-			HostRewriteLiteral: *urlRewrite.Hostname,
+	if urlRewrite.Host != nil {
+
+		switch {
+		case urlRewrite.Host.Name != nil:
+			routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewriteLiteral{
+				HostRewriteLiteral: *urlRewrite.Host.Name,
+			}
+		case urlRewrite.Host.Header != nil:
+			routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewriteHeader{
+				HostRewriteHeader: *urlRewrite.Host.Header,
+			}
+		case urlRewrite.Host.Backend != nil:
+			routeAction.HostRewriteSpecifier = &routev3.RouteAction_AutoHostRewrite{
+				AutoHostRewrite: wrapperspb.Bool(true),
+			}
 		}
 
 		routeAction.AppendXForwardedHost = true

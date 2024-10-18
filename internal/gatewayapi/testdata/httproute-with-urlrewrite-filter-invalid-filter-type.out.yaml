@@ -141,4 +141,5 @@ xdsIR:
           name: ""
           prefix: /
         urlRewrite:
-          hostname: urlrewrite.envoyproxy.io
+          host:
+            name: urlrewrite.envoyproxy.io
