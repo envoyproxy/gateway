@@ -78,17 +78,17 @@ spec:
         app: alloy
     spec:
       containers:
-      - name: alloy
-        image: grafana/alloy:v1.4.2
-        volumeMounts:
-        - name: config-volume
-          mountPath: /etc/alloy/config.alloy
-          subPath: config.alloy
-        command: ["alloy", "run", "--stability.level=experimental", "--server.http.listen-addr=0.0.0.0:12345", "--storage.path=/var/lib/alloy/data", "/etc/alloy/config.alloy"]
+        - name: alloy
+          image: grafana/alloy:v1.4.2
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/alloy/config.alloy
+              subPath: config.alloy
+          command: ["alloy", "run", "--stability.level=experimental", "--server.http.listen-addr=0.0.0.0:12345", "--storage.path=/var/lib/alloy/data", "/etc/alloy/config.alloy"]
       volumes:
-      - name: config-volume
-        configMap:
-          name: alloy-config
+        - name: config-volume
+          configMap:
+            name: alloy-config
 ---
 apiVersion: v1
 kind: Service
@@ -99,9 +99,9 @@ spec:
   selector:
     app: alloy
   ports:
-  - protocol: TCP
-    port: 8126
-    targetPort: 8126
+    - protocol: TCP
+      port: 8126
+      targetPort: 8126
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
