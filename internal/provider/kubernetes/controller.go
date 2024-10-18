@@ -598,7 +598,7 @@ func (r *gatewayAPIReconciler) processSecretRef(
 	ownerKind string,
 	ownerNS string,
 	ownerName string,
-	secretRef gwapiv1b1.SecretObjectReference,
+	secretRef gwapiv1.SecretObjectReference,
 ) error {
 	secret := new(corev1.Secret)
 	secretNS := gatewayapi.NamespaceDerefOr(secretRef.Namespace, ownerNS)
@@ -700,7 +700,7 @@ func (r *gatewayAPIReconciler) processConfigMapRef(
 	ownerKind string,
 	ownerNS string,
 	ownerName string,
-	configMapRef gwapiv1b1.SecretObjectReference,
+	configMapRef gwapiv1.SecretObjectReference,
 ) error {
 	configMap := new(corev1.ConfigMap)
 	configMapNS := gatewayapi.NamespaceDerefOr(configMapRef.Namespace, ownerNS)
@@ -1790,7 +1790,7 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicyRefs(
 					string(caCertRef.Kind) == resource.KindSecret {
 
 					var err error
-					caRefNew := gwapiv1b1.SecretObjectReference{
+					caRefNew := gwapiv1.SecretObjectReference{
 						Group:     gatewayapi.GroupPtr(string(caCertRef.Group)),
 						Kind:      gatewayapi.KindPtr(string(caCertRef.Kind)),
 						Name:      caCertRef.Name,

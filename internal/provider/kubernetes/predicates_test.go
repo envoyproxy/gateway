@@ -9,6 +9,13 @@ import (
 	"fmt"
 	"testing"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/envoygateway"
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
+	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/provider/kubernetes/test"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,15 +26,6 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
-
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/envoygateway"
-	"github.com/envoyproxy/gateway/internal/gatewayapi"
-	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
-	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
-	"github.com/envoyproxy/gateway/internal/logging"
-	"github.com/envoyproxy/gateway/internal/provider/kubernetes/test"
 )
 
 // TestGatewayClassHasMatchingController tests the hasMatchingController
@@ -261,7 +259,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 								TokenEndpoint:         ptr.To("https://oauth2.googleapis.com/token"),
 							},
 							ClientID: "client-id",
-							ClientSecret: gwapiv1b1.SecretObjectReference{
+							ClientSecret: gwapiv1.SecretObjectReference{
 								Name: "secret",
 							},
 						},
@@ -290,7 +288,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 							},
 						},
 						BasicAuth: &egv1a1.BasicAuth{
-							Users: gwapiv1b1.SecretObjectReference{
+							Users: gwapiv1.SecretObjectReference{
 								Name: "secret",
 							},
 						},
@@ -336,7 +334,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 									Type: egv1a1.ImageWasmCodeSourceType,
 									Image: &egv1a1.ImageWasmCodeSource{
 										URL: "https://example.com/testwasm:v1.0.0",
-										PullSecretRef: &gwapiv1b1.SecretObjectReference{
+										PullSecretRef: &gwapiv1.SecretObjectReference{
 											Name: "secret",
 										},
 									},
