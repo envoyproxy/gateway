@@ -283,7 +283,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 				return reconcile.Result{}, err
 			}
 
-			gwcResource.Namespaces = append(gwcResource.Namespaces, namespace)
+			gwcResource.AppendResource(namespace)
 		}
 
 		if gwcResource.EnvoyProxyForGatewayClass != nil && gwcResource.EnvoyProxyForGatewayClass.Spec.MergeGateways != nil {
@@ -400,9 +400,10 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 					"name", string(backendRef.Name))
 			} else {
 				resourceMappings.allAssociatedNamespaces.Insert(service.Namespace)
-				gwcResource.Services = append(gwcResource.Services, service)
-				r.log.Info("added Service to resource tree", "namespace", string(*backendRef.Namespace),
-					"name", string(backendRef.Name))
+				if gwcResource.AppendResource(service) {
+					r.log.Info("added Service to resource tree", "namespace", string(*backendRef.Namespace),
+						"name", string(backendRef.Name))
+				}
 			}
 			endpointSliceLabelKey = discoveryv1.LabelServiceName
 
@@ -414,9 +415,10 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 					"name", string(backendRef.Name))
 			} else {
 				resourceMappings.allAssociatedNamespaces.Insert(serviceImport.Namespace)
-				gwcResource.ServiceImports = append(gwcResource.ServiceImports, serviceImport)
-				r.log.Info("added ServiceImport to resource tree", "namespace", string(*backendRef.Namespace),
-					"name", string(backendRef.Name))
+				if gwcResource.AppendResource(serviceImport) {
+					r.log.Info("added ServiceImport to resource tree", "namespace", string(*backendRef.Namespace),
+						"name", string(backendRef.Name))
+				}
 			}
 			endpointSliceLabelKey = mcsapiv1a1.LabelServiceName
 
@@ -428,9 +430,10 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 					"name", string(backendRef.Name))
 			} else {
 				resourceMappings.allAssociatedNamespaces[backend.Namespace] = struct{}{}
-				gwcResource.Backends = append(gwcResource.Backends, backend)
-				r.log.Info("added Backend to resource tree", "namespace", string(*backendRef.Namespace),
-					"name", string(backendRef.Name))
+				if gwcResource.AppendResource(backend) {
+					r.log.Info("added Backend to resource tree", "namespace", string(*backendRef.Namespace),
+						"name", string(backendRef.Name))
+				}
 			}
 		}
 
@@ -449,9 +452,10 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 			} else {
 				for _, endpointSlice := range endpointSliceList.Items {
 					endpointSlice := endpointSlice //nolint:copyloopvar
-					r.log.Info("added EndpointSlice to resource tree", "namespace", endpointSlice.Namespace,
-						"name", endpointSlice.Name)
-					gwcResource.EndpointSlices = append(gwcResource.EndpointSlices, &endpointSlice)
+					if gwcResource.AppendResource(&endpointSlice) {
+						r.log.Info("added EndpointSlice to resource tree", "namespace", endpointSlice.Namespace,
+							"name", endpointSlice.Name)
+					}
 				}
 			}
 		}
@@ -555,9 +559,10 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 					r.log.Info("no matching ReferenceGrants found", "from", from.kind,
 						"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
 				default:
-					resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
-					r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
-						"name", refGrant.Name)
+					if resourceTree.AppendResource(refGrant) {
+						r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
+							"name", refGrant.Name)
+					}
 				}
 			}
 		}
@@ -588,7 +593,7 @@ func (r *gatewayAPIReconciler) processOIDCHMACSecret(ctx context.Context, resour
 		return
 	}
 
-	resourceTree.Secrets = append(resourceTree.Secrets, &secret)
+	resourceTree.AppendResource(&secret)
 	r.log.Info("processing OIDC HMAC Secret", "namespace", r.namespace, "name", oidcHMACSecretName)
 }
 
@@ -635,13 +640,14 @@ func (r *gatewayAPIReconciler) processSecretRef(
 				from.kind, from.namespace, to.kind, to.namespace)
 		default:
 			// RefGrant found
-			resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
-			r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
-				"name", refGrant.Name)
+			if resourceTree.AppendResource(refGrant) {
+				r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
+					"name", refGrant.Name)
+			}
 		}
 	}
 	resourceMap.allAssociatedNamespaces.Insert(secretNS) // TODO Zhaohuabing do we need this line?
-	resourceTree.Secrets = append(resourceTree.Secrets, secret)
+	resourceTree.AppendResource(secret)
 	r.log.Info("processing Secret", "namespace", secretNS, "name", string(secretRef.Name))
 	return nil
 }
@@ -737,13 +743,14 @@ func (r *gatewayAPIReconciler) processConfigMapRef(
 				from.kind, from.namespace, to.kind, to.namespace)
 		default:
 			// RefGrant found
-			resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
-			r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
-				"name", refGrant.Name)
+			if resourceTree.AppendResource(refGrant) {
+				r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
+					"name", refGrant.Name)
+			}
 		}
 	}
 	resourceMap.allAssociatedNamespaces.Insert(configMapNS) // TODO Zhaohuabing do we need this line?
-	resourceTree.ConfigMaps = append(resourceTree.ConfigMaps, configMap)
+	resourceTree.AppendResource(configMap)
 	r.log.Info("processing ConfigMap", "namespace", configMapNS, "name", string(configMapRef.Name))
 	return nil
 }
@@ -895,7 +902,7 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		gtw.Status = gwapiv1.GatewayStatus{}
-		resourceTree.Gateways = append(resourceTree.Gateways, &gtw)
+		resourceTree.AppendResource(&gtw)
 	}
 
 	return nil
@@ -914,7 +921,7 @@ func (r *gatewayAPIReconciler) processEnvoyPatchPolicies(ctx context.Context, re
 		// It will be recomputed by the gateway-api layer
 		policy.Status = gwapiv1a2.PolicyStatus{}
 
-		resourceTree.EnvoyPatchPolicies = append(resourceTree.EnvoyPatchPolicies, &policy)
+		resourceTree.AppendResource(&policy)
 	}
 	return nil
 }
@@ -933,7 +940,7 @@ func (r *gatewayAPIReconciler) processClientTrafficPolicies(
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		policy.Status = gwapiv1a2.PolicyStatus{}
-		resourceTree.ClientTrafficPolicies = append(resourceTree.ClientTrafficPolicies, &policy)
+		resourceTree.AppendResource(&policy)
 	}
 
 	r.processCtpConfigMapRefs(ctx, resourceTree, resourceMap)
@@ -953,7 +960,7 @@ func (r *gatewayAPIReconciler) processBackendTrafficPolicies(ctx context.Context
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		policy.Status = gwapiv1a2.PolicyStatus{}
-		resourceTree.BackendTrafficPolicies = append(resourceTree.BackendTrafficPolicies, &policy)
+		resourceTree.AppendResource(&policy)
 	}
 	return nil
 }
@@ -972,7 +979,7 @@ func (r *gatewayAPIReconciler) processSecurityPolicies(
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		policy.Status = gwapiv1a2.PolicyStatus{}
-		resourceTree.SecurityPolicies = append(resourceTree.SecurityPolicies, &policy)
+		resourceTree.AppendResource(&policy)
 	}
 
 	// Add the referenced Resources in SecurityPolicies to the resourceTree
@@ -997,7 +1004,7 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicies(
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		policy.Status = gwapiv1a2.PolicyStatus{}
-		resourceTree.BackendTLSPolicies = append(resourceTree.BackendTLSPolicies, &policy)
+		resourceTree.AppendResource(&policy)
 	}
 
 	// Add the referenced Secrets and ConfigMaps in BackendTLSPolicies to the resourceTree.
@@ -1852,7 +1859,7 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicies(
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		policy.Status = gwapiv1a2.PolicyStatus{}
-		resourceTree.EnvoyExtensionPolicies = append(resourceTree.EnvoyExtensionPolicies, &policy)
+		resourceTree.AppendResource(&policy)
 	}
 
 	// Add the referenced Resources in EnvoyExtensionPolicies to the resourceTree
@@ -1941,9 +1948,10 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
 						r.log.Info("no matching ReferenceGrants found", "from", from.kind,
 							"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
 					default:
-						resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
-						r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
-							"name", refGrant.Name)
+						if resourceTree.AppendResource(refGrant) {
+							r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
+								"name", refGrant.Name)
+						}
 					}
 				}
 			}

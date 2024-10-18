@@ -119,8 +119,10 @@ func newTranslateResult(gateways []*GatewayContext,
 		InfraIR: infraIR,
 	}
 
+	translateResult.InitCache()
+
 	for _, gateway := range gateways {
-		translateResult.Gateways = append(translateResult.Gateways, gateway.Gateway)
+		translateResult.AppendResource(gateway.Gateway)
 	}
 	for _, httpRoute := range httpRoutes {
 		translateResult.HTTPRoutes = append(translateResult.HTTPRoutes, httpRoute.HTTPRoute)
@@ -138,14 +140,14 @@ func newTranslateResult(gateways []*GatewayContext,
 		translateResult.UDPRoutes = append(translateResult.UDPRoutes, udpRoute.UDPRoute)
 	}
 
-	translateResult.ClientTrafficPolicies = append(translateResult.ClientTrafficPolicies, clientTrafficPolicies...)
-	translateResult.BackendTrafficPolicies = append(translateResult.BackendTrafficPolicies, backendTrafficPolicies...)
-	translateResult.SecurityPolicies = append(translateResult.SecurityPolicies, securityPolicies...)
-	translateResult.BackendTLSPolicies = append(translateResult.BackendTLSPolicies, backendTLSPolicies...)
-	translateResult.EnvoyExtensionPolicies = append(translateResult.EnvoyExtensionPolicies, envoyExtensionPolicies...)
+	translateResult.AppendClientTrafficPolicies(clientTrafficPolicies...)
+	translateResult.AppendBackendTrafficPolicies(backendTrafficPolicies...)
+	translateResult.AppendSecurityPolicies(securityPolicies...)
+	translateResult.AppendBackendTLSPolicies(backendTLSPolicies...)
+	translateResult.AppendEnvoyExtensionPolicies(envoyExtensionPolicies...)
 	translateResult.ExtensionServerPolicies = append(translateResult.ExtensionServerPolicies, extPolicies...)
-
 	translateResult.Backends = append(translateResult.Backends, backends...)
+
 	return translateResult
 }
 
