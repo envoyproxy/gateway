@@ -295,27 +295,23 @@ func TestBadAddWatcher(t *testing.T) {
 
 func TestDuplicateAdd(t *testing.T) {
 	w := NewWatcher()
-
 	name := newWatchFile(t)
+	defer func() {
+		_ = w.Close()
+		_ = os.Remove(name)
+	}()
 
-	if err := w.Add(name); err != nil {
-		t.Errorf("Expecting nil, got %v", err)
-	}
-
-	if err := w.Add(name); err == nil {
-		t.Errorf("Expecting error, got nil")
-	}
-
-	_ = w.Close()
+	require.NoError(t, w.Add(name))
+	require.Error(t, w.Add(name))
 }
 
 func TestBogusRemove(t *testing.T) {
 	w := NewWatcher()
-
 	name := newWatchFile(t)
-	if err := w.Remove(name); err == nil {
-		t.Errorf("Expecting error, got nil")
-	}
+	defer func() {
+		_ = w.Close()
+		_ = os.Remove(name)
+	}()
 
-	_ = w.Close()
+	require.Error(t, w.Remove(name))
 }
