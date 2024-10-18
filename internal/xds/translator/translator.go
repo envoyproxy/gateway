@@ -225,7 +225,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			}
 
 			// Create a new TCP listener for HTTP1/HTTP2 traffic.
-			tcpXDSListener = buildXdsTCPListener(httpListener.Name, httpListener.Address, httpListener.Port, httpListener.TCPKeepalive, httpListener.Connection, accessLog)
+			tcpXDSListener = buildXdsTCPListener(httpListener.Name, httpListener.Address, httpListener.Port, httpListener.IPFamily, httpListener.TCPKeepalive, httpListener.Connection, accessLog)
 			if err = tCtx.AddXdsResource(resourcev3.ListenerType, tcpXDSListener); err != nil {
 				errs = errors.Join(errs, err)
 				continue
@@ -565,7 +565,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 		// Search for an existing listener, if it does not exist, create one.
 		xdsListener := findXdsListenerByHostPort(tCtx, tcpListener.Address, tcpListener.Port, corev3.SocketAddress_TCP)
 		if xdsListener == nil {
-			xdsListener = buildXdsTCPListener(tcpListener.Name, tcpListener.Address, tcpListener.Port, tcpListener.TCPKeepalive, tcpListener.Connection, accesslog)
+			xdsListener = buildXdsTCPListener(tcpListener.Name, tcpListener.Address, tcpListener.Port, tcpListener.IPFamily, tcpListener.TCPKeepalive, tcpListener.Connection, accesslog)
 			if err := tCtx.AddXdsResource(resourcev3.ListenerType, xdsListener); err != nil {
 				// skip this listener if failed to add xds listener to the
 				errs = errors.Join(errs, err)
