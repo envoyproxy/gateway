@@ -69,7 +69,7 @@ func TestTranslate(t *testing.T) {
 			input, err := os.ReadFile(inputFile)
 			require.NoError(t, err)
 
-			resources := &resource.Resources{}
+			resources := resource.NewResources()
 			mustUnmarshal(t, input, resources)
 			envoyPatchPolicyEnabled := true
 			backendEnabled := true
@@ -301,6 +301,7 @@ func TestTranslate(t *testing.T) {
 			})
 
 			got, _ := translator.Translate(resources)
+			got.Cache = nil
 			require.NoError(t, field.SetValue(got, "LastTransitionTime", metav1.NewTime(time.Time{})))
 			outputFilePath := strings.ReplaceAll(inputFile, ".in.yaml", ".out.yaml")
 			out, err := yaml.Marshal(got)
