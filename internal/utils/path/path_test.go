@@ -6,6 +6,7 @@
 package path
 
 import (
+	"os"
 	"path"
 	"testing"
 
@@ -13,7 +14,17 @@ import (
 )
 
 func TestListDirsAndFiles(t *testing.T) {
-	testPath := path.Join("testdata", "paths")
+	basePath, _ := os.MkdirTemp(os.TempDir(), "list-test")
+	defer func() {
+		_ = os.RemoveAll(basePath)
+	}()
+	paths, err := os.MkdirTemp(basePath, "paths")
+	require.NoError(t, err)
+	dirPath, err := os.MkdirTemp(paths, "dir")
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(path.Join(paths, "foo"), []byte("foo"), 0o700))   // nolint: gosec
+	require.NoError(t, os.WriteFile(path.Join(dirPath, "bar"), []byte("bar"), 0o700)) // nolint: gosec
+
 	testCases := []struct {
 		name        string
 		paths       []string
@@ -23,22 +34,23 @@ func TestListDirsAndFiles(t *testing.T) {
 		{
 			name: "get file and dir path",
 			paths: []string{
-				path.Join(testPath, "dir"), path.Join(testPath, "foo"),
+				dirPath,
+				path.Join(paths, "foo"),
 			},
 			expectDirs: []string{
-				path.Join(testPath, "dir"),
+				dirPath,
 			},
 			expectFiles: []string{
-				path.Join(testPath, "foo"),
+				path.Join(paths, "foo"),
 			},
 		},
 		{
 			name: "overlap file path will be ignored",
 			paths: []string{
-				path.Join(testPath, "dir"), path.Join(testPath, "dir", "bar"),
+				dirPath, path.Join(dirPath, "bar"),
 			},
 			expectDirs: []string{
-				path.Join(testPath, "dir"),
+				dirPath,
 			},
 			expectFiles: []string{},
 		},
@@ -46,9 +58,9 @@ func TestListDirsAndFiles(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			dirs, paths := ListDirsAndFiles(tc.paths)
+			dirs, files := ListDirsAndFiles(tc.paths)
 			require.ElementsMatch(t, dirs.UnsortedList(), tc.expectDirs)
-			require.ElementsMatch(t, paths.UnsortedList(), tc.expectFiles)
+			require.ElementsMatch(t, files.UnsortedList(), tc.expectFiles)
 		})
 	}
 }
