@@ -206,10 +206,12 @@ rules:
   resources:
   - serviceaccounts
   - services
+  - configmaps
   verbs:
   - create
   - get
   - delete
+  - deletecollection
   - patch
 - apiGroups:
   - apps
@@ -220,6 +222,7 @@ rules:
   - create
   - get
   - delete
+  - deletecollection
   - patch
 - apiGroups:
   - autoscaling
@@ -231,6 +234,7 @@ rules:
   - create
   - get
   - delete
+  - deletecollection
   - patch
 ---
 # Source: gateway-helm/templates/leader-election-rbac.yaml
