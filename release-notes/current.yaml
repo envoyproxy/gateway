@@ -1,0 +1,36 @@
+date: Pending
+
+changes:
+  - area: documentation
+    change: |
+
+  - area: installation
+    change: |
+
+  - area: api
+    change: |
+
+    breaking-change: |
+
+    deprecation: |
+
+  - area: conformance
+    change: |
+
+  - area: testing
+    change: |
+
+  - area: translator
+    change: |
+
+  - area: providers
+    change: |
+
+  - area: infrastructure
+    change: |
+
+  - area: xds
+    change: |
+
+  - area: cli
+    change: |
