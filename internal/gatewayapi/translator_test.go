@@ -319,6 +319,7 @@ func TestTranslate(t *testing.T) {
 
 			opts := []cmp.Option{
 				cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
+				cmpopts.IgnoreFields(resource.Resources{}, "Cache"),
 				cmpopts.EquateEmpty(),
 			}
 
