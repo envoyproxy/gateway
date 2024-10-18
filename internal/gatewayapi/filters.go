@@ -30,8 +30,7 @@ type HTTPFiltersTranslator interface {
 	processRedirectFilter(redirect *gwapiv1.HTTPRequestRedirectFilter, filterContext *HTTPFiltersContext)
 	processRequestHeaderModifierFilter(headerModifier *gwapiv1.HTTPHeaderFilter, filterContext *HTTPFiltersContext)
 	processResponseHeaderModifierFilter(headerModifier *gwapiv1.HTTPHeaderFilter, filterContext *HTTPFiltersContext)
-	processRequestMirrorFilter(filterIdx int, mirror *gwapiv1.HTTPRequestMirrorFilter, filterContext *HTTPFiltersContext, resources *resource.Resources)
-	processExtensionRefHTTPFilter(extRef *gwapiv1.LocalObjectReference, filterContext *HTTPFiltersContext, resources *resource.Resources)
+	processRequestMirrorFilter(filterIdx int, mirror *gwapiv1.HTTPRequestMirrorFilter, filterContext *HTTPFiltersContext, resources *resource.Resources) error
 	processUnsupportedHTTPFilter(filterType string, filterContext *HTTPFiltersContext)
 }
 
@@ -68,13 +67,14 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 	filters []gwapiv1.HTTPRouteFilter,
 	ruleIdx int,
 	resources *resource.Resources,
-) *HTTPFiltersContext {
+) (*HTTPFiltersContext, error) {
 	httpFiltersContext := &HTTPFiltersContext{
 		ParentRef:    parentRef,
 		Route:        route,
 		RuleIdx:      ruleIdx,
 		HTTPFilterIR: &HTTPFilterIR{},
 	}
+	var err error
 	for i := range filters {
 		filter := filters[i]
 		// If an invalid filter type has been configured then skip processing any more filters
@@ -96,7 +96,7 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 		case gwapiv1.HTTPRouteFilterResponseHeaderModifier:
 			t.processResponseHeaderModifierFilter(filter.ResponseHeaderModifier, httpFiltersContext)
 		case gwapiv1.HTTPRouteFilterRequestMirror:
-			t.processRequestMirrorFilter(i, filter.RequestMirror, httpFiltersContext, resources)
+			err = t.processRequestMirrorFilter(i, filter.RequestMirror, httpFiltersContext, resources)
 		case gwapiv1.HTTPRouteFilterExtensionRef:
 			t.processExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources)
 		default:
@@ -104,7 +104,7 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 		}
 	}
 
-	return httpFiltersContext
+	return httpFiltersContext, err
 }
 
 // ProcessGRPCFilters translates gateway api grpc filters to IRs.
@@ -112,13 +112,14 @@ func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 	route RouteContext,
 	filters []gwapiv1.GRPCRouteFilter,
 	resources *resource.Resources,
-) *HTTPFiltersContext {
+) (*HTTPFiltersContext, error) {
 	httpFiltersContext := &HTTPFiltersContext{
 		ParentRef: parentRef,
 		Route:     route,
 
 		HTTPFilterIR: &HTTPFilterIR{},
 	}
+
 	for i := range filters {
 		filter := filters[i]
 		// If an invalid filter type has been configured then skip processing any more filters
@@ -136,7 +137,10 @@ func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 		case gwapiv1.GRPCRouteFilterResponseHeaderModifier:
 			t.processResponseHeaderModifierFilter(filter.ResponseHeaderModifier, httpFiltersContext)
 		case gwapiv1.GRPCRouteFilterRequestMirror:
-			t.processRequestMirrorFilter(i, filter.RequestMirror, httpFiltersContext, resources)
+			err := t.processRequestMirrorFilter(i, filter.RequestMirror, httpFiltersContext, resources)
+			if err != nil {
+				return nil, err
+			}
 		case gwapiv1.GRPCRouteFilterExtensionRef:
 			t.processExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources)
 		default:
@@ -144,7 +148,7 @@ func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 		}
 	}
 
-	return httpFiltersContext
+	return httpFiltersContext, nil
 }
 
 func (t *Translator) processURLRewriteFilter(
@@ -861,10 +865,10 @@ func (t *Translator) processRequestMirrorFilter(
 	mirrorFilter *gwapiv1.HTTPRequestMirrorFilter,
 	filterContext *HTTPFiltersContext,
 	resources *resource.Resources,
-) {
+) error {
 	// Make sure the config actually exists
 	if mirrorFilter == nil {
-		return
+		return nil
 	}
 
 	mirrorBackend := mirrorFilter.BackendRef
@@ -881,18 +885,23 @@ func (t *Translator) processRequestMirrorFilter(
 	// This sets the status on the HTTPRoute, should the usage be changed so that the status message reflects that the backendRef is from the filter?
 	filterNs := filterContext.Route.GetNamespace()
 	serviceNamespace := NamespaceDerefOr(mirrorBackend.Namespace, filterNs)
-	if !t.validateBackendRef(mirrorBackendRef, filterContext.ParentRef, filterContext.Route,
-		resources, serviceNamespace, resource.KindHTTPRoute) {
-		return
+	err := t.validateBackendRef(mirrorBackendRef, filterContext.ParentRef, filterContext.Route,
+		resources, serviceNamespace, resource.KindHTTPRoute)
+	if err != nil {
+		return err
 	}
 
-	ds := t.processDestination(mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources)
+	ds, err := t.processDestination(mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources)
+	if err != nil {
+		return err
+	}
 
 	newMirror := &ir.RouteDestination{
 		Name:     fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx),
 		Settings: []*ir.DestinationSetting{ds},
 	}
 	filterContext.Mirrors = append(filterContext.Mirrors, newMirror)
+	return nil
 }
 
 func (t *Translator) processUnresolvedHTTPFilter(errMsg string, filterContext *HTTPFiltersContext) {
