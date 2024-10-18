@@ -1051,9 +1051,6 @@ spec:
                           description: Content Type of the response. This will be
                             set in the Content-Type header.
                           type: string
-                        statusCode:
-                          description: Status Code of the HTTP response
-                          type: string
                       type: object
                   required:
                   - match
