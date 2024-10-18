@@ -102,14 +102,24 @@ func oauth2FilterName(oidc *ir.OIDC) string {
 }
 
 func oauth2Config(oidc *ir.OIDC) (*oauth2v3.OAuth2, error) {
-	cluster, err := url2Cluster(oidc.Provider.TokenEndpoint)
-	if err != nil {
-		return nil, err
-	}
-	if cluster.endpointType == EndpointTypeStatic {
-		return nil, fmt.Errorf(
-			"static IP cluster is not allowed: %s",
-			oidc.Provider.TokenEndpoint)
+	var (
+		tokenEndpointCluster string
+		err                  error
+	)
+
+	if oidc.Provider.Destination != nil && len(oidc.Provider.Destination.Settings) > 0 {
+		tokenEndpointCluster = oidc.Provider.Destination.Name
+	} else {
+		var cluster *urlCluster
+		if cluster, err = url2Cluster(oidc.Provider.TokenEndpoint); err != nil {
+			return nil, err
+		}
+		if cluster.endpointType == EndpointTypeStatic {
+			return nil, fmt.Errorf(
+				"static IP cluster is not allowed: %s",
+				oidc.Provider.TokenEndpoint)
+		}
+		tokenEndpointCluster = cluster.name
 	}
 
 	// Envoy OAuth2 filter deletes the HTTP authorization header by default, which surprises users.
@@ -126,7 +136,7 @@ func oauth2Config(oidc *ir.OIDC) (*oauth2v3.OAuth2, error) {
 			TokenEndpoint: &corev3.HttpUri{
 				Uri: oidc.Provider.TokenEndpoint,
 				HttpUpstreamType: &corev3.HttpUri_Cluster{
-					Cluster: cluster.name,
+					Cluster: tokenEndpointCluster,
 				},
 				Timeout: &durationpb.Duration{
 					Seconds: defaultExtServiceRequestTimeout,
@@ -210,7 +220,53 @@ func oauth2Config(oidc *ir.OIDC) (*oauth2v3.OAuth2, error) {
 		oauth2.Config.Credentials.CookieDomain = *oidc.CookieDomain
 	}
 
+	// Set the retry policy if it exists.
+	if oidc.Provider.Traffic != nil && oidc.Provider.Traffic.Retry != nil {
+		var rp *corev3.RetryPolicy
+		if rp, err = buildNonRouteRetryPolicy(oidc.Provider.Traffic.Retry); err != nil {
+			return nil, err
+		}
+		oauth2.Config.RetryPolicy = rp
+	}
 	return oauth2, nil
+}
+
+func buildNonRouteRetryPolicy(rr *ir.Retry) (*corev3.RetryPolicy, error) {
+	rp := &corev3.RetryPolicy{
+		RetryOn: retryDefaultRetryOn,
+	}
+
+	// These two fields in the RetryPolicy are just for route-level retries, they are not used for non-route retries.
+	// retry.PerRetry.Timeout
+	// retry.RetryOn.HTTPStatusCodes
+
+	if rr.PerRetry != nil && rr.PerRetry.BackOff != nil {
+		rp.RetryBackOff = &corev3.BackoffStrategy{
+			BaseInterval: &durationpb.Duration{
+				Seconds: int64(rr.PerRetry.BackOff.BaseInterval.Seconds()),
+			},
+			MaxInterval: &durationpb.Duration{
+				Seconds: int64(rr.PerRetry.BackOff.MaxInterval.Seconds()),
+			},
+		}
+	}
+
+	if rr.NumRetries != nil {
+		rp.NumRetries = &wrappers.UInt32Value{
+			Value: *rr.NumRetries,
+		}
+	}
+
+	if rr.RetryOn != nil {
+		if len(rr.RetryOn.Triggers) > 0 {
+			if ro, err := buildRetryOn(rr.RetryOn.Triggers); err == nil {
+				rp.RetryOn = ro
+			} else {
+				return nil, err
+			}
+		}
+	}
+	return rp, nil
 }
 
 // routeContainsOIDC returns true if OIDC exists for the provided route.
@@ -226,7 +282,7 @@ func routeContainsOIDC(irRoute *ir.HTTPRoute) bool {
 func (*oidc) patchResources(tCtx *types.ResourceVersionTable,
 	routes []*ir.HTTPRoute,
 ) error {
-	if err := createOAuth2TokenEndpointClusters(tCtx, routes); err != nil {
+	if err := createOAuthServerClusters(tCtx, routes); err != nil {
 		return err
 	}
 	if err := createOAuth2Secrets(tCtx, routes); err != nil {
@@ -235,9 +291,8 @@ func (*oidc) patchResources(tCtx *types.ResourceVersionTable,
 	return nil
 }
 
-// createOAuth2TokenEndpointClusters creates token endpoint clusters from the
-// provided routes, if needed.
-func createOAuth2TokenEndpointClusters(tCtx *types.ResourceVersionTable,
+// createOAuthServerClusters creates clusters for the OAuth2 server.
+func createOAuthServerClusters(tCtx *types.ResourceVersionTable,
 	routes []*ir.HTTPRoute,
 ) error {
 	if tCtx == nil || tCtx.XdsResources == nil {
@@ -250,59 +305,78 @@ func createOAuth2TokenEndpointClusters(tCtx *types.ResourceVersionTable,
 			continue
 		}
 
-		var (
-			cluster *urlCluster
-			ds      *ir.DestinationSetting
-			tSocket *corev3.TransportSocket
-			err     error
-		)
+		oidc := route.Security.OIDC
 
-		cluster, err = url2Cluster(route.Security.OIDC.Provider.TokenEndpoint)
-		if err != nil {
-			errs = errors.Join(errs, err)
-			continue
-		}
-
-		// EG does not support static IP clusters for token endpoint clusters.
-		// This validation could be removed since it's already validated in the
-		// Gateway API translator.
-		if cluster.endpointType == EndpointTypeStatic {
-			errs = errors.Join(errs, fmt.Errorf(
-				"static IP cluster is not allowed: %s",
-				route.Security.OIDC.Provider.TokenEndpoint))
-			continue
-		}
-
-		ds = &ir.DestinationSetting{
-			Weight: ptr.To[uint32](1),
-			Endpoints: []*ir.DestinationEndpoint{
-				ir.NewDestEndpoint(
-					cluster.hostname,
-					cluster.port),
-			},
-		}
-
-		clusterArgs := &xdsClusterArgs{
-			name:         cluster.name,
-			settings:     []*ir.DestinationSetting{ds},
-			tSocket:      tSocket,
-			endpointType: cluster.endpointType,
-		}
-		if cluster.tls {
-			tSocket, err = buildXdsUpstreamTLSSocket(cluster.hostname)
-			if err != nil {
+		// If the OIDC provider has a destination, use it.
+		if oidc.Provider.Destination != nil && len(oidc.Provider.Destination.Settings) > 0 {
+			if err := createExtServiceXDSCluster(
+				oidc.Provider.Destination, oidc.Provider.Traffic, tCtx); err != nil && !errors.Is(
+				err, ErrXdsClusterExists) {
 				errs = errors.Join(errs, err)
-				continue
 			}
-			clusterArgs.tSocket = tSocket
-		}
-
-		if err = addXdsCluster(tCtx, clusterArgs); err != nil && !errors.Is(err, ErrXdsClusterExists) {
-			errs = errors.Join(errs, err)
+		} else {
+			// Create a cluster with the token endpoint url.
+			if err := createOAuth2TokenEndpointCluster(tCtx, oidc.Provider.TokenEndpoint); err != nil {
+				errs = errors.Join(errs, err)
+			}
 		}
 	}
 
 	return errs
+}
+
+// createOAuth2TokenEndpointClusters creates token endpoint clusters from the
+// provided routes, if needed.
+func createOAuth2TokenEndpointCluster(tCtx *types.ResourceVersionTable,
+	tokenEndpoint string,
+) error {
+	var (
+		cluster *urlCluster
+		ds      *ir.DestinationSetting
+		tSocket *corev3.TransportSocket
+		err     error
+	)
+
+	if cluster, err = url2Cluster(tokenEndpoint); err != nil {
+		return err
+	}
+
+	// EG does not support static IP clusters for token endpoint clusters.
+	// This validation could be removed since it's already validated in the
+	// Gateway API translator.
+	if cluster.endpointType == EndpointTypeStatic {
+		return fmt.Errorf(
+			"static IP cluster is not allowed: %s",
+			tokenEndpoint)
+	}
+
+	ds = &ir.DestinationSetting{
+		Weight: ptr.To[uint32](1),
+		Endpoints: []*ir.DestinationEndpoint{
+			ir.NewDestEndpoint(
+				cluster.hostname,
+				cluster.port),
+		},
+	}
+
+	clusterArgs := &xdsClusterArgs{
+		name:         cluster.name,
+		settings:     []*ir.DestinationSetting{ds},
+		tSocket:      tSocket,
+		endpointType: cluster.endpointType,
+	}
+	if cluster.tls {
+		if tSocket, err = buildXdsUpstreamTLSSocket(cluster.hostname); err != nil {
+			return err
+		}
+		clusterArgs.tSocket = tSocket
+	}
+
+	if err = addXdsCluster(tCtx, clusterArgs); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+		return err
+	}
+
+	return err
 }
 
 // createOAuth2Secrets creates OAuth2 client and HMAC secrets from the provided
