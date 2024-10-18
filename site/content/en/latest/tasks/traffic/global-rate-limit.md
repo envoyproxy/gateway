@@ -214,11 +214,7 @@ data:
 {{% /tab %}}
 {{< /tabpane >}}
 
-* After updating the `ConfigMap`, you will need to restart the `envoy-gateway` deployment so the configuration kicks in
-
-```shell
-kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
-```
+{{< boilerplate rollout-envoy-gateway >}}
 
 ## Rate Limit Specific User 
 
@@ -1287,11 +1283,7 @@ data:
 {{% /tab %}}
 {{< /tabpane >}}
 
-* After updating the `ConfigMap`, you will need to restart the `envoy-gateway` deployment so the configuration kicks in
-
-```shell
-kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
-```
+{{< boilerplate rollout-envoy-gateway >}}
 
 [Global Rate Limiting]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/global_rate_limiting
 [Local rate limiting]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/local_rate_limiting

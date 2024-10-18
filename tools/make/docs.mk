@@ -118,6 +118,9 @@ docs-check-links: # Check for broken links in the docs
 	@$(LOG_TARGET)
 	linkinator site/public/ -r --concurrency 25 --skip $(LINKINATOR_IGNORE)
 
+docs-markdown-lint:
+	markdownlint -c .github/markdown_lint_config.json site/content/*
+
 release-notes-docs: $(tools/release-notes-docs)
 	@$(LOG_TARGET)
 	@for file in $(wildcard release-notes/*.yaml); do \

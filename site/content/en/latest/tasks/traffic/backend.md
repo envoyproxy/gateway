@@ -94,11 +94,7 @@ data:
 {{% /tab %}}
 {{< /tabpane >}}
 
-* After updating the `ConfigMap`, you will need to restart the `envoy-gateway` deployment so the configuration kicks in
-
-```shell
-kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
-```
+{{< boilerplate rollout-envoy-gateway >}}
 
 ## Testing
 
