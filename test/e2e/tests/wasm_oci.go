@@ -32,7 +32,6 @@ import (
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -416,7 +415,7 @@ func createEEPForWasmTest(
 		},
 	}
 	if withPullSecret {
-		eep.Spec.Wasm[0].Code.Image.PullSecretRef = &gwapiv1b1.SecretObjectReference{
+		eep.Spec.Wasm[0].Code.Image.PullSecretRef = &gwapiv1.SecretObjectReference{
 			Name: gwapiv1.ObjectName(pullSecret),
 		}
 	}
