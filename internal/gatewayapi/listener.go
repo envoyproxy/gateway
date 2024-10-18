@@ -344,7 +344,8 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 				al := &ir.ALSAccessLog{
 					LogName: logName,
 					Destination: ir.RouteDestination{
-						Name:     fmt.Sprintf("accesslog_als_%d_%d", i, j), // TODO: rename this, so that we can share backend with tracing?
+						// TODO: rename this, so that we can share backend with tracing?
+						Name:     fmt.Sprintf("accesslog_als_%d_%d", i, j),
 						Settings: ds,
 					},
 					Traffic:    traffic,
@@ -384,7 +385,8 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					CELMatches: validExprs,
 					Resources:  sink.OpenTelemetry.Resources,
 					Destination: ir.RouteDestination{
-						Name:     fmt.Sprintf("accesslog_otel_%d_%d", i, j), // TODO: rename this, so that we can share backend with tracing?
+						// TODO: rename this, so that we can share backend with tracing?
+						Name:     fmt.Sprintf("accesslog_otel_%d_%d", i, j),
 						Settings: ds,
 					},
 					Traffic: traffic,
@@ -416,7 +418,9 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 	return irAccessLog, nil
 }
 
-func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.EnvoyProxy, mergeGateways bool, resources *resource.Resources) (*ir.Tracing, error) {
+func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.EnvoyProxy,
+	mergeGateways bool, resources *resource.Resources,
+) (*ir.Tracing, error) {
 	if envoyproxy == nil ||
 		envoyproxy.Spec.Telemetry == nil ||
 		envoyproxy.Spec.Telemetry.Tracing == nil {
@@ -460,7 +464,8 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 		SamplingRate: samplingRate,
 		CustomTags:   tracing.CustomTags,
 		Destination: ir.RouteDestination{
-			Name:     "tracing", // TODO: rename this, so that we can share backend with accesslog?
+			// TODO: rename this, so that we can share backend with accesslog?
+			Name:     "tracing",
 			Settings: ds,
 		},
 		Provider: tracing.Provider,
@@ -487,13 +492,15 @@ func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy, resources *re
 	}
 
 	return &ir.Metrics{
-		EnableVirtualHostStats:          envoyproxy.Spec.Telemetry.Metrics.EnableVirtualHostStats != nil && *envoyproxy.Spec.Telemetry.Metrics.EnableVirtualHostStats,
-		EnablePerEndpointStats:          envoyproxy.Spec.Telemetry.Metrics.EnablePerEndpointStats != nil && *envoyproxy.Spec.Telemetry.Metrics.EnablePerEndpointStats,
-		EnableRequestResponseSizesStats: envoyproxy.Spec.Telemetry.Metrics.EnableRequestResponseSizesStats != nil && *envoyproxy.Spec.Telemetry.Metrics.EnableRequestResponseSizesStats,
+		EnableVirtualHostStats:          ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableVirtualHostStats, false),
+		EnablePerEndpointStats:          ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnablePerEndpointStats, false),
+		EnableRequestResponseSizesStats: ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableRequestResponseSizesStats, false),
 	}, nil
 }
 
-func (t *Translator) processBackendRefs(backendCluster egv1a1.BackendCluster, namespace string, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) ([]*ir.DestinationSetting, *ir.TrafficFeatures, error) {
+func (t *Translator) processBackendRefs(backendCluster egv1a1.BackendCluster, namespace string,
+	resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy,
+) ([]*ir.DestinationSetting, *ir.TrafficFeatures, error) {
 	traffic, err := translateTrafficFeatures(backendCluster.BackendSettings)
 	if err != nil {
 		return nil, nil, err
