@@ -3,7 +3,7 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-package file
+package path
 
 import (
 	"path"
@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGetDirsAndFilesForWatcher(t *testing.T) {
+func TestListDirsAndFiles(t *testing.T) {
 	testPath := path.Join("testdata", "paths")
 	testCases := []struct {
 		name        string
@@ -46,7 +46,7 @@ func TestGetDirsAndFilesForWatcher(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			dirs, paths, _ := getDirsAndFilesForWatcher(tc.paths)
+			dirs, paths := ListDirsAndFiles(tc.paths)
 			require.ElementsMatch(t, dirs.UnsortedList(), tc.expectDirs)
 			require.ElementsMatch(t, paths.UnsortedList(), tc.expectFiles)
 		})

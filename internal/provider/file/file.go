@@ -13,32 +13,34 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/filewatcher"
 	"github.com/envoyproxy/gateway/internal/message"
+	"github.com/envoyproxy/gateway/internal/utils/path"
 )
 
 type Provider struct {
 	paths          []string
 	logger         logr.Logger
-	notifier       *Notifier
+	watcher        filewatcher.FileWatcher
 	resourcesStore *resourcesStore
 }
 
 func New(svr *config.Server, resources *message.ProviderResources) (*Provider, error) {
 	logger := svr.Logger.Logger
-
-	notifier, err := NewNotifier(logger)
-	if err != nil {
-		return nil, err
+	paths := sets.New[string]()
+	if svr.EnvoyGateway.Provider.Custom.Resource.File != nil {
+		paths.Insert(svr.EnvoyGateway.Provider.Custom.Resource.File.Paths...)
 	}
 
 	return &Provider{
-		paths:          svr.EnvoyGateway.Provider.Custom.Resource.File.Paths,
+		paths:          paths.UnsortedList(),
 		logger:         logger,
-		notifier:       notifier,
+		watcher:        filewatcher.NewWatcher(),
 		resourcesStore: newResourcesStore(svr.EnvoyGateway.Gateway.ControllerName, resources, logger),
 	}, nil
 }
@@ -48,28 +50,38 @@ func (p *Provider) Type() egv1a1.ProviderType {
 }
 
 func (p *Provider) Start(ctx context.Context) error {
-	dirs, files, err := getDirsAndFilesForWatcher(p.paths)
-	if err != nil {
-		return fmt.Errorf("failed to get directories and files for the watcher: %w", err)
-	}
+	defer func() {
+		_ = p.watcher.Close()
+	}()
 
 	// Start runnable servers.
 	go p.startHealthProbeServer(ctx)
 
+	dirs, files := path.ListDirsAndFiles(p.paths)
 	// Initially load resources from paths on host.
-	if err = p.resourcesStore.LoadAndStore(files.UnsortedList(), dirs.UnsortedList()); err != nil {
+	if err := p.resourcesStore.LoadAndStore(files.UnsortedList(), dirs.UnsortedList()); err != nil {
 		return fmt.Errorf("failed to load resources into store: %w", err)
 	}
 
-	// Start watchers in notifier.
-	p.notifier.Watch(ctx, dirs, files)
-	defer p.notifier.Close()
+	// aggregate all path channel int one
+	aggCh := make(chan fsnotify.Event)
+	for _, path := range p.paths {
+		if err := p.watcher.Add(path); err != nil {
+			p.logger.Error(err, "failed to add watch", "path", path)
+		}
+		ch := p.watcher.Events(path)
+		go func(c chan fsnotify.Event) {
+			for msg := range c {
+				aggCh <- msg
+			}
+		}(ch)
+	}
 
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
-		case event := <-p.notifier.Events:
+		case event := <-aggCh:
 			switch event.Op {
 			case fsnotify.Create:
 				dirs.Insert(event.Name)
@@ -77,6 +89,9 @@ func (p *Provider) Start(ctx context.Context) error {
 			case fsnotify.Remove:
 				dirs.Delete(event.Name)
 				files.Delete(event.Name)
+			default:
+				p.logger.Info("unexcepted event", "op", event.Op, "name", event.Name)
+				continue
 			}
 
 			p.resourcesStore.HandleEvent(event, files.UnsortedList(), dirs.UnsortedList())

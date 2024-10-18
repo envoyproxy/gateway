@@ -90,7 +90,6 @@ func (fw *fileWatcher) Add(path string) error {
 	return err
 }
 
-// Stop watching a path
 func (fw *fileWatcher) Remove(path string) error {
 	fw.mu.Lock()
 	defer fw.mu.Unlock()
