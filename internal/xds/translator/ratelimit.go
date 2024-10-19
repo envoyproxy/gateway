@@ -180,13 +180,17 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 						StringMatch: buildXdsStringMatcher(match),
 					},
 				}
+				expectMatch := true
+				if match.Invert != nil && *match.Invert {
+					expectMatch = false
+				}
 				action = &routev3.RateLimit_Action{
 					ActionSpecifier: &routev3.RateLimit_Action_HeaderValueMatch_{
 						HeaderValueMatch: &routev3.RateLimit_Action_HeaderValueMatch{
 							DescriptorKey:   descriptorKey,
 							DescriptorValue: descriptorVal,
 							ExpectMatch: &wrapperspb.BoolValue{
-								Value: true,
+								Value: expectMatch,
 							},
 							Headers: []*routev3.HeaderMatcher{headerMatcher},
 						},

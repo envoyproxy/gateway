@@ -55,3 +55,23 @@
               descriptorValue: rule-0-match--1
         upgradeConfigs:
         - upgradeType: websocket
+    - match:
+        path: foo/bar/login
+      name: fourth-route
+      route:
+        cluster: fourth-route-dest
+        rateLimits:
+        - actions:
+          - genericKey:
+              descriptorKey: fourth-route
+              descriptorValue: fourth-route
+          - headerValueMatch:
+              descriptorKey: rule-0-match-0
+              descriptorValue: rule-0-match-0
+              expectMatch: false
+              headers:
+              - name: x-org-id
+                stringMatch:
+                  exact: admin
+        upgradeConfigs:
+        - upgradeType: websocket

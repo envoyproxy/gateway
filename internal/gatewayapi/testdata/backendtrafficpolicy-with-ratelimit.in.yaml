@@ -83,6 +83,9 @@ backendTrafficPolicies:
               value: one
             - name: x-org-id
               type: Distinct
+            - name: x-org-id
+              value: admin
+              invert: true
           limit:
             requests: 10
             unit: Hour
