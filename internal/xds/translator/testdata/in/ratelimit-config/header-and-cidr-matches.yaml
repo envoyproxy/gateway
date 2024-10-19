@@ -17,6 +17,8 @@ routes:
             exact: "one"
           - name: "x-user-id"
             exact: "two"
+          - name: "x-org-id"
+            exact: "three"
           cidrMatch:
             cidr: 0.0.0.0/0
             ip: 0.0.0.0

@@ -241,8 +241,8 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 			}
 		}
 
-		// Case when header/cidr match is not set and the rate limit is applied
-		// to all traffic.
+		// Case when both header and cidr match are not set and the ratelimit
+		// will be applied to all traffic.
 		if !rule.IsMatchSet() {
 			// Setup GenericKey action
 			action := &routev3.RateLimit_Action{
@@ -329,13 +329,20 @@ func BuildRateLimitServiceConfig(irListener *ir.HTTPListener) *rlsconfv3.RateLim
 func buildRateLimitServiceDescriptors(global *ir.GlobalRateLimit) []*rlsconfv3.RateLimitDescriptor {
 	pbDescriptors := make([]*rlsconfv3.RateLimitDescriptor, 0, len(global.Rules))
 
-	// Descriptors for matches are built corresponding to ratelimit actions.
+	// The order in which matching descriptors are built is consistent with
+	// the order in which ratelimit actions are built:
+	//  1) Header Matches
+	//  2) CIDR Match
+	//  3) No Match
 	for rIdx, rule := range global.Rules {
-		var head, cur *rlsconfv3.RateLimitDescriptor
 		rateLimitPolicy := &rlsconfv3.RateLimitPolicy{
 			RequestsPerUnit: uint32(rule.Limit.Requests),
 			Unit:            rlsconfv3.RateLimitUnit(rlsconfv3.RateLimitUnit_value[strings.ToUpper(string(rule.Limit.Unit))]),
 		}
+
+		// We use a chain structure to describe the matching descriptors for one rule.
+		// The RateLimitPolicy should be added to the last descriptor in the chain.
+		var head, cur *rlsconfv3.RateLimitDescriptor
 
 		for mIdx, match := range rule.HeaderMatches {
 			pbDesc := new(rlsconfv3.RateLimitDescriptor)
@@ -356,6 +363,9 @@ func buildRateLimitServiceDescriptors(global *ir.GlobalRateLimit) []*rlsconfv3.R
 			}
 
 			cur = pbDesc
+
+			// Do not add the RateLimitPolicy to the last header match descriptor yet,
+			// as it is also possible that CIDR match descriptor also exist.
 		}
 
 		// EG supports two kinds of rate limit descriptors for the source IP: exact and distinct.
@@ -386,12 +396,13 @@ func buildRateLimitServiceDescriptors(global *ir.GlobalRateLimit) []*rlsconfv3.R
 			pbDesc.Value = rule.CIDRMatch.CIDR
 
 			if cur != nil {
+				// The header match descriptor chain exist, add current
+				// descriptor to the chain.
 				cur.Descriptors = []*rlsconfv3.RateLimitDescriptor{pbDesc}
-				cur = pbDesc
 			} else {
 				head = pbDesc
-				cur = head
 			}
+			cur = pbDesc
 
 			if rule.CIDRMatch.Distinct {
 				pbDesc := new(rlsconfv3.RateLimitDescriptor)
@@ -401,8 +412,8 @@ func buildRateLimitServiceDescriptors(global *ir.GlobalRateLimit) []*rlsconfv3.R
 			}
 		}
 
-		// Case when header/cidr match is not set and the rate limit is applied
-		// to all traffic.
+		// Case when both header and cidr match are not set and the ratelimit
+		// will be applied to all traffic.
 		if !rule.IsMatchSet() {
 			pbDesc := new(rlsconfv3.RateLimitDescriptor)
 			// GenericKey case
@@ -412,7 +423,7 @@ func buildRateLimitServiceDescriptors(global *ir.GlobalRateLimit) []*rlsconfv3.R
 			cur = head
 		}
 
-		// Add the ratelimit values to the last descriptor
+		// Add the ratelimit policy to the last descriptor of chain.
 		cur.RateLimit = rateLimitPolicy
 		pbDescriptors = append(pbDescriptors, head)
 	}
