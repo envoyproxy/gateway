@@ -7,12 +7,9 @@ package runner
 
 import (
 	"context"
-	"crypto/rand"
 	"crypto/tls"
-	"crypto/x509"
 	"fmt"
 	"net"
-	"os"
 	"strconv"
 	"time"
 
@@ -29,6 +26,7 @@ import (
 	"google.golang.org/grpc/keepalive"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
@@ -39,15 +37,24 @@ import (
 const (
 	// XdsServerAddress is the listening address of the xds-server.
 	XdsServerAddress = "0.0.0.0"
-	// xdsTLSCertFilename is the fully qualified path of the file containing the
+
+	// Default certificates path for envoy-gateway with Kubernetes provider.
+
+	// xdsTLSCertFilepath is the fully qualified path of the file containing the
 	// xDS server TLS certificate.
-	xdsTLSCertFilename = "/certs/tls.crt"
-	// xdsTLSKeyFilename is the fully qualified path of the file containing the
+	xdsTLSCertFilepath = "/certs/tls.crt"
+	// xdsTLSKeyFilepath is the fully qualified path of the file containing the
 	// xDS server TLS key.
-	xdsTLSKeyFilename = "/certs/tls.key"
-	// xdsTLSCaFilename is the fully qualified path of the file containing the
+	xdsTLSKeyFilepath = "/certs/tls.key"
+	// xdsTLSCaFilepath is the fully qualified path of the file containing the
 	// xDS server trusted CA certificate.
-	xdsTLSCaFilename = "/certs/ca.crt"
+	xdsTLSCaFilepath = "/certs/ca.crt"
+
+	// TODO: Make these path configurable.
+	// Default certificates path for envoy-gateway with Host infrastructure provider.
+	localTLSCertFilepath = "/tmp/envoy-gateway/certs/envoy-gateway/tls.crt"
+	localTLSKeyFilepath  = "/tmp/envoy-gateway/certs/envoy-gateway/tls.key"
+	localTLSCaFilepath   = "/tmp/envoy-gateway/certs/envoy-gateway/ca.crt"
 )
 
 type Config struct {
@@ -76,8 +83,23 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	// Set up the gRPC server and register the xDS handler.
 	// Create SnapshotCache before start subscribeAndTranslate,
 	// prevent panics in case cache is nil.
-	cfg := r.tlsConfig(xdsTLSCertFilename, xdsTLSKeyFilename, xdsTLSCaFilename)
-	r.grpc = grpc.NewServer(grpc.Creds(credentials.NewTLS(cfg)), grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+	var tlsCfg *tls.Config
+	if r.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes {
+		tlsCfg, err = crypto.LoadTLSConfig(xdsTLSCertFilepath, xdsTLSKeyFilepath, xdsTLSCaFilepath)
+	} else if r.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeCustom &&
+		r.EnvoyGateway.Provider.Custom.Infrastructure != nil &&
+		r.EnvoyGateway.Provider.Custom.Infrastructure.Type == egv1a1.InfrastructureProviderTypeHost {
+		tlsCfg, err = crypto.LoadTLSConfig(localTLSCertFilepath, localTLSKeyFilepath, localTLSCaFilepath)
+	} else {
+		return fmt.Errorf("failed to start %s runner: no valid tls certificates", r.Name())
+	}
+
+	if err != nil {
+		return fmt.Errorf("failed to load TLS config: %w", err)
+	}
+	r.Logger.Info("loaded TLS certificate and key")
+
+	r.grpc = grpc.NewServer(grpc.Creds(credentials.NewTLS(tlsCfg)), grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
 		MinTime:             15 * time.Second,
 		PermitWithoutStream: true,
 	}))
@@ -158,46 +180,4 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	)
 
 	r.Logger.Info("subscriber shutting down")
-}
-
-func (r *Runner) tlsConfig(cert, key, ca string) *tls.Config {
-	loadConfig := func() (*tls.Config, error) {
-		cert, err := tls.LoadX509KeyPair(cert, key)
-		if err != nil {
-			return nil, err
-		}
-
-		// Load the CA cert.
-		ca, err := os.ReadFile(ca)
-		if err != nil {
-			return nil, err
-		}
-
-		certPool := x509.NewCertPool()
-		if !certPool.AppendCertsFromPEM(ca) {
-			return nil, fmt.Errorf("failed to parse CA certificate")
-		}
-
-		return &tls.Config{
-			Certificates: []tls.Certificate{cert},
-			ClientAuth:   tls.RequireAndVerifyClientCert,
-			ClientCAs:    certPool,
-			MinVersion:   tls.VersionTLS13,
-		}, nil
-	}
-
-	// Attempt to load certificates and key to catch configuration errors early.
-	if _, lerr := loadConfig(); lerr != nil {
-		r.Logger.Error(lerr, "failed to load certificate and key")
-	}
-	r.Logger.Info("loaded TLS certificate and key")
-
-	return &tls.Config{
-		MinVersion: tls.VersionTLS13,
-		ClientAuth: tls.RequireAndVerifyClientCert,
-		Rand:       rand.Reader,
-		GetConfigForClient: func(*tls.ClientHelloInfo) (*tls.Config, error) {
-			return loadConfig()
-		},
-	}
 }

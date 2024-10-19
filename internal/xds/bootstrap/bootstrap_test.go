@@ -20,6 +20,11 @@ import (
 )
 
 func TestGetRenderedBootstrapConfig(t *testing.T) {
+	sds := SdsConfigPath{
+		Certificate: "/sds/xds-certificate.json",
+		TrustedCA:   "/sds/xds-trusted-ca.json",
+	}
+
 	cases := []struct {
 		name string
 		opts *RenderBootstrapConfigOptions
@@ -32,6 +37,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 						Disable: true,
 					},
 				},
+				SdsConfig: sds,
 			},
 		},
 		{
@@ -40,6 +46,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 				ProxyMetrics: &egv1a1.ProxyMetrics{
 					Prometheus: &egv1a1.ProxyPrometheusProvider{},
 				},
+				SdsConfig: sds,
 			},
 		},
 		{
@@ -52,6 +59,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 						},
 					},
 				},
+				SdsConfig: sds,
 			},
 		},
 		{
@@ -71,6 +79,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 						},
 					},
 				},
+				SdsConfig: sds,
 			},
 		},
 		{
@@ -101,6 +110,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 						},
 					},
 				},
+				SdsConfig: sds,
 			},
 		},
 		{
@@ -130,12 +140,14 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 						},
 					},
 				},
+				SdsConfig: sds,
 			},
 		},
 		{
 			name: "with-max-heap-size-bytes",
 			opts: &RenderBootstrapConfigOptions{
 				MaxHeapSizeBytes: 1073741824,
+				SdsConfig:        sds,
 			},
 		},
 	}

@@ -8,9 +8,7 @@ package runner
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -27,6 +25,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extension "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -37,10 +36,24 @@ import (
 )
 
 const (
-	wasmCacheDir         = "/var/lib/eg/wasm"
-	serveTLSCertFilename = "/certs/tls.crt"
-	serveTLSKeyFilename  = "/certs/tls.key"
-	serveTLSCaFilename   = "/certs/ca.crt"
+	wasmCacheDir = "/var/lib/eg/wasm"
+
+	// Default certificates path for envoy-gateway with Kubernetes provider.
+	serveTLSCertFilepath = "/certs/tls.crt"
+	serveTLSKeyFilepath  = "/certs/tls.key"
+	serveTLSCaFilepath   = "/certs/ca.crt"
+
+	// TODO: Make these path configurable.
+	// Default certificates path for envoy-gateway with Host infrastructure provider.
+	localTLSCertFilepath = "/tmp/envoy-gateway/certs/envoy-gateway/tls.crt"
+	localTLSKeyFilepath  = "/tmp/envoy-gateway/certs/envoy-gateway/tls.key"
+	localTLSCaFilepath   = "/tmp/envoy-gateway/certs/envoy-gateway/ca.crt"
+
+	// nolint: gosec
+	hmacSecretName = "envoy-oidc-hmac"
+	hmacSecretKey  = "hmac-secret"
+
+	localHmacSecretPath = "/tmp/envoy-gateway/certs/envoy-oidc-hmac/hmac-secret"
 )
 
 type Config struct {
@@ -62,12 +75,6 @@ func New(cfg *Config) *Runner {
 	}
 }
 
-const (
-	// nolint: gosec
-	hmacSecretName = "envoy-oidc-hmac"
-	hmacSecretKey  = "hmac-secret"
-)
-
 func (r *Runner) Name() string {
 	return string(egv1a1.LogComponentGatewayAPIRunner)
 }
@@ -83,19 +90,47 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 }
 
 func (r *Runner) startWasmCache(ctx context.Context) {
+	var (
+		err       error
+		salt      []byte
+		tlsConfig *tls.Config
+	)
+
 	// Start the wasm cache server
 	// EG reuse the OIDC HMAC secret as a hash salt to generate an unguessable
 	// downloading path for the Wasm module.
-	salt, err := hmac(ctx, r.Namespace)
-	if err != nil {
-		r.Logger.Error(err, "failed to get hmac secret")
+	// TODO: make this implementation more elegant.
+	if r.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes {
+		salt, err = hmac(ctx, r.Namespace)
+		if err != nil {
+			r.Logger.Error(err, "failed to get hmac secret")
+			return
+		}
+
+		tlsConfig, err = crypto.LoadTLSConfig(serveTLSCertFilepath, serveTLSKeyFilepath, serveTLSCaFilepath)
+		if err != nil {
+			r.Logger.Error(err, "failed to create tls config")
+			return
+		}
+	} else if r.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeCustom &&
+		r.EnvoyGateway.Provider.Custom.Infrastructure != nil &&
+		r.EnvoyGateway.Provider.Custom.Infrastructure.Type == egv1a1.InfrastructureProviderTypeHost {
+		salt, err = os.ReadFile(localHmacSecretPath)
+		if err != nil {
+			r.Logger.Error(err, "failed to get hmac secret")
+			return
+		}
+
+		tlsConfig, err = crypto.LoadTLSConfig(localTLSCertFilepath, localTLSKeyFilepath, localTLSCaFilepath)
+		if err != nil {
+			r.Logger.Error(err, "failed to create tls config")
+			return
+		}
+	} else {
+		r.Logger.Error(fmt.Errorf("no valid tls certificates"), "failed to start wasm cache")
 		return
 	}
-	tlsConfig, err := r.tlsConfig()
-	if err != nil {
-		r.Logger.Error(err, "failed to create tls config")
-		return
-	}
+
 	// Create the file directory if it does not exist.
 	if err = fileutils.CreateIfNotExists(wasmCacheDir, true); err != nil {
 		r.Logger.Error(err, "Failed to create Wasm cache directory")
@@ -536,36 +571,4 @@ func hmac(ctx context.Context, namespace string) (hmac []byte, err error) {
 			"HMAC secret not found in secret %s/%s", namespace, hmacSecretName)
 	}
 	return
-}
-
-func (r *Runner) tlsConfig() (*tls.Config, error) {
-	var (
-		serverCert tls.Certificate // server's certificate and private key
-		caCert     []byte          // the CA certificate for client verification
-		caCertPool *x509.CertPool
-		err        error
-	)
-
-	// Load server's certificate and private key
-	if serverCert, err = tls.LoadX509KeyPair(serveTLSCertFilename, serveTLSKeyFilename); err != nil {
-		return nil, err
-	}
-
-	// Load client's CA certificate
-	if caCert, err = os.ReadFile(serveTLSCaFilename); err != nil {
-		return nil, err
-	}
-
-	caCertPool = x509.NewCertPool()
-	if !caCertPool.AppendCertsFromPEM(caCert) {
-		return nil, errors.New("failed to parse CA certificate")
-	}
-
-	// Configure the server to require client certificates
-	return &tls.Config{
-		Certificates: []tls.Certificate{serverCert},
-		ClientAuth:   tls.RequireAndVerifyClientCert,
-		ClientCAs:    caCertPool,
-		MinVersion:   tls.VersionTLS13,
-	}, nil
 }

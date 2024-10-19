@@ -9,6 +9,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path"
 
 	"github.com/spf13/cobra"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -21,21 +23,29 @@ import (
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes"
 )
 
+// TODO: make this path configurable.
+const defaultLocalCertPath = "/tmp/envoy-gateway/certs"
+
 // getCertGenCommand returns the certGen cobra command to be executed.
 func getCertGenCommand() *cobra.Command {
+	var local bool
+
 	cmd := &cobra.Command{
 		Use:   "certgen",
 		Short: "Generate Control Plane Certificates",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return certGen()
+			return certGen(local)
 		},
 	}
+
+	cmd.PersistentFlags().BoolVarP(&local, "local", "l", false,
+		"Generate all the certificates locally.")
 
 	return cmd
 }
 
 // certGen generates control plane certificates.
-func certGen() error {
+func certGen(local bool) error {
 	cfg, err := getConfig()
 	if err != nil {
 		return err
@@ -46,22 +56,29 @@ func certGen() error {
 	if err != nil {
 		return fmt.Errorf("failed to generate certificates: %w", err)
 	}
-	log.Info("generated certificates")
 
-	cli, err := client.New(clicfg.GetConfigOrDie(), client.Options{Scheme: envoygateway.GetScheme()})
-	if err != nil {
-		return fmt.Errorf("failed to create controller-runtime client: %w", err)
-	}
+	if !local {
+		log.Info("generated certificates")
+		cli, err := client.New(clicfg.GetConfigOrDie(), client.Options{Scheme: envoygateway.GetScheme()})
+		if err != nil {
+			return fmt.Errorf("failed to create controller-runtime client: %w", err)
+		}
 
-	if err := outputCerts(ctrl.SetupSignalHandler(), cli, cfg, certs); err != nil {
-		return fmt.Errorf("failed to output certificates: %w", err)
+		if err = outputCertsForKubernetes(ctrl.SetupSignalHandler(), cli, cfg, certs); err != nil {
+			return fmt.Errorf("failed to output certificates: %w", err)
+		}
+	} else {
+		log.Info("generated certificates", "path", defaultLocalCertPath)
+		if err = outputCertsForLocal(defaultLocalCertPath, certs); err != nil {
+			return fmt.Errorf("failed to output certificates locally: %w", err)
+		}
 	}
 
 	return nil
 }
 
-// outputCerts outputs the provided certs to a secret in namespace ns.
-func outputCerts(ctx context.Context, cli client.Client, cfg *config.Server, certs *crypto.Certificates) error {
+// outputCertsForKubernetes outputs the provided certs to a secret in namespace ns.
+func outputCertsForKubernetes(ctx context.Context, cli client.Client, cfg *config.Server, certs *crypto.Certificates) error {
 	var updateSecrets bool
 	if cfg.EnvoyGateway != nil &&
 		cfg.EnvoyGateway.Provider != nil &&
@@ -87,4 +104,39 @@ func outputCerts(ctx context.Context, cli client.Client, cfg *config.Server, cer
 	}
 
 	return nil
+}
+
+func outputCertsForLocal(localPath string, certs *crypto.Certificates) (errs error) {
+	writeCerts := func(dir, filename string, cert []byte) error {
+		err := os.MkdirAll(dir, 0o750)
+		if err != nil {
+			return err
+		}
+
+		var f *os.File
+		f, err = os.Create(path.Join(dir, filename))
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		_, err = f.Write(cert)
+		return err
+	}
+
+	errs = errors.Join(writeCerts(path.Join(localPath, "envoy-gateway"), "ca.crt", certs.CACertificate))
+	errs = errors.Join(writeCerts(path.Join(localPath, "envoy-gateway"), "tls.crt", certs.EnvoyGatewayCertificate))
+	errs = errors.Join(writeCerts(path.Join(localPath, "envoy-gateway"), "tls.key", certs.EnvoyGatewayPrivateKey))
+
+	errs = errors.Join(writeCerts(path.Join(localPath, "envoy"), "ca.crt", certs.CACertificate))
+	errs = errors.Join(writeCerts(path.Join(localPath, "envoy"), "tls.crt", certs.EnvoyCertificate))
+	errs = errors.Join(writeCerts(path.Join(localPath, "envoy"), "tls.key", certs.EnvoyPrivateKey))
+
+	errs = errors.Join(writeCerts(path.Join(localPath, "envoy-rate-limit"), "ca.crt", certs.CACertificate))
+	errs = errors.Join(writeCerts(path.Join(localPath, "envoy-rate-limit"), "tls.crt", certs.EnvoyRateLimitCertificate))
+	errs = errors.Join(writeCerts(path.Join(localPath, "envoy-rate-limit"), "tls.key", certs.EnvoyRateLimitPrivateKey))
+
+	errs = errors.Join(writeCerts(path.Join(localPath, "envoy-oidc-hmac"), "hmac-secret", certs.OIDCHMACSecret))
+
+	return
 }
