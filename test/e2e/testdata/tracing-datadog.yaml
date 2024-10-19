@@ -19,85 +19,15 @@ spec:
       name: datadog-tracing
 ---
 apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: alloy-config
-  namespace: monitoring
-data:
-  config.alloy: |
-    logging {
-      level  = "debug"
-      format = "logfmt"
-    }
-
-    otelcol.processor.batch "default" {
-      output {
-        metrics = [otelcol.exporter.otlp.default.input]
-        traces  = [otelcol.exporter.otlp.default.input]
-      }
-    }
-
-    otelcol.processor.deltatocumulative "default" {
-      max_stale = "5m"
-      max_streams = 100
-      output {
-        metrics = [otelcol.processor.batch.default.input]
-      }
-    }
-
-    otelcol.exporter.otlp "default" {
-      client {
-        endpoint = "otel-collector:4317"
-        tls {
-          insecure = true
-        }
-      }
-    }
-
-    otelcol.receiver.datadog "default" {
-      endpoint = "0.0.0.0:8126"
-      output {
-        metrics = [otelcol.processor.deltatocumulative.default.input]
-        traces  = [otelcol.processor.batch.default.input]
-      }
-    }
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: alloy-deployment
-  namespace: monitoring
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: alloy
-  template:
-    metadata:
-      labels:
-        app: alloy
-    spec:
-      containers:
-        - name: alloy
-          image: grafana/alloy:v1.4.2
-          volumeMounts:
-            - name: config-volume
-              mountPath: /etc/alloy/config.alloy
-              subPath: config.alloy
-          command: ["alloy", "run", "--stability.level=experimental", "--server.http.listen-addr=0.0.0.0:12345", "--storage.path=/var/lib/alloy/data", "/etc/alloy/config.alloy"]
-      volumes:
-        - name: config-volume
-          configMap:
-            name: alloy-config
----
-apiVersion: v1
 kind: Service
 metadata:
-  name: alloy-collector
+  name: datadog-agent
   namespace: monitoring
 spec:
   selector:
-    app: alloy
+    app.kubernetes.io/instance: eg-addons
+    app.kubernetes.io/name: opentelemetry-collector
+    component: standalone-collector
   ports:
     - protocol: TCP
       port: 8126
@@ -117,7 +47,7 @@ spec:
       provider:
         type: Datadog
         backendRefs:
-          - name: alloy-collector
+          - name: datadog-agent
             namespace: monitoring
             port: 8126
       customTags:
