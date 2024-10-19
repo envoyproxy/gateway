@@ -7,7 +7,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 const OIDCClientSecretKey = "client-secret"
@@ -29,7 +29,7 @@ type OIDC struct {
 	// This is an Opaque secret. The client secret should be stored in the key
 	// "client-secret".
 	// +kubebuilder:validation:Required
-	ClientSecret gwapiv1b1.SecretObjectReference `json:"clientSecret"`
+	ClientSecret gwapiv1.SecretObjectReference `json:"clientSecret"`
 
 	// The optional cookie name overrides to be used for Bearer and IdToken cookies in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
@@ -107,7 +107,8 @@ type OIDC struct {
 
 // OIDCProvider defines the OIDC Provider configuration.
 // +kubebuilder:validation:XValidation:rule="!has(self.backendRef)",message="BackendRefs must be used, backendRef is not supported."
-// +kubebuilder:validation:XValidation:rule="has(self.backendRefs)? self.backendRefs.size() > 1 : true",message="Only one backendRefs is allowed."
+// +kubebuilder:validation:XValidation:rule="has(self.backendSettings)? (has(self.backendSettings.retry)?(has(self.backendSettings.retry.perRetry)? !has(self.backendSettings.retry.perRetry.timeout):true):true):true",message="Retry timeout is not supported."
+// +kubebuilder:validation:XValidation:rule="has(self.backendSettings)? (has(self.backendSettings.retry)?(has(self.backendSettings.retry.retryOn)? !has(self.backendSettings.retry.retryOn.httpStatusCodes):true):true):true",message="HTTPStatusCodes is not supported."
 type OIDCProvider struct {
 	// BackendRefs is used to specify the address of the OIDC Provider.
 	// If the BackendRefs is not specified, The host and port of the OIDC Provider's token endpoint

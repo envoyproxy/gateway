@@ -151,6 +151,7 @@ func tryConnect(address string, clientCert tls.Certificate, caCertPool *x509.Cer
 		ServerName:   "localhost",
 		MinVersion:   tls.VersionTLS13,
 		Certificates: []tls.Certificate{clientCert},
+		NextProtos:   []string{"h2"},
 		RootCAs:      caCertPool,
 	}
 	conn, err := tls.Dial("tcp", address, clientConfig)

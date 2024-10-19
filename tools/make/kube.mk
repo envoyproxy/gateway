@@ -138,9 +138,6 @@ e2e: create-cluster kube-install-image kube-deploy install-ratelimit install-e2e
 install-ratelimit:
 	@$(LOG_TARGET)
 	kubectl apply -f examples/redis/redis.yaml
-	kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
-	kubectl rollout status --watch --timeout=5m -n envoy-gateway-system deployment/envoy-gateway
-	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	tools/hack/deployment-exists.sh "app.kubernetes.io/name=envoy-ratelimit" "envoy-gateway-system"
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 
@@ -158,7 +155,7 @@ ifeq ($(E2E_RUN_TEST),)
 	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=false
 	go test $(E2E_TEST_ARGS) ./test/e2e/merge_gateways --gateway-class=merge-gateways --debug=true --cleanup-base-resources=false
 	go test $(E2E_TEST_ARGS) ./test/e2e/multiple_gc --debug=true --cleanup-base-resources=true
-	go test $(E2E_TEST_ARGS) ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
+	LAST_VERSION_TAG=$(shell cat VERSION) go test $(E2E_TEST_ARGS) ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
 else
 	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
 		--run-test $(E2E_RUN_TEST)

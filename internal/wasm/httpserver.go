@@ -131,6 +131,12 @@ func (s *HTTPServer) Start(ctx context.Context) {
 			return
 		}
 	}()
+
+	go func() {
+		// waiting for shutdown
+		<-ctx.Done()
+		_ = s.server.Shutdown(context.Background())
+	}()
 	s.cache.Start(ctx)
 	go s.resetFailedAttempts(ctx)
 }

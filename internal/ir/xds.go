@@ -47,6 +47,7 @@ var (
 	ErrDestEndpointUDSPortInvalid              = errors.New("field Port must not be specified for Unix Domain Socket address")
 	ErrDestEndpointUDSHostInvalid              = errors.New("field Host must not be specified for Unix Domain Socket address")
 	ErrStringMatchConditionInvalid             = errors.New("only one of the Exact, Prefix, SafeRegex or Distinct fields must be set")
+	ErrStringMatchInvertDistinctInvalid        = errors.New("only one of the Invert or Distinct fields can be set")
 	ErrStringMatchNameIsEmpty                  = errors.New("field Name must be specified")
 	ErrDirectResponseStatusInvalid             = errors.New("only HTTP status codes 100 - 599 are supported for DirectResponse")
 	ErrRedirectUnsupportedStatus               = errors.New("only HTTP status codes 301 and 302 are supported for redirect filters")
@@ -350,6 +351,10 @@ type TLSConfig struct {
 	SignatureAlgorithms []string `json:"signatureAlgorithms,omitempty" yaml:"signatureAlgorithms,omitempty"`
 	// ALPNProtocols exposed by this listener
 	ALPNProtocols []string `json:"alpnProtocols,omitempty" yaml:"alpnProtocols,omitempty"`
+	// StatelessSessionResumption determines if stateless (session-ticket based) session resumption is enabled
+	StatelessSessionResumption bool `json:"statelessSessionResumption,omitempty" yaml:"statelessSessionResumption,omitempty"`
+	// StatefulSessionResumption determines if stateful (session-id based) session resumption is enabled
+	StatefulSessionResumption bool `json:"statefulSessionResumption,omitempty" yaml:"statefulSessionResumption,omitempty"`
 }
 
 // TLSCertificate holds a single certificate's details
@@ -843,7 +848,16 @@ type OIDC struct {
 	CookieDomain *string `json:"cookieDomain,omitempty"`
 }
 
+// OIDCProvider defines the schema for the OIDC Provider.
+//
+// +k8s:deepcopy-gen=true
 type OIDCProvider struct {
+	// Destination defines the destination for the OIDC Provider.
+	Destination *RouteDestination `json:"destination,omitempty"`
+
+	// Traffic contains configuration for traffic features for the OIDC Provider
+	Traffic *TrafficFeatures `json:"traffic,omitempty"`
+
 	// The OIDC Provider's [authorization endpoint](https://openid.net/specs/openid-connect-core-1_0.html#AuthorizationEndpoint).
 	AuthorizationEndpoint string `json:"authorizationEndpoint,omitempty"`
 
@@ -1443,6 +1457,8 @@ type StringMatch struct {
 	// Distinct match condition.
 	// Used to match any and all possible unique values encountered within the Name field.
 	Distinct bool `json:"distinct" yaml:"distinct"`
+	// Invert inverts the final match decision
+	Invert *bool `json:"invert,omitempty" yaml:"invert,omitempty"`
 }
 
 // Validate the fields within the StringMatch structure
@@ -1464,6 +1480,9 @@ func (s StringMatch) Validate() error {
 	if s.Distinct {
 		if s.Name == "" {
 			errs = errors.Join(errs, ErrStringMatchNameIsEmpty)
+		}
+		if s.Invert != nil && *s.Invert {
+			errs = errors.Join(errs, ErrStringMatchInvertDistinctInvalid)
 		}
 		matchCount++
 	}
@@ -1733,6 +1752,13 @@ type RateLimitValue struct {
 	Unit RateLimitUnit `json:"unit" yaml:"unit"`
 }
 
+type ProxyAccessLogType egv1a1.ProxyAccessLogType
+
+const (
+	ProxyAccessLogTypeRoute    = ProxyAccessLogType(egv1a1.ProxyAccessLogTypeRoute)
+	ProxyAccessLogTypeListener = ProxyAccessLogType(egv1a1.ProxyAccessLogTypeListener)
+)
+
 // AccessLog holds the access logging configuration.
 // +k8s:deepcopy-gen=true
 type AccessLog struct {
@@ -1745,17 +1771,19 @@ type AccessLog struct {
 // TextAccessLog holds the configuration for text access logging.
 // +k8s:deepcopy-gen=true
 type TextAccessLog struct {
-	CELMatches []string `json:"celMatches,omitempty" yaml:"celMatches,omitempty"`
-	Format     *string  `json:"format,omitempty" yaml:"format,omitempty"`
-	Path       string   `json:"path" yaml:"path"`
+	CELMatches []string            `json:"celMatches,omitempty" yaml:"celMatches,omitempty"`
+	Format     *string             `json:"format,omitempty" yaml:"format,omitempty"`
+	Path       string              `json:"path" yaml:"path"`
+	LogType    *ProxyAccessLogType `json:"logType,omitempty" yaml:"logType,omitempty"`
 }
 
 // JSONAccessLog holds the configuration for JSON access logging.
 // +k8s:deepcopy-gen=true
 type JSONAccessLog struct {
-	CELMatches []string          `json:"celMatches,omitempty" yaml:"celMatches,omitempty"`
-	JSON       map[string]string `json:"json,omitempty" yaml:"json,omitempty"`
-	Path       string            `json:"path" yaml:"path"`
+	CELMatches []string            `json:"celMatches,omitempty" yaml:"celMatches,omitempty"`
+	JSON       map[string]string   `json:"json,omitempty" yaml:"json,omitempty"`
+	Path       string              `json:"path" yaml:"path"`
+	LogType    *ProxyAccessLogType `json:"logType,omitempty" yaml:"logType,omitempty"`
 }
 
 // ALSAccessLog holds the configuration for gRPC ALS access logging.
@@ -1769,6 +1797,7 @@ type ALSAccessLog struct {
 	Text        *string                           `json:"text,omitempty" yaml:"text,omitempty"`
 	Attributes  map[string]string                 `json:"attributes,omitempty" yaml:"attributes,omitempty"`
 	HTTP        *ALSAccessLogHTTP                 `json:"http,omitempty" yaml:"http,omitempty"`
+	LogType     *ProxyAccessLogType               `json:"logType,omitempty" yaml:"logType,omitempty"`
 }
 
 // ALSAccessLogHTTP holds the configuration for HTTP ALS access logging.
@@ -1782,13 +1811,14 @@ type ALSAccessLogHTTP struct {
 // OpenTelemetryAccessLog holds the configuration for OpenTelemetry access logging.
 // +k8s:deepcopy-gen=true
 type OpenTelemetryAccessLog struct {
-	CELMatches  []string          `json:"celMatches,omitempty" yaml:"celMatches,omitempty"`
-	Authority   string            `json:"authority,omitempty" yaml:"authority,omitempty"`
-	Text        *string           `json:"text,omitempty" yaml:"text,omitempty"`
-	Attributes  map[string]string `json:"attributes,omitempty" yaml:"attributes,omitempty"`
-	Resources   map[string]string `json:"resources,omitempty" yaml:"resources,omitempty"`
-	Destination RouteDestination  `json:"destination,omitempty" yaml:"destination,omitempty"`
-	Traffic     *TrafficFeatures  `json:"traffic,omitempty" yaml:"traffic,omitempty"`
+	CELMatches  []string            `json:"celMatches,omitempty" yaml:"celMatches,omitempty"`
+	Authority   string              `json:"authority,omitempty" yaml:"authority,omitempty"`
+	Text        *string             `json:"text,omitempty" yaml:"text,omitempty"`
+	Attributes  map[string]string   `json:"attributes,omitempty" yaml:"attributes,omitempty"`
+	Resources   map[string]string   `json:"resources,omitempty" yaml:"resources,omitempty"`
+	Destination RouteDestination    `json:"destination,omitempty" yaml:"destination,omitempty"`
+	Traffic     *TrafficFeatures    `json:"traffic,omitempty" yaml:"traffic,omitempty"`
+	LogType     *ProxyAccessLogType `json:"logType,omitempty" yaml:"logType,omitempty"`
 }
 
 // EnvoyPatchPolicy defines the intermediate representation of the EnvoyPatchPolicy resource.

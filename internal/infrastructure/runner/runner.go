@@ -56,6 +56,13 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		// Enable global ratelimit if it has been configured.
 		if r.EnvoyGateway.RateLimit != nil {
 			go r.enableRateLimitInfra(ctx)
+		} else {
+			// Delete the ratelimit infra if it exists.
+			go func() {
+				if err := r.mgr.DeleteRateLimitInfra(ctx); err != nil {
+					r.Logger.Error(err, "failed to delete ratelimit infra")
+				}
+			}()
 		}
 		r.Logger.Info("started")
 	}

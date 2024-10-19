@@ -15,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 
@@ -57,6 +58,10 @@ func NewResourceRender(ns string, infra *ir.ProxyInfra, gateway *egv1a1.EnvoyGat
 
 func (r *ResourceRender) Name() string {
 	return ExpectedResourceHashedName(r.infra.Name)
+}
+
+func (r *ResourceRender) LabelSelector() labels.Selector {
+	return labels.SelectorFromSet(r.stableSelector().MatchLabels)
 }
 
 // ServiceAccount returns the expected proxy serviceAccount.
@@ -114,10 +119,10 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 		}
 	}
 
-	// Set the labels based on the owning gatewayclass name.
-	labels := envoyLabels(r.infra.GetProxyMetadata().Labels)
-	if OwningGatewayLabelsAbsent(labels) {
-		return nil, fmt.Errorf("missing owning gateway labels")
+	// Set the infraLabels based on the owning gatewayclass name.
+	infraLabels := envoyLabels(r.infra.GetProxyMetadata().Labels)
+	if OwningGatewayLabelsAbsent(infraLabels) {
+		return nil, fmt.Errorf("missing owning gateway infraLabels")
 	}
 
 	// Get annotations
@@ -133,10 +138,20 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 		annotations = nil
 	}
 
+	// Get service-specific labels
+	svcLabels := map[string]string{}
+	maps.Copy(svcLabels, infraLabels)
+	if envoyServiceConfig.Labels != nil {
+		maps.Copy(svcLabels, envoyServiceConfig.Labels)
+	}
+	if len(svcLabels) == 0 {
+		svcLabels = nil
+	}
+
 	// Set the spec of gateway service
 	serviceSpec := resource.ExpectedServiceSpec(envoyServiceConfig)
 	serviceSpec.Ports = ports
-	serviceSpec.Selector = resource.GetSelector(labels).MatchLabels
+	serviceSpec.Selector = resource.GetSelector(infraLabels).MatchLabels
 
 	if (*envoyServiceConfig.Type) == egv1a1.ServiceTypeClusterIP {
 		if len(r.infra.Addresses) > 0 {
@@ -157,7 +172,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   r.Namespace,
-			Labels:      labels,
+			Labels:      svcLabels,
 			Annotations: annotations,
 		},
 		Spec: serviceSpec,

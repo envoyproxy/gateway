@@ -15,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
@@ -58,6 +59,10 @@ func NewResourceRender(ns string, gateway *egv1a1.EnvoyGateway, ownerReferenceUI
 
 func (r *ResourceRender) Name() string {
 	return InfraName
+}
+
+func (r *ResourceRender) LabelSelector() labels.Selector {
+	return labels.SelectorFromSet(rateLimitLabels())
 }
 
 func enablePrometheus(rl *egv1a1.RateLimit) bool {

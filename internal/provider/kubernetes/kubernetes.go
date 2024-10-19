@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"k8s.io/client-go/rest"
+	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -47,6 +48,7 @@ func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources)
 	}
 
 	log.SetLogger(mgrOpts.Logger)
+	klog.SetLogger(mgrOpts.Logger)
 
 	if !ptr.Deref(svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable, false) {
 		mgrOpts.LeaderElection = true
@@ -107,10 +109,11 @@ func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources)
 		return nil, fmt.Errorf("unable to set up ready check: %w", err)
 	}
 
-	// Emit elected & continue with deployment of infra resources
+	// Emit elected & continue with envoyObjects of infra resources
 	go func() {
 		<-mgr.Elected()
-		close(svr.Elected)
+		// WARN: DO NOT CLOSE IT
+		svr.Elected <- struct{}{}
 	}()
 
 	return &Provider{
