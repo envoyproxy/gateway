@@ -15,6 +15,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/common"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/utils/file"
 )
 
 const (
@@ -44,6 +45,9 @@ type Infra struct {
 
 	// proxyContextMap store the context of each running proxy by its name for lifecycle management.
 	proxyContextMap map[string]*proxyContext
+
+	// TODO: remove this field once it supports the configurable homeDir
+	sdsConfigPath string
 }
 
 func NewInfra(runnerCtx context.Context, cfg *config.Server, logger logging.Logger) (*Infra, error) {
@@ -58,7 +62,7 @@ func NewInfra(runnerCtx context.Context, cfg *config.Server, logger logging.Logg
 	}
 
 	// Ensure the sds config exist.
-	if err := createSdsConfig(); err != nil {
+	if err := createSdsConfig(defaultLocalCertPathDir); err != nil {
 		return nil, fmt.Errorf("failed to create sds config: %w", err)
 	}
 
@@ -67,6 +71,7 @@ func NewInfra(runnerCtx context.Context, cfg *config.Server, logger logging.Logg
 		Logger:          logger,
 		EnvoyGateway:    cfg.EnvoyGateway,
 		proxyContextMap: make(map[string]*proxyContext),
+		sdsConfigPath:   defaultLocalCertPathDir,
 	}
 	go infra.cleanProxy(runnerCtx)
 
@@ -88,29 +93,18 @@ func (i *Infra) cleanProxy(ctx context.Context) {
 	i.Logger.Info("all proxies has been cleaned up")
 }
 
-// createSdsConfig creates the needing Sds config under defaultLocalCertPathDir.
-func createSdsConfig() error {
-	writeFile := func(fn, text string) error {
-		f, wErr := os.Create(fn)
-		if wErr != nil {
-			return wErr
-		}
-		defer f.Close()
-
-		_, wErr = f.WriteString(text)
-		return wErr
-	}
-
-	if err := writeFile(filepath.Join(defaultLocalCertPathDir, common.SdsCAFilename),
-		common.GetSdsCAConfigMapData(
-			filepath.Join(defaultLocalCertPathDir, XdsTLSCaFilename))); err != nil {
+// createSdsConfig creates the needing SDS config under certain directory.
+func createSdsConfig(dir string) error {
+	if err := file.Write(common.GetSdsCAConfigMapData(
+		filepath.Join(dir, XdsTLSCaFilename)),
+		filepath.Join(dir, common.SdsCAFilename)); err != nil {
 		return err
 	}
 
-	if err := writeFile(filepath.Join(defaultLocalCertPathDir, common.SdsCertFilename),
-		common.GetSdsCertConfigMapData(
-			filepath.Join(defaultLocalCertPathDir, XdsTLSCertFilename),
-			filepath.Join(defaultLocalCertPathDir, XdsTLSKeyFilename))); err != nil {
+	if err := file.Write(common.GetSdsCertConfigMapData(
+		filepath.Join(dir, XdsTLSCertFilename),
+		filepath.Join(dir, XdsTLSKeyFilename)),
+		filepath.Join(dir, common.SdsCertFilename)); err != nil {
 		return err
 	}
 

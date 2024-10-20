@@ -9,7 +9,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"path"
 
 	"github.com/spf13/cobra"
@@ -21,9 +20,10 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes"
+	"github.com/envoyproxy/gateway/internal/utils/file"
 )
 
-// TODO: make this path configurable.
+// TODO: make this path configurable or use server config directly.
 const defaultLocalCertPath = "/tmp/envoy-gateway/certs"
 
 // getCertGenCommand returns the certGen cobra command to be executed.
@@ -106,37 +106,44 @@ func outputCertsForKubernetes(ctx context.Context, cli client.Client, cfg *confi
 	return nil
 }
 
-func outputCertsForLocal(localPath string, certs *crypto.Certificates) (errs error) {
-	writeCerts := func(dir, filename string, cert []byte) error {
-		err := os.MkdirAll(dir, 0o750)
-		if err != nil {
-			return err
-		}
-
-		var f *os.File
-		f, err = os.Create(path.Join(dir, filename))
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-
-		_, err = f.Write(cert)
+// outputCertsForLocal outputs the provided certs to the local directory as files.
+func outputCertsForLocal(localPath string, certs *crypto.Certificates) (err error) {
+	egDir := path.Join(localPath, "envoy-gateway")
+	if err = file.WriteDir(certs.CACertificate, egDir, "ca.crt"); err != nil {
+		return err
+	}
+	if err = file.WriteDir(certs.EnvoyGatewayCertificate, egDir, "tls.crt"); err != nil {
+		return err
+	}
+	if err = file.WriteDir(certs.EnvoyGatewayPrivateKey, egDir, "tls.key"); err != nil {
 		return err
 	}
 
-	errs = errors.Join(writeCerts(path.Join(localPath, "envoy-gateway"), "ca.crt", certs.CACertificate))
-	errs = errors.Join(writeCerts(path.Join(localPath, "envoy-gateway"), "tls.crt", certs.EnvoyGatewayCertificate))
-	errs = errors.Join(writeCerts(path.Join(localPath, "envoy-gateway"), "tls.key", certs.EnvoyGatewayPrivateKey))
+	envoyDir := path.Join(localPath, "envoy")
+	if err = file.WriteDir(certs.CACertificate, envoyDir, "ca.crt"); err != nil {
+		return err
+	}
+	if err = file.WriteDir(certs.EnvoyCertificate, envoyDir, "tls.crt"); err != nil {
+		return err
+	}
+	if err = file.WriteDir(certs.EnvoyPrivateKey, envoyDir, "tls.key"); err != nil {
+		return err
+	}
 
-	errs = errors.Join(writeCerts(path.Join(localPath, "envoy"), "ca.crt", certs.CACertificate))
-	errs = errors.Join(writeCerts(path.Join(localPath, "envoy"), "tls.crt", certs.EnvoyCertificate))
-	errs = errors.Join(writeCerts(path.Join(localPath, "envoy"), "tls.key", certs.EnvoyPrivateKey))
+	rlDir := path.Join(localPath, "envoy-rate-limit")
+	if err = file.WriteDir(certs.CACertificate, rlDir, "ca.crt"); err != nil {
+		return err
+	}
+	if err = file.WriteDir(certs.EnvoyRateLimitCertificate, rlDir, "tls.crt"); err != nil {
+		return err
+	}
+	if err = file.WriteDir(certs.EnvoyRateLimitPrivateKey, rlDir, "tls.key"); err != nil {
+		return err
+	}
 
-	errs = errors.Join(writeCerts(path.Join(localPath, "envoy-rate-limit"), "ca.crt", certs.CACertificate))
-	errs = errors.Join(writeCerts(path.Join(localPath, "envoy-rate-limit"), "tls.crt", certs.EnvoyRateLimitCertificate))
-	errs = errors.Join(writeCerts(path.Join(localPath, "envoy-rate-limit"), "tls.key", certs.EnvoyRateLimitPrivateKey))
-
-	errs = errors.Join(writeCerts(path.Join(localPath, "envoy-oidc-hmac"), "hmac-secret", certs.OIDCHMACSecret))
+	if err = file.WriteDir(certs.OIDCHMACSecret, path.Join(localPath, "envoy-oidc-hmac"), "hmac-secret"); err != nil {
+		return err
+	}
 
 	return
 }

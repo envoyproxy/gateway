@@ -39,7 +39,6 @@ const (
 	XdsServerAddress = "0.0.0.0"
 
 	// Default certificates path for envoy-gateway with Kubernetes provider.
-
 	// xdsTLSCertFilepath is the fully qualified path of the file containing the
 	// xDS server TLS certificate.
 	xdsTLSCertFilepath = "/certs/tls.crt"
@@ -83,23 +82,13 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	// Set up the gRPC server and register the xDS handler.
 	// Create SnapshotCache before start subscribeAndTranslate,
 	// prevent panics in case cache is nil.
-	var tlsCfg *tls.Config
-	if r.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes {
-		tlsCfg, err = crypto.LoadTLSConfig(xdsTLSCertFilepath, xdsTLSKeyFilepath, xdsTLSCaFilepath)
-	} else if r.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeCustom &&
-		r.EnvoyGateway.Provider.Custom.Infrastructure != nil &&
-		r.EnvoyGateway.Provider.Custom.Infrastructure.Type == egv1a1.InfrastructureProviderTypeHost {
-		tlsCfg, err = crypto.LoadTLSConfig(localTLSCertFilepath, localTLSKeyFilepath, localTLSCaFilepath)
-	} else {
-		return fmt.Errorf("failed to start %s runner: no valid tls certificates", r.Name())
-	}
-
+	tlsConfig, err := r.loadTLSConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load TLS config: %w", err)
 	}
 	r.Logger.Info("loaded TLS certificate and key")
 
-	r.grpc = grpc.NewServer(grpc.Creds(credentials.NewTLS(tlsCfg)), grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+	r.grpc = grpc.NewServer(grpc.Creds(credentials.NewTLS(tlsConfig)), grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
 		MinTime:             15 * time.Second,
 		PermitWithoutStream: true,
 	}))
@@ -180,4 +169,24 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	)
 
 	r.Logger.Info("subscriber shutting down")
+}
+
+func (r *Runner) loadTLSConfig() (tlsConfig *tls.Config, err error) {
+	switch {
+	case r.EnvoyGateway.Provider.IsRunningOnKubernetes():
+		tlsConfig, err = crypto.LoadTLSConfig(xdsTLSCertFilepath, xdsTLSKeyFilepath, xdsTLSCaFilepath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create tls config: %w", err)
+		}
+
+	case r.EnvoyGateway.Provider.IsRunningOnHost():
+		tlsConfig, err = crypto.LoadTLSConfig(localTLSCertFilepath, localTLSKeyFilepath, localTLSCaFilepath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create tls config: %w", err)
+		}
+
+	default:
+		return nil, fmt.Errorf("no valid tls certificates")
+	}
+	return
 }

@@ -144,6 +144,17 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "custom-server-port",
+			opts: &RenderBootstrapConfigOptions{
+				XdsServerHost:   ptr.To("foo.bar"),
+				XdsServerPort:   ptr.To(int32(12345)),
+				WasmServerPort:  ptr.To(int32(1111)),
+				AdminServerPort: ptr.To(int32(2222)),
+				ReadyServerPort: ptr.To(int32(3333)),
+				SdsConfig:       sds,
+			},
+		},
+		{
 			name: "with-max-heap-size-bytes",
 			opts: &RenderBootstrapConfigOptions{
 				MaxHeapSizeBytes: 1073741824,

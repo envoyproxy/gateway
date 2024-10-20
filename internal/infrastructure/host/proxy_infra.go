@@ -52,8 +52,8 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 			},
 		},
 		SdsConfig: bootstrap.SdsConfigPath{
-			Certificate: filepath.Join(defaultLocalCertPathDir, common.SdsCertFilename),
-			TrustedCA:   filepath.Join(defaultLocalCertPathDir, common.SdsCAFilename),
+			Certificate: filepath.Join(i.sdsConfigPath, common.SdsCertFilename),
+			TrustedCA:   filepath.Join(i.sdsConfigPath, common.SdsCAFilename),
 		},
 		XdsServerHost:   ptr.To("0.0.0.0"),
 		WasmServerPort:  ptr.To(int32(0)),

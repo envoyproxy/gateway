@@ -49,11 +49,9 @@ const (
 	localTLSKeyFilepath  = "/tmp/envoy-gateway/certs/envoy-gateway/tls.key"
 	localTLSCaFilepath   = "/tmp/envoy-gateway/certs/envoy-gateway/ca.crt"
 
-	// nolint: gosec
-	hmacSecretName = "envoy-oidc-hmac"
+	hmacSecretName = "envoy-oidc-hmac" // nolint: gosec
 	hmacSecretKey  = "hmac-secret"
-
-	localHmacSecretPath = "/tmp/envoy-gateway/certs/envoy-oidc-hmac/hmac-secret"
+	hmacSecretPath = "/tmp/envoy-gateway/certs/envoy-oidc-hmac/hmac-secret" // nolint: gosec
 )
 
 type Config struct {
@@ -90,44 +88,12 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 }
 
 func (r *Runner) startWasmCache(ctx context.Context) {
-	var (
-		err       error
-		salt      []byte
-		tlsConfig *tls.Config
-	)
-
 	// Start the wasm cache server
 	// EG reuse the OIDC HMAC secret as a hash salt to generate an unguessable
 	// downloading path for the Wasm module.
-	// TODO: make this implementation more elegant.
-	if r.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes {
-		salt, err = hmac(ctx, r.Namespace)
-		if err != nil {
-			r.Logger.Error(err, "failed to get hmac secret")
-			return
-		}
-
-		tlsConfig, err = crypto.LoadTLSConfig(serveTLSCertFilepath, serveTLSKeyFilepath, serveTLSCaFilepath)
-		if err != nil {
-			r.Logger.Error(err, "failed to create tls config")
-			return
-		}
-	} else if r.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeCustom &&
-		r.EnvoyGateway.Provider.Custom.Infrastructure != nil &&
-		r.EnvoyGateway.Provider.Custom.Infrastructure.Type == egv1a1.InfrastructureProviderTypeHost {
-		salt, err = os.ReadFile(localHmacSecretPath)
-		if err != nil {
-			r.Logger.Error(err, "failed to get hmac secret")
-			return
-		}
-
-		tlsConfig, err = crypto.LoadTLSConfig(localTLSCertFilepath, localTLSKeyFilepath, localTLSCaFilepath)
-		if err != nil {
-			r.Logger.Error(err, "failed to create tls config")
-			return
-		}
-	} else {
-		r.Logger.Error(fmt.Errorf("no valid tls certificates"), "failed to start wasm cache")
+	tlsConfig, salt, err := r.loadTLSConfig(ctx)
+	if err != nil {
+		r.Logger.Error(err, "failed to start wasm cache")
 		return
 	}
 
@@ -332,6 +298,36 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 		},
 	)
 	r.Logger.Info("shutting down")
+}
+
+func (r *Runner) loadTLSConfig(ctx context.Context) (tlsConfig *tls.Config, salt []byte, err error) {
+	switch {
+	case r.EnvoyGateway.Provider.IsRunningOnKubernetes():
+		salt, err = hmac(ctx, r.Namespace)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to get hmac secret: %w", err)
+		}
+
+		tlsConfig, err = crypto.LoadTLSConfig(serveTLSCertFilepath, serveTLSKeyFilepath, serveTLSCaFilepath)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to create tls config: %w", err)
+		}
+
+	case r.EnvoyGateway.Provider.IsRunningOnHost():
+		salt, err = os.ReadFile(hmacSecretPath)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to get hmac secret: %w", err)
+		}
+
+		tlsConfig, err = crypto.LoadTLSConfig(localTLSCertFilepath, localTLSKeyFilepath, localTLSCaFilepath)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to create tls config: %w", err)
+		}
+
+	default:
+		return nil, nil, fmt.Errorf("no valid tls certificates")
+	}
+	return
 }
 
 func unstructuredToPolicyStatus(policyStatus map[string]any) gwapiv1a2.PolicyStatus {
