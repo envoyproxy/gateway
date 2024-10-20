@@ -264,8 +264,8 @@ kubectl patch httproute backend --type=json --patch '
 
 * Test it out by specifying a path apart from `/get`
 
-```
-$ curl --header "Host: www.example.com" http://localhost:8888/find
+```shell
+$ curl --header "Host: www.example.com" http://$GATEWAY_HOST/find
 Handling connection for 8888
 could not find what you are looking for
 ```
