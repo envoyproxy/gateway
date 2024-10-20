@@ -20,7 +20,7 @@ import (
 type worker struct {
 	mu sync.RWMutex
 
-	// watcher is an fsnotify watcher that watches the parent
+	// watcher is a fsnotify watcher that watches the parent
 	// dir of watchedFiles.
 	dirWatcher *fsnotify.Watcher
 
@@ -96,10 +96,10 @@ func (wk *worker) loop() {
 					continue
 				}
 
-				sum := getHashSum(path)
-				if !bytes.Equal(sum, ft.hash) {
+				sum, isDir := getHashSum(path)
+				fmt.Printf("isDir: %v sum: %v, ft.hash: %v\n", isDir, sum, ft.hash)
+				if isDir || !bytes.Equal(sum, ft.hash) {
 					ft.hash = sum
-
 					select {
 					case ft.events <- event:
 						// nothing to do
@@ -141,7 +141,7 @@ func (wk *worker) loop() {
 	}
 }
 
-// used only by the worker goroutine
+// drainRetiringTrackers used only by the worker goroutine
 func (wk *worker) drainRetiringTrackers() {
 	// cleanup any trackers that were in the process
 	// of being retired, but didn't get processed due
@@ -156,7 +156,7 @@ func (wk *worker) drainRetiringTrackers() {
 	}
 }
 
-// make a local copy of the set of trackers to avoid contention with callers
+// getTrackers make a local copy of the set of trackers to avoid contention with callers
 // used only by the worker goroutine
 func (wk *worker) getTrackers() map[string]*fileTracker {
 	wk.mu.RLock()
@@ -184,36 +184,34 @@ func (wk *worker) terminate() {
 
 func (wk *worker) addPath(path string) error {
 	wk.mu.Lock()
+	defer wk.mu.Unlock()
 
 	ft := wk.watchedFiles[path]
 	if ft != nil {
-		wk.mu.Unlock()
 		return fmt.Errorf("path %s is already being watched", path)
 	}
 
+	h, _ := getHashSum(path)
 	ft = &fileTracker{
 		events: make(chan fsnotify.Event),
 		errors: make(chan error),
-		hash:   getHashSum(path),
+		hash:   h,
 	}
-
 	wk.watchedFiles[path] = ft
-	wk.mu.Unlock()
 
 	return nil
 }
 
 func (wk *worker) removePath(path string) error {
 	wk.mu.Lock()
+	defer wk.mu.Unlock()
 
 	ft := wk.watchedFiles[path]
 	if ft == nil {
-		wk.mu.Unlock()
 		return fmt.Errorf("path %s not found", path)
 	}
 
 	delete(wk.watchedFiles, path)
-	wk.mu.Unlock()
 
 	wk.retireTrackerCh <- ft
 	return nil
@@ -241,16 +239,26 @@ func (wk *worker) errorChannel(path string) chan error {
 	return nil
 }
 
-// gets the hash of the given file, or nil if there's a problem
-func getHashSum(file string) []byte {
+// getHashSum return the hash of the given file, or nil if there's a problem, or it's a directory.
+func getHashSum(file string) ([]byte, bool) {
 	f, err := os.Open(file)
 	if err != nil {
-		return nil
+		return nil, false
 	}
-	defer f.Close()
-	r := bufio.NewReader(f)
+	defer func() {
+		_ = f.Close()
+	}()
 
+	fi, err := f.Stat()
+	if err != nil {
+		return nil, false
+	}
+	if fi.IsDir() {
+		return nil, true
+	}
+
+	r := bufio.NewReader(f)
 	h := sha256.New()
 	_, _ = io.Copy(h, r)
-	return h.Sum(nil)
+	return h.Sum(nil), false
 }
