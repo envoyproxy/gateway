@@ -8,6 +8,7 @@ package filewatcher
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sync"
 
@@ -141,9 +142,7 @@ func (fw *fileWatcher) getWorker(path string) (*workerState, string, string, err
 		return nil, "", "", errors.New("using a closed watcher")
 	}
 
-	cleanedPath := filepath.Clean(path)
-	parentPath, _ := filepath.Split(cleanedPath)
-
+	cleanedPath, parentPath := getPath(path)
 	ws, workerExists := fw.workers[parentPath]
 	if !workerExists {
 		wk, err := newWorker(parentPath, fw.funcs)
@@ -166,8 +165,7 @@ func (fw *fileWatcher) findWorker(path string) (*workerState, string, error) {
 		return nil, "", errors.New("using a closed watcher")
 	}
 
-	cleanedPath := filepath.Clean(path)
-	parentPath, _ := filepath.Split(cleanedPath)
+	cleanedPath, parentPath := getPath(path)
 
 	ws, workerExists := fw.workers[parentPath]
 	if !workerExists {
@@ -175,4 +173,14 @@ func (fw *fileWatcher) findWorker(path string) (*workerState, string, error) {
 	}
 
 	return ws, cleanedPath, nil
+}
+
+func getPath(path string) (cleanedPath, parentPath string) {
+	cleanedPath = filepath.Clean(path)
+	parentPath, _ = filepath.Split(cleanedPath)
+	if f, err := os.Lstat(cleanedPath); err == nil && f.IsDir() {
+		parentPath = cleanedPath
+	}
+
+	return
 }
