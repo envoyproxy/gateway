@@ -532,7 +532,7 @@ func secretSecurityPolicyIndexFunc(rawObj client.Object) []string {
 	securityPolicy := rawObj.(*egv1a1.SecurityPolicy)
 
 	var (
-		secretReferences []gwapiv1b1.SecretObjectReference
+		secretReferences []gwapiv1.SecretObjectReference
 		values           []string
 	)
 

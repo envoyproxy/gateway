@@ -7,7 +7,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 const OIDCClientSecretKey = "client-secret"
@@ -29,7 +29,7 @@ type OIDC struct {
 	// This is an Opaque secret. The client secret should be stored in the key
 	// "client-secret".
 	// +kubebuilder:validation:Required
-	ClientSecret gwapiv1b1.SecretObjectReference `json:"clientSecret"`
+	ClientSecret gwapiv1.SecretObjectReference `json:"clientSecret"`
 
 	// The optional cookie name overrides to be used for Bearer and IdToken cookies in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
@@ -119,7 +119,6 @@ type OIDCProvider struct {
 	// Other settings for the connection to the OIDC Provider can be specified in the BackendSettings resource.
 	//
 	// +optional
-	// +notImplementedHide
 	BackendCluster `json:",inline"`
 
 	// The OIDC Provider's [issuer identifier](https://openid.net/specs/openid-connect-discovery-1_0.html#IssuerDiscovery).
