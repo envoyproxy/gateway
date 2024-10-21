@@ -63,7 +63,6 @@ type BackendConnection struct {
 	SocketBufferLimit *resource.Quantity `json:"socketBufferLimit,omitempty"`
 }
 
-// +kubebuilder:validation:XValidation:rule="(has(self.value))",message="value must be specified"
 type ConnectionLimit struct {
 	// Value of the maximum concurrent connections limit.
 	// When the limit is reached, incoming connections will be closed after the CloseDelay duration.
