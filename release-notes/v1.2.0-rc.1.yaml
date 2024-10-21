@@ -36,7 +36,6 @@ changes:
       Added Support for maxUnavailable in the PodDisruptionBudget in the Envoy Gateway helm chart
       Added Support for configuring NodeSelector in the Envoy Gateway helm chart
 
-
   - area: api
     change: |
       Added Support for Gateway-API v1.2.0
@@ -67,16 +66,15 @@ changes:
       Added Support for DNS resolution settings in BackendTrafficPolicy CRD
 
     breaking-change: |
-      Gateway API GRPCRoute and ReferenceGrant v1alpha2 have been removed. Envoy Gateway has already supported.
+      Gateway API GRPCRoute and ReferenceGrant v1alpha2 have been removed.
       The supportedFeatures field in Gateway API GatewayClass status has changed from being a list of strings to being a list of objects/structs with a namefield.
       Please refer to the [Gateway API v1.2.0 documentation](https://github.com/kubernetes-sigs/gateway-api/releases) for more information.
 
-    deprecation: |
-
-
   - area: conformance
     change: |
-
+      Enalbed GatewayHTTPListenerIsolation conformance test
+      Enabled GRPC conformance profile
+      Enabled HTTPRouteBackendRequestHeaderModifier conformance test
 
   - area: testing
     change: |
@@ -88,9 +86,6 @@ changes:
       Added benchmark memory profiles into report
       Fixed flaky gateway_with_conflicted_listener_cannot_be_merged e2e test
       Fixed flaky ZipkinTracing e2e test
-      Enalbed GatewayHTTPListenerIsolation conformance test
-      Enabled GRPC conformance profile
-      Enabled HTTPRouteBackendRequestHeaderModifier conformance test
       Added e2e test for cookie based consistent hash load balancing
       Added e2e test for load balancing
       Fixed flaky authorization tests
@@ -156,7 +151,6 @@ changes:
   - area: xds
     change: |
       Bumped go-control-plane to v0.13.1
-
 
   - area: cli
     change: |
