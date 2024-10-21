@@ -69,7 +69,7 @@ type ConnectionLimit struct {
 	// When the limit is reached, incoming connections will be closed after the CloseDelay duration.
 	//
 	// +kubebuilder:validation:Minimum=1
-	Value int64 `json:"value,omitempty"`
+	Value int64 `json:"value"`
 
 	// CloseDelay defines the delay to use before closing connections that are rejected
 	// once the limit value is reached.

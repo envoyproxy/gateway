@@ -128,6 +128,8 @@ spec:
                         format: int64
                         minimum: 1
                         type: integer
+                    required:
+                    - value
                     type: object
                     x-kubernetes-validations:
                     - message: value must be specified
