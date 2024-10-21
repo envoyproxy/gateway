@@ -333,7 +333,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.connection.connectionLimit: Invalid value: \"object\": value must be specified",
+				"spec.connection.connectionLimit.value: Invalid value: 0: spec.connection.connectionLimit.value in body should be greater than or equal to 1",
 			},
 		},
 		{
