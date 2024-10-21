@@ -18,6 +18,7 @@ import (
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -1120,6 +1121,103 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{"at least one of claims or scopes must be specified"},
+		},
+		{
+			desc: "oidc-retry",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group: ptr.To(gwapiv1a2.Group("gateway.networking.k8s.io")),
+								Kind:  "HTTPRoute",
+								MatchLabels: map[string]string{
+									"eg/namespace": "reference-apps",
+								},
+							},
+						},
+					},
+					OIDC: &egv1a1.OIDC{
+						Provider: egv1a1.OIDCProvider{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendSettings: &egv1a1.ClusterSettings{
+									Retry: &egv1a1.Retry{
+										NumRetries: ptr.To(int32(3)),
+										PerRetry: &egv1a1.PerRetryPolicy{
+											BackOff: &egv1a1.BackOffPolicy{
+												BaseInterval: &metav1.Duration{
+													Duration: time.Second * 1,
+												},
+												MaxInterval: &metav1.Duration{
+													Duration: time.Second * 10,
+												},
+											},
+										},
+										RetryOn: &egv1a1.RetryOn{
+											Triggers: []egv1a1.TriggerEnum{
+												egv1a1.Error5XX, egv1a1.GatewayError, egv1a1.Reset,
+											},
+										},
+									},
+								},
+							},
+							Issuer:                "https://accounts.google.com",
+							AuthorizationEndpoint: ptr.To("https://accounts.google.com/o/oauth2/v2/auth"),
+							TokenEndpoint:         ptr.To("https://oauth2.googleapis.com/token"),
+						},
+						ClientID: "client-id",
+						ClientSecret: gwapiv1b1.SecretObjectReference{
+							Name: "secret",
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "oidc-retry-unsupported-parameters",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group: ptr.To(gwapiv1a2.Group("gateway.networking.k8s.io")),
+								Kind:  "HTTPRoute",
+								MatchLabels: map[string]string{
+									"eg/namespace": "reference-apps",
+								},
+							},
+						},
+					},
+					OIDC: &egv1a1.OIDC{
+						Provider: egv1a1.OIDCProvider{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendSettings: &egv1a1.ClusterSettings{
+									Retry: &egv1a1.Retry{
+										NumRetries: ptr.To(int32(3)),
+										PerRetry: &egv1a1.PerRetryPolicy{
+											Timeout: &metav1.Duration{
+												Duration: time.Second * 10,
+											},
+										},
+										RetryOn: &egv1a1.RetryOn{
+											HTTPStatusCodes: []egv1a1.HTTPStatus{500},
+										},
+									},
+								},
+							},
+							Issuer:                "https://accounts.google.com",
+							AuthorizationEndpoint: ptr.To("https://accounts.google.com/o/oauth2/v2/auth"),
+							TokenEndpoint:         ptr.To("https://oauth2.googleapis.com/token"),
+						},
+						ClientID: "client-id",
+						ClientSecret: gwapiv1b1.SecretObjectReference{
+							Name: "secret",
+						},
+					},
+				}
+			},
+			wantErrors: []string{"Retry timeout is not supported", "HTTPStatusCodes is not supported"},
 		},
 	}
 

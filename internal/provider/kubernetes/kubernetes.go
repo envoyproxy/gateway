@@ -112,7 +112,8 @@ func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources)
 	// Emit elected & continue with envoyObjects of infra resources
 	go func() {
 		<-mgr.Elected()
-		close(svr.Elected)
+		// WARN: DO NOT CLOSE IT
+		svr.Elected <- struct{}{}
 	}()
 
 	return &Provider{

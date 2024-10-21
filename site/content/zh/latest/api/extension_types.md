@@ -384,6 +384,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `endpoints` | _[BackendEndpoint](#backendendpoint) array_ |  true  | Endpoints defines the endpoints to be used when connecting to the backend. |
 | `appProtocols` | _[AppProtocolType](#appprotocoltype) array_ |  false  | AppProtocols defines the application protocols to be supported when connecting to the backend. |
+| `fallback` | _boolean_ |  false  | Fallback indicates whether the backend is designated as a fallback.<br />It is highly recommended to configure active or passive health checks to ensure that failover can be detected<br />when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.<br />The overprovisioning factor is set to 1.4, meaning the fallback backends will only start receiving traffic when<br />the health of the active backends falls below 72%. |
 
 
 #### BackendStatus
@@ -865,7 +866,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `contentType` | _string_ |  false  | Content Type of the response. This will be set in the Content-Type header. |
-| `body` | _[CustomResponseBody](#customresponsebody)_ |  true  | Body of the Custom Response |
+| `body` | _[CustomResponseBody](#customresponsebody)_ |  false  | Body of the Custom Response |
 
 
 #### CustomResponseBody
@@ -876,6 +877,7 @@ CustomResponseBody
 
 _Appears in:_
 - [CustomResponse](#customresponse)
+- [HTTPDirectResponseFilter](#httpdirectresponsefilter)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -1921,6 +1923,22 @@ _Appears in:_
 | `idleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | IdleTimeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.<br />Default: 1 hour. |
 
 
+#### HTTPDirectResponseFilter
+
+
+
+HTTPDirectResponseFilter defines the configuration to return a fixed response.
+
+_Appears in:_
+- [HTTPRouteFilterSpec](#httproutefilterspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `contentType` | _string_ |  false  | Content Type of the response. This will be set in the Content-Type header. |
+| `body` | _[CustomResponseBody](#customresponsebody)_ |  false  | Body of the Response |
+| `statusCode` | _integer_ |  false  | Status Code of the HTTP response<br />If unset, defaults to 200. |
+
+
 #### HTTPExtAuthService
 
 
@@ -2044,6 +2062,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `urlRewrite` | _[HTTPURLRewriteFilter](#httpurlrewritefilter)_ |  false  |  |
+| `directResponse` | _[HTTPDirectResponseFilter](#httpdirectresponsefilter)_ |  false  |  |
 
 
 #### HTTPStatus

@@ -398,6 +398,7 @@ func (i *Infra) deleteServiceAccount(ctx context.Context, r ResourceRender) (err
 
 	return i.Client.DeleteAllOf(ctx, sa, &client.DeleteAllOfOptions{
 		ListOptions: client.ListOptions{
+			Namespace:     ns,
 			LabelSelector: r.LabelSelector(),
 		},
 	})
@@ -437,6 +438,7 @@ func (i *Infra) deleteDeployment(ctx context.Context, r ResourceRender) (err err
 
 	return i.Client.DeleteAllOf(ctx, deployment, &client.DeleteAllOfOptions{
 		ListOptions: client.ListOptions{
+			Namespace:     ns,
 			LabelSelector: r.LabelSelector(),
 		},
 	})
@@ -476,6 +478,7 @@ func (i *Infra) deleteDaemonSet(ctx context.Context, r ResourceRender) (err erro
 
 	return i.Client.DeleteAllOf(ctx, daemonSet, &client.DeleteAllOfOptions{
 		ListOptions: client.ListOptions{
+			Namespace:     ns,
 			LabelSelector: r.LabelSelector(),
 		},
 	})
@@ -510,6 +513,7 @@ func (i *Infra) deleteConfigMap(ctx context.Context, r ResourceRender) (err erro
 
 	return i.Client.DeleteAllOf(ctx, cm, &client.DeleteAllOfOptions{
 		ListOptions: client.ListOptions{
+			Namespace:     ns,
 			LabelSelector: r.LabelSelector(),
 		},
 	})
@@ -544,6 +548,7 @@ func (i *Infra) deleteService(ctx context.Context, r ResourceRender) (err error)
 
 	return i.Client.DeleteAllOf(ctx, svc, &client.DeleteAllOfOptions{
 		ListOptions: client.ListOptions{
+			Namespace:     ns,
 			LabelSelector: r.LabelSelector(),
 		},
 	})
@@ -583,6 +588,7 @@ func (i *Infra) deleteHPA(ctx context.Context, r ResourceRender) (err error) {
 
 	return i.Client.DeleteAllOf(ctx, hpa, &client.DeleteAllOfOptions{
 		ListOptions: client.ListOptions{
+			Namespace:     ns,
 			LabelSelector: r.LabelSelector(),
 		},
 	})
@@ -622,6 +628,7 @@ func (i *Infra) deletePDB(ctx context.Context, r ResourceRender) (err error) {
 
 	return i.Client.DeleteAllOf(ctx, pdb, &client.DeleteAllOfOptions{
 		ListOptions: client.ListOptions{
+			Namespace:     ns,
 			LabelSelector: r.LabelSelector(),
 		},
 	})
