@@ -437,8 +437,9 @@ func irTLSConfigs(protocol gwapiv1.ProtocolType, tlsSecrets ...*corev1.Secret) *
 		}
 	}
 
+	// explicitly disable ALPN by setting an empty list for non-HTTPS use cases
 	if protocol != gwapiv1.HTTPSProtocolType {
-		tlsListenerConfigs.ALPNDisabled = true
+		tlsListenerConfigs.ALPNProtocols = ptr.To([]string{})
 	}
 
 	return tlsListenerConfigs

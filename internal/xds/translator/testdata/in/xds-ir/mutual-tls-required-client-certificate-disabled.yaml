@@ -52,7 +52,7 @@ tcp:
   - name: "tls-route-terminate"
     tls:
       terminate:
-        alpnDisabled: true
+        alpnProtocols: []
         certificates:
         - name: secret-3
           # byte slice representation of "key-data"
