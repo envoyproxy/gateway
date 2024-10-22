@@ -735,12 +735,12 @@ func buildTLSVersion(version *ir.TLSVersion) tlsv3.TlsParameters_TlsProtocol {
 	return tlsv3.TlsParameters_TLS_AUTO
 }
 
-func buildALPNProtocols(alpn *[]string) []string {
+func buildALPNProtocols(alpn []string) []string {
 	if alpn == nil { // not set - default to h2 and http/1.1
 		out := []string{"h2", "http/1.1"}
 		return out
 	} else {
-		return *alpn
+		return alpn
 	}
 }
 

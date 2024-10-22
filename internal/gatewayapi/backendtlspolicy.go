@@ -74,11 +74,10 @@ func (t *Translator) processBackendTLSPolicy(
 				tlsBundle.MaxVersion = ptr.To(ir.TLSVersion(*envoyProxy.Spec.BackendTLS.MaxVersion))
 			}
 			if len(envoyProxy.Spec.BackendTLS.ALPNProtocols) > 0 {
-				ap := make([]string, len(envoyProxy.Spec.BackendTLS.ALPNProtocols))
+				tlsBundle.ALPNProtocols = make([]string, len(envoyProxy.Spec.BackendTLS.ALPNProtocols))
 				for i := range envoyProxy.Spec.BackendTLS.ALPNProtocols {
-					ap[i] = string(envoyProxy.Spec.BackendTLS.ALPNProtocols[i])
+					tlsBundle.ALPNProtocols[i] = string(envoyProxy.Spec.BackendTLS.ALPNProtocols[i])
 				}
-				tlsBundle.ALPNProtocols = ptr.To(ap)
 			}
 		}
 	}
@@ -106,11 +105,10 @@ func (t *Translator) applyEnvoyProxyBackendTLSSetting(policy *gwapiv1a3.BackendT
 		tlsConfig.MaxVersion = ptr.To(ir.TLSVersion(*ep.Spec.BackendTLS.MaxVersion))
 	}
 	if len(ep.Spec.BackendTLS.ALPNProtocols) > 0 {
-		ap := make([]string, len(ep.Spec.BackendTLS.ALPNProtocols))
+		tlsConfig.ALPNProtocols = make([]string, len(ep.Spec.BackendTLS.ALPNProtocols))
 		for i := range ep.Spec.BackendTLS.ALPNProtocols {
-			ap[i] = string(ep.Spec.BackendTLS.ALPNProtocols[i])
+			tlsConfig.ALPNProtocols[i] = string(ep.Spec.BackendTLS.ALPNProtocols[i])
 		}
-		tlsConfig.ALPNProtocols = ptr.To(ap)
 	}
 	if ep.Spec.BackendTLS != nil && ep.Spec.BackendTLS.ClientCertificateRef != nil {
 		ns := string(ptr.Deref(ep.Spec.BackendTLS.ClientCertificateRef.Namespace, ""))

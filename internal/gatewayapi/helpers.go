@@ -437,9 +437,13 @@ func irTLSConfigs(protocol gwapiv1.ProtocolType, tlsSecrets ...*corev1.Secret) *
 		}
 	}
 
-	// explicitly disable ALPN by setting an empty list for non-HTTPS use cases
+	// Envoy Gateway defaults for ALPN:
+	// 1. HTTPS Routes: set IR to nil slice, which leads to xds-level
+	//    default of: h2, http/1.1. Envoy Proxy will support both HTTP2 and HTTP1.
+	// 2. Other xRoutes: set to empty list, disabling ALPN extension for Envoy Proxy.
+	//    ALPN cannot be used to negotiate application layer protocols like HTTP2.
 	if protocol != gwapiv1.HTTPSProtocolType {
-		tlsListenerConfigs.ALPNProtocols = ptr.To([]string{})
+		tlsListenerConfigs.ALPNProtocols = []string{}
 	}
 
 	return tlsListenerConfigs

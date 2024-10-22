@@ -350,7 +350,7 @@ type TLSConfig struct {
 	// SignatureAlgorithms supported by this listener
 	SignatureAlgorithms []string `json:"signatureAlgorithms,omitempty" yaml:"signatureAlgorithms,omitempty"`
 	// ALPNProtocols exposed by this listener
-	ALPNProtocols *[]string `json:"alpnProtocols,omitempty" yaml:"alpnProtocols,omitempty"`
+	ALPNProtocols []string `json:"alpnProtocols,omitempty" yaml:"alpnProtocols,omitempty"`
 	// StatelessSessionResumption determines if stateless (session-ticket based) session resumption is enabled
 	StatelessSessionResumption bool `json:"statelessSessionResumption,omitempty" yaml:"statelessSessionResumption,omitempty"`
 	// StatefulSessionResumption determines if stateful (session-id based) session resumption is enabled

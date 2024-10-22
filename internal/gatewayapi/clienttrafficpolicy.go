@@ -781,11 +781,10 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 	}
 
 	if len(tlsParams.ALPNProtocols) > 0 {
-		ap := make([]string, len(tlsParams.ALPNProtocols))
+		irTLSConfig.ALPNProtocols = make([]string, len(tlsParams.ALPNProtocols))
 		for i := range tlsParams.ALPNProtocols {
-			ap[i] = string(tlsParams.ALPNProtocols[i])
+			irTLSConfig.ALPNProtocols[i] = string(tlsParams.ALPNProtocols[i])
 		}
-		irTLSConfig.ALPNProtocols = ptr.To(ap)
 	}
 
 	if tlsParams.MinVersion != nil {

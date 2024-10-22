@@ -3062,12 +3062,8 @@ func (in *TLSConfig) DeepCopyInto(out *TLSConfig) {
 	}
 	if in.ALPNProtocols != nil {
 		in, out := &in.ALPNProtocols, &out.ALPNProtocols
-		*out = new([]string)
-		if **in != nil {
-			in, out := *in, *out
-			*out = make([]string, len(*in))
-			copy(*out, *in)
-		}
+		*out = make([]string, len(*in))
+		copy(*out, *in)
 	}
 }
 
