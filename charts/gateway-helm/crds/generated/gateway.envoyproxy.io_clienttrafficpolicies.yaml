@@ -125,10 +125,11 @@ spec:
                         description: |-
                           Value of the maximum concurrent connections limit.
                           When the limit is reached, incoming connections will be closed after the CloseDelay duration.
-                          Default: unlimited.
                         format: int64
-                        minimum: 0
+                        minimum: 1
                         type: integer
+                    required:
+                    - value
                     type: object
                   socketBufferLimit:
                     allOf:
