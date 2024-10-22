@@ -85,7 +85,7 @@ const (
 	// HeaderHTTPHostnameModifier indicates that the Host header value would be replaced with the value of the header specified in header.
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-host-rewrite-header
 	HeaderHTTPHostnameModifier HTTPHostnameModifierType = "Header"
-	// BackendHTTPHostnameModifier indicates that the Hostname header value would be replaced by the DNS name of the backend if it exists.
+	// BackendHTTPHostnameModifier indicates that the Host header value would be replaced by the DNS name of the backend if it exists.
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-auto-host-rewrite
 	BackendHTTPHostnameModifier HTTPHostnameModifierType = "Backend"
 )
