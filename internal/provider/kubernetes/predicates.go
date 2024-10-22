@@ -353,40 +353,40 @@ func (r *gatewayAPIReconciler) isRouteReferencingBackend(nsName *types.Namespace
 	httpRouteList := &gwapiv1.HTTPRouteList{}
 	if err := r.client.List(ctx, httpRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(backendHTTPRouteIndex, nsName.String()),
-	}); err != nil {
-		r.log.Error(err, "unable to find associated HTTPRoutes")
+	}); err != nil && !kerrors.IsNotFound(err) {
+		r.log.Error(err, "failed to find associated HTTPRoutes")
 		return false
 	}
 
 	grpcRouteList := &gwapiv1.GRPCRouteList{}
 	if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(backendGRPCRouteIndex, nsName.String()),
-	}); err != nil {
-		r.log.Error(err, "unable to find associated GRPCRoutes")
+	}); err != nil && !kerrors.IsNotFound(err) {
+		r.log.Error(err, "failed to find associated GRPCRoutes")
 		return false
 	}
 
 	tlsRouteList := &gwapiv1a2.TLSRouteList{}
 	if err := r.client.List(ctx, tlsRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(backendTLSRouteIndex, nsName.String()),
-	}); err != nil {
-		r.log.Error(err, "unable to find associated TLSRoutes")
+	}); err != nil && !kerrors.IsNotFound(err) {
+		r.log.Error(err, "failed to find associated TLSRoutes")
 		return false
 	}
 
 	tcpRouteList := &gwapiv1a2.TCPRouteList{}
 	if err := r.client.List(ctx, tcpRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(backendTCPRouteIndex, nsName.String()),
-	}); err != nil {
-		r.log.Error(err, "unable to find associated TCPRoutes")
+	}); err != nil && !kerrors.IsNotFound(err) {
+		r.log.Error(err, "failed to find associated TCPRoutes")
 		return false
 	}
 
 	udpRouteList := &gwapiv1a2.UDPRouteList{}
 	if err := r.client.List(ctx, udpRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(backendUDPRouteIndex, nsName.String()),
-	}); err != nil {
-		r.log.Error(err, "unable to find associated UDPRoutes")
+	}); err != nil && !kerrors.IsNotFound(err) {
+		r.log.Error(err, "failed to find associated UDPRoutes")
 		return false
 	}
 

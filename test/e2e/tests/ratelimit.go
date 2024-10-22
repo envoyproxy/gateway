@@ -26,7 +26,7 @@ import (
 func init() {
 	ConformanceTests = append(ConformanceTests, RateLimitCIDRMatchTest)
 	ConformanceTests = append(ConformanceTests, RateLimitHeaderMatchTest)
-	ConformanceTests = append(ConformanceTests, RateLimitHeaderInvertMatchTest)
+	ConformanceTests = append(ConformanceTests, GlobalRateLimitHeaderInvertMatchTest)
 	ConformanceTests = append(ConformanceTests, RateLimitHeadersDisabled)
 	ConformanceTests = append(ConformanceTests, RateLimitBasedJwtClaimsTest)
 	ConformanceTests = append(ConformanceTests, RateLimitMultipleListenersTest)
@@ -172,10 +172,10 @@ var RateLimitHeaderMatchTest = suite.ConformanceTest{
 	},
 }
 
-var RateLimitHeaderInvertMatchTest = suite.ConformanceTest{
-	ShortName:   "RateLimitHeaderInvertMatch",
+var GlobalRateLimitHeaderInvertMatchTest = suite.ConformanceTest{
+	ShortName:   "GlobalRateLimitHeaderInvertMatch",
 	Description: "Limit all requests that match distinct headers except for which invert is set to true",
-	Manifests:   []string{"testdata/ratelimit-header-invert-match.yaml"},
+	Manifests:   []string{"testdata/ratelimit-header-invert-match-global.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "header-ratelimit", Namespace: ns}
