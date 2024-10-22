@@ -46,6 +46,7 @@ const (
 	secretEnvoyProxyIndex            = "secretEnvoyProxyIndex"
 	secretEnvoyExtensionPolicyIndex  = "secretEnvoyExtensionPolicyIndex"
 	httpRouteFilterHTTPRouteIndex    = "httpRouteFilterHTTPRouteIndex"
+	configMapBtpIndex                = "configMapBtpIndex"
 )
 
 func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
@@ -531,7 +532,7 @@ func secretSecurityPolicyIndexFunc(rawObj client.Object) []string {
 	securityPolicy := rawObj.(*egv1a1.SecurityPolicy)
 
 	var (
-		secretReferences []gwapiv1b1.SecretObjectReference
+		secretReferences []gwapiv1.SecretObjectReference
 		values           []string
 	)
 
@@ -639,6 +640,36 @@ func secretCtpIndexFunc(rawObj client.Object) []string {
 		}
 	}
 	return secretReferences
+}
+
+// addBtpIndexers adds indexing on BackendTrafficPolicy, for ConfigMap objects that are
+// referenced in BackendTrafficPolicy objects. This helps in querying for BackendTrafficPolies that are
+// affected by a particular ConfigMap CRUD.
+func addBtpIndexers(ctx context.Context, mgr manager.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.BackendTrafficPolicy{}, configMapBtpIndex, configMapBtpIndexFunc); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func configMapBtpIndexFunc(rawObj client.Object) []string {
+	btp := rawObj.(*egv1a1.BackendTrafficPolicy)
+	var configMapReferences []string
+
+	for _, ro := range btp.Spec.ResponseOverride {
+		if ro.Response.Body.ValueRef != nil {
+			if string(ro.Response.Body.ValueRef.Kind) == resource.KindConfigMap {
+				configMapReferences = append(configMapReferences,
+					types.NamespacedName{
+						Namespace: btp.Namespace,
+						Name:      string(ro.Response.Body.ValueRef.Name),
+					}.String(),
+				)
+			}
+		}
+	}
+	return configMapReferences
 }
 
 // addBtlsIndexers adds indexing on BackendTLSPolicy, for ConfigMap objects that are

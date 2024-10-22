@@ -52,10 +52,6 @@ func (i *Infra) CreateOrUpdateRateLimitInfra(ctx context.Context) error {
 
 // DeleteRateLimitInfra removes the managed kube infra, if it doesn't exist.
 func (i *Infra) DeleteRateLimitInfra(ctx context.Context) error {
-	if err := ratelimit.Validate(ctx, i.Client.Client, i.EnvoyGateway, i.Namespace); err != nil {
-		return err
-	}
-
 	// Delete ratelimit infra do not require the uid of owner reference.
 	r := ratelimit.NewResourceRender(i.Namespace, i.EnvoyGateway, nil)
 	return i.delete(ctx, r)

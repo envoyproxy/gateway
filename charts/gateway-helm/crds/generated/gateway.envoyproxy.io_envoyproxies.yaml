@@ -305,6 +305,8 @@ spec:
 
                   - envoy.filters.http.ratelimit
 
+                  - envoy.filters.http.custom_response
+
                   - envoy.filters.http.router
 
                   Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain.
@@ -330,6 +332,7 @@ spec:
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
+                      - envoy.filters.http.custom_response
                       type: string
                     before:
                       description: |-
@@ -349,6 +352,7 @@ spec:
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
+                      - envoy.filters.http.custom_response
                       type: string
                     name:
                       description: Name of the filter.
@@ -366,6 +370,7 @@ spec:
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
+                      - envoy.filters.http.custom_response
                       type: string
                   required:
                   - name
@@ -10134,6 +10139,13 @@ spec:
                             - Local
                             - Cluster
                             type: string
+                          labels:
+                            additionalProperties:
+                              type: string
+                            description: |-
+                              Labels that should be appended to the service.
+                              By default, no labels are appended.
+                            type: object
                           loadBalancerClass:
                             description: |-
                               LoadBalancerClass, when specified, allows for choosing the LoadBalancer provider
@@ -11213,6 +11225,13 @@ spec:
                                                       Default: unlimited.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                  requestTimeout:
+                                                    description: RequestTimeout is
+                                                      the time until which entire
+                                                      response is received from the
+                                                      upstream.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
                                                 type: object
                                               tcp:
                                                 description: Timeout settings for
@@ -12181,6 +12200,13 @@ spec:
                                                     description: |-
                                                       The maximum duration of an HTTP connection.
                                                       Default: unlimited.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  requestTimeout:
+                                                    description: RequestTimeout is
+                                                      the time until which entire
+                                                      response is received from the
+                                                      upstream.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                 type: object
@@ -13213,6 +13239,12 @@ spec:
                                                 Default: unlimited.
                                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
+                                            requestTimeout:
+                                              description: RequestTimeout is the time
+                                                until which entire response is received
+                                                from the upstream.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
                                           type: object
                                         tcp:
                                           description: Timeout settings for TCP.
@@ -14186,6 +14218,12 @@ spec:
                                         description: |-
                                           The maximum duration of an HTTP connection.
                                           Default: unlimited.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                      requestTimeout:
+                                        description: RequestTimeout is the time until
+                                          which entire response is received from the
+                                          upstream.
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                     type: object

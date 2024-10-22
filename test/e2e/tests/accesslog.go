@@ -81,6 +81,38 @@ var FileAccessLogTest = suite.ConformanceTest{
 
 			runLogTest(t, suite, gwAddr, expectedResponse, labels, match, 0)
 		})
+
+		t.Run("Listener Logs", func(t *testing.T) {
+			// Ensure that Listener is emitting the log: protocol and response code should be
+			// empty in listener logs as they are upstream L7 attributes
+			expectedMatch := "LISTENER ACCESS LOG - 0"
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "accesslog-file", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+			expectedResponse := httputils.ExpectedResponse{
+				Request: httputils.Request{
+					Path: "/file",
+					Headers: map[string]string{
+						"connection": "close",
+					},
+				},
+				ExpectedRequest: &httputils.ExpectedRequest{
+					Request: httputils.Request{
+						Path: "/file",
+					},
+				},
+				Response: httputils.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+			// make sure listener is ready
+			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+
+			runLogTest(t, suite, gwAddr, expectedResponse, labels, expectedMatch, 0)
+		})
 	},
 }
 

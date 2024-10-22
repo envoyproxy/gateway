@@ -1291,6 +1291,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 			resources,
 			envoyProxy,
 		)
+
 		ds.Filters = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
 	}
 
@@ -1672,9 +1673,18 @@ func (t *Translator) processBackendDestinationSetting(backendRef gwapiv1.Backend
 		}
 	}
 
-	return &ir.DestinationSetting{
+	ds := &ir.DestinationSetting{
 		Protocol:    dstProtocol,
 		Endpoints:   dstEndpoints,
 		AddressType: dstAddrType,
 	}
+
+	if backend.Spec.Fallback != nil {
+		// set only the secondary priority, the backend defaults to a primary priority if unset.
+		if ptr.Deref(backend.Spec.Fallback, false) {
+			ds.Priority = ptr.To(uint32(1))
+		}
+	}
+
+	return ds
 }

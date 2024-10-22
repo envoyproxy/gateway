@@ -29,7 +29,13 @@ export GITHUB_REMOTE=origin
 ```
 
 1. Clone the repo, checkout the `main` branch, ensure it’s up-to-date, and your local branch is clean.
-2. Create a topic branch for adding the release notes and updating the [VERSION][] file with the release version. Refer to previous [release notes][] and [VERSION][] for additional details.
+2. Create a topic branch for adding the release notes and updating the [VERSION][] file with the release version. Refer to previous [release notes][] and [VERSION][] for additional details. The latest changes are already accumulated in the current.yaml file. Copy the content of the current.yaml file to the release notes file and clear the current.yaml file.
+
+   ```shell
+   echo "${MAJOR_VERSION}.${MINOR_VERSION}.0-rc.${RELEASE_CANDIDATE_NUMBER}" > VERSION
+   ```
+
+   __Note:__ The release candidate version should be in the format `${MAJOR_VERSION}.${MINOR_VERSION}.0-rc.${RELEASE_CANDIDATE_NUMBER}`.
 3. Sign, commit, and push your changes to your fork.
 4. Submit a [Pull Request][] to merge the changes into the `main` branch. Do not proceed until your PR has merged and
    the [Build and Test][] has successfully completed.
@@ -106,7 +112,7 @@ export GITHUB_REMOTE=origin
       ```
 
    1. Update the `Documentation` referred link on the menu in `site/hugo.toml`:
-   
+
       **DON'T FORGOT TO MOVE IT UNDER `LATEST`**
 
       ```shell
@@ -118,7 +124,7 @@ export GITHUB_REMOTE=origin
       ```
 
    1. Update `site/layouts/shortcodes/helm-version.html` base on latest minor version.
-   
+
       ```console
       {{- $pagePrefix := (index (split $.Page.File.Dir "/") 0) -}}
       {{- with (eq $pagePrefix "latest") -}}
@@ -133,7 +139,7 @@ export GITHUB_REMOTE=origin
       ```
 
    1. Update `site/layouts/shortcodes/yaml-version.html` base on latest minor version.
-      
+
       ```console
       {{- $pagePrefix := (index (split $.Page.File.Dir "/") 0) -}}
       {{- with (eq $pagePrefix "latest") -}}

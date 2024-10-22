@@ -5,7 +5,9 @@
 
 package v1alpha1
 
-import gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+import (
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+)
 
 const BasicAuthUsersSecretKey = ".htpasswd"
 
@@ -23,5 +25,5 @@ type BasicAuth struct {
 	// for more details.
 	//
 	// Note: The secret must be in the same namespace as the SecurityPolicy.
-	Users gwapiv1b1.SecretObjectReference `json:"users"`
+	Users gwapiv1.SecretObjectReference `json:"users"`
 }

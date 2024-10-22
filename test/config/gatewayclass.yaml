@@ -68,6 +68,15 @@ spec:
                     namespace: monitoring
                     port: 8080
                 type: HTTP
+        - type: Listener
+          format:
+            type: Text
+            text: |
+              LISTENER ACCESS LOG %UPSTREAM_PROTOCOL% %RESPONSE_CODE%
+          sinks:
+            - type: File
+              file:
+                path: /dev/stdout
     tracing:
       provider:
         backendRefs:
