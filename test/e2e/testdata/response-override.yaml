@@ -36,7 +36,7 @@ spec:
     name: response-override
   responseOverride:
     - match:
-        statusCode:
+        statusCodes:
           - type: Value
             value: 404
       response:
@@ -45,7 +45,7 @@ spec:
           type: Inline
           inline: "Oops! Your request is not found."
     - match:
-        statusCode:
+        statusCodes:
           - type: Value
             value: 500
           - type: Range
