@@ -421,11 +421,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - destination:
-          name: httproute/envoy-gateway/httproute-1/rule/0
-          settings:
-          - weight: 1
-        directResponse:
+      - directResponse:
           statusCode: 500
         hostname: '*'
         isHTTP2: false
@@ -459,11 +455,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - destination:
-          name: grpcroute/envoy-gateway/grpcroute-1/rule/0
-          settings:
-          - weight: 1
-        directResponse:
+      - directResponse:
           statusCode: 500
         headerMatches:
         - distinct: false

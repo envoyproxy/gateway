@@ -305,12 +305,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - destination:
-          name: httproute/default/httproute-1/rule/0
-          settings:
-          - weight: 1
-          - weight: 1
-        directResponse:
+      - directResponse:
           statusCode: 500
         hostname: '*'
         isHTTP2: false

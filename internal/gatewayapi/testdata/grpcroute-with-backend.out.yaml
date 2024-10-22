@@ -138,11 +138,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - destination:
-          name: grpcroute/default/grpcroute-1/rule/0
-          settings:
-          - weight: 1
-        directResponse:
+      - directResponse:
           statusCode: 500
         hostname: '*'
         isHTTP2: true
@@ -155,11 +151,7 @@ xdsIR:
           distinct: false
           name: ""
           safeRegex: /com.[A-Z]+/[A-Za-z_][A-Za-z_0-9]*
-      - destination:
-          name: grpcroute/default/grpcroute-1/rule/0
-          settings:
-          - weight: 1
-        directResponse:
+      - directResponse:
           statusCode: 500
         hostname: '*'
         isHTTP2: true

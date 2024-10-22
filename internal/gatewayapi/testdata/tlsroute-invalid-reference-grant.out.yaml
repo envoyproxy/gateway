@@ -1,0 +1,102 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-tlsroute-referencegrant
+    namespace: gateway-conformance-infra
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        kinds:
+        - kind: TLSRoute
+        namespaces:
+          from: Same
+      hostname: '*.example.com'
+      name: https
+      port: 443
+      protocol: TLS
+      tls:
+        mode: Passthrough
+  status:
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: https
+      supportedKinds:
+      - kind: TLSRoute
+infraIR:
+  gateway-conformance-infra/gateway-tlsroute-referencegrant:
+    proxy:
+      listeners:
+      - address: null
+        name: gateway-conformance-infra/gateway-tlsroute-referencegrant/https
+        ports:
+        - containerPort: 10443
+          name: tls-443
+          protocol: TLS
+          servicePort: 443
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-tlsroute-referencegrant
+          gateway.envoyproxy.io/owning-gateway-namespace: gateway-conformance-infra
+      name: gateway-conformance-infra/gateway-tlsroute-referencegrant
+tlsRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TLSRoute
+  metadata:
+    creationTimestamp: null
+    name: gateway-conformance-infra-test
+    namespace: gateway-conformance-infra
+  spec:
+    hostnames:
+    - abc.example.com
+    parentRefs:
+    - name: gateway-tlsroute-referencegrant
+    rules:
+    - backendRefs:
+      - name: tls-backend
+        namespace: gateway-conformance-app-backend
+        port: 443
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: No listeners included by this parent ref allowed this attachment.
+        reason: NotAllowedByListeners
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Backend ref to Service gateway-conformance-app-backend/tls-backend
+          not permitted by any ReferenceGrant.
+        reason: RefNotPermitted
+        status: "False"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-tlsroute-referencegrant
+xdsIR:
+  gateway-conformance-infra/gateway-tlsroute-referencegrant:
+    accessLog:
+      text:
+      - path: /dev/stdout
+    tcp:
+    - address: 0.0.0.0
+      name: gateway-conformance-infra/gateway-tlsroute-referencegrant/https
+      port: 10443

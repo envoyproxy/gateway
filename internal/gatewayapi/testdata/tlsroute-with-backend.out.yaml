@@ -121,8 +121,6 @@ xdsIR:
       routes:
       - destination:
           name: tlsroute/default/tlsroute-1/rule/-1
-          settings:
-          - weight: 1
         name: tlsroute/default/tlsroute-1
         tls:
           inspector:
