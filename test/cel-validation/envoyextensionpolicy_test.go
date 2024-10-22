@@ -293,6 +293,8 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 									},
 								},
 							},
+							RequestAttributes:  []string{"request.path"},
+							ResponseAttributes: []string{"response.code"},
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{

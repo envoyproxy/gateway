@@ -491,6 +491,14 @@ func (t *Translator) buildExtProc(
 		}
 	}
 
+	if extProc.RequestAttributes != nil {
+		extProcIR.RequestAttributes = extProc.RequestAttributes
+	}
+
+	if extProc.ResponseAttributes != nil {
+		extProcIR.ResponseAttributes = extProc.ResponseAttributes
+	}
+
 	return extProcIR, err
 }
 

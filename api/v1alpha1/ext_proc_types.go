@@ -70,4 +70,18 @@ type ExtProc struct {
 	//
 	// +optional
 	ProcessingMode *ExtProcProcessingMode `json:"processingMode,omitempty"`
+
+	// RequestAttributes is a list of request attributes that should be sent to the external processor
+	// on the request_headers message. The possible attributes are defined in the envoy documentation:
+	// https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/advanced/attributes#arch-overview-attributes
+	//
+	// +optional
+	RequestAttributes []string `json:"requestAttributes,omitempty"`
+
+	// ResponseAttributes is a list of response attributes that should be sent to the external processor
+	// on the response_headers message. The possible attributes are defined in the envoy documentation:
+	// https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/advanced/attributes#arch-overview-attributes
+	//
+	// +optional
+	ResponseAttributes []string `json:"responseAttributes,omitempty"`
 }

@@ -2546,6 +2546,12 @@ type ExtProc struct {
 
 	// ResponseBodyProcessingMode Defines response body processing
 	ResponseBodyProcessingMode *ExtProcBodyProcessingMode `json:"responseBodyProcessingMode,omitempty" yaml:"responseBodyProcessingMode,omitempty"`
+
+	// RequestAttributes defines the attributes to be sent to the external processor
+	RequestAttributes []string `json:"requestAttributes,omitempty" yaml:"requestAttributes,omitempty"`
+
+	// ResponseAttributes defines the attributes to be sent to the external processor
+	ResponseAttributes []string `json:"responseAttributes,omitempty" yaml:"responseAttributes,omitempty"`
 }
 
 // Wasm holds the information associated with the Wasm extensions.

@@ -940,6 +940,22 @@ spec:
                               type: string
                           type: object
                       type: object
+                    requestAttributes:
+                      description: |-
+                        RequestAttributes is a list of request attributes that should be sent to the external processor
+                        on the request_headers message. The possible attributes are defined in the envoy documentation:
+                        https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/advanced/attributes#arch-overview-attributes
+                      items:
+                        type: string
+                      type: array
+                    responseAttributes:
+                      description: |-
+                        ResponseAttributes is a list of response attributes that should be sent to the external processor
+                        on the response_headers message. The possible attributes are defined in the envoy documentation:
+                        https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/advanced/attributes#arch-overview-attributes
+                      items:
+                        type: string
+                      type: array
                   type: object
                   x-kubernetes-validations:
                   - message: BackendRefs must be used, backendRef is not supported.
