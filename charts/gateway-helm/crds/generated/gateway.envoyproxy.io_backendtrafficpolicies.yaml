@@ -727,19 +727,11 @@ spec:
                                       type: object
                                     maxItems: 16
                                     type: array
-                                    x-kubernetes-list-map-keys:
-                                    - name
-                                    x-kubernetes-list-type: map
                                   sourceCIDR:
                                     description: |-
                                       SourceCIDR is the client IP Address range to match on.
                                       At least one of headers or sourceCIDR condition must be specified.
                                     properties:
-                                      invert:
-                                        default: false
-                                        description: Invert specifies whether the
-                                          value match result will be inverted.
-                                        type: boolean
                                       type:
                                         default: Exact
                                         enum:
@@ -870,19 +862,11 @@ spec:
                                       type: object
                                     maxItems: 16
                                     type: array
-                                    x-kubernetes-list-map-keys:
-                                    - name
-                                    x-kubernetes-list-type: map
                                   sourceCIDR:
                                     description: |-
                                       SourceCIDR is the client IP Address range to match on.
                                       At least one of headers or sourceCIDR condition must be specified.
                                     properties:
-                                      invert:
-                                        default: false
-                                        description: Invert specifies whether the
-                                          value match result will be inverted.
-                                        type: boolean
                                       type:
                                         default: Exact
                                         enum:
@@ -1051,8 +1035,6 @@ spec:
                           description: Content Type of the response. This will be
                             set in the Content-Type header.
                           type: string
-                      required:
-                      - body
                       type: object
                   required:
                   - match
@@ -1314,6 +1296,11 @@ spec:
                         description: |-
                           The maximum duration of an HTTP connection.
                           Default: unlimited.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      requestTimeout:
+                        description: RequestTimeout is the time until which entire
+                          response is received from the upstream.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                     type: object

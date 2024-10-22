@@ -864,6 +864,15 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 		}
 	}
 
+	if tlsParams.Session != nil && tlsParams.Session.Resumption != nil {
+		if tlsParams.Session.Resumption.Stateless != nil {
+			irTLSConfig.StatelessSessionResumption = true
+		}
+		if tlsParams.Session.Resumption.Stateful != nil {
+			irTLSConfig.StatefulSessionResumption = true
+		}
+	}
+
 	return irTLSConfig, nil
 }
 

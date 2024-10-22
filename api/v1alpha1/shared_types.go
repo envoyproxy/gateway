@@ -98,7 +98,7 @@ type KubernetesDeploymentSpec struct {
 	// TODO: Expose config as use cases are better understood, e.g. labels.
 }
 
-// KubernetesDaemonsetSpec defines the desired state of the Kubernetes daemonset resource.
+// KubernetesDaemonSetSpec defines the desired state of the Kubernetes daemonset resource.
 type KubernetesDaemonSetSpec struct {
 	// Patch defines how to perform the patch operation to daemonset
 	//
@@ -669,7 +669,9 @@ type CustomResponse struct {
 	ContentType *string `json:"contentType,omitempty"`
 
 	// Body of the Custom Response
-	Body CustomResponseBody `json:"body"`
+	//
+	// +optional
+	Body *CustomResponseBody `json:"body,omitempty"`
 }
 
 // ResponseValueType defines the types of values for the response body supported by Envoy Gateway.

@@ -70,6 +70,7 @@
             - rsa_pkcs1_sha1
             tlsMaximumProtocolVersion: TLSv1_2
             tlsMinimumProtocolVersion: TLSv1_0
+        disableStatelessSessionResumption: true
   listenerFilters:
   - name: envoy.filters.listener.tls_inspector
     typedConfig:
@@ -121,5 +122,6 @@
             - rsa_pkcs1_sha1
             tlsMaximumProtocolVersion: TLSv1_2
             tlsMinimumProtocolVersion: TLSv1_0
+        disableStatefulSessionResumption: true
   name: second-listener
   perConnectionBufferLimitBytes: 32768

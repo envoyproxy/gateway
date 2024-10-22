@@ -384,6 +384,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `endpoints` | _[BackendEndpoint](#backendendpoint) array_ |  true  | Endpoints defines the endpoints to be used when connecting to the backend. |
 | `appProtocols` | _[AppProtocolType](#appprotocoltype) array_ |  false  | AppProtocols defines the application protocols to be supported when connecting to the backend. |
+| `fallback` | _boolean_ |  false  | Fallback indicates whether the backend is designated as a fallback.<br />It is highly recommended to configure active or passive health checks to ensure that failover can be detected<br />when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.<br />The overprovisioning factor is set to 1.4, meaning the fallback backends will only start receiving traffic when<br />the health of the active backends falls below 72%. |
 
 
 #### BackendStatus
@@ -610,6 +611,7 @@ _Appears in:_
 | `ecdhCurves` | _string array_ |  false  | ECDHCurves specifies the set of supported ECDH curves.<br />In non-FIPS Envoy Proxy builds the default curves are:<br />- X25519<br />- P-256<br />In builds using BoringSSL FIPS the default curve is:<br />- P-256 |
 | `signatureAlgorithms` | _string array_ |  false  | SignatureAlgorithms specifies which signature algorithms the listener should<br />support. |
 | `alpnProtocols` | _[ALPNProtocol](#alpnprotocol) array_ |  false  | ALPNProtocols supplies the list of ALPN protocols that should be<br />exposed by the listener. By default h2 and http/1.1 are enabled.<br />Supported values are:<br />- http/1.0<br />- http/1.1<br />- h2 |
+| `session` | _[Session](#session)_ |  false  | Session defines settings related to TLS session management. |
 
 
 #### ClientTimeout
@@ -864,7 +866,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `contentType` | _string_ |  false  | Content Type of the response. This will be set in the Content-Type header. |
-| `body` | _[CustomResponseBody](#customresponsebody)_ |  true  | Body of the Custom Response |
+| `body` | _[CustomResponseBody](#customresponsebody)_ |  false  | Body of the Custom Response |
 
 
 #### CustomResponseBody
@@ -875,6 +877,7 @@ CustomResponseBody
 
 _Appears in:_
 - [CustomResponse](#customresponse)
+- [HTTPDirectResponseFilter](#httpdirectresponsefilter)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -1920,6 +1923,22 @@ _Appears in:_
 | `idleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | IdleTimeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.<br />Default: 1 hour. |
 
 
+#### HTTPDirectResponseFilter
+
+
+
+HTTPDirectResponseFilter defines the configuration to return a fixed response.
+
+_Appears in:_
+- [HTTPRouteFilterSpec](#httproutefilterspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `contentType` | _string_ |  false  | Content Type of the response. This will be set in the Content-Type header. |
+| `body` | _[CustomResponseBody](#customresponsebody)_ |  false  | Body of the Response |
+| `statusCode` | _integer_ |  false  | Status Code of the HTTP response<br />If unset, defaults to 200. |
+
+
 #### HTTPExtAuthService
 
 
@@ -2043,6 +2062,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `urlRewrite` | _[HTTPURLRewriteFilter](#httpurlrewritefilter)_ |  false  |  |
+| `directResponse` | _[HTTPDirectResponseFilter](#httpdirectresponsefilter)_ |  false  |  |
 
 
 #### HTTPStatus
@@ -2070,6 +2090,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `connectionIdleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.<br />Default: 1 hour. |
 | `maxConnectionDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | The maximum duration of an HTTP connection.<br />Default: unlimited. |
+| `requestTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | RequestTimeout is the time until which entire response is received from the upstream. |
 
 
 #### HTTPURLRewriteFilter
@@ -2430,7 +2451,7 @@ _Appears in:_
 
 
 
-KubernetesDaemonsetSpec defines the desired state of the Kubernetes daemonset resource.
+KubernetesDaemonSetSpec defines the desired state of the Kubernetes daemonset resource.
 
 _Appears in:_
 - [EnvoyProxyKubernetesProvider](#envoyproxykubernetesprovider)
@@ -3677,6 +3698,35 @@ _Appears in:_
 | `NodePort` | ServiceTypeNodePort means a service will be exposed on each Kubernetes Node<br />at a static Port, common across all Nodes.<br /> | 
 
 
+#### Session
+
+
+
+Session defines settings related to TLS session management.
+
+_Appears in:_
+- [ClientTLSSettings](#clienttlssettings)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `resumption` | _[SessionResumption](#sessionresumption)_ |  false  | Resumption determines the proxy's supported TLS session resumption option.<br />By default, Envoy Gateway does not enable session resumption. Use sessionResumption to<br />enable stateful and stateless session resumption. Users should consider security impacts<br />of different resumption methods. Performance gains from resumption are diminished when<br />Envoy proxy is deployed with more than one replica. |
+
+
+#### SessionResumption
+
+
+
+SessionResumption defines supported tls session resumption methods and their associated configuration.
+
+_Appears in:_
+- [Session](#session)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `stateless` | _[StatelessTLSSessionResumption](#statelesstlssessionresumption)_ |  false  | Stateless defines setting for stateless (session-ticket based) session resumption |
+| `stateful` | _[StatefulTLSSessionResumption](#statefultlssessionresumption)_ |  false  | Stateful defines setting for stateful (session-id based) session resumption |
+
+
 #### ShutdownConfig
 
 
@@ -3735,6 +3785,37 @@ _Appears in:_
 | ----- | ----------- |
 | `Exact` | SourceMatchExact All IP Addresses within the specified Source IP CIDR are treated as a single client selector<br />and share the same rate limit bucket.<br /> | 
 | `Distinct` | SourceMatchDistinct Each IP Address within the specified Source IP CIDR is treated as a distinct client selector<br />and uses a separate rate limit bucket/counter.<br />Note: This is only supported for Global Rate Limits.<br /> | 
+
+
+#### StatefulTLSSessionResumption
+
+
+
+StatefulTLSSessionResumption defines the stateful (session-id based) type of TLS session resumption.
+Note: When Envoy Proxy is deployed with more than one replica, session caches are not synchronized
+between instances, possibly leading to resumption failures.
+Envoy does not re-validate client certificates upon session resumption.
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-routematch-tlscontextmatchoptions
+
+_Appears in:_
+- [SessionResumption](#sessionresumption)
+
+
+
+#### StatelessTLSSessionResumption
+
+
+
+StatelessTLSSessionResumption defines the stateless (session-ticket based) type of TLS session resumption.
+Note: When Envoy Proxy is deployed with more than one replica, session ticket encryption keys are not
+synchronized between instances, possibly leading to resumption failures.
+In-memory session ticket encryption keys are rotated every 48 hours.
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlssessionticketkeys
+https://commondatastorage.googleapis.com/chromium-boringssl-docs/ssl.h.html#Session-tickets
+
+_Appears in:_
+- [SessionResumption](#sessionresumption)
+
 
 
 #### StatusCodeMatch

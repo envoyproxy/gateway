@@ -8,6 +8,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -111,7 +112,10 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su Updater
 		r.namespaceLabel = cfg.EnvoyGateway.Provider.Kubernetes.Watch.NamespaceSelector
 	}
 
-	c, err := controller.New("gatewayapi", mgr, controller.Options{Reconciler: r, SkipNameValidation: skipNameValidation()})
+	// controller-runtime doesn't allow run controller with same name for more than once
+	// see https://github.com/kubernetes-sigs/controller-runtime/blob/2b941650bce159006c88bd3ca0d132c7bc40e947/pkg/controller/name.go#L29
+	name := fmt.Sprintf("gatewayapi-%d", time.Now().Unix())
+	c, err := controller.New(name, mgr, controller.Options{Reconciler: r, SkipNameValidation: skipNameValidation()})
 	if err != nil {
 		return fmt.Errorf("error creating controller: %w", err)
 	}
@@ -598,7 +602,7 @@ func (r *gatewayAPIReconciler) processSecretRef(
 	ownerKind string,
 	ownerNS string,
 	ownerName string,
-	secretRef gwapiv1b1.SecretObjectReference,
+	secretRef gwapiv1.SecretObjectReference,
 ) error {
 	secret := new(corev1.Secret)
 	secretNS := gatewayapi.NamespaceDerefOr(secretRef.Namespace, ownerNS)
@@ -700,7 +704,7 @@ func (r *gatewayAPIReconciler) processConfigMapRef(
 	ownerKind string,
 	ownerNS string,
 	ownerName string,
-	configMapRef gwapiv1b1.SecretObjectReference,
+	configMapRef gwapiv1.SecretObjectReference,
 ) error {
 	configMap := new(corev1.ConfigMap)
 	configMapNS := gatewayapi.NamespaceDerefOr(configMapRef.Namespace, ownerNS)
@@ -1386,13 +1390,13 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch Deployment CRUDs and process affected Gateways.
-	dPredicates := []predicate.TypedPredicate[*appsv1.Deployment]{
+	deploymentPredicates := []predicate.TypedPredicate[*appsv1.Deployment]{
 		predicate.NewTypedPredicateFuncs[*appsv1.Deployment](func(deploy *appsv1.Deployment) bool {
-			return r.validateDeploymentForReconcile(deploy)
+			return r.validateObjectForReconcile(deploy)
 		}),
 	}
 	if r.namespaceLabel != nil {
-		dPredicates = append(dPredicates, predicate.NewTypedPredicateFuncs[*appsv1.Deployment](func(deploy *appsv1.Deployment) bool {
+		deploymentPredicates = append(deploymentPredicates, predicate.NewTypedPredicateFuncs[*appsv1.Deployment](func(deploy *appsv1.Deployment) bool {
 			return r.hasMatchingNamespaceLabels(deploy)
 		}))
 	}
@@ -1401,7 +1405,27 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, deploy *appsv1.Deployment) []reconcile.Request {
 				return r.enqueueClass(ctx, deploy)
 			}),
-			dPredicates...)); err != nil {
+			deploymentPredicates...)); err != nil {
+		return err
+	}
+
+	// Watch DaemonSet CRUDs and process affected Gateways.
+	daemonsetPredicates := []predicate.TypedPredicate[*appsv1.DaemonSet]{
+		predicate.NewTypedPredicateFuncs[*appsv1.DaemonSet](func(daemonset *appsv1.DaemonSet) bool {
+			return r.validateObjectForReconcile(daemonset)
+		}),
+	}
+	if r.namespaceLabel != nil {
+		daemonsetPredicates = append(daemonsetPredicates, predicate.NewTypedPredicateFuncs[*appsv1.DaemonSet](func(daemonset *appsv1.DaemonSet) bool {
+			return r.hasMatchingNamespaceLabels(daemonset)
+		}))
+	}
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &appsv1.DaemonSet{},
+			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, daemonset *appsv1.DaemonSet) []reconcile.Request {
+				return r.enqueueClass(ctx, daemonset)
+			}),
+			daemonsetPredicates...)); err != nil {
 		return err
 	}
 
@@ -1770,7 +1794,7 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicyRefs(
 					string(caCertRef.Kind) == resource.KindSecret {
 
 					var err error
-					caRefNew := gwapiv1b1.SecretObjectReference{
+					caRefNew := gwapiv1.SecretObjectReference{
 						Group:     gatewayapi.GroupPtr(string(caCertRef.Group)),
 						Kind:      gatewayapi.KindPtr(string(caCertRef.Kind)),
 						Name:      caCertRef.Name,
