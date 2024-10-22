@@ -7,7 +7,7 @@ admin:
   address:
     socket_address:
       address: 127.0.0.1
-      port_value: 19000
+      port_value: 2222
 layered_runtime:
   layers:
   - name: global_config
@@ -31,11 +31,11 @@ dynamic_resources:
     resource_api_version: V3
 static_resources:
   listeners:
-  - name: envoy-gateway-proxy-ready-0.0.0.0-19001
+  - name: envoy-gateway-proxy-ready-0.0.0.0-3333
     address:
       socket_address:
         address: 0.0.0.0
-        port_value: 19001
+        port_value: 3333
         protocol: TCP
     filter_chains:
     - filters:
@@ -45,6 +45,15 @@ static_resources:
           stat_prefix: eg-ready-http
           route_config:
             name: local_route
+            virtual_hosts:
+            - name: prometheus_stats
+              domains:
+              - "*"
+              routes:
+              - match:
+                  prefix: /stats/prometheus
+                route:
+                  cluster: prometheus_stats
           http_filters:
           - name: envoy.filters.http.health_check
             typed_config:
@@ -58,6 +67,19 @@ static_resources:
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
   clusters:
+  - name: prometheus_stats
+    connect_timeout: 0.250s
+    type: STATIC
+    lb_policy: ROUND_ROBIN
+    load_assignment:
+      cluster_name: prometheus_stats
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: 127.0.0.1
+                port_value: 2222
   - connect_timeout: 10s
     load_assignment:
       cluster_name: xds_cluster
@@ -68,8 +90,8 @@ static_resources:
           endpoint:
             address:
               socket_address:
-                address: envoy-gateway
-                port_value: 18000
+                address: foo.bar
+                port_value: 12345
     typed_extension_protocol_options:
       envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
         "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
@@ -112,7 +134,7 @@ static_resources:
             address:
               socket_address:
                 address: envoy-gateway
-                port_value: 18002
+                port_value: 1111
     typed_extension_protocol_options:
       envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
         "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
