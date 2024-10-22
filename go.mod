@@ -64,6 +64,7 @@ require (
 require (
 	github.com/docker/docker v27.3.1+incompatible
 	github.com/replicatedhq/troubleshoot v0.107.1
+	github.com/tetratelabs/func-e v1.1.5-0.20240822223546-c85a098d5bf0
 	google.golang.org/grpc v1.67.1
 	sigs.k8s.io/kubectl-validate v0.0.5-0.20240827210056-ce13d95db263
 )
@@ -188,7 +189,6 @@ require (
 	github.com/sylabs/sif/v2 v2.18.0 // indirect
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635 // indirect
 	github.com/tchap/go-patricia/v2 v2.3.1 // indirect
-	github.com/tetratelabs/func-e v1.1.5-0.20240822223546-c85a098d5bf0 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/ulikunitz/xz v0.5.12 // indirect
