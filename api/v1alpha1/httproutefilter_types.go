@@ -37,7 +37,7 @@ type HTTPRouteFilterSpec struct {
 
 // HTTPURLRewriteFilter define rewrites of HTTP URL components such as path and host
 type HTTPURLRewriteFilter struct {
-	// Hostname is the value to be used to replace the Hostname header value during
+	// Hostname is the value to be used to replace the Host header value during
 	// forwarding.
 	//
 	// +optional
@@ -62,7 +62,7 @@ const (
 type HTTPHostnameModifierType string
 
 const (
-	// HeaderHTTPHostnameModifier indicates that the Hostname header value would be replaced with the value of the header specified in header.
+	// HeaderHTTPHostnameModifier indicates that the Host header value would be replaced with the value of the header specified in header.
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-host-rewrite-header
 	HeaderHTTPHostnameModifier HTTPHostnameModifierType = "Header"
 	// BackendHTTPHostnameModifier indicates that the Hostname header value would be replaced by the DNS name of the backend if it exists.

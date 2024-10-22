@@ -1964,7 +1964,7 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Header` | HeaderHTTPHostnameModifier indicates that the Hostname header value would be replaced with the value of the header specified in header.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-host-rewrite-header<br /> | 
+| `Header` | HeaderHTTPHostnameModifier indicates that the Host header value would be replaced with the value of the header specified in header.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-host-rewrite-header<br /> | 
 | `Backend` | BackendHTTPHostnameModifier indicates that the Hostname header value would be replaced by the DNS name of the backend if it exists.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-auto-host-rewrite<br /> | 
 
 
@@ -2083,7 +2083,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `hostname` | _[HTTPHostnameModifier](#httphostnamemodifier)_ |  false  | Hostname is the value to be used to replace the Hostname header value during<br />forwarding. |
+| `hostname` | _[HTTPHostnameModifier](#httphostnamemodifier)_ |  false  | Hostname is the value to be used to replace the Host header value during<br />forwarding. |
 | `path` | _[HTTPPathModifier](#httppathmodifier)_ |  false  | Path defines a path rewrite. |
 
 

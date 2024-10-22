@@ -148,23 +148,46 @@ func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 	return httpFiltersContext
 }
 
+// Checks if the context and the rewrite both contain a core gw-api HTTP URL rewrite
+func hasMultipleCoreRewrites(rewrite *gwapiv1.HTTPURLRewriteFilter, contextRewrite *ir.URLRewrite) bool {
+	contextHasCoreRewrites := contextRewrite.Path != nil && (contextRewrite.Path.FullReplace != nil ||
+		contextRewrite.Path.PrefixMatchReplace != nil) || (contextRewrite.Host != nil && contextRewrite.Host.Name != nil)
+	rewriteHasCoreRewrites := rewrite.Hostname != nil || rewrite.Path != nil
+	return contextHasCoreRewrites && rewriteHasCoreRewrites
+}
+
+// Checks if the context and the rewrite both contain a envoy-gateway extended HTTP URL rewrite
+func hasMultipleExtensionRewrites(rewrite *egv1a1.HTTPURLRewriteFilter, contextRewrite *ir.URLRewrite) bool {
+	contextHasExtensionRewrites := (contextRewrite.Path != nil && contextRewrite.Path.RegexMatchReplace != nil) ||
+		(contextRewrite.Host != nil && (contextRewrite.Host.Header != nil || contextRewrite.Host.Backend != nil))
+
+	return contextHasExtensionRewrites && (rewrite.Hostname != nil || rewrite.Path != nil)
+}
+
+// Checks if the context and the gw-api core rewrite both contain an HTTP URL rewrite that creates a conflict (e.g. both rewrite path)
+func hasConflictingCoreAndExtensionRewrites(rewrite *gwapiv1.HTTPURLRewriteFilter, contextRewrite *ir.URLRewrite) bool {
+	contextHasExtensionPathRewrites := contextRewrite.Path != nil && contextRewrite.Path.RegexMatchReplace != nil
+	contextHasExtensionHostRewrites := contextRewrite.Host != nil && (contextRewrite.Host.Header != nil ||
+		contextRewrite.Host.Backend != nil)
+	return (rewrite.Hostname != nil && contextHasExtensionHostRewrites) || (rewrite.Path != nil && contextHasExtensionPathRewrites)
+}
+
+// Checks if the context and the envoy-gateway extended rewrite both contain an HTTP URL rewrite that creates a conflict (e.g. both rewrite path)
+func hasConflictingExtensionAndCoreRewrites(rewrite *egv1a1.HTTPURLRewriteFilter, contextRewrite *ir.URLRewrite) bool {
+	contextHasCorePathRewrites := contextRewrite.Path != nil && (contextRewrite.Path.FullReplace != nil ||
+		contextRewrite.Path.PrefixMatchReplace != nil)
+	contextHasCoreHostnameRewrites := contextRewrite.Host != nil && contextRewrite.Host.Name != nil
+
+	return (rewrite.Hostname != nil && contextHasCoreHostnameRewrites) || (rewrite.Path != nil && contextHasCorePathRewrites)
+}
+
 func (t *Translator) processURLRewriteFilter(
 	rewrite *gwapiv1.HTTPURLRewriteFilter,
 	filterContext *HTTPFiltersContext,
 ) {
 	if filterContext.URLRewrite != nil {
-		// avoid conflicts:
-		// 1. multiple core URLRewriteFilters (of any type)
-		// 2. HTTPRouteFilter and URLRewriteFilter must not change the same component (host, path)
-
-		hasCoreRewrites := filterContext.URLRewrite.Path != nil && (filterContext.URLRewrite.Path.FullReplace != nil ||
-			filterContext.URLRewrite.Path.PrefixMatchReplace != nil) || (filterContext.URLRewrite.Host != nil && filterContext.URLRewrite.Host.Name != nil)
-		hasExtensionPathRewrites := filterContext.URLRewrite.Path != nil && filterContext.URLRewrite.Path.RegexMatchReplace != nil
-		hasExtensionHostRewrites := filterContext.URLRewrite.Host != nil && (filterContext.URLRewrite.Host.Header != nil ||
-			filterContext.URLRewrite.Host.Backend != nil)
-
-		if (rewrite.Hostname != nil && (hasCoreRewrites || hasExtensionHostRewrites)) ||
-			(rewrite.Path != nil && (hasCoreRewrites || hasExtensionPathRewrites)) {
+		if hasMultipleCoreRewrites(rewrite, filterContext.URLRewrite) ||
+			hasConflictingCoreAndExtensionRewrites(rewrite, filterContext.URLRewrite) {
 			routeStatus := GetRouteStatus(filterContext.Route)
 			status.SetRouteStatusCondition(routeStatus,
 				filterContext.ParentRef.routeParentStatusIdx,
@@ -767,18 +790,8 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 				if hrf.Spec.URLRewrite != nil {
 
 					if filterContext.URLRewrite != nil {
-						// avoid conflicts:
-						// 1. multiple extension HTTPRouteFilter (of any type)
-						// 2. HTTPRouteFilter and URLRewriteFilter must not change the same component (host, path)
-
-						hasCorePathRewrites := filterContext.URLRewrite.Path != nil && (filterContext.URLRewrite.Path.FullReplace != nil ||
-							filterContext.URLRewrite.Path.PrefixMatchReplace != nil)
-						hasCoreHostnameRewrites := filterContext.URLRewrite.Host != nil && filterContext.URLRewrite.Host.Name != nil
-						hasExtensionRewrites := (filterContext.URLRewrite.Path != nil && filterContext.URLRewrite.Path.RegexMatchReplace != nil) ||
-							(filterContext.URLRewrite.Host != nil && (filterContext.URLRewrite.Host.Header != nil || filterContext.URLRewrite.Host.Backend != nil))
-
-						if (hrf.Spec.URLRewrite.Hostname != nil && (hasExtensionRewrites || hasCoreHostnameRewrites)) ||
-							(hrf.Spec.URLRewrite.Path != nil && (hasExtensionRewrites || hasCorePathRewrites)) {
+						if hasMultipleExtensionRewrites(hrf.Spec.URLRewrite, filterContext.URLRewrite) ||
+							hasConflictingExtensionAndCoreRewrites(hrf.Spec.URLRewrite, filterContext.URLRewrite) {
 							routeStatus := GetRouteStatus(filterContext.Route)
 							status.SetRouteStatusCondition(routeStatus,
 								filterContext.ParentRef.routeParentStatusIdx,
