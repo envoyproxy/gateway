@@ -10,9 +10,11 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strconv"
 	"strings"
 
 	perr "github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -34,6 +36,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv
 	gateways []*GatewayContext,
 	routes []RouteContext,
 	xdsIR resource.XdsIRMap,
+	configMaps []*corev1.ConfigMap,
 ) []*egv1a1.BackendTrafficPolicy {
 	res := []*egv1a1.BackendTrafficPolicy{}
 
@@ -127,7 +130,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv
 				}
 
 				// Set conditions for translation error if it got any
-				if err := t.translateBackendTrafficPolicyForRoute(policy, route, xdsIR); err != nil {
+				if err := t.translateBackendTrafficPolicyForRoute(policy, route, xdsIR, configMaps); err != nil {
 					status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 						ancestorRefs,
 						t.GatewayControllerName,
@@ -181,7 +184,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv
 				}
 
 				// Set conditions for translation error if it got any
-				if err := t.translateBackendTrafficPolicyForGateway(policy, currTarget, gateway, xdsIR); err != nil {
+				if err := t.translateBackendTrafficPolicyForGateway(policy, currTarget, gateway, xdsIR, configMaps); err != nil {
 					status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 						ancestorRefs,
 						t.GatewayControllerName,
@@ -281,7 +284,12 @@ func resolveBTPolicyRouteTargetRef(policy *egv1a1.BackendTrafficPolicy, target g
 	return route.RouteContext, nil
 }
 
-func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.BackendTrafficPolicy, route RouteContext, xdsIR resource.XdsIRMap) error {
+func (t *Translator) translateBackendTrafficPolicyForRoute(
+	policy *egv1a1.BackendTrafficPolicy,
+	route RouteContext,
+	xdsIR resource.XdsIRMap,
+	configMaps []*corev1.ConfigMap,
+) error {
 	var (
 		rl        *ir.RateLimit
 		lb        *ir.LoadBalancer
@@ -295,6 +303,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 		bc        *ir.BackendConnection
 		ds        *ir.DNS
 		h2        *ir.HTTP2Settings
+		ro        *ir.ResponseOverride
 		err, errs error
 	)
 
@@ -337,6 +346,11 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 
 	if h2, err = buildIRHTTP2Settings(policy.Spec.HTTP2); err != nil {
 		err = perr.WithMessage(err, "HTTP2")
+		errs = errors.Join(errs, err)
+	}
+
+	if ro, err = buildResponseOverride(policy, configMaps); err != nil {
+		err = perr.WithMessage(err, "ResponseOverride")
 		errs = errors.Join(errs, err)
 	}
 
@@ -402,6 +416,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 						HTTP2:             h2,
 						DNS:               ds,
 						Timeout:           to,
+						ResponseOverride:  ro,
 					}
 
 					// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
@@ -418,7 +433,13 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 	return errs
 }
 
-func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.BackendTrafficPolicy, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, gateway *GatewayContext, xdsIR resource.XdsIRMap) error {
+func (t *Translator) translateBackendTrafficPolicyForGateway(
+	policy *egv1a1.BackendTrafficPolicy,
+	target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
+	gateway *GatewayContext,
+	xdsIR resource.XdsIRMap,
+	configMaps []*corev1.ConfigMap,
+) error {
 	var (
 		rl        *ir.RateLimit
 		lb        *ir.LoadBalancer
@@ -431,6 +452,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		rt        *ir.Retry
 		ds        *ir.DNS
 		h2        *ir.HTTP2Settings
+		ro        *ir.ResponseOverride
 		err, errs error
 	)
 
@@ -467,6 +489,10 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	}
 	if h2, err = buildIRHTTP2Settings(policy.Spec.HTTP2); err != nil {
 		err = perr.WithMessage(err, "HTTP2")
+		errs = errors.Join(errs, err)
+	}
+	if ro, err = buildResponseOverride(policy, configMaps); err != nil {
+		err = perr.WithMessage(err, "ResponseOverride")
 		errs = errors.Join(errs, err)
 	}
 
@@ -542,16 +568,17 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 			}
 
 			r.Traffic = &ir.TrafficFeatures{
-				RateLimit:      rl,
-				LoadBalancer:   lb,
-				ProxyProtocol:  pp,
-				HealthCheck:    hc,
-				CircuitBreaker: cb,
-				FaultInjection: fi,
-				TCPKeepalive:   ka,
-				Retry:          rt,
-				HTTP2:          h2,
-				DNS:            ds,
+				RateLimit:        rl,
+				LoadBalancer:     lb,
+				ProxyProtocol:    pp,
+				HealthCheck:      hc,
+				CircuitBreaker:   cb,
+				FaultInjection:   fi,
+				TCPKeepalive:     ka,
+				Retry:            rt,
+				HTTP2:            h2,
+				DNS:              ds,
+				ResponseOverride: ro,
 			}
 
 			// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
@@ -835,4 +862,82 @@ func makeIrTriggerSet(in []egv1a1.TriggerEnum) []ir.TriggerEnum {
 		irTriggers = append(irTriggers, ir.TriggerEnum(r))
 	}
 	return irTriggers
+}
+
+func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, configMaps []*corev1.ConfigMap) (*ir.ResponseOverride, error) {
+	if len(policy.Spec.ResponseOverride) == 0 {
+		return nil, nil
+	}
+
+	rules := make([]ir.ResponseOverrideRule, 0, len(policy.Spec.ResponseOverride))
+	for index, ro := range policy.Spec.ResponseOverride {
+		match := ir.CustomResponseMatch{
+			StatusCodes: make([]ir.StatusCodeMatch, 0, len(ro.Match.StatusCodes)),
+		}
+
+		for _, code := range ro.Match.StatusCodes {
+			if code.Type != nil && *code.Type == egv1a1.StatusCodeValueTypeRange {
+				match.StatusCodes = append(match.StatusCodes, ir.StatusCodeMatch{
+					Range: &ir.StatusCodeRange{
+						Start: code.Range.Start,
+						End:   code.Range.End,
+					},
+				})
+			} else {
+				match.StatusCodes = append(match.StatusCodes, ir.StatusCodeMatch{
+					Value: code.Value,
+				})
+			}
+		}
+
+		response := ir.CustomResponse{
+			ContentType: ro.Response.ContentType,
+		}
+
+		if ro.Response.Body.Type != nil && *ro.Response.Body.Type == egv1a1.ResponseValueTypeValueRef {
+			foundCM := false
+			for _, cm := range configMaps {
+				if cm.Namespace == policy.Namespace && cm.Name == string(ro.Response.Body.ValueRef.Name) {
+					body, dataOk := cm.Data["response.body"]
+					switch {
+					case dataOk:
+						response.Body = body
+					case len(cm.Data) > 0: // Fallback to the first key if response.body is not found
+						for _, value := range cm.Data {
+							body = value
+							break
+						}
+						response.Body = body
+					default:
+						return nil, fmt.Errorf("can't find the key response.body in the referenced configmap %s", ro.Response.Body.ValueRef.Name)
+					}
+
+					foundCM = true
+					break
+				}
+			}
+			if !foundCM {
+				return nil, fmt.Errorf("can't find the referenced configmap %s", ro.Response.Body.ValueRef.Name)
+			}
+		} else {
+			response.Body = *ro.Response.Body.Inline
+		}
+
+		rules = append(rules, ir.ResponseOverrideRule{
+			Name:     defaultResponseOverrideRuleName(policy, index),
+			Match:    match,
+			Response: response,
+		})
+	}
+	return &ir.ResponseOverride{
+		Name:  irConfigName(policy),
+		Rules: rules,
+	}, nil
+}
+
+func defaultResponseOverrideRuleName(policy *egv1a1.BackendTrafficPolicy, index int) string {
+	return fmt.Sprintf(
+		"%s/responseoverride/rule/%s",
+		irConfigName(policy),
+		strconv.Itoa(index))
 }
