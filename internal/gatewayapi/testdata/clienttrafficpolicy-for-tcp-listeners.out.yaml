@@ -191,6 +191,7 @@ xdsIR:
           closeDelay: 10s
           value: 3
       enableProxyProtocol: true
+      ipFamily: IPv4
       name: envoy-gateway/gateway-1/tls-1
       port: 10443
       routes:
@@ -253,6 +254,7 @@ xdsIR:
           closeDelay: 10s
           value: 3
       enableProxyProtocol: true
+      ipFamily: IPv4
       name: envoy-gateway/gateway-1/tcp-1
       port: 8080
       routes:

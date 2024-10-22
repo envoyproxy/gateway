@@ -170,6 +170,7 @@ xdsIR:
         initialConnectionWindowSize: 65536
         initialStreamWindowSize: 33554432
         maxConcurrentStreams: 200
+      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway
@@ -186,6 +187,7 @@ xdsIR:
       - www.example.com
       http2:
         maxConcurrentStreams: 200
+      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway

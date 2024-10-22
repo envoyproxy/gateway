@@ -459,6 +459,7 @@ xdsIR:
       - '*'
       http1:
         http10: {}
+      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway
@@ -476,6 +477,7 @@ xdsIR:
       http1:
         http10:
           defaultHost: www.example.com
+      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway
@@ -491,6 +493,7 @@ xdsIR:
       hostnames:
       - '*'
       http1: {}
+      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway
@@ -508,6 +511,7 @@ xdsIR:
       http1:
         http10:
           defaultHost: route.example.com
+      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway
@@ -541,6 +545,7 @@ xdsIR:
       hostnames:
       - '*'
       http1: {}
+      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway

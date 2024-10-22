@@ -409,6 +409,7 @@ xdsIR:
     - address: 0.0.0.0
       hostnames:
       - '*'
+      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway
@@ -447,6 +448,7 @@ xdsIR:
     - address: 0.0.0.0
       hostnames:
       - '*'
+      ipFamily: IPv4
       isHTTP2: true
       metadata:
         kind: Gateway
@@ -479,5 +481,6 @@ xdsIR:
         security: {}
     tcp:
     - address: 0.0.0.0
+      ipFamily: IPv4
       name: envoy-gateway/gateway-2/tcp
       port: 10053
