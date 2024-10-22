@@ -119,7 +119,6 @@ type OIDCProvider struct {
 	// Other settings for the connection to the OIDC Provider can be specified in the BackendSettings resource.
 	//
 	// +optional
-	// +notImplementedHide
 	BackendCluster `json:",inline"`
 
 	// The OIDC Provider's [issuer identifier](https://openid.net/specs/openid-connect-discovery-1_0.html#IssuerDiscovery).

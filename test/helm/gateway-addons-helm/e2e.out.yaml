@@ -32,10 +32,10 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.73.1
+    helm.sh/chart: opentelemetry-collector-0.108.0
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.88.0"
+    app.kubernetes.io/version: "0.111.0"
     app.kubernetes.io/managed-by: Helm
 ---
 # Source: gateway-addons-helm/charts/prometheus/templates/serviceaccount.yaml
@@ -219,16 +219,16 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.73.1
+    helm.sh/chart: opentelemetry-collector-0.108.0
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.88.0"
+    app.kubernetes.io/version: "0.111.0"
     app.kubernetes.io/managed-by: Helm
+    
 data:
   relay: |
     exporters:
-      debug: {}
-      logging:
+      debug:
         verbosity: detailed
       loki:
         endpoint: http://loki.monitoring.svc:3100/loki/api/v1/push
@@ -239,9 +239,8 @@ data:
       prometheus:
         endpoint: 0.0.0.0:19001
     extensions:
-      health_check: {}
-      memory_ballast:
-        size_in_percentage: 40
+      health_check:
+        endpoint: ${env:MY_POD_IP}:13133
     processors:
       attributes:
         actions:
@@ -254,6 +253,8 @@ data:
         limit_percentage: 80
         spike_limit_percentage: 25
     receivers:
+      datadog:
+        endpoint: ${env:MY_POD_IP}:8126
       jaeger:
         protocols:
           grpc:
@@ -296,6 +297,7 @@ data:
           - memory_limiter
           - batch
           receivers:
+          - datadog
           - otlp
         traces:
           exporters:
@@ -304,6 +306,7 @@ data:
           - memory_limiter
           - batch
           receivers:
+          - datadog
           - otlp
           - zipkin
       telemetry:
@@ -9517,11 +9520,12 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.73.1
+    helm.sh/chart: opentelemetry-collector-0.108.0
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.88.0"
+    app.kubernetes.io/version: "0.111.0"
     app.kubernetes.io/managed-by: Helm
+    
     component: standalone-collector
 spec:
   type: ClusterIP
@@ -9733,11 +9737,12 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.73.1
+    helm.sh/chart: opentelemetry-collector-0.108.0
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.88.0"
+    app.kubernetes.io/version: "0.111.0"
     app.kubernetes.io/managed-by: Helm
+    
 spec:
   replicas: 1
   revisionHistoryLimit: 10
@@ -9751,7 +9756,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: 4eb06aca6ff4da4de927cb9ba7d8ceb883d2484011fbd670683037b8ea4d996c
+        checksum/config: 270a8503091b51a264317115cf6df46b4501b03fc135eca95b93dca57a522a70
         
       labels:
         app.kubernetes.io/name: opentelemetry-collector
@@ -9765,12 +9770,11 @@ spec:
         {}
       containers:
         - name: opentelemetry-collector
-          command:
-            - /otelcol-contrib
+          args:
             - --config=/conf/relay.yaml
           securityContext:
             {}
-          image: "otel/opentelemetry-collector-contrib:0.88.0"
+          image: "otel/opentelemetry-collector-contrib:0.111.0"
           imagePullPolicy: IfNotPresent
           ports:
             
