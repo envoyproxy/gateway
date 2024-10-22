@@ -241,7 +241,6 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 			},
 		}, nil
 	}
-
 	if envoyproxy.Spec.Telemetry.AccessLog.Disable {
 		return nil, nil
 	}
@@ -249,6 +248,16 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 	irAccessLog := &ir.AccessLog{}
 	// translate the access log configuration to the IR
 	for i, accessLog := range envoyproxy.Spec.Telemetry.AccessLog.Settings {
+		var accessLogType *ir.ProxyAccessLogType
+		if accessLog.Type != nil {
+			switch *accessLog.Type {
+			case egv1a1.ProxyAccessLogTypeRoute:
+				accessLogType = ptr.To(ir.ProxyAccessLogTypeRoute)
+			case egv1a1.ProxyAccessLogTypeListener:
+				accessLogType = ptr.To(ir.ProxyAccessLogTypeListener)
+			}
+		}
+
 		var format egv1a1.ProxyAccessLogFormat
 		if accessLog.Format != nil {
 			format = *accessLog.Format
@@ -274,6 +283,16 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 			return nil, utilerrors.NewAggregate(errs)
 		}
 
+		if len(accessLog.Sinks) == 0 {
+			al := &ir.TextAccessLog{
+				Format:     format.Text,
+				CELMatches: validExprs,
+				LogType:    accessLogType,
+				Path:       "/dev/stdout",
+			}
+			irAccessLog.Text = append(irAccessLog.Text, al)
+		}
+
 		for j, sink := range accessLog.Sinks {
 			switch sink.Type {
 			case egv1a1.ProxyAccessLogSinkTypeFile:
@@ -287,6 +306,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 						Format:     format.Text,
 						Path:       sink.File.Path,
 						CELMatches: validExprs,
+						LogType:    accessLogType,
 					}
 					irAccessLog.Text = append(irAccessLog.Text, al)
 				case egv1a1.ProxyAccessLogFormatTypeJSON:
@@ -299,6 +319,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 						JSON:       format.JSON,
 						Path:       sink.File.Path,
 						CELMatches: validExprs,
+						LogType:    accessLogType,
 					}
 					irAccessLog.JSON = append(irAccessLog.JSON, al)
 				}
@@ -323,12 +344,14 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 				al := &ir.ALSAccessLog{
 					LogName: logName,
 					Destination: ir.RouteDestination{
-						Name:     fmt.Sprintf("accesslog_als_%d_%d", i, j), // TODO: rename this, so that we can share backend with tracing?
+						// TODO: rename this, so that we can share backend with tracing?
+						Name:     fmt.Sprintf("accesslog_als_%d_%d", i, j),
 						Settings: ds,
 					},
 					Traffic:    traffic,
 					Type:       sink.ALS.Type,
 					CELMatches: validExprs,
+					LogType:    accessLogType,
 				}
 
 				if al.Type == egv1a1.ALSEnvoyProxyAccessLogTypeHTTP && sink.ALS.HTTP != nil {
@@ -339,7 +362,6 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					}
 					al.HTTP = http
 				}
-
 				switch format.Type {
 				case egv1a1.ProxyAccessLogFormatTypeJSON:
 					al.Attributes = format.JSON
@@ -363,10 +385,12 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					CELMatches: validExprs,
 					Resources:  sink.OpenTelemetry.Resources,
 					Destination: ir.RouteDestination{
-						Name:     fmt.Sprintf("accesslog_otel_%d_%d", i, j), // TODO: rename this, so that we can share backend with tracing?
+						// TODO: rename this, so that we can share backend with tracing?
+						Name:     fmt.Sprintf("accesslog_otel_%d_%d", i, j),
 						Settings: ds,
 					},
 					Traffic: traffic,
+					LogType: accessLogType,
 				}
 
 				if len(ds) == 0 {
@@ -391,11 +415,12 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 			}
 		}
 	}
-
 	return irAccessLog, nil
 }
 
-func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.EnvoyProxy, mergeGateways bool, resources *resource.Resources) (*ir.Tracing, error) {
+func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.EnvoyProxy,
+	mergeGateways bool, resources *resource.Resources,
+) (*ir.Tracing, error) {
 	if envoyproxy == nil ||
 		envoyproxy.Spec.Telemetry == nil ||
 		envoyproxy.Spec.Telemetry.Tracing == nil {
@@ -439,7 +464,8 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 		SamplingRate: samplingRate,
 		CustomTags:   tracing.CustomTags,
 		Destination: ir.RouteDestination{
-			Name:     "tracing", // TODO: rename this, so that we can share backend with accesslog?
+			// TODO: rename this, so that we can share backend with accesslog?
+			Name:     "tracing",
 			Settings: ds,
 		},
 		Provider: tracing.Provider,
@@ -466,13 +492,15 @@ func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy, resources *re
 	}
 
 	return &ir.Metrics{
-		EnableVirtualHostStats:          envoyproxy.Spec.Telemetry.Metrics.EnableVirtualHostStats != nil && *envoyproxy.Spec.Telemetry.Metrics.EnableVirtualHostStats,
-		EnablePerEndpointStats:          envoyproxy.Spec.Telemetry.Metrics.EnablePerEndpointStats != nil && *envoyproxy.Spec.Telemetry.Metrics.EnablePerEndpointStats,
-		EnableRequestResponseSizesStats: envoyproxy.Spec.Telemetry.Metrics.EnableRequestResponseSizesStats != nil && *envoyproxy.Spec.Telemetry.Metrics.EnableRequestResponseSizesStats,
+		EnableVirtualHostStats:          ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableVirtualHostStats, false),
+		EnablePerEndpointStats:          ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnablePerEndpointStats, false),
+		EnableRequestResponseSizesStats: ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableRequestResponseSizesStats, false),
 	}, nil
 }
 
-func (t *Translator) processBackendRefs(backendCluster egv1a1.BackendCluster, namespace string, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) ([]*ir.DestinationSetting, *ir.TrafficFeatures, error) {
+func (t *Translator) processBackendRefs(backendCluster egv1a1.BackendCluster, namespace string,
+	resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy,
+) ([]*ir.DestinationSetting, *ir.TrafficFeatures, error) {
 	traffic, err := translateTrafficFeatures(backendCluster.BackendSettings)
 	if err != nil {
 		return nil, nil, err

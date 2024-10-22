@@ -56,8 +56,7 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 
 		for _, rule := range tlsRoute.Spec.Rules {
 			for _, backendRef := range rule.BackendRefs {
-				ref := gatewayapi.UpgradeBackendRef(backendRef)
-				if err := validateBackendRef(&ref); err != nil {
+				if err := validateBackendRef(&backendRef); err != nil {
 					r.log.Error(err, "invalid backendRef")
 					continue
 				}
@@ -467,8 +466,7 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 
 		for _, rule := range tcpRoute.Spec.Rules {
 			for _, backendRef := range rule.BackendRefs {
-				ref := gatewayapi.UpgradeBackendRef(backendRef)
-				if err := validateBackendRef(&ref); err != nil {
+				if err := validateBackendRef(&backendRef); err != nil {
 					r.log.Error(err, "invalid backendRef")
 					continue
 				}
@@ -545,8 +543,7 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 
 		for _, rule := range udpRoute.Spec.Rules {
 			for _, backendRef := range rule.BackendRefs {
-				ref := gatewayapi.UpgradeBackendRef(backendRef)
-				if err := validateBackendRef(&ref); err != nil {
+				if err := validateBackendRef(&backendRef); err != nil {
 					r.log.Error(err, "invalid backendRef")
 					continue
 				}

@@ -384,6 +384,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `endpoints` | _[BackendEndpoint](#backendendpoint) array_ |  true  | Endpoints defines the endpoints to be used when connecting to the backend. |
 | `appProtocols` | _[AppProtocolType](#appprotocoltype) array_ |  false  | AppProtocols defines the application protocols to be supported when connecting to the backend. |
+| `fallback` | _boolean_ |  false  | Fallback indicates whether the backend is designated as a fallback.<br />It is highly recommended to configure active or passive health checks to ensure that failover can be detected<br />when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.<br />The overprovisioning factor is set to 1.4, meaning the fallback backends will only start receiving traffic when<br />the health of the active backends falls below 72%. |
 
 
 #### BackendStatus
@@ -482,6 +483,7 @@ _Appears in:_
 | `rateLimit` | _[RateLimitSpec](#ratelimitspec)_ |  false  | RateLimit allows the user to limit the number of incoming requests<br />to a predefined value based on attributes within the traffic flow. |
 | `faultInjection` | _[FaultInjection](#faultinjection)_ |  false  | FaultInjection defines the fault injection policy to be applied. This configuration can be used to<br />inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
 | `useClientProtocol` | _boolean_ |  false  | UseClientProtocol configures Envoy to prefer sending requests to backends using<br />the same HTTP protocol that the incoming request used. Defaults to false, which means<br />that Envoy will use the protocol indicated by the attached BackendRef. |
+| `responseOverride` | _[ResponseOverride](#responseoverride) array_ |  false  | ResponseOverride defines the configuration to override specific responses with a custom one.<br />If multiple configurations are specified, the first one to match wins. |
 
 
 #### BasicAuth
@@ -610,6 +612,7 @@ _Appears in:_
 | `ecdhCurves` | _string array_ |  false  | ECDHCurves specifies the set of supported ECDH curves.<br />In non-FIPS Envoy Proxy builds the default curves are:<br />- X25519<br />- P-256<br />In builds using BoringSSL FIPS the default curve is:<br />- P-256 |
 | `signatureAlgorithms` | _string array_ |  false  | SignatureAlgorithms specifies which signature algorithms the listener should<br />support. |
 | `alpnProtocols` | _[ALPNProtocol](#alpnprotocol) array_ |  false  | ALPNProtocols supplies the list of ALPN protocols that should be<br />exposed by the listener. By default h2 and http/1.1 are enabled.<br />Supported values are:<br />- http/1.0<br />- http/1.1<br />- h2 |
+| `session` | _[Session](#session)_ |  false  | Session defines settings related to TLS session management. |
 
 
 #### ClientTimeout
@@ -779,7 +782,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `value` | _integer_ |  true  | Value of the maximum concurrent connections limit.<br />When the limit is reached, incoming connections will be closed after the CloseDelay duration.<br />Default: unlimited. |
+| `value` | _integer_ |  true  | Value of the maximum concurrent connections limit.<br />When the limit is reached, incoming connections will be closed after the CloseDelay duration. |
 | `closeDelay` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | CloseDelay defines the delay to use before closing connections that are rejected<br />once the limit value is reached.<br />Default: none. |
 
 
@@ -875,12 +878,13 @@ CustomResponseBody
 
 _Appears in:_
 - [CustomResponse](#customresponse)
+- [HTTPDirectResponseFilter](#httpdirectresponsefilter)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `type` | _[ResponseValueType](#responsevaluetype)_ |  true  | Type is the type of method to use to read the body value. |
+| `type` | _[ResponseValueType](#responsevaluetype)_ |  true  | Type is the type of method to use to read the body value.<br />Valid values are Inline and ValueRef, default is Inline. |
 | `inline` | _string_ |  false  | Inline contains the value as an inline string. |
-| `valueRef` | _[LocalObjectReference](#localobjectreference)_ |  false  | ValueRef contains the contents of the body<br />specified as a local object reference.<br />Only a reference to ConfigMap is supported. |
+| `valueRef` | _[LocalObjectReference](#localobjectreference)_ |  false  | ValueRef contains the contents of the body<br />specified as a local object reference.<br />Only a reference to ConfigMap is supported.<br /><br />The value of key `response.body` in the ConfigMap will be used as the response body.<br />If the key is not found, the first value in the ConfigMap will be used. |
 
 
 #### CustomResponseMatch
@@ -894,7 +898,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `statusCode` | _[StatusCodeMatch](#statuscodematch) array_ |  true  | Status code to match on. The match evaluates to true if any of the matches are successful. |
+| `statusCodes` | _[StatusCodeMatch](#statuscodematch) array_ |  true  | Status code to match on. The match evaluates to true if any of the matches are successful. |
 
 
 #### CustomTag
@@ -1023,6 +1027,7 @@ _Appears in:_
 | `envoy.filters.http.rbac` | EnvoyFilterRBAC defines the Envoy RBAC filter.<br /> | 
 | `envoy.filters.http.local_ratelimit` | EnvoyFilterLocalRateLimit defines the Envoy HTTP local rate limit filter.<br /> | 
 | `envoy.filters.http.ratelimit` | EnvoyFilterRateLimit defines the Envoy HTTP rate limit filter.<br /> | 
+| `envoy.filters.http.custom_response` | EnvoyFilterCustomResponse defines the Envoy HTTP custom response filter.<br /> | 
 | `envoy.filters.http.router` | EnvoyFilterRouter defines the Envoy HTTP router filter.<br /> | 
 
 
@@ -1476,7 +1481,7 @@ _Appears in:_
 | `extraArgs` | _string array_ |  false  | ExtraArgs defines additional command line options that are provided to Envoy.<br />More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options<br />Note: some command line options are used internally(e.g. --log-level) so they cannot be provided here. |
 | `mergeGateways` | _boolean_ |  false  | MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.<br />Setting this field to true would merge all Gateway Listeners under the parent Gateway Class.<br />This means that the port, protocol and hostname tuple must be unique for every listener.<br />If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition. |
 | `shutdown` | _[ShutdownConfig](#shutdownconfig)_ |  false  | Shutdown defines configuration for graceful envoy shutdown process. |
-| `filterOrder` | _[FilterPosition](#filterposition) array_ |  false  | FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.<br />The FilterPosition in the list will be applied in the order they are defined.<br />If unspecified, the default filter order is applied.<br />Default filter order is:<br /><br />- envoy.filters.http.health_check<br /><br />- envoy.filters.http.fault<br /><br />- envoy.filters.http.cors<br /><br />- envoy.filters.http.ext_authz<br /><br />- envoy.filters.http.basic_auth<br /><br />- envoy.filters.http.oauth2<br /><br />- envoy.filters.http.jwt_authn<br /><br />- envoy.filters.http.stateful_session<br /><br />- envoy.filters.http.ext_proc<br /><br />- envoy.filters.http.wasm<br /><br />- envoy.filters.http.rbac<br /><br />- envoy.filters.http.local_ratelimit<br /><br />- envoy.filters.http.ratelimit<br /><br />- envoy.filters.http.router<br /><br />Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain. |
+| `filterOrder` | _[FilterPosition](#filterposition) array_ |  false  | FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.<br />The FilterPosition in the list will be applied in the order they are defined.<br />If unspecified, the default filter order is applied.<br />Default filter order is:<br /><br />- envoy.filters.http.health_check<br /><br />- envoy.filters.http.fault<br /><br />- envoy.filters.http.cors<br /><br />- envoy.filters.http.ext_authz<br /><br />- envoy.filters.http.basic_auth<br /><br />- envoy.filters.http.oauth2<br /><br />- envoy.filters.http.jwt_authn<br /><br />- envoy.filters.http.stateful_session<br /><br />- envoy.filters.http.ext_proc<br /><br />- envoy.filters.http.wasm<br /><br />- envoy.filters.http.rbac<br /><br />- envoy.filters.http.local_ratelimit<br /><br />- envoy.filters.http.ratelimit<br /><br />- envoy.filters.http.custom_response<br /><br />- envoy.filters.http.router<br /><br />Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain. |
 | `backendTLS` | _[BackendTLSConfig](#backendtlsconfig)_ |  false  | BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.<br />These settings are applied on backends for which TLS policies are specified. |
 
 
@@ -1920,6 +1925,22 @@ _Appears in:_
 | `idleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | IdleTimeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.<br />Default: 1 hour. |
 
 
+#### HTTPDirectResponseFilter
+
+
+
+HTTPDirectResponseFilter defines the configuration to return a fixed response.
+
+_Appears in:_
+- [HTTPRouteFilterSpec](#httproutefilterspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `contentType` | _string_ |  false  | Content Type of the response. This will be set in the Content-Type header. |
+| `body` | _[CustomResponseBody](#customresponsebody)_ |  false  | Body of the Response |
+| `statusCode` | _integer_ |  false  | Status Code of the HTTP response<br />If unset, defaults to 200. |
+
+
 #### HTTPExtAuthService
 
 
@@ -2043,6 +2064,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `urlRewrite` | _[HTTPURLRewriteFilter](#httpurlrewritefilter)_ |  false  |  |
+| `directResponse` | _[HTTPDirectResponseFilter](#httpdirectresponsefilter)_ |  false  |  |
 
 
 #### HTTPStatus
@@ -2070,6 +2092,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `connectionIdleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.<br />Default: 1 hour. |
 | `maxConnectionDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | The maximum duration of an HTTP connection.<br />Default: unlimited. |
+| `requestTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | RequestTimeout is the time until which entire response is received from the upstream. |
 
 
 #### HTTPURLRewriteFilter
@@ -2429,7 +2452,7 @@ _Appears in:_
 
 
 
-KubernetesDaemonsetSpec defines the desired state of the Kubernetes daemonset resource.
+KubernetesDaemonSetSpec defines the desired state of the Kubernetes daemonset resource.
 
 _Appears in:_
 - [EnvoyProxyKubernetesProvider](#envoyproxykubernetesprovider)
@@ -2564,6 +2587,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `annotations` | _object (keys:string, values:string)_ |  false  | Annotations that should be appended to the service.<br />By default, no annotations are appended. |
+| `labels` | _object (keys:string, values:string)_ |  false  | Labels that should be appended to the service.<br />By default, no labels are appended. |
 | `type` | _[ServiceType](#servicetype)_ |  false  | Type determines how the Service is exposed. Defaults to LoadBalancer.<br />Valid options are ClusterIP, LoadBalancer and NodePort.<br />"LoadBalancer" means a service will be exposed via an external load balancer (if the cloud provider supports it).<br />"ClusterIP" means a service will only be accessible inside the cluster, via the cluster IP.<br />"NodePort" means a service will be exposed on a static Port on all Nodes of the cluster. |
 | `loadBalancerClass` | _string_ |  false  | LoadBalancerClass, when specified, allows for choosing the LoadBalancer provider<br />implementation if more than one are available or is otherwise expected to be specified |
 | `allocateLoadBalancerNodePorts` | _boolean_ |  false  | AllocateLoadBalancerNodePorts defines if NodePorts will be automatically allocated for<br />services with type LoadBalancer. Default is "true". It may be set to "false" if the cluster<br />load-balancer does not rely on NodePorts. If the caller requests specific NodePorts (by specifying a<br />value), those requests will be respected, regardless of this field. This field may only be set for<br />services with type LoadBalancer and will be cleared if the type is changed to any other type. |
@@ -2995,6 +3019,7 @@ _Appears in:_
 | `format` | _[ProxyAccessLogFormat](#proxyaccesslogformat)_ |  false  | Format defines the format of accesslog.<br />This will be ignored if sink type is ALS. |
 | `matches` | _string array_ |  true  | Matches defines the match conditions for accesslog in CEL expression.<br />An accesslog will be emitted only when one or more match conditions are evaluated to true.<br />Invalid [CEL](https://www.envoyproxy.io/docs/envoy/latest/xds/type/v3/cel.proto.html#common-expression-language-cel-proto) expressions will be ignored. |
 | `sinks` | _[ProxyAccessLogSink](#proxyaccesslogsink) array_ |  true  | Sinks defines the sinks of accesslog. |
+| `type` | _[ProxyAccessLogType](#proxyaccesslogtype)_ |  false  | Type defines the component emitting the accesslog, such as Listener and Route.<br />If type not defined, the setting would apply to:<br />(1) All Routes.<br />(2) Listeners if and only if Envoy does not find a matching route for a request.<br />If type is defined, the accesslog settings would apply to the relevant component (as-is). |
 
 
 #### ProxyAccessLogSink
@@ -3550,6 +3575,10 @@ ResponseValueType defines the types of values for the response body supported by
 _Appears in:_
 - [CustomResponseBody](#customresponsebody)
 
+| Value | Description |
+| ----- | ----------- |
+| `Inline` | ResponseValueTypeInline defines the "Inline" response body type.<br /> | 
+| `ValueRef` | ResponseValueTypeValueRef defines the "ValueRef" response body type.<br /> | 
 
 
 
@@ -3674,6 +3703,35 @@ _Appears in:_
 | `NodePort` | ServiceTypeNodePort means a service will be exposed on each Kubernetes Node<br />at a static Port, common across all Nodes.<br /> | 
 
 
+#### Session
+
+
+
+Session defines settings related to TLS session management.
+
+_Appears in:_
+- [ClientTLSSettings](#clienttlssettings)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `resumption` | _[SessionResumption](#sessionresumption)_ |  false  | Resumption determines the proxy's supported TLS session resumption option.<br />By default, Envoy Gateway does not enable session resumption. Use sessionResumption to<br />enable stateful and stateless session resumption. Users should consider security impacts<br />of different resumption methods. Performance gains from resumption are diminished when<br />Envoy proxy is deployed with more than one replica. |
+
+
+#### SessionResumption
+
+
+
+SessionResumption defines supported tls session resumption methods and their associated configuration.
+
+_Appears in:_
+- [Session](#session)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `stateless` | _[StatelessTLSSessionResumption](#statelesstlssessionresumption)_ |  false  | Stateless defines setting for stateless (session-ticket based) session resumption |
+| `stateful` | _[StatefulTLSSessionResumption](#statefultlssessionresumption)_ |  false  | Stateful defines setting for stateful (session-id based) session resumption |
+
+
 #### ShutdownConfig
 
 
@@ -3734,20 +3792,51 @@ _Appears in:_
 | `Distinct` | SourceMatchDistinct Each IP Address within the specified Source IP CIDR is treated as a distinct client selector<br />and uses a separate rate limit bucket/counter.<br />Note: This is only supported for Global Rate Limits.<br /> | 
 
 
+#### StatefulTLSSessionResumption
+
+
+
+StatefulTLSSessionResumption defines the stateful (session-id based) type of TLS session resumption.
+Note: When Envoy Proxy is deployed with more than one replica, session caches are not synchronized
+between instances, possibly leading to resumption failures.
+Envoy does not re-validate client certificates upon session resumption.
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-routematch-tlscontextmatchoptions
+
+_Appears in:_
+- [SessionResumption](#sessionresumption)
+
+
+
+#### StatelessTLSSessionResumption
+
+
+
+StatelessTLSSessionResumption defines the stateless (session-ticket based) type of TLS session resumption.
+Note: When Envoy Proxy is deployed with more than one replica, session ticket encryption keys are not
+synchronized between instances, possibly leading to resumption failures.
+In-memory session ticket encryption keys are rotated every 48 hours.
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlssessionticketkeys
+https://commondatastorage.googleapis.com/chromium-boringssl-docs/ssl.h.html#Session-tickets
+
+_Appears in:_
+- [SessionResumption](#sessionresumption)
+
+
+
 #### StatusCodeMatch
 
 
 
-
+StatusCodeMatch defines the configuration for matching a status code.
 
 _Appears in:_
 - [CustomResponseMatch](#customresponsematch)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `type` | _[StatusCodeValueType](#statuscodevaluetype)_ |  true  | Type is the type of value. |
-| `value` | _string_ |  false  | Value contains the value of the status code. |
-| `range` | _[StatusCodeRange](#statuscoderange)_ |  false  | ValueRef contains the contents of the body<br />specified as a local object reference.<br />Only a reference to ConfigMap is supported. |
+| `type` | _[StatusCodeValueType](#statuscodevaluetype)_ |  true  | Type is the type of value.<br />Valid values are Value and Range, default is Value. |
+| `value` | _integer_ |  false  | Value contains the value of the status code. |
+| `range` | _[StatusCodeRange](#statuscoderange)_ |  false  | Range contains the range of status codes. |
 
 
 #### StatusCodeRange
@@ -3774,6 +3863,10 @@ StatusCodeValueType defines the types of values for the status code match suppor
 _Appears in:_
 - [StatusCodeMatch](#statuscodematch)
 
+| Value | Description |
+| ----- | ----------- |
+| `Value` | StatusCodeValueTypeValue defines the "Value" status code match type.<br /> | 
+| `Range` | StatusCodeValueTypeRange defines the "Range" status code match type.<br /> | 
 
 
 #### StringMatch

@@ -101,8 +101,6 @@ type RateLimitSelectCondition struct {
 	// meaning, a request MUST match all the specified headers.
 	// At least one of headers or sourceCIDR condition must be specified.
 	//
-	// +listType=map
-	// +listMapKey=name
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
 	Headers []HeaderMatch `json:"headers,omitempty"`
@@ -138,13 +136,6 @@ type SourceMatch struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
 	Value string `json:"value"`
-
-	// Invert specifies whether the value match result will be inverted.
-	//
-	// +optional
-	// +kubebuilder:default=false
-	// +notImplementedHide
-	Invert *bool `json:"invert,omitempty"`
 }
 
 // HeaderMatch defines the match attributes within the HTTP Headers of the request.
@@ -175,7 +166,6 @@ type HeaderMatch struct { // TODO: zhaohuabing this type could be replaced with 
 	//
 	// +optional
 	// +kubebuilder:default=false
-	// +notImplementedHide
 	Invert *bool `json:"invert,omitempty"`
 }
 

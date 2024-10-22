@@ -1182,6 +1182,11 @@ spec:
                                       Default: unlimited.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  requestTimeout:
+                                    description: RequestTimeout is the time until
+                                      which entire response is received from the upstream.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
                                 type: object
                               tcp:
                                 description: Timeout settings for TCP.
@@ -2058,6 +2063,11 @@ spec:
                                     description: |-
                                       The maximum duration of an HTTP connection.
                                       Default: unlimited.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  requestTimeout:
+                                    description: RequestTimeout is the time until
+                                      which entire response is received from the upstream.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                 type: object
@@ -3214,6 +3224,11 @@ spec:
                                       Default: unlimited.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  requestTimeout:
+                                    description: RequestTimeout is the time until
+                                      which entire response is received from the upstream.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
                                 type: object
                               tcp:
                                 description: Timeout settings for TCP.
@@ -3246,9 +3261,12 @@ spec:
                     x-kubernetes-validations:
                     - message: BackendRefs must be used, backendRef is not supported.
                       rule: '!has(self.backendRef)'
-                    - message: Only one backendRefs is allowed.
-                      rule: 'has(self.backendRefs)? self.backendRefs.size() > 1 :
-                        true'
+                    - message: Retry timeout is not supported.
+                      rule: has(self.backendSettings)? (has(self.backendSettings.retry)?(has(self.backendSettings.retry.perRetry)?
+                        !has(self.backendSettings.retry.perRetry.timeout):true):true):true
+                    - message: HTTPStatusCodes is not supported.
+                      rule: has(self.backendSettings)? (has(self.backendSettings.retry)?(has(self.backendSettings.retry.retryOn)?
+                        !has(self.backendSettings.retry.retryOn.httpStatusCodes):true):true):true
                   redirectURL:
                     description: |-
                       The redirect URL to be used in the OIDC

@@ -7,7 +7,7 @@ package v1alpha1
 
 import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 // Wasm defines a Wasm extension.
@@ -136,7 +136,7 @@ type ImageWasmCodeSource struct {
 	// Only support Kubernetes Secret resource from the same namespace.
 	// +kubebuilder:validation:XValidation:message="only support Secret kind.",rule="self.kind == 'Secret'"
 	// +optional
-	PullSecretRef *gwapiv1b1.SecretObjectReference `json:"pullSecretRef,omitempty"`
+	PullSecretRef *gwapiv1.SecretObjectReference `json:"pullSecretRef,omitempty"`
 }
 
 // ImagePullPolicy defines the policy to use when pulling an OIC image.
