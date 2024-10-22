@@ -25,7 +25,7 @@ Usage: `Fixes #<issue number>`, or `Fixes (paste link of issue)`.
 Fixes #
 
 <!--
-For most cases, you need to provide a brief description of the PR changes in the release notes.
+For any non-trivial changes, you need to provide a brief description of the changes in the release notes.
 Please add the description to the release-notes/current.yaml file and include this file in the PR.
 -->
 Release Notes: Yes/No
