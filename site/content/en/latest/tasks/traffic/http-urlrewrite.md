@@ -374,14 +374,14 @@ spec:
 The HTTPRoute status should indicate that it has been accepted and is bound to the example Gateway.
 
 ```shell
-kubectl get httproute/http-filter-url-rewrite -o yaml
+kubectl get httproute/http-filter-url-regex-rewrite -o yaml
 ```
 
-Querying `http://${GATEWAY_HOST}/get/origin/path/extra` should rewrite the request to
-`http://${GATEWAY_HOST}/force/replace/fullpath`.
+Querying `http://${GATEWAY_HOST}/service/foo/v1/api` should rewrite the request to
+`http://${GATEWAY_HOST}/service/foo/v1/api`.
 
 ```console
-$ curl -L -vvv --header "Host: path.regex.rewrite.example" "http://${GATEWAY_HOST}/get/origin/path/extra"
+$ curl -L -vvv --header "Host: path.regex.rewrite.example" "http://${GATEWAY_HOST}/service/foo/v1/api"
 ...
 > GET /service/foo/v1/api HTTP/1.1
 > Host: path.regex.rewrite.example
@@ -554,6 +554,145 @@ $ curl -L -vvv --header "Host: path.rewrite.example" "http://${GATEWAY_HOST}/get
 ```
 
 You can see that the `X-Forwarded-Host` is `path.rewrite.example`, but the actual host is `envoygateway.io`.
+
+## Rewrite URL Host Name by Header or Backend
+
+In addition to core Gateway-API rewrite options, Envoy Gateway supports extended rewrite options through the [HTTPRouteFilter][] API.
+The `HTTPRouteFilter` API can be configured to rewrite the Host header value to:
+- The value of a different request header
+- The DNS name of the backend that the request is routed to
+
+In the following example, the host header is rewritten to the value of the x-custom-host header. 
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-filter-hostname-header-rewrite
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - host.header.rewrite.example
+  rules:
+    - matches:
+      - path:
+          type: PathPrefix
+          value: "/header"
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: header-host-rewrite
+      backendRefs:
+      - name: backend
+        port: 3000
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: header-host-rewrite
+spec:
+  urlRewrite:
+    hostname:
+      type: Header
+      header: x-custom-host      
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-filter-hostname-header-rewrite
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - host.header.rewrite.example
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: "/header"
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: header-host-rewrite
+      backendRefs:
+        - name: backend
+          port: 3000
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: header-host-rewrite
+spec:
+  urlRewrite:
+    hostname:
+      type: Header
+      header: x-custom-host   
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+The HTTPRoute status should indicate that it has been accepted and is bound to the example Gateway.
+
+```shell
+kubectl get httproute/http-filter-header-host-rewrite -o yaml
+```
+
+Querying `http://${GATEWAY_HOST}/header` and providing a custom host rewrite header x-custom-host should rewrite the 
+request host header to the value of the x-custom-host header.
+
+```console
+$ curl -L -vvv --header "Host: host.header.rewrite.example" --header "x-custom-host: foo" "http://${GATEWAY_HOST}/header"
+...
+> GET /header HTTP/1.1
+> Host: host.header.rewrite.example
+> User-Agent: curl/8.7.1
+> Accept: */*
+> x-custom-host: foo
+>
+* Request completely sent off
+< HTTP/1.1 200 OK
+<
+{
+ "path": "/header",
+ "host": "foo",
+ "method": "GET",
+ "proto": "HTTP/1.1",
+ "headers": {
+  "X-Custom-Host": [
+   "foo"
+  ],
+  "X-Forwarded-Host": [
+   "host.header.rewrite.example"
+  ],
+ },
+ "namespace": "default",
+ "ingress": "",
+ "service": "",
+ "pod": "backend-765694d47f-5t6f2"
+...
+```
+
+You can see that the host is rewritten from `host.header.rewrite.example`, to the value of the provided 
+`x-custom-host` header `foo`. The original host header is preserved in the `X-Forwarded-Host` header. 
+
 
 [HTTPURLRewriteFilter]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPURLRewriteFilter
 [HTTPRouteFilter]: ../../../api/extension_types#httproutefilter
