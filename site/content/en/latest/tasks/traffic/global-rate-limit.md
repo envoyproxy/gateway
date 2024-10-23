@@ -433,11 +433,11 @@ server: envoy
 
 ```
 
-## Rate Limit Distinct Users 
+## Rate Limit Distinct Users Except Admin 
 
 Here is an example of a rate limit implemented by the application developer to limit distinct users who can be differentiated based on the 
 value in the `x-user-id` header. Here, user `one` (recognised from the traffic flow using the header `x-user-id` and value `one`) will be rate limited at 3 requests/hour
-and so will user `two` (recognised from the traffic flow using the header `x-user-id` and value `two`).
+and so will user `two` (recognised from the traffic flow using the header `x-user-id` and value `two`). But if `x-user-id` is `admin`, it will not be rate limited even beyond 3 requests/hour.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -461,6 +461,9 @@ spec:
         - headers:
           - type: Distinct
             name: x-user-id
+          - name: x-user-id
+            value: admin
+            invert: true
         limit:
           requests: 3
           unit: Hour
@@ -633,6 +636,47 @@ x-envoy-ratelimited: true
 date: Wed, 08 Feb 2023 02:33:34 GMT
 server: envoy
 transfer-encoding: chunked
+
+```
+
+But when the value for header `x-user-id` is set to `admin` and 4 requests are sent, all 4 of them should respond with 200 OK.
+
+```shell
+for i in {1..4}; do curl -I --header "Host: ratelimit.example" --header "x-user-id: admin" http://${GATEWAY_HOST}/get ; sleep 1; done
+```
+
+```console
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:31 GMT
+content-length: 460
+x-envoy-upstream-service-time: 4
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:32 GMT
+content-length: 460
+x-envoy-upstream-service-time: 2
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:33 GMT
+content-length: 460
+x-envoy-upstream-service-time: 0
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:33 GMT
+content-length: 460
+x-envoy-upstream-service-time: 0
+server: envoy
 
 ```
 
@@ -809,7 +853,7 @@ spec:
   targetRefs:
   - group: gateway.networking.k8s.io
     kind: HTTPRoute
-    name: http-ratelimit 
+    name: http-ratelimit
   rateLimit:
     type: Global
     global:
@@ -858,7 +902,7 @@ spec:
   targetRefs:
   - group: gateway.networking.k8s.io
     kind: HTTPRoute
-    name: http-ratelimit 
+    name: http-ratelimit
   rateLimit:
     type: Global
     global:

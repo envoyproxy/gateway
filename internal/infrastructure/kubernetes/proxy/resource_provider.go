@@ -21,9 +21,22 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/infrastructure/common"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
+)
+
+const (
+	// XdsTLSCertFilepath is the fully qualified path of the file containing Envoy's
+	// xDS server TLS certificate.
+	XdsTLSCertFilepath = "/certs/tls.crt"
+	// XdsTLSKeyFilepath is the fully qualified path of the file containing Envoy's
+	// xDS server TLS key.
+	XdsTLSKeyFilepath = "/certs/tls.key"
+	// XdsTLSCaFilepath is the fully qualified path of the file containing Envoy's
+	// trusted CA certificate.
+	XdsTLSCaFilepath = "/certs/ca.crt"
 )
 
 type ResourceRender struct {
@@ -201,8 +214,8 @@ func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
 			Annotations: r.infra.GetProxyMetadata().Annotations,
 		},
 		Data: map[string]string{
-			SdsCAFilename:   SdsCAConfigMapData,
-			SdsCertFilename: SdsCertConfigMapData,
+			common.SdsCAFilename:   common.GetSdsCAConfigMapData(XdsTLSCaFilepath),
+			common.SdsCertFilename: common.GetSdsCertConfigMapData(XdsTLSCertFilepath, XdsTLSKeyFilepath),
 		},
 	}, nil
 }

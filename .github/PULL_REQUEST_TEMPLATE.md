@@ -1,6 +1,6 @@
 **What type of PR is this?**
 <!--
-Your PR title should be descriptive, and generally start with type that contains a subsystem name with `()` if necessary 
+Your PR title should be descriptive, and generally start with type that contains a subsystem name with `()` if necessary
 and summary followed by a colon. format `chore/docs/api/feat/fix/refactor/style/test: summary`.
 Examples:
 * "docs: fix grammar error"
@@ -23,3 +23,9 @@ a new PR, and we will review the API part first. It will save you lots of implem
 Usage: `Fixes #<issue number>`, or `Fixes (paste link of issue)`.
 -->
 Fixes #
+
+<!--
+For any non-trivial changes, you need to provide a brief description of the changes in the release notes.
+Please add the description to the release-notes/current.yaml file and include this file in the PR.
+-->
+Release Notes: Yes/No

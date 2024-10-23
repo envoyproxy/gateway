@@ -181,11 +181,13 @@ opentelemetry-collector:
   enabled: false
   fullnameOverride: otel-collector
   mode: deployment
+  image:
+    repository: "otel/opentelemetry-collector-contrib"
   config:
     exporters:
       prometheus:
         endpoint: 0.0.0.0:19001
-      logging:
+      debug:
         verbosity: detailed
       loki:
         endpoint: "http://loki.monitoring.svc:3100/loki/api/v1/push"
@@ -207,6 +209,8 @@ opentelemetry-collector:
             # Loki will convert this to k8s_pod_name label.
             value: k8s.pod.name, k8s.namespace.name
     receivers:
+      datadog:
+        endpoint: ${env:MY_POD_IP}:8126
       zipkin:
         endpoint: ${env:MY_POD_IP}:9411
       otlp:
@@ -223,6 +227,7 @@ opentelemetry-collector:
           exporters:
             - prometheus
           receivers:
+            - datadog
             - otlp
         logs:
           exporters:
@@ -235,5 +240,6 @@ opentelemetry-collector:
           exporters:
             - otlp
           receivers:
+            - datadog
             - otlp
             - zipkin

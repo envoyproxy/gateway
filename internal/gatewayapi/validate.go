@@ -288,7 +288,7 @@ func (t *Translator) validateBackendRefBackend(backendRef *gwapiv1a2.BackendRef,
 		return false
 	}
 
-	if kind != resource.KindHTTPRoute {
+	if kind != resource.KindHTTPRoute && kind != resource.KindTLSRoute {
 		status.SetRouteStatusCondition(routeStatus,
 			parentRef.routeParentStatusIdx,
 			route.GetGeneration(),

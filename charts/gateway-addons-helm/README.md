@@ -25,7 +25,7 @@ An Add-ons Helm chart for Envoy Gateway
 | https://grafana.github.io/helm-charts | grafana | 8.0.0 |
 | https://grafana.github.io/helm-charts | loki | 4.8.0 |
 | https://grafana.github.io/helm-charts | tempo | 1.3.1 |
-| https://open-telemetry.github.io/opentelemetry-helm-charts | opentelemetry-collector | 0.73.1 |
+| https://open-telemetry.github.io/opentelemetry-helm-charts | opentelemetry-collector | 0.108.0 |
 | https://prometheus-community.github.io/helm-charts | prometheus | 25.21.0 |
 
 ## Usage
@@ -103,7 +103,7 @@ To uninstall the chart:
 | loki.singleBinary.replicas | int | `1` |  |
 | loki.test.enabled | bool | `false` |  |
 | loki.write.replicas | int | `0` |  |
-| opentelemetry-collector.config.exporters.logging.verbosity | string | `"detailed"` |  |
+| opentelemetry-collector.config.exporters.debug.verbosity | string | `"detailed"` |  |
 | opentelemetry-collector.config.exporters.loki.endpoint | string | `"http://loki.monitoring.svc:3100/loki/api/v1/push"` |  |
 | opentelemetry-collector.config.exporters.otlp.endpoint | string | `"tempo.monitoring.svc:4317"` |  |
 | opentelemetry-collector.config.exporters.otlp.tls.insecure | bool | `true` |  |
@@ -112,6 +112,7 @@ To uninstall the chart:
 | opentelemetry-collector.config.processors.attributes.actions[0].action | string | `"insert"` |  |
 | opentelemetry-collector.config.processors.attributes.actions[0].key | string | `"loki.attribute.labels"` |  |
 | opentelemetry-collector.config.processors.attributes.actions[0].value | string | `"k8s.pod.name, k8s.namespace.name"` |  |
+| opentelemetry-collector.config.receivers.datadog.endpoint | string | `"${env:MY_POD_IP}:8126"` |  |
 | opentelemetry-collector.config.receivers.otlp.protocols.grpc.endpoint | string | `"${env:MY_POD_IP}:4317"` |  |
 | opentelemetry-collector.config.receivers.otlp.protocols.http.endpoint | string | `"${env:MY_POD_IP}:4318"` |  |
 | opentelemetry-collector.config.receivers.zipkin.endpoint | string | `"${env:MY_POD_IP}:9411"` |  |
@@ -120,12 +121,15 @@ To uninstall the chart:
 | opentelemetry-collector.config.service.pipelines.logs.processors[0] | string | `"attributes"` |  |
 | opentelemetry-collector.config.service.pipelines.logs.receivers[0] | string | `"otlp"` |  |
 | opentelemetry-collector.config.service.pipelines.metrics.exporters[0] | string | `"prometheus"` |  |
-| opentelemetry-collector.config.service.pipelines.metrics.receivers[0] | string | `"otlp"` |  |
+| opentelemetry-collector.config.service.pipelines.metrics.receivers[0] | string | `"datadog"` |  |
+| opentelemetry-collector.config.service.pipelines.metrics.receivers[1] | string | `"otlp"` |  |
 | opentelemetry-collector.config.service.pipelines.traces.exporters[0] | string | `"otlp"` |  |
-| opentelemetry-collector.config.service.pipelines.traces.receivers[0] | string | `"otlp"` |  |
-| opentelemetry-collector.config.service.pipelines.traces.receivers[1] | string | `"zipkin"` |  |
+| opentelemetry-collector.config.service.pipelines.traces.receivers[0] | string | `"datadog"` |  |
+| opentelemetry-collector.config.service.pipelines.traces.receivers[1] | string | `"otlp"` |  |
+| opentelemetry-collector.config.service.pipelines.traces.receivers[2] | string | `"zipkin"` |  |
 | opentelemetry-collector.enabled | bool | `false` |  |
 | opentelemetry-collector.fullnameOverride | string | `"otel-collector"` |  |
+| opentelemetry-collector.image.repository | string | `"otel/opentelemetry-collector-contrib"` |  |
 | opentelemetry-collector.mode | string | `"deployment"` |  |
 | prometheus.alertmanager.enabled | bool | `false` |  |
 | prometheus.enabled | bool | `true` |  |

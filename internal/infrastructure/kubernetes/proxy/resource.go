@@ -7,6 +7,7 @@ package proxy
 
 import (
 	"fmt"
+	"path/filepath"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -15,6 +16,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/cmd/envoy"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/infrastructure/common"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
@@ -22,33 +24,12 @@ import (
 )
 
 const (
-	SdsCAFilename   = "xds-trusted-ca.json"
-	SdsCertFilename = "xds-certificate.json"
-	// XdsTLSCertFilename is the fully qualified path of the file containing Envoy's
-	// xDS server TLS certificate.
-	XdsTLSCertFilename = "/certs/tls.crt"
-	// XdsTLSKeyFilename is the fully qualified path of the file containing Envoy's
-	// xDS server TLS key.
-	XdsTLSKeyFilename = "/certs/tls.key"
-	// XdsTLSCaFilename is the fully qualified path of the file containing Envoy's
-	// trusted CA certificate.
-	XdsTLSCaFilename = "/certs/ca.crt"
 	// envoyContainerName is the name of the Envoy container.
 	envoyContainerName = "envoy"
 	// envoyNsEnvVar is the name of the Envoy Gateway namespace environment variable.
 	envoyNsEnvVar = "ENVOY_GATEWAY_NAMESPACE"
 	// envoyPodEnvVar is the name of the Envoy pod name environment variable.
 	envoyPodEnvVar = "ENVOY_POD_NAME"
-)
-
-var (
-	// xDS certificate rotation is supported by using SDS path-based resource files.
-	SdsCAConfigMapData = fmt.Sprintf(`{"resources":[{"@type":"type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret",`+
-		`"name":"xds_trusted_ca","validation_context":{"trusted_ca":{"filename":"%s"},`+
-		`"match_typed_subject_alt_names":[{"san_type":"DNS","matcher":{"exact":"envoy-gateway"}}]}}]}`, XdsTLSCaFilename)
-	SdsCertConfigMapData = fmt.Sprintf(`{"resources":[{"@type":"type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret",`+
-		`"name":"xds_certificate","tls_certificate":{"certificate_chain":{"filename":"%s"},`+
-		`"private_key":{"filename":"%s"}}}]}`, XdsTLSCertFilename, XdsTLSKeyFilename)
 )
 
 // ExpectedResourceHashedName returns expected resource hashed name including up to the 48 characters of the original name.
@@ -135,8 +116,6 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		})
 	}
 
-	var bootstrapConfigurations string
-
 	var proxyMetrics *egv1a1.ProxyMetrics
 	if infra.Config != nil &&
 		infra.Config.Spec.Telemetry != nil {
@@ -146,52 +125,18 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 	maxHeapSizeBytes := calculateMaxHeapSizeBytes(containerSpec.Resources)
 
 	// Get the default Bootstrap
-	bootstrapConfigurations, err := bootstrap.GetRenderedBootstrapConfig(&bootstrap.RenderBootstrapConfigOptions{
-		ProxyMetrics:     proxyMetrics,
+	bootstrapConfigOptions := &bootstrap.RenderBootstrapConfigOptions{
+		ProxyMetrics: proxyMetrics,
+		SdsConfig: bootstrap.SdsConfigPath{
+			Certificate: filepath.Join("/sds", common.SdsCertFilename),
+			TrustedCA:   filepath.Join("/sds", common.SdsCAFilename),
+		},
 		MaxHeapSizeBytes: maxHeapSizeBytes,
-	})
+	}
+
+	args, err := common.BuildProxyArgs(infra, shutdownConfig, bootstrapConfigOptions, fmt.Sprintf("$(%s)", envoyPodEnvVar))
 	if err != nil {
 		return nil, err
-	}
-
-	// Apply Bootstrap from EnvoyProxy API if set by the user
-	// The config should have been validated already
-	if infra.Config != nil && infra.Config.Spec.Bootstrap != nil {
-		bootstrapConfigurations, err = bootstrap.ApplyBootstrapConfig(infra.Config.Spec.Bootstrap, bootstrapConfigurations)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	logging := infra.Config.Spec.Logging
-
-	args := []string{
-		fmt.Sprintf("--service-cluster %s", infra.Name),
-		fmt.Sprintf("--service-node $(%s)", envoyPodEnvVar),
-		fmt.Sprintf("--config-yaml %s", bootstrapConfigurations),
-		fmt.Sprintf("--log-level %s", logging.DefaultEnvoyProxyLoggingLevel()),
-		"--cpuset-threads",
-		"--drain-strategy immediate",
-	}
-
-	if infra.Config != nil &&
-		infra.Config.Spec.Concurrency != nil {
-		args = append(args, fmt.Sprintf("--concurrency %d", *infra.Config.Spec.Concurrency))
-	}
-
-	if componentsLogLevel := logging.GetEnvoyProxyComponentLevel(); componentsLogLevel != "" {
-		args = append(args, fmt.Sprintf("--component-log-level %s", componentsLogLevel))
-	}
-
-	// Default
-	drainTimeout := 60.0
-	if shutdownConfig != nil && shutdownConfig.DrainTimeout != nil {
-		drainTimeout = shutdownConfig.DrainTimeout.Seconds()
-	}
-	args = append(args, fmt.Sprintf("--drain-time-s %.0f", drainTimeout))
-
-	if infra.Config != nil {
-		args = append(args, infra.Config.Spec.ExtraArgs...)
 	}
 
 	containers := []corev1.Container{
@@ -378,12 +323,12 @@ func expectedVolumes(name string, pod *egv1a1.KubernetesPodSpec) []corev1.Volume
 					},
 					Items: []corev1.KeyToPath{
 						{
-							Key:  SdsCAFilename,
-							Path: SdsCAFilename,
+							Key:  common.SdsCAFilename,
+							Path: common.SdsCAFilename,
 						},
 						{
-							Key:  SdsCertFilename,
-							Path: SdsCertFilename,
+							Key:  common.SdsCertFilename,
+							Path: common.SdsCertFilename,
 						},
 					},
 					DefaultMode: ptr.To[int32](420),

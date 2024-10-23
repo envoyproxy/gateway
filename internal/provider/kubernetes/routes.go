@@ -56,8 +56,7 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 
 		for _, rule := range tlsRoute.Spec.Rules {
 			for _, backendRef := range rule.BackendRefs {
-				ref := gatewayapi.UpgradeBackendRef(backendRef)
-				if err := validateBackendRef(&ref); err != nil {
+				if err := validateBackendRef(&backendRef); err != nil {
 					r.log.Error(err, "invalid backendRef")
 					continue
 				}
@@ -81,9 +80,13 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 						r.log.Info("no matching ReferenceGrants found", "from", from.kind,
 							"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
 					default:
-						resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
-						r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
-							"name", refGrant.Name)
+						refGrantNamespacedName := utils.NamespacedName(refGrant).String()
+						if !resourceMap.allAssociatedReferenceGrants.Has(refGrantNamespacedName) {
+							resourceMap.allAssociatedReferenceGrants.Insert(refGrantNamespacedName)
+							resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
+							r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
+								"name", refGrant.Name)
+						}
 					}
 				}
 			}
@@ -167,9 +170,13 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 						r.log.Info("no matching ReferenceGrants found", "from", from.kind,
 							"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
 					default:
-						resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
-						r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
-							"name", refGrant.Name)
+						refGrantNamespacedName := utils.NamespacedName(refGrant).String()
+						if !resourceMap.allAssociatedReferenceGrants.Has(refGrantNamespacedName) {
+							resourceMap.allAssociatedReferenceGrants.Insert(refGrantNamespacedName)
+							resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
+							r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
+								"name", refGrant.Name)
+						}
 					}
 				}
 			}
@@ -310,9 +317,13 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 						r.log.Info("no matching ReferenceGrants found", "from", from.kind,
 							"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
 					default:
-						resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
-						r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
-							"name", refGrant.Name)
+						refGrantNamespacedName := utils.NamespacedName(refGrant).String()
+						if !resourceMap.allAssociatedReferenceGrants.Has(refGrantNamespacedName) {
+							resourceMap.allAssociatedReferenceGrants.Insert(refGrantNamespacedName)
+							resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
+							r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
+								"name", refGrant.Name)
+						}
 					}
 				}
 			}
@@ -377,9 +388,13 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 							r.log.Info("no matching ReferenceGrants found", "from", from.kind,
 								"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
 						default:
-							resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
-							r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
-								"name", refGrant.Name)
+							refGrantNamespacedName := utils.NamespacedName(refGrant).String()
+							if !resourceMap.allAssociatedReferenceGrants.Has(refGrantNamespacedName) {
+								resourceMap.allAssociatedReferenceGrants.Insert(refGrantNamespacedName)
+								resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
+								r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
+									"name", refGrant.Name)
+							}
 						}
 					}
 				} else if filter.Type == gwapiv1.HTTPRouteFilterExtensionRef {
@@ -403,7 +418,6 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 							r.log.Error(err, "HTTPRouteFilters not found; bypassing rule", "index", i)
 							continue
 						}
-
 						resourceTree.HTTPRouteFilters = append(resourceTree.HTTPRouteFilters, httpFilter)
 					default:
 						extRefFilter, ok := resourceMap.extensionRefFilters[key]
@@ -467,8 +481,7 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 
 		for _, rule := range tcpRoute.Spec.Rules {
 			for _, backendRef := range rule.BackendRefs {
-				ref := gatewayapi.UpgradeBackendRef(backendRef)
-				if err := validateBackendRef(&ref); err != nil {
+				if err := validateBackendRef(&backendRef); err != nil {
 					r.log.Error(err, "invalid backendRef")
 					continue
 				}
@@ -492,9 +505,13 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 						r.log.Info("no matching ReferenceGrants found", "from", from.kind,
 							"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
 					default:
-						resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
-						r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
-							"name", refGrant.Name)
+						refGrantNamespacedName := utils.NamespacedName(refGrant).String()
+						if !resourceMap.allAssociatedReferenceGrants.Has(refGrantNamespacedName) {
+							resourceMap.allAssociatedReferenceGrants.Insert(refGrantNamespacedName)
+							resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
+							r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
+								"name", refGrant.Name)
+						}
 					}
 				}
 			}
@@ -545,8 +562,7 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 
 		for _, rule := range udpRoute.Spec.Rules {
 			for _, backendRef := range rule.BackendRefs {
-				ref := gatewayapi.UpgradeBackendRef(backendRef)
-				if err := validateBackendRef(&ref); err != nil {
+				if err := validateBackendRef(&backendRef); err != nil {
 					r.log.Error(err, "invalid backendRef")
 					continue
 				}
@@ -570,9 +586,12 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 						r.log.Info("no matching ReferenceGrants found", "from", from.kind,
 							"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
 					default:
-						resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
-						r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
-							"name", refGrant.Name)
+						if !resourceMap.allAssociatedReferenceGrants.Has(utils.NamespacedName(refGrant).String()) {
+							resourceMap.allAssociatedReferenceGrants.Insert(utils.NamespacedName(refGrant).String())
+							resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
+							r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
+								"name", refGrant.Name)
+						}
 					}
 				}
 			}
