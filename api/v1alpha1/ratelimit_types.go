@@ -166,7 +166,6 @@ type HeaderMatch struct { // TODO: zhaohuabing this type could be replaced with 
 	//
 	// +optional
 	// +kubebuilder:default=false
-	// +notImplementedHide
 	Invert *bool `json:"invert,omitempty"`
 }
 
