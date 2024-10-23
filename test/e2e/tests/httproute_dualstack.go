@@ -69,5 +69,5 @@ var SkipHTTPRouteDualStackTest = suite.ConformanceTest{
 	Description: "Skipping HTTPRouteDualStack test as IP_FAMILY is not dual",
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Skip("Skipping HTTPRouteDualStack test as IP_FAMILY is not dual")
-	}
+	},
 }
