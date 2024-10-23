@@ -111,7 +111,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 						Port:     uint32(containerPort),
 						Metadata: buildListenerMetadata(listener, gateway),
 					},
-					TLS: irTLSConfigs(listener.Protocol, listener.tlsSecrets...),
+					TLS: irTLSConfigs(listener.tlsSecrets...),
 					Path: ir.PathSettings{
 						MergeSlashes:         true,
 						EscapedSlashesAction: ir.UnescapeAndRedirect,
@@ -138,7 +138,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 					// TLS field should be added to TCPListener as ClientTrafficPolicy will affect
 					// Listener TLS. Then TCPRoute whose TLS should be configured as Terminate just
 					// refers to the Listener TLS.
-					TLS: irTLSConfigs(listener.Protocol, listener.tlsSecrets...),
+					TLS: irTLSConfigsForTCPListener(listener.tlsSecrets...),
 				}
 				xdsIR[irKey].TCP = append(xdsIR[irKey].TCP, irListener)
 			case gwapiv1.UDPProtocolType:

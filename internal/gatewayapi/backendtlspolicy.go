@@ -133,7 +133,7 @@ func (t *Translator) applyEnvoyProxyBackendTLSSetting(policy *gwapiv1a3.BackendT
 			)
 			return tlsConfig
 		}
-		tlsConf := irTLSConfigs("", secret)
+		tlsConf := irTLSConfigs(secret)
 		tlsConfig.ClientCertificates = tlsConf.Certificates
 	}
 	return tlsConfig
