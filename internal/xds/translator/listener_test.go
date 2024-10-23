@@ -26,7 +26,9 @@ func Test_toNetworkFilter(t *testing.T) {
 	}{
 		{
 			name:    "valid filter",
-			proto:   &hcmv3.HttpConnectionManager{},
+			proto:   &hcmv3.HttpConnectionManager{
+				StatPrefix: "stats",
+			},
 			wantErr: nil,
 		},
 		{
