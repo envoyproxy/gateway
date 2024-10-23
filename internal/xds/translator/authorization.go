@@ -26,6 +26,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/protocov"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -75,7 +76,7 @@ func (*rbac) patchHCM(
 // buildHCMRBACFilter returns a RBAC filter from the provided IR listener.
 func buildHCMRBACFilter() (*hcmv3.HttpFilter, error) {
 	rbacProto := &rbacv3.RBAC{}
-	rbacAny, err := anypb.New(rbacProto)
+	rbacAny, err := protocov.ToAnyWithValidation(rbacProto)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +134,7 @@ func (*rbac) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 		return err
 	}
 
-	if cfgAny, err = anypb.New(rbacPerRoute); err != nil {
+	if cfgAny, err = protocov.ToAnyWithValidation(rbacPerRoute); err != nil {
 		return err
 	}
 
@@ -159,7 +160,7 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 		Name:   "ALLOW",
 		Action: rbacconfigv3.RBAC_ALLOW,
 	}
-	if allowAction, err = anypb.New(allow); err != nil {
+	if allowAction, err = protocov.ToAnyWithValidation(allow); err != nil {
 		return nil, err
 	}
 
@@ -167,7 +168,7 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 		Name:   "DENY",
 		Action: rbacconfigv3.RBAC_DENY,
 	}
-	if denyAction, err = anypb.New(deny); err != nil {
+	if denyAction, err = protocov.ToAnyWithValidation(deny); err != nil {
 		return nil, err
 	}
 
@@ -287,11 +288,6 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 		rbac.Rbac.Matcher.MatcherType = nil
 	}
 
-	// We need to validate the RBACPerRoute message before converting it to an Any.
-	if err = rbac.ValidateAll(); err != nil {
-		return nil, err
-	}
-
 	return rbac, nil
 }
 
@@ -316,11 +312,11 @@ func buildIPPredicate(clientCIDRs []*ir.CIDRMatch) (*matcherv3.Matcher_MatcherLi
 		})
 	}
 
-	if ipMatcher, err = anypb.New(ipRangeMatcher); err != nil {
+	if ipMatcher, err = protocov.ToAnyWithValidation(ipRangeMatcher); err != nil {
 		return nil, err
 	}
 
-	if sourceIPInput, err = anypb.New(&networkinput.SourceIPInput{}); err != nil {
+	if sourceIPInput, err = protocov.ToAnyWithValidation(&networkinput.SourceIPInput{}); err != nil {
 		return nil, err
 	}
 
@@ -389,11 +385,11 @@ func buildJWTPredicate(jwt egv1a1.JWTPrincipal) ([]*matcherv3.Matcher_MatcherLis
 			},
 		}
 
-		if inputPb, err = anypb.New(input); err != nil {
+		if inputPb, err = protocov.ToAnyWithValidation(input); err != nil {
 			return nil, err
 		}
 
-		if matcherPb, err = anypb.New(scopeMatcher); err != nil {
+		if matcherPb, err = protocov.ToAnyWithValidation(scopeMatcher); err != nil {
 			return nil, err
 		}
 
@@ -454,7 +450,7 @@ func buildJWTPredicate(jwt egv1a1.JWTPrincipal) ([]*matcherv3.Matcher_MatcherLis
 			Path:   path,
 		}
 
-		if inputPb, err = anypb.New(input); err != nil {
+		if inputPb, err = protocov.ToAnyWithValidation(input); err != nil {
 			return nil, err
 		}
 
@@ -492,7 +488,7 @@ func buildJWTPredicate(jwt egv1a1.JWTPrincipal) ([]*matcherv3.Matcher_MatcherLis
 				}
 			}
 
-			if matcherPb, err = anypb.New(&metadatav3.Metadata{
+			if matcherPb, err = protocov.ToAnyWithValidation(&metadatav3.Metadata{
 				Value: valueMatcher,
 			}); err != nil {
 				return nil, err

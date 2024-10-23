@@ -66,7 +66,7 @@ func http1ProtocolOptions(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
 		EnableTrailers: opts.EnableTrailers,
 	}
 	if opts.PreserveHeaderCase {
-		preservecaseAny, _ := anypb.New(&preservecasev3.PreserveCaseFormatterConfig{})
+		preservecaseAny, _ := protocov.ToAnyWithValidation(&preservecasev3.PreserveCaseFormatterConfig{})
 		r.HeaderKeyFormat = &corev3.Http1ProtocolOptions_HeaderKeyFormat{
 			HeaderFormat: &corev3.Http1ProtocolOptions_HeaderKeyFormat_StatefulFormatter{
 				StatefulFormatter: &corev3.TypedExtensionConfig{
@@ -131,7 +131,7 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 			rejectWithStatus = &typev3.HttpStatus{Code: typev3.StatusCode_Forbidden}
 		}
 
-		customHeaderConfigAny, _ := anypb.New(&customheaderv3.CustomHeaderConfig{
+		customHeaderConfigAny, _ := protocov.ToAnyWithValidation(&customheaderv3.CustomHeaderConfig{
 			HeaderName:       clientIPDetection.CustomHeader.Name,
 			RejectWithStatus: rejectWithStatus,
 
@@ -420,7 +420,7 @@ func buildEarlyHeaderMutation(headers *ir.HeaderSettings) []*corev3.TypedExtensi
 		mutationRules = append(mutationRules, mr)
 	}
 
-	earlyHeaderMutationAny, _ := anypb.New(&early_header_mutationv3.HeaderMutation{
+	earlyHeaderMutationAny, _ := protocov.ToAnyWithValidation(&early_header_mutationv3.HeaderMutation{
 		Mutations: mutationRules,
 	})
 
@@ -578,7 +578,7 @@ func addXdsTLSInspectorFilter(xdsListener *listenerv3.Listener) error {
 	}
 
 	tlsInspector := &tls_inspectorv3.TlsInspector{}
-	tlsInspectorAny, err := anypb.New(tlsInspector)
+	tlsInspectorAny, err := protocov.ToAnyWithValidation(tlsInspector)
 	if err != nil {
 		return err
 	}
@@ -626,7 +626,7 @@ func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSConfig) (*corev3.Transp
 
 	setDownstreamTLSSessionSettings(tlsConfig, tlsCtx.DownstreamTlsContext)
 
-	tlsCtxAny, err := anypb.New(tlsCtx)
+	tlsCtxAny, err := protocov.ToAnyWithValidation(tlsCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -668,7 +668,7 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 
 	setDownstreamTLSSessionSettings(tlsConfig, tlsCtx)
 
-	tlsCtxAny, err := anypb.New(tlsCtx)
+	tlsCtxAny, err := protocov.ToAnyWithValidation(tlsCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -736,11 +736,12 @@ func buildTLSVersion(version *ir.TLSVersion) tlsv3.TlsParameters_TlsProtocol {
 }
 
 func buildALPNProtocols(alpn []string) []string {
-	if len(alpn) == 0 {
+	if alpn == nil { // not set - default to h2 and http/1.1
 		out := []string{"h2", "http/1.1"}
 		return out
+	} else {
+		return alpn
 	}
-	return alpn
 }
 
 func buildXdsTLSCertSecret(tlsConfig ir.TLSCertificate) *tlsv3.Secret {
@@ -782,7 +783,7 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener, access
 	route := &udpv3.Route{
 		Cluster: clusterName,
 	}
-	routeAny, err := anypb.New(route)
+	routeAny, err := protocov.ToAnyWithValidation(route)
 	if err != nil {
 		return nil, err
 	}
@@ -803,7 +804,7 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener, access
 			},
 		},
 	}
-	udpProxyAny, err := anypb.New(udpProxy)
+	udpProxyAny, err := protocov.ToAnyWithValidation(udpProxy)
 	if err != nil {
 		return nil, err
 	}
