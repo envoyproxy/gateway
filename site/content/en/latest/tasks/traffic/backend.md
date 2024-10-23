@@ -204,7 +204,7 @@ curl -I -HHost:www.example.com http://${GATEWAY_HOST}/headers
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
 [TLSRoute]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.TLSRoute
 [Envoy Extension Policy]: ../../../api/extension_types#envoyextensionpolicy
-[Security Policy]: ../../../api/extension_types#securitypolicy
+[Security Policy]: ../../../api/extension_types#oidcprovider
 [Backend TLS Policy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/
 [EnvoyProxy]: ../../../api/extension_types#envoyproxy
 [EnvoyGateway]: ../../../api/extension_types#envoygateway
