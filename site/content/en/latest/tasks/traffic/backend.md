@@ -7,27 +7,28 @@ Envoy Gateway supports routing to native K8s resources such as `Service` and `Se
 ## Motivation
 The Backend API was added to support several use cases:
 - Allowing users to integrate Envoy with services (Ext Auth, Rate Limit, ALS, ...) using Unix Domain Sockets, which are currently not supported by K8s.
-- Simplify [routing to cluster-external backends][], which currently requires users to maintain both K8s `Service` and `EndpointSlice` resources. 
+- Simplify [routing to cluster-external backends][], which currently requires users to maintain both K8s `Service` and `EndpointSlice` resources.
 
 ## Warning
 
-Similar to the K8s EndpointSlice API, the Backend API can be misused to allow traffic to be sent to otherwise restricted destinations, as described in [CVE-2021-25740][]. 
+Similar to the K8s EndpointSlice API, the Backend API can be misused to allow traffic to be sent to otherwise restricted destinations, as described in [CVE-2021-25740][].
 A Backend resource can be used to:
 - Expose a Service or Pod that should not be accessible
 - Reference a Service or Pod by a Route without appropriate Reference Grants
 - Expose the Envoy Proxy localhost (including the Envoy admin endpoint)
 
-For these reasons, the Backend API is disabled by default in Envoy Gateway configuration. Envoy Gateway admins are advised to follow [upstream recommendations][] and restrict access to the Backend API using K8s RBAC.  
+For these reasons, the Backend API is disabled by default in Envoy Gateway configuration. Envoy Gateway admins are advised to follow [upstream recommendations][] and restrict access to the Backend API using K8s RBAC.
 
 ## Restrictions
 
 The Backend API is currently supported only in the following BackendReferences:
 - [HTTPRoute]: IP and FQDN endpoints
+- [TLSRoute]: IP and FQDN endpoints
 - [Envoy Extension Policy] (ExtProc): IP, FQDN and unix domain socket endpoints
 - [Security Policy]: IP and FQDN endpoints for the OIDC providers
 
 The Backend API supports attachment the following policies:
-- [Backend TLS Policy][] 
+- [Backend TLS Policy][]
 
 Certain restrictions apply on the value of hostnames and addresses. For example, the loopback IP address range and the localhost hostname are forbidden.
 
@@ -201,7 +202,9 @@ curl -I -HHost:www.example.com http://${GATEWAY_HOST}/headers
 [CVE-2021-25740]: https://nvd.nist.gov/vuln/detail/CVE-2021-25740
 [upstream recommendations]: https://github.com/kubernetes/kubernetes/issues/103675
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
+[TLSRoute]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.TLSRoute
 [Envoy Extension Policy]: ../../../api/extension_types#envoyextensionpolicy
+[Security Policy]: ../../../api/extension_types#securitypolicy
 [Backend TLS Policy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/
 [EnvoyProxy]: ../../../api/extension_types#envoyproxy
 [EnvoyGateway]: ../../../api/extension_types#envoygateway
