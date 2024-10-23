@@ -173,7 +173,9 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				// Publish the IRs.
 				// Also validate the ir before sending it.
 				for key, val := range result.InfraIR {
-					r.Logger.WithValues("infra-ir", key).Info(val.JSONString())
+					if vlog := r.Logger.V(1); vlog.Enabled() {
+						vlog.WithValues("infra-ir", key).Info(val.JSONString())
+					}
 					if err := val.Validate(); err != nil {
 						r.Logger.Error(err, "unable to validate infra ir, skipped sending it")
 						errChan <- err
@@ -184,7 +186,9 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				}
 
 				for key, val := range result.XdsIR {
-					r.Logger.WithValues("xds-ir", key).Info(val.JSONString())
+					if vlog := r.Logger.V(1); vlog.Enabled() {
+						vlog.WithValues("xds-ir", key).Info(val.JSONString())
+					}
 					if err := val.Validate(); err != nil {
 						r.Logger.Error(err, "unable to validate xds ir, skipped sending it")
 						errChan <- err
