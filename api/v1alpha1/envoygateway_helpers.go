@@ -241,6 +241,16 @@ func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubern
 	return r.Kubernetes
 }
 
+func (r *EnvoyGatewayProvider) IsRunningOnKubernetes() bool {
+	return r.Type == ProviderTypeKubernetes
+}
+
+func (r *EnvoyGatewayProvider) IsRunningOnHost() bool {
+	return r.Type == ProviderTypeCustom &&
+		r.Custom.Infrastructure != nil &&
+		r.Custom.Infrastructure.Type == InfrastructureProviderTypeHost
+}
+
 // DefaultEnvoyGatewayLoggingLevel returns a new EnvoyGatewayLogging with default configuration parameters.
 // When v1alpha1.LogComponentGatewayDefault specified, all other logging components are ignored.
 func (logging *EnvoyGatewayLogging) DefaultEnvoyGatewayLoggingLevel(level LogLevel) LogLevel {

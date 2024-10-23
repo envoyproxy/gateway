@@ -53,9 +53,9 @@ func (*oidc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListe
 			continue
 		}
 
-		// Only generates one BasicAuth Envoy filter for each unique name.
+		// Only generates one OAuth2 Envoy filter for each unique name.
 		// For example, if there are two routes under the same gateway with the
-		// same BasicAuth config, only one BasicAuth filter will be generated.
+		// same OAuth2 config, only one OAuth2 filter will be generated.
 		if hcmContainsFilter(mgr, oauth2FilterName(route.Security.OIDC)) {
 			continue
 		}

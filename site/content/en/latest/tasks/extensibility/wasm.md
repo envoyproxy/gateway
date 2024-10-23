@@ -16,7 +16,7 @@ This instantiated resource can be linked to a [Gateway][Gateway] and [HTTPRoute]
 
 ## Configuration
 
-Envoy Gateway supports two types of Wasm extensions: 
+Envoy Gateway supports two types of Wasm extensions:
 * HTTP Wasm Extension: The Wasm extension is fetched from a remote URL.
 * Image Wasm Extension: The Wasm extension is packaged as an OCI image and fetched from an image registry.
 
@@ -47,7 +47,7 @@ spec:
     code:
       type: HTTP
       http:
-        url: https://raw.githubusercontent.com/envoyproxy/envoy/main/examples/wasm-cc/lib/envoy_filter_http_wasm_example.wasm
+        url: https://raw.githubusercontent.com/envoyproxy/examples/main/wasm-cc/lib/envoy_filter_http_wasm_example.wasm
         sha256: 79c9f85128bb0177b6511afa85d587224efded376ac0ef76df56595f1e6315c0
 EOF
 ```
@@ -73,7 +73,7 @@ spec:
     code:
       type: HTTP
       http:
-        url: https://raw.githubusercontent.com/envoyproxy/envoy/main/examples/wasm-cc/lib/envoy_filter_http_wasm_example.wasm
+        url: https://raw.githubusercontent.com/envoyproxy/examples/main/wasm-cc/lib/envoy_filter_http_wasm_example.wasm
         sha256: 79c9f85128bb0177b6511afa85d587224efded376ac0ef76df56595f1e6315c0
 ```
 

@@ -940,16 +940,15 @@ spec:
                     match:
                       description: Match configuration.
                       properties:
-                        statusCode:
+                        statusCodes:
                           description: Status code to match on. The match evaluates
                             to true if any of the matches are successful.
                           items:
+                            description: StatusCodeMatch defines the configuration
+                              for matching a status code.
                             properties:
                               range:
-                                description: |-
-                                  ValueRef contains the contents of the body
-                                  specified as a local object reference.
-                                  Only a reference to ConfigMap is supported.
+                                description: Range contains the range of status codes.
                                 properties:
                                   end:
                                     description: End of the range, including the end
@@ -963,23 +962,41 @@ spec:
                                 - end
                                 - start
                                 type: object
+                                x-kubernetes-validations:
+                                - message: end must be greater than start
+                                  rule: self.end > self.start
                               type:
+                                allOf:
+                                - enum:
+                                  - Value
+                                  - Range
+                                - enum:
+                                  - Value
+                                  - Range
                                 default: Value
-                                description: Type is the type of value.
-                                enum:
-                                - Value
-                                - Range
+                                description: |-
+                                  Type is the type of value.
+                                  Valid values are Value and Range, default is Value.
                                 type: string
                               value:
                                 description: Value contains the value of the status
                                   code.
-                                type: string
+                                type: integer
                             required:
                             - type
                             type: object
+                            x-kubernetes-validations:
+                            - message: value must be set for type Value
+                              rule: '(!has(self.type) || self.type == ''Value'')?
+                                has(self.value) : true'
+                            - message: range must be set for type Range
+                              rule: '(has(self.type) && self.type == ''Range'')? has(self.range)
+                                : true'
+                          maxItems: 50
+                          minItems: 1
                           type: array
                       required:
-                      - statusCode
+                      - statusCodes
                       type: object
                     response:
                       description: Response configuration.
@@ -992,17 +1009,26 @@ spec:
                                 string.
                               type: string
                             type:
-                              description: Type is the type of method to use to read
-                                the body value.
-                              enum:
-                              - Inline
-                              - ValueRef
+                              allOf:
+                              - enum:
+                                - Inline
+                                - ValueRef
+                              - enum:
+                                - Inline
+                                - ValueRef
+                              default: Inline
+                              description: |-
+                                Type is the type of method to use to read the body value.
+                                Valid values are Inline and ValueRef, default is Inline.
                               type: string
                             valueRef:
                               description: |-
                                 ValueRef contains the contents of the body
                                 specified as a local object reference.
                                 Only a reference to ConfigMap is supported.
+
+                                The value of key `response.body` in the ConfigMap will be used as the response body.
+                                If the key is not found, the first value in the ConfigMap will be used.
                               properties:
                                 group:
                                   description: |-
@@ -1031,10 +1057,22 @@ spec:
                           required:
                           - type
                           type: object
+                          x-kubernetes-validations:
+                          - message: inline must be set for type Inline
+                            rule: '(!has(self.type) || self.type == ''Inline'')? has(self.inline)
+                              : true'
+                          - message: valueRef must be set for type ValueRef
+                            rule: '(has(self.type) && self.type == ''ValueRef'')?
+                              has(self.valueRef) : true'
+                          - message: only ConfigMap is supported for ValueRef
+                            rule: 'has(self.valueRef) ? self.valueRef.kind == ''ConfigMap''
+                              : true'
                         contentType:
                           description: Content Type of the response. This will be
                             set in the Content-Type header.
                           type: string
+                      required:
+                      - body
                       type: object
                   required:
                   - match

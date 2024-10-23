@@ -17,7 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
+	klabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -255,7 +255,7 @@ func isSelectorMatch(labelselector *metav1.LabelSelector, l map[string]string) (
 		return false, fmt.Errorf("invalid label selector is generated: %w", err)
 	}
 
-	return selector.Matches(labels.Set(l)), nil
+	return selector.Matches(klabels.Set(l)), nil
 }
 
 func (i *Infra) createOrUpdatePodDisruptionBudget(ctx context.Context, r ResourceRender) (err error) {

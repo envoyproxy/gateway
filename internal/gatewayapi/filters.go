@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -147,14 +148,46 @@ func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 	return httpFiltersContext
 }
 
+// Checks if the context and the rewrite both contain a core gw-api HTTP URL rewrite
+func hasMultipleCoreRewrites(rewrite *gwapiv1.HTTPURLRewriteFilter, contextRewrite *ir.URLRewrite) bool {
+	contextHasCoreRewrites := contextRewrite.Path != nil && (contextRewrite.Path.FullReplace != nil ||
+		contextRewrite.Path.PrefixMatchReplace != nil) || (contextRewrite.Host != nil && contextRewrite.Host.Name != nil)
+	rewriteHasCoreRewrites := rewrite.Hostname != nil || rewrite.Path != nil
+	return contextHasCoreRewrites && rewriteHasCoreRewrites
+}
+
+// Checks if the context and the rewrite both contain a envoy-gateway extended HTTP URL rewrite
+func hasMultipleExtensionRewrites(rewrite *egv1a1.HTTPURLRewriteFilter, contextRewrite *ir.URLRewrite) bool {
+	contextHasExtensionRewrites := (contextRewrite.Path != nil && contextRewrite.Path.RegexMatchReplace != nil) ||
+		(contextRewrite.Host != nil && (contextRewrite.Host.Header != nil || contextRewrite.Host.Backend != nil))
+
+	return contextHasExtensionRewrites && (rewrite.Hostname != nil || rewrite.Path != nil)
+}
+
+// Checks if the context and the gw-api core rewrite both contain an HTTP URL rewrite that creates a conflict (e.g. both rewrite path)
+func hasConflictingCoreAndExtensionRewrites(rewrite *gwapiv1.HTTPURLRewriteFilter, contextRewrite *ir.URLRewrite) bool {
+	contextHasExtensionPathRewrites := contextRewrite.Path != nil && contextRewrite.Path.RegexMatchReplace != nil
+	contextHasExtensionHostRewrites := contextRewrite.Host != nil && (contextRewrite.Host.Header != nil ||
+		contextRewrite.Host.Backend != nil)
+	return (rewrite.Hostname != nil && contextHasExtensionHostRewrites) || (rewrite.Path != nil && contextHasExtensionPathRewrites)
+}
+
+// Checks if the context and the envoy-gateway extended rewrite both contain an HTTP URL rewrite that creates a conflict (e.g. both rewrite path)
+func hasConflictingExtensionAndCoreRewrites(rewrite *egv1a1.HTTPURLRewriteFilter, contextRewrite *ir.URLRewrite) bool {
+	contextHasCorePathRewrites := contextRewrite.Path != nil && (contextRewrite.Path.FullReplace != nil ||
+		contextRewrite.Path.PrefixMatchReplace != nil)
+	contextHasCoreHostnameRewrites := contextRewrite.Host != nil && contextRewrite.Host.Name != nil
+
+	return (rewrite.Hostname != nil && contextHasCoreHostnameRewrites) || (rewrite.Path != nil && contextHasCorePathRewrites)
+}
+
 func (t *Translator) processURLRewriteFilter(
 	rewrite *gwapiv1.HTTPURLRewriteFilter,
 	filterContext *HTTPFiltersContext,
 ) {
 	if filterContext.URLRewrite != nil {
-		if filterContext.URLRewrite.Hostname != nil ||
-			filterContext.URLRewrite.Path.FullReplace != nil ||
-			filterContext.URLRewrite.Path.PrefixMatchReplace != nil {
+		if hasMultipleCoreRewrites(rewrite, filterContext.URLRewrite) ||
+			hasConflictingCoreAndExtensionRewrites(rewrite, filterContext.URLRewrite) {
 			routeStatus := GetRouteStatus(filterContext.Route)
 			status.SetRouteStatusCondition(routeStatus,
 				filterContext.ParentRef.routeParentStatusIdx,
@@ -188,7 +221,9 @@ func (t *Translator) processURLRewriteFilter(
 			return
 		}
 		redirectHost := string(*rewrite.Hostname)
-		newURLRewrite.Hostname = &redirectHost
+		newURLRewrite.Host = &ir.HTTPHostModifier{
+			Name: &redirectHost,
+		}
 	}
 
 	if rewrite.Path != nil {
@@ -751,48 +786,12 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 
 	if string(extFilter.Kind) == egv1a1.KindHTTPRouteFilter {
 		for _, hrf := range resources.HTTPRouteFilters {
-			if hrf.Namespace == filterNs && hrf.Name == string(extFilter.Name) &&
-				hrf.Spec.URLRewrite.Path.Type == egv1a1.RegexHTTPPathModifier {
+			if hrf.Namespace == filterNs && hrf.Name == string(extFilter.Name) {
+				if hrf.Spec.URLRewrite != nil {
 
-				if hrf.Spec.URLRewrite.Path.ReplaceRegexMatch == nil ||
-					hrf.Spec.URLRewrite.Path.ReplaceRegexMatch.Pattern == "" {
-					errMsg := "ReplaceRegexMatch Pattern must be set when rewrite path type is \"ReplaceRegexMatch\""
-					routeStatus := GetRouteStatus(filterContext.Route)
-					status.SetRouteStatusCondition(routeStatus,
-						filterContext.ParentRef.routeParentStatusIdx,
-						filterContext.Route.GetGeneration(),
-						gwapiv1.RouteConditionAccepted,
-						metav1.ConditionFalse,
-						gwapiv1.RouteReasonUnsupportedValue,
-						errMsg,
-					)
-					return
-				} else if _, err := regexp.Compile(hrf.Spec.URLRewrite.Path.ReplaceRegexMatch.Pattern); err != nil {
-					// Avoid envoy NACKs due to invalid regex.
-					// Golang's regexp is almost identical to RE2: https://pkg.go.dev/regexp/syntax
-					errMsg := "ReplaceRegexMatch must be a valid RE2 regular expression"
-					routeStatus := GetRouteStatus(filterContext.Route)
-					status.SetRouteStatusCondition(routeStatus,
-						filterContext.ParentRef.routeParentStatusIdx,
-						filterContext.Route.GetGeneration(),
-						gwapiv1.RouteConditionAccepted,
-						metav1.ConditionFalse,
-						gwapiv1.RouteReasonUnsupportedValue,
-						errMsg,
-					)
-					return
-				}
-
-				rmr := &ir.RegexMatchReplace{
-					Pattern:      hrf.Spec.URLRewrite.Path.ReplaceRegexMatch.Pattern,
-					Substitution: hrf.Spec.URLRewrite.Path.ReplaceRegexMatch.Substitution,
-				}
-
-				if filterContext.HTTPFilterIR.URLRewrite != nil {
-					// If path IR is already set - check for a conflict
-					if filterContext.HTTPFilterIR.URLRewrite.Path != nil {
-						path := filterContext.HTTPFilterIR.URLRewrite.Path
-						if path.RegexMatchReplace != nil || path.PrefixMatchReplace != nil || path.FullReplace != nil {
+					if filterContext.URLRewrite != nil {
+						if hasMultipleExtensionRewrites(hrf.Spec.URLRewrite, filterContext.URLRewrite) ||
+							hasConflictingExtensionAndCoreRewrites(hrf.Spec.URLRewrite, filterContext.URLRewrite) {
 							routeStatus := GetRouteStatus(filterContext.Route)
 							status.SetRouteStatusCondition(routeStatus,
 								filterContext.ParentRef.routeParentStatusIdx,
@@ -804,19 +803,100 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 							)
 							return
 						}
-					} else { // no path
-						filterContext.HTTPFilterIR.URLRewrite.Path = &ir.ExtendedHTTPPathModifier{
-							RegexMatchReplace: rmr,
+					}
+
+					if hrf.Spec.URLRewrite.Path != nil {
+						if hrf.Spec.URLRewrite.Path.Type == egv1a1.RegexHTTPPathModifier {
+							if hrf.Spec.URLRewrite.Path.ReplaceRegexMatch == nil ||
+								hrf.Spec.URLRewrite.Path.ReplaceRegexMatch.Pattern == "" {
+								errMsg := "ReplaceRegexMatch Pattern must be set when rewrite path type is \"ReplaceRegexMatch\""
+								routeStatus := GetRouteStatus(filterContext.Route)
+								status.SetRouteStatusCondition(routeStatus,
+									filterContext.ParentRef.routeParentStatusIdx,
+									filterContext.Route.GetGeneration(),
+									gwapiv1.RouteConditionAccepted,
+									metav1.ConditionFalse,
+									gwapiv1.RouteReasonUnsupportedValue,
+									errMsg,
+								)
+								return
+							} else if _, err := regexp.Compile(hrf.Spec.URLRewrite.Path.ReplaceRegexMatch.Pattern); err != nil {
+								// Avoid envoy NACKs due to invalid regex.
+								// Golang's regexp is almost identical to RE2: https://pkg.go.dev/regexp/syntax
+								errMsg := "ReplaceRegexMatch must be a valid RE2 regular expression"
+								routeStatus := GetRouteStatus(filterContext.Route)
+								status.SetRouteStatusCondition(routeStatus,
+									filterContext.ParentRef.routeParentStatusIdx,
+									filterContext.Route.GetGeneration(),
+									gwapiv1.RouteConditionAccepted,
+									metav1.ConditionFalse,
+									gwapiv1.RouteReasonUnsupportedValue,
+									errMsg,
+								)
+								return
+							}
+
+							rmr := &ir.RegexMatchReplace{
+								Pattern:      hrf.Spec.URLRewrite.Path.ReplaceRegexMatch.Pattern,
+								Substitution: hrf.Spec.URLRewrite.Path.ReplaceRegexMatch.Substitution,
+							}
+
+							if filterContext.HTTPFilterIR.URLRewrite != nil {
+								if filterContext.HTTPFilterIR.URLRewrite.Path == nil {
+									filterContext.HTTPFilterIR.URLRewrite.Path = &ir.ExtendedHTTPPathModifier{
+										RegexMatchReplace: rmr,
+									}
+									return
+								}
+							} else { // no url rewrite
+								filterContext.HTTPFilterIR.URLRewrite = &ir.URLRewrite{
+									Path: &ir.ExtendedHTTPPathModifier{
+										RegexMatchReplace: rmr,
+									},
+								}
+								return
+							}
 						}
-						return
 					}
-				} else { // no url rewrite
-					filterContext.HTTPFilterIR.URLRewrite = &ir.URLRewrite{
-						Path: &ir.ExtendedHTTPPathModifier{
-							RegexMatchReplace: rmr,
-						},
+
+					if hrf.Spec.URLRewrite.Hostname != nil {
+						var hm *ir.HTTPHostModifier
+						if hrf.Spec.URLRewrite.Hostname.Type == egv1a1.HeaderHTTPHostnameModifier {
+							if hrf.Spec.URLRewrite.Hostname.Header == nil {
+								errMsg := "Header must be set when rewrite path type is \"Header\""
+								routeStatus := GetRouteStatus(filterContext.Route)
+								status.SetRouteStatusCondition(routeStatus,
+									filterContext.ParentRef.routeParentStatusIdx,
+									filterContext.Route.GetGeneration(),
+									gwapiv1.RouteConditionAccepted,
+									metav1.ConditionFalse,
+									gwapiv1.RouteReasonUnsupportedValue,
+									errMsg,
+								)
+								return
+							}
+							hm = &ir.HTTPHostModifier{
+								Header: hrf.Spec.URLRewrite.Hostname.Header,
+							}
+						} else if hrf.Spec.URLRewrite.Hostname.Type == egv1a1.BackendHTTPHostnameModifier {
+							hm = &ir.HTTPHostModifier{
+								Backend: ptr.To(true),
+							}
+						}
+
+						if filterContext.HTTPFilterIR.URLRewrite != nil {
+							if filterContext.HTTPFilterIR.URLRewrite.Host == nil {
+								filterContext.HTTPFilterIR.URLRewrite.Host = hm
+								return
+							}
+						} else { // no url rewrite
+							filterContext.HTTPFilterIR.URLRewrite = &ir.URLRewrite{
+								Host: hm,
+							}
+							return
+						}
 					}
-					return
+
 				}
 			}
 		}
