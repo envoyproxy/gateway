@@ -144,7 +144,8 @@ xdsIR:
           name: ""
           prefix: /
         urlRewrite:
-          hostname: rewrite.com
+          host:
+            name: rewrite.com
           path:
             fullReplace: null
             prefixMatchReplace: /rewrite

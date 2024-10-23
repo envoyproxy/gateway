@@ -42,6 +42,9 @@ const (
 	envoyReadinessAddress = "0.0.0.0"
 	EnvoyReadinessPort    = 19001
 	EnvoyReadinessPath    = "/ready"
+
+	defaultSdsTrustedCAPath   = "/sds/xds-trusted-ca.json"
+	defaultSdsCertificatePath = "/sds/xds-certificate.json"
 )
 
 //go:embed bootstrap.yaml.tpl
@@ -67,6 +70,12 @@ type bootstrapParameters struct {
 	AdminServer adminServerParameters
 	// ReadyServer defines the configuration for health check ready listener
 	ReadyServer readyServerParameters
+
+	// SdsCertificatePath defines the path to SDS certificate config.
+	SdsCertificatePath string
+	// SdsTrustedCAPath defines the path to SDS trusted CA config.
+	SdsTrustedCAPath string
+
 	// EnablePrometheus defines whether to enable metrics endpoint for prometheus.
 	EnablePrometheus bool
 	// EnablePrometheusCompression defines whether to enable HTTP compression on metrics endpoint for prometheus.
@@ -130,7 +139,18 @@ type overloadManagerParameters struct {
 
 type RenderBootstrapConfigOptions struct {
 	ProxyMetrics     *egv1a1.ProxyMetrics
+	SdsConfig        SdsConfigPath
+	XdsServerHost    *string
+	XdsServerPort    *int32
+	WasmServerPort   *int32
+	AdminServerPort  *int32
+	ReadyServerPort  *int32
 	MaxHeapSizeBytes uint64
+}
+
+type SdsConfigPath struct {
+	Certificate string
+	TrustedCA   string
 }
 
 // render the stringified bootstrap config in yaml format.
@@ -238,17 +258,47 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 				Port:          EnvoyReadinessPort,
 				ReadinessPath: EnvoyReadinessPath,
 			},
+			SdsCertificatePath:           defaultSdsCertificatePath,
+			SdsTrustedCAPath:             defaultSdsTrustedCAPath,
 			EnablePrometheus:             enablePrometheus,
 			EnablePrometheusCompression:  enablePrometheusCompression,
 			PrometheusCompressionLibrary: PrometheusCompressionLibrary,
 			OtelMetricSinks:              metricSinks,
 		},
 	}
-	if opts != nil && opts.ProxyMetrics != nil && opts.ProxyMetrics.Matches != nil {
-		cfg.parameters.StatsMatcher = &StatsMatcher
-	}
 
+	// Bootstrap config override
 	if opts != nil {
+		if opts.ProxyMetrics != nil && opts.ProxyMetrics.Matches != nil {
+			cfg.parameters.StatsMatcher = &StatsMatcher
+		}
+
+		// Override Sds configs
+		if len(opts.SdsConfig.Certificate) > 0 {
+			cfg.parameters.SdsCertificatePath = opts.SdsConfig.Certificate
+		}
+		if len(opts.SdsConfig.TrustedCA) > 0 {
+			cfg.parameters.SdsTrustedCAPath = opts.SdsConfig.TrustedCA
+		}
+
+		if opts.XdsServerHost != nil {
+			cfg.parameters.XdsServer.Address = *opts.XdsServerHost
+		}
+
+		// Override the various server port
+		if opts.XdsServerPort != nil {
+			cfg.parameters.XdsServer.Port = *opts.XdsServerPort
+		}
+		if opts.AdminServerPort != nil {
+			cfg.parameters.AdminServer.Port = *opts.AdminServerPort
+		}
+		if opts.ReadyServerPort != nil {
+			cfg.parameters.ReadyServer.Port = *opts.ReadyServerPort
+		}
+		if opts.WasmServerPort != nil {
+			cfg.parameters.WasmServer.Port = *opts.WasmServerPort
+		}
+
 		cfg.parameters.OverloadManager.MaxHeapSizeBytes = opts.MaxHeapSizeBytes
 	}
 

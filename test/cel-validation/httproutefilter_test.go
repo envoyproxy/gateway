@@ -86,13 +86,13 @@ func TestHTTPRouteFilter(t *testing.T) {
 			},
 		},
 		{
-			desc: "Valid SetFromHeader",
+			desc: "Valid Header",
 			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
 				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
 					URLRewrite: &egv1a1.HTTPURLRewriteFilter{
 						Hostname: &egv1a1.HTTPHostnameModifier{
-							Type:          egv1a1.HeaderHTTPHostnameModifier,
-							SetFromHeader: ptr.To("foo"),
+							Type:   egv1a1.HeaderHTTPHostnameModifier,
+							Header: ptr.To("foo"),
 						},
 					},
 				}
@@ -113,7 +113,7 @@ func TestHTTPRouteFilter(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "invalid SetFromHeader missing settings",
+			desc: "invalid Header missing settings",
 			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
 				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
 					URLRewrite: &egv1a1.HTTPURLRewriteFilter{
@@ -123,7 +123,7 @@ func TestHTTPRouteFilter(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"spec.urlRewrite.hostname: Invalid value: \"object\": setFromHeader must be specified for SetFromHeader type"},
+			wantErrors: []string{"spec.urlRewrite.hostname: Invalid value: \"object\": header must be specified for Header type"},
 		},
 		{
 			desc: "invalid SetFromBackend type",
@@ -131,13 +131,13 @@ func TestHTTPRouteFilter(t *testing.T) {
 				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
 					URLRewrite: &egv1a1.HTTPURLRewriteFilter{
 						Hostname: &egv1a1.HTTPHostnameModifier{
-							Type:          egv1a1.BackendHTTPHostnameModifier,
-							SetFromHeader: ptr.To("foo"),
+							Type:   egv1a1.BackendHTTPHostnameModifier,
+							Header: ptr.To("foo"),
 						},
 					},
 				}
 			},
-			wantErrors: []string{"spec.urlRewrite.hostname: Invalid value: \"object\": setFromHeader must be nil if the type is not SetFromHeader"},
+			wantErrors: []string{"spec.urlRewrite.hostname: Invalid value: \"object\": header must be nil if the type is not Header"},
 		},
 	}
 

@@ -55,6 +55,7 @@ var (
 	ErrHTTPPathModifierDoubleReplace           = errors.New("redirect filter cannot have a path modifier that supplies more than one of fullPathReplace, prefixMatchReplace and regexMatchReplace")
 	ErrHTTPPathModifierNoReplace               = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace, prefixMatchReplace or regexMatchReplace")
 	ErrHTTPPathRegexModifierNoSetting          = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace, prefixMatchReplace or regexMatchReplace")
+	ErrHTTPHostModifierDoubleReplace           = errors.New("redirect filter cannot have a host modifier that supplies more than one of Hostname, Header and Backend")
 	ErrAddHeaderEmptyName                      = errors.New("header modifier filter cannot configure a header without a name to be added")
 	ErrAddHeaderDuplicate                      = errors.New("header modifier filter attempts to add the same header more than once (case insensitive)")
 	ErrRemoveHeaderDuplicate                   = errors.New("header modifier filter attempts to remove the same header more than once (case insensitive)")
@@ -1382,8 +1383,8 @@ func (r DirectResponse) Validate() error {
 type URLRewrite struct {
 	// Path contains config for rewriting the path of the request.
 	Path *ExtendedHTTPPathModifier `json:"path,omitempty" yaml:"path,omitempty"`
-	// Hostname configures the replacement of the request's hostname.
-	Hostname *string `json:"hostname,omitempty" yaml:"hostname,omitempty"`
+	// Host configures the replacement of the request's host header.
+	Host *HTTPHostModifier `json:"host,omitempty" yaml:"host,omitempty"`
 }
 
 // Validate the fields within the URLRewrite structure
@@ -1392,6 +1393,12 @@ func (r URLRewrite) Validate() error {
 
 	if r.Path != nil {
 		if err := r.Path.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	if r.Host != nil {
+		if err := r.Host.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -1494,6 +1501,34 @@ func (r ExtendedHTTPPathModifier) Validate() error {
 
 	if r.RegexMatchReplace != nil && (r.RegexMatchReplace.Pattern == "" || r.RegexMatchReplace.Substitution == "") {
 		errs = errors.Join(errs, ErrHTTPPathModifierNoReplace)
+	}
+
+	return errs
+}
+
+// HTTPHostModifier holds instructions for how to modify the host of a request
+// with both core gateway-api and extended envoy gateway capabilities
+// +k8s:deepcopy-gen=true
+type HTTPHostModifier struct {
+	Name    *string `json:"name,omitempty" yaml:"name,omitempty"`
+	Header  *string `json:"header,omitempty" yaml:"header,omitempty"`
+	Backend *bool   `json:"backend,omitempty" yaml:"backend,omitempty"`
+}
+
+// Validate the fields within the HTTPPathModifier structure
+func (r HTTPHostModifier) Validate() error {
+	var errs error
+
+	rewrites := []bool{r.Name != nil, r.Header != nil, r.Backend != nil}
+	rwc := 0
+	for _, rw := range rewrites {
+		if rw {
+			rwc++
+		}
+	}
+
+	if rwc > 1 {
+		errs = errors.Join(errs, ErrHTTPHostModifierDoubleReplace)
 	}
 
 	return errs

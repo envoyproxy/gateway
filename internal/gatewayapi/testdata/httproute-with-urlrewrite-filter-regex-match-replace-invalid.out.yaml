@@ -164,9 +164,9 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
+        message: Cannot configure multiple urlRewrite filters for a single HTTPRouteRule
+        reason: UnsupportedValue
+        status: "False"
         type: Accepted
       - lastTransitionTime: null
         message: Resolved all the Object references for the Route
@@ -356,28 +356,3 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
-      routes:
-      - destination:
-          name: httproute/default/httproute-multiple-path-rewrites-1/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            protocol: HTTP
-            weight: 1
-        hostname: gateway.envoyproxy.io
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-multiple-path-rewrites-1
-          namespace: default
-        name: httproute/default/httproute-multiple-path-rewrites-1/rule/0/match/0/gateway_envoyproxy_io
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /ext-first
-        urlRewrite:
-          path:
-            fullReplace: null
-            prefixMatchReplace: /rewrite
