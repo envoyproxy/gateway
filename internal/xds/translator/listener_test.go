@@ -12,6 +12,7 @@ import (
 
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
+	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/proto"
 
@@ -28,6 +29,11 @@ func Test_toNetworkFilter(t *testing.T) {
 			name:    "valid filter",
 			proto:   &hcmv3.HttpConnectionManager{
 				StatPrefix: "stats",
+				RouteSpecifier: &hcmv3.HttpConnectionManager_RouteConfig{
+					RouteConfig: &routev3.RouteConfiguration{
+						Name: "route",
+					},
+				},
 			},
 			wantErr: nil,
 		},
