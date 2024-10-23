@@ -71,8 +71,8 @@ var EnvoyProxyDaemonSetTest = suite.ConformanceTest{
 						"app.kubernetes.io/name":                         "envoy",
 						"gateway.envoyproxy.io/owning-gateway-name":      gwNN.Name,
 						"gateway.envoyproxy.io/owning-gateway-namespace": gwNN.Namespace,
-					})},
-				)
+					}),
+				})
 				if err != nil {
 					return false, err
 				}
