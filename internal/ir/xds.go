@@ -7,6 +7,7 @@ package ir
 
 import (
 	"cmp"
+	"encoding"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -76,6 +77,25 @@ var (
 
 	redacted = []byte("[redacted]")
 )
+
+// PrivateBytes implements a custom []byte type so that we can override the
+// various string-ish printing functions to redact the contents.
+type PrivateBytes []byte
+
+var _ fmt.Stringer = PrivateBytes{}
+var _ encoding.TextMarshaler = PrivateBytes{}
+
+// MarshalText redacts the contents of the PrivateBytes type.
+// Note that MarshalJSON will call MarshalText if it exists, so we don't
+// need to implement MarshalJSON.
+func (p PrivateBytes) MarshalText() ([]byte, error) {
+	return redacted, nil
+}
+
+// String redacts the contents of the PrivateBytes type.
+func (p PrivateBytes) String() string {
+	return string(redacted)
+}
 
 // Xds holds the intermediate representation of a Gateway and is
 // used by the xDS Translator to convert it into xDS resources.
@@ -176,34 +196,13 @@ func (x *Xds) GetUDPListener(name string) *UDPListener {
 }
 
 func (x *Xds) YAMLString() string {
-	y, _ := yaml.Marshal(x.Printable())
+	y, _ := yaml.Marshal(x)
 	return string(y)
 }
 
 func (x *Xds) JSONString() string {
-	j, _ := json.Marshal(x.Printable())
+	j, _ := json.Marshal(x)
 	return string(j)
-}
-
-// Printable returns a deep copy of the resource that can be safely logged.
-func (x *Xds) Printable() *Xds {
-	out := x.DeepCopy()
-	for _, listener := range out.HTTP {
-		// Omit field
-		if listener.TLS != nil {
-			for i := range listener.TLS.Certificates {
-				listener.TLS.Certificates[i].PrivateKey = redacted
-			}
-		}
-
-		for _, route := range listener.Routes {
-			// Omit field
-			if route.Security != nil {
-				route.Security = route.Security.Printable()
-			}
-		}
-	}
-	return out
 }
 
 type Listener interface {
@@ -366,7 +365,7 @@ type TLSCertificate struct {
 	// Certificate can be either a client or server certificate.
 	Certificate []byte `json:"serverCertificate,omitempty" yaml:"serverCertificate,omitempty"`
 	// PrivateKey for the server.
-	PrivateKey []byte `json:"privateKey,omitempty" yaml:"privateKey,omitempty"`
+	PrivateKey PrivateBytes `json:"privateKey,omitempty" yaml:"privateKey,omitempty"`
 }
 
 // TLSCACertificate holds CA Certificate to validate clients
@@ -753,18 +752,6 @@ type SecurityFeatures struct {
 	Authorization *Authorization `json:"authorization,omitempty" yaml:"authorization,omitempty"`
 }
 
-func (s *SecurityFeatures) Printable() *SecurityFeatures {
-	out := s.DeepCopy()
-	if out.OIDC != nil {
-		out.OIDC.ClientSecret = redacted
-		out.OIDC.HMACSecret = redacted
-	}
-	if out.BasicAuth != nil {
-		out.BasicAuth.Users = redacted
-	}
-	return out
-}
-
 func (s *SecurityFeatures) Validate() error {
 	var errs error
 
@@ -858,10 +845,10 @@ type OIDC struct {
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	//
 	// This is an Opaque secret. The client secret should be stored in the key "client-secret".
-	ClientSecret []byte `json:"clientSecret,omitempty" yaml:"clientSecret,omitempty"`
+	ClientSecret PrivateBytes `json:"clientSecret,omitempty" yaml:"clientSecret,omitempty"`
 
 	// HMACSecret is the secret used to sign the HMAC of the OAuth2 filter cookies.
-	HMACSecret []byte `json:"hmacSecret,omitempty" yaml:"hmacSecret,omitempty"`
+	HMACSecret PrivateBytes `json:"hmacSecret,omitempty" yaml:"hmacSecret,omitempty"`
 
 	// The OIDC scopes to be used in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
@@ -934,7 +921,7 @@ type BasicAuth struct {
 	Name string `json:"name" yaml:"name"`
 
 	// The username-password pairs in htpasswd format.
-	Users []byte `json:"users,omitempty" yaml:"users,omitempty"`
+	Users PrivateBytes `json:"users,omitempty" yaml:"users,omitempty"`
 }
 
 // ExtAuth defines the schema for the external authorization.
