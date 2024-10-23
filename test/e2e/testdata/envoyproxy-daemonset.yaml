@@ -1,4 +1,3 @@
-# nonk8s
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
@@ -19,8 +18,6 @@ spec:
       kind: EnvoyProxy
       name: eg-daemonset
 ---
-#  This is a EnvoyProxy used for Zipkin tracing and will
-#  target to the eg-special-case Gateway
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
