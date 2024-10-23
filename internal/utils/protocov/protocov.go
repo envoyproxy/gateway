@@ -28,7 +28,7 @@ func ToAnyWithError(msg proto.Message) (*anypb.Any, error) {
 			return nil, err
 		}
 	}
-	
+
 	b, err := marshalOpts.Marshal(msg)
 	if err != nil {
 		return nil, err

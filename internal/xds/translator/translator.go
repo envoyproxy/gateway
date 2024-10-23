@@ -911,7 +911,7 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.
 		}
 	}
 
-	tlsCtxAny, err := anypb.New(tlsCtx)
+	tlsCtxAny, err := protocov.ToAnyWithValidation(tlsCtx)
 	if err != nil {
 		return nil, err
 	}

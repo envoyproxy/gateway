@@ -22,7 +22,6 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	otlpcommonv1 "go.opentelemetry.io/proto/otlp/common/v1"
 	"golang.org/x/exp/maps"
-	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -134,7 +133,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) []
 		}
 
 		// TODO: find a better way to handle this
-		accesslogAny, _ := anypb.New(filelog)
+		accesslogAny, _ := protocov.ToAnyWithValidation(filelog)
 		accessLogs = append(accessLogs, &accesslog.AccessLog{
 			Name: wellknown.FileAccessLog,
 			ConfigType: &accesslog.AccessLog_TypedConfig{
@@ -185,7 +184,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) []
 			filelog.GetLogFormat().Formatters = formatters
 		}
 
-		accesslogAny, _ := anypb.New(filelog)
+		accesslogAny, _ := protocov.ToAnyWithValidation(filelog)
 		accessLogs = append(accessLogs, &accesslog.AccessLog{
 			Name: wellknown.FileAccessLog,
 			ConfigType: &accesslog.AccessLog_TypedConfig{
@@ -228,7 +227,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) []
 				alCfg.AdditionalResponseTrailersToLog = als.HTTP.ResponseTrailers
 			}
 
-			accesslogAny, _ := anypb.New(alCfg)
+			accesslogAny, _ := protocov.ToAnyWithValidation(alCfg)
 			accessLogs = append(accessLogs, &accesslog.AccessLog{
 				Name: wellknown.HTTPGRPCAccessLog,
 				ConfigType: &accesslog.AccessLog_TypedConfig{
@@ -241,7 +240,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) []
 				CommonConfig: cc,
 			}
 
-			accesslogAny, _ := anypb.New(alCfg)
+			accesslogAny, _ := protocov.ToAnyWithValidation(alCfg)
 			accessLogs = append(accessLogs, &accesslog.AccessLog{
 				Name: tcpGRPCAccessLog,
 				ConfigType: &accesslog.AccessLog_TypedConfig{
@@ -297,7 +296,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) []
 			al.Formatters = formatters
 		}
 
-		accesslogAny, _ := anypb.New(al)
+		accesslogAny, _ := protocov.ToAnyWithValidation(al)
 		accessLogs = append(accessLogs, &accesslog.AccessLog{
 			Name: otelAccessLog,
 			ConfigType: &accesslog.AccessLog_TypedConfig{
