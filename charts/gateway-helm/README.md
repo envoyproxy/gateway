@@ -68,7 +68,6 @@ To uninstall the chart:
 | deployment.envoyGateway.image.tag | string | `""` |  |
 | deployment.envoyGateway.imagePullPolicy | string | `""` |  |
 | deployment.envoyGateway.imagePullSecrets | list | `[]` |  |
-| deployment.envoyGateway.resources.limits.cpu | string | `"500m"` |  |
 | deployment.envoyGateway.resources.limits.memory | string | `"1024Mi"` |  |
 | deployment.envoyGateway.resources.requests.cpu | string | `"100m"` |  |
 | deployment.envoyGateway.resources.requests.memory | string | `"256Mi"` |  |

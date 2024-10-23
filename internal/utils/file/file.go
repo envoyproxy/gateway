@@ -8,8 +8,10 @@ package file
 import (
 	"bufio"
 	"os"
+	"path/filepath"
 )
 
+// Write writes data into a given filepath.
 func Write(data string, filepath string) error {
 	file, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
 	if err != nil {
@@ -24,4 +26,14 @@ func Write(data string, filepath string) error {
 	write.Flush()
 
 	return nil
+}
+
+// WriteDir write data into a given filename under certain directory.
+func WriteDir(data []byte, dir, filename string) error {
+	err := os.MkdirAll(dir, 0o755)
+	if err != nil {
+		return err
+	}
+
+	return Write(string(data), filepath.Join(dir, filename))
 }
