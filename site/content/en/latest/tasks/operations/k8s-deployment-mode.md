@@ -1,50 +1,46 @@
 ---
-title: "Deployment Mode"
+title: "Kubernetes Deployment Mode"
 ---
-## Deployment modes
 
-### One GatewayClass per Envoy Gateway Controller
-* An Envoy Gateway is associated with a single [GatewayClass][] resource under one controller.
-This is the simplest deployment mode and is suitable for scenarios where each Gateway needs to have its own dedicated set of resources and configurations.
+In Kubernetes deployment mode:
 
-### Multiple GatewayClasses per Envoy Gateway Controller
-* An Envoy Gateway is associated with multiple [GatewayClass][] resources under one controller.
-* Support for accepting multiple GatewayClasses was added [here][issue1231].
-
-### Separate Envoy Gateway Controllers
-If you've instantiated multiple GatewayClasses, you can also run separate Envoy Gateway controllers in different namespaces, linking a GatewayClass to each of them for multi-tenancy.
-Please follow the example [Multi-tenancy](#multi-tenancy).
-
-### Merged Gateways onto a single EnvoyProxy fleet
-By default, each Gateway has its own dedicated set of Envoy Proxy and its configurations.
-However, for some deployments, it may be more convenient to merge listeners across multiple Gateways and deploy a single Envoy Proxy fleet.
-
-This can help to efficiently utilize the infra resources in the cluster and manage them in a centralized manner, or have a single IP address for all of the listeners.
-Setting the `mergeGateways` field in the EnvoyProxy resource linked to GatewayClass will result in merging all Gateway listeners under one GatewayClass resource.
-
-* The tuple of port, protocol, and hostname must be unique across all Listeners.
-
-Please follow the example [Merged gateways deployment](#merged-gateways-deployment).
-
-### Supported Modes
-
-#### Kubernetes
-
-* The default deployment model is - Envoy Gateway **watches** for resources such a `Service` & `HTTPRoute` in **all** namespaces
-and **creates** managed data plane resources such as EnvoyProxy `Deployment` in the **namespace where Envoy Gateway is running**.
+* The default deployment model is - Envoy Gateway **watches** for resources such as `Service` or `HTTPRoute` in **all** namespaces
+  and **creates** managed data plane resources such as EnvoyProxy `Deployment` in the **namespace where Envoy Gateway is running**.
 * Envoy Gateway also supports [Namespaced deployment mode][], you can watch resources in the specific namespaces by assigning
-`EnvoyGateway.provider.kubernetes.watch.namespaces` or `EnvoyGateway.provider.kubernetes.watch.namespaceSelector` and **creates** managed data plane resources in the **namespace where Envoy Gateway is running**.
+  `EnvoyGateway.provider.kubernetes.watch.namespaces` or `EnvoyGateway.provider.kubernetes.watch.namespaceSelector` and
+  **creates** managed data plane resources in the **namespace where Envoy Gateway is running**.
 * Support for alternate deployment modes is being tracked [here][issue1117].
 
-### Multi-tenancy
+## Envoy Gateway Controller
 
-#### Kubernetes
+This section describes few ways to deploy the Envoy Gateway controller.
+
+### One GatewayClass per Controller
+
+An Envoy Gateway is associated with a single [GatewayClass][] resource under one controller.
+
+This is the simplest deployment mode and is suitable for scenarios where each Gateway needs to have its own dedicated set of resources and configurations.
+
+### Multiple GatewayClasses per Controller
+
+An Envoy Gateway is associated with multiple [GatewayClass][] resources under one controller.
+
+Support for accepting multiple GatewayClasses was added [here][issue1231].
+
+### Separate Controllers
+
+If you've instantiated multiple GatewayClasses, you can also run separate Envoy Gateway controllers in different namespaces, 
+linking a GatewayClass to each of them for multi-tenancy.
+
+For more information, please follow the [Multi-tenancy](#multi-tenancy) example.
+
+## Multi-tenancy
 
 * A `tenant` is a group within an organization (e.g. a team or department) who shares organizational resources. We recommend
 each `tenant` deploy their own Envoy Gateway controller in their respective `namespace`. Below is an example of deploying Envoy Gateway
 by the `marketing` and `product` teams in separate namespaces.
 
-* Lets deploy Envoy Gateway in the `marketing` namespace and also watch resources only in this namespace. We are also setting the controller name to a unique string here `gateway.envoyproxy.io/marketing-gatewayclass-controller`.
+* Let's deploy Envoy Gateway in the `marketing` namespace and also watch resources only in this namespace. We are also setting the controller name to a unique string here `gateway.envoyproxy.io/marketing-gatewayclass-controller`.
 
 ```shell
 helm install \
@@ -55,7 +51,7 @@ eg-marketing oci://docker.io/envoyproxy/gateway-helm \
 --version {{< helm-version >}} -n marketing --create-namespace
 ```
 
-Lets create a `GatewayClass` linked to the marketing team's Envoy Gateway controller, and as well other resources linked to it, so the `backend` application operated by this team can be exposed to external clients.
+Let's create a `GatewayClass` linked to the marketing team's Envoy Gateway controller, and as well other resources linked to it, so the `backend` application operated by this team can be exposed to external clients.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -332,7 +328,7 @@ Handling connection for 8888
 * Connection #0 to host localhost left intact
 ```
 
-* Lets deploy Envoy Gateway in the `product` namespace and also watch resources only in this namespace.
+* Let's deploy Envoy Gateway in the `product` namespace and also watch resources only in this namespace.
 
 ```shell
 helm install \
@@ -343,7 +339,7 @@ eg-product oci://docker.io/envoyproxy/gateway-helm \
 --version {{< helm-version >}} -n product --create-namespace
 ```
 
-Lets create a `GatewayClass` linked to the product team's Envoy Gateway controller, and as well other resources linked to it, so the `backend` application operated by this team can be exposed to external clients.
+Let's create a `GatewayClass` linked to the product team's Envoy Gateway controller, and as well other resources linked to it, so the `backend` application operated by this team can be exposed to external clients.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -556,7 +552,7 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-Lets port forward to the generated envoy proxy service in the `product` namespace and send a request to it.
+Let's port forward to the generated envoy proxy service in the `product` namespace and send a request to it.
 
 ```shell
 export ENVOY_SERVICE=$(kubectl get svc -n product --selector=gateway.envoyproxy.io/owning-gateway-namespace=product,gateway.envoyproxy.io/owning-gateway-name=eg -o jsonpath='{.items[0].metadata.name}')
@@ -645,11 +641,47 @@ Handling connection for 8889
 * Connection #0 to host localhost left intact
 ```
 
-### Merged gateways deployment
+## Merge Gateways
 
-In this example, we will deploy GatewayClass
+By default, each Gateway has its own dedicated set of Envoy Proxy and its configurations.
+However, for some deployments, it may be more convenient to **merge listeners across multiple Gateways and deploy a single Envoy Proxy fleet**.
+
+This can help to efficiently utilize the infra resources in the cluster and manage them in a centralized manner, or have a single IP address for all the listeners.
+Setting the `mergeGateways` field in the EnvoyProxy resource linked to GatewayClass will result in merging all Gateway listeners under one GatewayClass resource.
+
+* The tuple of port, protocol, and hostname **must be unique** across all Listeners.
+
+### Example Deployment
+
+In this example, we will describe how to use merge-gateways feature through an example.
+
+First, deploy a GatewayClass
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: merged-eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: custom-proxy-config
+    namespace: envoy-gateway-system
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resources to your cluster:
+
+```yaml
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
@@ -663,9 +695,32 @@ spec:
     namespace: envoy-gateway-system
 ```
 
+{{% /tab %}}
+{{< /tabpane >}}
+
 with a referenced [EnvoyProxy][] resource configured to enable merged Gateways deployment mode.
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: envoy-gateway-system
+spec:
+  mergeGateways: true
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resources to your cluster:
+
+```yaml
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
@@ -675,7 +730,8 @@ spec:
   mergeGateways: true
 ```
 
-#### Deploy merged-gateways example
+{{% /tab %}}
+{{< /tabpane >}}
 
 Deploy resources on your cluster from the example.
 
@@ -683,47 +739,58 @@ Deploy resources on your cluster from the example.
 kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/merged-gateways.yaml
 ```
 
-Verify that Gateways are deployed and programmed
+Verify that Gateways are deployed and programmed:
 
 ```shell
 kubectl get gateways -n default
+```
 
+```console
 NAMESPACE   NAME          CLASS       ADDRESS          PROGRAMMED   AGE
 default     merged-eg-1   merged-eg   172.18.255.202   True         2m4s
 default     merged-eg-2   merged-eg   172.18.255.202   True         2m4s
 default     merged-eg-3   merged-eg   172.18.255.202   True         2m4s
 ```
 
-Verify that HTTPRoutes are deployed
+Verify that HTTPRoutes are deployed:
 
 ```shell
 kubectl get httproute -n default
+```
+
+```console
 NAMESPACE   NAME              HOSTNAMES             AGE
 default     hostname1-route   ["www.merged1.com"]   2m4s
 default     hostname2-route   ["www.merged2.com"]   2m4s
 default     hostname3-route   ["www.merged3.com"]   2m4s
 ```
 
-If you take a look at the deployed Envoy Proxy service you would notice that all of the Gateway listeners ports are added to that service.
+If you take a look at the deployed Envoy Proxy service you would notice that all the Gateway listeners ports are added to that service.
 
 ```shell
 kubectl get service -n envoy-gateway-system
+```
+
+```console
 NAME                            TYPE           CLUSTER-IP      EXTERNAL-IP      PORT(S)                                        AGE
 envoy-gateway                   ClusterIP      10.96.141.4     <none>           18000/TCP,18001/TCP                            6m43s
 envoy-gateway-metrics-service   ClusterIP      10.96.113.191   <none>           19001/TCP                                      6m43s
 envoy-merged-eg-668ac7ae        LoadBalancer   10.96.48.255    172.18.255.202   8081:30467/TCP,8082:31793/TCP,8080:31153/TCP   3m17s
 ```
 
-There should be also one deployment (envoy-merged-eg-668ac7ae-775f9865d-55zhs) for every Gateway and its name should reference the name of the GatewayClass.
+There should be also one deployment (`envoy-merged-eg-668ac7ae-775f9865d-55zhs`) for every Gateway and its name should reference the name of the GatewayClass.
 
 ```shell
 kubectl get pods -n envoy-gateway-system
+```
+
+```console
 NAME                                       READY   STATUS    RESTARTS       AGE
 envoy-gateway-5d998778f6-wr6m9             1/1     Running   0              6m43s
 envoy-merged-eg-668ac7ae-775f9865d-55zhs   2/2     Running   0              3m17s
 ```
 
-#### Testing the Configuration
+### Verify the Connection
 
 Get the name of the merged gateways Envoy service:
 
@@ -740,7 +807,7 @@ export GATEWAY_HOST=$(kubectl get svc/${ENVOY_SERVICE} -n envoy-gateway-system -
 In certain environments, the load balancer may be exposed using a hostname, instead of an IP address. If so, replace
 `ip` in the above command with `hostname`.
 
-Curl the route hostname-route2 through Envoy proxy:
+Curl the route `hostname-route2` through Envoy proxy:
 
 ```shell
 curl --header "Host: www.merged2.com" http://$GATEWAY_HOST:8081/example2
@@ -779,7 +846,7 @@ curl --header "Host: www.merged2.com" http://$GATEWAY_HOST:8081/example2
 }
 ```
 
-Curl the route hostname-route1 through Envoy proxy:
+Curl the route `hostname-route1` through Envoy proxy:
 
 ```shell
 curl --header "Host: www.merged1.com" http://$GATEWAY_HOST:8080/example
@@ -818,7 +885,7 @@ curl --header "Host: www.merged1.com" http://$GATEWAY_HOST:8080/example
 }
 ```
 
-#### Verify deployment of multiple GatewayClass
+### Verify Multiple GatewayClass Deployment
 
 Install the GatewayClass, Gateway, HTTPRoute and example app from [Quickstart][] example:
 
@@ -826,7 +893,8 @@ Install the GatewayClass, Gateway, HTTPRoute and example app from [Quickstart][]
 kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/{{< yaml-version >}}/quickstart.yaml -n default
 ```
 
-Lets create also and additional `Gateway` linked to the GatewayClass and `backend` application from Quickstart example.
+In order to demonstrate that one GatewayClass with merge-gateways feature enabled won't be disturbed by the one that disabled,
+let's create also and additional `Gateway` linked to the GatewayClass and `backend` application from Quickstart example.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -913,13 +981,13 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-Verify that Gateways are deployed and programmed
+Verify that Gateways are deployed and programmed:
 
 ```shell
 kubectl get gateways -n default
 ```
 
-```shell
+```console
 NAME          CLASS       ADDRESS          PROGRAMMED   AGE
 eg            eg          172.18.255.203   True         114s
 eg-2          eg          172.18.255.204   True         89s
@@ -928,13 +996,13 @@ merged-eg-2   merged-eg   172.18.255.202   True         8m33s
 merged-eg-3   merged-eg   172.18.255.202   True         8m33s
 ```
 
-Verify that HTTPRoutes are deployed
+Verify that HTTPRoutes are deployed:
 
 ```shell
 kubectl get httproute -n default
 ```
 
-```shell
+```console
 NAMESPACE   NAME              HOSTNAMES                        AGE
 default     backend           ["www.example.com"]              2m29s
 default     eg-2              ["www.quickstart.example.com"]   87s
@@ -943,13 +1011,13 @@ default     hostname2-route   ["www.merged2.com"]              10m4s
 default     hostname3-route   ["www.merged3.com"]              10m4s
 ```
 
-Verify that services are now deployed separately.
+Verify that services are now deployed separately:
 
 ```shell
 kubectl get service -n envoy-gateway-system
 ```
 
-```shell
+```console
 NAME                            TYPE           CLUSTER-IP      EXTERNAL-IP      PORT(S)                                        AGE
 envoy-default-eg-2-7e515b2f     LoadBalancer   10.96.121.46    172.18.255.204   8080:32705/TCP                                 3m27s
 envoy-default-eg-e41e7b31       LoadBalancer   10.96.11.244    172.18.255.203   80:31930/TCP                                   2m26s
@@ -964,15 +1032,13 @@ There should be two deployments for each of newly deployed Gateway and its name 
 kubectl get pods -n envoy-gateway-system
 ```
 
-```shell
+```console
 NAME                                          READY   STATUS    RESTARTS   AGE
 envoy-default-eg-2-7e515b2f-8c98fdf88-p6jhg   2/2     Running   0          3m27s
 envoy-default-eg-e41e7b31-6f998d85d7-jpvmj    2/2     Running   0          2m26s
 envoy-gateway-5d998778f6-wr6m9                1/1     Running   0          14m25s
 envoy-merged-eg-668ac7ae-5958f7b7f6-9h9v2     2/2     Running   0          10m59s
 ```
-
-#### Testing the Configuration
 
 Get the name of the merged gateways Envoy service:
 
@@ -992,7 +1058,7 @@ Curl the route Quickstart backend route through Envoy proxy:
 curl --header "Host: www.example.com" http://$DEFAULT_GATEWAY_HOST
 ```
 
-```shell
+```console
 {
  "path": "/",
  "host": "www.example.com",
@@ -1025,13 +1091,13 @@ curl --header "Host: www.example.com" http://$DEFAULT_GATEWAY_HOST
 }
 ```
 
-Curl the route hostname-route3 through Envoy proxy:
+Curl the route `hostname-route3` through Envoy proxy:
 
 ```shell
 curl --header "Host: www.merged3.com" http://$GATEWAY_HOST:8082/example3
 ```
 
-```shell
+```console
 {
  "path": "/example3",
  "host": "www.merged3.com",
