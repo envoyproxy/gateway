@@ -133,7 +133,6 @@ xdsIR:
         withUnderscoresAction: RejectRequest
       hostnames:
       - '*'
-      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway
@@ -152,7 +151,6 @@ xdsIR:
         withUnderscoresAction: RejectRequest
       hostnames:
       - '*'
-      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway

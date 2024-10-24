@@ -227,7 +227,7 @@ type CoreListenerDetails struct {
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 	// IPFamily specifies the IP address family for the gateway.
 	// It can be IPv4, IPv6, or Dual.
-	IPFamily IPFamily `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
+	IPFamily *IPFamily `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
 }
 
 // IPFamily specifies the IP address family used by the Gateway for its listening ports.

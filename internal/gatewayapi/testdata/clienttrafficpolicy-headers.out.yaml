@@ -159,7 +159,6 @@ xdsIR:
         withUnderscoresAction: Allow
       hostnames:
       - '*'
-      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway
@@ -189,7 +188,6 @@ xdsIR:
         withUnderscoresAction: Allow
       hostnames:
       - '*'
-      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway

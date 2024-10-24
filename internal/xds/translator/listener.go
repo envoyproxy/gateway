@@ -147,8 +147,11 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 	return extensionConfig
 }
 
-func setAddressByIPFamily(socketAddress *corev3.SocketAddress, ipFamily ir.IPFamily, port uint32) []*listenerv3.AdditionalAddress {
-	switch ipFamily {
+func setAddressByIPFamily(socketAddress *corev3.SocketAddress, ipFamily *ir.IPFamily, port uint32) []*listenerv3.AdditionalAddress {
+	if ipFamily == nil {
+		return nil
+	}
+	switch *ipFamily {
 	case ir.IPv4:
 		socketAddress.Address = "0.0.0.0"
 	case ir.IPv6:
@@ -176,7 +179,7 @@ func setAddressByIPFamily(socketAddress *corev3.SocketAddress, ipFamily ir.IPFam
 
 // buildXdsTCPListener creates a xds Listener resource
 // TODO: Improve function parameters
-func buildXdsTCPListener(name, address string, port uint32, ipFamily ir.IPFamily, keepalive *ir.TCPKeepalive, connection *ir.ClientConnection, accesslog *ir.AccessLog) *listenerv3.Listener {
+func buildXdsTCPListener(name, address string, port uint32, ipFamily *ir.IPFamily, keepalive *ir.TCPKeepalive, connection *ir.ClientConnection, accesslog *ir.AccessLog) *listenerv3.Listener {
 	socketOptions := buildTCPSocketOptions(keepalive)
 	al := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeListener)
 	bufferLimitBytes := buildPerConnectionBufferLimitBytes(connection)

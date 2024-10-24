@@ -609,16 +609,20 @@ func setIfNil[T any](target **T, value *T) {
 	}
 }
 
-func getIPFamily(envoyProxy *egv1a1.EnvoyProxy) ir.IPFamily {
+func getIPFamily(envoyProxy *egv1a1.EnvoyProxy) *ir.IPFamily {
 	if envoyProxy == nil || envoyProxy.Spec.IPFamily == nil {
-		return ir.IPv4
+		return nil
 	}
+	var result ir.IPFamily
 	switch *envoyProxy.Spec.IPFamily {
+	case egv1a1.IPv4:
+		result = ir.IPv4
 	case egv1a1.IPv6:
-		return ir.IPv6
+		result = ir.IPv6
 	case egv1a1.DualStack:
-		return ir.Dualstack
+		result = ir.Dualstack
 	default:
-		return ir.IPv4
+		return nil
 	}
+	return &result
 }

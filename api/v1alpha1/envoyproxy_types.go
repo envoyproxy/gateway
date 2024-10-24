@@ -144,7 +144,6 @@ type EnvoyProxySpec struct {
 	// - It defaults to IPv4 only.
 	// - IPv6 and dual-stack environments are not supported in this default configuration.
 	// Note: To enable IPv6 or dual-stack functionality, explicit configuration is required.
-	// +kubebuilder:default=IPv4
 	// +kubebuilder:validation:Enum=IPv4;IPv6;DualStack
 	// +optional
 	IPFamily *IPFamily `json:"ipFamily,omitempty"`

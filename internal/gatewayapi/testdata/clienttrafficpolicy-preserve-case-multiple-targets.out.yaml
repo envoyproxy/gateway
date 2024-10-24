@@ -204,7 +204,6 @@ xdsIR:
       http1:
         enableTrailers: true
         preserveHeaderCase: true
-      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway
@@ -224,7 +223,6 @@ xdsIR:
     - address: 0.0.0.0
       hostnames:
       - '*'
-      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway
@@ -242,7 +240,6 @@ xdsIR:
       http1:
         enableTrailers: true
         preserveHeaderCase: true
-      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway

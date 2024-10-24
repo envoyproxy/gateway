@@ -94,7 +94,6 @@ xdsIR:
         path: /ready
       hostnames:
       - '*'
-      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway

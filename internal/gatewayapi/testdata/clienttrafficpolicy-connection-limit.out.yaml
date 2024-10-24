@@ -168,7 +168,6 @@ xdsIR:
           value: 3
       hostnames:
       - '*'
-      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway
@@ -184,7 +183,6 @@ xdsIR:
       connection: {}
       hostnames:
       - '*'
-      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway

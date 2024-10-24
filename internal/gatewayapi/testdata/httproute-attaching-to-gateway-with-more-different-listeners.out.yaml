@@ -359,7 +359,6 @@ xdsIR:
     - address: 0.0.0.0
       hostnames:
       - foo.com
-      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway
@@ -395,7 +394,6 @@ xdsIR:
     - address: 0.0.0.0
       hostnames:
       - bar.com
-      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway
@@ -431,7 +429,6 @@ xdsIR:
     - address: 0.0.0.0
       hostnames:
       - foo1.com
-      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway
@@ -467,7 +464,6 @@ xdsIR:
     - address: 0.0.0.0
       hostnames:
       - bar1.com
-      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway
@@ -503,7 +499,6 @@ xdsIR:
     - address: 0.0.0.0
       hostnames:
       - foo2.com
-      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway
@@ -539,7 +534,6 @@ xdsIR:
     - address: 0.0.0.0
       hostnames:
       - bar2.com
-      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway
@@ -575,7 +569,6 @@ xdsIR:
     - address: 0.0.0.0
       hostnames:
       - foo3.com
-      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway
@@ -611,7 +604,6 @@ xdsIR:
     - address: 0.0.0.0
       hostnames:
       - bar3.com
-      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway

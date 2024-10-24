@@ -136,7 +136,6 @@ xdsIR:
       - '*'
       http3:
         quicPort: 443
-      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway

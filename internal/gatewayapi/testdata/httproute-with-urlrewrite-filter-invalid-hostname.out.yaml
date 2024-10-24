@@ -114,7 +114,6 @@ xdsIR:
     - address: 0.0.0.0
       hostnames:
       - '*.envoyproxy.io'
-      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway

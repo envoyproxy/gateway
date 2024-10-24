@@ -97,6 +97,5 @@ xdsIR:
       - path: /dev/stdout
     tcp:
     - address: 0.0.0.0
-      ipFamily: IPv4
       name: envoy-gateway/gateway-1/tcp
       port: 10080

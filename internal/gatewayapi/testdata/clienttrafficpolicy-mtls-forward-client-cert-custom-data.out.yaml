@@ -551,7 +551,6 @@ xdsIR:
           mode: Sanitize
       hostnames:
       - '*'
-      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway
@@ -582,7 +581,6 @@ xdsIR:
           mode: Sanitize
       hostnames:
       - '*'
-      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway
@@ -606,7 +604,6 @@ xdsIR:
           mode: ForwardOnly
       hostnames:
       - '*'
-      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway
@@ -644,7 +641,6 @@ xdsIR:
           mode: AppendForward
       hostnames:
       - '*'
-      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway
@@ -684,7 +680,6 @@ xdsIR:
           mode: SanitizeSet
       hostnames:
       - '*'
-      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway
@@ -726,7 +721,6 @@ xdsIR:
           mode: SanitizeSet
       hostnames:
       - '*'
-      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway

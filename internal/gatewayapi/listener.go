@@ -118,6 +118,9 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 						EscapedSlashesAction: ir.UnescapeAndRedirect,
 					},
 				}
+				if ipFamily := getIPFamily(gateway.envoyProxy); ipFamily != nil {
+					irListener.CoreListenerDetails.IPFamily = ipFamily
+				}
 				if listener.Hostname != nil {
 					irListener.Hostnames = append(irListener.Hostnames, string(*listener.Hostname))
 				} else {

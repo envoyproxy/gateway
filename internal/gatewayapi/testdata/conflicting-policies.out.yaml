@@ -268,7 +268,6 @@ xdsIR:
     - address: 0.0.0.0
       hostnames:
       - '*.192.168.0.15.nip.io'
-      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway
@@ -304,7 +303,6 @@ xdsIR:
     - address: 0.0.0.0
       hostnames:
       - qccbahgo.qccbahgo
-      ipFamily: IPv4
       isHTTP2: false
       metadata:
         kind: Gateway

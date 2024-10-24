@@ -383,7 +383,6 @@ spec:
                       && has(self.after))
                 type: array
               ipFamily:
-                default: IPv4
                 description: |-
                   IPFamily specifies the IP family for the EnvoyProxy fleet.
                   This setting only affects the Gateway listener port and does not impact
