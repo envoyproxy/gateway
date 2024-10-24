@@ -132,7 +132,6 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 			filelog.GetLogFormat().Formatters = formatters
 		}
 
-		// TODO: find a better way to handle this
 		accesslogAny, err := protocov.ToAnyWithValidation(filelog)
 		if err != nil {
 			return nil, err
