@@ -1172,92 +1172,112 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
-	// Watch GRPCRoute CRUDs and process affected Gateways.
-	grpcrPredicates := []predicate.TypedPredicate[*gwapiv1.GRPCRoute]{
-		predicate.Or(predicate.TypedGenerationChangedPredicate[*gwapiv1.GRPCRoute]{},
-			predicate.TypedLabelChangedPredicate[*gwapiv1.GRPCRoute]{}),
-	}
-	if r.namespaceLabel != nil {
-		grpcrPredicates = append(grpcrPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1.GRPCRoute](func(grpc *gwapiv1.GRPCRoute) bool {
-			return r.hasMatchingNamespaceLabels(grpc)
-		}))
-	}
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gwapiv1.GRPCRoute{},
-			handler.TypedEnqueueRequestsFromMapFunc[*gwapiv1.GRPCRoute](func(ctx context.Context, route *gwapiv1.GRPCRoute) []reconcile.Request {
-				return r.enqueueClass(ctx, route)
-			}),
-			grpcrPredicates...)); err != nil {
-		return err
-	}
-	if err := addGRPCRouteIndexers(ctx, mgr); err != nil {
-		return err
-	}
-
-	// Watch TLSRoute CRUDs and process affected Gateways.
-	tlsrPredicates := []predicate.TypedPredicate[*gwapiv1a2.TLSRoute]{
-		predicate.Or(predicate.TypedGenerationChangedPredicate[*gwapiv1a2.TLSRoute]{},
-			predicate.TypedLabelChangedPredicate[*gwapiv1a2.TLSRoute]{}),
-	}
-	if r.namespaceLabel != nil {
-		tlsrPredicates = append(tlsrPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1a2.TLSRoute](func(route *gwapiv1a2.TLSRoute) bool {
-			return r.hasMatchingNamespaceLabels(route)
-		}))
-	}
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gwapiv1a2.TLSRoute{},
-			handler.TypedEnqueueRequestsFromMapFunc[*gwapiv1a2.TLSRoute](func(ctx context.Context, route *gwapiv1a2.TLSRoute) []reconcile.Request {
-				return r.enqueueClass(ctx, route)
-			}),
-			tlsrPredicates...)); err != nil {
-		return err
-	}
-	if err := addTLSRouteIndexers(ctx, mgr); err != nil {
-		return err
+	grpcRouteCRDExists := r.crdExists(mgr, resource.KindGRPCRoute, gwapiv1.GroupVersion.String())
+	if !grpcRouteCRDExists {
+		r.log.Info("GRPCRoute CRD not found, skipping GRPCRoute watch")
+	} else {
+		// Watch GRPCRoute CRUDs and process affected Gateways.
+		grpcrPredicates := []predicate.TypedPredicate[*gwapiv1.GRPCRoute]{
+			predicate.Or(predicate.TypedGenerationChangedPredicate[*gwapiv1.GRPCRoute]{},
+				predicate.TypedLabelChangedPredicate[*gwapiv1.GRPCRoute]{}),
+		}
+		if r.namespaceLabel != nil {
+			grpcrPredicates = append(grpcrPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1.GRPCRoute](func(grpc *gwapiv1.GRPCRoute) bool {
+				return r.hasMatchingNamespaceLabels(grpc)
+			}))
+		}
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &gwapiv1.GRPCRoute{},
+				handler.TypedEnqueueRequestsFromMapFunc[*gwapiv1.GRPCRoute](func(ctx context.Context, route *gwapiv1.GRPCRoute) []reconcile.Request {
+					return r.enqueueClass(ctx, route)
+				}),
+				grpcrPredicates...)); err != nil {
+			return err
+		}
+		if err := addGRPCRouteIndexers(ctx, mgr); err != nil {
+			return err
+		}
 	}
 
-	// Watch UDPRoute CRUDs and process affected Gateways.
-	udprPredicates := []predicate.TypedPredicate[*gwapiv1a2.UDPRoute]{
-		predicate.Or(predicate.TypedGenerationChangedPredicate[*gwapiv1a2.UDPRoute]{},
-			predicate.TypedLabelChangedPredicate[*gwapiv1a2.UDPRoute]{}),
-	}
-	if r.namespaceLabel != nil {
-		udprPredicates = append(udprPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1a2.UDPRoute](func(route *gwapiv1a2.UDPRoute) bool {
-			return r.hasMatchingNamespaceLabels(route)
-		}))
-	}
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gwapiv1a2.UDPRoute{},
-			handler.TypedEnqueueRequestsFromMapFunc[*gwapiv1a2.UDPRoute](func(ctx context.Context, route *gwapiv1a2.UDPRoute) []reconcile.Request {
-				return r.enqueueClass(ctx, route)
-			}),
-			udprPredicates...)); err != nil {
-		return err
-	}
-	if err := addUDPRouteIndexers(ctx, mgr); err != nil {
-		return err
+	tlsRouteCRDExists := r.crdExists(mgr, resource.KindTLSRoute, gwapiv1a2.GroupVersion.String())
+	if !tlsRouteCRDExists {
+		r.log.Info("TLSRoute CRD not found, skipping TLSRoute watch")
+	} else {
+		// Watch TLSRoute CRUDs and process affected Gateways.
+		tlsrPredicates := []predicate.TypedPredicate[*gwapiv1a2.TLSRoute]{
+			predicate.Or(predicate.TypedGenerationChangedPredicate[*gwapiv1a2.TLSRoute]{},
+				predicate.TypedLabelChangedPredicate[*gwapiv1a2.TLSRoute]{}),
+		}
+		if r.namespaceLabel != nil {
+			tlsrPredicates = append(tlsrPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1a2.TLSRoute](func(route *gwapiv1a2.TLSRoute) bool {
+				return r.hasMatchingNamespaceLabels(route)
+			}))
+		}
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &gwapiv1a2.TLSRoute{},
+				handler.TypedEnqueueRequestsFromMapFunc[*gwapiv1a2.TLSRoute](func(ctx context.Context, route *gwapiv1a2.TLSRoute) []reconcile.Request {
+					return r.enqueueClass(ctx, route)
+				}),
+				tlsrPredicates...)); err != nil {
+			return err
+		}
+		if err := addTLSRouteIndexers(ctx, mgr); err != nil {
+			return err
+		}
 	}
 
-	// Watch TCPRoute CRUDs and process affected Gateways.
-	tcprPredicates := []predicate.TypedPredicate[*gwapiv1a2.TCPRoute]{
-		predicate.Or(predicate.TypedGenerationChangedPredicate[*gwapiv1a2.TCPRoute]{},
-			predicate.TypedLabelChangedPredicate[*gwapiv1a2.TCPRoute]{}),
+	udpRouteCRDExists := r.crdExists(mgr, resource.KindUDPRoute, gwapiv1a2.GroupVersion.String())
+	if !udpRouteCRDExists {
+		r.log.Info("UDPRoute CRD not found, skipping UDPRoute watch")
+	} else {
+		// Watch UDPRoute CRUDs and process affected Gateways.
+		udprPredicates := []predicate.TypedPredicate[*gwapiv1a2.UDPRoute]{
+			predicate.Or(predicate.TypedGenerationChangedPredicate[*gwapiv1a2.UDPRoute]{},
+				predicate.TypedLabelChangedPredicate[*gwapiv1a2.UDPRoute]{}),
+		}
+		if r.namespaceLabel != nil {
+			udprPredicates = append(udprPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1a2.UDPRoute](func(route *gwapiv1a2.UDPRoute) bool {
+				return r.hasMatchingNamespaceLabels(route)
+			}))
+		}
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &gwapiv1a2.UDPRoute{},
+				handler.TypedEnqueueRequestsFromMapFunc[*gwapiv1a2.UDPRoute](func(ctx context.Context, route *gwapiv1a2.UDPRoute) []reconcile.Request {
+					return r.enqueueClass(ctx, route)
+				}),
+				udprPredicates...)); err != nil {
+			return err
+		}
+		if err := addUDPRouteIndexers(ctx, mgr); err != nil {
+			return err
+		}
 	}
-	if r.namespaceLabel != nil {
-		tcprPredicates = append(tcprPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1a2.TCPRoute](func(route *gwapiv1a2.TCPRoute) bool {
-			return r.hasMatchingNamespaceLabels(route)
-		}))
-	}
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gwapiv1a2.TCPRoute{},
-			handler.TypedEnqueueRequestsFromMapFunc[*gwapiv1a2.TCPRoute](func(ctx context.Context, route *gwapiv1a2.TCPRoute) []reconcile.Request {
-				return r.enqueueClass(ctx, route)
-			}),
-			tcprPredicates...)); err != nil {
-		return err
-	}
-	if err := addTCPRouteIndexers(ctx, mgr); err != nil {
-		return err
+
+	tcpRouteCRDExists := r.crdExists(mgr, resource.KindTCPRoute, gwapiv1a2.GroupVersion.String())
+	if !tcpRouteCRDExists {
+		r.log.Info("TCPRoute CRD not found, skipping TCPRoute watch")
+	} else {
+		// Watch TCPRoute CRUDs and process affected Gateways.
+		tcprPredicates := []predicate.TypedPredicate[*gwapiv1a2.TCPRoute]{
+			predicate.Or(predicate.TypedGenerationChangedPredicate[*gwapiv1a2.TCPRoute]{},
+				predicate.TypedLabelChangedPredicate[*gwapiv1a2.TCPRoute]{}),
+		}
+		if r.namespaceLabel != nil {
+			tcprPredicates = append(tcprPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1a2.TCPRoute](func(route *gwapiv1a2.TCPRoute) bool {
+				return r.hasMatchingNamespaceLabels(route)
+			}))
+		}
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &gwapiv1a2.TCPRoute{},
+				handler.TypedEnqueueRequestsFromMapFunc[*gwapiv1a2.TCPRoute](func(ctx context.Context, route *gwapiv1a2.TCPRoute) []reconcile.Request {
+					return r.enqueueClass(ctx, route)
+				}),
+				tcprPredicates...)); err != nil {
+			return err
+		}
+		if err := addTCPRouteIndexers(ctx, mgr); err != nil {
+			return err
+		}
 	}
 
 	// Watch Service CRUDs and process affected *Route objects.
@@ -1281,11 +1301,10 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch ServiceImport CRUDs and process affected *Route objects.
-	serviceImportCRDExists := r.serviceImportCRDExists(mgr)
+	serviceImportCRDExists := r.crdExists(mgr, resource.KindServiceImport, mcsapiv1a1.GroupVersion.String())
 	if !serviceImportCRDExists {
 		r.log.Info("ServiceImport CRD not found, skipping ServiceImport watch")
-	}
-	if serviceImportCRDExists {
+	} else {
 		if err := c.Watch(
 			source.Kind(mgr.GetCache(), &mcsapiv1a1.ServiceImport{},
 				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, si *mcsapiv1a1.ServiceImport) []reconcile.Request {
@@ -1321,8 +1340,11 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
-	// Watch Backend CRUDs and process affected *Route objects.
-	if r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableBackend {
+	backendCRDExists := r.crdExists(mgr, resource.KindBackend, egv1a1.GroupVersion.String())
+	if !backendCRDExists {
+		r.log.Info("Backend CRD not found, skipping Backend watch")
+	} else if r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableBackend {
+		// Watch Backend CRUDs and process affected *Route objects.
 		backendPredicates := []predicate.TypedPredicate[*egv1a1.Backend]{
 			predicate.TypedGenerationChangedPredicate[*egv1a1.Backend]{},
 			predicate.NewTypedPredicateFuncs[*egv1a1.Backend](func(be *egv1a1.Backend) bool {
@@ -1468,7 +1490,10 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
-	if r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy {
+	eppCRDExists := r.crdExists(mgr, resource.KindEnvoyPatchPolicy, egv1a1.GroupVersion.String())
+	if !eppCRDExists {
+		r.log.Info("EnvoyPatchPolicy CRD not found, skipping EnvoyPatchPolicy watch")
+	} else if r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy {
 		// Watch EnvoyPatchPolicy if enabled in config
 		eppPredicates := []predicate.TypedPredicate[*egv1a1.EnvoyPatchPolicy]{
 			predicate.TypedGenerationChangedPredicate[*egv1a1.EnvoyPatchPolicy]{},
@@ -1489,118 +1514,143 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	// Watch ClientTrafficPolicy
-	ctpPredicates := []predicate.TypedPredicate[*egv1a1.ClientTrafficPolicy]{
-		predicate.TypedGenerationChangedPredicate[*egv1a1.ClientTrafficPolicy]{},
-	}
-	if r.namespaceLabel != nil {
-		ctpPredicates = append(ctpPredicates, predicate.NewTypedPredicateFuncs[*egv1a1.ClientTrafficPolicy](func(ctp *egv1a1.ClientTrafficPolicy) bool {
-			return r.hasMatchingNamespaceLabels(ctp)
-		}))
+	ctpCRDExists := r.crdExists(mgr, resource.KindClientTrafficPolicy, egv1a1.GroupVersion.String())
+	if !ctpCRDExists {
+		r.log.Info("ClientTrafficPolicy CRD not found, skipping ClientTrafficPolicy watch")
+	} else {
+		// Watch ClientTrafficPolicy
+		ctpPredicates := []predicate.TypedPredicate[*egv1a1.ClientTrafficPolicy]{
+			predicate.TypedGenerationChangedPredicate[*egv1a1.ClientTrafficPolicy]{},
+		}
+		if r.namespaceLabel != nil {
+			ctpPredicates = append(ctpPredicates, predicate.NewTypedPredicateFuncs[*egv1a1.ClientTrafficPolicy](func(ctp *egv1a1.ClientTrafficPolicy) bool {
+				return r.hasMatchingNamespaceLabels(ctp)
+			}))
+		}
+
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &egv1a1.ClientTrafficPolicy{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, ctp *egv1a1.ClientTrafficPolicy) []reconcile.Request {
+					return r.enqueueClass(ctx, ctp)
+				}),
+				ctpPredicates...)); err != nil {
+			return err
+		}
+
+		if err := addCtpIndexers(ctx, mgr); err != nil {
+			return err
+		}
 	}
 
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &egv1a1.ClientTrafficPolicy{},
-			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, ctp *egv1a1.ClientTrafficPolicy) []reconcile.Request {
-				return r.enqueueClass(ctx, ctp)
-			}),
-			ctpPredicates...)); err != nil {
-		return err
+	btpCRDExists := r.crdExists(mgr, resource.KindBackendTrafficPolicy, egv1a1.GroupVersion.String())
+	if !btpCRDExists {
+		r.log.Info("BackendTrafficPolicy CRD not found, skipping BackendTrafficPolicy watch")
+	} else {
+		// Watch BackendTrafficPolicy
+		btpPredicates := []predicate.TypedPredicate[*egv1a1.BackendTrafficPolicy]{
+			predicate.TypedGenerationChangedPredicate[*egv1a1.BackendTrafficPolicy]{},
+		}
+		if r.namespaceLabel != nil {
+			btpPredicates = append(btpPredicates, predicate.NewTypedPredicateFuncs[*egv1a1.BackendTrafficPolicy](func(btp *egv1a1.BackendTrafficPolicy) bool {
+				return r.hasMatchingNamespaceLabels(btp)
+			}))
+		}
+
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &egv1a1.BackendTrafficPolicy{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, btp *egv1a1.BackendTrafficPolicy) []reconcile.Request {
+					return r.enqueueClass(ctx, btp)
+				}),
+				btpPredicates...)); err != nil {
+			return err
+		}
+
+		if err := addBtpIndexers(ctx, mgr); err != nil {
+			return err
+		}
 	}
 
-	if err := addCtpIndexers(ctx, mgr); err != nil {
-		return err
+	spCRDExists := r.crdExists(mgr, resource.KindSecurityPolicy, egv1a1.GroupVersion.String())
+	if !spCRDExists {
+		r.log.Info("SecurityPolicy CRD not found, skipping SecurityPolicy watch")
+	} else {
+		// Watch SecurityPolicy
+		spPredicates := []predicate.TypedPredicate[*egv1a1.SecurityPolicy]{
+			predicate.TypedGenerationChangedPredicate[*egv1a1.SecurityPolicy]{},
+		}
+		if r.namespaceLabel != nil {
+			spPredicates = append(spPredicates, predicate.NewTypedPredicateFuncs[*egv1a1.SecurityPolicy](func(sp *egv1a1.SecurityPolicy) bool {
+				return r.hasMatchingNamespaceLabels(sp)
+			}))
+		}
+
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &egv1a1.SecurityPolicy{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, sp *egv1a1.SecurityPolicy) []reconcile.Request {
+					return r.enqueueClass(ctx, sp)
+				}),
+				spPredicates...)); err != nil {
+			return err
+		}
+		if err := addSecurityPolicyIndexers(ctx, mgr); err != nil {
+			return err
+		}
 	}
 
-	// Watch BackendTrafficPolicy
-	btpPredicates := []predicate.TypedPredicate[*egv1a1.BackendTrafficPolicy]{
-		predicate.TypedGenerationChangedPredicate[*egv1a1.BackendTrafficPolicy]{},
-	}
-	if r.namespaceLabel != nil {
-		btpPredicates = append(btpPredicates, predicate.NewTypedPredicateFuncs[*egv1a1.BackendTrafficPolicy](func(btp *egv1a1.BackendTrafficPolicy) bool {
-			return r.hasMatchingNamespaceLabels(btp)
-		}))
+	bTLSPolicyCRDExists := r.crdExists(mgr, resource.KindBackendTLSPolicy, gwapiv1a3.GroupVersion.String())
+	if !bTLSPolicyCRDExists {
+		r.log.Info("BackendTLSPolicy CRD not found, skipping BackendTLSPolicy watch")
+	} else {
+		// Watch BackendTLSPolicy
+		btlsPredicates := []predicate.TypedPredicate[*gwapiv1a3.BackendTLSPolicy]{
+			predicate.TypedGenerationChangedPredicate[*gwapiv1a3.BackendTLSPolicy]{},
+		}
+		if r.namespaceLabel != nil {
+			btlsPredicates = append(btlsPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1a3.BackendTLSPolicy](func(btp *gwapiv1a3.BackendTLSPolicy) bool {
+				return r.hasMatchingNamespaceLabels(btp)
+			}))
+		}
+
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &gwapiv1a3.BackendTLSPolicy{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, btp *gwapiv1a3.BackendTLSPolicy) []reconcile.Request {
+					return r.enqueueClass(ctx, btp)
+				}),
+				btlsPredicates...)); err != nil {
+			return err
+		}
+
+		if err := addBtlsIndexers(ctx, mgr); err != nil {
+			return err
+		}
 	}
 
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &egv1a1.BackendTrafficPolicy{},
-			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, btp *egv1a1.BackendTrafficPolicy) []reconcile.Request {
-				return r.enqueueClass(ctx, btp)
-			}),
-			btpPredicates...)); err != nil {
-		return err
-	}
+	eepCRDExists := r.crdExists(mgr, resource.KindEnvoyExtensionPolicy, egv1a1.GroupVersion.String())
+	if !eepCRDExists {
+		r.log.Info("EnvoyExtensionPolicy CRD not found, skipping EnvoyExtensionPolicy watch")
+	} else {
+		// Watch EnvoyExtensionPolicy
+		eepPredicates := []predicate.TypedPredicate[*egv1a1.EnvoyExtensionPolicy]{
+			predicate.TypedGenerationChangedPredicate[*egv1a1.EnvoyExtensionPolicy]{},
+		}
+		if r.namespaceLabel != nil {
+			eepPredicates = append(eepPredicates, predicate.NewTypedPredicateFuncs[*egv1a1.EnvoyExtensionPolicy](func(eep *egv1a1.EnvoyExtensionPolicy) bool {
+				return r.hasMatchingNamespaceLabels(eep)
+			}))
+		}
 
-	if err := addBtpIndexers(ctx, mgr); err != nil {
-		return err
-	}
-
-	// Watch SecurityPolicy
-	spPredicates := []predicate.TypedPredicate[*egv1a1.SecurityPolicy]{
-		predicate.TypedGenerationChangedPredicate[*egv1a1.SecurityPolicy]{},
-	}
-	if r.namespaceLabel != nil {
-		spPredicates = append(spPredicates, predicate.NewTypedPredicateFuncs[*egv1a1.SecurityPolicy](func(sp *egv1a1.SecurityPolicy) bool {
-			return r.hasMatchingNamespaceLabels(sp)
-		}))
-	}
-
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &egv1a1.SecurityPolicy{},
-			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, sp *egv1a1.SecurityPolicy) []reconcile.Request {
-				return r.enqueueClass(ctx, sp)
-			}),
-			spPredicates...)); err != nil {
-		return err
-	}
-	if err := addSecurityPolicyIndexers(ctx, mgr); err != nil {
-		return err
-	}
-
-	// Watch BackendTLSPolicy
-	btlsPredicates := []predicate.TypedPredicate[*gwapiv1a3.BackendTLSPolicy]{
-		predicate.TypedGenerationChangedPredicate[*gwapiv1a3.BackendTLSPolicy]{},
-	}
-	if r.namespaceLabel != nil {
-		btlsPredicates = append(btlsPredicates, predicate.NewTypedPredicateFuncs[*gwapiv1a3.BackendTLSPolicy](func(btp *gwapiv1a3.BackendTLSPolicy) bool {
-			return r.hasMatchingNamespaceLabels(btp)
-		}))
-	}
-
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gwapiv1a3.BackendTLSPolicy{},
-			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, btp *gwapiv1a3.BackendTLSPolicy) []reconcile.Request {
-				return r.enqueueClass(ctx, btp)
-			}),
-			btlsPredicates...)); err != nil {
-		return err
-	}
-
-	if err := addBtlsIndexers(ctx, mgr); err != nil {
-		return err
-	}
-
-	// Watch EnvoyExtensionPolicy
-	eepPredicates := []predicate.TypedPredicate[*egv1a1.EnvoyExtensionPolicy]{
-		predicate.TypedGenerationChangedPredicate[*egv1a1.EnvoyExtensionPolicy]{},
-	}
-	if r.namespaceLabel != nil {
-		eepPredicates = append(eepPredicates, predicate.NewTypedPredicateFuncs[*egv1a1.EnvoyExtensionPolicy](func(eep *egv1a1.EnvoyExtensionPolicy) bool {
-			return r.hasMatchingNamespaceLabels(eep)
-		}))
-	}
-
-	// Watch EnvoyExtensionPolicy CRUDs
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &egv1a1.EnvoyExtensionPolicy{},
-			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, eep *egv1a1.EnvoyExtensionPolicy) []reconcile.Request {
-				return r.enqueueClass(ctx, eep)
-			}),
-			eepPredicates...)); err != nil {
-		return err
-	}
-	if err := addEnvoyExtensionPolicyIndexers(ctx, mgr); err != nil {
-		return err
+		// Watch EnvoyExtensionPolicy CRUDs
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &egv1a1.EnvoyExtensionPolicy{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, eep *egv1a1.EnvoyExtensionPolicy) []reconcile.Request {
+					return r.enqueueClass(ctx, eep)
+				}),
+				eepPredicates...)); err != nil {
+			return err
+		}
+		if err := addEnvoyExtensionPolicyIndexers(ctx, mgr); err != nil {
+			return err
+		}
 	}
 
 	r.log.Info("Watching gatewayAPI related objects")
@@ -1639,31 +1689,35 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		r.log.Info("Watching additional policy resource", "resource", gvk.String())
 	}
 
-	// Watch HTTPRouteFilter CRUDs and process affected HTTPRoute objects.
-	httpRouteFilter := []predicate.TypedPredicate[*egv1a1.HTTPRouteFilter]{
-		predicate.TypedGenerationChangedPredicate[*egv1a1.HTTPRouteFilter]{},
-		predicate.NewTypedPredicateFuncs[*egv1a1.HTTPRouteFilter](func(be *egv1a1.HTTPRouteFilter) bool {
-			return r.validateHTTPRouteFilterForReconcile(be)
-		}),
-	}
-	if r.namespaceLabel != nil {
-		httpRouteFilter = append(httpRouteFilter, predicate.NewTypedPredicateFuncs[*egv1a1.HTTPRouteFilter](func(be *egv1a1.HTTPRouteFilter) bool {
-			return r.hasMatchingNamespaceLabels(be)
-		}))
-	}
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &egv1a1.HTTPRouteFilter{},
-			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, be *egv1a1.HTTPRouteFilter) []reconcile.Request {
-				return r.enqueueClass(ctx, be)
+	hrfCRDExists := r.crdExists(mgr, resource.KindHTTPRouteFilter, egv1a1.GroupVersion.String())
+	if !hrfCRDExists {
+		r.log.Info("HTTPRouteFilter CRD not found, skipping HTTPRouteFilter watch")
+	} else {
+		// Watch HTTPRouteFilter CRUDs and process affected HTTPRoute objects.
+		httpRouteFilter := []predicate.TypedPredicate[*egv1a1.HTTPRouteFilter]{
+			predicate.TypedGenerationChangedPredicate[*egv1a1.HTTPRouteFilter]{},
+			predicate.NewTypedPredicateFuncs[*egv1a1.HTTPRouteFilter](func(be *egv1a1.HTTPRouteFilter) bool {
+				return r.validateHTTPRouteFilterForReconcile(be)
 			}),
-			httpRouteFilter...)); err != nil {
-		return err
-	}
+		}
+		if r.namespaceLabel != nil {
+			httpRouteFilter = append(httpRouteFilter, predicate.NewTypedPredicateFuncs[*egv1a1.HTTPRouteFilter](func(be *egv1a1.HTTPRouteFilter) bool {
+				return r.hasMatchingNamespaceLabels(be)
+			}))
+		}
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &egv1a1.HTTPRouteFilter{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, be *egv1a1.HTTPRouteFilter) []reconcile.Request {
+					return r.enqueueClass(ctx, be)
+				}),
+				httpRouteFilter...)); err != nil {
+			return err
+		}
 
-	if err := addRouteFilterIndexers(ctx, mgr); err != nil {
-		return err
+		if err := addRouteFilterIndexers(ctx, mgr); err != nil {
+			return err
+		}
 	}
-
 	return nil
 }
 
@@ -1803,8 +1857,8 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 	return nil
 }
 
-// serviceImportCRDExists checks for the existence of the ServiceImport CRD in k8s APIServer before watching it
-func (r *gatewayAPIReconciler) serviceImportCRDExists(mgr manager.Manager) bool {
+// crdExists checks for the existence of the CRD in k8s APIServer before watching it
+func (r *gatewayAPIReconciler) crdExists(mgr manager.Manager, kind string, groupVersion string) bool {
 	discoveryClient, err := discovery.NewDiscoveryClientForConfig(mgr.GetConfig())
 	if err != nil {
 		r.log.Error(err, "failed to create discovery client")
@@ -1813,17 +1867,17 @@ func (r *gatewayAPIReconciler) serviceImportCRDExists(mgr manager.Manager) bool 
 	if err != nil {
 		r.log.Error(err, "failed to get API resource list")
 	}
-	serviceImportFound := false
+	found := false
 	for _, list := range apiResourceList {
 		for _, res := range list.APIResources {
-			if list.GroupVersion == mcsapiv1a1.GroupVersion.String() && res.Kind == resource.KindServiceImport {
-				serviceImportFound = true
+			if list.GroupVersion == groupVersion && res.Kind == kind {
+				found = true
 				break
 			}
 		}
 	}
 
-	return serviceImportFound
+	return found
 }
 
 func (r *gatewayAPIReconciler) processBackendTLSPolicyRefs(
