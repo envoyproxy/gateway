@@ -69,6 +69,7 @@ changes:
       Added Support for socket buffer limit field in ClientTrafficPolicy and BackendTrafficPolicy CRD
       Added Support for http2 upstream settings in BackendTrafficPolicy CRD
       Added Support for DNS resolution settings in BackendTrafficPolicy CRD
+      Added Support for direct response in HTTPRouteFilter CRD
 
     breaking-change: |
       Gateway API GRPCRoute and ReferenceGrant v1alpha2 have been removed.
@@ -83,6 +84,7 @@ changes:
 
   - area: testing
     change: |
+      Added e2e test for Daemonset mode
       Updated upgrades tests to use VERSION env variable
       Fixed OVS scanner wrong license warnings
       Added e2e test for TLS session resumption
@@ -103,6 +105,7 @@ changes:
 
   - area: translator
     change: |
+      Disabled ALPN for non-HTTP routes
       Fixed unsupported listener protocol type causing an error while updating Gateway Status
       Fixed some status updates were being discarded by the status updater
       Added support for HTTPRouteFilter and path regex rewrite
