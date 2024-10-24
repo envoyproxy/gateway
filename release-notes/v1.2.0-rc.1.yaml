@@ -25,6 +25,10 @@ changes:
       Added task for Wasm extensions
       Added docs for gRPC Access Log Service sink
       Update the docs for Extension Servers and adding an example extension server
+      Updated Backend docs to include TLSRoute and Security Policy OIDC Provider support
+      Update docs for ratelimit to add examples for invert match headers
+      Added docs for Datadog tracing
+
 
   - area: installation
     change: |
@@ -35,6 +39,7 @@ changes:
       Added Support for default user group and user id for the SecurityContexts in the Envoy Gateway helm chart
       Added Support for maxUnavailable in the PodDisruptionBudget in the Envoy Gateway helm chart
       Added Support for configuring NodeSelector in the Envoy Gateway helm chart
+      Removed default cpu limit in the Envoy Gateway helm chart
 
   - area: api
     change: |
@@ -92,6 +97,9 @@ changes:
       Enabled upgrade test
       Fixed flaky basic auth e2e test
       Enabled use-client-protocol e2e test
+      Added performance benchmarking test for 1000 HTTPRoutes
+      Added e2e test for Datadog tracing
+      Added e2e tests for ratelimit invert matching headers
 
   - area: translator
     change: |
@@ -125,11 +133,18 @@ changes:
       Fixed upstream mTLS only works for HTTPS listeners
       Fixed nil pointer if backedtls.minVersion is set but backedtls.maxVersion is not
       Added Support for target selectors on Envoy Gateway Extension Server policies
+      Added Support for non-Kubernetes Backends for TLSRoute
+      Fixed empty connection limit causes XDS rejection
+      Fixed ratelimit not working with both headers and cidr matches
+      Added Support for fallback to the Backend API
 
   - area: providers
     change: |
       Added file resource provider for EG standalone mode
       Fixed EDS didn't update when deployments was created after services
+      Fixed repeated resources and optimize memory usage
+      Added Support for host-infra provider(experimental)
+      Added Support for reloadable EnvoyGateway configuration
 
   - area: infrastructure
     change: |
