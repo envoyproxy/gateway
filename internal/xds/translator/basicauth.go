@@ -17,6 +17,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/protocov"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -84,7 +85,7 @@ func buildHCMBasicAuthFilter(basicAuth *ir.BasicAuth) (*hcmv3.HttpFilter, error)
 	if err = basicAuthProto.ValidateAll(); err != nil {
 		return nil, err
 	}
-	if basicAuthAny, err = anypb.New(basicAuthProto); err != nil {
+	if basicAuthAny, err = protocov.ToAnyWithValidation(basicAuthProto); err != nil {
 		return nil, err
 	}
 
@@ -134,7 +135,7 @@ func (*basicAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error 
 		return err
 	}
 
-	if basicAuthAny, err = anypb.New(basicAuthProto); err != nil {
+	if basicAuthAny, err = protocov.ToAnyWithValidation(basicAuthProto); err != nil {
 		return err
 	}
 
