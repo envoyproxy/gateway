@@ -877,7 +877,7 @@ func translateEscapePath(in ir.PathEscapedSlashAction) hcmv3.HttpConnectionManag
 }
 
 func toNetworkFilter(filterName string, filterProto proto.Message) (*listenerv3.Filter, error) {
-	filterAny, err := protocov.ToAnyWithError(filterProto)
+	filterAny, err := protocov.ToAnyWithValidation(filterProto)
 	if err != nil {
 		return nil, err
 	}

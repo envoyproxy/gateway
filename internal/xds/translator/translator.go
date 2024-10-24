@@ -522,7 +522,7 @@ func (t *Translator) addHTTPFiltersToHCM(filterChain *listenerv3.FilterChain, ht
 	for i, filter := range filterChain.Filters {
 		if filter.Name == wellknown.HTTPConnectionManager {
 			var mgrAny *anypb.Any
-			if mgrAny, err = protocov.ToAnyWithError(hcm); err != nil {
+			if mgrAny, err = protocov.ToAnyWithValidation(hcm); err != nil {
 				return err
 			}
 
