@@ -47,7 +47,7 @@ type HTTPFiltersContext struct {
 
 // HTTPFilterIR contains the ir processing results.
 type HTTPFilterIR struct {
-	DirectResponse   *ir.DirectResponse
+	DirectResponse   *ir.CustomResponse
 	RedirectResponse *ir.Redirect
 
 	URLRewrite *ir.URLRewrite
@@ -785,8 +785,10 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 	filterNs := filterContext.Route.GetNamespace()
 
 	if string(extFilter.Kind) == egv1a1.KindHTTPRouteFilter {
+		found := false
 		for _, hrf := range resources.HTTPRouteFilters {
 			if hrf.Namespace == filterNs && hrf.Name == string(extFilter.Name) {
+				found = true
 				if hrf.Spec.URLRewrite != nil {
 
 					if filterContext.URLRewrite != nil {
@@ -846,7 +848,6 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 									filterContext.HTTPFilterIR.URLRewrite.Path = &ir.ExtendedHTTPPathModifier{
 										RegexMatchReplace: rmr,
 									}
-									return
 								}
 							} else { // no url rewrite
 								filterContext.HTTPFilterIR.URLRewrite = &ir.URLRewrite{
@@ -854,7 +855,6 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 										RegexMatchReplace: rmr,
 									},
 								}
-								return
 							}
 						}
 					}
@@ -887,22 +887,47 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 						if filterContext.HTTPFilterIR.URLRewrite != nil {
 							if filterContext.HTTPFilterIR.URLRewrite.Host == nil {
 								filterContext.HTTPFilterIR.URLRewrite.Host = hm
-								return
 							}
 						} else { // no url rewrite
 							filterContext.HTTPFilterIR.URLRewrite = &ir.URLRewrite{
 								Host: hm,
 							}
-							return
 						}
 					}
 
 				}
+
+				if hrf.Spec.DirectResponse != nil {
+					dr := &ir.CustomResponse{}
+					if hrf.Spec.DirectResponse.Body != nil {
+						var err error
+						if dr.Body, err = getCustomResponseBody(*hrf.Spec.DirectResponse.Body, resources, filterNs); err != nil {
+							t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, err)
+							return
+						}
+					}
+
+					if hrf.Spec.DirectResponse.StatusCode != nil {
+						dr.StatusCode = ptr.To(uint32(*hrf.Spec.DirectResponse.StatusCode))
+					}
+
+					if hrf.Spec.DirectResponse.ContentType != nil {
+						newHeader := ir.AddHeader{
+							Name:  "Content-Type",
+							Value: []string{*hrf.Spec.DirectResponse.ContentType},
+						}
+						filterContext.AddResponseHeaders = append(filterContext.AddResponseHeaders, newHeader)
+					}
+
+					filterContext.HTTPFilterIR.DirectResponse = dr
+				}
 			}
 		}
-		errMsg := fmt.Sprintf("Unable to translate HTTPRouteFilter: %s/%s", filterNs,
-			extFilter.Name)
-		t.processUnresolvedHTTPFilter(errMsg, filterContext)
+		if !found {
+			errMsg := fmt.Sprintf("Unable to translate HTTPRouteFilter: %s/%s", filterNs,
+				extFilter.Name)
+			t.processUnresolvedHTTPFilter(errMsg, filterContext)
+		}
 		return
 	}
 
@@ -993,8 +1018,8 @@ func (t *Translator) processUnresolvedHTTPFilter(errMsg string, filterContext *H
 		gwapiv1.RouteReasonUnsupportedValue,
 		errMsg,
 	)
-	filterContext.DirectResponse = &ir.DirectResponse{
-		StatusCode: 500,
+	filterContext.DirectResponse = &ir.CustomResponse{
+		StatusCode: ptr.To(uint32(500)),
 	}
 }
 
@@ -1009,8 +1034,8 @@ func (t *Translator) processUnsupportedHTTPFilter(filterType string, filterConte
 		gwapiv1.RouteReasonUnsupportedValue,
 		errMsg,
 	)
-	filterContext.DirectResponse = &ir.DirectResponse{
-		StatusCode: 500,
+	filterContext.DirectResponse = &ir.CustomResponse{
+		StatusCode: ptr.To(uint32(500)),
 	}
 }
 
@@ -1025,7 +1050,7 @@ func (t *Translator) processInvalidHTTPFilter(filterType string, filterContext *
 		gwapiv1.RouteReasonUnsupportedValue,
 		errMsg,
 	)
-	filterContext.DirectResponse = &ir.DirectResponse{
-		StatusCode: 500,
+	filterContext.DirectResponse = &ir.CustomResponse{
+		StatusCode: ptr.To(uint32(500)),
 	}
 }
