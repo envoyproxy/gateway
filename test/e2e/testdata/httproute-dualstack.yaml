@@ -1,0 +1,121 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: infra-backend-v1-httproute-ipv6
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: dualstack-gateway
+  rules:
+    - backendRefs:
+        - name: infra-backend-v1-service-ipv6
+          port: 8080
+      matches:
+        - path:
+            type: PathPrefix
+            value: /ipv6-only
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: infra-backend-v1-service-ipv6
+  namespace: gateway-conformance-infra
+spec:
+  ipFamilies:
+    - IPv6
+  ipFamilyPolicy: SingleStack
+  ports:
+    - port: 8080
+      targetPort: 3000
+  selector:
+    app: infra-backend-v1
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: infra-backend-v1-httproute-dualstack
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: dualstack-gateway
+  rules:
+    - backendRefs:
+        - name: infra-backend-v1-service-dualstack
+          port: 8080
+      matches:
+        - path:
+            type: PathPrefix
+            value: /dual-stack
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: infra-backend-v1-service-dualstack
+  namespace: gateway-conformance-infra
+spec:
+  ipFamilies:
+    - IPv4
+    - IPv6
+  ipFamilyPolicy: RequireDualStack
+  ports:
+    - port: 8080
+      targetPort: 3000
+  selector:
+    app: infra-backend-v1
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: infra-backend-v1-httproute-ipv4
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: dualstack-gateway
+  rules:
+    - backendRefs:
+        - name: infra-backend-v1-service-ipv4
+          port: 8080
+      matches:
+        - path:
+            type: PathPrefix
+            value: /ipv4-only
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: infra-backend-v1-service-ipv4
+  namespace: gateway-conformance-infra
+spec:
+  ipFamilies:
+    - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+    - port: 8080
+      targetPort: 3000
+  selector:
+    app: infra-backend-v1
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: dualstack-proxy-config
+  namespace: gateway-conformance-infra
+spec:
+  ipFamily: DualStack
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: dualstack-gateway
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: envoy-gateway
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: dualstack-proxy-config
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP

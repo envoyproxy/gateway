@@ -58,7 +58,7 @@ type BackendEndpoint struct {
 	// +optional
 	FQDN *FQDNEndpoint `json:"fqdn,omitempty"`
 
-	// IP defines an IP endpoint. Currently, only IPv4 Addresses are supported.
+	// IP defines an IP endpoint. Supports both IPv4 and IPv6 addresses.
 	//
 	// +optional
 	IP *IPEndpoint `json:"ip,omitempty"`
@@ -73,10 +73,11 @@ type BackendEndpoint struct {
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-socketaddress
 type IPEndpoint struct {
 	// Address defines the IP address of the backend endpoint.
+	// Supports both IPv4 and IPv6 addresses.
 	//
-	// +kubebuilder:validation:MinLength=7
-	// +kubebuilder:validation:MaxLength=15
-	// +kubebuilder:validation:Pattern=`^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$`
+	// +kubebuilder:validation:MinLength=3
+	// +kubebuilder:validation:MaxLength=45
+	// +kubebuilder:validation:Pattern=`^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$|^(([0-9a-fA-F]{1,4}:){1,7}[0-9a-fA-F]{1,4}|::|(([0-9a-fA-F]{1,4}:){0,5})?(:[0-9a-fA-F]{1,4}){1,2})$`
 	Address string `json:"address"`
 
 	// Port defines the port of the backend endpoint.
