@@ -217,7 +217,11 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		case !xdsListenerOnSameAddressPortExists:
 			// Create a new UDP(QUIC) listener for HTTP3 traffic if HTTP3 is enabled
 			if http3Enabled {
-				quicXDSListener = buildXdsQuicListener(httpListener.Name, httpListener.Address, httpListener.Port, accessLog)
+				if quicXDSListener, err = buildXdsQuicListener(httpListener.Name, httpListener.Address, httpListener.Port, accessLog); err != nil {
+					errs = errors.Join(errs, err)
+					continue
+				}
+
 				if err = tCtx.AddXdsResource(resourcev3.ListenerType, quicXDSListener); err != nil {
 					errs = errors.Join(errs, err)
 					continue
@@ -225,7 +229,11 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			}
 
 			// Create a new TCP listener for HTTP1/HTTP2 traffic.
-			tcpXDSListener = buildXdsTCPListener(httpListener.Name, httpListener.Address, httpListener.Port, httpListener.TCPKeepalive, httpListener.Connection, accessLog)
+			if tcpXDSListener, err = buildXdsTCPListener(httpListener.Name, httpListener.Address, httpListener.Port, httpListener.TCPKeepalive, httpListener.Connection, accessLog); err != nil {
+				errs = errors.Join(errs, err)
+				continue
+			}
+
 			if err = tCtx.AddXdsResource(resourcev3.ListenerType, tcpXDSListener); err != nil {
 				errs = errors.Join(errs, err)
 				continue
@@ -560,12 +568,17 @@ func (t *Translator) processTCPListenerXdsTranslation(
 ) error {
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
-	var errs error
+	var errs, err error
 	for _, tcpListener := range tcpListeners {
 		// Search for an existing listener, if it does not exist, create one.
 		xdsListener := findXdsListenerByHostPort(tCtx, tcpListener.Address, tcpListener.Port, corev3.SocketAddress_TCP)
 		if xdsListener == nil {
-			xdsListener = buildXdsTCPListener(tcpListener.Name, tcpListener.Address, tcpListener.Port, tcpListener.TCPKeepalive, tcpListener.Connection, accesslog)
+			if xdsListener, err = buildXdsTCPListener(tcpListener.Name, tcpListener.Address, tcpListener.Port, tcpListener.TCPKeepalive, tcpListener.Connection, accesslog); err != nil {
+				// skip this listener if failed to build xds listener
+				errs = errors.Join(errs, err)
+				continue
+			}
+
 			if err := tCtx.AddXdsResource(resourcev3.ListenerType, xdsListener); err != nil {
 				// skip this listener if failed to add xds listener to the
 				errs = errors.Join(errs, err)

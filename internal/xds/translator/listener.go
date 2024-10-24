@@ -148,9 +148,12 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 
 // buildXdsTCPListener creates a xds Listener resource
 // TODO: Improve function parameters
-func buildXdsTCPListener(name, address string, port uint32, keepalive *ir.TCPKeepalive, connection *ir.ClientConnection, accesslog *ir.AccessLog) *listenerv3.Listener {
+func buildXdsTCPListener(name, address string, port uint32, keepalive *ir.TCPKeepalive, connection *ir.ClientConnection, accesslog *ir.AccessLog) (*listenerv3.Listener, error) {
 	socketOptions := buildTCPSocketOptions(keepalive)
-	al := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeListener)
+	al, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeListener)
+	if err != nil {
+		return nil, err
+	}
 	bufferLimitBytes := buildPerConnectionBufferLimitBytes(connection)
 	return &listenerv3.Listener{
 		Name:                          name,
@@ -168,7 +171,7 @@ func buildXdsTCPListener(name, address string, port uint32, keepalive *ir.TCPKee
 				},
 			},
 		},
-	}
+	}, nil
 }
 
 func buildPerConnectionBufferLimitBytes(connection *ir.ClientConnection) *wrapperspb.UInt32Value {
@@ -179,10 +182,14 @@ func buildPerConnectionBufferLimitBytes(connection *ir.ClientConnection) *wrappe
 }
 
 // buildXdsQuicListener creates a xds Listener resource for quic
-func buildXdsQuicListener(name, address string, port uint32, accesslog *ir.AccessLog) *listenerv3.Listener {
+func buildXdsQuicListener(name, address string, port uint32, accesslog *ir.AccessLog) (*listenerv3.Listener, error) {
+	log, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeListener)
+	if err != nil {
+		return nil, err
+	}
 	xdsListener := &listenerv3.Listener{
 		Name:      name + "-quic",
-		AccessLog: buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeListener),
+		AccessLog: log,
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{
 				SocketAddress: &corev3.SocketAddress{
@@ -203,7 +210,7 @@ func buildXdsQuicListener(name, address string, port uint32, accesslog *ir.Acces
 		DrainType: listenerv3.Listener_MODIFY_ONLY,
 	}
 
-	return xdsListener
+	return xdsListener, nil
 }
 
 // addHCMToXDSListener adds a HCM filter to the listener's filter chain, and adds
@@ -219,7 +226,10 @@ func buildXdsQuicListener(name, address string, port uint32, accesslog *ir.Acces
 func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irListener *ir.HTTPListener,
 	accesslog *ir.AccessLog, tracing *ir.Tracing, http3Listener bool, connection *ir.ClientConnection,
 ) error {
-	al := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute)
+	al, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute)
+	if err != nil {
+		return err
+	}
 
 	hcmTracing, err := buildHCMTracing(tracing)
 	if err != nil {
@@ -491,9 +501,12 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute
 
 	// Append port to the statPrefix.
 	statPrefix = strings.Join([]string{statPrefix, strconv.Itoa(int(xdsListener.Address.GetSocketAddress().GetPortValue()))}, "-")
-
+	al, error := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute)
+	if error != nil {
+		return error
+	}
 	mgr := &tcpv3.TcpProxy{
-		AccessLog:  buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute),
+		AccessLog:  al,
 		StatPrefix: statPrefix,
 		ClusterSpecifier: &tcpv3.TcpProxy_Cluster{
 			Cluster: clusterName,
@@ -787,9 +800,13 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener, access
 		return nil, err
 	}
 
+	al, error := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute)
+	if error != nil {
+		return nil, error
+	}
 	udpProxy := &udpv3.UdpProxyConfig{
 		StatPrefix: statPrefix,
-		AccessLog:  buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute),
+		AccessLog:  al,
 		RouteSpecifier: &udpv3.UdpProxyConfig_Matcher{
 			Matcher: &matcher.Matcher{
 				OnNoMatch: &matcher.Matcher_OnMatch{
@@ -808,9 +825,12 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener, access
 		return nil, err
 	}
 
+	if al, err = buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeListener); err != nil {
+		return nil, err
+	}
 	xdsListener := &listenerv3.Listener{
 		Name:      udpListener.Name,
-		AccessLog: buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeListener),
+		AccessLog: al,
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{
 				SocketAddress: &corev3.SocketAddress{

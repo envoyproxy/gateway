@@ -89,9 +89,9 @@ var (
 	}
 )
 
-func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) []*accesslog.AccessLog {
+func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([]*accesslog.AccessLog, error) {
 	if al == nil {
-		return nil
+		return nil, nil
 	}
 
 	totalLen := len(al.Text) + len(al.JSON) + len(al.OpenTelemetry)
@@ -133,7 +133,10 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) []
 		}
 
 		// TODO: find a better way to handle this
-		accesslogAny, _ := protocov.ToAnyWithValidation(filelog)
+		accesslogAny, err := protocov.ToAnyWithValidation(filelog)
+		if err != nil {
+			return nil, err
+		}
 		accessLogs = append(accessLogs, &accesslog.AccessLog{
 			Name: wellknown.FileAccessLog,
 			ConfigType: &accesslog.AccessLog_TypedConfig{
@@ -184,7 +187,10 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) []
 			filelog.GetLogFormat().Formatters = formatters
 		}
 
-		accesslogAny, _ := protocov.ToAnyWithValidation(filelog)
+		accesslogAny, err := protocov.ToAnyWithValidation(filelog)
+		if err != nil {
+			return nil, err
+		}
 		accessLogs = append(accessLogs, &accesslog.AccessLog{
 			Name: wellknown.FileAccessLog,
 			ConfigType: &accesslog.AccessLog_TypedConfig{
@@ -227,7 +233,10 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) []
 				alCfg.AdditionalResponseTrailersToLog = als.HTTP.ResponseTrailers
 			}
 
-			accesslogAny, _ := protocov.ToAnyWithValidation(alCfg)
+			accesslogAny, err := protocov.ToAnyWithValidation(alCfg)
+			if err != nil {
+				return nil, err
+			}
 			accessLogs = append(accessLogs, &accesslog.AccessLog{
 				Name: wellknown.HTTPGRPCAccessLog,
 				ConfigType: &accesslog.AccessLog_TypedConfig{
@@ -240,7 +249,10 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) []
 				CommonConfig: cc,
 			}
 
-			accesslogAny, _ := protocov.ToAnyWithValidation(alCfg)
+			accesslogAny, err := protocov.ToAnyWithValidation(alCfg)
+			if err != nil {
+				return nil, err
+			}
 			accessLogs = append(accessLogs, &accesslog.AccessLog{
 				Name: tcpGRPCAccessLog,
 				ConfigType: &accesslog.AccessLog_TypedConfig{
@@ -296,7 +308,10 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) []
 			al.Formatters = formatters
 		}
 
-		accesslogAny, _ := protocov.ToAnyWithValidation(al)
+		accesslogAny, err := protocov.ToAnyWithValidation(al)
+		if err != nil {
+			return nil, err
+		}
 		accessLogs = append(accessLogs, &accesslog.AccessLog{
 			Name: otelAccessLog,
 			ConfigType: &accesslog.AccessLog_TypedConfig{
@@ -306,7 +321,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) []
 		})
 	}
 
-	return accessLogs
+	return accessLogs, nil
 }
 
 func celAccessLogFilter(expr string) *accesslog.AccessLogFilter {
