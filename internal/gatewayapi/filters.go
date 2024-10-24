@@ -909,6 +909,8 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 
 					if hrf.Spec.DirectResponse.StatusCode != nil {
 						dr.StatusCode = ptr.To(uint32(*hrf.Spec.DirectResponse.StatusCode))
+					} else {
+						dr.StatusCode = ptr.To(uint32(200))
 					}
 
 					if hrf.Spec.DirectResponse.ContentType != nil {
