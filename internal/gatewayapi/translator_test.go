@@ -865,11 +865,11 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		EnvoyPatchPolicies []*ir.EnvoyPatchPolicy
 		FilterOrder        []egv1a1.FilterPosition
 	}{
-		AccessLog: a.AccessLog,
-		Tracing:   a.Tracing,
-		Metrics:   a.Metrics,
-		HTTP:      a.HTTP,
-		TCP:       a.TCP,
+		AccessLog:          a.AccessLog,
+		Tracing:            a.Tracing,
+		Metrics:            a.Metrics,
+		HTTP:               a.HTTP,
+		TCP:                a.TCP,
 		UDP:                a.UDP,
 		EnvoyPatchPolicies: a.EnvoyPatchPolicies,
 		FilterOrder:        a.FilterOrder,
@@ -878,11 +878,11 @@ func xdsWithoutEqual(a *ir.Xds) any {
 	// Ensure we didn't drop an exported field.
 	ta, tr := reflect.TypeOf(*a), reflect.TypeOf(ret)
 	for i := 0; i < ta.NumField(); i++ {
-		a_field := ta.Field(i)
-		if r_field, ok := tr.FieldByName(a_field.Name); !ok || a_field.Type != r_field.Type {
+		aField := ta.Field(i)
+		if rField, ok := tr.FieldByName(aField.Name); !ok || aField.Type != rField.Type {
 			// We panic here because this is test code, and it would be hard to
 			// plumb the error out.
-			panic(fmt.Sprintf("field %q is missing or has wrong type in the ir.Xds mirror", a_field.Name))
+			panic(fmt.Sprintf("field %q is missing or has wrong type in the ir.Xds mirror", aField.Name))
 		}
 	}
 

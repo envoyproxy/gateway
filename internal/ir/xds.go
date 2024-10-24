@@ -82,8 +82,10 @@ var (
 // various string-ish printing functions to redact the contents.
 type PrivateBytes []byte
 
-var _ fmt.Stringer = PrivateBytes{}
-var _ encoding.TextMarshaler = PrivateBytes{}
+var (
+	_ fmt.Stringer           = PrivateBytes{}
+	_ encoding.TextMarshaler = PrivateBytes{}
+)
 
 // MarshalText redacts the contents of the PrivateBytes type.
 // Note that MarshalJSON will call MarshalText if it exists, so we don't
