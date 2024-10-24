@@ -324,8 +324,8 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 					if strings.HasPrefix(r.Name, prefix) {
 						// return 500 and do not configure EnvoyExtensions in this case
 						if errs != nil {
-							r.DirectResponse = &ir.DirectResponse{
-								StatusCode: 500,
+							r.DirectResponse = &ir.CustomResponse{
+								StatusCode: ptr.To(uint32(500)),
 							}
 							continue
 						}
@@ -386,8 +386,8 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 
 			// return 500 and do not configure EnvoyExtensions in this case
 			if errs != nil {
-				r.DirectResponse = &ir.DirectResponse{
-					StatusCode: 500,
+				r.DirectResponse = &ir.CustomResponse{
+					StatusCode: ptr.To(uint32(500)),
 				}
 				continue
 			}

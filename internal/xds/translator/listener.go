@@ -736,11 +736,12 @@ func buildTLSVersion(version *ir.TLSVersion) tlsv3.TlsParameters_TlsProtocol {
 }
 
 func buildALPNProtocols(alpn []string) []string {
-	if len(alpn) == 0 {
+	if alpn == nil { // not set - default to h2 and http/1.1
 		out := []string{"h2", "http/1.1"}
 		return out
+	} else {
+		return alpn
 	}
-	return alpn
 }
 
 func buildXdsTLSCertSecret(tlsConfig ir.TLSCertificate) *tlsv3.Secret {

@@ -1660,6 +1660,10 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
+	if err := addRouteFilterIndexers(ctx, mgr); err != nil {
+		return err
+	}
+
 	return nil
 }
 

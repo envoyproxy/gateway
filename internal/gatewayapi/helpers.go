@@ -421,6 +421,7 @@ func irRouteDestinationName(route RouteContext, ruleIdx int) string {
 	return fmt.Sprintf("%srule/%d", irRoutePrefix(route), ruleIdx)
 }
 
+// irTLSConfigs produces a defaulted IR TLSConfig
 func irTLSConfigs(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
 	if len(tlsSecrets) == 0 {
 		return nil
@@ -436,6 +437,21 @@ func irTLSConfigs(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
 			PrivateKey:  tlsSecret.Data[corev1.TLSPrivateKeyKey],
 		}
 	}
+
+	return tlsListenerConfigs
+}
+
+// irTLSConfigsForTCPListener creates an IR TLSConfig with defaults appropriate
+// for TCP/TLS routes, e.g. disabling ALPN
+func irTLSConfigsForTCPListener(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
+	tlsListenerConfigs := irTLSConfigs(tlsSecrets...)
+
+	// Envoy Gateway disables ALPN by default for non-HTTPS listeners
+	// by setting an empty slice instead of a nil slice
+	if tlsListenerConfigs != nil {
+		tlsListenerConfigs.ALPNProtocols = []string{}
+	}
+
 	return tlsListenerConfigs
 }
 
