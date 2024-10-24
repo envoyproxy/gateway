@@ -150,6 +150,7 @@ xdsIR:
           name: ""
           prefix: /
       tls:
+        alpnProtocols: null
         certificates:
         - name: default/tls-secret-1
           privateKey: '[redacted]'

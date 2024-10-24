@@ -141,6 +141,7 @@ xdsIR:
           name: ""
           prefix: /
       tls:
+        alpnProtocols: null
         certificates:
         - name: envoy-gateway/tls-secret-1
           privateKey: '[redacted]'

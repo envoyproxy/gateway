@@ -255,8 +255,8 @@ var (
 		PathMatch: &StringMatch{
 			Exact: ptr.To("filter-error"),
 		},
-		DirectResponse: &DirectResponse{
-			StatusCode: uint32(500),
+		DirectResponse: &CustomResponse{
+			StatusCode: ptr.To(uint32(500)),
 		},
 	}
 
@@ -297,8 +297,8 @@ var (
 		PathMatch: &StringMatch{
 			Exact: ptr.To("redirect"),
 		},
-		DirectResponse: &DirectResponse{
-			StatusCode: uint32(799),
+		DirectResponse: &CustomResponse{
+			StatusCode: ptr.To(uint32(799)),
 		},
 	}
 

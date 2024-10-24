@@ -1,0 +1,57 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: eg-daemonset
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: All
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: eg-daemonset
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: eg-daemonset
+  namespace: gateway-conformance-infra
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDaemonSet:
+        patch:
+          type: StrategicMerge
+          value:
+            spec:
+              template:
+                spec:
+                  containers:
+                    - name: envoy
+                      readinessProbe:
+                        initialDelaySeconds: 5
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: foo-route
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: eg-daemonset
+  rules:
+    - backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+      matches:
+        - path:
+            type: PathPrefix
+            value: /foo
