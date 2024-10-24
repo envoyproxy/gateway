@@ -302,6 +302,10 @@ func ratelimitUnitToDuration(unit ir.RateLimitUnit) *durationpb.Duration {
 		seconds = 60 * 60
 	case egv1a1.RateLimitUnitDay:
 		seconds = 60 * 60 * 24
+	case egv1a1.RateLimitUnitMonth:
+		seconds = 60 * 60 * 24 * 30
+	case egv1a1.RateLimitUnitYear:
+		seconds = 60 * 60 * 24 * 365
 	}
 	return &durationpb.Duration{
 		Seconds: seconds,
