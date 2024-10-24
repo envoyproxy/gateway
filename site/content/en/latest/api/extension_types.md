@@ -4250,13 +4250,15 @@ _Appears in:_
 
 
 XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address.
+Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
+for more details.
 
 _Appears in:_
 - [ClientIPDetectionSettings](#clientipdetectionsettings)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `numTrustedHops` | _integer_ |  false  | NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP<br />headers to trust when determining the origin client's IP address.<br />Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for<br />for more details. |
+| `numTrustedHops` | _integer_ |  false  | NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP<br />headers to trust when determining the origin client's IP address.<br />Only one of NumTrustedHops and TrustedCIDRs must be set. |
 
 
 #### ZipkinTracingProvider

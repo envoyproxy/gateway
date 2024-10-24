@@ -1,4 +1,4 @@
-date: Pending
+date: October 24, 2024
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
@@ -10,7 +10,7 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
-  - Add a new feature here
+  - api: support setting trusted CIDRs
 
 # Fixes for bugs identified in previous versions.
 bug fixes: |
