@@ -87,13 +87,6 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su Updater
 		}
 	}
 
-	byNamespaceSelector := cfg.EnvoyGateway.Provider != nil &&
-		cfg.EnvoyGateway.Provider.Kubernetes != nil &&
-		cfg.EnvoyGateway.Provider.Kubernetes.Watch != nil &&
-		cfg.EnvoyGateway.Provider.Kubernetes.Watch.Type == egv1a1.KubernetesWatchModeTypeNamespaceSelector &&
-		(cfg.EnvoyGateway.Provider.Kubernetes.Watch.NamespaceSelector.MatchLabels != nil ||
-			len(cfg.EnvoyGateway.Provider.Kubernetes.Watch.NamespaceSelector.MatchExpressions) > 0)
-
 	r := &gatewayAPIReconciler{
 		client:            mgr.GetClient(),
 		log:               cfg.Logger,
@@ -108,7 +101,7 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su Updater
 		extServerPolicies: extServerPoliciesGVKs,
 	}
 
-	if byNamespaceSelector {
+	if byNamespaceSelectorEnabled(cfg.EnvoyGateway) {
 		r.namespaceLabel = cfg.EnvoyGateway.Provider.Kubernetes.Watch.NamespaceSelector
 	}
 
@@ -129,6 +122,23 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su Updater
 		return fmt.Errorf("error watching resources: %w", err)
 	}
 	return nil
+}
+
+func byNamespaceSelectorEnabled(eg *egv1a1.EnvoyGateway) bool {
+	if eg.Provider == nil ||
+		eg.Provider.Kubernetes == nil ||
+		eg.Provider.Kubernetes.Watch == nil {
+		return false
+	}
+
+	watch := eg.Provider.Kubernetes.Watch
+	switch watch.Type {
+	case egv1a1.KubernetesWatchModeTypeNamespaceSelector:
+		// Make sure that the namespace selector has at least one label or expression is set.
+		return watch.NamespaceSelector.MatchLabels != nil || len(watch.NamespaceSelector.MatchExpressions) > 0
+	default:
+		return false
+	}
 }
 
 // Reconcile handles reconciling all resources in a single call. Any resource event should enqueue the
