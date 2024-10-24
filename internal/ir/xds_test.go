@@ -1394,8 +1394,8 @@ func TestRedaction(t *testing.T) {
 			wantStr: `{"http":[{"name":"","address":"","port":0,"hostnames":null,` +
 				`"tls":{` +
 				`"certificates":[{"name":"server","serverCertificate":"LS0t","privateKey":"[redacted]"}],` +
-				`"clientCertificates":[{"name":"client","serverCertificate":"LS0t","privateKey":"[redacted]"}]` +
-				`},` +
+				`"clientCertificates":[{"name":"client","serverCertificate":"LS0t","privateKey":"[redacted]"}],` +
+				`"alpnProtocols":null},` +
 				`"routes":[{` +
 				`"name":"","hostname":"","isHTTP2":false,"security":{` +
 				`"oidc":{"name":"","provider":{},"clientID":"","clientSecret":"[redacted]","hmacSecret":"[redacted]"},` +
