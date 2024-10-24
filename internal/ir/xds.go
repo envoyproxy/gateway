@@ -181,7 +181,7 @@ func (x *Xds) YAMLString() string {
 }
 
 func (x *Xds) JSONString() string {
-	j, _ := json.MarshalIndent(x.Printable(), "", "\t")
+	j, _ := json.Marshal(x.Printable())
 	return string(j)
 }
 
