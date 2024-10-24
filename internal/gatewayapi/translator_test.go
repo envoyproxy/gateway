@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -34,6 +35,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/field"
 	"github.com/envoyproxy/gateway/internal/utils/file"
 	"github.com/envoyproxy/gateway/internal/wasm"
@@ -318,6 +320,8 @@ func TestTranslate(t *testing.T) {
 
 			opts := []cmp.Option{
 				cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
+				cmp.Transformer("ClearXdsEqual", xdsWithoutEqual),
+				cmpopts.IgnoreTypes(ir.PrivateBytes{}),
 				cmpopts.EquateEmpty(),
 			}
 
@@ -845,3 +849,42 @@ func (m *mockWasmCache) Get(downloadURL string, _ wasm.GetOptions) (url string, 
 }
 
 func (m *mockWasmCache) Cleanup() {}
+
+// ir.Xds implements a custom Equal method which ensures exact equality, even
+// over redacted fields. This function is used to remove the Equal method from
+// the type, but ensure that the set of fields is the same.
+// This allows us to use cmp.Diff to compare the types with field-level cmpopts.
+func xdsWithoutEqual(a *ir.Xds) any {
+	ret := struct {
+		AccessLog          *ir.AccessLog
+		Tracing            *ir.Tracing
+		Metrics            *ir.Metrics
+		HTTP               []*ir.HTTPListener
+		TCP                []*ir.TCPListener
+		UDP                []*ir.UDPListener
+		EnvoyPatchPolicies []*ir.EnvoyPatchPolicy
+		FilterOrder        []egv1a1.FilterPosition
+	}{
+		AccessLog: a.AccessLog,
+		Tracing:   a.Tracing,
+		Metrics:   a.Metrics,
+		HTTP:      a.HTTP,
+		TCP:       a.TCP,
+		UDP:                a.UDP,
+		EnvoyPatchPolicies: a.EnvoyPatchPolicies,
+		FilterOrder:        a.FilterOrder,
+	}
+
+	// Ensure we didn't drop an exported field.
+	ta, tr := reflect.TypeOf(*a), reflect.TypeOf(ret)
+	for i := 0; i < ta.NumField(); i++ {
+		a_field := ta.Field(i)
+		if r_field, ok := tr.FieldByName(a_field.Name); !ok || a_field.Type != r_field.Type {
+			// We panic here because this is test code, and it would be hard to
+			// plumb the error out.
+			panic(fmt.Sprintf("field %q is missing or has wrong type in the ir.Xds mirror", a_field.Name))
+		}
+	}
+
+	return ret
+}

@@ -89,12 +89,36 @@ var _ encoding.TextMarshaler = PrivateBytes{}
 // Note that MarshalJSON will call MarshalText if it exists, so we don't
 // need to implement MarshalJSON.
 func (p PrivateBytes) MarshalText() ([]byte, error) {
+	if len(p) == 0 {
+		return nil, nil
+	}
 	return redacted, nil
 }
 
 // String redacts the contents of the PrivateBytes type.
 func (p PrivateBytes) String() string {
+	if len(p) == 0 {
+		return ""
+	}
 	return string(redacted)
+}
+
+func (p *PrivateBytes) UnmarshalJSON(data []byte) error {
+	if len(data) == 0 {
+		*p = nil
+		return nil
+	}
+	if string(data) == `"`+string(redacted)+`"` {
+		*p = redacted
+		return nil
+	}
+	var b []byte
+	err := json.Unmarshal(data, &b)
+	if err != nil {
+		return fmt.Errorf("UnmarshalJSON failed: %w, %q", err, string(data))
+	}
+	*p = b
+	return err
 }
 
 // Xds holds the intermediate representation of a Gateway and is
