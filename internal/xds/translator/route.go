@@ -440,8 +440,20 @@ func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite, pathMa
 	return routeAction
 }
 
-func buildXdsDirectResponseAction(res *ir.DirectResponse) *routev3.DirectResponseAction {
-	routeAction := &routev3.DirectResponseAction{Status: res.StatusCode}
+func buildXdsDirectResponseAction(res *ir.CustomResponse) *routev3.DirectResponseAction {
+	routeAction := &routev3.DirectResponseAction{}
+	if res.StatusCode != nil {
+		routeAction.Status = *res.StatusCode
+	}
+
+	if res.Body != nil && *res.Body != "" {
+		routeAction.Body = &corev3.DataSource{
+			Specifier: &corev3.DataSource_InlineString{
+				InlineString: *res.Body,
+			},
+		}
+	}
+
 	return routeAction
 }
 

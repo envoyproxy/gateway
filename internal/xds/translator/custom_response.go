@@ -375,12 +375,13 @@ func (c *customResponse) buildStatusCodeCELMatcher(codeRange ir.StatusCodeRange)
 }
 
 func (c *customResponse) buildAction(r ir.ResponseOverrideRule) (*matcherv3.Matcher_OnMatch_Action, error) {
-	response := &policyv3.LocalResponsePolicy{
-		Body: &corev3.DataSource{
+	response := &policyv3.LocalResponsePolicy{}
+	if r.Response.Body != nil && *r.Response.Body != "" {
+		response.Body = &corev3.DataSource{
 			Specifier: &corev3.DataSource_InlineString{
-				InlineString: r.Response.Body,
+				InlineString: *r.Response.Body,
 			},
-		},
+		}
 	}
 
 	if r.Response.ContentType != nil && *r.Response.ContentType != "" {

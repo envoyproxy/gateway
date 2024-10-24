@@ -238,8 +238,8 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		for _, ruleRoute := range ruleRoutes {
 			noValidBackends := ruleRoute.Destination == nil || ruleRoute.Destination.ToBackendWeights().Valid == 0
 			if noValidBackends && ruleRoute.Redirect == nil {
-				ruleRoute.DirectResponse = &ir.DirectResponse{
-					StatusCode: 500,
+				ruleRoute.DirectResponse = &ir.CustomResponse{
+					StatusCode: ptr.To(uint32(500)),
 				}
 			}
 			ruleRoute.IsHTTP2 = false
@@ -570,8 +570,8 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		for _, ruleRoute := range ruleRoutes {
 			noValidBackends := ruleRoute.Destination == nil || ruleRoute.Destination.ToBackendWeights().Valid == 0
 			if noValidBackends && ruleRoute.Redirect == nil {
-				ruleRoute.DirectResponse = &ir.DirectResponse{
-					StatusCode: 500,
+				ruleRoute.DirectResponse = &ir.CustomResponse{
+					StatusCode: ptr.To(uint32(500)),
 				}
 			}
 			ruleRoute.IsHTTP2 = true
