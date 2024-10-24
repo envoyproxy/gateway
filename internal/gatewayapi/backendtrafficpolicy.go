@@ -14,10 +14,10 @@ import (
 	"strings"
 
 	perr "github.com/pkg/errors"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -32,14 +32,14 @@ const (
 	MaxConsistentHashTableSize = 5000011 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-maglevlbconfig
 )
 
-func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv1a1.BackendTrafficPolicy,
+func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources,
 	gateways []*GatewayContext,
 	routes []RouteContext,
 	xdsIR resource.XdsIRMap,
-	configMaps []*corev1.ConfigMap,
 ) []*egv1a1.BackendTrafficPolicy {
 	res := []*egv1a1.BackendTrafficPolicy{}
 
+	backendTrafficPolicies := resources.BackendTrafficPolicies
 	// Sort based on timestamp
 	sort.Slice(backendTrafficPolicies, func(i, j int) bool {
 		return backendTrafficPolicies[i].CreationTimestamp.Before(&(backendTrafficPolicies[j].CreationTimestamp))
@@ -130,7 +130,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv
 				}
 
 				// Set conditions for translation error if it got any
-				if err := t.translateBackendTrafficPolicyForRoute(policy, route, xdsIR, configMaps); err != nil {
+				if err := t.translateBackendTrafficPolicyForRoute(policy, route, xdsIR, resources); err != nil {
 					status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 						ancestorRefs,
 						t.GatewayControllerName,
@@ -184,7 +184,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv
 				}
 
 				// Set conditions for translation error if it got any
-				if err := t.translateBackendTrafficPolicyForGateway(policy, currTarget, gateway, xdsIR, configMaps); err != nil {
+				if err := t.translateBackendTrafficPolicyForGateway(policy, currTarget, gateway, xdsIR, resources); err != nil {
 					status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 						ancestorRefs,
 						t.GatewayControllerName,
@@ -288,7 +288,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 	policy *egv1a1.BackendTrafficPolicy,
 	route RouteContext,
 	xdsIR resource.XdsIRMap,
-	configMaps []*corev1.ConfigMap,
+	resources *resource.Resources,
 ) error {
 	var (
 		rl        *ir.RateLimit
@@ -349,7 +349,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 		errs = errors.Join(errs, err)
 	}
 
-	if ro, err = buildResponseOverride(policy, configMaps); err != nil {
+	if ro, err = buildResponseOverride(policy, resources); err != nil {
 		err = perr.WithMessage(err, "ResponseOverride")
 		errs = errors.Join(errs, err)
 	}
@@ -392,8 +392,8 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 				if strings.HasPrefix(r.Name, prefix) {
 					if errs != nil {
 						// Return a 500 direct response
-						r.DirectResponse = &ir.DirectResponse{
-							StatusCode: 500,
+						r.DirectResponse = &ir.CustomResponse{
+							StatusCode: ptr.To(uint32(500)),
 						}
 						continue
 					}
@@ -438,7 +438,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 	target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
 	gateway *GatewayContext,
 	xdsIR resource.XdsIRMap,
-	configMaps []*corev1.ConfigMap,
+	resources *resource.Resources,
 ) error {
 	var (
 		rl        *ir.RateLimit
@@ -491,7 +491,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 		err = perr.WithMessage(err, "HTTP2")
 		errs = errors.Join(errs, err)
 	}
-	if ro, err = buildResponseOverride(policy, configMaps); err != nil {
+	if ro, err = buildResponseOverride(policy, resources); err != nil {
 		err = perr.WithMessage(err, "ResponseOverride")
 		errs = errors.Join(errs, err)
 	}
@@ -561,8 +561,8 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 
 			if errs != nil {
 				// Return a 500 direct response
-				r.DirectResponse = &ir.DirectResponse{
-					StatusCode: 500,
+				r.DirectResponse = &ir.CustomResponse{
+					StatusCode: ptr.To(uint32(500)),
 				}
 				continue
 			}
@@ -864,7 +864,7 @@ func makeIrTriggerSet(in []egv1a1.TriggerEnum) []ir.TriggerEnum {
 	return irTriggers
 }
 
-func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, configMaps []*corev1.ConfigMap) (*ir.ResponseOverride, error) {
+func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resource.Resources) (*ir.ResponseOverride, error) {
 	if len(policy.Spec.ResponseOverride) == 0 {
 		return nil, nil
 	}
@@ -894,33 +894,10 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, configMaps []*co
 			ContentType: ro.Response.ContentType,
 		}
 
-		if ro.Response.Body.Type != nil && *ro.Response.Body.Type == egv1a1.ResponseValueTypeValueRef {
-			foundCM := false
-			for _, cm := range configMaps {
-				if cm.Namespace == policy.Namespace && cm.Name == string(ro.Response.Body.ValueRef.Name) {
-					body, dataOk := cm.Data["response.body"]
-					switch {
-					case dataOk:
-						response.Body = body
-					case len(cm.Data) > 0: // Fallback to the first key if response.body is not found
-						for _, value := range cm.Data {
-							body = value
-							break
-						}
-						response.Body = body
-					default:
-						return nil, fmt.Errorf("can't find the key response.body in the referenced configmap %s", ro.Response.Body.ValueRef.Name)
-					}
-
-					foundCM = true
-					break
-				}
-			}
-			if !foundCM {
-				return nil, fmt.Errorf("can't find the referenced configmap %s", ro.Response.Body.ValueRef.Name)
-			}
-		} else {
-			response.Body = *ro.Response.Body.Inline
+		var err error
+		response.Body, err = getCustomResponseBody(ro.Response.Body, resources, policy.Namespace)
+		if err != nil {
+			return nil, err
 		}
 
 		rules = append(rules, ir.ResponseOverrideRule{
@@ -933,6 +910,34 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, configMaps []*co
 		Name:  irConfigName(policy),
 		Rules: rules,
 	}, nil
+}
+
+func getCustomResponseBody(body egv1a1.CustomResponseBody, resources *resource.Resources, policyNs string) (*string, error) {
+	if body.Type != nil && *body.Type == egv1a1.ResponseValueTypeValueRef {
+		cm := resources.GetConfigMap(policyNs, string(body.ValueRef.Name))
+		if cm != nil {
+			b, dataOk := cm.Data["response.body"]
+			switch {
+			case dataOk:
+				return &b, nil
+			case len(cm.Data) > 0: // Fallback to the first key if response.body is not found
+				for _, value := range cm.Data {
+					b = value
+					break
+				}
+				return &b, nil
+			default:
+				return nil, fmt.Errorf("can't find the key response.body in the referenced configmap %s", body.ValueRef.Name)
+			}
+
+		} else {
+			return nil, fmt.Errorf("can't find the referenced configmap %s", body.ValueRef.Name)
+		}
+	} else if body.Inline != nil {
+		return body.Inline, nil
+	}
+
+	return nil, nil
 }
 
 func defaultResponseOverrideRuleName(policy *egv1a1.BackendTrafficPolicy, index int) string {

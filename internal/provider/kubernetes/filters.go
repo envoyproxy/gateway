@@ -9,9 +9,13 @@ import (
 	"context"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/types"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 func (r *gatewayAPIReconciler) getExtensionRefFilters(ctx context.Context) ([]unstructured.Unstructured, error) {
@@ -53,4 +57,38 @@ func (r *gatewayAPIReconciler) getHTTPRouteFilters(ctx context.Context) ([]egv1a
 	}
 
 	return httpFilterList.Items, nil
+}
+
+// processRouteFilterConfigMapRef adds the referenced ConfigMap in a HTTPRouteFilter
+// to the resourceTree
+func (r *gatewayAPIReconciler) processRouteFilterConfigMapRef(
+	ctx context.Context, filter *egv1a1.HTTPRouteFilter,
+	resourceMap *resourceMappings, resourceTree *resource.Resources,
+) {
+	if filter.Spec.DirectResponse != nil &&
+		filter.Spec.DirectResponse.Body.ValueRef != nil &&
+		string(filter.Spec.DirectResponse.Body.ValueRef.Kind) == resource.KindConfigMap {
+		configMap := new(corev1.ConfigMap)
+		err := r.client.Get(ctx,
+			types.NamespacedName{Namespace: filter.Namespace, Name: string(filter.Spec.DirectResponse.Body.ValueRef.Name)},
+			configMap)
+		// we don't return an error here, because we want to continue
+		// reconciling the rest of the HTTPRouteFilter despite that this
+		// reference is invalid.
+		// This HTTPRouteFilter will be marked as invalid in its status
+		// when translating to IR because the referenced configmap can't be
+		// found.
+		if err != nil {
+			r.log.Error(err,
+				"failed to process DirectResponse ValueRef for HTTPRouteFilter",
+				"filter", filter, "ValueRef", filter.Spec.DirectResponse.Body.ValueRef.Name)
+		}
+
+		resourceMap.allAssociatedNamespaces.Insert(filter.Namespace)
+		if !resourceMap.allAssociatedConfigMaps.Has(utils.NamespacedName(configMap).String()) {
+			resourceMap.allAssociatedConfigMaps.Insert(utils.NamespacedName(configMap).String())
+			resourceTree.ConfigMaps = append(resourceTree.ConfigMaps, configMap)
+			r.log.Info("processing ConfigMap", "namespace", filter.Namespace, "name", string(filter.Spec.DirectResponse.Body.ValueRef.Name))
+		}
+	}
 }

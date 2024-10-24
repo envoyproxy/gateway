@@ -243,9 +243,11 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 	if err != nil {
 		return err
 	}
+
 	for i := range httpFilters {
 		filter := httpFilters[i]
 		resourceMap.httpRouteFilters[utils.GetNamespacedNameWithGroupKind(&filter)] = &filter
+		r.processRouteFilterConfigMapRef(ctx, &filter, resourceMap, resourceTree)
 	}
 
 	extensionRefFilters, err := r.getExtensionRefFilters(ctx)

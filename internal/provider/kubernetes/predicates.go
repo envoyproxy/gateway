@@ -632,6 +632,18 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 		return true
 	}
 
+	routeFilterList := &egv1a1.HTTPRouteFilterList{}
+	if err := r.client.List(context.Background(), routeFilterList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(configMapHTTPRouteFilterIndex, utils.NamespacedName(configMap).String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated HTTPRouteFilter")
+		return false
+	}
+
+	if len(routeFilterList.Items) > 0 {
+		return true
+	}
+
 	return false
 }
 

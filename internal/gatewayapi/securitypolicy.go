@@ -406,8 +406,8 @@ func (t *Translator) translateSecurityPolicyForRoute(
 						}
 						if errs != nil {
 							// Return a 500 direct response to avoid unauthorized access
-							r.DirectResponse = &ir.DirectResponse{
-								StatusCode: 500,
+							r.DirectResponse = &ir.CustomResponse{
+								StatusCode: ptr.To(uint32(500)),
 							}
 						}
 					}
@@ -514,8 +514,8 @@ func (t *Translator) translateSecurityPolicyForGateway(
 			}
 			if errs != nil {
 				// Return a 500 direct response to avoid unauthorized access
-				r.DirectResponse = &ir.DirectResponse{
-					StatusCode: 500,
+				r.DirectResponse = &ir.CustomResponse{
+					StatusCode: ptr.To(uint32(500)),
 				}
 			}
 		}
