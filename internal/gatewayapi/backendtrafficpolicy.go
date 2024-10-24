@@ -25,6 +25,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
+	"github.com/envoyproxy/gateway/internal/utils/ratelimit"
 	"github.com/envoyproxy/gateway/internal/utils/regex"
 )
 
@@ -642,9 +643,9 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 	// Validate that the rule limit unit is a multiple of the default limit unit.
 	// This is required by Envoy local rateLimit implementation.
 	// see https://github.com/envoyproxy/envoy/blob/6d9a6e995f472526de2b75233abca69aa00021ed/source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.cc#L49
-	defaultLimitUnit := ratelimitUnitToDuration(egv1a1.RateLimitUnit(defaultLimit.Unit))
+	defaultLimitUnit := ratelimit.UnitToSeconds(egv1a1.RateLimitUnit(defaultLimit.Unit))
 	for _, rule := range local.Rules {
-		ruleLimitUint := ratelimitUnitToDuration(rule.Limit.Unit)
+		ruleLimitUint := ratelimit.UnitToSeconds(rule.Limit.Unit)
 		if defaultLimitUnit == 0 || ruleLimitUint%defaultLimitUnit != 0 {
 			return nil, fmt.Errorf("local rateLimit rule limit unit must be a multiple of the default limit unit")
 		}
@@ -786,22 +787,6 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 		}
 	}
 	return irRule, nil
-}
-
-func ratelimitUnitToDuration(unit egv1a1.RateLimitUnit) int64 {
-	var seconds int64
-
-	switch unit {
-	case egv1a1.RateLimitUnitSecond:
-		seconds = 1
-	case egv1a1.RateLimitUnitMinute:
-		seconds = 60
-	case egv1a1.RateLimitUnitHour:
-		seconds = 60 * 60
-	case egv1a1.RateLimitUnitDay:
-		seconds = 60 * 60 * 24
-	}
-	return seconds
 }
 
 func int64ToUint32(in int64) (uint32, bool) {
