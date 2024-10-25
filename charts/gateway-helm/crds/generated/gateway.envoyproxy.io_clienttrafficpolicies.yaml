@@ -85,11 +85,24 @@ spec:
                         description: |-
                           NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP
                           headers to trust when determining the origin client's IP address.
-                          Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
-                          for more details.
+                          Only one of NumTrustedHops and TrustedCIDRs must be set.
                         format: int32
                         type: integer
+                      trustedCIDRs:
+                        description: |-
+                          TrustedCIDRs is a list of trusted CIDRs to trust when
+                          evaluating the remote IP address to determine the original client's IP address.
+                          Only one of NumTrustedHops and TrustedCIDRs must be set.
+                        items:
+                          type: string
+                        minItems: 1
+                        type: array
                     type: object
+                    x-kubernetes-validations:
+                    - message: only one of numTrustedHops or trustedCIDRs must be
+                        set
+                      rule: (has(self.numTrustedHops) && !has(self.trustedCIDRs))
+                        || (!has(self.numTrustedHops) && has(self.trustedCIDRs))
                 type: object
                 x-kubernetes-validations:
                 - message: customHeader cannot be used in conjunction with xForwardedFor
