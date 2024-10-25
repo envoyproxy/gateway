@@ -12,17 +12,14 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/kube"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -53,11 +50,11 @@ var EGUpgradeTest = suite.ConformanceTest{
 			chartPath := "../../../charts/gateway-helm"
 			relName := "eg"
 			depNS := "envoy-gateway-system"
-			lastVersionTag := os.Getenv("LAST_VERSION_TAG")
+			lastVersionTag := os.Getenv("last_version_tag")
 			if lastVersionTag == "" {
-				lastVersionTag = "v1.1.2" // Default version tag if not specified
+				// Use v1.0.2 instead of v1.1.2 due to https://github.com/envoyproxy/gateway/issues/4336
+				lastVersionTag = "v1.0.2" // Default version tag if not specified
 			}
-			t.Logf("Upgrading from version: %s", lastVersionTag)
 
 			// Uninstall the current version of EG
 			relNamespace := "envoy-gateway-system"
@@ -108,25 +105,18 @@ var EGUpgradeTest = suite.ConformanceTest{
 			suite.Applier.GatewayClass = suite.GatewayClassName
 			suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, suite.BaseManifests, suite.Cleanup)
 
-			// verify latestVersion is working
-			kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{depNS})
-
-			// let's make sure the gateway is up and running
-			ns := "gateway-upgrade-infra"
-			gwNN := types.NamespacedName{Name: "ha-gateway", Namespace: ns}
-			_, err = kubernetes.WaitForGatewayAddress(t, suite.Client, suite.TimeoutConfig, kubernetes.GatewayRef{
-				NamespacedName: gwNN,
-			})
-			require.NoErrorf(t, err, "timed out waiting for Gateway address to be assigned")
-
-			// Apply the test manifests
 			for _, manifestLocation := range []string{"testdata/eg-upgrade.yaml"} {
 				tlog.Logf(t, "Applying %s", manifestLocation)
 				suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, manifestLocation, true)
 			}
 
 			// wait for everything to startup
+			kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{depNS})
+
+			// verify latestVersion is working
+			ns := "gateway-upgrade-infra"
 			routeNN := types.NamespacedName{Name: "http-backend-eg-upgrade", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "ha-gateway", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
 			kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{depNS})
@@ -276,53 +266,47 @@ func updateChartCRDs(actionConfig *action.Configuration, gatewayChart *chart.Cha
 	return err
 }
 
-func migrateChartCRDs(actionConfig *action.Configuration, gatewayChart *chart.Chart, _ time.Duration) error {
+// TODO: proper migration framework required
+func migrateChartCRDs(actionConfig *action.Configuration, gatewayChart *chart.Chart, timeout time.Duration) error {
 	crds, err := extractCRDs(actionConfig, gatewayChart)
 	if err != nil {
 		return err
 	}
 
-	// https: //gateway-api.sigs.k8s.io/guides/?h=upgrade#v12-upgrade-notes
-	storedVersionsMap := map[string]string{
-		"referencegrants.gateway.networking.k8s.io": "v1beta1",
-		"grpcroutes.gateway.networking.k8s.io":      "v1",
-	}
-
-	restCfg, err := actionConfig.RESTClientGetter.ToRESTConfig()
-	if err != nil {
-		return err
-	}
-
-	cli, err := client.New(restCfg, client.Options{})
-	if err != nil {
-		return err
-	}
-
 	for _, crd := range crds {
-		storedVersion, ok := storedVersionsMap[crd.Name]
-		if !ok {
-			continue
-		}
-
-		newVersion, err := getGWAPIVersion(crd.Object)
-		if err != nil {
-			return err
-		}
-
-		if strings.HasPrefix(newVersion, "v1.2.0") {
-			existingCRD := &apiextensionsv1.CustomResourceDefinition{}
-			err := cli.Get(context.Background(), types.NamespacedName{Name: crd.Name}, existingCRD)
-			if kerrors.IsNotFound(err) {
-				continue
-			}
+		if crd.Name == "backendtlspolicies.gateway.networking.k8s.io" ||
+			crd.Name == "grpcroutes.gateway.networking.k8s.io" {
+			newVersion, err := getGWAPIVersion(crd.Object)
 			if err != nil {
-				return fmt.Errorf("failed to get CRD: %s", err.Error())
+				return err
 			}
+			// https://gateway-api.sigs.k8s.io/guides/?h=upgrade#v11-upgrade-notes
+			if newVersion == "v1.2.0-rc2" {
+				helper := resource.NewHelper(crd.Client, crd.Mapping)
+				existingCRD, err := helper.Get(crd.Namespace, crd.Name)
+				if kerrors.IsNotFound(err) {
+					continue
+				}
 
-			existingCRD.Status.StoredVersions = []string{storedVersion}
+				// previous version exists
+				existingVersion, err := getGWAPIVersion(existingCRD)
+				if err != nil {
+					return err
+				}
 
-			if err := cli.Status().Patch(context.Background(), existingCRD, client.MergeFrom(existingCRD)); err != nil {
-				return fmt.Errorf("failed to patch CRD: %s", err.Error())
+				if existingVersion == "v1.0.0" {
+					// Delete the existing instance of the BTLS and GRPCRoute CRDs
+					_, errs := actionConfig.KubeClient.Delete([]*resource.Info{crd})
+					if errs != nil {
+						return fmt.Errorf("failed to delete backendtlspolicies: %s", util.MultipleErrors("", errs))
+					}
+
+					if kubeClient, ok := actionConfig.KubeClient.(kube.InterfaceExt); ok {
+						if err := kubeClient.WaitForDelete([]*resource.Info{crd}, timeout); err != nil {
+							return fmt.Errorf("failed to wait for backendtlspolicies deletion: %s", err.Error())
+						}
+					}
+				}
 			}
 		}
 	}
@@ -370,7 +354,7 @@ func getGWAPIVersion(object runtime.Object) (string, error) {
 	if ok {
 		return newVersion, nil
 	}
-	return "", fmt.Errorf("failed to determine Gateway API CRD version: %v", annotations)
+	return "", fmt.Errorf("failed to determine Gateway API CRD version")
 }
 
 // extractCRDs Extract the CRDs part of the chart
