@@ -5,7 +5,7 @@ breaking changes: |
   Gateway API GRPCRoute and ReferenceGrant v1alpha2 have been removed.
   Please refer to the [Gateway API v1.2.0 documentation](https://github.com/kubernetes-sigs/gateway-api/releases) for more information.
   Removed default CPU limit of the Envoy Gateway deployment
-  Changed default Envoy shutdown settings: drain strategy has been changed to immediate, default minDrainDuration, drainTimeout and terminationGracePeriodSeconds have been set to 10s, 360s and 360s respectively
+  Changed default Envoy shutdown settings: drain strategy has been changed to immediate, default minDrainDuration, drainTimeout and terminationGracePeriodSeconds have been set to 10s, 60s and 360s respectively
 
 # New features or capabilities added in this release.
 new features: |
