@@ -132,6 +132,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			TrustedCA:   filepath.Join("/sds", common.SdsCAFilename),
 		},
 		MaxHeapSizeBytes: maxHeapSizeBytes,
+		XdsServerHost:    ptr.To(fmt.Sprintf("%s.%s.svc.cluster.local", infra.Config.Name, infra.Config.Namespace)),
 	}
 
 	args, err := common.BuildProxyArgs(infra, shutdownConfig, bootstrapConfigOptions, fmt.Sprintf("$(%s)", envoyPodEnvVar))

@@ -58,6 +58,13 @@ func newTestInfraWithAddresses(addresses []string) *ir.Infra {
 func newTestInfraWithAnnotationsAndLabels(annotations, labels map[string]string) *ir.Infra {
 	i := ir.NewInfra()
 
+	i.Proxy.Config = &egv1a1.EnvoyProxy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "envoy-gateway",
+			Namespace: "envoy-gateway-system",
+		},
+	}
+
 	i.Proxy.GetProxyMetadata().Annotations = annotations
 	if len(labels) > 0 {
 		i.Proxy.GetProxyMetadata().Labels = labels
