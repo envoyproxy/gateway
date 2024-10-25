@@ -225,7 +225,19 @@ type CoreListenerDetails struct {
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 	// Metadata is used to enrich envoy resource metadata with user and provider-specific information
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	// IPFamily specifies the IP address family for the gateway.
+	// It can be IPv4, IPv6, or Dual.
+	IPFamily *IPFamily `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
 }
+
+// IPFamily specifies the IP address family used by the Gateway for its listening ports.
+type IPFamily string
+
+const (
+	IPv4      IPFamily = "IPv4"
+	IPv6      IPFamily = "IPv6"
+	Dualstack IPFamily = "DualStack"
+)
 
 func (l CoreListenerDetails) GetName() string {
 	return l.Name

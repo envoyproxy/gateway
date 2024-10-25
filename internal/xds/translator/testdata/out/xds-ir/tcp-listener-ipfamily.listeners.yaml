@@ -1,0 +1,19 @@
+- additionalAddresses:
+  - address:
+      socketAddress:
+        address: '::'
+        portValue: 8082
+  address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 8082
+  filterChains:
+  - filters:
+    - name: envoy.filters.network.tcp_proxy
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        cluster: tcp-route-dual-dest
+        statPrefix: tcp-8082
+    name: tcp-route-dual
+  name: tcp-listener-dual
+  perConnectionBufferLimitBytes: 32768
