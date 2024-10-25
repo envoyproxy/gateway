@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -54,6 +55,7 @@ var skipNameValidation = func() *bool {
 
 type gatewayAPIReconciler struct {
 	client            client.Client
+	clientSet         *kubernetes.Clientset
 	log               logging.Logger
 	statusUpdater     Updater
 	classController   gwapiv1.GatewayController
@@ -71,6 +73,11 @@ type gatewayAPIReconciler struct {
 func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su Updater,
 	resources *message.ProviderResources,
 ) error {
+	cli, err := kubernetes.NewForConfig(mgr.GetConfig())
+	if err != nil {
+		return err
+	}
+
 	ctx := context.Background()
 
 	// Gather additional resources to watch from registered extensions
@@ -89,6 +96,7 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su Updater
 
 	r := &gatewayAPIReconciler{
 		client:            mgr.GetClient(),
+		clientSet:         cli,
 		log:               cfg.Logger,
 		classController:   gwapiv1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
 		namespace:         cfg.Namespace,
@@ -362,8 +370,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 		var endpointSliceLabelKey string
 		switch backendRefKind {
 		case resource.KindService:
-			service := new(corev1.Service)
-			err := r.client.Get(ctx, types.NamespacedName{Namespace: string(*backendRef.Namespace), Name: string(backendRef.Name)}, service)
+			service, err := r.clientSet.CoreV1().Services(string(*backendRef.Namespace)).Get(ctx, string(backendRef.Name), metav1.GetOptions{})
 			if err != nil {
 				r.log.Error(err, "failed to get Service", "namespace", string(*backendRef.Namespace),
 					"name", string(backendRef.Name))
@@ -409,14 +416,11 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 
 		// Retrieve the EndpointSlices associated with the Service and ServiceImport
 		if endpointSliceLabelKey != "" {
-			endpointSliceList := new(discoveryv1.EndpointSliceList)
-			opts := []client.ListOption{
-				client.MatchingLabels(map[string]string{
-					endpointSliceLabelKey: string(backendRef.Name),
-				}),
-				client.InNamespace(string(*backendRef.Namespace)),
+			opts := metav1.ListOptions{
+				LabelSelector: fmt.Sprintf("%s=%s", endpointSliceLabelKey, string(backendRef.Name)),
 			}
-			if err := r.client.List(ctx, endpointSliceList, opts...); err != nil {
+			endpointSliceList, err := r.clientSet.DiscoveryV1().EndpointSlices(string(*backendRef.Namespace)).List(ctx, opts)
+			if err != nil {
 				r.log.Error(err, "failed to get EndpointSlices", "namespace", string(*backendRef.Namespace),
 					backendRefKind, string(backendRef.Name))
 			} else {
@@ -547,15 +551,7 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 // The OIDC HMAC Secret is created by the CertGen job and is used by SecurityPolicy
 // to configure OAuth2 filters.
 func (r *gatewayAPIReconciler) processOIDCHMACSecret(ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings) {
-	var (
-		secret corev1.Secret
-		err    error
-	)
-
-	err = r.client.Get(ctx,
-		types.NamespacedName{Namespace: r.namespace, Name: oidcHMACSecretName},
-		&secret,
-	)
+	secret, err := r.clientSet.CoreV1().Secrets(r.namespace).Get(ctx, oidcHMACSecretName, metav1.GetOptions{})
 	// We don't return an error here, because we want to continue reconciling
 	// despite that the OIDC HMAC secret can't be found.
 	// If the OIDC HMAC Secret is missing, the SecurityPolicy with OIDC will be
@@ -567,9 +563,9 @@ func (r *gatewayAPIReconciler) processOIDCHMACSecret(ctx context.Context, resour
 		return
 	}
 
-	if !resourceMap.allAssociatedSecrets.Has(utils.NamespacedName(&secret).String()) {
-		resourceMap.allAssociatedSecrets.Insert(utils.NamespacedName(&secret).String())
-		resourceTree.Secrets = append(resourceTree.Secrets, &secret)
+	if !resourceMap.allAssociatedSecrets.Has(utils.NamespacedName(secret).String()) {
+		resourceMap.allAssociatedSecrets.Insert(utils.NamespacedName(secret).String())
+		resourceTree.Secrets = append(resourceTree.Secrets, secret)
 		r.log.Info("processing OIDC HMAC Secret", "namespace", r.namespace, "name", oidcHMACSecretName)
 	}
 }
@@ -586,12 +582,8 @@ func (r *gatewayAPIReconciler) processSecretRef(
 	ownerName string,
 	secretRef gwapiv1.SecretObjectReference,
 ) error {
-	secret := new(corev1.Secret)
 	secretNS := gatewayapi.NamespaceDerefOr(secretRef.Namespace, ownerNS)
-	err := r.client.Get(ctx,
-		types.NamespacedName{Namespace: secretNS, Name: string(secretRef.Name)},
-		secret,
-	)
+	secret, err := r.clientSet.CoreV1().Secrets(secretNS).Get(ctx, string(secretRef.Name), metav1.GetOptions{})
 	if err != nil && kerrors.IsNotFound(err) {
 		return fmt.Errorf("unable to find the Secret: %s/%s", secretNS, string(secretRef.Name))
 	}
@@ -696,10 +688,7 @@ func (r *gatewayAPIReconciler) processConfigMapRef(
 ) error {
 	configMap := new(corev1.ConfigMap)
 	configMapNS := gatewayapi.NamespaceDerefOr(configMapRef.Namespace, ownerNS)
-	err := r.client.Get(ctx,
-		types.NamespacedName{Namespace: configMapNS, Name: string(configMapRef.Name)},
-		configMap,
-	)
+	configMap, err := r.clientSet.CoreV1().ConfigMaps(configMapNS).Get(ctx, string(configMapRef.Name), metav1.GetOptions{})
 	if err != nil && kerrors.IsNotFound(err) {
 		return fmt.Errorf("unable to find the ConfigMap: %s/%s", configMapNS, string(configMapRef.Name))
 	}
@@ -750,11 +739,7 @@ func (r *gatewayAPIReconciler) processBtpConfigMapRefs(
 	for _, policy := range resourceTree.BackendTrafficPolicies {
 		for _, ro := range policy.Spec.ResponseOverride {
 			if ro.Response.Body.ValueRef != nil && string(ro.Response.Body.ValueRef.Kind) == resource.KindConfigMap {
-				configMap := new(corev1.ConfigMap)
-				err := r.client.Get(ctx,
-					types.NamespacedName{Namespace: policy.Namespace, Name: string(ro.Response.Body.ValueRef.Name)},
-					configMap,
-				)
+				configMap, err := r.clientSet.CoreV1().ConfigMaps(policy.Namespace).Get(ctx, string(ro.Response.Body.ValueRef.Name), metav1.GetOptions{})
 				// we don't return an error here, because we want to continue
 				// reconciling the rest of the BackendTrafficPolicies despite that this
 				// reference is invalid.
@@ -779,9 +764,8 @@ func (r *gatewayAPIReconciler) processBtpConfigMapRefs(
 }
 
 func (r *gatewayAPIReconciler) getNamespace(ctx context.Context, name string) (*corev1.Namespace, error) {
-	nsKey := types.NamespacedName{Name: name}
-	ns := new(corev1.Namespace)
-	if err := r.client.Get(ctx, nsKey, ns); err != nil {
+	ns, err := r.clientSet.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
 		r.log.Error(err, "unable to get Namespace")
 		return nil, err
 	}

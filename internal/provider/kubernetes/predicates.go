@@ -71,15 +71,8 @@ func (r *gatewayAPIReconciler) checkObjectNamespaceLabels(obj metav1.Object) (bo
 		return false, nil
 	}
 
-	ns := &corev1.Namespace{}
-	if err := r.client.Get(
-		context.Background(),
-		client.ObjectKey{
-			Namespace: "", // Namespace object should have an empty Namespace
-			Name:      nsString,
-		},
-		ns,
-	); err != nil {
+	ns, err := r.clientSet.CoreV1().Namespaces().Get(context.Background(), nsString, metav1.GetOptions{})
+	if err != nil {
 		return false, err
 	}
 
@@ -507,12 +500,9 @@ func (r *gatewayAPIReconciler) envoyObjectForGateway(ctx context.Context, gatewa
 
 // envoyServiceForGateway returns the Envoy service, returning nil if the service doesn't exist.
 func (r *gatewayAPIReconciler) envoyServiceForGateway(ctx context.Context, gateway *gwapiv1.Gateway) (*corev1.Service, error) {
-	var services corev1.ServiceList
-	labelSelector := labels.SelectorFromSet(labels.Set(gatewayapi.OwnerLabels(gateway, r.mergeGateways.Has(string(gateway.Spec.GatewayClassName)))))
-	if err := r.client.List(ctx, &services, &client.ListOptions{
-		LabelSelector: labelSelector,
-		Namespace:     r.namespace,
-	}); err != nil {
+	labelSelector := labels.SelectorFromSet(gatewayapi.OwnerLabels(gateway, r.mergeGateways.Has(string(gateway.Spec.GatewayClassName))))
+	services, err := r.clientSet.CoreV1().Services(r.namespace).List(ctx, metav1.ListOptions{LabelSelector: labelSelector.String()})
+	if err != nil {
 		if kerrors.IsNotFound(err) {
 			return nil, nil
 		}
