@@ -15,7 +15,7 @@ def format_date(date_str):
             return datetime.strptime(date_str, date_format).date()
         except ValueError:
             pass  # If the format doesn't match, move to the next one
-    
+
     raise ValueError(f"Date string '{date_str}' does not match any supported format.")
 
 def capitalize(name):
@@ -46,18 +46,19 @@ def convert_yaml_to_markdown(input_yaml_file, output_markdown_path):
 
         file.write("Date: {}\n\n".format(data['date']))
 
-        for area in data['changes']:
-            file.write("## {}\n".format(capitalize(area['area'])))
-            if 'change' in area:
-                file.write(change_to_markdown(area['change']) + '\n\n')
+        if 'changes' in data:
+          for area in data['changes']:
+              file.write("## {}\n".format(capitalize(area['area'])))
+              if 'change' in area:
+                  file.write(change_to_markdown(area['change']) + '\n\n')
 
-            if 'breaking-change' in area:
-                file.write("### Breaking Changes\n")
-                file.write(change_to_markdown(area['breaking-change']) + '\n\n')
+              if 'breaking-change' in area:
+                  file.write("### Breaking Changes\n")
+                  file.write(change_to_markdown(area['breaking-change']) + '\n\n')
 
-            if 'deprecation' in area:
-                file.write("### Deprecations\n")
-                file.write(change_to_markdown(area['deprecation']) + '\n\n')
+              if 'deprecation' in area:
+                  file.write("### Deprecations\n")
+                  file.write(change_to_markdown(area['deprecation']) + '\n\n')
 
     print("Markdown file '{}' has been generated.".format(output_markdown_file))
 
