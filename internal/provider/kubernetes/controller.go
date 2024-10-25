@@ -1113,16 +1113,22 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			return r.hasMatchingNamespaceLabels(ep)
 		}))
 	}
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &egv1a1.EnvoyProxy{},
-			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, t *egv1a1.EnvoyProxy) []reconcile.Request {
-				return r.enqueueClass(ctx, t)
-			}),
-			epPredicates...)); err != nil {
-		return err
-	}
-	if err := addEnvoyProxyIndexers(ctx, mgr); err != nil {
-		return err
+
+	epCRDExists := r.crdExists(mgr, resource.KindEnvoyProxy, egv1a1.GroupVersion.String())
+	if !epCRDExists {
+		r.log.Info("EnvoyProxy CRD not found, skipping EnvoyProxy watch")
+	} else {
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &egv1a1.EnvoyProxy{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, t *egv1a1.EnvoyProxy) []reconcile.Request {
+					return r.enqueueClass(ctx, t)
+				}),
+				epPredicates...)); err != nil {
+			return err
+		}
+		if err := addEnvoyProxyIndexers(ctx, mgr); err != nil {
+			return err
+		}
 	}
 
 	// Watch Gateway CRUDs and reconcile affected GatewayClass.
