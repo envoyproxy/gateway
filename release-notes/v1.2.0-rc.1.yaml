@@ -11,7 +11,7 @@ new features: |
   Added support for IPv4/IPv6 Dual Stack for Envoy listeners and BackendRef resources
   Added support for EG standalone(host deployment) mode (experimental)
   Added support for JWT claims based Authorization in SecurityPolicy CRD
-  Added support for direct response in HTTPRouteFilter CRD
+  Added support for Direct Response in HTTPRouteFilter CRD
   Added support for Response Override in BackendTrafficPolicy CRD
   Added support for RequestTimeout in BackendTrafficPolicy CRD
   Added support for inverting header matches for rate limit in BackendTrafficPolicy CRD
