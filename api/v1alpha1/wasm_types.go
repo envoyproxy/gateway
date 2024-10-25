@@ -52,6 +52,11 @@ type Wasm struct {
 	// Priority defines the location of the Wasm extension in the HTTP filter chain.
 	// If not specified, the Wasm extension will be inserted before the router filter.
 	// Priority *uint32 `json:"priority,omitempty"`
+
+	// HostEnvKeys is a list of keys for environment variables from the host envoy process
+	// that should be passed into the Wasm VM. This is useful for passing secrets to to Wasm extensions.
+	// +optional
+	HostEnvKeys []string `json:"hostEnvKeys,omitempty"`
 }
 
 // WasmCodeSource defines the source of the Wasm code.
