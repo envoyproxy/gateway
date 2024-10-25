@@ -10,7 +10,7 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
-  Add a new feature here
+  - Added support for trusted CIDRs in the ClientIPDetectionSettings API
 
 # Fixes for bugs identified in previous versions.
 bug fixes: |
