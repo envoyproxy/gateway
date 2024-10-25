@@ -686,7 +686,6 @@ func (r *gatewayAPIReconciler) processConfigMapRef(
 	ownerName string,
 	configMapRef gwapiv1.SecretObjectReference,
 ) error {
-	configMap := new(corev1.ConfigMap)
 	configMapNS := gatewayapi.NamespaceDerefOr(configMapRef.Namespace, ownerNS)
 	configMap, err := r.clientSet.CoreV1().ConfigMaps(configMapNS).Get(ctx, string(configMapRef.Name), metav1.GetOptions{})
 	if err != nil && kerrors.IsNotFound(err) {
