@@ -8,6 +8,9 @@ dependencies:
 - name: fluent-bit
   repository: https://fluent.github.io/helm-charts
   version: 0.30.4
+- name: alloy
+  repository: https://grafana.github.io/helm-charts
+  version: 0.9.2
 - name: loki
   repository: https://grafana.github.io/helm-charts
   version: 4.8.0
@@ -17,5 +20,5 @@ dependencies:
 - name: opentelemetry-collector
   repository: https://open-telemetry.github.io/opentelemetry-helm-charts
   version: 0.108.0
-digest: sha256:ea6663bb1358123b96b69d2c5b0b8c20650a43dc39b24c482f0560201fd2cc3a
-generated: "2024-10-19T12:59:47.251089661+02:00"
+digest: sha256:bc634c59972bfd4a01e0f4310a4949095752e659a9b5cb1d9c0fbe9a86f37011
+generated: "2024-10-25T10:55:26.755739+08:00"
