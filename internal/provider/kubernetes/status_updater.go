@@ -37,16 +37,16 @@ type Update struct {
 
 // Mutator is an interface to hold mutator functions for status updates.
 type Mutator interface {
-	Mutate(obj client.Object) client.Object
+	Mutate(obj client.Object) bool
 }
 
 // MutatorFunc is a function adaptor for Mutators.
-type MutatorFunc func(client.Object) client.Object
+type MutatorFunc func(client.Object) bool
 
 // Mutate adapts the MutatorFunc to fit through the Mutator interface.
-func (m MutatorFunc) Mutate(old client.Object) client.Object {
+func (m MutatorFunc) Mutate(old client.Object) bool {
 	if m == nil {
-		return nil
+		return false
 	}
 
 	return m(old)
@@ -94,20 +94,15 @@ func (u *UpdateHandler) apply(update Update) {
 			return err
 		}
 
-		newObj := update.Mutator.Mutate(obj)
-
-		if isStatusEqual(obj, newObj) {
+		if update.Mutator.Mutate(obj) {
 			u.log.WithName(update.NamespacedName.Name).
 				WithName(update.NamespacedName.Namespace).
 				Info("status unchanged, bypassing update")
-
 			statusUpdateTotal.WithStatus(statusNoAction, kindLabel.Value(objKind)).Increment()
 			return nil
 		}
 
-		newObj.SetUID(obj.GetUID())
-
-		return u.client.Status().Update(context.Background(), newObj)
+		return u.client.Status().Update(context.Background(), obj)
 	}); err != nil {
 		u.log.Error(err, "unable to update status", "name", update.NamespacedName.Name,
 			"namespace", update.NamespacedName.Namespace)
@@ -188,100 +183,8 @@ func isStatusEqual(objA, objB interface{}) bool {
 			return k == "lastTransitionTime"
 		}),
 	}
-	switch a := objA.(type) {
-	case *gwapiv1.GatewayClass:
-		if b, ok := objB.(*gwapiv1.GatewayClass); ok {
-			if cmp.Equal(a.Status, b.Status, opts) {
-				return true
-			}
-		}
-	case *gwapiv1.Gateway:
-		if b, ok := objB.(*gwapiv1.Gateway); ok {
-			if cmp.Equal(a.Status, b.Status, opts) {
-				return true
-			}
-		}
-	case *gwapiv1.HTTPRoute:
-		if b, ok := objB.(*gwapiv1.HTTPRoute); ok {
-			if cmp.Equal(a.Status, b.Status, opts) {
-				return true
-			}
-		}
-	case *gwapiv1a2.TLSRoute:
-		if b, ok := objB.(*gwapiv1a2.TLSRoute); ok {
-			if cmp.Equal(a.Status, b.Status, opts) {
-				return true
-			}
-		}
-	case *gwapiv1a2.TCPRoute:
-		if b, ok := objB.(*gwapiv1a2.TCPRoute); ok {
-			if cmp.Equal(a.Status, b.Status, opts) {
-				return true
-			}
-		}
-	case *gwapiv1a2.UDPRoute:
-		if b, ok := objB.(*gwapiv1a2.UDPRoute); ok {
-			if cmp.Equal(a.Status, b.Status, opts) {
-				return true
-			}
-		}
-	case *gwapiv1.GRPCRoute:
-		if b, ok := objB.(*gwapiv1.GRPCRoute); ok {
-			if cmp.Equal(a.Status, b.Status, opts) {
-				return true
-			}
-		}
-	case *egv1a1.EnvoyPatchPolicy:
-		if b, ok := objB.(*egv1a1.EnvoyPatchPolicy); ok {
-			if cmp.Equal(a.Status, b.Status, opts) {
-				return true
-			}
-		}
-	case *egv1a1.ClientTrafficPolicy:
-		if b, ok := objB.(*egv1a1.ClientTrafficPolicy); ok {
-			if cmp.Equal(a.Status, b.Status, opts) {
-				return true
-			}
-		}
-	case *egv1a1.BackendTrafficPolicy:
-		if b, ok := objB.(*egv1a1.BackendTrafficPolicy); ok {
-			if cmp.Equal(a.Status, b.Status, opts) {
-				return true
-			}
-		}
-	case *egv1a1.SecurityPolicy:
-		if b, ok := objB.(*egv1a1.SecurityPolicy); ok {
-			if cmp.Equal(a.Status, b.Status, opts) {
-				return true
-			}
-		}
-	case *gwapiv1a3.BackendTLSPolicy:
-		if b, ok := objB.(*gwapiv1a3.BackendTLSPolicy); ok {
-			if cmp.Equal(a.Status, b.Status, opts) {
-				return true
-			}
-		}
-	case *egv1a1.EnvoyExtensionPolicy:
-		if b, ok := objB.(*egv1a1.EnvoyExtensionPolicy); ok {
-			if cmp.Equal(a.Status, b.Status, opts) {
-				return true
-			}
-		}
-	case *unstructured.Unstructured:
-		if b, ok := objB.(*unstructured.Unstructured); ok {
-			if cmp.Equal(a.Object["status"], b.Object["status"], opts) {
-				return true
-			}
-		}
-	case *egv1a1.Backend:
-		if b, ok := objB.(*egv1a1.Backend); ok {
-			if cmp.Equal(a.Status, b.Status, opts) {
-				return true
-			}
-		}
-	}
 
-	return false
+	return cmp.Equal(objA, objB, opts)
 }
 
 // kindOf returns the known kind string for the given Kubernetes object,

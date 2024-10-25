@@ -66,16 +66,20 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 				r.statusUpdater.Send(Update{
 					NamespacedName: key,
 					Resource:       new(gwapiv1.HTTPRoute),
-					Mutator: MutatorFunc(func(obj client.Object) client.Object {
+					Mutator: MutatorFunc(func(obj client.Object) bool {
 						h, ok := obj.(*gwapiv1.HTTPRoute)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
 							errChan <- err
 							panic(err)
 						}
-						hCopy := h.DeepCopy()
-						hCopy.Status.Parents = val.Parents
-						return hCopy
+
+						if isStatusEqual(h.Status.Parents, val.Parents) {
+							return true
+						}
+
+						h.Status.Parents = val.Parents
+						return false
 					}),
 				})
 			},
@@ -96,16 +100,20 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 				r.statusUpdater.Send(Update{
 					NamespacedName: key,
 					Resource:       new(gwapiv1.GRPCRoute),
-					Mutator: MutatorFunc(func(obj client.Object) client.Object {
+					Mutator: MutatorFunc(func(obj client.Object) bool {
 						h, ok := obj.(*gwapiv1.GRPCRoute)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
 							errChan <- err
 							panic(err)
 						}
-						hCopy := h.DeepCopy()
-						hCopy.Status.Parents = val.Parents
-						return hCopy
+
+						if isStatusEqual(h.Status.Parents, val.Parents) {
+							return true
+						}
+
+						h.Status.Parents = val.Parents
+						return false
 					}),
 				})
 			},
@@ -128,16 +136,20 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 				r.statusUpdater.Send(Update{
 					NamespacedName: key,
 					Resource:       new(gwapiv1a2.TLSRoute),
-					Mutator: MutatorFunc(func(obj client.Object) client.Object {
+					Mutator: MutatorFunc(func(obj client.Object) bool {
 						t, ok := obj.(*gwapiv1a2.TLSRoute)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
 							errChan <- err
 							panic(err)
 						}
-						tCopy := t.DeepCopy()
-						tCopy.Status.Parents = val.Parents
-						return tCopy
+
+						if isStatusEqual(t.Status.Parents, val.Parents) {
+							return true
+						}
+
+						t.Status.Parents = val.Parents
+						return false
 					}),
 				})
 			},
@@ -160,16 +172,20 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 				r.statusUpdater.Send(Update{
 					NamespacedName: key,
 					Resource:       new(gwapiv1a2.TCPRoute),
-					Mutator: MutatorFunc(func(obj client.Object) client.Object {
+					Mutator: MutatorFunc(func(obj client.Object) bool {
 						t, ok := obj.(*gwapiv1a2.TCPRoute)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
 							errChan <- err
 							panic(err)
 						}
-						tCopy := t.DeepCopy()
-						tCopy.Status.Parents = val.Parents
-						return tCopy
+
+						if isStatusEqual(t.Status.Parents, val.Parents) {
+							return true
+						}
+
+						t.Status.Parents = val.Parents
+						return false
 					}),
 				})
 			},
@@ -192,16 +208,20 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 				r.statusUpdater.Send(Update{
 					NamespacedName: key,
 					Resource:       new(gwapiv1a2.UDPRoute),
-					Mutator: MutatorFunc(func(obj client.Object) client.Object {
+					Mutator: MutatorFunc(func(obj client.Object) bool {
 						t, ok := obj.(*gwapiv1a2.UDPRoute)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
 							errChan <- err
 							panic(err)
 						}
-						tCopy := t.DeepCopy()
-						tCopy.Status.Parents = val.Parents
-						return tCopy
+
+						if isStatusEqual(t.Status.Parents, val.Parents) {
+							return true
+						}
+
+						t.Status.Parents = val.Parents
+						return false
 					}),
 				})
 			},
@@ -224,16 +244,20 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 				r.statusUpdater.Send(Update{
 					NamespacedName: key,
 					Resource:       new(egv1a1.EnvoyPatchPolicy),
-					Mutator: MutatorFunc(func(obj client.Object) client.Object {
+					Mutator: MutatorFunc(func(obj client.Object) bool {
 						t, ok := obj.(*egv1a1.EnvoyPatchPolicy)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
 							errChan <- err
 							panic(err)
 						}
-						tCopy := t.DeepCopy()
-						tCopy.Status = *val
-						return tCopy
+
+						if isStatusEqual(t.Status, *val) {
+							return true
+						}
+
+						t.Status = *val
+						return false
 					}),
 				})
 			},
@@ -256,16 +280,20 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 				r.statusUpdater.Send(Update{
 					NamespacedName: key,
 					Resource:       new(egv1a1.ClientTrafficPolicy),
-					Mutator: MutatorFunc(func(obj client.Object) client.Object {
+					Mutator: MutatorFunc(func(obj client.Object) bool {
 						t, ok := obj.(*egv1a1.ClientTrafficPolicy)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
 							errChan <- err
 							panic(err)
 						}
-						tCopy := t.DeepCopy()
-						tCopy.Status = *val
-						return tCopy
+
+						if isStatusEqual(t.Status, *val) {
+							return true
+						}
+
+						t.Status = *val
+						return false
 					}),
 				})
 			},
@@ -288,16 +316,20 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 				r.statusUpdater.Send(Update{
 					NamespacedName: key,
 					Resource:       new(egv1a1.BackendTrafficPolicy),
-					Mutator: MutatorFunc(func(obj client.Object) client.Object {
+					Mutator: MutatorFunc(func(obj client.Object) bool {
 						t, ok := obj.(*egv1a1.BackendTrafficPolicy)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
 							errChan <- err
 							panic(err)
 						}
-						tCopy := t.DeepCopy()
-						tCopy.Status = *val
-						return tCopy
+
+						if isStatusEqual(t.Status, *val) {
+							return true
+						}
+
+						t.Status = *val
+						return false
 					}),
 				})
 			},
@@ -320,16 +352,20 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 				r.statusUpdater.Send(Update{
 					NamespacedName: key,
 					Resource:       new(egv1a1.SecurityPolicy),
-					Mutator: MutatorFunc(func(obj client.Object) client.Object {
+					Mutator: MutatorFunc(func(obj client.Object) bool {
 						t, ok := obj.(*egv1a1.SecurityPolicy)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
 							errChan <- err
 							panic(err)
 						}
-						tCopy := t.DeepCopy()
-						tCopy.Status = *val
-						return tCopy
+
+						if isStatusEqual(t.Status, *val) {
+							return true
+						}
+
+						t.Status = *val
+						return false
 					}),
 				})
 			},
@@ -350,16 +386,20 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 				r.statusUpdater.Send(Update{
 					NamespacedName: key,
 					Resource:       new(gwapiv1a3.BackendTLSPolicy),
-					Mutator: MutatorFunc(func(obj client.Object) client.Object {
+					Mutator: MutatorFunc(func(obj client.Object) bool {
 						t, ok := obj.(*gwapiv1a3.BackendTLSPolicy)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
 							errChan <- err
 							panic(err)
 						}
-						tCopy := t.DeepCopy()
-						tCopy.Status = *val
-						return tCopy
+
+						if isStatusEqual(t.Status, *val) {
+							return true
+						}
+
+						t.Status = *val
+						return false
 					}),
 				})
 			},
@@ -382,16 +422,20 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 				r.statusUpdater.Send(Update{
 					NamespacedName: key,
 					Resource:       new(egv1a1.EnvoyExtensionPolicy),
-					Mutator: MutatorFunc(func(obj client.Object) client.Object {
+					Mutator: MutatorFunc(func(obj client.Object) bool {
 						t, ok := obj.(*egv1a1.EnvoyExtensionPolicy)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
 							errChan <- err
 							panic(err)
 						}
-						tCopy := t.DeepCopy()
-						tCopy.Status = *val
-						return tCopy
+
+						if isStatusEqual(t.Status, *val) {
+							return true
+						}
+
+						t.Status = *val
+						return false
 					}),
 				})
 			},
@@ -414,16 +458,20 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 				r.statusUpdater.Send(Update{
 					NamespacedName: key,
 					Resource:       new(egv1a1.Backend),
-					Mutator: MutatorFunc(func(obj client.Object) client.Object {
+					Mutator: MutatorFunc(func(obj client.Object) bool {
 						t, ok := obj.(*egv1a1.Backend)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
 							errChan <- err
 							panic(err)
 						}
-						tCopy := t.DeepCopy()
-						tCopy.Status = *val
-						return tCopy
+
+						if isStatusEqual(t.Status, *val) {
+							return true
+						}
+
+						t.Status = *val
+						return false
 					}),
 				})
 			},
@@ -450,16 +498,20 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 					r.statusUpdater.Send(Update{
 						NamespacedName: key.NamespacedName,
 						Resource:       &obj,
-						Mutator: MutatorFunc(func(obj client.Object) client.Object {
+						Mutator: MutatorFunc(func(obj client.Object) bool {
 							t, ok := obj.(*unstructured.Unstructured)
 							if !ok {
 								err := fmt.Errorf("unsupported object type %T", obj)
 								errChan <- err
 								panic(err)
 							}
-							tCopy := t.DeepCopy()
-							tCopy.Object["status"] = *val
-							return tCopy
+
+							if isStatusEqual(t.Object["status"], *val) {
+								return true
+							}
+
+							t.Object["status"] = *val
+							return false
 						}),
 					})
 				},
@@ -499,16 +551,22 @@ func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *
 	r.statusUpdater.Send(Update{
 		NamespacedName: key,
 		Resource:       new(gwapiv1.Gateway),
-		Mutator: MutatorFunc(func(obj client.Object) client.Object {
+		Mutator: MutatorFunc(func(obj client.Object) bool {
 			g, ok := obj.(*gwapiv1.Gateway)
 			if !ok {
 				panic(fmt.Sprintf("unsupported object type %T", obj))
 			}
-			gCopy := g.DeepCopy()
-			gCopy.Status.Conditions = gtw.Status.Conditions
-			gCopy.Status.Addresses = gtw.Status.Addresses
-			gCopy.Status.Listeners = gtw.Status.Listeners
-			return gCopy
+
+			if isStatusEqual(g.Status.Conditions, gtw.Status.Conditions) &&
+				isStatusEqual(g.Status.Addresses, gtw.Status.Addresses) &&
+				isStatusEqual(g.Status.Listeners, gtw.Status.Listeners) {
+				return true
+			}
+
+			g.Status.Conditions = gtw.Status.Conditions
+			g.Status.Addresses = gtw.Status.Addresses
+			g.Status.Listeners = gtw.Status.Listeners
+			return false
 		}),
 	})
 }
@@ -524,13 +582,19 @@ func (r *gatewayAPIReconciler) updateStatusForGatewayClass(
 		r.statusUpdater.Send(Update{
 			NamespacedName: types.NamespacedName{Name: gc.Name},
 			Resource:       &gwapiv1.GatewayClass{},
-			Mutator: MutatorFunc(func(obj client.Object) client.Object {
+			Mutator: MutatorFunc(func(obj client.Object) bool {
 				gc, ok := obj.(*gwapiv1.GatewayClass)
 				if !ok {
 					panic(fmt.Sprintf("unsupported object type %T", obj))
 				}
 
-				return status.SetGatewayClassAccepted(gc.DeepCopy(), accepted, reason, msg)
+				gcp := status.SetGatewayClassAccepted(gc.DeepCopy(), accepted, reason, msg)
+				if isStatusEqual(gcp.Status, gc.Status) {
+					return true
+				}
+
+				gc.Status = gcp.Status
+				return false
 			}),
 		})
 	} else {
