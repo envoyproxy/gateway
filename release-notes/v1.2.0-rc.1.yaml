@@ -70,6 +70,7 @@ changes:
       Added Support for http2 upstream settings in BackendTrafficPolicy CRD
       Added Support for DNS resolution settings in BackendTrafficPolicy CRD
       Added Support for direct response in HTTPRouteFilter CRD
+      Added Support for ipv4/ipv6 dual stack in EnvoyProxy and Backend CRD
 
     breaking-change: |
       Gateway API GRPCRoute and ReferenceGrant v1alpha2 have been removed.
@@ -140,6 +141,7 @@ changes:
       Fixed empty connection limit causes XDS rejection
       Fixed ratelimit not working with both headers and cidr matches
       Added Support for fallback to the Backend API
+      Added Support for ipv4/ipv6 dual stack in the listeners and clusters
 
   - area: providers
     change: |
