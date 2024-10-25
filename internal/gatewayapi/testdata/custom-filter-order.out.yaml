@@ -284,7 +284,7 @@ xdsIR:
         security:
           basicAuth:
             name: securitypolicy/envoy-gateway/policy-for-gateway
-            users: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
+            users: '[redacted]'
           cors:
             allowMethods:
             - GET

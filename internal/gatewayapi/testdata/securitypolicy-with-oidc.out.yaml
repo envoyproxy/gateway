@@ -273,13 +273,13 @@ xdsIR:
         security:
           oidc:
             clientID: client2.oauth.foo.com
-            clientSecret: Y2xpZW50MTpzZWNyZXQK
+            clientSecret: '[redacted]'
             cookieDomain: example.com
             cookieSuffix: 5f93c2e4
             defaultRefreshTokenTTL: 48h0m0s
             defaultTokenTTL: 1h0m0s
             forwardAccessToken: true
-            hmacSecret: qrOYACHXoe7UEDI/raOjNSx+Z9ufXSc/22C3T6X/zPY=
+            hmacSecret: '[redacted]'
             logoutPath: /foo/logout
             name: securitypolicy/default/policy-for-http-route
             provider:
@@ -317,12 +317,12 @@ xdsIR:
         security:
           oidc:
             clientID: client1.apps.googleusercontent.com
-            clientSecret: Y2xpZW50MTpzZWNyZXQK
+            clientSecret: '[redacted]'
             cookieSuffix: b0a1b740
             defaultRefreshTokenTTL: 24h0m0s
             defaultTokenTTL: 30m0s
             forwardAccessToken: true
-            hmacSecret: qrOYACHXoe7UEDI/raOjNSx+Z9ufXSc/22C3T6X/zPY=
+            hmacSecret: '[redacted]'
             logoutPath: /bar/logout
             name: securitypolicy/envoy-gateway/policy-for-gateway
             provider:

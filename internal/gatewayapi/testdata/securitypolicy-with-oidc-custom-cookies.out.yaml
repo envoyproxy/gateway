@@ -178,12 +178,12 @@ xdsIR:
         security:
           oidc:
             clientID: client1.apps.googleusercontent.com
-            clientSecret: Y2xpZW50MTpzZWNyZXQK
+            clientSecret: '[redacted]'
             cookieNameOverrides:
               accessToken: CustomAccessTokenCookie
               idToken: CustomIdTokenCookie
             cookieSuffix: b0a1b740
-            hmacSecret: qrOYACHXoe7UEDI/raOjNSx+Z9ufXSc/22C3T6X/zPY=
+            hmacSecret: '[redacted]'
             logoutPath: /bar/logout
             name: securitypolicy/envoy-gateway/policy-for-gateway
             provider:

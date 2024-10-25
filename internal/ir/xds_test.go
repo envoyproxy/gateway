@@ -6,6 +6,7 @@
 package ir
 
 import (
+	"encoding/json"
 	"net/http"
 	"testing"
 	"time"
@@ -1331,11 +1332,12 @@ func TestValidateLoadBalancer(t *testing.T) {
 	}
 }
 
-func TestPrintable(t *testing.T) {
+func TestRedaction(t *testing.T) {
 	tests := []struct {
-		name  string
-		input Xds
-		want  *Xds
+		name    string
+		input   Xds
+		want    *Xds
+		wantStr string
 	}{
 		{
 			name:  "empty",
@@ -1360,10 +1362,59 @@ func TestPrintable(t *testing.T) {
 				HTTP: []*HTTPListener{&redactedHappyHTTPSListener},
 			},
 		},
+		{
+			name: "explicit string check",
+			input: Xds{
+				HTTP: []*HTTPListener{{
+					TLS: &TLSConfig{
+						Certificates: []TLSCertificate{{
+							Name:        "server",
+							Certificate: []byte("---"),
+							PrivateKey:  []byte("secret"),
+						}},
+						ClientCertificates: []TLSCertificate{{
+							Name:        "client",
+							Certificate: []byte("---"),
+							PrivateKey:  []byte("secret"),
+						}},
+					},
+					Routes: []*HTTPRoute{{
+						Security: &SecurityFeatures{
+							OIDC: &OIDC{
+								ClientSecret: []byte("secret"),
+								HMACSecret:   []byte("secret"),
+							},
+							BasicAuth: &BasicAuth{
+								Users: []byte("secret"),
+							},
+						},
+					}},
+				}},
+			},
+			wantStr: `{"http":[{"name":"","address":"","port":0,"hostnames":null,` +
+				`"tls":{` +
+				`"certificates":[{"name":"server","serverCertificate":"LS0t","privateKey":"[redacted]"}],` +
+				`"clientCertificates":[{"name":"client","serverCertificate":"LS0t","privateKey":"[redacted]"}],` +
+				`"alpnProtocols":null},` +
+				`"routes":[{` +
+				`"name":"","hostname":"","isHTTP2":false,"security":{` +
+				`"oidc":{"name":"","provider":{},"clientID":"","clientSecret":"[redacted]","hmacSecret":"[redacted]"},` +
+				`"basicAuth":{"name":"","users":"[redacted]"}` +
+				`}}],` +
+				`"isHTTP2":false,"path":{"mergeSlashes":false,"escapedSlashesAction":""}}]}`,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			assert.Equal(t, *test.want, *test.input.Printable())
+			if test.want != nil {
+				if test.wantStr != "" {
+					t.Fatalf("Don't set both want and wantStr")
+				}
+				wantJSON, err := json.Marshal(test.want)
+				require.NoError(t, err)
+				test.wantStr = string(wantJSON)
+			}
+			assert.Equal(t, test.wantStr, test.input.JSONString())
 		})
 	}
 }
