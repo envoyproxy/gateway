@@ -1071,6 +1071,7 @@ func TestCheckObjectNamespaceLabels(t *testing.T) {
 
 	for _, tc := range testCases {
 		r.client = fakeclient.NewClientBuilder().WithObjects(tc.ns).Build()
+		r.clientSet = fake.NewClientset(tc.ns)
 		r.namespaceLabel = &metav1.LabelSelector{MatchExpressions: matchExpressions(tc.reconcileLabels, metav1.LabelSelectorOpExists, []string{})}
 		ok, err := r.checkObjectNamespaceLabels(tc.object)
 		require.NoError(t, err)
