@@ -46,6 +46,7 @@ def convert_yaml_to_markdown(input_yaml_file, output_markdown_path):
 
         file.write("Date: {}\n\n".format(data['date']))
 
+        # old release notes format
         if 'changes' in data:
           for area in data['changes']:
               file.write("## {}\n".format(capitalize(area['area'])))
@@ -59,6 +60,7 @@ def convert_yaml_to_markdown(input_yaml_file, output_markdown_path):
               if 'deprecation' in area:
                   file.write("### Deprecations\n")
                   file.write(change_to_markdown(area['deprecation']) + '\n\n')
+        # new release notes format
         else:
           if 'breaking changes' in data:
             file.write("## {}\n".format(capitalize('breaking changes')))
