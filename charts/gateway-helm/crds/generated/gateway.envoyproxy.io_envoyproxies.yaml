@@ -382,6 +382,20 @@ spec:
                     rule: (has(self.before) && !has(self.after)) || (!has(self.before)
                       && has(self.after))
                 type: array
+              ipFamily:
+                description: |-
+                  IPFamily specifies the IP family for the EnvoyProxy fleet.
+                  This setting only affects the Gateway listener port and does not impact
+                  other aspects of the Envoy proxy configuration.
+                  If not specified, the system will operate as follows:
+                  - It defaults to IPv4 only.
+                  - IPv6 and dual-stack environments are not supported in this default configuration.
+                  Note: To enable IPv6 or dual-stack functionality, explicit configuration is required.
+                enum:
+                - IPv4
+                - IPv6
+                - DualStack
+                type: string
               logging:
                 default:
                   level:

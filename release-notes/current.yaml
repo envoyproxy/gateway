@@ -2,28 +2,28 @@ date: Pending
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
-  - Add a breaking change here
+  Add a breaking change here
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
-  - Add a security update here
+  Add a security update here
 
 # New features or capabilities added in this release.
 new features: |
-  - Add a new feature here
+  Add a new feature here
 
 # Fixes for bugs identified in previous versions.
 bug fixes: |
-  - Only log endpoint configuration in verbose logging mode (`-v 1` or higher)
+  Only log endpoint configuration in verbose logging mode (`-v 1` or higher)
 
 # Enhancements that improve performance.
 performance improvements: |
-  - Add a performance improvement here
+  Add a performance improvement here
 
 # Deprecated features or APIs.
 deprecations: |
-  - Add a deprecation here
+  Add a deprecation here
 
 # Other notable changes not covered by the above sections.
 Other changes: |
-  - Add other changes here
+  Add other changes here
