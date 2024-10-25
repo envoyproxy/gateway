@@ -155,7 +155,7 @@ ifeq ($(E2E_RUN_TEST),)
 	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=false
 	go test $(E2E_TEST_ARGS) ./test/e2e/merge_gateways --gateway-class=merge-gateways --debug=true --cleanup-base-resources=false
 	go test $(E2E_TEST_ARGS) ./test/e2e/multiple_gc --debug=true --cleanup-base-resources=true
-	LAST_VERSION_TAG=$(shell git tag |grep -Eo 'v[0-9]+\.[0-9]+\.[0-9]+.*'|sort -r|head -n 1) go test $(E2E_TEST_ARGS) ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
+	LAST_VERSION_TAG=$(shell git tag |grep -Eo 'v[0-9]+\.[0-9]+\.[0-9]+'|sort -r|head -n 1) go test $(E2E_TEST_ARGS) ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
 else
 	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
 		--run-test $(E2E_RUN_TEST)
