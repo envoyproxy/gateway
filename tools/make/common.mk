@@ -84,11 +84,11 @@ include tools/make/proto.mk
 LOG_TARGET = echo -e "\033[0;32m===========> Running $@ ... \033[0m"
 # Log debugging info
 define log
-@echo -e "\033[36m===========>$1\033[0m"
+echo -e "\033[36m===========>$1\033[0m"
 endef
 
 define errorlog
-@echo -e "\033[0;31m===========>$1\033[0m"
+echo -e "\033[0;31m===========>$1\033[0m"
 endef
 
 define USAGE_OPTIONS
