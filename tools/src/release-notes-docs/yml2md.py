@@ -59,7 +59,34 @@ def convert_yaml_to_markdown(input_yaml_file, output_markdown_path):
               if 'deprecation' in area:
                   file.write("### Deprecations\n")
                   file.write(change_to_markdown(area['deprecation']) + '\n\n')
+        else:
+          if 'breaking changes' in data:
+            file.write("## {}\n".format(capitalize('breaking changes')))
+            file.write(change_to_markdown(data['breaking changes']) + '\n\n')
 
+          if 'security updates' in data:
+            file.write("## {}\n".format(capitalize('security updates')))
+            file.write(change_to_markdown(data['security updates']) + '\n\n')
+
+          if 'new features' in data:
+            file.write("## {}\n".format(capitalize('new features')))
+            file.write(change_to_markdown(data['new features']) + '\n\n')
+
+          if 'bug fixes' in data:
+            file.write("## {}\n".format(capitalize('bug fixes')))
+            file.write(change_to_markdown(data['bug fixes']) + '\n\n')
+
+          if 'performance improvements' in data:
+            file.write("## {}\n".format(capitalize('performance improvements')))
+            file.write(change_to_markdown(data['performance improvements']) + '\n\n')
+
+          if 'deprecations' in data:
+            file.write("## {}\n".format(capitalize('deprecations')))
+            file.write(change_to_markdown(data['deprecations']) + '\n\n')
+
+          if 'Other changes' in data:
+            file.write("## {}\n".format(capitalize('Other changes')))
+            file.write(change_to_markdown(data['Other changes']) + '\n\n')
     print("Markdown file '{}' has been generated.".format(output_markdown_file))
 
 if __name__ == "__main__":
