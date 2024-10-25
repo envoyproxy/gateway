@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -110,6 +111,13 @@ func TestGatewayClassHasMatchingNamespaceLabels(t *testing.T) {
 			classController: egv1a1.GatewayControllerName,
 			namespaceLabel:  &metav1.LabelSelector{MatchExpressions: matchExpressions(tc.namespaceLabels, metav1.LabelSelectorOpExists, []string{})},
 			log:             logger,
+			clientSet: fake.NewClientset(&corev1.Namespace{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Namespace",
+					APIVersion: "v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{Name: ns, Labels: tc.labels},
+			}),
 			client: fakeclient.NewClientBuilder().
 				WithScheme(envoygateway.GetScheme()).
 				WithObjects(&corev1.Namespace{

@@ -55,7 +55,7 @@ var skipNameValidation = func() *bool {
 
 type gatewayAPIReconciler struct {
 	client            client.Client
-	clientSet         *kubernetes.Clientset
+	clientSet         kubernetes.Interface
 	log               logging.Logger
 	statusUpdater     Updater
 	classController   gwapiv1.GatewayController

@@ -557,15 +557,14 @@ func (r *gatewayAPIReconciler) updateStatusForGatewaysUnderGatewayClass(ctx cont
 }
 
 func (r *gatewayAPIReconciler) handleNode(obj client.Object) bool {
-	ctx := context.Background()
 	node, ok := obj.(*corev1.Node)
 	if !ok {
 		r.log.Info("unexpected object type, bypassing reconciliation", "object", obj)
 		return false
 	}
 
-	key := types.NamespacedName{Name: node.Name}
-	if err := r.client.Get(ctx, key, node); err != nil {
+	node, err := r.clientSet.CoreV1().Nodes().Get(context.Background(), node.Name, metav1.GetOptions{})
+	if err != nil {
 		if kerrors.IsNotFound(err) {
 			r.store.removeNode(node)
 			return true
