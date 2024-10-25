@@ -10,6 +10,7 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  The Envoy Gateway Helm chart installs roles that grant the standard Kubernetes "admin", "edit", and "view" roles access to Gateway API and Envoy-Gateway resources.
   Add a new feature here
 
 # Fixes for bugs identified in previous versions.
