@@ -3,63 +3,62 @@ date: October 25, 2024
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
   Gateway API GRPCRoute and ReferenceGrant v1alpha2 have been removed.
-  The supportedFeatures field in Gateway API GatewayClass status has changed from being a list of strings to being a list of objects/structs with a name field.
   Please refer to the [Gateway API v1.2.0 documentation](https://github.com/kubernetes-sigs/gateway-api/releases) for more information.
 
 # New features or capabilities added in this release.
 new features: |
-  Added Support for Gateway-API v1.2.0
-  Added Support for ipv4/ipv6 dual stack for Envoy listeners and Backend resources
-  Added Support for EG standalone(host deployment) mode (experimental)
-  Added Support for JWT claims based Authorization in SecurityPolicy CRD
-  Added Support for direct response in HTTPRouteFilter CRD
-  Added Support for Response Override in BackendTrafficPolicy CRD
-  Added Support for RequestTimeout in BackendTrafficPolicy CRD
-  Added Support for inverting header matches for rate limit in BackendTrafficPolicy CRD
-  Added Support for client TLS session resumption in ClientTrafficPolicy CRD
+  Added support for Gateway-API v1.2.0
+  Added support for ipv4/ipv6 dual stack for Envoy listeners and Backend resources
+  Added support for EG standalone(host deployment) mode (experimental)
+  Added support for JWT claims based Authorization in SecurityPolicy CRD
+  Added support for direct response in HTTPRouteFilter CRD
+  Added support for Response Override in BackendTrafficPolicy CRD
+  Added support for RequestTimeout in BackendTrafficPolicy CRD
+  Added support for inverting header matches for rate limit in BackendTrafficPolicy CRD
+  Added support for client TLS session resumption in ClientTrafficPolicy CRD
   Added support for HTTPRouteFilter and path regex rewrite
-  Added Support for host header rewrite in HTTPRouteFilter CRD
-  Added Support for Listener Access Log in EnvoyProxy CRD
-  Added Support for Datadog tracing support in EnvoyProxy CRD
-  Added Support for request response sizes stats in EnvoyProxy CRD
-  Added Support for wildcard matching for CORS AllowMethods and AllowHeaders settings in SecurityPolicy CRD
-  Added Support for match conditions for access log in EnvoyProxy CRD
-  Added Support for using BackendCluster to represent OIDCProvider
-  Added Support for RecomputeRoute for ExtAuth in SecurityPolicy CRD
-  Added Support for sharing token cookies between multiple domains in SecurityPolicy CRD
-  Added Support for JSONPatches for proxy bootstrap modifications in EnvoyProxy CRD
-  Added Support for LB priority for non xRoute endpoints
-  Added Support for configuring the GRPC Health Checker in the BackendTrafficPolicy CRD
-  Added Support for early request header mutation in the ClientTrafficPolicy CRD
-  Added Support for JsonPath in the EnvoyPatchPolicy CRD
-  Added Support for cluster settings for tracing and access log backends in EnvoyProxy CRD
-  Added Support for cluster settings for non xRoute-generated backend refs
-  Added Support for socket buffer limit field in ClientTrafficPolicy and BackendTrafficPolicy CRD
-  Added Support for http2 upstream settings in BackendTrafficPolicy CRD
-  Added Support for DNS resolution settings in BackendTrafficPolicy CRD
-  Added Support for configuring service annotations in the Envoy Gateway helm chart
-  Added Support for configuring priorityClassName to Envoy Gateway helm chart
-  Added Support for ratelimit metrics monitoring in grafana in the addons helm chart
-  Added Support for default user group and user id for the SecurityContexts in the Envoy Gateway helm chart
-  Added Support for maxUnavailable in the PodDisruptionBudget in the Envoy Gateway helm chart
-  Added Support for configuring NodeSelector in the Envoy Gateway helm chart
-  Added Support for nonce in the OIDC auth flow
-  Added Support for choosing an HTTPRoute's non-wildcard hostname as the default Host
-  Added Support for returning 500 when EnvoyExtensionTrafficPolicy translation fails
-  Added Support for returning 500 when SecurityPolicy translation fails
-  Added Support for multiple backendRefs for ExtAuth and ExtProc
-  Added Support for session persistence in HTTPRoute rules
-  Added Support for the Backend resource for ExtAuth
-  Added Support for target selectors on Envoy Gateway Extension Server policies
-  Added Support for non-Kubernetes Backends for TLSRoute
-  Added Support for fallback to the Backend API
-  Added Support for reloadable EnvoyGateway configuration
-  Added Support for adding Labels to the Envoy Service
-  Added Support for custom name for ratelimit deployment
+  Added support for host header rewrite in HTTPRouteFilter CRD
+  Added support for Listener Access Log in EnvoyProxy CRD
+  Added support for Datadog tracing support in EnvoyProxy CRD
+  Added support for request response sizes stats in EnvoyProxy CRD
+  Added support for wildcard matching for CORS AllowMethods and AllowHeaders settings in SecurityPolicy CRD
+  Added support for match conditions for access log in EnvoyProxy CRD
+  Added support for using BackendCluster to represent OIDCProvider
+  Added support for RecomputeRoute for ExtAuth in SecurityPolicy CRD
+  Added support for sharing token cookies between multiple domains in SecurityPolicy CRD
+  Added support for JSONPatches for proxy bootstrap modifications in EnvoyProxy CRD
+  Added support for LB priority for non xRoute endpoints
+  Added support for configuring the GRPC Health Checker in the BackendTrafficPolicy CRD
+  Added support for early request header mutation in the ClientTrafficPolicy CRD
+  Added support for JsonPath in the EnvoyPatchPolicy CRD
+  Added support for cluster settings for tracing and access log backends in EnvoyProxy CRD
+  Added support for cluster settings for non xRoute-generated backend refs
+  Added support for socket buffer limit field in ClientTrafficPolicy and BackendTrafficPolicy CRD
+  Added support for http2 upstream settings in BackendTrafficPolicy CRD
+  Added support for DNS resolution settings in BackendTrafficPolicy CRD
+  Added support for configuring service annotations in the Envoy Gateway helm chart
+  Added support for configuring priorityClassName to Envoy Gateway helm chart
+  Added support for ratelimit metrics monitoring in grafana in the addons helm chart
+  Added support for default user group and user id for the SecurityContexts in the Envoy Gateway helm chart
+  Added support for maxUnavailable in the PodDisruptionBudget in the Envoy Gateway helm chart
+  Added support for configuring NodeSelector in the Envoy Gateway helm chart
+  Added support for nonce in the OIDC auth flow
+  Added support for choosing an HTTPRoute's non-wildcard hostname as the default Host
+  Added support for returning 500 when EnvoyExtensionTrafficPolicy translation fails
+  Added support for returning 500 when SecurityPolicy translation fails
+  Added support for multiple backendRefs for ExtAuth and ExtProc
+  Added support for session persistence in HTTPRoute rules
+  Added support for the Backend resource for ExtAuth
+  Added support for target selectors on Envoy Gateway Extension Server policies
+  Added support for non-Kubernetes Backends for TLSRoute
+  Added support for fallback to the Backend API
+  Added support for reloadable EnvoyGateway configuration
+  Added support for adding Labels to the Envoy Service
+  Added support for custom name for ratelimit deployment
   Added default SecurityContext for EG components
   Added startupProbe to all provisioned containers
-  Added Support for local validations for egctl translate and file provider
-  Added Support for egctl x collect to collect information from the cluster for debugging
+  Added support for local validations for egctl translate and file provider
+  Added support for egctl x collect to collect information from the cluster for debugging
 
 # Fixes for bugs identified in previous versions.
 bug fixes: |
@@ -94,7 +93,7 @@ bug fixes: |
   Fixed terminating envoy pods don't respond with "Connection: close" (H1) or GOAWAY(H2) on shutdown, switch to an immediate drain strategy
   Fixed ratelimit statsd not working
   Fixed not generating selector of deployment/daemonset based on the custom label configuration of EnvoyProxy
-  Fixed egctl experimental translate with error ns
+  Fixed egctl experimental translate using the wrong ns
 
 # Enhancements that improve performance.
 performance improvements: |
