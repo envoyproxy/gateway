@@ -242,7 +242,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 		// For this particular Gateway, and all associated objects, check whether the
 		// namespace exists. Add to the resourceTree.
-		for ns := range resourceMappings.allAssociatedNamespaces {
+		for ns := range resourceMappings.allAssociatedNamespaces.values {
 			namespace, err := r.getNamespace(ctx, ns)
 			if err != nil {
 				r.log.Error(err, "unable to find the namespace")
@@ -354,7 +354,7 @@ func (r *gatewayAPIReconciler) managedGatewayClasses(ctx context.Context) ([]*gw
 // - EndpointSlices
 // - Backends
 func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResource *resource.Resources, resourceMappings *resourceMappings) {
-	for backendRef := range resourceMappings.allAssociatedBackendRefs {
+	for backendRef := range resourceMappings.allAssociatedBackendRefs.values {
 		backendRefKind := gatewayapi.KindDerefOr(backendRef.Kind, resource.KindService)
 		r.log.Info("processing Backend", "kind", backendRefKind, "namespace", string(*backendRef.Namespace),
 			"name", string(backendRef.Name))
@@ -399,7 +399,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 				r.log.Error(err, "failed to get Backend", "namespace", string(*backendRef.Namespace),
 					"name", string(backendRef.Name))
 			} else {
-				resourceMappings.allAssociatedNamespaces[backend.Namespace] = struct{}{}
+				resourceMappings.allAssociatedNamespaces.Insert(backend.Namespace)
 				backend.Status = egv1a1.BackendStatus{}
 				gwcResource.Backends = append(gwcResource.Backends, backend)
 				r.log.Info("added Backend to resource tree", "namespace", string(*backendRef.Namespace),
