@@ -93,7 +93,7 @@ bug fixes: |
   Fixed terminating envoy pods don't respond with "Connection: close" (H1) or GOAWAY(H2) on shutdown, switch to an immediate drain strategy
   Fixed ratelimit statsd not working
   Fixed not generating selector of deployment/daemonset based on the custom label configuration of EnvoyProxy
-  Fixed egctl experimental translate using the wrong ns
+  Fixed egctl experimental translate using a wrong ns
 
 # Enhancements that improve performance.
 performance improvements: |
