@@ -4,6 +4,8 @@ date: October 25, 2024
 breaking changes: |
   Gateway API GRPCRoute and ReferenceGrant v1alpha2 have been removed.
   Please refer to the [Gateway API v1.2.0 documentation](https://github.com/kubernetes-sigs/gateway-api/releases) for more information.
+  Removed default CPU limit of the Envoy Gateway deployment
+  Changed default Envoy shutdown settings: drain strategy has been changed to immediate, default minDrainDuration, drainTimeout and terminationGracePeriodSeconds have been set to 10s, 360s and 360s respectively
 
 # New features or capabilities added in this release.
 new features: |
@@ -102,7 +104,6 @@ performance improvements: |
 # Other notable changes not covered by the above sections.
 Other changes: |
   Removed grafana test framework from the addons helm chart
-  Removed default cpu limit in the Envoy Gateway helm chart
   Disabled ALPN for non-HTTP routes
   Added statPrefix for HCM and TCPProxy
   Enabled GatewayHTTPListenerIsolation conformance test
@@ -111,7 +112,6 @@ Other changes: |
   Added e2e test for Daemonset mode
   Updated upgrades tests to use VERSION env variable
   Fixed OVS scanner wrong license warnings
-  Updated shutdown settings for the Envoy Proxy
   Added e2e test for TLS session resumption
   Added heap profile into benchmark report
   Added e2e test for RecomputeRoute in ExtAuth
