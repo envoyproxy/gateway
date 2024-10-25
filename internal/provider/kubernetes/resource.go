@@ -6,6 +6,8 @@
 package kubernetes
 
 import (
+	"sync"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -16,45 +18,45 @@ import (
 
 type resourceMappings struct {
 	// Map for storing Gateways' NamespacedNames.
-	allAssociatedGateways sets.Set[string]
+	allAssociatedGateways *safeSet[string]
 	// Map for storing ReferenceGrants' NamespacedNames.
-	allAssociatedReferenceGrants sets.Set[string]
+	allAssociatedReferenceGrants *safeSet[string]
 	// Map for storing ServiceImports' NamespacedNames.
-	allAssociatedServiceImports sets.Set[string]
+	allAssociatedServiceImports *safeSet[string]
 	// Map for storing EndpointSlices' NamespacedNames.
-	allAssociatedEndpointSlices sets.Set[string]
+	allAssociatedEndpointSlices *safeSet[string]
 	// Map for storing Secrets' NamespacedNames.
-	allAssociatedSecrets sets.Set[string]
+	allAssociatedSecrets *safeSet[string]
 	// Map for storing ConfigMaps' NamespacedNames.
-	allAssociatedConfigMaps sets.Set[string]
+	allAssociatedConfigMaps *safeSet[string]
 	// Map for storing namespaces for Route, Service and Gateway objects.
-	allAssociatedNamespaces sets.Set[string]
+	allAssociatedNamespaces *safeSet[string]
 	// Map for storing EnvoyProxies' NamespacedNames attaching to Gateway or GatewayClass.
-	allAssociatedEnvoyProxies sets.Set[string]
+	allAssociatedEnvoyProxies *safeSet[string]
 	// Map for storing EnvoyPatchPolicies' NamespacedNames attaching to Gateway.
-	allAssociatedEnvoyPatchPolicies sets.Set[string]
+	allAssociatedEnvoyPatchPolicies *safeSet[string]
 	// Map for storing TLSRoutes' NamespacedNames attaching to various Gateway objects.
-	allAssociatedTLSRoutes sets.Set[string]
+	allAssociatedTLSRoutes *safeSet[string]
 	// Map for storing HTTPRoutes' NamespacedNames attaching to various Gateway objects.
-	allAssociatedHTTPRoutes sets.Set[string]
+	allAssociatedHTTPRoutes *safeSet[string]
 	// Map for storing GRPCRoutes' NamespacedNames attaching to various Gateway objects.
-	allAssociatedGRPCRoutes sets.Set[string]
+	allAssociatedGRPCRoutes *safeSet[string]
 	// Map for storing TCPRoutes' NamespacedNames attaching to various Gateway objects.
-	allAssociatedTCPRoutes sets.Set[string]
+	allAssociatedTCPRoutes *safeSet[string]
 	// Map for storing UDPRoutes' NamespacedNames attaching to various Gateway objects.
-	allAssociatedUDPRoutes sets.Set[string]
+	allAssociatedUDPRoutes *safeSet[string]
 	// Map for storing backendRefs' BackendObjectReference referred by various Route objects.
-	allAssociatedBackendRefs sets.Set[gwapiv1.BackendObjectReference]
+	allAssociatedBackendRefs *safeSet[gwapiv1.BackendObjectReference]
 	// Map for storing ClientTrafficPolicies' NamespacedNames referred by various Route objects.
-	allAssociatedClientTrafficPolicies sets.Set[string]
+	allAssociatedClientTrafficPolicies *safeSet[string]
 	// Map for storing BackendTrafficPolicies' NamespacedNames referred by various Route objects.
-	allAssociatedBackendTrafficPolicies sets.Set[string]
+	allAssociatedBackendTrafficPolicies *safeSet[string]
 	// Map for storing SecurityPolicies' NamespacedNames referred by various Route objects.
-	allAssociatedSecurityPolicies sets.Set[string]
+	allAssociatedSecurityPolicies *safeSet[string]
 	// Map for storing BackendTLSPolicies' NamespacedNames referred by various Backend objects.
-	allAssociatedBackendTLSPolicies sets.Set[string]
+	allAssociatedBackendTLSPolicies *safeSet[string]
 	// Map for storing EnvoyExtensionPolicies' NamespacedNames attaching to various Gateway objects.
-	allAssociatedEnvoyExtensionPolicies sets.Set[string]
+	allAssociatedEnvoyExtensionPolicies *safeSet[string]
 	// extensionRefFilters is a map of filters managed by an extension.
 	// The key is the namespaced name, group and kind of the filter and the value is the
 	// unstructured form of the resource.
@@ -64,28 +66,51 @@ type resourceMappings struct {
 	httpRouteFilters map[utils.NamespacedNameWithGroupKind]*egv1a1.HTTPRouteFilter
 }
 
+type safeSet[T comparable] struct {
+	lock   sync.RWMutex
+	values sets.Set[T]
+}
+
+func newSafeSet[T comparable](items ...T) *safeSet[T] {
+	return &safeSet[T]{values: sets.New[T](items...)}
+}
+
+func (s *safeSet[T]) Has(item T) bool {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	return s.values.Has(item)
+}
+
+func (s *safeSet[T]) Insert(item ...T) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	s.values.Insert(item...)
+}
+
 func newResourceMapping() *resourceMappings {
 	return &resourceMappings{
-		allAssociatedGateways:               sets.New[string](),
-		allAssociatedReferenceGrants:        sets.New[string](),
-		allAssociatedServiceImports:         sets.New[string](),
-		allAssociatedEndpointSlices:         sets.New[string](),
-		allAssociatedSecrets:                sets.New[string](),
-		allAssociatedConfigMaps:             sets.New[string](),
-		allAssociatedNamespaces:             sets.New[string](),
-		allAssociatedEnvoyProxies:           sets.New[string](),
-		allAssociatedEnvoyPatchPolicies:     sets.New[string](),
-		allAssociatedTLSRoutes:              sets.New[string](),
-		allAssociatedHTTPRoutes:             sets.New[string](),
-		allAssociatedGRPCRoutes:             sets.New[string](),
-		allAssociatedTCPRoutes:              sets.New[string](),
-		allAssociatedUDPRoutes:              sets.New[string](),
-		allAssociatedBackendRefs:            sets.New[gwapiv1.BackendObjectReference](),
-		allAssociatedClientTrafficPolicies:  sets.New[string](),
-		allAssociatedBackendTrafficPolicies: sets.New[string](),
-		allAssociatedSecurityPolicies:       sets.New[string](),
-		allAssociatedBackendTLSPolicies:     sets.New[string](),
-		allAssociatedEnvoyExtensionPolicies: sets.New[string](),
+		allAssociatedGateways:               newSafeSet[string](),
+		allAssociatedReferenceGrants:        newSafeSet[string](),
+		allAssociatedServiceImports:         newSafeSet[string](),
+		allAssociatedEndpointSlices:         newSafeSet[string](),
+		allAssociatedSecrets:                newSafeSet[string](),
+		allAssociatedConfigMaps:             newSafeSet[string](),
+		allAssociatedNamespaces:             newSafeSet[string](),
+		allAssociatedEnvoyProxies:           newSafeSet[string](),
+		allAssociatedEnvoyPatchPolicies:     newSafeSet[string](),
+		allAssociatedTLSRoutes:              newSafeSet[string](),
+		allAssociatedHTTPRoutes:             newSafeSet[string](),
+		allAssociatedGRPCRoutes:             newSafeSet[string](),
+		allAssociatedTCPRoutes:              newSafeSet[string](),
+		allAssociatedUDPRoutes:              newSafeSet[string](),
+		allAssociatedBackendRefs:            newSafeSet[gwapiv1.BackendObjectReference](),
+		allAssociatedClientTrafficPolicies:  newSafeSet[string](),
+		allAssociatedBackendTrafficPolicies: newSafeSet[string](),
+		allAssociatedSecurityPolicies:       newSafeSet[string](),
+		allAssociatedBackendTLSPolicies:     newSafeSet[string](),
+		allAssociatedEnvoyExtensionPolicies: newSafeSet[string](),
 		extensionRefFilters:                 map[utils.NamespacedNameWithGroupKind]unstructured.Unstructured{},
 		httpRouteFilters:                    map[utils.NamespacedNameWithGroupKind]*egv1a1.HTTPRouteFilter{},
 	}
