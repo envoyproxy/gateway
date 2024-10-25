@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/discovery"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -61,7 +60,7 @@ type gatewayAPIReconciler struct {
 	namespace         string
 	namespaceLabel    *metav1.LabelSelector
 	envoyGateway      *egv1a1.EnvoyGateway
-	mergeGateways     sets.Set[string]
+	mergeGateways     *safeSet[string]
 	resources         *message.ProviderResources
 	extGVKs           []schema.GroupVersionKind
 	extServerPolicies []schema.GroupVersionKind
@@ -97,7 +96,7 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su Updater
 		extGVKs:           extGVKs,
 		store:             newProviderStore(),
 		envoyGateway:      cfg.EnvoyGateway,
-		mergeGateways:     sets.New[string](),
+		mergeGateways:     newSafeSet[string](),
 		extServerPolicies: extServerPoliciesGVKs,
 	}
 

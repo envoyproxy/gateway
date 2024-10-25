@@ -82,11 +82,20 @@ func (s *safeSet[T]) Has(item T) bool {
 	return s.values.Has(item)
 }
 
-func (s *safeSet[T]) Insert(item ...T) {
+func (s *safeSet[T]) Insert(item ...T) *safeSet[T] {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
 	s.values.Insert(item...)
+	return s
+}
+
+func (s *safeSet[T]) Delete(item ...T) *safeSet[T] {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	s.values.Delete(item...)
+	return s
 }
 
 func newResourceMapping() *resourceMappings {
