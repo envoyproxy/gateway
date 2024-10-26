@@ -14,7 +14,7 @@ new features: |
 
 # Fixes for bugs identified in previous versions.
 bug fixes: |
-  Add a bug fix here
+  Only log endpoint configuration in verbose logging mode (`-v 4` or higher)
 
 # Enhancements that improve performance.
 performance improvements: |
