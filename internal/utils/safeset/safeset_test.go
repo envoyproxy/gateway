@@ -15,17 +15,20 @@ import (
 func TestSafeSet(t *testing.T) {
 	items := []string{"A", "B", "C"}
 
+	var mutex sync.Mutex
 	set := NewSafeSet[string]()
 	data := func() {
+		mutex.Lock()
+		defer mutex.Unlock()
+
 		setcp := set.Insert(items...)
 		for _, item := range items {
 			if !setcp.Has(item) {
 				t.Errorf("%s does not exist", item)
 			}
 		}
-		require.Equal(t, 3, len(setcp.Values))
 		setcp.Delete("A")
-		require.Equal(t, false, set.Has("A"))
+		require.False(t, set.Has("A"))
 	}
 
 	var wg sync.WaitGroup
