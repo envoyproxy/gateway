@@ -173,7 +173,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				// Publish the IRs.
 				// Also validate the ir before sending it.
 				for key, val := range result.InfraIR {
-					if vlog := r.Logger.V(1); vlog.Enabled() {
+					if vlog := r.Logger.V(4); vlog.Enabled() {
 						vlog.WithValues("infra-ir", key).Info(val.JSONString())
 					}
 					if err := val.Validate(); err != nil {
@@ -186,7 +186,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				}
 
 				for key, val := range result.XdsIR {
-					if vlog := r.Logger.V(1); vlog.Enabled() {
+					if vlog := r.Logger.V(4); vlog.Enabled() {
 						vlog.WithValues("xds-ir", key).Info(val.JSONString())
 					}
 					if err := val.Validate(); err != nil {
