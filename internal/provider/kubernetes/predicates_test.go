@@ -26,6 +26,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes/test"
+	"github.com/envoyproxy/gateway/internal/utils/safeset"
 )
 
 // TestGatewayClassHasMatchingController tests the hasMatchingController
@@ -849,7 +850,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 	r := gatewayAPIReconciler{
 		classController: egv1a1.GatewayControllerName,
 		log:             logger,
-		mergeGateways:   newSafeSet("test-mg"),
+		mergeGateways:   safeset.NewSafeSet("test-mg"),
 	}
 
 	for _, tc := range testCases {
@@ -960,7 +961,7 @@ func TestValidateObjectForReconcile(t *testing.T) {
 	r := gatewayAPIReconciler{
 		classController: egv1a1.GatewayControllerName,
 		log:             logger,
-		mergeGateways:   newSafeSet("test-mg"),
+		mergeGateways:   safeset.NewSafeSet("test-mg"),
 	}
 
 	for _, tc := range testCases {
