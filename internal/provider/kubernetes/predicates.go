@@ -144,24 +144,32 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(obj client.Object) boo
 		return true
 	}
 
-	if r.isSecurityPolicyReferencingSecret(&nsName) {
-		return true
+	if r.spCRDExists {
+		if r.isSecurityPolicyReferencingSecret(&nsName) {
+			return true
+		}
 	}
 
-	if r.isCtpReferencingSecret(&nsName) {
-		return true
+	if r.ctpCRDExists {
+		if r.isCtpReferencingSecret(&nsName) {
+			return true
+		}
 	}
 
 	if r.isOIDCHMACSecret(&nsName) {
 		return true
 	}
 
-	if r.isEnvoyProxyReferencingSecret(&nsName) {
-		return true
+	if r.epCRDExists {
+		if r.isEnvoyProxyReferencingSecret(&nsName) {
+			return true
+		}
 	}
 
-	if r.isExtensionPolicyReferencingSecret(&nsName) {
-		return true
+	if r.eepCRDExists {
+		if r.isExtensionPolicyReferencingSecret(&nsName) {
+			return true
+		}
 	}
 
 	return false
@@ -283,15 +291,26 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 		return true
 	}
 
-	if r.isSecurityPolicyReferencingBackend(&nsName) {
-		return true
+	if r.spCRDExists {
+		if r.isSecurityPolicyReferencingBackend(&nsName) {
+			return true
+		}
 	}
 
-	if r.isEnvoyProxyReferencingBackend(&nsName) {
-		return true
+	if r.epCRDExists {
+		if r.isEnvoyProxyReferencingBackend(&nsName) {
+			return true
+		}
 	}
 
-	return r.isEnvoyExtensionPolicyReferencingBackend(&nsName)
+	if r.eepCRDExists {
+		if r.isEnvoyExtensionPolicyReferencingBackend(&nsName) {
+			return true
+		}
+
+	}
+
+	return false
 }
 
 // validateBackendForReconcile tries finding the owning Gateway of the Backend
@@ -309,15 +328,26 @@ func (r *gatewayAPIReconciler) validateBackendForReconcile(obj client.Object) bo
 		return true
 	}
 
-	if r.isSecurityPolicyReferencingBackend(&nsName) {
-		return true
+	if r.spCRDExists {
+		if r.isSecurityPolicyReferencingBackend(&nsName) {
+			return true
+		}
 	}
 
-	if r.isEnvoyProxyReferencingBackend(&nsName) {
-		return true
+	if r.epCRDExists {
+		if r.isEnvoyProxyReferencingBackend(&nsName) {
+			return true
+		}
 	}
 
-	return r.isEnvoyExtensionPolicyReferencingBackend(&nsName)
+	if r.eepCRDExists {
+		if r.isEnvoyExtensionPolicyReferencingBackend(&nsName) {
+			return true
+		}
+
+	}
+
+	return false
 }
 
 func (r *gatewayAPIReconciler) isSecurityPolicyReferencingBackend(nsName *types.NamespacedName) bool {
@@ -357,47 +387,63 @@ func (r *gatewayAPIReconciler) isRouteReferencingBackend(nsName *types.Namespace
 		r.log.Error(err, "failed to find associated HTTPRoutes")
 		return false
 	}
-
-	grpcRouteList := &gwapiv1.GRPCRouteList{}
-	if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(backendGRPCRouteIndex, nsName.String()),
-	}); err != nil && !kerrors.IsNotFound(err) {
-		r.log.Error(err, "failed to find associated GRPCRoutes")
-		return false
+	if len(httpRouteList.Items) > 0 {
+		return true
 	}
 
-	tlsRouteList := &gwapiv1a2.TLSRouteList{}
-	if err := r.client.List(ctx, tlsRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(backendTLSRouteIndex, nsName.String()),
-	}); err != nil && !kerrors.IsNotFound(err) {
-		r.log.Error(err, "failed to find associated TLSRoutes")
-		return false
+	if r.grpcRouteCRDExists {
+		grpcRouteList := &gwapiv1.GRPCRouteList{}
+		if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(backendGRPCRouteIndex, nsName.String()),
+		}); err != nil && !kerrors.IsNotFound(err) {
+			r.log.Error(err, "failed to find associated GRPCRoutes")
+			return false
+		}
+		if len(grpcRouteList.Items) > 0 {
+			return true
+		}
 	}
 
-	tcpRouteList := &gwapiv1a2.TCPRouteList{}
-	if err := r.client.List(ctx, tcpRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(backendTCPRouteIndex, nsName.String()),
-	}); err != nil && !kerrors.IsNotFound(err) {
-		r.log.Error(err, "failed to find associated TCPRoutes")
-		return false
+	if r.tlsRouteCRDExists {
+		tlsRouteList := &gwapiv1a2.TLSRouteList{}
+		if err := r.client.List(ctx, tlsRouteList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(backendTLSRouteIndex, nsName.String()),
+		}); err != nil && !kerrors.IsNotFound(err) {
+			r.log.Error(err, "failed to find associated TLSRoutes")
+			return false
+		}
+		if len(tlsRouteList.Items) > 0 {
+			return true
+		}
 	}
 
-	udpRouteList := &gwapiv1a2.UDPRouteList{}
-	if err := r.client.List(ctx, udpRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(backendUDPRouteIndex, nsName.String()),
-	}); err != nil && !kerrors.IsNotFound(err) {
-		r.log.Error(err, "failed to find associated UDPRoutes")
-		return false
+	if r.tcpRouteCRDExists {
+		tcpRouteList := &gwapiv1a2.TCPRouteList{}
+		if err := r.client.List(ctx, tcpRouteList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(backendTCPRouteIndex, nsName.String()),
+		}); err != nil && !kerrors.IsNotFound(err) {
+			r.log.Error(err, "failed to find associated TCPRoutes")
+			return false
+		}
+		if len(tcpRouteList.Items) > 0 {
+			return true
+		}
 	}
 
-	// Check how many Route objects refer this Backend
-	allAssociatedRoutes := len(httpRouteList.Items) +
-		len(grpcRouteList.Items) +
-		len(tlsRouteList.Items) +
-		len(tcpRouteList.Items) +
-		len(udpRouteList.Items)
+	if r.udpRouteCRDExists {
+		udpRouteList := &gwapiv1a2.UDPRouteList{}
+		if err := r.client.List(ctx, udpRouteList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(backendUDPRouteIndex, nsName.String()),
+		}); err != nil && !kerrors.IsNotFound(err) {
+			r.log.Error(err, "failed to find associated UDPRoutes")
+			return false
+		}
+		if len(udpRouteList.Items) > 0 {
+			return true
+		}
+	}
 
-	return allAssociatedRoutes != 0
+	return false
 }
 
 // validateEndpointSliceForReconcile returns true if the endpointSlice references
@@ -429,15 +475,25 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 		return true
 	}
 
-	if r.isSecurityPolicyReferencingBackend(&nsName) {
-		return true
+	if r.spCRDExists {
+		if r.isSecurityPolicyReferencingBackend(&nsName) {
+			return true
+		}
 	}
 
-	if r.isEnvoyProxyReferencingBackend(&nsName) {
-		return true
+	if r.epCRDExists {
+		if r.isEnvoyProxyReferencingBackend(&nsName) {
+			return true
+		}
 	}
 
-	return r.isEnvoyExtensionPolicyReferencingBackend(&nsName)
+	if r.eepCRDExists {
+		if r.isEnvoyExtensionPolicyReferencingBackend(&nsName) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // validateObjectForReconcile tries finding the owning Gateway of the Deployment or DaemonSet
@@ -596,52 +652,60 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 		return false
 	}
 
-	ctpList := &egv1a1.ClientTrafficPolicyList{}
-	if err := r.client.List(context.Background(), ctpList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(configMapCtpIndex, utils.NamespacedName(configMap).String()),
-	}); err != nil {
-		r.log.Error(err, "unable to find associated ClientTrafficPolicy")
-		return false
+	if r.ctpCRDExists {
+		ctpList := &egv1a1.ClientTrafficPolicyList{}
+		if err := r.client.List(context.Background(), ctpList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(configMapCtpIndex, utils.NamespacedName(configMap).String()),
+		}); err != nil {
+			r.log.Error(err, "unable to find associated ClientTrafficPolicy")
+			return false
+		}
+
+		if len(ctpList.Items) > 0 {
+			return true
+		}
 	}
 
-	if len(ctpList.Items) > 0 {
-		return true
+	if r.bTLSPolicyCRDExists {
+		btlsList := &gwapiv1a3.BackendTLSPolicyList{}
+		if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(configMapBtlsIndex, utils.NamespacedName(configMap).String()),
+		}); err != nil {
+			r.log.Error(err, "unable to find associated BackendTLSPolicy")
+			return false
+		}
+
+		if len(btlsList.Items) > 0 {
+			return true
+		}
 	}
 
-	btlsList := &gwapiv1a3.BackendTLSPolicyList{}
-	if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(configMapBtlsIndex, utils.NamespacedName(configMap).String()),
-	}); err != nil {
-		r.log.Error(err, "unable to find associated BackendTLSPolicy")
-		return false
+	if r.btpCRDExists {
+		btpList := &egv1a1.BackendTrafficPolicyList{}
+		if err := r.client.List(context.Background(), btpList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(configMapBtpIndex, utils.NamespacedName(configMap).String()),
+		}); err != nil {
+			r.log.Error(err, "unable to find associated BackendTrafficPolicy")
+			return false
+		}
+
+		if len(btpList.Items) > 0 {
+			return true
+		}
 	}
 
-	if len(btlsList.Items) > 0 {
-		return true
-	}
+	if r.hrfCRDExists {
+		routeFilterList := &egv1a1.HTTPRouteFilterList{}
+		if err := r.client.List(context.Background(), routeFilterList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(configMapHTTPRouteFilterIndex, utils.NamespacedName(configMap).String()),
+		}); err != nil {
+			r.log.Error(err, "unable to find associated HTTPRouteFilter")
+			return false
+		}
 
-	btpList := &egv1a1.BackendTrafficPolicyList{}
-	if err := r.client.List(context.Background(), btpList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(configMapBtpIndex, utils.NamespacedName(configMap).String()),
-	}); err != nil {
-		r.log.Error(err, "unable to find associated BackendTrafficPolicy")
-		return false
-	}
-
-	if len(btpList.Items) > 0 {
-		return true
-	}
-
-	routeFilterList := &egv1a1.HTTPRouteFilterList{}
-	if err := r.client.List(context.Background(), routeFilterList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(configMapHTTPRouteFilterIndex, utils.NamespacedName(configMap).String()),
-	}); err != nil {
-		r.log.Error(err, "unable to find associated HTTPRouteFilter")
-		return false
-	}
-
-	if len(routeFilterList.Items) > 0 {
-		return true
+		if len(routeFilterList.Items) > 0 {
+			return true
+		}
 	}
 
 	return false

@@ -65,6 +65,21 @@ type gatewayAPIReconciler struct {
 	resources         *message.ProviderResources
 	extGVKs           []schema.GroupVersionKind
 	extServerPolicies []schema.GroupVersionKind
+
+	backendCRDExists       bool
+	bTLSPolicyCRDExists    bool
+	btpCRDExists           bool
+	ctpCRDExists           bool
+	eepCRDExists           bool
+	epCRDExists            bool
+	eppCRDExists           bool
+	hrfCRDExists           bool
+	grpcRouteCRDExists     bool
+	serviceImportCRDExists bool
+	spCRDExists            bool
+	tcpRouteCRDExists      bool
+	tlsRouteCRDExists      bool
+	udpRouteCRDExists      bool
 }
 
 // newGatewayAPIController
@@ -187,42 +202,55 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			return reconcile.Result{}, err
 		}
 
-		// Add all EnvoyPatchPolicies to the resourceTree
-		if err = r.processEnvoyPatchPolicies(ctx, gwcResource, resourceMappings); err != nil {
-			return reconcile.Result{}, err
+		if r.eppCRDExists {
+			// Add all EnvoyPatchPolicies to the resourceTree
+			if err = r.processEnvoyPatchPolicies(ctx, gwcResource, resourceMappings); err != nil {
+				return reconcile.Result{}, err
+			}
+		}
+		if r.ctpCRDExists {
+			// Add all ClientTrafficPolicies and their referenced resources to the resourceTree
+			if err = r.processClientTrafficPolicies(ctx, gwcResource, resourceMappings); err != nil {
+				return reconcile.Result{}, err
+			}
 		}
 
-		// Add all ClientTrafficPolicies and their referenced resources to the resourceTree
-		if err = r.processClientTrafficPolicies(ctx, gwcResource, resourceMappings); err != nil {
-			return reconcile.Result{}, err
+		if r.btpCRDExists {
+			// Add all BackendTrafficPolicies to the resourceTree
+			if err = r.processBackendTrafficPolicies(ctx, gwcResource, resourceMappings); err != nil {
+				return reconcile.Result{}, err
+			}
 		}
 
-		// Add all BackendTrafficPolicies to the resourceTree
-		if err = r.processBackendTrafficPolicies(ctx, gwcResource, resourceMappings); err != nil {
-			return reconcile.Result{}, err
+		if r.spCRDExists {
+			// Add all SecurityPolicies and their referenced resources to the resourceTree
+			if err = r.processSecurityPolicies(ctx, gwcResource, resourceMappings); err != nil {
+				return reconcile.Result{}, err
+			}
 		}
 
-		// Add all SecurityPolicies and their referenced resources to the resourceTree
-		if err = r.processSecurityPolicies(ctx, gwcResource, resourceMappings); err != nil {
-			return reconcile.Result{}, err
+		if r.bTLSPolicyCRDExists {
+			// Add all BackendTLSPolies to the resourceTree
+			if err = r.processBackendTLSPolicies(ctx, gwcResource, resourceMappings); err != nil {
+				return reconcile.Result{}, err
+			}
 		}
 
-		// Add all BackendTLSPolies to the resourceTree
-		if err = r.processBackendTLSPolicies(ctx, gwcResource, resourceMappings); err != nil {
-			return reconcile.Result{}, err
-		}
-
-		// Add all EnvoyExtensionPolicies and their referenced resources to the resourceTree
-		if err = r.processEnvoyExtensionPolicies(ctx, gwcResource, resourceMappings); err != nil {
-			return reconcile.Result{}, err
+		if r.eepCRDExists {
+			// Add all EnvoyExtensionPolicies and their referenced resources to the resourceTree
+			if err = r.processEnvoyExtensionPolicies(ctx, gwcResource, resourceMappings); err != nil {
+				return reconcile.Result{}, err
+			}
 		}
 
 		if err = r.processExtensionServerPolicies(ctx, gwcResource); err != nil {
 			return reconcile.Result{}, err
 		}
 
-		if err = r.processBackends(ctx, gwcResource); err != nil {
-			return reconcile.Result{}, err
+		if r.backendCRDExists {
+			if err = r.processBackends(ctx, gwcResource); err != nil {
+				return reconcile.Result{}, err
+			}
 		}
 
 		// Add the referenced services, ServiceImports, and EndpointSlices in
@@ -888,9 +916,12 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 
 		gtwNamespacedName := utils.NamespacedName(&gtw).String()
 		// Route Processing
-		// Get TLSRoute objects and check if it exists.
-		if err := r.processTLSRoutes(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
-			return err
+
+		if r.tlsRouteCRDExists {
+			// Get TLSRoute objects and check if it exists.
+			if err := r.processTLSRoutes(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
+				return err
+			}
 		}
 
 		// Get HTTPRoute objects and check if it exists.
@@ -898,21 +929,26 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 			return err
 		}
 
-		// Get GRPCRoute objects and check if it exists.
-		if err := r.processGRPCRoutes(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
-			return err
+		if r.grpcRouteCRDExists {
+			// Get GRPCRoute objects and check if it exists.
+			if err := r.processGRPCRoutes(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
+				return err
+			}
 		}
 
-		// Get TCPRoute objects and check if it exists.
-		if err := r.processTCPRoutes(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
-			return err
+		if r.tcpRouteCRDExists {
+			// Get TCPRoute objects and check if it exists.
+			if err := r.processTCPRoutes(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
+				return err
+			}
 		}
 
-		// Get UDPRoute objects and check if it exists.
-		if err := r.processUDPRoutes(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
-			return err
+		if r.udpRouteCRDExists {
+			// Get UDPRoute objects and check if it exists.
+			if err := r.processUDPRoutes(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
+				return err
+			}
 		}
-
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		gtw.Status = gwapiv1.GatewayStatus{}
@@ -1105,19 +1141,19 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return fmt.Errorf("failed to watch GatewayClass: %w", err)
 	}
 
-	epPredicates := []predicate.TypedPredicate[*egv1a1.EnvoyProxy]{
-		&predicate.TypedGenerationChangedPredicate[*egv1a1.EnvoyProxy]{},
-	}
-	if r.namespaceLabel != nil {
-		epPredicates = append(epPredicates, predicate.NewTypedPredicateFuncs(func(ep *egv1a1.EnvoyProxy) bool {
-			return r.hasMatchingNamespaceLabels(ep)
-		}))
-	}
-
-	epCRDExists := r.crdExists(mgr, resource.KindEnvoyProxy, egv1a1.GroupVersion.String())
-	if !epCRDExists {
+	r.epCRDExists = r.crdExists(mgr, resource.KindEnvoyProxy, egv1a1.GroupVersion.String())
+	if !r.epCRDExists {
 		r.log.Info("EnvoyProxy CRD not found, skipping EnvoyProxy watch")
 	} else {
+		epPredicates := []predicate.TypedPredicate[*egv1a1.EnvoyProxy]{
+			&predicate.TypedGenerationChangedPredicate[*egv1a1.EnvoyProxy]{},
+		}
+		if r.namespaceLabel != nil {
+			epPredicates = append(epPredicates, predicate.NewTypedPredicateFuncs(func(ep *egv1a1.EnvoyProxy) bool {
+				return r.hasMatchingNamespaceLabels(ep)
+			}))
+		}
+
 		if err := c.Watch(
 			source.Kind(mgr.GetCache(), &egv1a1.EnvoyProxy{},
 				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, t *egv1a1.EnvoyProxy) []reconcile.Request {
@@ -1178,8 +1214,8 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
-	grpcRouteCRDExists := r.crdExists(mgr, resource.KindGRPCRoute, gwapiv1.GroupVersion.String())
-	if !grpcRouteCRDExists {
+	r.grpcRouteCRDExists = r.crdExists(mgr, resource.KindGRPCRoute, gwapiv1.GroupVersion.String())
+	if !r.grpcRouteCRDExists {
 		r.log.Info("GRPCRoute CRD not found, skipping GRPCRoute watch")
 	} else {
 		// Watch GRPCRoute CRUDs and process affected Gateways.
@@ -1205,8 +1241,8 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	tlsRouteCRDExists := r.crdExists(mgr, resource.KindTLSRoute, gwapiv1a2.GroupVersion.String())
-	if !tlsRouteCRDExists {
+	r.tlsRouteCRDExists = r.crdExists(mgr, resource.KindTLSRoute, gwapiv1a2.GroupVersion.String())
+	if !r.tlsRouteCRDExists {
 		r.log.Info("TLSRoute CRD not found, skipping TLSRoute watch")
 	} else {
 		// Watch TLSRoute CRUDs and process affected Gateways.
@@ -1232,8 +1268,8 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	udpRouteCRDExists := r.crdExists(mgr, resource.KindUDPRoute, gwapiv1a2.GroupVersion.String())
-	if !udpRouteCRDExists {
+	r.udpRouteCRDExists = r.crdExists(mgr, resource.KindUDPRoute, gwapiv1a2.GroupVersion.String())
+	if !r.udpRouteCRDExists {
 		r.log.Info("UDPRoute CRD not found, skipping UDPRoute watch")
 	} else {
 		// Watch UDPRoute CRUDs and process affected Gateways.
@@ -1259,8 +1295,8 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	tcpRouteCRDExists := r.crdExists(mgr, resource.KindTCPRoute, gwapiv1a2.GroupVersion.String())
-	if !tcpRouteCRDExists {
+	r.tcpRouteCRDExists = r.crdExists(mgr, resource.KindTCPRoute, gwapiv1a2.GroupVersion.String())
+	if !r.tcpRouteCRDExists {
 		r.log.Info("TCPRoute CRD not found, skipping TCPRoute watch")
 	} else {
 		// Watch TCPRoute CRUDs and process affected Gateways.
@@ -1307,8 +1343,8 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch ServiceImport CRUDs and process affected *Route objects.
-	serviceImportCRDExists := r.crdExists(mgr, resource.KindServiceImport, mcsapiv1a1.GroupVersion.String())
-	if !serviceImportCRDExists {
+	r.serviceImportCRDExists = r.crdExists(mgr, resource.KindServiceImport, mcsapiv1a1.GroupVersion.String())
+	if !r.serviceImportCRDExists {
 		r.log.Info("ServiceImport CRD not found, skipping ServiceImport watch")
 	} else {
 		if err := c.Watch(
@@ -1346,8 +1382,8 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
-	backendCRDExists := r.crdExists(mgr, resource.KindBackend, egv1a1.GroupVersion.String())
-	if !backendCRDExists {
+	r.backendCRDExists = r.crdExists(mgr, resource.KindBackend, egv1a1.GroupVersion.String())
+	if !r.backendCRDExists {
 		r.log.Info("Backend CRD not found, skipping Backend watch")
 	} else if r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableBackend {
 		// Watch Backend CRUDs and process affected *Route objects.
@@ -1496,8 +1532,8 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
-	eppCRDExists := r.crdExists(mgr, resource.KindEnvoyPatchPolicy, egv1a1.GroupVersion.String())
-	if !eppCRDExists {
+	r.eppCRDExists = r.crdExists(mgr, resource.KindEnvoyPatchPolicy, egv1a1.GroupVersion.String())
+	if !r.eppCRDExists {
 		r.log.Info("EnvoyPatchPolicy CRD not found, skipping EnvoyPatchPolicy watch")
 	} else if r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy {
 		// Watch EnvoyPatchPolicy if enabled in config
@@ -1520,8 +1556,8 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	ctpCRDExists := r.crdExists(mgr, resource.KindClientTrafficPolicy, egv1a1.GroupVersion.String())
-	if !ctpCRDExists {
+	r.ctpCRDExists = r.crdExists(mgr, resource.KindClientTrafficPolicy, egv1a1.GroupVersion.String())
+	if !r.ctpCRDExists {
 		r.log.Info("ClientTrafficPolicy CRD not found, skipping ClientTrafficPolicy watch")
 	} else {
 		// Watch ClientTrafficPolicy
@@ -1548,8 +1584,8 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	btpCRDExists := r.crdExists(mgr, resource.KindBackendTrafficPolicy, egv1a1.GroupVersion.String())
-	if !btpCRDExists {
+	r.btpCRDExists = r.crdExists(mgr, resource.KindBackendTrafficPolicy, egv1a1.GroupVersion.String())
+	if !r.btpCRDExists {
 		r.log.Info("BackendTrafficPolicy CRD not found, skipping BackendTrafficPolicy watch")
 	} else {
 		// Watch BackendTrafficPolicy
@@ -1576,8 +1612,8 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	spCRDExists := r.crdExists(mgr, resource.KindSecurityPolicy, egv1a1.GroupVersion.String())
-	if !spCRDExists {
+	r.spCRDExists = r.crdExists(mgr, resource.KindSecurityPolicy, egv1a1.GroupVersion.String())
+	if !r.spCRDExists {
 		r.log.Info("SecurityPolicy CRD not found, skipping SecurityPolicy watch")
 	} else {
 		// Watch SecurityPolicy
@@ -1603,8 +1639,8 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	bTLSPolicyCRDExists := r.crdExists(mgr, resource.KindBackendTLSPolicy, gwapiv1a3.GroupVersion.String())
-	if !bTLSPolicyCRDExists {
+	r.bTLSPolicyCRDExists = r.crdExists(mgr, resource.KindBackendTLSPolicy, gwapiv1a3.GroupVersion.String())
+	if !r.bTLSPolicyCRDExists {
 		r.log.Info("BackendTLSPolicy CRD not found, skipping BackendTLSPolicy watch")
 	} else {
 		// Watch BackendTLSPolicy
@@ -1631,8 +1667,8 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	eepCRDExists := r.crdExists(mgr, resource.KindEnvoyExtensionPolicy, egv1a1.GroupVersion.String())
-	if !eepCRDExists {
+	r.eepCRDExists = r.crdExists(mgr, resource.KindEnvoyExtensionPolicy, egv1a1.GroupVersion.String())
+	if !r.eepCRDExists {
 		r.log.Info("EnvoyExtensionPolicy CRD not found, skipping EnvoyExtensionPolicy watch")
 	} else {
 		// Watch EnvoyExtensionPolicy
@@ -1695,8 +1731,8 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		r.log.Info("Watching additional policy resource", "resource", gvk.String())
 	}
 
-	hrfCRDExists := r.crdExists(mgr, resource.KindHTTPRouteFilter, egv1a1.GroupVersion.String())
-	if !hrfCRDExists {
+	r.hrfCRDExists = r.crdExists(mgr, resource.KindHTTPRouteFilter, egv1a1.GroupVersion.String())
+	if !r.hrfCRDExists {
 		r.log.Info("HTTPRouteFilter CRD not found, skipping HTTPRouteFilter watch")
 	} else {
 		// Watch HTTPRouteFilter CRUDs and process affected HTTPRoute objects.
