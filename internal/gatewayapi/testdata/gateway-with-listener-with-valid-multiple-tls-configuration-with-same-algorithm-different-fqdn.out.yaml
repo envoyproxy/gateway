@@ -141,6 +141,7 @@ xdsIR:
           name: ""
           prefix: /
       tls:
+        alpnProtocols: null
         certificates:
         - name: envoy-gateway/tls-secret-ecdsa-1
           privateKey: LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCk1IY0NBUUVFSUxEbnZNM1RKM3NHYm9EeTF4T3dqSVppVFNWeWZXVWF5YVExcWdrdUdacEtvQW9HQ0NxR1NNNDkKQXdFSG9VUURRZ0FFSDVWdHJjenJQS091alV5RTMyaDU2UnVrdHUzSVhTVnJJMkNibXh5UUpqcEY3di9rNVNqTQpSVXZjUnBCdmpnQWROaGhUNGNUMXV4YW1TMFlmQ2JXMVhRPT0KLS0tLS1FTkQgRUMgUFJJVkFURSBLRVktLS0tLQo=

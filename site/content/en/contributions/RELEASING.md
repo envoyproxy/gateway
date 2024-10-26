@@ -32,7 +32,7 @@ export GITHUB_REMOTE=origin
 2. Create a topic branch for adding the release notes and updating the [VERSION][] file with the release version. Refer to previous [release notes][] and [VERSION][] for additional details. The latest changes are already accumulated in the current.yaml file. Copy the content of the current.yaml file to the release notes file and clear the current.yaml file.
 
    ```shell
-   echo "${MAJOR_VERSION}.${MINOR_VERSION}.0-rc.${RELEASE_CANDIDATE_NUMBER}" > VERSION
+   echo "v${MAJOR_VERSION}.${MINOR_VERSION}.0-rc.${RELEASE_CANDIDATE_NUMBER}" > VERSION
    ```
 
    __Note:__ The release candidate version should be in the format `${MAJOR_VERSION}.${MINOR_VERSION}.0-rc.${RELEASE_CANDIDATE_NUMBER}`.

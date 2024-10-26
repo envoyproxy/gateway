@@ -191,13 +191,13 @@ static_resources:
           - name: xds_certificate
             sds_config:
               path_config_source:
-                path: "/sds/xds-certificate.json"
+                path: {{ .SdsCertificatePath }}
               resource_api_version: V3
           validation_context_sds_secret_config:
             name: xds_trusted_ca
             sds_config:
               path_config_source:
-                path: "/sds/xds-trusted-ca.json"
+                path: {{ .SdsTrustedCAPath }}
               resource_api_version: V3
   - name: wasm_cluster
     type: STRICT_DNS
@@ -229,13 +229,13 @@ static_resources:
           - name: xds_certificate
             sds_config:
               path_config_source:
-                path: "/sds/xds-certificate.json"
+                path: {{ .SdsCertificatePath }}
               resource_api_version: V3
           validation_context_sds_secret_config:
             name: xds_trusted_ca
             sds_config:
               path_config_source:
-                path: "/sds/xds-trusted-ca.json"
+                path: {{ .SdsTrustedCAPath }}
               resource_api_version: V3
 overload_manager:
   refresh_interval: 0.25s

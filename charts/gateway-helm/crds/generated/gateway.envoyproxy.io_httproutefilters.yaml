@@ -137,25 +137,25 @@ spec:
                       Hostname is the value to be used to replace the Host header value during
                       forwarding.
                     properties:
-                      setFromHeader:
-                        description: SetFromHeader is the name of the header whose
-                          value would be used to rewrite the Host header
+                      header:
+                        description: Header is the name of the header whose value
+                          would be used to rewrite the Host header
                         type: string
                       type:
                         description: HTTPPathModifierType defines the type of Hostname
                           rewrite.
                         enum:
-                        - SetFromHeader
-                        - SetFromBackend
+                        - Header
+                        - Backend
                         type: string
                     required:
                     - type
                     type: object
                     x-kubernetes-validations:
-                    - message: setFromHeader must be nil if the type is not SetFromHeader
-                      rule: '!(has(self.setFromHeader) && self.type != ''SetFromHeader'')'
-                    - message: setFromHeader must be specified for SetFromHeader type
-                      rule: '!(!has(self.setFromHeader) && self.type == ''SetFromHeader'')'
+                    - message: header must be nil if the type is not Header
+                      rule: '!(has(self.header) && self.type != ''Header'')'
+                    - message: header must be specified for Header type
+                      rule: '!(!has(self.header) && self.type == ''Header'')'
                   path:
                     description: Path defines a path rewrite.
                     properties:

@@ -254,8 +254,8 @@ var (
 		PathMatch: &StringMatch{
 			Exact: ptr.To("filter-error"),
 		},
-		DirectResponse: &DirectResponse{
-			StatusCode: uint32(500),
+		DirectResponse: &CustomResponse{
+			StatusCode: ptr.To(uint32(500)),
 		},
 	}
 
@@ -296,8 +296,8 @@ var (
 		PathMatch: &StringMatch{
 			Exact: ptr.To("redirect"),
 		},
-		DirectResponse: &DirectResponse{
-			StatusCode: uint32(799),
+		DirectResponse: &CustomResponse{
+			StatusCode: ptr.To(uint32(799)),
 		},
 	}
 
@@ -308,7 +308,9 @@ var (
 			Exact: ptr.To("rewrite"),
 		},
 		URLRewrite: &URLRewrite{
-			Hostname: ptr.To("rewrite.example.com"),
+			Host: &HTTPHostModifier{
+				Name: ptr.To("rewrite.example.com"),
+			},
 			Path: &ExtendedHTTPPathModifier{
 				HTTPPathModifier: HTTPPathModifier{
 					FullReplace: ptr.To("/rewrite"),
@@ -324,7 +326,9 @@ var (
 			Exact: ptr.To("rewrite"),
 		},
 		URLRewrite: &URLRewrite{
-			Hostname: ptr.To("rewrite.example.com"),
+			Host: &HTTPHostModifier{
+				Name: ptr.To("rewrite.example.com"),
+			},
 			Path: &ExtendedHTTPPathModifier{
 				HTTPPathModifier: HTTPPathModifier{
 					FullReplace:        ptr.To("/rewrite"),

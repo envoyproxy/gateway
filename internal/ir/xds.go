@@ -55,6 +55,7 @@ var (
 	ErrHTTPPathModifierDoubleReplace           = errors.New("redirect filter cannot have a path modifier that supplies more than one of fullPathReplace, prefixMatchReplace and regexMatchReplace")
 	ErrHTTPPathModifierNoReplace               = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace, prefixMatchReplace or regexMatchReplace")
 	ErrHTTPPathRegexModifierNoSetting          = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace, prefixMatchReplace or regexMatchReplace")
+	ErrHTTPHostModifierDoubleReplace           = errors.New("redirect filter cannot have a host modifier that supplies more than one of Hostname, Header and Backend")
 	ErrAddHeaderEmptyName                      = errors.New("header modifier filter cannot configure a header without a name to be added")
 	ErrAddHeaderDuplicate                      = errors.New("header modifier filter attempts to add the same header more than once (case insensitive)")
 	ErrRemoveHeaderDuplicate                   = errors.New("header modifier filter attempts to remove the same header more than once (case insensitive)")
@@ -224,7 +225,19 @@ type CoreListenerDetails struct {
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 	// Metadata is used to enrich envoy resource metadata with user and provider-specific information
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	// IPFamily specifies the IP address family for the gateway.
+	// It can be IPv4, IPv6, or Dual.
+	IPFamily *IPFamily `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
 }
+
+// IPFamily specifies the IP address family used by the Gateway for its listening ports.
+type IPFamily string
+
+const (
+	IPv4      IPFamily = "IPv4"
+	IPv6      IPFamily = "IPv6"
+	Dualstack IPFamily = "DualStack"
+)
 
 func (l CoreListenerDetails) GetName() string {
 	return l.Name
@@ -350,7 +363,7 @@ type TLSConfig struct {
 	// SignatureAlgorithms supported by this listener
 	SignatureAlgorithms []string `json:"signatureAlgorithms,omitempty" yaml:"signatureAlgorithms,omitempty"`
 	// ALPNProtocols exposed by this listener
-	ALPNProtocols []string `json:"alpnProtocols,omitempty" yaml:"alpnProtocols,omitempty"`
+	ALPNProtocols []string `json:"alpnProtocols" yaml:"alpnProtocols"`
 	// StatelessSessionResumption determines if stateless (session-ticket based) session resumption is enabled
 	StatelessSessionResumption bool `json:"statelessSessionResumption,omitempty" yaml:"statelessSessionResumption,omitempty"`
 	// StatefulSessionResumption determines if stateful (session-id based) session resumption is enabled
@@ -531,7 +544,20 @@ type CustomResponse struct {
 	ContentType *string `json:"contentType,omitempty"`
 
 	// Body of the Custom Response
-	Body string `json:"body"`
+	Body *string `json:"body,omitempty"`
+
+	// StatusCode will be used for the response's status code.
+	StatusCode *uint32 `json:"statusCode,omitempty"`
+}
+
+// Validate the fields within the CustomResponse structure
+func (r *CustomResponse) Validate() error {
+	var errs error
+	if status := r.StatusCode; status != nil && (*status > 599 || *status < 100) {
+		errs = errors.Join(errs, ErrDirectResponseStatusInvalid)
+	}
+
+	return errs
 }
 
 // HealthCheckSettings provides HealthCheck configuration on the HTTP/HTTPS listener.
@@ -624,7 +650,7 @@ type HTTPRoute struct {
 	// RemoveResponseHeaders defines a list of headers to be removed from response.
 	RemoveResponseHeaders []string `json:"removeResponseHeaders,omitempty" yaml:"removeResponseHeaders,omitempty"`
 	// Direct responses to be returned for this route. Takes precedence over Destinations and Redirect.
-	DirectResponse *DirectResponse `json:"directResponse,omitempty" yaml:"directResponse,omitempty"`
+	DirectResponse *CustomResponse `json:"directResponse,omitempty" yaml:"directResponse,omitempty"`
 	// Redirections to be returned for this route. Takes precedence over Destinations.
 	Redirect *Redirect `json:"redirect,omitempty" yaml:"redirect,omitempty"`
 	// Destination that requests to this HTTPRoute will be mirrored to
@@ -1360,30 +1386,13 @@ func (h AddHeader) Validate() error {
 	return errs
 }
 
-// DirectResponse holds the details for returning a body and status code for a route.
-// +k8s:deepcopy-gen=true
-type DirectResponse struct {
-	// StatusCode will be used for the direct response's status code.
-	StatusCode uint32 `json:"statusCode" yaml:"statusCode"`
-}
-
-// Validate the fields within the DirectResponse structure
-func (r DirectResponse) Validate() error {
-	var errs error
-	if status := r.StatusCode; status > 599 || status < 100 {
-		errs = errors.Join(errs, ErrDirectResponseStatusInvalid)
-	}
-
-	return errs
-}
-
 // URLRewrite holds the details for how to rewrite a request
 // +k8s:deepcopy-gen=true
 type URLRewrite struct {
 	// Path contains config for rewriting the path of the request.
 	Path *ExtendedHTTPPathModifier `json:"path,omitempty" yaml:"path,omitempty"`
-	// Hostname configures the replacement of the request's hostname.
-	Hostname *string `json:"hostname,omitempty" yaml:"hostname,omitempty"`
+	// Host configures the replacement of the request's host header.
+	Host *HTTPHostModifier `json:"host,omitempty" yaml:"host,omitempty"`
 }
 
 // Validate the fields within the URLRewrite structure
@@ -1392,6 +1401,12 @@ func (r URLRewrite) Validate() error {
 
 	if r.Path != nil {
 		if err := r.Path.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	if r.Host != nil {
+		if err := r.Host.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -1494,6 +1509,34 @@ func (r ExtendedHTTPPathModifier) Validate() error {
 
 	if r.RegexMatchReplace != nil && (r.RegexMatchReplace.Pattern == "" || r.RegexMatchReplace.Substitution == "") {
 		errs = errors.Join(errs, ErrHTTPPathModifierNoReplace)
+	}
+
+	return errs
+}
+
+// HTTPHostModifier holds instructions for how to modify the host of a request
+// with both core gateway-api and extended envoy gateway capabilities
+// +k8s:deepcopy-gen=true
+type HTTPHostModifier struct {
+	Name    *string `json:"name,omitempty" yaml:"name,omitempty"`
+	Header  *string `json:"header,omitempty" yaml:"header,omitempty"`
+	Backend *bool   `json:"backend,omitempty" yaml:"backend,omitempty"`
+}
+
+// Validate the fields within the HTTPPathModifier structure
+func (r HTTPHostModifier) Validate() error {
+	var errs error
+
+	rewrites := []bool{r.Name != nil, r.Header != nil, r.Backend != nil}
+	rwc := 0
+	for _, rw := range rewrites {
+		if rw {
+			rwc++
+		}
+	}
+
+	if rwc > 1 {
+		errs = errors.Join(errs, ErrHTTPHostModifierDoubleReplace)
 	}
 
 	return errs

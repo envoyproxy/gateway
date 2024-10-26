@@ -22,7 +22,7 @@ BENCHMARK_REPORT_DIR ?= benchmark_report
 
 E2E_RUN_TEST ?=
 E2E_CLEANUP ?= true
-E2E_TEST_ARGS ?= -v -tags e2e -timeout 15m
+E2E_TEST_ARGS ?= -v -tags e2e -timeout 20m
 
 # Set Kubernetes Resources Directory Path
 ifeq ($(origin KUBE_PROVIDER_DIR),undefined)

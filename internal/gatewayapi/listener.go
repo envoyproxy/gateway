@@ -110,12 +110,16 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 						Address:  "0.0.0.0",
 						Port:     uint32(containerPort),
 						Metadata: buildListenerMetadata(listener, gateway),
+						IPFamily: getIPFamily(gateway.envoyProxy),
 					},
 					TLS: irTLSConfigs(listener.tlsSecrets...),
 					Path: ir.PathSettings{
 						MergeSlashes:         true,
 						EscapedSlashesAction: ir.UnescapeAndRedirect,
 					},
+				}
+				if ipFamily := getIPFamily(gateway.envoyProxy); ipFamily != nil {
+					irListener.CoreListenerDetails.IPFamily = ipFamily
 				}
 				if listener.Hostname != nil {
 					irListener.Hostnames = append(irListener.Hostnames, string(*listener.Hostname))
@@ -129,16 +133,17 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			case gwapiv1.TCPProtocolType, gwapiv1.TLSProtocolType:
 				irListener := &ir.TCPListener{
 					CoreListenerDetails: ir.CoreListenerDetails{
-						Name:    irListenerName(listener),
-						Address: "0.0.0.0",
-						Port:    uint32(containerPort),
+						Name:     irListenerName(listener),
+						Address:  "0.0.0.0",
+						Port:     uint32(containerPort),
+						IPFamily: getIPFamily(gateway.envoyProxy),
 					},
 
 					// Gateway is processed firstly, then ClientTrafficPolicy, then xRoute.
 					// TLS field should be added to TCPListener as ClientTrafficPolicy will affect
 					// Listener TLS. Then TCPRoute whose TLS should be configured as Terminate just
 					// refers to the Listener TLS.
-					TLS: irTLSConfigs(listener.tlsSecrets...),
+					TLS: irTLSConfigsForTCPListener(listener.tlsSecrets...),
 				}
 				xdsIR[irKey].TCP = append(xdsIR[irKey].TCP, irListener)
 			case gwapiv1.UDPProtocolType:

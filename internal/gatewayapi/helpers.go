@@ -421,6 +421,7 @@ func irRouteDestinationName(route RouteContext, ruleIdx int) string {
 	return fmt.Sprintf("%srule/%d", irRoutePrefix(route), ruleIdx)
 }
 
+// irTLSConfigs produces a defaulted IR TLSConfig
 func irTLSConfigs(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
 	if len(tlsSecrets) == 0 {
 		return nil
@@ -436,6 +437,21 @@ func irTLSConfigs(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
 			PrivateKey:  tlsSecret.Data[corev1.TLSPrivateKeyKey],
 		}
 	}
+
+	return tlsListenerConfigs
+}
+
+// irTLSConfigsForTCPListener creates an IR TLSConfig with defaults appropriate
+// for TCP/TLS routes, e.g. disabling ALPN
+func irTLSConfigsForTCPListener(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
+	tlsListenerConfigs := irTLSConfigs(tlsSecrets...)
+
+	// Envoy Gateway disables ALPN by default for non-HTTPS listeners
+	// by setting an empty slice instead of a nil slice
+	if tlsListenerConfigs != nil {
+		tlsListenerConfigs.ALPNProtocols = []string{}
+	}
+
 	return tlsListenerConfigs
 }
 
@@ -591,4 +607,22 @@ func setIfNil[T any](target **T, value *T) {
 	if *target == nil {
 		*target = value
 	}
+}
+
+func getIPFamily(envoyProxy *egv1a1.EnvoyProxy) *ir.IPFamily {
+	if envoyProxy == nil || envoyProxy.Spec.IPFamily == nil {
+		return nil
+	}
+	var result ir.IPFamily
+	switch *envoyProxy.Spec.IPFamily {
+	case egv1a1.IPv4:
+		result = ir.IPv4
+	case egv1a1.IPv6:
+		result = ir.IPv6
+	case egv1a1.DualStack:
+		result = ir.Dualstack
+	default:
+		return nil
+	}
+	return &result
 }

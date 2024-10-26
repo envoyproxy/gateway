@@ -417,9 +417,21 @@ func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite, pathMa
 		}
 	}
 
-	if urlRewrite.Hostname != nil {
-		routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewriteLiteral{
-			HostRewriteLiteral: *urlRewrite.Hostname,
+	if urlRewrite.Host != nil {
+
+		switch {
+		case urlRewrite.Host.Name != nil:
+			routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewriteLiteral{
+				HostRewriteLiteral: *urlRewrite.Host.Name,
+			}
+		case urlRewrite.Host.Header != nil:
+			routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewriteHeader{
+				HostRewriteHeader: *urlRewrite.Host.Header,
+			}
+		case urlRewrite.Host.Backend != nil:
+			routeAction.HostRewriteSpecifier = &routev3.RouteAction_AutoHostRewrite{
+				AutoHostRewrite: wrapperspb.Bool(true),
+			}
 		}
 
 		routeAction.AppendXForwardedHost = true
@@ -428,8 +440,20 @@ func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite, pathMa
 	return routeAction
 }
 
-func buildXdsDirectResponseAction(res *ir.DirectResponse) *routev3.DirectResponseAction {
-	routeAction := &routev3.DirectResponseAction{Status: res.StatusCode}
+func buildXdsDirectResponseAction(res *ir.CustomResponse) *routev3.DirectResponseAction {
+	routeAction := &routev3.DirectResponseAction{}
+	if res.StatusCode != nil {
+		routeAction.Status = *res.StatusCode
+	}
+
+	if res.Body != nil && *res.Body != "" {
+		routeAction.Body = &corev3.DataSource{
+			Specifier: &corev3.DataSource_InlineString{
+				InlineString: *res.Body,
+			},
+		}
+	}
+
 	return routeAction
 }
 

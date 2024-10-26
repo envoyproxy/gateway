@@ -153,6 +153,7 @@ xdsIR:
               port: 8080
             protocol: HTTP
             tls:
+              alpnProtocols: null
               sni: example.com
               useSystemTrustStore: true
             weight: 1
