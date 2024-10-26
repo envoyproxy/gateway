@@ -80,20 +80,58 @@ provider:
 logging:
   level:
     default: info
+extensionApis:
+  enableBackend: true
 ```
 
-Update gateway-api resources:
+As you can see, we have enabled the [Backend][] API, this API will be used to represent our local endpoints.
+
+Since Envoy Gateway is running in the standalone mode, we highly recommend using the [Backend][] API instead of the Kubernetes Service.
+
+### Trigger an Update
+
+Any changes under watched `paths` will be considered as an update by the file provider.
+
+For instance, copying example file into `/tmp/envoy-gateway-test/` will trigger an update of gateway-api resources:
 
 ```shell
 cp examples/standalone/quickstart.yaml /tmp/envoy-gateway-test/quickstart.yaml
 ```
 
-From Envoy Gateway log, you should be able to observe a Envoy Proxy has been started.
+From the Envoy Gateway log, you should be able to observe that the Envoy Proxy has been started, and its admin address has been returned.
 
 ### Test Connection
 
-Starts a simple local server as an upstream service:
+Starts a simple local server as an endpoint:
 
 ```shell
 python3 -m http.server 3000
 ```
+
+Curl the example server through Envoy Proxy:
+
+```shell
+curl --verbose --header "Host: www.example.com" http://0.0.0.0:8888/
+```
+
+```console
+*   Trying 0.0.0.0:8888...
+* Connected to 0.0.0.0 (127.0.0.1) port 8888 (#0)
+> GET / HTTP/1.1
+> Host: www.example.com
+> User-Agent: curl/7.81.0
+> Accept: */*
+>
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 200 OK
+< server: SimpleHTTP/0.6 Python/3.10.12
+< date: Sat, 26 Oct 2024 13:20:34 GMT
+< content-type: text/html; charset=utf-8
+< content-length: 1870
+<
+...
+* Connection #0 to host 0.0.0.0 left intact
+```
+
+
+[Backend]: ../../../api/extension_types#backend
