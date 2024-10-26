@@ -43,6 +43,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/utils"
+	"github.com/envoyproxy/gateway/internal/utils/safeset"
 	"github.com/envoyproxy/gateway/internal/utils/slice"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
@@ -60,7 +61,7 @@ type gatewayAPIReconciler struct {
 	namespace         string
 	namespaceLabel    *metav1.LabelSelector
 	envoyGateway      *egv1a1.EnvoyGateway
-	mergeGateways     *safeSet[string]
+	mergeGateways     *safeset.SafeSet[string]
 	resources         *message.ProviderResources
 	extGVKs           []schema.GroupVersionKind
 	extServerPolicies []schema.GroupVersionKind
@@ -96,7 +97,7 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su Updater
 		extGVKs:           extGVKs,
 		store:             newProviderStore(),
 		envoyGateway:      cfg.EnvoyGateway,
-		mergeGateways:     newSafeSet[string](),
+		mergeGateways:     safeset.NewSafeSet[string](),
 		extServerPolicies: extServerPoliciesGVKs,
 	}
 
@@ -241,7 +242,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 		// For this particular Gateway, and all associated objects, check whether the
 		// namespace exists. Add to the resourceTree.
-		for ns := range resourceMappings.allAssociatedNamespaces.values {
+		for ns := range resourceMappings.allAssociatedNamespaces.Values {
 			namespace, err := r.getNamespace(ctx, ns)
 			if err != nil {
 				r.log.Error(err, "unable to find the namespace")
@@ -353,7 +354,7 @@ func (r *gatewayAPIReconciler) managedGatewayClasses(ctx context.Context) ([]*gw
 // - EndpointSlices
 // - Backends
 func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResource *resource.Resources, resourceMappings *resourceMappings) {
-	for backendRef := range resourceMappings.allAssociatedBackendRefs.values {
+	for backendRef := range resourceMappings.allAssociatedBackendRefs.Values {
 		backendRefKind := gatewayapi.KindDerefOr(backendRef.Kind, resource.KindService)
 		r.log.Info("processing Backend", "kind", backendRefKind, "namespace", string(*backendRef.Namespace),
 			"name", string(backendRef.Name))
