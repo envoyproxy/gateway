@@ -45,12 +45,16 @@ type ResourceRender struct {
 	// Namespace is the Namespace used for managed infra.
 	Namespace string
 
+	// DNSDomain is the dns domain used by k8s services. Defaults to "cluster.local".
+	DNSDomain string
+
 	ShutdownManager *egv1a1.ShutdownManager
 }
 
-func NewResourceRender(ns string, infra *ir.ProxyInfra, gateway *egv1a1.EnvoyGateway) *ResourceRender {
+func NewResourceRender(ns string, dnsDomain string, infra *ir.ProxyInfra, gateway *egv1a1.EnvoyGateway) *ResourceRender {
 	return &ResourceRender{
 		Namespace:       ns,
+		DNSDomain:       dnsDomain,
 		infra:           infra,
 		ShutdownManager: gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().ShutdownManager,
 	}
@@ -258,7 +262,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 
 	proxyConfig := r.infra.GetProxyConfig()
 	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager)
+	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Namespace, r.DNSDomain)
 	if err != nil {
 		return nil, err
 	}
@@ -360,7 +364,7 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 	proxyConfig := r.infra.GetProxyConfig()
 
 	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager)
+	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Namespace, r.DNSDomain)
 	if err != nil {
 		return nil, err
 	}
