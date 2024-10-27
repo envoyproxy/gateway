@@ -384,34 +384,6 @@ spec:
         app.kubernetes.io/name: gateway-helm
         app.kubernetes.io/instance: gateway-helm
     spec:
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: topology.kubernetes.io/zone
-                operator: In
-                values:
-                - antarctica-east1
-                - antarctica-west1
-      topologySpreadConstraints:
-      - labelSelector:
-          matchLabels:
-            app: envoyproxy
-            control-plane: envoy-control-plane
-        maxSkew: 1
-        topologyKey: kubernetes.io/hostname
-        whenUnsatisfiable: DoNotSchedule
-      - labelSelector:
-          matchLabels:
-            app: envoyproxy
-        maxSkew: 1
-        topologyKey: topology.kubernetes.io/zone
-        whenUnsatisfiable: ScheduleAnyway
-      tolerations:
-      - key: custom.taint
-        operator: Equal
-        value: custom.value
       containers:
       - args:
         - server
@@ -460,9 +432,9 @@ spec:
             drop:
             - ALL
           privileged: false
-          runAsGroup: 65532
+          runAsGroup: 1000
           runAsNonRoot: true
-          runAsUser: 65532
+          runAsUser: 1000
           seccompProfile:
             type: RuntimeDefault
         volumeMounts:
@@ -591,9 +563,9 @@ spec:
             - ALL
           privileged: false
           readOnlyRootFilesystem: true
-          runAsGroup: 65534
+          runAsGroup: 1000
           runAsNonRoot: true
-          runAsUser: 65534
+          runAsUser: 1000
           seccompProfile:
             type: RuntimeDefault
       imagePullSecrets: []
