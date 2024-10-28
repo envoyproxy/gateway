@@ -1214,6 +1214,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
+	// TODO: Remove this optional check once most cloud providers and service meshes support GRPCRoute v1
 	r.grpcRouteCRDExists = r.crdExists(mgr, resource.KindGRPCRoute, gwapiv1.GroupVersion.String())
 	if !r.grpcRouteCRDExists {
 		r.log.Info("GRPCRoute CRD not found, skipping GRPCRoute watch")
