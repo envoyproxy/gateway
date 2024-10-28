@@ -115,18 +115,18 @@ jobs:
       fail-fast: false
       matrix:
         target:
-          - version: v1.28.13
-            ipFamily: ipv4
-          - version: v1.29.8
-            ipFamily: ipv4
-          - version: v1.30.4
-            ipFamily: ipv4
-          - version: v1.31.0
-            ipFamily: ipv4
-          - version: v1.31.0
-            ipFamily: ipv6  # only run ipv6 test on latest version to save time
-          - version: v1.31.0
-            ipFamily: dual # only run dual test on latest version to save time
+        - version: v1.28.13
+          ipFamily: ipv4
+        - version: v1.29.8
+          ipFamily: ipv4
+        - version: v1.30.4
+          ipFamily: ipv4
+        - version: v1.31.0
+          ipFamily: ipv4
+        - version: v1.31.0
+          ipFamily: ipv6   # only run ipv6 test on latest version to save time
+        - version: v1.31.0
+          ipFamily: dual  # only run dual test on latest version to save time
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
     - uses: ./tools/github-actions/setup-deps
