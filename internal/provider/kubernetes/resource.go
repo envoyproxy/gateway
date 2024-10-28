@@ -15,45 +15,47 @@ import (
 )
 
 type resourceMappings struct {
-	// Map for storing Gateways' NamespacedNames.
+	// Set for storing Gateways' NamespacedNames.
 	allAssociatedGateways sets.Set[string]
-	// Map for storing ReferenceGrants' NamespacedNames.
+	// Set for storing ReferenceGrants' NamespacedNames.
 	allAssociatedReferenceGrants sets.Set[string]
-	// Map for storing ServiceImports' NamespacedNames.
+	// Set for storing ServiceImports' NamespacedNames.
 	allAssociatedServiceImports sets.Set[string]
-	// Map for storing EndpointSlices' NamespacedNames.
+	// Set for storing EndpointSlices' NamespacedNames.
 	allAssociatedEndpointSlices sets.Set[string]
-	// Map for storing Secrets' NamespacedNames.
+	// Set for storing Backends' NamespacedNames.
+	allAssociatedBackends sets.Set[string]
+	// Set for storing Secrets' NamespacedNames.
 	allAssociatedSecrets sets.Set[string]
-	// Map for storing ConfigMaps' NamespacedNames.
+	// Set for storing ConfigMaps' NamespacedNames.
 	allAssociatedConfigMaps sets.Set[string]
-	// Map for storing namespaces for Route, Service and Gateway objects.
+	// Set for storing namespaces for Route, Service and Gateway objects.
 	allAssociatedNamespaces sets.Set[string]
-	// Map for storing EnvoyProxies' NamespacedNames attaching to Gateway or GatewayClass.
+	// Set for storing EnvoyProxies' NamespacedNames attaching to Gateway or GatewayClass.
 	allAssociatedEnvoyProxies sets.Set[string]
-	// Map for storing EnvoyPatchPolicies' NamespacedNames attaching to Gateway.
+	// Set for storing EnvoyPatchPolicies' NamespacedNames attaching to Gateway.
 	allAssociatedEnvoyPatchPolicies sets.Set[string]
-	// Map for storing TLSRoutes' NamespacedNames attaching to various Gateway objects.
+	// Set for storing TLSRoutes' NamespacedNames attaching to various Gateway objects.
 	allAssociatedTLSRoutes sets.Set[string]
-	// Map for storing HTTPRoutes' NamespacedNames attaching to various Gateway objects.
+	// Set for storing HTTPRoutes' NamespacedNames attaching to various Gateway objects.
 	allAssociatedHTTPRoutes sets.Set[string]
-	// Map for storing GRPCRoutes' NamespacedNames attaching to various Gateway objects.
+	// Set for storing GRPCRoutes' NamespacedNames attaching to various Gateway objects.
 	allAssociatedGRPCRoutes sets.Set[string]
-	// Map for storing TCPRoutes' NamespacedNames attaching to various Gateway objects.
+	// Set for storing TCPRoutes' NamespacedNames attaching to various Gateway objects.
 	allAssociatedTCPRoutes sets.Set[string]
-	// Map for storing UDPRoutes' NamespacedNames attaching to various Gateway objects.
+	// Set for storing UDPRoutes' NamespacedNames attaching to various Gateway objects.
 	allAssociatedUDPRoutes sets.Set[string]
-	// Map for storing backendRefs' BackendObjectReference referred by various Route objects.
+	// Set for storing backendRefs' BackendObjectReference referred by various Route objects.
 	allAssociatedBackendRefs sets.Set[gwapiv1.BackendObjectReference]
-	// Map for storing ClientTrafficPolicies' NamespacedNames referred by various Route objects.
+	// Set for storing ClientTrafficPolicies' NamespacedNames referred by various Route objects.
 	allAssociatedClientTrafficPolicies sets.Set[string]
-	// Map for storing BackendTrafficPolicies' NamespacedNames referred by various Route objects.
+	// Set for storing BackendTrafficPolicies' NamespacedNames referred by various Route objects.
 	allAssociatedBackendTrafficPolicies sets.Set[string]
-	// Map for storing SecurityPolicies' NamespacedNames referred by various Route objects.
+	// Set for storing SecurityPolicies' NamespacedNames referred by various Route objects.
 	allAssociatedSecurityPolicies sets.Set[string]
-	// Map for storing BackendTLSPolicies' NamespacedNames referred by various Backend objects.
+	// Set for storing BackendTLSPolicies' NamespacedNames referred by various Backend objects.
 	allAssociatedBackendTLSPolicies sets.Set[string]
-	// Map for storing EnvoyExtensionPolicies' NamespacedNames attaching to various Gateway objects.
+	// Set for storing EnvoyExtensionPolicies' NamespacedNames attaching to various Gateway objects.
 	allAssociatedEnvoyExtensionPolicies sets.Set[string]
 	// extensionRefFilters is a map of filters managed by an extension.
 	// The key is the namespaced name, group and kind of the filter and the value is the
@@ -70,6 +72,7 @@ func newResourceMapping() *resourceMappings {
 		allAssociatedReferenceGrants:        sets.New[string](),
 		allAssociatedServiceImports:         sets.New[string](),
 		allAssociatedEndpointSlices:         sets.New[string](),
+		allAssociatedBackends:               sets.New[string](),
 		allAssociatedSecrets:                sets.New[string](),
 		allAssociatedConfigMaps:             sets.New[string](),
 		allAssociatedNamespaces:             sets.New[string](),

@@ -146,16 +146,53 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 	return extensionConfig
 }
 
+func setAddressByIPFamily(socketAddress *corev3.SocketAddress, ipFamily *ir.IPFamily, port uint32) []*listenerv3.AdditionalAddress {
+	if ipFamily == nil {
+		return nil
+	}
+	switch *ipFamily {
+	case ir.IPv4:
+		socketAddress.Address = "0.0.0.0"
+	case ir.IPv6:
+		socketAddress.Address = "::"
+	case ir.Dualstack:
+		socketAddress.Address = "0.0.0.0"
+		return []*listenerv3.AdditionalAddress{
+			{
+				Address: &corev3.Address{
+					Address: &corev3.Address_SocketAddress{
+						SocketAddress: &corev3.SocketAddress{
+							Protocol: socketAddress.Protocol,
+							Address:  "::",
+							PortSpecifier: &corev3.SocketAddress_PortValue{
+								PortValue: port,
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+	return nil
+}
+
 // buildXdsTCPListener creates a xds Listener resource
 // TODO: Improve function parameters
-func buildXdsTCPListener(name, address string, port uint32, keepalive *ir.TCPKeepalive, connection *ir.ClientConnection, accesslog *ir.AccessLog) (*listenerv3.Listener, error) {
+func buildXdsTCPListener(
+	name, address string,
+	port uint32,
+	ipFamily *ir.IPFamily,
+	keepalive *ir.TCPKeepalive,
+	connection *ir.ClientConnection,
+	accesslog *ir.AccessLog,
+) (*listenerv3.Listener, error) {
 	socketOptions := buildTCPSocketOptions(keepalive)
 	al, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeListener)
 	if err != nil {
 		return nil, err
 	}
 	bufferLimitBytes := buildPerConnectionBufferLimitBytes(connection)
-	return &listenerv3.Listener{
+	listener := &listenerv3.Listener{
 		Name:                          name,
 		AccessLog:                     al,
 		SocketOptions:                 socketOptions,
@@ -171,7 +208,11 @@ func buildXdsTCPListener(name, address string, port uint32, keepalive *ir.TCPKee
 				},
 			},
 		},
-	}, nil
+	}
+
+	socketAddress := listener.Address.GetSocketAddress()
+	listener.AdditionalAddresses = setAddressByIPFamily(socketAddress, ipFamily, port)
+	return listener, nil
 }
 
 func buildPerConnectionBufferLimitBytes(connection *ir.ClientConnection) *wrapperspb.UInt32Value {

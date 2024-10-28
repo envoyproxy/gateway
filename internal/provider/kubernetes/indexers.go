@@ -47,6 +47,7 @@ const (
 	secretEnvoyExtensionPolicyIndex  = "secretEnvoyExtensionPolicyIndex"
 	httpRouteFilterHTTPRouteIndex    = "httpRouteFilterHTTPRouteIndex"
 	configMapBtpIndex                = "configMapBtpIndex"
+	configMapHTTPRouteFilterIndex    = "configMapHTTPRouteFilterIndex"
 )
 
 func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
@@ -667,6 +668,35 @@ func configMapBtpIndexFunc(rawObj client.Object) []string {
 					}.String(),
 				)
 			}
+		}
+	}
+	return configMapReferences
+}
+
+// addRouteFilterIndexers adds indexing on HTTPRouteFilter, for ConfigMap objects that are
+// referenced in HTTPRouteFilter objects. This helps in querying for HTTPRouteFilters that are
+// affected by a particular ConfigMap CRUD.
+func addRouteFilterIndexers(ctx context.Context, mgr manager.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.HTTPRouteFilter{},
+		configMapHTTPRouteFilterIndex, configMapRouteFilterIndexFunc); err != nil {
+		return err
+	}
+	return nil
+}
+
+func configMapRouteFilterIndexFunc(rawObj client.Object) []string {
+	filter := rawObj.(*egv1a1.HTTPRouteFilter)
+	var configMapReferences []string
+	if filter.Spec.DirectResponse != nil &&
+		filter.Spec.DirectResponse.Body != nil &&
+		filter.Spec.DirectResponse.Body.ValueRef != nil {
+		if string(filter.Spec.DirectResponse.Body.ValueRef.Kind) == resource.KindConfigMap {
+			configMapReferences = append(configMapReferences,
+				types.NamespacedName{
+					Namespace: filter.Namespace,
+					Name:      string(filter.Spec.DirectResponse.Body.ValueRef.Name),
+				}.String(),
+			)
 		}
 	}
 	return configMapReferences
