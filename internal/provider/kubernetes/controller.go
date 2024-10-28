@@ -336,7 +336,7 @@ func (r *gatewayAPIReconciler) managedGatewayClasses(ctx context.Context) ([]*gw
 			// so clean-up dependents.
 			if !gwClass.DeletionTimestamp.IsZero() &&
 				!slice.ContainsString(gwClass.Finalizers, gatewayClassFinalizer) {
-				r.log.Info("gatewayclass marked for deletion")
+				r.log.Info("gatewayclass marked for deletion", "name", gwClass.Name)
 				cc.removeMatch(&gwClass)
 				continue
 			}
@@ -383,8 +383,9 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 					"name", string(backendRef.Name))
 			} else {
 				resourceMappings.allAssociatedNamespaces.Insert(serviceImport.Namespace)
-				if !resourceMappings.allAssociatedServiceImports.Has(utils.NamespacedName(serviceImport).String()) {
-					resourceMappings.allAssociatedServiceImports.Insert(utils.NamespacedName(serviceImport).String())
+				key := utils.NamespacedName(serviceImport).String()
+				if !resourceMappings.allAssociatedServiceImports.Has(key) {
+					resourceMappings.allAssociatedServiceImports.Insert(key)
 					gwcResource.ServiceImports = append(gwcResource.ServiceImports, serviceImport)
 					r.log.Info("added ServiceImport to resource tree", "namespace", string(*backendRef.Namespace),
 						"name", string(backendRef.Name))
@@ -399,11 +400,14 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 				r.log.Error(err, "failed to get Backend", "namespace", string(*backendRef.Namespace),
 					"name", string(backendRef.Name))
 			} else {
-				resourceMappings.allAssociatedNamespaces[backend.Namespace] = struct{}{}
-				backend.Status = egv1a1.BackendStatus{}
-				gwcResource.Backends = append(gwcResource.Backends, backend)
-				r.log.Info("added Backend to resource tree", "namespace", string(*backendRef.Namespace),
-					"name", string(backendRef.Name))
+				resourceMappings.allAssociatedNamespaces.Insert(backend.Namespace)
+				key := utils.NamespacedName(backend).String()
+				if !resourceMappings.allAssociatedBackends.Has(key) {
+					resourceMappings.allAssociatedBackends.Insert(key)
+					gwcResource.Backends = append(gwcResource.Backends, backend)
+					r.log.Info("added Backend to resource tree", "namespace", string(*backendRef.Namespace),
+						"name", string(backendRef.Name))
+				}
 			}
 		}
 
@@ -414,17 +418,18 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 				client.MatchingLabels(map[string]string{
 					endpointSliceLabelKey: string(backendRef.Name),
 				}),
-				client.InNamespace(string(*backendRef.Namespace)),
+				client.InNamespace(*backendRef.Namespace),
 			}
 			if err := r.client.List(ctx, endpointSliceList, opts...); err != nil {
 				r.log.Error(err, "failed to get EndpointSlices", "namespace", string(*backendRef.Namespace),
 					backendRefKind, string(backendRef.Name))
 			} else {
 				for _, endpointSlice := range endpointSliceList.Items {
-					endpointSlice := endpointSlice //nolint:copyloopvar
-					if !resourceMappings.allAssociatedEndpointSlices.Has(utils.NamespacedName(&endpointSlice).String()) {
-						resourceMappings.allAssociatedEndpointSlices.Insert(utils.NamespacedName(&endpointSlice).String())
-						r.log.Info("added EndpointSlice to resource tree", "namespace", endpointSlice.Namespace,
+					key := utils.NamespacedName(&endpointSlice).String()
+					if !resourceMappings.allAssociatedEndpointSlices.Has(key) {
+						resourceMappings.allAssociatedEndpointSlices.Insert(key)
+						r.log.Info("added EndpointSlice to resource tree",
+							"namespace", endpointSlice.Namespace,
 							"name", endpointSlice.Name)
 						gwcResource.EndpointSlices = append(gwcResource.EndpointSlices, &endpointSlice)
 					}
@@ -567,8 +572,9 @@ func (r *gatewayAPIReconciler) processOIDCHMACSecret(ctx context.Context, resour
 		return
 	}
 
-	if !resourceMap.allAssociatedSecrets.Has(utils.NamespacedName(&secret).String()) {
-		resourceMap.allAssociatedSecrets.Insert(utils.NamespacedName(&secret).String())
+	key := utils.NamespacedName(&secret).String()
+	if !resourceMap.allAssociatedSecrets.Has(key) {
+		resourceMap.allAssociatedSecrets.Insert(key)
 		resourceTree.Secrets = append(resourceTree.Secrets, &secret)
 		r.log.Info("processing OIDC HMAC Secret", "namespace", r.namespace, "name", oidcHMACSecretName)
 	}
@@ -626,8 +632,9 @@ func (r *gatewayAPIReconciler) processSecretRef(
 		}
 	}
 	resourceMap.allAssociatedNamespaces.Insert(secretNS) // TODO Zhaohuabing do we need this line?
-	if !resourceMap.allAssociatedSecrets.Has(utils.NamespacedName(secret).String()) {
-		resourceMap.allAssociatedSecrets.Insert(utils.NamespacedName(secret).String())
+	key := utils.NamespacedName(secret).String()
+	if !resourceMap.allAssociatedSecrets.Has(key) {
+		resourceMap.allAssociatedSecrets.Insert(key)
 		resourceTree.Secrets = append(resourceTree.Secrets, secret)
 		r.log.Info("processing Secret", "namespace", secretNS, "name", string(secretRef.Name))
 	}
