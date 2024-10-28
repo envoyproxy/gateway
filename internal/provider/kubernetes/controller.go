@@ -653,9 +653,11 @@ func (r *gatewayAPIReconciler) processSecretRef(
 			}
 		}
 	}
-	resourceMap.allAssociatedNamespaces.Insert(secretNS) // TODO Zhaohuabing do we need this line?
-	if !resourceMap.allAssociatedSecrets.Has(utils.NamespacedName(secret).String()) {
-		resourceMap.allAssociatedSecrets.Insert(utils.NamespacedName(secret).String())
+
+	resourceMap.allAssociatedNamespaces.Insert(secretNS)
+	key := utils.NamespacedName(secret).String()
+	if !resourceMap.allAssociatedSecrets.Has(key) {
+		resourceMap.allAssociatedSecrets.Insert(key)
 		resourceTree.Secrets = append(resourceTree.Secrets, secret)
 		r.log.Info("processing Secret", "namespace", secretNS, "name", string(secretRef.Name))
 	}
@@ -761,7 +763,7 @@ func (r *gatewayAPIReconciler) processConfigMapRef(
 			}
 		}
 	}
-	resourceMap.allAssociatedNamespaces.Insert(configMapNS) // TODO Zhaohuabing do we need this line?
+	resourceMap.allAssociatedNamespaces.Insert(configMapNS)
 	if !resourceMap.allAssociatedConfigMaps.Has(utils.NamespacedName(configMap).String()) {
 		resourceMap.allAssociatedConfigMaps.Insert(utils.NamespacedName(configMap).String())
 		resourceTree.ConfigMaps = append(resourceTree.ConfigMaps, configMap)
