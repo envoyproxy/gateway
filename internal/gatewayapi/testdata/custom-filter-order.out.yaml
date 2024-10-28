@@ -13,7 +13,7 @@ envoyExtensionPolicies:
     wasm:
     - code:
         http:
-          sha256: 746df05c8f3a0b07a46c0967cfbc5cbe5b9d48d0f79b6177eeedf8be6c8b34b5
+          sha256: 2d89c4c6ab2a1c615c7696ed37ade9e50654ac70384b5d45100eb08e62130ff4
           url: https://www.example.com/wasm-filter-1.wasm
         type: HTTP
       config:
@@ -24,7 +24,7 @@ envoyExtensionPolicies:
       name: wasm-filter-1
     - code:
         http:
-          sha256: a1efca12ea51069abb123bf9c77889fcc2a31cc5483fc14d115e44fdf07c7980
+          sha256: 84274ca23246855cc491b3c6a657a89167e0b109a7ae380f1e64df77c910307e
           url: https://www.example.com/wasm-filter-2.wasm
         type: HTTP
       config:
