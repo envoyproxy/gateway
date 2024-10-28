@@ -147,7 +147,8 @@ jobs:
       env:
         KIND_NODE_TAG: ${{ matrix.target.version }}
         IMAGE_PULL_POLICY: IfNotPresent
-      run: IP_FAMILY=${{ matrix.target.ipFamily }} make e2e
+        IP_FAMILY: ${{ matrix.target.ipFamily }}
+      run: make e2e
 
   benchmark-test:
     runs-on: ubuntu-latest
