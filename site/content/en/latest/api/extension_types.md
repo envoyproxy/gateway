@@ -324,7 +324,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `fqdn` | _[FQDNEndpoint](#fqdnendpoint)_ |  false  | FQDN defines a FQDN endpoint |
-| `ip` | _[IPEndpoint](#ipendpoint)_ |  false  | IP defines an IP endpoint. Currently, only IPv4 Addresses are supported. |
+| `ip` | _[IPEndpoint](#ipendpoint)_ |  false  | IP defines an IP endpoint. Supports both IPv4 and IPv6 addresses. |
 | `unix` | _[UnixSocket](#unixsocket)_ |  false  | Unix defines the unix domain socket endpoint |
 
 
@@ -1483,6 +1483,7 @@ _Appears in:_
 | `shutdown` | _[ShutdownConfig](#shutdownconfig)_ |  false  | Shutdown defines configuration for graceful envoy shutdown process. |
 | `filterOrder` | _[FilterPosition](#filterposition) array_ |  false  | FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.<br />The FilterPosition in the list will be applied in the order they are defined.<br />If unspecified, the default filter order is applied.<br />Default filter order is:<br /><br />- envoy.filters.http.health_check<br /><br />- envoy.filters.http.fault<br /><br />- envoy.filters.http.cors<br /><br />- envoy.filters.http.ext_authz<br /><br />- envoy.filters.http.basic_auth<br /><br />- envoy.filters.http.oauth2<br /><br />- envoy.filters.http.jwt_authn<br /><br />- envoy.filters.http.stateful_session<br /><br />- envoy.filters.http.ext_proc<br /><br />- envoy.filters.http.wasm<br /><br />- envoy.filters.http.rbac<br /><br />- envoy.filters.http.local_ratelimit<br /><br />- envoy.filters.http.ratelimit<br /><br />- envoy.filters.http.custom_response<br /><br />- envoy.filters.http.router<br /><br />Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain. |
 | `backendTLS` | _[BackendTLSConfig](#backendtlsconfig)_ |  false  | BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.<br />These settings are applied on backends for which TLS policies are specified. |
+| `ipFamily` | _[IPFamily](#ipfamily)_ |  false  | IPFamily specifies the IP family for the EnvoyProxy fleet.<br />This setting only affects the Gateway listener port and does not impact<br />other aspects of the Envoy proxy configuration.<br />If not specified, the system will operate as follows:<br />- It defaults to IPv4 only.<br />- IPv6 and dual-stack environments are not supported in this default configuration.<br />Note: To enable IPv6 or dual-stack functionality, explicit configuration is required. |
 
 
 #### EnvoyProxyStatus
@@ -1644,7 +1645,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `fqdn` | _[FQDNEndpoint](#fqdnendpoint)_ |  false  | FQDN defines a FQDN endpoint |
-| `ip` | _[IPEndpoint](#ipendpoint)_ |  false  | IP defines an IP endpoint. Currently, only IPv4 Addresses are supported. |
+| `ip` | _[IPEndpoint](#ipendpoint)_ |  false  | IP defines an IP endpoint. Supports both IPv4 and IPv6 addresses. |
 | `unix` | _[UnixSocket](#unixsocket)_ |  false  | Unix defines the unix domain socket endpoint |
 | `host` | _string_ |  false  | Host define the extension service hostname.<br />Deprecated: use the appropriate transport attribute instead (FQDN,IP,Unix) |
 | `port` | _integer_ |  false  | Port defines the port the extension service is exposed on.<br />Deprecated: use the appropriate transport attribute instead (FQDN,IP,Unix) |
@@ -2207,8 +2208,24 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `address` | _string_ |  true  | Address defines the IP address of the backend endpoint. |
+| `address` | _string_ |  true  | Address defines the IP address of the backend endpoint.<br />Supports both IPv4 and IPv6 addresses. |
 | `port` | _integer_ |  true  | Port defines the port of the backend endpoint. |
+
+
+#### IPFamily
+
+_Underlying type:_ _string_
+
+IPFamily defines the IP family to use for the Envoy proxy.
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Value | Description |
+| ----- | ----------- |
+| `IPv4` | IPv4 defines the IPv4 family.<br /> | 
+| `IPv6` | IPv6 defines the IPv6 family.<br /> | 
+| `DualStack` | DualStack defines the dual-stack family.<br />When set to DualStack, Envoy proxy will listen on both IPv4 and IPv6 addresses<br />for incoming client traffic, enabling support for both IP protocol versions.<br /> | 
 
 
 #### ImagePullPolicy

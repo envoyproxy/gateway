@@ -287,6 +287,12 @@ func TestTranslate(t *testing.T) {
 			expect:    true,
 			extraArgs: []string{"--add-missing-resources"},
 		},
+		{
+			name:   "backend-endpoint",
+			from:   "gateway-api",
+			to:     "gateway-api",
+			expect: true,
+		},
 	}
 
 	flag.Parse()
