@@ -83,8 +83,6 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 	containerSpec *egv1a1.KubernetesContainerSpec,
 	shutdownConfig *egv1a1.ShutdownConfig,
 	shutdownManager *egv1a1.ShutdownManager,
-	namespace string,
-	dnsDomain string,
 ) ([]corev1.Container, error) {
 	// Define slice to hold container ports
 	var ports []corev1.ContainerPort
@@ -134,7 +132,6 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			TrustedCA:   filepath.Join("/sds", common.SdsCAFilename),
 		},
 		MaxHeapSizeBytes: maxHeapSizeBytes,
-		XdsServerHost:    ptr.To(config.EnvoyGatewayServiceName),
 	}
 
 	args, err := common.BuildProxyArgs(infra, shutdownConfig, bootstrapConfigOptions, fmt.Sprintf("$(%s)", envoyPodEnvVar))

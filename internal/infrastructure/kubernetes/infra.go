@@ -50,9 +50,6 @@ type Infra struct {
 	// Namespace is the Namespace used for managed infra.
 	Namespace string
 
-	// DNSDomain is the dns domain used by k8s services. Defaults to "cluster.local".
-	DNSDomain string
-
 	// EnvoyGateway is the configuration used to startup Envoy Gateway.
 	EnvoyGateway *egv1a1.EnvoyGateway
 
@@ -64,7 +61,6 @@ type Infra struct {
 func NewInfra(cli client.Client, cfg *config.Server) *Infra {
 	return &Infra{
 		Namespace:    cfg.Namespace,
-		DNSDomain:    cfg.DNSDomain,
 		EnvoyGateway: cfg.EnvoyGateway,
 		Client:       New(cli),
 	}
