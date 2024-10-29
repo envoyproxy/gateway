@@ -15,6 +15,7 @@ new features: |
 # Fixes for bugs identified in previous versions.
 bug fixes: |
   Only log endpoint configuration in verbose logging mode (`-v 4` or higher)
+  The xDS translation failed when wasm http code source configured without a sha
 
 # Enhancements that improve performance.
 performance improvements: |

@@ -833,7 +833,7 @@ type mockWasmCache struct{}
 
 func (m *mockWasmCache) Start(_ context.Context) {}
 
-func (m *mockWasmCache) Get(downloadURL string, _ wasm.GetOptions) (url string, checksum string, err error) {
+func (m *mockWasmCache) Get(downloadURL string, options wasm.GetOptions) (url string, checksum string, err error) {
 	// This is a mock implementation of the wasm.Cache.Get method.
 	sha := sha256.Sum256([]byte(downloadURL))
 	hashedName := hex.EncodeToString(sha[:])
@@ -841,6 +841,9 @@ func (m *mockWasmCache) Get(downloadURL string, _ wasm.GetOptions) (url string, 
 	salt = append(salt, hashedName...)
 	sha = sha256.Sum256(salt)
 	checksum = hex.EncodeToString(sha[:])
+	if options.Checksum != "" && checksum != options.Checksum {
+		return "", "", fmt.Errorf("module downloaded from %v has checksum %v, which does not match: %v", downloadURL, checksum, options.Checksum)
+	}
 	return fmt.Sprintf("https://envoy-gateway:18002/%s.wasm", hashedName), checksum, nil
 }
 

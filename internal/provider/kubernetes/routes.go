@@ -238,16 +238,17 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) error {
 	httpRouteList := &gwapiv1.HTTPRouteList{}
+	if r.hrfCRDExists {
+		httpFilters, err := r.getHTTPRouteFilters(ctx)
+		if err != nil {
+			return err
+		}
 
-	httpFilters, err := r.getHTTPRouteFilters(ctx)
-	if err != nil {
-		return err
-	}
-
-	for i := range httpFilters {
-		filter := httpFilters[i]
-		resourceMap.httpRouteFilters[utils.GetNamespacedNameWithGroupKind(&filter)] = &filter
-		r.processRouteFilterConfigMapRef(ctx, &filter, resourceMap, resourceTree)
+		for i := range httpFilters {
+			filter := httpFilters[i]
+			resourceMap.httpRouteFilters[utils.GetNamespacedNameWithGroupKind(&filter)] = &filter
+			r.processRouteFilterConfigMapRef(ctx, &filter, resourceMap, resourceTree)
+		}
 	}
 
 	extensionRefFilters, err := r.getExtensionRefFilters(ctx)
