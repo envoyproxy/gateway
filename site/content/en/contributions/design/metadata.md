@@ -34,7 +34,15 @@ apiVersion: gateway.networking.k8s.io/v1
 metadata:
   annotations:
     gateway.envoyproxy.io/foo: bar
-/... rest of the resource .../
+  name: myroute
+  namespace: gateway-conformance-infra
+spec:
+  rules:
+    matches:
+    - path:
+        type: PathPrefix
+        value: /mypath
+  
 ```yaml
 name: httproute/gateway-conformance-infra/myroute/rule/0/match/0/*
 match:
