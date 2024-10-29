@@ -29,6 +29,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/protocov"
 )
 
 const (
@@ -478,7 +479,7 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) map[string]*anypb.
 	if args.http1Settings != nil {
 		http1opts.EnableTrailers = args.http1Settings.EnableTrailers
 		if args.http1Settings.PreserveHeaderCase {
-			preservecaseAny, _ := anypb.New(&preservecasev3.PreserveCaseFormatterConfig{})
+			preservecaseAny, _ := protocov.ToAnyWithValidation(&preservecasev3.PreserveCaseFormatterConfig{})
 			http1opts.HeaderKeyFormat = &corev3.Http1ProtocolOptions_HeaderKeyFormat{
 				HeaderFormat: &corev3.Http1ProtocolOptions_HeaderKeyFormat_StatefulFormatter{
 					StatefulFormatter: &corev3.TypedExtensionConfig{
@@ -529,7 +530,7 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) map[string]*anypb.
 		}
 	}
 
-	anyProtocolOptions, _ := anypb.New(&protocolOptions)
+	anyProtocolOptions, _ := protocov.ToAnyWithValidation(&protocolOptions)
 
 	extensionOptions := map[string]*anypb.Any{
 		extensionOptionsKey: anyProtocolOptions,
@@ -560,7 +561,7 @@ func buildProxyProtocolSocket(proxyProtocol *ir.ProxyProtocol, tSocket *corev3.T
 	// If existing transport socket does not exist wrap around raw buffer
 	if tSocket == nil {
 		rawCtx := &rawbufferv3.RawBuffer{}
-		rawCtxAny, err := anypb.New(rawCtx)
+		rawCtxAny, err := protocov.ToAnyWithValidation(rawCtx)
 		if err != nil {
 			return nil
 		}
@@ -575,7 +576,7 @@ func buildProxyProtocolSocket(proxyProtocol *ir.ProxyProtocol, tSocket *corev3.T
 		ppCtx.TransportSocket = tSocket
 	}
 
-	ppCtxAny, err := anypb.New(ppCtx)
+	ppCtxAny, err := protocov.ToAnyWithValidation(ppCtx)
 	if err != nil {
 		return nil
 	}

@@ -43,6 +43,7 @@
         grpcService:
           envoyGrpc:
             clusterName: accesslog/monitoring/envoy-als/port/9000
+        logName: als
         transportApiVersion: V3
   - filter:
       responseFlagFilter:
@@ -119,6 +120,7 @@
               grpcService:
                 envoyGrpc:
                   clusterName: accesslog/monitoring/envoy-als/port/9000
+              logName: als
               transportApiVersion: V3
         - name: envoy.access_loggers.open_telemetry
           typedConfig:

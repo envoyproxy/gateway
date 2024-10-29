@@ -18,6 +18,7 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/protocov"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -80,10 +81,8 @@ func buildHCMWasmFilter(wasm ir.Wasm) (*hcmv3.HttpFilter, error) {
 	if wasmProto, err = wasmConfig(wasm); err != nil {
 		return nil, err
 	}
-	if err = wasmProto.ValidateAll(); err != nil {
-		return nil, err
-	}
-	if wasmAny, err = anypb.New(wasmProto); err != nil {
+
+	if wasmAny, err = protocov.ToAnyWithValidation(wasmProto); err != nil {
 		return nil, err
 	}
 
@@ -114,7 +113,7 @@ func wasmConfig(wasm ir.Wasm) (*wasmfilterv3.Wasm, error) {
 		pluginConfig = string(wasm.Config.Raw)
 	}
 
-	if configAny, err = anypb.New(wrapperspb.String(pluginConfig)); err != nil {
+	if configAny, err = protocov.ToAnyWithValidation(wrapperspb.String(pluginConfig)); err != nil {
 		return nil, err
 	}
 

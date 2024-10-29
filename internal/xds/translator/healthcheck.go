@@ -17,6 +17,7 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/protocov"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -82,10 +83,7 @@ func buildHealthCheckFilter(healthCheck *ir.HealthCheckSettings) (*hcmv3.HttpFil
 		}},
 	}
 
-	if err = healthCheckProto.ValidateAll(); err != nil {
-		return nil, err
-	}
-	if healthCheckAny, err = anypb.New(healthCheckProto); err != nil {
+	if healthCheckAny, err = protocov.ToAnyWithValidation(healthCheckProto); err != nil {
 		return nil, err
 	}
 

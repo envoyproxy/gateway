@@ -25,7 +25,6 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/utils/ptr"
@@ -62,7 +61,7 @@ func http1ProtocolOptions(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
 		EnableTrailers: opts.EnableTrailers,
 	}
 	if opts.PreserveHeaderCase {
-		preservecaseAny, _ := anypb.New(&preservecasev3.PreserveCaseFormatterConfig{})
+		preservecaseAny, _ := protocov.ToAnyWithValidation(&preservecasev3.PreserveCaseFormatterConfig{})
 		r.HeaderKeyFormat = &corev3.Http1ProtocolOptions_HeaderKeyFormat{
 			HeaderFormat: &corev3.Http1ProtocolOptions_HeaderKeyFormat_StatefulFormatter{
 				StatefulFormatter: &corev3.TypedExtensionConfig{
@@ -119,7 +118,7 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 			rejectWithStatus = &typev3.HttpStatus{Code: typev3.StatusCode_Forbidden}
 		}
 
-		customHeaderConfigAny, _ := anypb.New(&customheaderv3.CustomHeaderConfig{
+		customHeaderConfigAny, _ := protocov.ToAnyWithValidation(&customheaderv3.CustomHeaderConfig{
 			HeaderName:       clientIPDetection.CustomHeader.Name,
 			RejectWithStatus: rejectWithStatus,
 
@@ -137,9 +136,12 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 
 // buildXdsTCPListener creates a xds Listener resource
 // TODO: Improve function parameters
-func buildXdsTCPListener(name, address string, port uint32, keepalive *ir.TCPKeepalive, connection *ir.ClientConnection, accesslog *ir.AccessLog) *listenerv3.Listener {
+func buildXdsTCPListener(name, address string, port uint32, keepalive *ir.TCPKeepalive, connection *ir.ClientConnection, accesslog *ir.AccessLog) (*listenerv3.Listener, error) {
 	socketOptions := buildTCPSocketOptions(keepalive)
-	al := buildXdsAccessLog(accesslog, true)
+	al, err := buildXdsAccessLog(accesslog, true)
+	if err != nil {
+		return nil, err
+	}
 	bufferLimitBytes := buildPerConnectionBufferLimitBytes(connection)
 	return &listenerv3.Listener{
 		Name:                          name,
@@ -157,7 +159,7 @@ func buildXdsTCPListener(name, address string, port uint32, keepalive *ir.TCPKee
 				},
 			},
 		},
-	}
+	}, nil
 }
 
 func buildPerConnectionBufferLimitBytes(connection *ir.ClientConnection) *wrapperspb.UInt32Value {
@@ -168,10 +170,14 @@ func buildPerConnectionBufferLimitBytes(connection *ir.ClientConnection) *wrappe
 }
 
 // buildXdsQuicListener creates a xds Listener resource for quic
-func buildXdsQuicListener(name, address string, port uint32, accesslog *ir.AccessLog) *listenerv3.Listener {
+func buildXdsQuicListener(name, address string, port uint32, accesslog *ir.AccessLog) (*listenerv3.Listener, error) {
+	al, err := buildXdsAccessLog(accesslog, true)
+	if err != nil {
+		return nil, err
+	}
 	xdsListener := &listenerv3.Listener{
 		Name:      name + "-quic",
-		AccessLog: buildXdsAccessLog(accesslog, true),
+		AccessLog: al,
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{
 				SocketAddress: &corev3.SocketAddress{
@@ -192,7 +198,7 @@ func buildXdsQuicListener(name, address string, port uint32, accesslog *ir.Acces
 		DrainType: listenerv3.Listener_MODIFY_ONLY,
 	}
 
-	return xdsListener
+	return xdsListener, nil
 }
 
 // addHCMToXDSListener adds a HCM filter to the listener's filter chain, and adds
@@ -208,7 +214,10 @@ func buildXdsQuicListener(name, address string, port uint32, accesslog *ir.Acces
 func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irListener *ir.HTTPListener,
 	accesslog *ir.AccessLog, tracing *ir.Tracing, http3Listener bool, connection *ir.ClientConnection,
 ) error {
-	al := buildXdsAccessLog(accesslog, false)
+	al, err := buildXdsAccessLog(accesslog, false)
+	if err != nil {
+		return err
+	}
 
 	hcmTracing, err := buildHCMTracing(tracing)
 	if err != nil {
@@ -407,8 +416,12 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute
 		statPrefix = "terminate"
 	}
 
+	al, err := buildXdsAccessLog(accesslog, false)
+	if err != nil {
+		return err
+	}
 	mgr := &tcpv3.TcpProxy{
-		AccessLog:  buildXdsAccessLog(accesslog, false),
+		AccessLog:  al,
 		StatPrefix: statPrefix,
 		ClusterSpecifier: &tcpv3.TcpProxy_Cluster{
 			Cluster: clusterName,
@@ -492,7 +505,7 @@ func addXdsTLSInspectorFilter(xdsListener *listenerv3.Listener) error {
 	}
 
 	tlsInspector := &tls_inspectorv3.TlsInspector{}
-	tlsInspectorAny, err := anypb.New(tlsInspector)
+	tlsInspectorAny, err := protocov.ToAnyWithValidation(tlsInspector)
 	if err != nil {
 		return err
 	}
@@ -538,7 +551,7 @@ func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSConfig) (*corev3.Transp
 		}
 	}
 
-	tlsCtxAny, err := anypb.New(tlsCtx)
+	tlsCtxAny, err := protocov.ToAnyWithValidation(tlsCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -578,7 +591,7 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 		}
 	}
 
-	tlsCtxAny, err := anypb.New(tlsCtx)
+	tlsCtxAny, err := protocov.ToAnyWithValidation(tlsCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -680,14 +693,19 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener, access
 	route := &udpv3.Route{
 		Cluster: clusterName,
 	}
-	routeAny, err := anypb.New(route)
+	routeAny, err := protocov.ToAnyWithValidation(route)
+	if err != nil {
+		return nil, err
+	}
+
+	al, err := buildXdsAccessLog(accesslog, false)
 	if err != nil {
 		return nil, err
 	}
 
 	udpProxy := &udpv3.UdpProxyConfig{
 		StatPrefix: statPrefix,
-		AccessLog:  buildXdsAccessLog(accesslog, false),
+		AccessLog:  al,
 		RouteSpecifier: &udpv3.UdpProxyConfig_Matcher{
 			Matcher: &matcher.Matcher{
 				OnNoMatch: &matcher.Matcher_OnMatch{
@@ -701,14 +719,18 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener, access
 			},
 		},
 	}
-	udpProxyAny, err := anypb.New(udpProxy)
+	udpProxyAny, err := protocov.ToAnyWithValidation(udpProxy)
 	if err != nil {
 		return nil, err
 	}
 
+	al, err = buildXdsAccessLog(accesslog, true)
+	if err != nil {
+		return nil, err
+	}
 	xdsListener := &listenerv3.Listener{
 		Name:      udpListener.Name,
-		AccessLog: buildXdsAccessLog(accesslog, true),
+		AccessLog: al,
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{
 				SocketAddress: &corev3.SocketAddress{
@@ -755,7 +777,7 @@ func translateEscapePath(in ir.PathEscapedSlashAction) hcmv3.HttpConnectionManag
 }
 
 func toNetworkFilter(filterName string, filterProto proto.Message) (*listenerv3.Filter, error) {
-	filterAny, err := protocov.ToAnyWithError(filterProto)
+	filterAny, err := protocov.ToAnyWithValidation(filterProto)
 	if err != nil {
 		return nil, err
 	}

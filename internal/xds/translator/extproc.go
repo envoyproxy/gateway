@@ -12,10 +12,10 @@ import (
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	extprocv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ext_proc/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
-	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/protocov"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -72,11 +72,8 @@ func (*extProc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPLi
 // buildHCMExtProcFilter returns an ext_proc HTTP filter from the provided IR HTTPRoute.
 func buildHCMExtProcFilter(extProc ir.ExtProc) (*hcmv3.HttpFilter, error) {
 	extAuthProto := extProcConfig(extProc)
-	if err := extAuthProto.ValidateAll(); err != nil {
-		return nil, err
-	}
 
-	extAuthAny, err := anypb.New(extAuthProto)
+	extAuthAny, err := protocov.ToAnyWithValidation(extAuthProto)
 	if err != nil {
 		return nil, err
 	}

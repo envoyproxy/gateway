@@ -23,6 +23,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/protocov"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -72,7 +73,7 @@ func (*rbac) patchHCM(
 // buildHCMRBACFilter returns a RBAC filter from the provided IR listener.
 func buildHCMRBACFilter() (*hcmv3.HttpFilter, error) {
 	rbacProto := &rbacv3.RBAC{}
-	rbacAny, err := anypb.New(rbacProto)
+	rbacAny, err := protocov.ToAnyWithValidation(rbacProto)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +135,7 @@ func (*rbac) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 		Name:   "ALLOW",
 		Action: rbacconfigv3.RBAC_ALLOW,
 	}
-	if allowAction, err = anypb.New(allow); err != nil {
+	if allowAction, err = protocov.ToAnyWithValidation(allow); err != nil {
 		return err
 	}
 
@@ -142,7 +143,7 @@ func (*rbac) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 		Name:   "DENY",
 		Action: rbacconfigv3.RBAC_DENY,
 	}
-	if denyAction, err = anypb.New(deny); err != nil {
+	if denyAction, err = protocov.ToAnyWithValidation(deny); err != nil {
 		return err
 	}
 
@@ -166,11 +167,11 @@ func (*rbac) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 			})
 		}
 
-		if ipMatcher, err = anypb.New(ipRangeMatcher); err != nil {
+		if ipMatcher, err = protocov.ToAnyWithValidation(ipRangeMatcher); err != nil {
 			return err
 		}
 
-		if sourceIPInput, err = anypb.New(&networkinput.SourceIPInput{}); err != nil {
+		if sourceIPInput, err = protocov.ToAnyWithValidation(&networkinput.SourceIPInput{}); err != nil {
 			return err
 		}
 
@@ -243,12 +244,7 @@ func (*rbac) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 		routeCfgProto.Rbac.Matcher.MatcherType = nil
 	}
 
-	// We need to validate the RBACPerRoute message before converting it to an Any.
-	if err = routeCfgProto.ValidateAll(); err != nil {
-		return err
-	}
-
-	routeCfgAny, err := anypb.New(routeCfgProto)
+	routeCfgAny, err := protocov.ToAnyWithValidation(routeCfgProto)
 	if err != nil {
 		return err
 	}
