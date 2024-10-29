@@ -50,6 +50,10 @@ spec:
         command:
         - envoy
         env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         - name: ENVOY_GATEWAY_NAMESPACE
           valueFrom:
             fieldRef:
@@ -126,6 +130,10 @@ spec:
         command:
         - envoy-gateway
         env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         - name: ENVOY_GATEWAY_NAMESPACE
           valueFrom:
             fieldRef:

@@ -134,7 +134,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			TrustedCA:   filepath.Join("/sds", common.SdsCAFilename),
 		},
 		MaxHeapSizeBytes: maxHeapSizeBytes,
-		XdsServerHost:    ptr.To(fmt.Sprintf("%s.%s.svc.%s", config.EnvoyGatewayServiceName, namespace, dnsDomain)),
+		XdsServerHost:    ptr.To(config.EnvoyGatewayServiceName),
 	}
 
 	args, err := common.BuildProxyArgs(infra, shutdownConfig, bootstrapConfigOptions, fmt.Sprintf("$(%s)", envoyPodEnvVar))
@@ -347,6 +347,14 @@ func expectedVolumes(name string, pod *egv1a1.KubernetesPodSpec) []corev1.Volume
 // expectedContainerEnv returns expected proxy container envs.
 func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec) []corev1.EnvVar {
 	env := []corev1.EnvVar{
+		{
+			Name: "POD_IP",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					FieldPath: "status.podIP",
+				},
+			},
+		},
 		{
 			Name: envoyNsEnvVar,
 			ValueFrom: &corev1.EnvVarSource{

@@ -391,6 +391,10 @@ spec:
         - server
         - --config-path=/config/envoy-gateway.yaml
         env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         - name: ENVOY_GATEWAY_NAMESPACE
           valueFrom:
             fieldRef:

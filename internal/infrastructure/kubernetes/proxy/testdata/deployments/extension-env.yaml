@@ -79,7 +79,7 @@ spec:
             - name: envoy-gateway-proxy-ready-0.0.0.0-19001
               address:
                 socket_address:
-                  address: 0.0.0.0
+                  address: '0.0.0.0'
                   port_value: 19001
                   protocol: TCP
               filter_chains:
@@ -135,7 +135,7 @@ spec:
                     endpoint:
                       address:
                         socket_address:
-                          address: envoy-gateway.envoy-gateway-system.svc.cluster.local
+                          address: envoy-gateway
                           port_value: 18000
               typed_extension_protocol_options:
                 envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
@@ -233,6 +233,10 @@ spec:
         command:
         - envoy
         env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         - name: ENVOY_GATEWAY_NAMESPACE
           valueFrom:
             fieldRef:
@@ -307,6 +311,10 @@ spec:
         command:
         - envoy-gateway
         env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         - name: ENVOY_GATEWAY_NAMESPACE
           valueFrom:
             fieldRef:
