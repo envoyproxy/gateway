@@ -25,8 +25,16 @@ Future enhancements may include:
 
 ## Translation 
 
-Envoy Gateway uses the following namespace for envoy resource metadata: `io.envoyproxy.gateway.metadata`. For example, an envoy [route][] resource may have the following metadata structure:
+Envoy Gateway uses the following namespace for envoy resource metadata: `gateway.envoyproxy.io/`. For example, an envoy [route][] resource may have the following metadata structure:
+```yaml
 
+````
+kind: HTTPRoute
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  annotations:
+    gateway.envoyproxy.io/foo: bar
+/... rest of the resource .../
 ```yaml
 name: httproute/gateway-conformance-infra/myroute/rule/0/match/0/*
 match:
