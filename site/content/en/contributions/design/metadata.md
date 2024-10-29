@@ -26,9 +26,10 @@ Future enhancements may include:
 ## Translation 
 
 Envoy Gateway uses the following namespace for envoy resource metadata: `gateway.envoyproxy.io/`. For example, an envoy [route][] resource may have the following metadata structure:
-```yaml
 
-````
+Kubernetes resource:
+
+```yaml
 kind: HTTPRoute
 apiVersion: gateway.networking.k8s.io/v1
 metadata:
@@ -42,7 +43,10 @@ spec:
     - path:
         type: PathPrefix
         value: /mypath
-  
+```
+
+Metadata structure:
+
 ```yaml
 name: httproute/gateway-conformance-infra/myroute/rule/0/match/0/*
 match:
