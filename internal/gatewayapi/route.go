@@ -362,6 +362,10 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 			Name:               irRouteName(httpRoute, ruleIdx, matchIdx),
 			SessionPersistence: sessionPersistence,
 		}
+		irRoute.Metadata = buildRouteMetadata(httpRoute)
+		if rule.Name != nil {
+			irRoute.Metadata.SectionName = string(*rule.Name)
+		}
 		processRouteTimeout(irRoute, rule)
 
 		if match.Path != nil {
@@ -696,7 +700,6 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 			continue
 		}
 		hasHostnameIntersection = true
-		routeMetadata := buildRouteMetadata(route)
 
 		var perHostRoutes []*ir.HTTPRoute
 		for _, host := range hosts {
@@ -721,6 +724,10 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 				// Remove dots from the hostname before appending it to the IR Route name
 				// since dots are special chars used in stats tag extraction in Envoy
 				underscoredHost := strings.ReplaceAll(host, ".", "_")
+				routeMetadata := routeRoute.Metadata
+				if routeMetadata == nil { // if metadata was not set in the matcher evaluation phase, build it here
+					routeMetadata = buildRouteMetadata(route)
+				}
 				hostRoute := &ir.HTTPRoute{
 					Name:                  fmt.Sprintf("%s/%s", routeRoute.Name, underscoredHost),
 					Metadata:              routeMetadata,
