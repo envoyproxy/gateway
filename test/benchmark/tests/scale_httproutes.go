@@ -11,6 +11,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
@@ -98,6 +99,8 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 					gatewayAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, bSuite.Client, bSuite.TimeoutConfig,
 						bSuite.ControllerName, kubernetes.NewGatewayRef(gatewayNN), routeNNs...)
 
+					// Add sleep to wait until watchable memory is updated
+					time.Sleep(10 * time.Second)
 					// Run benchmark test at different scale.
 					name := fmt.Sprintf("scale-down-httproutes-%d", scale)
 					report, err := bSuite.Benchmark(t, ctx, name, gatewayAddr, requestHeaders...)
