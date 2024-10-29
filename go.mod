@@ -15,7 +15,7 @@ require (
 	github.com/envoyproxy/go-control-plane v0.13.1
 	github.com/envoyproxy/ratelimit v1.4.1-0.20230427142404-e2a87f41d3a7
 	github.com/evanphx/json-patch/v5 v5.9.0
-	github.com/fatih/color v1.17.0
+	github.com/fatih/color v1.18.0
 	github.com/go-logfmt/logfmt v0.6.0
 	github.com/go-logr/logr v1.4.2
 	github.com/go-logr/zapr v1.3.0
@@ -33,7 +33,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.9.0
 	github.com/telepresenceio/watchable v0.0.0-20220726211108-9bb86f92afa7
-	github.com/tsaarni/certyaml v0.9.3
+	github.com/tsaarni/certyaml v0.10.0
 	go.opentelemetry.io/otel v1.31.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.31.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v1.31.0
@@ -63,7 +63,7 @@ require (
 
 require (
 	github.com/docker/docker v27.3.1+incompatible
-	github.com/replicatedhq/troubleshoot v0.107.1
+	github.com/replicatedhq/troubleshoot v0.107.4
 	github.com/tetratelabs/func-e v1.1.5-0.20240822223546-c85a098d5bf0
 	google.golang.org/grpc v1.67.1
 	sigs.k8s.io/kubectl-validate v0.0.5-0.20240827210056-ce13d95db263
