@@ -356,6 +356,9 @@ func TestValidateSecretForReconcile(t *testing.T) {
 	r := gatewayAPIReconciler{
 		classController: egv1a1.GatewayControllerName,
 		log:             logger,
+		spCRDExists:     true,
+		epCRDExists:     true,
+		eepCRDExists:    true,
 	}
 
 	for _, tc := range testCases {
@@ -848,9 +851,16 @@ func TestValidateServiceForReconcile(t *testing.T) {
 	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
-		classController: egv1a1.GatewayControllerName,
-		log:             logger,
-		mergeGateways:   sets.New[string]("test-mg"),
+		classController:    egv1a1.GatewayControllerName,
+		log:                logger,
+		mergeGateways:      sets.New[string]("test-mg"),
+		grpcRouteCRDExists: true,
+		tcpRouteCRDExists:  true,
+		udpRouteCRDExists:  true,
+		tlsRouteCRDExists:  true,
+		spCRDExists:        true,
+		eepCRDExists:       true,
+		epCRDExists:        true,
 	}
 
 	for _, tc := range testCases {
