@@ -278,6 +278,22 @@ func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 ) []corev1.EnvVar {
 	env := []corev1.EnvVar{
 		{
+			Name:  "PROTO",
+			Value: "tcp6",
+		},
+		{
+			Name:  "HOST",
+			Value: "",
+		},
+		{
+			Name:  "DEBUG_HOST",
+			Value: "",
+		},
+		{
+			Name:  "GRPC_HOST",
+			Value: "",
+		},
+		{
 			Name:  RuntimeRootEnvVar,
 			Value: "/data",
 		},

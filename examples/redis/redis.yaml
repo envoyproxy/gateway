@@ -60,6 +60,10 @@ data:
     kind: EnvoyGateway
     provider:
       type: Kubernetes
+      kubernetes:
+        rateLimitDeployment:
+          container:
+            image: ghcr.io/zirain-dev/ratelimit:latest  # remove this line when upstream PR merged
     gateway:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     extensionApis:
