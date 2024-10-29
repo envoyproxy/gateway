@@ -13,7 +13,7 @@ envoyExtensionPolicies:
     wasm:
     - code:
         http:
-          sha256: a1f0b78b8c1320690327800e3a5de10e7dbba7b6c752e702193a395a52c727b6
+          sha256: b6922722ab58109abfaa8d9eb16f339b38b2bb1c17076b083b34438b934e7463
           url: https://www.test.com/wasm-filter-4.wasm
         type: HTTP
       config:
@@ -53,7 +53,7 @@ envoyExtensionPolicies:
     wasm:
     - code:
         http:
-          sha256: 746df05c8f3a0b07a46c0967cfbc5cbe5b9d48d0f79b6177eeedf8be6c8b34b5
+          sha256: 2d89c4c6ab2a1c615c7696ed37ade9e50654ac70384b5d45100eb08e62130ff4
           url: https://www.example.com/wasm-filter-1.wasm
         type: HTTP
       config:
@@ -68,7 +68,7 @@ envoyExtensionPolicies:
             group: null
             kind: null
             name: my-pull-secret
-          sha256: a1efca12ea51069abb123bf9c77889fcc2a31cc5483fc14d115e44fdf07c7980
+          sha256: 314100af781b98a8ca175d5bf90a8bf76576e20a2f397a88223404edc6ebfd46
           url: oci://www.example.com/wasm-filter-2:v1.0.0
         type: Image
       config:
@@ -277,7 +277,7 @@ xdsIR:
             httpWasmCode:
               originalDownloadingURL: https://www.test.com/wasm-filter-4.wasm
               servingURL: https://envoy-gateway:18002/fe571e7b1ef5dc626ceb2c2c86782a134a92989a2643485238951696ae4334c3.wasm
-              sha256: a1f0b78b8c1320690327800e3a5de10e7dbba7b6c752e702193a395a52c727b6
+              sha256: b6922722ab58109abfaa8d9eb16f339b38b2bb1c17076b083b34438b934e7463
             name: envoyextensionpolicy/default/policy-for-http-route/wasm/0
             wasmName: wasm-filter-4
         hostname: www.example.com
@@ -311,7 +311,7 @@ xdsIR:
             httpWasmCode:
               originalDownloadingURL: https://www.example.com/wasm-filter-1.wasm
               servingURL: https://envoy-gateway:18002/5c90b9a82642ce00a7753923fabead306b9d9a54a7c0bd2463a1af3efcfb110b.wasm
-              sha256: 746df05c8f3a0b07a46c0967cfbc5cbe5b9d48d0f79b6177eeedf8be6c8b34b5
+              sha256: 2d89c4c6ab2a1c615c7696ed37ade9e50654ac70384b5d45100eb08e62130ff4
             name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/0
             wasmName: wasm-filter-1
           - config:
