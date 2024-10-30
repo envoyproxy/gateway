@@ -126,6 +126,7 @@ jobs:
         # Enable these after https://github.com/envoyproxy/gateway/issues/4572 fixed
         # - version: v1.31.0
         #   ipFamily: ipv6   # only run ipv6 test on latest version to save time
+        # TODO: this's IPv4 first, need a way to test IPv6 first.
         - version: v1.31.0
           ipFamily: dual  # only run dual test on latest version to save time
     steps:
