@@ -132,7 +132,9 @@ experimental-conformance: create-cluster kube-install-image kube-deploy run-expe
 benchmark: create-cluster kube-install-image kube-deploy-for-benchmark-test run-benchmark delete-cluster ## Create a kind cluster, deploy EG into it, run Envoy Gateway benchmark test, and clean up.
 
 .PHONY: e2e
-e2e: create-cluster kube-install-image kube-deploy install-ratelimit install-e2e-telemetry run-e2e delete-cluster
+e2e: create-cluster kube-install-image kube-deploy \
+	install-ratelimit install-e2e-telemetry kube-install-examples-image \
+	run-e2e delete-cluster
 
 .PHONY: install-ratelimit
 install-ratelimit:
