@@ -12,6 +12,7 @@ import (
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/utils/env"
+	"github.com/envoyproxy/gateway/internal/utils/net"
 )
 
 const (
@@ -38,6 +39,8 @@ type Server struct {
 	Logger logging.Logger
 	// Elected chan is used to signal what a leader is elected
 	Elected chan struct{}
+	// IPv6First is a flag to indicate if the server should prefer IPv6 addresses.
+	IPv6First bool
 }
 
 // New returns a Server with default parameters.
@@ -46,6 +49,7 @@ func New() (*Server, error) {
 		EnvoyGateway: egv1a1.DefaultEnvoyGateway(),
 		Namespace:    env.Lookup("ENVOY_GATEWAY_NAMESPACE", DefaultNamespace),
 		DNSDomain:    env.Lookup("KUBERNETES_CLUSTER_DOMAIN", DefaultDNSDomain),
+		IPv6First:    net.IsIPv6FirstPod(),
 		// the default logger
 		Logger:  logging.DefaultLogger(egv1a1.LogLevelInfo),
 		Elected: make(chan struct{}),

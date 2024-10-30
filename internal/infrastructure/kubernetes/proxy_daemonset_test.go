@@ -66,7 +66,7 @@ func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
 		},
 	}
 
-	r := proxy.NewResourceRender(cfg.Namespace, cfg.DNSDomain, infra.GetProxyInfra(), cfg.EnvoyGateway)
+	r := proxy.NewResourceRender(false, cfg.Namespace, cfg.DNSDomain, infra.GetProxyInfra(), cfg.EnvoyGateway)
 	ds, err := r.DaemonSet()
 	require.NoError(t, err)
 
@@ -245,7 +245,7 @@ func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
 			}
 
 			kube := NewInfra(cli, cfg)
-			r := proxy.NewResourceRender(kube.Namespace, kube.DNSDomain, tc.in.GetProxyInfra(), cfg.EnvoyGateway)
+			r := proxy.NewResourceRender(false, kube.Namespace, kube.DNSDomain, tc.in.GetProxyInfra(), cfg.EnvoyGateway)
 			err := kube.createOrUpdateDaemonSet(context.Background(), r)
 			if tc.wantErr {
 				require.Error(t, err)

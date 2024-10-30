@@ -49,14 +49,17 @@ type ResourceRender struct {
 	DNSDomain string
 
 	ShutdownManager *egv1a1.ShutdownManager
+
+	IPv6First bool
 }
 
-func NewResourceRender(ns string, dnsDomain string, infra *ir.ProxyInfra, gateway *egv1a1.EnvoyGateway) *ResourceRender {
+func NewResourceRender(ipv6First bool, ns string, dnsDomain string, infra *ir.ProxyInfra, gateway *egv1a1.EnvoyGateway) *ResourceRender {
 	return &ResourceRender{
 		Namespace:       ns,
 		DNSDomain:       dnsDomain,
 		infra:           infra,
 		ShutdownManager: gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().ShutdownManager,
+		IPv6First:       ipv6First,
 	}
 }
 
@@ -262,7 +265,8 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 
 	proxyConfig := r.infra.GetProxyConfig()
 	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Namespace, r.DNSDomain)
+	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown,
+		r.ShutdownManager, r.Namespace, r.DNSDomain, r.IPv6First)
 	if err != nil {
 		return nil, err
 	}
@@ -364,7 +368,8 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 	proxyConfig := r.infra.GetProxyConfig()
 
 	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Namespace, r.DNSDomain)
+	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown,
+		r.ShutdownManager, r.Namespace, r.DNSDomain, r.IPv6First)
 	if err != nil {
 		return nil, err
 	}

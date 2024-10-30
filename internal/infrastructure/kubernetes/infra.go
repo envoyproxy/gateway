@@ -58,6 +58,8 @@ type Infra struct {
 
 	// Client wrap k8s client.
 	Client *InfraClient
+
+	IPv6First bool
 }
 
 // NewInfra returns a new Infra.
@@ -67,6 +69,7 @@ func NewInfra(cli client.Client, cfg *config.Server) *Infra {
 		DNSDomain:    cfg.DNSDomain,
 		EnvoyGateway: cfg.EnvoyGateway,
 		Client:       New(cli),
+		IPv6First:    cfg.IPv6First,
 	}
 }
 

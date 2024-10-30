@@ -165,26 +165,43 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := GetRenderedBootstrapConfig(tc.opts)
-			require.NoError(t, err)
-
-			if *overrideTestData {
-				// nolint:gosec
-				err = os.WriteFile(path.Join("testdata", "render", fmt.Sprintf("%s.yaml", tc.name)), []byte(got), 0o644)
+			// IPv4
+			{
+				got, err := GetRenderedBootstrapConfig(tc.opts)
 				require.NoError(t, err)
-				return
-			}
 
-			expected, err := readTestData(tc.name)
-			require.NoError(t, err)
-			assert.Equal(t, expected, got)
+				if *overrideTestData {
+					// nolint:gosec
+					err = os.WriteFile(path.Join("testdata", "render", fmt.Sprintf("%s.yaml", tc.name)), []byte(got), 0o644)
+					require.NoError(t, err)
+				} else {
+					expected, err := readTestData(tc.name, "render")
+					require.NoError(t, err)
+					assert.Equal(t, expected, got)
+				}
+			}
+			// IPv6
+			{
+				tc.opts.IPFamily = egv1a1.IPv6
+				gotIPv6, err := GetRenderedBootstrapConfig(tc.opts)
+				require.NoError(t, err)
+
+				if *overrideTestData {
+					// nolint:gosec
+					err = os.WriteFile(path.Join("testdata", "ipv6", fmt.Sprintf("%s.yaml", tc.name)), []byte(gotIPv6), 0o644)
+					require.NoError(t, err)
+				} else {
+					expected, err := readTestData(tc.name, "ipv6")
+					require.NoError(t, err)
+					assert.Equal(t, expected, gotIPv6)
+				}
+			}
 		})
 	}
 }
 
-func readTestData(caseName string) (string, error) {
-	filename := path.Join("testdata", "render", fmt.Sprintf("%s.yaml", caseName))
-
+func readTestData(caseName string, sub string) (string, error) {
+	filename := path.Join("testdata", sub, fmt.Sprintf("%s.yaml", caseName))
 	b, err := os.ReadFile(filename)
 	if err != nil {
 		return "", err

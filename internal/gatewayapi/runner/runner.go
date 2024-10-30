@@ -152,6 +152,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					Namespace:               r.Namespace,
 					MergeGateways:           gatewayapi.IsMergeGatewaysEnabled(resources),
 					WasmCache:               r.wasmCache,
+					IPv6First:               r.IPv6First,
 				}
 
 				// If an extension is loaded, pass its supported groups/kinds to the translator

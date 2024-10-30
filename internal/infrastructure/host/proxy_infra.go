@@ -17,6 +17,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/infrastructure/common"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
+	"github.com/envoyproxy/gateway/internal/utils/net"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
@@ -59,6 +60,7 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 		WasmServerPort:  ptr.To(int32(0)),
 		AdminServerPort: ptr.To(int32(0)),
 		ReadyServerPort: ptr.To(int32(0)),
+		IPFamily:        net.PreferIPFamily(false, proxyConfig),
 	}
 
 	args, err := common.BuildProxyArgs(proxyInfra, proxyConfig.Spec.Shutdown, bootstrapConfigOptions, proxyName)

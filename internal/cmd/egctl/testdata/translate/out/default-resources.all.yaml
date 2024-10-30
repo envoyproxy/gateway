@@ -43,7 +43,7 @@ envoyProxyForGatewayClass:
           - name: envoy-gateway-proxy-ready-0.0.0.0-19001
             address:
               socket_address:
-                address: 0.0.0.0
+                address: '0.0.0.0'
                 port_value: 19001
                 protocol: TCP
             filter_chains:

@@ -20,6 +20,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
+	"github.com/envoyproxy/gateway/internal/utils/net"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
@@ -83,8 +84,8 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 	containerSpec *egv1a1.KubernetesContainerSpec,
 	shutdownConfig *egv1a1.ShutdownConfig,
 	shutdownManager *egv1a1.ShutdownManager,
-	namespace string,
-	dnsDomain string,
+	namespace string, dnsDomain string,
+	ipv6First bool,
 ) ([]corev1.Container, error) {
 	// Define slice to hold container ports
 	var ports []corev1.ContainerPort
@@ -135,6 +136,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		},
 		MaxHeapSizeBytes: maxHeapSizeBytes,
 		XdsServerHost:    ptr.To(fmt.Sprintf("%s.%s.svc.%s", config.EnvoyGatewayServiceName, namespace, dnsDomain)),
+		IPFamily:         net.PreferIPFamily(ipv6First, infra.Config),
 	}
 
 	args, err := common.BuildProxyArgs(infra, shutdownConfig, bootstrapConfigOptions, fmt.Sprintf("$(%s)", envoyPodEnvVar))

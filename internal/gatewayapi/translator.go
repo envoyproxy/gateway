@@ -91,6 +91,9 @@ type Translator struct {
 
 	// WasmCache is the cache for Wasm modules.
 	WasmCache wasm.Cache
+
+	// IPv6First is true when IPv6 addresses should be preferred
+	IPv6First bool
 }
 
 type TranslateResult struct {
