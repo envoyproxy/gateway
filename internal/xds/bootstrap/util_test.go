@@ -22,7 +22,7 @@ import (
 var overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
 
 func TestApplyBootstrapConfig(t *testing.T) {
-	str, _ := readTestData("enable-prometheus")
+	str, _ := readTestData("enable-prometheus", "render")
 	cases := []struct {
 		name             string
 		boostrapConfig   *egv1a1.ProxyBootstrap

@@ -22,6 +22,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/naming"
+	"github.com/envoyproxy/gateway/internal/utils/net"
 )
 
 var _ ListenersTranslator = (*Translator)(nil)
@@ -99,6 +100,12 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			if !isReady {
 				continue
 			}
+
+			address := net.IPv4ListenerAddress
+			if net.PreferIPFamily(t.IPv6First, gateway.envoyProxy) == egv1a1.IPv6 {
+				address = net.IPv6ListenerAddress
+			}
+
 			// Add the listener to the Xds IR
 			servicePort := &protocolPort{protocol: listener.Protocol, port: int32(listener.Port)}
 			containerPort := servicePortToContainerPort(int32(listener.Port), gateway.envoyProxy)
@@ -107,7 +114,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 				irListener := &ir.HTTPListener{
 					CoreListenerDetails: ir.CoreListenerDetails{
 						Name:     irListenerName(listener),
-						Address:  "0.0.0.0",
+						Address:  address,
 						Port:     uint32(containerPort),
 						Metadata: buildListenerMetadata(listener, gateway),
 						IPFamily: getIPFamily(gateway.envoyProxy),
@@ -134,7 +141,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 				irListener := &ir.TCPListener{
 					CoreListenerDetails: ir.CoreListenerDetails{
 						Name:     irListenerName(listener),
-						Address:  "0.0.0.0",
+						Address:  address,
 						Port:     uint32(containerPort),
 						IPFamily: getIPFamily(gateway.envoyProxy),
 					},
@@ -150,7 +157,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 				irListener := &ir.UDPListener{
 					CoreListenerDetails: ir.CoreListenerDetails{
 						Name:    irListenerName(listener),
-						Address: "0.0.0.0",
+						Address: address,
 						Port:    uint32(containerPort),
 					},
 				}

@@ -28,7 +28,8 @@ const (
 	// It defaults to the Envoy Gateway Kubernetes service.
 	envoyGatewayXdsServerHost = "envoy-gateway"
 	// EnvoyAdminAddress is the listening address of the envoy admin interface.
-	EnvoyAdminAddress = "127.0.0.1"
+	envoyAdminAddress     = "127.0.0.1"
+	envoyAdminAddressIPv6 = "::1"
 	// EnvoyAdminPort is the port used to expose admin interface.
 	EnvoyAdminPort = 19000
 	// envoyAdminAccessLogPath is the path used to expose admin access log.
@@ -41,13 +42,28 @@ const (
 	// DefaultWasmServerPort is the default listening port of the wasm HTTP server.
 	wasmServerPort = 18002
 
-	envoyReadinessAddress = "0.0.0.0"
-	EnvoyReadinessPort    = 19001
-	EnvoyReadinessPath    = "/ready"
+	envoyReadinessAddress     = "0.0.0.0"
+	envoyReadinessAddressIPv6 = "::"
+	EnvoyReadinessPort        = 19001
+	EnvoyReadinessPath        = "/ready"
 
 	defaultSdsTrustedCAPath   = "/sds/xds-trusted-ca.json"
 	defaultSdsCertificatePath = "/sds/xds-certificate.json"
 )
+
+func AdminAddress(family egv1a1.IPFamily) string {
+	if family == egv1a1.IPv6 {
+		return envoyAdminAddressIPv6
+	}
+	return envoyAdminAddress
+}
+
+func readinessAddress(family egv1a1.IPFamily) string {
+	if family == egv1a1.IPv6 {
+		return envoyReadinessAddressIPv6
+	}
+	return envoyReadinessAddress
+}
 
 //go:embed bootstrap.yaml.tpl
 var bootstrapTmplStr string
@@ -148,6 +164,7 @@ type RenderBootstrapConfigOptions struct {
 	AdminServerPort  *int32
 	ReadyServerPort  *int32
 	MaxHeapSizeBytes uint64
+	IPFamily         egv1a1.IPFamily
 }
 
 type SdsConfigPath struct {
@@ -240,6 +257,11 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 		}
 	}
 
+	ipFamily := egv1a1.IPv4
+	if opts != nil {
+		ipFamily = opts.IPFamily
+	}
+
 	cfg := &bootstrapConfig{
 		parameters: bootstrapParameters{
 			XdsServer: serverParameters{
@@ -251,12 +273,12 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 				Port:    wasmServerPort,
 			},
 			AdminServer: adminServerParameters{
-				Address:       EnvoyAdminAddress,
+				Address:       AdminAddress(ipFamily),
 				Port:          EnvoyAdminPort,
 				AccessLogPath: envoyAdminAccessLogPath,
 			},
 			ReadyServer: readyServerParameters{
-				Address:       envoyReadinessAddress,
+				Address:       readinessAddress(ipFamily),
 				Port:          EnvoyReadinessPort,
 				ReadinessPath: EnvoyReadinessPath,
 			},

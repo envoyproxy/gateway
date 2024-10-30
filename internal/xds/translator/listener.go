@@ -35,6 +35,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/net"
 	"github.com/envoyproxy/gateway/internal/utils/protocov"
 	xdsfilters "github.com/envoyproxy/gateway/internal/xds/filters"
 )
@@ -146,36 +147,6 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 	return extensionConfig
 }
 
-func setAddressByIPFamily(socketAddress *corev3.SocketAddress, ipFamily *ir.IPFamily, port uint32) []*listenerv3.AdditionalAddress {
-	if ipFamily == nil {
-		return nil
-	}
-	switch *ipFamily {
-	case ir.IPv4:
-		socketAddress.Address = "0.0.0.0"
-	case ir.IPv6:
-		socketAddress.Address = "::"
-	case ir.Dualstack:
-		socketAddress.Address = "0.0.0.0"
-		return []*listenerv3.AdditionalAddress{
-			{
-				Address: &corev3.Address{
-					Address: &corev3.Address_SocketAddress{
-						SocketAddress: &corev3.SocketAddress{
-							Protocol: socketAddress.Protocol,
-							Address:  "::",
-							PortSpecifier: &corev3.SocketAddress_PortValue{
-								PortValue: port,
-							},
-						},
-					},
-				},
-			},
-		}
-	}
-	return nil
-}
-
 // buildXdsTCPListener creates a xds Listener resource
 // TODO: Improve function parameters
 func buildXdsTCPListener(
@@ -210,9 +181,38 @@ func buildXdsTCPListener(
 		},
 	}
 
-	socketAddress := listener.Address.GetSocketAddress()
-	listener.AdditionalAddresses = setAddressByIPFamily(socketAddress, ipFamily, port)
+	listener.AdditionalAddresses = additionalAddressByIPFamily(address, ipFamily, port)
 	return listener, nil
+}
+
+func additionalAddressByIPFamily(currentAddress string, ipFamily *ir.IPFamily, port uint32) []*listenerv3.AdditionalAddress {
+	if ipFamily == nil {
+		return nil
+	}
+
+	if *ipFamily == ir.Dualstack {
+		additionalAddress := net.IPv6ListenerAddress
+		// If the current address is already IPv6, use the IPv4 equivalent
+		if currentAddress == net.IPv6ListenerAddress {
+			additionalAddress = net.IPv4ListenerAddress
+		}
+		return []*listenerv3.AdditionalAddress{
+			{
+				Address: &corev3.Address{
+					Address: &corev3.Address_SocketAddress{
+						SocketAddress: &corev3.SocketAddress{
+							Protocol: corev3.SocketAddress_TCP,
+							Address:  additionalAddress,
+							PortSpecifier: &corev3.SocketAddress_PortValue{
+								PortValue: port,
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+	return nil
 }
 
 func buildPerConnectionBufferLimitBytes(connection *ir.ClientConnection) *wrapperspb.UInt32Value {
