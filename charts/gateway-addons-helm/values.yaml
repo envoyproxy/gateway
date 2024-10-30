@@ -186,7 +186,7 @@ opentelemetry-collector:
   config:
     exporters:
       prometheus:
-        endpoint: 0.0.0.0:19001
+        endpoint: "[${env:MY_POD_IP}]:19001"
       debug:
         verbosity: detailed
       loki:
@@ -196,10 +196,8 @@ opentelemetry-collector:
         tls:
           insecure: true
     extensions:
-      # The health_check extension is mandatory for this chart.
-      # Without the health_check extension the collector will fail the readiness and liveliness probes.
-      # The health_check extension can be modified, but should never be removed.
-      health_check: {}
+      health_check:
+        endpoint: "[${env:MY_POD_IP}]:13133"
     processors:
       attributes:
         actions:
@@ -209,17 +207,36 @@ opentelemetry-collector:
             # Loki will convert this to k8s_pod_name label.
             value: k8s.pod.name, k8s.namespace.name
     receivers:
+      jaeger:
+        protocols:
+          grpc:
+            endpoint: "[${env:MY_POD_IP}]:14250"
+          thrift_http:
+            endpoint: "[${env:MY_POD_IP}]:14268"
+          thrift_compact:
+            endpoint: "[${env:MY_POD_IP}]:6831"
       datadog:
-        endpoint: ${env:MY_POD_IP}:8126
+        endpoint: "[${env:MY_POD_IP}]:8126"
       zipkin:
-        endpoint: ${env:MY_POD_IP}:9411
+        endpoint: "[${env:MY_POD_IP}]:9411"
       otlp:
         protocols:
           grpc:
-            endpoint: ${env:MY_POD_IP}:4317
+            endpoint: "[${env:MY_POD_IP}]:4317"
           http:
-            endpoint: ${env:MY_POD_IP}:4318
+            endpoint: "[${env:MY_POD_IP}]:4318"
+      prometheus:
+        config:
+          scrape_configs:
+          - job_name: opentelemetry-collector
+            scrape_interval: 10s
+            static_configs:
+            - targets:
+              - "[${env:MY_POD_IP}]:8888"
     service:
+      telemetry:
+        metrics:
+          address: "[${env:MY_POD_IP}]:8888"
       extensions:
         - health_check
       pipelines:
