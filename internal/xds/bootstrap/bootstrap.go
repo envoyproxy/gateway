@@ -9,7 +9,6 @@ import (
 	// Register embed
 	_ "embed"
 	"fmt"
-	"os"
 	"strings"
 	"text/template"
 
@@ -51,16 +50,14 @@ const (
 )
 
 func AdminAddress() string {
-	podIP := os.Getenv("POD_IP")
-	if netutils.IsIPv6(podIP) {
+	if netutils.IsIPv6Pod() {
 		return envoyAdminAddressIPv6
 	}
 	return envoyAdminAddress
 }
 
 func readinessAddress() string {
-	podIP := os.Getenv("POD_IP")
-	if netutils.IsIPv6(podIP) {
+	if netutils.IsIPv6Pod() {
 		return envoyReadinessAddressIPv6
 	}
 	return envoyReadinessAddress

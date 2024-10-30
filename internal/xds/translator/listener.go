@@ -150,13 +150,12 @@ func setAddressByIPFamily(socketAddress *corev3.SocketAddress, ipFamily *ir.IPFa
 	if ipFamily == nil {
 		return nil
 	}
-	switch *ipFamily {
-	case ir.IPv4:
-		socketAddress.Address = "0.0.0.0"
-	case ir.IPv6:
-		socketAddress.Address = "::"
-	case ir.Dualstack:
-		socketAddress.Address = "0.0.0.0"
+	if *ipFamily == ir.Dualstack {
+		// case ir.IPv4:
+		// 	socketAddress.Address = "0.0.0.0"
+		// case ir.IPv6:
+		// 	socketAddress.Address = "::"
+		// socketAddress.Address = "0.0.0.0"
 		return []*listenerv3.AdditionalAddress{
 			{
 				Address: &corev3.Address{
