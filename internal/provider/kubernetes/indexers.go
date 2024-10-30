@@ -40,6 +40,7 @@ const (
 	backendSecurityPolicyIndex       = "backendSecurityPolicyIndex"
 	configMapCtpIndex                = "configMapCtpIndex"
 	secretCtpIndex                   = "secretCtpIndex"
+	secretBtlsIndex                  = "secretBtlsIndex"
 	configMapBtlsIndex               = "configMapBtlsIndex"
 	backendEnvoyExtensionPolicyIndex = "backendEnvoyExtensionPolicyIndex"
 	backendEnvoyProxyTelemetryIndex  = "backendEnvoyProxyTelemetryIndex"
@@ -702,7 +703,7 @@ func configMapRouteFilterIndexFunc(rawObj client.Object) []string {
 	return configMapReferences
 }
 
-// addBtlsIndexers adds indexing on BackendTLSPolicy, for ConfigMap objects that are
+// addBtlsIndexers adds indexing on BackendTLSPolicy, for ConfigMap and Secret objects that are
 // referenced in BackendTLSPolicy objects. This helps in querying for BackendTLSPolicies that are
 // affected by a particular ConfigMap CRUD.
 func addBtlsIndexers(ctx context.Context, mgr manager.Manager) error {
@@ -710,6 +711,9 @@ func addBtlsIndexers(ctx context.Context, mgr manager.Manager) error {
 		return err
 	}
 
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a3.BackendTLSPolicy{}, secretBtlsIndex, secretBtlsIndexFunc); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -729,6 +733,24 @@ func configMapBtlsIndexFunc(rawObj client.Object) []string {
 		}
 	}
 	return configMapReferences
+}
+
+func secretBtlsIndexFunc(rawObj client.Object) []string {
+	btls := rawObj.(*gwapiv1a3.BackendTLSPolicy)
+	var secretReferences []string
+	if btls.Spec.Validation.CACertificateRefs != nil {
+		for _, caCertRef := range btls.Spec.Validation.CACertificateRefs {
+			if string(caCertRef.Kind) == resource.KindSecret {
+				secretReferences = append(secretReferences,
+					types.NamespacedName{
+						Namespace: btls.Namespace,
+						Name:      string(caCertRef.Name),
+					}.String(),
+				)
+			}
+		}
+	}
+	return secretReferences
 }
 
 // addEnvoyExtensionPolicyIndexers adds indexing on EnvoyExtensionPolicy.
