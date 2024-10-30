@@ -237,10 +237,10 @@ data:
         tls:
           insecure: true
       prometheus:
-        endpoint: 0.0.0.0:19001
+        endpoint: '[${env:MY_POD_IP}]:19001'
     extensions:
       health_check:
-        endpoint: ${env:MY_POD_IP}:13133
+        endpoint: '[${env:MY_POD_IP}]:13133'
     processors:
       attributes:
         actions:
@@ -254,21 +254,21 @@ data:
         spike_limit_percentage: 25
     receivers:
       datadog:
-        endpoint: ${env:MY_POD_IP}:8126
+        endpoint: '[${env:MY_POD_IP}]:8126'
       jaeger:
         protocols:
           grpc:
-            endpoint: ${env:MY_POD_IP}:14250
+            endpoint: '[${env:MY_POD_IP}]:14250'
           thrift_compact:
-            endpoint: ${env:MY_POD_IP}:6831
+            endpoint: '[${env:MY_POD_IP}]:6831'
           thrift_http:
-            endpoint: ${env:MY_POD_IP}:14268
+            endpoint: '[${env:MY_POD_IP}]:14268'
       otlp:
         protocols:
           grpc:
-            endpoint: ${env:MY_POD_IP}:4317
+            endpoint: '[${env:MY_POD_IP}]:4317'
           http:
-            endpoint: ${env:MY_POD_IP}:4318
+            endpoint: '[${env:MY_POD_IP}]:4318'
       prometheus:
         config:
           scrape_configs:
@@ -276,9 +276,9 @@ data:
             scrape_interval: 10s
             static_configs:
             - targets:
-              - ${env:MY_POD_IP}:8888
+              - '[${env:MY_POD_IP}]:8888'
       zipkin:
-        endpoint: ${env:MY_POD_IP}:9411
+        endpoint: '[${env:MY_POD_IP}]:9411'
     service:
       extensions:
       - health_check
@@ -311,7 +311,7 @@ data:
           - zipkin
       telemetry:
         metrics:
-          address: ${env:MY_POD_IP}:8888
+          address: '[${env:MY_POD_IP}]:8888'
 ---
 # Source: gateway-addons-helm/charts/prometheus/templates/cm.yaml
 apiVersion: v1
@@ -9756,7 +9756,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: 270a8503091b51a264317115cf6df46b4501b03fc135eca95b93dca57a522a70
+        checksum/config: 77c11cf41a890ec6a75a644880450d53887eca3e37511c3139cf0b3e8ebbe1ee
         
       labels:
         app.kubernetes.io/name: opentelemetry-collector
