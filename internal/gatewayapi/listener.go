@@ -73,6 +73,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 			case gwapiv1.UDPProtocolType:
 				t.validateAllowedRoutes(listener, KindUDPRoute)
 			default:
+				listener.SetSupportedKinds()
 				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
 					listener.listenerStatusIdx,
 					gwapiv1.ListenerConditionAccepted,
