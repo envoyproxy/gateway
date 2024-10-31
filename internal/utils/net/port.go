@@ -8,7 +8,6 @@ package net
 import (
 	"fmt"
 	"net"
-	"strconv"
 )
 
 const (
@@ -22,8 +21,4 @@ func LocalAvailablePort() (int, error) {
 	}
 
 	return l.Addr().(*net.TCPAddr).Port, l.Close()
-}
-
-func JoinHostPort(host string, port int) string {
-	return net.JoinHostPort(host, strconv.Itoa(port))
 }
