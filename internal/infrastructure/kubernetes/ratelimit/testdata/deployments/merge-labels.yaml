@@ -42,6 +42,11 @@ spec:
       - command:
         - /bin/ratelimit
         env:
+        - name: PROTO
+          value: tcp6
+        - name: HOST
+        - name: DEBUG_HOST
+        - name: GRPC_HOST
         - name: RUNTIME_ROOT
           value: /data
         - name: RUNTIME_SUBDIRECTORY

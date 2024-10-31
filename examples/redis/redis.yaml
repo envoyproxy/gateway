@@ -60,6 +60,11 @@ data:
     kind: EnvoyGateway
     provider:
       type: Kubernetes
+      kubernetes:
+        rateLimitDeployment:
+          container:
+            # remove this line when https://github.com/envoyproxy/ratelimit/pull/748 merged
+            image: ghcr.io/zirain-dev/ratelimit:latest
     gateway:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     extensionApis:
