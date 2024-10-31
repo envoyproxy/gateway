@@ -201,7 +201,7 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 			if len(sink.OpenTelemetry.BackendRefs) > 0 {
 				host, port = net.BackendHostAndPort(sink.OpenTelemetry.BackendRefs[0].BackendObjectReference, "")
 			}
-			addr := fmt.Sprintf("%s:%d", host, port)
+			addr := net.JoinHostPort(host, int(port))
 			if addresses.Has(addr) {
 				continue
 			}

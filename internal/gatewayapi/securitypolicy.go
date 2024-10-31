@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/netip"
 	"net/url"
@@ -921,16 +922,16 @@ func backendRefAuthority(resources *resource.Resources, backendRef *gwapiv1.Back
 			// TODO: exists multi FQDN endpoints?
 			for _, ep := range backend.Spec.Endpoints {
 				if ep.FQDN != nil {
-					return fmt.Sprintf("%s:%d", ep.FQDN.Hostname, ep.FQDN.Port)
+					return net.JoinHostPort(ep.FQDN.Hostname, strconv.Itoa(int(ep.FQDN.Port)))
 				}
 			}
 		}
 	}
 
-	return fmt.Sprintf("%s.%s:%d",
-		backendRef.Name,
-		backendNamespace,
-		*backendRef.Port)
+	return net.JoinHostPort(
+		fmt.Sprintf("%s.%s", backendRef.Name, backendNamespace),
+		strconv.Itoa(int(*backendRef.Port)),
+	)
 }
 
 func (t *Translator) buildAuthorization(policy *egv1a1.SecurityPolicy) (*ir.Authorization, error) {
