@@ -80,6 +80,14 @@ jobs:
           name: benchmark_report
           path: release-artifacts
 
+      - name: Build egctl multiarch binaries
+        run: |
+          make build-multiarch BINS="egctl"
+          tar -zcvf egctl_${{ env.release_tag }}_linux_amd64.tar.gz bin/linux/amd64/
+          tar -zcvf egctl_${{ env.release_tag }}_linux_arm64.tar.gz bin/linux/arm64/
+          tar -zcvf egctl_${{ env.release_tag }}_darwin_amd64.tar.gz bin/darwin/amd64/
+          tar -zcvf egctl_${{ env.release_tag }}_darwin_arm64.tar.gz bin/darwin/arm64/
+
       - name: Upload Release Manifests
         uses: softprops/action-gh-release@c062e08bd532815e2082a85e87e3ef29c3e6d191  # v0.1.15
         with:
@@ -88,7 +96,7 @@ jobs:
             release-artifacts/quickstart.yaml
             release-artifacts/release-notes.yaml
             release-artifacts/benchmark_report.zip
-            release-artifacts/egctl_${{ env.release_tag }}_linux_amd64.tar.gz
-            release-artifacts/egctl_${{ env.release_tag }}_linux_arm64.tar.gz
-            release-artifacts/egctl_${{ env.release_tag }}_darwin_amd64.tar.gz
-            release-artifacts/egctl_${{ env.release_tag }}_darwin_arm64.tar.gz
+            egctl_${{ env.release_tag }}_linux_amd64.tar.gz
+            egctl_${{ env.release_tag }}_linux_arm64.tar.gz
+            egctl_${{ env.release_tag }}_darwin_amd64.tar.gz
+            egctl_${{ env.release_tag }}_darwin_arm64.tar.gz
