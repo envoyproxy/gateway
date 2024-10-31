@@ -15,21 +15,14 @@ API group.
 
 ### Resource Types
 - [Backend](#backend)
-- [BackendList](#backendlist)
 - [BackendTrafficPolicy](#backendtrafficpolicy)
-- [BackendTrafficPolicyList](#backendtrafficpolicylist)
 - [ClientTrafficPolicy](#clienttrafficpolicy)
-- [ClientTrafficPolicyList](#clienttrafficpolicylist)
 - [EnvoyExtensionPolicy](#envoyextensionpolicy)
-- [EnvoyExtensionPolicyList](#envoyextensionpolicylist)
 - [EnvoyGateway](#envoygateway)
 - [EnvoyPatchPolicy](#envoypatchpolicy)
-- [EnvoyPatchPolicyList](#envoypatchpolicylist)
 - [EnvoyProxy](#envoyproxy)
 - [HTTPRouteFilter](#httproutefilter)
-- [HTTPRouteFilterList](#httproutefilterlist)
 - [SecurityPolicy](#securitypolicy)
-- [SecurityPolicyList](#securitypolicylist)
 
 
 
@@ -267,8 +260,7 @@ _Appears in:_
 Backend allows the user to configure the endpoints of a backend and
 the behavior of the connection from Envoy Proxy to the backend.
 
-_Appears in:_
-- [BackendList](#backendlist)
+
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -326,22 +318,6 @@ _Appears in:_
 | `fqdn` | _[FQDNEndpoint](#fqdnendpoint)_ |  false  | FQDN defines a FQDN endpoint |
 | `ip` | _[IPEndpoint](#ipendpoint)_ |  false  | IP defines an IP endpoint. Supports both IPv4 and IPv6 addresses. |
 | `unix` | _[UnixSocket](#unixsocket)_ |  false  | Unix defines the unix domain socket endpoint |
-
-
-#### BackendList
-
-
-
-BackendList contains a list of Backend resources.
-
-
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
-| `kind` | _string_ | |`BackendList`
-| `metadata` | _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#listmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `items` | _[Backend](#backend) array_ |  true  |  |
 
 
 #### BackendRef
@@ -428,8 +404,7 @@ _Appears in:_
 BackendTrafficPolicy allows the user to configure the behavior of the connection
 between the Envoy Proxy listener and the backend service.
 
-_Appears in:_
-- [BackendTrafficPolicyList](#backendtrafficpolicylist)
+
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -438,22 +413,6 @@ _Appears in:_
 | `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` | _[BackendTrafficPolicySpec](#backendtrafficpolicyspec)_ |  true  | spec defines the desired state of BackendTrafficPolicy. |
 | `status` | _[PolicyStatus](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyStatus)_ |  true  | status defines the current status of BackendTrafficPolicy. |
-
-
-#### BackendTrafficPolicyList
-
-
-
-BackendTrafficPolicyList contains a list of BackendTrafficPolicy resources.
-
-
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
-| `kind` | _string_ | |`BackendTrafficPolicyList`
-| `metadata` | _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#listmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `items` | _[BackendTrafficPolicy](#backendtrafficpolicy) array_ |  true  |  |
 
 
 #### BackendTrafficPolicySpec
@@ -637,8 +596,7 @@ _Appears in:_
 ClientTrafficPolicy allows the user to configure the behavior of the connection
 between the downstream client and Envoy Proxy listener.
 
-_Appears in:_
-- [ClientTrafficPolicyList](#clienttrafficpolicylist)
+
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -647,22 +605,6 @@ _Appears in:_
 | `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` | _[ClientTrafficPolicySpec](#clienttrafficpolicyspec)_ |  true  | Spec defines the desired state of ClientTrafficPolicy. |
 | `status` | _[PolicyStatus](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyStatus)_ |  true  | Status defines the current status of ClientTrafficPolicy. |
-
-
-#### ClientTrafficPolicyList
-
-
-
-ClientTrafficPolicyList contains a list of ClientTrafficPolicy resources.
-
-
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
-| `kind` | _string_ | |`ClientTrafficPolicyList`
-| `metadata` | _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#listmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `items` | _[ClientTrafficPolicy](#clienttrafficpolicy) array_ |  true  |  |
 
 
 #### ClientTrafficPolicySpec
@@ -957,8 +899,7 @@ _Appears in:_
 
 EnvoyExtensionPolicy allows the user to configure various envoy extensibility options for the Gateway.
 
-_Appears in:_
-- [EnvoyExtensionPolicyList](#envoyextensionpolicylist)
+
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -967,22 +908,6 @@ _Appears in:_
 | `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` | _[EnvoyExtensionPolicySpec](#envoyextensionpolicyspec)_ |  true  | Spec defines the desired state of EnvoyExtensionPolicy. |
 | `status` | _[PolicyStatus](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyStatus)_ |  true  | Status defines the current status of EnvoyExtensionPolicy. |
-
-
-#### EnvoyExtensionPolicyList
-
-
-
-EnvoyExtensionPolicyList contains a list of EnvoyExtensionPolicy resources.
-
-
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
-| `kind` | _string_ | |`EnvoyExtensionPolicyList`
-| `metadata` | _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#listmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `items` | _[EnvoyExtensionPolicy](#envoyextensionpolicy) array_ |  true  |  |
 
 
 #### EnvoyExtensionPolicySpec
@@ -1350,8 +1275,7 @@ _Appears in:_
 EnvoyPatchPolicy allows the user to modify the generated Envoy xDS
 resources by Envoy Gateway using this patch API
 
-_Appears in:_
-- [EnvoyPatchPolicyList](#envoypatchpolicylist)
+
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -1360,22 +1284,6 @@ _Appears in:_
 | `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` | _[EnvoyPatchPolicySpec](#envoypatchpolicyspec)_ |  true  | Spec defines the desired state of EnvoyPatchPolicy. |
 | `status` | _[PolicyStatus](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyStatus)_ |  true  | Status defines the current status of EnvoyPatchPolicy. |
-
-
-#### EnvoyPatchPolicyList
-
-
-
-EnvoyPatchPolicyList contains a list of EnvoyPatchPolicy resources.
-
-
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
-| `kind` | _string_ | |`EnvoyPatchPolicyList`
-| `metadata` | _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#listmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `items` | _[EnvoyPatchPolicy](#envoypatchpolicy) array_ |  true  |  |
 
 
 #### EnvoyPatchPolicySpec
@@ -2026,8 +1934,7 @@ _Appears in:_
 HTTPRouteFilter is a custom Envoy Gateway HTTPRouteFilter which provides extended
 traffic processing options such as path regex rewrite, direct response and more.
 
-_Appears in:_
-- [HTTPRouteFilterList](#httproutefilterlist)
+
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -2035,22 +1942,6 @@ _Appears in:_
 | `kind` | _string_ | |`HTTPRouteFilter`
 | `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` | _[HTTPRouteFilterSpec](#httproutefilterspec)_ |  true  | Spec defines the desired state of HTTPRouteFilter. |
-
-
-#### HTTPRouteFilterList
-
-
-
-HTTPRouteFilterList contains a list of HTTPRouteFilter resources.
-
-
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
-| `kind` | _string_ | |`HTTPRouteFilterList`
-| `metadata` | _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#listmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `items` | _[HTTPRouteFilter](#httproutefilter) array_ |  true  |  |
 
 
 #### HTTPRouteFilterSpec
@@ -3638,8 +3529,7 @@ _Appears in:_
 SecurityPolicy allows the user to configure various security settings for a
 Gateway.
 
-_Appears in:_
-- [SecurityPolicyList](#securitypolicylist)
+
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -3648,22 +3538,6 @@ _Appears in:_
 | `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` | _[SecurityPolicySpec](#securitypolicyspec)_ |  true  | Spec defines the desired state of SecurityPolicy. |
 | `status` | _[PolicyStatus](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyStatus)_ |  true  | Status defines the current status of SecurityPolicy. |
-
-
-#### SecurityPolicyList
-
-
-
-SecurityPolicyList contains a list of SecurityPolicy resources.
-
-
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
-| `kind` | _string_ | |`SecurityPolicyList`
-| `metadata` | _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#listmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `items` | _[SecurityPolicy](#securitypolicy) array_ |  true  |  |
 
 
 #### SecurityPolicySpec
