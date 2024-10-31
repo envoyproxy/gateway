@@ -121,8 +121,6 @@ jobs:
           ipFamily: ipv4
         - version: v1.30.4
           ipFamily: ipv4
-        - version: v1.31.0
-          ipFamily: ipv4
         # Enable these after https://github.com/envoyproxy/gateway/issues/4572 fixed
         # - version: v1.31.0
         #   ipFamily: ipv6   # only run ipv6 test on latest version to save time
