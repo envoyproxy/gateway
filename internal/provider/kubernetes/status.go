@@ -74,7 +74,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 							panic(err)
 						}
 						hCopy := h.DeepCopy()
-						hCopy.Status.Parents = val.Parents
+						hCopy.Status.Parents = mergeRouteParentStatus(h.Namespace, h.Status.Parents, val.Parents)
 						return hCopy
 					}),
 				})
@@ -97,15 +97,15 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 					NamespacedName: key,
 					Resource:       new(gwapiv1.GRPCRoute),
 					Mutator: MutatorFunc(func(obj client.Object) client.Object {
-						h, ok := obj.(*gwapiv1.GRPCRoute)
+						g, ok := obj.(*gwapiv1.GRPCRoute)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
 							errChan <- err
 							panic(err)
 						}
-						hCopy := h.DeepCopy()
-						hCopy.Status.Parents = val.Parents
-						return hCopy
+						gCopy := g.DeepCopy()
+						gCopy.Status.Parents = mergeRouteParentStatus(g.Namespace, g.Status.Parents, val.Parents)
+						return gCopy
 					}),
 				})
 			},
@@ -136,7 +136,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 							panic(err)
 						}
 						tCopy := t.DeepCopy()
-						tCopy.Status.Parents = val.Parents
+						tCopy.Status.Parents = mergeRouteParentStatus(t.Namespace, t.Status.Parents, val.Parents)
 						return tCopy
 					}),
 				})
@@ -168,7 +168,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 							panic(err)
 						}
 						tCopy := t.DeepCopy()
-						tCopy.Status.Parents = val.Parents
+						tCopy.Status.Parents = mergeRouteParentStatus(t.Namespace, t.Status.Parents, val.Parents)
 						return tCopy
 					}),
 				})
@@ -193,15 +193,15 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 					NamespacedName: key,
 					Resource:       new(gwapiv1a2.UDPRoute),
 					Mutator: MutatorFunc(func(obj client.Object) client.Object {
-						t, ok := obj.(*gwapiv1a2.UDPRoute)
+						u, ok := obj.(*gwapiv1a2.UDPRoute)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
 							errChan <- err
 							panic(err)
 						}
-						tCopy := t.DeepCopy()
-						tCopy.Status.Parents = val.Parents
-						return tCopy
+						uCopy := u.DeepCopy()
+						uCopy.Status.Parents = mergeRouteParentStatus(u.Namespace, u.Status.Parents, val.Parents)
+						return uCopy
 					}),
 				})
 			},
@@ -467,6 +467,29 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 			r.log.Info("extensionServerPolicies status subscriber shutting down")
 		}()
 	}
+}
+
+// mergeRouteParentStatus merges the old and new RouteParentStatus.
+// This is needed because the RouteParentStatus doesn't support strategic merge patch yet.
+func mergeRouteParentStatus(ns string, old, new []gwapiv1.RouteParentStatus) []gwapiv1.RouteParentStatus {
+	merged := make([]gwapiv1.RouteParentStatus, len(old))
+	_ = copy(merged, old)
+	for _, parent := range new {
+		found := -1
+		for i, existing := range old {
+			if parent.ParentRef.Name == existing.ParentRef.Name &&
+				utils.NamespaceDerefOr(parent.ParentRef.Namespace, ns) == utils.NamespaceDerefOr(existing.ParentRef.Namespace, ns) {
+				found = i
+				break
+			}
+		}
+		if found >= 0 {
+			merged[found] = parent
+		} else {
+			merged = append(merged, parent)
+		}
+	}
+	return merged
 }
 
 func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *gwapiv1.Gateway) {

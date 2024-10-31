@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 type NamespacedNameWithGroupKind struct {
@@ -41,6 +42,13 @@ func NamespacedName(obj client.Object) types.NamespacedName {
 		Namespace: obj.GetNamespace(),
 		Name:      obj.GetName(),
 	}
+}
+
+func NamespaceDerefOr(namespace *gwapiv1.Namespace, defaultNamespace string) string {
+	if namespace != nil && *namespace != "" {
+		return string(*namespace)
+	}
+	return defaultNamespace
 }
 
 // GetHashedName returns a partially hashed name for the string including up to the given length of the original name characters before the hash.
