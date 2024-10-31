@@ -48,11 +48,6 @@ var OIDCTest = suite.ConformanceTest{
 	Manifests:   []string{"testdata/oidc-keycloak.yaml", "testdata/oidc-securitypolicy.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("oidc provider represented by a URL", func(t *testing.T) {
-			// Add a function to dump current cluster status
-			t.Cleanup(func() {
-				CollectAndDump(t, suite.RestConfig)
-			})
-
 			testOIDC(t, suite)
 		})
 
