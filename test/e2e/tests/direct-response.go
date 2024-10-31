@@ -26,27 +26,21 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, ResponseOverrideTest)
+	ConformanceTests = append(ConformanceTests, DirectResponseTest)
 }
 
-var ResponseOverrideTest = suite.ConformanceTest{
-	ShortName:   "ResponseOverrideSpecificUser",
-	Description: "Response Override",
-	Manifests:   []string{"testdata/response-override.yaml"},
+var DirectResponseTest = suite.ConformanceTest{
+	ShortName:   "DirectResponse",
+	Description: "Direct",
+	Manifests:   []string{"testdata/direct-response.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("response override", func(t *testing.T) {
+		t.Run("direct response", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "response-override", Namespace: ns}
+			routeNN := types.NamespacedName{Name: "direct-response", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
-			ancestorRef := gwapiv1a2.ParentReference{
-				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-				Kind:      gatewayapi.KindPtr(resource.KindGateway),
-				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
-				Name:      gwapiv1.ObjectName(gwNN.Name),
-			}
-			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "response-override", Namespace: ns}, suite.ControllerName, ancestorRef)
+			kubernetes.HTTPRouteMustHaveResolvedRefsConditionsTrue(t, suite.Client, suite.TimeoutConfig, routeNN, gwNN)
 			verifyCustomResponse(t, gwAddr, "/status/404", "text/plain", "Oops! Your request is not found.")
 			verifyCustomResponse(t, gwAddr, "/status/500", "application/json", `{"error": "Internal Server Error"}`)
 		})
