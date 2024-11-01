@@ -33,6 +33,8 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 						ParentRef: gwapiv1.ParentReference{
 							Name:      "gateway1",
 							Namespace: ptr.To[gwapiv1.Namespace]("default"),
+							SectionName: ptr.To[gwapiv1.SectionName]("listener1"),
+							Port: 	 ptr.To[gwapiv1.PortNumber](80),
 						},
 						Conditions: []metav1.Condition{
 							{
@@ -70,6 +72,8 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 					ParentRef: gwapiv1.ParentReference{
 						Name:      "gateway1",
 						Namespace: ptr.To[gwapiv1.Namespace]("default"),
+						SectionName: ptr.To[gwapiv1.SectionName]("listener1"),
+						Port: 	 ptr.To[gwapiv1.PortNumber](80),
 					},
 					Conditions: []metav1.Condition{
 						{
