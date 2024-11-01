@@ -1,0 +1,247 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-a
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: '*.a.example.com'
+      name: default
+      port: 80
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: default
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-b
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: '*.b.example.com'
+      name: default
+      port: 80
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: default
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: targeted-route
+    namespace: envoy-gateway
+  spec:
+    hostnames:
+    - targeted.a.example.com
+    - targeted.b.example.com
+    parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-a
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-b
+    rules:
+    - matches:
+      - method: GET
+        path:
+          type: PathPrefix
+          value: /toy
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-a
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-b
+infraIR:
+  envoy-gateway/gateway-a:
+    proxy:
+      listeners:
+      - address: null
+        name: envoy-gateway/gateway-a/default
+        ports:
+        - containerPort: 10080
+          name: http-80
+          protocol: HTTP
+          servicePort: 80
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-a
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+      name: envoy-gateway/gateway-a
+  envoy-gateway/gateway-b:
+    proxy:
+      listeners:
+      - address: null
+        name: envoy-gateway/gateway-b/default
+        ports:
+        - containerPort: 10080
+          name: http-80
+          protocol: HTTP
+          servicePort: 80
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-b
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+      name: envoy-gateway/gateway-b
+xdsIR:
+  envoy-gateway/gateway-a:
+    accessLog:
+      text:
+      - path: /dev/stdout
+    http:
+    - address: 0.0.0.0
+      hostnames:
+      - '*.a.example.com'
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-a
+        namespace: envoy-gateway
+        sectionName: default
+      name: envoy-gateway/gateway-a/default
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+      routes:
+      - directResponse:
+          statusCode: 500
+        headerMatches:
+        - distinct: false
+          exact: GET
+          name: :method
+        hostname: targeted.a.example.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: targeted-route
+          namespace: envoy-gateway
+        name: httproute/envoy-gateway/targeted-route/rule/0/match/0/targeted_a_example_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /toy
+  envoy-gateway/gateway-b:
+    accessLog:
+      text:
+      - path: /dev/stdout
+    http:
+    - address: 0.0.0.0
+      hostnames:
+      - '*.b.example.com'
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-b
+        namespace: envoy-gateway
+        sectionName: default
+      name: envoy-gateway/gateway-b/default
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+      routes:
+      - directResponse:
+          statusCode: 500
+        headerMatches:
+        - distinct: false
+          exact: GET
+          name: :method
+        hostname: targeted.b.example.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: targeted-route
+          namespace: envoy-gateway
+        name: httproute/envoy-gateway/targeted-route/rule/0/match/0/targeted_b_example_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /toy
