@@ -1,0 +1,29 @@
+date: November 1, 2024
+
+# Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
+breaking changes: |
+
+# New features or capabilities added in this release.
+new features: |
+
+# Fixes for bugs identified in previous versions.
+bug fixes: |
+  Fixed unsupported listener protocol type causing an error while updating Gateway Status
+  Fixed some status updates were being discarded by the status updater
+  Fixed error level logging for admin and metrics modules
+  Fix Dashboard typos
+  Fixed Ratelimit Deployment ignoring pod labels and annotation merge
+  Fixed the API Server receives unnecessary requests
+  Fixed set invalid Listener.SupportedKinds to empty list
+  Fixed losing timeout settings that originate from the route when translating the backend traffic policy
+  Fixed xds translation failure when wasm http code source configured without sha
+
+# Enhancements that improve performance.
+performance improvements: |
+
+# Other notable changes not covered by the above sections.
+Other changes: |
+  Bumped Envoy proxy to 1.31.3
+  Bumped Gatewy-API to v1.1.1
+  Bumped github.com/docker/docker to 27.3.1+incompatible
+
