@@ -31,7 +31,7 @@ spec:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: response-value-ref
+  name: value-ref-response
   namespace: gateway-conformance-infra
 data:
   response.body: '{"error": "Internal Server Error"}'

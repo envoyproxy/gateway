@@ -8,7 +8,6 @@
 package tests
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
