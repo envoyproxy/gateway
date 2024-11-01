@@ -9,7 +9,6 @@ package tests
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"testing"
 	"time"
@@ -495,7 +494,7 @@ var RateLimitMultipleListenersTest = suite.ConformanceTest{
 
 			gwPorts := []string{"80", "8080"}
 			for _, port := range gwPorts {
-				gwAddr = fmt.Sprintf("%s:%s", gwIP, port)
+				gwAddr = net.JoinHostPort(gwIP, port)
 
 				ratelimitHeader := make(map[string]string)
 				expectOkResp := http.ExpectedResponse{
