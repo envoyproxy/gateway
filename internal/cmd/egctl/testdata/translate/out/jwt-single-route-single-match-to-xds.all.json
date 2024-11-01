@@ -358,6 +358,7 @@
                   },
                   "serviceName": "httproute/envoy-gateway-system/backend/rule/0"
                 },
+                "ignoreHealthOnHostRemoval": true,
                 "lbPolicy": "LEAST_REQUEST",
                 "name": "httproute/envoy-gateway-system/backend/rule/0",
                 "outlierDetection": {},

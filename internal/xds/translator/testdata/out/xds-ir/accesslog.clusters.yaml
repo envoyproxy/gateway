@@ -10,6 +10,7 @@
       ads: {}
       resourceApiVersion: V3
     serviceName: direct-route-dest
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: direct-route-dest
   outlierDetection: {}
@@ -27,6 +28,7 @@
       ads: {}
       resourceApiVersion: V3
     serviceName: accesslog/monitoring/envoy-als/port/9000
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: accesslog/monitoring/envoy-als/port/9000
   outlierDetection: {}
