@@ -31,10 +31,10 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 					{
 						ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
 						ParentRef: gwapiv1.ParentReference{
-							Name:      "gateway1",
-							Namespace: ptr.To[gwapiv1.Namespace]("default"),
+							Name:        "gateway1",
+							Namespace:   ptr.To[gwapiv1.Namespace]("default"),
 							SectionName: ptr.To[gwapiv1.SectionName]("listener1"),
-							Port: 	 ptr.To[gwapiv1.PortNumber](80),
+							Port:        ptr.To[gwapiv1.PortNumber](80),
 						},
 						Conditions: []metav1.Condition{
 							{
@@ -70,10 +70,10 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 				{
 					ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
 					ParentRef: gwapiv1.ParentReference{
-						Name:      "gateway1",
-						Namespace: ptr.To[gwapiv1.Namespace]("default"),
+						Name:        "gateway1",
+						Namespace:   ptr.To[gwapiv1.Namespace]("default"),
 						SectionName: ptr.To[gwapiv1.SectionName]("listener1"),
-						Port: 	 ptr.To[gwapiv1.PortNumber](80),
+						Port:        ptr.To[gwapiv1.PortNumber](80),
 					},
 					Conditions: []metav1.Condition{
 						{
