@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strconv"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -123,13 +124,13 @@ func getExtensionServerAddress(service *egv1a1.ExtensionService) string {
 	var serverAddr string
 	switch {
 	case service.FQDN != nil:
-		serverAddr = fmt.Sprintf("%s:%d", service.FQDN.Hostname, service.FQDN.Port)
+		serverAddr = net.JoinHostPort(service.FQDN.Hostname, strconv.Itoa(int(service.FQDN.Port)))
 	case service.IP != nil:
-		serverAddr = fmt.Sprintf("%s:%d", service.IP.Address, service.IP.Port)
+		serverAddr = net.JoinHostPort(service.IP.Address, strconv.Itoa(int(service.IP.Port)))
 	case service.Unix != nil:
 		serverAddr = fmt.Sprintf("unix://%s", service.Unix.Path)
 	case service.Host != "":
-		serverAddr = fmt.Sprintf("%s:%d", service.Host, service.Port)
+		serverAddr = net.JoinHostPort(service.Host, strconv.Itoa(int(service.Port)))
 	}
 	return serverAddr
 }

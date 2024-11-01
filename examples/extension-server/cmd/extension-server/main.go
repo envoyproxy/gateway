@@ -6,7 +6,6 @@
 package main
 
 import (
-	"fmt"
 	"log/slog"
 	"net"
 	"os"
@@ -82,7 +81,7 @@ func startExtensionServer(cCtx *cli.Context) error {
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
 		Level: level,
 	}))
-	address := fmt.Sprintf("%s:%d", cCtx.String("host"), cCtx.Int("port"))
+	address := net.JoinHostPort(cCtx.String("host"), cCtx.String("port"))
 	logger.Info("Starting the extension server", slog.String("host", address))
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
