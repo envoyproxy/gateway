@@ -82,11 +82,15 @@ jobs:
 
       - name: Build egctl multiarch binaries
         run: |
-          make build-multiarch BINS="egctl"
-          tar -zcvf egctl_${{ env.release_tag }}_linux_amd64.tar.gz bin/linux/amd64/
-          tar -zcvf egctl_${{ env.release_tag }}_linux_arm64.tar.gz bin/linux/arm64/
-          tar -zcvf egctl_${{ env.release_tag }}_darwin_amd64.tar.gz bin/darwin/amd64/
-          tar -zcvf egctl_${{ env.release_tag }}_darwin_arm64.tar.gz bin/darwin/arm64/
+          make build-multiarch
+          tar -zcvf envoy-gateway_${{ env.release_tag }}_linux_amd64.tar.gz bin/linux/amd64/envoy-gateway
+          tar -zcvf envoy-gateway_${{ env.release_tag }}_linux_arm64.tar.gz bin/linux/arm64/envoy-gateway
+          tar -zcvf envoy-gateway_${{ env.release_tag }}_darwin_amd64.tar.gz bin/darwin/amd64/envoy-gateway
+          tar -zcvf envoy-gateway_${{ env.release_tag }}_darwin_arm64.tar.gz bin/darwin/arm64/envoy-gateway
+          tar -zcvf egctl_${{ env.release_tag }}_linux_amd64.tar.gz bin/linux/amd64/egctl
+          tar -zcvf egctl_${{ env.release_tag }}_linux_arm64.tar.gz bin/linux/arm64/egctl
+          tar -zcvf egctl_${{ env.release_tag }}_darwin_amd64.tar.gz bin/darwin/amd64/egctl
+          tar -zcvf egctl_${{ env.release_tag }}_darwin_arm64.tar.gz bin/darwin/arm64/egctl
 
       - name: Upload Release Manifests
         uses: softprops/action-gh-release@c062e08bd532815e2082a85e87e3ef29c3e6d191  # v0.1.15
