@@ -24,7 +24,7 @@ func init() {
 }
 
 var GatewayWithEnvoyProxy = suite.ConformanceTest{
-	ShortName:   "Gateway with EnvoyProxy",
+	ShortName:   "GatewayWithEnvoyProxy",
 	Description: "Attach an EnvoyProxy to a Gateway",
 	Manifests:   []string{"testdata/gateway-with-envoyproxy.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
