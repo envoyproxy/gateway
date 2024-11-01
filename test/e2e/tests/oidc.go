@@ -149,7 +149,7 @@ func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite) {
 			// Parse the response body to get the URL where the login page would post the user-entered credentials
 			if err := oidcClient.ParseLoginForm(res.Body, keyCloakLoginFormID); err != nil {
 				tlog.Logf(t, "failed to parse login form: %v", err)
-				// restart the envoy proxy to recover from the error, this is a workaround for the flaky test
+				// restart the envoy proxy to recover from the error, this is a workaround for the flaky test: https://github.com/envoyproxy/gateway/issues/3898
 				// TODO: we should investigate the root cause of the flakiness and remove this workaround
 				proxyLabel := map[string]string{"gateway.envoyproxy.io/owning-gateway-name": "same-namespace"}
 				err := suite.Client.DeleteAllOf(context.TODO(), &corev1.Pod{}, client.MatchingLabels(proxyLabel), client.InNamespace("envoy-gateway-system"))
