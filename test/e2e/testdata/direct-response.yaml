@@ -32,7 +32,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: value-ref-response
-  namespace: gateway-conformance-infra
+  namespace: same-namespace
 data:
   response.body: '{"error": "Internal Server Error"}'
 ---
@@ -40,7 +40,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: HTTPRouteFilter
 metadata:
   name: direct-response-inline
-  namespace: gateway-conformance-infra
+  namespace: same-namespace
 spec:
   directResponse:
     contentType: text/plain
@@ -52,7 +52,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: HTTPRouteFilter
 metadata:
   name: direct-response-value-ref
-  namespace: gateway-conformance-infra
+  namespace: same-namespace
 spec:
   directResponse:
     contentType: application/json
