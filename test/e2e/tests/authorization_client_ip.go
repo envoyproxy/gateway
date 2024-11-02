@@ -26,7 +26,7 @@ func init() {
 }
 
 var AuthorizationClientIPTest = suite.ConformanceTest{
-	ShortName:   "Authorization with client IP",
+	ShortName:   "AuthzWithClientIP",
 	Description: "Authorization with client IP Allow/Deny list",
 	Manifests:   []string{"testdata/authorization-client-ip.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
