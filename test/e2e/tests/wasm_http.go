@@ -27,7 +27,7 @@ func init() {
 
 // HTTPWasmTest tests Wasm extension for an http route with HTTP Wasm configured.
 var HTTPWasmTest = suite.ConformanceTest{
-	ShortName:   "Wasm HTTP Code Source",
+	ShortName:   "WasmHTTPCodeSource",
 	Description: "Test Wasm extension that adds response headers",
 	Manifests:   []string{"testdata/wasm-http.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
