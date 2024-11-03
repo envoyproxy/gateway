@@ -40,7 +40,3 @@ spec:
           ports:
             - containerPort: 8080
             - containerPort: 19001
-      volumes:
-        - name: envoy-als
-          configMap:
-            name: envoy-als
