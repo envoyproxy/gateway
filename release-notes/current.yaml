@@ -16,6 +16,7 @@ new features: |
 bug fixes: |
   Only log endpoint configuration in verbose logging mode (`-v 4` or higher)
   The xDS translation failed when wasm http code source configured without a sha
+  HTTPRoute status only shows one parent when targeting multiple Gateways from different GatewayClasses
   Route with multiple parents has incorrect namespace in parentRef status
 
 # Enhancements that improve performance.
