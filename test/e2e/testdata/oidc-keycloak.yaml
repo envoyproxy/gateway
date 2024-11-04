@@ -43,7 +43,7 @@ spec:
       serviceAccountName: keycloak
       containers:
         - name: keycloak
-          image: quay.io/keycloak/keycloak:23.0.6
+          image: quay.io/keycloak/keycloak:26.0.4
           imagePullPolicy: IfNotPresent
           args:
             - "start-dev"

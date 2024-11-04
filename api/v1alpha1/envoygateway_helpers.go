@@ -6,7 +6,8 @@
 package v1alpha1
 
 import (
-	"fmt"
+	"net"
+	"strconv"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -80,7 +81,7 @@ func (e *EnvoyGateway) GetEnvoyGatewayAdmin() *EnvoyGatewayAdmin {
 func (e *EnvoyGateway) GetEnvoyGatewayAdminAddress() string {
 	address := e.GetEnvoyGatewayAdmin().Address
 	if address != nil {
-		return fmt.Sprintf("%s:%d", address.Host, address.Port)
+		return net.JoinHostPort(address.Host, strconv.Itoa(address.Port))
 	}
 
 	return ""

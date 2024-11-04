@@ -26,7 +26,7 @@ func init() {
 }
 
 var AuthorizationDefaultActionTest = suite.ConformanceTest{
-	ShortName:   "Authorization with default actions",
+	ShortName:   "AuthzWithDefaultActions",
 	Description: "Authorization with default actions",
 	Manifests:   []string{"testdata/authorization-default-action.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
