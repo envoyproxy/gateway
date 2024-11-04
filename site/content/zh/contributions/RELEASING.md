@@ -102,10 +102,10 @@ export GITHUB_REMOTE=origin
             cherrypick/release-v0.4
           # 将发布经理名字放在这里
           reviewers: |
-            AliceProxy
+            Alice-Lilith
 ```
 
-将 `v0.4` 替换为真实的分支名称，并将 `AliceProxy` 替换为 RM 的真实名称。
+将 `v0.4` 替换为真实的分支名称，并将 `Alice-Lilith` 替换为 RM 的真实名称。
 
 ## 次要版本 {#minor-release}
 
