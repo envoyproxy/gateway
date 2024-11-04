@@ -5,7 +5,6 @@ description: "This section includes Maintainers of Envoy Gateway."
 
 ## The following maintainers, listed in alphabetical order, own everything
 
-- @AliceProxy
 - @arkodg
 - @qicz
 - @Xunzhuo
@@ -19,3 +18,4 @@ description: "This section includes Maintainers of Envoy Gateway."
 - @LukeShu
 - @skriss
 - @youngnick
+- @Alice-Lilith
