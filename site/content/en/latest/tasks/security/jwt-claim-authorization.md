@@ -2,7 +2,7 @@
 title: "JWT Claim-Based Authorization"
 ---
 
-This task provides instructions for configuring JWT claim-based authorization. JWT claim-based authorization checks if an incoming request has the required claims before routing the request to a backend service.
+This task provides instructions for configuring JWT claim-based authorization. JWT claim-based authorization checks if an incoming request has the required JWT claims before routing the request to a backend service.
 
 Envoy Gateway introduces a new CRD called [SecurityPolicy][SecurityPolicy] that allows the user to configure JWT claim-based authorization.
 
@@ -18,7 +18,7 @@ This instantiated resource can be linked to a [Gateway][Gateway], [HTTPRoute][HT
 
 Please note that the JWT claim-based authorization requires the JWT token to be present in the request. A JWT authentication must be configured in the same SecurityPolicy to validate the JWT token and extract the claims.
 
-The below SecurityPolicy configuration allows requests with the JWT token if the token has the following claims:
+The below SecurityPolicy configuration allows requests with a valid JWT token that has the following claims:
 - `user.name` claim with the value `John Doe`
 - `user.roles` claim with the value `admin`
 - `scope` claim with the values `read`, `add`, and `modify`
