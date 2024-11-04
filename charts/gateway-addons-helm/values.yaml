@@ -170,7 +170,7 @@ loki:
 
 # Values for Alloy dependency
 alloy:
-  enabled: true
+  enabled: false
   fullnameOverride: alloy
   alloy:
     configMap:
