@@ -26,12 +26,7 @@ var OIDCBackendClusterTest = suite.ConformanceTest{
 	Manifests:   []string{"testdata/oidc-keycloak.yaml", "testdata/oidc-securitypolicy-backendcluster.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("oidc provider represented by a BackendCluster", func(t *testing.T) {
-			// Add a function to dump current cluster status
-			t.Cleanup(func() {
-				CollectAndDump(t, suite.RestConfig)
-			})
-
-			testOIDC(t, suite)
+			testOIDC(t, suite, "testdata/oidc-securitypolicy-backendcluster.yaml")
 		})
 	},
 }

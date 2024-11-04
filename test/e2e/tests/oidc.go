@@ -17,6 +17,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -26,6 +27,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
@@ -48,12 +50,7 @@ var OIDCTest = suite.ConformanceTest{
 	Manifests:   []string{"testdata/oidc-keycloak.yaml", "testdata/oidc-securitypolicy.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("oidc provider represented by a URL", func(t *testing.T) {
-			// Add a function to dump current cluster status
-			t.Cleanup(func() {
-				CollectAndDump(t, suite.RestConfig)
-			})
-
-			testOIDC(t, suite)
+			testOIDC(t, suite, "testdata/oidc-securitypolicy.yaml")
 		})
 
 		t.Run("http route without oidc authentication", func(t *testing.T) {
@@ -97,7 +94,7 @@ var OIDCTest = suite.ConformanceTest{
 	},
 }
 
-func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite) {
+func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, securityPolicyManifest string) {
 	var (
 		testURL   = "http://www.example.com/myapp"
 		logoutURL = "http://www.example.com/myapp/logout"
@@ -124,7 +121,7 @@ func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite) {
 	WaitForPods(t, suite.Client, ns, map[string]string{"job-name": "setup-keycloak"}, corev1.PodSucceeded, podInitialized)
 
 	// Initialize the test OIDC client that will keep track of the state of the OIDC login process
-	client, err := NewOIDCTestClient(
+	oidcClient, err := NewOIDCTestClient(
 		WithLoggingOptions(t.Log, true),
 		// Map the application and keycloak cluster DNS name to the gateway address
 		WithCustomAddressMappings(map[string]string{
@@ -140,13 +137,31 @@ func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite) {
 
 			// Send a request to the http route with OIDC configured.
 			// It will be redirected to the keycloak login page
-			res, err := client.Get(testURL, true)
-			require.NoError(t, err, "Failed to get the login page")
-			require.Equal(t, 200, res.StatusCode, "Expected 200 OK")
+			res, err := oidcClient.Get(testURL, true)
+			if err != nil {
+				tlog.Logf(t, "failed to get the login page: %v", err)
+				return false, nil
+			}
+			if res.StatusCode != http.StatusOK {
+				tlog.Logf(t, "Failed to get the login page, expected 200 OK, got %d", res.StatusCode)
+				return false, nil
+			}
 
 			// Parse the response body to get the URL where the login page would post the user-entered credentials
-			if err := client.ParseLoginForm(res.Body, keyCloakLoginFormID); err != nil {
+			if err := oidcClient.ParseLoginForm(res.Body, keyCloakLoginFormID); err != nil {
 				tlog.Logf(t, "failed to parse login form: %v", err)
+				// recreate the security policy to force repushing the configuration to the envoy proxy to recover from the error.
+				// This is a workaround for the flaky test: https://github.com/envoyproxy/gateway/issues/3898
+				// TODO: we should investigate the root cause of the flakiness and remove this workaround
+				existingSP := &egv1a1.SecurityPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: ns,
+						Name:      sp,
+					},
+				}
+				require.NoError(t, suite.Client.Delete(context.TODO(), existingSP))
+				suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, securityPolicyManifest, false)
+				SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: sp, Namespace: ns}, suite.ControllerName, ancestorRef)
 				return false, nil
 			}
 
@@ -158,7 +173,7 @@ func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite) {
 
 	// Submit the login form to the IdP.
 	// This will authenticate and redirect back to the application
-	res, err := client.Login(map[string]string{"username": username, "password": password, "credentialId": ""})
+	res, err := oidcClient.Login(map[string]string{"username": username, "password": password, "credentialId": ""})
 	require.NoError(t, err, "Failed to login to the IdP")
 
 	// Verify that we get the expected response from the application
@@ -168,14 +183,14 @@ func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite) {
 	require.Contains(t, string(body), "infra-backend-v1", "Expected response from the application")
 
 	// Verify that we can access the application without logging in again
-	res, err = client.Get(testURL, false)
+	res, err = oidcClient.Get(testURL, false)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, res.StatusCode)
 	require.Contains(t, string(body), "infra-backend-v1", "Expected response from the application")
 
 	// Verify that we can logout
 	// Note: OAuth2 filter just clears its cookies and does not log out from the IdP.
-	res, err = client.Get(logoutURL, false)
+	res, err = oidcClient.Get(logoutURL, false)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusFound, res.StatusCode)
 
