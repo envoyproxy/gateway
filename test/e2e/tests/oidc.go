@@ -17,9 +17,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwhttp "sigs.k8s.io/gateway-api/conformance/utils/http"
@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
@@ -49,7 +50,7 @@ var OIDCTest = suite.ConformanceTest{
 	Manifests:   []string{"testdata/oidc-keycloak.yaml", "testdata/oidc-securitypolicy.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("oidc provider represented by a URL", func(t *testing.T) {
-			testOIDC(t, suite)
+			testOIDC(t, suite, "testdata/oidc-securitypolicy.yaml")
 		})
 
 		t.Run("http route without oidc authentication", func(t *testing.T) {
@@ -93,7 +94,7 @@ var OIDCTest = suite.ConformanceTest{
 	},
 }
 
-func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite) {
+func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, securityPolicyManifest string) {
 	var (
 		testURL   = "http://www.example.com/myapp"
 		logoutURL = "http://www.example.com/myapp/logout"
@@ -149,12 +150,18 @@ func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite) {
 			// Parse the response body to get the URL where the login page would post the user-entered credentials
 			if err := oidcClient.ParseLoginForm(res.Body, keyCloakLoginFormID); err != nil {
 				tlog.Logf(t, "failed to parse login form: %v", err)
-				// restart the envoy proxy to recover from the error, this is a workaround for the flaky test: https://github.com/envoyproxy/gateway/issues/3898
+				// recreate the security policy to force repushing the configuration to the envoy proxy to recover from the error.
+				// This is a workaround for the flaky test: https://github.com/envoyproxy/gateway/issues/3898
 				// TODO: we should investigate the root cause of the flakiness and remove this workaround
-				proxyLabel := map[string]string{"gateway.envoyproxy.io/owning-gateway-name": "same-namespace"}
-				err := suite.Client.DeleteAllOf(context.TODO(), &corev1.Pod{}, client.MatchingLabels(proxyLabel), client.InNamespace("envoy-gateway-system"))
-				require.NoError(t, err)
-				WaitForPods(t, suite.Client, "envoy-gateway-system", proxyLabel, corev1.PodRunning, podInitialized)
+				existingSP := &egv1a1.SecurityPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: ns,
+						Name:      sp,
+					},
+				}
+				require.NoError(t, suite.Client.Delete(context.TODO(), existingSP))
+				suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, securityPolicyManifest, true)
+				SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: sp, Namespace: ns}, suite.ControllerName, ancestorRef)
 				return false, nil
 			}
 
