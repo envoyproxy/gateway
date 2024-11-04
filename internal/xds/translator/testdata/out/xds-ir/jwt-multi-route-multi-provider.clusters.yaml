@@ -10,6 +10,7 @@
       ads: {}
       resourceApiVersion: V3
     serviceName: first-route-www.test.com-dest
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: first-route-www.test.com-dest
   outlierDetection: {}
@@ -27,6 +28,7 @@
       ads: {}
       resourceApiVersion: V3
     serviceName: second-route-www.test.com-dest
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: second-route-www.test.com-dest
   outlierDetection: {}
@@ -71,6 +73,7 @@
       ads: {}
       resourceApiVersion: V3
     serviceName: "192_168_1_250_8080"
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: "192_168_1_250_8080"
   outlierDetection: {}

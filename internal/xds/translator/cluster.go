@@ -158,6 +158,9 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 				},
 			},
 		}
+		// Dont wait for a health check to determine health and remove these endpoints
+		// if the endpoint has been removed via EDS by the control plane
+		cluster.IgnoreHealthOnHostRemoval = true
 	} else {
 		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STRICT_DNS}
 		cluster.DnsRefreshRate = durationpb.New(30 * time.Second)

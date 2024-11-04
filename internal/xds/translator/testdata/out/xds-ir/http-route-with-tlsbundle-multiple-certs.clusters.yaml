@@ -10,6 +10,7 @@
       ads: {}
       resourceApiVersion: V3
     serviceName: httproute/envoy-gateway/httproute-btls/rule/0
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: httproute/envoy-gateway/httproute-btls/rule/0
   outlierDetection: {}
@@ -68,6 +69,7 @@
       ads: {}
       resourceApiVersion: V3
     serviceName: httproute/envoy-gateway/httproute-btls-2/rule/0
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: httproute/envoy-gateway/httproute-btls-2/rule/0
   outlierDetection: {}
