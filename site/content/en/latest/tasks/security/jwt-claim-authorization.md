@@ -130,6 +130,7 @@ jq -R 'split(".") | .[0],.[1] | @base64d | fromjson' <<< $(echo ${VALID_TOKEN})
 ```
 
 The decoded JWT token should look like the following:
+
 ```json
 {
   "typ": "JWT",
@@ -174,6 +175,7 @@ jq -R 'split(".") | .[0],.[1] | @base64d | fromjson' <<< $(echo ${INVALID_TOKEN}
 ```
 
 The decoded JWT token should look like the following:
+
 ```json
 {
   "typ": "JWT",
