@@ -60,7 +60,7 @@ func init() {
 
 // OCIWasmTest tests Wasm extension for an http route with OCI Wasm configured.
 var OCIWasmTest = suite.ConformanceTest{
-	ShortName:   "Wasm OCI Image Code Source",
+	ShortName:   "WasmOCIImageCodeSource",
 	Description: "Test OCI Wasm extension",
 	Manifests:   []string{"testdata/wasm-oci.yaml", "testdata/wasm-oci-registry-test-server.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
