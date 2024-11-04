@@ -15,6 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"testing"
 	"time"
 
@@ -70,7 +71,7 @@ var OCIWasmTest = suite.ConformanceTest{
 		if err != nil {
 			t.Fatalf("failed to get registry IP: %v", err)
 		}
-		registryAddr := fmt.Sprintf("%s:5000", registryIP)
+		registryAddr := net.JoinHostPort(registryIP, "5000")
 
 		// Push the wasm image to the registry
 		digest := pushWasmImageForTest(t, suite, registryAddr)
