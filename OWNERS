@@ -9,7 +9,6 @@ admins:
 
 maintainers:
 
-- AliceProxy
 - arkodg
 - Xunzhuo
 - zirain
@@ -25,6 +24,7 @@ emeritus-maintainers:
 - skriss
 - youngnick
 - qicz
+- Alice-Lilith
 
 reviewers:
 
