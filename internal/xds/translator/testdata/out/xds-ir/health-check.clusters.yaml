@@ -25,6 +25,7 @@
     interval: 3s
     timeout: 0.500s
     unhealthyThreshold: 3
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: first-route-dest
   outlierDetection:
@@ -61,6 +62,7 @@
     interval: 5s
     timeout: 1s
     unhealthyThreshold: 3
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: second-route-dest
   outlierDetection:
@@ -94,6 +96,7 @@
         text: "70696e67"
     timeout: 1s
     unhealthyThreshold: 3
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: third-route-dest
   outlierDetection:
@@ -127,6 +130,7 @@
         binary: cGluZw==
     timeout: 1s
     unhealthyThreshold: 3
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: fourth-route-dest
   outlierDetection:
@@ -158,6 +162,7 @@
     interval: 5s
     timeout: 1s
     unhealthyThreshold: 3
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: fifth-route-dest
   outlierDetection: {}
