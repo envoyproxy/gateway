@@ -8,18 +8,20 @@
 package tests
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"testing"
+	"time"
 
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/conformance/utils/config"
 	httputils "sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -47,37 +49,47 @@ var ResponseOverrideTest = suite.ConformanceTest{
 				Name:      gwapiv1.ObjectName(gwNN.Name),
 			}
 			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "response-override", Namespace: ns}, suite.ControllerName, ancestorRef)
-			verifyResponseOverride(t, gwAddr, 404, "text/plain", "Oops! Your request is not found.")
-			verifyResponseOverride(t, gwAddr, 500, "application/json", `{"error": "Internal Server Error"}`)
+			verifyCustomResponse(t, suite.TimeoutConfig, gwAddr, "/status/404", "text/plain", "Oops! Your request is not found.")
+			verifyCustomResponse(t, suite.TimeoutConfig, gwAddr, "/status/500", "application/json", `{"error": "Internal Server Error"}`)
 		})
 	},
 }
 
-func verifyResponseOverride(t *testing.T, gwAddr string, statusCode int, expectedContentType string, expectedBody string) {
+func verifyCustomResponse(t *testing.T, timeoutConfig config.TimeoutConfig, gwAddr, path, expectedContentType, expectedBody string) {
 	reqURL := url.URL{
 		Scheme: "http",
 		Host:   httputils.CalculateHost(t, gwAddr, "http"),
-		Path:   fmt.Sprintf("/status/%d", statusCode),
+		Path:   path,
 	}
 
-	rsp, err := http.Get(reqURL.String())
-	if err != nil {
-		t.Fatalf("failed to get response: %v", err)
-	}
+	httputils.AwaitConvergence(t, timeoutConfig.RequiredConsecutiveSuccesses, timeoutConfig.MaxTimeToConsistency, func(elapsed time.Duration) bool {
+		rsp, err := http.Get(reqURL.String())
+		if err != nil {
+			tlog.Logf(t, "failed to get response: %v", err)
+			return false
+		}
 
-	// Verify that the response body is overridden
-	defer rsp.Body.Close()
-	body, err := io.ReadAll(rsp.Body)
-	if err != nil {
-		t.Fatalf("failed to read response body: %v", err)
-	}
-	if string(body) != expectedBody {
-		t.Errorf("expected response body to be %s but got %s", expectedBody, string(body))
-	}
+		// Verify that the response body is overridden
+		defer rsp.Body.Close()
+		body, err := io.ReadAll(rsp.Body)
+		if err != nil {
+			tlog.Logf(t, "failed to read response body: %v", err)
+			return false
+		}
+		if string(body) != expectedBody {
+			tlog.Logf(t, "expected response body to be %s but got %s", expectedBody, string(body))
+			return false
+		}
 
-	// Verify that the content type is overridden
-	contentType := rsp.Header.Get("Content-Type")
-	if contentType != expectedContentType {
-		t.Errorf("expected content type to be %s but got %s", expectedContentType, contentType)
-	}
+		// Verify that the content type is overridden
+		contentType := rsp.Header.Get("Content-Type")
+		if contentType != expectedContentType {
+			tlog.Logf(t, "expected content type to be %s but got %s", expectedContentType, contentType)
+			return false
+		}
+
+		return true
+	})
+
+	tlog.Logf(t, "Request passed")
 }
