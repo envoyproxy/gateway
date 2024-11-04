@@ -1,0 +1,208 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-1
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: '*.envoyproxy.io'
+      name: http
+      port: 80
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 2
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: direct-response
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - filters:
+      - extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: direct-response-inline
+        type: ExtensionRef
+      matches:
+      - path:
+          type: PathPrefix
+          value: /inline
+    - filters:
+      - extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: direct-response-value-ref
+        type: ExtensionRef
+      matches:
+      - path:
+          type: PathPrefix
+          value: /value-ref
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: direct-response-with-errors
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - filters:
+      - extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: direct-response-value-ref-not-found
+        type: ExtensionRef
+      matches:
+      - path:
+          type: PathPrefix
+          value: /value-ref-not-found
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: 'Unable to translate HTTPRouteFilter: default/direct-response-value-ref-not-found'
+        reason: UnsupportedValue
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: 'Unable to translate HTTPRouteFilter: default/direct-response-value-ref-not-found'
+        reason: BackendNotFound
+        status: "False"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+infraIR:
+  envoy-gateway/gateway-1:
+    proxy:
+      listeners:
+      - address: null
+        name: envoy-gateway/gateway-1/http
+        ports:
+        - containerPort: 10080
+          name: http-80
+          protocol: HTTP
+          servicePort: 80
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+      name: envoy-gateway/gateway-1
+xdsIR:
+  envoy-gateway/gateway-1:
+    accessLog:
+      text:
+      - path: /dev/stdout
+    http:
+    - address: 0.0.0.0
+      hostnames:
+      - '*.envoyproxy.io'
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      name: envoy-gateway/gateway-1/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+      routes:
+      - addResponseHeaders:
+        - append: false
+          name: Content-Type
+          value:
+          - application/json
+        directResponse:
+          body: '{"error": "Internal Server Error"}'
+          statusCode: 502
+        hostname: '*.envoyproxy.io'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: direct-response
+          namespace: default
+        name: httproute/default/direct-response/rule/1/match/0/*_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /value-ref
+      - addResponseHeaders:
+        - append: false
+          name: Content-Type
+          value:
+          - text/plain
+        directResponse:
+          body: OK
+          statusCode: 200
+        hostname: '*.envoyproxy.io'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: direct-response
+          namespace: default
+        name: httproute/default/direct-response/rule/0/match/0/*_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /inline
