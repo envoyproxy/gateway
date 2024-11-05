@@ -32,4 +32,12 @@ httpRoutes:
       - name: service-1
         port: 8080
       name: rule-1
-
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - headers:
+        - type: Exact
+          name: foo
+          value: bar
+      name: rule-2

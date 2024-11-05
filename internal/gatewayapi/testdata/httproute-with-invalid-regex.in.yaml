@@ -46,4 +46,3 @@ httpRoutes:
           backendRefs:
             - name: service-1
               port: 8080
-          name: rule-1

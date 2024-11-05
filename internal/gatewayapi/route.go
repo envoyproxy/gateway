@@ -302,6 +302,10 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 		irRoute := &ir.HTTPRoute{
 			Name: irRouteName(httpRoute, ruleIdx, -1),
 		}
+		irRoute.Metadata = buildRouteMetadata(httpRoute)
+		if rule.Name != nil {
+			irRoute.Metadata.SectionName = string(*rule.Name)
+		}
 		processRouteTimeout(irRoute, rule)
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
 		ruleRoutes = append(ruleRoutes, irRoute)
@@ -599,6 +603,10 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 		irRoute := &ir.HTTPRoute{
 			Name: irRouteName(grpcRoute, ruleIdx, -1),
 		}
+		irRoute.Metadata = buildRouteMetadata(grpcRoute)
+		if rule.Name != nil {
+			irRoute.Metadata.SectionName = string(*rule.Name)
+		}
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
 		ruleRoutes = append(ruleRoutes, irRoute)
 	}
@@ -609,6 +617,10 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 	for matchIdx, match := range rule.Matches {
 		irRoute := &ir.HTTPRoute{
 			Name: irRouteName(grpcRoute, ruleIdx, matchIdx),
+		}
+		irRoute.Metadata = buildRouteMetadata(grpcRoute)
+		if rule.Name != nil {
+			irRoute.Metadata.SectionName = string(*rule.Name)
 		}
 
 		for _, headerMatch := range match.Headers {

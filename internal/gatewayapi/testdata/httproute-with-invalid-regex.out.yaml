@@ -98,7 +98,6 @@ httpRoutes:
       - path:
           type: RegularExpression
           value: '*.foo.bar.com'
-      name: rule-1
   status:
     parents:
     - conditions:

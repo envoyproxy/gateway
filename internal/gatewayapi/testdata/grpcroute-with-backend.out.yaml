@@ -82,6 +82,7 @@ grpcRoutes:
       - method:
           service: com.[A-Z]+
           type: RegularExpression
+      name: grpcrule-1
   status:
     parents:
     - conditions:
@@ -150,6 +151,7 @@ xdsIR:
           kind: GRPCRoute
           name: grpcroute-1
           namespace: default
+          sectionName: grpcrule-1
         name: grpcroute/default/grpcroute-1/rule/0/match/1/*
         pathMatch:
           distinct: false
@@ -167,6 +169,7 @@ xdsIR:
           kind: GRPCRoute
           name: grpcroute-1
           namespace: default
+          sectionName: grpcrule-1
         name: grpcroute/default/grpcroute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
