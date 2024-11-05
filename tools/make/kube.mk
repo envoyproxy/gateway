@@ -132,7 +132,9 @@ experimental-conformance: create-cluster kube-install-image kube-deploy run-expe
 benchmark: create-cluster kube-install-image kube-deploy-for-benchmark-test run-benchmark delete-cluster ## Create a kind cluster, deploy EG into it, run Envoy Gateway benchmark test, and clean up.
 
 .PHONY: e2e
-e2e: create-cluster kube-install-image kube-deploy install-ratelimit install-e2e-telemetry run-e2e delete-cluster
+e2e: create-cluster kube-install-image kube-deploy \
+	install-ratelimit install-eg-addons kube-install-examples-image \
+	run-e2e delete-cluster
 
 .PHONY: install-ratelimit
 install-ratelimit:
@@ -188,10 +190,10 @@ uninstall-benchmark-server: ## Uninstall nighthawk server for benchmark test
 	kubectl delete configmap test-server-config -n benchmark-test
 	kubectl delete namespace benchmark-test
 
-.PHONY: install-e2e-telemetry
-install-e2e-telemetry: helm-generate.gateway-addons-helm
+.PHONY: install-eg-addons
+install-eg-addons: helm-generate.gateway-addons-helm
 	@$(LOG_TARGET)
-	helm upgrade -i eg-addons charts/gateway-addons-helm --set grafana.enabled=false,opentelemetry-collector.enabled=true -n monitoring --create-namespace --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
+	helm upgrade -i eg-addons charts/gateway-addons-helm -f test/helm/gateway-addons-helm/e2e.in.yaml -n monitoring --create-namespace --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
 	# Change loki service type from ClusterIP to LoadBalancer
 	kubectl patch service loki -n monitoring -p '{"spec": {"type": "LoadBalancer"}}'
 	# Wait service Ready
@@ -202,8 +204,8 @@ install-e2e-telemetry: helm-generate.gateway-addons-helm
 	kubectl rollout restart -n monitoring deployment/otel-collector
 	kubectl rollout status --watch --timeout=5m -n monitoring deployment/otel-collector
 
-.PHONY: uninstall-e2e-telemetry
-uninstall-e2e-telemetry:
+.PHONY: uninstall-eg-addons
+uninstall-eg-addons: 
 	@$(LOG_TARGET)
 	helm delete $(shell helm list -n monitoring -q) -n monitoring
 
@@ -249,16 +251,7 @@ generate-manifests: helm-generate.gateway-helm ## Generate Kubernetes release ma
 	@$(call log, "Added: $(OUTPUT_DIR)/quickstart.yaml")
 
 .PHONY: generate-artifacts
-generate-artifacts: generate-manifests generate-egctl-releases ## Generate release artifacts.
+generate-artifacts: generate-manifests ## Generate release artifacts.
 	@$(LOG_TARGET)
 	cp -r $(ROOT_DIR)/release-notes/$(TAG).yaml $(OUTPUT_DIR)/release-notes.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/release-notes.yaml")
-
-.PHONY: generate-egctl-releases
-generate-egctl-releases: ## Generate egctl releases
-	@$(LOG_TARGET)
-	mkdir -p $(OUTPUT_DIR)/
-	curl -sSL https://github.com/envoyproxy/gateway/releases/download/latest/egctl_latest_darwin_amd64.tar.gz -o $(OUTPUT_DIR)/egctl_$(TAG)_darwin_amd64.tar.gz
-	curl -sSL https://github.com/envoyproxy/gateway/releases/download/latest/egctl_latest_darwin_arm64.tar.gz -o $(OUTPUT_DIR)/egctl_$(TAG)_darwin_arm64.tar.gz
-	curl -sSL https://github.com/envoyproxy/gateway/releases/download/latest/egctl_latest_linux_amd64.tar.gz -o $(OUTPUT_DIR)/egctl_$(TAG)_linux_amd64.tar.gz
-	curl -sSL https://github.com/envoyproxy/gateway/releases/download/latest/egctl_latest_linux_arm64.tar.gz -o $(OUTPUT_DIR)/egctl_$(TAG)_linux_arm64.tar.gz

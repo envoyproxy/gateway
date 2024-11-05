@@ -72,11 +72,15 @@ jobs:
 
     - name: Build egctl latest multiarch binaries
       run: |
-        make build-multiarch BINS="egctl"
-        tar -zcvf egctl_latest_linux_amd64.tar.gz bin/linux/amd64/
-        tar -zcvf egctl_latest_linux_arm64.tar.gz bin/linux/arm64/
-        tar -zcvf egctl_latest_darwin_amd64.tar.gz bin/darwin/amd64/
-        tar -zcvf egctl_latest_darwin_arm64.tar.gz bin/darwin/arm64/
+        make build-multiarch
+        tar -zcvf envoy-gateway_latest_linux_amd64.tar.gz bin/linux/amd64/envoy-gateway
+        tar -zcvf envoy-gateway_linux_arm64.tar.gz bin/linux/arm64/envoy-gateway
+        tar -zcvf envoy-gateway_darwin_amd64.tar.gz bin/darwin/amd64/envoy-gateway
+        tar -zcvf envoy-gateway_darwin_arm64.tar.gz bin/darwin/arm64/envoy-gateway
+        tar -zcvf egctl_latest_linux_amd64.tar.gz bin/linux/amd64/egctl
+        tar -zcvf egctl_latest_linux_arm64.tar.gz bin/linux/arm64/egctl
+        tar -zcvf egctl_latest_darwin_amd64.tar.gz bin/darwin/amd64/egctl
+        tar -zcvf egctl_latest_darwin_arm64.tar.gz bin/darwin/arm64/egctl
 
     # Ignore the error when we delete the latest release, it might not exist.
 
@@ -103,7 +107,7 @@ jobs:
         GITHUB_REPOSITORY: ${{ github.repository_owner }}/${{ github.event.repository.name }}
 
     - name: Recreate the Latest Release and Tag
-      uses: softprops/action-gh-release@c062e08bd532815e2082a85e87e3ef29c3e6d191  # v0.1.15
+      uses: softprops/action-gh-release@e7a8f85e1c67a31e6ed99a94b41bd0b71bbee6b8  # v0.1.15
       with:
         draft: false
         prerelease: true

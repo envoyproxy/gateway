@@ -15,6 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"testing"
 	"time"
 
@@ -60,7 +61,7 @@ func init() {
 
 // OCIWasmTest tests Wasm extension for an http route with OCI Wasm configured.
 var OCIWasmTest = suite.ConformanceTest{
-	ShortName:   "Wasm OCI Image Code Source",
+	ShortName:   "WasmOCIImageCodeSource",
 	Description: "Test OCI Wasm extension",
 	Manifests:   []string{"testdata/wasm-oci.yaml", "testdata/wasm-oci-registry-test-server.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
@@ -70,7 +71,7 @@ var OCIWasmTest = suite.ConformanceTest{
 		if err != nil {
 			t.Fatalf("failed to get registry IP: %v", err)
 		}
-		registryAddr := fmt.Sprintf("%s:5000", registryIP)
+		registryAddr := net.JoinHostPort(registryIP, "5000")
 
 		// Push the wasm image to the registry
 		digest := pushWasmImageForTest(t, suite, registryAddr)

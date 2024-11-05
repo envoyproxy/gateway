@@ -10,12 +10,14 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
-  Add a new feature here
+  Add support for modifying container securityContext for Envoy Gateway deployment in Helm
 
 # Fixes for bugs identified in previous versions.
 bug fixes: |
   Only log endpoint configuration in verbose logging mode (`-v 4` or higher)
   The xDS translation failed when wasm http code source configured without a sha
+  HTTPRoute status only shows one parent when targeting multiple Gateways from different GatewayClasses
+  Route with multiple parents has incorrect namespace in parentRef status
 
 # Enhancements that improve performance.
 performance improvements: |

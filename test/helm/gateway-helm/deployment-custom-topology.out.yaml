@@ -460,8 +460,8 @@ spec:
             drop:
             - ALL
           privileged: false
-          runAsNonRoot: true
           runAsGroup: 65532
+          runAsNonRoot: true
           runAsUser: 65532
           seccompProfile:
             type: RuntimeDefault
@@ -591,8 +591,8 @@ spec:
             - ALL
           privileged: false
           readOnlyRootFilesystem: true
-          runAsNonRoot: true
           runAsGroup: 65534
+          runAsNonRoot: true
           runAsUser: 65534
           seccompProfile:
             type: RuntimeDefault

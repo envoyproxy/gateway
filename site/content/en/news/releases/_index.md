@@ -31,7 +31,7 @@ communications with the Envoy Gateway community, and the mechanics of the releas
 |:-------:|:--------------------------------------------------------------:|
 | 2022 Q4 |    Daneyon Hansen ([danehans](https://github.com/danehans))    |
 | 2023 Q1 |    Xunzhuo Liu ([Xunzhuo](https://github.com/Xunzhuo))         |
-| 2023 Q2 |    Alice Wasko ([AliceProxy](https://github.com/AliceProxy))   |
+| 2023 Q2 |    Alice Wasko ([Alice-Lilith](https://github.com/Alice-Lilith))   |
 | 2023 Q3 |    Arko Dasgupta ([arkodg](https://github.com/arkodg))         |
 | 2023 Q4 |    Arko Dasgupta ([arkodg](https://github.com/arkodg))         |
 | 2024 Q1 |    Xunzhuo Liu ([Xunzhuo](https://github.com/Xunzhuo))         |

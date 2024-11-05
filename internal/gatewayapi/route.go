@@ -237,7 +237,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		// If the route has no valid backends then just use a direct response and don't fuss with weighted responses
 		for _, ruleRoute := range ruleRoutes {
 			noValidBackends := ruleRoute.Destination == nil || ruleRoute.Destination.ToBackendWeights().Valid == 0
-			if noValidBackends && ruleRoute.Redirect == nil {
+			if ruleRoute.DirectResponse == nil && noValidBackends && ruleRoute.Redirect == nil {
 				ruleRoute.DirectResponse = &ir.CustomResponse{
 					StatusCode: ptr.To(uint32(500)),
 				}

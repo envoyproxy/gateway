@@ -172,6 +172,28 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(obj client.Object) boo
 		}
 	}
 
+	if r.bTLSPolicyCRDExists {
+		if r.isBackendTLSPolicyReferencingSecret(&nsName) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (r *gatewayAPIReconciler) isBackendTLSPolicyReferencingSecret(nsName *types.NamespacedName) bool {
+	btlsList := &gwapiv1a3.BackendTLSPolicyList{}
+	if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(secretBtlsIndex, nsName.String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated BackendTLSPolicy")
+		return false
+	}
+
+	if len(btlsList.Items) > 0 {
+		return true
+	}
+
 	return false
 }
 

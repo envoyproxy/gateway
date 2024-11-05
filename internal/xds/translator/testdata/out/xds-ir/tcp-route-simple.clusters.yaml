@@ -10,6 +10,7 @@
       ads: {}
       resourceApiVersion: V3
     serviceName: tcp-route-simple-dest
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: tcp-route-simple-dest
   outlierDetection: {}
