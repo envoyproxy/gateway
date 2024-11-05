@@ -302,10 +302,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 		irRoute := &ir.HTTPRoute{
 			Name: irRouteName(httpRoute, ruleIdx, -1),
 		}
-		irRoute.Metadata = buildRouteMetadata(httpRoute)
-		if rule.Name != nil {
-			irRoute.Metadata.SectionName = string(*rule.Name)
-		}
+		irRoute.Metadata = buildRouteMetadata(httpRoute, rule.Name)
 		processRouteTimeout(irRoute, rule)
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
 		ruleRoutes = append(ruleRoutes, irRoute)
@@ -366,10 +363,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 			Name:               irRouteName(httpRoute, ruleIdx, matchIdx),
 			SessionPersistence: sessionPersistence,
 		}
-		irRoute.Metadata = buildRouteMetadata(httpRoute)
-		if rule.Name != nil {
-			irRoute.Metadata.SectionName = string(*rule.Name)
-		}
+		irRoute.Metadata = buildRouteMetadata(httpRoute, rule.Name)
 		processRouteTimeout(irRoute, rule)
 
 		if match.Path != nil {
@@ -603,10 +597,7 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 		irRoute := &ir.HTTPRoute{
 			Name: irRouteName(grpcRoute, ruleIdx, -1),
 		}
-		irRoute.Metadata = buildRouteMetadata(grpcRoute)
-		if rule.Name != nil {
-			irRoute.Metadata.SectionName = string(*rule.Name)
-		}
+		irRoute.Metadata = buildRouteMetadata(grpcRoute, rule.Name)
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
 		ruleRoutes = append(ruleRoutes, irRoute)
 	}
@@ -618,11 +609,7 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 		irRoute := &ir.HTTPRoute{
 			Name: irRouteName(grpcRoute, ruleIdx, matchIdx),
 		}
-		irRoute.Metadata = buildRouteMetadata(grpcRoute)
-		if rule.Name != nil {
-			irRoute.Metadata.SectionName = string(*rule.Name)
-		}
-
+		irRoute.Metadata = buildRouteMetadata(grpcRoute, rule.Name)
 		for _, headerMatch := range match.Headers {
 			switch GRPCHeaderMatchTypeDerefOr(headerMatch.Type, gwapiv1.GRPCHeaderMatchExact) {
 			case gwapiv1.GRPCHeaderMatchExact:
@@ -736,13 +723,9 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 				// Remove dots from the hostname before appending it to the IR Route name
 				// since dots are special chars used in stats tag extraction in Envoy
 				underscoredHost := strings.ReplaceAll(host, ".", "_")
-				routeMetadata := routeRoute.Metadata
-				if routeMetadata == nil { // if metadata was not set in the matcher evaluation phase, build it here
-					routeMetadata = buildRouteMetadata(route)
-				}
 				hostRoute := &ir.HTTPRoute{
 					Name:                  fmt.Sprintf("%s/%s", routeRoute.Name, underscoredHost),
-					Metadata:              routeMetadata,
+					Metadata:              routeRoute.Metadata,
 					Hostname:              host,
 					PathMatch:             routeRoute.PathMatch,
 					HeaderMatches:         routeRoute.HeaderMatches,
@@ -783,13 +766,17 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 	return hasHostnameIntersection
 }
 
-func buildRouteMetadata(route RouteContext) *ir.ResourceMetadata {
-	return &ir.ResourceMetadata{
+func buildRouteMetadata(route RouteContext, sectionName *gwapiv1.SectionName) *ir.ResourceMetadata {
+	metadata := &ir.ResourceMetadata{
 		Kind:        route.GetObjectKind().GroupVersionKind().Kind,
 		Name:        route.GetName(),
 		Namespace:   route.GetNamespace(),
 		Annotations: filterEGPrefix(route.GetAnnotations()),
 	}
+	if sectionName != nil {
+		metadata.SectionName = string(*sectionName)
+	}
+	return metadata
 }
 
 func filterEGPrefix(in map[string]string) map[string]string {
