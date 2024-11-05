@@ -1,5 +1,5 @@
 alloy:
-  enabled: false
+  enabled: true
 grafana:
   enabled: false
 opentelemetry-collector:
