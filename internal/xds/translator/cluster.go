@@ -30,6 +30,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/net"
 	"github.com/envoyproxy/gateway/internal/utils/protocov"
 )
 
@@ -85,6 +86,9 @@ func buildEndpointType(settings []*ir.DestinationSetting) EndpointType {
 
 func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 	dnsLookupFamily := clusterv3.Cluster_V4_ONLY
+	if net.IsIPv6FirstPod() {
+		dnsLookupFamily = clusterv3.Cluster_V6_ONLY
+	}
 	if args.ipFamily != nil && *args.ipFamily == egv1a1.DualStack {
 		dnsLookupFamily = clusterv3.Cluster_ALL
 	}

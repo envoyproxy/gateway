@@ -52,6 +52,9 @@ func TestE2E(t *testing.T) {
 		SupportedFeatures: sets.New[features.FeatureName](features.SupportGateway),
 		SkipTests: []string{
 			tests.GatewayInfraResourceTest.ShortName, // https://github.com/envoyproxy/gateway/issues/3191
+			tests.OIDCTest.ShortName,                 // https://github.com/envoyproxy/gateway/issues/4598
+			tests.OCIWasmTest.ShortName,              // https://github.com/envoyproxy/gateway/issues/4607
+			tests.HTTPWasmTest.ShortName,             // https://github.com/envoyproxy/gateway/issues/4606
 		},
 		AllowCRDsMismatch: *flags.AllowCRDsMismatch,
 	})

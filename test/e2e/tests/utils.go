@@ -14,6 +14,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -400,7 +401,7 @@ func RetrieveURL(c client.Client, nn types.NamespacedName, port int32, path stri
 	default:
 		host = fmt.Sprintf("%s.%s.svc", nn.Name, nn.Namespace)
 	}
-	return fmt.Sprintf("http://%s:%d%s", host, port, path), nil
+	return fmt.Sprintf("http://%s%s", net.JoinHostPort(host, strconv.Itoa(int(port))), path), nil
 }
 
 var metricParser = &expfmt.TextParser{}
@@ -560,7 +561,7 @@ func QueryLogCountFromLoki(t *testing.T, c client.Client, keyValues map[string]s
 	params := url.Values{}
 	params.Add("query", q)
 	params.Add("start", fmt.Sprintf("%d", time.Now().Add(-10*time.Minute).Unix())) // query logs from last 10 minutes
-	lokiQueryURL := fmt.Sprintf("http://%s:3100/loki/api/v1/query_range?%s", lokiHost, params.Encode())
+	lokiQueryURL := fmt.Sprintf("http://%s/loki/api/v1/query_range?%s", net.JoinHostPort(lokiHost, "3100"), params.Encode())
 	res, err := http.DefaultClient.Get(lokiQueryURL)
 	if err != nil {
 		return -1, err

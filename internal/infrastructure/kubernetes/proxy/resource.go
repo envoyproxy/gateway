@@ -139,6 +139,11 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		IPFamily:         net.PreferIPFamily(ipv6First, infra.Config),
 	}
 
+	// TODO: this's a temporary solution to support IPv6 first cluster for Envoy Gateway.
+	if bootstrapConfigOptions.IPFamily == egv1a1.IPv6 {
+		bootstrapConfigOptions.XdsServerHost = ptr.To(config.EnvoyGatewayServiceName)
+	}
+
 	args, err := common.BuildProxyArgs(infra, shutdownConfig, bootstrapConfigOptions, fmt.Sprintf("$(%s)", envoyPodEnvVar))
 	if err != nil {
 		return nil, err

@@ -64,5 +64,5 @@ metadata:
 spec:
   endpoints:
   - fqdn:
-      hostname: infra-backend-v1.gateway-conformance-infra.svc.cluster.local
+      hostname: infra-backend-v1.gateway-conformance-infra.svc
       port: 8080

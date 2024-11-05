@@ -8,6 +8,7 @@ package prometheus
 import (
 	"context"
 	"fmt"
+	"net"
 	"time"
 
 	prom "github.com/prometheus/client_golang/api"
@@ -36,7 +37,7 @@ func NewClient(kubeClient client.Client, nn types.NamespacedName) (*Client, erro
 	var addr string
 	for _, ing := range svc.Status.LoadBalancer.Ingress {
 		if len(ing.IP) > 0 {
-			addr = fmt.Sprintf("http://%s", ing.IP)
+			addr = fmt.Sprintf("http://%s", net.JoinHostPort(ing.IP, "80"))
 		}
 	}
 
