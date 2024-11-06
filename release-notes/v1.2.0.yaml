@@ -4,7 +4,7 @@ date: November 6, 2024
 breaking changes: |
   Gateway API GRPCRoute and ReferenceGrant v1alpha2 have been removed
   Please refer to the [Gateway API v1.2.0 documentation](https://github.com/kubernetes-sigs/gateway-api/releases) for more information
-  Removed default CPU limit of the Envoy Gateway deployment
+  Removed default CPU limit of the Envoy Gateway deployment, to eliminate CPU throttling
   Changed default Envoy shutdown settings: drain strategy has been changed to immediate, default minDrainDuration, drainTimeout and terminationGracePeriodSeconds have been set to 10s, 60s and 360s respectively
   Set ignore_health_on_host_removal to true for clusters with static endpoints This was done to speed up removal of static endpoints by the control plane when active health check is configured
   Xds and Infra IR logs are logged at Debug level instead of Info level. They will now not be seen by default in Envoy Gateway logs. You can change the logging level to default: debug to view them
