@@ -2,6 +2,8 @@
 {{- with (eq $pagePrefix "latest") -}}
 {{- "latest" -}}
 {{- end -}}
+{{- with (strings.HasPrefix $pagePrefix "v1.1") -}}
+{{- "v1.1.3" -}}
 {{- with (strings.HasPrefix $pagePrefix "v1.2") -}}
 {{- "v1.2.0" -}}
 {{- end -}}
