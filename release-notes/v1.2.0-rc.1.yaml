@@ -71,7 +71,7 @@ bug fixes: |
   Fixed Delay in SecurityPolicy change propagation for HTTPRoute when using targetSelectors
   Fixed JSONPath not correctly translated to JSONPatch paths
   Fixed allow empty slowStart when using LeastRequest
-  Fixed updating the HTTPRoute status correctly when the linked Backend resource is invalid
+  Fixed Backends which should be rejected are still used as an HTTPRoute's destination
   Fixed losing timeout settings that originate from the route when translating the backend traffic policy
   Fixed Backend resources don't get status updates
   Fixed Active Health check requires expectedStatuses field to work
