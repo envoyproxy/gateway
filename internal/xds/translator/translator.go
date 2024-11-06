@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
@@ -179,9 +181,27 @@ func (t *Translator) notifyExtensionServerAboutListeners(
 		}
 		if err := processExtensionPostListenerHook(tCtx, listener, policies, t.ExtensionManager); err != nil {
 			errs = errors.Join(errs, err)
+			hcm, err := findHCMinFilterChain(listener.DefaultFilterChain)
+			if err != nil {
+				// no HCM found, skip
+			} else {
+				clearAllRoutes(hcm)
+			}
+			for _, filter := range listener.FilterChains {
+				hcm, err := findHCMinFilterChain(filter)
+				if err != nil {
+					// no HCM found, skip
+					continue
+				}
+				clearAllRoutes(hcm)
+			}
 		}
 	}
 	return errs
+}
+
+func clearAllRoutes(hcm *hcmv3.HttpConnectionManager) {
+	hcm.RouteSpecifier = nil
 }
 
 func (t *Translator) processHTTPListenerXdsTranslation(
@@ -449,6 +469,10 @@ func (t *Translator) addRouteToRouteConfig(
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
 		if err = processExtensionPostRouteHook(xdsRoute, vHost, httpRoute, t.ExtensionManager); err != nil {
 			errs = errors.Join(errs, err)
+			xdsRoute.Action =
+				&routev3.Route_DirectResponse{DirectResponse: buildXdsDirectResponseAction(&ir.CustomResponse{
+					StatusCode: ptr.To(uint32(http.StatusInternalServerError)),
+				})}
 		}
 
 		if http3Enabled {
@@ -500,6 +524,17 @@ func (t *Translator) addRouteToRouteConfig(
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
 		if err = processExtensionPostVHostHook(vHost, t.ExtensionManager); err != nil {
 			errs = errors.Join(errs, err)
+			vHost.Routes = []*routev3.Route{&routev3.Route{
+				Name: "error_route",
+				Match: &routev3.RouteMatch{
+					PathSpecifier: &routev3.RouteMatch_Prefix{
+						Prefix: "/",
+					},
+				},
+				Action: &routev3.Route_DirectResponse{DirectResponse: buildXdsDirectResponseAction(&ir.CustomResponse{
+					StatusCode: ptr.To(uint32(http.StatusInternalServerError)),
+				})},
+			}}
 		}
 	}
 	xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHostList...)
