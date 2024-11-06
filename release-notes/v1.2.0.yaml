@@ -1,6 +1,6 @@
 date: November 6, 2024
 
-# Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
+# Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs or updating default values.
 breaking changes: |
   Gateway API GRPCRoute and ReferenceGrant v1alpha2 have been removed
   Please refer to the [Gateway API v1.2.0 documentation](https://github.com/kubernetes-sigs/gateway-api/releases) for more information
