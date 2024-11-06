@@ -10,6 +10,7 @@
       ads: {}
       resourceApiVersion: V3
     serviceName: direct-route-dest
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: direct-route-dest
   outlierDetection: {}
@@ -27,6 +28,7 @@
       ads: {}
       resourceApiVersion: V3
     serviceName: accesslog_als_0_1
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: accesslog_als_0_1
   outlierDetection: {}
@@ -51,6 +53,7 @@
       ads: {}
       resourceApiVersion: V3
     serviceName: accesslog_als_0_2
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: accesslog_als_0_2
   outlierDetection: {}
@@ -75,6 +78,7 @@
       ads: {}
       resourceApiVersion: V3
     serviceName: accesslog_als_1_1
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: accesslog_als_1_1
   outlierDetection: {}
@@ -99,6 +103,7 @@
       ads: {}
       resourceApiVersion: V3
     serviceName: accesslog_als_1_2
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: accesslog_als_1_2
   outlierDetection: {}
@@ -123,6 +128,7 @@
       ads: {}
       resourceApiVersion: V3
     serviceName: accesslog_als_2_1
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: accesslog_als_2_1
   outlierDetection: {}
@@ -147,6 +153,7 @@
       ads: {}
       resourceApiVersion: V3
     serviceName: accesslog_als_2_2
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: accesslog_als_2_2
   outlierDetection: {}

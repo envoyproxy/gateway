@@ -20,6 +20,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/protocov"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -71,7 +72,7 @@ func buildHCMFaultFilter() (*hcmv3.HttpFilter, error) {
 		return nil, err
 	}
 
-	faultAny, err := anypb.New(faultProto)
+	faultAny, err := protocov.ToAnyWithValidation(faultProto)
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +166,7 @@ func (*fault) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 		return nil
 	}
 
-	routeCfgAny, err := anypb.New(routeCfgProto)
+	routeCfgAny, err := protocov.ToAnyWithValidation(routeCfgProto)
 	if err != nil {
 		return err
 	}

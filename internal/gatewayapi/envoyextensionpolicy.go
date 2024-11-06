@@ -561,6 +561,8 @@ func (t *Translator) buildWasm(
 
 	switch config.Code.Type {
 	case egv1a1.HTTPWasmCodeSourceType:
+		var checksum string
+
 		// This is a sanity check, the validation should have caught this
 		if config.Code.HTTP == nil {
 			return nil, fmt.Errorf("missing HTTP field in Wasm code source")
@@ -572,7 +574,7 @@ func (t *Translator) buildWasm(
 
 		http := config.Code.HTTP
 
-		if servingURL, _, err = t.WasmCache.Get(http.URL, wasm.GetOptions{
+		if servingURL, checksum, err = t.WasmCache.Get(http.URL, wasm.GetOptions{
 			Checksum:        originalChecksum,
 			PullPolicy:      pullPolicy,
 			ResourceName:    irConfigNameForWasm(policy, idx),
@@ -584,7 +586,7 @@ func (t *Translator) buildWasm(
 		code = &ir.HTTPWasmCode{
 			ServingURL:  servingURL,
 			OriginalURL: http.URL,
-			SHA256:      originalChecksum,
+			SHA256:      checksum,
 		}
 
 	case egv1a1.ImageWasmCodeSourceType:

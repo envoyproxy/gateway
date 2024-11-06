@@ -44,7 +44,7 @@ http:
               isIPv6: false
               maskLen: 24
             jwt:
-              issuer: https://one.example.com
+              provider: https://one.example.com
               scopes:
               - foo
               claims:
@@ -68,7 +68,7 @@ http:
               isIPv6: false
               maskLen: 24
             jwt:
-              issuer: https://two.example.com
+              provider: https://two.example.com
               scopes:
               - for
               - bar
