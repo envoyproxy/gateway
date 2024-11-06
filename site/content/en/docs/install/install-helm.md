@@ -61,7 +61,7 @@ consideration when debugging.
 
 ## Upgrading from a previous version
 
-Follow the steps outlined in [this](./install-yaml.md#upgrading-from-v1.1) section if youre upgrading from a previous version.
+Follow the steps outlined in [this](./install-yaml.md#upgrading-from-v1.1) section if you're upgrading from a previous version.
 
 ## Helm chart customizations
 
