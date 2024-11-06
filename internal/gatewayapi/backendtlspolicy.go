@@ -145,9 +145,13 @@ func backendTLSTargetMatched(policy gwapiv1a3.BackendTLSPolicy, target gwapiv1a2
 		if target.Group == currTarget.Group &&
 			target.Kind == currTarget.Kind &&
 			backendNamespace == policy.Namespace &&
-			target.Name == currTarget.Name &&
-			reflect.DeepEqual(currTarget.SectionName, target.SectionName) {
-			return true
+			target.Name == currTarget.Name {
+			// if section name is not set, then it targets the entire backend
+			if currTarget.SectionName == nil {
+				return true
+			}else if reflect.DeepEqual(currTarget.SectionName, target.SectionName) {
+				return true
+			}
 		}
 	}
 	return false
