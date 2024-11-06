@@ -16,7 +16,7 @@ new features: |
   Added support for Direct Response in HTTPRouteFilter CRD
   Added support for Response Override in BackendTrafficPolicy CRD
   Added support for RequestTimeout in BackendTrafficPolicy CRD
-  Added support for inverting header matches for rate limit in BackendTrafficPolicy CRD
+  Added support for inverting header matches for Rate Limit in BackendTrafficPolicy CRD
   Added support for client TLS session resumption in ClientTrafficPolicy CRD
   Added support for HTTPRouteFilter and path regex rewrite
   Added support for host header rewrite in HTTPRouteFilter CRD
