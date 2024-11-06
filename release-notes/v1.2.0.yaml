@@ -10,7 +10,7 @@ breaking changes: |
 # New features or capabilities added in this release.
 new features: |
   Added support for Gateway-API v1.2.0
-  Added support for IPv4/IPv6 Dual Stack for Envoy listeners and BackendRef resources
+  Added support for IPv4/IPv6 Dual Stack for EnvoyProxy fleet and BackendRef resources
   Added support for EG standalone(host deployment) mode (experimental)
   Added support for JWT claims based Authorization in SecurityPolicy CRD
   Added support for Direct Response in HTTPRouteFilter CRD
