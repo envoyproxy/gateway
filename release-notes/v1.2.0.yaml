@@ -96,7 +96,6 @@ bug fixes: |
   Fixed rate limit deployment ignoring pod labels and annotation merges
   Fixed the API Server receives unnecessary requests
   Fixed terminating envoy pods don't respond with "Connection: close" (H1) or GOAWAY(H2) on shutdown, switch to an immediate drain strategy
-  Fixed ratelimit statsd not working
   Fixed not generating selector of deployment/daemonset based on the custom label configuration of EnvoyProxy
   Fixed egctl experimental translate using an incorrect namespace
   Fixed reconciliation not being triggered for Secret updates referenced by a BackendTLSPolicy
@@ -111,9 +110,9 @@ performance improvements: |
 
 # Other notable changes not covered by the above sections.
 Other changes: |
-  Upgraded Envoy to v1.32.1
+  Upgraded Envoy Proxy to v1.32.1
   Reduced the amount of configuration logging, and make it line-delimited friendly
-  Made watching alpha CRDs optional, so that gateway-api upgrade don't break envoy gateway
+  Made watching alpha CRDs optional, so that Envoy Gateway can run with older Gateway Api versions
   Removed grafana test framework from the addons helm chart
   Disabled ALPN for non-HTTP routes
   Added statPrefix for HCM and TCPProxy
@@ -121,7 +120,6 @@ Other changes: |
   Enabled GRPC conformance profile
   Enabled HTTPRouteBackendRequestHeaderModifier conformance test
   Added e2e test for Daemonset mode
-  Updated upgrades tests to use VERSION env variable
   Fixed OVS scanner wrong license warnings
   Added e2e test for Gateway with EnvoyProxy
   Added e2e test for TLS session resumption
