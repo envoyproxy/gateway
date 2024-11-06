@@ -85,8 +85,6 @@ bug fixes: |
   Fixed incorrect gateway being selected as the HTTPRoute parent
   Fixed override issues for EnvoyExtensionPolicy
   Fixed nil pointer error when translating hash load balancing
-  Fixed ratelimit does not work across multiple GatewayClasses
-  Fixed upstream mTLS only works for HTTPS listeners
   Fixed nil pointer if backedtls.minVersion is set but backedtls.maxVersion is not
   Fixed empty connection limits causing xDS rejection
   Fixed rate limiting not working with both headers and CIDR matches
