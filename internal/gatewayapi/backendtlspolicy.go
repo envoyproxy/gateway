@@ -7,6 +7,7 @@ package gatewayapi
 
 import (
 	"fmt"
+	"reflect"
 
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -145,13 +146,12 @@ func backendTLSTargetMatched(policy gwapiv1a3.BackendTLSPolicy, target gwapiv1a2
 			target.Kind == currTarget.Kind &&
 			backendNamespace == policy.Namespace &&
 			target.Name == currTarget.Name {
-			if currTarget.SectionName != nil {
-				if target.SectionName != nil && *currTarget.SectionName == *target.SectionName {
-					return true
-				}
-				return false
+			// if section name is not set, then it targets the entire backend
+			if currTarget.SectionName == nil {
+				return true
+			} else if reflect.DeepEqual(currTarget.SectionName, target.SectionName) {
+				return true
 			}
-			return true
 		}
 	}
 	return false
