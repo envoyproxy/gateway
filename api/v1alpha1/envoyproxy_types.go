@@ -140,10 +140,11 @@ type EnvoyProxySpec struct {
 	// IPFamily specifies the IP family for the EnvoyProxy fleet.
 	// This setting only affects the Gateway listener port and does not impact
 	// other aspects of the Envoy proxy configuration.
+	//
 	// If not specified, the system will operate as follows:
-	// - It defaults to IPv4 only.
-	// - IPv6 and dual-stack environments are not supported in this default configuration.
-	// Note: To enable IPv6 or dual-stack functionality, explicit configuration is required.
+	// - Default to the IP family of the pod IP of the Envoy Gateway Controller.
+	// - To enable DualStack functionality, explicit configuration is required.
+	//
 	// +kubebuilder:validation:Enum=IPv4;IPv6;DualStack
 	// +optional
 	IPFamily *IPFamily `json:"ipFamily,omitempty"`
