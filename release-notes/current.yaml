@@ -18,6 +18,8 @@ bug fixes: |
   The xDS translation failed when wasm http code source configured without a sha
   HTTPRoute status only shows one parent when targeting multiple Gateways from different GatewayClasses
   Route with multiple parents has incorrect namespace in parentRef status
+  BackendTlsPolicy specify multiple targetRefs of the same service, only one will work
+  Helm chart fails for Flux HelmRelease
 
 # Enhancements that improve performance.
 performance improvements: |

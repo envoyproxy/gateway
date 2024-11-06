@@ -30,9 +30,9 @@ var FileAccessLogTest = suite.ConformanceTest{
 	Manifests:   []string{"testdata/accesslog-file.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		labels := map[string]string{
-			"job":                "fluentbit",
-			"k8s_namespace_name": "envoy-gateway-system",
-			"k8s_container_name": "envoy",
+			"job":       "envoy-gateway-system/envoy",
+			"namespace": "envoy-gateway-system",
+			"container": "envoy",
 		}
 		match := "test-annotation-value"
 

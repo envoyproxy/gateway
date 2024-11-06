@@ -133,7 +133,7 @@ benchmark: create-cluster kube-install-image kube-deploy-for-benchmark-test run-
 
 .PHONY: e2e
 e2e: create-cluster kube-install-image kube-deploy \
-	install-ratelimit install-e2e-telemetry kube-install-examples-image \
+	install-ratelimit install-eg-addons kube-install-examples-image \
 	run-e2e delete-cluster
 
 .PHONY: install-ratelimit
@@ -190,10 +190,10 @@ uninstall-benchmark-server: ## Uninstall nighthawk server for benchmark test
 	kubectl delete configmap test-server-config -n benchmark-test
 	kubectl delete namespace benchmark-test
 
-.PHONY: install-e2e-telemetry
-install-e2e-telemetry: helm-generate.gateway-addons-helm
+.PHONY: install-eg-addons
+install-eg-addons: helm-generate.gateway-addons-helm
 	@$(LOG_TARGET)
-	helm upgrade -i eg-addons charts/gateway-addons-helm --set grafana.enabled=false,opentelemetry-collector.enabled=true -n monitoring --create-namespace --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
+	helm upgrade -i eg-addons charts/gateway-addons-helm -f test/helm/gateway-addons-helm/e2e.in.yaml -n monitoring --create-namespace --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
 	# Change loki service type from ClusterIP to LoadBalancer
 	kubectl patch service loki -n monitoring -p '{"spec": {"type": "LoadBalancer"}}'
 	# Wait service Ready
@@ -204,8 +204,8 @@ install-e2e-telemetry: helm-generate.gateway-addons-helm
 	kubectl rollout restart -n monitoring deployment/otel-collector
 	kubectl rollout status --watch --timeout=5m -n monitoring deployment/otel-collector
 
-.PHONY: uninstall-e2e-telemetry
-uninstall-e2e-telemetry:
+.PHONY: uninstall-eg-addons
+uninstall-eg-addons: 
 	@$(LOG_TARGET)
 	helm delete $(shell helm list -n monitoring -q) -n monitoring
 
