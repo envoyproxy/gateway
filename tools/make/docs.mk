@@ -26,7 +26,7 @@ copy-current-release-docs:  ## Copy the current release docs to the docs folder
 	cp -r $(ROOT_DIR)/site/content/en/$$CURRENT_RELEASE/** $(ROOT_DIR)/site/content/en/docs
 
 .PHONY: docs-release
-docs-release: docs-release-prepare release-notes-docs docs-release-gen docs  ## Generate Envoy Gateway Release Docs
+docs-release: docs-release-prepare docs-release-gen docs  ## Generate Envoy Gateway Release Docs
 
 .PHONY: docs-serve
 docs-serve: copy-current-release-docs ## Start Envoy Gateway Site Locally
