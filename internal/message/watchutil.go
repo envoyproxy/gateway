@@ -6,6 +6,8 @@
 package message
 
 import (
+	"fmt"
+	"runtime/debug"
 	"time"
 
 	"github.com/telepresenceio/watchable"
@@ -54,6 +56,14 @@ func HandleSubscription[K comparable, V any](
 	go func() {
 		for err := range errChans {
 			logger.WithValues("runner", meta.Runner).Error(err, "observed an error")
+			watchableSubscribeTotal.WithFailure(metrics.ReasonError, meta.LabelValues()...).Increment()
+		}
+	}()
+	defer close(errChans)
+	defer func() {
+		if r := recover(); r != nil {
+			logger.WithValues("runner", meta.Runner).Error(fmt.Errorf("%+v", r), "observed an panic",
+				"stackTrace", string(debug.Stack()))
 			watchableSubscribeTotal.WithFailure(metrics.ReasonError, meta.LabelValues()...).Increment()
 		}
 	}()
