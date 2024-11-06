@@ -59,6 +59,10 @@ consideration when debugging.
 
 [`quickstart.yaml`]: https://github.com/envoyproxy/gateway/releases/download/{{< yaml-version >}}/quickstart.yaml
 
+## Upgrading from a previous version
+
+Follow the steps outlined in [this](./install-yaml.md#upgrading-from-v1.1) section if youre upgrading from a previous version.
+
 ## Helm chart customizations
 
 Some of the quick ways of using the helm install command for envoy gateway installation are below.
