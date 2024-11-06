@@ -275,8 +275,12 @@ enable = true
   url = "/latest"
 
 [[params.versions]]
-  version = "v1.1"
+  version = "v1.2"
   url = "/docs"
+
+[[params.versions]]
+  version = "v1.1"
+  url = "/v1.1"
 
 [[params.versions]]
   version = "v1.0"
@@ -301,3 +305,4 @@ enable = true
 [[params.versions]]
   version = "v0.2"
   url = "/v0.2"
+

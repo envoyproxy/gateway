@@ -5,6 +5,9 @@
 {{- with (strings.HasPrefix $pagePrefix "v1.1") -}}
 {{- "v1.1.3" -}}
 {{- end -}}
+{{- with (strings.HasPrefix $pagePrefix "v1.2") -}}
+{{- "v1.2.0" -}}
+{{- end -}}
 {{- with (strings.HasPrefix $pagePrefix "doc") -}}
-{{- "v1.1.3" -}}
+{{- "v1.2.0" -}}
 {{- end -}}
