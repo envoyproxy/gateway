@@ -57,6 +57,7 @@ jobs:
         shell: bash
         run: |
           echo "release_tag=$(echo ${GITHUB_REF##*/})" >> $GITHUB_ENV
+          echo "without_v_release_tag=${release_tag:1}" >> $GITHUB_ENV
           echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
       - name: Login to DockerHub
@@ -73,6 +74,7 @@ jobs:
 
       - name: Build and Push EG Release Helm Chart
         run: IMAGE_PULL_POLICY=IfNotPresent OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=${{ env.release_tag }} IMAGE=docker.io/envoyproxy/gateway TAG=${{ env.release_tag }} make helm-package helm-push
+        run: IMAGE_PULL_POLICY=IfNotPresent OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=${{ env.without_v_release_tag }} IMAGE=docker.io/envoyproxy/gateway TAG=${{ env.release_tag }} make helm-package helm-push
 
       - name: Download Benchmark Report
         uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16  # v4.1.8
