@@ -21,13 +21,13 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	rlsconfv3 "github.com/envoyproxy/go-control-plane/ratelimit/config/ratelimit/v3"
 	"github.com/envoyproxy/ratelimit/src/config"
-	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	goyaml "gopkg.in/yaml.v3" // nolint: depguard
 	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/protocov"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -113,7 +113,7 @@ func (t *Translator) buildRateLimitFilter(irListener *ir.HTTPListener) *hcmv3.Ht
 		rateLimitFilterProto.FailureModeDeny = t.GlobalRateLimit.FailClosed
 	}
 
-	rateLimitFilterAny, err := anypb.New(rateLimitFilterProto)
+	rateLimitFilterAny, err := protocov.ToAnyWithValidation(rateLimitFilterProto)
 	if err != nil {
 		return nil
 	}
@@ -456,7 +456,7 @@ func buildRateLimitTLSocket() (*corev3.TransportSocket, error) {
 	}
 	tlsCtx.CommonTlsContext.TlsCertificates = append(tlsCtx.CommonTlsContext.TlsCertificates, tlsCert)
 
-	tlsCtxAny, err := anypb.New(tlsCtx)
+	tlsCtxAny, err := protocov.ToAnyWithValidation(tlsCtx)
 	if err != nil {
 		return nil, err
 	}

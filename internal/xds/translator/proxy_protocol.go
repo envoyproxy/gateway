@@ -9,7 +9,8 @@ import (
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	proxyprotocolv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/proxy_protocol/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
-	"google.golang.org/protobuf/types/known/anypb"
+
+	"github.com/envoyproxy/gateway/internal/utils/protocov"
 )
 
 // patchProxyProtocolFilter builds and appends the Proxy Protocol Filter to the
@@ -39,7 +40,7 @@ func patchProxyProtocolFilter(xdsListener *listenerv3.Listener, enableProxyProto
 func buildProxyProtocolFilter() *listenerv3.ListenerFilter {
 	pp := &proxyprotocolv3.ProxyProtocol{}
 
-	ppAny, err := anypb.New(pp)
+	ppAny, err := protocov.ToAnyWithValidation(pp)
 	if err != nil {
 		return nil
 	}

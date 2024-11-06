@@ -13,7 +13,8 @@ accesslog:
       protocol: "%PROTOCOL%"
       response_code: "%RESPONSE_CODE%"
   als:
-  - destination:
+  - name: als
+    destination:
       name: accesslog/monitoring/envoy-als/port/9000
       settings:
       - addressType: IP

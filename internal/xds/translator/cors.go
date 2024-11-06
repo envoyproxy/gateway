@@ -20,6 +20,7 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/protocov"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -70,7 +71,7 @@ func (*cors) patchHCM(
 func buildHCMCORSFilter() (*hcmv3.HttpFilter, error) {
 	corsProto := &corsv3.Cors{}
 
-	corsAny, err := anypb.New(corsProto)
+	corsAny, err := protocov.ToAnyWithValidation(corsProto)
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +153,7 @@ func (*cors) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 		ForwardNotMatchingPreflights: &wrapperspb.BoolValue{Value: false},
 	}
 
-	routeCfgAny, err := anypb.New(routeCfgProto)
+	routeCfgAny, err := protocov.ToAnyWithValidation(routeCfgProto)
 	if err != nil {
 		return err
 	}

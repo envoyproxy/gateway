@@ -21,6 +21,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/protocov"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -62,7 +63,7 @@ func (*localRateLimit) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir
 		StatPrefix: localRateLimitFilterStatPrefix,
 	}
 
-	localRlAny, err := anypb.New(localRl)
+	localRlAny, err := protocov.ToAnyWithValidation(localRl)
 	if err != nil {
 		return err
 	}
@@ -176,7 +177,7 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) e
 		},
 	}
 
-	localRlAny, err := anypb.New(localRl)
+	localRlAny, err := protocov.ToAnyWithValidation(localRl)
 	if err != nil {
 		return err
 	}
