@@ -57,7 +57,7 @@ jobs:
         shell: bash
         run: |
           echo "release_tag=$(echo ${GITHUB_REF##*/})" >> $GITHUB_ENV
-          echo "without_v_release_tag=${release_tag:1}" >> $GITHUB_ENV
+          echo "without_v_release_tag=$(echo ${GITHUB_REF##*/v})" >> $GITHUB_ENV
           echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
       - name: Login to DockerHub
