@@ -1,0 +1,38 @@
+# These roles grant the standard Kubernetes "admin", "edit", and "view"
+# roles access to Gateway API and Envoy-Gateway resources.
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: envoy-gateway-namespaced-admin
+  labels:
+  {{- include "eg.labels" . | nindent 4 }}
+    rbac.authorization.k8s.io/aggregate-to-admin: "true"
+rules:
+  - apiGroups: ["gateway.networking.k8s.io", "gateway.envoyproxy.io"]
+    resources: ["*"]
+    verbs: ["*"]
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: envoy-gateway-namespaced-edit
+  labels:
+  {{- include "eg.labels" . | nindent 4 }}
+    rbac.authorization.k8s.io/aggregate-to-edit: "true"
+rules:
+  - apiGroups: ["gateway.networking.k8s.io", "gateway.envoyproxy.io"]
+    resources: ["*"]
+    verbs: ["create", "update", "patch", "delete", "deletecollection"]
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: envoy-gateway-namespaced-view
+  labels:
+  {{- include "eg.labels" . | nindent 4 }}
+    rbac.authorization.k8s.io/aggregate-to-view: "true"
+    rbac.authorization.k8s.io/aggregate-to-edit: "true"
+rules:
+  - apiGroups: ["gateway.networking.k8s.io", "gateway.envoyproxy.io"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
