@@ -30,7 +30,7 @@ func TestHandleSubscriptionAlreadyClosed(t *testing.T) {
 	assert.Equal(t, 0, calls)
 }
 
-func TestPanicInSubsscriptionHandler(t *testing.T) {
+func TestPanicInSubscriptionHandler(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
 			assert.Fail(t, "recovered from an unexpected panic")
@@ -38,11 +38,19 @@ func TestPanicInSubsscriptionHandler(t *testing.T) {
 	}()
 	var m watchable.Map[string, any]
 	m.Store("foo", "bar")
+
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		m.Store("baz", "qux")
+		time.Sleep(100 * time.Millisecond)
+		m.Close()
+	}()
+
 	message.HandleSubscription[string, any](
 		message.Metadata{Runner: "demo", Message: "demo"},
 		m.Subscribe(context.Background()),
 		func(update message.Update[string, any], errChans chan error) {
-			panic("oops")
+			panic("oops " + update.Key)
 		},
 	)
 }
