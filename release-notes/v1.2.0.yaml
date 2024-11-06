@@ -2,18 +2,19 @@ date: November 6, 2024
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
-  Gateway API GRPCRoute and ReferenceGrant v1alpha2 have been removed.
-  Please refer to the [Gateway API v1.2.0 documentation](https://github.com/kubernetes-sigs/gateway-api/releases) for more information.
+  Gateway API GRPCRoute and ReferenceGrant v1alpha2 have been removed
+  Please refer to the [Gateway API v1.2.0 documentation](https://github.com/kubernetes-sigs/gateway-api/releases) for more information
   Removed default CPU limit of the Envoy Gateway deployment
   Changed default Envoy shutdown settings: drain strategy has been changed to immediate, default minDrainDuration, drainTimeout and terminationGracePeriodSeconds have been set to 10s, 60s and 360s respectively
+  Set ignore_health_on_host_removal to true for clusters with static endpoints This was done to speed up removal of static endpoints by the control plane when active health check is configured
+  Xds and Infra IR logs are logged at Debug level instead of Info level. They will now not be seen by default in Envoy Gateway logs. You can change the logging level to default: debug to view them
 
 # New features or capabilities added in this release.
 new features: |
   Added support for Gateway-API v1.2.0
   Added support for IPv4/IPv6 Dual Stack for EnvoyProxy fleet and BackendRef resources
-  Added experimental support for EG standalone(host deployment) mode.
+  Added experimental support for EG standalone(host deployment) mode
   Added support for JWT claims based Authorization in SecurityPolicy CRD
-  Added support for Direct Response in HTTPRouteFilter CRD
   Added support for Response Override in BackendTrafficPolicy CRD
   Added support for RequestTimeout in BackendTrafficPolicy CRD
   Added support for inverting header matches for Rate Limit in BackendTrafficPolicy CRD
@@ -30,7 +31,7 @@ new features: |
   Added support for RecomputeRoute for ExtAuth in SecurityPolicy CRD
   Added support for sharing token cookies between multiple domains in SecurityPolicy CRD
   Added support for JSONPatches for proxy bootstrap modifications in EnvoyProxy CRD
-  Added support for LB priority for non xRoute endpoints
+  Added support for Active Passive Failover Backends
   Added support for configuring the GRPC Health Checker in the BackendTrafficPolicy CRD
   Added support for early request header mutation in the ClientTrafficPolicy CRD
   Added support for JsonPath in the EnvoyPatchPolicy CRD
@@ -66,51 +67,47 @@ new features: |
 
 # Fixes for bugs identified in previous versions.
 bug fixes: |
-  Fixed xDS translation failed when wasm http code source configured without sha
-  Fixed unsupported listener protocol type causing an error while updating Gateway Status
-  Fixed some status updates were being discarded by the status updater
-  Fixed Gateway crash adding BackendTLSPolicy to External Backend of an HTTPRoute
+  Fixed xDS translation failing when the WASM HTTP code source was configured without an SHA
+  Fixed unsupported listener protocol types causing errors while updating Gateway status
+  Fixed unsupported listener protocol types causing errors while updating Gateway status
+  Fixed invalid sectionName in BackendTLSPolicy for Backend
   Fixed Delay in SecurityPolicy change propagation for HTTPRoute when using targetSelectors
-  Fixed JSONPath not correctly translated to JSONPatch paths
-  Fixed allow empty slowStart when using LeastRequest
+  Fixed JSONPath not being correctly translated to JSONPatch paths
+  Fixed allowing an empty slowStart value when using LeastRequest
   Fixed Backends which should be rejected are still used as an HTTPRoute's destination
-  Fixed losing timeout settings that originate from the route when translating the backend traffic policy
-  Fixed Backend resources don't get status updates
-  Fixed Active Health check requires expectedStatuses field to work
-  Fixed HTTPHeaderFilter processing doesn't correctly support multiple header values
-  Fixed multiple reference grants in same namespace
-  Fixed upstream get unwanted /.
+  Fixed timeout settings originating from the route being lost when translating the backend traffic policy
+  Fixed Backend resources not receiving status updates
+  Fixed active health checks requiring the expectedStatuses field to function correctly
+  Fixed HTTPHeaderFilter processing not correctly supporting multiple header values
+  Fixed reconciling multiple ReferenceGrants within the same namespace
+  Fixed unwanted / appearing in the Path when using Prefix Rewrites
   Fixed creation of SecurityPolicy with targetSelectors fails
-  Fixed wrong gateway is chosen as HTTPRoute parent
-  Fixed override issue for EEP
-  Fixed nil pointer err translating hash load balancing
+  Fixed incorrect gateway being selected as the HTTPRoute parent
+  Fixed override issues for EnvoyExtensionPolicy
+  Fixed nil pointer error when translating hash load balancing
   Fixed ratelimit does not work across multiple GatewayClasses
   Fixed upstream mTLS only works for HTTPS listeners
   Fixed nil pointer if backedtls.minVersion is set but backedtls.maxVersion is not
-  Fixed empty connection limit causes xDS rejection
-  Fixed ratelimit not working with both headers and cidr matches
-  Fixed EDS didn't update when deployments was created after services
+  Fixed empty connection limits causing xDS rejection
+  Fixed rate limiting not working with both headers and CIDR matches
+  Fixed EDS not updating when deployments were created after services
   Fixed RBAC issue for deleting infrastructure resources
-  Fixed customized infrastructure resources not being deleted
-  Fixed Gateways never become ready/programmed when running Envoy as a Daemonset
-  Fixed Ratelimit Deployment ignoring pod labels and annotation merge
+  Fixed gateways never reaching ready/programmed status when running Envoy as a Daemonset
+  Fixed rate limit deployment ignoring pod labels and annotation merges
   Fixed the API Server receives unnecessary requests
   Fixed terminating envoy pods don't respond with "Connection: close" (H1) or GOAWAY(H2) on shutdown, switch to an immediate drain strategy
   Fixed ratelimit statsd not working
   Fixed not generating selector of deployment/daemonset based on the custom label configuration of EnvoyProxy
-  Fixed egctl experimental translate using a wrong ns
-  Fixed reconcile not triggered for Secret updates referenced by a BackendTLSPolicy
-  Fixed Route with multiple parents has incorrect namespace in parentRef status
-  Fixed only log endpoint configuration in verbose logging mode (`-v 4` or higher)
-  Fixed the xDS translation failed when wasm http code source configured without a sha
-  Fixed HTTPRoute status only shows one parent when targeting multiple Gateways from different GatewayClasses
-  Fixed Route with multiple parents has incorrect namespace in parentRef status
-  Fixed BackendTlsPolicy specify multiple targetRefs of the same service, only one will work
-  Fixed Helm chart fails for Flux HelmRelease
+  Fixed egctl experimental translate using an incorrect namespace
+  Fixed reconciliation not being triggered for Secret updates referenced by a BackendTLSPolicy
+  Fixed xDS translation failure when WASM HTTP code source was configured without an SHA
+  Fixed HTTPRoute status displaying only one parent when targeting multiple gateways from different GatewayClasses
+  Fixed Route with multiple parents having an incorrect namespace in the parentRef status
+  Fixed BackendTlsPolicy specifying multiple targetRefs for the same service, to work
 
 # Enhancements that improve performance.
 performance improvements: |
-  Fixed repeated resources and optimize memory usage
+  Optimize memory usage by only storing distinct resources
 
 # Other notable changes not covered by the above sections.
 Other changes: |
@@ -145,5 +142,5 @@ Other changes: |
   Reduced readinessProbe failureThreshold and periodSeconds
   Bumped go-control-plane to v0.13.1
   Enabled e2e tests for dual stack
-  Set ignore_health_on_host_removal to true for clusters with static endpoints
   Use grafana alloy instead of fluent-bit for e2e tests
+  Push tags without the v prefix for helm charts to support Flux HelmReleases
