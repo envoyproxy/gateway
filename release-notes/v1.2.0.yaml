@@ -146,4 +146,4 @@ Other changes: |
   Bumped go-control-plane to v0.13.1
   Enabled e2e tests for dual stack
   Set ignore_health_on_host_removal to true for clusters with static endpoints
-  Use grafana alloy instead of fluent-bit in the addons helm chart for log forwarding
+  Use grafana alloy instead of fluent-bit for e2e tests
