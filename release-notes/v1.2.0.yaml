@@ -92,7 +92,6 @@ bug fixes: |
   Fixed gateways never reaching ready/programmed status when running Envoy as a Daemonset
   Fixed rate limit deployment ignoring pod labels and annotation merges
   Fixed the API Server receives unnecessary requests
-  Fixed terminating envoy pods don't respond with "Connection: close" (H1) or GOAWAY(H2) on shutdown, switch to an immediate drain strategy
   Fixed egctl experimental translate using an incorrect namespace
   Fixed reconciliation not being triggered for Secret updates referenced by a BackendTLSPolicy
   Fixed xDS translation failure when WASM HTTP code source was configured without an SHA
