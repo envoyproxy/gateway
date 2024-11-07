@@ -46,13 +46,16 @@ func TestPanicInSubscriptionHandler(t *testing.T) {
 		m.Close()
 	}()
 
+	numCalls := 0
 	message.HandleSubscription[string, any](
 		message.Metadata{Runner: "demo", Message: "demo"},
 		m.Subscribe(context.Background()),
 		func(update message.Update[string, any], errChans chan error) {
+			numCalls++
 			panic("oops " + update.Key)
 		},
 	)
+	assert.Equal(t, 2, numCalls)
 }
 
 func TestHandleSubscriptionAlreadyInitialized(t *testing.T) {
