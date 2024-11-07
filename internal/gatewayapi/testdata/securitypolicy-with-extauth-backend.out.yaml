@@ -179,6 +179,7 @@ securityPolicies:
       headersToExtAuth:
       - header1
       - header2
+      bodyToExtAuth: '{"name": "John Doe"}'
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -262,6 +263,7 @@ xdsIR:
             headersToExtAuth:
             - header1
             - header2
+            bodyToExtAuth: '{"name": "John Doe"}'
             name: securitypolicy/default/policy-for-http-route-1
       - destination:
           name: httproute/default/httproute-1/rule/1
@@ -306,6 +308,7 @@ xdsIR:
             headersToExtAuth:
             - header1
             - header2
+            bodyToExtAuth: '{"name": "John Doe"}'
             name: securitypolicy/default/policy-for-http-route-1
       - destination:
           name: httproute/default/httproute-2/rule/0
