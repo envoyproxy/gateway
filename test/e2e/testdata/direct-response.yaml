@@ -27,6 +27,17 @@ spec:
         group: gateway.envoyproxy.io
         kind: HTTPRouteFilter
         name: direct-response-value-ref
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /401
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: gateway.envoyproxy.io
+        kind: HTTPRouteFilter
+        name: direct-response-status
+
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -62,3 +73,12 @@ spec:
         group: ""
         kind: ConfigMap
         name: value-ref-response
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: direct-response-status
+  namespace: gateway-conformance-infra
+spec:
+  directResponse:
+    statusCode: 401

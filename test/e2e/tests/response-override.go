@@ -49,13 +49,15 @@ var ResponseOverrideTest = suite.ConformanceTest{
 				Name:      gwapiv1.ObjectName(gwNN.Name),
 			}
 			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "response-override", Namespace: ns}, suite.ControllerName, ancestorRef)
-			verifyCustomResponse(t, suite.TimeoutConfig, gwAddr, "/status/404", "text/plain", "Oops! Your request is not found.")
-			verifyCustomResponse(t, suite.TimeoutConfig, gwAddr, "/status/500", "application/json", `{"error": "Internal Server Error"}`)
+			verifyCustomResponse(t, suite.TimeoutConfig, gwAddr, "/status/404", "text/plain", "Oops! Your request is not found.", 404)
+			verifyCustomResponse(t, suite.TimeoutConfig, gwAddr, "/status/500", "application/json", `{"error": "Internal Server Error"}`, 500)
 		})
 	},
 }
 
-func verifyCustomResponse(t *testing.T, timeoutConfig config.TimeoutConfig, gwAddr, path, expectedContentType, expectedBody string) {
+func verifyCustomResponse(t *testing.T, timeoutConfig config.TimeoutConfig, gwAddr,
+	path, expectedContentType, expectedBody string, expectedStatusCode int,
+) {
 	reqURL := url.URL{
 		Scheme: "http",
 		Host:   httputils.CalculateHost(t, gwAddr, "http"),
@@ -85,6 +87,11 @@ func verifyCustomResponse(t *testing.T, timeoutConfig config.TimeoutConfig, gwAd
 		contentType := rsp.Header.Get("Content-Type")
 		if contentType != expectedContentType {
 			tlog.Logf(t, "expected content type to be %s but got %s", expectedContentType, contentType)
+			return false
+		}
+
+		if expectedStatusCode != rsp.StatusCode {
+			tlog.Logf(t, "expected status code to be %d but got %d", expectedStatusCode, rsp.StatusCode)
 			return false
 		}
 
