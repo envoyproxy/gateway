@@ -15,8 +15,9 @@ envoyProxyForGatewayClass:
               path: /dev/null
           address:
             socket_address:
-              address: 127.0.0.1
+              address: ::1
               port_value: 19000
+              ipv4_compat: true
         layered_runtime:
           layers:
           - name: global_config
@@ -87,7 +88,7 @@ envoyProxyForGatewayClass:
                 - endpoint:
                     address:
                       socket_address:
-                        address: 127.0.0.1
+                        address: ::1
                         port_value: 19000
           - connect_timeout: 10s
             load_assignment:
@@ -532,7 +533,8 @@ xds:
               path: /dev/null
           address:
             socketAddress:
-              address: 127.0.0.1
+              address: ::1
+              ipv4Compat: true
               portValue: 19000
         dynamicResources:
           adsConfig:
@@ -572,7 +574,7 @@ xds:
                 - endpoint:
                     address:
                       socketAddress:
-                        address: 127.0.0.1
+                        address: ::1
                         portValue: 19000
             name: prometheus_stats
             type: STATIC

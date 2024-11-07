@@ -7,6 +7,7 @@ admin:
   address:
     socketAddress:
       address: 127.0.0.1
+      ipv4Compat: true
       portValue: 20000
 dynamicResources:
   adsConfig:
@@ -52,7 +53,7 @@ staticResources:
         - endpoint:
             address:
               socketAddress:
-                address: 127.0.0.1
+                address: ::1
                 portValue: 19000
     name: prometheus_stats
     type: STATIC

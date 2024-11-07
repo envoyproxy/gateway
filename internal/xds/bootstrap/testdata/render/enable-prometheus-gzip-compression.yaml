@@ -6,8 +6,9 @@ admin:
       path: /dev/null
   address:
     socket_address:
-      address: 127.0.0.1
+      address: ::1
       port_value: 19000
+      ipv4_compat: true
 layered_runtime:
   layers:
   - name: global_config
@@ -85,7 +86,7 @@ static_resources:
         - endpoint:
             address:
               socket_address:
-                address: 127.0.0.1
+                address: ::1
                 port_value: 19000
   - connect_timeout: 10s
     load_assignment:
