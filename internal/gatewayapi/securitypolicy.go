@@ -888,6 +888,7 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *reso
 	extAuth := &ir.ExtAuth{
 		Name:             irConfigName(policy),
 		HeadersToExtAuth: policy.Spec.ExtAuth.HeadersToExtAuth,
+		BodyToExtAuth:    policy.Spec.ExtAuth.BodyToExtAuth,
 		FailOpen:         policy.Spec.ExtAuth.FailOpen,
 		Traffic:          traffic,
 		RecomputeRoute:   policy.Spec.ExtAuth.RecomputeRoute,

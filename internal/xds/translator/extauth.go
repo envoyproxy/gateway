@@ -117,6 +117,13 @@ func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
 		})
 	}
 
+	if extAuth.BodyToExtAuth != nil {
+		config.WithRequestBody = &extauthv3.BufferSettings{
+			AllowPartialMessage: false,
+			PackAsBytes:         false,
+		}
+	}
+
 	if len(headersToExtAuth) > 0 {
 		config.AllowedHeaders = &matcherv3.ListStringMatcher{
 			Patterns: headersToExtAuth,
