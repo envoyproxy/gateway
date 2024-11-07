@@ -66,6 +66,7 @@ func (r *gatewayAPIReconciler) processRouteFilterConfigMapRef(
 	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) {
 	if filter.Spec.DirectResponse != nil &&
+		filter.Spec.DirectResponse.Body != nil &&
 		filter.Spec.DirectResponse.Body.ValueRef != nil &&
 		string(filter.Spec.DirectResponse.Body.ValueRef.Kind) == resource.KindConfigMap {
 		configMap := new(corev1.ConfigMap)
