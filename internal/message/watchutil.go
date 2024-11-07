@@ -51,6 +51,7 @@ func handleWithCrashRecovery[K comparable, V any](
 			logger.WithValues("runner", meta.Runner).Error(fmt.Errorf("%+v", r), "observed an panic",
 				"stackTrace", string(debug.Stack()))
 			watchableSubscribeTotal.WithFailure(metrics.ReasonError, meta.LabelValues()...).Increment()
+			panicCounter.WithFailure(metrics.ReasonError, meta.LabelValues()...).Increment()
 		}
 	}()
 	startHandleTime := time.Now()

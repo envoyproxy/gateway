@@ -13,6 +13,11 @@ var (
 		"Current depth of watchable queue.",
 	)
 
+	panicCounter = metrics.NewCounter(
+		"panics_recovered_total",
+		"Total number of panics recovered while handling items in queue.",
+	)
+
 	watchableSubscribeDurationSeconds = metrics.NewHistogram(
 		"watchable_subscribe_duration_seconds",
 		"How long in seconds a subscribed watchable queue is handled.",
