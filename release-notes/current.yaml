@@ -26,4 +26,4 @@ deprecations: |
 
 # Other notable changes not covered by the above sections.
 Other changes: |
-  Add other changes here
+  [SecurityPolicy] Modify the JWT Provider Issuer validation constraint
