@@ -61,7 +61,9 @@ consideration when debugging.
 
 ## Upgrading from a previous version
 
-Follow the steps outlined in [this](./install-yaml.md#upgrading-from-v1.1) section if you're upgrading from a previous version.
+[Helm](https://helm.sh/docs/chart_best_practices/custom_resource_definitions/#some-caveats-and-explanations) does not update CRDs
+that live in the `/crds` folder in the Helm Chart. So you will manually need to update the CRDs.
+Follow the steps outlined in [this](./install-yaml.mdupgrading-from-v1.1) section if you're upgrading from a previous version.
 
 ## Helm chart customizations
 
