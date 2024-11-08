@@ -34,3 +34,5 @@
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
+- name: NullRouteCluster
+  type: STATIC

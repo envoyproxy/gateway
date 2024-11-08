@@ -39,7 +39,11 @@ var (
 	ErrXdsSecretExists  = errors.New("xds secret exists")
 )
 
-const AuthorityHeaderKey = ":authority"
+const (
+	AuthorityHeaderKey = ":authority"
+	// The dummy cluster for TCP listeners that have no routes
+	nullRouteClusterName = "NullRouteCluster"
+)
 
 // Translator translates the xDS IR into xDS resources.
 type Translator struct {
@@ -624,6 +628,31 @@ func (t *Translator) processTCPListenerXdsTranslation(
 				}
 			}
 			if err := addXdsTCPFilterChain(xdsListener, route, route.Destination.Name, accesslog, tcpListener.Timeout, tcpListener.Connection); err != nil {
+				errs = errors.Join(errs, err)
+			}
+		}
+
+		// If there are no routes, add a route without a destination to the listener to create a filter chain
+		// This is needed because Envoy requires a filter chain to be present in the listener, otherwise it will reject the listener and report a warning
+		if len(tcpListener.Routes) == 0 {
+			nullRouteCluster := &clusterv3.Cluster{
+				Name:                 nullRouteClusterName,
+				ClusterDiscoveryType: &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STATIC},
+			}
+
+			if findXdsCluster(tCtx, nullRouteClusterName) == nil {
+				if err := tCtx.AddXdsResource(resourcev3.ClusterType, nullRouteCluster); err != nil {
+					errs = errors.Join(errs, err)
+				}
+			}
+
+			nullRoute := &ir.TCPRoute{
+				Name: nullRouteClusterName,
+				Destination: &ir.RouteDestination{
+					Name: nullRouteClusterName,
+				},
+			}
+			if err := addXdsTCPFilterChain(xdsListener, nullRoute, nullRouteClusterName, accesslog, tcpListener.Timeout, tcpListener.Connection); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}

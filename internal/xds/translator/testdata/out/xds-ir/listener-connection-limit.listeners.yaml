@@ -75,11 +75,38 @@
     socketAddress:
       address: 0.0.0.0
       portValue: 10082
+  filterChains:
+  - filters:
+    - name: envoy.filters.network.connection_limit
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.connection_limit.v3.ConnectionLimit
+        maxConnections: "3"
+        statPrefix: tcp-10082
+    - name: envoy.filters.network.tcp_proxy
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        cluster: NullRouteCluster
+        statPrefix: tcp-10082
+    name: NullRouteCluster
   name: third-listener
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
       address: 0.0.0.0
       portValue: 10083
+  filterChains:
+  - filters:
+    - name: envoy.filters.network.connection_limit
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.connection_limit.v3.ConnectionLimit
+        delay: 3s
+        maxConnections: "10"
+        statPrefix: tcp-10083
+    - name: envoy.filters.network.tcp_proxy
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        cluster: NullRouteCluster
+        statPrefix: tcp-10083
+    name: NullRouteCluster
   name: fourth-listener
   perConnectionBufferLimitBytes: 32768

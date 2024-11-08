@@ -1,3 +1,5 @@
+- name: NullRouteCluster
+  type: STATIC
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
