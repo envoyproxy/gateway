@@ -1043,6 +1043,53 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
+## Customize EnvoyProxy IP Family
+
+You can customize the IP family configuration for EnvoyProxy via the EnvoyProxy Config.
+This allows the Envoy Proxy fleet to serve external client over IPv4 as well as IPv6.
+
+The below configuration sets the `ipFamily` to `DualStack` to allow ingressing IPv4 as well as IPv6 traffic.
+
+**Note**: Envoy Gateway relies on the [Service](https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services) spec of the BackendRef resource (linked to xRoutes) to decide which type of IP addresses to use to route to them.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: default
+spec:
+  ipFamily: DualStack
+EOF
+```
+
+{{% /tab %}}
+
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: default
+spec:
+  ipFamily: DualStack  # Supports: IPv4, IPv6, or DualStack
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+After applying the config, the EnvoyProxy deployment will be configured to use the specified IP family. When set to `DualStack`, both IPv4 and IPv6 networking will be enabled.
+
+**Note**: Your cluster must support the selected IP family configuration. For DualStack support, ensure your Kubernetes cluster is properly configured for dual-stack networking.
+
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
 [EnvoyProxy]: ../../../api/extension_types#envoyproxy
 [egctl translate]: ../egctl/#validating-gateway-api-configuration

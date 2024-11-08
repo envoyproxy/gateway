@@ -1046,6 +1046,11 @@ spec:
 ## Customize EnvoyProxy IP Family
 
 You can customize the IP family configuration for EnvoyProxy via the EnvoyProxy Config.
+This allows the Envoy Proxy fleet to serve external client over IPv4 as well as IPv6.
+
+The below configuration sets the `ipFamily` to `DualStack` to allow ingressing IPv4 as well as IPv6 traffic.
+
+**Note**: Envoy Gateway relies on the [Service](https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services) spec of the BackendRef resource (linked to xRoutes) to decide which type of IP addresses to use to route to them.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
