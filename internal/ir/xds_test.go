@@ -503,7 +503,7 @@ var (
 				Providers: []egv1a1.JWTProvider{
 					{
 						Name: "test1",
-						RemoteJWKS: egv1a1.RemoteJWKS{
+						RemoteJWKS: &egv1a1.RemoteJWKS{
 							URI: "https://test1.local",
 						},
 					},
@@ -1256,7 +1256,7 @@ func TestValidateJWT(t *testing.T) {
 						Name:      "test",
 						Issuer:    "https://test.local",
 						Audiences: []string{"test1", "test2"},
-						RemoteJWKS: egv1a1.RemoteJWKS{
+						RemoteJWKS: &egv1a1.RemoteJWKS{
 							URI: "https://test.local",
 						},
 					},

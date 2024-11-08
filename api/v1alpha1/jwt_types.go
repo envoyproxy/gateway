@@ -5,6 +5,8 @@
 
 package v1alpha1
 
+import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+
 // JWT defines the configuration for JSON Web Token (JWT) authentication.
 type JWT struct {
 	// Optional determines whether a missing JWT is acceptable, defaulting to false if not specified.
@@ -23,6 +25,8 @@ type JWT struct {
 
 // JWTProvider defines how a JSON Web Token (JWT) can be verified.
 // +kubebuilder:validation:XValidation:rule="(has(self.recomputeRoute) && self.recomputeRoute) ? size(self.claimToHeaders) > 0 : true", message="claimToHeaders must be specified if recomputeRoute is enabled"
+// +kubebuilder:validation:XValidation:rule="((has(self.remoteJWKS) && self.remoteJWKS) && (has(self.jwksSource) && self.jwksSource)", message="only one of jwksSource or remoteJWKS, should be specfied. remoteJWKS can be replaced by jwksSource."
+// +kubebuilder:validation:XValidation:rule="(!has(self.remoteJWKS) && !has(self.jwksSource))", message="a jwksSource is required."
 type JWTProvider struct {
 	// Name defines a unique name for the JWT provider. A name can have a variety of forms,
 	// including RFC1123 subdomains, RFC 1123 labels, or RFC 1035 labels.
@@ -49,8 +53,17 @@ type JWTProvider struct {
 	Audiences []string `json:"audiences,omitempty"`
 
 	// RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote
-	// HTTP/HTTPS endpoint.
-	RemoteJWKS RemoteJWKS `json:"remoteJWKS"`
+	// HTTP/HTTPS endpoint. This field is deprecated, https retrieval is supported by the uri
+	// type in JWKSSource
+	//
+	// +optional
+	RemoteJWKS *RemoteJWKS `json:"remoteJWKS"`
+
+	// JWKSSource defines how to fetch and cache JSON Web Key Sets (JWKS) from a given source.
+	// Inline, URI and Configmap/Secret contents are supported.
+	//
+	// +optional
+	JWKSSource *JWKSSource `json:"jwksSource"`
 
 	// ClaimToHeaders is a list of JWT claims that must be extracted into HTTP request headers
 	// For examples, following config:
@@ -76,7 +89,7 @@ type JWTProvider struct {
 }
 
 // RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote
-// HTTP/HTTPS endpoint.
+// HTTP/HTTPS endpoint. Note this has been replaced by JWKSSource and is deprecated.
 type RemoteJWKS struct {
 	// URI is the HTTPS URI to fetch the JWKS. Envoy's system trust bundle is used to
 	// validate the server certificate.
@@ -86,6 +99,63 @@ type RemoteJWKS struct {
 	URI string `json:"uri"`
 
 	// TODO: Add TBD remote JWKS fields based on defined use cases.
+}
+
+// JWKSSourceType defines the types of values for the source of JSON Web Key Sets (JWKS) for use with a JWTProvider.
+// +kubebuilder:validation:Enum=Inline;URI;ValueRef
+type JWKSSourceType string
+
+const (
+	// JWKSSourceTypeInline defines the "Inline" type, indicating that the JWKS json is provided inline
+	JWKSSourceTypeInline JWKSSourceType = "Inline"
+
+	// JWKSSourceTypeURI defines the "URI" type, indicating that the JWKS json should be retrieved from the given uri
+	// typically a https endpoint or a local file.
+	JWKSSourceTypeURI JWKSSourceType = "URI"
+
+	// JWKSSourceTypeValueRefdefines the "ValueRef" type, indicating that the JWKS json should be loaded from
+	// the given LocalObjectReference
+	JWKSSourceTypeValueRef JWKSSourceType = "ValueRef"
+)
+
+// JWKSSource defines how to load a JSON Web Key Sets (JWKS) from various source locations.
+//
+// +kubebuilder:validation:XValidation:message="uri must be set for type URI",rule="(!has(self.type) || self.type == 'URI')? has(self.path) : true"
+// +kubebuilder:validation:XValidation:message="inline must be set for type Inline",rule="(!has(self.type) || self.type == 'Inline')? has(self.inline) : true"
+// +kubebuilder:validation:XValidation:message="valueRef must be set for type ValueRef",rule="(has(self.type) && self.type == 'ValueRef')? has(self.valueRef) : true"
+type JWKSSource struct {
+
+	// Type is the type of method to use to read the contents of the JWKS.
+	// Valid values are Inline, URI and ValueRef, default is URI.
+	//
+	// +kubebuilder:default=Inline
+	// +kubebuilder:validation:Enum=Inline;URI;ValueRef
+	// +unionDiscriminator
+	Type *JWKSSourceType `json:"type"`
+
+	// URI is a location of the JWKS for File or HTTPS based retrieval. The location of the contents
+	// are determined by examining the scheme of the given URI. This covers the HTTPS usecase supported
+	// by RemoteJWKS
+	//
+	// Envoy's system trust bundle is used to validate the server certificate for HTTPS retrieval
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +optional
+	URI *string `json:"uri,omitempty"`
+
+	// Inline contains the value as an inline string.
+	//
+	// +optional
+	Inline *string `json:"inline,omitempty"`
+
+	// ValueRef contains the contents of the JWKS specified as a local object reference specifically
+	// a ConfigMap or Secret.
+	//
+	// The first value in the Secret/ConfigMap will be used as the contents for the JWKS
+	//
+	// +optional
+	ValueRef *gwapiv1.LocalObjectReference `json:"valueRef,omitempty"`
 }
 
 // ClaimToHeader defines a configuration to convert JWT claims into HTTP headers
