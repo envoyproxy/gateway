@@ -171,7 +171,7 @@ func Shutdown(drainTimeout time.Duration, minDrainDuration time.Duration, exitAt
 // postEnvoyAdminAPI sends a POST request to the Envoy admin API
 func postEnvoyAdminAPI(path string) error {
 	if resp, err := http.Post(fmt.Sprintf("http://%s:%d/%s",
-		bootstrap.EnvoyAdminAddress, bootstrap.EnvoyAdminPort, path), "application/json", nil); err != nil {
+		"localhost", bootstrap.EnvoyAdminPort, path), "application/json", nil); err != nil {
 		return err
 	} else {
 		defer resp.Body.Close()
@@ -187,7 +187,7 @@ func postEnvoyAdminAPI(path string) error {
 func getTotalConnections() (*int, error) {
 	// Send request to Envoy admin API to retrieve server.total_connections stat
 	if resp, err := http.Get(fmt.Sprintf("http://%s:%d//stats?filter=^server\\.total_connections$&format=json",
-		bootstrap.EnvoyAdminAddress, bootstrap.EnvoyAdminPort)); err != nil {
+		"localhost", bootstrap.EnvoyAdminPort)); err != nil {
 		return nil, err
 	} else {
 		defer resp.Body.Close()
