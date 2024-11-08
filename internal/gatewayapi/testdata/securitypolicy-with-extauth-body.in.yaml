@@ -99,6 +99,7 @@ securityPolicies:
         headersToExtAuth:
           - header1
           - header2
+        bodyToExtAuth: true
         grpc:
           backendRefs:
             - name: service-2
