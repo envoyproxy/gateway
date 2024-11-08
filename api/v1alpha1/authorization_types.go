@@ -71,7 +71,6 @@ type Principal struct {
 	// Note: in order to use JWT claims for authorization, you must configure the
 	// JWT authentication in the same `SecurityPolicy`.
 	// +optional
-	// +notImplementedHide
 	JWT *JWTPrincipal `json:"jwt,omitempty"`
 }
 
