@@ -9,6 +9,7 @@ package tests
 
 import (
 	"context"
+	"net"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -47,7 +48,7 @@ var GatewayWithEnvoyProxy = suite.ConformanceTest{
 
 					// Verify that the RouteType is set to Service by the attached EnvoyProxy
 					Headers: map[string]string{
-						"upstream-host": svc.Spec.ClusterIP + ":8080",
+						"upstream-host": net.JoinHostPort(svc.Spec.ClusterIP, "8080"),
 					},
 				},
 				Namespace: ns,
