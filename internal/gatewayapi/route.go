@@ -237,7 +237,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		// If the route has no valid backends then just use a direct response and don't fuss with weighted responses
 		for _, ruleRoute := range ruleRoutes {
 			noValidBackends := ruleRoute.Destination == nil || ruleRoute.Destination.ToBackendWeights().Valid == 0
-			if noValidBackends && ruleRoute.Redirect == nil {
+			if ruleRoute.DirectResponse == nil && noValidBackends && ruleRoute.Redirect == nil {
 				ruleRoute.DirectResponse = &ir.CustomResponse{
 					StatusCode: ptr.To(uint32(500)),
 				}
@@ -302,6 +302,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 		irRoute := &ir.HTTPRoute{
 			Name: irRouteName(httpRoute, ruleIdx, -1),
 		}
+		irRoute.Metadata = buildRouteMetadata(httpRoute, rule.Name)
 		processRouteTimeout(irRoute, rule)
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
 		ruleRoutes = append(ruleRoutes, irRoute)
@@ -362,6 +363,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 			Name:               irRouteName(httpRoute, ruleIdx, matchIdx),
 			SessionPersistence: sessionPersistence,
 		}
+		irRoute.Metadata = buildRouteMetadata(httpRoute, rule.Name)
 		processRouteTimeout(irRoute, rule)
 
 		if match.Path != nil {
@@ -595,6 +597,7 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 		irRoute := &ir.HTTPRoute{
 			Name: irRouteName(grpcRoute, ruleIdx, -1),
 		}
+		irRoute.Metadata = buildRouteMetadata(grpcRoute, rule.Name)
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
 		ruleRoutes = append(ruleRoutes, irRoute)
 	}
@@ -606,7 +609,7 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 		irRoute := &ir.HTTPRoute{
 			Name: irRouteName(grpcRoute, ruleIdx, matchIdx),
 		}
-
+		irRoute.Metadata = buildRouteMetadata(grpcRoute, rule.Name)
 		for _, headerMatch := range match.Headers {
 			switch GRPCHeaderMatchTypeDerefOr(headerMatch.Type, gwapiv1.GRPCHeaderMatchExact) {
 			case gwapiv1.GRPCHeaderMatchExact:
@@ -696,7 +699,6 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 			continue
 		}
 		hasHostnameIntersection = true
-		routeMetadata := buildRouteMetadata(route)
 
 		var perHostRoutes []*ir.HTTPRoute
 		for _, host := range hosts {
@@ -723,7 +725,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 				underscoredHost := strings.ReplaceAll(host, ".", "_")
 				hostRoute := &ir.HTTPRoute{
 					Name:                  fmt.Sprintf("%s/%s", routeRoute.Name, underscoredHost),
-					Metadata:              routeMetadata,
+					Metadata:              routeRoute.Metadata,
 					Hostname:              host,
 					PathMatch:             routeRoute.PathMatch,
 					HeaderMatches:         routeRoute.HeaderMatches,
@@ -764,13 +766,17 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 	return hasHostnameIntersection
 }
 
-func buildRouteMetadata(route RouteContext) *ir.ResourceMetadata {
-	return &ir.ResourceMetadata{
+func buildRouteMetadata(route RouteContext, sectionName *gwapiv1.SectionName) *ir.ResourceMetadata {
+	metadata := &ir.ResourceMetadata{
 		Kind:        route.GetObjectKind().GroupVersionKind().Kind,
 		Name:        route.GetName(),
 		Namespace:   route.GetNamespace(),
 		Annotations: filterEGPrefix(route.GetAnnotations()),
 	}
+	if sectionName != nil {
+		metadata.SectionName = string(*sectionName)
+	}
+	return metadata
 }
 
 func filterEGPrefix(in map[string]string) map[string]string {

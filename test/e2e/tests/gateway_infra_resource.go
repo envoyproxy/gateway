@@ -27,7 +27,7 @@ func init() {
 }
 
 var GatewayInfraResourceTest = suite.ConformanceTest{
-	ShortName:   "GatewayInfraResourceTest",
+	ShortName:   "GatewayInfraResource",
 	Description: "Gateway Infra Resource E2E Test",
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		gatewayTypeMeta := metav1.TypeMeta{

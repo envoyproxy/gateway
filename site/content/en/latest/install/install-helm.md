@@ -59,6 +59,12 @@ consideration when debugging.
 
 [`quickstart.yaml`]: https://github.com/envoyproxy/gateway/releases/download/{{< yaml-version >}}/quickstart.yaml
 
+## Upgrading from a previous version
+
+[Helm](https://helm.sh/docs/chart_best_practices/custom_resource_definitions/#some-caveats-and-explanations) does not update CRDs
+that live in the `/crds` folder in the Helm Chart. So you will manually need to update the CRDs.
+Follow the steps outlined in [this](./install-yaml/#upgrading-from-v1.1) section if you're upgrading from a previous version.
+
 ## Helm chart customizations
 
 Some of the quick ways of using the helm install command for envoy gateway installation are below.

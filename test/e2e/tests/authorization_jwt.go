@@ -59,7 +59,7 @@ func init() {
 }
 
 var AuthorizationJWTTest = suite.ConformanceTest{
-	ShortName:   "Authorization with jwt claims and scopes",
+	ShortName:   "AuthzWithJWTClaimsScopes",
 	Description: "Authorization with jwt claims and scopes",
 	Manifests:   []string{"testdata/authorization-jwt.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {

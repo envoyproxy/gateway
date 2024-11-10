@@ -9,13 +9,15 @@ import (
 	// Register embed
 	_ "embed"
 	"fmt"
+	"net"
+	"strconv"
 	"strings"
 	"text/template"
 
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/utils/net"
+	netutils "github.com/envoyproxy/gateway/internal/utils/net"
 	"github.com/envoyproxy/gateway/internal/utils/regex"
 )
 
@@ -199,9 +201,9 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 				host, port = *sink.OpenTelemetry.Host, uint32(sink.OpenTelemetry.Port)
 			}
 			if len(sink.OpenTelemetry.BackendRefs) > 0 {
-				host, port = net.BackendHostAndPort(sink.OpenTelemetry.BackendRefs[0].BackendObjectReference, "")
+				host, port = netutils.BackendHostAndPort(sink.OpenTelemetry.BackendRefs[0].BackendObjectReference, "")
 			}
-			addr := fmt.Sprintf("%s:%d", host, port)
+			addr := net.JoinHostPort(host, strconv.Itoa(int(port)))
 			if addresses.Has(addr) {
 				continue
 			}

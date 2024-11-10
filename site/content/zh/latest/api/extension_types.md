@@ -15,21 +15,14 @@ API group.
 
 ### Resource Types
 - [Backend](#backend)
-- [BackendList](#backendlist)
 - [BackendTrafficPolicy](#backendtrafficpolicy)
-- [BackendTrafficPolicyList](#backendtrafficpolicylist)
 - [ClientTrafficPolicy](#clienttrafficpolicy)
-- [ClientTrafficPolicyList](#clienttrafficpolicylist)
 - [EnvoyExtensionPolicy](#envoyextensionpolicy)
-- [EnvoyExtensionPolicyList](#envoyextensionpolicylist)
 - [EnvoyGateway](#envoygateway)
 - [EnvoyPatchPolicy](#envoypatchpolicy)
-- [EnvoyPatchPolicyList](#envoypatchpolicylist)
 - [EnvoyProxy](#envoyproxy)
 - [HTTPRouteFilter](#httproutefilter)
-- [HTTPRouteFilterList](#httproutefilterlist)
 - [SecurityPolicy](#securitypolicy)
-- [SecurityPolicyList](#securitypolicylist)
 
 
 
@@ -267,8 +260,7 @@ _Appears in:_
 Backend allows the user to configure the endpoints of a backend and
 the behavior of the connection from Envoy Proxy to the backend.
 
-_Appears in:_
-- [BackendList](#backendlist)
+
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -326,22 +318,6 @@ _Appears in:_
 | `fqdn` | _[FQDNEndpoint](#fqdnendpoint)_ |  false  | FQDN defines a FQDN endpoint |
 | `ip` | _[IPEndpoint](#ipendpoint)_ |  false  | IP defines an IP endpoint. Supports both IPv4 and IPv6 addresses. |
 | `unix` | _[UnixSocket](#unixsocket)_ |  false  | Unix defines the unix domain socket endpoint |
-
-
-#### BackendList
-
-
-
-BackendList contains a list of Backend resources.
-
-
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
-| `kind` | _string_ | |`BackendList`
-| `metadata` | _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#listmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `items` | _[Backend](#backend) array_ |  true  |  |
 
 
 #### BackendRef
@@ -428,8 +404,7 @@ _Appears in:_
 BackendTrafficPolicy allows the user to configure the behavior of the connection
 between the Envoy Proxy listener and the backend service.
 
-_Appears in:_
-- [BackendTrafficPolicyList](#backendtrafficpolicylist)
+
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -438,22 +413,6 @@ _Appears in:_
 | `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` | _[BackendTrafficPolicySpec](#backendtrafficpolicyspec)_ |  true  | spec defines the desired state of BackendTrafficPolicy. |
 | `status` | _[PolicyStatus](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyStatus)_ |  true  | status defines the current status of BackendTrafficPolicy. |
-
-
-#### BackendTrafficPolicyList
-
-
-
-BackendTrafficPolicyList contains a list of BackendTrafficPolicy resources.
-
-
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
-| `kind` | _string_ | |`BackendTrafficPolicyList`
-| `metadata` | _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#listmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `items` | _[BackendTrafficPolicy](#backendtrafficpolicy) array_ |  true  |  |
 
 
 #### BackendTrafficPolicySpec
@@ -525,6 +484,7 @@ A CIDR can be an IPv4 address range such as "192.168.1.0/24" or an IPv6 address 
 
 _Appears in:_
 - [Principal](#principal)
+- [XForwardedForSettings](#xforwardedforsettings)
 
 
 
@@ -637,8 +597,7 @@ _Appears in:_
 ClientTrafficPolicy allows the user to configure the behavior of the connection
 between the downstream client and Envoy Proxy listener.
 
-_Appears in:_
-- [ClientTrafficPolicyList](#clienttrafficpolicylist)
+
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -647,22 +606,6 @@ _Appears in:_
 | `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` | _[ClientTrafficPolicySpec](#clienttrafficpolicyspec)_ |  true  | Spec defines the desired state of ClientTrafficPolicy. |
 | `status` | _[PolicyStatus](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyStatus)_ |  true  | Status defines the current status of ClientTrafficPolicy. |
-
-
-#### ClientTrafficPolicyList
-
-
-
-ClientTrafficPolicyList contains a list of ClientTrafficPolicy resources.
-
-
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
-| `kind` | _string_ | |`ClientTrafficPolicyList`
-| `metadata` | _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#listmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `items` | _[ClientTrafficPolicy](#clienttrafficpolicy) array_ |  true  |  |
 
 
 #### ClientTrafficPolicySpec
@@ -957,8 +900,7 @@ _Appears in:_
 
 EnvoyExtensionPolicy allows the user to configure various envoy extensibility options for the Gateway.
 
-_Appears in:_
-- [EnvoyExtensionPolicyList](#envoyextensionpolicylist)
+
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -967,22 +909,6 @@ _Appears in:_
 | `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` | _[EnvoyExtensionPolicySpec](#envoyextensionpolicyspec)_ |  true  | Spec defines the desired state of EnvoyExtensionPolicy. |
 | `status` | _[PolicyStatus](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyStatus)_ |  true  | Status defines the current status of EnvoyExtensionPolicy. |
-
-
-#### EnvoyExtensionPolicyList
-
-
-
-EnvoyExtensionPolicyList contains a list of EnvoyExtensionPolicy resources.
-
-
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
-| `kind` | _string_ | |`EnvoyExtensionPolicyList`
-| `metadata` | _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#listmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `items` | _[EnvoyExtensionPolicy](#envoyextensionpolicy) array_ |  true  |  |
 
 
 #### EnvoyExtensionPolicySpec
@@ -1350,8 +1276,7 @@ _Appears in:_
 EnvoyPatchPolicy allows the user to modify the generated Envoy xDS
 resources by Envoy Gateway using this patch API
 
-_Appears in:_
-- [EnvoyPatchPolicyList](#envoypatchpolicylist)
+
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -1360,22 +1285,6 @@ _Appears in:_
 | `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` | _[EnvoyPatchPolicySpec](#envoypatchpolicyspec)_ |  true  | Spec defines the desired state of EnvoyPatchPolicy. |
 | `status` | _[PolicyStatus](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyStatus)_ |  true  | Status defines the current status of EnvoyPatchPolicy. |
-
-
-#### EnvoyPatchPolicyList
-
-
-
-EnvoyPatchPolicyList contains a list of EnvoyPatchPolicy resources.
-
-
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
-| `kind` | _string_ | |`EnvoyPatchPolicyList`
-| `metadata` | _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#listmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `items` | _[EnvoyPatchPolicy](#envoypatchpolicy) array_ |  true  |  |
 
 
 #### EnvoyPatchPolicySpec
@@ -2026,8 +1935,7 @@ _Appears in:_
 HTTPRouteFilter is a custom Envoy Gateway HTTPRouteFilter which provides extended
 traffic processing options such as path regex rewrite, direct response and more.
 
-_Appears in:_
-- [HTTPRouteFilterList](#httproutefilterlist)
+
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -2035,22 +1943,6 @@ _Appears in:_
 | `kind` | _string_ | |`HTTPRouteFilter`
 | `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` | _[HTTPRouteFilterSpec](#httproutefilterspec)_ |  true  | Spec defines the desired state of HTTPRouteFilter. |
-
-
-#### HTTPRouteFilterList
-
-
-
-HTTPRouteFilterList contains a list of HTTPRouteFilter resources.
-
-
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
-| `kind` | _string_ | |`HTTPRouteFilterList`
-| `metadata` | _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#listmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `items` | _[HTTPRouteFilter](#httproutefilter) array_ |  true  |  |
 
 
 #### HTTPRouteFilterSpec
@@ -2757,6 +2649,7 @@ _Appears in:_
 | `clientID` | _string_ |  true  | The client ID to be used in the OIDC<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). |
 | `clientSecret` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  true  | The Kubernetes secret which contains the OIDC client secret to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br /><br />This is an Opaque secret. The client secret should be stored in the key<br />"client-secret". |
 | `cookieNames` | _[OIDCCookieNames](#oidccookienames)_ |  false  | The optional cookie name overrides to be used for Bearer and IdToken cookies in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, uses a randomly generated suffix |
+| `cookieDomain` | _string_ |  false  | The optional domain to set the access and ID token cookies on.<br />If not set, the cookies will default to the host of the request, not including the subdomains.<br />If set, the cookies will be set on the specified domain and all subdomains.<br />This means that requests to any subdomain will not require reauthentication after users log in to the parent domain. |
 | `scopes` | _string array_ |  false  | The OIDC scopes to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />The "openid" scope is always added to the list of scopes if not already<br />specified. |
 | `resources` | _string array_ |  false  | The OIDC resources to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). |
 | `redirectURL` | _string_ |  true  | The redirect URL to be used in the OIDC<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, uses the default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback" |
@@ -2944,6 +2837,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `clientCIDRs` | _[CIDR](#cidr) array_ |  false  | ClientCIDRs are the IP CIDR ranges of the client.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64"<br /><br />If multiple CIDR ranges are specified, one of the CIDR ranges must match<br />the client IP for the rule to match.<br /><br />The client IP is inferred from the X-Forwarded-For header, a custom header,<br />or the proxy protocol.<br />You can use the `ClientIPDetection` or the `EnableProxyProtocol` field in<br />the `ClientTrafficPolicy` to configure how the client IP is detected. |
+| `jwt` | _[JWTPrincipal](#jwtprincipal)_ |  false  | JWT authorize the request based on the JWT claims and scopes.<br />Note: in order to use JWT claims for authorization, you must configure the<br />JWT authentication in the same `SecurityPolicy`. |
 
 
 #### ProcessingModeOptions
@@ -3638,8 +3532,7 @@ _Appears in:_
 SecurityPolicy allows the user to configure various security settings for a
 Gateway.
 
-_Appears in:_
-- [SecurityPolicyList](#securitypolicylist)
+
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -3648,22 +3541,6 @@ _Appears in:_
 | `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#objectmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` | _[SecurityPolicySpec](#securitypolicyspec)_ |  true  | Spec defines the desired state of SecurityPolicy. |
 | `status` | _[PolicyStatus](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyStatus)_ |  true  | Status defines the current status of SecurityPolicy. |
-
-
-#### SecurityPolicyList
-
-
-
-SecurityPolicyList contains a list of SecurityPolicy resources.
-
-
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
-| `kind` | _string_ | |`SecurityPolicyList`
-| `metadata` | _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#listmeta-v1-meta)_ |  true  | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `items` | _[SecurityPolicy](#securitypolicy) array_ |  true  |  |
 
 
 #### SecurityPolicySpec
@@ -4267,13 +4144,15 @@ _Appears in:_
 
 
 XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address.
+Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
+for more details.
 
 _Appears in:_
 - [ClientIPDetectionSettings](#clientipdetectionsettings)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `numTrustedHops` | _integer_ |  false  | NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP<br />headers to trust when determining the origin client's IP address.<br />Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for<br />for more details. |
+| `numTrustedHops` | _integer_ |  false  | NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP<br />headers to trust when determining the origin client's IP address.<br />Only one of NumTrustedHops and TrustedCIDRs must be set. |
 
 
 #### ZipkinTracingProvider

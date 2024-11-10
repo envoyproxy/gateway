@@ -36,7 +36,7 @@ func (i *Infra) YAMLString() string {
 }
 
 func (i *Infra) JSONString() string {
-	j, _ := json.MarshalIndent(i, "", "\t")
+	j, _ := json.Marshal(i)
 	return string(j)
 }
 

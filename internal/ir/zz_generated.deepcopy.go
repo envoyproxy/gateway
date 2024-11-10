@@ -315,7 +315,7 @@ func (in *BasicAuth) DeepCopyInto(out *BasicAuth) {
 	*out = *in
 	if in.Users != nil {
 		in, out := &in.Users, &out.Users
-		*out = make([]byte, len(*in))
+		*out = make(PrivateBytes, len(*in))
 		copy(*out, *in)
 	}
 }
@@ -1975,12 +1975,12 @@ func (in *OIDC) DeepCopyInto(out *OIDC) {
 	in.Provider.DeepCopyInto(&out.Provider)
 	if in.ClientSecret != nil {
 		in, out := &in.ClientSecret, &out.ClientSecret
-		*out = make([]byte, len(*in))
+		*out = make(PrivateBytes, len(*in))
 		copy(*out, *in)
 	}
 	if in.HMACSecret != nil {
 		in, out := &in.HMACSecret, &out.HMACSecret
-		*out = make([]byte, len(*in))
+		*out = make(PrivateBytes, len(*in))
 		copy(*out, *in)
 	}
 	if in.Scopes != nil {
@@ -3028,7 +3028,7 @@ func (in *TLSCertificate) DeepCopyInto(out *TLSCertificate) {
 	}
 	if in.PrivateKey != nil {
 		in, out := &in.PrivateKey, &out.PrivateKey
-		*out = make([]byte, len(*in))
+		*out = make(PrivateBytes, len(*in))
 		copy(*out, *in)
 	}
 }

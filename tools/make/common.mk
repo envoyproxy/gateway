@@ -79,6 +79,7 @@ include tools/make/kube.mk
 include tools/make/docs.mk
 include tools/make/helm.mk
 include tools/make/proto.mk
+include tools/make/examples.mk
 
 # Log the running target
 LOG_TARGET = echo -e "\033[0;32m===========> Running $@ ... \033[0m"
@@ -119,7 +120,7 @@ export USAGE_OPTIONS
 
 .PHONY: generate
 generate: ## Generate go code from templates and tags
-generate: kube-generate docs-api helm-generate go.generate release-notes-docs copy-current-release-docs
+generate: kube-generate docs-api helm-generate go.generate copy-current-release-docs
 
 ## help: Show this help info.
 .PHONY: help
