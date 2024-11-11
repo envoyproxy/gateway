@@ -8,7 +8,7 @@ require (
 	fortio.org/fortio v1.67.1
 	fortio.org/log v1.17.1
 	github.com/Masterminds/semver/v3 v3.3.0
-	github.com/cncf/xds/go v0.0.0-20240723142845-024c85f92f20
+	github.com/cncf/xds/go v0.0.0-20240905190251-b4127c9b8d78
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/docker/cli v27.3.1+incompatible
 	github.com/dominikbraun/graph v0.23.0
@@ -65,12 +65,12 @@ require (
 	github.com/docker/docker v27.3.1+incompatible
 	github.com/replicatedhq/troubleshoot v0.107.5
 	github.com/tetratelabs/func-e v1.1.5-0.20240822223546-c85a098d5bf0
-	google.golang.org/grpc v1.67.1
+	google.golang.org/grpc v1.68.0
 	sigs.k8s.io/kubectl-validate v0.0.5-0.20240827210056-ce13d95db263
 )
 
 require (
-	cel.dev/expr v0.16.0 // indirect
+	cel.dev/expr v0.16.1 // indirect
 	dario.cat/mergo v1.0.1 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
 	fortio.org/cli v1.9.2 // indirect
