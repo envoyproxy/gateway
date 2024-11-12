@@ -34,11 +34,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
-var (
-	ErrXdsClusterExists = errors.New("xds cluster exists")
-	ErrXdsSecretExists  = errors.New("xds secret exists")
-)
-
 const AuthorityHeaderKey = ":authority"
 
 // Translator translates the xDS IR into xDS resources.
@@ -487,7 +482,7 @@ func (t *Translator) addRouteToRouteConfig(
 					tSocket:      nil,
 					endpointType: EndpointTypeStatic,
 					metrics:      metrics,
-				}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+				}); err != nil {
 					errs = errors.Join(errs, err)
 				}
 			}
@@ -598,7 +593,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 		patchProxyProtocolFilter(xdsListener, tcpListener.EnableProxyProtocol)
 
 		for _, route := range tcpListener.Routes {
-			if err := processXdsCluster(tCtx, &TCPRouteTranslator{route}, &ExtraArgs{metrics: metrics}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+			if err := processXdsCluster(tCtx, &TCPRouteTranslator{route}, &ExtraArgs{metrics: metrics}); err != nil {
 				errs = errors.Join(errs, err)
 			}
 			if route.TLS != nil && route.TLS.Terminate != nil {
@@ -660,7 +655,7 @@ func processUDPListenerXdsTranslation(
 			}
 
 			// 1:1 between IR UDPRoute and xDS Cluster
-			if err := processXdsCluster(tCtx, &UDPRouteTranslator{route}, &ExtraArgs{metrics: metrics}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+			if err := processXdsCluster(tCtx, &UDPRouteTranslator{route}, &ExtraArgs{metrics: metrics}); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
@@ -754,10 +749,7 @@ func findXdsEndpoint(tCtx *types.ResourceVersionTable, name string) *endpointv3.
 
 // processXdsCluster processes xds cluster with args per route.
 func processXdsCluster(tCtx *types.ResourceVersionTable, route clusterArgs, extras *ExtraArgs) error {
-	if err := addXdsCluster(tCtx, route.asClusterArgs(extras)); err != nil && !errors.Is(err, ErrXdsClusterExists) {
-		return err
-	}
-	return nil
+	return addXdsCluster(tCtx, route.asClusterArgs(extras))
 }
 
 // findXdsSecret finds a xds secret with the same name, and returns nil if there is no match.
@@ -776,10 +768,12 @@ func findXdsSecret(tCtx *types.ResourceVersionTable, name string) *tlsv3.Secret 
 	return nil
 }
 
+// addXdsSecret adds a xds secret with args.
+// If the secret already exists, it skips adding the secret and returns nil
 func addXdsSecret(tCtx *types.ResourceVersionTable, secret *tlsv3.Secret) error {
-	// Return early if cluster with the same name exists
+	// Return early if secret with the same name exists
 	if c := findXdsSecret(tCtx, secret.Name); c != nil {
-		return ErrXdsSecretExists
+		return nil
 	}
 
 	if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
@@ -788,10 +782,12 @@ func addXdsSecret(tCtx *types.ResourceVersionTable, secret *tlsv3.Secret) error 
 	return nil
 }
 
+// addXdsCluster adds a xds cluster with args.
+// If the cluster already exists, it skips adding the cluster and returns nil
 func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error {
 	// Return early if cluster with the same name exists
 	if c := findXdsCluster(tCtx, args.name); c != nil {
-		return ErrXdsClusterExists
+		return nil
 	}
 
 	xdsCluster := buildXdsCluster(args)
