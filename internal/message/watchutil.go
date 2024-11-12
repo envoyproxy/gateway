@@ -48,7 +48,7 @@ func handleWithCrashRecovery[K comparable, V any](
 ) {
 	defer func() {
 		if r := recover(); r != nil {
-			logger.WithValues("runner", meta.Runner).Error(fmt.Errorf("%+v", r), "observed an panic",
+			logger.WithValues("runner", meta.Runner).Error(fmt.Errorf("%+v", r), "observed a panic",
 				"stackTrace", string(debug.Stack()))
 			watchableSubscribeTotal.WithFailure(metrics.ReasonError, meta.LabelValues()...).Increment()
 			panicCounter.WithFailure(metrics.ReasonError, meta.LabelValues()...).Increment()

@@ -14,7 +14,7 @@ var (
 	)
 
 	panicCounter = metrics.NewCounter(
-		"panics_recovered_total",
+		"watchable_panics_recovered_total",
 		"Total number of panics recovered while handling items in queue.",
 	)
 
