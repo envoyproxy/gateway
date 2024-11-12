@@ -1,0 +1,115 @@
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: httproute/default/httproute-1/rule/0
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  name: httproute/default/httproute-1/rule/0
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: httproute/default/httproute-1/rule/1
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  name: httproute/default/httproute-1/rule/1
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: httproute/default/httproute-2/rule/0
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  name: httproute/default/httproute-2/rule/0
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  dnsRefreshRate: 30s
+  lbPolicy: LEAST_REQUEST
+  loadAssignment:
+    clusterName: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: primary.foo.com
+              portValue: 9000
+        loadBalancingWeight: 1
+      loadBalancingWeight: 1
+      locality:
+        region: securitypolicy/default/policy-for-http-route-1/default/grpc-backend/backend/0
+  name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  respectDnsTtl: true
+  type: STRICT_DNS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      explicitHttpConfig:
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  dnsRefreshRate: 30s
+  lbPolicy: LEAST_REQUEST
+  loadAssignment:
+    clusterName: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: primary.foo.com
+              portValue: 80
+        loadBalancingWeight: 1
+      loadBalancingWeight: 1
+      locality:
+        region: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend/backend/0
+  name: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  respectDnsTtl: true
+  type: STRICT_DNS
