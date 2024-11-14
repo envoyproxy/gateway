@@ -18,3 +18,12 @@ kube-install-examples-image: kube-build-examples-image
 	@for app in $(EXAMPLE_APPS); do \
 		tools/hack/kind-load-image.sh $(EXAMPLE_IMAGE_PREFIX)$$app $(EXAMPLE_TAG); \
 	done
+
+.PHONY: go.mod.tidy.examples
+go.mod.tidy.examples:
+	@$(LOG_TARGET)
+	@for app in $(EXAMPLE_APPS); do \
+		pushd $(ROOT_DIR)/examples/$$app; \
+		go mod tidy -compat=$(GO_VERSION); \
+		popd; \
+	done
