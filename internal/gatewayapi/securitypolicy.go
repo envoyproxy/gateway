@@ -45,11 +45,6 @@ const (
 	oidcHMACSecretKey  = "hmac-secret"
 )
 
-var (
-	extAutClusterIndex = 0
-	oidcClusterIndex   = 0
-)
-
 func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.SecurityPolicy,
 	gateways []*GatewayContext,
 	routes []RouteContext,
@@ -366,6 +361,10 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	// Apply IR to all relevant routes
 	prefix := irRoutePrefix(route)
 	parentRefs := GetParentReferences(route)
+	var (
+		extAutClusterIndex = 0
+		oidcClusterIndex   = 0
+	)
 	for _, p := range parentRefs {
 		parentRefCtx := GetRouteParentContext(route, p)
 		gtwCtx := parentRefCtx.GetGateway()
@@ -386,7 +385,6 @@ func (t *Translator) translateSecurityPolicyForRoute(
 			}
 			extAutClusterIndex++
 		}
-		extAutClusterIndex = 0
 
 		var oidc *ir.OIDC
 		if policy.Spec.OIDC != nil {
@@ -401,7 +399,6 @@ func (t *Translator) translateSecurityPolicyForRoute(
 			}
 			oidcClusterIndex++
 		}
-		oidcClusterIndex = 0
 
 		irKey := t.getIRKey(gtwCtx.Gateway)
 		for _, listener := range parentRefCtx.listeners {
@@ -462,13 +459,11 @@ func (t *Translator) translateSecurityPolicyForGateway(
 			policy,
 			resources,
 			gateway.envoyProxy,
-			oidcClusterIndex); err != nil {
+			0); err != nil {
 			err = perr.WithMessage(err, "OIDC")
 			errs = errors.Join(errs, err)
 		}
-		oidcClusterIndex++
 	}
-	oidcClusterIndex = 0
 
 	if policy.Spec.BasicAuth != nil {
 		if basicAuth, err = t.buildBasicAuth(
@@ -484,14 +479,12 @@ func (t *Translator) translateSecurityPolicyForGateway(
 			policy,
 			resources,
 			gateway.envoyProxy,
-			extAutClusterIndex,
+			0,
 		); err != nil {
 			err = perr.WithMessage(err, "ExtAuth")
 			errs = errors.Join(errs, err)
 		}
-		extAutClusterIndex++
 	}
-	extAutClusterIndex = 0
 
 	if policy.Spec.Authorization != nil {
 		if authorization, err = t.buildAuthorization(policy); err != nil {
