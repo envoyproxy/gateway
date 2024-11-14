@@ -89,3 +89,6 @@ http:
           sha256: 2a19e4f337e5223d7287e7fccd933fb01905deaff804292e5257f8c681b82bee
         name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/2
         wasmName: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/2
+        hostKeys:
+        - SOME_KEY
+        - ANOTHER_KEY
