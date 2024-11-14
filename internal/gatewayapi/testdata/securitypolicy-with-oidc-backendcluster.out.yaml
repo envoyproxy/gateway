@@ -228,7 +228,7 @@ xdsIR:
             provider:
               authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
               destination:
-                name: securitypolicy/envoy-gateway/policy-for-gateway/0
+                name: securitypolicy/envoy-gateway/policy-for-gateway/oidc/0
                 settings:
                 - addressType: FQDN
                   endpoints:

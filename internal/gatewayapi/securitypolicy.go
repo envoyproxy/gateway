@@ -45,6 +45,11 @@ const (
 	oidcHMACSecretKey  = "hmac-secret"
 )
 
+var (
+	extAutClusterIndex = 0
+	oidcClusterIndex   = 0
+)
+
 func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.SecurityPolicy,
 	gateways []*GatewayContext,
 	routes []RouteContext,
@@ -374,22 +379,29 @@ func (t *Translator) translateSecurityPolicyForRoute(
 				policy,
 				resources,
 				gtwCtx.envoyProxy,
+				extAutClusterIndex,
 			); err != nil {
 				err = perr.WithMessage(err, "ExtAuth")
 				errs = errors.Join(errs, err)
 			}
+			extAutClusterIndex++
 		}
+		extAutClusterIndex = 0
 
 		var oidc *ir.OIDC
 		if policy.Spec.OIDC != nil {
 			if oidc, err = t.buildOIDC(
 				policy,
 				resources,
-				gtwCtx.envoyProxy); err != nil {
+				gtwCtx.envoyProxy,
+				oidcClusterIndex,
+			); err != nil {
 				err = perr.WithMessage(err, "OIDC")
 				errs = errors.Join(errs, err)
 			}
+			oidcClusterIndex++
 		}
+		oidcClusterIndex = 0
 
 		irKey := t.getIRKey(gtwCtx.Gateway)
 		for _, listener := range parentRefCtx.listeners {
@@ -449,11 +461,14 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		if oidc, err = t.buildOIDC(
 			policy,
 			resources,
-			gateway.envoyProxy); err != nil {
+			gateway.envoyProxy,
+			oidcClusterIndex); err != nil {
 			err = perr.WithMessage(err, "OIDC")
 			errs = errors.Join(errs, err)
 		}
+		oidcClusterIndex++
 	}
+	oidcClusterIndex = 0
 
 	if policy.Spec.BasicAuth != nil {
 		if basicAuth, err = t.buildBasicAuth(
@@ -469,11 +484,14 @@ func (t *Translator) translateSecurityPolicyForGateway(
 			policy,
 			resources,
 			gateway.envoyProxy,
+			extAutClusterIndex,
 		); err != nil {
 			err = perr.WithMessage(err, "ExtAuth")
 			errs = errors.Join(errs, err)
 		}
+		extAutClusterIndex++
 	}
+	extAutClusterIndex = 0
 
 	if policy.Spec.Authorization != nil {
 		if authorization, err = t.buildAuthorization(policy); err != nil {
@@ -571,6 +589,7 @@ func (t *Translator) buildOIDC(
 	policy *egv1a1.SecurityPolicy,
 	resources *resource.Resources,
 	envoyProxy *egv1a1.EnvoyProxy,
+	clusterIndex int,
 ) (*ir.OIDC, error) {
 	var (
 		oidc               = policy.Spec.OIDC
@@ -584,7 +603,7 @@ func (t *Translator) buildOIDC(
 		err                error
 	)
 
-	if provider, err = t.buildOIDCProvider(policy, resources, envoyProxy); err != nil {
+	if provider, err = t.buildOIDCProvider(policy, resources, envoyProxy, clusterIndex); err != nil {
 		return nil, err
 	}
 
@@ -666,7 +685,7 @@ func (t *Translator) buildOIDC(
 	}, nil
 }
 
-func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) (*ir.OIDCProvider, error) {
+func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy, clusterIndex int) (*ir.OIDCProvider, error) {
 	var (
 		provider              = policy.Spec.OIDC.Provider
 		tokenEndpoint         string
@@ -705,7 +724,7 @@ func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources 
 	}
 
 	if len(provider.BackendRefs) > 0 {
-		if rd, err = t.translateExtServiceBackendRefs(policy, provider.BackendRefs, protocol, resources, envoyProxy, 0); err != nil {
+		if rd, err = t.translateExtServiceBackendRefs(policy, provider.BackendRefs, protocol, resources, envoyProxy, "oidc", clusterIndex); err != nil {
 			return nil, err
 		}
 	}
@@ -839,7 +858,7 @@ func (t *Translator) buildBasicAuth(
 	}, nil
 }
 
-func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) (*ir.ExtAuth, error) {
+func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy, clusterIndex int) (*ir.ExtAuth, error) {
 	var (
 		http      = policy.Spec.ExtAuth.HTTP
 		grpc      = policy.Spec.ExtAuth.GRPC
@@ -868,7 +887,7 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *reso
 		protocol = ir.GRPC
 	}
 
-	if rd, err = t.translateExtServiceBackendRefs(policy, backends.BackendRefs, protocol, resources, envoyProxy, 0); err != nil {
+	if rd, err = t.translateExtServiceBackendRefs(policy, backends.BackendRefs, protocol, resources, envoyProxy, "extauth", clusterIndex); err != nil {
 		return nil, err
 	}
 

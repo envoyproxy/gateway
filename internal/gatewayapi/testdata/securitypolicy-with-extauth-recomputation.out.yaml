@@ -246,7 +246,7 @@ xdsIR:
             grpc:
               authority: service-2.default:8080
               destination:
-                name: securitypolicy/default/policy-for-http-route-1/0
+                name: securitypolicy/default/policy-for-http-route-1/extauth/0
                 settings:
                 - addressType: IP
                   endpoints:
@@ -291,7 +291,7 @@ xdsIR:
             grpc:
               authority: service-2.default:8080
               destination:
-                name: securitypolicy/default/policy-for-http-route-1/0
+                name: securitypolicy/default/policy-for-http-route-1/extauth/0
                 settings:
                 - addressType: IP
                   endpoints:
