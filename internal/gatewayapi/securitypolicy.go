@@ -391,7 +391,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 			if oidc, err = t.buildOIDC(
 				policy,
 				resources,
-				gtwCtx.envoyProxy,
+				gtwCtx.envoyProxy,  // TODO: Only the last cluster is used as the OIDC name doesn't include the cluster index
 				oidcClusterIndex,
 			); err != nil {
 				err = perr.WithMessage(err, "OIDC")
