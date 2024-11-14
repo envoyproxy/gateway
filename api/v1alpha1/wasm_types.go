@@ -10,6 +10,14 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
+// WasmEnv defines the environment variables for the VM of a Wasm extension
+type WasmEnv struct {
+	// HostKeys is a list of keys for environment variables from the host envoy process
+	// that should be passed into the Wasm VM. This is useful for passing secrets to to Wasm extensions.
+	// +optional
+	HostKeys []string `json:"hostKeys,omitempty"`
+}
+
 // Wasm defines a Wasm extension.
 //
 // Note: at the moment, Envoy Gateway does not support configuring Wasm runtime.
@@ -52,6 +60,10 @@ type Wasm struct {
 	// Priority defines the location of the Wasm extension in the HTTP filter chain.
 	// If not specified, the Wasm extension will be inserted before the router filter.
 	// Priority *uint32 `json:"priority,omitempty"`
+
+	// Env configures the environment for the Wasm extension
+	// +optional
+	Env *WasmEnv `json:"env,omitempty"`
 }
 
 // WasmCodeSource defines the source of the Wasm code.
