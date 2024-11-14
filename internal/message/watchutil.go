@@ -6,6 +6,8 @@
 package message
 
 import (
+	"fmt"
+	"runtime/debug"
 	"time"
 
 	"github.com/telepresenceio/watchable"
@@ -36,6 +38,28 @@ func (m Metadata) LabelValues() []metrics.LabelValue {
 	return labels
 }
 
+// handleWithCrashRecovery calls the provided handle function and gracefully recovers from any panics
+// that might occur when the handle function is called.
+func handleWithCrashRecovery[K comparable, V any](
+	handle func(updateFunc Update[K, V], errChans chan error),
+	update Update[K, V],
+	meta Metadata,
+	errChans chan error,
+) {
+	defer func() {
+		if r := recover(); r != nil {
+			logger.WithValues("runner", meta.Runner).Error(fmt.Errorf("%+v", r), "observed a panic",
+				"stackTrace", string(debug.Stack()))
+			watchableSubscribeTotal.WithFailure(metrics.ReasonError, meta.LabelValues()...).Increment()
+			panicCounter.WithFailure(metrics.ReasonError, meta.LabelValues()...).Increment()
+		}
+	}()
+	startHandleTime := time.Now()
+	handle(update, errChans)
+	watchableSubscribeTotal.WithSuccess(meta.LabelValues()...).Increment()
+	watchableSubscribeDurationSeconds.With(meta.LabelValues()...).Record(time.Since(startHandleTime).Seconds())
+}
+
 // HandleSubscription takes a channel returned by
 // watchable.Map.Subscribe() (or .SubscribeSubset()), and calls the
 // given function for each initial value in the map, and for any
@@ -57,25 +81,20 @@ func HandleSubscription[K comparable, V any](
 			watchableSubscribeTotal.WithFailure(metrics.ReasonError, meta.LabelValues()...).Increment()
 		}
 	}()
+	defer close(errChans)
 
 	if snapshot, ok := <-subscription; ok {
 		for k, v := range snapshot.State {
-			startHandleTime := time.Now()
-			handle(Update[K, V]{
+			handleWithCrashRecovery(handle, Update[K, V]{
 				Key:   k,
 				Value: v,
-			}, errChans)
-			watchableSubscribeTotal.WithSuccess(meta.LabelValues()...).Increment()
-			watchableSubscribeDurationSeconds.With(meta.LabelValues()...).Record(time.Since(startHandleTime).Seconds())
+			}, meta, errChans)
 		}
 	}
 	for snapshot := range subscription {
 		watchableDepth.With(meta.LabelValues()...).Record(float64(len(subscription)))
 		for _, update := range snapshot.Updates {
-			startHandleTime := time.Now()
-			handle(Update[K, V](update), errChans)
-			watchableSubscribeTotal.WithSuccess(meta.LabelValues()...).Increment()
-			watchableSubscribeDurationSeconds.With(meta.LabelValues()...).Record(time.Since(startHandleTime).Seconds())
+			handleWithCrashRecovery(handle, Update[K, V](update), meta, errChans)
 		}
 	}
 }
