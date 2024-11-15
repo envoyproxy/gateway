@@ -10,8 +10,6 @@ Standalone mode is an experimental feature, please **DO NOT** use it in producti
 
 Envoy Gateway also supports running in standalone mode. In this mode, Envoy Gateway
 does not need to rely on Kubernetes and can be deployed directly on bare metal or virtual machines.
-In the standalone deployment mode, the functions and features supported by Envoy Gateway are 
-basically the same as those in the Kubernetes deployment mode.
 
 Currently, Envoy Gateway only support the file provider and the host infrastructure provider combinations.
 
