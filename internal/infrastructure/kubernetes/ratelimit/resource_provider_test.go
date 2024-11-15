@@ -9,7 +9,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"sort"
 	"strconv"
 	"testing"
 
@@ -724,42 +723,11 @@ func TestDeployment(t *testing.T) {
 				},
 			},
 		},
-		{
-			caseName: "overwrite-redis-url",
-			rateLimit: &egv1a1.RateLimit{
-				Backend: egv1a1.RateLimitDatabaseBackend{
-					Type: egv1a1.RedisBackendType,
-					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
-					},
-				},
-				Telemetry: &egv1a1.RateLimitTelemetry{
-					Tracing: &egv1a1.RateLimitTracing{
-						Provider: &egv1a1.RateLimitTracingProvider{
-							URL: "http://trace-collector.envoy-gateway-system.svc.cluster.local:4318",
-						},
-					},
-				},
-			},
-			deploy: &egv1a1.KubernetesDeploymentSpec{
-				Container: &egv1a1.KubernetesContainerSpec{
-					Env: []corev1.EnvVar{
-						{
-							Name:  TracingServiceNamespaceVar,
-							Value: "test-overwrite-namespace",
-						},
-						{
-							Name:  RedisURLEnvVar,
-							Value: "redis://username:password@custom-redis.com:6379",
-						},
-					},
-				},
-			},
-		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
 			cfg.EnvoyGateway.RateLimit = tc.rateLimit
+
 			cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 				Type: egv1a1.ProviderTypeKubernetes,
 				Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
@@ -770,14 +738,10 @@ func TestDeployment(t *testing.T) {
 			dp, err := r.Deployment()
 			require.NoError(t, err)
 
-			// Normalize environment variables in actual and expected deployments
-			for i := range dp.Spec.Template.Spec.Containers {
-				dp.Spec.Template.Spec.Containers[i].Env = normalizeEnvVars(dp.Spec.Template.Spec.Containers[i].Env)
-			}
-
 			if *overrideTestData {
 				deploymentYAML, err := yaml.Marshal(dp)
 				require.NoError(t, err)
+				// nolint:gosec
 				err = os.WriteFile(fmt.Sprintf("testdata/deployments/%s.yaml", tc.caseName), deploymentYAML, 0o644)
 				require.NoError(t, err)
 				return
@@ -785,10 +749,6 @@ func TestDeployment(t *testing.T) {
 
 			expected, err := loadDeployment(tc.caseName)
 			require.NoError(t, err)
-
-			for i := range expected.Spec.Template.Spec.Containers {
-				expected.Spec.Template.Spec.Containers[i].Env = normalizeEnvVars(expected.Spec.Template.Spec.Containers[i].Env)
-			}
 
 			assert.Equal(t, expected, dp)
 		})
@@ -803,26 +763,6 @@ func loadDeployment(caseName string) (*appsv1.Deployment, error) {
 	deployment := &appsv1.Deployment{}
 	_ = yaml.Unmarshal(deploymentYAML, deployment)
 	return deployment, nil
-}
-
-func sortEnvVars(envVars []corev1.EnvVar) {
-	sort.SliceStable(envVars, func(i, j int) bool {
-		return envVars[i].Name < envVars[j].Name
-	})
-}
-
-func normalizeEnvVars(envVars []corev1.EnvVar) []corev1.EnvVar {
-	sorted := make([]corev1.EnvVar, len(envVars))
-	copy(sorted, envVars)
-	sortEnvVars(sorted)
-
-	for i := range sorted {
-		if sorted[i].ValueFrom == nil {
-			sorted[i].ValueFrom = &corev1.EnvVarSource{} // Standardize nil fields to a default value
-		}
-	}
-
-	return sorted
 }
 
 func TestGetServiceURL(t *testing.T) {
