@@ -783,9 +783,12 @@ func addXdsSecret(tCtx *types.ResourceVersionTable, secret *tlsv3.Secret) error 
 }
 
 // addXdsCluster adds a xds cluster with args.
-// If the cluster already exists, it skips adding the cluster and returns nil
+// If the cluster already exists, it skips adding the cluster and returns nil.
 func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error {
-	// Return early if cluster with the same name exists
+	// Return early if cluster with the same name exists.
+	// All the current callers can all safely assume the xdsClusterArgs is the same for the clusters with the same name.
+	// If this assumption changes, the callers should call findXdsCluster first to check if the cluster already exists
+	// before calling addXdsCluster.
 	if c := findXdsCluster(tCtx, args.name); c != nil {
 		return nil
 	}
