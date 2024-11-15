@@ -37,7 +37,7 @@ var RateLimitCIDRMatchTest = suite.ConformanceTest{
 	Description: "Limit all requests that match CIDR",
 	Manifests:   []string{"testdata/ratelimit-cidr-match.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		if ipFamily == "ipv6" {
+		if IPFamily == "ipv6" {
 			t.Skip("Skipping test as IP_FAMILY is IPv6")
 		}
 
@@ -488,7 +488,7 @@ var RateLimitMultipleListenersTest = suite.ConformanceTest{
 	Description: "Limit requests on multiple listeners",
 	Manifests:   []string{"testdata/ratelimit-multiple-listeners.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		if ipFamily == "ipv6" {
+		if IPFamily == "ipv6" {
 			t.Skip("Skipping test as IP_FAMILY is IPv6")
 		}
 
@@ -557,7 +557,7 @@ var RateLimitHeadersAndCIDRMatchTest = suite.ConformanceTest{
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
 		t.Run("all matched both headers and cidr can got limited", func(t *testing.T) {
-			if ipFamily == "ipv6" {
+			if IPFamily == "ipv6" {
 				t.Skip("Skipping test as IP_FAMILY is IPv6")
 			}
 

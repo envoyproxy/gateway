@@ -26,10 +26,6 @@ var HTTPRouteDualStackTest = suite.ConformanceTest{
 	Description: "Test HTTPRoute support for IPv6 only, dual-stack, and IPv4 only services",
 	Manifests:   []string{"testdata/httproute-dualstack.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		if ipFamily != "dual" {
-			t.Skip("Skipping test as IP_FAMILY is not dual")
-		}
-
 		ns := "gateway-conformance-infra"
 		gwNN := types.NamespacedName{Name: "dualstack-gateway", Namespace: ns}
 

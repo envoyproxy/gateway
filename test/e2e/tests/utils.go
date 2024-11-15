@@ -45,7 +45,7 @@ import (
 	tb "github.com/envoyproxy/gateway/internal/troubleshoot"
 )
 
-var ipFamily = os.Getenv("IP_FAMILY")
+var IPFamily = os.Getenv("IP_FAMILY")
 
 const defaultServiceStartupTimeout = 5 * time.Minute
 

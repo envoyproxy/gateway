@@ -27,10 +27,6 @@ var BackendDualStackTest = suite.ConformanceTest{
 	Description: "Test IPv6 and Dual Stack support for backends",
 	Manifests:   []string{"testdata/backend-dualstack.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		if ipFamily != "dual" {
-			t.Skip("Skipping test as IP_FAMILY is not dual")
-		}
-
 		ns := "gateway-conformance-infra"
 		gwNN := types.NamespacedName{Name: "dualstack-gateway", Namespace: ns}
 
