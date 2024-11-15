@@ -35,14 +35,29 @@ var TLSRouteBackendFQDNTest = suite.ConformanceTest{
 }
 
 var TLSRouteBackendIPTest = suite.ConformanceTest{
-	ShortName:   "TLSRouteBackendIPTest",
+	ShortName:   "TLSRouteBackendIP",
 	Description: "TLSRoutes with a backend ref to a Backend",
 	Manifests: []string{
 		"testdata/tlsroute-to-backend-ip.yaml",
 	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("TLSRoute with a IP type Backend", func(t *testing.T) {
-			testTLSRouteWithBackend(t, suite, "tlsroute-to-backend-ip", "backend-ip")
+			svcNN := types.NamespacedName{
+				Name:      "tls-backend-2-clusterip",
+				Namespace: "gateway-conformance-infra",
+			}
+			svc, err := GetService(suite.Client, svcNN)
+			if err != nil {
+				t.Fatalf("failed to get service %s: %v", svcNN, err)
+			}
+
+			backendIPName := "backend-ip"
+			ns := "gateway-conformance-infra"
+			err = CreateBackend(suite.Client, types.NamespacedName{Name: backendIPName, Namespace: ns}, svc.Spec.ClusterIP)
+			if err != nil {
+				t.Fatalf("failed to create backend %s: %v", backendIPName, err)
+			}
+			testTLSRouteWithBackend(t, suite, "tlsroute-to-backend-ip", backendIPName)
 		})
 	},
 }

@@ -693,3 +693,31 @@ func CollectAndDump(t *testing.T, rest *rest.Config) {
 		tlog.Logf(t, "\ndata: \n%s", data)
 	}
 }
+
+func GetService(c client.Client, nn types.NamespacedName) (*corev1.Service, error) {
+	svc := &corev1.Service{}
+	if err := c.Get(context.Background(), nn, svc); err != nil {
+		return nil, err
+	}
+	return svc, nil
+}
+
+func CreateBackend(c client.Client, nn types.NamespacedName, clusterIP string) error {
+	backend := &egv1a1.Backend{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: nn.Namespace,
+			Name:      nn.Name,
+		},
+		Spec: egv1a1.BackendSpec{
+			Endpoints: []egv1a1.BackendEndpoint{
+				{
+					IP: &egv1a1.IPEndpoint{
+						Address: clusterIP,
+						Port:    8080,
+					},
+				},
+			},
+		},
+	}
+	return c.Create(context.TODO(), backend)
+}

@@ -15,17 +15,6 @@ spec:
       kind: Backend
       name: backend-ip
 ---
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: Backend
-metadata:
-  name: backend-ip
-  namespace: gateway-conformance-infra
-spec:
-  endpoints:
-  - ip:
-      address: 10.96.96.96
-      port: 443
----
 apiVersion: v1
 kind: Service
 metadata:
@@ -34,7 +23,6 @@ metadata:
 spec:
   selector:
     app: tls-backend-2
-  clusterIP: 10.96.96.96
   ports:
   - protocol: TCP
     port: 443
