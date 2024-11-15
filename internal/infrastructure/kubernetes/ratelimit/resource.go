@@ -445,24 +445,6 @@ func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 		env = append(env, tracingEnvs...)
 	}
 
-	// Apply user-defined environment variables last to allow them to override defaults
-	// Create a map for easy replacement of existing env variables
-	envMap := make(map[string]corev1.EnvVar)
-	for _, e := range env {
-		envMap[e.Name] = e
-	}
-
-	// Apply user-defined environment variables, replacing if they already exist
-	for _, userEnv := range rateLimitDeployment.Container.Env {
-		envMap[userEnv.Name] = userEnv
-	}
-
-	// Reconstruct the env slice from the map
-	env = make([]corev1.EnvVar, 0, len(envMap))
-	for _, e := range envMap {
-		env = append(env, e)
-	}
-
 	return resource.ExpectedContainerEnv(rateLimitDeployment.Container, env)
 }
 
