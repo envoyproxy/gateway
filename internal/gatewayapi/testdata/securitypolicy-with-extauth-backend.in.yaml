@@ -58,6 +58,44 @@ httpRoutes:
           backendRefs:
             - name: service-3
               port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-3
+    spec:
+      hostnames:
+        - www.baz.com
+      parentRefs:
+        - namespace: default
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: /baz
+          backendRefs:
+            - name: service-4
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-4
+    spec:
+      hostnames:
+        - www.qux.com
+      parentRefs:
+        - namespace: default
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: /qux
+          backendRefs:
+            - name: service-5
+              port: 8080
 backends:
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: Backend
@@ -108,3 +146,40 @@ securityPolicies:
               kind: Backend
               group: gateway.envoyproxy.io
               port: 3000
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: SecurityPolicy
+    metadata:
+      namespace: default
+      name: policy-for-http-route-3--grpc-backendref
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: HTTPRoute
+        name: httproute-3
+      extAuth:
+        failOpen: true
+        headersToExtAuth:
+          - header3
+          - header4
+        grpc:
+          backendRef:
+            name: service-2
+            kind: Service
+            port: 8080
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: SecurityPolicy
+    metadata:
+      namespace: default
+      name: policy-for-http-route-3-http-backendref
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: HTTPRoute
+        name: httproute-4
+      extAuth:
+        http:
+          backendRef:
+            name: backend-fqdn
+            kind: Backend
+            group: gateway.envoyproxy.io
+            port: 3000

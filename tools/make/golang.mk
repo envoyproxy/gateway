@@ -84,7 +84,7 @@ go.mod.tidy: ## Update and check dependences with go mod tidy.
 
 .PHONY: go.mod.lint
 lint: go.mod.lint
-go.mod.lint: go.mod.tidy ## Check if go.mod is clean
+go.mod.lint: go.mod.tidy go.mod.tidy.examples ## Check if go.mod is clean
 	@$(LOG_TARGET)
 	@if test -n "$$(git status -s -- go.mod go.sum)"; then \
 		git diff --exit-code go.mod; \
