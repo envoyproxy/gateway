@@ -702,7 +702,7 @@ func GetService(c client.Client, nn types.NamespacedName) (*corev1.Service, erro
 	return svc, nil
 }
 
-func CreateBackend(c client.Client, nn types.NamespacedName, clusterIP string) error {
+func CreateBackend(c client.Client, nn types.NamespacedName, clusterIP string, port int32) error {
 	backend := &egv1a1.Backend{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: nn.Namespace,
@@ -713,7 +713,7 @@ func CreateBackend(c client.Client, nn types.NamespacedName, clusterIP string) e
 				{
 					IP: &egv1a1.IPEndpoint{
 						Address: clusterIP,
-						Port:    8080,
+						Port:    port,
 					},
 				},
 			},

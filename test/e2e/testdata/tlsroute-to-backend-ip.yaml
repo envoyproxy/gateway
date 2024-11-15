@@ -13,7 +13,7 @@ spec:
   - backendRefs:
     - group: gateway.envoyproxy.io
       kind: Backend
-      name: backend-ip
+      name: backend-tls-ip
 ---
 apiVersion: v1
 kind: Service

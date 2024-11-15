@@ -62,7 +62,7 @@ var EnvoyGatewayBackendTest = suite.ConformanceTest{
 
 			backendIPName := "backend-ip"
 			ns := "gateway-conformance-infra"
-			err = CreateBackend(suite.Client, types.NamespacedName{Name: backendIPName, Namespace: ns}, svc.Spec.ClusterIP)
+			err = CreateBackend(suite.Client, types.NamespacedName{Name: backendIPName, Namespace: ns}, svc.Spec.ClusterIP, 8080)
 			if err != nil {
 				t.Fatalf("failed to create backend %s: %v", backendIPName, err)
 			}
