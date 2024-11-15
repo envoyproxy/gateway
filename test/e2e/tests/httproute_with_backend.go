@@ -21,7 +21,7 @@ func init() {
 }
 
 var EnvoyGatewayBackendTest = suite.ConformanceTest{
-	ShortName:   "EnvoyGatewayBackendTest",
+	ShortName:   "EnvoyGatewayBackend",
 	Description: "Routes with a backend ref to a backend",
 	Manifests: []string{
 		"testdata/httproute-to-backend-fqdn.yaml",
@@ -51,11 +51,31 @@ var EnvoyGatewayBackendTest = suite.ConformanceTest{
 		})
 
 		t.Run("of type IP", func(t *testing.T) {
+			svcNN := types.NamespacedName{
+				Name:      "infra-backend-v1-clusterip",
+				Namespace: "gateway-conformance-infra",
+			}
+			svc, err := GetService(suite.Client, svcNN)
+			if err != nil {
+				t.Fatalf("failed to get service %s: %v", svcNN, err)
+			}
+
+			backendIPName := "backend-ip"
 			ns := "gateway-conformance-infra"
+			err = CreateBackend(suite.Client, types.NamespacedName{Name: backendIPName, Namespace: ns}, svc.Spec.ClusterIP, 8080)
+			if err != nil {
+				t.Fatalf("failed to create backend %s: %v", backendIPName, err)
+			}
+			t.Cleanup(func() {
+				if err := DeleteBackend(suite.Client, types.NamespacedName{Name: backendIPName, Namespace: ns}); err != nil {
+					t.Fatalf("failed to delete backend %s: %v", backendIPName, err)
+				}
+			})
+
 			routeNN := types.NamespacedName{Name: "httproute-to-backend-ip", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-			BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-ip", Namespace: ns})
+			BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: backendIPName, Namespace: ns})
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{

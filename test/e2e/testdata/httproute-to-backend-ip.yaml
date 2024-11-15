@@ -6,7 +6,6 @@ metadata:
 spec:
   selector:
     app: infra-backend-v1
-  clusterIP: 10.96.96.96
   ports:
   - protocol: TCP
     port: 8080
@@ -34,14 +33,3 @@ spec:
     - group: gateway.envoyproxy.io
       kind: Backend
       name: backend-ip
----
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: Backend
-metadata:
-  name: backend-ip
-  namespace: gateway-conformance-infra
-spec:
-  endpoints:
-  - ip:
-      address: 10.96.96.96
-      port: 8080
