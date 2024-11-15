@@ -9,7 +9,6 @@
 package tests
 
 import (
-	"os"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -20,11 +19,7 @@ import (
 
 // If the environment is not dual, the IPv6 manifest cannot be applied, so the test will be skipped.
 func init() {
-	if os.Getenv("IP_FAMILY") == "dual" {
-		ConformanceTests = append(ConformanceTests, BackendDualStackTest)
-	} else {
-		ConformanceTests = append(ConformanceTests, SkipBackendDualStackTest)
-	}
+	ConformanceTests = append(ConformanceTests, BackendDualStackTest)
 }
 
 var BackendDualStackTest = suite.ConformanceTest{
@@ -32,6 +27,10 @@ var BackendDualStackTest = suite.ConformanceTest{
 	Description: "Test IPv6 and Dual Stack support for backends",
 	Manifests:   []string{"testdata/backend-dualstack.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		if ipFamily != "dual" {
+			t.Skip("Skipping test as IP_FAMILY is not dual")
+		}
+
 		ns := "gateway-conformance-infra"
 		gwNN := types.NamespacedName{Name: "dualstack-gateway", Namespace: ns}
 
@@ -62,12 +61,4 @@ func runBackendDualStackTest(t *testing.T, suite *suite.ConformanceTestSuite, ns
 	}
 
 	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
-}
-
-var SkipBackendDualStackTest = suite.ConformanceTest{
-	ShortName:   "BackendDualStack",
-	Description: "Skipping BackendDualStack test as IP_FAMILY is not dual",
-	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Skip("Skipping BackendDualStack test as IP_FAMILY is not dual")
-	},
 }
