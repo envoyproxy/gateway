@@ -1,5 +1,5 @@
 
-EXAMPLE_APPS := grpc-ext-auth envoy-als grpc-ext-proc http-ext-auth preserve-case-backend
+EXAMPLE_APPS := grpc-ext-auth envoy-als grpc-ext-proc http-ext-auth preserve-case-backend static-file-server
 EXAMPLE_IMAGE_PREFIX ?= envoyproxy/gateway-
 EXAMPLE_TAG ?= latest
 
