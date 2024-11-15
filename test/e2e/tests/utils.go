@@ -14,6 +14,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -43,6 +44,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/kubernetes"
 	tb "github.com/envoyproxy/gateway/internal/troubleshoot"
 )
+
+var IPFamily = os.Getenv("IP_FAMILY")
 
 const defaultServiceStartupTimeout = 5 * time.Minute
 
