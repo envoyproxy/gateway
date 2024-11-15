@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 
@@ -352,16 +353,18 @@ func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 	}
 
 	if rateLimit.Backend.Redis != nil {
-		env = append(env, []corev1.EnvVar{
-			{
-				Name:  RedisSocketTypeEnvVar,
-				Value: "tcp",
-			},
-			{
+		env = append(env, corev1.EnvVar{
+			Name:  RedisSocketTypeEnvVar,
+			Value: "tcp",
+		})
+
+		// Only set REDIS_URL if it's not already set
+		if _, exists := os.LookupEnv(RedisURLEnvVar); !exists {
+			env = append(env, corev1.EnvVar{
 				Name:  RedisURLEnvVar,
 				Value: rateLimit.Backend.Redis.URL,
-			},
-		}...)
+			})
+		}
 	}
 
 	if rateLimit.Backend.Redis != nil && rateLimit.Backend.Redis.TLS != nil {
