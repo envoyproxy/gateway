@@ -721,3 +721,11 @@ func CreateBackend(c client.Client, nn types.NamespacedName, clusterIP string) e
 	}
 	return c.Create(context.TODO(), backend)
 }
+
+func DeleteBackend(c client.Client, nn types.NamespacedName) error {
+	backend := &egv1a1.Backend{}
+	if err := c.Get(context.Background(), nn, backend); err != nil {
+		return err
+	}
+	return c.Delete(context.Background(), backend)
+}

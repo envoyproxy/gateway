@@ -66,9 +66,11 @@ var EnvoyGatewayBackendTest = suite.ConformanceTest{
 			if err != nil {
 				t.Fatalf("failed to create backend %s: %v", backendIPName, err)
 			}
-			if err != nil {
-				t.Fatalf("failed to create backend %s: %v", backendIPName, err)
-			}
+			t.Cleanup(func() {
+				if err := DeleteBackend(suite.Client, types.NamespacedName{Name: backendIPName, Namespace: ns}); err != nil {
+					t.Fatalf("failed to delete backend %s: %v", backendIPName, err)
+				}
+			})
 
 			routeNN := types.NamespacedName{Name: "httproute-to-backend-ip", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}

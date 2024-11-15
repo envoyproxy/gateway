@@ -57,6 +57,11 @@ var TLSRouteBackendIPTest = suite.ConformanceTest{
 			if err != nil {
 				t.Fatalf("failed to create backend %s: %v", backendIPName, err)
 			}
+			t.Cleanup(func() {
+				if err := DeleteBackend(suite.Client, types.NamespacedName{Name: backendIPName, Namespace: ns}); err != nil {
+					t.Fatalf("failed to delete backend %s: %v", backendIPName, err)
+				}
+			})
 			testTLSRouteWithBackend(t, suite, "tlsroute-to-backend-ip", backendIPName)
 		})
 	},
