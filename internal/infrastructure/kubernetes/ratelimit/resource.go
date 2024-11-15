@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"os"
 	"strconv"
 	"strings"
 
@@ -353,18 +352,16 @@ func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 	}
 
 	if rateLimit.Backend.Redis != nil {
-		env = append(env, corev1.EnvVar{
-			Name:  RedisSocketTypeEnvVar,
-			Value: "tcp",
-		})
-
-		// Only set REDIS_URL if it's not already set
-		if _, exists := os.LookupEnv(RedisURLEnvVar); !exists {
-			env = append(env, corev1.EnvVar{
+		env = append(env, []corev1.EnvVar{
+			{
+				Name:  RedisSocketTypeEnvVar,
+				Value: "tcp",
+			},
+			{
 				Name:  RedisURLEnvVar,
 				Value: rateLimit.Backend.Redis.URL,
-			})
-		}
+			},
+		}...)
 	}
 
 	if rateLimit.Backend.Redis != nil && rateLimit.Backend.Redis.TLS != nil {
@@ -446,6 +443,24 @@ func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 			},
 		}
 		env = append(env, tracingEnvs...)
+	}
+
+	// Apply user-defined environment variables last to allow them to override defaults
+	// Create a map for easy replacement of existing env variables
+	envMap := make(map[string]corev1.EnvVar)
+	for _, e := range env {
+		envMap[e.Name] = e
+	}
+
+	// Apply user-defined environment variables, replacing if they already exist
+	for _, userEnv := range rateLimitDeployment.Container.Env {
+		envMap[userEnv.Name] = userEnv
+	}
+
+	// Reconstruct the env slice from the map
+	env = make([]corev1.EnvVar, 0, len(envMap))
+	for _, e := range envMap {
+		env = append(env, e)
 	}
 
 	return resource.ExpectedContainerEnv(rateLimitDeployment.Container, env)
