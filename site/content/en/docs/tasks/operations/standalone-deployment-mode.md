@@ -74,9 +74,6 @@ extensionApis:
 
 As you can see, we have enabled the [Backend][] API, this API will be used to represent our local endpoints.
 
-Since Envoy Gateway is running in the standalone mode, we highly recommend using the [Backend][] API instead of 
-the Kubernetes Service or EndpointSlice.
-
 ### Trigger an Update
 
 Any changes under watched `paths` will be considered as an update by the file provider.
