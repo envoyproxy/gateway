@@ -39,6 +39,18 @@ func TestE2E(t *testing.T) {
 			*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug)
 	}
 
+	skipTests := []string{
+		tests.GatewayInfraResourceTest.ShortName, // https://github.com/envoyproxy/gateway/issues/3191
+	}
+
+	// Skip test only work on DualStack cluster
+	if tests.IPFamily != "dual" {
+		skipTests = append(skipTests,
+			tests.BackendDualStackTest.ShortName,
+			tests.HTTPRouteDualStackTest.ShortName,
+		)
+	}
+
 	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 		Client:               c,
 		RestConfig:           cfg,
@@ -50,9 +62,7 @@ func TestE2E(t *testing.T) {
 		// SupportedFeatures cannot be empty, so we set it to SupportGateway
 		// All e2e tests should leave Features empty.
 		SupportedFeatures: sets.New[features.FeatureName](features.SupportGateway),
-		SkipTests: []string{
-			tests.GatewayInfraResourceTest.ShortName, // https://github.com/envoyproxy/gateway/issues/3191
-		},
+		SkipTests:         skipTests,
 		AllowCRDsMismatch: *flags.AllowCRDsMismatch,
 	})
 	if err != nil {
