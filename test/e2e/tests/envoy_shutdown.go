@@ -141,7 +141,8 @@ func restartProxyAndWaitForRollout(t *testing.T, timeoutConfig config.TimeoutCon
 		return err
 	}
 
-	return wait.PollUntilContextTimeout(ctx, 1*time.Second, timeoutConfig.CreateTimeout, true, func(ctx context.Context) (bool, error) {
+	// increase timeout for IPv6 first cluster
+	return wait.PollUntilContextTimeout(ctx, 2*time.Second, 2*timeoutConfig.CreateTimeout, true, func(ctx context.Context) (bool, error) {
 		// wait for replicaset with the same annotation to reach ready status
 		podList := &corev1.PodList{}
 		listOpts := []client.ListOption{
