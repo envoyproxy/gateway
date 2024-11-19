@@ -994,6 +994,8 @@ type ExtAuth struct {
 	// +optional
 	HeadersToExtAuth []string `json:"headersToExtAuth,omitempty"`
 
+	// BodyToExtAuth defines the Body to Ext Auth configuration.
+	// +optional
 	BodyToExtAuth *BodyToExtAuth `json:"bodyToExtAuth,omitempty"`
 
 	// FailOpen is a switch used to control the behavior when a response from the External Authorization service cannot be obtained.

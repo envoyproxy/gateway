@@ -459,6 +459,17 @@ _Appears in:_
 | `users` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  true  | The Kubernetes secret which contains the username-password pairs in<br />htpasswd format, used to verify user credentials in the "Authorization"<br />header.<br /><br />This is an Opaque secret. The username-password pairs should be stored in<br />the key ".htpasswd". As the key name indicates, the value needs to be the<br />htpasswd format, for example: "user1:\{SHA\}hashed_user1_password".<br />Right now, only SHA hash algorithm is supported.<br />Reference to https://httpd.apache.org/docs/2.4/programs/htpasswd.html<br />for more details.<br /><br />Note: The secret must be in the same namespace as the SecurityPolicy. |
 
 
+#### BodyToExtAuth
+
+
+
+BodyToExtAuth defines the Body to Ext Auth configuration
+
+_Appears in:_
+- [ExtAuth](#extauth)
+
+
+
 #### BootstrapType
 
 _Underlying type:_ _string_
@@ -1437,6 +1448,7 @@ _Appears in:_
 | `grpc` | _[GRPCExtAuthService](#grpcextauthservice)_ |  true  | GRPC defines the gRPC External Authorization service.<br />Either GRPCService or HTTPService must be specified,<br />and only one of them can be provided. |
 | `http` | _[HTTPExtAuthService](#httpextauthservice)_ |  true  | HTTP defines the HTTP External Authorization service.<br />Either GRPCService or HTTPService must be specified,<br />and only one of them can be provided. |
 | `headersToExtAuth` | _string array_ |  false  | HeadersToExtAuth defines the client request headers that will be included<br />in the request to the external authorization service.<br />Note: If not specified, the default behavior for gRPC and HTTP external<br />authorization services is different due to backward compatibility reasons.<br />All headers will be included in the check request to a gRPC authorization server.<br />Only the following headers will be included in the check request to an HTTP<br />authorization server: Host, Method, Path, Content-Length, and Authorization.<br />And these headers will always be included to the check request to an HTTP<br />authorization server by default, no matter whether they are specified<br />in HeadersToExtAuth or not. |
+| `bodyToExtAuth` | _[BodyToExtAuth](#bodytoextauth)_ |  false  | BodyToExtAuth defines the Body to Ext Auth configuration. |
 | `failOpen` | _boolean_ |  false  | FailOpen is a switch used to control the behavior when a response from the External Authorization service cannot be obtained.<br />If FailOpen is set to true, the system allows the traffic to pass through.<br />Otherwise, if it is set to false or not set (defaulting to false),<br />the system blocks the traffic and returns a HTTP 5xx error, reflecting a fail-closed approach.<br />This setting determines whether to prioritize accessibility over strict security in case of authorization service failure. |
 | `recomputeRoute` | _boolean_ |  false  | RecomputeRoute clears the route cache and recalculates the routing decision.<br />This field must be enabled if the headers added or modified by the ExtAuth are used for<br />route matching decisions. If the recomputation selects a new route, features targeting<br />the new matched route will be applied. |
 
