@@ -35,6 +35,7 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
             withRequestBody:
+              maxRequestBytes: 1024
               allowPartialMessage: false
               packAsBytes: false
             failureModeAllow: true

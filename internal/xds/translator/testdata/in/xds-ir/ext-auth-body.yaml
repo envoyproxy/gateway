@@ -106,7 +106,7 @@ http:
           extAuth:
             name: securitypolicy/default/policy-for-gateway-1
             failOpen: true
-            bodyToExtAuth: true
+            bodyToExtAuth: {}
             http:
               authority: primary.foo.com
               destination:

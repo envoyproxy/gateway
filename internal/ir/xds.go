@@ -994,7 +994,7 @@ type ExtAuth struct {
 	// +optional
 	HeadersToExtAuth []string `json:"headersToExtAuth,omitempty"`
 
-	BodyToExtAuth *bool `json:"bodyToExtAuth,omitempty"`
+	BodyToExtAuth *BodyToExtAuth `json:"bodyToExtAuth,omitempty"`
 
 	// FailOpen is a switch used to control the behavior when a response from the External Authorization service cannot be obtained.
 	// If FailOpen is set to true, the system allows the traffic to pass through.
@@ -1011,6 +1011,10 @@ type ExtAuth struct {
 	// +optional
 	RecomputeRoute *bool `json:"recomputeRoute,omitempty"`
 }
+
+// BodyToExtAuth defines the Body to Ext Auth configuration
+// +k8s:deepcopy-gen=true
+type BodyToExtAuth struct{}
 
 // HTTPExtAuthService defines the HTTP External Authorization service
 // +k8s:deepcopy-gen=true
