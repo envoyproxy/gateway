@@ -1,4 +1,4 @@
-- name: NullRouteCluster
+- name: EmptyCluster
   type: STATIC
 - circuitBreakers:
     thresholds:

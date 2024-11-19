@@ -13,10 +13,10 @@
     - name: envoy.filters.network.tcp_proxy
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
-        cluster: NullRouteCluster
+        cluster: EmptyCluster
         idleTimeout: 1200s
         statPrefix: tcp-10443
-    name: NullRouteCluster
+    name: EmptyCluster
   listenerFilters:
   - name: envoy.filters.listener.proxy_protocol
     typedConfig:

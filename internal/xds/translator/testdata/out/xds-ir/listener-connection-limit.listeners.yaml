@@ -85,9 +85,9 @@
     - name: envoy.filters.network.tcp_proxy
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
-        cluster: NullRouteCluster
+        cluster: EmptyCluster
         statPrefix: tcp-10082
-    name: NullRouteCluster
+    name: EmptyCluster
   name: third-listener
   perConnectionBufferLimitBytes: 32768
 - address:
@@ -105,8 +105,8 @@
     - name: envoy.filters.network.tcp_proxy
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
-        cluster: NullRouteCluster
+        cluster: EmptyCluster
         statPrefix: tcp-10083
-    name: NullRouteCluster
+    name: EmptyCluster
   name: fourth-listener
   perConnectionBufferLimitBytes: 32768

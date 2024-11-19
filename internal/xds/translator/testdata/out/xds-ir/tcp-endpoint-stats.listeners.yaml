@@ -7,8 +7,8 @@
     - name: envoy.filters.network.tcp_proxy
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
-        cluster: NullRouteCluster
+        cluster: EmptyCluster
         statPrefix: tcp-10080
-    name: NullRouteCluster
+    name: EmptyCluster
   name: tcp-route-enable-endpoint-stats
   perConnectionBufferLimitBytes: 32768
