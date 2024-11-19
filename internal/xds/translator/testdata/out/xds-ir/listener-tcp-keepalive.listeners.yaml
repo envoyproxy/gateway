@@ -93,13 +93,19 @@
       address: 0.0.0.0
       portValue: 10082
   filterChains:
-  - filters:
+  - filterChainMatch:
+      serverNames:
+      - bar.com
+    filters:
     - name: envoy.filters.network.tcp_proxy
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
-        cluster: EmptyCluster
-        statPrefix: tcp-10082
-    name: EmptyCluster
+        cluster: tls-route-dest
+        statPrefix: tls-passthrough-10082
+  listenerFilters:
+  - name: envoy.filters.listener.tls_inspector
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
   name: third-listener
   perConnectionBufferLimitBytes: 32768
   socketOptions:
@@ -116,9 +122,8 @@
     - name: envoy.filters.network.tcp_proxy
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
-        cluster: EmptyCluster
+        cluster: tcp-route-dest
         statPrefix: tcp-10083
-    name: EmptyCluster
   name: fourth-listener
   perConnectionBufferLimitBytes: 32768
   socketOptions:
