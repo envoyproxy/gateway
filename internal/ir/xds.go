@@ -2634,6 +2634,10 @@ type Wasm struct {
 	// original URL(either an HTTP URL or an OCI image) and serves it through the
 	// local HTTP server.
 	Code *HTTPWasmCode `json:"httpWasmCode,omitempty"`
+
+	// HostKeys is a list of keys for environment variables from the host envoy process
+	// that should be passed into the Wasm VM.
+	HostKeys []string `json:"hostKeys,omitempty"`
 }
 
 // HTTPWasmCode holds the information associated with the HTTP Wasm code source.

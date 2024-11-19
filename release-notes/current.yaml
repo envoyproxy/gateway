@@ -14,6 +14,7 @@ new features: |
 
 # Fixes for bugs identified in previous versions.
 bug fixes: |
+  Fixed failed to update SecurityPolicy resources with the `backendRef` field specified
   Fixed Envoy rejecting TCP Listeners that have no attached TCPRoutes
 
 # Enhancements that improve performance.
@@ -26,4 +27,4 @@ deprecations: |
 
 # Other notable changes not covered by the above sections.
 Other changes: |
-  Add other changes here
+  [SecurityPolicy] Modify the JWT Provider Issuer validation constraint

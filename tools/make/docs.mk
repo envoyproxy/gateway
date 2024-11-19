@@ -89,7 +89,7 @@ docs-api-gen: $(tools/crd-ref-docs)
 	--config=tools/crd-ref-docs/config.yaml \
 	--templates-dir=tools/crd-ref-docs/templates \
 	--output-path=site/content/en/latest/api/extension_types.md \
-	--max-depth 10 \
+	--max-depth 100 \
 	--renderer=markdown
 	# below line copy command for sync English api doc into Chinese
 	cp site/content/en/latest/api/extension_types.md site/content/zh/latest/api/extension_types.md

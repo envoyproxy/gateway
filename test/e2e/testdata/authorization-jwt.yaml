@@ -64,7 +64,7 @@ spec:
     - name: example
       issuer: https://foo.bar.com
       remoteJWKS:
-        uri: https://raw.githubusercontent.com/envoyproxy/gateway/refs/heads/main/examples/kubernetes/jwt/jwks.json
+        uri: http://static-file-server.gateway-conformance-infra/jwt/jwks.json
   authorization:
     defaultAction: Deny
     rules:
@@ -97,7 +97,7 @@ spec:
     - name: example
       issuer: https://foo.bar.com
       remoteJWKS:
-        uri: https://raw.githubusercontent.com/envoyproxy/gateway/refs/heads/main/examples/kubernetes/jwt/jwks.json
+        uri: http://static-file-server.gateway-conformance-infra/jwt/jwks.json
   authorization:
     defaultAction: Deny
     rules:
@@ -123,7 +123,7 @@ spec:
     - name: example
       issuer: https://foo.bar.com
       remoteJWKS:
-        uri: https://raw.githubusercontent.com/envoyproxy/gateway/refs/heads/main/examples/kubernetes/jwt/jwks.json
+        uri: http://static-file-server.gateway-conformance-infra/jwt/jwks.json
   authorization:
     defaultAction: Deny
     rules:
