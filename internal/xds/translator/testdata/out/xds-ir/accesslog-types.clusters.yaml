@@ -4,7 +4,6 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
   edsClusterConfig:
     edsConfig:
       ads: {}
@@ -22,7 +21,6 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
   edsClusterConfig:
     edsConfig:
       ads: {}
@@ -47,7 +45,6 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
   edsClusterConfig:
     edsConfig:
       ads: {}
@@ -72,7 +69,6 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
   edsClusterConfig:
     edsConfig:
       ads: {}
@@ -97,7 +93,6 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
   edsClusterConfig:
     edsConfig:
       ads: {}
@@ -122,7 +117,6 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
   edsClusterConfig:
     edsConfig:
       ads: {}
@@ -147,7 +141,6 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
   edsClusterConfig:
     edsConfig:
       ads: {}
@@ -172,7 +165,6 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
@@ -206,7 +198,6 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
@@ -240,7 +231,6 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
