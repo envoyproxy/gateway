@@ -5,11 +5,12 @@ tcp:
 - name: "tcp-route-enable-req-resp-sizes-stats"
   address: "0.0.0.0"
   port: 10080
-  destination:
-    name: "tcp-route-simple-dest"
-    settings:
-    - endpoints:
-      - host: "1.2.3.4"
-        port: 50000
-      - host: "5.6.7.8"
-        port: 50001
+  routes:
+  - destination:
+      name: "tcp-route-simple-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        - host: "5.6.7.8"
+          port: 50001
