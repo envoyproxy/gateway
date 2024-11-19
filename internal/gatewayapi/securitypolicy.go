@@ -840,7 +840,8 @@ func (t *Translator) buildBasicAuth(
 func (t *Translator) buildExtAuth(
 	policy *egv1a1.SecurityPolicy,
 	resources *resource.Resources,
-	envoyProxy *egv1a1.EnvoyProxy) (*ir.ExtAuth, error) {
+	envoyProxy *egv1a1.EnvoyProxy,
+) (*ir.ExtAuth, error) {
 	var (
 		http            = policy.Spec.ExtAuth.HTTP
 		grpc            = policy.Spec.ExtAuth.GRPC
