@@ -89,27 +89,6 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 	// Define slice to hold container ports
 	var ports []corev1.ContainerPort
 
-	// Iterate over listeners and ports to get container ports
-	for _, listener := range infra.Listeners {
-		for _, p := range listener.Ports {
-			var protocol corev1.Protocol
-			switch p.Protocol {
-			case ir.HTTPProtocolType, ir.HTTPSProtocolType, ir.TLSProtocolType, ir.TCPProtocolType:
-				protocol = corev1.ProtocolTCP
-			case ir.UDPProtocolType:
-				protocol = corev1.ProtocolUDP
-			default:
-				return nil, fmt.Errorf("invalid protocol %q", p.Protocol)
-			}
-			port := corev1.ContainerPort{
-				Name:          p.Name,
-				ContainerPort: p.ContainerPort,
-				Protocol:      protocol,
-			}
-			ports = append(ports, port)
-		}
-	}
-
 	if enablePrometheus(infra) {
 		ports = append(ports, corev1.ContainerPort{
 			Name:          "metrics",
