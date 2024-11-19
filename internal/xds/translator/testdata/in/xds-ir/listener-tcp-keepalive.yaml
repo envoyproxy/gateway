@@ -60,7 +60,7 @@ tcp:
     probes: 10
   port: 10083
   routes:
-  -  destination:
+  - destination:
       name: "tcp-route-dest"
       settings:
       - endpoints:
