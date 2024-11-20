@@ -10,9 +10,12 @@ package upgrade
 import (
 	"flag"
 	"io/fs"
+	"os"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/util/sets"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
@@ -25,6 +28,7 @@ import (
 
 func TestEGUpgrade(t *testing.T) {
 	flag.Parse()
+	log.SetLogger(zap.New(zap.WriteTo(os.Stderr), zap.UseDevMode(true)))
 
 	c, cfg := kubetest.NewClient(t)
 

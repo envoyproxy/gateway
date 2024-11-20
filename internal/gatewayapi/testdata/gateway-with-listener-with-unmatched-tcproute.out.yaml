@@ -59,6 +59,6 @@ xdsIR:
       text:
       - path: /dev/stdout
     tcp:
-    - address: 0.0.0.0
+    - address: '::'
       name: envoy-gateway/gateway-1/tcp
       port: 10080

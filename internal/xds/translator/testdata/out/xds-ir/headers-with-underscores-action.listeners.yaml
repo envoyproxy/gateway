@@ -1,6 +1,7 @@
 - address:
     socketAddress:
       address: 0.0.0.0
+      ipv4Compat: true
       portValue: 8081
   defaultFilterChain:
     filters:
@@ -33,6 +34,7 @@
 - address:
     socketAddress:
       address: 0.0.0.0
+      ipv4Compat: true
       portValue: 8082
   defaultFilterChain:
     filters:
@@ -64,6 +66,7 @@
 - address:
     socketAddress:
       address: 0.0.0.0
+      ipv4Compat: true
       portValue: 8083
   defaultFilterChain:
     filters:
@@ -96,6 +99,7 @@
 - address:
     socketAddress:
       address: 0.0.0.0
+      ipv4Compat: true
       portValue: 8084
   defaultFilterChain:
     filters:
