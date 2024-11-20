@@ -33,7 +33,7 @@ type ProcessingModeOptions struct {
 	// https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/advanced/attributes
 	//
 	// +optional
-	Attributes []string
+	Attributes []string `json:"attributes,omitempty"`
 }
 
 // ExtProcProcessingMode defines if and how headers and bodies are sent to the service.

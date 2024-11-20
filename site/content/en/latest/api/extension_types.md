@@ -2991,7 +2991,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `body` | _[ExtProcBodyProcessingMode](#extprocbodyprocessingmode)_ |  false  | Defines body processing mode |
-| `Attributes` | _string array_ |  false  | Defines which attributes are sent to the external processor<br />https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/advanced/attributes |
+| `attributes` | _string array_ |  false  | Defines which attributes are sent to the external processor<br />https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/advanced/attributes |
 
 
 #### ProviderType

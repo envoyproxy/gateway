@@ -938,6 +938,13 @@ spec:
                             Defines processing mode for requests. If present, request headers are sent. Request body is processed according
                             to the specified mode.
                           properties:
+                            attributes:
+                              description: |-
+                                Defines which attributes are sent to the external processor
+                                https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/advanced/attributes
+                              items:
+                                type: string
+                              type: array
                             body:
                               description: Defines body processing mode
                               enum:
@@ -951,6 +958,13 @@ spec:
                             Defines processing mode for responses. If present, response headers are sent. Response body is processed according
                             to the specified mode.
                           properties:
+                            attributes:
+                              description: |-
+                                Defines which attributes are sent to the external processor
+                                https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/advanced/attributes
+                              items:
+                                type: string
+                              type: array
                             body:
                               description: Defines body processing mode
                               enum:
