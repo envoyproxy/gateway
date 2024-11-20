@@ -251,7 +251,6 @@ xds:
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
-          dnsLookupFamily: V4_ONLY
           edsClusterConfig:
             edsConfig:
               ads: {}
@@ -271,7 +270,6 @@ xds:
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
-          dnsLookupFamily: V4_ONLY
           edsClusterConfig:
             edsConfig:
               ads: {}
@@ -298,7 +296,6 @@ xds:
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
-          dnsLookupFamily: V4_ONLY
           edsClusterConfig:
             edsConfig:
               ads: {}
@@ -318,7 +315,6 @@ xds:
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
-          dnsLookupFamily: V4_ONLY
           edsClusterConfig:
             edsConfig:
               ads: {}
@@ -338,7 +334,6 @@ xds:
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
-          dnsLookupFamily: V4_ONLY
           edsClusterConfig:
             edsConfig:
               ads: {}
