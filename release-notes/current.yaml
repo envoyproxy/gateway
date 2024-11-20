@@ -14,8 +14,8 @@ new features: |
 
 # Fixes for bugs identified in previous versions.
 bug fixes: |
-  Add a bug fix here
   Fixed failed to update SecurityPolicy resources with the `backendRef` field specified
+  Fixed Envoy rejecting TCP Listeners that have no attached TCPRoutes
 
 # Enhancements that improve performance.
 performance improvements: |
