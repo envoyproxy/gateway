@@ -15,6 +15,7 @@ new features: |
 # Fixes for bugs identified in previous versions.
 bug fixes: |
   Fixed failed to update SecurityPolicy resources with the `backendRef` field specified
+  Fixed Envoy rejecting TCP Listeners that have no attached TCPRoutes
   Fixed xDS translation failed when oidc tokenEndpoint and jwt remoteJWKS are specified in the same SecurityPolicy and using the same hostname
 
 # Enhancements that improve performance.
