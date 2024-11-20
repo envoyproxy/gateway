@@ -22,11 +22,18 @@ const (
 )
 
 // ProcessingModeOptions defines if headers or body should be processed by the external service
+// and which attributes are sent to the processor
 type ProcessingModeOptions struct {
 	// Defines body processing mode
 	//
 	// +optional
 	Body *ExtProcBodyProcessingMode `json:"body,omitempty"`
+
+	// Defines which attributes are sent to the external processor
+	// https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/advanced/attributes
+	//
+	// +optional
+	Attributes []string
 }
 
 // ExtProcProcessingMode defines if and how headers and bodies are sent to the service.
@@ -70,4 +77,41 @@ type ExtProc struct {
 	//
 	// +optional
 	ProcessingMode *ExtProcProcessingMode `json:"processingMode,omitempty"`
+
+	// MetadataOptions defines options related to the sending and receiving of dynamic metadata.
+	// These options define which metadata namespaces would be sent to the processor and which dynamic metadata
+	// namespaces the processor would be permitted to emit metadata to.
+	// Users can specify custom namespaces or well-known envoy metadata namespace (such as envoy.filters.http.ext_authz)
+	// documented here: https://www.envoyproxy.io/docs/envoy/latest/configuration/advanced/well_known_dynamic_metadata#well-known-dynamic-metadata
+	// Default: no metadata context is sent or received from the external processor
+	//
+	// +optional
+	MetadataOptions *ExtProcMetadataOptions `json:"metadataOptions,omitempty"`
+}
+
+// ExtProcAttributes defines which envoy attributes are sent for requests and responses to the external processor
+type ExtProcAttributes struct {
+	// defines attributes to send for Request processing
+	//
+	// +optional
+	Request []string `json:"request,omitempty"`
+
+	// defines attributes to send for Response processing
+	//
+	// +optional
+	Response []string `json:"response,omitempty"`
+}
+
+// ExtProcMetadataOptions defines options related to the sending and receiving of dynamic metadata to and from the
+// external processor service
+type ExtProcMetadataOptions struct {
+	// metadata namespaces forwarded to external processor
+	//
+	// +optional
+	ForwardingNamespaces []string `json:"forwardingNamespaces,omitempty"`
+
+	// metadata namespaces updatable by external processor
+	//
+	// +optional
+	ReceivingNamespaces []string `json:"receivingNamespaces,omitempty"`
 }

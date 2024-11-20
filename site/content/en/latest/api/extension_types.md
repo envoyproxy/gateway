@@ -1503,6 +1503,9 @@ _Appears in:_
 | `messageTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | MessageTimeout is the timeout for a response to be returned from the external processor<br />Default: 200ms |
 | `failOpen` | _boolean_ |  false  | FailOpen defines if requests or responses that cannot be processed due to connectivity to the<br />external processor are terminated or passed-through.<br />Default: false |
 | `processingMode` | _[ExtProcProcessingMode](#extprocprocessingmode)_ |  false  | ProcessingMode defines how request and response body is processed<br />Default: header and body are not sent to the external processor |
+| `metadataOptions` | _[ExtProcMetadataOptions](#extprocmetadataoptions)_ |  false  | MetadataOptions defines options related to the sending and receiving of dynamic metadata.<br />These options define which metadata namespaces would be sent to the processor and which dynamic metadata<br />namespaces the processor would be permitted to emit metadata to.<br />Users can specify custom namespaces or well-known envoy metadata namespace (such as envoy.filters.http.ext_authz)<br />documented here: https://www.envoyproxy.io/docs/envoy/latest/configuration/advanced/well_known_dynamic_metadata#well-known-dynamic-metadata<br />Default: no metadata context is sent or received from the external processor |
+
+
 
 
 #### ExtProcBodyProcessingMode
@@ -1519,6 +1522,22 @@ _Appears in:_
 | `Streamed` | StreamedExtProcBodyProcessingMode will stream the body to the server in pieces as they arrive at the proxy.<br /> | 
 | `Buffered` | BufferedExtProcBodyProcessingMode will buffer the message body in memory and send the entire body at once. If the body exceeds the configured buffer limit, then the downstream system will receive an error.<br /> | 
 | `BufferedPartial` | BufferedPartialExtBodyHeaderProcessingMode will buffer the message body in memory and send the entire body in one chunk. If the body exceeds the configured buffer limit, then the body contents up to the buffer limit will be sent.<br /> | 
+
+
+#### ExtProcMetadataOptions
+
+
+
+ExtProcMetadataOptions defines options related to the sending and receiving of dynamic metadata to and from the
+external processor service
+
+_Appears in:_
+- [ExtProc](#extproc)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `forwardingNamespaces` | _string array_ |  false  | metadata namespaces forwarded to external processor |
+| `receivingNamespaces` | _string array_ |  false  | metadata namespaces updatable by external processor |
 
 
 #### ExtProcProcessingMode
@@ -2964,6 +2983,7 @@ _Appears in:_
 
 
 ProcessingModeOptions defines if headers or body should be processed by the external service
+and which attributes are sent to the processor
 
 _Appears in:_
 - [ExtProcProcessingMode](#extprocprocessingmode)
@@ -2971,6 +2991,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `body` | _[ExtProcBodyProcessingMode](#extprocbodyprocessingmode)_ |  false  | Defines body processing mode |
+| `Attributes` | _string array_ |  false  | Defines which attributes are sent to the external processor<br />https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/advanced/attributes |
 
 
 #### ProviderType
