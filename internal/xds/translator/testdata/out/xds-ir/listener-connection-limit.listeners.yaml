@@ -75,11 +75,43 @@
     socketAddress:
       address: 0.0.0.0
       portValue: 10082
+  filterChains:
+  - filterChainMatch:
+      serverNames:
+      - bar.com
+    filters:
+    - name: envoy.filters.network.connection_limit
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.connection_limit.v3.ConnectionLimit
+        maxConnections: "3"
+        statPrefix: passthrough
+    - name: envoy.filters.network.tcp_proxy
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        cluster: tls-route-dest
+        statPrefix: passthrough
+  listenerFilters:
+  - name: envoy.filters.listener.tls_inspector
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
   name: third-listener
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
       address: 0.0.0.0
       portValue: 10083
+  filterChains:
+  - filters:
+    - name: envoy.filters.network.connection_limit
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.connection_limit.v3.ConnectionLimit
+        delay: 3s
+        maxConnections: "10"
+        statPrefix: tcp
+    - name: envoy.filters.network.tcp_proxy
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        cluster: tcp-route-dest
+        statPrefix: tcp
   name: fourth-listener
   perConnectionBufferLimitBytes: 32768

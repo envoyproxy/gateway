@@ -43,24 +43,26 @@ tcp:
   address: "0.0.0.0"
   port: 10082
   tcpKeepalive: {}
-  tls:
-    inspector:
-      snis:
-      - bar.com
-  destination:
-    name: "tls-route-dest"
-    settings:
-    - endpoints:
-      - host: "1.2.3.4"
-        port: 50000
+  routes:
+  - tls:
+      inspector:
+        snis:
+        - bar.com
+    destination:
+      name: "tls-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
 - name: "fourth-listener"
   address: "0.0.0.0"
   tcpKeepalive:
     probes: 10
   port: 10083
-  destination:
-    name: "tcp-route-dest"
-    settings:
-    - endpoints:
-      - host: "1.2.3.4"
-        port: 50000
+  routes:
+  - destination:
+      name: "tcp-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000

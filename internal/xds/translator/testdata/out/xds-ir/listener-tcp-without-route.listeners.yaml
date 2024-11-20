@@ -1,0 +1,42 @@
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10443
+  filterChains:
+  - filters:
+    - name: envoy.filters.network.connection_limit
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.connection_limit.v3.ConnectionLimit
+        delay: 10s
+        maxConnections: "3"
+        statPrefix: tcp
+    - name: envoy.filters.network.tcp_proxy
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        cluster: EmptyCluster
+        idleTimeout: 1200s
+        statPrefix: tcp
+    name: EmptyCluster
+  listenerFilters:
+  - name: envoy.filters.listener.proxy_protocol
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.proxy_protocol.v3.ProxyProtocol
+  name: envoy-gateway/gateway-1/tls-1
+  perConnectionBufferLimitBytes: 50000000
+  socketOptions:
+  - description: socket option to enable tcp keep alive
+    intValue: "1"
+    level: "1"
+    name: "9"
+  - description: socket option for keep alive probes
+    intValue: "3"
+    level: "6"
+    name: "6"
+  - description: socket option for keep alive idle time
+    intValue: "1200"
+    level: "6"
+    name: "4"
+  - description: socket option for keep alive interval
+    intValue: "60"
+    level: "6"
+    name: "5"
