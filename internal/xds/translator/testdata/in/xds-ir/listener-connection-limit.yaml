@@ -44,16 +44,17 @@ tcp:
   connection:
     limit:
       value: 3
-  tls:
-    passthrough:
-      snis:
-      - bar.com
-  destination:
-    name: "tls-route-dest"
-    settings:
-    - endpoints:
-      - host: "1.2.3.4"
-        port: 50000
+  routes:
+  - tls:
+      inspector:
+        snis:
+        - bar.com
+    destination:
+      name: "tls-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
 - name: "fourth-listener"
   address: "0.0.0.0"
   connection:
@@ -61,9 +62,10 @@ tcp:
       value: 10
       closeDelay: 3s
   port: 10083
-  destination:
-    name: "tcp-route-dest"
-    settings:
-    - endpoints:
-      - host: "1.2.3.4"
-        port: 50000
+  routes:
+  - destination:
+      name: "tcp-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
