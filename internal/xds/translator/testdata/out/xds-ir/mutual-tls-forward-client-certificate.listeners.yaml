@@ -1,6 +1,6 @@
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       ipv4Compat: true
       portValue: 10001
   filterChains:
@@ -60,7 +60,7 @@
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       ipv4Compat: true
       portValue: 10002
   filterChains:
@@ -121,7 +121,7 @@
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       ipv4Compat: true
       portValue: 10003
   filterChains:
@@ -182,7 +182,7 @@
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       ipv4Compat: true
       portValue: 10004
   filterChains:
@@ -243,7 +243,7 @@
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       ipv4Compat: true
       portValue: 10005
   filterChains:

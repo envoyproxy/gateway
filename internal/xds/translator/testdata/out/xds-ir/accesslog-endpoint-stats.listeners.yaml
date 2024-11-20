@@ -61,7 +61,7 @@
             stringValue: cluster1
   address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       ipv4Compat: true
       portValue: 10080
   defaultFilterChain:

@@ -1,6 +1,6 @@
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       ipv4Compat: true
       portValue: 10080
   filterChains:
@@ -64,7 +64,7 @@
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       ipv4Compat: true
       portValue: 10081
   filterChains:
