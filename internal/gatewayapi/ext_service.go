@@ -29,6 +29,7 @@ func (t *Translator) translateExtServiceBackendRefs(
 	protocol ir.AppProtocol,
 	resources *resource.Resources,
 	envoyProxy *egv1a1.EnvoyProxy,
+	configType string,
 	index int, // index is used to differentiate between multiple external services in the same policy
 ) (*ir.RouteDestination, error) {
 	var (
@@ -66,7 +67,7 @@ func (t *Translator) translateExtServiceBackendRefs(
 	}
 
 	rs = &ir.RouteDestination{
-		Name:     irIndexedExtServiceDestinationName(pnn, policy.GetObjectKind().GroupVersionKind().Kind, index),
+		Name:     irIndexedExtServiceDestinationName(pnn, policy.GetObjectKind().GroupVersionKind().Kind, configType, index),
 		Settings: ds,
 	}
 	return rs, nil
@@ -139,12 +140,12 @@ func (t *Translator) processExtServiceDestination(
 	return ds, nil
 }
 
-// TODO: also refer to extension type, as Wasm may also introduce destinations
-func irIndexedExtServiceDestinationName(policyNamespacedName types.NamespacedName, policyKind string, idx int) string {
+func irIndexedExtServiceDestinationName(policyNamespacedName types.NamespacedName, policyKind string, configType string, idx int) string {
 	return strings.ToLower(fmt.Sprintf(
-		"%s/%s/%s/%d",
+		"%s/%s/%s/%s/%d",
 		policyKind,
 		policyNamespacedName.Namespace,
 		policyNamespacedName.Name,
+		configType,
 		idx))
 }
