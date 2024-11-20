@@ -210,13 +210,6 @@ spec:
               port: 19002
               scheme: HTTP
         name: envoy
-        ports:
-        - containerPort: 8080
-          name: EnvoyHTTPPort
-          protocol: TCP
-        - containerPort: 8443
-          name: EnvoyHTTPSPort
-          protocol: TCP
         readinessProbe:
           failureThreshold: 1
           httpGet:

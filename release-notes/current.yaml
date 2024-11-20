@@ -2,7 +2,7 @@ date: Pending
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
-  Add a breaking change here
+  The Container `ports` field of the gateway instance has been removed, which will cause the gateway Pod to be rebuilt when upgrading the version.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
