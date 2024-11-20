@@ -20,6 +20,7 @@ bug fixes: |
   Route with multiple parents has incorrect namespace in parentRef status
   BackendTlsPolicy specify multiple targetRefs of the same service, only one will work
   Helm chart fails for Flux HelmRelease
+  Fixed Envoy rejecting TCP Listeners that have no attached TCPRoutes
 
 # Enhancements that improve performance.
 performance improvements: |

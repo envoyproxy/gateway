@@ -9,6 +9,42 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
+    serviceName: http-route-dest
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  name: http-route-dest
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: tcp-route-dest
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  name: tcp-route-dest
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
     serviceName: udp-route-dest
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST

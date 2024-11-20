@@ -1,0 +1,17 @@
+tcp:
+- address: 0.0.0.0
+  connection:
+    bufferLimit: 50000000
+    limit:
+      closeDelay: 10s
+      value: 3
+  enableProxyProtocol: true
+  name: envoy-gateway/gateway-1/tls-1
+  port: 10443
+  tcpKeepalive:
+    idleTime: 1200
+    interval: 60
+    probes: 3
+  timeout:
+    tcp:
+      idleTimeout: 20m0s
