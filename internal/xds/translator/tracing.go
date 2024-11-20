@@ -6,7 +6,6 @@
 package translator
 
 import (
-	"errors"
 	"fmt"
 	"sort"
 
@@ -176,7 +175,7 @@ func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Trac
 	if traffic == nil {
 		traffic = &ir.TrafficFeatures{}
 	}
-	if err := addXdsCluster(tCtx, &xdsClusterArgs{
+	return addXdsCluster(tCtx, &xdsClusterArgs{
 		name:              tracing.Destination.Name,
 		settings:          tracing.Destination.Settings,
 		tSocket:           nil,
@@ -191,8 +190,5 @@ func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Trac
 		backendConnection: traffic.BackendConnection,
 		dns:               traffic.DNS,
 		http2Settings:     traffic.HTTP2,
-	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
-		return err
-	}
-	return nil
+	})
 }

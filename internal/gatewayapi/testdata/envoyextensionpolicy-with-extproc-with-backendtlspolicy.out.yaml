@@ -308,7 +308,7 @@ xdsIR:
           extProcs:
           - authority: grpc-backend-2.default:9000
             destination:
-              name: envoyextensionpolicy/default/policy-for-http-route/0
+              name: envoyextensionpolicy/default/policy-for-http-route/extproc/0
               settings:
               - addressType: IP
                 endpoints:
@@ -349,7 +349,7 @@ xdsIR:
           extProcs:
           - authority: grpc-backend.envoy-gateway:8000
             destination:
-              name: envoyextensionpolicy/default/policy-for-gateway/0
+              name: envoyextensionpolicy/default/policy-for-gateway/extproc/0
               settings:
               - addressType: IP
                 protocol: GRPC

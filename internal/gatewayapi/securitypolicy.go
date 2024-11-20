@@ -373,8 +373,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 			if extAuth, err = t.buildExtAuth(
 				policy,
 				resources,
-				gtwCtx.envoyProxy,
-			); err != nil {
+				gtwCtx.envoyProxy); err != nil {
 				err = perr.WithMessage(err, "ExtAuth")
 				errs = errors.Join(errs, err)
 			}
@@ -385,7 +384,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 			if oidc, err = t.buildOIDC(
 				policy,
 				resources,
-				gtwCtx.envoyProxy); err != nil {
+				gtwCtx.envoyProxy); err != nil { // TODO zhaohuabing: Only the last EnvoyProxy is used
 				err = perr.WithMessage(err, "OIDC")
 				errs = errors.Join(errs, err)
 			}
@@ -468,8 +467,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		if extAuth, err = t.buildExtAuth(
 			policy,
 			resources,
-			gateway.envoyProxy,
-		); err != nil {
+			gateway.envoyProxy); err != nil {
 			err = perr.WithMessage(err, "ExtAuth")
 			errs = errors.Join(errs, err)
 		}
@@ -705,7 +703,7 @@ func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources 
 	}
 
 	if len(provider.BackendRefs) > 0 {
-		if rd, err = t.translateExtServiceBackendRefs(policy, provider.BackendRefs, protocol, resources, envoyProxy, 0); err != nil {
+		if rd, err = t.translateExtServiceBackendRefs(policy, provider.BackendRefs, protocol, resources, envoyProxy, "oidc", 0); err != nil {
 			return nil, err
 		}
 	}
@@ -839,7 +837,11 @@ func (t *Translator) buildBasicAuth(
 	}, nil
 }
 
-func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) (*ir.ExtAuth, error) {
+func (t *Translator) buildExtAuth(
+	policy *egv1a1.SecurityPolicy,
+	resources *resource.Resources,
+	envoyProxy *egv1a1.EnvoyProxy,
+) (*ir.ExtAuth, error) {
 	var (
 		http            = policy.Spec.ExtAuth.HTTP
 		grpc            = policy.Spec.ExtAuth.GRPC
@@ -893,7 +895,7 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *reso
 		}
 	}
 
-	if rd, err = t.translateExtServiceBackendRefs(policy, backendRefs, protocol, resources, envoyProxy, 0); err != nil {
+	if rd, err = t.translateExtServiceBackendRefs(policy, backendRefs, protocol, resources, envoyProxy, "extauth", 0); err != nil {
 		return nil, err
 	}
 
