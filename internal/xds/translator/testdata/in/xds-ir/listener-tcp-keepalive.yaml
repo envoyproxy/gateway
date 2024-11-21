@@ -1,6 +1,6 @@
 http:
 - name: "first-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 10080
   hostnames:
   - "foo.com"
@@ -18,7 +18,7 @@ http:
         - host: "1.2.3.4"
           port: 50000
 - name: "second-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 10081
   hostnames:
   - "foo.net"
@@ -40,7 +40,7 @@ http:
           port: 50000
 tcp:
 - name: "third-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 10082
   tcpKeepalive: {}
   routes:
@@ -55,7 +55,7 @@ tcp:
         - host: "1.2.3.4"
           port: 50000
 - name: "fourth-listener"
-  address: "0.0.0.0"
+  address: "::"
   tcpKeepalive:
     probes: 10
   port: 10083

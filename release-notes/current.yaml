@@ -2,7 +2,7 @@ date: Pending
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
-  Add a breaking change here
+  Always use `::` and `IPv4Compact` enabled on dynamic listeners.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |

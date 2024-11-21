@@ -1,6 +1,6 @@
 http:
 - name: "first-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 8081
   hostnames:
   - "*"
@@ -14,7 +14,7 @@ http:
         - host: "1.1.1.1"
           port: 8081
 - name: "second-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 8082
   hostnames:
   - "*"
@@ -30,7 +30,7 @@ http:
   headers:
     withUnderscoresAction: Allow
 - name: "third-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 8083
   hostnames:
   - "*"
@@ -46,7 +46,7 @@ http:
   headers:
     withUnderscoresAction: RejectRequest
 - name: "fourth-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 8084
   hostnames:
   - "*"

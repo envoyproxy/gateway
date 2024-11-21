@@ -3,7 +3,7 @@ metrics:
   enablePerEndpointStats: true
 http:
   - name: "listener-enable-endpoint-stats"
-    address: "0.0.0.0"
+    address: "::"
     port: 10080
     hostnames:
       - "*"

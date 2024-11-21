@@ -51,6 +51,9 @@ var EnvoyShutdownTest = suite.ConformanceTest{
 				t.Errorf("Failed to get proxy deployment")
 			}
 
+			// Wait for the grpc ext auth service pod to be ready
+			WaitForPods(t, suite.Client, "envoy-gateway-system", map[string]string{"gateway.envoyproxy.io/owning-gateway-name": name}, corev1.PodRunning, PodReady)
+
 			// wait for route to be programmed on envoy
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
@@ -79,7 +82,7 @@ var EnvoyShutdownTest = suite.ConformanceTest{
 			aborter.Abort(false) // abort the load either way
 
 			if err != nil {
-				t.Errorf("Failed to rollout proxy deployment")
+				t.Errorf("Failed to rollout proxy deployment: %v", err)
 			}
 
 			// Wait for the goroutine to finish

@@ -370,7 +370,8 @@ xds:
                 path: /dev/stdout
             address:
               socketAddress:
-                address: 0.0.0.0
+                address: '::'
+                ipv4Compat: true
                 portValue: 10080
             defaultFilterChain:
               filters:
@@ -429,7 +430,8 @@ xds:
                 path: /dev/stdout
             address:
               socketAddress:
-                address: 0.0.0.0
+                address: '::'
+                ipv4Compat: true
                 portValue: 8080
             defaultFilterChain:
               filters:
@@ -496,7 +498,8 @@ xds:
                 path: /dev/stdout
             address:
               socketAddress:
-                address: 0.0.0.0
+                address: '::'
+                ipv4Compat: true
                 portValue: 1234
             filterChains:
             - filters:
@@ -535,7 +538,8 @@ xds:
                 path: /dev/stdout
             address:
               socketAddress:
-                address: 0.0.0.0
+                address: '::'
+                ipv4Compat: true
                 portValue: 8443
             filterChains:
             - filterChainMatch:
@@ -581,7 +585,8 @@ xds:
                 path: /dev/stdout
             address:
               socketAddress:
-                address: 0.0.0.0
+                address: '::'
+                ipv4Compat: true
                 portValue: 1234
                 protocol: UDP
             listenerFilters:
