@@ -1,6 +1,6 @@
 udp:
 - name: "udp-route"
-  address: "0.0.0.0"
+  address: "::"
   port: 10080
   route:
     name: "udp-route"

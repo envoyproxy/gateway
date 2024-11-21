@@ -306,7 +306,7 @@ xdsIR:
       text:
       - path: /dev/stdout
     tcp:
-    - address: 0.0.0.0
+    - address: '::'
       name: default/tcp-gateway/bar
       port: 8089
       routes:
@@ -365,7 +365,7 @@ xdsIR:
           tcp:
             connectTimeout: 15s
     udp:
-    - address: 0.0.0.0
+    - address: '::'
       name: default/tcp-gateway/foo
       port: 8162
       route:

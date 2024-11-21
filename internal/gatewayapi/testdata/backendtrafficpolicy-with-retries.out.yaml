@@ -264,7 +264,7 @@ xdsIR:
       text:
       - path: /dev/stdout
     http:
-    - address: 0.0.0.0
+    - address: '::'
       hostnames:
       - '*'
       isHTTP2: true
@@ -310,7 +310,7 @@ xdsIR:
       text:
       - path: /dev/stdout
     http:
-    - address: 0.0.0.0
+    - address: '::'
       hostnames:
       - '*'
       isHTTP2: false

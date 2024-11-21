@@ -146,42 +146,11 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 	return extensionConfig
 }
 
-func setAddressByIPFamily(socketAddress *corev3.SocketAddress, ipFamily *ir.IPFamily, port uint32) []*listenerv3.AdditionalAddress {
-	if ipFamily == nil {
-		return nil
-	}
-	switch *ipFamily {
-	case ir.IPv4:
-		socketAddress.Address = "0.0.0.0"
-	case ir.IPv6:
-		socketAddress.Address = "::"
-	case ir.Dualstack:
-		socketAddress.Address = "0.0.0.0"
-		return []*listenerv3.AdditionalAddress{
-			{
-				Address: &corev3.Address{
-					Address: &corev3.Address_SocketAddress{
-						SocketAddress: &corev3.SocketAddress{
-							Protocol: socketAddress.Protocol,
-							Address:  "::",
-							PortSpecifier: &corev3.SocketAddress_PortValue{
-								PortValue: port,
-							},
-						},
-					},
-				},
-			},
-		}
-	}
-	return nil
-}
-
 // buildXdsTCPListener creates a xds Listener resource
 // TODO: Improve function parameters
 func buildXdsTCPListener(
 	name, address string,
 	port uint32,
-	ipFamily *ir.IPFamily,
 	keepalive *ir.TCPKeepalive,
 	connection *ir.ClientConnection,
 	accesslog *ir.AccessLog,
@@ -205,13 +174,12 @@ func buildXdsTCPListener(
 					PortSpecifier: &corev3.SocketAddress_PortValue{
 						PortValue: port,
 					},
+					Ipv4Compat: true,
 				},
 			},
 		},
 	}
 
-	socketAddress := listener.Address.GetSocketAddress()
-	listener.AdditionalAddresses = setAddressByIPFamily(socketAddress, ipFamily, port)
 	return listener, nil
 }
 
@@ -239,6 +207,7 @@ func buildXdsQuicListener(name, address string, port uint32, accesslog *ir.Acces
 					PortSpecifier: &corev3.SocketAddress_PortValue{
 						PortValue: port,
 					},
+					Ipv4Compat: true,
 				},
 			},
 		},
@@ -880,6 +849,7 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener, access
 					PortSpecifier: &corev3.SocketAddress_PortValue{
 						PortValue: udpListener.Port,
 					},
+					Ipv4Compat: true,
 				},
 			},
 		},

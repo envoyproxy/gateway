@@ -230,7 +230,7 @@ xdsIR:
       text:
       - path: /dev/stdout
     http:
-    - address: 0.0.0.0
+    - address: '::'
       hostnames:
       - '*.envoyproxy.io'
       isHTTP2: false
@@ -265,7 +265,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    - address: 0.0.0.0
+    - address: '::'
       hostnames:
       - '*'
       isHTTP2: false
@@ -279,7 +279,7 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 8888
-    - address: 0.0.0.0
+    - address: '::'
       hostnames:
       - example.com
       isHTTP2: false

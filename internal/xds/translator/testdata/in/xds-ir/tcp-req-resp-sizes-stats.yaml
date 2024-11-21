@@ -3,7 +3,7 @@ metrics:
   enableRequestResponseSizesStats: true
 tcp:
 - name: "tcp-route-enable-req-resp-sizes-stats"
-  address: "0.0.0.0"
+  address: "::"
   port: 10080
   routes:
   - destination:

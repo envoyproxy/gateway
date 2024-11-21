@@ -1,6 +1,7 @@
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
+      ipv4Compat: true
       portValue: 10080
   defaultFilterChain:
     filters:
@@ -34,7 +35,8 @@
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
+      ipv4Compat: true
       portValue: 10081
   filterChains:
   - filters:
@@ -48,7 +50,8 @@
   perConnectionBufferLimitBytes: 1500
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
+      ipv4Compat: true
       portValue: 10080
       protocol: UDP
   listenerFilters:

@@ -1,6 +1,6 @@
 http:
 - name: "first-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 8081
   hostnames:
   - "*"
@@ -16,7 +16,7 @@ http:
   headers:
     preserveXRequestID: true
 - name: "second-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 8082
   hostnames:
   - "*"

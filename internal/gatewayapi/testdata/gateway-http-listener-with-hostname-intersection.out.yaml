@@ -172,7 +172,7 @@ xdsIR:
       text:
       - path: /dev/stdout
     http:
-    - address: 0.0.0.0
+    - address: '::'
       hostnames:
       - '*'
       isHTTP2: false
@@ -204,7 +204,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /empty-hostname
-    - address: 0.0.0.0
+    - address: '::'
       hostnames:
       - '*.example.com'
       isHTTP2: false
