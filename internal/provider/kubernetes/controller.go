@@ -454,12 +454,22 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 			} else {
 				for _, endpointSlice := range endpointSliceList.Items {
 					key := utils.NamespacedName(&endpointSlice).String()
+					r.log.Info("added EndpointSlice to resource tree",
+						"namespace", endpointSlice.Namespace,
+						"name", endpointSlice.Name)
 					if !resourceMappings.allAssociatedEndpointSlices.Has(key) {
 						resourceMappings.allAssociatedEndpointSlices.Insert(key)
-						r.log.Info("added EndpointSlice to resource tree",
-							"namespace", endpointSlice.Namespace,
-							"name", endpointSlice.Name)
 						gwcResource.EndpointSlices = append(gwcResource.EndpointSlices, &endpointSlice)
+					} else {
+						updated := gwcResource.EndpointSlices
+						for i, es := range gwcResource.EndpointSlices {
+							if es.Name == endpointSlice.Name && es.Namespace == endpointSlice.Namespace {
+								updated = append(updated[:i], updated[i+1:]...)
+								updated = append(updated, &endpointSlice)
+								break
+							}
+						}
+						gwcResource.EndpointSlices = updated
 					}
 				}
 			}
