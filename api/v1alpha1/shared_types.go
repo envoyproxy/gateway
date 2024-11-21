@@ -29,7 +29,7 @@ const (
 	// DefaultShutdownManagerImage is the default image used for the shutdown manager.
 	DefaultShutdownManagerImage = "envoyproxy/gateway-dev:latest"
 	// DefaultRateLimitImage is the default image used by ratelimit.
-	DefaultRateLimitImage = "envoyproxy/ratelimit:91484c59"
+	DefaultRateLimitImage = "docker.io/envoyproxy/ratelimit:49af5cca"
 	// HTTPProtocol is the common-used http protocol.
 	HTTPProtocol = "http"
 	// GRPCProtocol is the common-used grpc protocol.
