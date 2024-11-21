@@ -52,11 +52,7 @@ ALSEnvoyProxyAccessLog defines the gRPC Access Log Service (ALS) sink.
 The service must implement the Envoy gRPC Access Log Service streaming API:
 https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/accesslog/v3/als.proto
 Access log format information is passed in the form of gRPC metadata when the
-stream is established. Specifically, the following metadata is passed:
-
-
-- `x-accesslog-text` - The access log format string when a Text format is used.
-- `x-accesslog-attr` - JSON encoded key/value pairs when a JSON format is used.
+stream is established.
 
 _Appears in:_
 - [ProxyAccessLogSink](#proxyaccesslogsink)

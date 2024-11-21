@@ -138,10 +138,7 @@ const (
 // The service must implement the Envoy gRPC Access Log Service streaming API:
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/accesslog/v3/als.proto
 // Access log format information is passed in the form of gRPC metadata when the
-// stream is established. Specifically, the following metadata is passed:
-//
-// - `x-accesslog-text` - The access log format string when a Text format is used.
-// - `x-accesslog-attr` - JSON encoded key/value pairs when a JSON format is used.
+// stream is established.
 //
 // +kubebuilder:validation:XValidation:rule="self.type == 'HTTP' || !has(self.http)",message="The http field may only be set when type is HTTP."
 // +kubebuilder:validation:XValidation:message="BackendRefs must be used, backendRef is not supported.",rule="!has(self.backendRef)"
