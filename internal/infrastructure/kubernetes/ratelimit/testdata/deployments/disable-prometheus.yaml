@@ -76,7 +76,7 @@ spec:
           value: tcp
         - name: REDIS_URL
           value: redis.redis.svc:6379
-        image: envoyproxy/ratelimit:28b1629a
+        image: docker.io/envoyproxy/ratelimit:49af5cca
         imagePullPolicy: IfNotPresent
         name: envoy-ratelimit
         ports:
