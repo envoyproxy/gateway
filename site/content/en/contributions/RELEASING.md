@@ -52,7 +52,8 @@ export GITHUB_REMOTE=origin
     git push ${GITHUB_REMOTE} release/v${MAJOR_VERSION}.${MINOR_VERSION}
     ```
 
-7. Create a topic branch for updating the Envoy proxy image and Envoy Ratelimit image to the tag supported by the release. Reference [PR #2098][]
+7. Create a topic branch for updating the Envoy proxy image and Envoy Ratelimit image to the tag supported by the release.
+ Please note that the tags should be updated in both the source code and the Helm chart. Reference [PR #2098][]
    for additional details on updating the image tag.
 8. Sign, commit, and push your changes to your fork.
 9. Submit a [Pull Request][] to merge the changes into the `release/v${MAJOR_VERSION}.${MINOR_VERSION}` branch. Do not
@@ -204,7 +205,7 @@ export GITHUB_REMOTE=origin
    Check out the [v${MAJOR_VERSION}.${MINOR_VERSION} release announcement]
    (https://gateway.envoyproxy.io/news/releases/notes/v${MAJOR_VERSION}.${MINOR_VERSION}.html) to learn more about the release.
    ```
-   
+
 15. Update the `lastVersionTag` in `test/e2e/tests/eg_upgrade.go` to reflect the latest prior release. Refer to [PR #4666] as an example.
 
 If you find any bugs in this process, please create an issue.
