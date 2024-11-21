@@ -56,6 +56,7 @@ func (m MutatorFunc) Mutate(old client.Object) client.Object {
 type UpdateHandler struct {
 	log           logr.Logger
 	client        client.Client
+	sendUpdates   chan struct{}
 	updateChannel chan Update
 }
 
@@ -63,6 +64,7 @@ func NewUpdateHandler(log logr.Logger, client client.Client) *UpdateHandler {
 	return &UpdateHandler{
 		log:           log,
 		client:        client,
+		sendUpdates:   make(chan struct{}),
 		updateChannel: make(chan Update, 100),
 	}
 }
@@ -127,6 +129,9 @@ func (u *UpdateHandler) Start(ctx context.Context) error {
 	u.log.Info("started status update handler")
 	defer u.log.Info("stopped status update handler")
 
+	// Enable Updaters to start sending updates to this handler.
+	close(u.sendUpdates)
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -143,6 +148,7 @@ func (u *UpdateHandler) Start(ctx context.Context) error {
 // Writer retrieves the interface that should be used to write to the UpdateHandler.
 func (u *UpdateHandler) Writer() Updater {
 	return &UpdateWriter{
+		enabled:       u.sendUpdates,
 		updateChannel: u.updateChannel,
 	}
 }
@@ -154,13 +160,18 @@ type Updater interface {
 
 // UpdateWriter takes status updates and sends these to the UpdateHandler via a channel.
 type UpdateWriter struct {
+	enabled       <-chan struct{}
 	updateChannel chan<- Update
 }
 
 // Send sends the given Update off to the update channel for writing by the UpdateHandler.
 func (u *UpdateWriter) Send(update Update) {
 	// Non-blocking receive to see if we should pass along update.
-	u.updateChannel <- update
+	select {
+	case <-u.enabled:
+		u.updateChannel <- update
+	default:
+	}
 }
 
 // isStatusEqual checks if two objects have equivalent status.
