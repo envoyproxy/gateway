@@ -14,6 +14,9 @@ kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 networking:
   ipFamily: ${IP_FAMILY}
+  # it's to prevent inherit search domains from the host which slows down DNS resolution
+  # and cause problems to IPv6 only clusters running on IPv4 host.
+  dnsSearch: []
 nodes:
 - role: control-plane
 EOM

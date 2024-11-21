@@ -237,14 +237,29 @@ type ClientIPDetectionSettings struct {
 }
 
 // XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address.
+// Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
+// for more details.
+// +kubebuilder:validation:XValidation:rule="(has(self.numTrustedHops) && !has(self.trustedCIDRs)) || (!has(self.numTrustedHops) && has(self.trustedCIDRs))", message="only one of numTrustedHops or trustedCIDRs must be set"
 type XForwardedForSettings struct {
 	// NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP
 	// headers to trust when determining the origin client's IP address.
-	// Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
-	// for more details.
+	// Only one of NumTrustedHops and TrustedCIDRs must be set.
 	//
 	// +optional
 	NumTrustedHops *uint32 `json:"numTrustedHops,omitempty"`
+
+	// TrustedCIDRs is a list of CIDR ranges to trust when evaluating
+	// the remote IP address to determine the original client’s IP address.
+	// When the remote IP address matches a trusted CIDR and the x-forwarded-for header was sent,
+	// each entry in the x-forwarded-for header is evaluated from right to left
+	// and the first public non-trusted address is used as the original client address.
+	// If all addresses in x-forwarded-for are within the trusted list, the first (leftmost) entry is used.
+	// Only one of NumTrustedHops and TrustedCIDRs must be set.
+	//
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +notImplementedHide
+	TrustedCIDRs []CIDR `json:"trustedCIDRs,omitempty"`
 }
 
 // CustomHeaderExtensionSettings provides configuration for determining the client IP address for a request based on

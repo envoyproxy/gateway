@@ -36,6 +36,14 @@ func TestEGUpgrade(t *testing.T) {
 			*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug)
 	}
 
+	var skipTests []string
+	// previous did not support ipv6, so skip upgrade tests for ipv6
+	if tests.IPFamily == "ipv6" {
+		skipTests = append(skipTests,
+			tests.EGUpgradeTest.ShortName,
+		)
+	}
+
 	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 		Client:               c,
 		RestConfig:           cfg,
@@ -46,7 +54,7 @@ func TestEGUpgrade(t *testing.T) {
 		RunTest:              *flags.RunTest,
 		BaseManifests:        "upgrade/manifests.yaml",
 		SupportedFeatures:    sets.New[features.FeatureName](features.SupportGateway),
-		SkipTests:            []string{},
+		SkipTests:            skipTests,
 	})
 	if err != nil {
 		t.Fatalf("Failed to create test suite: %v", err)

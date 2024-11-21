@@ -4,7 +4,6 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
   edsClusterConfig:
     edsConfig:
       ads: {}
@@ -22,7 +21,6 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
   edsClusterConfig:
     edsConfig:
       ads: {}
@@ -31,6 +29,40 @@
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: second-route-dest
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: tls-route-dest
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  name: tls-route-dest
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: tcp-route-dest
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  name: tcp-route-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS

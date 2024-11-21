@@ -300,6 +300,19 @@ _Appears in:_
 
 
 
+#### BackendConnection
+
+
+
+BackendConnection allows users to configure connection-level settings of backend
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+- [ClusterSettings](#clustersettings)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `bufferLimit` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#quantity-resource-api)_ |  false  | BufferLimit Soft limit on size of the cluster’s connections read and write buffers.<br />BufferLimit applies to connection streaming (maybe non-streaming) channel between processes, it's in user space.<br />If unspecified, an implementation defined default is applied (32768 bytes).<br />For example, 20Mi, 1Gi, 256Ki etc.<br />Note: that when the suffix is not provided, the value is interpreted as bytes. |
 
 
 #### BackendEndpoint
@@ -484,6 +497,7 @@ A CIDR can be an IPv4 address range such as "192.168.1.0/24" or an IPv6 address 
 
 _Appears in:_
 - [Principal](#principal)
+- [XForwardedForSettings](#xforwardedforsettings)
 
 
 
@@ -506,6 +520,23 @@ _Appears in:_
 | `allowCredentials` | _boolean_ |  false  | AllowCredentials indicates whether a request can include user credentials<br />like cookies, authentication headers, or TLS client certificates.<br />It specifies the value in the Access-Control-Allow-Credentials CORS response header. |
 
 
+#### CircuitBreaker
+
+
+
+CircuitBreaker defines the Circuit Breaker configuration.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+- [ClusterSettings](#clustersettings)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `maxConnections` | _integer_ |  false  | The maximum number of connections that Envoy will establish to the referenced backend defined within a xRoute rule. |
+| `maxPendingRequests` | _integer_ |  false  | The maximum number of pending requests that Envoy will queue to the referenced backend defined within a xRoute rule. |
+| `maxParallelRequests` | _integer_ |  false  | The maximum number of parallel requests that Envoy will make to the referenced backend defined within a xRoute rule. |
+| `maxParallelRetries` | _integer_ |  false  | The maximum number of parallel retries that Envoy will make to the referenced backend defined within a xRoute rule. |
+| `maxRequestsPerConnection` | _integer_ |  false  | The maximum number of requests that Envoy will make over a single connection to the referenced backend defined within a xRoute rule.<br />Default: unlimited. |
 
 
 #### ClaimToHeader
@@ -876,6 +907,20 @@ _Appears in:_
 | `RequestHeader` | CustomTagTypeRequestHeader adds value from request header to each span.<br /> | 
 
 
+#### DNS
+
+
+
+
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+- [ClusterSettings](#clustersettings)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `dnsRefreshRate` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  true  | DNSRefreshRate specifies the rate at which DNS records should be refreshed.<br />Defaults to 30 seconds. |
+| `respectDnsTtl` | _boolean_ |  true  | RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.<br />If the value is set to true, the DNS refresh rate will be set to the resource record’s TTL.<br />Defaults to true. |
 
 
 #### EnvironmentCustomTag
@@ -1789,6 +1834,23 @@ _Appears in:_
 | `http10` | _[HTTP10Settings](#http10settings)_ |  false  | HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests. |
 
 
+#### HTTP2Settings
+
+
+
+HTTP2Settings provides HTTP/2 configuration for listeners and backends.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+- [ClusterSettings](#clustersettings)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `initialStreamWindowSize` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#quantity-resource-api)_ |  false  | InitialStreamWindowSize sets the initial window size for HTTP/2 streams.<br />If not set, the default value is 64 KiB(64*1024). |
+| `initialConnectionWindowSize` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#quantity-resource-api)_ |  false  | InitialConnectionWindowSize sets the initial window size for HTTP/2 connections.<br />If not set, the default value is 1 MiB. |
+| `maxConcurrentStreams` | _integer_ |  false  | MaxConcurrentStreams sets the maximum number of concurrent streams allowed per connection.<br />If not set, the default value is 100. |
+| `onInvalidMessage` | _[InvalidMessageAction](#invalidmessageaction)_ |  false  | OnInvalidMessage determines if Envoy will terminate the connection or just the offending stream in the event of HTTP messaging error<br />It's recommended for L2 Envoy deployments to set this value to TerminateStream.<br />https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/level_two<br />Default: TerminateConnection |
 
 
 #### HTTP3Settings
@@ -2032,6 +2094,21 @@ _Appears in:_
 | `name` | _string_ |  true  | Name of the header to hash. |
 
 
+#### HeaderMatch
+
+
+
+HeaderMatch defines the match attributes within the HTTP Headers of the request.
+
+_Appears in:_
+- [RateLimitSelectCondition](#ratelimitselectcondition)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `type` | _[HeaderMatchType](#headermatchtype)_ |  false  | Type specifies how to match against the value of the header. |
+| `name` | _string_ |  true  | Name of the HTTP header. |
+| `value` | _string_ |  false  | Value within the HTTP header. Due to the<br />case-insensitivity of header names, "foo" and "Foo" are considered equivalent.<br />Do not set this field when Type="Distinct", implying matching on any/all unique<br />values within the header. |
+| `invert` | _boolean_ |  false  | Invert specifies whether the value match result will be inverted.<br />Do not set this field when Type="Distinct", implying matching on any/all unique<br />values within the header. |
 
 
 #### HeaderMatchType
@@ -2070,6 +2147,21 @@ _Appears in:_
 | `earlyRequestHeaders` | _[HTTPHeaderFilter](#httpheaderfilter)_ |  false  | EarlyRequestHeaders defines settings for early request header modification, before envoy performs<br />routing, tracing and built-in header manipulation. |
 
 
+#### HealthCheck
+
+
+
+HealthCheck configuration to decide which endpoints
+are healthy and can be used for routing.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+- [ClusterSettings](#clustersettings)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `active` | _[ActiveHealthCheck](#activehealthcheck)_ |  false  | Active health check configuration |
+| `passive` | _[PassiveHealthCheck](#passivehealthcheck)_ |  false  | Passive passive check configuration |
 
 
 #### HealthCheckSettings
@@ -2565,6 +2657,21 @@ _Appears in:_
 | `value` | _string_ |  true  | Value defines the hard-coded value to add to each span. |
 
 
+#### LoadBalancer
+
+
+
+LoadBalancer defines the load balancer policy to be applied.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+- [ClusterSettings](#clustersettings)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `type` | _[LoadBalancerType](#loadbalancertype)_ |  true  | Type decides the type of Load Balancer policy.<br />Valid LoadBalancerType values are<br />"ConsistentHash",<br />"LeastRequest",<br />"Random",<br />"RoundRobin". |
+| `consistentHash` | _[ConsistentHash](#consistenthash)_ |  false  | ConsistentHash defines the configuration when the load balancer type is<br />set to ConsistentHash |
+| `slowStart` | _[SlowStart](#slowstart)_ |  false  | SlowStart defines the configuration related to the slow start load balancer policy.<br />If set, during slow start window, traffic sent to the newly added hosts will gradually increase.<br />Currently this is only supported for RoundRobin and LeastRequest load balancers |
 
 
 #### LoadBalancerType
@@ -2616,6 +2723,19 @@ _Appears in:_
 | `error` | LogLevelError defines the "Error" logging level.<br /> | 
 
 
+#### MergeType
+
+_Underlying type:_ _string_
+
+MergeType defines the type of merge operation
+
+_Appears in:_
+- [KubernetesPatchSpec](#kubernetespatchspec)
+
+| Value | Description |
+| ----- | ----------- |
+| `StrategicMerge` | StrategicMerge indicates a strategic merge patch type<br /> | 
+| `JSONMerge` | JSONMerge indicates a JSON merge patch type<br /> | 
 
 
 #### MetricSinkType
@@ -2836,6 +2956,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `clientCIDRs` | _[CIDR](#cidr) array_ |  false  | ClientCIDRs are the IP CIDR ranges of the client.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64"<br /><br />If multiple CIDR ranges are specified, one of the CIDR ranges must match<br />the client IP for the rule to match.<br /><br />The client IP is inferred from the X-Forwarded-For header, a custom header,<br />or the proxy protocol.<br />You can use the `ClientIPDetection` or the `EnableProxyProtocol` field in<br />the `ClientTrafficPolicy` to configure how the client IP is detected. |
+| `jwt` | _[JWTPrincipal](#jwtprincipal)_ |  false  | JWT authorize the request based on the JWT claims and scopes.<br />Note: in order to use JWT claims for authorization, you must configure the<br />JWT authentication in the same `SecurityPolicy`. |
 
 
 #### ProcessingModeOptions
@@ -3101,6 +3222,20 @@ _Appears in:_
 | `compression` | _[Compression](#compression)_ |  false  | Configure the compression on Prometheus endpoint. Compression is useful in situations when bandwidth is scarce and large payloads can be effectively compressed at the expense of higher CPU load. |
 
 
+#### ProxyProtocol
+
+
+
+ProxyProtocol defines the configuration related to the proxy protocol
+when communicating with the backend.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+- [ClusterSettings](#clustersettings)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `version` | _[ProxyProtocolVersion](#proxyprotocolversion)_ |  true  | Version of ProxyProtol<br />Valid ProxyProtocolVersion values are<br />"V1"<br />"V2" |
 
 
 #### ProxyProtocolVersion
@@ -3338,6 +3473,15 @@ _Appears in:_
 | `url` | _string_ |  true  | URL is the endpoint of the trace collector that supports the OTLP protocol |
 
 
+#### RateLimitTracingProviderType
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [RateLimitTracingProvider](#ratelimittracingprovider)
+
 
 
 #### RateLimitType
@@ -3491,6 +3635,21 @@ _Appears in:_
 | `ValueRef` | ResponseValueTypeValueRef defines the "ValueRef" response body type.<br /> | 
 
 
+#### Retry
+
+
+
+Retry defines the retry strategy to be applied.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+- [ClusterSettings](#clustersettings)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `numRetries` | _integer_ |  false  | NumRetries is the number of retries to be attempted. Defaults to 2. |
+| `retryOn` | _[RetryOn](#retryon)_ |  false  | RetryOn specifies the retry trigger condition.<br /><br />If not specified, the default is to retry on connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes(503). |
+| `perRetry` | _[PerRetryPolicy](#perretrypolicy)_ |  false  | PerRetry is the retry policy to be applied per retry attempt. |
 
 
 #### RetryOn
@@ -3668,6 +3827,19 @@ _Appears in:_
 | `window` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  true  | Window defines the duration of the warm up period for newly added host.<br />During slow start window, traffic sent to the newly added hosts will gradually increase.<br />Currently only supports linear growth of traffic. For additional details,<br />see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig |
 
 
+#### SourceMatch
+
+
+
+
+
+_Appears in:_
+- [RateLimitSelectCondition](#ratelimitselectcondition)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `type` | _[SourceMatchType](#sourcematchtype)_ |  false  |  |
+| `value` | _string_ |  true  | Value is the IP CIDR that represents the range of Source IP Addresses of the client.<br />These could also be the intermediate addresses through which the request has flown through and is part of the  `X-Forwarded-For` header.<br />For example, `192.168.0.1/32`, `192.168.0.0/24`, `001:db8::/64`. |
 
 
 #### SourceMatchType
@@ -3826,6 +3998,22 @@ _Appears in:_
 | `idleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | IdleTimeout for a TCP connection. Idle time is defined as a period in which there are no<br />bytes sent or received on either the upstream or downstream connection.<br />Default: 1 hour. |
 
 
+#### TCPKeepalive
+
+
+
+TCPKeepalive define the TCP Keepalive configuration.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+- [ClusterSettings](#clustersettings)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `probes` | _integer_ |  false  | The total number of unacknowledged probes to send before deciding<br />the connection is dead.<br />Defaults to 9. |
+| `idleTime` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | The duration a connection needs to be idle before keep-alive<br />probes start being sent.<br />The duration format is<br />Defaults to `7200s`. |
+| `interval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | The duration between keep-alive probes.<br />Defaults to `75s`. |
 
 
 #### TCPTimeout
@@ -3902,6 +4090,20 @@ _Appears in:_
 | `matchLabels` | _object (keys:string, values:string)_ |  true  | MatchLabels are the set of label selectors for identifying the targeted resource |
 
 
+#### Timeout
+
+
+
+Timeout defines configuration for timeouts related to connections.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+- [ClusterSettings](#clustersettings)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `tcp` | _[TCPTimeout](#tcptimeout)_ |  false  | Timeout settings for TCP. |
+| `http` | _[HTTPTimeout](#httptimeout)_ |  false  | Timeout settings for HTTP. |
 
 
 #### TracingProvider
@@ -4142,13 +4344,15 @@ _Appears in:_
 
 
 XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address.
+Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
+for more details.
 
 _Appears in:_
 - [ClientIPDetectionSettings](#clientipdetectionsettings)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `numTrustedHops` | _integer_ |  false  | NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP<br />headers to trust when determining the origin client's IP address.<br />Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for<br />for more details. |
+| `numTrustedHops` | _integer_ |  false  | NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP<br />headers to trust when determining the origin client's IP address.<br />Only one of NumTrustedHops and TrustedCIDRs must be set. |
 
 
 #### ZipkinTracingProvider

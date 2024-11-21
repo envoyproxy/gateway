@@ -84,9 +84,16 @@ func buildEndpointType(settings []*ir.DestinationSetting) EndpointType {
 }
 
 func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
-	dnsLookupFamily := clusterv3.Cluster_V4_ONLY
-	if args.ipFamily != nil && *args.ipFamily == egv1a1.DualStack {
-		dnsLookupFamily = clusterv3.Cluster_ALL
+	dnsLookupFamily := clusterv3.Cluster_AUTO
+	if args.ipFamily != nil {
+		switch *args.ipFamily {
+		case egv1a1.IPv4:
+			dnsLookupFamily = clusterv3.Cluster_V4_ONLY
+		case egv1a1.IPv6:
+			dnsLookupFamily = clusterv3.Cluster_V6_ONLY
+		case egv1a1.DualStack:
+			dnsLookupFamily = clusterv3.Cluster_ALL
+		}
 	}
 	cluster := &clusterv3.Cluster{
 		Name:            args.name,
