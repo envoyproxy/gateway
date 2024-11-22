@@ -310,8 +310,7 @@ func createOAuthServerClusters(tCtx *types.ResourceVersionTable,
 		// If the OIDC provider has a destination, use it.
 		if oidc.Provider.Destination != nil && len(oidc.Provider.Destination.Settings) > 0 {
 			if err := createExtServiceXDSCluster(
-				oidc.Provider.Destination, oidc.Provider.Traffic, tCtx); err != nil && !errors.Is(
-				err, ErrXdsClusterExists) {
+				oidc.Provider.Destination, oidc.Provider.Traffic, tCtx); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		} else {
@@ -372,11 +371,7 @@ func createOAuth2TokenEndpointCluster(tCtx *types.ResourceVersionTable,
 		clusterArgs.tSocket = tSocket
 	}
 
-	if err = addXdsCluster(tCtx, clusterArgs); err != nil && !errors.Is(err, ErrXdsClusterExists) {
-		return err
-	}
-
-	return err
+	return addXdsCluster(tCtx, clusterArgs)
 }
 
 // createOAuth2Secrets creates OAuth2 client and HMAC secrets from the provided

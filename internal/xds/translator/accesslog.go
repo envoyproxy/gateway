@@ -6,7 +6,6 @@
 package translator
 
 import (
-	"errors"
 	"sort"
 	"strings"
 
@@ -545,7 +544,7 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 			backendConnection: traffic.BackendConnection,
 			dns:               traffic.DNS,
 			http2Settings:     traffic.HTTP2,
-		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+		}); err != nil {
 			return err
 		}
 	}
@@ -573,7 +572,7 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 			backendConnection: traffic.BackendConnection,
 			dns:               traffic.DNS,
 			http2Settings:     traffic.HTTP2,
-		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+		}); err != nil {
 			return err
 		}
 	}

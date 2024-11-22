@@ -35,6 +35,15 @@ http:
     escapedSlashesAction: UnescapeAndRedirect
     mergeSlashes: true
   port: 10080
+  routes:
+  - name: "http-route"
+    hostname: "*"
+    destination:
+      name: "http-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
 tcp:
 - address: 0.0.0.0
   extensionRefs:
@@ -66,6 +75,13 @@ tcp:
           controllerName: gateway.envoyproxy.io/gatewayclass-controller
   name: envoy-gateway/gateway-1/tcp1
   port: 10080
+  routes:
+  - destination:
+      name: "tcp-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
 udp:
 - address: 0.0.0.0
   route:

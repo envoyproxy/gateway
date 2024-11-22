@@ -58,6 +58,16 @@ httpRoutes:
     - backendRefs:
       - name: service-1
         port: 8080
+      name: rule-1
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - headers:
+        - name: foo
+          type: Exact
+          value: bar
+      name: rule-2
   status:
     parents:
     - conditions:
@@ -98,7 +108,7 @@ xdsIR:
       text:
       - path: /dev/stdout
     http:
-    - address: 0.0.0.0
+    - address: '::'
       hostnames:
       - '*'
       isHTTP2: false
@@ -113,6 +123,29 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
+      - destination:
+          name: httproute/default/httproute-1/rule/1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            protocol: HTTP
+            weight: 1
+        headerMatches:
+        - distinct: false
+          exact: bar
+          name: foo
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          annotations:
+            foo: bar
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+          sectionName: rule-2
+        name: httproute/default/httproute-1/rule/1/match/0/*
       - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
@@ -130,4 +163,5 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
+          sectionName: rule-1
         name: httproute/default/httproute-1/rule/0/match/-1/*

@@ -1,6 +1,7 @@
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
+      ipv4Compat: true
       portValue: 10080
   defaultFilterChain:
     filters:
@@ -39,7 +40,8 @@
     name: "9"
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
+      ipv4Compat: true
       portValue: 10081
   defaultFilterChain:
     filters:
@@ -90,8 +92,23 @@
     name: "5"
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
+      ipv4Compat: true
       portValue: 10082
+  filterChains:
+  - filterChainMatch:
+      serverNames:
+      - bar.com
+    filters:
+    - name: envoy.filters.network.tcp_proxy
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        cluster: tls-route-dest
+        statPrefix: tls-passthrough-10082
+  listenerFilters:
+  - name: envoy.filters.listener.tls_inspector
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
   name: third-listener
   perConnectionBufferLimitBytes: 32768
   socketOptions:
@@ -101,8 +118,16 @@
     name: "9"
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
+      ipv4Compat: true
       portValue: 10083
+  filterChains:
+  - filters:
+    - name: envoy.filters.network.tcp_proxy
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        cluster: tcp-route-dest
+        statPrefix: tcp-10083
   name: fourth-listener
   perConnectionBufferLimitBytes: 32768
   socketOptions:

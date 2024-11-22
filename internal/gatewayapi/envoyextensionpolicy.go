@@ -434,7 +434,7 @@ func (t *Translator) buildExtProc(
 		err       error
 	)
 
-	if rd, err = t.translateExtServiceBackendRefs(policy, extProc.BackendRefs, ir.GRPC, resources, envoyProxy, extProcIdx); err != nil {
+	if rd, err = t.translateExtServiceBackendRefs(policy, extProc.BackendRefs, ir.GRPC, resources, envoyProxy, "extproc", extProcIdx); err != nil {
 		return nil, err
 	}
 
@@ -673,6 +673,10 @@ func (t *Translator) buildWasm(
 		Config:   config.Config,
 		FailOpen: failOpen,
 		Code:     code,
+	}
+
+	if config.Env != nil && len(config.Env.HostKeys) > 0 {
+		wasmIR.HostKeys = config.Env.HostKeys
 	}
 
 	return wasmIR, nil

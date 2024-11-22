@@ -1204,8 +1204,6 @@ spec:
                     x-kubernetes-validations:
                     - message: backendRef or backendRefs needs to be set
                       rule: has(self.backendRef) || self.backendRefs.size() > 0
-                    - message: BackendRefs must be used, backendRef is not supported.
-                      rule: '!has(self.backendRef)'
                     - message: BackendRefs only supports Service and Backend kind.
                       rule: 'has(self.backendRefs) ? self.backendRefs.all(f, f.kind
                         == ''Service'' || f.kind == ''Backend'') : true'
@@ -2103,8 +2101,6 @@ spec:
                     x-kubernetes-validations:
                     - message: backendRef or backendRefs needs to be set
                       rule: has(self.backendRef) || self.backendRefs.size() > 0
-                    - message: BackendRefs must be used, backendRef is not supported.
-                      rule: '!has(self.backendRef)'
                     - message: BackendRefs only supports Service and Backend kind.
                       rule: 'has(self.backendRefs) ? self.backendRefs.all(f, f.kind
                         == ''Service'' || f.kind == ''Backend'') : true'

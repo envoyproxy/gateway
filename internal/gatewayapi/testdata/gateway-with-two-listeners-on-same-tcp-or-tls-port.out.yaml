@@ -115,7 +115,7 @@ xdsIR:
       text:
       - path: /dev/stdout
     tcp:
-    - address: 0.0.0.0
+    - address: '::'
       name: envoy-gateway/gateway-1/tcp1
       port: 10162
       routes:

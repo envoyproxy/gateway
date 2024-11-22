@@ -85,7 +85,7 @@ kubectl get httproute/myapp -o yaml
 
 ## OIDC Authentication for a HTTPRoute
 
-OIDC can be configured at the Gateway level to authenticate all the HTTPRoutes that are associated with the Gateway with 
+OIDC can be configured at the Gateway level to authenticate all the HTTPRoutes that are associated with the Gateway with
 the same OIDC configuration, or at the HTTPRoute level to authenticate each HTTPRoute with different OIDC configurations.
 
 This section demonstrates how to configure OIDC authentication for a specific HTTPRoute.
@@ -117,9 +117,9 @@ kubectl create secret generic my-app-client-secret --from-literal=client-secret=
 ### Create a SecurityPolicy
 
 **Please notice that the `redirectURL` and `logoutPath` must match the target HTTPRoute.** In this example, the target
-HTTPRoute is configured to match the host `www.example.com` and the path `/myapp`, so the `redirectURL` must be prefixed 
-with `https://www.example.com:8443/myapp`, and `logoutPath` must be prefixed with`/myapp`, otherwise the OIDC authentication 
-will fail because the redirect and logout requests will not match the target HTTPRoute and therefore can't be processed 
+HTTPRoute is configured to match the host `www.example.com` and the path `/myapp`, so the `redirectURL` must be prefixed
+with `https://www.example.com:8443/myapp`, and `logoutPath` must be prefixed with`/myapp`, otherwise the OIDC authentication
+will fail because the redirect and logout requests will not match the target HTTPRoute and therefore can't be processed
 by the OAuth2 filter on that HTTPRoute.
 
 Note: please replace the ${CLIENT_ID} in the below yaml snippet with the actual Client ID that you got from the OIDC provider.
@@ -200,8 +200,8 @@ Put www.example.com in the /etc/hosts file in your test machine, so we can use t
 127.0.0.1 www.example.com
 ```
 
-Open a browser and navigate to the `https://www.example.com:8443/myapp` address. You should be redirected to the Google 
-login page. After you successfully login, you should see the response from the backend service. 
+Open a browser and navigate to the `https://www.example.com:8443/myapp` address. You should be redirected to the Google
+login page. After you successfully login, you should see the response from the backend service.
 
 Clean the cookies in the browser and try to access `https://www.example.com:8443/foo` address. You should be able to see
 this page since the path `/foo` is not protected by the OIDC policy.
@@ -284,15 +284,17 @@ kubectl get httproute/foo -o yaml
 
 ### Create a SecurityPolicy
 
-Create or update the SecurityPolicy to target the Gateway instead of the HTTPRoute. **Please notice that the `redirectURL` 
-and `logoutPath` must match one of the HTTPRoutes associated with the Gateway.** In this example, the target Gateway has 
-three HTTPRoutes associated with it, one with the host `www.example.com` and the path `/myapp`, one with the host 
-`www.example.com` and the path `/`, and one with the host `foo.example.com` and the path `/`. Any of these HTTPRoutes 
+Create or update the SecurityPolicy to target the Gateway instead of the HTTPRoute. **Please notice that the `redirectURL`
+and `logoutPath` must match one of the HTTPRoutes associated with the Gateway.** In this example, the target Gateway has
+three HTTPRoutes associated with it, one with the host `www.example.com` and the path `/myapp`, one with the host
+`www.example.com` and the path `/`, and one with the host `foo.example.com` and the path `/`. Any of these HTTPRoutes
 can be used to match the `redirectURL` and `logoutPath`.
 
 By default, the access token and ID token cookies are set to the host of the request, excluding subdomains. To allow the
-token cookies to be shared across subdomains and prevent users from having to log in again when switching between subdomains, 
+token cookies to be shared across subdomains and prevent users from having to log in again when switching between subdomains,
 the `cookieDomain` field needs to be set to the root domain. In this example, the root domain is `example.com`.
+
+Note: if a `cookieDomain` is added to an existing SecurityPolicy, the cookies in the browser must be cleared before sending a new request to the Gateway, otherwise the cookies with the old subdomain will take precedence and be sent to the Gateway, causing the OIDC authentication to fail.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}

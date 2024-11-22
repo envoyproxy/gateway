@@ -7,7 +7,6 @@ package translator
 
 import (
 	"bytes"
-	"errors"
 	"net/url"
 	"strconv"
 	"strings"
@@ -492,17 +491,13 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 		return err
 	}
 
-	if err := addXdsCluster(tCtx, &xdsClusterArgs{
+	return addXdsCluster(tCtx, &xdsClusterArgs{
 		name:         clusterName,
 		settings:     []*ir.DestinationSetting{ds},
 		tSocket:      tSocket,
 		endpointType: EndpointTypeDNS,
 		metrics:      metrics,
-	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
-		return err
-	}
-
-	return nil
+	})
 }
 
 func getRouteRuleDescriptor(ruleIndex, matchIndex int) string {

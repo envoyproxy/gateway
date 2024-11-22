@@ -160,7 +160,7 @@ xdsIR:
       text:
       - path: /dev/stdout
     tcp:
-    - address: 0.0.0.0
+    - address: '::'
       name: envoy-gateway/gateway-1/tcp1
       port: 10162
       routes:
@@ -174,7 +174,7 @@ xdsIR:
             protocol: TCP
             weight: 1
         name: tcproute/default/tcproute-1
-    - address: 0.0.0.0
+    - address: '::'
       name: envoy-gateway/gateway-1/tcp2
       port: 10163
       routes:

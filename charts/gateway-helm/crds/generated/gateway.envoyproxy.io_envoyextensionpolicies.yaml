@@ -1232,6 +1232,17 @@ spec:
                         Config is the configuration for the Wasm extension.
                         This configuration will be passed as a JSON string to the Wasm extension.
                       x-kubernetes-preserve-unknown-fields: true
+                    env:
+                      description: Env configures the environment for the Wasm extension
+                      properties:
+                        hostKeys:
+                          description: |-
+                            HostKeys is a list of keys for environment variables from the host envoy process
+                            that should be passed into the Wasm VM. This is useful for passing secrets to to Wasm extensions.
+                          items:
+                            type: string
+                          type: array
+                      type: object
                     failOpen:
                       default: false
                       description: |-

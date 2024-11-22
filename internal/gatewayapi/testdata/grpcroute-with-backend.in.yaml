@@ -36,6 +36,7 @@ grpcRoutes:
       - group: gateway.envoyproxy.io
         kind: Backend
         name: backend-ip
+      name: grpcrule-1
 backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend

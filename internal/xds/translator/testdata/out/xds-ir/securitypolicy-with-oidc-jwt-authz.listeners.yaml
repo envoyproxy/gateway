@@ -1,0 +1,108 @@
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      ipv4Compat: true
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - disabled: true
+          name: envoy.filters.http.oauth2/securitypolicy/default/policy-for-http-route
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.oauth2.v3.OAuth2
+            config:
+              authScopes:
+              - openid
+              - email
+              - profile
+              authType: BASIC_AUTH
+              authorizationEndpoint: https://oidc.example.com/authorize
+              credentials:
+                clientId: prometheus
+                cookieNames:
+                  bearerToken: AccessToken-5f93c2e4
+                  idToken: IdToken
+                  oauthExpires: OauthExpires-5f93c2e4
+                  oauthHmac: OauthHMAC-5f93c2e4
+                  oauthNonce: OauthNonce-5f93c2e4
+                  refreshToken: RefreshToken-5f93c2e4
+                hmacSecret:
+                  name: oauth2/hmac_secret/securitypolicy/default/policy-for-http-route
+                  sdsConfig:
+                    ads: {}
+                    resourceApiVersion: V3
+                tokenSecret:
+                  name: oauth2/client_secret/securitypolicy/default/policy-for-http-route
+                  sdsConfig:
+                    ads: {}
+                    resourceApiVersion: V3
+              preserveAuthorizationHeader: true
+              redirectPathMatcher:
+                path:
+                  exact: /oauth2/callback
+              redirectUri: '%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback'
+              signoutPath:
+                path:
+                  exact: /logout
+              tokenEndpoint:
+                cluster: oidc_example_com_443
+                timeout: 10s
+                uri: https://oidc.example.com/oauth/token
+              useRefreshToken: false
+        - name: envoy.filters.http.jwt_authn
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
+            providers:
+              httproute/default/httproute-1/rule/0/match/0/www_example_com/exjwt:
+                claimToHeaders:
+                - claimName: email
+                  headerName: x-user-email
+                forward: true
+                fromCookies:
+                - IdToken
+                issuer: https://oidc.example.com/auth/realms/example
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scope
+                payloadInMetadata: exjwt
+                remoteJwks:
+                  asyncFetch: {}
+                  cacheDuration: 300s
+                  httpUri:
+                    cluster: oidc_example_com_443
+                    timeout: 10s
+                    uri: https://oidc.example.com/auth/realms/example/protocol/openid-connect/certs
+                  retryPolicy: {}
+            requirementMap:
+              httproute/default/httproute-1/rule/0/match/0/www_example_com:
+                providerName: httproute/default/httproute-1/rule/0/match/0/www_example_com/exjwt
+        - name: envoy.filters.http.rbac
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBAC
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: envoy-gateway/gateway-1/http
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10080
+        useRemoteAddress: true
+    name: envoy-gateway/gateway-1/http
+  name: envoy-gateway/gateway-1/http
+  perConnectionBufferLimitBytes: 32768

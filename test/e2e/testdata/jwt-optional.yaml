@@ -19,7 +19,7 @@ spec:
           - claim: name
             header: x-name
         remoteJWKS:
-          uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
+          uri: http://static-file-server.gateway-conformance-infra/jwt/jwks.json
     optional: true
 ---
 apiVersion: gateway.networking.k8s.io/v1

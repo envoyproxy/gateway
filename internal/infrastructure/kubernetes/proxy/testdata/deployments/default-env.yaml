@@ -253,12 +253,6 @@ spec:
               scheme: HTTP
         name: envoy
         ports:
-        - containerPort: 8080
-          name: EnvoyHTTPPort
-          protocol: TCP
-        - containerPort: 8443
-          name: EnvoyHTTPSPort
-          protocol: TCP
         - containerPort: 19001
           name: metrics
           protocol: TCP

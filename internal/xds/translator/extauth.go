@@ -234,14 +234,12 @@ func (*extAuth) patchResources(tCtx *types.ResourceVersionTable,
 		}
 		if route.Security.ExtAuth.HTTP != nil {
 			if err := createExtServiceXDSCluster(
-				&route.Security.ExtAuth.HTTP.Destination, route.Security.ExtAuth.Traffic, tCtx); err != nil && !errors.Is(
-				err, ErrXdsClusterExists) {
+				&route.Security.ExtAuth.HTTP.Destination, route.Security.ExtAuth.Traffic, tCtx); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		} else {
 			if err := createExtServiceXDSCluster(
-				&route.Security.ExtAuth.GRPC.Destination, route.Security.ExtAuth.Traffic, tCtx); err != nil && !errors.Is(
-				err, ErrXdsClusterExists) {
+				&route.Security.ExtAuth.GRPC.Destination, route.Security.ExtAuth.Traffic, tCtx); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}

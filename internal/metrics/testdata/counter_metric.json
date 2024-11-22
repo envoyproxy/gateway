@@ -20,7 +20,8 @@
       "Scope": {
         "Name": "envoy-gateway",
         "Version": "",
-        "SchemaURL": ""
+        "SchemaURL": "",
+        "Attributes": null
       },
       "Metrics": [
         {

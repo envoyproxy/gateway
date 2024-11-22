@@ -212,7 +212,7 @@ xdsIR:
       text:
       - path: /dev/stdout
     http:
-    - address: 0.0.0.0
+    - address: '::'
       hostnames:
       - '*'
       isHTTP2: false
@@ -250,7 +250,7 @@ xdsIR:
         security:
           basicAuth:
             name: securitypolicy/default/policy-for-http-route-1
-            users: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
+            users: '[redacted]'
       - destination:
           name: httproute/default/httproute-1/rule/1
           settings:
@@ -274,7 +274,7 @@ xdsIR:
         security:
           basicAuth:
             name: securitypolicy/default/policy-for-http-route-1
-            users: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
+            users: '[redacted]'
       - destination:
           name: httproute/default/httproute-2/rule/0
           settings:
@@ -298,4 +298,4 @@ xdsIR:
         security:
           basicAuth:
             name: securitypolicy/default/policy-for-gateway-1
-            users: Zm9vOntTSEF9WXMyM0FnLzVJT1dxWkN3OVFHYVZEZEh3SDAwPQpmb28xOntTSEF9ZGpaMTFxSFkwS09pamV5bUs3YUt2WXV2aHZNPQo=
+            users: '[redacted]'

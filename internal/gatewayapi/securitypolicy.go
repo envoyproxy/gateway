@@ -373,8 +373,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 			if extAuth, err = t.buildExtAuth(
 				policy,
 				resources,
-				gtwCtx.envoyProxy,
-			); err != nil {
+				gtwCtx.envoyProxy); err != nil {
 				err = perr.WithMessage(err, "ExtAuth")
 				errs = errors.Join(errs, err)
 			}
@@ -385,7 +384,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 			if oidc, err = t.buildOIDC(
 				policy,
 				resources,
-				gtwCtx.envoyProxy); err != nil {
+				gtwCtx.envoyProxy); err != nil { // TODO zhaohuabing: Only the last EnvoyProxy is used
 				err = perr.WithMessage(err, "OIDC")
 				errs = errors.Join(errs, err)
 			}
@@ -468,8 +467,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		if extAuth, err = t.buildExtAuth(
 			policy,
 			resources,
-			gateway.envoyProxy,
-		); err != nil {
+			gateway.envoyProxy); err != nil {
 			err = perr.WithMessage(err, "ExtAuth")
 			errs = errors.Join(errs, err)
 		}
@@ -705,7 +703,7 @@ func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources 
 	}
 
 	if len(provider.BackendRefs) > 0 {
-		if rd, err = t.translateExtServiceBackendRefs(policy, provider.BackendRefs, protocol, resources, envoyProxy, 0); err != nil {
+		if rd, err = t.translateExtServiceBackendRefs(policy, provider.BackendRefs, protocol, resources, envoyProxy, "oidc", 0); err != nil {
 			return nil, err
 		}
 	}
@@ -839,16 +837,21 @@ func (t *Translator) buildBasicAuth(
 	}, nil
 }
 
-func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) (*ir.ExtAuth, error) {
+func (t *Translator) buildExtAuth(
+	policy *egv1a1.SecurityPolicy,
+	resources *resource.Resources,
+	envoyProxy *egv1a1.EnvoyProxy,
+) (*ir.ExtAuth, error) {
 	var (
-		http      = policy.Spec.ExtAuth.HTTP
-		grpc      = policy.Spec.ExtAuth.GRPC
-		backends  *egv1a1.BackendCluster
-		protocol  ir.AppProtocol
-		rd        *ir.RouteDestination
-		authority string
-		err       error
-		traffic   *ir.TrafficFeatures
+		http            = policy.Spec.ExtAuth.HTTP
+		grpc            = policy.Spec.ExtAuth.GRPC
+		backendRefs     []egv1a1.BackendRef
+		backendSettings *egv1a1.ClusterSettings
+		protocol        ir.AppProtocol
+		rd              *ir.RouteDestination
+		authority       string
+		err             error
+		traffic         *ir.TrafficFeatures
 	)
 
 	// These are sanity checks, they should never happen because the API server
@@ -861,18 +864,42 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *reso
 
 	switch {
 	case http != nil:
-		backends = &http.BackendCluster
 		protocol = ir.HTTP
+		switch {
+		case len(http.BackendRefs) > 0:
+			backendRefs = http.BackendCluster.BackendRefs
+		case http.BackendRef != nil:
+			backendRefs = []egv1a1.BackendRef{
+				{
+					BackendObjectReference: *http.BackendRef,
+				},
+			}
+		default:
+			// This is a sanity check, it should never happen because the API server should have caught it
+			return nil, errors.New("http backend refs must be specified")
+		}
 	case grpc != nil:
-		backends = &grpc.BackendCluster
 		protocol = ir.GRPC
+		switch {
+		case len(grpc.BackendCluster.BackendRefs) > 0:
+			backendRefs = grpc.BackendRefs
+		case grpc.BackendRef != nil:
+			backendRefs = []egv1a1.BackendRef{
+				{
+					BackendObjectReference: *grpc.BackendRef,
+				},
+			}
+		default:
+			// This is a sanity check, it should never happen because the API server should have caught it
+			return nil, errors.New("grpc backend refs must be specified")
+		}
 	}
 
-	if rd, err = t.translateExtServiceBackendRefs(policy, backends.BackendRefs, protocol, resources, envoyProxy, 0); err != nil {
+	if rd, err = t.translateExtServiceBackendRefs(policy, backendRefs, protocol, resources, envoyProxy, "extauth", 0); err != nil {
 		return nil, err
 	}
 
-	for _, backendRef := range backends.BackendRefs {
+	for _, backendRef := range backendRefs {
 		// Authority is the calculated hostname that will be used as the Authority header.
 		// If there are multiple backend referenced, simply use the first one - there are no good answers here.
 		// When translated to XDS, the authority is used on the filter level not on the cluster level.
@@ -882,7 +909,7 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *reso
 		}
 	}
 
-	if traffic, err = translateTrafficFeatures(backends.BackendSettings); err != nil {
+	if traffic, err = translateTrafficFeatures(backendSettings); err != nil {
 		return nil, err
 	}
 	extAuth := &ir.ExtAuth{

@@ -9,7 +9,6 @@
 package tests
 
 import (
-	"os"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -18,13 +17,8 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 )
 
-// If the environment is not dual, the IPv6 manifest cannot be applied, so the test will be skipped.
 func init() {
-	if os.Getenv("IP_FAMILY") == "dual" {
-		ConformanceTests = append(ConformanceTests, HTTPRouteDualStackTest)
-	} else {
-		ConformanceTests = append(ConformanceTests, SkipHTTPRouteDualStackTest)
-	}
+	ConformanceTests = append(ConformanceTests, HTTPRouteDualStackTest)
 }
 
 var HTTPRouteDualStackTest = suite.ConformanceTest{
@@ -62,12 +56,4 @@ func runHTTPRouteTest(t *testing.T, suite *suite.ConformanceTestSuite, ns string
 	}
 
 	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
-}
-
-var SkipHTTPRouteDualStackTest = suite.ConformanceTest{
-	ShortName:   "HTTPRouteDualStack",
-	Description: "Skipping HTTPRouteDualStack test as IP_FAMILY is not dual",
-	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Skip("Skipping HTTPRouteDualStack test as IP_FAMILY is not dual")
-	},
 }

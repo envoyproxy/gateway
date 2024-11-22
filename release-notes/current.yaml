@@ -2,7 +2,10 @@ date: Pending
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
-  Add a breaking change here
+  The Container `ports` field of the gateway instance has been removed, which will cause the gateway Pod to be rebuilt when upgrading the version.
+  ClientTrafficPolicy previously treated an empty TLS ALPNProtocols list as being undefined and applied Envoy Gateway defaults.
+  An empty TLS ALPNProtocols list is now treated as user-defined disablement of the TLS ALPN extension.
+  Always use `::` and `IPv4Compact` enabled on dynamic listeners.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
@@ -10,11 +13,13 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
-  Add a new feature here
+  - Added support for trusted CIDRs in the ClientIPDetectionSettings API
 
 # Fixes for bugs identified in previous versions.
 bug fixes: |
-  Add a bug fix here
+  Fixed failed to update SecurityPolicy resources with the `backendRef` field specified
+  Fixed Envoy rejecting TCP Listeners that have no attached TCPRoutes
+  Fixed xDS translation failed when oidc tokenEndpoint and jwt remoteJWKS are specified in the same SecurityPolicy and using the same hostname
 
 # Enhancements that improve performance.
 performance improvements: |
@@ -26,4 +31,4 @@ deprecations: |
 
 # Other notable changes not covered by the above sections.
 Other changes: |
-  Add other changes here
+  [SecurityPolicy] Modify the JWT Provider Issuer validation constraint

@@ -14,6 +14,8 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -42,6 +44,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/kubernetes"
 	tb "github.com/envoyproxy/gateway/internal/troubleshoot"
 )
+
+var IPFamily = os.Getenv("IP_FAMILY")
 
 const defaultServiceStartupTimeout = 5 * time.Minute
 
@@ -400,7 +404,7 @@ func RetrieveURL(c client.Client, nn types.NamespacedName, port int32, path stri
 	default:
 		host = fmt.Sprintf("%s.%s.svc", nn.Name, nn.Namespace)
 	}
-	return fmt.Sprintf("http://%s:%d%s", host, port, path), nil
+	return fmt.Sprintf("http://%s%s", net.JoinHostPort(host, strconv.Itoa(int(port))), path), nil
 }
 
 var metricParser = &expfmt.TextParser{}
@@ -560,7 +564,7 @@ func QueryLogCountFromLoki(t *testing.T, c client.Client, keyValues map[string]s
 	params := url.Values{}
 	params.Add("query", q)
 	params.Add("start", fmt.Sprintf("%d", time.Now().Add(-10*time.Minute).Unix())) // query logs from last 10 minutes
-	lokiQueryURL := fmt.Sprintf("http://%s:3100/loki/api/v1/query_range?%s", lokiHost, params.Encode())
+	lokiQueryURL := fmt.Sprintf("http://%s/loki/api/v1/query_range?%s", net.JoinHostPort(lokiHost, "3100"), params.Encode())
 	res, err := http.DefaultClient.Get(lokiQueryURL)
 	if err != nil {
 		return -1, err
@@ -691,4 +695,40 @@ func CollectAndDump(t *testing.T, rest *rest.Config) {
 		tlog.Logf(t, "\nfilename: %s", r)
 		tlog.Logf(t, "\ndata: \n%s", data)
 	}
+}
+
+func GetService(c client.Client, nn types.NamespacedName) (*corev1.Service, error) {
+	svc := &corev1.Service{}
+	if err := c.Get(context.Background(), nn, svc); err != nil {
+		return nil, err
+	}
+	return svc, nil
+}
+
+func CreateBackend(c client.Client, nn types.NamespacedName, clusterIP string, port int32) error {
+	backend := &egv1a1.Backend{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: nn.Namespace,
+			Name:      nn.Name,
+		},
+		Spec: egv1a1.BackendSpec{
+			Endpoints: []egv1a1.BackendEndpoint{
+				{
+					IP: &egv1a1.IPEndpoint{
+						Address: clusterIP,
+						Port:    port,
+					},
+				},
+			},
+		},
+	}
+	return c.Create(context.TODO(), backend)
+}
+
+func DeleteBackend(c client.Client, nn types.NamespacedName) error {
+	backend := &egv1a1.Backend{}
+	if err := c.Get(context.Background(), nn, backend); err != nil {
+		return err
+	}
+	return c.Delete(context.Background(), backend)
 }

@@ -1,0 +1,80 @@
+http:
+- name: "envoy-gateway/gateway-1/http"
+  address: 0.0.0.0
+  hostnames:
+  - '*'
+  isHTTP2: false
+  metadata:
+    kind: Gateway
+    name: gateway-1
+    namespace: envoy-gateway
+    sectionName: http
+  path:
+    escapedSlashesAction: UnescapeAndRedirect
+    mergeSlashes: true
+  port: 10080
+  routes:
+  - destination:
+      name: httproute/default/httproute-1/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        protocol: HTTP
+        weight: 1
+    hostname: www.example.com
+    isHTTP2: false
+    metadata:
+      kind: HTTPRoute
+      name: httproute-1
+      namespace: default
+    name: httproute/default/httproute-1/rule/0/match/0/www_example_com
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /foo
+    security:
+      authorization:
+        defaultAction: Deny
+        rules:
+        - action: Allow
+          name: allow
+          principal:
+            jwt:
+              claims:
+              - name: groups
+                valueType: StringArray
+                values:
+                - foobar
+              provider: exjwt
+      jwt:
+        providers:
+        - claimToHeaders:
+          - claim: email
+            header: x-user-email
+          extractFrom:
+            cookies:
+            - IdToken
+          issuer: https://oidc.example.com/auth/realms/example
+          name: exjwt
+          remoteJWKS:
+            uri: https://oidc.example.com/auth/realms/example/protocol/openid-connect/certs
+      oidc:
+        clientID: prometheus
+        clientSecret: '[redacted]'
+        cookieNameOverrides:
+          idToken: IdToken
+        cookieSuffix: 5f93c2e4
+        hmacSecret: '[redacted]'
+        logoutPath: /logout
+        name: securitypolicy/default/policy-for-http-route
+        provider:
+          authorizationEndpoint: https://oidc.example.com/authorize
+          tokenEndpoint: https://oidc.example.com/oauth/token
+        redirectPath: /oauth2/callback
+        redirectURL: '%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback'
+        scopes:
+        - openid
+        - email
+        - profile
