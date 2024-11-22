@@ -1,6 +1,6 @@
 http:
   - name: "first-listener"
-    address: "0.0.0.0"
+    address: "::"
     port: 10080
     hostnames:
       - "*"
@@ -21,7 +21,7 @@ http:
             bufferLimit: 100000000
 tcp:
   - name: "second-listener"
-    address: "0.0.0.0"
+    address: "::"
     connection:
       bufferLimit: 1500
     port: 10081
@@ -37,7 +37,7 @@ tcp:
           bufferLimit: 100000000
 udp:
   - name: "udp-route"
-    address: "0.0.0.0"
+    address: "::"
     port: 10080
     route:
       name: "udp-route"

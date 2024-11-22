@@ -1,11 +1,7 @@
-- additionalAddresses:
-  - address:
-      socketAddress:
-        address: '::'
-        portValue: 8082
-  address:
+- address:
     socketAddress:
       address: 0.0.0.0
+      ipv4Compat: true
       portValue: 8082
   filterChains:
   - filters:

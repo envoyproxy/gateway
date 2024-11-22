@@ -1,6 +1,7 @@
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
+      ipv4Compat: true
       portValue: 8081
   defaultFilterChain:
     filters:
@@ -32,7 +33,8 @@
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
+      ipv4Compat: true
       portValue: 8082
   defaultFilterChain:
     filters:
@@ -63,7 +65,8 @@
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
+      ipv4Compat: true
       portValue: 8083
   defaultFilterChain:
     filters:
@@ -95,7 +98,8 @@
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
+      ipv4Compat: true
       portValue: 8084
   defaultFilterChain:
     filters:

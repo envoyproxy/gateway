@@ -262,7 +262,7 @@ xdsIR:
       text:
       - path: /dev/stdout
     http:
-    - address: 0.0.0.0
+    - address: '::'
       clientIPDetection:
         xForwardedFor:
           numTrustedHops: 2
@@ -279,7 +279,7 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 8081
-    - address: 0.0.0.0
+    - address: '::'
       clientIPDetection:
         customHeader:
           failClosed: false
@@ -297,7 +297,7 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 8082
-    - address: 0.0.0.0
+    - address: '::'
       clientIPDetection:
         customHeader:
           failClosed: true
@@ -315,7 +315,7 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 8083
-    - address: 0.0.0.0
+    - address: '::'
       hostnames:
       - '*'
       isHTTP2: false
