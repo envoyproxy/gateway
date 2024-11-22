@@ -199,9 +199,12 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		if managedGC.Spec.ParametersRef != nil && managedGC.DeletionTimestamp == nil {
 			if err := r.processGatewayClassParamsRef(ctx, managedGC, resourceMappings, gwcResource); err != nil {
 				msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
-				if err := r.updateStatusForGatewayClass(ctx, managedGC, false, string(gwapiv1.GatewayClassReasonInvalidParameters), msg); err != nil {
-					r.log.Error(err, "unable to update GatewayClass status")
-				}
+				gc := status.SetGatewayClassAccepted(
+					managedGC.DeepCopy(),
+					false,
+					string(gwapiv1.GatewayClassReasonInvalidParameters),
+					msg)
+				r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
 				r.log.Error(err, "failed to process parametersRef for gatewayclass", "name", managedGC.Name)
 				return reconcile.Result{}, err
 			}
@@ -293,11 +296,12 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 		// process envoy gateway secret refs
 		r.processEnvoyProxySecretRef(ctx, gwcResource)
-
-		if err := r.updateStatusForGatewayClass(ctx, managedGC, true, string(gwapiv1.GatewayClassReasonAccepted), status.MsgValidGatewayClass); err != nil {
-			r.log.Error(err, "unable to update GatewayClass status")
-			return reconcile.Result{}, err
-		}
+		gc := status.SetGatewayClassAccepted(
+			managedGC.DeepCopy(),
+			true,
+			string(gwapiv1.GatewayClassReasonAccepted),
+			status.MsgValidGatewayClass)
+		r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
 
 		if len(gwcResource.Gateways) == 0 {
 			r.log.Info("No gateways found for accepted gatewayclass")
