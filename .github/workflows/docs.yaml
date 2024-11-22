@@ -3,14 +3,12 @@ on:
   push:
     branches:
     - "main"
-    - "release/v*"
     paths:
     - 'site/**'
     - 'tools/make/docs.mk'
   pull_request:
     branches:
     - "main"
-    - "release/v*"
     paths:
     - 'site/**'
     - 'tools/make/docs.mk'
