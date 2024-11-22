@@ -42,5 +42,5 @@ metadata:
 spec:
   endpoints:
     - ip:
-        address: 0.0.0.0 # this address is for demo purpose only, do not use it in production!
+        address: 0.0.0.0  # this address is for demo purpose only, do not use it in production!
         port: 3000
