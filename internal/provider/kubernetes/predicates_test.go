@@ -26,6 +26,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes/test"
 )
 
@@ -851,9 +852,10 @@ func TestValidateServiceForReconcile(t *testing.T) {
 	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
-		classController:    egv1a1.GatewayControllerName,
-		log:                logger,
-		mergeGateways:      sets.New[string]("test-mg"),
+		classController: egv1a1.GatewayControllerName,
+		log:             logger,
+		mergeGateways:   sets.New[string]("test-mg"),
+		resources: &message.ProviderResources{},
 		grpcRouteCRDExists: true,
 		tcpRouteCRDExists:  true,
 		udpRouteCRDExists:  true,
@@ -972,6 +974,7 @@ func TestValidateObjectForReconcile(t *testing.T) {
 		classController: egv1a1.GatewayControllerName,
 		log:             logger,
 		mergeGateways:   sets.New[string]("test-mg"),
+		resources: &message.ProviderResources{},
 	}
 
 	for _, tc := range testCases {
