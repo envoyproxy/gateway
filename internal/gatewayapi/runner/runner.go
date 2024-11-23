@@ -369,7 +369,6 @@ type StatusesToDelete struct {
 func (r *Runner) getAllStatuses() *StatusesToDelete {
 	// Maps storing status keys to be deleted
 	ds := &StatusesToDelete{
-		GatewayStatusKeys:   make(map[types.NamespacedName]bool),
 		HTTPRouteStatusKeys: make(map[types.NamespacedName]bool),
 		GRPCRouteStatusKeys: make(map[types.NamespacedName]bool),
 		TLSRouteStatusKeys:  make(map[types.NamespacedName]bool),
@@ -387,9 +386,9 @@ func (r *Runner) getAllStatuses() *StatusesToDelete {
 	}
 
 	// Get current status keys
-	for key := range r.ProviderResources.GatewayStatuses.LoadAll() {
-		ds.GatewayStatusKeys[key] = true
-	}
+	// Do not delete the status keys for the Gateway because the Gateway status is also stored in the provider runner
+	// to update the address and workload status.
+	// TODO: zhaohuabing move all the status handling to Gateway API translator to avoid this.
 	for key := range r.ProviderResources.HTTPRouteStatuses.LoadAll() {
 		ds.HTTPRouteStatusKeys[key] = true
 	}
@@ -428,10 +427,6 @@ func (r *Runner) getAllStatuses() *StatusesToDelete {
 }
 
 func (r *Runner) deleteStatusKeys(ds *StatusesToDelete) {
-	for key := range ds.GatewayStatusKeys {
-		r.ProviderResources.GatewayStatuses.Delete(key)
-		delete(ds.GatewayStatusKeys, key)
-	}
 	for key := range ds.HTTPRouteStatusKeys {
 		r.ProviderResources.HTTPRouteStatuses.Delete(key)
 		delete(ds.HTTPRouteStatusKeys, key)
