@@ -369,6 +369,7 @@ type StatusesToDelete struct {
 func (r *Runner) getAllStatuses() *StatusesToDelete {
 	// Maps storing status keys to be deleted
 	ds := &StatusesToDelete{
+		GatewayStatusKeys:   make(map[types.NamespacedName]bool),
 		HTTPRouteStatusKeys: make(map[types.NamespacedName]bool),
 		GRPCRouteStatusKeys: make(map[types.NamespacedName]bool),
 		TLSRouteStatusKeys:  make(map[types.NamespacedName]bool),
@@ -386,11 +387,9 @@ func (r *Runner) getAllStatuses() *StatusesToDelete {
 	}
 
 	// Get current status keys
-	// Do not delete the status keys for the Gateway because the Gateway status has also been stored into the ProviderResources
-	// by the kubernetes provider to update the address and workload status.
-	//
-	// TODO: zhaohuabing It's not a big issue as the Gateway status typically does not occupy a lot of memory.
-	// but it's better to move all the status handling to Gateway API translator layer to avoid this.
+	for key := range r.ProviderResources.GatewayStatuses.LoadAll() {
+		ds.GatewayStatusKeys[key] = true
+	}
 	for key := range r.ProviderResources.HTTPRouteStatuses.LoadAll() {
 		ds.HTTPRouteStatusKeys[key] = true
 	}
@@ -429,6 +428,11 @@ func (r *Runner) getAllStatuses() *StatusesToDelete {
 }
 
 func (r *Runner) deleteStatusKeys(ds *StatusesToDelete) {
+	// Do not delete the status keys for the Gateway because the Gateway status has also been stored into the ProviderResources
+	// by the kubernetes provider to update the address and workload status.
+	//
+	// TODO: zhaohuabing this is acceptable as the Gateway status typically does not occupy a lot of memory,
+	// but it's better to move all the status handling to Gateway API translator layer to avoid this.
 	for key := range ds.HTTPRouteStatusKeys {
 		r.ProviderResources.HTTPRouteStatuses.Delete(key)
 		delete(ds.HTTPRouteStatusKeys, key)
