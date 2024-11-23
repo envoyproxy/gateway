@@ -294,6 +294,9 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 	// Check if the Service belongs to a Gateway, if so, update the Gateway status.
 	gtw := r.findOwningGateway(ctx, labels)
 	if gtw != nil {
+		// Trigger a status update for the Gateway.
+		// The status updater will check the service to get the addresses of the Gateway,
+		// and check the Deployment/DaemonSet to get the status of the Gateway workload.
 		r.resources.GatewayStatuses.Store(utils.NamespacedName(gtw), &gtw.Status)
 		return false
 	}
@@ -528,6 +531,9 @@ func (r *gatewayAPIReconciler) validateObjectForReconcile(obj client.Object) boo
 		// Check if the obj belongs to a Gateway, if so, update the Gateway status.
 		gtw := r.findOwningGateway(ctx, labels)
 		if gtw != nil {
+			// Trigger a status update for the Gateway.
+			// The status updater will check the service to get the addresses of the Gateway,
+			// and check the Deployment/DaemonSet to get the status of the Gateway workload.
 			r.resources.GatewayStatuses.Store(utils.NamespacedName(gtw), &gtw.Status)
 			return false
 		}
