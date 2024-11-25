@@ -113,8 +113,13 @@ envoyExtensionPolicies:
       messageTimeout: 5s
       processingMode:
         request:
+          attributes:
+          - request.path
           body: Buffered
         response:
+          attributes:
+          - xds.route_metadata
+          - connection.requested_server_name
           body: Streamed
     targetRef:
       group: gateway.networking.k8s.io
@@ -363,8 +368,13 @@ xdsIR:
             failOpen: true
             messageTimeout: 5s
             name: envoyextensionpolicy/default/policy-for-gateway/extproc/0
+            requestAttributes:
+            - request.path
             requestBodyProcessingMode: Buffered
             requestHeaderProcessing: true
+            responseAttributes:
+            - xds.route_metadata
+            - connection.requested_server_name
             responseBodyProcessingMode: Streamed
             responseHeaderProcessing: true
         hostname: www.bar.com
