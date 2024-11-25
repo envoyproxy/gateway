@@ -3,7 +3,7 @@ metrics:
   enableRequestResponseSizesStats: true
 udp:
 - name: "udp-route-enable-req-resp-sizes-stats"
-  address: "0.0.0.0"
+  address: "::"
   port: 10080
   route:
     name: "udp-route"

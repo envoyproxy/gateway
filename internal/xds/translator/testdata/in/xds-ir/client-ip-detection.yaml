@@ -1,6 +1,6 @@
 http:
 - name: "first-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 8081
   hostnames:
   - "*"
@@ -17,7 +17,7 @@ http:
     xForwardedFor:
       numTrustedHops: 2
 - name: "second-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 8082
   hostnames:
   - "*"
@@ -35,7 +35,7 @@ http:
       name: "x-my-custom-header"
       failClosed: false
 - name: "third-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 8083
   hostnames:
   - "*"

@@ -498,13 +498,14 @@ After applying the config, you can get the envoyproxy service, and see annotatio
 ## Customize EnvoyProxy Bootstrap Config
 
 You can customize the EnvoyProxy bootstrap config via EnvoyProxy Config.
-There are two ways to customize it:
+There are three ways to customize it:
 
 * Replace: the whole bootstrap config will be replaced by the config you provided.
 * Merge: the config you provided will be merged into the default bootstrap config.
+* JSONPatch: the list of JSON Patches you provided will be applied to the bootstrap config. JSON Patch is a standard format specified in [RFC 6902](https://datatracker.ietf.org/doc/html/rfc6902/).
 
 {{< tabpane text=true >}}
-{{% tab header="Apply from stdin" %}}
+{{% tab header="Replace: apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -591,7 +592,7 @@ EOF
 ```
 
 {{% /tab %}}
-{{% tab header="Apply from file" %}}
+{{% tab header="Replace: apply from file" %}}
 Save and apply the following resource to your cluster:
 
 ```yaml
@@ -675,6 +676,45 @@ spec:
               ads: {}
               resource_api_version: V3
             name: runtime-0
+```
+
+{{% /tab %}}
+{{% tab header="JSONPatch: apply from stdin" %}}
+Save and apply the following resource to your cluster:
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: default 
+spec:
+  bootstrap:
+    type: JSONPatch
+    jsonPatches:
+    - {"op": "add", "path": "/static_resources/clusters/0/dns_lookup_family", "value": "V4_ONLY"}
+    - {"op": "replace", "path": "/admin/address/socket_address/port_value", "value": 9901}
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="JSONPatch: apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: default
+spec:
+  bootstrap:
+    type: JSONPatch
+    jsonPatches:
+      - {"op": "add", "path": "/static_resources/clusters/0/dns_lookup_family", "value": "V4_ONLY"}
+      - {"op": "replace", "path": "/admin/address/socket_address/port_value", "value": 9901}
 ```
 
 {{% /tab %}}

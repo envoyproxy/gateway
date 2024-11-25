@@ -356,7 +356,7 @@ xdsIR:
       text:
       - path: /dev/stdout
     http:
-    - address: 0.0.0.0
+    - address: '::'
       hostnames:
       - foo.com
       isHTTP2: false
@@ -391,7 +391,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    - address: 0.0.0.0
+    - address: '::'
       hostnames:
       - bar.com
       isHTTP2: false
@@ -426,7 +426,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    - address: 0.0.0.0
+    - address: '::'
       hostnames:
       - foo1.com
       isHTTP2: false
@@ -461,7 +461,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    - address: 0.0.0.0
+    - address: '::'
       hostnames:
       - bar1.com
       isHTTP2: false
@@ -496,7 +496,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    - address: 0.0.0.0
+    - address: '::'
       hostnames:
       - foo2.com
       isHTTP2: false
@@ -531,7 +531,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    - address: 0.0.0.0
+    - address: '::'
       hostnames:
       - bar2.com
       isHTTP2: false
@@ -566,7 +566,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    - address: 0.0.0.0
+    - address: '::'
       hostnames:
       - foo3.com
       isHTTP2: false
@@ -601,7 +601,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    - address: 0.0.0.0
+    - address: '::'
       hostnames:
       - bar3.com
       isHTTP2: false

@@ -116,7 +116,7 @@ xdsIR:
             type: Accepted
           controllerName: gateway.envoyproxy.io/gatewayclass-controller
     http:
-    - address: 0.0.0.0
+    - address: '::'
       hostnames:
       - '*'
       isHTTP2: false

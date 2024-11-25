@@ -1,6 +1,6 @@
 http:
 - name: "first-listener"
-  address: "0.0.0.0"
+  address: "::"
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect

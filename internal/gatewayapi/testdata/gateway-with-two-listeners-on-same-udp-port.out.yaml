@@ -118,7 +118,7 @@ xdsIR:
       text:
       - path: /dev/stdout
     udp:
-    - address: 0.0.0.0
+    - address: '::'
       name: envoy-gateway/gateway-1/udp1
       port: 10162
       route:
