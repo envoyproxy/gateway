@@ -320,11 +320,11 @@ func TestTranslate(t *testing.T) {
 
 			opts := []cmp.Option{
 				cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
+				cmpopts.IgnoreFields(resource.Resources{}, "serviceMap"),
 				cmp.Transformer("ClearXdsEqual", xdsWithoutEqual),
 				cmpopts.IgnoreTypes(ir.PrivateBytes{}),
 				cmpopts.EquateEmpty(),
 			}
-
 			require.Empty(t, cmp.Diff(want, got, opts...))
 		})
 	}
@@ -519,8 +519,11 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 			want := &TranslateResult{}
 			mustUnmarshal(t, output, want)
 
-			opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
-			require.Empty(t, cmp.Diff(want, got, opts))
+			opts := []cmp.Option{
+				cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
+				cmpopts.IgnoreFields(resource.Resources{}, "serviceMap"),
+			}
+			require.Empty(t, cmp.Diff(want, got, opts...))
 		})
 	}
 }

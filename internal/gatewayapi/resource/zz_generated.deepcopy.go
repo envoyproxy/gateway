@@ -14,6 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1alpha3"
@@ -288,6 +289,22 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 				*out = new(v1alpha1.HTTPRouteFilter)
 				(*in).DeepCopyInto(*out)
 			}
+		}
+	}
+	if in.serviceMap != nil {
+		in, out := &in.serviceMap, &out.serviceMap
+		*out = make(map[types.NamespacedName]*corev1.Service, len(*in))
+		for key, val := range *in {
+			var outVal *corev1.Service
+			if val == nil {
+				(*out)[key] = nil
+			} else {
+				inVal := (*in)[key]
+				in, out := &inVal, &outVal
+				*out = new(corev1.Service)
+				(*in).DeepCopyInto(*out)
+			}
+			(*out)[key] = outVal
 		}
 	}
 }

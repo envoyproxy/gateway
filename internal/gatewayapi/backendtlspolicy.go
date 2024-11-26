@@ -162,7 +162,8 @@ func backendTLSTargetMatched(policy gwapiv1a3.BackendTLSPolicy, target gwapiv1a2
 func getTargetBackendReferenceWithPortName(
 	backendRef gwapiv1a2.BackendObjectReference,
 	backendNamespace string,
-	resources *resource.Resources) gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {
+	resources *resource.Resources,
+) gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {
 	ref := getTargetBackendReference(backendRef)
 	if ref.SectionName == nil {
 		return ref
