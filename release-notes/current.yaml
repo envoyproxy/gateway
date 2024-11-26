@@ -6,6 +6,7 @@ breaking changes: |
   ClientTrafficPolicy previously treated an empty TLS ALPNProtocols list as being undefined and applied Envoy Gateway defaults.
   An empty TLS ALPNProtocols list is now treated as user-defined disablement of the TLS ALPN extension.
   Always use `::` and `IPv4Compact` enabled on dynamic listeners.
+  Use `V4_PREFERRED` instead of `V4_ONLY` by default for the cluster's `DnsLookupFamily`.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |

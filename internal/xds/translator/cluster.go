@@ -84,7 +84,7 @@ func buildEndpointType(settings []*ir.DestinationSetting) EndpointType {
 }
 
 func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
-	dnsLookupFamily := clusterv3.Cluster_AUTO
+	dnsLookupFamily := clusterv3.Cluster_V4_PREFERRED
 	if args.ipFamily != nil {
 		switch *args.ipFamily {
 		case egv1a1.IPv4:
