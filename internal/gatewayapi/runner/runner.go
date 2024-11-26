@@ -428,11 +428,10 @@ func (r *Runner) getAllStatuses() *StatusesToDelete {
 }
 
 func (r *Runner) deleteStatusKeys(ds *StatusesToDelete) {
-	// Do not delete the status keys for the Gateway because the Gateway status has also been stored into the ProviderResources
-	// by the kubernetes provider to update the address and workload status.
-	//
-	// TODO: zhaohuabing this is acceptable as the Gateway status typically does not occupy a lot of memory,
-	// but it's better to move all the status handling to Gateway API translator layer to avoid this.
+	for key := range ds.GatewayStatusKeys {
+		r.ProviderResources.GatewayStatuses.Delete(key)
+		delete(ds.GatewayStatusKeys, key)
+	}
 	for key := range ds.HTTPRouteStatusKeys {
 		r.ProviderResources.HTTPRouteStatuses.Delete(key)
 		delete(ds.HTTPRouteStatusKeys, key)

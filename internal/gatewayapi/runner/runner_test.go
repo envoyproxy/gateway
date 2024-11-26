@@ -203,6 +203,7 @@ func TestDeleteStatusKeys(t *testing.T) {
 	delete(ds.UDPRouteStatusKeys, keys[6])
 	r.deleteStatusKeys(ds)
 
+	require.Equal(t, 0, r.ProviderResources.GatewayStatuses.Len())
 	require.Equal(t, 0, r.ProviderResources.HTTPRouteStatuses.Len())
 	require.Equal(t, 0, r.ProviderResources.GRPCRouteStatuses.Len())
 	require.Equal(t, 0, r.ProviderResources.TLSRouteStatuses.Len())
@@ -277,6 +278,7 @@ func TestDeleteAllStatusKeys(t *testing.T) {
 	// Checks that the keys are successfully stored to DeletableStatus and watchable maps
 	ds := r.getAllStatuses()
 
+	require.True(t, ds.GatewayStatusKeys[keys[0]])
 	require.True(t, ds.HTTPRouteStatusKeys[keys[1]])
 	require.True(t, ds.GRPCRouteStatusKeys[keys[2]])
 	require.True(t, ds.TLSRouteStatusKeys[keys[3]])
