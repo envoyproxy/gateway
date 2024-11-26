@@ -32,7 +32,7 @@ func (t *Translator) processBackendTLSPolicy(
 	resources *resource.Resources,
 	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.TLSUpstreamConfig, *gwapiv1a3.BackendTLSPolicy) {
-	policy := getBackendTLSPolicy(resources.BackendTLSPolicies, backendRef, backendNamespace)
+	policy := getBackendTLSPolicy(resources.BackendTLSPolicies, backendRef, backendNamespace, resources)
 	if policy == nil {
 		return nil, nil
 	}
@@ -157,8 +157,48 @@ func backendTLSTargetMatched(policy gwapiv1a3.BackendTLSPolicy, target gwapiv1a2
 	return false
 }
 
-func getBackendTLSPolicy(policies []*gwapiv1a3.BackendTLSPolicy, backendRef gwapiv1a2.BackendObjectReference, backendNamespace string) *gwapiv1a3.BackendTLSPolicy {
+// getTargetBackendReferenceWithPortName returns the LocalPolicyTargetReference for the given BackendObjectReference,
+// and sets the sectionName to the port name if the BackendObjectReference is a Kubernetes Service.
+func getTargetBackendReferenceWithPortName(
+	backendRef gwapiv1a2.BackendObjectReference,
+	backendNamespace string,
+	resources *resource.Resources) gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {
+	ref := getTargetBackendReference(backendRef)
+	if ref.SectionName == nil {
+		return ref
+	}
+	if backendRef.Kind != nil && *backendRef.Kind != resource.KindService {
+		return ref
+	}
+
+	if service := resources.GetService(backendNamespace, string(backendRef.Name)); service != nil {
+		for _, port := range service.Spec.Ports {
+			if port.Port == int32(*backendRef.Port) {
+				if port.Name != "" {
+					ref.SectionName = SectionNamePtr(port.Name)
+				}
+			}
+		}
+	}
+
+	return ref
+}
+
+func getBackendTLSPolicy(
+	policies []*gwapiv1a3.BackendTLSPolicy,
+	backendRef gwapiv1a2.BackendObjectReference,
+	backendNamespace string,
+	resources *resource.Resources,
+) *gwapiv1a3.BackendTLSPolicy {
 	target := getTargetBackendReference(backendRef)
+	for _, policy := range policies {
+		if backendTLSTargetMatched(*policy, target, backendNamespace) {
+			return policy
+		}
+	}
+
+	// SectionName can be port name for Kubernetes Service
+	target = getTargetBackendReferenceWithPortName(backendRef, backendNamespace, resources)
 	for _, policy := range policies {
 		if backendTLSTargetMatched(*policy, target, backendNamespace) {
 			return policy

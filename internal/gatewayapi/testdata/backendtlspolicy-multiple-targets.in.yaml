@@ -64,11 +64,11 @@ services:
       clusterIP: 10.11.12.13
       ports:
         - port: 8080
-          name: http
+          name: http1
           protocol: TCP
           targetPort: 8080
         - port: 8081
-          name: http
+          name: http2
           protocol: TCP
           targetPort: 8081
 
@@ -114,7 +114,7 @@ backendTLSPolicies:
         - group: ""
           kind: Service
           name: http-backend
-          sectionName: "8081"
+          sectionName: http2
       validation:
         caCertificateRefs:
           - name: ca-cmap
