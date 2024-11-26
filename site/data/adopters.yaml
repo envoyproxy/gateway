@@ -14,4 +14,4 @@ adopters:
   - name: "Teleport"
     logo: "/logos/teleport.svg"
     url: "https://goteleport.com/"
-    description: ""
+    description: "Teleport is using Envoy Gateway to manage dynamic routing for all traffic to the Teleport Cloud Platform."
