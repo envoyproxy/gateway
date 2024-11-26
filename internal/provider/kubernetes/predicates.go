@@ -294,7 +294,7 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 	// Check if the Service belongs to a Gateway, if so, update the Gateway status.
 	gtw := r.findOwningGateway(ctx, labels)
 	if gtw != nil {
-		r.updateGatewayStatus(ctx, gtw)
+		r.updateGatewayStatus(gtw)
 		return false
 	}
 
@@ -528,7 +528,7 @@ func (r *gatewayAPIReconciler) validateObjectForReconcile(obj client.Object) boo
 		// Check if the obj belongs to a Gateway, if so, update the Gateway status.
 		gtw := r.findOwningGateway(ctx, labels)
 		if gtw != nil {
-			r.updateGatewayStatus(ctx, gtw)
+			r.updateGatewayStatus(gtw)
 			return false
 		}
 	}
@@ -636,15 +636,23 @@ func (r *gatewayAPIReconciler) updateStatusForGatewaysUnderGatewayClass(ctx cont
 	}
 
 	for _, gateway := range gateways.Items {
-		r.updateGatewayStatus(ctx, &gateway)
+		r.updateGatewayStatus(&gateway)
 	}
 
 	return nil
 }
 
 // updateGatewayStatus triggers a status update for the Gateway.
-func (r *gatewayAPIReconciler) updateGatewayStatus(ctx context.Context, gateway *gwapiv1.Gateway) {
-	r.updateGatewayAddressAndProgrammingStatus(ctx, gateway)
+func (r *gatewayAPIReconciler) updateGatewayStatus(gateway *gwapiv1.Gateway) {
+	// The status added to GatewayStatuses is solely used to trigger the status updater
+	// and does not reflect the real changed status.
+	//
+	// The status updater will check the Envoy Proxy service to get the addresses of the Gateway,
+	// and check the Envoy Proxy Deployment/DaemonSet to get the status of the Gateway workload.
+	//
+	// Since the status does not reflect the actual changed status, we need to delete it first
+	// to prevent it from being considered unchanged. This ensures that subscribers receive the update event.
+	r.resources.GatewayStatuses.Delete(utils.NamespacedName(gateway))
 	r.resources.GatewayStatuses.Store(utils.NamespacedName(gateway), &gateway.Status)
 }
 

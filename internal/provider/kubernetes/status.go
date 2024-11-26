@@ -555,7 +555,23 @@ func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *
 		return
 	}
 
-	r.updateGatewayAddressAndProgrammingStatus(ctx, gtw)
+	// Get envoyObjects
+	envoyObj, err := r.envoyObjectForGateway(ctx, gtw)
+	if err != nil {
+		r.log.Info("failed to get Deployment for gateway",
+			"namespace", gtw.Namespace, "name", gtw.Name)
+	}
+
+	// Get service
+	svc, err := r.envoyServiceForGateway(ctx, gtw)
+	if err != nil {
+		r.log.Info("failed to get Service for gateway",
+			"namespace", gtw.Namespace, "name", gtw.Name)
+	}
+	// update accepted condition
+	status.UpdateGatewayStatusAcceptedCondition(gtw, true)
+	// update address field and programmed condition
+	status.UpdateGatewayStatusProgrammedCondition(gtw, svc, envoyObj, r.store.listNodeAddresses()...)
 
 	key := utils.NamespacedName(gtw)
 
@@ -575,26 +591,4 @@ func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *
 			return gCopy
 		}),
 	})
-}
-
-// updateGatewayAddressAndProgrammingStatus updates the Gateway status with the envoy service address and the envoy
-// deployment or daemonset programming status.
-func (r *gatewayAPIReconciler) updateGatewayAddressAndProgrammingStatus(ctx context.Context, gtw *gwapiv1.Gateway) {
-	// Get envoyObjects
-	envoyObj, err := r.envoyObjectForGateway(ctx, gtw)
-	if err != nil {
-		r.log.Info("failed to get Deployment for gateway",
-			"namespace", gtw.Namespace, "name", gtw.Name)
-	}
-
-	// Get service
-	svc, err := r.envoyServiceForGateway(ctx, gtw)
-	if err != nil {
-		r.log.Info("failed to get Service for gateway",
-			"namespace", gtw.Namespace, "name", gtw.Name)
-	}
-	// update accepted condition
-	status.UpdateGatewayStatusAcceptedCondition(gtw, true)
-	// update address field and programmed condition
-	status.UpdateGatewayStatusProgrammedCondition(gtw, svc, envoyObj, r.store.listNodeAddresses()...)
 }
