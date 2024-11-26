@@ -11,3 +11,7 @@ adopters:
     logo: "/logos/airspacelink.svg"
     url: "https://airspacelink.com/"
     description: "Airspace Link is using Envoy Gateway to route all public APIs to Kubernetes clusters, developers are manipulating routes descriptions using agnostic manifest files, which are then automatically provisioned using Envoy Gateway."
+  - name: "Teleport"
+    logo: "/logos/teleport.svg"
+    url: "https://goteleport.com/"
+    description: "Teleport is using Envoy Gateway to manage dynamic routing for all traffic to the Teleport Cloud Platform."
