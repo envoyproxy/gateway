@@ -165,9 +165,10 @@ func getTargetBackendReferenceWithPortName(
 	resources *resource.Resources,
 ) gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {
 	ref := getTargetBackendReference(backendRef)
-	if ref.SectionName == nil {
+	if backendRef.Port == nil {
 		return ref
 	}
+
 	if backendRef.Kind != nil && *backendRef.Kind != resource.KindService {
 		return ref
 	}
@@ -199,10 +200,13 @@ func getBackendTLSPolicy(
 	}
 
 	// SectionName can be port name for Kubernetes Service
-	target = getTargetBackendReferenceWithPortName(backendRef, backendNamespace, resources)
-	for _, policy := range policies {
-		if backendTLSTargetMatched(*policy, target, backendNamespace) {
-			return policy
+	if backendRef.Port != nil &&
+		(backendRef.Kind != nil && *backendRef.Kind == resource.KindService) {
+		target = getTargetBackendReferenceWithPortName(backendRef, backendNamespace, resources)
+		for _, policy := range policies {
+			if backendTLSTargetMatched(*policy, target, backendNamespace) {
+				return policy
+			}
 		}
 	}
 	return nil
