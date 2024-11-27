@@ -5,7 +5,7 @@ breaking changes: |
   Use `V4_PREFERRED` instead of `V4_ONLY` by default for the cluster's `DnsLookupFamily`.
 
 bug fixes: |
-  Fixed Envoy rejecting TCP Listeners that have no attached TCPRoutes.
+  Fixed Envoy rejecting TCP Listeners with no attached TCPRoutes.
   Fixed failures to update SecurityPolicy resources with backendRef for extAuth.
 Fixed xDS translation when oidc tokenEndpoint and jwt remoteJWKS share the same hostname.
   Fixed frequent 503 errors seen for requests during high Pod churn
