@@ -10,6 +10,7 @@ xds:
         commonLbConfig:
           localityWeightedLbConfig: {}
         connectTimeout: 10s
+        dnsLookupFamily: V4_PREFERRED
         edsClusterConfig:
           edsConfig:
             ads: {}
@@ -29,6 +30,7 @@ xds:
         commonLbConfig:
           localityWeightedLbConfig: {}
         connectTimeout: 10s
+        dnsLookupFamily: V4_PREFERRED
         dnsRefreshRate: 30s
         lbPolicy: LEAST_REQUEST
         loadAssignment:
