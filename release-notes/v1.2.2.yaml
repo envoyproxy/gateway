@@ -2,7 +2,7 @@ date: November 28, 2024
 
 breaking changes: |
   Always use :: with IPv4Compact enabled on dynamic listeners.
-  Use `V4_PREFERRED` instead of `V4_ONLY` by default for the cluster's `DnsLookupFamily`.
+  Use V4_PREFERRED instead of V4_ONLY by default for the cluster's DnsLookupFamily.
 
 bug fixes: |
   Fixed Envoy rejecting TCP Listeners with no attached TCPRoutes.
