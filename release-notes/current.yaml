@@ -23,6 +23,7 @@ bug fixes: |
   Fixed Envoy rejecting TCP Listeners that have no attached TCPRoutes
   Fixed failed to update SecurityPolicy resources with the `backendRef` field specified
   Fixed xDS translation failed when oidc tokenEndpoint and jwt remoteJWKS are specified in the same SecurityPolicy and using the same hostname
+  Fixed frequent 503 errors when connecting to a Service experiencing high Pod churn
 
 # Enhancements that improve performance.
 performance improvements: |
