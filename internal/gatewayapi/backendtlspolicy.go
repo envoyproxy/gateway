@@ -201,7 +201,7 @@ func getBackendTLSPolicy(
 
 	// SectionName can be port name for Kubernetes Service
 	if backendRef.Port != nil &&
-		(backendRef.Kind != nil && *backendRef.Kind == resource.KindService) {
+		(backendRef.Kind == nil || *backendRef.Kind == resource.KindService) {
 		target = getTargetBackendReferenceWithPortName(backendRef, backendNamespace, resources)
 		for _, policy := range policies {
 			if backendTLSTargetMatched(*policy, target, backendNamespace) {
