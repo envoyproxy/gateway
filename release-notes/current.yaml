@@ -14,7 +14,8 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
-  - Added support for trusted CIDRs in the ClientIPDetectionSettings API
+  Added support for trusted CIDRs in the ClientIPDetectionSettings API
+  Added support for sending attributes to external processor in EnvoyExtensionPolicy API
 
 # Fixes for bugs identified in previous versions.
 bug fixes: |
