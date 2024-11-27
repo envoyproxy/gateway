@@ -8,7 +8,7 @@ bug fixes: |
   Fixed Envoy rejecting TCP Listeners that have no attached TCPRoutes.
   Fixed failures to update SecurityPolicy resources with backendRef for extAuth.
 Fixed xDS translation when oidc tokenEndpoint and jwt remoteJWKS share the same hostname.
-  Fixed frequent 503 errors when connecting to a Service experiencing high Pod churn.
+  Fixed frequent 503 errors seen for requests during high Pod churn
 
 Other changes: |
   Bump the RateLimit image to 49af5cca.
