@@ -772,6 +772,11 @@ func (in *DestinationSetting) DeepCopyInto(out *DestinationSetting) {
 		*out = new(DestinationAddressType)
 		**out = **in
 	}
+	if in.IPFamily != nil {
+		in, out := &in.IPFamily, &out.IPFamily
+		*out = new(IPFamily)
+		**out = **in
+	}
 	if in.TLS != nil {
 		in, out := &in.TLS, &out.TLS
 		*out = new(TLSUpstreamConfig)

@@ -610,20 +610,20 @@ func setIfNil[T any](target **T, value *T) {
 	}
 }
 
+// getIPFamily returns the IPFamily configuration from EnvoyProxy
 func getIPFamily(envoyProxy *egv1a1.EnvoyProxy) *ir.IPFamily {
 	if envoyProxy == nil || envoyProxy.Spec.IPFamily == nil {
 		return nil
 	}
-	var result ir.IPFamily
+
 	switch *envoyProxy.Spec.IPFamily {
 	case egv1a1.IPv4:
-		result = ir.IPv4
+		return ptr.To(ir.IPv4)
 	case egv1a1.IPv6:
-		result = ir.IPv6
+		return ptr.To(ir.IPv6)
 	case egv1a1.DualStack:
-		result = ir.DualStack
+		return ptr.To(ir.Dualstack)
 	default:
 		return nil
 	}
-	return &result
 }
