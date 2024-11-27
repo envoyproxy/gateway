@@ -1,6 +1,7 @@
 - address:
     socketAddress:
       address: 0.0.0.0
+      ipv4Compat: true
       portValue: 10080
   defaultFilterChain:
     filters:
@@ -30,12 +31,20 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: envoy-gateway/gateway-1/http1
+  filterChains:
+  - filters:
+    - name: envoy.filters.network.tcp_proxy
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        cluster: tcp-route-dest
+        statPrefix: tcp-10080
   name: envoy-gateway/gateway-1/http1
   perConnectionBufferLimitBytes: 32768
   statPrefix: envoy-gateway/gateway-1/http1
 - address:
     socketAddress:
       address: 0.0.0.0
+      ipv4Compat: true
       portValue: 10162
       protocol: UDP
   listenerFilters:

@@ -501,7 +501,7 @@ xdsIR:
       text:
       - path: /dev/stdout
     http:
-    - address: 0.0.0.0
+    - address: '::'
       hostnames:
       - bar.example.com
       isHTTP2: false
@@ -560,7 +560,7 @@ xdsIR:
       timeout:
         http:
           requestReceivedTimeout: 5s
-    - address: 0.0.0.0
+    - address: '::'
       hostnames:
       - foo.example.com
       isHTTP2: false
@@ -619,7 +619,7 @@ xdsIR:
       timeout:
         http:
           requestReceivedTimeout: 5s
-    - address: 0.0.0.0
+    - address: '::'
       hostnames:
       - bar.example.com
       isHTTP2: false
@@ -670,7 +670,7 @@ xdsIR:
             - x-header-7
             - x-header-8
             maxAge: 33m20s
-    - address: 0.0.0.0
+    - address: '::'
       hostnames:
       - foo.example.com
       isHTTP2: false

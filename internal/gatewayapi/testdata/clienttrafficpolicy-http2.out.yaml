@@ -163,7 +163,7 @@ xdsIR:
       text:
       - path: /dev/stdout
     http:
-    - address: 0.0.0.0
+    - address: '::'
       hostnames:
       - '*'
       http2:
@@ -181,7 +181,7 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
-    - address: 0.0.0.0
+    - address: '::'
       hostnames:
       - www.example.com
       http2:

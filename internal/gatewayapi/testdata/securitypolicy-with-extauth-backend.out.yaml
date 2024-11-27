@@ -35,7 +35,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 2
+    - attachedRoutes: 4
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -141,6 +141,82 @@ httpRoutes:
         name: gateway-1
         namespace: default
         sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-3
+    namespace: default
+  spec:
+    hostnames:
+    - www.baz.com
+    parentRefs:
+    - name: gateway-1
+      namespace: default
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-4
+        port: 8080
+      matches:
+      - path:
+          value: /baz
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: default
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-4
+    namespace: default
+  spec:
+    hostnames:
+    - www.qux.com
+    parentRefs:
+    - name: gateway-1
+      namespace: default
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-5
+        port: 8080
+      matches:
+      - path:
+          value: /qux
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Service default/service-5 not found
+        reason: BackendNotFound
+        status: "False"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: default
+        sectionName: http
 infraIR:
   default/gateway-1:
     proxy:
@@ -198,13 +274,82 @@ securityPolicies:
         status: "True"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    creationTimestamp: null
+    name: policy-for-http-route-3--grpc-backendref
+    namespace: default
+  spec:
+    extAuth:
+      failOpen: true
+      grpc:
+        backendRef:
+          kind: Service
+          name: service-2
+          port: 8080
+      headersToExtAuth:
+      - header3
+      - header4
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-3
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    creationTimestamp: null
+    name: policy-for-http-route-3-http-backendref
+    namespace: default
+  spec:
+    extAuth:
+      http:
+        backendRef:
+          group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-fqdn
+          port: 3000
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-4
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   default/gateway-1:
     accessLog:
       text:
       - path: /dev/stdout
     http:
-    - address: 0.0.0.0
+    - address: '::'
       hostnames:
       - '*'
       isHTTP2: false
@@ -245,7 +390,7 @@ xdsIR:
             grpc:
               authority: service-2.default:8080
               destination:
-                name: securitypolicy/default/policy-for-http-route-1/0
+                name: securitypolicy/default/policy-for-http-route-1/extauth/0
                 settings:
                 - addressType: IP
                   endpoints:
@@ -289,7 +434,7 @@ xdsIR:
             grpc:
               authority: service-2.default:8080
               destination:
-                name: securitypolicy/default/policy-for-http-route-1/0
+                name: securitypolicy/default/policy-for-http-route-1/extauth/0
                 settings:
                 - addressType: IP
                   endpoints:
@@ -327,3 +472,73 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /bar
+      - destination:
+          name: httproute/default/httproute-3/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            protocol: HTTP
+            weight: 1
+        hostname: www.baz.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-3
+          namespace: default
+        name: httproute/default/httproute-3/rule/0/match/0/www_baz_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /baz
+        security:
+          extAuth:
+            failOpen: true
+            grpc:
+              authority: service-2.default:8080
+              destination:
+                name: securitypolicy/default/policy-for-http-route-3--grpc-backendref/extauth/0
+                settings:
+                - addressType: IP
+                  endpoints:
+                  - host: 7.7.7.7
+                    port: 8080
+                  protocol: GRPC
+                  weight: 1
+            headersToExtAuth:
+            - header3
+            - header4
+            name: securitypolicy/default/policy-for-http-route-3--grpc-backendref
+      - destination:
+          name: httproute/default/httproute-4/rule/0
+          settings:
+          - weight: 1
+        directResponse:
+          statusCode: 500
+        hostname: www.qux.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-4
+          namespace: default
+        name: httproute/default/httproute-4/rule/0/match/0/www_qux_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /qux
+        security:
+          extAuth:
+            http:
+              authority: primary.foo.com:3000
+              destination:
+                name: securitypolicy/default/policy-for-http-route-3-http-backendref/extauth/0
+                settings:
+                - addressType: FQDN
+                  endpoints:
+                  - host: primary.foo.com
+                    port: 3000
+                  protocol: HTTP
+                  weight: 1
+              path: ""
+            name: securitypolicy/default/policy-for-http-route-3-http-backendref

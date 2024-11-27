@@ -1,6 +1,6 @@
 http:
 - name: "first-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 10080
   hostnames:
   - "foo.com"
@@ -18,7 +18,7 @@ http:
         - host: "1.2.3.4"
           port: 50000
 - name: "second-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 10081
   hostnames:
   - "foo.net"
@@ -39,31 +39,33 @@ http:
           port: 50000
 tcp:
 - name: "third-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 10082
   connection:
     limit:
       value: 3
-  tls:
-    passthrough:
-      snis:
-      - bar.com
-  destination:
-    name: "tls-route-dest"
-    settings:
-    - endpoints:
-      - host: "1.2.3.4"
-        port: 50000
+  routes:
+  - tls:
+      inspector:
+        snis:
+        - bar.com
+    destination:
+      name: "tls-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
 - name: "fourth-listener"
-  address: "0.0.0.0"
+  address: "::"
   connection:
     limit:
       value: 10
       closeDelay: 3s
   port: 10083
-  destination:
-    name: "tcp-route-dest"
-    settings:
-    - endpoints:
-      - host: "1.2.3.4"
-        port: 50000
+  routes:
+  - destination:
+      name: "tcp-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000

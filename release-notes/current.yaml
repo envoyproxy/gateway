@@ -2,7 +2,8 @@ date: Pending
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
-  Add a breaking change here
+  Always use `::` and `IPv4Compact` enabled on dynamic listeners.
+  Use `V4_PREFERRED` instead of `V4_ONLY` by default for the cluster's `DnsLookupFamily`.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
@@ -20,6 +21,10 @@ bug fixes: |
   Route with multiple parents has incorrect namespace in parentRef status
   BackendTlsPolicy specify multiple targetRefs of the same service, only one will work
   Helm chart fails for Flux HelmRelease
+  Fixed Envoy rejecting TCP Listeners that have no attached TCPRoutes
+  Fixed failed to update SecurityPolicy resources with the `backendRef` field specified
+  Fixed xDS translation failed when oidc tokenEndpoint and jwt remoteJWKS are specified in the same SecurityPolicy and using the same hostname
+  Fixed frequent 503 errors when connecting to a Service experiencing high Pod churn
 
 # Enhancements that improve performance.
 performance improvements: |

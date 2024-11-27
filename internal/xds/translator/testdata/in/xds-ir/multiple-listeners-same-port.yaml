@@ -1,6 +1,6 @@
 http:
 - name: "first-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 10080
   hostnames:
   - "foo.com"
@@ -27,7 +27,7 @@ http:
         - host: "1.2.3.4"
           port: 50000
 - name: "second-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 10080
   hostnames:
   - "foo.net"
@@ -54,7 +54,7 @@ http:
         - host: "1.2.3.4"
           port: 50000
 - name: "third-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 10080
   hostnames:
   - "example.com"
@@ -71,7 +71,7 @@ http:
         - host: "1.2.3.4"
           port: 50000
 - name: "fourth-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 10080
   hostnames:
   - "example.net"
@@ -89,7 +89,7 @@ http:
           port: 50000
 tcp:
 - name: "fifth-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 10080
   routes:
   - name: "fifth-route"
@@ -104,7 +104,7 @@ tcp:
         - host: "1.2.3.4"
           port: 50000
 - name: "sixth-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 10080
   routes:
   - name: "sixth-route"

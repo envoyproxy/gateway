@@ -350,7 +350,7 @@
                   "localityWeightedLbConfig": {}
                 },
                 "connectTimeout": "10s",
-                "dnsLookupFamily": "V4_ONLY",
+                "dnsLookupFamily": "V4_PREFERRED",
                 "edsClusterConfig": {
                   "edsConfig": {
                     "ads": {},
@@ -380,7 +380,7 @@
                   "localityWeightedLbConfig": {}
                 },
                 "connectTimeout": "10s",
-                "dnsLookupFamily": "V4_ONLY",
+                "dnsLookupFamily": "V4_PREFERRED",
                 "dnsRefreshRate": "30s",
                 "lbPolicy": "LEAST_REQUEST",
                 "loadAssignment": {
@@ -460,7 +460,8 @@
                   ],
                   "address": {
                     "socketAddress": {
-                      "address": "0.0.0.0",
+                      "address": "::",
+                      "ipv4Compat": true,
                       "portValue": 10080
                     }
                   },
