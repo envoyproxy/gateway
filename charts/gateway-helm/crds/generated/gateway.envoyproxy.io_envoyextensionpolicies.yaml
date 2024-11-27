@@ -940,9 +940,12 @@ spec:
                           properties:
                             attributes:
                               description: |-
-                                Defines which attributes are sent to the external processor
+                                Defines which attributes are sent to the external processor. Envoy Gateway currently
+                                supports only the following attribute prefixes: connection, source, destination,
+                                request, response, upstream and xds.route.
                                 https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/advanced/attributes
                               items:
+                                pattern: ^(connection\.|source\.|destination\.|request\.|response\.|upstream\.|xds\.route_)[a-z_1-9]*$
                                 type: string
                               type: array
                             body:
@@ -960,9 +963,12 @@ spec:
                           properties:
                             attributes:
                               description: |-
-                                Defines which attributes are sent to the external processor
+                                Defines which attributes are sent to the external processor. Envoy Gateway currently
+                                supports only the following attribute prefixes: connection, source, destination,
+                                request, response, upstream and xds.route.
                                 https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/advanced/attributes
                               items:
+                                pattern: ^(connection\.|source\.|destination\.|request\.|response\.|upstream\.|xds\.route_)[a-z_1-9]*$
                                 type: string
                               type: array
                             body:

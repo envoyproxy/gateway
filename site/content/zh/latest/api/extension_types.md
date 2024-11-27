@@ -1502,8 +1502,6 @@ _Appears in:_
 | `metadataOptions` | _[ExtProcMetadataOptions](#extprocmetadataoptions)_ |  false  | MetadataOptions defines options related to the sending and receiving of dynamic metadata.<br />These options define which metadata namespaces would be sent to the processor and which dynamic metadata<br />namespaces the processor would be permitted to emit metadata to.<br />Users can specify custom namespaces or well-known envoy metadata namespace (such as envoy.filters.http.ext_authz)<br />documented here: https://www.envoyproxy.io/docs/envoy/latest/configuration/advanced/well_known_dynamic_metadata#well-known-dynamic-metadata<br />Default: no metadata context is sent or received from the external processor |
 
 
-
-
 #### ExtProcBodyProcessingMode
 
 _Underlying type:_ _string_
@@ -2987,7 +2985,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `body` | _[ExtProcBodyProcessingMode](#extprocbodyprocessingmode)_ |  false  | Defines body processing mode |
-| `attributes` | _string array_ |  false  | Defines which attributes are sent to the external processor<br />https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/advanced/attributes |
+| `attributes` | _string array_ |  false  | Defines which attributes are sent to the external processor. Envoy Gateway currently<br />supports only the following attribute prefixes: connection, source, destination,<br />request, response, upstream and xds.route.<br />https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/advanced/attributes |
 
 
 #### ProviderType

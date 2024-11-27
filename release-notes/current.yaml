@@ -15,9 +15,7 @@ security updates: |
 # New features or capabilities added in this release.
 new features: |
   Added support for trusted CIDRs in the ClientIPDetectionSettings API
-  Added support for forwarding attributes to external processor in EnvoyExtensionPolicy API
-  Added support for forwarding dynamic metadata to external processor in EnvoyExtensionPolicy API
-  Added support for receiving dynamic metadata from external processor in EnvoyExtensionPolicy API
+  Added support for sending attributes to external processor in EnvoyExtensionPolicy API
 
 # Fixes for bugs identified in previous versions.
 bug fixes: |
