@@ -23,6 +23,7 @@ This page contains a list of organizations who are users of Envoy Gateway, follo
 If you would like to be included in this table, please submit a PR to this file or comment to [this issue](https://github.com/envoyproxy/gateway/issues/2781) and your information will be added.
 
 ## AllFactors
+
 * Website https://allfactors.com
 * Category: End User
 * Environments:
@@ -33,6 +34,7 @@ If you would like to be included in this table, please submit a PR to this file 
 * Logo: https://allfactors.com/AllFactors-Logo.svg
 
 ## Tetrate
+
 * Website: https://www.tetrate.io
 * Category: Service Provider
 * Environments: AWS
@@ -43,6 +45,7 @@ If you would like to be included in this table, please submit a PR to this file 
 * (Option) Description:
 
 ## Airspace Link
+
 * Organizatioin: Airspace Link
 * Website: https://airspacelink.com/
 * Category: End User
@@ -51,3 +54,13 @@ If you would like to be included in this table, please submit a PR to this file 
     - Airspace Link is using Envoy Gateway to route all public APIs to Kubernetes clusters, developers are manipulating routes descriptions using agnostic manifest files, which are then automatically provisioned using Envoy Gateway.
 * Status: production
 * Logo: https://airhub.airspacelink.com/images/asl-flat-logo.png
+
+## Tencent Cloud
+
+* Organizatioin: Tencent Cloud
+* Website: https://www.tencentcloud.com
+* Category: Service Provider
+* Environments: Tencent Kubernetes Engine (TKE)
+* Use Cases:
+    - Tencent Cloud is using Envoy Gateway as a Kubernetes Cluster Network Addon to manage dynamic routing in the Tencent Kubernetes Engine.
+* Status: production

@@ -15,3 +15,7 @@ adopters:
     logo: "/logos/teleport.svg"
     url: "https://goteleport.com/"
     description: "Teleport is using Envoy Gateway to manage dynamic routing for all traffic to the Teleport Cloud Platform."
+  - name: "Tencent Cloud"
+    logo: "/logos/tencent-cloud.png"
+    url: "https://www.tencentcloud.com"
+    description: "Tencent Cloud is using Envoy Gateway as a Kubernetes Cluster Network Addon to manage dynamic routing in the Tencent Kubernetes Engine."
