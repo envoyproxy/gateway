@@ -540,6 +540,16 @@ func parseCIDR(cidr string) (*ir.CIDRMatch, error) {
 	}, nil
 }
 
+func irConfigNameWithEnvoyProxy(policy client.Object, ep *egv1a1.EnvoyProxy) string {
+	name := irConfigName(policy)
+	// If a config is associated with a cluster, the cluster settings are unique per EnvoyProxy,
+	// so include the EnvoyProxy name in the config name to avoid overwriting
+	if ep != nil {
+		name = fmt.Sprintf("%s/%s", name, utils.NamespacedName(ep).String())
+	}
+	return name
+}
+
 func irConfigName(policy client.Object) string {
 	return fmt.Sprintf(
 		"%s/%s",

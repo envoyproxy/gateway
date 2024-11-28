@@ -410,8 +410,7 @@ func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resource
 	}
 
 	for idx, ep := range policy.Spec.ExtProc {
-		name := irConfigNameForExtProc(policy, idx)
-		extProcIR, err := t.buildExtProc(name, policy, ep, idx, resources, envoyProxy)
+		extProcIR, err := t.buildExtProc(policy, ep, idx, resources, envoyProxy)
 		if err != nil {
 			return nil, err
 		}
@@ -421,7 +420,6 @@ func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resource
 }
 
 func (t *Translator) buildExtProc(
-	name string,
 	policy *egv1a1.EnvoyExtensionPolicy,
 	extProc egv1a1.ExtProc,
 	extProcIdx int,
@@ -457,7 +455,7 @@ func (t *Translator) buildExtProc(
 	}
 
 	extProcIR := &ir.ExtProc{
-		Name:        name,
+		Name:        irConfigNameForExtProc(policy, extProcIdx, envoyProxy),
 		Destination: *rd,
 		Traffic:     traffic,
 		Authority:   authority,
@@ -494,11 +492,15 @@ func (t *Translator) buildExtProc(
 	return extProcIR, err
 }
 
-func irConfigNameForExtProc(policy *egv1a1.EnvoyExtensionPolicy, index int) string {
-	return fmt.Sprintf(
+func irConfigNameForExtProc(policy *egv1a1.EnvoyExtensionPolicy, index int, ep *egv1a1.EnvoyProxy) string {
+	name := fmt.Sprintf(
 		"%s/extproc/%s",
 		irConfigName(policy),
 		strconv.Itoa(index))
+	if ep != nil {
+		name = fmt.Sprintf("%s/%s", name, utils.NamespacedName(ep).String())
+	}
+	return name
 }
 
 func (t *Translator) buildWasms(

@@ -26,6 +26,11 @@ gateways:
     namespace: envoy-gateway
   spec:
     gatewayClassName: envoy-gateway-class
+    infrastructure:
+      parametersRef:
+        group: gateway.envoyproxy.io
+        kind: EnvoyProxy
+        name: test
     listeners:
     - allowedRoutes:
         namespaces:
@@ -100,6 +105,17 @@ httpRoutes:
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
+      config:
+        apiVersion: gateway.envoyproxy.io/v1alpha1
+        kind: EnvoyProxy
+        metadata:
+          creationTimestamp: null
+          name: test
+          namespace: envoy-gateway
+        spec:
+          logging: {}
+          routingType: Endpoint
+        status: {}
       listeners:
       - address: null
         name: envoy-gateway/gateway-1/http
@@ -224,11 +240,11 @@ xdsIR:
             forwardAccessToken: true
             hmacSecret: '[redacted]'
             logoutPath: /bar/logout
-            name: securitypolicy/envoy-gateway/policy-for-gateway
+            name: securitypolicy/envoy-gateway/policy-for-gateway/envoy-gateway/test
             provider:
               authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
               destination:
-                name: securitypolicy/envoy-gateway/policy-for-gateway/oidc/0
+                name: securitypolicy/envoy-gateway/policy-for-gateway/oidc/0/envoy-gateway/test
                 settings:
                 - addressType: FQDN
                   endpoints:

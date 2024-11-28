@@ -67,7 +67,8 @@ func (t *Translator) translateExtServiceBackendRefs(
 	}
 
 	rs = &ir.RouteDestination{
-		Name:     irIndexedExtServiceDestinationName(pnn, policy.GetObjectKind().GroupVersionKind().Kind, configType, index),
+		Name: irIndexedExtServiceDestinationName(
+			pnn, policy.GetObjectKind().GroupVersionKind().Kind, configType, index, envoyProxy),
 		Settings: ds,
 	}
 	return rs, nil
@@ -140,12 +141,24 @@ func (t *Translator) processExtServiceDestination(
 	return ds, nil
 }
 
-func irIndexedExtServiceDestinationName(policyNamespacedName types.NamespacedName, policyKind string, configType string, idx int) string {
-	return strings.ToLower(fmt.Sprintf(
+func irIndexedExtServiceDestinationName(
+	policyNamespacedName types.NamespacedName,
+	policyKind string, configType string,
+	idx int,
+	ep *egv1a1.EnvoyProxy,
+) string {
+	name := strings.ToLower(fmt.Sprintf(
 		"%s/%s/%s/%s/%d",
 		policyKind,
 		policyNamespacedName.Namespace,
 		policyNamespacedName.Name,
 		configType,
 		idx))
+
+	// If the EnvoyProxy is set, append the EnvoyProxy name to the destination name because the generated destination
+	// setting is specific to the EnvoyProxy, such as the TLS settings and route type.
+	if ep != nil {
+		name = strings.ToLower(fmt.Sprintf("%s/%s", name, utils.NamespacedName(ep).String()))
+	}
+	return name
 }

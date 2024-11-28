@@ -178,6 +178,11 @@ gateways:
     namespace: default
   spec:
     gatewayClassName: envoy-gateway-class
+    infrastructure:
+      parametersRef:
+        group: gateway.envoyproxy.io
+        kind: EnvoyProxy
+        name: test
     listeners:
     - allowedRoutes:
         namespaces:
@@ -290,6 +295,17 @@ httpRoutes:
 infraIR:
   default/gateway-1:
     proxy:
+      config:
+        apiVersion: gateway.envoyproxy.io/v1alpha1
+        kind: EnvoyProxy
+        metadata:
+          creationTimestamp: null
+          name: test
+          namespace: default
+        spec:
+          logging: {}
+          routingType: Endpoint
+        status: {}
       listeners:
       - address: null
         name: default/gateway-1/http
@@ -337,7 +353,7 @@ xdsIR:
           extProcs:
           - authority: grpc-backend.envoy-gateway:8000
             destination:
-              name: envoyextensionpolicy/default/policy-for-http-route/extproc/0
+              name: envoyextensionpolicy/default/policy-for-http-route/extproc/0/default/test
               settings:
               - addressType: IP
                 protocol: GRPC
@@ -372,7 +388,7 @@ xdsIR:
                     name: policy-btls-backend-ip/envoy-gateway-ca
                   sni: ip-backend
                 weight: 1
-            name: envoyextensionpolicy/default/policy-for-http-route/extproc/0
+            name: envoyextensionpolicy/default/policy-for-http-route/extproc/0/default/test
             traffic:
               backendConnection:
                 bufferLimit: 20971520

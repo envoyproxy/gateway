@@ -644,7 +644,7 @@ func (t *Translator) buildOIDC(
 	}
 
 	return &ir.OIDC{
-		Name:                   irConfigName(policy),
+		Name:                   irConfigNameWithEnvoyProxy(policy, envoyProxy),
 		Provider:               *provider,
 		ClientID:               oidc.ClientID,
 		ClientSecret:           clientSecretBytes,
@@ -913,7 +913,7 @@ func (t *Translator) buildExtAuth(
 		return nil, err
 	}
 	extAuth := &ir.ExtAuth{
-		Name:             irConfigName(policy),
+		Name:             irConfigNameWithEnvoyProxy(policy, envoyProxy),
 		HeadersToExtAuth: policy.Spec.ExtAuth.HeadersToExtAuth,
 		FailOpen:         policy.Spec.ExtAuth.FailOpen,
 		Traffic:          traffic,
