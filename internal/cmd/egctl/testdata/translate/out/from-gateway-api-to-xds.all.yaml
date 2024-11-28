@@ -137,7 +137,8 @@ xds:
           listeners:
           - address:
               socketAddress:
-                address: 0.0.0.0
+                address: '::'
+                ipv4Compat: true
                 portValue: 19001
             filterChains:
             - filters:
@@ -168,7 +169,7 @@ xds:
                         route:
                           cluster: prometheus_stats
                   statPrefix: eg-ready-http
-            name: envoy-gateway-proxy-ready-0.0.0.0-19001
+            name: envoy-gateway-proxy-ready-::-19001
     - '@type': type.googleapis.com/envoy.admin.v3.EndpointsConfigDump
       dynamicEndpointConfigs:
       - endpointConfig:
@@ -251,6 +252,7 @@ xds:
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
+          dnsLookupFamily: V4_PREFERRED
           edsClusterConfig:
             edsConfig:
               ads: {}
@@ -270,6 +272,7 @@ xds:
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
+          dnsLookupFamily: V4_PREFERRED
           edsClusterConfig:
             edsConfig:
               ads: {}
@@ -296,6 +299,7 @@ xds:
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
+          dnsLookupFamily: V4_PREFERRED
           edsClusterConfig:
             edsConfig:
               ads: {}
@@ -315,6 +319,7 @@ xds:
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
+          dnsLookupFamily: V4_PREFERRED
           edsClusterConfig:
             edsConfig:
               ads: {}
@@ -334,6 +339,7 @@ xds:
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
+          dnsLookupFamily: V4_PREFERRED
           edsClusterConfig:
             edsConfig:
               ads: {}
