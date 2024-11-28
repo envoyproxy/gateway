@@ -188,7 +188,9 @@ func (u *UpdateWriter) Send(update Update) {
 			u.eventsBeforeEnabled <- update
 		} else {
 			// If the buffer is full, drop the event to avoid blocking the sender.
-			u.log.Error(errors.New("dropping status update, buffer full"), "event", update.NamespacedName)
+			u.log.Error(errors.New("dropping status update, buffer full"), "event",
+				"name", update.NamespacedName.Name,
+				"namespace", update.NamespacedName.Namespace)
 		}
 	}
 }
