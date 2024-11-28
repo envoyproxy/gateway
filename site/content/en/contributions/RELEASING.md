@@ -52,7 +52,8 @@ export GITHUB_REMOTE=origin
     git push ${GITHUB_REMOTE} release/v${MAJOR_VERSION}.${MINOR_VERSION}
     ```
 
-7. Create a topic branch for updating the Envoy proxy image and Envoy Ratelimit image to the tag supported by the release. Reference [PR #2098][]
+7. Create a topic branch for updating the Envoy proxy image and Envoy Ratelimit image to the tag supported by the release.
+ Please note that the tags should be updated in both the source code and the Helm chart. Reference [PR #2098][]
    for additional details on updating the image tag.
 8. Sign, commit, and push your changes to your fork.
 9. Submit a [Pull Request][] to merge the changes into the `release/v${MAJOR_VERSION}.${MINOR_VERSION}` branch. Do not
@@ -111,19 +112,7 @@ export GITHUB_REMOTE=origin
          make docs-release TAG=v${MAJOR_VERSION}.${MINOR_VERSION}.0
       ```
 
-   1. Update the `Documentation` referred link on the menu in `site/hugo.toml`:
-
-      **DON'T FORGOT TO MOVE IT UNDER `LATEST`**
-
-      ```shell
-      [[menu.main]]
-         name = "Documentation"
-         weight = -101
-         pre = "<i class='fas fa-book pr-2'></i>"
-         url = "/v1.1"
-      ```
-
-   1. Update `site/layouts/shortcodes/helm-version.html` base on latest minor version.
+   1. Update `site/layouts/shortcodes/helm-version.html`, add the latest version of the minor release, and update the short code for `{{- with (strings.HasPrefix $pagePrefix "doc") -}}` to the latest minor version.
 
       ```console
       {{- $pagePrefix := (index (split $.Page.File.Dir "/") 0) -}}
@@ -131,14 +120,17 @@ export GITHUB_REMOTE=origin
       {{- "v0.0.0-latest" -}}
       {{- end -}}
       {{- with (strings.HasPrefix $pagePrefix "v1.1") -}}
-      {{- "v1.1.0" -}}
+      {{- "v1.1.3" -}}
+      {{- end -}}
+      {{- with (strings.HasPrefix $pagePrefix "v1.2") -}}
+      {{- "v1.2.0" -}}
       {{- end -}}
       {{- with (strings.HasPrefix $pagePrefix "doc") -}}
-      {{- "v1.1.0" -}}
+      {{- "v1.2.0" -}}
       {{- end -}}
       ```
 
-   1. Update `site/layouts/shortcodes/yaml-version.html` base on latest minor version.
+   1. Update `site/layouts/shortcodes/yaml-version.html`, add the latest version of the minor release, and update the short code for `{{- with (strings.HasPrefix $pagePrefix "doc") -}}` to the latest minor version.
 
       ```console
       {{- $pagePrefix := (index (split $.Page.File.Dir "/") 0) -}}
@@ -146,13 +138,15 @@ export GITHUB_REMOTE=origin
       {{- "latest" -}}
       {{- end -}}
       {{- with (strings.HasPrefix $pagePrefix "v1.1") -}}
-      {{- "v1.1.0" -}}
+      {{- "v1.1.3" -}}
+      {{- end -}}
+      {{- with (strings.HasPrefix $pagePrefix "v1.2") -}}
+      {{- "v1.2.0" -}}
       {{- end -}}
       {{- with (strings.HasPrefix $pagePrefix "doc") -}}
-      {{- "v1.1.0" -}}
+      {{- "v1.2.0" -}}
       {{- end -}}
       ```
-
 
 3. Sign, commit, and push your changes to your fork.
 4. Submit a [Pull Request][] to merge the changes into the `main` branch. Do not proceed until all your PRs have merged
@@ -161,7 +155,7 @@ export GITHUB_REMOTE=origin
 5. Checkout the release branch.
 
    ```shell
-   git checkout -b release/v${MAJOR_VERSION}.${MINOR_VERSION} $GITHUB_REMOTE/release/v${MAJOR_VERSION}.${MINOR_VERSION}
+   git checkout release/v${MAJOR_VERSION}.${MINOR_VERSION} $GITHUB_REMOTE/release/v${MAJOR_VERSION}.${MINOR_VERSION}
    ```
 
 6. If the tip of the release branch does not match the tip of `main`, perform the following:
@@ -209,12 +203,14 @@ export GITHUB_REMOTE=origin
    # Release Announcement
 
    Check out the [v${MAJOR_VERSION}.${MINOR_VERSION} release announcement]
-   (https://gateway.envoyproxy.io/releases/v${MAJOR_VERSION}.${MINOR_VERSION}.html) to learn more about the release.
+   (https://gateway.envoyproxy.io/news/releases/notes/v${MAJOR_VERSION}.${MINOR_VERSION}.html) to learn more about the release.
    ```
+
+15. Update the `lastVersionTag` in `test/e2e/tests/eg_upgrade.go` to reflect the latest prior release. Refer to [PR #4666] as an example.
 
 If you find any bugs in this process, please create an issue.
 
-## Announce the Release
+### Announce the Release
 
 It's important that the world knows about the release. Use the following steps to announce the release.
 
@@ -236,6 +232,137 @@ It's important that the world knows about the release. Use the following steps t
 
    Link to the GitHub release and release announcement page that highlights the release.
 
+## Patch Release
+
+The following steps should be used for creating a patch release.
+
+### Prerequisites
+
+- Permissions to push to the Envoy Gateway repository.
+- A minor release has already been released. Refer to the [Minor Release](#minor-candidate) section for additional details on releasing a minor release.
+
+Set environment variables for use in subsequent steps:
+
+```shell
+export MAJOR_VERSION=1
+export MINOR_VERSION=2
+export PATCH_VERSION=1
+export GITHUB_REMOTE=origin
+```
+
+1. Clone the repo, checkout the `main` branch, ensure it’s up-to-date, and your local branch is clean.
+2. Create a topic branch for adding the release notes.
+
+   1. Create the release notes. The release note should only include the changes since the last minor or patch release.
+   1. Create a release announcement. Refer to [PR #635] as an example release announcement.
+   1. Update `site/layouts/shortcodes/helm-version.html`, update the short code for `{{- with (strings.HasPrefix $pagePrefix "doc") -}}` to the latest patch version. For example:
+
+      ```console
+      {{- $pagePrefix := (index (split $.Page.File.Dir "/") 0) -}}
+      {{- with (eq $pagePrefix "latest") -}}
+      {{- "v0.0.0-latest" -}}
+      {{- end -}}
+      {{- with (strings.HasPrefix $pagePrefix "v1.1") -}}
+      {{- "v1.1.3" -}}
+      {{- end -}}
+      {{- with (strings.HasPrefix $pagePrefix "v1.2") -}}
+      {{- "v1.2.1" -}}
+      {{- end -}}
+      {{- with (strings.HasPrefix $pagePrefix "doc") -}}
+      {{- "v1.2.1" -}}
+      {{- end -}}
+      ```
+
+   1. Update `site/layouts/shortcodes/yaml-version.html`, update the short code for `{{- with (strings.HasPrefix $pagePrefix "doc") -}}` to the latest patch version. For example:
+
+      ```console
+      {{- $pagePrefix := (index (split $.Page.File.Dir "/") 0) -}}
+      {{- with (eq $pagePrefix "latest") -}}
+      {{- "latest" -}}
+      {{- end -}}
+      {{- with (strings.HasPrefix $pagePrefix "v1.1") -}}
+      {{- "v1.1.3" -}}
+      {{- end -}}
+      {{- with (strings.HasPrefix $pagePrefix "v1.2") -}}
+      {{- "v1.2.1" -}}
+      {{- end -}}
+      {{- with (strings.HasPrefix $pagePrefix "doc") -}}
+      {{- "v1.2.1" -}}
+      {{- end -}}
+      ```
+
+3. Sign, commit, and push your changes to your fork.
+4. Submit a [Pull Request][] to merge the changes into the `main` branch. Do not proceed until all your PRs have merged
+   and the [Build and Test][] has completed for your final PR.
+
+5. Checkout the release branch.
+
+   ```shell
+   git checkout release/v${MAJOR_VERSION}.${MINOR_VERSION} $GITHUB_REMOTE/release/v${MAJOR_VERSION}.${MINOR_VERSION}
+   ```
+
+6. Cherry-pick the release note and release announcement that you created in the previous step to the release branch. The release note will be included in the release artifacts.
+   1. Create a topic branch from the release branch.
+   2. Cherry-pick the release note and release announcement commit from `main` to the topic branch.
+   3. Submit a PR to merge the topic from of your fork into the release branch.
+
+7. Cherry-pick the commits that you want to include in the patch release.
+   1. Create a topic branch from the release branch.
+   2. Cherry-pick the commits from `main` that you want to include in the patch release.
+   3. Run tests locally, e.g. `make lint`.
+   4. Sign, commit, and push your topic branch to your Envoy Gateway fork.
+   5. Submit a PR to merge the topic from of your fork into the release branch.
+   6. Do not proceed until the PR has merged and CI passes for the merged PR.
+   7. If you are still on your topic branch, change to the release branch:
+
+      ```shell
+      git checkout release/v${MAJOR_VERSION}.${MINOR_VERSION}
+      ```
+
+   8. Ensure your local release branch is up-to-date:
+
+      ```shell
+      git pull $GITHUB_REMOTE release/v${MAJOR_VERSION}.${MINOR_VERSION}
+      ```
+
+7. Tag the head of your release branch with the release tag. For example:
+
+    ```shell
+    git tag -a v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION} -m 'Envoy Gateway v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION} Release'
+    ```
+
+8. Push the tag to the Envoy Gateway repository.
+
+     ```shell
+     git push origin v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION
+     ```
+
+9.  This will trigger the [release GitHub action][] that generates the release, release artifacts, etc.
+10. Confirm that the [release workflow][] completed successfully.
+11. Confirm that the Envoy Gateway [image][] with the correct release tag was published to Docker Hub.
+12. Confirm that the [release][] was created.
+13. Confirm that the steps in the [Quickstart][] work as expected.
+14. [Generate][] the GitHub changelog and include the following text at the beginning of the release page:
+
+   ```console
+   # Release Announcement
+
+   Check out the [v${MAJOR_VERSION}.${MINOR_VERSION}.${MINOR_VERSION}  release announcement]
+   (https://gateway.envoyproxy.io/news/releases/notes/v${MAJOR_VERSION}.${MINOR_VERSION}.${MINOR_VERSION}.html) to learn more about the release.
+   ```
+
+15. If this patch release is the latest release, update the `lastVersionTag` in `test/e2e/tests/eg_upgrade.go` to reflect the latest prior release. Refer to [PR #4666] as an example.
+
+### Announce the Release
+
+It's important that the world knows about the release. Use the following steps to announce the release.
+
+1. Set the release information in the Envoy Gateway Slack channel. For example:
+
+   ```shell
+   Envoy Gateway v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION} has been released: https://github.com/envoyproxy/gateway/releases/tag/v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}
+   ```
+
 [release notes]: https://github.com/envoyproxy/gateway/tree/main/release-notes
 [Pull Request]: https://github.com/envoyproxy/gateway/pulls
 [Quickstart]: https://github.com/envoyproxy/gateway/blob/main/docs/user/quickstart.md
@@ -248,4 +375,5 @@ It's important that the world knows about the release. Use the following steps t
 [PR #635]: https://github.com/envoyproxy/gateway/pull/635
 [PR #2098]: https://github.com/envoyproxy/gateway/pull/2098
 [PR #1002]: https://github.com/envoyproxy/gateway/pull/1002
+[PR #4666]: https://github.com/envoyproxy/gateway/pull/4666
 [VERSION]: https://github.com/envoyproxy/gateway/blob/main/VERSION
