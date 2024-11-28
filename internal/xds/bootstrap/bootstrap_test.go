@@ -161,6 +161,12 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 				SdsConfig:        sds,
 			},
 		},
+		{
+			name: "ipv6",
+			opts: &RenderBootstrapConfigOptions{
+				IPFamily: ptr.To(egv1a1.IPv6),
+			},
+		},
 	}
 
 	for _, tc := range cases {
