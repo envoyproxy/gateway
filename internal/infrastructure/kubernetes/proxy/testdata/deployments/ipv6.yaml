@@ -24,6 +24,10 @@ spec:
     type: RollingUpdate
   template:
     metadata:
+      annotations:
+        prometheus.io/path: /stats/prometheus
+        prometheus.io/port: "19001"
+        prometheus.io/scrape: "true"
       creationTimestamp: null
       labels:
         app.kubernetes.io/component: proxy
@@ -46,7 +50,7 @@ spec:
                 path: /dev/null
             address:
               socket_address:
-                address: 127.0.0.1
+                address: ::1
                 port_value: 19000
           layered_runtime:
             layers:
@@ -86,6 +90,15 @@ spec:
                     stat_prefix: eg-ready-http
                     route_config:
                       name: local_route
+                      virtual_hosts:
+                      - name: prometheus_stats
+                        domains:
+                        - "*"
+                        routes:
+                        - match:
+                            prefix: /stats/prometheus
+                          route:
+                            cluster: prometheus_stats
                     http_filters:
                     - name: envoy.filters.http.health_check
                       typed_config:
@@ -99,6 +112,19 @@ spec:
                       typed_config:
                         "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
             clusters:
+            - name: prometheus_stats
+              connect_timeout: 0.250s
+              type: STATIC
+              lb_policy: ROUND_ROBIN
+              load_assignment:
+                cluster_name: prometheus_stats
+                endpoints:
+                - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: ::1
+                          port_value: 19000
             - connect_timeout: 10s
               load_assignment:
                 cluster_name: xds_cluster
@@ -211,6 +237,10 @@ spec:
               port: 19002
               scheme: HTTP
         name: envoy
+        ports:
+        - containerPort: 19001
+          name: metrics
+          protocol: TCP
         readinessProbe:
           failureThreshold: 1
           httpGet:
