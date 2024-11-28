@@ -136,7 +136,8 @@ xds:
         listeners:
         - address:
             socketAddress:
-              address: 0.0.0.0
+              address: '::'
+              ipv4Compat: true
               portValue: 19001
           filterChains:
           - filters:
@@ -167,4 +168,4 @@ xds:
                       route:
                         cluster: prometheus_stats
                 statPrefix: eg-ready-http
-          name: envoy-gateway-proxy-ready-0.0.0.0-19001
+          name: envoy-gateway-proxy-ready-::-19001
