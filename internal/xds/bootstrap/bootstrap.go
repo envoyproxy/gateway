@@ -41,7 +41,7 @@ const (
 	// DefaultWasmServerPort is the default listening port of the wasm HTTP server.
 	wasmServerPort = 18002
 
-	envoyReadinessAddress = "0.0.0.0"
+	envoyReadinessAddress = "::"
 	EnvoyReadinessPort    = 19001
 	EnvoyReadinessPath    = "/ready"
 
