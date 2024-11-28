@@ -17,7 +17,7 @@ new features: |
 
 # Fixes for bugs identified in previous versions.
 bug fixes: |
-  Fixed two many requests sent to the JWKs endpoint when retry policy is enabled for the JWT provider.
+  Disabled the retry policy for the JWT provider to reduce requests sent to the JWKS endpoint. Failed async fetches will retry every 1s.
 
 # Enhancements that improve performance.
 performance improvements: |
