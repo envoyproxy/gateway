@@ -22,11 +22,21 @@ const (
 )
 
 // ProcessingModeOptions defines if headers or body should be processed by the external service
+// and which attributes are sent to the processor
 type ProcessingModeOptions struct {
 	// Defines body processing mode
 	//
 	// +optional
 	Body *ExtProcBodyProcessingMode `json:"body,omitempty"`
+
+	// Defines which attributes are sent to the external processor. Envoy Gateway currently
+	// supports only the following attribute prefixes: connection, source, destination,
+	// request, response, upstream and xds.route.
+	// https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/advanced/attributes
+	//
+	// +optional
+	// +kubebuilder:validation:items:Pattern=`^(connection\.|source\.|destination\.|request\.|response\.|upstream\.|xds\.route_)[a-z_1-9]*$`
+	Attributes []string `json:"attributes,omitempty"`
 }
 
 // ExtProcProcessingMode defines if and how headers and bodies are sent to the service.
