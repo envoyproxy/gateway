@@ -134,7 +134,8 @@ static_resources:
   listeners:
   - address:
       socket_address:
-        address: 0.0.0.0
+        address: '::'
+        ipv4_compat: true
         port_value: 19001
         protocol: TCP
     filter_chains:
@@ -166,4 +167,4 @@ static_resources:
                 route:
                   cluster: prometheus_stats
           stat_prefix: eg-ready-http
-    name: envoy-gateway-proxy-ready-0.0.0.0-19001
+    name: envoy-gateway-proxy-ready-::-19001
