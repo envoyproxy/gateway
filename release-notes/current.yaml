@@ -17,7 +17,7 @@ new features: |
 
 # Fixes for bugs identified in previous versions.
 bug fixes: |
-  Add a bug fix here
+  Fixed two many requests sent to the JWKs endpoint when retry policy is enabled for the JWT provider.
 
 # Enhancements that improve performance.
 performance improvements: |
