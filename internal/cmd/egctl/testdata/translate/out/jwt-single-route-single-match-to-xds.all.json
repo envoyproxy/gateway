@@ -17,7 +17,8 @@
               ],
               "address": {
                 "socketAddress": {
-                  "address": "127.0.0.1",
+                  "address": "::1",
+                  "ipv4Compat": true,
                   "portValue": 19000
                 }
               }
@@ -81,7 +82,7 @@
                             "endpoint": {
                               "address": {
                                 "socketAddress": {
-                                  "address": "127.0.0.1",
+                                  "address": "::1",
                                   "portValue": 19000
                                 }
                               }

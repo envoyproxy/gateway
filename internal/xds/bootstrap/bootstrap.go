@@ -28,7 +28,7 @@ const (
 	// It defaults to the Envoy Gateway Kubernetes service.
 	envoyGatewayXdsServerHost = "envoy-gateway"
 	// EnvoyAdminAddress is the listening address of the envoy admin interface.
-	EnvoyAdminAddress = "127.0.0.1"
+	EnvoyAdminAddress = "::1"
 	// EnvoyAdminPort is the port used to expose admin interface.
 	EnvoyAdminPort = 19000
 	// envoyAdminAccessLogPath is the path used to expose admin access log.

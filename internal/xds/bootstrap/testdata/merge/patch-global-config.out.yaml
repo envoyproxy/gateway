@@ -6,7 +6,8 @@ admin:
       path: /dev/null
   address:
     socket_address:
-      address: 127.0.0.1
+      address: ::1
+      ipv4_compat: true
       port_value: 19000
 dynamic_resources:
   ads_config:
@@ -48,7 +49,7 @@ static_resources:
         - endpoint:
             address:
               socket_address:
-                address: 127.0.0.1
+                address: ::1
                 port_value: 19000
     name: prometheus_stats
     type: STATIC
