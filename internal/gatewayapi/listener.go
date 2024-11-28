@@ -118,16 +118,13 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 						Address:  address,
 						Port:     uint32(containerPort),
 						Metadata: buildListenerMetadata(listener, gateway),
-						IPFamily: getIPFamily(gateway.envoyProxy),
+						IPFamily: getEnvoyIPFamily(gateway.envoyProxy),
 					},
 					TLS: irTLSConfigs(listener.tlsSecrets...),
 					Path: ir.PathSettings{
 						MergeSlashes:         true,
 						EscapedSlashesAction: ir.UnescapeAndRedirect,
 					},
-				}
-				if ipFamily := getIPFamily(gateway.envoyProxy); ipFamily != nil {
-					irListener.CoreListenerDetails.IPFamily = ipFamily
 				}
 				if listener.Hostname != nil {
 					irListener.Hostnames = append(irListener.Hostnames, string(*listener.Hostname))
@@ -144,7 +141,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 						Name:     irListenerName(listener),
 						Address:  address,
 						Port:     uint32(containerPort),
-						IPFamily: getIPFamily(gateway.envoyProxy),
+						IPFamily: getEnvoyIPFamily(gateway.envoyProxy),
 					},
 
 					// Gateway is processed firstly, then ClientTrafficPolicy, then xRoute.

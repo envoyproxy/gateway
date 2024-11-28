@@ -610,8 +610,44 @@ func setIfNil[T any](target **T, value *T) {
 	}
 }
 
-// getIPFamily returns the IPFamily configuration from EnvoyProxy
-func getIPFamily(envoyProxy *egv1a1.EnvoyProxy) *ir.IPFamily {
+// getServiceIPFamily returns the IP family configuration from a Kubernetes Service
+// following the dual-stack service configuration scenarios:
+// https://kubernetes.io/docs/concepts/services-networking/dual-stack/#dual-stack-service-configuration-scenarios
+//
+// The IP family is determined in the following order:
+// 1. Service.Spec.IPFamilyPolicy == RequireDualStack -> DualStack
+// 2. Service.Spec.IPFamilies length > 1 -> DualStack
+// 3. Service.Spec.IPFamilies[0] -> IPv4 or IPv6
+// 4. nil if not specified
+func getServiceIPFamily(service *corev1.Service) *ir.IPFamily {
+	if service == nil {
+		return nil
+	}
+
+	// If ipFamilyPolicy is RequireDualStack, return DualStack
+	if service.Spec.IPFamilyPolicy != nil &&
+		*service.Spec.IPFamilyPolicy == corev1.IPFamilyPolicyRequireDualStack {
+		return ptr.To(ir.DualStack)
+	}
+
+	// Check ipFamilies array
+	if len(service.Spec.IPFamilies) > 0 {
+		if len(service.Spec.IPFamilies) > 1 {
+			return ptr.To(ir.DualStack)
+		}
+		switch service.Spec.IPFamilies[0] {
+		case corev1.IPv4Protocol:
+			return ptr.To(ir.IPv4)
+		case corev1.IPv6Protocol:
+			return ptr.To(ir.IPv6)
+		}
+	}
+
+	return nil
+}
+
+// getEnvoyIPFamily returns the IPFamily configuration from EnvoyProxy
+func getEnvoyIPFamily(envoyProxy *egv1a1.EnvoyProxy) *ir.IPFamily {
 	if envoyProxy == nil || envoyProxy.Spec.IPFamily == nil {
 		return nil
 	}
@@ -622,7 +658,7 @@ func getIPFamily(envoyProxy *egv1a1.EnvoyProxy) *ir.IPFamily {
 	case egv1a1.IPv6:
 		return ptr.To(ir.IPv6)
 	case egv1a1.DualStack:
-		return ptr.To(ir.Dualstack)
+		return ptr.To(ir.DualStack)
 	default:
 		return nil
 	}

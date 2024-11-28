@@ -1232,6 +1232,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 		addrType  *ir.DestinationAddressType
 	)
 	protocol := inspectAppProtocolByRouteKind(routeType)
+
 	switch KindDerefOr(backendRef.Kind, resource.KindService) {
 	case resource.KindServiceImport:
 		serviceImport := resources.GetServiceImport(backendNamespace, string(backendRef.Name))
@@ -1261,12 +1262,10 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 			Protocol:    protocol,
 			Endpoints:   endpoints,
 			AddressType: addrType,
-			IPFamily:    getIPFamily(envoyProxy),
 		}
+
 	case resource.KindService:
 		ds = t.processServiceDestinationSetting(backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
-		ds.IPFamily = getIPFamily(envoyProxy)
-
 		ds.TLS = t.applyBackendTLSSetting(
 			backendRef.BackendObjectReference,
 			backendNamespace,
@@ -1284,7 +1283,6 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 		ds.Filters = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
 	case egv1a1.KindBackend:
 		ds = t.processBackendDestinationSetting(backendRef.BackendObjectReference, backendNamespace, resources)
-		ds.IPFamily = getIPFamily(envoyProxy)
 
 		ds.TLS = t.applyBackendTLSSetting(
 			backendRef.BackendObjectReference,
@@ -1316,6 +1314,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 	}
 
 	ds.Weight = &weight
+	ds.IPFamily = getServiceIPFamily(resources.GetService(backendNamespace, string(backendRef.Name)))
 	return ds
 }
 
@@ -1382,7 +1381,6 @@ func (t *Translator) processServiceDestinationSetting(
 		Protocol:    protocol,
 		Endpoints:   endpoints,
 		AddressType: addrType,
-		IPFamily:    getIPFamily(envoyProxy),
 	}
 }
 

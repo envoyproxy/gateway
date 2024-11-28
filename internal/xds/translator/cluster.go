@@ -90,7 +90,7 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 			dnsLookupFamily = clusterv3.Cluster_V4_ONLY
 		case ir.IPv6:
 			dnsLookupFamily = clusterv3.Cluster_V6_ONLY
-		case ir.Dualstack:
+		case ir.DualStack:
 			dnsLookupFamily = clusterv3.Cluster_ALL
 		}
 	}
