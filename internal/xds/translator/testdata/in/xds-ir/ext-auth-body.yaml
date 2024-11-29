@@ -106,7 +106,10 @@ http:
           extAuth:
             name: securitypolicy/default/policy-for-gateway-1
             failOpen: true
-            bodyToExtAuth: {}
+            bodyToExtAuth:
+              maxRequestBytes: 32768
+              allowPartialMessage: false
+              packAsBytes: true
             http:
               authority: primary.foo.com
               destination:

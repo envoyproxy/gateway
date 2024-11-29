@@ -935,7 +935,11 @@ func (t *Translator) buildExtAuth(
 	}
 
 	if policy.Spec.ExtAuth.BodyToExtAuth != nil {
-		extAuth.BodyToExtAuth = &ir.BodyToExtAuth{}
+		extAuth.BodyToExtAuth = &ir.BodyToExtAuth{
+			MaxRequestBytes:     policy.Spec.ExtAuth.BodyToExtAuth.MaxRequestBytes,
+			AllowPartialMessage: policy.Spec.ExtAuth.BodyToExtAuth.AllowPartialMessage,
+			PackAsBytes:         policy.Spec.ExtAuth.BodyToExtAuth.PackAsBytes,
+		}
 	}
 
 	return extAuth, nil

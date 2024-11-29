@@ -166,6 +166,10 @@ securityPolicies:
     namespace: default
   spec:
     extAuth:
+      bodyToExtAuth:
+        allowPartialMessage: false
+        maxRequestBytes: 0
+        packAsBytes: false
       failOpen: true
       grpc:
         backendRefs:
@@ -179,7 +183,6 @@ securityPolicies:
       headersToExtAuth:
       - header1
       - header2
-      bodyToExtAuth: {}
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -205,7 +208,7 @@ xdsIR:
       text:
       - path: /dev/stdout
     http:
-    - address: 0.0.0.0
+    - address: '::'
       hostnames:
       - '*'
       isHTTP2: false
@@ -242,11 +245,15 @@ xdsIR:
           prefix: /foo1
         security:
           extAuth:
+            bodyToExtAuth:
+              allowPartialMessage: false
+              maxRequestBytes: 0
+              packAsBytes: false
             failOpen: true
             grpc:
               authority: service-2.default:8080
               destination:
-                name: securitypolicy/default/policy-for-http-route-1/0
+                name: securitypolicy/default/policy-for-http-route-1/extauth/0
                 settings:
                 - addressType: IP
                   endpoints:
@@ -263,7 +270,6 @@ xdsIR:
             headersToExtAuth:
             - header1
             - header2
-            bodyToExtAuth: {}
             name: securitypolicy/default/policy-for-http-route-1
       - destination:
           name: httproute/default/httproute-1/rule/1
@@ -287,11 +293,15 @@ xdsIR:
           prefix: /foo2
         security:
           extAuth:
+            bodyToExtAuth:
+              allowPartialMessage: false
+              maxRequestBytes: 0
+              packAsBytes: false
             failOpen: true
             grpc:
               authority: service-2.default:8080
               destination:
-                name: securitypolicy/default/policy-for-http-route-1/0
+                name: securitypolicy/default/policy-for-http-route-1/extauth/0
                 settings:
                 - addressType: IP
                   endpoints:
@@ -308,7 +318,6 @@ xdsIR:
             headersToExtAuth:
             - header1
             - header2
-            bodyToExtAuth: {}
             name: securitypolicy/default/policy-for-http-route-1
       - destination:
           name: httproute/default/httproute-2/rule/0

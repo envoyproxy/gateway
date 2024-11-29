@@ -1,6 +1,7 @@
 - address:
     socketAddress:
       address: 0.0.0.0
+      ipv4Compat: true
       portValue: 10080
   defaultFilterChain:
     filters:
@@ -34,8 +35,6 @@
           name: envoy.filters.http.ext_authz/securitypolicy/default/policy-for-gateway-1
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
-            withRequestBody:
-              maxRequestBytes: 1024
             failureModeAllow: true
             httpService:
               authorizationResponse:
@@ -51,6 +50,9 @@
                 timeout: 10s
                 uri: http://primary.foo.com/auth
             transportApiVersion: V3
+            withRequestBody:
+              maxRequestBytes: 32768
+              packAsBytes: true
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
