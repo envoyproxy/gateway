@@ -28,6 +28,7 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/utils/ptr"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/protocov"
 )
@@ -56,7 +57,7 @@ type xdsClusterArgs struct {
 	backendConnection *ir.BackendConnection
 	dns               *ir.DNS
 	useClientProtocol bool
-	ipFamily          *ir.IPFamily
+	ipFamily          *egv1a1.IPFamily
 }
 
 type EndpointType int
@@ -86,11 +87,11 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 	dnsLookupFamily := clusterv3.Cluster_V4_PREFERRED
 	if args.ipFamily != nil {
 		switch *args.ipFamily {
-		case ir.IPv4:
+		case egv1a1.IPv4:
 			dnsLookupFamily = clusterv3.Cluster_V4_ONLY
-		case ir.IPv6:
+		case egv1a1.IPv6:
 			dnsLookupFamily = clusterv3.Cluster_V6_ONLY
-		case ir.DualStack:
+		case egv1a1.DualStack:
 			dnsLookupFamily = clusterv3.Cluster_ALL
 		}
 	}
@@ -697,7 +698,7 @@ type ExtraArgs struct {
 	metrics       *ir.Metrics
 	http1Settings *ir.HTTP1Settings
 	http2Settings *ir.HTTP2Settings
-	ipFamily      *ir.IPFamily
+	ipFamily      *egv1a1.IPFamily
 }
 
 type clusterArgs interface {

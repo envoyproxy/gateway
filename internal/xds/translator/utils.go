@@ -6,6 +6,12 @@
 package translator
 
 import (
+	"log"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/ir"
+	"k8s.io/utils/ptr"
+
 	"errors"
 	"fmt"
 	"net/netip"
@@ -17,10 +23,7 @@ import (
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	"google.golang.org/protobuf/types/known/anypb"
-	"k8s.io/utils/ptr"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -195,4 +198,39 @@ func addClusterFromURL(url string, tCtx *types.ResourceVersionTable) error {
 	}
 
 	return addXdsCluster(tCtx, clusterArgs)
+}
+
+// determineIPFamily determines the IP family based on multiple destination settings
+func determineIPFamily(settings []*ir.DestinationSetting) *egv1a1.IPFamily {
+	hasIPv4 := false
+	hasIPv6 := false
+	hasDualStack := false
+
+	for _, setting := range settings {
+		if setting.IPFamily == nil {
+			continue
+		}
+
+		switch *setting.IPFamily {
+		case egv1a1.IPv4:
+			hasIPv4 = true
+		case egv1a1.IPv6:
+			hasIPv6 = true
+		case egv1a1.DualStack:
+			hasDualStack = true
+		}
+	}
+
+	if hasDualStack {
+		return ptr.To(egv1a1.DualStack)
+	} else if hasIPv4 && hasIPv6 {
+		return ptr.To(egv1a1.DualStack)
+	} else if hasIPv4 {
+		return ptr.To(egv1a1.IPv4)
+	} else if hasIPv6 {
+		log.Printf("Using IPv6")
+		return ptr.To(egv1a1.IPv6)
+	}
+
+	return nil
 }

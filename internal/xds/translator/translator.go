@@ -464,10 +464,11 @@ func (t *Translator) addRouteToRouteConfig(
 			ea := &ExtraArgs{
 				metrics:       metrics,
 				http1Settings: httpListener.HTTP1,
+				ipFamily:      httpRoute.Destination.Settings[0].IPFamily,
 			}
 
-			if len(httpRoute.Destination.Settings) > 0 {
-				ea.ipFamily = httpRoute.Destination.Settings[0].IPFamily
+			if len(httpRoute.Destination.Settings) > 1 {
+				ea.ipFamily = determineIPFamily(httpRoute.Destination.Settings)
 			}
 
 			if httpRoute.Traffic != nil && httpRoute.Traffic.HTTP2 != nil {

@@ -619,7 +619,7 @@ func setIfNil[T any](target **T, value *T) {
 // 2. Service.Spec.IPFamilies length > 1 -> DualStack
 // 3. Service.Spec.IPFamilies[0] -> IPv4 or IPv6
 // 4. nil if not specified
-func getServiceIPFamily(service *corev1.Service) *ir.IPFamily {
+func getServiceIPFamily(service *corev1.Service) *egv1a1.IPFamily {
 	if service == nil {
 		return nil
 	}
@@ -627,19 +627,19 @@ func getServiceIPFamily(service *corev1.Service) *ir.IPFamily {
 	// If ipFamilyPolicy is RequireDualStack, return DualStack
 	if service.Spec.IPFamilyPolicy != nil &&
 		*service.Spec.IPFamilyPolicy == corev1.IPFamilyPolicyRequireDualStack {
-		return ptr.To(ir.DualStack)
+		return ptr.To(egv1a1.DualStack)
 	}
 
 	// Check ipFamilies array
 	if len(service.Spec.IPFamilies) > 0 {
 		if len(service.Spec.IPFamilies) > 1 {
-			return ptr.To(ir.DualStack)
+			return ptr.To(egv1a1.DualStack)
 		}
 		switch service.Spec.IPFamilies[0] {
 		case corev1.IPv4Protocol:
-			return ptr.To(ir.IPv4)
+			return ptr.To(egv1a1.IPv4)
 		case corev1.IPv6Protocol:
-			return ptr.To(ir.IPv6)
+			return ptr.To(egv1a1.IPv6)
 		}
 	}
 
@@ -647,18 +647,18 @@ func getServiceIPFamily(service *corev1.Service) *ir.IPFamily {
 }
 
 // getEnvoyIPFamily returns the IPFamily configuration from EnvoyProxy
-func getEnvoyIPFamily(envoyProxy *egv1a1.EnvoyProxy) *ir.IPFamily {
+func getEnvoyIPFamily(envoyProxy *egv1a1.EnvoyProxy) *egv1a1.IPFamily {
 	if envoyProxy == nil || envoyProxy.Spec.IPFamily == nil {
 		return nil
 	}
 
 	switch *envoyProxy.Spec.IPFamily {
 	case egv1a1.IPv4:
-		return ptr.To(ir.IPv4)
+		return ptr.To(egv1a1.IPv4)
 	case egv1a1.IPv6:
-		return ptr.To(ir.IPv6)
+		return ptr.To(egv1a1.IPv6)
 	case egv1a1.DualStack:
-		return ptr.To(ir.DualStack)
+		return ptr.To(egv1a1.DualStack)
 	default:
 		return nil
 	}

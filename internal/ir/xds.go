@@ -250,19 +250,12 @@ type CoreListenerDetails struct {
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 	// Metadata is used to enrich envoy resource metadata with user and provider-specific information
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
-	// IPFamily specifies the IP address family for the gateway.
-	// It can be IPv4, IPv6, or DualStack.
+	// IPFamily specifies the IP address family used by the Gateway for its listening ports.
 	IPFamily *IPFamily `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
 }
 
 // IPFamily specifies the IP address family used by the Gateway for its listening ports.
-type IPFamily string
-
-const (
-	IPv4      IPFamily = "IPv4"
-	IPv6      IPFamily = "IPv6"
-	DualStack IPFamily = "DualStack"
-)
+type IPFamily = egv1a1.IPFamily
 
 func (l CoreListenerDetails) GetName() string {
 	return l.Name
@@ -1688,6 +1681,7 @@ func (t TCPListener) Validate() error {
 
 func (t TCPRoute) Validate() error {
 	var errs error
+
 	if t.Name == "" {
 		errs = errors.Join(errs, ErrRouteNameEmpty)
 	}

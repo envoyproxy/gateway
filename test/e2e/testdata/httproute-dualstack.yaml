@@ -95,6 +95,30 @@ spec:
   selector:
     app: infra-backend-v1
 ---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: infra-backend-v1-httproute-all-stacks
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: dualstack-gateway
+  rules:
+    - backendRefs:
+        - name: infra-backend-v1-service-ipv4
+          port: 8080
+          weight: 30
+        - name: infra-backend-v1-service-ipv6
+          port: 8080
+          weight: 30
+        - name: infra-backend-v1-service-dualstack
+          port: 8080
+          weight: 40
+      matches:
+        - path:
+            type: PathPrefix
+            value: /all-stacks
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
@@ -119,3 +143,11 @@ spec:
     - name: http
       port: 80
       protocol: HTTP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: envoy-gateway
+  namespace: gateway-conformance-infra
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller

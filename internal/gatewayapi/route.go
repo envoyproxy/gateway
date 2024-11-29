@@ -1281,6 +1281,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 			envoyProxy,
 		)
 		ds.Filters = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
+		ds.IPFamily = getServiceIPFamily(resources.GetService(backendNamespace, string(backendRef.Name)))
 	case egv1a1.KindBackend:
 		ds = t.processBackendDestinationSetting(backendRef.BackendObjectReference, backendNamespace, resources)
 
@@ -1314,7 +1315,6 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 	}
 
 	ds.Weight = &weight
-	ds.IPFamily = getServiceIPFamily(resources.GetService(backendNamespace, string(backendRef.Name)))
 	return ds
 }
 
