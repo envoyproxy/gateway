@@ -1,0 +1,5 @@
+date: November 30, 2024
+
+bug fixes: |
+  Disabled the retry policy for the JWT provider to reduce requests sent to the JWKS endpoint. Failed async fetches will retry every 1s.
+  Used a waitGroup instead of an enabled channel in the status updater.
