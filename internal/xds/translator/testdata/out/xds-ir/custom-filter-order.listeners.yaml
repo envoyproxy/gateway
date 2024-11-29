@@ -85,7 +85,6 @@
                     cluster: one_example_com_443
                     timeout: 10s
                     uri: https://one.example.com/jwt/public-key/jwks.json
-                  retryPolicy: {}
               httproute/envoy-gateway/httproute-1/rule/0/match/0/www_example_com/example2:
                 audiences:
                 - two.foo.com
@@ -105,7 +104,6 @@
                     cluster: two_example_com_80
                     timeout: 10s
                     uri: http://two.example.com/jwt/public-key/jwks.json
-                  retryPolicy: {}
             requirementMap:
               httproute/envoy-gateway/httproute-1/rule/0/match/0/www_example_com:
                 requiresAny:
