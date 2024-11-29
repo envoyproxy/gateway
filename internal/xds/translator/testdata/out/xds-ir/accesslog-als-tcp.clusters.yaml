@@ -5,6 +5,7 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 15s
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}

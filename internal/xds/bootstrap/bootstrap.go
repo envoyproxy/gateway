@@ -27,8 +27,9 @@ const (
 	// envoyGatewayXdsServerHost is the DNS name of the Xds Server within Envoy Gateway.
 	// It defaults to the Envoy Gateway Kubernetes service.
 	envoyGatewayXdsServerHost = "envoy-gateway"
-	// EnvoyAdminAddress is the listening address of the envoy admin interface.
-	EnvoyAdminAddress = "127.0.0.1"
+	// EnvoyAdminAddress is the listening v4 address of the envoy admin interface.
+	EnvoyAdminAddress   = "127.0.0.1"
+	EnvoyAdminAddressV6 = "::1"
 	// EnvoyAdminPort is the port used to expose admin interface.
 	EnvoyAdminPort = 19000
 	// envoyAdminAccessLogPath is the path used to expose admin access log.
@@ -41,7 +42,7 @@ const (
 	// DefaultWasmServerPort is the default listening port of the wasm HTTP server.
 	wasmServerPort = 18002
 
-	envoyReadinessAddress = "0.0.0.0"
+	envoyReadinessAddress = "::"
 	EnvoyReadinessPort    = 19001
 	EnvoyReadinessPath    = "/ready"
 
@@ -140,6 +141,7 @@ type overloadManagerParameters struct {
 }
 
 type RenderBootstrapConfigOptions struct {
+	IPFamily         *egv1a1.IPFamily
 	ProxyMetrics     *egv1a1.ProxyMetrics
 	SdsConfig        SdsConfigPath
 	XdsServerHost    *string
@@ -299,6 +301,10 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 		}
 		if opts.WasmServerPort != nil {
 			cfg.parameters.WasmServer.Port = *opts.WasmServerPort
+		}
+
+		if opts.IPFamily != nil && *opts.IPFamily == egv1a1.IPv6 {
+			cfg.parameters.AdminServer.Address = EnvoyAdminAddressV6
 		}
 
 		cfg.parameters.OverloadManager.MaxHeapSizeBytes = opts.MaxHeapSizeBytes
