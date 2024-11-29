@@ -6,12 +6,6 @@
 package translator
 
 import (
-	"log"
-
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/ir"
-	"k8s.io/utils/ptr"
-
 	"errors"
 	"fmt"
 	"net/netip"
@@ -23,7 +17,10 @@ import (
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	"google.golang.org/protobuf/types/known/anypb"
+	"k8s.io/utils/ptr"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -221,16 +218,16 @@ func determineIPFamily(settings []*ir.DestinationSetting) *egv1a1.IPFamily {
 		}
 	}
 
-	if hasDualStack {
+	switch {
+	case hasDualStack:
 		return ptr.To(egv1a1.DualStack)
-	} else if hasIPv4 && hasIPv6 {
+	case hasIPv4 && hasIPv6:
 		return ptr.To(egv1a1.DualStack)
-	} else if hasIPv4 {
+	case hasIPv4:
 		return ptr.To(egv1a1.IPv4)
-	} else if hasIPv6 {
-		log.Printf("Using IPv6")
+	case hasIPv6:
 		return ptr.To(egv1a1.IPv6)
+	default:
+		return nil
 	}
-
-	return nil
 }
