@@ -38,7 +38,6 @@
                     cluster: localhost_80
                     timeout: 10s
                     uri: http://localhost/jwt/public-key/jwks.json
-                  retryPolicy: {}
               first-route-www.test.com/example2:
                 audiences:
                 - one.foo.com
@@ -62,7 +61,6 @@
                     cluster: "192_168_1_250_8080"
                     timeout: 10s
                     uri: https://192.168.1.250:8080/jwt/public-key/jwks.json
-                  retryPolicy: {}
               second-route-www.test.com/example:
                 audiences:
                 - foo.com
@@ -82,7 +80,6 @@
                     cluster: localhost_80
                     timeout: 10s
                     uri: http://localhost/jwt/public-key/jwks.json
-                  retryPolicy: {}
               second-route-www.test.com/example2:
                 audiences:
                 - one.foo.com
@@ -100,7 +97,6 @@
                     cluster: "192_168_1_250_8080"
                     timeout: 10s
                     uri: https://192.168.1.250:8080/jwt/public-key/jwks.json
-                  retryPolicy: {}
             requirementMap:
               first-route-www.test.com:
                 requiresAny:
