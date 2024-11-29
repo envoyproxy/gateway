@@ -101,8 +101,11 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 				continue
 			}
 
-			// EG always use `::` and set ipv4_compact with true to support both IPv4 and IPv6
-			address := net.IPv6ListenerAddress
+			address := net.IPv4ListenerAddress
+			ipFamily := getIPFamily(gateway.envoyProxy)
+			if ipFamily != nil && (*ipFamily == ir.IPv6 || *ipFamily == ir.DualStack) {
+				address = net.IPv6ListenerAddress
+			}
 
 			// Add the listener to the Xds IR
 			servicePort := &protocolPort{protocol: listener.Protocol, port: int32(listener.Port)}

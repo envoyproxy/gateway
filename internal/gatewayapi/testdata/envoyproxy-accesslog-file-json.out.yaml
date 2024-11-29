@@ -134,7 +134,7 @@ xdsIR:
           protocol: '%PROTOCOL%'
         path: /dev/stdout
     http:
-    - address: '::'
+    - address: 0.0.0.0
       hostnames:
       - '*'
       isHTTP2: false

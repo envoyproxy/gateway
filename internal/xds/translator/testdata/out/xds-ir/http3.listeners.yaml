@@ -1,7 +1,6 @@
 - address:
     socketAddress:
       address: 0.0.0.0
-      ipv4Compat: true
       portValue: 10443
       protocol: UDP
   drainType: MODIFY_ONLY
@@ -57,7 +56,6 @@
 - address:
     socketAddress:
       address: 0.0.0.0
-      ipv4Compat: true
       portValue: 10443
   filterChains:
   - filters:
