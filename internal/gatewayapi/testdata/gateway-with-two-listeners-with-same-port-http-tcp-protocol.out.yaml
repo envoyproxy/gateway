@@ -163,7 +163,7 @@ xdsIR:
       text:
       - path: /dev/stdout
     http:
-    - address: '::'
+    - address: 0.0.0.0
       hostnames:
       - '*'
       isHTTP2: false
@@ -199,7 +199,7 @@ xdsIR:
           name: ""
           prefix: /
     tcp:
-    - address: '::'
+    - address: 0.0.0.0
       name: envoy-gateway/gateway-1/tcp
       port: 10080
       routes:

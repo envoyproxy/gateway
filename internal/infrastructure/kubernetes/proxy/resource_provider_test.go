@@ -44,6 +44,26 @@ func newTestInfra() *ir.Infra {
 	return newTestInfraWithAnnotations(nil)
 }
 
+func newTestIPv6Infra() *ir.Infra {
+	i := newTestInfra()
+	i.Proxy.Config = &egv1a1.EnvoyProxy{
+		Spec: egv1a1.EnvoyProxySpec{
+			IPFamily: ptr.To(egv1a1.IPv6),
+		},
+	}
+	return i
+}
+
+func newTestDualStackInfra() *ir.Infra {
+	i := newTestInfra()
+	i.Proxy.Config = &egv1a1.EnvoyProxy{
+		Spec: egv1a1.EnvoyProxySpec{
+			IPFamily: ptr.To(egv1a1.DualStack),
+		},
+	}
+	return i
+}
+
 func newTestInfraWithAnnotations(annotations map[string]string) *ir.Infra {
 	return newTestInfraWithAnnotationsAndLabels(annotations, nil)
 }
@@ -199,6 +219,16 @@ func TestDeployment(t *testing.T) {
 			infra:     newTestInfra(),
 			deploy:    nil,
 			bootstrap: `test bootstrap config`,
+		},
+		{
+			caseName: "ipv6",
+			infra:    newTestIPv6Infra(),
+			deploy:   nil,
+		},
+		{
+			caseName: "dual-stack",
+			infra:    newTestDualStackInfra(),
+			deploy:   nil,
 		},
 		{
 			caseName: "extension-env",
@@ -568,15 +598,6 @@ func TestDeployment(t *testing.T) {
 			dp, err := r.Deployment()
 			require.NoError(t, err)
 
-			expected, err := loadDeployment(tc.caseName)
-			require.NoError(t, err)
-
-			sortEnv := func(env []corev1.EnvVar) {
-				sort.Slice(env, func(i, j int) bool {
-					return env[i].Name > env[j].Name
-				})
-			}
-
 			if *overrideTestData {
 				deploymentYAML, err := yaml.Marshal(dp)
 				require.NoError(t, err)
@@ -586,8 +607,17 @@ func TestDeployment(t *testing.T) {
 				return
 			}
 
+			expected, err := loadDeployment(tc.caseName)
+			require.NoError(t, err)
+
+			sortEnv := func(env []corev1.EnvVar) {
+				sort.Slice(env, func(i, j int) bool {
+					return env[i].Name > env[j].Name
+				})
+			}
 			sortEnv(dp.Spec.Template.Spec.Containers[0].Env)
 			sortEnv(expected.Spec.Template.Spec.Containers[0].Env)
+
 			assert.Equal(t, expected, dp)
 		})
 	}

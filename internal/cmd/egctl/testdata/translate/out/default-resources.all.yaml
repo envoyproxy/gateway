@@ -43,7 +43,7 @@ envoyProxyForGatewayClass:
           - name: envoy-gateway-proxy-ready-0.0.0.0-19001
             address:
               socket_address:
-                address: 0.0.0.0
+                address: '0.0.0.0'
                 port_value: 19001
                 protocol: TCP
             filter_chains:
@@ -891,8 +891,7 @@ xds:
                 path: /dev/stdout
             address:
               socketAddress:
-                address: '::'
-                ipv4Compat: true
+                address: 0.0.0.0
                 portValue: 10080
             defaultFilterChain:
               filters:
@@ -951,8 +950,7 @@ xds:
                 path: /dev/stdout
             address:
               socketAddress:
-                address: '::'
-                ipv4Compat: true
+                address: 0.0.0.0
                 portValue: 8080
             defaultFilterChain:
               filters:
@@ -1019,8 +1017,7 @@ xds:
                 path: /dev/stdout
             address:
               socketAddress:
-                address: '::'
-                ipv4Compat: true
+                address: 0.0.0.0
                 portValue: 1234
             filterChains:
             - filters:
@@ -1059,8 +1056,7 @@ xds:
                 path: /dev/stdout
             address:
               socketAddress:
-                address: '::'
-                ipv4Compat: true
+                address: 0.0.0.0
                 portValue: 8443
             filterChains:
             - filterChainMatch:
@@ -1106,8 +1102,7 @@ xds:
                 path: /dev/stdout
             address:
               socketAddress:
-                address: '::'
-                ipv4Compat: true
+                address: 0.0.0.0
                 portValue: 1234
                 protocol: UDP
             listenerFilters:

@@ -65,9 +65,12 @@ static_resources:
   - name: envoy-gateway-proxy-ready-{{ .ReadyServer.Address }}-{{ .ReadyServer.Port }}
     address:
       socket_address:
-        address: {{ .ReadyServer.Address }}
+        address: '{{ .ReadyServer.Address }}'
         port_value: {{ .ReadyServer.Port }}
         protocol: TCP
+        {{- if eq .IPFamily "DualStack"}}
+        ipv4_compat: true
+        {{- end }}
     filter_chains:
     - filters:
       - name: envoy.filters.network.http_connection_manager
