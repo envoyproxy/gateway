@@ -159,7 +159,7 @@ xdsIR:
       text:
       - path: /dev/stdout
     http:
-    - address: '::'
+    - address: 0.0.0.0
       connection:
         bufferLimit: 50000000
       hostnames:
@@ -175,7 +175,7 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
-    - address: '::'
+    - address: 0.0.0.0
       connection: {}
       hostnames:
       - '*'
