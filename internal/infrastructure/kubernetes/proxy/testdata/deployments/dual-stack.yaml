@@ -1,5 +1,5 @@
 apiVersion: apps/v1
-kind: DaemonSet
+kind: Deployment
 metadata:
   creationTimestamp: null
   labels:
@@ -11,6 +11,8 @@ metadata:
   name: envoy-default-37a8eec1
   namespace: envoy-gateway-system
 spec:
+  progressDeadlineSeconds: 600
+  revisionHistoryLimit: 10
   selector:
     matchLabels:
       app.kubernetes.io/component: proxy
@@ -18,6 +20,8 @@ spec:
       app.kubernetes.io/name: envoy
       gateway.envoyproxy.io/owning-gateway-name: default
       gateway.envoyproxy.io/owning-gateway-namespace: default
+  strategy:
+    type: RollingUpdate
   template:
     metadata:
       annotations:
@@ -71,12 +75,13 @@ spec:
               resource_api_version: V3
           static_resources:
             listeners:
-            - name: envoy-gateway-proxy-ready-0.0.0.0-19001
+            - name: envoy-gateway-proxy-ready-::-19001
               address:
                 socket_address:
-                  address: '0.0.0.0'
+                  address: '::'
                   port_value: 19001
                   protocol: TCP
+                  ipv4_compat: true
               filter_chains:
               - filters:
                 - name: envoy.filters.network.http_connection_manager
@@ -354,9 +359,6 @@ spec:
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
       dnsPolicy: ClusterFirst
-      nodeSelector:
-        key1: value1
-        key2: value2
       restartPolicy: Always
       schedulerName: default-scheduler
       serviceAccountName: envoy-default-37a8eec1
@@ -376,10 +378,4 @@ spec:
           name: envoy-default-37a8eec1
           optional: false
         name: sds
-  updateStrategy:
-    type: RollingUpdate
-status:
-  currentNumberScheduled: 0
-  desiredNumberScheduled: 0
-  numberMisscheduled: 0
-  numberReady: 0
+status: {}

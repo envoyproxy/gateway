@@ -77,13 +77,12 @@ spec:
               resource_api_version: V3
           static_resources:
             listeners:
-            - name: envoy-gateway-proxy-ready-::-19001
+            - name: envoy-gateway-proxy-ready-0.0.0.0-19001
               address:
                 socket_address:
-                  address: '::'
+                  address: '0.0.0.0'
                   port_value: 19001
                   protocol: TCP
-                  ipv4_compat: true
               filter_chains:
               - filters:
                 - name: envoy.filters.network.http_connection_manager

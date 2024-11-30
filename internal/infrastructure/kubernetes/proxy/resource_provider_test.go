@@ -54,6 +54,16 @@ func newTestIPv6Infra() *ir.Infra {
 	return i
 }
 
+func newTestDualStackInfra() *ir.Infra {
+	i := newTestInfra()
+	i.Proxy.Config = &egv1a1.EnvoyProxy{
+		Spec: egv1a1.EnvoyProxySpec{
+			IPFamily: ptr.To(egv1a1.DualStack),
+		},
+	}
+	return i
+}
+
 func newTestInfraWithAnnotations(annotations map[string]string) *ir.Infra {
 	return newTestInfraWithAnnotationsAndLabels(annotations, nil)
 }
@@ -213,6 +223,11 @@ func TestDeployment(t *testing.T) {
 		{
 			caseName: "ipv6",
 			infra:    newTestIPv6Infra(),
+			deploy:   nil,
+		},
+		{
+			caseName: "dual-stack",
+			infra:    newTestDualStackInfra(),
 			deploy:   nil,
 		},
 		{

@@ -226,7 +226,7 @@ type CoreListenerDetails struct {
 	// Metadata is used to enrich envoy resource metadata with user and provider-specific information
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 	// IPFamily specifies the IP address family for the gateway.
-	// It can be IPv4, IPv6, or Dual.
+	// It can be IPv4, IPv6, or DualStack.
 	IPFamily *IPFamily `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
 }
 
@@ -236,7 +236,7 @@ type IPFamily string
 const (
 	IPv4      IPFamily = "IPv4"
 	IPv6      IPFamily = "IPv6"
-	Dualstack IPFamily = "DualStack"
+	DualStack IPFamily = "DualStack"
 )
 
 func (l CoreListenerDetails) GetName() string {

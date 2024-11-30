@@ -81,7 +81,6 @@ spec:
                   address: '::'
                   port_value: 19001
                   protocol: TCP
-                  ipv4_compat: true
               filter_chains:
               - filters:
                 - name: envoy.filters.network.http_connection_manager
@@ -135,7 +134,7 @@ spec:
                     endpoint:
                       address:
                         socket_address:
-                          address: envoy-gateway.envoy-gateway-system.svc.cluster.local
+                          address: envoy-gateway
                           port_value: 18000
               typed_extension_protocol_options:
                 envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
@@ -228,7 +227,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.name
-        image: docker.io/envoyproxy/envoy:distroless-dev
+        image: envoyproxy/envoy:distroless-v1.32.1
         imagePullPolicy: IfNotPresent
         lifecycle:
           preStop:
@@ -238,6 +237,12 @@ spec:
               scheme: HTTP
         name: envoy
         ports:
+        - containerPort: 8080
+          name: EnvoyHTTPPort
+          protocol: TCP
+        - containerPort: 8443
+          name: EnvoyHTTPSPort
+          protocol: TCP
         - containerPort: 19001
           name: metrics
           protocol: TCP
