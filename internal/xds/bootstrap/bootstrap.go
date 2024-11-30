@@ -42,9 +42,11 @@ const (
 	// DefaultWasmServerPort is the default listening port of the wasm HTTP server.
 	wasmServerPort = 18002
 
-	envoyReadinessAddress = "::"
-	EnvoyReadinessPort    = 19001
-	EnvoyReadinessPath    = "/ready"
+	envoyReadinessAddressv4 = "0.0.0.0"
+	envoyReadinessAddressv6 = "::"
+
+	EnvoyReadinessPort = 19001
+	EnvoyReadinessPath = "/ready"
 
 	defaultSdsTrustedCAPath   = "/sds/xds-trusted-ca.json"
 	defaultSdsCertificatePath = "/sds/xds-certificate.json"
@@ -95,6 +97,9 @@ type bootstrapParameters struct {
 	StatsMatcher *StatsMatcherParameters
 	// OverloadManager defines the configuration of the Envoy overload manager.
 	OverloadManager overloadManagerParameters
+
+	// IPFamily of the Listener
+	IPFamily string
 }
 
 type serverParameters struct {
@@ -258,7 +263,7 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 				AccessLogPath: envoyAdminAccessLogPath,
 			},
 			ReadyServer: readyServerParameters{
-				Address:       envoyReadinessAddress,
+				Address:       envoyReadinessAddressv4,
 				Port:          EnvoyReadinessPort,
 				ReadinessPath: EnvoyReadinessPath,
 			},
@@ -303,8 +308,14 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 			cfg.parameters.WasmServer.Port = *opts.WasmServerPort
 		}
 
-		if opts.IPFamily != nil && *opts.IPFamily == egv1a1.IPv6 {
-			cfg.parameters.AdminServer.Address = EnvoyAdminAddressV6
+		if opts.IPFamily != nil {
+			cfg.parameters.IPFamily = string(*opts.IPFamily)
+			if *opts.IPFamily == egv1a1.IPv6 {
+				cfg.parameters.AdminServer.Address = EnvoyAdminAddressV6
+				cfg.parameters.ReadyServer.Address = envoyReadinessAddressv6
+			} else if *opts.IPFamily == egv1a1.DualStack {
+				cfg.parameters.ReadyServer.Address = envoyReadinessAddressv6
+			}
 		}
 
 		cfg.parameters.OverloadManager.MaxHeapSizeBytes = opts.MaxHeapSizeBytes
