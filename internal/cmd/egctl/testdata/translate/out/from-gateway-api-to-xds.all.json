@@ -234,8 +234,7 @@
                 {
                   "address": {
                     "socketAddress": {
-                      "address": "::",
-                      "ipv4Compat": true,
+                      "address": "0.0.0.0",
                       "portValue": 19001
                     }
                   },
@@ -296,7 +295,7 @@
                       ]
                     }
                   ],
-                  "name": "envoy-gateway-proxy-ready-::-19001"
+                  "name": "envoy-gateway-proxy-ready-0.0.0.0-19001"
                 }
               ]
             }
@@ -638,8 +637,7 @@
                   ],
                   "address": {
                     "socketAddress": {
-                      "address": "::",
-                      "ipv4Compat": true,
+                      "address": "0.0.0.0",
                       "portValue": 10080
                     }
                   },
@@ -730,8 +728,7 @@
                   ],
                   "address": {
                     "socketAddress": {
-                      "address": "::",
-                      "ipv4Compat": true,
+                      "address": "0.0.0.0",
                       "portValue": 8080
                     }
                   },
@@ -836,8 +833,7 @@
                   ],
                   "address": {
                     "socketAddress": {
-                      "address": "::",
-                      "ipv4Compat": true,
+                      "address": "0.0.0.0",
                       "portValue": 1234
                     }
                   },
@@ -902,8 +898,7 @@
                   ],
                   "address": {
                     "socketAddress": {
-                      "address": "::",
-                      "ipv4Compat": true,
+                      "address": "0.0.0.0",
                       "portValue": 8443
                     }
                   },
@@ -981,8 +976,7 @@
                   ],
                   "address": {
                     "socketAddress": {
-                      "address": "::",
-                      "ipv4Compat": true,
+                      "address": "0.0.0.0",
                       "portValue": 1234,
                       "protocol": "UDP"
                     }

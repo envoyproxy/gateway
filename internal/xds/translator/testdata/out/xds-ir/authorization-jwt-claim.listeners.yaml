@@ -1,7 +1,6 @@
 - address:
     socketAddress:
       address: 0.0.0.0
-      ipv4Compat: true
       portValue: 10080
   defaultFilterChain:
     filters:
@@ -35,7 +34,6 @@
                     cluster: two_example_com_443
                     timeout: 10s
                     uri: https://two.example.com/jwt/public-key/jwks.json
-                  retryPolicy: {}
               httproute/default/httproute-2/rule/0/match/0/www_example_com/example1:
                 audiences:
                 - one.foo.com
@@ -52,7 +50,6 @@
                     cluster: one_example_com_443
                     timeout: 10s
                     uri: https://one.example.com/jwt/public-key/jwks.json
-                  retryPolicy: {}
             requirementMap:
               httproute/default/httproute-1/rule/0/match/0/www_example_com:
                 providerName: httproute/default/httproute-1/rule/0/match/0/www_example_com/example1
