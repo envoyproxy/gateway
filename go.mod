@@ -4,9 +4,6 @@ go 1.23.3
 
 replace github.com/imdario/mergo => github.com/imdario/mergo v0.3.16
 
-// The version must match the one listed on https://pkg.go.dev/github.com/golang/groupcache to pass the license check.
-replace github.com/golang/groupcache => github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8
-
 require (
 	fortio.org/fortio v1.68.0
 	fortio.org/log v1.17.1
@@ -241,7 +238,7 @@ require (
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/jsonreference v0.21.0 // indirect
 	github.com/go-openapi/swag v0.23.0 // indirect
-	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
+	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/google/btree v1.1.2 // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
