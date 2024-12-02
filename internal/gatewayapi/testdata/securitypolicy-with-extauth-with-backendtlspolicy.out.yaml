@@ -10,7 +10,7 @@ backendTLSPolicies:
     - group: ""
       kind: Service
       name: http-backend
-      sectionName: "80"
+      sectionName: http
     validation:
       caCertificateRefs:
       - group: ""
@@ -42,7 +42,7 @@ backendTLSPolicies:
     - group: ""
       kind: Service
       name: grpc-backend
-      sectionName: "9000"
+      sectionName: grpc
     validation:
       caCertificateRefs:
       - group: ""

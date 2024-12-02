@@ -10,7 +10,7 @@ backendTLSPolicies:
     - group: ""
       kind: Service
       name: http-backend
-      sectionName: "8080"
+      sectionName: http1
     - group: ""
       kind: Service
       name: http-backend
