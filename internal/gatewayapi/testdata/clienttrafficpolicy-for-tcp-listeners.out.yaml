@@ -184,7 +184,7 @@ xdsIR:
       text:
       - path: /dev/stdout
     tcp:
-    - address: '::'
+    - address: 0.0.0.0
       connection:
         bufferLimit: 50000000
         limit:
@@ -246,7 +246,7 @@ xdsIR:
         signatureAlgorithms:
         - sig1
         - sig2
-    - address: '::'
+    - address: 0.0.0.0
       connection:
         bufferLimit: 50000000
         limit:

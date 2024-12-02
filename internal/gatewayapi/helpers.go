@@ -621,7 +621,7 @@ func getIPFamily(envoyProxy *egv1a1.EnvoyProxy) *ir.IPFamily {
 	case egv1a1.IPv6:
 		result = ir.IPv6
 	case egv1a1.DualStack:
-		result = ir.Dualstack
+		result = ir.DualStack
 	default:
 		return nil
 	}
