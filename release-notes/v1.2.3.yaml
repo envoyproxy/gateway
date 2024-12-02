@@ -6,4 +6,4 @@ bug fixes: |
 
 Other changes: |
   EG Listens on IPv4 by default, but if IPFamily is set to IPv6 or DualStack, it listens on :: and enables ipv4_compat for DualStack.
-
+  Bumped Gateway API to v1.2.1.
