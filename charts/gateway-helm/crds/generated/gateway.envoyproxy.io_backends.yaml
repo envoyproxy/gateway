@@ -132,7 +132,7 @@ spec:
                     rule: ((has(self.fqdn) && !(has(self.ip) || has(self.unix))) ||
                       (has(self.ip) && !(has(self.fqdn) || has(self.unix))) || (has(self.unix)
                       && !(has(self.ip) || has(self.fqdn))))
-                maxItems: 4
+                maxItems: 64
                 minItems: 1
                 type: array
                 x-kubernetes-validations:

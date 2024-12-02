@@ -83,6 +83,12 @@ func TestBackend(t *testing.T) {
 						},
 						{
 							FQDN: &egv1a1.FQDNEndpoint{
+								Hostname: "sub1.sub.sub.example.com",
+								Port:     443,
+							},
+						},
+ 						{
+							FQDN: &egv1a1.FQDNEndpoint{
 								Hostname: "sub.s.example.com",
 								Port:     443,
 							},
