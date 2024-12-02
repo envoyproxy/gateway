@@ -160,7 +160,7 @@ xdsIR:
       text:
       - path: /dev/stdout
     udp:
-    - address: '::'
+    - address: 0.0.0.0
       name: envoy-gateway/gateway-1/udp1
       port: 10162
       route:
@@ -174,7 +174,7 @@ xdsIR:
             protocol: UDP
             weight: 1
         name: udproute/default/udproute-1
-    - address: '::'
+    - address: 0.0.0.0
       name: envoy-gateway/gateway-1/udp2
       port: 10163
       route:

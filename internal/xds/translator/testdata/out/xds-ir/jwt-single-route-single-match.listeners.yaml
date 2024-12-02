@@ -1,7 +1,6 @@
 - address:
     socketAddress:
       address: '::'
-      ipv4Compat: true
       portValue: 10080
   defaultFilterChain:
     filters:
@@ -35,7 +34,6 @@
                     cluster: localhost_443
                     timeout: 10s
                     uri: https://localhost/jwt/public-key/jwks.json
-                  retryPolicy: {}
             requirementMap:
               first-route:
                 providerName: first-route/example

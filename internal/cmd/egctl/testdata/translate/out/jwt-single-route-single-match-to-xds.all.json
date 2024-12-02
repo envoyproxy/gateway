@@ -234,8 +234,7 @@
                 {
                   "address": {
                     "socketAddress": {
-                      "address": "::",
-                      "ipv4Compat": true,
+                      "address": "0.0.0.0",
                       "portValue": 19001
                     }
                   },
@@ -296,7 +295,7 @@
                       ]
                     }
                   ],
-                  "name": "envoy-gateway-proxy-ready-::-19001"
+                  "name": "envoy-gateway-proxy-ready-0.0.0.0-19001"
                 }
               ]
             }
@@ -461,8 +460,7 @@
                   ],
                   "address": {
                     "socketAddress": {
-                      "address": "::",
-                      "ipv4Compat": true,
+                      "address": "0.0.0.0",
                       "portValue": 10080
                     }
                   },
@@ -515,8 +513,7 @@
                                         "cluster": "raw_githubusercontent_com_443",
                                         "timeout": "10s",
                                         "uri": "https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json"
-                                      },
-                                      "retryPolicy": {}
+                                      }
                                     }
                                   }
                                 },

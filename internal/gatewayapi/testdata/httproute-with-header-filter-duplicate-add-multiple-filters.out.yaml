@@ -116,7 +116,7 @@ xdsIR:
       text:
       - path: /dev/stdout
     http:
-    - address: '::'
+    - address: 0.0.0.0
       hostnames:
       - '*.envoyproxy.io'
       isHTTP2: false

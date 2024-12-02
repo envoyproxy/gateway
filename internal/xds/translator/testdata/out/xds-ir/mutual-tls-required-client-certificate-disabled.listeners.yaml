@@ -1,7 +1,6 @@
 - address:
     socketAddress:
       address: '::'
-      ipv4Compat: true
       portValue: 10080
   filterChains:
   - filters:
@@ -61,7 +60,6 @@
 - address:
     socketAddress:
       address: '::'
-      ipv4Compat: true
       portValue: 10081
   filterChains:
   - filters:

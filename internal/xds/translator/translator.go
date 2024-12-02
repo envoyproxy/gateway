@@ -216,7 +216,8 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		case !xdsListenerOnSameAddressPortExists:
 			// Create a new UDP(QUIC) listener for HTTP3 traffic if HTTP3 is enabled
 			if http3Enabled {
-				if quicXDSListener, err = buildXdsQuicListener(httpListener.Name, httpListener.Address, httpListener.Port, accessLog); err != nil {
+				if quicXDSListener, err = buildXdsQuicListener(httpListener.Name, httpListener.Address,
+					httpListener.Port, httpListener.IPFamily, accessLog); err != nil {
 					errs = errors.Join(errs, err)
 					continue
 				}
@@ -229,7 +230,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 
 			// Create a new TCP listener for HTTP1/HTTP2 traffic.
 			if tcpXDSListener, err = buildXdsTCPListener(
-				httpListener.Name, httpListener.Address, httpListener.Port,
+				httpListener.Name, httpListener.Address, httpListener.Port, httpListener.IPFamily,
 				httpListener.TCPKeepalive, httpListener.Connection, accessLog); err != nil {
 				errs = errors.Join(errs, err)
 				continue
@@ -575,7 +576,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 		xdsListener := findXdsListenerByHostPort(tCtx, tcpListener.Address, tcpListener.Port, corev3.SocketAddress_TCP)
 		if xdsListener == nil {
 			if xdsListener, err = buildXdsTCPListener(
-				tcpListener.Name, tcpListener.Address, tcpListener.Port,
+				tcpListener.Name, tcpListener.Address, tcpListener.Port, tcpListener.IPFamily,
 				tcpListener.TCPKeepalive, tcpListener.Connection, accesslog); err != nil {
 				// skip this listener if failed to build xds listener
 				errs = errors.Join(errs, err)
