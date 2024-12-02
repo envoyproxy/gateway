@@ -127,7 +127,7 @@ xdsIR:
       text:
       - path: /dev/stdout
     http:
-    - address: '::'
+    - address: 0.0.0.0
       hostnames:
       - foo.com
       isHTTP2: false
@@ -162,7 +162,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    - address: '::'
+    - address: 0.0.0.0
       hostnames:
       - bar.com
       isHTTP2: false

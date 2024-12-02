@@ -265,8 +265,7 @@ xds:
                 path: /dev/stdout
             address:
               socketAddress:
-                address: '::'
-                ipv4Compat: true
+                address: 0.0.0.0
                 portValue: 10080
             defaultFilterChain:
               filters:
@@ -306,7 +305,6 @@ xds:
                               cluster: raw_githubusercontent_com_443
                               timeout: 10s
                               uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
-                            retryPolicy: {}
                       requirementMap:
                         httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com:
                           providerName: httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com/example

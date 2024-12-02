@@ -5,8 +5,6 @@ breaking changes: |
   The Container `ports` field of the gateway instance has been removed, which will cause the gateway Pod to be rebuilt when upgrading the version.
   ClientTrafficPolicy previously treated an empty TLS ALPNProtocols list as being undefined and applied Envoy Gateway defaults.
   An empty TLS ALPNProtocols list is now treated as user-defined disablement of the TLS ALPN extension.
-  Always use `::` and `IPv4Compact` enabled on dynamic listeners.
-  Use `V4_PREFERRED` instead of `V4_ONLY` by default for the cluster's `DnsLookupFamily`.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
@@ -19,10 +17,6 @@ new features: |
 
 # Fixes for bugs identified in previous versions.
 bug fixes: |
-  Fixed failed to update SecurityPolicy resources with the `backendRef` field specified
-  Fixed Envoy rejecting TCP Listeners that have no attached TCPRoutes
-  Fixed xDS translation failed when oidc tokenEndpoint and jwt remoteJWKS are specified in the same SecurityPolicy and using the same hostname
-  Fixed frequent 503 errors when connecting to a Service experiencing high Pod churn
 
 # Enhancements that improve performance.
 performance improvements: |
