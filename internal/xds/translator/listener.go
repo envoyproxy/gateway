@@ -180,7 +180,7 @@ func buildXdsTCPListener(
 		},
 	}
 
-	if ipFamily != nil && *ipFamily == ir.DualStack {
+	if ipFamily != nil && *ipFamily == egv1a1.DualStack {
 		socketAddress := listener.Address.GetSocketAddress()
 		socketAddress.Ipv4Compat = true
 	}
@@ -224,7 +224,7 @@ func buildXdsQuicListener(name, address string, port uint32, ipFamily *ir.IPFami
 		DrainType: listenerv3.Listener_MODIFY_ONLY,
 	}
 
-	if ipFamily != nil && *ipFamily == ir.DualStack {
+	if ipFamily != nil && *ipFamily == egv1a1.DualStack {
 		socketAddress := xdsListener.Address.GetSocketAddress()
 		socketAddress.Ipv4Compat = true
 	}
@@ -869,7 +869,7 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener, access
 		}},
 	}
 
-	if udpListener.IPFamily != nil && *udpListener.IPFamily == ir.DualStack {
+	if udpListener.IPFamily != nil && *udpListener.IPFamily == egv1a1.DualStack {
 		socketAddress := xdsListener.Address.GetSocketAddress()
 		socketAddress.Ipv4Compat = true
 	}

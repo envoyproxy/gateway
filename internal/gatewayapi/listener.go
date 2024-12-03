@@ -102,8 +102,8 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			}
 
 			address := net.IPv4ListenerAddress
-			ipFamily := getIPFamily(gateway.envoyProxy)
-			if ipFamily != nil && (*ipFamily == ir.IPv6 || *ipFamily == ir.DualStack) {
+			ipFamily := getEnvoyIPFamily(gateway.envoyProxy)
+			if ipFamily != nil && (*ipFamily == egv1a1.IPv6 || *ipFamily == egv1a1.DualStack) {
 				address = net.IPv6ListenerAddress
 			}
 
