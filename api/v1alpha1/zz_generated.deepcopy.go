@@ -545,17 +545,6 @@ func (in *BackendTrafficPolicySpec) DeepCopyInto(out *BackendTrafficPolicySpec) 
 		*out = new(bool)
 		**out = **in
 	}
-	if in.Compression != nil {
-		in, out := &in.Compression, &out.Compression
-		*out = make([]*Compression, len(*in))
-		for i := range *in {
-			if (*in)[i] != nil {
-				in, out := &(*in)[i], &(*out)[i]
-				*out = new(Compression)
-				(*in).DeepCopyInto(*out)
-			}
-		}
-	}
 	if in.ResponseOverride != nil {
 		in, out := &in.ResponseOverride, &out.ResponseOverride
 		*out = make([]*ResponseOverride, len(*in))

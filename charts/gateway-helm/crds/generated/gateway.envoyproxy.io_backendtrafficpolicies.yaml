@@ -99,26 +99,6 @@ spec:
                     minimum: 0
                     type: integer
                 type: object
-              compression:
-                description: The compression config for the http streams.
-                items:
-                  description: |-
-                    Compression defines the config of enabling compression.
-                    This can help reduce the bandwidth at the expense of higher CPU.
-                  properties:
-                    gzip:
-                      description: The configuration for GZIP compressor.
-                      type: object
-                    type:
-                      description: CompressorType defines the compressor type to use
-                        for compression.
-                      enum:
-                      - Gzip
-                      type: string
-                  required:
-                  - type
-                  type: object
-                type: array
               connection:
                 description: Connection includes backend connection settings.
                 properties:

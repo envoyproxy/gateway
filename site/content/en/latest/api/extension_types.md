@@ -720,7 +720,6 @@ Compression defines the config of enabling compression.
 This can help reduce the bandwidth at the expense of higher CPU.
 
 _Appears in:_
-- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [ProxyPrometheusProvider](#proxyprometheusprovider)
 
 | Field | Type | Required | Description |
