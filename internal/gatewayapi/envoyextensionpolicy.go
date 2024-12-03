@@ -481,12 +481,20 @@ func (t *Translator) buildExtProc(
 			if extProc.ProcessingMode.Request.Body != nil {
 				extProcIR.RequestBodyProcessingMode = ptr.To(ir.ExtProcBodyProcessingMode(*extProc.ProcessingMode.Request.Body))
 			}
+
+			if extProc.ProcessingMode.Request.Attributes != nil {
+				extProcIR.RequestAttributes = append(extProcIR.RequestAttributes, extProc.ProcessingMode.Request.Attributes...)
+			}
 		}
 
 		if extProc.ProcessingMode.Response != nil {
 			extProcIR.ResponseHeaderProcessing = true
 			if extProc.ProcessingMode.Response.Body != nil {
 				extProcIR.ResponseBodyProcessingMode = ptr.To(ir.ExtProcBodyProcessingMode(*extProc.ProcessingMode.Response.Body))
+			}
+
+			if extProc.ProcessingMode.Response.Attributes != nil {
+				extProcIR.ResponseAttributes = append(extProcIR.ResponseAttributes, extProc.ProcessingMode.Response.Attributes...)
 			}
 		}
 	}

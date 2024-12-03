@@ -210,6 +210,16 @@ func (s *extProcServer) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 		resp := &envoy_service_proc_v3.ProcessingResponse{}
 		switch v := req.Request.(type) {
 		case *envoy_service_proc_v3.ProcessingRequest_RequestHeaders:
+			xdsRouteName := ""
+
+			if req.Attributes != nil {
+				if epa, ok := req.Attributes["envoy.filters.http.ext_proc"]; ok {
+					if rqa, ok := epa.Fields["xds.route_name"]; ok {
+						xdsRouteName = rqa.GetStringValue()
+					}
+				}
+			}
+
 			xrch := ""
 			if v.RequestHeaders != nil {
 				hdrs := v.RequestHeaders.Headers.GetHeaders()
@@ -228,6 +238,12 @@ func (s *extProcServer) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 								Header: &envoy_api_v3_core.HeaderValue{
 									Key:      "x-request-ext-processed",
 									RawValue: []byte("true"),
+								},
+							},
+							{
+								Header: &envoy_api_v3_core.HeaderValue{
+									Key:      "x-request-xds-route-name",
+									RawValue: []byte(xdsRouteName),
 								},
 							},
 						},
@@ -257,8 +273,19 @@ func (s *extProcServer) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 					RequestHeaders: rhq,
 				},
 			}
+
 			break
 		case *envoy_service_proc_v3.ProcessingRequest_ResponseHeaders:
+
+			respXDSRouteName := ""
+
+			if req.Attributes != nil {
+				if epa, ok := req.Attributes["envoy.filters.http.ext_proc"]; ok {
+					if rsa, ok := epa.Fields["xds.route_name"]; ok {
+						respXDSRouteName = rsa.GetStringValue()
+					}
+				}
+			}
 			rhq := &envoy_service_proc_v3.HeadersResponse{
 				Response: &envoy_service_proc_v3.CommonResponse{
 					HeaderMutation: &envoy_service_proc_v3.HeaderMutation{
@@ -267,6 +294,12 @@ func (s *extProcServer) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 								Header: &envoy_api_v3_core.HeaderValue{
 									Key:      "x-response-ext-processed",
 									RawValue: []byte("true"),
+								},
+							},
+							{
+								Header: &envoy_api_v3_core.HeaderValue{
+									Key:      "x-response-xds-route-name",
+									RawValue: []byte(respXDSRouteName),
 								},
 							},
 						},
