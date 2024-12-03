@@ -15,7 +15,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func Test_determineIPFamily(t *testing.T) {
+func TestDetermineIPFamily(t *testing.T) {
 	tests := []struct {
 		name     string
 		settings []*ir.DestinationSetting

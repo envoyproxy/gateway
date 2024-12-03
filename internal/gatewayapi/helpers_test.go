@@ -23,6 +23,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func TestValidateGRPCFilterRef(t *testing.T) {
@@ -548,6 +549,70 @@ func TestIsRefToGateway(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			got := IsRefToGateway(tc.routeNamespace, tc.parentRef, tc.gatewayNN)
 			require.Equal(t, tc.expected, got)
+		})
+	}
+}
+
+func TestGetServiceIPFamily(t *testing.T) {
+	testCases := []struct {
+		name     string
+		service  *corev1.Service
+		expected *egv1a1.IPFamily
+	}{
+		{
+			name:     "nil service",
+			service:  nil,
+			expected: nil,
+		},
+		{
+			name: "require dual stack",
+			service: &corev1.Service{
+				Spec: corev1.ServiceSpec{
+					IPFamilyPolicy: ptr.To(corev1.IPFamilyPolicyRequireDualStack),
+				},
+			},
+			expected: ptr.To(egv1a1.DualStack),
+		},
+		{
+			name: "multiple ip families",
+			service: &corev1.Service{
+				Spec: corev1.ServiceSpec{
+					IPFamilies: []corev1.IPFamily{corev1.IPv4Protocol, corev1.IPv6Protocol},
+				},
+			},
+			expected: ptr.To(egv1a1.DualStack),
+		},
+		{
+			name: "ipv4 only",
+			service: &corev1.Service{
+				Spec: corev1.ServiceSpec{
+					IPFamilies: []corev1.IPFamily{corev1.IPv4Protocol},
+				},
+			},
+			expected: ptr.To(egv1a1.IPv4),
+		},
+		{
+			name: "ipv6 only",
+			service: &corev1.Service{
+				Spec: corev1.ServiceSpec{
+					IPFamilies: []corev1.IPFamily{corev1.IPv6Protocol},
+				},
+			},
+			expected: ptr.To(egv1a1.IPv6),
+		},
+		{
+			name: "no ip family specified",
+			service: &corev1.Service{
+				Spec: corev1.ServiceSpec{},
+			},
+			expected: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := getServiceIPFamily(tc.service)
+			require.Equal(t, tc.expected, result)
 		})
 	}
 }
