@@ -199,6 +199,11 @@ func addClusterFromURL(url string, tCtx *types.ResourceVersionTable) error {
 
 // determineIPFamily determines the IP family based on multiple destination settings
 func determineIPFamily(settings []*ir.DestinationSetting) *egv1a1.IPFamily {
+	// If there's only one setting, return its IPFamily directly
+	if len(settings) == 1 {
+		return settings[0].IPFamily
+	}
+
 	hasIPv4 := false
 	hasIPv6 := false
 	hasDualStack := false
