@@ -126,7 +126,7 @@ xdsIR:
       text:
       - path: /dev/stdout
     http:
-    - address: '::'
+    - address: 0.0.0.0
       hostnames:
       - '*'
       isHTTP2: false
@@ -140,7 +140,7 @@ xdsIR:
         escapedSlashesAction: KeepUnchanged
         mergeSlashes: false
       port: 10080
-    - address: '::'
+    - address: 0.0.0.0
       hostnames:
       - '*'
       isHTTP2: false

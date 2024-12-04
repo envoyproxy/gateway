@@ -426,7 +426,7 @@ xdsIR:
           this is a Global log
         path: /dev/stdout
     http:
-    - address: '::'
+    - address: 0.0.0.0
       hostnames:
       - '*'
       isHTTP2: false

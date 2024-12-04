@@ -68,7 +68,9 @@ static_resources:
         address: '{{ .ReadyServer.Address }}'
         port_value: {{ .ReadyServer.Port }}
         protocol: TCP
+        {{- if eq .IPFamily "DualStack"}}
         ipv4_compat: true
+        {{- end }}
     filter_chains:
     - filters:
       - name: envoy.filters.network.http_connection_manager

@@ -62,7 +62,6 @@
   address:
     socketAddress:
       address: '::'
-      ipv4Compat: true
       portValue: 10080
   defaultFilterChain:
     filters:

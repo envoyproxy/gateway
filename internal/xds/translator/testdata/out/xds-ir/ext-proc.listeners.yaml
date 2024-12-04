@@ -1,7 +1,6 @@
 - address:
     socketAddress:
       address: 0.0.0.0
-      ipv4Compat: true
       portValue: 10080
   defaultFilterChain:
     filters:
@@ -33,6 +32,11 @@
               responseBodyMode: STREAMED
               responseHeaderMode: SKIP
               responseTrailerMode: SKIP
+            requestAttributes:
+            - xds.route_metadata
+            - connection.requested_server_name
+            responseAttributes:
+            - request.path
         - disabled: true
           name: envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-route-1/extproc/0
           typedConfig:
@@ -79,6 +83,11 @@
               requestTrailerMode: SKIP
               responseHeaderMode: SKIP
               responseTrailerMode: SKIP
+            requestAttributes:
+            - xds.route_metadata
+            - connection.requested_server_name
+            responseAttributes:
+            - request.path
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

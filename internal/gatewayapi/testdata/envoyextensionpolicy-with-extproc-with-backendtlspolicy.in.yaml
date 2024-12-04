@@ -203,8 +203,13 @@ envoyExtensionPolicies:
       processingMode:
         request:
           body: Buffered
+          attributes:
+          - request.path
         response:
           body: Streamed
+          attributes:
+          - xds.route_metadata
+          - connection.requested_server_name
       messageTimeout: 5s
       failOpen: true
 - apiVersion: gateway.envoyproxy.io/v1alpha1

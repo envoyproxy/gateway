@@ -146,7 +146,7 @@ xdsIR:
       text:
       - path: /dev/stdout
     tcp:
-    - address: '::'
+    - address: 0.0.0.0
       extensionRefs:
       - object:
           apiVersion: foo.example.io/v1alpha1
@@ -204,7 +204,7 @@ xdsIR:
               controllerName: gateway.envoyproxy.io/gatewayclass-controller
       name: envoy-gateway/gateway-1/tcp1
       port: 10080
-    - address: '::'
+    - address: 0.0.0.0
       extensionRefs:
       - object:
           apiVersion: foo.example.io/v1alpha1
