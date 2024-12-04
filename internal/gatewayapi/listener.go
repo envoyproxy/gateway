@@ -118,7 +118,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 						Address:  address,
 						Port:     uint32(containerPort),
 						Metadata: buildListenerMetadata(listener, gateway),
-						IPFamily: getEnvoyIPFamily(gateway.envoyProxy),
+						IPFamily: ipFamily,
 					},
 					TLS: irTLSConfigs(listener.tlsSecrets...),
 					Path: ir.PathSettings{
@@ -141,7 +141,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 						Name:     irListenerName(listener),
 						Address:  address,
 						Port:     uint32(containerPort),
-						IPFamily: getEnvoyIPFamily(gateway.envoyProxy),
+						IPFamily: ipFamily,
 					},
 
 					// Gateway is processed firstly, then ClientTrafficPolicy, then xRoute.
