@@ -167,9 +167,7 @@ securityPolicies:
   spec:
     extAuth:
       bodyToExtAuth:
-        allowPartialMessage: false
-        maxRequestBytes: 0
-        packAsBytes: false
+        maxRequestBytes: 32768
       failOpen: true
       grpc:
         backendRefs:
@@ -246,9 +244,7 @@ xdsIR:
         security:
           extAuth:
             bodyToExtAuth:
-              allowPartialMessage: false
-              maxRequestBytes: 0
-              packAsBytes: false
+              maxRequestBytes: 32768
             failOpen: true
             grpc:
               authority: service-2.default:8080
@@ -294,9 +290,7 @@ xdsIR:
         security:
           extAuth:
             bodyToExtAuth:
-              allowPartialMessage: false
-              maxRequestBytes: 0
-              packAsBytes: false
+              maxRequestBytes: 32768
             failOpen: true
             grpc:
               authority: service-2.default:8080

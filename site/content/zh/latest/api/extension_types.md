@@ -479,9 +479,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `maxRequestBytes` | _integer_ |  true  | MaxRequestBytes is the maximum size of a message body that the filter will hold in memory.<br />Envoy will return HTTP 413 and will not initiate the authorization process when buffer<br />reaches the number set in this field.<br />Note that this setting will have precedence over failureModeAllow. |
-| `allowPartialMessage` | _boolean_ |  true  | When AllowPartialMessage is true, Envoy will buffer the message until MaxRequestBytes is reached.<br />The authorization request will be dispatched and no 413 HTTP error will be returned by the filter. |
-| `packAsBytes` | _boolean_ |  true  | If PackAsBytes is true, the body sent to the external authorization service is set with raw bytes,<br />it sets the raw_body field of HTTP request attribute context. Otherwise, body will be<br />filled with UTF-8 string request body.<br />This field only affects configurations using a grpcService. In configurations that use<br />an httpService, this has no effect. |
+| `maxRequestBytes` | _integer_ |  true  | MaxRequestBytes is the maximum size of a message body that the filter will hold in memory.<br />Envoy will return HTTP 413 and will not initiate the authorization process when buffer<br />reaches the number set in this field.<br />Note that this setting will have precedence over failOpen mode. |
 
 
 #### BootstrapType

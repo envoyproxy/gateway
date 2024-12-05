@@ -119,9 +119,7 @@ func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
 
 	if extAuth.BodyToExtAuth != nil {
 		config.WithRequestBody = &extauthv3.BufferSettings{
-			MaxRequestBytes:     extAuth.BodyToExtAuth.MaxRequestBytes,
-			AllowPartialMessage: extAuth.BodyToExtAuth.AllowPartialMessage,
-			PackAsBytes:         extAuth.BodyToExtAuth.PackAsBytes,
+			MaxRequestBytes: extAuth.BodyToExtAuth.MaxRequestBytes,
 		}
 	}
 

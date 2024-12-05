@@ -99,7 +99,8 @@ securityPolicies:
         headersToExtAuth:
           - header1
           - header2
-        bodyToExtAuth: {}
+        bodyToExtAuth:
+          maxRequestBytes: 32768
         grpc:
           backendRefs:
             - name: service-2

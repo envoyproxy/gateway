@@ -1033,19 +1033,8 @@ type BodyToExtAuth struct {
 	// MaxRequestBytes is the maximum size of a message body that the filter will hold in memory.
 	// Envoy will return HTTP 413 and will not initiate the authorization process when buffer
 	// reaches the number set in this field.
-	// Note that this setting will have precedence over failureModeAllow.
+	// Note that this setting will have precedence over failOpen mode.
 	MaxRequestBytes uint32 `json:"maxRequestBytes"`
-
-	// When AllowPartialMessage is true, Envoy will buffer the message until MaxRequestBytes is reached.
-	// The authorization request will be dispatched and no 413 HTTP error will be returned by the filter.
-	AllowPartialMessage bool `json:"allowPartialMessage"`
-
-	// If PackAsBytes is true, the body sent to the external authorization service is set with raw bytes,
-	// it sets the raw_body field of HTTP request attribute context. Otherwise, body will be
-	// filled with UTF-8 string request body.
-	// This field only affects configurations using a grpcService. In configurations that use
-	// an httpService, this has no effect.
-	PackAsBytes bool `json:"packAsBytes"`
 }
 
 // HTTPExtAuthService defines the HTTP External Authorization service

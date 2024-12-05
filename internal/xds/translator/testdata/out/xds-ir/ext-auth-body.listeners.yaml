@@ -51,7 +51,6 @@
             transportApiVersion: V3
             withRequestBody:
               maxRequestBytes: 32768
-              packAsBytes: true
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
