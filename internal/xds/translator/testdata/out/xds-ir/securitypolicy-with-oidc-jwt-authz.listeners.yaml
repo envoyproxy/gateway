@@ -1,7 +1,6 @@
 - address:
     socketAddress:
       address: 0.0.0.0
-      ipv4Compat: true
       portValue: 10080
   defaultFilterChain:
     filters:
@@ -81,7 +80,6 @@
                     cluster: oidc_example_com_443
                     timeout: 10s
                     uri: https://oidc.example.com/auth/realms/example/protocol/openid-connect/certs
-                  retryPolicy: {}
             requirementMap:
               httproute/default/httproute-1/rule/0/match/0/www_example_com:
                 providerName: httproute/default/httproute-1/rule/0/match/0/www_example_com/exjwt

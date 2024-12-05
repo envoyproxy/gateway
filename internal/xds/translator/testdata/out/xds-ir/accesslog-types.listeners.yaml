@@ -142,7 +142,6 @@
   address:
     socketAddress:
       address: 0.0.0.0
-      ipv4Compat: true
       portValue: 10080
   defaultFilterChain:
     filters:

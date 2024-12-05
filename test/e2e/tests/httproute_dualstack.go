@@ -38,6 +38,9 @@ var HTTPRouteDualStackTest = suite.ConformanceTest{
 		t.Run("HTTPRoute to IPv4 only service", func(t *testing.T) {
 			runHTTPRouteTest(t, suite, ns, gwNN, "infra-backend-v1-httproute-ipv4", "/ipv4-only")
 		})
+		t.Run("HTTPRoute to All-stacks services", func(t *testing.T) {
+			runHTTPRouteTest(t, suite, ns, gwNN, "infra-backend-v1-httproute-all-stacks", "/all-stacks")
+		})
 	},
 }
 
