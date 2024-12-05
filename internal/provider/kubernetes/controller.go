@@ -2088,7 +2088,7 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
 
 				if backendNamespace != policy.Namespace {
 					from := ObjectKindNamespacedName{
-						kind:      resource.KindHTTPRoute,
+						kind:      resource.KindEnvoyExtensionPolicy,
 						namespace: policy.Namespace,
 						name:      policy.Name,
 					}
