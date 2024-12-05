@@ -51,8 +51,12 @@ spec:
       namespace: gateway-conformance-infra
       port: 9002
     processingMode:
-      request: {}
-      response: {}
+      request:
+        attributes:
+        - xds.route_name
+      response:
+        attributes:
+        - xds.route_name
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyExtensionPolicy

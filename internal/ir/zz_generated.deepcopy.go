@@ -592,7 +592,7 @@ func (in *CoreListenerDetails) DeepCopyInto(out *CoreListenerDetails) {
 	}
 	if in.IPFamily != nil {
 		in, out := &in.IPFamily, &out.IPFamily
-		*out = new(IPFamily)
+		*out = new(v1alpha1.IPFamily)
 		**out = **in
 	}
 }
@@ -772,6 +772,11 @@ func (in *DestinationSetting) DeepCopyInto(out *DestinationSetting) {
 		*out = new(DestinationAddressType)
 		**out = **in
 	}
+	if in.IPFamily != nil {
+		in, out := &in.IPFamily, &out.IPFamily
+		*out = new(v1alpha1.IPFamily)
+		**out = **in
+	}
 	if in.TLS != nil {
 		in, out := &in.TLS, &out.TLS
 		*out = new(TLSUpstreamConfig)
@@ -943,6 +948,16 @@ func (in *ExtProc) DeepCopyInto(out *ExtProc) {
 		in, out := &in.ResponseBodyProcessingMode, &out.ResponseBodyProcessingMode
 		*out = new(ExtProcBodyProcessingMode)
 		**out = **in
+	}
+	if in.RequestAttributes != nil {
+		in, out := &in.RequestAttributes, &out.RequestAttributes
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
+	if in.ResponseAttributes != nil {
+		in, out := &in.ResponseAttributes, &out.ResponseAttributes
+		*out = make([]string, len(*in))
+		copy(*out, *in)
 	}
 }
 
