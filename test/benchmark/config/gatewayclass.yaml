@@ -16,6 +16,7 @@ metadata:
   name: proxy-config
   namespace: envoy-gateway-system
 spec:
+  ipFamily: $ENVOY_PROXY_IP_FAMILY
   provider:
     type: Kubernetes
     kubernetes:

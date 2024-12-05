@@ -12,6 +12,7 @@ GATEWAY_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/d
 
 WAIT_TIMEOUT ?= 15m
 
+IP_FAMILY ?= ipv4
 BENCHMARK_TIMEOUT ?= 60m
 BENCHMARK_CPU_LIMITS ?= 1000m
 BENCHMARK_MEMORY_LIMITS ?= 1024Mi
@@ -39,6 +40,17 @@ endif
 
 YEAR := $(shell date +%Y)
 CONTROLLERGEN_OBJECT_FLAGS :=  object:headerFile="$(ROOT_DIR)/tools/boilerplate/boilerplate.generatego.txt",year=$(YEAR)
+
+.PHONY: prepare-ip-family
+prepare-ip-family: ## Prepare the environment for running e2e tests with ENVOY_PROXY_IP_FAMILY
+	@$(LOG_TARGET)
+ifeq ($(IP_FAMILY),ipv4)
+  ENVOY_PROXY_IP_FAMILY := IPv4
+else ifeq ($(IP_FAMILY),ipv6)
+  ENVOY_PROXY_IP_FAMILY := IPv6
+else ifeq ($(IP_FAMILY),dual)
+  ENVOY_PROXY_IP_FAMILY := DualStack
+endif
 
 .PHONY: manifests
 manifests: $(tools/controller-gen) generate-gwapi-manifests ## Generate WebhookConfiguration and CustomResourceDefinition objects.
@@ -145,11 +157,11 @@ install-ratelimit:
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 
 .PHONY: e2e-prepare
-e2e-prepare: ## Prepare the environment for running e2e tests
+e2e-prepare: prepare-ip-family ## Prepare the environment for running e2e tests
 	@$(LOG_TARGET)
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
-	kubectl apply -f test/config/gatewayclass.yaml
+	cat test/config/gatewayclass.yaml | ENVOY_PROXY_IP_FAMILY=${ENVOY_PROXY_IP_FAMILY} envsubst | kubectl apply -f -
 
 .PHONY: run-e2e
 run-e2e: e2e-prepare ## Run e2e tests
@@ -158,19 +170,21 @@ ifeq ($(E2E_RUN_TEST),)
 	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=false
 	go test $(E2E_TEST_ARGS) ./test/e2e/merge_gateways --gateway-class=merge-gateways --debug=true --cleanup-base-resources=false
 	go test $(E2E_TEST_ARGS) ./test/e2e/multiple_gc --debug=true --cleanup-base-resources=true
+ifeq ($(IP_FAMILY),ipv4) ## only run upgrade tests for ipv4
 	LAST_VERSION_TAG=$(shell cat VERSION) go test $(E2E_TEST_ARGS) ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
+endif
 else
 	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
 		--run-test $(E2E_RUN_TEST)
 endif
 
 .PHONY: run-benchmark
-run-benchmark: install-benchmark-server ## Run benchmark tests
+run-benchmark: install-benchmark-server prepare-ip-family ## Run benchmark tests
 	@$(LOG_TARGET)
 	mkdir -p $(OUTPUT_DIR)/benchmark
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n benchmark-test deployment/nighthawk-test-server --for=condition=Available
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
-	kubectl apply -f test/benchmark/config/gatewayclass.yaml
+	cat test/benchmark/config/gatewayclass.yaml | ENVOY_PROXY_IP_FAMILY=${ENVOY_PROXY_IP_FAMILY} envsubst | kubectl apply -f -
 	go test -v -tags benchmark -timeout $(BENCHMARK_TIMEOUT) ./test/benchmark --rps=$(BENCHMARK_RPS) --connections=$(BENCHMARK_CONNECTIONS) --duration=$(BENCHMARK_DURATION) --report-save-dir=$(BENCHMARK_REPORT_DIR)
 	# render benchmark profiles into image
 	dot -V
@@ -221,19 +235,19 @@ kube-install-image: image.build $(tools/kind) ## Install the EG image to a kind 
 	tools/hack/kind-load-image.sh $(IMAGE) $(TAG)
 
 .PHONY: run-conformance
-run-conformance: ## Run Gateway API conformance.
+run-conformance: prepare-ip-family ## Run Gateway API conformance.
 	@$(LOG_TARGET)
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
-	kubectl apply -f test/config/gatewayclass.yaml
+	cat test/config/gatewayclass.yaml| ENVOY_PROXY_IP_FAMILY=${ENVOY_PROXY_IP_FAMILY} envsubst | kubectl apply -f -
 	go test -v -tags conformance ./test/conformance --gateway-class=envoy-gateway --debug=true
 
 CONFORMANCE_REPORT_PATH ?=
 
 .PHONY: run-experimental-conformance
-run-experimental-conformance: ## Run Experimental Gateway API conformance.
+run-experimental-conformance: prepare-ip-family ## Run Experimental Gateway API conformance.
 	@$(LOG_TARGET)
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
-	kubectl apply -f test/config/gatewayclass.yaml
+	cat test/config/gatewayclass.yaml | ENVOY_PROXY_IP_FAMILY=${ENVOY_PROXY_IP_FAMILY} envsubst | kubectl apply -f -
 	go test -v -tags experimental ./test/conformance -run TestExperimentalConformance --gateway-class=envoy-gateway --debug=true --organization=envoyproxy --project=envoy-gateway --url=https://github.com/envoyproxy/gateway --version=latest --report-output="$(CONFORMANCE_REPORT_PATH)" --contact=https://github.com/envoyproxy/gateway/blob/main/GOVERNANCE.md
 
 .PHONY: delete-cluster

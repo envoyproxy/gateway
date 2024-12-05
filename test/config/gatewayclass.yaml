@@ -16,6 +16,7 @@ metadata:
   name: proxy-config
   namespace: envoy-gateway-system
 spec:
+  ipFamily: $ENVOY_PROXY_IP_FAMILY
   provider:
     type: Kubernetes
     kubernetes:
@@ -124,6 +125,7 @@ metadata:
   name: upgrade-config
   namespace: envoy-gateway-system
 spec:
+  ipFamily: $ENVOY_PROXY_IP_FAMILY
   provider:
     type: Kubernetes
     kubernetes:
@@ -158,6 +160,7 @@ metadata:
   name: merge-gateways-config
   namespace: envoy-gateway-system
 spec:
+  ipFamily: $ENVOY_PROXY_IP_FAMILY
   mergeGateways: true
 ---
 kind: GatewayClass
@@ -173,5 +176,129 @@ metadata:
   name: private
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gateway-conformance-infra
+  labels:
+    gateway-conformance: infra
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-routing-config
+  namespace: gateway-conformance-infra
+spec:
+  ipFamily: $ENVOY_PROXY_IP_FAMILY
+  routingType: Service
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: datadog-tracing
+  namespace: gateway-conformance-infra
+spec:
+  ipFamily: $ENVOY_PROXY_IP_FAMILY
+  logging:
+    level:
+      default: debug
+  telemetry:
+    tracing:
+      provider:
+        type: Datadog
+        backendRefs:
+          - name: datadog-agent
+            namespace: monitoring
+            port: 8126
+      customTags:
+        "provider":
+          type: Literal
+          literal:
+            value: "datadog"
+        "k8s.cluster.name":
+          type: Literal
+          literal:
+            value: "envoy-gateway"
+        "k8s.pod.name":
+          type: Environment
+          environment:
+            name: ENVOY_POD_NAME
+            defaultValue: "-"
+        "k8s.namespace.name":
+          type: Environment
+          environment:
+            name: ENVOY_GATEWAY_NAMESPACE
+            defaultValue: "envoy-gateway-system"
+  shutdown:
+    drainTimeout: 5s
+    minDrainDuration: 1s
+---
+#  This is a EnvoyProxy used for Zipkin tracing and will
+#  target to the eg-special-case Gateway
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: zipkin-tracing
+  namespace: gateway-conformance-infra
+spec:
+  ipFamily: $ENVOY_PROXY_IP_FAMILY
+  logging:
+    level:
+      default: debug
+  telemetry:
+    tracing:
+      provider:
+        type: Zipkin
+        backendRefs:
+          - name: otel-collector
+            namespace: monitoring
+            port: 9411
+        zipkin:
+          enable128BitTraceId: true
+      customTags:
+        "provider":
+          type: Literal
+          literal:
+            value: "zipkin"
+        "k8s.cluster.name":
+          type: Literal
+          literal:
+            value: "envoy-gateway"
+        "k8s.pod.name":
+          type: Environment
+          environment:
+            name: ENVOY_POD_NAME
+            defaultValue: "-"
+        "k8s.namespace.name":
+          type: Environment
+          environment:
+            name: ENVOY_GATEWAY_NAMESPACE
+            defaultValue: "envoy-gateway-system"
+  shutdown:
+    drainTimeout: 5s
+    minDrainDuration: 1s
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: eg-daemonset
+  namespace: gateway-conformance-infra
+spec:
+  ipFamily: $ENVOY_PROXY_IP_FAMILY
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDaemonSet:
+        patch:
+          type: StrategicMerge
+          value:
+            spec:
+              template:
+                spec:
+                  containers:
+                    - name: envoy
+                      readinessProbe:
+                        initialDelaySeconds: 5
 ---
 

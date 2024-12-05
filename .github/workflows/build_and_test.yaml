@@ -120,10 +120,7 @@ jobs:
         - version: v1.29.8
           ipFamily: ipv4
         - version: v1.30.4
-          ipFamily: ipv4
-        # Enable these after https://github.com/envoyproxy/gateway/issues/4572 fixed
-        # - version: v1.31.0
-        #   ipFamily: ipv6   # only run ipv6 test on latest version to save time
+          ipFamily: ipv6  # only run ipv6 test on this version to save time
         # TODO: this's IPv4 first, need a way to test IPv6 first.
         - version: v1.31.0
           ipFamily: dual  # only run dual test on latest version to save time
@@ -148,6 +145,7 @@ jobs:
         KIND_NODE_TAG: ${{ matrix.target.version }}
         IMAGE_PULL_POLICY: IfNotPresent
         IP_FAMILY: ${{ matrix.target.ipFamily }}
+        E2E_TIMEOUT: 1h
       run: make e2e
 
   benchmark-test:

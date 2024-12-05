@@ -1,11 +1,3 @@
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: EnvoyProxy
-metadata:
-  name: custom-proxy-config
-  namespace: gateway-conformance-infra
-spec:
-  routingType: Service
----
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
