@@ -720,12 +720,12 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-You can use [egctl translate][]
+You can use [egctl x translate][]
 to get the default xDS Bootstrap configuration used by Envoy Gateway.
 
 After applying the config, the bootstrap config will be overridden by the new config you provided.
 Any errors in the configuration will be surfaced as status within the `GatewayClass` resource.
-You can also validate this configuration using [egctl translate][].
+You can also validate this configuration using [egctl x translate][].
 
 ## Customize EnvoyProxy Horizontal Pod Autoscaler
 
@@ -1046,7 +1046,7 @@ spec:
 ## Customize EnvoyProxy IP Family
 
 You can customize the IP family configuration for EnvoyProxy via the EnvoyProxy Config.
-This allows the Envoy Proxy fleet to serve external client over IPv4 as well as IPv6.
+This allows the Envoy Proxy fleet to serve external clients over IPv4 as well as IPv6.
 
 The below configuration sets the `ipFamily` to `DualStack` to allow ingressing IPv4 as well as IPv6 traffic.
 
@@ -1092,4 +1092,4 @@ After applying the config, the EnvoyProxy deployment will be configured to use t
 
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
 [EnvoyProxy]: ../../../api/extension_types#envoyproxy
-[egctl translate]: ../egctl/#validating-gateway-api-configuration
+[egctl x translate]: ../operations/egctl#egctl-experimental-translate
