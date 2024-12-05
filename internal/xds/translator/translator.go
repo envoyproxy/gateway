@@ -464,6 +464,7 @@ func (t *Translator) addRouteToRouteConfig(
 			ea := &ExtraArgs{
 				metrics:       metrics,
 				http1Settings: httpListener.HTTP1,
+				ipFamily:      determineIPFamily(httpRoute.Destination.Settings),
 			}
 
 			if httpRoute.Traffic != nil && httpRoute.Traffic.HTTP2 != nil {

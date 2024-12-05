@@ -592,7 +592,7 @@ func (in *CoreListenerDetails) DeepCopyInto(out *CoreListenerDetails) {
 	}
 	if in.IPFamily != nil {
 		in, out := &in.IPFamily, &out.IPFamily
-		*out = new(IPFamily)
+		*out = new(v1alpha1.IPFamily)
 		**out = **in
 	}
 }
@@ -770,6 +770,11 @@ func (in *DestinationSetting) DeepCopyInto(out *DestinationSetting) {
 	if in.AddressType != nil {
 		in, out := &in.AddressType, &out.AddressType
 		*out = new(DestinationAddressType)
+		**out = **in
+	}
+	if in.IPFamily != nil {
+		in, out := &in.IPFamily, &out.IPFamily
+		*out = new(v1alpha1.IPFamily)
 		**out = **in
 	}
 	if in.TLS != nil {
