@@ -698,6 +698,7 @@ type ExtraArgs struct {
 	metrics       *ir.Metrics
 	http1Settings *ir.HTTP1Settings
 	http2Settings *ir.HTTP2Settings
+	ipFamily      *egv1a1.IPFamily
 }
 
 type clusterArgs interface {
@@ -716,6 +717,7 @@ func (route *UDPRouteTranslator) asClusterArgs(extra *ExtraArgs) *xdsClusterArgs
 		endpointType: buildEndpointType(route.Destination.Settings),
 		metrics:      extra.metrics,
 		dns:          route.DNS,
+		ipFamily:     extra.ipFamily,
 	}
 }
 
@@ -737,6 +739,7 @@ func (route *TCPRouteTranslator) asClusterArgs(extra *ExtraArgs) *xdsClusterArgs
 		metrics:           extra.metrics,
 		backendConnection: route.BackendConnection,
 		dns:               route.DNS,
+		ipFamily:          extra.ipFamily,
 	}
 }
 
@@ -754,6 +757,7 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(extra *ExtraArgs) *xdsCluste
 		http1Settings:     extra.http1Settings,
 		http2Settings:     extra.http2Settings,
 		useClientProtocol: ptr.Deref(httpRoute.UseClientProtocol, false),
+		ipFamily:          extra.ipFamily,
 	}
 
 	// Populate traffic features.

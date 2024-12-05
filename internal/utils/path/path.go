@@ -8,6 +8,8 @@ package path
 import (
 	"os"
 	"path/filepath"
+
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 // ValidateOutputPath takes an output file path and returns it as an absolute path.
@@ -21,4 +23,36 @@ func ValidateOutputPath(outputPath string) (string, error) {
 		return "", err
 	}
 	return outputPath, nil
+}
+
+// ListDirsAndFiles return a list of directories and files from a list of paths recursively.
+func ListDirsAndFiles(paths []string) (dirs sets.Set[string], files sets.Set[string]) {
+	dirs, files = sets.New[string](), sets.New[string]()
+	// Separate paths by whether is a directory or not.
+	paths = sets.NewString(paths...).UnsortedList()
+	for _, path := range paths {
+		var p os.FileInfo
+		p, err := os.Lstat(path)
+		if err != nil {
+			// skip
+			continue
+		}
+
+		if p.IsDir() {
+			dirs.Insert(path)
+		} else {
+			files.Insert(path)
+		}
+	}
+
+	// Ignore filepath if its parent directory is also be watched.
+	var ignoreFiles []string
+	for fp := range files {
+		if dirs.Has(filepath.Dir(fp)) {
+			ignoreFiles = append(ignoreFiles, fp)
+		}
+	}
+	files.Delete(ignoreFiles...)
+
+	return
 }
