@@ -4,6 +4,7 @@ metadata:
   name: custom-proxy-config
   namespace: gateway-conformance-infra
 spec:
+  ipFamily: IPv4
   routingType: Service
 ---
 apiVersion: gateway.networking.k8s.io/v1

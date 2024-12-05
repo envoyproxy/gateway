@@ -24,6 +24,7 @@ metadata:
   namespace: gateway-conformance-infra
   name: test
 spec:
+  ipFamily: IPv4
   routingType: Service
 ---
 apiVersion: gateway.networking.k8s.io/v1
