@@ -16,6 +16,7 @@ metadata:
   name: proxy-config
   namespace: envoy-gateway-system
 spec:
+  ipFamily: IPv4
   provider:
     type: Kubernetes
     kubernetes:
@@ -124,6 +125,7 @@ metadata:
   name: upgrade-config
   namespace: envoy-gateway-system
 spec:
+  ipFamily: IPv4
   provider:
     type: Kubernetes
     kubernetes:
@@ -158,6 +160,7 @@ metadata:
   name: merge-gateways-config
   namespace: envoy-gateway-system
 spec:
+  ipFamily: IPv4
   mergeGateways: true
 ---
 kind: GatewayClass
@@ -166,6 +169,11 @@ metadata:
   name: internet
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: proxy-config
+    namespace: envoy-gateway-system
 ---
 kind: GatewayClass
 apiVersion: gateway.networking.k8s.io/v1
@@ -173,5 +181,10 @@ metadata:
   name: private
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: proxy-config
+    namespace: envoy-gateway-system
 ---
 
