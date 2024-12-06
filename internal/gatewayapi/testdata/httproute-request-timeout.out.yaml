@@ -136,4 +136,3 @@ xdsIR:
           name: ""
           prefix: /
         timeout: 5s
-        traffic: {}
