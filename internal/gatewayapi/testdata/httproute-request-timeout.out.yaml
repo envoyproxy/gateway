@@ -135,7 +135,5 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        traffic:
-          timeout:
-            http:
-              requestTimeout: 5s
+        timeout: 5s
+        traffic: {}
