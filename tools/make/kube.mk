@@ -12,6 +12,7 @@ GATEWAY_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/d
 
 WAIT_TIMEOUT ?= 15m
 
+IP_FAMILY ?= ipv4
 BENCHMARK_TIMEOUT ?= 60m
 BENCHMARK_CPU_LIMITS ?= 1000m
 BENCHMARK_MEMORY_LIMITS ?= 1024Mi
@@ -35,10 +36,22 @@ ifeq ($(origin KUBE_INFRA_DIR),undefined)
 KUBE_INFRA_DIR := $(ROOT_DIR)/internal/infrastructure/kubernetes/config
 endif
 
+ifeq ($(IP_FAMILY),ipv4)
+ENVOY_PROXY_IP_FAMILY := IPv4
+else ifeq ($(IP_FAMILY),ipv6)
+ENVOY_PROXY_IP_FAMILY := IPv6
+else ifeq ($(IP_FAMILY),dual)
+ENVOY_PROXY_IP_FAMILY := DualStack
+endif
+
 ##@ Kubernetes Development
 
 YEAR := $(shell date +%Y)
 CONTROLLERGEN_OBJECT_FLAGS :=  object:headerFile="$(ROOT_DIR)/tools/boilerplate/boilerplate.generatego.txt",year=$(YEAR)
+
+.PHONY: prepare-ip-family
+prepare-ip-family:
+	@find ./test -type f -name "*.yaml" | xargs sed -i -e 's/ipFamily: IPv4/ipFamily: $(ENVOY_PROXY_IP_FAMILY)/g'
 
 .PHONY: manifests
 manifests: $(tools/controller-gen) generate-gwapi-manifests ## Generate WebhookConfiguration and CustomResourceDefinition objects.
@@ -145,7 +158,7 @@ install-ratelimit:
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 
 .PHONY: e2e-prepare
-e2e-prepare: ## Prepare the environment for running e2e tests
+e2e-prepare: prepare-ip-family ## Prepare the environment for running e2e tests
 	@$(LOG_TARGET)
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
@@ -165,7 +178,7 @@ else
 endif
 
 .PHONY: run-benchmark
-run-benchmark: install-benchmark-server ## Run benchmark tests
+run-benchmark: install-benchmark-server prepare-ip-family ## Run benchmark tests
 	@$(LOG_TARGET)
 	mkdir -p $(OUTPUT_DIR)/benchmark
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n benchmark-test deployment/nighthawk-test-server --for=condition=Available
@@ -221,7 +234,7 @@ kube-install-image: image.build $(tools/kind) ## Install the EG image to a kind 
 	tools/hack/kind-load-image.sh $(IMAGE) $(TAG)
 
 .PHONY: run-conformance
-run-conformance: ## Run Gateway API conformance.
+run-conformance: prepare-ip-family ## Run Gateway API conformance.
 	@$(LOG_TARGET)
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml
@@ -230,7 +243,7 @@ run-conformance: ## Run Gateway API conformance.
 CONFORMANCE_REPORT_PATH ?=
 
 .PHONY: run-experimental-conformance
-run-experimental-conformance: ## Run Experimental Gateway API conformance.
+run-experimental-conformance: prepare-ip-family ## Run Experimental Gateway API conformance.
 	@$(LOG_TARGET)
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml

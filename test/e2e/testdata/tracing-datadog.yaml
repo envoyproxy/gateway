@@ -39,6 +39,7 @@ metadata:
   name: datadog-tracing
   namespace: gateway-conformance-infra
 spec:
+  ipFamily: IPv4
   logging:
     level:
       default: debug

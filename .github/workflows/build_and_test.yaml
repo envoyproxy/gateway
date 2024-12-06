@@ -55,7 +55,7 @@ jobs:
     - name: Run Coverage Tests
       run: make go.test.coverage
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238  # v4.6.0
+      uses: codecov/codecov-action@015f24e6818733317a2da2edd6290ab26238649a  # v5.0.7
       with:
         fail_ci_if_error: true
         files: ./coverage.xml
@@ -120,10 +120,7 @@ jobs:
         - version: v1.29.8
           ipFamily: ipv4
         - version: v1.30.4
-          ipFamily: ipv4
-        # Enable these after https://github.com/envoyproxy/gateway/issues/4572 fixed
-        # - version: v1.31.0
-        #   ipFamily: ipv6   # only run ipv6 test on latest version to save time
+          ipFamily: ipv6  # only run ipv6 test on this version to save time
         # TODO: this's IPv4 first, need a way to test IPv6 first.
         - version: v1.31.0
           ipFamily: dual  # only run dual test on latest version to save time
@@ -148,6 +145,7 @@ jobs:
         KIND_NODE_TAG: ${{ matrix.target.version }}
         IMAGE_PULL_POLICY: IfNotPresent
         IP_FAMILY: ${{ matrix.target.ipFamily }}
+        E2E_TIMEOUT: 1h
       run: make e2e
 
   benchmark-test:

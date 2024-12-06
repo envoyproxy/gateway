@@ -14,6 +14,7 @@ import (
 	"runtime"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/stretchr/testify/require"
@@ -173,6 +174,44 @@ func TestWatchFile(t *testing.T) {
 	})
 }
 
+func TestWatchDir(t *testing.T) {
+	// Given a file being watched
+	watchFile := newWatchFile(t)
+	_, err := os.Stat(watchFile)
+	require.NoError(t, err)
+
+	w := NewWatcher()
+	defer func() {
+		_ = w.Close()
+	}()
+	d := path.Dir(watchFile)
+	require.NoError(t, w.Add(d))
+
+	timeout := time.After(5 * time.Second)
+
+	wg := sync.WaitGroup{}
+	var timeoutErr error
+	wg.Add(1)
+	go func() {
+		select {
+		case <-w.Events(d):
+
+		case <-w.Events(watchFile):
+
+		case <-timeout:
+			timeoutErr = errors.New("timeout")
+		}
+		wg.Done()
+	}()
+
+	// Overwriting the file and waiting its event to be received.
+	err = os.WriteFile(watchFile, []byte("foo: baz\n"), 0o600)
+	require.NoError(t, err)
+	wg.Wait()
+
+	require.NoErrorf(t, timeoutErr, "timeout waiting for event")
+}
+
 func TestWatcherLifecycle(t *testing.T) {
 	watchFile1, watchFile2 := newTwoWatchFile(t)
 
@@ -295,27 +334,23 @@ func TestBadAddWatcher(t *testing.T) {
 
 func TestDuplicateAdd(t *testing.T) {
 	w := NewWatcher()
-
 	name := newWatchFile(t)
+	defer func() {
+		_ = w.Close()
+		_ = os.Remove(name)
+	}()
 
-	if err := w.Add(name); err != nil {
-		t.Errorf("Expecting nil, got %v", err)
-	}
-
-	if err := w.Add(name); err == nil {
-		t.Errorf("Expecting error, got nil")
-	}
-
-	_ = w.Close()
+	require.NoError(t, w.Add(name))
+	require.Error(t, w.Add(name))
 }
 
 func TestBogusRemove(t *testing.T) {
 	w := NewWatcher()
-
 	name := newWatchFile(t)
-	if err := w.Remove(name); err == nil {
-		t.Errorf("Expecting error, got nil")
-	}
+	defer func() {
+		_ = w.Close()
+		_ = os.Remove(name)
+	}()
 
-	_ = w.Close()
+	require.Error(t, w.Remove(name))
 }
