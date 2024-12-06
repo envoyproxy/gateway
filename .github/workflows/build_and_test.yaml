@@ -176,6 +176,21 @@ jobs:
 
     - name: Read Benchmark report
       run: cat test/benchmark/benchmark_report/benchmark_report.md
+  resiliency-test:
+    runs-on: ubuntu-latest
+    if: ${{ ! startsWith(github.event_name, 'push') }}
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: ./tools/github-actions/setup-deps
+      - name: Setup Graphviz
+        uses: ts-graphviz/setup-graphviz@v2.0.2
+      - name: Resilience Test
+        env:
+          KIND_NODE_TAG: v1.28.13
+          IMAGE_PULL_POLICY: IfNotPresent
+          CUSTOM_CNI: "true"
+        run: make resiliency-test
 
   publish:
     runs-on: ubuntu-latest
