@@ -480,7 +480,8 @@ spec:
   selector:
     app: tls-backend-2
   ports:
-    - protocol: TCP
+    - name: https
+      protocol: TCP
       port: 443
       targetPort: 8443
 ---
