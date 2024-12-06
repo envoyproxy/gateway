@@ -61,7 +61,8 @@ case $OS in
         CILIUM_CLI_VERSION=$(curl -s https://raw.githubusercontent.com/cilium/cilium-cli/main/stable.txt)
         CLI_ARCH=amd64
         if [ "$(uname -m)" = "arm64" ]; then CLI_ARCH=arm64; fi
-        curl -L --fail --remote-name-all "https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-linux-${CLI_ARCH}.tar.gz"{,.sha256sum}        shasum -a 256 -c cilium-darwin-${CLI_ARCH}.tar.gz.sha256sum
+        curl -L --fail --remote-name-all "https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-darwin-${CLI_ARCH}.tar.gz"{,.sha256sum}
+        shasum -a 256 -c cilium-darwin-${CLI_ARCH}.tar.gz.sha256sum
         tar xf cilium-darwin-${CLI_ARCH}.tar.gz
         rm cilium-darwin-${CLI_ARCH}.tar.gz{,.sha256sum}
         ;;
@@ -69,7 +70,8 @@ case $OS in
         CILIUM_CLI_VERSION=$(curl -s https://raw.githubusercontent.com/cilium/cilium-cli/main/stable.txt)
         CLI_ARCH=amd64
         if [ "$(uname -m)" = "aarch64" ]; then CLI_ARCH=arm64; fi
-        curl -L --fail --remote-name-all "https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-linux-${CLI_ARCH}.tar.gz"{,.sha256sum}        sha256sum --check cilium-linux-${CLI_ARCH}.tar.gz.sha256sum
+        curl -L --fail --remote-name-all "https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-linux-${CLI_ARCH}.tar.gz"{,.sha256sum}
+        sha256sum --check cilium-linux-${CLI_ARCH}.tar.gz.sha256sum
         tar xf cilium-linux-${CLI_ARCH}.tar.gz
         rm cilium-linux-${CLI_ARCH}.tar.gz{,.sha256sum}
         ;;
@@ -138,27 +140,27 @@ spec:
 EOF
 }
 
+RETRY_INTERVAL=5  # seconds
+TIMEOUT=120        # seconds
+ELAPSED_TIME=0
+
 if [ "$CUSTOM_CNI" = "true" ]; then
   CILIUM_BIN="./bin/cilium"
   $CILIUM_BIN install --wait --version 1.16.4
   $CILIUM_BIN status --wait
-  RETRY_INTERVAL=20  # seconds
-  TIMEOUT=120        # seconds
-  ELAPSED_TIME=0
-  echo "Applying configuration with retries..."
-  # Retry loop
-  while [ $ELAPSED_TIME -lt $TIMEOUT ]; do
-    if apply_metallb_ranges; then
-      echo "Configuration applied successfully."
-      exit 0
-    else
-      echo "Trying to apply configuration. Retrying in $RETRY_INTERVAL seconds..."
-    fi
-    sleep $RETRY_INTERVAL
-    ELAPSED_TIME=$((ELAPSED_TIME + RETRY_INTERVAL))
-  done
 else
   # Apply MetalLB IPAddressPool and L2Advertisement
-  apply_metallb_ranges
+  echo "Applying configuration with retries..."
+    # Retry loop
+    while [ $ELAPSED_TIME -lt $TIMEOUT ]; do
+      if apply_metallb_ranges; then
+        echo "Configuration applied successfully."
+        exit 0
+      else
+        echo "Trying to apply configuration. Retrying in $RETRY_INTERVAL seconds..."
+      fi
+      sleep $RETRY_INTERVAL
+      ELAPSED_TIME=$((ELAPSED_TIME + RETRY_INTERVAL))
+    done
 fi
 
