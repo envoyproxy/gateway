@@ -32,7 +32,7 @@ func (t *Translator) processBackendTLSPolicy(
 	resources *resource.Resources,
 	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.TLSUpstreamConfig, *gwapiv1a3.BackendTLSPolicy) {
-	policy := getBackendTLSPolicy(resources.BackendTLSPolicies, backendRef, backendNamespace)
+	policy := getBackendTLSPolicy(resources.BackendTLSPolicies, backendRef, backendNamespace, resources)
 	if policy == nil {
 		return nil, nil
 	}
@@ -157,8 +157,14 @@ func backendTLSTargetMatched(policy gwapiv1a3.BackendTLSPolicy, target gwapiv1a2
 	return false
 }
 
-func getBackendTLSPolicy(policies []*gwapiv1a3.BackendTLSPolicy, backendRef gwapiv1a2.BackendObjectReference, backendNamespace string) *gwapiv1a3.BackendTLSPolicy {
-	target := getTargetBackendReference(backendRef)
+func getBackendTLSPolicy(
+	policies []*gwapiv1a3.BackendTLSPolicy,
+	backendRef gwapiv1a2.BackendObjectReference,
+	backendNamespace string,
+	resources *resource.Resources,
+) *gwapiv1a3.BackendTLSPolicy {
+	// SectionName is port number for EG Backend object
+	target := getTargetBackendReference(backendRef, backendNamespace, resources)
 	for _, policy := range policies {
 		if backendTLSTargetMatched(*policy, target, backendNamespace) {
 			return policy

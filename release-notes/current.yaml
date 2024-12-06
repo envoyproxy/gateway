@@ -17,6 +17,7 @@ new features: |
 
 # Fixes for bugs identified in previous versions.
 bug fixes: |
+  Fixed BackendTLSPolicy didn't support using port name as the sectionName in the targetRefs
   Fixed reference grant from EnvoyExtensionPolicy to referenced ext-proc backend not respected
 
 # Enhancements that improve performance.
