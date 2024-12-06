@@ -103,7 +103,6 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 				LocalityWeightedLbConfig: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig{},
 			},
 		},
-		OutlierDetection:              &clusterv3.OutlierDetection{},
 		PerConnectionBufferLimitBytes: buildBackandConnectionBufferLimitBytes(args.backendConnection),
 	}
 

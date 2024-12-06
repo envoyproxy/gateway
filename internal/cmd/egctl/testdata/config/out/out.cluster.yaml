@@ -21,7 +21,6 @@ default:
             loadBalancingWeight: 1
             locality: {}
         name: default-backend-rule-0-match-0-www.example.com
-        outlierDetection: {}
         type: STATIC
       lastUpdated: "2023-02-23T09:05:38.443Z"
       versionInfo: 2a0a1698a9d3e05b802047b0cd36b52a070afa49042e1ba267168c5265c7cabf

@@ -19,7 +19,6 @@ xds:
         ignoreHealthOnHostRemoval: true
         lbPolicy: LEAST_REQUEST
         name: httproute/default/backend/rule/0
-        outlierDetection: {}
         perConnectionBufferLimitBytes: 32768
         type: EDS
     - cluster:
@@ -39,7 +38,6 @@ xds:
         ignoreHealthOnHostRemoval: true
         lbPolicy: LEAST_REQUEST
         name: grpcroute/default/backend/rule/0
-        outlierDetection: {}
         perConnectionBufferLimitBytes: 32768
         type: EDS
         typedExtensionProtocolOptions:
@@ -66,7 +64,6 @@ xds:
         ignoreHealthOnHostRemoval: true
         lbPolicy: LEAST_REQUEST
         name: tcproute/default/backend/rule/-1
-        outlierDetection: {}
         perConnectionBufferLimitBytes: 32768
         type: EDS
     - cluster:
@@ -86,7 +83,6 @@ xds:
         ignoreHealthOnHostRemoval: true
         lbPolicy: LEAST_REQUEST
         name: tlsroute/default/backend/rule/-1
-        outlierDetection: {}
         perConnectionBufferLimitBytes: 32768
         type: EDS
     - cluster:
@@ -106,6 +102,5 @@ xds:
         ignoreHealthOnHostRemoval: true
         lbPolicy: LEAST_REQUEST
         name: udproute/default/backend/rule/-1
-        outlierDetection: {}
         perConnectionBufferLimitBytes: 32768
         type: EDS
