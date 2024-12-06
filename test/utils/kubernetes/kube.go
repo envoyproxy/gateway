@@ -10,9 +10,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/envoyproxy/gateway/api/v1alpha1"
-	kube "github.com/envoyproxy/gateway/internal/kubernetes"
 	"io"
+	"strings"
+	"sync"
+	"time"
+
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -22,9 +24,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
-	"sync"
-	"time"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	kube "github.com/envoyproxy/gateway/internal/kubernetes"
 )
 
 // NewKubeHelper consolidates common Kubernetes operations, including deployments, traffic management, and log probing.
@@ -49,8 +51,7 @@ func (ka *KubeActions) ManageEgress(ctx context.Context, ip, namespace, policyNa
 	}
 
 	// Define the Egress rule based on the enforce parameter
-	var egressRule networkingv1.NetworkPolicyEgressRule
-	egressRule = networkingv1.NetworkPolicyEgressRule{
+	egressRule := networkingv1.NetworkPolicyEgressRule{
 		To: []networkingv1.NetworkPolicyPeer{
 			{
 				IPBlock: &networkingv1.IPBlock{
@@ -81,7 +82,7 @@ func (ka *KubeActions) ManageEgress(ctx context.Context, ip, namespace, policyNa
 		},
 	}
 
-	//remove the policy
+	// remove the policy
 	if !blockTraffic {
 		if err := ka.Client.Delete(ctx, netPolicy); err != nil {
 			return nil, fmt.Errorf("failed to delete NetworkPolicy: %w", err)
@@ -140,13 +141,13 @@ func (ka *KubeActions) ScaleEnvoyProxy(envoyProxyName, namespace string, replica
 	ctx := context.Background()
 
 	// Retrieve the existing EnvoyProxy resource
-	envoyProxy := &v1alpha1.EnvoyProxy{}
+	envoyProxy := &egv1a1.EnvoyProxy{}
 	err := ka.Client.Get(ctx, types.NamespacedName{Name: envoyProxyName, Namespace: namespace}, envoyProxy)
 	if err != nil {
 		return fmt.Errorf("failed to get EnvoyProxy: %w", err)
 	}
-	envoyProxy.Spec.Provider.Kubernetes = &v1alpha1.EnvoyProxyKubernetesProvider{
-		EnvoyDeployment: &v1alpha1.KubernetesDeploymentSpec{
+	envoyProxy.Spec.Provider.Kubernetes = &egv1a1.EnvoyProxyKubernetesProvider{
+		EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
 			Replicas: ptr.To[int32](replicas),
 		},
 	}
@@ -276,7 +277,7 @@ func (ka *KubeActions) CheckConnectivityJob(targetURL string, reqs int) error {
 		if deleteErr := ka.Delete(ctx, job, &client.DeleteOptions{
 			PropagationPolicy: &deletePolicy,
 		}); deleteErr != nil {
-			return fmt.Errorf("failed to delete job after failure: %v; original error: %w", deleteErr, err)
+			return fmt.Errorf("failed to delete job after failure: %w; original error: %w", deleteErr, err)
 		}
 		return fmt.Errorf("job failed: %w", err)
 	}
@@ -286,7 +287,7 @@ func (ka *KubeActions) CheckConnectivityJob(targetURL string, reqs int) error {
 	if deleteErr := ka.Delete(ctx, job, &client.DeleteOptions{
 		PropagationPolicy: &deletePolicy,
 	}); deleteErr != nil {
-		return fmt.Errorf("failed to delete job after failure: %v; original error: %w", deleteErr, err)
+		return fmt.Errorf("failed to delete job after failure: %w; original error: %w", deleteErr, err)
 	}
 	fmt.Printf("Job %s deleted.\n", job.Name)
 

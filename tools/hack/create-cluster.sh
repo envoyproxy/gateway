@@ -61,8 +61,7 @@ case $OS in
         CILIUM_CLI_VERSION=$(curl -s https://raw.githubusercontent.com/cilium/cilium-cli/main/stable.txt)
         CLI_ARCH=amd64
         if [ "$(uname -m)" = "arm64" ]; then CLI_ARCH=arm64; fi
-        curl -L --fail --remote-name-all https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-darwin-${CLI_ARCH}.tar.gz{,.sha256sum}
-        shasum -a 256 -c cilium-darwin-${CLI_ARCH}.tar.gz.sha256sum
+        curl -L --fail --remote-name-all "https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-linux-${CLI_ARCH}.tar.gz"{,.sha256sum}        shasum -a 256 -c cilium-darwin-${CLI_ARCH}.tar.gz.sha256sum
         tar xf cilium-darwin-${CLI_ARCH}.tar.gz
         rm cilium-darwin-${CLI_ARCH}.tar.gz{,.sha256sum}
         ;;
@@ -70,8 +69,7 @@ case $OS in
         CILIUM_CLI_VERSION=$(curl -s https://raw.githubusercontent.com/cilium/cilium-cli/main/stable.txt)
         CLI_ARCH=amd64
         if [ "$(uname -m)" = "aarch64" ]; then CLI_ARCH=arm64; fi
-        curl -L --fail --remote-name-all https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-linux-${CLI_ARCH}.tar.gz{,.sha256sum}
-        sha256sum --check cilium-linux-${CLI_ARCH}.tar.gz.sha256sum
+        curl -L --fail --remote-name-all "https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-linux-${CLI_ARCH}.tar.gz"{,.sha256sum}        sha256sum --check cilium-linux-${CLI_ARCH}.tar.gz.sha256sum
         tar xf cilium-linux-${CLI_ARCH}.tar.gz
         rm cilium-linux-${CLI_ARCH}.tar.gz{,.sha256sum}
         ;;

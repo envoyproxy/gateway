@@ -94,9 +94,9 @@ func (rts *ResilienceTestSuite) Kube() *kubernetes.KubeActions {
 }
 
 func (rts *ResilienceTestSuite) Run(t *testing.T, tests []ResilienceTest) {
-	t.Logf("Running %d resilence tests", len(tests))
+	t.Logf("Running %d resilience tests", len(tests))
 	for _, test := range tests {
-		t.Logf("Running resilence test: %s", test.ShortName)
+		t.Logf("Running resilience test: %s", test.ShortName)
 		test.Test(t, rts)
 	}
 }
