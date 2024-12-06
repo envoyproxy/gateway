@@ -1,0 +1,125 @@
+http:
+  - address: 0.0.0.0
+    hostnames:
+      - '*'
+    isHTTP2: false
+    name: default/gateway-1/http
+    path:
+      escapedSlashesAction: UnescapeAndRedirect
+      mergeSlashes: true
+    port: 10080
+    routes:
+      - name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
+        hostname: www.foo.com
+        isHTTP2: false
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /foo1
+        backendWeights:
+          invalid: 0
+          valid: 0
+        destination:
+          name: httproute/default/httproute-1/rule/0
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 7.7.7.7
+                  port: 8080
+              protocol: HTTP
+              weight: 1
+        security:
+          extAuth:
+            name: securitypolicy/default/policy-for-http-route-1
+            failOpen: false
+            grpc:
+              authority: primary.foo.com
+              destination:
+                name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
+                settings:
+                  - addressType: FQDN
+                    endpoints:
+                      - host: primary.foo.com
+                        port: 9000
+                    protocol: GRPC
+                    weight: 1
+            headersToExtAuth:
+              - header1
+              - header2
+      - name: httproute/default/httproute-1/rule/1/match/0/www_foo_com
+        hostname: www.foo.com
+        isHTTP2: false
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /foo2
+        backendWeights:
+          invalid: 0
+          valid: 0
+        destination:
+          name: httproute/default/httproute-1/rule/1
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 7.7.7.7
+                  port: 8080
+              protocol: HTTP
+              weight: 1
+        security:
+          extAuth:
+            name: securitypolicy/default/policy-for-http-route-1
+            failOpen: false
+            grpc:
+              authority: primary.foo.com
+              destination:
+                name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
+                settings:
+                  - addressType: IP
+                    endpoints:
+                      - host: primary.foo.com
+                        port: 3000
+                    protocol: GRPC
+                    weight: 1
+            headersToExtAuth:
+              - header1
+              - header2
+      - name: httproute/default/httproute-2/rule/0/match/0/www_bar_com
+        hostname: www.bar.com
+        isHTTP2: false
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /bar
+        backendWeights:
+          invalid: 0
+          valid: 0
+        destination:
+          name: httproute/default/httproute-2/rule/0
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 7.7.7.7
+                  port: 8080
+              protocol: HTTP
+              weight: 1
+        security:
+          extAuth:
+            name: securitypolicy/default/policy-for-gateway-1
+            failOpen: true
+            bodyToExtAuth:
+              maxRequestBytes: 32768
+            http:
+              authority: primary.foo.com
+              destination:
+                name: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
+                settings:
+                  - addressType: FQDN
+                    endpoints:
+                      - host: primary.foo.com
+                        port: 80
+                    protocol: HTTP
+                    weight: 1
+              headersToBackend:
+                - header1
+                - header2
+              path: /auth

@@ -24,6 +24,7 @@ metadata:
   name: eg-daemonset
   namespace: gateway-conformance-infra
 spec:
+  ipFamily: IPv4
   provider:
     type: Kubernetes
     kubernetes:
