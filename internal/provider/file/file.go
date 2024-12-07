@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -31,6 +32,9 @@ type Provider struct {
 	logger         logr.Logger
 	watcher        filewatcher.FileWatcher
 	resourcesStore *resourcesStore
+
+	// ready indicates whether the provider can start watching filesystem events.
+	ready atomic.Bool
 }
 
 func New(svr *config.Server, resources *message.ProviderResources) (*Provider, error) {
@@ -58,7 +62,13 @@ func (p *Provider) Start(ctx context.Context) error {
 	}()
 
 	// Start runnable servers.
-	go p.startHealthProbeServer(ctx)
+	var readyzChecker healthz.Checker = func(req *http.Request) error {
+		if !p.ready.Load() {
+			return fmt.Errorf("file provider not ready yet")
+		}
+		return nil
+	}
+	go p.startHealthProbeServer(ctx, readyzChecker)
 
 	initDirs, initFiles := path.ListDirsAndFiles(p.paths)
 	// Initially load resources from paths on host.
@@ -83,7 +93,9 @@ func (p *Provider) Start(ctx context.Context) error {
 		}(ch)
 	}
 
+	p.ready.Store(true)
 	curDirs, curFiles := initDirs.Clone(), initFiles.Clone()
+	initFilesParent := path.GetParentDirs(initFiles.UnsortedList())
 	for {
 		select {
 		case <-ctx.Done():
@@ -102,29 +114,35 @@ func (p *Provider) Start(ctx context.Context) error {
 			// temporary file when file is saved. So the watcher will only receive:
 			// - Create event, with name "filename~".
 			// - Remove event, with name "filename", but the file actually exist.
-			if initFiles.Has(event.Name) {
+			if initFilesParent.Has(filepath.Dir(event.Name)) {
 				p.logger.Info("file changed", "op", event.Op, "name", event.Name)
 
 				// For Write event, the file definitely exist.
-				if event.Has(fsnotify.Write) {
+				if initFiles.Has(event.Name) && event.Has(fsnotify.Write) {
 					goto handle
 				}
 
-				_, err := os.Lstat(event.Name)
-				if err != nil && os.IsNotExist(err) {
-					curFiles.Delete(event.Name)
-				} else {
-					curFiles.Insert(event.Name)
+				// Iter over the watched files to see the different.
+				for f := range initFiles {
+					_, err := os.Lstat(f)
+					if err != nil {
+						if os.IsNotExist(err) {
+							curFiles.Delete(f)
+						} else {
+							p.logger.Error(err, "stat file error", "name", f)
+						}
+					} else {
+						curFiles.Insert(f)
+					}
 				}
 				goto handle
 			}
 
 			// Ignore the hidden or temporary file related change event under a directory.
-			if _, name := filepath.Split(event.Name); strings.HasPrefix(name, ".") ||
-				strings.HasSuffix(name, "~") {
+			if _, name := filepath.Split(event.Name); strings.HasPrefix(name, ".") || strings.HasSuffix(name, "~") {
 				continue
 			}
-			p.logger.Info("file changed", "op", event.Op, "name", event.Name)
+			p.logger.Info("file changed", "op", event.Op, "name", event.Name, "dir", filepath.Dir(event.Name))
 
 			switch event.Op {
 			case fsnotify.Create, fsnotify.Write, fsnotify.Remove:
@@ -142,7 +160,7 @@ func (p *Provider) Start(ctx context.Context) error {
 	}
 }
 
-func (p *Provider) startHealthProbeServer(ctx context.Context) {
+func (p *Provider) startHealthProbeServer(ctx context.Context, readyzChecker healthz.Checker) {
 	const (
 		readyzEndpoint  = "/readyz"
 		healthzEndpoint = "/healthz"
@@ -159,7 +177,7 @@ func (p *Provider) startHealthProbeServer(ctx context.Context) {
 
 	readyzHandler := &healthz.Handler{
 		Checks: map[string]healthz.Checker{
-			readyzEndpoint: healthz.Ping,
+			readyzEndpoint: readyzChecker,
 		},
 	}
 	mux.Handle(readyzEndpoint, http.StripPrefix(readyzEndpoint, readyzHandler))
