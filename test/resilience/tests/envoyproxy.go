@@ -73,7 +73,7 @@ var EPResilience = suite.ResilienceTest{
 
 			resultCh := make(chan error, 1)
 			go func() {
-				err := suite.Kube().CheckConnectivityJob(fmt.Sprintf("http://%s/route-change", gwAddr), 10)
+				err := suite.Kube().CheckConnectivityJob(fmt.Sprintf("http://%s/welcome", gwAddr), 10)
 				resultCh <- err // Send the error (or nil) to the channel
 			}()
 			err = <-resultCh

@@ -72,17 +72,18 @@ var EGResilience = suite.ResilienceTest{
 			require.NoError(t, err, "unable to block api server connectivity")
 
 			err = suite.Kube().WaitForDeploymentReplicaCount(context.Background(), "envoy-gateway", namespace, 0, time.Minute, false)
+
 			ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/route_changes.yaml", true)
+			t.Log("backend routes changed")
 
-			t.Log("restore API server for all pods")
-			err = suite.WithResCleanUp(context.Background(), t, func() (client.Object, error) {
-				return suite.Kube().ManageEgress(context.Background(), apiServerIP, namespace, policyName, false, map[string]string{})
-			})
-
+			t.Log("restore API server connectivity")
+			_, err = suite.Kube().ManageEgress(context.Background(), apiServerIP, namespace, policyName, false, map[string]string{})
 			require.NoError(t, err, "unable to unblock api server connectivity")
 
 			err = suite.Kube().WaitForDeploymentReplicaCount(context.Background(), "envoy-gateway", namespace, 1, time.Minute, false)
 			require.NoError(t, err, "Failed to ensure that pod is online")
+			t.Log("eg is online")
+
 			t.Log("Monitoring logs to identify the leader pod")
 			name, err = suite.Kube().MonitorDeploymentLogs(context.Background(), time.Now(), namespace, envoygateway, targetString, timeout, false)
 			require.NoError(t, err, "Failed to monitor logs")
@@ -92,11 +93,11 @@ var EGResilience = suite.ResilienceTest{
 			routeNN := types.NamespacedName{Name: "backend", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "all-namespaces", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-
 			resultCh := make(chan error, 1)
 			go func() {
+				t.Log("connecting to:", fmt.Sprintf("http://%s/route-change", gwAddr))
 				err := suite.Kube().CheckConnectivityJob(fmt.Sprintf("http://%s/route-change", gwAddr), 10)
-				resultCh <- err // Send the error (or nil) to the channel
+				resultCh <- err
 			}()
 			err = <-resultCh
 			require.NoError(t, err, "Failed during connectivity checkup")

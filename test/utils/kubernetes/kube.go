@@ -224,7 +224,7 @@ func (ka *KubeActions) WaitForDeploymentReplicaCount(ctx context.Context, deploy
 }
 
 func (ka *KubeActions) CheckConnectivityJob(targetURL string, reqs int) error {
-	jobName := "ab-connectivity"
+	jobName := "check-connectivity"
 	// Check if the job already exists and delete it
 	existingJob := &batchv1.Job{}
 	err := ka.Get(context.Background(), client.ObjectKey{Name: jobName, Namespace: corev1.NamespaceDefault}, existingJob)
@@ -247,13 +247,27 @@ func (ka *KubeActions) CheckConnectivityJob(targetURL string, reqs int) error {
 			Namespace: corev1.NamespaceDefault,
 		},
 		Spec: batchv1.JobSpec{
+			BackoffLimit: ptr.To[int32](0),
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:    "ab",
-							Image:   "jordi/ab",
-							Command: []string{"ab", "-n", fmt.Sprintf("%d", reqs), "-c", "10", targetURL},
+							Name:  "curl",
+							Image: "curlimages/curl:latest",
+							Command: []string{
+								"sh",
+								"-c",
+								fmt.Sprintf(`
+                                for i in $(seq 1 %d); do
+                                    response=$(curl -s -o /dev/null -w "%%{http_code}" %s)
+                                    if [ "$response" -ne 200 ]; then
+                                        echo "Error: Request $i received HTTP status code $response"
+                                        exit 1
+                                    fi
+                                    echo "Success: Request $i received HTTP 200 OK"
+                                done
+                                `, reqs, targetURL),
+							},
 						},
 					},
 					RestartPolicy: corev1.RestartPolicyNever,
