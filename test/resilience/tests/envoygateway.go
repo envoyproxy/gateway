@@ -14,6 +14,7 @@ import (
 	"github.com/go-logr/zapr"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
@@ -52,6 +53,48 @@ var EGResilience = suite.ResilienceTest{
 			ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
 		}
 		ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/base.yaml", true)
+
+		t.Run("envoy proxy reconcile resource and sync xds after api server connectivity is restored", func(t *testing.T) {
+			t.Log("Simulating API server down for all pods")
+			err := suite.Kube().ScaleDeploymentAndWait(context.Background(), "envoy-gateway", namespace, 1, time.Minute, false)
+			require.NoError(t, err, "Failed to scale deployment to 0 replicas")
+
+			err = suite.WithResCleanUp(context.Background(), t, func() (client.Object, error) {
+				return suite.Kube().ManageEgress(context.Background(), apiServerIP, namespace, policyName, true, map[string]string{})
+			})
+			require.NoError(t, err, "unable to block api server connectivity")
+
+			err = suite.Kube().WaitForDeploymentReplicaCount(context.Background(), "envoy-gateway", namespace, 0, time.Minute, false)
+			ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/route_changes.yaml", true)
+
+			t.Log("restore API server for all pods")
+			err = suite.WithResCleanUp(context.Background(), t, func() (client.Object, error) {
+				return suite.Kube().ManageEgress(context.Background(), apiServerIP, namespace, policyName, false, map[string]string{})
+			})
+
+			require.NoError(t, err, "unable to unblock api server connectivity")
+
+			err = suite.Kube().WaitForDeploymentReplicaCount(context.Background(), "envoy-gateway", namespace, 1, time.Minute, false)
+			require.NoError(t, err, "Failed to ensure that pod is online")
+			t.Log("Monitoring logs to identify the leader pod")
+			name, err := suite.Kube().MonitorDeploymentLogs(context.Background(), time.Now(), namespace, envoygateway, targetString, timeout, false)
+			require.NoError(t, err, "Failed to monitor logs")
+			require.NotEmpty(t, name, "Leader pod name should not be empty")
+
+			ns := "gateway-resilience"
+			routeNN := types.NamespacedName{Name: "backend", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "all-namespaces", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+			resultCh := make(chan error, 1)
+			go func() {
+				err := suite.Kube().CheckConnectivityJob(fmt.Sprintf("http://%s/route-change", gwAddr), 10)
+				resultCh <- err // Send the error (or nil) to the channel
+			}()
+			err = <-resultCh
+			require.NoError(t, err, "Failed during connectivity checkup")
+		})
+
 		t.Run("Leader election transitions when leader loses API server connection", func(t *testing.T) {
 			ctx := context.Background()
 			t.Log("Scaling down the deployment to 0 replicas")
