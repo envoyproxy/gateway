@@ -55,7 +55,10 @@ var EGResilience = suite.ResilienceTest{
 		ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/base.yaml", true)
 
 		t.Run("envoy proxy reconcile resource and sync xds after api server connectivity is restored", func(t *testing.T) {
-			err := suite.Kube().ScaleDeploymentAndWait(context.Background(), "envoy-gateway", namespace, 1, time.Minute, false)
+			err := suite.Kube().ScaleDeploymentAndWait(context.Background(), "envoy-gateway", namespace, 0, time.Minute, false)
+			require.NoError(t, err, "Failed to scale deployment")
+
+			err = suite.Kube().ScaleDeploymentAndWait(context.Background(), "envoy-gateway", namespace, 1, time.Minute, false)
 			require.NoError(t, err, "Failed to scale deployment")
 
 			t.Log("Monitoring logs to identify the leader pod")
