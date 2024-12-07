@@ -62,6 +62,7 @@ require (
 )
 
 require (
+	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/docker/docker v27.3.1+incompatible
 	github.com/replicatedhq/troubleshoot v0.107.5
 	github.com/tetratelabs/func-e v1.1.5-0.20240822223546-c85a098d5bf0
@@ -91,7 +92,6 @@ require (
 	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
 	github.com/apparentlymart/go-cidr v1.1.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
-	github.com/avast/retry-go v3.0.0+incompatible // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/c9s/goprocinfo v0.0.0-20170724085704-0010a05ce49f // indirect
 	github.com/cilium/ebpf v0.16.0 // indirect
