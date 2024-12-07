@@ -56,11 +56,11 @@ var EGResilience = suite.ResilienceTest{
 			ctx := context.Background()
 			t.Log("Scaling down the deployment to 0 replicas")
 			err := suite.Kube().ScaleDeploymentAndWait(ctx, envoygateway, namespace, 0, time.Minute, false)
-			require.NoError(t, err, "Failed to scale deployment to 0 replicas")
+			require.NoError(t, err, "Failed to scale deployment replicas")
 
 			t.Log("Scaling up the deployment to 2 replicas")
 			err = suite.Kube().ScaleDeploymentAndWait(ctx, envoygateway, namespace, 2, time.Minute, false)
-			require.NoError(t, err, "Failed to scale deployment to 2 replicas")
+			require.NoError(t, err, "Failed to scale deployment replicas")
 
 			t.Log("Monitoring logs to identify the leader pod")
 			name, err := suite.Kube().MonitorDeploymentLogs(ctx, time.Now(), namespace, envoygateway, targetString, timeout, false)
@@ -81,7 +81,7 @@ var EGResilience = suite.ResilienceTest{
 			// leader pod should go down, the standby remain
 			t.Log("Verifying deployment scales down to 1 replica")
 			err = suite.Kube().CheckDeploymentReplicas(ctx, envoygateway, namespace, 1, time.Minute)
-			require.NoError(t, err, "Deployment did not scale down to 1 replica")
+			require.NoError(t, err, "Deployment did not scale down")
 
 			t.Log("Monitoring logs for a new leader pod")
 			name, err = suite.Kube().MonitorDeploymentLogs(ctx, time.Now().Add(-time.Minute), namespace, envoygateway, targetString, timeout, false)

@@ -46,9 +46,13 @@ var EPResilience = suite.ResilienceTest{
 
 		t.Run("envoy proxies continue to work even when eg is offline", func(t *testing.T) {
 			ctx := context.Background()
+			t.Log("ensure envoy proxy is running")
+			err := suite.Kube().CheckDeploymentReplicas(ctx, envoygateway, namespace, 2, time.Minute)
+			require.NoError(t, err, "Failed to check deployment replicas")
+
 			t.Log("Scaling down the deployment to 0 replicas")
-			err := suite.Kube().ScaleDeploymentAndWait(ctx, envoygateway, namespace, 0, time.Minute, false)
-			require.NoError(t, err, "Failed to scale deployment to 0 replicas")
+			err = suite.Kube().ScaleDeploymentAndWait(ctx, envoygateway, namespace, 0, time.Minute, false)
+			require.NoError(t, err, "Failed to scale deployment to replicas")
 
 			t.Cleanup(func() {
 				err := suite.Kube().ScaleDeploymentAndWait(ctx, envoygateway, namespace, 1, time.Minute, false)
