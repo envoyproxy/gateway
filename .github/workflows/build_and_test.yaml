@@ -190,7 +190,7 @@ jobs:
         KIND_NODE_TAG: v1.28.13
         IMAGE_PULL_POLICY: IfNotPresent
         CUSTOM_CNI: "true"
-      run: make resiliency-test
+      run: make resilience
 
   publish:
     runs-on: ubuntu-latest
