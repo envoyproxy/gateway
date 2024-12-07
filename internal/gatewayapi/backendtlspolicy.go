@@ -8,6 +8,7 @@ package gatewayapi
 import (
 	"fmt"
 	"reflect"
+
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -34,7 +35,7 @@ func (t *Translator) processBackendTLSPolicy(
 	parent gwapiv1a2.ParentReference,
 	resources *resource.Resources,
 ) (*ir.TLSUpstreamConfig, *gwapiv1a3.BackendTLSPolicy, error) {
-	policy := getBackendTLSPolicy(resources.BackendTLSPolicies, backendRef, backendNamespace,resources)
+	policy := getBackendTLSPolicy(resources.BackendTLSPolicies, backendRef, backendNamespace, resources)
 	if policy == nil {
 		return nil, nil, nil
 	}
