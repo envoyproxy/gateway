@@ -10,6 +10,7 @@ package tests
 import (
 	"context"
 	"fmt"
+	"github.com/avast/retry-go"
 	"github.com/envoyproxy/gateway/test/resilience/suite"
 	"github.com/go-logr/zapr"
 	"github.com/stretchr/testify/require"
@@ -95,8 +96,15 @@ var EGResilience = suite.ResilienceTest{
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 			resultCh := make(chan error, 1)
 			go func() {
-				t.Log("connecting to:", fmt.Sprintf("http://%s/route-change", gwAddr))
-				err := suite.Kube().CheckConnectivityJob(fmt.Sprintf("http://%s/route-change", gwAddr), 10)
+				t.Log("Connecting to:", fmt.Sprintf("http://%s/route-change", gwAddr))
+				err := retry.Do(
+					func() error {
+						return suite.Kube().CheckConnectivityJob(fmt.Sprintf("http://%s/route-change", gwAddr), 10)
+					},
+					retry.Attempts(3),                 // Number of retry attempts
+					retry.DelayType(retry.FixedDelay), // Use a fixed delay between retries
+					retry.Delay(2*time.Second),        // Delay duration between retries
+				)
 				resultCh <- err
 			}()
 			err = <-resultCh
