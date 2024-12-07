@@ -184,7 +184,7 @@ func writeResourcesFile(t *testing.T, tmpl, dst string, params *resourcesParam) 
 	dstFile, err := os.Create(dst)
 	require.NoError(t, err)
 
-	// Write parametes into target file.
+	// Write parameters into target file.
 	tmplFile, err := template.ParseFiles(tmpl)
 	require.NoError(t, err)
 

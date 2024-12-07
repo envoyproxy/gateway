@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -31,6 +32,9 @@ type Provider struct {
 	logger         logr.Logger
 	watcher        filewatcher.FileWatcher
 	resourcesStore *resourcesStore
+
+	// ready indicates whether the provider can start watching filesystem events.
+	ready atomic.Bool
 }
 
 func New(svr *config.Server, resources *message.ProviderResources) (*Provider, error) {
@@ -58,9 +62,8 @@ func (p *Provider) Start(ctx context.Context) error {
 	}()
 
 	// Start runnable servers.
-	readyz := false
 	var readyzChecker healthz.Checker = func(req *http.Request) error {
-		if !readyz {
+		if !p.ready.Load() {
 			return fmt.Errorf("file provider not ready yet")
 		}
 		return nil
@@ -90,7 +93,7 @@ func (p *Provider) Start(ctx context.Context) error {
 		}(ch)
 	}
 
-	readyz = true
+	p.ready.Store(true)
 	curDirs, curFiles := initDirs.Clone(), initFiles.Clone()
 	initFilesParent := path.GetParentDirs(initFiles.UnsortedList())
 	for {
