@@ -9561,6 +9561,7 @@ spec:
   selector:
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
+  internalTrafficPolicy: Cluster
   ports:
     - name: http-metrics
       port: 12345
