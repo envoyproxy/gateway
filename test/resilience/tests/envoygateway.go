@@ -56,8 +56,12 @@ var EGResilience = suite.ResilienceTest{
 
 		t.Run("envoy proxy reconcile resource and sync xds after api server connectivity is restored", func(t *testing.T) {
 			t.Log("Simulating API server down for all pods")
+
 			err := suite.Kube().ScaleDeploymentAndWait(context.Background(), "envoy-gateway", namespace, 1, time.Minute, false)
-			require.NoError(t, err, "Failed to scale deployment to 0 replicas")
+			require.NoError(t, err, "Failed to scale deployment")
+
+			err = suite.Kube().ScaleDeploymentAndWait(context.Background(), "envoy-gateway", namespace, 1, time.Minute, false)
+			require.NoError(t, err, "Failed to scale deployment")
 
 			err = suite.WithResCleanUp(context.Background(), t, func() (client.Object, error) {
 				return suite.Kube().ManageEgress(context.Background(), apiServerIP, namespace, policyName, true, map[string]string{})
