@@ -176,7 +176,7 @@ jobs:
 
     - name: Read Benchmark report
       run: cat test/benchmark/benchmark_report/benchmark_report.md
-  resiliency-test:
+  resilience-test:
     runs-on: ubuntu-latest
     if: ${{ ! startsWith(github.event_name, 'push') }}
     needs: [build]
