@@ -54,21 +54,16 @@ var EGResilience = suite.ResilienceTest{
 		}
 		ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/base.yaml", true)
 
-		t.Run("envoy proxy reconcile resource and sync xds after api server connectivity is restored", func(t *testing.T) {
-			err := suite.Kube().ScaleDeploymentAndWait(context.Background(), "envoy-gateway", namespace, 0, time.Minute, false)
+		t.Run("envoyproxy reconciles missed resources and sync xds after api server connectivity is restored", func(t *testing.T) {
+			err := suite.Kube().ScaleDeploymentAndWait(context.Background(), envoygateway, namespace, 0, time.Minute, false)
 			require.NoError(t, err, "Failed to scale deployment")
-
-			err = suite.Kube().ScaleDeploymentAndWait(context.Background(), "envoy-gateway", namespace, 1, time.Minute, false)
+			err = suite.Kube().ScaleDeploymentAndWait(context.Background(), envoygateway, namespace, 1, time.Minute, false)
 			require.NoError(t, err, "Failed to scale deployment")
 
 			t.Log("Monitoring logs to identify the leader pod")
 			name, err := suite.Kube().MonitorDeploymentLogs(context.Background(), time.Now(), namespace, envoygateway, targetString, timeout, false)
 			require.NoError(t, err, "Failed to monitor logs for leader pod")
 			require.NotEmpty(t, name, "Leader pod name should not be empty")
-
-			// this does not to work for eps > 1
-			err = suite.Kube().ScaleDeploymentAndWait(context.Background(), "envoy-gateway-resilience-all-namespaces", namespace, 1, time.Minute, true)
-			require.NoError(t, err, "Failed to scale deployment")
 
 			t.Log("Simulating API server down for all pods")
 			err = suite.WithResCleanUp(context.Background(), t, func() (client.Object, error) {
