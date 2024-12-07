@@ -80,7 +80,7 @@ case $OS in
         exit 1
         ;;
 esac
-
+mkdir -p bin
 chmod +x cilium
 mv cilium bin
 fi
