@@ -31,7 +31,7 @@ const (
 )
 
 func init() {
-	//ResilienceTests = append(ResilienceTests, EGResilience)
+	ResilienceTests = append(ResilienceTests, EGResilience)
 	// Create a Zap logger
 	zapLog, err := zap.NewDevelopment() // Use zap.NewProduction() for production
 	if err != nil {
