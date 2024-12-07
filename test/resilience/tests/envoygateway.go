@@ -60,7 +60,8 @@ var EGResilience = suite.ResilienceTest{
 			err := suite.Kube().ScaleDeploymentAndWait(context.Background(), "envoy-gateway", namespace, 1, time.Minute, false)
 			require.NoError(t, err, "Failed to scale deployment")
 
-			err = suite.Kube().ScaleDeploymentAndWait(context.Background(), "envoy-gateway", namespace, 1, time.Minute, false)
+			// this does not to work for eps > 1
+			err = suite.Kube().ScaleDeploymentAndWait(context.Background(), "envoy-gateway-resilience-all-namespaces", namespace, 1, time.Minute, true)
 			require.NoError(t, err, "Failed to scale deployment")
 
 			err = suite.WithResCleanUp(context.Background(), t, func() (client.Object, error) {
