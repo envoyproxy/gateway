@@ -148,19 +148,19 @@ if [ "$CUSTOM_CNI" = "true" ]; then
   CILIUM_BIN="./bin/cilium"
   $CILIUM_BIN install --wait --version 1.16.4
   $CILIUM_BIN status --wait
-else
-  # Apply MetalLB IPAddressPool and L2Advertisement
-  echo "Applying configuration with retries..."
-    # Retry loop
-    while [ $ELAPSED_TIME -lt $TIMEOUT ]; do
-      if apply_metallb_ranges; then
-        echo "Configuration applied successfully."
-        exit 0
-      else
-        echo "Trying to apply configuration. Retrying in $RETRY_INTERVAL seconds..."
-      fi
-      sleep $RETRY_INTERVAL
-      ELAPSED_TIME=$((ELAPSED_TIME + RETRY_INTERVAL))
-    done
 fi
+
+# Apply MetalLB IPAddressPool and L2Advertisement
+echo "Applying configuration with retries..."
+  # Retry loop
+  while [ $ELAPSED_TIME -lt $TIMEOUT ]; do
+    if apply_metallb_ranges; then
+      echo "Configuration applied successfully."
+      exit 0
+    else
+      echo "Trying to apply configuration. Retrying in $RETRY_INTERVAL seconds..."
+    fi
+    sleep $RETRY_INTERVAL
+    ELAPSED_TIME=$((ELAPSED_TIME + RETRY_INTERVAL))
+  done
 
