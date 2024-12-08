@@ -257,14 +257,12 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 
 func processRouteTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 	if rule.Timeouts != nil {
-		rto := &ir.Timeout{}
-
 		if rule.Timeouts.Request != nil {
 			d, err := time.ParseDuration(string(*rule.Timeouts.Request))
 			if err != nil {
 				d, _ = time.ParseDuration(HTTPRequestTimeout)
 			}
-			setRequestTimeout(rto, metav1.Duration{Duration: d})
+			irRoute.Timeout = ptr.To(metav1.Duration{Duration: d})
 		}
 
 		// Also set the IR Route Timeout to the backend request timeout
@@ -274,23 +272,8 @@ func processRouteTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 			if err != nil {
 				d, _ = time.ParseDuration(HTTPRequestTimeout)
 			}
-			setRequestTimeout(rto, metav1.Duration{Duration: d})
+			irRoute.Timeout = ptr.To(metav1.Duration{Duration: d})
 		}
-
-		irRoute.Traffic = &ir.TrafficFeatures{
-			Timeout: rto,
-		}
-	}
-}
-
-func setRequestTimeout(irTimeout *ir.Timeout, d metav1.Duration) {
-	switch {
-	case irTimeout.HTTP == nil:
-		irTimeout.HTTP = &ir.HTTPTimeout{
-			RequestTimeout: ptr.To(d),
-		}
-	default:
-		irTimeout.HTTP.RequestTimeout = ptr.To(d)
 	}
 }
 
@@ -742,11 +725,11 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					ExtensionRefs:         routeRoute.ExtensionRefs,
 					IsHTTP2:               routeRoute.IsHTTP2,
 					SessionPersistence:    routeRoute.SessionPersistence,
+					Timeout:               routeRoute.Timeout,
 				}
 				if routeRoute.Traffic != nil {
 					hostRoute.Traffic = &ir.TrafficFeatures{
-						Timeout: routeRoute.Traffic.Timeout,
-						Retry:   routeRoute.Traffic.Retry,
+						Retry: routeRoute.Traffic.Retry,
 					}
 				}
 				perHostRoutes = append(perHostRoutes, hostRoute)
