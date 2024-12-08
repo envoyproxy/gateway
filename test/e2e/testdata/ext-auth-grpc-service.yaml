@@ -103,3 +103,4 @@ spec:
     - protocol: TCP
       port: 9002
       targetPort: 9002
+      name: grpc
