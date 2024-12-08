@@ -520,11 +520,7 @@ xdsIR:
         mergeSlashes: true
       port: 8082
       routes:
-      - destination:
-          name: httproute/envoy-gateway/httproute-1/rule/0
-          settings:
-          - weight: 1
-        directResponse:
+      - directResponse:
           statusCode: 500
         hostname: route.example.com
         isHTTP2: false
@@ -553,11 +549,7 @@ xdsIR:
         mergeSlashes: true
       port: 8083
       routes:
-      - destination:
-          name: httproute/envoy-gateway/httproute-1/rule/0
-          settings:
-          - weight: 1
-        directResponse:
+      - directResponse:
           statusCode: 500
         hostname: route.example.com
         isHTTP2: false
@@ -570,11 +562,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-      - destination:
-          name: httproute/envoy-gateway/httproute-2/rule/0
-          settings:
-          - weight: 1
-        directResponse:
+      - directResponse:
           statusCode: 500
         hostname: route2.example.com
         isHTTP2: false
