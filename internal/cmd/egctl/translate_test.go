@@ -22,6 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/utils/field"
 	"github.com/envoyproxy/gateway/internal/utils/file"
 )
@@ -368,8 +369,12 @@ func TestTranslate(t *testing.T) {
 			//	want.GatewayClass.Status.SupportedFeatures = status.GatewaySupportedFeatures
 			// }
 
-			opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
-			require.Empty(t, cmp.Diff(want, got, opts))
+			opts := []cmp.Option{
+				cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
+				cmpopts.IgnoreFields(resource.Resources{}, "serviceMap"),
+			}
+
+			require.Empty(t, cmp.Diff(want, got, opts...))
 		})
 	}
 }

@@ -105,7 +105,7 @@ backendTLSPolicies:
         - group: ""
           kind: Service
           name: http-backend
-          sectionName: "8080"
+          sectionName: http
       validation:
         caCertificateRefs:
           - name: no-ca-cmap
