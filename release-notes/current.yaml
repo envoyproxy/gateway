@@ -12,13 +12,14 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
-  Added support for trusted CIDRs in the ClientIPDetectionSettings API
-  Added support for sending attributes to external processor in EnvoyExtensionPolicy API
+  Added support for trusted CIDRs in the ClientIPDetectionSettings API.
+  Added support for sending attributes to external processor in EnvoyExtensionPolicy API.
 
 # Fixes for bugs identified in previous versions.
 bug fixes: |
-  Fixed BackendTLSPolicy didn't support using port name as the sectionName in the targetRefs
-  Fixed reference grant from EnvoyExtensionPolicy to referenced ext-proc backend not respected
+  Fixed BackendTLSPolicy didn't support using port name as the sectionName in the targetRefs.
+  Fixed reference grant from EnvoyExtensionPolicy to referenced ext-proc backend not respected.
+  Fixed Envoy proxies connected to the secondary gateway didn't receive configuration.
 
 # Enhancements that improve performance.
 performance improvements: |
@@ -30,4 +31,4 @@ deprecations: |
 
 # Other notable changes not covered by the above sections.
 Other changes: |
-  [SecurityPolicy] Modify the JWT Provider Issuer validation constraint
+  [SecurityPolicy] Modify the JWT Provider Issuer validation constraint.

@@ -135,7 +135,10 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su Updater
 		controller.Options{
 			Reconciler:         r,
 			SkipNameValidation: skipNameValidation(),
-			NewQueue: func(_ string, _ workqueue.TypedRateLimiter[reconcile.Request]) workqueue.TypedRateLimitingInterface[reconcile.Request] {
+			NewQueue: func(
+				_ string,
+				_ workqueue.TypedRateLimiter[reconcile.Request],
+			) workqueue.TypedRateLimitingInterface[reconcile.Request] {
 				return queue
 			},
 		})
@@ -152,8 +155,8 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su Updater
 		return nil, fmt.Errorf("error watching resources: %w", err)
 	}
 
-	// Trigger a resync of the controller
 	return func() {
+		// Trigger a reconciliation to update the status of all resources.
 		queue.AddRateLimited(reconcile.Request{})
 	}, nil
 }

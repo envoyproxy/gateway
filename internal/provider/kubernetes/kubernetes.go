@@ -100,7 +100,7 @@ func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources)
 		return nil, fmt.Errorf("failted to create gatewayapi controller: %w", err)
 	}
 
-	// Trigger a resync after updateHandler is started to ensure we don't miss any updates.
+	// Trigger a reconciliation after updateHandler is started to ensure we don't miss any updates.
 	updateHandler.addPostStart(resync)
 
 	// Add health check health probes.

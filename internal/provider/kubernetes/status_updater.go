@@ -137,7 +137,7 @@ func (u *UpdateHandler) Start(ctx context.Context) error {
 	// Enable Updaters to start sending updates to this handler.
 	close(u.sendUpdates)
 
-	// Trigger a resync to ensure we don't miss any updates.
+	// Trigger a reconciliation to ensure we don't miss any updates.
 	if u.postStart != nil {
 		u.postStart()
 	}
