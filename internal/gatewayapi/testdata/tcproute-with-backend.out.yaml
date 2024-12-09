@@ -92,9 +92,10 @@ tcpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
+        message: 'backend reference validation failed: backend is not supported for
+          route kind: TCPRoute'
+        reason: Failed to process the settings associated with the TCP route.
+        status: "False"
         type: Accepted
       - lastTransitionTime: null
         message: Resource default/backend-ip of type Backend is not supported for
@@ -115,9 +116,3 @@ xdsIR:
     - address: 0.0.0.0
       name: envoy-gateway/gateway-1/tcp
       port: 10090
-      routes:
-      - destination:
-          name: tcproute/default/tcproute-1/rule/-1
-          settings:
-          - weight: 1
-        name: tcproute/default/tcproute-1
