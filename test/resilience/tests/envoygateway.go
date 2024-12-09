@@ -10,14 +10,10 @@ package tests
 import (
 	"context"
 	"fmt"
-	"github.com/avast/retry-go"
 	"github.com/envoyproxy/gateway/test/resilience/suite"
-	"github.com/go-logr/zapr"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"testing"
 	"time"
@@ -34,19 +30,11 @@ const (
 
 func init() {
 	ResilienceTests = append(ResilienceTests, EGResilience)
-	// Create a Zap logger
-	zapLog, err := zap.NewDevelopment() // Use zap.NewProduction() for production
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create logger: %v", err))
-	}
-
-	// Set the logger for controller-runtime
-	log.SetLogger(zapr.NewLogger(zapLog))
 }
 
 var EGResilience = suite.ResilienceTest{
 	ShortName:   "EGResilience",
-	Description: "Kube API server failure and EG gateway",
+	Description: "Envoygateway resilience test",
 	Test: func(t *testing.T, suite *suite.ResilienceTestSuite) {
 		ap := kubernetes.Applier{
 			ManifestFS:     suite.ManifestFS,
@@ -55,7 +43,7 @@ var EGResilience = suite.ResilienceTest{
 		}
 		ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/base.yaml", true)
 
-		t.Run("envoyproxy reconciles missed resources and sync xds after api server connectivity is restored", func(t *testing.T) {
+		t.Run("Envoyproxy reconciles missed resources and sync xds after api server connectivity is restored", func(t *testing.T) {
 			err := suite.Kube().ScaleDeploymentAndWait(context.Background(), envoygateway, namespace, 0, time.Minute, false)
 			require.NoError(t, err, "Failed to scale deployment")
 			err = suite.Kube().ScaleDeploymentAndWait(context.Background(), envoygateway, namespace, 1, time.Minute, false)

@@ -31,8 +31,8 @@ func init() {
 }
 
 var EPResilience = suite.ResilienceTest{
-	ShortName:   "EGResilience",
-	Description: "Kube API server failure and EG gateway",
+	ShortName:   "EPResilience",
+	Description: "Envoyproxy resilience test",
 	Test: func(t *testing.T, suite *suite.ResilienceTestSuite) {
 		var ()
 
@@ -44,7 +44,7 @@ var EPResilience = suite.ResilienceTest{
 
 		ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/base.yaml", true)
 
-		t.Run("envoy proxies continue to work even when eg is offline", func(t *testing.T) {
+		t.Run("Envoy proxies continue to work even when eg is offline", func(t *testing.T) {
 			ctx := context.Background()
 
 			t.Log("Scaling down the deployment to 2 replicas")
@@ -70,7 +70,6 @@ var EPResilience = suite.ResilienceTest{
 			routeNN := types.NamespacedName{Name: "backend", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "all-namespaces", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-
 			resultCh := make(chan error, 1)
 			go func() {
 				err := suite.Kube().CheckConnectivityJob(fmt.Sprintf("http://%s/welcome", gwAddr), 10)

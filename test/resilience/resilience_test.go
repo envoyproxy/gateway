@@ -10,6 +10,9 @@ package resilience
 import (
 	"flag"
 	"io/fs"
+	"os"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"testing"
 
@@ -22,6 +25,7 @@ func TestResilience(t *testing.T) {
 	cli, _ := kubetest.NewClient(t)
 	// Parse benchmark options.
 	flag.Parse()
+	log.SetLogger(zap.New(zap.WriteTo(os.Stderr), zap.UseDevMode(true)))
 	bSuite, err := suite.NewResilienceTestSuite(
 		cli,
 		*suite.ReportSaveDir,
@@ -31,7 +35,6 @@ func TestResilience(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create the resillience test suit: %v", err)
 	}
-
 	t.Logf("Running %d resilience tests", len(tests.ResilienceTests))
 	bSuite.Run(t, tests.ResilienceTests)
 }
