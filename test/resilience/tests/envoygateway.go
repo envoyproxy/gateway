@@ -44,7 +44,7 @@ var EGResilience = suite.ResilienceTest{
 		}
 		ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/base.yaml", true)
 
-		t.Run("Envoyproxy reconciles missed resources and sync xds after api server connectivity is restored", func(t *testing.T) {
+		t.Run("EnvoyGateway reconciles missed resources and sync xds after api server connectivity is restored", func(t *testing.T) {
 			err := suite.Kube().ScaleDeploymentAndWait(context.Background(), envoygateway, namespace, 0, time.Minute, false)
 			require.NoError(t, err, "Failed to scale deployment")
 			err = suite.Kube().ScaleDeploymentAndWait(context.Background(), envoygateway, namespace, 1, time.Minute, false)
@@ -135,6 +135,30 @@ var EGResilience = suite.ResilienceTest{
 			name, err = suite.Kube().MonitorDeploymentLogs(ctx, time.Now().Add(-time.Minute), namespace, envoygateway, targetString, timeout, false)
 			require.NoError(t, err, "Failed to monitor logs for new leader pod")
 			require.NotEmpty(t, name, "New leader pod name should not be empty")
+
+			ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/route_changes.yaml", true)
+			t.Log("backend routes changed")
+
+			ns := "gateway-resilience"
+			routeNN := types.NamespacedName{Name: "backend", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "all-namespaces", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+			resultCh := make(chan error, 1)
+			go func() {
+				t.Log("Connecting to:", fmt.Sprintf("http://%s/route-change", gwAddr))
+				err := retry.Do(
+					func() error {
+						return suite.Kube().CheckConnectivityJob(fmt.Sprintf("http://%s/route-change", gwAddr), 10)
+					},
+					retry.Attempts(3),                 // Number of retry attempts
+					retry.DelayType(retry.FixedDelay), // Use a fixed delay between retries
+					retry.Delay(2*time.Second),        // Delay duration between retries
+				)
+				resultCh <- err
+			}()
+			err = <-resultCh
+			require.NoError(t, err, "Failed during connectivity checkup")
 		})
 	},
 }

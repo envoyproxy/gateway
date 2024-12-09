@@ -183,8 +183,6 @@ jobs:
     steps:
     - uses: actions/checkout@v4.2.2
     - uses: ./tools/github-actions/setup-deps
-    - name: Setup Graphviz
-      uses: ts-graphviz/setup-graphviz@v2.0.2
     - name: Resilience Test
       env:
         KIND_NODE_TAG: v1.28.13
