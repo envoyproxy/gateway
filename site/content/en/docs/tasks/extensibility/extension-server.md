@@ -97,7 +97,7 @@ image name and tag.
              --resource=ListenerContextExample
 
   kubectl create clusterrolebinding envoy-gateway-listener-context \
-             --clusterrole=listener-context-example-viewer  \
+             --clusterrole=listener-context-example-viewer \
              --serviceaccount=envoy-gateway-system:envoy-gateway
 
   kubectl create clusterrolebinding envoy-gateway-listener-context-status \
