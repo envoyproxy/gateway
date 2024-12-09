@@ -11,11 +11,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/envoyproxy/gateway/test/resilience/suite"
-	"github.com/go-logr/zapr"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"testing"
 	"time"
@@ -23,11 +20,6 @@ import (
 
 func init() {
 	ResilienceTests = append(ResilienceTests, EPResilience)
-	zapLog, err := zap.NewDevelopment() // Use zap.NewProduction() for production
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create logger: %v", err))
-	}
-	log.SetLogger(zapr.NewLogger(zapLog))
 }
 
 var EPResilience = suite.ResilienceTest{
