@@ -95,9 +95,13 @@ func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources)
 	}
 
 	// Create and register the controllers with the manager.
-	if err := newGatewayAPIController(mgr, svr, updateHandler.Writer(), resources); err != nil {
+	var resync func()
+	if resync, err = newGatewayAPIController(mgr, svr, updateHandler.Writer(), resources); err != nil {
 		return nil, fmt.Errorf("failted to create gatewayapi controller: %w", err)
 	}
+
+	// Trigger a resync after updateHandler is started to ensure we don't miss any updates.
+	updateHandler.addPostStart(resync)
 
 	// Add health check health probes.
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

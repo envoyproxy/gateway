@@ -7,7 +7,6 @@ package kubernetes
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -57,21 +56,22 @@ func (m MutatorFunc) Mutate(old client.Object) client.Object {
 type UpdateHandler struct {
 	log           logr.Logger
 	client        client.Client
+	sendUpdates   chan struct{}
 	updateChannel chan Update
-	wg            *sync.WaitGroup
+	postStart     func()
 }
 
 func NewUpdateHandler(log logr.Logger, client client.Client) *UpdateHandler {
-	u := &UpdateHandler{
+	return &UpdateHandler{
 		log:           log,
 		client:        client,
+		sendUpdates:   make(chan struct{}),
 		updateChannel: make(chan Update, 1000),
-		wg:            new(sync.WaitGroup),
 	}
+}
 
-	u.wg.Add(1)
-
-	return u
+func (u *UpdateHandler) addPostStart(postStart func()) {
+	u.postStart = postStart
 }
 
 func (u *UpdateHandler) apply(update Update) {
@@ -135,7 +135,12 @@ func (u *UpdateHandler) Start(ctx context.Context) error {
 	defer u.log.Info("stopped status update handler")
 
 	// Enable Updaters to start sending updates to this handler.
-	u.wg.Done()
+	close(u.sendUpdates)
+
+	// Trigger a resync to ensure we don't miss any updates.
+	if u.postStart != nil {
+		u.postStart()
+	}
 
 	for {
 		select {
@@ -153,8 +158,8 @@ func (u *UpdateHandler) Start(ctx context.Context) error {
 // Writer retrieves the interface that should be used to write to the UpdateHandler.
 func (u *UpdateHandler) Writer() Updater {
 	return &UpdateWriter{
+		enabled:       u.sendUpdates,
 		updateChannel: u.updateChannel,
-		wg:            u.wg,
 	}
 }
 
@@ -165,15 +170,22 @@ type Updater interface {
 
 // UpdateWriter takes status updates and sends these to the UpdateHandler via a channel.
 type UpdateWriter struct {
+	enabled       <-chan struct{}
 	updateChannel chan<- Update
-	wg            *sync.WaitGroup
 }
 
 // Send sends the given Update off to the update channel for writing by the UpdateHandler.
 func (u *UpdateWriter) Send(update Update) {
-	// Wait until updater is ready
-	u.wg.Wait()
-	u.updateChannel <- update
+	// The Send method should be non-blocking because the status updater won't be started if the EG it is running in is
+	// not the leader.
+	// In a non-leader scenario, the status updater will still receive updates, but the updates will be dropped.
+	// This is to prevent the status updater from blocking the reconciliation loop.
+	// The status updates will be handled by the leader.
+	select {
+	case <-u.enabled:
+		u.updateChannel <- update
+	default:
+	}
 }
 
 // isStatusEqual checks if two objects have equivalent status.

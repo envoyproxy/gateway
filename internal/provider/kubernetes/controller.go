@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -85,7 +86,7 @@ type gatewayAPIReconciler struct {
 // newGatewayAPIController
 func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su Updater,
 	resources *message.ProviderResources,
-) error {
+) (resync func(), err error) {
 	ctx := context.Background()
 
 	// Gather additional resources to watch from registered extensions
@@ -123,9 +124,23 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su Updater
 	// controller-runtime doesn't allow run controller with same name for more than once
 	// see https://github.com/kubernetes-sigs/controller-runtime/blob/2b941650bce159006c88bd3ca0d132c7bc40e947/pkg/controller/name.go#L29
 	name := fmt.Sprintf("gatewayapi-%d", time.Now().Unix())
-	c, err := controller.New(name, mgr, controller.Options{Reconciler: r, SkipNameValidation: skipNameValidation()})
+
+	queue := workqueue.NewTypedRateLimitingQueueWithConfig(
+		workqueue.DefaultTypedControllerRateLimiter[reconcile.Request](),
+		workqueue.TypedRateLimitingQueueConfig[reconcile.Request]{Name: name})
+
+	c, err := controller.New(
+		name,
+		mgr,
+		controller.Options{
+			Reconciler:         r,
+			SkipNameValidation: skipNameValidation(),
+			NewQueue: func(_ string, _ workqueue.TypedRateLimiter[reconcile.Request]) workqueue.TypedRateLimitingInterface[reconcile.Request] {
+				return queue
+			},
+		})
 	if err != nil {
-		return fmt.Errorf("error creating controller: %w", err)
+		return nil, fmt.Errorf("error creating controller: %w", err)
 	}
 	r.log.Info("created gatewayapi controller")
 
@@ -134,9 +149,13 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su Updater
 
 	// Watch resources
 	if err := r.watchResources(ctx, mgr, c); err != nil {
-		return fmt.Errorf("error watching resources: %w", err)
+		return nil, fmt.Errorf("error watching resources: %w", err)
 	}
-	return nil
+
+	// Trigger a resync of the controller
+	return func() {
+		queue.AddRateLimited(reconcile.Request{})
+	}, nil
 }
 
 func byNamespaceSelectorEnabled(eg *egv1a1.EnvoyGateway) bool {
