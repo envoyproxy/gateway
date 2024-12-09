@@ -10,6 +10,7 @@ package tests
 import (
 	"context"
 	"fmt"
+	"github.com/avast/retry-go"
 	"github.com/envoyproxy/gateway/test/resilience/suite"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
