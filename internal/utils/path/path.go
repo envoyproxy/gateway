@@ -56,3 +56,12 @@ func ListDirsAndFiles(paths []string) (dirs sets.Set[string], files sets.Set[str
 
 	return
 }
+
+// GetParentDirs returns all the parent directories of given files.
+func GetParentDirs(files []string) sets.Set[string] {
+	parents := sets.New[string]()
+	for _, f := range files {
+		parents.Insert(filepath.Dir(f))
+	}
+	return parents
+}
