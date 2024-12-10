@@ -9,11 +9,12 @@ package tests
 
 import (
 	"context"
-	"fmt"
 	"github.com/envoyproxy/gateway/test/resilience/suite"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 	"testing"
 	"time"
 )
@@ -62,13 +63,30 @@ var EPResilience = suite.ResilienceTest{
 			routeNN := types.NamespacedName{Name: "backend", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "all-namespaces", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-			resultCh := make(chan error, 1)
-			go func() {
-				err := suite.Kube().CheckConnectivityJob(fmt.Sprintf("http://%s/welcome", gwAddr), 10)
-				resultCh <- err // Send the error (or nil) to the channel
-			}()
-			err = <-resultCh
-			require.NoError(t, err, "Failed during connectivity checkup")
+
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/welcome",
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+
+			req := http.MakeRequest(t, &expectedResponse, gwAddr, "http", "http")
+			http.AwaitConvergence(t, 2, time.Minute, func(elapsed time.Duration) bool {
+				cReq, cRes, err := suite.RoundTripper.CaptureRoundTrip(req)
+				if err != nil {
+					tlog.Logf(t, "Request failed, not ready yet: %v (after %v)", err.Error(), elapsed)
+					return false
+				}
+				if err := http.CompareRequest(t, &req, cReq, cRes, expectedResponse); err != nil {
+					tlog.Logf(t, "Response expectation failed for request: %+v  not ready yet: %v (after %v)", req, err, elapsed)
+					return false
+				}
+				return true
+			})
 		})
 	},
 }

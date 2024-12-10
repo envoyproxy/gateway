@@ -11,6 +11,7 @@ import (
 	"context"
 	"github.com/envoyproxy/gateway/test/utils/kubernetes"
 	"io/fs"
+	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
 	"testing"
 	"time"
 
@@ -45,6 +46,7 @@ type ResilienceTestSuite struct {
 	kubeClient       kube.CLIClient // required for getting logs from pod\
 	ManifestFS       []fs.FS
 	GatewayClassName string
+	RoundTripper     roundtripper.RoundTripper
 }
 
 func NewResilienceTestSuite(client client.Client, reportDir string, manifestFS []fs.FS, gcn string) (*ResilienceTestSuite, error) {
@@ -55,7 +57,7 @@ func NewResilienceTestSuite(client client.Client, reportDir string, manifestFS [
 	// Reset some timeout config for the benchmark test.
 	config.SetupTimeoutConfig(&timeoutConfig)
 	timeoutConfig.RouteMustHaveParents = 180 * time.Second
-
+	roundTripper := &roundtripper.DefaultRoundTripper{Debug: true, TimeoutConfig: timeoutConfig}
 	// Initial various client.
 	kubeClient, err := kube.NewCLIClient(opt.DefaultConfigFlags.ToRawKubeConfigLoader())
 	if err != nil {
@@ -72,8 +74,9 @@ func NewResilienceTestSuite(client client.Client, reportDir string, manifestFS [
 		scaledLabels: map[string]string{
 			BenchmarkTestScaledKey: "true",
 		},
-		KubeActions: KubeActions,
-		kubeClient:  kubeClient,
+		KubeActions:  KubeActions,
+		kubeClient:   kubeClient,
+		RoundTripper: roundTripper,
 	}, nil
 }
 

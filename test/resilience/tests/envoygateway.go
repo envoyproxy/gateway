@@ -9,14 +9,14 @@ package tests
 
 import (
 	"context"
-	"fmt"
-	"github.com/avast/retry-go"
 	"github.com/envoyproxy/gateway/test/resilience/suite"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 	"testing"
 	"time"
 )
@@ -62,7 +62,7 @@ var EGResilience = suite.ResilienceTest{
 			})
 			require.NoError(t, err, "unable to block api server connectivity")
 
-			err = suite.Kube().WaitForDeploymentReplicaCount(context.Background(), "envoy-gateway", namespace, 0, time.Minute, false)
+			err = suite.Kube().WaitForDeploymentReplicaCount(context.Background(), "envoy-gatay", namespace, 0, time.Minute, false)
 
 			ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/route_changes.yaml", true)
 			t.Log("backend routes changed")
@@ -84,20 +84,32 @@ var EGResilience = suite.ResilienceTest{
 			routeNN := types.NamespacedName{Name: "backend", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "all-namespaces", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-			resultCh := make(chan error, 1)
-			go func() {
-				t.Log("Connecting to:", fmt.Sprintf("http://%s/route-change", gwAddr))
-				err := retry.Do(
-					func() error {
-						return suite.Kube().CheckConnectivityJob(fmt.Sprintf("http://%s/route-change", gwAddr), 10)
-					},
-					retry.Attempts(3),                 // Number of retry attempts
-					retry.DelayType(retry.FixedDelay), // Use a fixed delay between retries
-					retry.Delay(2*time.Second),        // Delay duration between retries
-				)
-				resultCh <- err
-			}()
-			err = <-resultCh
+
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/route-change",
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+
+			req := http.MakeRequest(t, &expectedResponse, gwAddr, "http", "http")
+			http.AwaitConvergence(t, 2, time.Minute, func(elapsed time.Duration) bool {
+				cReq, cRes, err := suite.RoundTripper.CaptureRoundTrip(req)
+				if err != nil {
+					tlog.Logf(t, "Request failed, not ready yet: %v (after %v)", err.Error(), elapsed)
+					return false
+				}
+
+				if err := http.CompareRequest(t, &req, cReq, cRes, expectedResponse); err != nil {
+					tlog.Logf(t, "Response expectation failed for request: %+v  not ready yet: %v (after %v)", req, err, elapsed)
+					return false
+				}
+				return true
+			})
+
 			require.NoError(t, err, "Failed during connectivity checkup")
 		})
 
@@ -144,21 +156,31 @@ var EGResilience = suite.ResilienceTest{
 			gwNN := types.NamespacedName{Name: "all-namespaces", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
-			resultCh := make(chan error, 1)
-			go func() {
-				t.Log("Connecting to:", fmt.Sprintf("http://%s/route-change", gwAddr))
-				err := retry.Do(
-					func() error {
-						return suite.Kube().CheckConnectivityJob(fmt.Sprintf("http://%s/route-change", gwAddr), 10)
-					},
-					retry.Attempts(3),                 // Number of retry attempts
-					retry.DelayType(retry.FixedDelay), // Use a fixed delay between retries
-					retry.Delay(2*time.Second),        // Delay duration between retries
-				)
-				resultCh <- err
-			}()
-			err = <-resultCh
-			require.NoError(t, err, "Failed during connectivity checkup")
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/route-change",
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+
+			req := http.MakeRequest(t, &expectedResponse, gwAddr, "http", "http")
+
+			http.AwaitConvergence(t, 2, time.Minute, func(elapsed time.Duration) bool {
+				cReq, cRes, err := suite.RoundTripper.CaptureRoundTrip(req)
+				if err != nil {
+					tlog.Logf(t, "Request failed, not ready yet: %v (after %v)", err.Error(), elapsed)
+					return false
+				}
+
+				if err := http.CompareRequest(t, &req, cReq, cRes, expectedResponse); err != nil {
+					tlog.Logf(t, "Response expectation failed for request: %+v  not ready yet: %v (after %v)", req, err, elapsed)
+					return false
+				}
+				return true
+			})
 		})
 	},
 }

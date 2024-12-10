@@ -14,7 +14,6 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
-	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -221,91 +220,6 @@ func (ka *KubeActions) WaitForDeploymentReplicaCount(ctx context.Context, deploy
 	}
 }
 
-func (ka *KubeActions) CheckConnectivityJob(targetURL string, reqs int) error {
-	jobName := "check-connectivity"
-	// Check if the job already exists and delete it
-	existingJob := &batchv1.Job{}
-	err := ka.Get(context.Background(), client.ObjectKey{Name: jobName, Namespace: corev1.NamespaceDefault}, existingJob)
-	if err == nil {
-		// Job exists; delete it
-		fmt.Printf("Job %s already exists. Deleting it...\n", jobName)
-		if deleteErr := ka.Delete(context.Background(), existingJob); deleteErr != nil {
-			return fmt.Errorf("failed to delete existing job: %w", deleteErr)
-		}
-		fmt.Printf("Job %s deleted.\n", jobName)
-	} else if !kerrors.IsNotFound(err) {
-		// Some other error occurred while checking for the job
-		return fmt.Errorf("failed to check if job exists: %w", err)
-	}
-
-	// Define the Job object
-	job := &batchv1.Job{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      jobName,
-			Namespace: corev1.NamespaceDefault,
-		},
-		Spec: batchv1.JobSpec{
-			BackoffLimit: ptr.To[int32](0),
-			Template: corev1.PodTemplateSpec{
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:  "curl",
-							Image: "curlimages/curl:latest",
-							Command: []string{
-								"sh",
-								"-c",
-								fmt.Sprintf(`
-                                for i in $(seq 1 %d); do
-                                    response=$(curl -s -o /dev/null -w "%%{http_code}" %s)
-                                    if [ "$response" -ne 200 ]; then
-                                        echo "Error: Request $i received HTTP status code $response"
-                                        exit 1
-                                    fi
-                                    echo "Success: Request $i received HTTP 200 OK"
-                                done
-                                `, reqs, targetURL),
-							},
-						},
-					},
-					RestartPolicy: corev1.RestartPolicyNever,
-				},
-			},
-		},
-	}
-
-	ctx := context.Background()
-
-	// Create the Job
-	if err := ka.Create(ctx, job); err != nil {
-		return fmt.Errorf("failed to create job: %w", err)
-	}
-	fmt.Printf("Job %s created.\n", job.Name)
-
-	// Wait for the Job to complete
-	if err := waitForJobCompletion(ctx, ka, job, 5*time.Minute); err != nil {
-		// Delete the Job upon failure
-		deletePolicy := metav1.DeletePropagationBackground
-		if deleteErr := ka.Delete(ctx, job, &client.DeleteOptions{
-			PropagationPolicy: &deletePolicy,
-		}); deleteErr != nil {
-			return fmt.Errorf("failed to delete job after failure: %w; original error: %w", deleteErr, err)
-		}
-		return fmt.Errorf("job failed: %w", err)
-	}
-
-	// Delete the Job upon failure
-	deletePolicy := metav1.DeletePropagationBackground
-	if deleteErr := ka.Delete(ctx, job, &client.DeleteOptions{
-		PropagationPolicy: &deletePolicy,
-	}); deleteErr != nil {
-		return fmt.Errorf("failed to delete job after failure: %w; original error: %w", deleteErr, err)
-	}
-	fmt.Printf("Job %s deleted.\n", job.Name)
-
-	return nil
-}
-
 func (ka *KubeActions) CheckDeploymentReplicas(ctx context.Context, prefix, namespace string, expectedReplicas int, timeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
@@ -432,27 +346,4 @@ func (ka *KubeActions) getLease(ctx context.Context, namespace, leaseName string
 	}
 
 	return lease, nil
-}
-
-// getPodsForDeployment retrieves all pods belonging to a deployment using label selectors.
-func (ka *KubeActions) getPodsForDeployment(ctx context.Context, namespace string, deployment *appsv1.Deployment) ([]corev1.Pod, error) {
-	labelSelector := deployment.Spec.Selector.MatchLabels
-	podList, err := ka.Kube().CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: convertMatchLabelsToSelectorString(labelSelector),
-	})
-	if err != nil {
-		return nil, err
-	}
-	return podList.Items, nil
-}
-
-func convertMatchLabelsToSelectorString(matchLabels map[string]string) string {
-	var sb strings.Builder
-	for key, value := range matchLabels {
-		if sb.Len() > 0 {
-			sb.WriteString(",")
-		}
-		sb.WriteString(fmt.Sprintf("%s=%s", key, value))
-	}
-	return sb.String()
 }
