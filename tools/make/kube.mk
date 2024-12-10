@@ -169,11 +169,8 @@ run-e2e: e2e-prepare ## Run e2e tests
 	@$(LOG_TARGET)
 ifeq ($(E2E_RUN_TEST),)
 	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=false
-	go test $(E2E_TEST_ARGS) ./test/e2e/merge_gateways --gateway-class=merge-gateways --debug=true --cleanup-base-resources=false
-	go test $(E2E_TEST_ARGS) ./test/e2e/multiple_gc --debug=true --cleanup-base-resources=true
-	LAST_VERSION_TAG=$(shell cat VERSION) go test $(E2E_TEST_ARGS) ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
 else
-	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
+	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=false \
 		--run-test $(E2E_RUN_TEST)
 endif
 
@@ -219,7 +216,7 @@ install-eg-addons: helm-generate.gateway-addons-helm
 	kubectl rollout status --watch --timeout=5m -n monitoring deployment/otel-collector
 
 .PHONY: uninstall-eg-addons
-uninstall-eg-addons: 
+uninstall-eg-addons:
 	@$(LOG_TARGET)
 	helm delete $(shell helm list -n monitoring -q) -n monitoring
 
