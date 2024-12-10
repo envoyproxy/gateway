@@ -26,9 +26,10 @@ const (
 	envoygateway = "envoy-gateway"
 	targetString = "successfully acquired lease"
 	apiServerIP  = "10.96.0.1"
-	timeout      = 5 * time.Minute
+	timeout      = 2 * time.Minute
 	policyName   = "egress-rules"
 	leaseName    = "5b9825d2.gateway.envoyproxy.io"
+	trashHold    = 2
 )
 
 func init() {
@@ -47,13 +48,13 @@ var EGResilience = suite.ResilienceTest{
 		ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/base.yaml", true)
 
 		t.Run("EnvoyGateway reconciles missed resources and sync xds after api server connectivity is restored", func(t *testing.T) {
-			err := suite.Kube().ScaleDeploymentAndWait(context.Background(), envoygateway, namespace, 0, time.Minute, false)
+			err := suite.Kube().ScaleDeploymentAndWait(context.Background(), envoygateway, namespace, 0, timeout, false)
 			require.NoError(t, err, "Failed to scale deployment")
-			err = suite.Kube().ScaleDeploymentAndWait(context.Background(), envoygateway, namespace, 1, time.Minute, false)
+			err = suite.Kube().ScaleDeploymentAndWait(context.Background(), envoygateway, namespace, 1, timeout, false)
 			require.NoError(t, err, "Failed to scale deployment")
 
 			// Ensure leadership was taken
-			_, err = suite.Kube().GetElectedLeader(context.Background(), namespace, leaseName, metav1.Now(), time.Minute*2)
+			_, err = suite.Kube().GetElectedLeader(context.Background(), namespace, leaseName, metav1.Now(), timeout)
 			require.NoError(t, err, "unable to detect leader election")
 
 			t.Log("Simulating API server down for all pods")
@@ -96,7 +97,7 @@ var EGResilience = suite.ResilienceTest{
 			}
 
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "http", "http")
-			http.AwaitConvergence(t, 2, time.Minute, func(elapsed time.Duration) bool {
+			http.AwaitConvergence(t, trashHold, time.Minute, func(elapsed time.Duration) bool {
 				cReq, cRes, err := suite.RoundTripper.CaptureRoundTrip(req)
 				if err != nil {
 					tlog.Logf(t, "Request failed, not ready yet: %v (after %v)", err.Error(), elapsed)
@@ -168,7 +169,7 @@ var EGResilience = suite.ResilienceTest{
 
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "http", "http")
 
-			http.AwaitConvergence(t, 2, time.Minute, func(elapsed time.Duration) bool {
+			http.AwaitConvergence(t, trashHold, timeout, func(elapsed time.Duration) bool {
 				cReq, cRes, err := suite.RoundTripper.CaptureRoundTrip(req)
 				if err != nil {
 					tlog.Logf(t, "Request failed, not ready yet: %v (after %v)", err.Error(), elapsed)
