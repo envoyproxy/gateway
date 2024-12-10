@@ -2562,8 +2562,12 @@ func (t *TLSUpstreamConfig) ToTLSConfig() (*tls.Config, error) {
 	// nolint:gosec
 	tlsConfig := &tls.Config{
 		ServerName: t.SNI,
-		MinVersion: t.MinVersion.Int(),
-		MaxVersion: t.MaxVersion.Int(),
+	}
+	if t.MinVersion != nil {
+		tlsConfig.MinVersion = t.MinVersion.Int()
+	}
+	if t.MaxVersion != nil {
+		tlsConfig.MaxVersion = t.MaxVersion.Int()
 	}
 	if t.CACertificate != nil {
 		caCertPool := x509.NewCertPool()
