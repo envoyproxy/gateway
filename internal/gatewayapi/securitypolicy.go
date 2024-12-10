@@ -7,7 +7,6 @@ package gatewayapi
 
 import (
 	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -710,8 +709,7 @@ func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources 
 		}
 	}
 
-	// Discover the token and authorization endpoints from the issuer's
-	// well-known url if not explicitly specified
+	// Discover the token and authorization endpoints from the issuer's well-known url if not explicitly specified.
 	// EG assumes that the issuer url uses the same protocol and CA as the token endpoint.
 	// If we need to support different protocols or CAs, we need to add more fields to the OIDCProvider CRD.
 	if provider.TokenEndpoint == nil || provider.AuthorizationEndpoint == nil {
@@ -785,25 +783,16 @@ type OpenIDConfig struct {
 }
 
 func fetchEndpointsFromIssuer(issuerURL string, providerTLS *ir.TLSUpstreamConfig) (string, string, error) {
-	var tlsConfig *tls.Config
+	var (
+		tlsConfig *tls.Config
+		err       error
+	)
 
 	if providerTLS != nil {
-		tlsConfig = &tls.Config{
-			ServerName: providerTLS.SNI,
-			MinVersion: tls.VersionTLS13,
-		}
-		if providerTLS.CACertificate != nil {
-			caCertPool := x509.NewCertPool()
-			caCertPool.AppendCertsFromPEM(providerTLS.CACertificate.Certificate)
-			tlsConfig.RootCAs = caCertPool
-		}
-		for _, cert := range providerTLS.ClientCertificates {
-			cert, err := tls.X509KeyPair(cert.Certificate, cert.PrivateKey)
-			if err != nil {
-				return "", "", err
-			}
-			tlsConfig.Certificates = append(tlsConfig.Certificates, cert)
-		}
+		tlsConfig, err = providerTLS.ToTLSConfig()
+	}
+	if err != nil {
+		return "", "", err
 	}
 
 	// Fetch the OpenID configuration from the issuer URL
