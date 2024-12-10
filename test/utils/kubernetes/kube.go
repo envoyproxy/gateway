@@ -6,13 +6,10 @@
 package kubernetes
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"strings"
-	"sync"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -27,6 +24,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	kube "github.com/envoyproxy/gateway/internal/kubernetes"
+	coordinationv1 "k8s.io/api/coordination/v1"
 )
 
 // NewKubeHelper consolidates common Kubernetes operations, including deployments, traffic management, and log probing.
@@ -386,74 +384,54 @@ func waitForJobCompletion(ctx context.Context, k8sClient client.Client, job *bat
 	return fmt.Errorf("job %s did not complete within the specified timeout", job.Name)
 }
 
-// MonitorDeploymentLogs monitors logs for all pods in a deployment and returns true
-// if the target string is found within the given timeout.
-func (ka *KubeActions) MonitorDeploymentLogs(ctx context.Context, currentTime time.Time, namespace, depName, targetString string, timeout time.Duration, prefix bool) (string, error) {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
+func (ka *KubeActions) GetElectedLeader(ctx context.Context, namespace, leaseName string, afterTime metav1.Time, timeout time.Duration) (string, error) {
+	// Create a context with a timeout
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	deployment := &appsv1.Deployment{}
-	if prefix {
-		var err error
-		deployment, err = ka.getDepByPrefix(ctx, depName, namespace)
-		if err != nil {
-			return "", err
-		}
-	} else {
-		err := ka.Client.Get(ctx, client.ObjectKey{Name: depName, Namespace: namespace}, deployment)
-		if err != nil {
-			return "", err
-		}
-	}
-
-	deploymentName := deployment.Name
-	// Retrieve all pods for the deployment
-	pods, err := ka.getPodsForDeployment(ctx, namespace, deployment)
-	if err != nil {
-		return "", fmt.Errorf("failed to get pods for deployment %q: %w", deploymentName, err)
-	}
-
-	if len(pods) == 0 {
-		return "", fmt.Errorf("no pods found for deployment %q", deploymentName)
-	}
-
-	// Monitor logs for all pods in parallel
-	results := make(chan string, len(pods))
-	errors := make(chan error, len(pods))
-
-	var wg sync.WaitGroup
-	for _, pod := range pods {
-		wg.Add(1)
-		go func(podName string) {
-			defer wg.Done()
-			if found, err := ka.monitorPodLogs(ctx, currentTime, namespace, podName, targetString); err != nil {
-				errors <- fmt.Errorf("error monitoring logs for pod %q: %w", podName, err)
-			} else if found {
-				results <- podName
-			}
-		}(pod.Name)
-	}
-
-	// Close result channels once all goroutines finish
-	go func() {
-		wg.Wait()
-		close(results)
-		close(errors)
-	}()
-
-	// Handle results and errors
 	for {
-		select {
-		case <-ctx.Done():
-			return "", fmt.Errorf("timeout reached while monitoring logs for deployment %q", deploymentName)
-		case found := <-results:
-			if found != "" {
-				return found, nil
+		// Fetch the Lease object
+		lease, err := ka.getLease(ctxWithTimeout, namespace, leaseName)
+		if err != nil {
+			return "", fmt.Errorf("failed to get lease %s in namespace %s: %w", leaseName, namespace, err)
+		}
+
+		// Check if RenewTime matches the condition
+		if lease.Spec.RenewTime != nil && lease.Spec.RenewTime.After(afterTime.Time) {
+			if lease.Spec.HolderIdentity == nil || *lease.Spec.HolderIdentity == "" {
+				return "", fmt.Errorf("lease %s does not have a valid holderIdentity", leaseName)
 			}
-		case err := <-errors:
-			return "", err
+
+			// Return the leader pod name
+			hi := *lease.Spec.HolderIdentity
+			parts := strings.SplitN(hi, "_", 2)
+
+			// Return the left part (pod name)
+			if len(parts) > 0 {
+				return parts[0], nil
+			} else {
+				return "", fmt.Errorf("lease %s does not have a valid holderIdentity", leaseName)
+			}
+		}
+
+		// Sleep for a short interval before retrying to avoid excessive API calls
+		select {
+		case <-ctxWithTimeout.Done():
+			return "", fmt.Errorf("timeout reached while waiting for lease renew time: %w", ctxWithTimeout.Err())
+		case <-time.After(1 * time.Second):
+			// Retry after a delay
 		}
 	}
+}
+
+func (ka *KubeActions) getLease(ctx context.Context, namespace, leaseName string) (*coordinationv1.Lease, error) {
+	// Fetch the Lease object
+	lease, err := ka.Kube().CoordinationV1().Leases(namespace).Get(ctx, leaseName, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get lease %s in namespace %s: %w", leaseName, namespace, err)
+	}
+
+	return lease, nil
 }
 
 // getPodsForDeployment retrieves all pods belonging to a deployment using label selectors.
@@ -477,32 +455,4 @@ func convertMatchLabelsToSelectorString(matchLabels map[string]string) string {
 		sb.WriteString(fmt.Sprintf("%s=%s", key, value))
 	}
 	return sb.String()
-}
-
-// monitorPodLogs streams logs from a pod and searches for the target string.
-func (ka *KubeActions) monitorPodLogs(ctx context.Context, currenTime time.Time, namespace, podName, targetString string) (bool, error) {
-	req := ka.Kube().CoreV1().Pods(namespace).GetLogs(podName, &corev1.PodLogOptions{Follow: true, SinceTime: ptr.To(metav1.Time{Time: currenTime})})
-	stream, err := req.Stream(ctx)
-	if err != nil {
-		return false, fmt.Errorf("failed to stream logs for pod %q: %w", podName, err)
-	}
-	defer stream.Close()
-	return ka.scanLogsForString(stream, targetString)
-}
-
-// scanLogsForString reads a log stream and searches for the target string.
-func (ka *KubeActions) scanLogsForString(stream io.ReadCloser, targetString string) (bool, error) {
-	reader := bufio.NewReader(stream)
-	for {
-		line, err := reader.ReadString('\n')
-		if err == io.EOF {
-			continue
-		}
-		if err != nil {
-			return false, fmt.Errorf("error reading log stream: %w", err)
-		}
-		if strings.Contains(line, targetString) {
-			return true, nil
-		}
-	}
 }

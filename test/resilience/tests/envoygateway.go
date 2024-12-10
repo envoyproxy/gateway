@@ -13,6 +13,7 @@ import (
 	"github.com/avast/retry-go"
 	"github.com/envoyproxy/gateway/test/resilience/suite"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
@@ -27,6 +28,7 @@ const (
 	apiServerIP  = "10.96.0.1"
 	timeout      = 5 * time.Minute
 	policyName   = "egress-rules"
+	leaseName    = "5b9825d2.gateway.envoyproxy.io"
 )
 
 func init() {
@@ -50,10 +52,9 @@ var EGResilience = suite.ResilienceTest{
 			err = suite.Kube().ScaleDeploymentAndWait(context.Background(), envoygateway, namespace, 1, time.Minute, false)
 			require.NoError(t, err, "Failed to scale deployment")
 
-			t.Log("Monitoring logs to identify the leader pod")
-			name, err := suite.Kube().MonitorDeploymentLogs(context.Background(), time.Now(), namespace, envoygateway, targetString, timeout, false)
-			require.NoError(t, err, "Failed to monitor logs for leader pod")
-			require.NotEmpty(t, name, "Leader pod name should not be empty")
+			// Ensure leadership was taken
+			_, err = suite.Kube().GetElectedLeader(context.Background(), namespace, leaseName, metav1.Now(), time.Minute*2)
+			require.NoError(t, err, "unable to detect leader election")
 
 			t.Log("Simulating API server down for all pods")
 			err = suite.WithResCleanUp(context.Background(), t, func() (client.Object, error) {
@@ -75,9 +76,9 @@ var EGResilience = suite.ResilienceTest{
 			t.Log("eg is online")
 
 			t.Log("Monitoring logs to identify the leader pod")
-			name, err = suite.Kube().MonitorDeploymentLogs(context.Background(), time.Now(), namespace, envoygateway, targetString, timeout, false)
-			require.NoError(t, err, "Failed to monitor logs")
-			require.NotEmpty(t, name, "Leader pod name should not be empty")
+
+			_, err = suite.Kube().GetElectedLeader(context.Background(), namespace, leaseName, metav1.Now(), time.Minute*2)
+			require.NoError(t, err, "unable to detect leader election")
 
 			ns := "gateway-resilience"
 			routeNN := types.NamespacedName{Name: "backend", Namespace: ns}
@@ -110,10 +111,10 @@ var EGResilience = suite.ResilienceTest{
 			err = suite.Kube().ScaleDeploymentAndWait(ctx, envoygateway, namespace, 2, time.Minute, false)
 			require.NoError(t, err, "Failed to scale deployment replicas")
 
-			t.Log("Monitoring logs to identify the leader pod")
-			name, err := suite.Kube().MonitorDeploymentLogs(ctx, time.Now(), namespace, envoygateway, targetString, timeout, false)
-			require.NoError(t, err, "Failed to monitor logs for leader pod")
-			require.NotEmpty(t, name, "Leader pod name should not be empty")
+			t.Log("Waiting for leader election")
+			// Ensure leadership was taken
+			name, err := suite.Kube().GetElectedLeader(context.Background(), namespace, leaseName, metav1.Now(), time.Minute*2)
+			require.NoError(t, err, "unable to detect leader election")
 
 			t.Log("Marking the identified pod as leader")
 			suite.Kube().MarkAsLeader(namespace, name)
@@ -131,11 +132,10 @@ var EGResilience = suite.ResilienceTest{
 			err = suite.Kube().CheckDeploymentReplicas(ctx, envoygateway, namespace, 1, time.Minute)
 			require.NoError(t, err, "Deployment did not scale down")
 
-			t.Log("Monitoring logs for a new leader pod")
-			name, err = suite.Kube().MonitorDeploymentLogs(ctx, time.Now().Add(-time.Minute), namespace, envoygateway, targetString, timeout, false)
-			require.NoError(t, err, "Failed to monitor logs for new leader pod")
-			require.NotEmpty(t, name, "New leader pod name should not be empty")
-
+			// Ensure leadership was taken
+			newLeader, err := suite.Kube().GetElectedLeader(context.Background(), namespace, leaseName, metav1.Now(), time.Minute*2)
+			require.NoError(t, err, "unable to detect leader election")
+			require.NotEqual(t, newLeader, name, "new leader name should not be equal to the first leader")
 			ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/route_changes.yaml", true)
 			t.Log("backend routes changed")
 
