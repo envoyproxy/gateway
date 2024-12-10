@@ -41,4 +41,5 @@ func CheckInstallScheme(t *testing.T, c client.Client) {
 	require.NoError(t, gwapiv1.Install(c.Scheme()))
 	require.NoError(t, egv1a1.AddToScheme(c.Scheme()))
 	require.NoError(t, batchv1.AddToScheme(c.Scheme()))
+
 }
