@@ -66,9 +66,7 @@ spec:
               maxInterval: 5s
           retryOn:
             triggers: ["5xx", "gateway-error", "reset"]
-      issuer: "https://keycloak.gateway-conformance-infra/realms/master"
-      authorizationEndpoint: "https://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/auth"
-      tokenEndpoint: "https://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/token"
+      issuer: "https://keycloak.gateway-conformance-infra/realms/master"   # Test fetching auth endpoint from the issuer url
     clientID: "oidctest"
     clientSecret:
       name: "oidctest-secret"

@@ -48,7 +48,7 @@ func init() {
 var OIDCTest = suite.ConformanceTest{
 	ShortName:   "OIDC",
 	Description: "Test OIDC authentication",
-	Manifests:   []string{"testdata/oidc-keycloak.yaml", "testdata/oidc-securitypolicy.yaml"},
+	Manifests:   []string{"testdata/oidc-keycloak.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("oidc provider represented by a URL", func(t *testing.T) {
 			testOIDC(t, suite, "testdata/oidc-securitypolicy.yaml")
@@ -104,6 +104,13 @@ func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, securityPolicyMan
 		ns        = "gateway-conformance-infra"
 	)
 
+	podInitialized := corev1.PodCondition{Type: corev1.PodInitialized, Status: corev1.ConditionTrue}
+	// Wait for the keycloak pod to be configured with the test user and client
+	WaitForPods(t, suite.Client, ns, map[string]string{"job-name": "setup-keycloak"}, corev1.PodSucceeded, podInitialized)
+
+	// Apply the security policy that configures OIDC authentication
+	suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, securityPolicyManifest, false)
+
 	routeNN := types.NamespacedName{Name: route, Namespace: ns}
 	gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 	httpGWAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN, "http"), routeNN)
@@ -115,12 +122,8 @@ func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, securityPolicyMan
 		Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 		Name:      gwapiv1.ObjectName(gwNN.Name),
 	}
+
 	SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: sp, Namespace: ns}, suite.ControllerName, ancestorRef)
-
-	podInitialized := corev1.PodCondition{Type: corev1.PodInitialized, Status: corev1.ConditionTrue}
-
-	// Wait for the keycloak pod to be configured with the test user and client
-	WaitForPods(t, suite.Client, ns, map[string]string{"job-name": "setup-keycloak"}, corev1.PodSucceeded, podInitialized)
 
 	// Initialize the test OIDC client that will keep track of the state of the OIDC login process
 	oidcClient, err := NewOIDCTestClient(

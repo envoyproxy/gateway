@@ -712,6 +712,8 @@ func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources 
 
 	// Discover the token and authorization endpoints from the issuer's
 	// well-known url if not explicitly specified
+	// EG assumes that the issuer url uses the same protocol and CA as the token endpoint.
+	// If we need to support different protocols or CAs, we need to add more fields to the OIDCProvider CRD.
 	if provider.TokenEndpoint == nil || provider.AuthorizationEndpoint == nil {
 		tokenEndpoint, authorizationEndpoint, err = fetchEndpointsFromIssuer(provider.Issuer, providerTLS)
 		if err != nil {
