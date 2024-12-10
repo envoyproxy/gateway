@@ -266,6 +266,7 @@ xdsIR:
                   endpoints:
                   - host: oauth.foo.com
                     port: 443
+                  protocol: HTTPS
                   tls:
                     alpnProtocols: null
                     caCertificate:

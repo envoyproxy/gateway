@@ -678,7 +678,13 @@ func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources 
 		err                   error
 	)
 
-	u, err := url.Parse(tokenEndpoint)
+	var u *url.URL
+	if provider.TokenEndpoint != nil {
+		u, err = url.Parse(*provider.TokenEndpoint)
+	} else {
+		u, err = url.Parse(provider.Issuer)
+	}
+
 	if err != nil {
 		return nil, err
 	}
