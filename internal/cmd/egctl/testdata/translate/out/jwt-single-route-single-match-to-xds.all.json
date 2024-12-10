@@ -361,7 +361,6 @@
                 "ignoreHealthOnHostRemoval": true,
                 "lbPolicy": "LEAST_REQUEST",
                 "name": "httproute/envoy-gateway-system/backend/rule/0",
-                "outlierDetection": {},
                 "perConnectionBufferLimitBytes": 32768,
                 "type": "EDS"
               }
@@ -408,7 +407,6 @@
                   ]
                 },
                 "name": "raw_githubusercontent_com_443",
-                "outlierDetection": {},
                 "perConnectionBufferLimitBytes": 32768,
                 "respectDnsTtl": true,
                 "transportSocket": {

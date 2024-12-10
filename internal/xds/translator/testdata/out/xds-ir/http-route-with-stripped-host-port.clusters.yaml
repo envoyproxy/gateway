@@ -8,6 +8,5 @@
       resourceApiVersion: V3
     serviceName: first-route
   name: first-route
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
