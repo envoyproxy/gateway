@@ -13,7 +13,6 @@ import (
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
-	batchv1 "k8s.io/api/batch/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -270,32 +269,6 @@ func (ka *KubeActions) getDepByPrefix(ctx context.Context, prefix string, namesp
 		}
 	}
 	return nil, errors.New("deployment not found")
-}
-
-func waitForJobCompletion(ctx context.Context, k8sClient client.Client, job *batchv1.Job, timeout time.Duration) error {
-	key := types.NamespacedName{Name: job.Name, Namespace: job.Namespace}
-	endTime := time.Now().Add(timeout)
-
-	for time.Now().Before(endTime) {
-		var j batchv1.Job
-		if err := k8sClient.Get(ctx, key, &j); err != nil {
-			return fmt.Errorf("failed to get job: %w", err)
-		}
-
-		if j.Status.Failed > 0 {
-			return fmt.Errorf("job %s failed", job.Name)
-		}
-
-		if j.Status.Succeeded > 0 {
-			fmt.Printf("Job %s completed successfully.\n", job.Name)
-			return nil
-		}
-
-		fmt.Printf("Waiting for job %s to complete...\n", job.Name)
-		time.Sleep(5 * time.Second)
-	}
-
-	return fmt.Errorf("job %s did not complete within the specified timeout", job.Name)
 }
 
 func (ka *KubeActions) GetElectedLeader(ctx context.Context, namespace, leaseName string, afterTime metav1.Time, timeout time.Duration) (string, error) {
