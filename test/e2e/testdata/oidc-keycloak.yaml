@@ -98,8 +98,8 @@ spec:
     spec:
       initContainers:
         - name: wait-for-keycloak
-          image: busybox:stable
-          command: ["sh", "-c", "until nc -v -z -w3 keycloak 80; do sleep 2; done"]
+          image: curlimages/curl:latest
+          command: ["sh", "-c", "until curl -s -o /dev/null -w '%{http_code}' http://keycloak:80; do sleep 2; done"]
       containers:
         - name: setup-keycloak
           image: quay.io/keycloak/keycloak:26.0.4
