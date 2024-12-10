@@ -10,6 +10,7 @@ package tests
 import (
 	"context"
 	"io"
+	"net"
 	"net/http"
 	"regexp"
 	"testing"
@@ -105,8 +106,9 @@ func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, securityPolicyMan
 
 	routeNN := types.NamespacedName{Name: route, Namespace: ns}
 	gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-	gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-
+	httpGWAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN, "http"), routeNN)
+	host, _, _ := net.SplitHostPort(httpGWAddr)
+	tlsGWAddr := net.JoinHostPort(host, "443")
 	ancestorRef := gwapiv1a2.ParentReference{
 		Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 		Kind:      gatewayapi.KindPtr(resource.KindGateway),
@@ -125,8 +127,9 @@ func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, securityPolicyMan
 		WithLoggingOptions(t.Log, true),
 		// Map the application and keycloak cluster DNS name to the gateway address
 		WithCustomAddressMappings(map[string]string{
-			"www.example.com:80":                    gwAddr,
-			"keycloak.gateway-conformance-infra:80": gwAddr,
+			"www.example.com:80":                     httpGWAddr,
+			"keycloak.gateway-conformance-infra:80":  httpGWAddr,
+			"keycloak.gateway-conformance-infra:443": tlsGWAddr,
 		}),
 	)
 	require.NoError(t, err)

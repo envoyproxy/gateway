@@ -6,6 +6,8 @@
 package gatewayapi
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -672,24 +674,9 @@ func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources 
 		protocol              ir.AppProtocol
 		rd                    *ir.RouteDestination
 		traffic               *ir.TrafficFeatures
+		providerTLS           *ir.TLSUpstreamConfig
 		err                   error
 	)
-
-	// Discover the token and authorization endpoints from the issuer's
-	// well-known url if not explicitly specified
-	if provider.TokenEndpoint == nil || provider.AuthorizationEndpoint == nil {
-		tokenEndpoint, authorizationEndpoint, err = fetchEndpointsFromIssuer(provider.Issuer)
-		if err != nil {
-			return nil, fmt.Errorf("error fetching endpoints from issuer: %w", err)
-		}
-	} else {
-		tokenEndpoint = *provider.TokenEndpoint
-		authorizationEndpoint = *provider.AuthorizationEndpoint
-	}
-
-	if err = validateTokenEndpoint(tokenEndpoint); err != nil {
-		return nil, err
-	}
 
 	u, err := url.Parse(tokenEndpoint)
 	if err != nil {
@@ -706,6 +693,31 @@ func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources 
 		if rd, err = t.translateExtServiceBackendRefs(policy, provider.BackendRefs, protocol, resources, envoyProxy, "oidc", 0); err != nil {
 			return nil, err
 		}
+	}
+
+	if rd != nil {
+		for _, st := range rd.Settings {
+			if st.TLS != nil {
+				providerTLS = st.TLS
+				break
+			}
+		}
+	}
+
+	// Discover the token and authorization endpoints from the issuer's
+	// well-known url if not explicitly specified
+	if provider.TokenEndpoint == nil || provider.AuthorizationEndpoint == nil {
+		tokenEndpoint, authorizationEndpoint, err = fetchEndpointsFromIssuer(provider.Issuer, providerTLS)
+		if err != nil {
+			return nil, fmt.Errorf("error fetching endpoints from issuer: %w", err)
+		}
+	} else {
+		tokenEndpoint = *provider.TokenEndpoint
+		authorizationEndpoint = *provider.AuthorizationEndpoint
+	}
+
+	if err = validateTokenEndpoint(tokenEndpoint); err != nil {
+		return nil, err
 	}
 
 	if traffic, err = translateTrafficFeatures(provider.BackendSettings); err != nil {
@@ -764,9 +776,36 @@ type OpenIDConfig struct {
 	AuthorizationEndpoint string `json:"authorization_endpoint"`
 }
 
-func fetchEndpointsFromIssuer(issuerURL string) (string, string, error) {
+func fetchEndpointsFromIssuer(issuerURL string, providerTLS *ir.TLSUpstreamConfig) (string, string, error) {
+	var tlsConfig *tls.Config
+
+	if providerTLS != nil {
+		tlsConfig = &tls.Config{
+			ServerName: providerTLS.SNI,
+			MinVersion: tls.VersionTLS13,
+		}
+		if providerTLS.CACertificate != nil {
+			caCertPool := x509.NewCertPool()
+			caCertPool.AppendCertsFromPEM(providerTLS.CACertificate.Certificate)
+			tlsConfig.RootCAs = caCertPool
+		}
+		for _, cert := range providerTLS.ClientCertificates {
+			cert, err := tls.X509KeyPair(cert.Certificate, cert.PrivateKey)
+			if err != nil {
+				return "", "", err
+			}
+			tlsConfig.Certificates = append(tlsConfig.Certificates, cert)
+		}
+	}
+
 	// Fetch the OpenID configuration from the issuer URL
-	resp, err := http.Get(fmt.Sprintf("%s/.well-known/openid-configuration", issuerURL))
+	client := &http.Client{}
+	if tlsConfig != nil {
+		client.Transport = &http.Transport{
+			TLSClientConfig: tlsConfig,
+		}
+	}
+	resp, err := client.Get(fmt.Sprintf("%s/.well-known/openid-configuration", issuerURL))
 	if err != nil {
 		return "", "", err
 	}
