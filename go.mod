@@ -62,6 +62,7 @@ require (
 )
 
 require (
+	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/docker/docker v27.3.1+incompatible
 	github.com/replicatedhq/troubleshoot v0.107.5
 	github.com/tetratelabs/func-e v1.1.5-0.20240822223546-c85a098d5bf0
