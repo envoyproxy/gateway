@@ -17,7 +17,9 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	perr "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -789,29 +791,31 @@ func fetchEndpointsFromIssuer(issuerURL string, providerTLS *ir.TLSUpstreamConfi
 	)
 
 	if providerTLS != nil {
-		tlsConfig, err = providerTLS.ToTLSConfig()
-	}
-	if err != nil {
-		return "", "", err
+		if tlsConfig, err = providerTLS.ToTLSConfig(); err != nil {
+			return "", "", err
+		}
 	}
 
-	// Fetch the OpenID configuration from the issuer URL
 	client := &http.Client{}
 	if tlsConfig != nil {
 		client.Transport = &http.Transport{
 			TLSClientConfig: tlsConfig,
 		}
 	}
-	resp, err := client.Get(fmt.Sprintf("%s/.well-known/openid-configuration", issuerURL))
-	if err != nil {
-		return "", "", err
-	}
-	defer resp.Body.Close()
 
 	// Parse the OpenID configuration response
 	var config OpenIDConfig
-	err = json.NewDecoder(resp.Body).Decode(&config)
-	if err != nil {
+	if err = backoff.Retry(func() error {
+		resp, err := client.Get(fmt.Sprintf("%s/.well-known/openid-configuration", issuerURL))
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+		if err = json.NewDecoder(resp.Body).Decode(&config); err != nil {
+			return err
+		}
+		return nil
+	}, backoff.NewExponentialBackOff(backoff.WithMaxElapsedTime(5*time.Second))); err != nil {
 		return "", "", err
 	}
 
