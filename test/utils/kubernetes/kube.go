@@ -13,6 +13,7 @@ import (
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,7 +23,6 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	kube "github.com/envoyproxy/gateway/internal/kubernetes"
-	coordinationv1 "k8s.io/api/coordination/v1"
 )
 
 // NewKubeHelper consolidates common Kubernetes operations, including deployments, traffic management, and log probing.
