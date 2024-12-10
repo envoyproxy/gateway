@@ -12,7 +12,6 @@
     serviceName: first-route-dest
   ignoreHealthOnHostRemoval: true
   name: first-route-dest
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -30,7 +29,6 @@
   ignoreHealthOnHostRemoval: true
   lbPolicy: RANDOM
   name: second-route-dest
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -48,7 +46,6 @@
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: third-route-dest
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -66,7 +63,6 @@
   ignoreHealthOnHostRemoval: true
   lbPolicy: MAGLEV
   name: fourth-route-dest
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -87,7 +83,6 @@
     slowStartConfig:
       slowStartWindow: 60s
   name: fifth-route-dest
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -104,7 +99,6 @@
     serviceName: sixth-route-dest
   ignoreHealthOnHostRemoval: true
   name: sixth-route-dest
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   roundRobinLbConfig:
     slowStartConfig:
@@ -125,7 +119,6 @@
   ignoreHealthOnHostRemoval: true
   lbPolicy: MAGLEV
   name: seventh-route-dest
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -145,7 +138,6 @@
   maglevLbConfig:
     tableSize: "524287"
   name: eighth-route-dest
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -163,7 +155,6 @@
   ignoreHealthOnHostRemoval: true
   lbPolicy: MAGLEV
   name: ninth-route-dest
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -181,6 +172,5 @@
   ignoreHealthOnHostRemoval: true
   lbPolicy: MAGLEV
   name: tenth-route-dest
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
