@@ -64,3 +64,62 @@ func TestListDirsAndFiles(t *testing.T) {
 		})
 	}
 }
+
+func TestGetParentDirs(t *testing.T) {
+	aPaths := path.Join("a")
+	bPaths := path.Join("a", "b")
+	cPaths := path.Join("a", "b", "c")
+
+	testCases := []struct {
+		name             string
+		paths            []string
+		expectParentDirs []string
+	}{
+		{
+			name: "all files",
+			paths: []string{
+				path.Join(cPaths, "foo"),
+				path.Join(bPaths, "bar"),
+			},
+			expectParentDirs: []string{
+				cPaths,
+				bPaths,
+			},
+		},
+		{
+			name: "all dirs",
+			paths: []string{
+				bPaths + "/",
+				cPaths + "/",
+			},
+			expectParentDirs: []string{
+				bPaths,
+				cPaths,
+			},
+		},
+		{
+			name: "mixed files and dirs",
+			paths: []string{
+				path.Join(cPaths, "foo"),
+				path.Join(cPaths, "bar"),
+				path.Join(bPaths, "foo"),
+				path.Join(bPaths, "bar"),
+				aPaths + "/",
+				bPaths + "/",
+				cPaths + "/",
+			},
+			expectParentDirs: []string{
+				cPaths,
+				bPaths,
+				aPaths,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			parents := GetParentDirs(tc.paths)
+			require.ElementsMatch(t, parents.UnsortedList(), tc.expectParentDirs)
+		})
+	}
+}
