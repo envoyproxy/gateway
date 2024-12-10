@@ -19,7 +19,7 @@ new features: |
 bug fixes: |
   Fixed BackendTLSPolicy didn't support using port name as the sectionName in the targetRefs.
   Fixed reference grant from EnvoyExtensionPolicy to referenced ext-proc backend not respected.
-  Fixed the Gateway API translator didn't use the TLS configuration from the BackendTLSPolicy to fetch the auth endpoint.
+  Fixed the Gateway API translator didn't use the TLS configuration from the BackendTLSPolicy when connecting to the OIDC provider's well-known endpoint.
 
 # Enhancements that improve performance.
 performance improvements: |
