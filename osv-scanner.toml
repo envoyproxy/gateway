@@ -69,6 +69,13 @@ license.ignore = true
 reason = "This package has MPL-2.0 which is not approved in CNCF Allowlist, but it has an exception. See https://github.com/cncf/foundation/blob/main/license-exceptions/cncf-exceptions-2023-08-31.spdx"
 
 [[PackageOverrides]]
+name = "github.com/golang/groupcache"
+version = "0.0.0-20241129210726-2c02b8208cf8"
+ecosystem = "Go"
+license.override = ["Apache-2.0 "]
+reason = "Unidentified license, remove once https://github.com/google/deps.dev/issues/119 is resolved"
+
+[[PackageOverrides]]
 name = "stdlib"
 ecosystem = "Go"
 license.override = ["BSD-3-Clause"]
