@@ -35,6 +35,27 @@ httpRoutes:
         port: 8080
       timeouts:
         request: 130s
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-2
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
+      timeouts:
+        request: 130s
 backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -47,4 +68,20 @@ backendTrafficPolicies:
       kind: HTTPRoute
       name: httproute-1
     useClientProtocol: true
-
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-gateway
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+    useClientProtocol: true
+    loadBalancer:
+      type: ConsistentHash
+      consistentHash:
+        type: Cookie
+        cookie:
+          name: "test"
