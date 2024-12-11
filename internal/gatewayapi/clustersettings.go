@@ -29,7 +29,7 @@ func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatur
 	}
 	ret := &ir.TrafficFeatures{}
 
-	if timeout, err := buildClusterSettingsTimeout(*policy, nil); err != nil {
+	if timeout, err := buildClusterSettingsTimeout(*policy); err != nil {
 		return nil, err
 	} else {
 		ret.Timeout = timeout
@@ -83,14 +83,11 @@ func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatur
 	return ret, nil
 }
 
-func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings, routeTrafficFeatures *ir.TrafficFeatures) (*ir.Timeout, error) {
+func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings) (*ir.Timeout, error) {
 	if policy.Timeout == nil {
-		if routeTrafficFeatures != nil {
-			// Don't lose any existing timeout definitions.
-			return mergeTimeoutSettings(nil, routeTrafficFeatures.Timeout), nil
-		}
 		return nil, nil
 	}
+
 	var (
 		errs error
 		to   = &ir.Timeout{}
@@ -146,38 +143,7 @@ func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings, routeTrafficFeat
 			RequestTimeout:        rt,
 		}
 	}
-
-	// The timeout from route's TrafficFeatures takes precedence over the timeout in BTP
-	if routeTrafficFeatures != nil {
-		to = mergeTimeoutSettings(routeTrafficFeatures.Timeout, to)
-	}
-
 	return to, errs
-}
-
-// merge secondary into main if both are not nil, otherwise return the
-// one that is not nil. If both are nil, returns nil
-func mergeTimeoutSettings(main, secondary *ir.Timeout) *ir.Timeout {
-	switch {
-	case main == nil && secondary == nil:
-		return nil
-	case main == nil:
-		return secondary.DeepCopy()
-	case secondary == nil:
-		return main
-	default: // Neither main nor secondary are nil here
-		if secondary.HTTP != nil {
-			setIfNil(&main.HTTP, &ir.HTTPTimeout{})
-			setIfNil(&main.HTTP.RequestTimeout, secondary.HTTP.RequestTimeout)
-			setIfNil(&main.HTTP.ConnectionIdleTimeout, secondary.HTTP.ConnectionIdleTimeout)
-			setIfNil(&main.HTTP.MaxConnectionDuration, secondary.HTTP.MaxConnectionDuration)
-		}
-		if secondary.TCP != nil {
-			setIfNil(&main.TCP, &ir.TCPTimeout{})
-			setIfNil(&main.TCP.ConnectTimeout, secondary.TCP.ConnectTimeout)
-		}
-		return main
-	}
 }
 
 func buildBackendConnection(policy egv1a1.ClusterSettings) (*ir.BackendConnection, error) {
