@@ -16,6 +16,7 @@ import (
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/protocov"
@@ -96,12 +97,11 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 	}
 
 	// Timeouts
-	if router.GetRoute() != nil &&
-		httpRoute.Traffic != nil &&
-		httpRoute.Traffic.Timeout != nil &&
-		httpRoute.Traffic.Timeout.HTTP != nil &&
-		httpRoute.Traffic.Timeout.HTTP.RequestTimeout != nil {
-		router.GetRoute().Timeout = durationpb.New(httpRoute.Traffic.Timeout.HTTP.RequestTimeout.Duration)
+	if router.GetRoute() != nil {
+		rt := getEffectiveRequestTimeout(httpRoute)
+		if rt != nil {
+			router.GetRoute().Timeout = durationpb.New(rt.Duration)
+		}
 	}
 
 	// Retries
@@ -292,14 +292,26 @@ func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*
 	}
 }
 
-func idleTimeout(httpRoute *ir.HTTPRoute) *durationpb.Duration {
+func getEffectiveRequestTimeout(httpRoute *ir.HTTPRoute) *metav1.Duration {
+	// gateway-api timeout takes precedence
+	if httpRoute.Timeout != nil {
+		return httpRoute.Timeout
+	}
+
 	if httpRoute.Traffic != nil &&
 		httpRoute.Traffic.Timeout != nil &&
 		httpRoute.Traffic.Timeout.HTTP != nil &&
 		httpRoute.Traffic.Timeout.HTTP.RequestTimeout != nil {
-		rt := httpRoute.Traffic.Timeout.HTTP.RequestTimeout
-		timeout := time.Hour // Default to 1 hour
+		return httpRoute.Traffic.Timeout.HTTP.RequestTimeout
+	}
 
+	return nil
+}
+
+func idleTimeout(httpRoute *ir.HTTPRoute) *durationpb.Duration {
+	rt := getEffectiveRequestTimeout(httpRoute)
+	timeout := time.Hour // Default to 1 hour
+	if rt != nil {
 		// Ensure is not less than the request timeout
 		if timeout < rt.Duration {
 			timeout = rt.Duration
