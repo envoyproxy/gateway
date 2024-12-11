@@ -644,21 +644,21 @@ func (r *gatewayAPIReconciler) updateStatusForGatewaysUnderGatewayClass(ctx cont
 
 // updateGatewayStatus triggers a status update for the Gateway.
 func (r *gatewayAPIReconciler) updateGatewayStatus(gateway *gwapiv1.Gateway) {
-	// The status added to GatewayStatuses is solely used to trigger the status updater
-	// and does not reflect the real changed status.
-	//
-	// The status updater will check the Envoy Proxy service to get the addresses of the Gateway,
-	// and check the Envoy Proxy Deployment/DaemonSet to get the status of the Gateway workload.
-	//
-	// Since the status does not reflect the actual changed status, we need to delete it first
-	// to prevent it from being considered unchanged. This ensures that subscribers receive the update event.
 	gwName := utils.NamespacedName(gateway)
 	status:= &gateway.Status
 	// Use the existing status if it exists to avoid losing the status calculated by the Gateway API translator.
 	if existing, ok := r.resources.GatewayStatuses.Load(gwName); ok {
 		status = existing
 	}
+
+	// Since the status does not reflect the actual changed status, we need to delete it first
+	// to prevent it from being considered unchanged. This ensures that subscribers receive the update event.
 	r.resources.GatewayStatuses.Delete(gwName)
+	// The status that is stored in the GatewayStatuses GatewayStatuses is solely used to trigger the status updater
+	// and does not reflect the real changed status.
+	//
+	// The status updater will check the Envoy Proxy service to get the addresses of the Gateway,
+	// and check the Envoy Proxy Deployment/DaemonSet to get the status of the Gateway workload.
 	r.resources.GatewayStatuses.Store(gwName, status)
 }
 
