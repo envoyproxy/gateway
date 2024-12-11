@@ -65,7 +65,7 @@ require (
 	github.com/docker/docker v27.3.1+incompatible
 	github.com/replicatedhq/troubleshoot v0.107.5
 	github.com/tetratelabs/func-e v1.1.5-0.20240822223546-c85a098d5bf0
-	google.golang.org/grpc v1.68.0
+	google.golang.org/grpc v1.68.1
 	sigs.k8s.io/kubectl-validate v0.0.5-0.20240827210056-ce13d95db263
 )
 

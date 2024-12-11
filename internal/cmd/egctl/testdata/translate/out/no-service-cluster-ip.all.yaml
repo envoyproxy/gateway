@@ -204,7 +204,6 @@ xds:
           ignoreHealthOnHostRemoval: true
           lbPolicy: LEAST_REQUEST
           name: httproute/envoy-gateway-system/routes/rule/0
-          outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
           type: EDS
     - '@type': type.googleapis.com/envoy.admin.v3.ListenersConfigDump
