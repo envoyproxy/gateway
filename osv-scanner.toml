@@ -72,7 +72,7 @@ reason = "This package has MPL-2.0 which is not approved in CNCF Allowlist, but 
 name = "github.com/golang/groupcache"
 version = "0.0.0-20241129210726-2c02b8208cf8"
 ecosystem = "Go"
-license.override = ["Apache-2.0 "]
+license.override = ["Apache-2.0"]
 reason = "Unidentified license, remove once https://github.com/google/deps.dev/issues/119 is resolved"
 
 [[PackageOverrides]]
