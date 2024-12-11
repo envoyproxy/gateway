@@ -169,7 +169,4 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        traffic:
-          timeout:
-            http:
-              requestTimeout: 1s
+        timeout: 1s
