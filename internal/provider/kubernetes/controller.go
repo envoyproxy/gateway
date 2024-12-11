@@ -129,12 +129,27 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su Updater
 	}
 	r.log.Info("created gatewayapi controller")
 
-	// Subscribe to status updates
-	r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.EnvoyGatewaySpec.ExtensionManager != nil)
-
 	// Watch resources
 	if err := r.watchResources(ctx, mgr, c); err != nil {
 		return fmt.Errorf("error watching resources: %w", err)
+	}
+
+	// When leader election is active, only subscribe to status updates upon acquiring leadership to avoid multiple
+	// EG instances processing status updates.
+	if cfg.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes &&
+		!ptr.Deref(cfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable, false) {
+		go func() {
+			select {
+			case <-ctx.Done():
+				return
+			case <-mgr.Elected():
+				// Subscribe to status updates
+				r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.EnvoyGatewaySpec.ExtensionManager != nil)
+			}
+		}()
+	} else {
+		// Subscribe to status updates
+		r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.EnvoyGatewaySpec.ExtensionManager != nil)
 	}
 	return nil
 }
