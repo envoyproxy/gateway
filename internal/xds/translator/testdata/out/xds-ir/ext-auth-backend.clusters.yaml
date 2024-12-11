@@ -13,7 +13,6 @@
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: httproute/default/httproute-1/rule/0
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -31,7 +30,6 @@
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: httproute/default/httproute-1/rule/1
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -49,7 +47,6 @@
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: httproute/default/httproute-2/rule/0
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -75,7 +72,6 @@
       locality:
         region: securitypolicy/default/policy-for-http-route-1/default/grpc-backend/backend/0
   name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   type: STRICT_DNS
@@ -109,7 +105,6 @@
       locality:
         region: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend/backend/0
   name: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   type: STRICT_DNS

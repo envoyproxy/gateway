@@ -27,7 +27,6 @@
       locality:
         region: first-route-dest/backend/0
   name: first-route-dest
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   type: STRICT_DNS
