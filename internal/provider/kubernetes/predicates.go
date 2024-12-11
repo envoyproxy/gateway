@@ -645,7 +645,7 @@ func (r *gatewayAPIReconciler) updateStatusForGatewaysUnderGatewayClass(ctx cont
 // updateGatewayStatus triggers a status update for the Gateway.
 func (r *gatewayAPIReconciler) updateGatewayStatus(gateway *gwapiv1.Gateway) {
 	gwName := utils.NamespacedName(gateway)
-	status:= &gateway.Status
+	status := &gateway.Status
 	// Use the existing status if it exists to avoid losing the status calculated by the Gateway API translator.
 	if existing, ok := r.resources.GatewayStatuses.Load(gwName); ok {
 		status = existing
