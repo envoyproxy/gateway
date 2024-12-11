@@ -9,8 +9,12 @@ package suite
 
 import (
 	"context"
+	"fmt"
 	"github.com/envoyproxy/gateway/test/utils/kubernetes"
+	"golang.org/x/net/proxy"
 	"io/fs"
+	"net"
+	"net/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
 	"testing"
 	"time"
@@ -49,6 +53,41 @@ type ResilienceTestSuite struct {
 	RoundTripper     roundtripper.RoundTripper
 }
 
+func setupRoundTripperWithSOCKS5(proxyAddr string, debug bool, timeoutConfig config.TimeoutConfig) (*roundtripper.DefaultRoundTripper, error) {
+	// Create a SOCKS5 dialer
+	dialer, err := createSOCKS5Dialer(proxyAddr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create SOCKS5 dialer: %w", err)
+	}
+
+	// Create a custom DialContext function
+	customDialContext := createCustomDialContext(dialer)
+
+	// Initialize DefaultRoundTripper with the custom DialContext
+	return &roundtripper.DefaultRoundTripper{
+		Debug:             debug,
+		TimeoutConfig:     timeoutConfig,
+		CustomDialContext: customDialContext,
+	}, nil
+}
+
+func createCustomDialContext(dialer proxy.Dialer) func(ctx context.Context, network, addr string) (net.Conn, error) {
+	return func(ctx context.Context, network, addr string) (net.Conn, error) {
+		return dialer.Dial(network, addr)
+	}
+}
+
+func createTransport(dialer proxy.Dialer) *http.Transport {
+	return &http.Transport{
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			return dialer.Dial(network, addr)
+		},
+	}
+}
+func createSOCKS5Dialer(proxyAddr string) (proxy.Dialer, error) {
+	return proxy.SOCKS5("tcp", proxyAddr, nil, proxy.Direct)
+}
+
 func NewResilienceTestSuite(client client.Client, reportDir string, manifestFS []fs.FS, gcn string) (*ResilienceTestSuite, error) {
 	var (
 		timeoutConfig = config.TimeoutConfig{}
@@ -57,7 +96,9 @@ func NewResilienceTestSuite(client client.Client, reportDir string, manifestFS [
 	// Reset some timeout config for the benchmark test.
 	config.SetupTimeoutConfig(&timeoutConfig)
 	timeoutConfig.RouteMustHaveParents = 180 * time.Second
-	roundTripper := &roundtripper.DefaultRoundTripper{Debug: true, TimeoutConfig: timeoutConfig}
+	//roundTripper := &roundtripper.DefaultRoundTripper{Debug: true, TimeoutConfig: timeoutConfig}
+	roundTripper, _ := setupRoundTripperWithSOCKS5("localhost:1080", true, timeoutConfig)
+
 	// Initial various client.
 	kubeClient, err := kube.NewCLIClient(opt.DefaultConfigFlags.ToRawKubeConfigLoader())
 	if err != nil {
