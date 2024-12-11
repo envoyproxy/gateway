@@ -335,7 +335,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 	if policy.Spec.Retry != nil {
 		rt = buildRetry(policy.Spec.Retry)
 	}
-	if to, err = buildClusterSettingsTimeout(policy.Spec.ClusterSettings, nil); err != nil {
+	if to, err = buildClusterSettingsTimeout(policy.Spec.ClusterSettings); err != nil {
 		err = perr.WithMessage(err, "Timeout")
 		errs = errors.Join(errs, err)
 	}
@@ -399,8 +399,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 						continue
 					}
 
-					// Some timeout setting originate from the route.
-					if localTo, err := buildClusterSettingsTimeout(policy.Spec.ClusterSettings, r.Traffic); err == nil {
+					if localTo, err := buildClusterSettingsTimeout(policy.Spec.ClusterSettings); err == nil {
 						to = localTo
 					}
 
@@ -484,7 +483,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 	if policy.Spec.Retry != nil {
 		rt = buildRetry(policy.Spec.Retry)
 	}
-	if ct, err = buildClusterSettingsTimeout(policy.Spec.ClusterSettings, nil); err != nil {
+	if ct, err = buildClusterSettingsTimeout(policy.Spec.ClusterSettings); err != nil {
 		err = perr.WithMessage(err, "Timeout")
 		errs = errors.Join(errs, err)
 	}
@@ -585,7 +584,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 			// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
 			r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 
-			if ct, err = buildClusterSettingsTimeout(policy.Spec.ClusterSettings, r.Traffic); err == nil {
+			if ct, err = buildClusterSettingsTimeout(policy.Spec.ClusterSettings); err == nil {
 				r.Traffic.Timeout = ct
 			}
 
