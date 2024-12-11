@@ -48,7 +48,7 @@ var EGResilience = suite.ResilienceTest{
 		ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/base.yaml", true)
 
 		//this test will fail until https://github.com/envoyproxy/gateway/pull/4767/files is merged
-		t.Run("Secondary EnvoyGateway instances can serve an up to date xds", func(t *testing.T) {
+		t.Run("Secondary EnvoyGateway instances can serve an up to date xDS", func(t *testing.T) {
 			ctx := context.Background()
 			t.Log("Scaling down the deployment to 0 replicas")
 			err := suite.Kube().ScaleDeploymentAndWait(ctx, envoygateway, namespace, 0, time.Minute, false)
@@ -108,7 +108,7 @@ var EGResilience = suite.ResilienceTest{
 			})
 		})
 
-		t.Run("EnvoyGateway reconciles missed resources and sync xds after api server connectivity is restored", func(t *testing.T) {
+		t.Run("EnvoyGateway reconciles missed resources and sync xDS after api server connectivity is restored", func(t *testing.T) {
 			err := suite.Kube().ScaleDeploymentAndWait(context.Background(), envoygateway, namespace, 0, timeout, false)
 			require.NoError(t, err, "Failed to scale deployment")
 			err = suite.Kube().ScaleDeploymentAndWait(context.Background(), envoygateway, namespace, 1, timeout, false)
@@ -124,8 +124,6 @@ var EGResilience = suite.ResilienceTest{
 			})
 			require.NoError(t, err, "unable to block api server connectivity")
 
-			err = suite.Kube().WaitForDeploymentReplicaCount(context.Background(), "envoy-gatay", namespace, 0, time.Minute, false)
-
 			ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/route_changes.yaml", true)
 			t.Log("backend routes changed")
 
@@ -133,15 +131,11 @@ var EGResilience = suite.ResilienceTest{
 			_, err = suite.Kube().ManageEgress(context.Background(), apiServerIP, namespace, policyName, false, map[string]string{})
 			require.NoError(t, err, "unable to unblock api server connectivity")
 
-			err = suite.Kube().WaitForDeploymentReplicaCount(context.Background(), "envoy-gateway", namespace, 1, time.Minute, false)
+			err = suite.Kube().WaitForDeploymentReplicaCount(context.Background(), envoygateway, namespace, 1, time.Minute, false)
 			require.NoError(t, err, "Failed to ensure that pod is online")
-			t.Log("eg is online")
-
-			t.Log("Monitoring logs to identify the leader pod")
-
 			_, err = suite.Kube().GetElectedLeader(context.Background(), namespace, leaseName, metav1.Now(), time.Minute*2)
 			require.NoError(t, err, "unable to detect leader election")
-
+			t.Log("eg is online")
 			ns := "gateway-resilience"
 			routeNN := types.NamespacedName{Name: "backend", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "all-namespaces", Namespace: ns}
@@ -202,7 +196,7 @@ var EGResilience = suite.ResilienceTest{
 			require.NoError(t, err, "Failed to simulate API server connection failure")
 
 			// leader pod should go down, the standby remain
-			t.Log("Verifying deployment scales down to 1 replica")
+			t.Log("Verifying deployment scales down to 1 replicas")
 			err = suite.Kube().CheckDeploymentReplicas(ctx, envoygateway, namespace, 1, time.Minute)
 			require.NoError(t, err, "Deployment did not scale down")
 
