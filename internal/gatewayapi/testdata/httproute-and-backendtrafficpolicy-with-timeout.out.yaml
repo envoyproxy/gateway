@@ -332,10 +332,10 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
+        timeout: 1s
         traffic:
           timeout:
             http:
               maxConnectionDuration: 22s
-              requestTimeout: 1s
             tcp:
               connectTimeout: 20s
