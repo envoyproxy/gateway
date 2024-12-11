@@ -336,11 +336,12 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
+        timeout: 1s
         traffic:
           timeout:
             http:
               connectionIdleTimeout: 21s
               maxConnectionDuration: 22s
-              requestTimeout: 1s
+              requestTimeout: 23s
             tcp:
               connectTimeout: 20s
