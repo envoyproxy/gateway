@@ -652,8 +652,13 @@ func (r *gatewayAPIReconciler) updateGatewayStatus(gateway *gwapiv1.Gateway) {
 	//
 	// Since the status does not reflect the actual changed status, we need to delete it first
 	// to prevent it from being considered unchanged. This ensures that subscribers receive the update event.
-	r.resources.GatewayStatuses.Delete(utils.NamespacedName(gateway))
-	r.resources.GatewayStatuses.Store(utils.NamespacedName(gateway), &gateway.Status)
+	gwName := utils.NamespacedName(gateway)
+	status:= &gateway.Status
+	if existing, ok := r.resources.GatewayStatuses.Load(gwName); ok {
+		status = existing
+	}
+	r.resources.GatewayStatuses.Delete(gwName)
+	r.resources.GatewayStatuses.Store(gwName, status)
 }
 
 func (r *gatewayAPIReconciler) handleNode(obj client.Object) bool {
