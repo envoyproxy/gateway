@@ -4,6 +4,7 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
@@ -12,7 +13,6 @@
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: first-route-dest
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   trackClusterStats:
     perEndpointStats: true
@@ -23,6 +23,7 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
@@ -31,7 +32,6 @@
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: second-route-dest
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   trackClusterStats:
     perEndpointStats: true
@@ -42,6 +42,7 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
@@ -50,7 +51,6 @@
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: third-route-dest
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   trackClusterStats:
     perEndpointStats: true
@@ -61,6 +61,7 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
@@ -77,7 +78,6 @@
       locality:
         region: ratelimit_cluster/backend/0
   name: ratelimit_cluster
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   trackClusterStats:

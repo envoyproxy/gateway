@@ -1,7 +1,6 @@
 - address:
     socketAddress:
       address: '::'
-      ipv4Compat: true
       portValue: 10001
   filterChains:
   - filters:
@@ -61,7 +60,6 @@
 - address:
     socketAddress:
       address: '::'
-      ipv4Compat: true
       portValue: 10002
   filterChains:
   - filters:
@@ -122,7 +120,6 @@
 - address:
     socketAddress:
       address: '::'
-      ipv4Compat: true
       portValue: 10003
   filterChains:
   - filters:
@@ -183,7 +180,6 @@
 - address:
     socketAddress:
       address: '::'
-      ipv4Compat: true
       portValue: 10004
   filterChains:
   - filters:
@@ -244,7 +240,6 @@
 - address:
     socketAddress:
       address: '::'
-      ipv4Compat: true
       portValue: 10005
   filterChains:
   - filters:

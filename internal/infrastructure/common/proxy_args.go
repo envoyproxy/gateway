@@ -13,6 +13,14 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
+func getIPFamily(infra *ir.ProxyInfra) *egv1a1.IPFamily {
+	if infra == nil || infra.Config == nil {
+		return nil
+	}
+
+	return infra.Config.Spec.IPFamily
+}
+
 // BuildProxyArgs builds command arguments for proxy infrastructure.
 func BuildProxyArgs(
 	infra *ir.ProxyInfra,
@@ -20,6 +28,11 @@ func BuildProxyArgs(
 	bootstrapConfigOptions *bootstrap.RenderBootstrapConfigOptions,
 	serviceNode string,
 ) ([]string, error) {
+	// If IPFamily is not set, try to determine it from the infrastructure.
+	if bootstrapConfigOptions != nil && bootstrapConfigOptions.IPFamily == nil {
+		bootstrapConfigOptions.IPFamily = getIPFamily(infra)
+	}
+
 	bootstrapConfigurations, err := bootstrap.GetRenderedBootstrapConfig(bootstrapConfigOptions)
 	if err != nil {
 		return nil, err

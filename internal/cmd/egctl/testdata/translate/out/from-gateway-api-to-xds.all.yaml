@@ -251,6 +251,7 @@ xds:
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
+          dnsLookupFamily: V4_PREFERRED
           edsClusterConfig:
             edsConfig:
               ads: {}
@@ -259,7 +260,6 @@ xds:
           ignoreHealthOnHostRemoval: true
           lbPolicy: LEAST_REQUEST
           name: httproute/default/backend/rule/0
-          outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
           type: EDS
       - cluster:
@@ -270,6 +270,7 @@ xds:
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
+          dnsLookupFamily: V4_PREFERRED
           edsClusterConfig:
             edsConfig:
               ads: {}
@@ -278,7 +279,6 @@ xds:
           ignoreHealthOnHostRemoval: true
           lbPolicy: LEAST_REQUEST
           name: grpcroute/default/backend/rule/0
-          outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
           type: EDS
           typedExtensionProtocolOptions:
@@ -296,6 +296,7 @@ xds:
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
+          dnsLookupFamily: V4_PREFERRED
           edsClusterConfig:
             edsConfig:
               ads: {}
@@ -304,7 +305,6 @@ xds:
           ignoreHealthOnHostRemoval: true
           lbPolicy: LEAST_REQUEST
           name: tcproute/default/backend/rule/-1
-          outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
           type: EDS
       - cluster:
@@ -315,6 +315,7 @@ xds:
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
+          dnsLookupFamily: V4_PREFERRED
           edsClusterConfig:
             edsConfig:
               ads: {}
@@ -323,7 +324,6 @@ xds:
           ignoreHealthOnHostRemoval: true
           lbPolicy: LEAST_REQUEST
           name: tlsroute/default/backend/rule/-1
-          outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
           type: EDS
       - cluster:
@@ -334,6 +334,7 @@ xds:
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
+          dnsLookupFamily: V4_PREFERRED
           edsClusterConfig:
             edsConfig:
               ads: {}
@@ -342,7 +343,6 @@ xds:
           ignoreHealthOnHostRemoval: true
           lbPolicy: LEAST_REQUEST
           name: udproute/default/backend/rule/-1
-          outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
           type: EDS
     - '@type': type.googleapis.com/envoy.admin.v3.ListenersConfigDump
@@ -365,8 +365,7 @@ xds:
                 path: /dev/stdout
             address:
               socketAddress:
-                address: '::'
-                ipv4Compat: true
+                address: 0.0.0.0
                 portValue: 10080
             defaultFilterChain:
               filters:
@@ -425,8 +424,7 @@ xds:
                 path: /dev/stdout
             address:
               socketAddress:
-                address: '::'
-                ipv4Compat: true
+                address: 0.0.0.0
                 portValue: 8080
             defaultFilterChain:
               filters:
@@ -493,8 +491,7 @@ xds:
                 path: /dev/stdout
             address:
               socketAddress:
-                address: '::'
-                ipv4Compat: true
+                address: 0.0.0.0
                 portValue: 1234
             filterChains:
             - filters:
@@ -533,8 +530,7 @@ xds:
                 path: /dev/stdout
             address:
               socketAddress:
-                address: '::'
-                ipv4Compat: true
+                address: 0.0.0.0
                 portValue: 8443
             filterChains:
             - filterChainMatch:
@@ -580,8 +576,7 @@ xds:
                 path: /dev/stdout
             address:
               socketAddress:
-                address: '::'
-                ipv4Compat: true
+                address: 0.0.0.0
                 portValue: 1234
                 protocol: UDP
             listenerFilters:

@@ -4,6 +4,7 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
@@ -12,6 +13,5 @@
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: valid-route-dest
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS

@@ -101,8 +101,11 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 				continue
 			}
 
-			// EG always use `::` and set ipv4_compact with true to support both IPv4 and IPv6
-			address := net.IPv6ListenerAddress
+			address := net.IPv4ListenerAddress
+			ipFamily := getEnvoyIPFamily(gateway.envoyProxy)
+			if ipFamily != nil && (*ipFamily == egv1a1.IPv6 || *ipFamily == egv1a1.DualStack) {
+				address = net.IPv6ListenerAddress
+			}
 
 			// Add the listener to the Xds IR
 			servicePort := &protocolPort{protocol: listener.Protocol, port: int32(listener.Port)}
@@ -115,16 +118,13 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 						Address:  address,
 						Port:     uint32(containerPort),
 						Metadata: buildListenerMetadata(listener, gateway),
-						IPFamily: getIPFamily(gateway.envoyProxy),
+						IPFamily: ipFamily,
 					},
 					TLS: irTLSConfigs(listener.tlsSecrets...),
 					Path: ir.PathSettings{
 						MergeSlashes:         true,
 						EscapedSlashesAction: ir.UnescapeAndRedirect,
 					},
-				}
-				if ipFamily := getIPFamily(gateway.envoyProxy); ipFamily != nil {
-					irListener.CoreListenerDetails.IPFamily = ipFamily
 				}
 				if listener.Hostname != nil {
 					irListener.Hostnames = append(irListener.Hostnames, string(*listener.Hostname))
@@ -141,7 +141,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 						Name:     irListenerName(listener),
 						Address:  address,
 						Port:     uint32(containerPort),
-						IPFamily: getIPFamily(gateway.envoyProxy),
+						IPFamily: ipFamily,
 					},
 
 					// Gateway is processed firstly, then ClientTrafficPolicy, then xRoute.

@@ -196,3 +196,43 @@ func addClusterFromURL(url string, tCtx *types.ResourceVersionTable) error {
 
 	return addXdsCluster(tCtx, clusterArgs)
 }
+
+// determineIPFamily determines the IP family based on multiple destination settings
+func determineIPFamily(settings []*ir.DestinationSetting) *egv1a1.IPFamily {
+	// If there's only one setting, return its IPFamily directly
+	if len(settings) == 1 {
+		return settings[0].IPFamily
+	}
+
+	hasIPv4 := false
+	hasIPv6 := false
+	hasDualStack := false
+
+	for _, setting := range settings {
+		if setting.IPFamily == nil {
+			continue
+		}
+
+		switch *setting.IPFamily {
+		case egv1a1.IPv4:
+			hasIPv4 = true
+		case egv1a1.IPv6:
+			hasIPv6 = true
+		case egv1a1.DualStack:
+			hasDualStack = true
+		}
+	}
+
+	switch {
+	case hasDualStack:
+		return ptr.To(egv1a1.DualStack)
+	case hasIPv4 && hasIPv6:
+		return ptr.To(egv1a1.DualStack)
+	case hasIPv4:
+		return ptr.To(egv1a1.IPv4)
+	case hasIPv6:
+		return ptr.To(egv1a1.IPv6)
+	default:
+		return nil
+	}
+}

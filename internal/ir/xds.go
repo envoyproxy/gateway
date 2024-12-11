@@ -250,19 +250,12 @@ type CoreListenerDetails struct {
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 	// Metadata is used to enrich envoy resource metadata with user and provider-specific information
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
-	// IPFamily specifies the IP address family for the gateway.
-	// It can be IPv4, IPv6, or Dual.
+	// IPFamily specifies the IP address family used by the Gateway for its listening ports.
 	IPFamily *IPFamily `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
 }
 
 // IPFamily specifies the IP address family used by the Gateway for its listening ports.
-type IPFamily string
-
-const (
-	IPv4      IPFamily = "IPv4"
-	IPv6      IPFamily = "IPv6"
-	Dualstack IPFamily = "DualStack"
-)
+type IPFamily = egv1a1.IPFamily
 
 func (l CoreListenerDetails) GetName() string {
 	return l.Name
@@ -1007,6 +1000,10 @@ type ExtAuth struct {
 	// +optional
 	HeadersToExtAuth []string `json:"headersToExtAuth,omitempty"`
 
+	// BodyToExtAuth defines the Body to Ext Auth configuration.
+	// +optional
+	BodyToExtAuth *BodyToExtAuth `json:"bodyToExtAuth,omitempty"`
+
 	// FailOpen is a switch used to control the behavior when a response from the External Authorization service cannot be obtained.
 	// If FailOpen is set to true, the system allows the traffic to pass through.
 	// Otherwise, if it is set to false or not set (defaulting to false),
@@ -1021,6 +1018,16 @@ type ExtAuth struct {
 	// the new matched route will be applied.
 	// +optional
 	RecomputeRoute *bool `json:"recomputeRoute,omitempty"`
+}
+
+// BodyToExtAuth defines the Body to Ext Auth configuration
+// +k8s:deepcopy-gen=true
+type BodyToExtAuth struct {
+	// MaxRequestBytes is the maximum size of a message body that the filter will hold in memory.
+	// Envoy will return HTTP 413 and will not initiate the authorization process when buffer
+	// reaches the number set in this field.
+	// Note that this setting will have precedence over failOpen mode.
+	MaxRequestBytes uint32 `json:"maxRequestBytes"`
 }
 
 // HTTPExtAuthService defines the HTTP External Authorization service
@@ -1308,9 +1315,11 @@ type DestinationSetting struct {
 	Endpoints []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 	// AddressTypeState specifies the state of DestinationEndpoint address type.
 	AddressType *DestinationAddressType `json:"addressType,omitempty" yaml:"addressType,omitempty"`
-
-	TLS     *TLSUpstreamConfig  `json:"tls,omitempty" yaml:"tls,omitempty"`
-	Filters *DestinationFilters `json:"filters,omitempty" yaml:"filters,omitempty"`
+	// IPFamily specifies the IP family (IPv4 or IPv6) to use for this destination's endpoints.
+	// This is derived from the backend service and endpoint slice information.
+	IPFamily *IPFamily           `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
+	TLS      *TLSUpstreamConfig  `json:"tls,omitempty" yaml:"tls,omitempty"`
+	Filters  *DestinationFilters `json:"filters,omitempty" yaml:"filters,omitempty"`
 }
 
 // Validate the fields within the RouteDestination structure
@@ -1686,6 +1695,7 @@ func (t TCPListener) Validate() error {
 
 func (t TCPRoute) Validate() error {
 	var errs error
+
 	if t.Name == "" {
 		errs = errors.Join(errs, ErrRouteNameEmpty)
 	}
@@ -2602,6 +2612,14 @@ type ExtProc struct {
 
 	// ResponseBodyProcessingMode Defines response body processing
 	ResponseBodyProcessingMode *ExtProcBodyProcessingMode `json:"responseBodyProcessingMode,omitempty" yaml:"responseBodyProcessingMode,omitempty"`
+
+	// RequestAttributes defines which envoy attributes are provided as context to external processor
+	// when processing requests
+	RequestAttributes []string `json:"requestAttributes,omitempty" yaml:"requestAttributes,omitempty"`
+
+	// ResponseAttributes defines which envoy attributes are provided as context to external processor
+	// when processing responses
+	ResponseAttributes []string `json:"responseAttributes,omitempty" yaml:"responseAttributes,omitempty"`
 }
 
 // Wasm holds the information associated with the Wasm extensions.

@@ -4,6 +4,7 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
@@ -12,7 +13,6 @@
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: first-route-www.test.com-dest
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -21,6 +21,7 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
@@ -29,7 +30,6 @@
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: second-route-www.test.com-dest
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -38,6 +38,7 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
@@ -54,7 +55,6 @@
       locality:
         region: localhost_80/backend/0
   name: localhost_80
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   type: STRICT_DNS
@@ -64,6 +64,7 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
@@ -72,7 +73,6 @@
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: "192_168_1_250_8080"
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   transportSocket:
     name: envoy.transport_sockets.tls

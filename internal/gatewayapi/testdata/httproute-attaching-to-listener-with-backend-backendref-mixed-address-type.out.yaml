@@ -259,7 +259,7 @@ xdsIR:
       text:
       - path: /dev/stdout
     http:
-    - address: '::'
+    - address: 0.0.0.0
       hostnames:
       - '*'
       isHTTP2: false
@@ -274,11 +274,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - destination:
-          name: httproute/default/httproute-1/rule/0
-          settings:
-          - weight: 1
-        directResponse:
+      - directResponse:
           statusCode: 500
         hostname: '*'
         isHTTP2: false
@@ -291,16 +287,8 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /1
-      - destination:
-          name: httproute/default/httproute-3/rule/0
-          settings:
-          - addressType: Mixed
-            endpoints:
-            - host: primary.foo.com
-              port: 3000
-            - host: 1.1.1.1
-              port: 3001
-            weight: 1
+      - directResponse:
+          statusCode: 500
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -312,16 +300,8 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /3
-      - destination:
-          name: httproute/default/httproute-2/rule/0
-          settings:
-          - addressType: Mixed
-            endpoints:
-            - host: primary.foo.com
-              port: 3000
-            - host: 1.1.1.1
-              port: 3001
-            weight: 1
+      - directResponse:
+          statusCode: 500
         hostname: '*'
         isHTTP2: false
         metadata:

@@ -4,6 +4,7 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
@@ -12,7 +13,6 @@
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: direct-route-dest
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -21,6 +21,7 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
@@ -29,7 +30,6 @@
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: accesslog_als_0_1
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
   typedExtensionProtocolOptions:
@@ -45,6 +45,7 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
@@ -53,7 +54,6 @@
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: accesslog_als_0_2
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
   typedExtensionProtocolOptions:
@@ -69,6 +69,7 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
@@ -77,7 +78,6 @@
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: accesslog_als_1_1
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
   typedExtensionProtocolOptions:
@@ -93,6 +93,7 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
@@ -101,7 +102,6 @@
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: accesslog_als_1_2
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
   typedExtensionProtocolOptions:
@@ -117,6 +117,7 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
@@ -125,7 +126,6 @@
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: accesslog_als_2_1
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
   typedExtensionProtocolOptions:
@@ -141,6 +141,7 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
@@ -149,7 +150,6 @@
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: accesslog_als_2_2
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
   typedExtensionProtocolOptions:
@@ -165,6 +165,7 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
@@ -181,7 +182,6 @@
       locality:
         region: accesslog_otel_0_3/backend/0
   name: accesslog_otel_0_3
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   type: STRICT_DNS
@@ -198,6 +198,7 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
@@ -214,7 +215,6 @@
       locality:
         region: accesslog_otel_1_3/backend/0
   name: accesslog_otel_1_3
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   type: STRICT_DNS
@@ -231,6 +231,7 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
@@ -247,7 +248,6 @@
       locality:
         region: accesslog_otel_2_3/backend/0
   name: accesslog_otel_2_3
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   type: STRICT_DNS

@@ -10,7 +10,7 @@ backendTLSPolicies:
     - group: ""
       kind: Service
       name: grpc-backend
-      sectionName: "8000"
+      sectionName: grpc
     validation:
       caCertificateRefs:
       - group: ""
@@ -280,7 +280,7 @@ xdsIR:
       text:
       - path: /dev/stdout
     http:
-    - address: '::'
+    - address: 0.0.0.0
       hostnames:
       - '*'
       isHTTP2: false

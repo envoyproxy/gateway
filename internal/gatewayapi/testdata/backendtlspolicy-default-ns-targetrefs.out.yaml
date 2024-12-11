@@ -10,7 +10,7 @@ backendTLSPolicies:
     - group: ""
       kind: Service
       name: http-backend
-      sectionName: "8080"
+      sectionName: http
     - group: gateway.envoyproxy.io
       kind: Backend
       name: backend-ip-tls
@@ -266,7 +266,7 @@ xdsIR:
       text:
       - path: /dev/stdout
     http:
-    - address: '::'
+    - address: 0.0.0.0
       hostnames:
       - '*'
       isHTTP2: false
@@ -323,7 +323,7 @@ xdsIR:
       text:
       - path: /dev/stdout
     http:
-    - address: '::'
+    - address: 0.0.0.0
       hostnames:
       - '*'
       isHTTP2: false

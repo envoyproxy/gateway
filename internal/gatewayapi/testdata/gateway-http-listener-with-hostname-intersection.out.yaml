@@ -172,7 +172,7 @@ xdsIR:
       text:
       - path: /dev/stdout
     http:
-    - address: '::'
+    - address: 0.0.0.0
       hostnames:
       - '*'
       isHTTP2: false
@@ -187,11 +187,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - destination:
-          name: httproute/envoy-gateway/httproute-1/rule/0
-          settings:
-          - weight: 1
-        directResponse:
+      - directResponse:
           statusCode: 500
         hostname: bar.com
         isHTTP2: false
@@ -204,7 +200,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /empty-hostname
-    - address: '::'
+    - address: 0.0.0.0
       hostnames:
       - '*.example.com'
       isHTTP2: false
@@ -219,11 +215,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - destination:
-          name: httproute/envoy-gateway/httproute-2/rule/0
-          settings:
-          - weight: 1
-        directResponse:
+      - directResponse:
           statusCode: 500
         hostname: '*.example.com'
         isHTTP2: false

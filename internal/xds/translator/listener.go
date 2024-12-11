@@ -151,6 +151,7 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 func buildXdsTCPListener(
 	name, address string,
 	port uint32,
+	ipFamily *ir.IPFamily,
 	keepalive *ir.TCPKeepalive,
 	connection *ir.ClientConnection,
 	accesslog *ir.AccessLog,
@@ -174,10 +175,14 @@ func buildXdsTCPListener(
 					PortSpecifier: &corev3.SocketAddress_PortValue{
 						PortValue: port,
 					},
-					Ipv4Compat: true,
 				},
 			},
 		},
+	}
+
+	if ipFamily != nil && *ipFamily == egv1a1.DualStack {
+		socketAddress := listener.Address.GetSocketAddress()
+		socketAddress.Ipv4Compat = true
 	}
 
 	return listener, nil
@@ -191,7 +196,7 @@ func buildPerConnectionBufferLimitBytes(connection *ir.ClientConnection) *wrappe
 }
 
 // buildXdsQuicListener creates a xds Listener resource for quic
-func buildXdsQuicListener(name, address string, port uint32, accesslog *ir.AccessLog) (*listenerv3.Listener, error) {
+func buildXdsQuicListener(name, address string, port uint32, ipFamily *ir.IPFamily, accesslog *ir.AccessLog) (*listenerv3.Listener, error) {
 	log, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeListener)
 	if err != nil {
 		return nil, err
@@ -207,7 +212,6 @@ func buildXdsQuicListener(name, address string, port uint32, accesslog *ir.Acces
 					PortSpecifier: &corev3.SocketAddress_PortValue{
 						PortValue: port,
 					},
-					Ipv4Compat: true,
 				},
 			},
 		},
@@ -218,6 +222,11 @@ func buildXdsQuicListener(name, address string, port uint32, accesslog *ir.Acces
 		// Remove /healthcheck/fail from endpoints that trigger a drain of listeners for better control
 		// over the drain process while still allowing the healthcheck to be failed during pod shutdown.
 		DrainType: listenerv3.Listener_MODIFY_ONLY,
+	}
+
+	if ipFamily != nil && *ipFamily == egv1a1.DualStack {
+		socketAddress := xdsListener.Address.GetSocketAddress()
+		socketAddress.Ipv4Compat = true
 	}
 
 	return xdsListener, nil
@@ -849,7 +858,6 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener, access
 					PortSpecifier: &corev3.SocketAddress_PortValue{
 						PortValue: udpListener.Port,
 					},
-					Ipv4Compat: true,
 				},
 			},
 		},
@@ -859,6 +867,11 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener, access
 				TypedConfig: udpProxyAny,
 			},
 		}},
+	}
+
+	if udpListener.IPFamily != nil && *udpListener.IPFamily == egv1a1.DualStack {
+		socketAddress := xdsListener.Address.GetSocketAddress()
+		socketAddress.Ipv4Compat = true
 	}
 
 	return xdsListener, nil

@@ -4,6 +4,7 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
@@ -12,7 +13,6 @@
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: httproute/default/httproute-1/rule/0
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -21,6 +21,7 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
@@ -29,7 +30,6 @@
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: httproute/default/httproute-2/rule/0
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -38,6 +38,7 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
@@ -46,7 +47,6 @@
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: envoyextensionpolicy/default/policy-for-route-2/0/grpc-backend-4
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
   typedExtensionProtocolOptions:
@@ -62,6 +62,7 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
@@ -70,7 +71,6 @@
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: envoyextensionpolicy/default/policy-for-route-1/0/grpc-backend-2
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
   typedExtensionProtocolOptions:
@@ -86,6 +86,7 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
@@ -94,7 +95,6 @@
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-2/0/grpc-backend-3
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
   typedExtensionProtocolOptions:
@@ -110,6 +110,7 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
@@ -118,7 +119,6 @@
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/0/grpc-backend
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
   typedExtensionProtocolOptions:

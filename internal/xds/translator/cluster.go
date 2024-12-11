@@ -84,7 +84,7 @@ func buildEndpointType(settings []*ir.DestinationSetting) EndpointType {
 }
 
 func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
-	dnsLookupFamily := clusterv3.Cluster_AUTO
+	dnsLookupFamily := clusterv3.Cluster_V4_PREFERRED
 	if args.ipFamily != nil {
 		switch *args.ipFamily {
 		case egv1a1.IPv4:
@@ -103,7 +103,6 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 				LocalityWeightedLbConfig: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig{},
 			},
 		},
-		OutlierDetection:              &clusterv3.OutlierDetection{},
 		PerConnectionBufferLimitBytes: buildBackandConnectionBufferLimitBytes(args.backendConnection),
 	}
 
@@ -698,6 +697,7 @@ type ExtraArgs struct {
 	metrics       *ir.Metrics
 	http1Settings *ir.HTTP1Settings
 	http2Settings *ir.HTTP2Settings
+	ipFamily      *egv1a1.IPFamily
 }
 
 type clusterArgs interface {
@@ -716,6 +716,7 @@ func (route *UDPRouteTranslator) asClusterArgs(extra *ExtraArgs) *xdsClusterArgs
 		endpointType: buildEndpointType(route.Destination.Settings),
 		metrics:      extra.metrics,
 		dns:          route.DNS,
+		ipFamily:     extra.ipFamily,
 	}
 }
 
@@ -737,6 +738,7 @@ func (route *TCPRouteTranslator) asClusterArgs(extra *ExtraArgs) *xdsClusterArgs
 		metrics:           extra.metrics,
 		backendConnection: route.BackendConnection,
 		dns:               route.DNS,
+		ipFamily:          extra.ipFamily,
 	}
 }
 
@@ -754,6 +756,7 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(extra *ExtraArgs) *xdsCluste
 		http1Settings:     extra.http1Settings,
 		http2Settings:     extra.http2Settings,
 		useClientProtocol: ptr.Deref(httpRoute.UseClientProtocol, false),
+		ipFamily:          extra.ipFamily,
 	}
 
 	// Populate traffic features.

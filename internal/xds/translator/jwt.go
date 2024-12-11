@@ -120,7 +120,6 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 					},
 					CacheDuration: &durationpb.Duration{Seconds: 5 * 60},
 					AsyncFetch:    &jwtauthnv3.JwksAsyncFetch{},
-					RetryPolicy:   &corev3.RetryPolicy{},
 				},
 			}
 

@@ -8,7 +8,7 @@ spec:
     - group: ""
       kind: Service
       name: tls-backend-2
-      sectionName: "443"
+      sectionName: https
   validation:
     caCertificateRefs:
       - name: backend-tls-checks-certificate

@@ -137,6 +137,18 @@ func extProcConfig(extProc ir.ExtProc) *extprocv3.ExternalProcessor {
 		config.ProcessingMode.ResponseHeaderMode = extprocv3.ProcessingMode_SEND
 	}
 
+	if extProc.RequestAttributes != nil {
+		var attrs []string
+		attrs = append(attrs, extProc.RequestAttributes...)
+		config.RequestAttributes = attrs
+	}
+
+	if extProc.ResponseAttributes != nil {
+		var attrs []string
+		attrs = append(attrs, extProc.ResponseAttributes...)
+		config.ResponseAttributes = attrs
+	}
+
 	return config
 }
 

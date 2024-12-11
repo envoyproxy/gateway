@@ -10,6 +10,7 @@ xds:
         commonLbConfig:
           localityWeightedLbConfig: {}
         connectTimeout: 10s
+        dnsLookupFamily: V4_PREFERRED
         edsClusterConfig:
           edsConfig:
             ads: {}
@@ -18,7 +19,6 @@ xds:
         ignoreHealthOnHostRemoval: true
         lbPolicy: LEAST_REQUEST
         name: httproute/envoy-gateway-system/backend/rule/0
-        outlierDetection: {}
         perConnectionBufferLimitBytes: 32768
         type: EDS
     - cluster:
@@ -29,6 +29,7 @@ xds:
         commonLbConfig:
           localityWeightedLbConfig: {}
         connectTimeout: 10s
+        dnsLookupFamily: V4_PREFERRED
         dnsRefreshRate: 30s
         lbPolicy: LEAST_REQUEST
         loadAssignment:
@@ -45,7 +46,6 @@ xds:
             locality:
               region: raw_githubusercontent_com_443/backend/0
         name: raw_githubusercontent_com_443
-        outlierDetection: {}
         perConnectionBufferLimitBytes: 32768
         respectDnsTtl: true
         transportSocket:

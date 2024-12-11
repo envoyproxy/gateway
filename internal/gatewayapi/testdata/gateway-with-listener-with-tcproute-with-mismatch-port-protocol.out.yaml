@@ -72,9 +72,10 @@ tcpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
+        message: 'backend service validation failed: TCP Port 8081 not found on service
+          default/service-1'
+        reason: Failed to process the settings associated with the TCP route.
+        status: "False"
         type: Accepted
       - lastTransitionTime: null
         message: TCP Port 8081 not found on service default/service-1
@@ -91,12 +92,6 @@ xdsIR:
       text:
       - path: /dev/stdout
     tcp:
-    - address: '::'
+    - address: 0.0.0.0
       name: envoy-gateway/gateway-1/tcp
       port: 10162
-      routes:
-      - destination:
-          name: tcproute/default/tcproute-1/rule/-1
-          settings:
-          - weight: 1
-        name: tcproute/default/tcproute-1

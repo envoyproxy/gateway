@@ -6,5 +6,6 @@
 package net
 
 const (
+	IPv4ListenerAddress = "0.0.0.0"
 	IPv6ListenerAddress = "::"
 )

@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -57,14 +58,20 @@ type UpdateHandler struct {
 	log           logr.Logger
 	client        client.Client
 	updateChannel chan Update
+	wg            *sync.WaitGroup
 }
 
 func NewUpdateHandler(log logr.Logger, client client.Client) *UpdateHandler {
-	return &UpdateHandler{
+	u := &UpdateHandler{
 		log:           log,
 		client:        client,
-		updateChannel: make(chan Update, 100),
+		updateChannel: make(chan Update, 1000),
+		wg:            new(sync.WaitGroup),
 	}
+
+	u.wg.Add(1)
+
+	return u
 }
 
 func (u *UpdateHandler) apply(update Update) {
@@ -127,6 +134,9 @@ func (u *UpdateHandler) Start(ctx context.Context) error {
 	u.log.Info("started status update handler")
 	defer u.log.Info("stopped status update handler")
 
+	// Enable Updaters to start sending updates to this handler.
+	u.wg.Done()
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -144,6 +154,7 @@ func (u *UpdateHandler) Start(ctx context.Context) error {
 func (u *UpdateHandler) Writer() Updater {
 	return &UpdateWriter{
 		updateChannel: u.updateChannel,
+		wg:            u.wg,
 	}
 }
 
@@ -155,11 +166,13 @@ type Updater interface {
 // UpdateWriter takes status updates and sends these to the UpdateHandler via a channel.
 type UpdateWriter struct {
 	updateChannel chan<- Update
+	wg            *sync.WaitGroup
 }
 
 // Send sends the given Update off to the update channel for writing by the UpdateHandler.
 func (u *UpdateWriter) Send(update Update) {
-	// Non-blocking receive to see if we should pass along update.
+	// Wait until updater is ready
+	u.wg.Wait()
 	u.updateChannel <- update
 }
 
