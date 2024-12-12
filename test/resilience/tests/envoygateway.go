@@ -72,7 +72,7 @@ var EGResilience = suite.ResilienceTest{
 			// and share it with envoy proxies accordingly.
 			t.Log("Simulating API server connection failure for all pods")
 			err = suite.WithResCleanUp(ctx, t, func() (client.Object, error) {
-				return suite.Kube().ManageEgress(ctx, apiServerIP, namespace, policyName, true, map[string]string{})
+				return suite.Kube().ManageEgress(ctx, apiServerIP, namespace, policyName, true, map[string]string{"app.kubernetes.io/name": "gateway-helm"})
 			})
 			require.NoError(t, err, "Failed to simulate API server connection failure")
 

@@ -23,3 +23,7 @@ adopters:
     logo: "/logos/quantco.png"
     url: "https://www.quantco.com"
     description: "QuantCo is using Envoy Gateway to expose various services from our K8s clusters in a secure and flexible way, where developers can deploy and manage their apps and cluster administrators can enforce common security policies like OIDC authentication."
+  - name: "Titan"
+    logo: "/logos/titan.svg"
+    url: "https://www.titan.email"
+    description: "Titan uses Envoy Gateway to enhance observability and centralize security for its Kubernetes services, managing critical policies like rate limiting, IP blocking, and access controls—freeing developers from the burden of handling service security."
