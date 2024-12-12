@@ -278,7 +278,7 @@ func (hpa *KubernetesHorizontalPodAutoscalerSpec) ApplyMergePatch(old *autoscali
 	// Serialize the current HPA to JSON
 	originalJSON, err := json.Marshal(old)
 	if err != nil {
-		return nil, fmt.Errorf("error marshaling original deployment: %w", err)
+		return nil, fmt.Errorf("error marshaling original HorizontalPodAutoscaler: %w", err)
 	}
 
 	switch {
@@ -314,7 +314,7 @@ func (pdb *KubernetesPodDisruptionBudgetSpec) ApplyMergePatch(old *policyv1.PodD
 	// Serialize the PDB deployment to JSON
 	originalJSON, err := json.Marshal(old)
 	if err != nil {
-		return nil, fmt.Errorf("error marshaling original deployment: %w", err)
+		return nil, fmt.Errorf("error marshaling original PodDisruptionBudget: %w", err)
 	}
 
 	switch {
