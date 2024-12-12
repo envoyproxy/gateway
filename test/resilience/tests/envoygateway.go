@@ -66,13 +66,22 @@ var EGResilience = suite.ResilienceTest{
 			t.Log("Marking the identified pod as leader")
 			suite.Kube().MarkAsLeader(namespace, name)
 
+			// Pods rely on connectivity to the API server to participate in leader election processes.
+			// Without this connectivity, they cannot become leaders, in this test we won't bring it back.
+			// The secondary pods will continue to operate using their last known good configuration (xDS)
+			// and share it with envoy proxies accordingly.
 			t.Log("Simulating API server connection failure for all pods")
 			err = suite.WithResCleanUp(ctx, t, func() (client.Object, error) {
 				return suite.Kube().ManageEgress(ctx, apiServerIP, namespace, policyName, true, map[string]string{})
 			})
 			require.NoError(t, err, "Failed to simulate API server connection failure")
 
-			// leader pod should go down, the standby remain
+			// The leader pod should go down, the standby pods remain
+			// When a leader pod loses connectivity to the API server, Kubernetes does not immediately terminate or stop the pod. Instead, the pod itself detects the loss of connectivity, initiates a graceful teardown process, and restarts to attempt to reconnect to the API server.
+			// The replica count for the deployment remains at 3 throughout the process.
+			// Kubernetes does not schedule a new pod to replace the one that lost connectivity because the existing pod is not
+			// considered failed from Kubernetes’ perspective. It’s the responsibility of the application running inside the
+			// pod (e.g., the leader election logic) to handle reconnection attempts or restart itself.
 			t.Log("Verifying deployment scales down to 2 replica")
 			err = suite.Kube().CheckDeploymentReplicas(ctx, envoygateway, namespace, 2, time.Minute)
 			require.NoError(t, err, "Deployment did not scale down")
