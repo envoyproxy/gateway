@@ -51,6 +51,7 @@ func New() (*Server, error) {
 		Logger:  logging.DefaultLogger(egv1a1.LogLevelInfo),
 		Elected: &sync.WaitGroup{},
 	}
+	// Block the tasks that are waiting for the leader to be elected
 	server.Elected.Add(1)
 	return server, nil
 }
