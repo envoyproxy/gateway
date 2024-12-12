@@ -115,9 +115,9 @@ jobs:
       fail-fast: false
       matrix:
         target:
-        - version: v1.29.12
+        - version: v1.29.10
           ipFamily: ipv4
-        - version: v1.30.8
+        - version: v1.30.6
           ipFamily: ipv4
         - version: v1.31.4
           ipFamily: ipv6  # only run ipv6 test on this version to save time
@@ -163,7 +163,7 @@ jobs:
     # Benchmark
     - name: Run Benchmark tests
       env:
-        KIND_NODE_TAG: v1.28.13
+        KIND_NODE_TAG: v1.29.10
         IMAGE_PULL_POLICY: IfNotPresent
         # Args for benchmark test
         BENCHMARK_RPS: 10000
