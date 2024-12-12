@@ -138,12 +138,8 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su Updater
 	if cfg.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes &&
 		!ptr.Deref(cfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable, false) {
 		go func() {
-			select {
-			case <-ctx.Done():
-				return
-			case <-mgr.Elected():
-				r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.EnvoyGatewaySpec.ExtensionManager != nil)
-			}
+			cfg.Elected.Wait()
+			r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.EnvoyGatewaySpec.ExtensionManager != nil)
 		}()
 	} else {
 		r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.EnvoyGatewaySpec.ExtensionManager != nil)

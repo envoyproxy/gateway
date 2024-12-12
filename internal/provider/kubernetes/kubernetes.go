@@ -109,11 +109,10 @@ func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources)
 		return nil, fmt.Errorf("unable to set up ready check: %w", err)
 	}
 
-	// Emit elected & continue with envoyObjects of infra resources
+	// Emit elected & continue with the tasks that require leadership.
 	go func() {
 		<-mgr.Elected()
-		// WARN: DO NOT CLOSE IT
-		svr.Elected <- struct{}{}
+		svr.Elected.Done()
 	}()
 
 	return &Provider{
