@@ -1873,7 +1873,7 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
 
 				if backendNamespace != policy.Namespace {
 					from := ObjectKindNamespacedName{
-						kind:      gatewayapi.KindHTTPRoute,
+						kind:      gatewayapi.KindEnvoyExtensionPolicy,
 						namespace: policy.Namespace,
 						name:      policy.Name,
 					}

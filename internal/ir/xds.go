@@ -563,6 +563,8 @@ type HTTPRoute struct {
 	UseClientProtocol *bool `json:"useClientProtocol,omitempty" yaml:"useClientProtocol,omitempty"`
 	// Metadata is used to enrich envoy route metadata with user and provider-specific information
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	// Timeout is the time until which entire response is received from the upstream.
+	Timeout *metav1.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 }
 
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.

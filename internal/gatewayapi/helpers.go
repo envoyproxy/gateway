@@ -580,10 +580,3 @@ func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, 
 
 	return ret
 }
-
-// Sets *target to value if and only if *target is nil
-func setIfNil[T any](target **T, value *T) {
-	if *target == nil {
-		*target = value
-	}
-}

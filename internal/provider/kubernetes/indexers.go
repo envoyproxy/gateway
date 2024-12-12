@@ -47,17 +47,21 @@ const (
 )
 
 func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1b1.ReferenceGrant{}, targetRefGrantRouteIndex, func(rawObj client.Object) []string {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1b1.ReferenceGrant{}, targetRefGrantRouteIndex, getReferenceGrantIndexerFunc()); err != nil {
+		return err
+	}
+	return nil
+}
+
+func getReferenceGrantIndexerFunc() func(rawObj client.Object) []string {
+	return func(rawObj client.Object) []string {
 		refGrant := rawObj.(*gwapiv1b1.ReferenceGrant)
 		var referredServices []string
 		for _, target := range refGrant.Spec.To {
 			referredServices = append(referredServices, string(target.Kind))
 		}
 		return referredServices
-	}); err != nil {
-		return err
 	}
-	return nil
 }
 
 // addHTTPRouteIndexers adds indexing on HTTPRoute.

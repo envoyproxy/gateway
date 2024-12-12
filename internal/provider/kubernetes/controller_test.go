@@ -12,8 +12,10 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
@@ -285,6 +287,161 @@ func TestProcessGatewayClassParamsRef(t *testing.T) {
 				require.Equal(t, tc.ep, resourceTree.EnvoyProxyForGatewayClass)
 			} else {
 				require.Error(t, err)
+			}
+		})
+	}
+}
+
+func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
+	testCases := []struct {
+		name                 string
+		envoyExtensionPolicy *egv1a1.EnvoyExtensionPolicy
+		backend              *egv1a1.Backend
+		referenceGrant       *gwapiv1b1.ReferenceGrant
+		shouldBeAdded        bool
+	}{
+		{
+			name: "valid envoy extension policy with proper ref grant to backend",
+			envoyExtensionPolicy: &egv1a1.EnvoyExtensionPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns-1",
+					Name:      "test-policy",
+				},
+				Spec: egv1a1.EnvoyExtensionPolicySpec{
+					ExtProc: []egv1a1.ExtProc{
+						{
+							BackendRefs: []egv1a1.BackendRef{
+								{
+									BackendObjectReference: gwapiv1.BackendObjectReference{
+										Namespace: gatewayapi.NamespacePtr("ns-2"),
+										Name:      "test-backend",
+										Kind:      gatewayapi.KindPtr(egv1a1.KindBackend),
+										Group:     gatewayapi.GroupPtr(egv1a1.GroupName),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			backend: &egv1a1.Backend{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns-2",
+					Name:      "test-backend",
+				},
+			},
+			referenceGrant: &gwapiv1b1.ReferenceGrant{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns-2",
+					Name:      "test-grant",
+				},
+				Spec: gwapiv1b1.ReferenceGrantSpec{
+					From: []gwapiv1b1.ReferenceGrantFrom{
+						{
+							Namespace: gwapiv1.Namespace("ns-1"),
+							Kind:      gwapiv1.Kind(gatewayapi.KindEnvoyExtensionPolicy),
+							Group:     gwapiv1.Group(egv1a1.GroupName),
+						},
+					},
+					To: []gwapiv1b1.ReferenceGrantTo{
+						{
+							Name:  gatewayapi.ObjectNamePtr("test-backend"),
+							Kind:  gwapiv1.Kind(egv1a1.KindBackend),
+							Group: gwapiv1.Group(egv1a1.GroupName),
+						},
+					},
+				},
+			},
+			shouldBeAdded: true,
+		},
+		{
+			name: "valid envoy extension policy with wrong from kind in ref grant to backend",
+			envoyExtensionPolicy: &egv1a1.EnvoyExtensionPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns-1",
+					Name:      "test-policy",
+				},
+				Spec: egv1a1.EnvoyExtensionPolicySpec{
+					ExtProc: []egv1a1.ExtProc{
+						{
+							BackendRefs: []egv1a1.BackendRef{
+								{
+									BackendObjectReference: gwapiv1.BackendObjectReference{
+										Namespace: gatewayapi.NamespacePtr("ns-2"),
+										Name:      "test-backend",
+										Kind:      gatewayapi.KindPtr(egv1a1.KindBackend),
+										Group:     gatewayapi.GroupPtr(egv1a1.GroupName),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			backend: &egv1a1.Backend{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns-2",
+					Name:      "test-backend",
+				},
+			},
+			referenceGrant: &gwapiv1b1.ReferenceGrant{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns-2",
+					Name:      "test-grant",
+				},
+				Spec: gwapiv1b1.ReferenceGrantSpec{
+					From: []gwapiv1b1.ReferenceGrantFrom{
+						{
+							Namespace: gwapiv1.Namespace("ns-1"),
+							Kind:      gwapiv1.Kind(gatewayapi.KindHTTPRoute),
+							Group:     gwapiv1.Group(gwapiv1.GroupName),
+						},
+					},
+					To: []gwapiv1b1.ReferenceGrantTo{
+						{
+							Name:  gatewayapi.ObjectNamePtr("test-backend"),
+							Kind:  gwapiv1.Kind(egv1a1.KindBackend),
+							Group: gwapiv1.Group(egv1a1.GroupName),
+						},
+					},
+				},
+			},
+			shouldBeAdded: false,
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+		// Run the test cases.
+		t.Run(tc.name, func(t *testing.T) {
+			// Add objects referenced by test cases.
+			objs := []client.Object{tc.envoyExtensionPolicy, tc.backend, tc.referenceGrant}
+
+			// Create the reconciler.
+			logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
+
+			ctx := context.Background()
+
+			r := &gatewayAPIReconciler{
+				log:             logger,
+				classController: "some-gateway-class",
+			}
+
+			r.client = fakeclient.NewClientBuilder().
+				WithScheme(envoygateway.GetScheme()).
+				WithObjects(objs...).
+				WithIndex(&gwapiv1b1.ReferenceGrant{}, targetRefGrantRouteIndex, getReferenceGrantIndexerFunc()).
+				Build()
+
+			resourceTree := gatewayapi.NewResources()
+			resourceMap := newResourceMapping()
+
+			err := r.processEnvoyExtensionPolicies(ctx, resourceTree, resourceMap)
+			require.NoError(t, err)
+			if tc.shouldBeAdded {
+				require.Contains(t, resourceTree.ReferenceGrants, tc.referenceGrant)
+			} else {
+				require.NotContains(t, resourceTree.ReferenceGrants, tc.referenceGrant)
 			}
 		})
 	}
