@@ -451,6 +451,54 @@ func TestValidateEnvoyProxy(t *testing.T) {
 			expected: true,
 		},
 		{
+			name: "should be invalid when hpa patch type is empty",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+								Patch: &egv1a1.KubernetesPatchSpec{
+									Value: apiextensionsv1.JSON{
+										Raw: []byte{},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "should be invalid when pdb patch type is empty",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyPDB: &egv1a1.KubernetesPodDisruptionBudgetSpec{
+								Patch: &egv1a1.KubernetesPatchSpec{
+									Value: apiextensionsv1.JSON{
+										Raw: []byte{},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
 			name: "should invalid when patch object is empty",
 			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
