@@ -77,7 +77,9 @@ var EGResilience = suite.ResilienceTest{
 			require.NoError(t, err, "Failed to simulate API server connection failure")
 
 			// The leader pod should go down, the standby pods remain
-			// When a leader pod loses connectivity to the API server, Kubernetes does not immediately terminate or stop the pod. Instead, the pod itself detects the loss of connectivity, initiates a graceful teardown process, and restarts to attempt to reconnect to the API server.
+			// When a leader pod loses connectivity to the API server, Kubernetes does not immediately terminate or stop the pod.
+			// Instead, the pod itself detects the loss of connectivity, initiates a graceful teardown process, and restarts to attempt
+			// to reconnect to the API server.
 			// The replica count for the deployment remains at 3 throughout the process.
 			// Kubernetes does not schedule a new pod to replace the one that lost connectivity because the existing pod is not
 			// considered failed from Kubernetes’ perspective. It’s the responsibility of the application running inside the
