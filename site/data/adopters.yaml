@@ -26,4 +26,4 @@ adopters:
   - name: "Titan"
     logo: "/logos/titan.svg"
     url: "https://www.titan.email"
-    description: ""
+    description: "Titan uses Envoy Gateway to enhance observability and centralize security for its Kubernetes services, managing critical policies like rate limiting, IP blocking, and access controls—freeing developers from the burden of handling service security."
