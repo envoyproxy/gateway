@@ -1,7 +1,8 @@
 # Ignore vulnerabilities on license scan
 [[PackageOverrides]]
 ecosystem = "Go"
-vulnerability.ignore = true
+# TODO uncomment once osv-scanner-action is updated to v1.9.1
+# vulnerability.ignore = true
 
 [[PackageOverrides]]
 name = "github.com/AdaLogics/go-fuzz-headers"
@@ -79,6 +80,13 @@ version = "0.0.0-20241129210726-2c02b8208cf8"
 ecosystem = "Go"
 license.override = ["Apache-2.0"]
 reason = "Unidentified license, remove once https://github.com/google/deps.dev/issues/119 is resolved"
+
+[[PackageOverrides]]
+name = "golang.org/x/crypto"
+version = "0.31.0"
+ecosystem = "Go"
+license.override = ["BSD-3-Clause"]
+reason = "Unidentified license, remove once https://github.com/google/deps.dev/issues/120 is resolved"
 
 [[PackageOverrides]]
 name = "stdlib"
