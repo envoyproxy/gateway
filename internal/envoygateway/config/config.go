@@ -43,7 +43,7 @@ type Server struct {
 
 // New returns a Server with default parameters.
 func New() (*Server, error) {
-	server:= &Server{
+	server := &Server{
 		EnvoyGateway: egv1a1.DefaultEnvoyGateway(),
 		Namespace:    env.Lookup("ENVOY_GATEWAY_NAMESPACE", DefaultNamespace),
 		DNSDomain:    env.Lookup("KUBERNETES_CLUSTER_DOMAIN", DefaultDNSDomain),
