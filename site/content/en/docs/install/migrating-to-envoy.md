@@ -34,7 +34,7 @@ kind: GatewayClass
 metadata:
   name: envoy-gateway-class
 spec:
-  controllerName: gateway.envoyproxy.io/controller
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
 ```
 
 Apply this resource:
