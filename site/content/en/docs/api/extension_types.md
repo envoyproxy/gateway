@@ -2518,7 +2518,6 @@ _Appears in:_
 | `maxReplicas` | _integer_ |  true  | maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up.<br />It cannot be less that minReplicas. |
 | `metrics` | _[MetricSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#metricspec-v2-autoscaling) array_ |  false  | metrics contains the specifications for which to use to calculate the<br />desired replica count (the maximum replica count across all metrics will<br />be used).<br />If left empty, it defaults to being based on CPU utilization with average on 80% usage. |
 | `behavior` | _[HorizontalPodAutoscalerBehavior](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#horizontalpodautoscalerbehavior-v2-autoscaling)_ |  false  | behavior configures the scaling behavior of the target<br />in both Up and Down directions (scaleUp and scaleDown fields respectively).<br />If not set, the default HPAScalingRules for scale up and scale down are used.<br />See k8s.io.autoscaling.v2.HorizontalPodAutoScalerBehavior. |
-| `patch` | _[KubernetesPatchSpec](#kubernetespatchspec)_ |  false  | Patch defines how to perform the patch operation to the HorizontalPodAutoscaler |
 
 
 #### KubernetesPatchSpec
@@ -2552,7 +2551,6 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `minAvailable` | _integer_ |  false  | MinAvailable specifies the minimum number of pods that must be available at all times during voluntary disruptions,<br />such as node drains or updates. This setting ensures that your envoy proxy maintains a certain level of availability<br />and resilience during maintenance operations. |
-| `patch` | _[KubernetesPatchSpec](#kubernetespatchspec)_ |  false  | Patch defines how to perform the patch operation to the PodDisruptionBudget |
 
 
 #### KubernetesPodSpec

@@ -9,7 +9,7 @@ metadata:
 spec:
   metrics:
   - resource:
-      name: cpu 
+      name: cpu
       target:
         averageUtilization: 50
         type: Utilization

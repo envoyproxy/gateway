@@ -1,13 +1,13 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: foo 
+  name: foo
   namespace: envoy-gateway-system
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: bar 
+      app: bar
       app.kubernetes.io/component: proxy
       app.kubernetes.io/managed-by: envoy-gateway
       app.kubernetes.io/name: envoy
