@@ -67,7 +67,7 @@ require (
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/kubectl v0.31.3
 	k8s.io/utils v0.0.0-20240821151609-f90d01438635
-	sigs.k8s.io/controller-runtime v0.19.2
+	sigs.k8s.io/controller-runtime v0.19.3
 	sigs.k8s.io/gateway-api v1.2.1
 	sigs.k8s.io/kubectl-validate v0.0.5-0.20240827210056-ce13d95db263
 	sigs.k8s.io/mcs-api v0.1.0
