@@ -603,3 +603,16 @@ spec:
         - name: static-file-server
           image: envoyproxy/gateway-static-file-server
           imagePullPolicy: IfNotPresent
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: envoy-gateway-ext-lb
+  namespace: envoy-gateway-system
+spec:
+  ports:
+    - name: grpc
+      port: 18000
+      protocol: TCP
+      targetPort: 18000
+  type: LoadBalancer
