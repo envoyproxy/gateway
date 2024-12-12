@@ -16,7 +16,7 @@ security updates: |
 new features: |
   Added support for trusted CIDRs in the ClientIPDetectionSettings API
   Added support for sending attributes to external processor in EnvoyExtensionPolicy API
-  Added support for patch field in EnvoyProxy API for envoyHpa and envoyPdb
+  Added support for patch field in EnvoyProxy API for envoyHpa and envoyPDB
 
 # Fixes for bugs identified in previous versions.
 bug fixes: |
