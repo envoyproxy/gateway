@@ -361,7 +361,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 		rt = t.buildRetry(policy)
 	}
 	if policy.Spec.Timeout != nil {
-		if to, err = t.buildTimeout(*policy, nil); err != nil {
+		if to, err = t.buildTimeout(*policy); err != nil {
 			err = perr.WithMessage(err, "Timeout")
 			errs = errors.Join(errs, err)
 		}
@@ -411,8 +411,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 
 		for _, http := range x.HTTP {
 			for _, r := range http.Routes {
-				// Some timeout setting originate from the route.
-				if localTo, err := t.buildTimeout(*policy, r.Traffic); err == nil {
+				if localTo, err := t.buildTimeout(*policy); err == nil {
 					to = localTo
 				}
 
@@ -497,7 +496,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 		rt = t.buildRetry(policy)
 	}
 	if policy.Spec.Timeout != nil {
-		if ct, err = t.buildTimeout(*policy, nil); err != nil {
+		if ct, err = t.buildTimeout(*policy); err != nil {
 			err = perr.WithMessage(err, "Timeout")
 			errs = errors.Join(errs, err)
 		}
@@ -595,7 +594,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 			// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
 			r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 
-			if ct, err = t.buildTimeout(*policy, r.Traffic); err == nil {
+			if ct, err = t.buildTimeout(*policy); err == nil {
 				r.Traffic.Timeout = ct
 			}
 
@@ -1066,12 +1065,8 @@ func (t *Translator) buildCircuitBreaker(policy *egv1a1.BackendTrafficPolicy) (*
 	return cb, nil
 }
 
-func (t *Translator) buildTimeout(policy egv1a1.BackendTrafficPolicy, traffic *ir.TrafficFeatures) (*ir.Timeout, error) {
+func (t *Translator) buildTimeout(policy egv1a1.BackendTrafficPolicy) (*ir.Timeout, error) {
 	if policy.Spec.Timeout == nil {
-		if traffic != nil {
-			// Don't lose any existing timeout definitions.
-			return mergeTimeoutSettings(nil, traffic.Timeout), nil
-		}
 		return nil, nil
 	}
 	var (
@@ -1119,39 +1114,7 @@ func (t *Translator) buildTimeout(policy egv1a1.BackendTrafficPolicy, traffic *i
 		}
 	}
 
-	// http request timeout is translated during the gateway-api route resource translation
-	// merge route timeout setting with backendtrafficpolicy timeout settings.
-	// Merging is done after the clustersettings definitions are translated so that
-	// clustersettings will override previous settings.
-	if traffic != nil {
-		to = mergeTimeoutSettings(to, traffic.Timeout)
-	}
 	return to, errs
-}
-
-// merge secondary into main if both are not nil, otherwise return the
-// one that is not nil. If both are nil, returns nil
-func mergeTimeoutSettings(main, secondary *ir.Timeout) *ir.Timeout {
-	switch {
-	case main == nil && secondary == nil:
-		return nil
-	case main == nil:
-		return secondary.DeepCopy()
-	case secondary == nil:
-		return main
-	default: // Neither main nor secondary are nil here
-		if secondary.HTTP != nil {
-			setIfNil(&main.HTTP, &ir.HTTPTimeout{})
-			setIfNil(&main.HTTP.RequestTimeout, secondary.HTTP.RequestTimeout)
-			setIfNil(&main.HTTP.ConnectionIdleTimeout, secondary.HTTP.ConnectionIdleTimeout)
-			setIfNil(&main.HTTP.MaxConnectionDuration, secondary.HTTP.MaxConnectionDuration)
-		}
-		if secondary.TCP != nil {
-			setIfNil(&main.TCP, &ir.TCPTimeout{})
-			setIfNil(&main.TCP.ConnectTimeout, secondary.TCP.ConnectTimeout)
-		}
-		return main
-	}
 }
 
 func int64ToUint32(in int64) (uint32, bool) {
