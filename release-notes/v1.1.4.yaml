@@ -1,10 +1,4 @@
-date: November 27, 2024
-
-# Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
-breaking changes: |
-
-# New features or capabilities added in this release.
-new features: |
+date: December 12, 2024
 
 # Fixes for bugs identified in previous versions.
 bug fixes: |
@@ -12,11 +6,11 @@ bug fixes: |
   Fixed BackendTlsPolicy specify multiple targetRefs of the same service, only one will work
   Fixed Envoy rejecting TCP Listeners that have no attached TCPRoutes
   Fixed frequent 503 errors when connecting to a Service experiencing high Pod churn
-
-# Enhancements that improve performance.
-performance improvements: |
+  Fixed reference grant from EnvoyExtensionPolicy to referenced ext-proc backend not respected
+  Fixed BackendTrafficPolicy not applying to Gateway Route when Route has a Request Timeout defined
 
 # Other notable changes not covered by the above sections.
 Other changes: |
   Bumped Rate Limit to 49af5cca
+  Bumped golang.org/x/crypto to 0.31.0
 
