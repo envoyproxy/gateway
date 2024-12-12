@@ -5,7 +5,7 @@ set -euo pipefail
 # Setup default values
 CLUSTER_NAME=${CLUSTER_NAME:-"envoy-gateway"}
 METALLB_VERSION=${METALLB_VERSION:-"v0.13.10"}
-KIND_NODE_TAG=${KIND_NODE_TAG:-"v1.31.0"}
+KIND_NODE_TAG=${KIND_NODE_TAG:-"v1.32.0"}
 NUM_WORKERS=${NUM_WORKERS:-""}
 IP_FAMILY=${IP_FAMILY:-"ipv4"}
 
