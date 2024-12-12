@@ -43,14 +43,16 @@ type Server struct {
 
 // New returns a Server with default parameters.
 func New() (*Server, error) {
-	return &Server{
+	server:= &Server{
 		EnvoyGateway: egv1a1.DefaultEnvoyGateway(),
 		Namespace:    env.Lookup("ENVOY_GATEWAY_NAMESPACE", DefaultNamespace),
 		DNSDomain:    env.Lookup("KUBERNETES_CLUSTER_DOMAIN", DefaultDNSDomain),
 		// the default logger
 		Logger:  logging.DefaultLogger(egv1a1.LogLevelInfo),
 		Elected: &sync.WaitGroup{},
-	}, nil
+	}
+	server.Elected.Add(1)
+	return server, nil
 }
 
 // Validate validates a Server config.
