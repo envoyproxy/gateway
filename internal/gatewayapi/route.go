@@ -257,14 +257,12 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 
 func processRouteTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 	if rule.Timeouts != nil {
-		rto := &ir.Timeout{}
-
 		if rule.Timeouts.Request != nil {
 			d, err := time.ParseDuration(string(*rule.Timeouts.Request))
 			if err != nil {
 				d, _ = time.ParseDuration(HTTPRequestTimeout)
 			}
-			setRequestTimeout(rto, metav1.Duration{Duration: d})
+			irRoute.Timeout = ptr.To(metav1.Duration{Duration: d})
 		}
 
 		// Also set the IR Route Timeout to the backend request timeout
@@ -274,23 +272,8 @@ func processRouteTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 			if err != nil {
 				d, _ = time.ParseDuration(HTTPRequestTimeout)
 			}
-			setRequestTimeout(rto, metav1.Duration{Duration: d})
+			irRoute.Timeout = ptr.To(metav1.Duration{Duration: d})
 		}
-
-		irRoute.Traffic = &ir.TrafficFeatures{
-			Timeout: rto,
-		}
-	}
-}
-
-func setRequestTimeout(irTimeout *ir.Timeout, d metav1.Duration) {
-	switch {
-	case irTimeout.HTTP == nil:
-		irTimeout.HTTP = &ir.HTTPTimeout{
-			RequestTimeout: ptr.To(d),
-		}
-	default:
-		irTimeout.HTTP.RequestTimeout = ptr.To(d)
 	}
 }
 
@@ -740,11 +723,11 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					ExtensionRefs:         routeRoute.ExtensionRefs,
 					IsHTTP2:               routeRoute.IsHTTP2,
 					SessionPersistence:    routeRoute.SessionPersistence,
+					Timeout:               routeRoute.Timeout,
 				}
 				if routeRoute.Traffic != nil {
 					hostRoute.Traffic = &ir.TrafficFeatures{
-						Timeout: routeRoute.Traffic.Timeout,
-						Retry:   routeRoute.Traffic.Retry,
+						Retry: routeRoute.Traffic.Retry,
 					}
 				}
 				perHostRoutes = append(perHostRoutes, hostRoute)
@@ -1590,30 +1573,45 @@ func getIREndpointsFromEndpointSlice(endpointSlice *discoveryv1.EndpointSlice, p
 	return endpoints
 }
 
-func getTargetBackendReference(backendRef gwapiv1a2.BackendObjectReference) gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {
+func getTargetBackendReference(backendRef gwapiv1a2.BackendObjectReference, backendNamespace string, resources *resource.Resources) gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {
 	ref := gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
 		LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
 			Group: func() gwapiv1a2.Group {
-				if backendRef.Group == nil {
+				if backendRef.Group == nil || *backendRef.Group == "" {
 					return ""
 				}
 				return *backendRef.Group
 			}(),
 			Kind: func() gwapiv1.Kind {
-				if backendRef.Kind == nil {
+				if backendRef.Kind == nil || *backendRef.Kind == resource.KindService {
 					return "Service"
 				}
 				return *backendRef.Kind
 			}(),
 			Name: backendRef.Name,
 		},
-		SectionName: func() *gwapiv1.SectionName {
-			if backendRef.Port != nil {
-				return SectionNamePtr(strconv.Itoa(int(*backendRef.Port)))
-			}
-			return nil
-		}(),
 	}
+	if backendRef.Port == nil {
+		return ref
+	}
+
+	// Set the section name to the port name if the backend is a Kubernetes Service
+	if backendRef.Kind == nil || *backendRef.Kind == resource.KindService {
+		if service := resources.GetService(backendNamespace, string(backendRef.Name)); service != nil {
+			for _, port := range service.Spec.Ports {
+				if port.Port == int32(*backendRef.Port) {
+					if port.Name != "" {
+						ref.SectionName = SectionNamePtr(port.Name)
+						break
+					}
+				}
+			}
+		}
+	} else {
+		// Set the section name to the port number if the backend is a EG Backend
+		ref.SectionName = SectionNamePtr(strconv.Itoa(int(*backendRef.Port)))
+	}
+
 	return ref
 }
 

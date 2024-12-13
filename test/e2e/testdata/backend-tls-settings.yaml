@@ -62,7 +62,8 @@ spec:
   selector:
     app: tls-backend
   ports:
-    - protocol: TCP
+    - name: https
+      protocol: TCP
       port: 443
       targetPort: 8443
 ---
@@ -137,7 +138,7 @@ spec:
     - group: ""
       kind: Service
       name: tls-backend
-      sectionName: "443"
+      sectionName: https
   validation:
     caCertificateRefs:
       - name: backend-tls-certificate

@@ -10,11 +10,11 @@ backendTLSPolicies:
     - group: ""
       kind: Service
       name: http-backend
-      sectionName: "8080"
+      sectionName: http1
     - group: ""
       kind: Service
       name: http-backend
-      sectionName: "8081"
+      sectionName: http2
     validation:
       caCertificateRefs:
       - group: ""

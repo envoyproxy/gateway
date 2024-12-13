@@ -80,7 +80,7 @@ spec:
   - group: ''
     kind: Service
     name: grpc-ext-proc
-    sectionName: "9002"
+    sectionName: grpc
   validation:
     caCertificateRefs:
     - name: grpc-ext-proc-ca
