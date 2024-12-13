@@ -605,7 +605,8 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
 								Patch: &egv1a1.KubernetesPatchSpec{
-									Type: ptr.To(egv1a1.StrategicMerge)},
+									Type: ptr.To(egv1a1.StrategicMerge),
+								},
 							},
 						},
 					},
