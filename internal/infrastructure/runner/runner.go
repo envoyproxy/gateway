@@ -72,12 +72,8 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	if r.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes &&
 		!ptr.Deref(r.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable, false) {
 		go func() {
-			select {
-			case <-ctx.Done():
-				return
-			case <-r.Elected:
-				initInfra()
-			}
+			r.Elected.Wait()
+			initInfra()
 		}()
 		return
 	}
