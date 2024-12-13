@@ -30,6 +30,7 @@ updates:
       k8s.io:
         patterns:
           - "k8s.io/*"
+          - "sigs.k8s.io/*"
       go.opentelemetry.io:
         patterns:
           - "go.opentelemetry.io/*"
