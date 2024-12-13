@@ -17,6 +17,7 @@ new features: |
   Added support for trusted CIDRs in the ClientIPDetectionSettings API
   Added support for sending attributes to external processor in EnvoyExtensionPolicy API
   Added support for patching EnvoyProxy.spec.provider.kubernetes.envoyHpa and EnvoyProxy.spec.provider.kubernetes.envoyPDB
+  Do not stop routing to endpoints until their graceful termination is complete, as indicated by their respective EndpointConditions
 
 # Fixes for bugs identified in previous versions.
 bug fixes: |

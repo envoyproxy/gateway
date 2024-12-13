@@ -1622,7 +1622,7 @@ func getIREndpointsFromEndpointSlice(endpointSlice *discoveryv1.EndpointSlice, p
 			if *endpointPort.Name == portName &&
 				*endpointPort.Protocol == portProtocol &&
 				// Unknown state (nil) should be interpreted as Ready, see https://pkg.go.dev/k8s.io/api/discovery/v1#EndpointConditions
-				(endpoint.Conditions.Ready == nil || *endpoint.Conditions.Ready) {
+				(endpoint.Conditions.Ready == nil || *endpoint.Conditions.Ready || (endpoint.Conditions.Serving != nil && *endpoint.Conditions.Serving)) {
 				for _, address := range endpoint.Addresses {
 					ep := ir.NewDestEndpoint(
 						address,
