@@ -36,3 +36,4 @@ deprecations: |
 # Other notable changes not covered by the above sections.
 Other changes: |
   [SecurityPolicy] Modify the JWT Provider Issuer validation constraint
+  Add support for Kubernetes 1.32.x in the test matrix, and remove support for Kubernetes 1.28.x.
