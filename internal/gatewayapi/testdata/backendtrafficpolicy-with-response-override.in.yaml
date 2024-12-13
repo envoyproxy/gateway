@@ -177,4 +177,4 @@ backendTrafficPolicies:
             statusCodes:
               - value: 403
           response:
-            statusCode: 401 
+            statusCode: 401
