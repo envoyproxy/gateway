@@ -37,6 +37,7 @@ updates:
       golang.org:
         patterns:
           - "golang.org/*"
+          - "google.golang.org/*"
   - package-ecosystem: pip
     directories:
       - /tools/src/codespell
