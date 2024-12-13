@@ -8,4 +8,4 @@ bug fixes: |
   Fixed traffic splitting not working when some backends were invalid.
 
 Other changes: |
-  Bumped Envoy to 1.32.2.
+  Bumped Envoy to version 1.32.2.
