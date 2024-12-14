@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"net/netip"
 	"reflect"
+	"time"
 
 	"golang.org/x/exp/slices"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -1251,7 +1252,7 @@ type FaultInjection struct {
 // +k8s:deepcopy-gen=true
 type FaultInjectionDelay struct {
 	// FixedDelay defines the fixed delay duration.
-	FixedDelay *metav1.Duration `json:"fixedDelay,omitempty" yaml:"fixedDelay,omitempty"`
+	FixedDelay *time.Duration `json:"fixedDelay,omitempty" yaml:"fixedDelay,omitempty"`
 	// Percentage defines the percentage of requests to be delayed.
 	Percentage *float32 `json:"percentage,omitempty" yaml:"percentage,omitempty"`
 }
@@ -2329,7 +2330,7 @@ type ProxyProtocol struct {
 // +k8s:deepcopy-gen=true
 type SlowStart struct {
 	// Window defines the duration of the warm up period for newly added host.
-	Window *metav1.Duration `json:"window" yaml:"window"`
+	Window *time.Duration `json:"window" yaml:"window"`
 }
 
 // Backend CircuitBreaker settings for the DEFAULT routing priority
@@ -2363,7 +2364,7 @@ type HealthCheck struct {
 // +k8s:deepcopy-gen=true
 type OutlierDetection struct {
 	// Interval defines the time between passive health checks.
-	Interval *metav1.Duration `json:"interval,omitempty"`
+	Interval *time.Duration `json:"interval,omitempty"`
 	// SplitExternalLocalOriginErrors enables splitting of errors between external and local origin.
 	SplitExternalLocalOriginErrors *bool `json:"splitExternalLocalOriginErrors,omitempty" yaml:"splitExternalLocalOriginErrors,omitempty"`
 	// ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.
@@ -2373,7 +2374,7 @@ type OutlierDetection struct {
 	// Consecutive5xxErrors sets the number of consecutive 5xx errors triggering ejection.
 	Consecutive5xxErrors *uint32 `json:"consecutive5XxErrors,omitempty" yaml:"consecutive5XxErrors,omitempty"`
 	// BaseEjectionTime defines the base duration for which a host will be ejected on consecutive failures.
-	BaseEjectionTime *metav1.Duration `json:"baseEjectionTime,omitempty" yaml:"baseEjectionTime,omitempty"`
+	BaseEjectionTime *time.Duration `json:"baseEjectionTime,omitempty" yaml:"baseEjectionTime,omitempty"`
 	// MaxEjectionPercent sets the maximum percentage of hosts in a cluster that can be ejected.
 	MaxEjectionPercent *int32 `json:"maxEjectionPercent,omitempty" yaml:"maxEjectionPercent,omitempty"`
 }
@@ -2382,9 +2383,9 @@ type OutlierDetection struct {
 // +k8s:deepcopy-gen=true
 type ActiveHealthCheck struct {
 	// Timeout defines the time to wait for a health check response.
-	Timeout *metav1.Duration `json:"timeout"`
+	Timeout *time.Duration `json:"timeout"`
 	// Interval defines the time between active health checks.
-	Interval *metav1.Duration `json:"interval"`
+	Interval *time.Duration `json:"interval"`
 	// UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
 	UnhealthyThreshold *uint32 `json:"unhealthyThreshold"`
 	// HealthyThreshold defines the number of healthy health checks required before a backend host is marked healthy.
@@ -2407,10 +2408,10 @@ func (h *HealthCheck) SetHTTPHostIfAbsent(host string) {
 func (h *HealthCheck) Validate() error {
 	var errs error
 	if h.Active != nil {
-		if h.Active.Timeout != nil && h.Active.Timeout.Duration == 0 {
+		if h.Active.Timeout == nil {
 			errs = errors.Join(errs, ErrHealthCheckTimeoutInvalid)
 		}
-		if h.Active.Interval != nil && h.Active.Interval.Duration == 0 {
+		if h.Active.Interval == nil {
 			errs = errors.Join(errs, ErrHealthCheckIntervalInvalid)
 		}
 		if h.Active.UnhealthyThreshold != nil && *h.Active.UnhealthyThreshold == 0 {
@@ -2447,15 +2448,14 @@ func (h *HealthCheck) Validate() error {
 	}
 
 	if h.Passive != nil {
-		if h.Passive.BaseEjectionTime != nil && h.Passive.BaseEjectionTime.Duration == 0 {
+		if h.Passive.BaseEjectionTime == nil {
 			errs = errors.Join(errs, ErrOutlierDetectionBaseEjectionTimeInvalid)
 		}
 
-		if h.Passive.Interval != nil && h.Passive.Interval.Duration == 0 {
+		if h.Passive.Interval == nil {
 			errs = errors.Join(errs, ErrOutlierDetectionIntervalInvalid)
 		}
 	}
-
 	return errs
 }
 

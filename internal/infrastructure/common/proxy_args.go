@@ -7,6 +7,7 @@ package common
 
 import (
 	"fmt"
+	"time"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -70,7 +71,11 @@ func BuildProxyArgs(
 	// Default drain timeout.
 	drainTimeout := 60.0
 	if shutdownConfig != nil && shutdownConfig.DrainTimeout != nil {
-		drainTimeout = shutdownConfig.DrainTimeout.Seconds()
+		d, err := time.ParseDuration(string(*shutdownConfig.DrainTimeout))
+		if err != nil {
+			return nil, err
+		}
+		drainTimeout = d.Seconds()
 	}
 	args = append(args, fmt.Sprintf("--drain-time-s %.0f", drainTimeout))
 

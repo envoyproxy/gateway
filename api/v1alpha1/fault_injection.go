@@ -5,7 +5,7 @@
 
 package v1alpha1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 // FaultInjection defines the fault injection policy to be applied. This configuration can be used to
 // inject delays and abort requests to mimic failure scenarios such as service failures and overloads
@@ -29,7 +29,7 @@ type FaultInjectionDelay struct {
 	// FixedDelay specifies the fixed delay duration
 	//
 	// +required
-	FixedDelay *metav1.Duration `json:"fixedDelay"`
+	FixedDelay *gwapiv1.Duration `json:"fixedDelay"`
 
 	// Percentage specifies the percentage of requests to be delayed. Default 100%, if set 0, no requests will be delayed. Accuracy to 0.0001%.
 	// +optional

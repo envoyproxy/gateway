@@ -200,7 +200,7 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 				cluster.LbConfig = &clusterv3.Cluster_LeastRequestLbConfig_{
 					LeastRequestLbConfig: &clusterv3.Cluster_LeastRequestLbConfig{
 						SlowStartConfig: &clusterv3.Cluster_SlowStartConfig{
-							SlowStartWindow: durationpb.New(args.loadBalancer.LeastRequest.SlowStart.Window.Duration),
+							SlowStartWindow: durationpb.New(*args.loadBalancer.LeastRequest.SlowStart.Window),
 						},
 					},
 				}
@@ -212,7 +212,7 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 			cluster.LbConfig = &clusterv3.Cluster_RoundRobinLbConfig_{
 				RoundRobinLbConfig: &clusterv3.Cluster_RoundRobinLbConfig{
 					SlowStartConfig: &clusterv3.Cluster_SlowStartConfig{
-						SlowStartWindow: durationpb.New(args.loadBalancer.RoundRobin.SlowStart.Window.Duration),
+						SlowStartWindow: durationpb.New(*args.loadBalancer.RoundRobin.SlowStart.Window),
 					},
 				},
 			}
@@ -249,8 +249,8 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 
 func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck) []*corev3.HealthCheck {
 	hc := &corev3.HealthCheck{
-		Timeout:  durationpb.New(healthcheck.Timeout.Duration),
-		Interval: durationpb.New(healthcheck.Interval.Duration),
+		Timeout:  durationpb.New(*healthcheck.Timeout),
+		Interval: durationpb.New(*healthcheck.Interval),
 	}
 	if healthcheck.UnhealthyThreshold != nil {
 		hc.UnhealthyThreshold = wrapperspb.UInt32(*healthcheck.UnhealthyThreshold)
@@ -296,8 +296,8 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck) []*corev3.HealthChec
 
 func buildXdsOutlierDetection(outlierDetection *ir.OutlierDetection) *clusterv3.OutlierDetection {
 	od := &clusterv3.OutlierDetection{
-		BaseEjectionTime: durationpb.New(outlierDetection.BaseEjectionTime.Duration),
-		Interval:         durationpb.New(outlierDetection.Interval.Duration),
+		BaseEjectionTime: durationpb.New(*outlierDetection.BaseEjectionTime),
+		Interval:         durationpb.New(*outlierDetection.Interval),
 	}
 	if outlierDetection.SplitExternalLocalOriginErrors != nil {
 		od.SplitExternalLocalOriginErrors = *outlierDetection.SplitExternalLocalOriginErrors

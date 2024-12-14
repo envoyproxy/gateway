@@ -281,8 +281,12 @@ func buildLoadBalancer(policy egv1a1.ClusterSettings) (*ir.LoadBalancer, error) 
 			LeastRequest: &ir.LeastRequest{},
 		}
 		if policy.LoadBalancer.SlowStart != nil && policy.LoadBalancer.SlowStart.Window != nil {
+			d, err := time.ParseDuration(string(*policy.LoadBalancer.SlowStart.Window))
+			if err != nil {
+				return nil, err
+			}
 			lb.LeastRequest.SlowStart = &ir.SlowStart{
-				Window: policy.LoadBalancer.SlowStart.Window,
+				Window: &d,
 			}
 		}
 	case egv1a1.RandomLoadBalancerType:
@@ -294,8 +298,12 @@ func buildLoadBalancer(policy egv1a1.ClusterSettings) (*ir.LoadBalancer, error) 
 			RoundRobin: &ir.RoundRobin{},
 		}
 		if policy.LoadBalancer.SlowStart != nil && policy.LoadBalancer.SlowStart.Window != nil {
+			d, err := time.ParseDuration(string(*policy.LoadBalancer.SlowStart.Window))
+			if err != nil {
+				return nil, err
+			}
 			lb.RoundRobin.SlowStart = &ir.SlowStart{
-				Window: policy.LoadBalancer.SlowStart.Window,
+				Window: &d,
 			}
 		}
 	}
@@ -368,13 +376,27 @@ func buildPassiveHealthCheck(policy egv1a1.HealthCheck) *ir.OutlierDetection {
 
 	hc := policy.Passive
 	irOD := &ir.OutlierDetection{
-		Interval:                       hc.Interval,
 		SplitExternalLocalOriginErrors: hc.SplitExternalLocalOriginErrors,
 		ConsecutiveLocalOriginFailures: hc.ConsecutiveLocalOriginFailures,
 		ConsecutiveGatewayErrors:       hc.ConsecutiveGatewayErrors,
 		Consecutive5xxErrors:           hc.Consecutive5xxErrors,
-		BaseEjectionTime:               hc.BaseEjectionTime,
 		MaxEjectionPercent:             hc.MaxEjectionPercent,
+	}
+
+	if hc.Interval != nil {
+		d, err := time.ParseDuration(string(*hc.Interval))
+		if err != nil {
+			return nil
+		}
+		irOD.Interval = &d
+	}
+
+	if hc.BaseEjectionTime != nil {
+		d, err := time.ParseDuration(string(*hc.BaseEjectionTime))
+		if err != nil {
+			return nil
+		}
+		irOD.BaseEjectionTime = &d
 	}
 	return irOD
 }
@@ -386,11 +408,26 @@ func buildActiveHealthCheck(policy egv1a1.HealthCheck) *ir.ActiveHealthCheck {
 
 	hc := policy.Active
 	irHC := &ir.ActiveHealthCheck{
-		Timeout:            hc.Timeout,
-		Interval:           hc.Interval,
 		UnhealthyThreshold: hc.UnhealthyThreshold,
 		HealthyThreshold:   hc.HealthyThreshold,
 	}
+
+	if hc.Timeout != nil {
+		d, err := time.ParseDuration(string(*hc.Timeout))
+		if err != nil {
+			return nil
+		}
+		irHC.Timeout = &d
+	}
+
+	if hc.Interval != nil {
+		d, err := time.ParseDuration(string(*hc.Interval))
+		if err != nil {
+			return nil
+		}
+		irHC.Interval = &d
+	}
+
 	switch hc.Type {
 	case egv1a1.ActiveHealthCheckerTypeHTTP:
 		irHC.HTTP = buildHTTPActiveHealthChecker(hc.HTTP)

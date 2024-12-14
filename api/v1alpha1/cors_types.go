@@ -5,7 +5,7 @@
 
 package v1alpha1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 // Origin is defined by the scheme (protocol), hostname (domain), and port of
 // the URL used to access it. The hostname can be "precise" which is just the
@@ -61,7 +61,7 @@ type CORS struct {
 	// It specifies the value in the Access-Control-Max-Age CORS response header..
 	//
 	// +optional
-	MaxAge *metav1.Duration `json:"maxAge,omitempty"`
+	MaxAge *gwapiv1.Duration `json:"maxAge,omitempty"`
 
 	// AllowCredentials indicates whether a request can include user credentials
 	// like cookies, authentication headers, or TLS client certificates.
