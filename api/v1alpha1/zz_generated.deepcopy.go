@@ -81,12 +81,12 @@ func (in *ActiveHealthCheck) DeepCopyInto(out *ActiveHealthCheck) {
 	*out = *in
 	if in.Timeout != nil {
 		in, out := &in.Timeout, &out.Timeout
-		*out = new(v1.Duration)
+		*out = new(apisv1.Duration)
 		**out = **in
 	}
 	if in.Interval != nil {
 		in, out := &in.Interval, &out.Interval
-		*out = new(v1.Duration)
+		*out = new(apisv1.Duration)
 		**out = **in
 	}
 	if in.UnhealthyThreshold != nil {
@@ -204,12 +204,12 @@ func (in *BackOffPolicy) DeepCopyInto(out *BackOffPolicy) {
 	*out = *in
 	if in.BaseInterval != nil {
 		in, out := &in.BaseInterval, &out.BaseInterval
-		*out = new(v1.Duration)
+		*out = new(apisv1.Duration)
 		**out = **in
 	}
 	if in.MaxInterval != nil {
 		in, out := &in.MaxInterval, &out.MaxInterval
-		*out = new(v1.Duration)
+		*out = new(apisv1.Duration)
 		**out = **in
 	}
 }
@@ -635,7 +635,7 @@ func (in *CORS) DeepCopyInto(out *CORS) {
 	}
 	if in.MaxAge != nil {
 		in, out := &in.MaxAge, &out.MaxAge
-		*out = new(v1.Duration)
+		*out = new(apisv1.Duration)
 		**out = **in
 	}
 	if in.AllowCredentials != nil {
@@ -1113,7 +1113,7 @@ func (in *Cookie) DeepCopyInto(out *Cookie) {
 	*out = *in
 	if in.TTL != nil {
 		in, out := &in.TTL, &out.TTL
-		*out = new(v1.Duration)
+		*out = new(apisv1.Duration)
 		**out = **in
 	}
 	if in.Attributes != nil {
@@ -1263,7 +1263,7 @@ func (in *DNS) DeepCopyInto(out *DNS) {
 	*out = *in
 	if in.DNSRefreshRate != nil {
 		in, out := &in.DNSRefreshRate, &out.DNSRefreshRate
-		*out = new(v1.Duration)
+		*out = new(apisv1.Duration)
 		**out = **in
 	}
 	if in.RespectDNSTTL != nil {
@@ -2395,7 +2395,7 @@ func (in *FaultInjectionDelay) DeepCopyInto(out *FaultInjectionDelay) {
 	*out = *in
 	if in.FixedDelay != nil {
 		in, out := &in.FixedDelay, &out.FixedDelay
-		*out = new(v1.Duration)
+		*out = new(apisv1.Duration)
 		**out = **in
 	}
 	if in.Percentage != nil {
@@ -3873,7 +3873,7 @@ func (in *OIDC) DeepCopyInto(out *OIDC) {
 	}
 	if in.DefaultTokenTTL != nil {
 		in, out := &in.DefaultTokenTTL, &out.DefaultTokenTTL
-		*out = new(v1.Duration)
+		*out = new(apisv1.Duration)
 		**out = **in
 	}
 	if in.RefreshToken != nil {
@@ -3883,7 +3883,7 @@ func (in *OIDC) DeepCopyInto(out *OIDC) {
 	}
 	if in.DefaultRefreshTokenTTL != nil {
 		in, out := &in.DefaultRefreshTokenTTL, &out.DefaultRefreshTokenTTL
-		*out = new(v1.Duration)
+		*out = new(apisv1.Duration)
 		**out = **in
 	}
 }
@@ -3987,7 +3987,7 @@ func (in *PassiveHealthCheck) DeepCopyInto(out *PassiveHealthCheck) {
 	}
 	if in.Interval != nil {
 		in, out := &in.Interval, &out.Interval
-		*out = new(v1.Duration)
+		*out = new(apisv1.Duration)
 		**out = **in
 	}
 	if in.ConsecutiveLocalOriginFailures != nil {
@@ -4007,7 +4007,7 @@ func (in *PassiveHealthCheck) DeepCopyInto(out *PassiveHealthCheck) {
 	}
 	if in.BaseEjectionTime != nil {
 		in, out := &in.BaseEjectionTime, &out.BaseEjectionTime
-		*out = new(v1.Duration)
+		*out = new(apisv1.Duration)
 		**out = **in
 	}
 	if in.MaxEjectionPercent != nil {
@@ -4057,7 +4057,7 @@ func (in *PerRetryPolicy) DeepCopyInto(out *PerRetryPolicy) {
 	*out = *in
 	if in.Timeout != nil {
 		in, out := &in.Timeout, &out.Timeout
-		*out = new(v1.Duration)
+		*out = new(apisv1.Duration)
 		**out = **in
 	}
 	if in.BackOff != nil {
@@ -4520,7 +4520,7 @@ func (in *RateLimit) DeepCopyInto(out *RateLimit) {
 	in.Backend.DeepCopyInto(&out.Backend)
 	if in.Timeout != nil {
 		in, out := &in.Timeout, &out.Timeout
-		*out = new(v1.Duration)
+		*out = new(apisv1.Duration)
 		**out = **in
 	}
 	if in.Telemetry != nil {
@@ -5072,12 +5072,12 @@ func (in *ShutdownConfig) DeepCopyInto(out *ShutdownConfig) {
 	*out = *in
 	if in.DrainTimeout != nil {
 		in, out := &in.DrainTimeout, &out.DrainTimeout
-		*out = new(v1.Duration)
+		*out = new(apisv1.Duration)
 		**out = **in
 	}
 	if in.MinDrainDuration != nil {
 		in, out := &in.MinDrainDuration, &out.MinDrainDuration
-		*out = new(v1.Duration)
+		*out = new(apisv1.Duration)
 		**out = **in
 	}
 }
@@ -5117,7 +5117,7 @@ func (in *SlowStart) DeepCopyInto(out *SlowStart) {
 	*out = *in
 	if in.Window != nil {
 		in, out := &in.Window, &out.Window
-		*out = new(v1.Duration)
+		*out = new(apisv1.Duration)
 		**out = **in
 	}
 }
