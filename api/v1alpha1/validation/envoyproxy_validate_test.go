@@ -403,7 +403,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 			expected: true,
 		},
 		{
-			name: "should be invalid when service patch type is empty",
+			name: "should be valid when service patch is empty",
 			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
@@ -427,7 +427,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 			expected: true,
 		},
 		{
-			name: "should be invalid when deployment patch type is empty",
+			name: "should be valid when deployment patch is empty",
 			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
