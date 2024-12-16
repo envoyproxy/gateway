@@ -500,7 +500,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 			expected: true,
 		},
 		{
-			name: "should be invalid when pdb patch not set",
+			name: "should be invalid when pdb patch object is empty",
 			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
@@ -595,7 +595,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 			expected: true,
 		},
 		{
-			name: "should be invalid when hpa patch not set",
+			name: "should be invalid when hpa patch object is empty",
 			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
