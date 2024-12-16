@@ -14,15 +14,9 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
-  Added support for trusted CIDRs in the ClientIPDetectionSettings API.
-  Added support for sending attributes to external processor in EnvoyExtensionPolicy API.
 
-# Fixes for bugs identified in previous versions.
 bug fixes: |
-  Fixed BackendTLSPolicy didn't support using port name as the sectionName in the targetRefs.
-  Fixed reference grant from EnvoyExtensionPolicy to referenced ext-proc backend not respected.
-  Fixed BackendTrafficPolicy not applying to Gateway Route when Route has a Request Timeout defined.
-  Fixed the Gateway API translator didn't use the TLS configuration from the BackendTLSPolicy when connecting to the OIDC provider's well-known endpoint.
+Fixed the Gateway API translator didn't use the TLS configuration from the BackendTLSPolicy when connecting to the OIDC provider's well-known endpoint.
 
 # Enhancements that improve performance.
 performance improvements: |
@@ -34,4 +28,5 @@ deprecations: |
 
 # Other notable changes not covered by the above sections.
 Other changes: |
-  [SecurityPolicy] Modify the JWT Provider Issuer validation constraint.
+  [SecurityPolicy] Modify the JWT Provider Issuer validation constraint
+  Add support for Kubernetes 1.32.x in the test matrix, and remove support for Kubernetes 1.28.x.
