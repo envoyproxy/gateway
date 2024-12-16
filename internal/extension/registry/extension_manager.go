@@ -107,6 +107,11 @@ func NewInMemoryManager(cfg egv1a1.ExtensionManager, server extension.EnvoyGatew
 	}, c, nil
 }
 
+// FailOpen returns true if the extension manager is configured to fail open, and false otherwise.
+func (m *Manager) FailOpen() bool {
+	return m.extension.FailOpen
+}
+
 // HasExtension checks to see whether a given Group and Kind has an
 // associated extension registered for it.
 func (m *Manager) HasExtension(g gwapiv1.Group, k gwapiv1.Kind) bool {

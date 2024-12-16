@@ -32,4 +32,7 @@ type Manager interface {
 	// If the extension makes use of the hook then the XDS Hook Client is returned. If it does not support
 	// the hook type then nil is returned
 	GetPostXDSHookClient(xdsHookType egv1a1.XDSTranslatorHook) XDSHookClient
+
+	// FailOpen returns true if the extension manager is configured to fail open, and false otherwise.
+	FailOpen() bool
 }
