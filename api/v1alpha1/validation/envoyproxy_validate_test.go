@@ -522,7 +522,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 			expected: false,
 		},
 		{
-			name: "should be invalid when pdb type not set",
+			name: "should be valid when pdb type not set",
 			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
@@ -534,14 +534,16 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyPDB: &egv1a1.KubernetesPodDisruptionBudgetSpec{
 								Patch: &egv1a1.KubernetesPatchSpec{
-									Type: ptr.To(egv1a1.StrategicMerge),
+									Value: apiextensionsv1.JSON{
+										Raw: []byte("{}"),
+									},
 								},
 							},
 						},
 					},
 				},
 			},
-			expected: false,
+			expected: true,
 		},
 		{
 			name: "should be valid when hpa patch and type are empty",
@@ -615,7 +617,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 			expected: false,
 		},
 		{
-			name: "should be invalid when hpa type not set",
+			name: "should be valid when hpa type not set",
 			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
@@ -627,17 +629,19 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
 								Patch: &egv1a1.KubernetesPatchSpec{
-									Type: ptr.To(egv1a1.StrategicMerge),
+									Value: apiextensionsv1.JSON{
+										Raw: []byte("{}"),
+									},
 								},
 							},
 						},
 					},
 				},
 			},
-			expected: false,
+			expected: true,
 		},
 		{
-			name: "should invalid when patch object is empty",
+			name: "should invalid when deployment patch object is empty",
 			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
@@ -659,7 +663,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 			expected: false,
 		},
 		{
-			name: "should valid when patch type and object are both not empty",
+			name: "should valid when deployment patch type and object are both not empty",
 			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
@@ -684,7 +688,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 			expected: true,
 		},
 		{
-			name: "should valid when patch type is empty and object is not empty",
+			name: "should valid when deployment patch type is empty and object is not empty",
 			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
