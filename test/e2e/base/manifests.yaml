@@ -610,6 +610,8 @@ metadata:
   name: envoy-gateway-ext-lb
   namespace: envoy-gateway-system
 spec:
+  selector:
+    control-plane: envoy-gateway
   ports:
     - name: grpc
       port: 18000
