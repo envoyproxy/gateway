@@ -72,6 +72,14 @@ func validateProvider(spec *egv1a1.EnvoyProxySpec) []error {
 		if len(validateDeploymentErrs) != 0 {
 			errs = append(errs, validateDeploymentErrs...)
 		}
+		validateHpaErrors := validateHpa(spec)
+		if len(validateHpaErrors) != 0 {
+			errs = append(errs, validateHpaErrors...)
+		}
+		validatePdbErrors := validatePdb(spec)
+		if len(validatePdbErrors) != 0 {
+			errs = append(errs, validatePdbErrors...)
+		}
 		validateServiceErrs := validateService(spec)
 		if len(validateServiceErrs) != 0 {
 			errs = append(errs, validateServiceErrs...)
@@ -89,6 +97,36 @@ func validateDeployment(spec *egv1a1.EnvoyProxySpec) []error {
 			}
 			if patch.Type != nil && *patch.Type != egv1a1.JSONMerge && *patch.Type != egv1a1.StrategicMerge {
 				errs = append(errs, fmt.Errorf("unsupported envoy deployment patch type %s", *patch.Type))
+			}
+		}
+	}
+	return errs
+}
+
+func validateHpa(spec *egv1a1.EnvoyProxySpec) []error {
+	var errs []error
+	if spec.Provider.Kubernetes != nil && spec.Provider.Kubernetes.EnvoyHpa != nil {
+		if patch := spec.Provider.Kubernetes.EnvoyHpa.Patch; patch != nil {
+			if patch.Value.Raw == nil {
+				errs = append(errs, fmt.Errorf("envoy hpa patch object cannot be empty"))
+			}
+			if patch.Type != nil && *patch.Type != egv1a1.JSONMerge && *patch.Type != egv1a1.StrategicMerge {
+				errs = append(errs, fmt.Errorf("unsupported envoy hpa patch type %s", *patch.Type))
+			}
+		}
+	}
+	return errs
+}
+
+func validatePdb(spec *egv1a1.EnvoyProxySpec) []error {
+	var errs []error
+	if spec.Provider.Kubernetes != nil && spec.Provider.Kubernetes.EnvoyPDB != nil {
+		if patch := spec.Provider.Kubernetes.EnvoyPDB.Patch; patch != nil {
+			if patch.Value.Raw == nil {
+				errs = append(errs, fmt.Errorf("envoy pdb patch object cannot be empty"))
+			}
+			if patch.Type != nil && *patch.Type != egv1a1.JSONMerge && *patch.Type != egv1a1.StrategicMerge {
+				errs = append(errs, fmt.Errorf("unsupported envoy pdb patch type %s", *patch.Type))
 			}
 		}
 	}

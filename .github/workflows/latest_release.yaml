@@ -31,7 +31,7 @@ jobs:
     # Benchmark
     - name: Run Benchmark tests
       env:
-        KIND_NODE_TAG: v1.28.13
+        KIND_NODE_TAG: v1.29.10
         IMAGE_PULL_POLICY: IfNotPresent
         # Args for benchmark test
         BENCHMARK_RPS: 10000
@@ -107,7 +107,7 @@ jobs:
         GITHUB_REPOSITORY: ${{ github.repository_owner }}/${{ github.event.repository.name }}
 
     - name: Recreate the Latest Release and Tag
-      uses: softprops/action-gh-release@01570a1f39cb168c169c802c3bceb9e93fb10974  # v0.1.15
+      uses: softprops/action-gh-release@7b4da11513bf3f43f9999e90eabced41ab8bb048  # v0.1.15
       with:
         draft: false
         prerelease: true

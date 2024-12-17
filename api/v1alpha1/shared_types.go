@@ -406,6 +406,11 @@ type KubernetesPodDisruptionBudgetSpec struct {
 	// and resilience during maintenance operations.
 	// +optional
 	MinAvailable *int32 `json:"minAvailable,omitempty"`
+
+	// Patch defines how to perform the patch operation to the PodDisruptionBudget
+	//
+	// +optional
+	Patch *KubernetesPatchSpec `json:"patch,omitempty"`
 }
 
 // KubernetesHorizontalPodAutoscalerSpec defines Kubernetes Horizontal Pod Autoscaler settings of Envoy Proxy Deployment.
@@ -443,6 +448,11 @@ type KubernetesHorizontalPodAutoscalerSpec struct {
 	//
 	// +optional
 	Behavior *autoscalingv2.HorizontalPodAutoscalerBehavior `json:"behavior,omitempty"`
+
+	// Patch defines how to perform the patch operation to the HorizontalPodAutoscaler
+	//
+	// +optional
+	Patch *KubernetesPatchSpec `json:"patch,omitempty"`
 }
 
 // HTTPStatus defines the http status code.

@@ -1298,6 +1298,32 @@ func TestPDB(t *testing.T) {
 				MinAvailable: ptr.To(int32(1)),
 			},
 		},
+		{
+			caseName: "patch-json-pdb",
+			infra:    newTestInfra(),
+			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
+				MinAvailable: ptr.To(int32(1)),
+				Patch: &egv1a1.KubernetesPatchSpec{
+					Type: ptr.To(egv1a1.JSONMerge),
+					Value: apiextensionsv1.JSON{
+						Raw: []byte("{\"metadata\":{\"name\":\"foo\"}, \"spec\": {\"selector\": {\"matchLabels\": {\"app\": \"bar\"}}}}"),
+					},
+				},
+			},
+		},
+		{
+			caseName: "patch-strategic-pdb",
+			infra:    newTestInfra(),
+			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
+				MinAvailable: ptr.To(int32(1)),
+				Patch: &egv1a1.KubernetesPatchSpec{
+					Type: ptr.To(egv1a1.StrategicMerge),
+					Value: apiextensionsv1.JSON{
+						Raw: []byte("{\"metadata\":{\"name\":\"foo\"}, \"spec\": {\"selector\": {\"matchLabels\": {\"app\": \"bar\"}}}}"),
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range cases {
@@ -1371,6 +1397,32 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 							},
 						},
 						Type: autoscalingv2.ResourceMetricSourceType,
+					},
+				},
+			},
+		},
+		{
+			caseName: "patch-json-hpa",
+			infra:    newTestInfra(),
+			hpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+				MaxReplicas: ptr.To[int32](1),
+				Patch: &egv1a1.KubernetesPatchSpec{
+					Type: ptr.To(egv1a1.JSONMerge),
+					Value: apiextensionsv1.JSON{
+						Raw: []byte("{\"metadata\":{\"name\":\"foo\"}, \"spec\": {\"scaleTargetRef\": {\"name\": \"bar\"}}}"),
+					},
+				},
+			},
+		},
+		{
+			caseName: "patch-strategic-hpa",
+			infra:    newTestInfra(),
+			hpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+				MaxReplicas: ptr.To[int32](1),
+				Patch: &egv1a1.KubernetesPatchSpec{
+					Type: ptr.To(egv1a1.StrategicMerge),
+					Value: apiextensionsv1.JSON{
+						Raw: []byte("{\"metadata\":{\"name\":\"foo\"}, \"spec\": {\"metrics\": [{\"resource\": {\"name\": \"cpu\", \"target\": {\"averageUtilization\": 50, \"type\": \"Utilization\"}}, \"type\": \"Resource\"}]}}"),
 					},
 				},
 			},

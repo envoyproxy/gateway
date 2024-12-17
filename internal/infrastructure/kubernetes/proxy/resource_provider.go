@@ -433,13 +433,13 @@ func (r *ResourceRender) PodDisruptionBudgetSpec() (*egv1a1.KubernetesPodDisrupt
 }
 
 func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, error) {
-	podDisruptionBudget, er := r.PodDisruptionBudgetSpec()
+	podDisruptionBudgetConfig, err := r.PodDisruptionBudgetSpec()
 	// If podDisruptionBudget config is nil or MinAvailable is nil, ignore PodDisruptionBudget.
-	if podDisruptionBudget == nil {
-		return nil, er
+	if podDisruptionBudgetConfig == nil {
+		return nil, err
 	}
 
-	return &policyv1.PodDisruptionBudget{
+	podDisruptionBudget := &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      r.Name(),
 			Namespace: r.Namespace,
@@ -449,10 +449,17 @@ func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, e
 			Kind:       "PodDisruptionBudget",
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
-			MinAvailable: &intstr.IntOrString{IntVal: ptr.Deref(podDisruptionBudget.MinAvailable, 0)},
+			MinAvailable: &intstr.IntOrString{IntVal: ptr.Deref(podDisruptionBudgetConfig.MinAvailable, 0)},
 			Selector:     r.stableSelector(),
 		},
-	}, nil
+	}
+
+	// apply merge patch to PodDisruptionBudget
+	if podDisruptionBudget, err = podDisruptionBudgetConfig.ApplyMergePatch(podDisruptionBudget); err != nil {
+		return nil, err
+	}
+
+	return podDisruptionBudget, nil
 }
 
 // HorizontalPodAutoscalerSpec returns the `HorizontalPodAutoscaler` sets spec.
@@ -504,6 +511,10 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 		hpa.Spec.ScaleTargetRef.Name = *deploymentConfig.Name
 	} else {
 		hpa.Spec.ScaleTargetRef.Name = r.Name()
+	}
+
+	if hpa, err = hpaConfig.ApplyMergePatch(hpa); err != nil {
+		return nil, err
 	}
 
 	return hpa, nil
