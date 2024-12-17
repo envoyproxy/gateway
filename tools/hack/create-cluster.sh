@@ -8,11 +8,19 @@ METALLB_VERSION=${METALLB_VERSION:-"v0.13.10"}
 KIND_NODE_TAG=${KIND_NODE_TAG:-"v1.32.0"}
 NUM_WORKERS=${NUM_WORKERS:-""}
 IP_FAMILY=${IP_FAMILY:-"ipv4"}
+CUSTOM_CNI=${CUSTOM_CNI:-"false"}
+
+if [ "$CUSTOM_CNI" = "true" ]; then
+  CNI_CONFIG="disableDefaultCNI: true"
+else
+  CNI_CONFIG="disableDefaultCNI: false"
+fi
 
 KIND_CFG=$(cat <<-EOM
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 networking:
+  ${CNI_CONFIG}
   ipFamily: ${IP_FAMILY}
   # it's to prevent inherit search domains from the host which slows down DNS resolution
   # and cause problems to IPv6 only clusters running on IPv4 host.
@@ -44,7 +52,38 @@ ${KIND_CFG}
 EOF
 fi
 fi
-
+if [ "$CUSTOM_CNI" = "true" ]; then
+## Install Calico
+# Determine the operating system
+OS=$(uname -s)
+case $OS in
+    Darwin)
+        CILIUM_CLI_VERSION=$(curl -s https://raw.githubusercontent.com/cilium/cilium-cli/main/stable.txt)
+        CLI_ARCH=amd64
+        if [ "$(uname -m)" = "arm64" ]; then CLI_ARCH=arm64; fi
+        curl -L --fail --remote-name-all "https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-darwin-${CLI_ARCH}.tar.gz"{,.sha256sum}
+        shasum -a 256 -c cilium-darwin-${CLI_ARCH}.tar.gz.sha256sum
+        tar xf cilium-darwin-${CLI_ARCH}.tar.gz
+        rm cilium-darwin-${CLI_ARCH}.tar.gz{,.sha256sum}
+        ;;
+    Linux)
+        CILIUM_CLI_VERSION=$(curl -s https://raw.githubusercontent.com/cilium/cilium-cli/main/stable.txt)
+        CLI_ARCH=amd64
+        if [ "$(uname -m)" = "aarch64" ]; then CLI_ARCH=arm64; fi
+        curl -L --fail --remote-name-all "https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-linux-${CLI_ARCH}.tar.gz"{,.sha256sum}
+        sha256sum --check cilium-linux-${CLI_ARCH}.tar.gz.sha256sum
+        tar xf cilium-linux-${CLI_ARCH}.tar.gz
+        rm cilium-linux-${CLI_ARCH}.tar.gz{,.sha256sum}
+        ;;
+    *)
+        echo "Unsupported operating system: $OS"
+        exit 1
+        ;;
+esac
+mkdir -p bin
+chmod +x cilium
+mv cilium bin
+fi
 
 ## Install MetalLB.
 kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/"${METALLB_VERSION}"/config/manifests/metallb-native.yaml
@@ -53,9 +92,6 @@ if [ -z "$needCreate" ]; then
     kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)"
 fi
 
-# Wait for MetalLB to become available.
-kubectl rollout status -n metallb-system deployment/controller --timeout 5m
-kubectl rollout status -n metallb-system daemonset/speaker --timeout 5m
 
 # Apply config with addresses based on docker network IPAM.
 address_ranges=""
@@ -82,8 +118,8 @@ if [ -z "${address_ranges}" ]; then
     exit 1
 fi
 
-# Apply MetalLB IPAddressPool and L2Advertisement
-kubectl apply -f - <<EOF
+apply_metallb_ranges() {
+kubectl apply -f - <<EOF >/dev/null 2>&1
 apiVersion: metallb.io/v1beta1
 kind: IPAddressPool
 metadata:
@@ -102,3 +138,29 @@ spec:
   ipAddressPools:
   - kube-services
 EOF
+}
+
+RETRY_INTERVAL=5  # seconds
+TIMEOUT=120        # seconds
+ELAPSED_TIME=0
+
+if [ "$CUSTOM_CNI" = "true" ]; then
+  CILIUM_BIN="./bin/cilium"
+  $CILIUM_BIN install --wait --version 1.16.4
+  $CILIUM_BIN status --wait
+fi
+
+# Apply MetalLB IPAddressPool and L2Advertisement
+echo "Applying configuration with retries..."
+  # Retry loop
+  while [ $ELAPSED_TIME -lt $TIMEOUT ]; do
+    if apply_metallb_ranges; then
+      echo "Configuration applied successfully."
+      exit 0
+    else
+      echo "Trying to apply configuration. Retrying in $RETRY_INTERVAL seconds..."
+    fi
+    sleep $RETRY_INTERVAL
+    ELAPSED_TIME=$((ELAPSED_TIME + RETRY_INTERVAL))
+  done
+

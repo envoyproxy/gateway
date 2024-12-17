@@ -145,6 +145,9 @@ experimental-conformance: create-cluster kube-install-image kube-deploy run-expe
 .PHONY: benchmark
 benchmark: create-cluster kube-install-image kube-deploy-for-benchmark-test run-benchmark delete-cluster ## Create a kind cluster, deploy EG into it, run Envoy Gateway benchmark test, and clean up.
 
+.PHONY: resilience
+resilience: create-cluster kube-install-image kube-deploy run-resilience delete-cluster ## Create a kind cluster, deploy EG into it, run Envoy Gateway resilience test, and clean up.
+
 .PHONY: e2e
 e2e: create-cluster kube-install-image kube-deploy \
 	install-ratelimit install-eg-addons kube-install-examples-image \
@@ -176,6 +179,11 @@ else
 	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
 		--run-test $(E2E_RUN_TEST)
 endif
+
+.PHONY: run-resilience
+run-resilience: ## Run resilience tests
+	@$(LOG_TARGET)
+	go test -v -tags resilience ./test/resilience --gateway-class=envoy-gateway
 
 .PHONY: run-benchmark
 run-benchmark: install-benchmark-server prepare-ip-family ## Run benchmark tests
