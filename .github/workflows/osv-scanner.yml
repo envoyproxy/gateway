@@ -21,7 +21,7 @@ jobs:
     if: ${{ github.event_name == 'push' || github.event_name == 'schedule' }}
     runs-on: ubuntu-latest
     steps:
-    - uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@19ec1116569a47416e11a45848722b1af31a857b"  # v1.9.0
+    - uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@daa2c68f50d845057895a9c300e42478481c1d26"  # v1.9.1
       with:
         scan-args: |-
           --skip-git
@@ -40,7 +40,7 @@ jobs:
     - uses: actions/setup-go@v5
       with:
         go-version: '1.23.4' # The Go version to download (if necessary) and use.
-    - uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@19ec1116569a47416e11a45848722b1af31a857b"  # v1.9.0
+    - uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@daa2c68f50d845057895a9c300e42478481c1d26"  # v1.9.1
       with:
         scan-args: |-
           --skip-git
