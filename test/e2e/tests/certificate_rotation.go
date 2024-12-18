@@ -45,6 +45,7 @@ var CertificateRotationTest = suite.ConformanceTest{
 			EnvoyGatewayLBSVC := "envoy-gateway-ext-lb"
 			EnvoyCertificateSecret := "envoy"
 			EnvoyGatewayXDSPort := 18000
+			var envoyGatewayAddr string
 
 			ctx := context.Background()
 			envoyGatewaySvc := &corev1.Service{}
@@ -52,7 +53,12 @@ var CertificateRotationTest = suite.ConformanceTest{
 			require.NoError(t, err)
 			require.Len(t, envoyGatewaySvc.Status.LoadBalancer.Ingress, 1)
 			require.NotEmpty(t, envoyGatewaySvc.Status.LoadBalancer.Ingress[0].IP)
-			envoyGatewayAddr := fmt.Sprintf("%s:%d", envoyGatewaySvc.Status.LoadBalancer.Ingress[0].IP, EnvoyGatewayXDSPort)
+
+			if IPFamily == "ipv6" {
+				envoyGatewayAddr = fmt.Sprintf("[%s]:%d", envoyGatewaySvc.Status.LoadBalancer.Ingress[0].IP, EnvoyGatewayXDSPort)
+			} else {
+				envoyGatewayAddr = fmt.Sprintf("%s:%d", envoyGatewaySvc.Status.LoadBalancer.Ingress[0].IP, EnvoyGatewayXDSPort)
+			}
 
 			// get the current envoy TLS credentials
 			certNN := types.NamespacedName{Namespace: envoyGatewayNS, Name: EnvoyCertificateSecret}
