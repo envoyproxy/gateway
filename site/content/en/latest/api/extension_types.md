@@ -980,7 +980,7 @@ _Appears in:_
 | `targetRefs` | _[LocalPolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName) array_ |  true  | TargetRefs are the names of the Gateway resources this policy<br />is being attached to. |
 | `targetSelectors` | _[TargetSelector](#targetselector) array_ |  true  | TargetSelectors allow targeting resources for this policy based on labels |
 | `wasm` | _[Wasm](#wasm) array_ |  false  | Wasm is a list of Wasm extensions to be loaded by the Gateway.<br />Order matters, as the extensions will be loaded in the order they are<br />defined in this list. |
-| `extProc` | _[ExtProc](#extproc) array_ |  false  | ExtProc is an ordered list of external processing filters<br />that should added to the envoy filter chain |
+| `extProc` | _[ExtProc](#extproc) array_ |  false  | ExtProc is an ordered list of external processing filters<br />that should be added to the envoy filter chain |
 
 
 #### EnvoyFilter
@@ -2736,6 +2736,22 @@ _Appears in:_
 | `info` | LogLevelInfo defines the "Info" logging level.<br /> | 
 | `warn` | LogLevelWarn defines the "Warn" logging level.<br /> | 
 | `error` | LogLevelError defines the "Error" logging level.<br /> | 
+
+
+#### Lua
+
+
+
+Lua defines a Lua extension
+Only one of Inline or ValueRef must be set
+
+_Appears in:_
+- [EnvoyExtensionPolicySpec](#envoyextensionpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `inline` | _string_ |  false  | Inline contains the source code as an inline string. |
+| `valueRef` | _[LocalObjectReference](#localobjectreference)_ |  false  | ValueRef has the source code specified as a local object reference.<br />Only a reference to ConfigMap is supported.<br />The value of key `lua` in the ConfigMap will be used.<br />If the key is not found, the first value in the ConfigMap will be used. |
 
 
 #### MergeType
