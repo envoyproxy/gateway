@@ -1,0 +1,12 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - directResponse:
+        status: 500
+      match:
+        prefix: /
+      name: extension-post-xdsroute-hook-error
