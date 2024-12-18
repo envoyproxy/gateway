@@ -219,6 +219,9 @@ func TestTranslateXdsWithExtension(t *testing.T) {
 		"http-route-extension-listener-error": {
 			errMsg: "rpc error: code = Unknown desc = extension post xds listener hook error",
 		},
+		"http-route-extension-translate-error": {
+			errMsg: "rpc error: code = Unknown desc = cluster hook resource error: fail-close-error",
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "extension-xds-ir", "*.yaml"))
