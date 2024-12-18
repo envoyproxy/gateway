@@ -49,7 +49,7 @@ spec:
               extProc:
                 description: |-
                   ExtProc is an ordered list of external processing filters
-                  that should added to the envoy filter chain
+                  that should be added to the envoy filter chain
                 items:
                   description: ExtProc defines the configuration for External Processing
                     filter.
@@ -971,6 +971,73 @@ spec:
                       group.
                     rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
                       == "" || f.group == ''gateway.envoyproxy.io'')) : true'
+                maxItems: 16
+                type: array
+              lua:
+                description: |-
+                  Lua is an ordered list of Lua filters
+                  that should be added to the envoy filter chain
+                items:
+                  description: |-
+                    Lua defines a Lua extension
+                    Only one of Inline or ValueRef must be set
+                  properties:
+                    inline:
+                      description: Inline contains the source code as an inline string.
+                      type: string
+                    type:
+                      default: Inline
+                      description: |-
+                        Type is the type of method to use to read the Lua value.
+                        Valid values are Inline and ValueRef, default is Inline.
+                      enum:
+                      - Inline
+                      - ValueRef
+                      type: string
+                    valueRef:
+                      description: |-
+                        ValueRef has the source code specified as a local object reference.
+                        Only a reference to ConfigMap is supported.
+                        The value of key `lua` in the ConfigMap will be used.
+                        If the key is not found, the first value in the ConfigMap will be used.
+                      properties:
+                        group:
+                          description: |-
+                            Group is the group of the referent. For example, "gateway.networking.k8s.io".
+                            When unspecified or empty string, core API group is inferred.
+                          maxLength: 253
+                          pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                          type: string
+                        kind:
+                          description: Kind is kind of the referent. For example "HTTPRoute"
+                            or "Service".
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                          type: string
+                        name:
+                          description: Name is the name of the referent.
+                          maxLength: 253
+                          minLength: 1
+                          type: string
+                      required:
+                      - group
+                      - kind
+                      - name
+                      type: object
+                      x-kubernetes-validations:
+                      - message: Only a reference to an object of kind ConfigMap belonging
+                          to default core API group is supported.
+                        rule: self.kind == 'ConfigMap' && (!has(self.group) || self.group
+                          == '')
+                  required:
+                  - type
+                  type: object
+                  x-kubernetes-validations:
+                  - message: Exactly one of inline or valueRef must be set with correct
+                      type.
+                    rule: (self.type == 'Inline' && has(self.inline) && !has(self.valueRef))
+                      || (self.type == 'ValueRef' && !has(self.inline) && has(self.valueRef))
                 maxItems: 16
                 type: array
               targetRef:
