@@ -691,6 +691,8 @@ type HTTPRoute struct {
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 	// SessionPersistence holds the configuration for session persistence.
 	SessionPersistence *SessionPersistence `json:"sessionPersistence,omitempty" yaml:"sessionPersistence,omitempty"`
+	// Timeout is the time until which entire response is received from the upstream.
+	Timeout *metav1.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 }
 
 // DNS contains configuration options for DNS resolution.

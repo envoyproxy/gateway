@@ -16,6 +16,7 @@ import (
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/protocov"
@@ -96,12 +97,11 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 	}
 
 	// Timeouts
-	if router.GetRoute() != nil &&
-		httpRoute.Traffic != nil &&
-		httpRoute.Traffic.Timeout != nil &&
-		httpRoute.Traffic.Timeout.HTTP != nil &&
-		httpRoute.Traffic.Timeout.HTTP.RequestTimeout != nil {
-		router.GetRoute().Timeout = durationpb.New(httpRoute.Traffic.Timeout.HTTP.RequestTimeout.Duration)
+	if router.GetRoute() != nil {
+		rt := getEffectiveRequestTimeout(httpRoute)
+		if rt != nil {
+			router.GetRoute().Timeout = durationpb.New(rt.Duration)
+		}
 	}
 
 	// Retries
@@ -244,39 +244,33 @@ func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*
 			Weight: &wrapperspb.UInt32Value{Value: backendWeights.Invalid},
 		}
 		weightedClusters = append(weightedClusters, invalidCluster)
-		return &routev3.RouteAction{
-			// Intentionally route to a non-existent cluster and return a 500 error when it is not found
-			ClusterNotFoundResponseCode: routev3.RouteAction_INTERNAL_SERVER_ERROR,
-			ClusterSpecifier: &routev3.RouteAction_WeightedClusters{
-				WeightedClusters: &routev3.WeightedCluster{
-					Clusters: weightedClusters,
-				},
-			},
-		}
 	}
 
 	for _, destinationSetting := range settings {
-		if destinationSetting.Filters != nil {
+		if len(destinationSetting.Endpoints) > 0 {
 			validCluster := &routev3.WeightedCluster_ClusterWeight{
 				Name:   backendWeights.Name,
 				Weight: &wrapperspb.UInt32Value{Value: *destinationSetting.Weight},
 			}
 
-			if len(destinationSetting.Filters.AddRequestHeaders) > 0 {
-				validCluster.RequestHeadersToAdd = append(validCluster.RequestHeadersToAdd, buildXdsAddedHeaders(destinationSetting.Filters.AddRequestHeaders)...)
+			if destinationSetting.Filters != nil {
+				if len(destinationSetting.Filters.AddRequestHeaders) > 0 {
+					validCluster.RequestHeadersToAdd = append(validCluster.RequestHeadersToAdd, buildXdsAddedHeaders(destinationSetting.Filters.AddRequestHeaders)...)
+				}
+
+				if len(destinationSetting.Filters.RemoveRequestHeaders) > 0 {
+					validCluster.RequestHeadersToRemove = append(validCluster.RequestHeadersToRemove, destinationSetting.Filters.RemoveRequestHeaders...)
+				}
+
+				if len(destinationSetting.Filters.AddResponseHeaders) > 0 {
+					validCluster.ResponseHeadersToAdd = append(validCluster.ResponseHeadersToAdd, buildXdsAddedHeaders(destinationSetting.Filters.AddResponseHeaders)...)
+				}
+
+				if len(destinationSetting.Filters.RemoveResponseHeaders) > 0 {
+					validCluster.ResponseHeadersToRemove = append(validCluster.ResponseHeadersToRemove, destinationSetting.Filters.RemoveResponseHeaders...)
+				}
 			}
 
-			if len(destinationSetting.Filters.RemoveRequestHeaders) > 0 {
-				validCluster.RequestHeadersToRemove = append(validCluster.RequestHeadersToRemove, destinationSetting.Filters.RemoveRequestHeaders...)
-			}
-
-			if len(destinationSetting.Filters.AddResponseHeaders) > 0 {
-				validCluster.ResponseHeadersToAdd = append(validCluster.ResponseHeadersToAdd, buildXdsAddedHeaders(destinationSetting.Filters.AddResponseHeaders)...)
-			}
-
-			if len(destinationSetting.Filters.RemoveResponseHeaders) > 0 {
-				validCluster.ResponseHeadersToRemove = append(validCluster.ResponseHeadersToRemove, destinationSetting.Filters.RemoveResponseHeaders...)
-			}
 			weightedClusters = append(weightedClusters, validCluster)
 		}
 	}
@@ -292,14 +286,26 @@ func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*
 	}
 }
 
-func idleTimeout(httpRoute *ir.HTTPRoute) *durationpb.Duration {
+func getEffectiveRequestTimeout(httpRoute *ir.HTTPRoute) *metav1.Duration {
+	// gateway-api timeout takes precedence
+	if httpRoute.Timeout != nil {
+		return httpRoute.Timeout
+	}
+
 	if httpRoute.Traffic != nil &&
 		httpRoute.Traffic.Timeout != nil &&
 		httpRoute.Traffic.Timeout.HTTP != nil &&
 		httpRoute.Traffic.Timeout.HTTP.RequestTimeout != nil {
-		rt := httpRoute.Traffic.Timeout.HTTP.RequestTimeout
-		timeout := time.Hour // Default to 1 hour
+		return httpRoute.Traffic.Timeout.HTTP.RequestTimeout
+	}
 
+	return nil
+}
+
+func idleTimeout(httpRoute *ir.HTTPRoute) *durationpb.Duration {
+	rt := getEffectiveRequestTimeout(httpRoute)
+	timeout := time.Hour // Default to 1 hour
+	if rt != nil {
 		// Ensure is not less than the request timeout
 		if timeout < rt.Duration {
 			timeout = rt.Duration

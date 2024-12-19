@@ -10109,6 +10109,23 @@ spec:
                             x-kubernetes-validations:
                             - message: minReplicas must be greater than 0
                               rule: self > 0
+                          patch:
+                            description: Patch defines how to perform the patch operation
+                              to the HorizontalPodAutoscaler
+                            properties:
+                              type:
+                                description: |-
+                                  Type is the type of merge operation to perform
+
+                                  By default, StrategicMerge is used as the patch type.
+                                type: string
+                              value:
+                                description: Object contains the raw configuration
+                                  for merged object
+                                x-kubernetes-preserve-unknown-fields: true
+                            required:
+                            - value
+                            type: object
                         required:
                         - maxReplicas
                         type: object
@@ -10126,6 +10143,23 @@ spec:
                               and resilience during maintenance operations.
                             format: int32
                             type: integer
+                          patch:
+                            description: Patch defines how to perform the patch operation
+                              to the PodDisruptionBudget
+                            properties:
+                              type:
+                                description: |-
+                                  Type is the type of merge operation to perform
+
+                                  By default, StrategicMerge is used as the patch type.
+                                type: string
+                              value:
+                                description: Object contains the raw configuration
+                                  for merged object
+                                x-kubernetes-preserve-unknown-fields: true
+                            required:
+                            - value
+                            type: object
                         type: object
                       envoyService:
                         description: |-

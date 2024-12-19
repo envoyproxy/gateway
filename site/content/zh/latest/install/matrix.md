@@ -15,4 +15,4 @@ Envoy Gateway 依赖于 Envoy Proxy 和 Gateway API，并在 Kubernetes 集群�
 | v0.4.0                | **v1.26-latest**            | **542a6047**       | **v0.6.2**          | v1.25, v1.26, v1.27        |
 | v0.3.0                | **v1.25-latest**            | **f28024e3**       | **v0.6.1**          | v1.24, v1.25, v1.26        |
 | v0.2.0                | **v1.23-latest**            |                    | **v0.5.1**          | v1.24                      |
-| latest                | **dev-latest**              | **master**         | **v1.0.0**          | v1.26, v1.27, v1.28, v1.29 |
+| latest                | **dev-latest**              | **master**         | **v1.0.0**          | v1.29, v1.30, v1.31, v1.32 |
