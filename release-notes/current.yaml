@@ -16,7 +16,7 @@ security updates: |
 new features: |
 
 bug fixes: |
-Fixed the Gateway API translator didn't use the TLS configuration from the BackendTLSPolicy when connecting to the OIDC provider's well-known endpoint.
+  Fixed the Gateway API translator didn't use the TLS configuration from the BackendTLSPolicy when connecting to the OIDC provider's well-known endpoint.
 
 # Enhancements that improve performance.
 performance improvements: |
