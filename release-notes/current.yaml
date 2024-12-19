@@ -25,3 +25,4 @@ deprecations: |
 
 # Other notable changes not covered by the above sections.
 Other changes: |
+  Bumped the version of Envoy to 1.32.3.
