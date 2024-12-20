@@ -98,6 +98,8 @@ type RateLimitRule struct {
 	//
 	// This is optional and if not specified, the rate limit counters are not reduced.
 	//
+	// Currently, this is only supported for HTTP Global Rate Limits.
+	//
 	// +optional
 	UsageSpecifier *RateLimitUsageSpecifier
 }
