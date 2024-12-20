@@ -777,6 +777,28 @@ spec:
                               - requests
                               - unit
                               type: object
+                            usageSpecifier:
+                              description: |-
+                                UsageSpecifier specifies the "usage" of each request that matches the rule.
+                                The usage is used to reduce the rate limit counters for the matching requests.
+                                The reduction happens after the request stream is complete, so the rate limit
+                                won't be enforced for the current request, but for the subsequent requests.
+
+                                This is optional and if not specified, the rate limit counters are not reduced.
+
+                                Currently, this is only supported for HTTP Global Rate Limits.
+                              properties:
+                                format:
+                                  description: |-
+                                    Format specifies the format of the usage number. See the Envoy documentation for the supported formats:
+                                    https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto.html#config-route-v3-ratelimit-hitsaddend
+                                  type: string
+                                number:
+                                  description: Number specifies the fixed usage number
+                                    to reduce the rate limit counters.
+                                  format: int64
+                                  type: integer
+                              type: object
                           required:
                           - limit
                           type: object
@@ -911,6 +933,28 @@ spec:
                               required:
                               - requests
                               - unit
+                              type: object
+                            usageSpecifier:
+                              description: |-
+                                UsageSpecifier specifies the "usage" of each request that matches the rule.
+                                The usage is used to reduce the rate limit counters for the matching requests.
+                                The reduction happens after the request stream is complete, so the rate limit
+                                won't be enforced for the current request, but for the subsequent requests.
+
+                                This is optional and if not specified, the rate limit counters are not reduced.
+
+                                Currently, this is only supported for HTTP Global Rate Limits.
+                              properties:
+                                format:
+                                  description: |-
+                                    Format specifies the format of the usage number. See the Envoy documentation for the supported formats:
+                                    https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto.html#config-route-v3-ratelimit-hitsaddend
+                                  type: string
+                                number:
+                                  description: Number specifies the fixed usage number
+                                    to reduce the rate limit counters.
+                                  format: int64
+                                  type: integer
                               type: object
                           required:
                           - limit

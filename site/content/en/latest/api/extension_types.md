@@ -3465,6 +3465,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `clientSelectors` | _[RateLimitSelectCondition](#ratelimitselectcondition) array_ |  false  | ClientSelectors holds the list of select conditions to select<br />specific clients using attributes from the traffic flow.<br />All individual select conditions must hold True for this rule<br />and its limit to be applied.<br /><br />If no client selectors are specified, the rule applies to all traffic of<br />the targeted Route.<br /><br />If the policy targets a Gateway, the rule applies to each Route of the Gateway.<br />Please note that each Route has its own rate limit counters. For example,<br />if a Gateway has two Routes, and the policy has a rule with limit 10rps,<br />each Route will have its own 10rps limit. |
 | `limit` | _[RateLimitValue](#ratelimitvalue)_ |  true  | Limit holds the rate limit values.<br />This limit is applied for traffic flows when the selectors<br />compute to True, causing the request to be counted towards the limit.<br />The limit is enforced and the request is ratelimited, i.e. a response with<br />429 HTTP status code is sent back to the client when<br />the selected requests have reached the limit. |
+| `UsageSpecifier` | _[RateLimitUsageSpecifier](#ratelimitusagespecifier)_ |  false  | UsageSpecifier specifies the "usage" of each request that matches the rule.<br />The usage is used to reduce the rate limit counters for the matching requests.<br />The reduction happens after the request stream is complete, so the rate limit<br />won't be enforced for the current request, but for the subsequent requests.<br /><br />This is optional and if not specified, the rate limit counters are not reduced.<br /><br />Currently, this is only supported for HTTP Global Rate Limits. |
 
 
 #### RateLimitSelectCondition
@@ -3587,6 +3588,30 @@ _Appears in:_
 | `Minute` | RateLimitUnitMinute specifies the rate limit interval to be 1 minute.<br /> | 
 | `Hour` | RateLimitUnitHour specifies the rate limit interval to be 1 hour.<br /> | 
 | `Day` | RateLimitUnitDay specifies the rate limit interval to be 1 day.<br /> | 
+
+
+#### RateLimitUsageSpecifier
+
+
+
+RateLimitUsageSpecifier specifies the attributes within the request context from which
+the Envoy retrieves the usage number to reduce the rate limit counters.
+
+
+By default, Envoy looks up the usage number from the `envoy.ratelimit.hits_addend` filter metadata.
+If there's no such metadata or the number stored in the metadata is invalid, it will use the default
+usage number of 1.
+
+
+This default behavior can be overridden by specifying one of the fields in this RateLimitUsageSpecifier.
+
+_Appears in:_
+- [RateLimitRule](#ratelimitrule)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `number` | _integer_ |  false  | Number specifies the fixed usage number to reduce the rate limit counters. |
+| `format` | _string_ |  false  | Format specifies the format of the usage number. See the Envoy documentation for the supported formats:<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto.html#config-route-v3-ratelimit-hitsaddend |
 
 
 #### RateLimitValue
