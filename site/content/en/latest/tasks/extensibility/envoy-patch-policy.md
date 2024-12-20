@@ -299,7 +299,7 @@ spec:
         op: add
         # Every virtual_host that ends with 'www_example_com' (using RegEx Filter)
         jsonPath: "..virtual_hosts[?match(@.name, '.*www_example_com')]"
-        # If the property does not exists, it can not be selected with jsonPath 
+        # If the property does not exists, it can not be selected with jsonPath
         # Therefore the new property must be set in path
         path: "include_attempt_count_in_response"
         value: true
@@ -331,7 +331,7 @@ spec:
         op: add
         # Every virtual_host that ends with 'www_example_com' (using RegEx Filter)
         jsonPath: "..virtual_hosts[?match(@.name, '.*www_example_com')]"
-        # If the property does not exists, it can not be selected with jsonPath 
+        # If the property does not exists, it can not be selected with jsonPath
         # Therefore the new property must be set in path
         path: "include_attempt_count_in_response"
         value: true
@@ -414,7 +414,7 @@ status:
 
 ## Caveats
 
-This API will always be an unstable API and the same outcome cannot be garunteed
+This API will always be an unstable API and the same outcome cannot be guaranteed
 across versions for these reasons
 * The Envoy Proxy API might deprecate and remove API fields
 * Envoy Gateway might alter the xDS translation creating a different xDS output
