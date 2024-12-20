@@ -8,12 +8,12 @@ package proxy
 import (
 	"testing"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
-
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/ptr"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 )
 
 func TestEnvoyPodSelector(t *testing.T) {
