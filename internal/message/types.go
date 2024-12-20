@@ -12,7 +12,8 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 	xdstypes "github.com/envoyproxy/gateway/internal/xds/types"
 )
@@ -21,7 +22,7 @@ import (
 type ProviderResources struct {
 	// GatewayAPIResources is a map from a GatewayClass name to
 	// a group of gateway API and other related resources.
-	GatewayAPIResources watchable.Map[string, *gatewayapi.ControllerResources]
+	GatewayAPIResources watchable.Map[string, *resource.ControllerResources]
 
 	// GatewayAPIStatuses is a group of gateway api
 	// resource statuses maps.
@@ -29,9 +30,12 @@ type ProviderResources struct {
 
 	// PolicyStatuses is a group of policy statuses maps.
 	PolicyStatuses
+
+	// ExtensionStatuses is a group of gw-api extension resource statuses map.
+	ExtensionStatuses
 }
 
-func (p *ProviderResources) GetResources() []*gatewayapi.Resources {
+func (p *ProviderResources) GetResources() []*resource.Resources {
 	if p.GatewayAPIResources.Len() == 0 {
 		return nil
 	}
@@ -43,7 +47,7 @@ func (p *ProviderResources) GetResources() []*gatewayapi.Resources {
 	return nil
 }
 
-func (p *ProviderResources) GetResourcesByGatewayClass(name string) *gatewayapi.Resources {
+func (p *ProviderResources) GetResourcesByGatewayClass(name string) *resource.Resources {
 	for _, r := range p.GetResources() {
 		if r != nil && r.GatewayClass != nil && r.GatewayClass.Name == name {
 			return r
@@ -71,12 +75,13 @@ func (p *ProviderResources) Close() {
 
 // GatewayAPIStatuses contains gateway API resources statuses
 type GatewayAPIStatuses struct {
-	GatewayStatuses   watchable.Map[types.NamespacedName, *gwapiv1.GatewayStatus]
-	HTTPRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1.HTTPRouteStatus]
-	GRPCRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1.GRPCRouteStatus]
-	TLSRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.TLSRouteStatus]
-	TCPRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.TCPRouteStatus]
-	UDPRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.UDPRouteStatus]
+	GatewayClassStatuses watchable.Map[types.NamespacedName, *gwapiv1.GatewayClassStatus]
+	GatewayStatuses      watchable.Map[types.NamespacedName, *gwapiv1.GatewayStatus]
+	HTTPRouteStatuses    watchable.Map[types.NamespacedName, *gwapiv1.HTTPRouteStatus]
+	GRPCRouteStatuses    watchable.Map[types.NamespacedName, *gwapiv1.GRPCRouteStatus]
+	TLSRouteStatuses     watchable.Map[types.NamespacedName, *gwapiv1a2.TLSRouteStatus]
+	TCPRouteStatuses     watchable.Map[types.NamespacedName, *gwapiv1a2.TCPRouteStatus]
+	UDPRouteStatuses     watchable.Map[types.NamespacedName, *gwapiv1a2.UDPRouteStatus]
 }
 
 func (s *GatewayAPIStatuses) Close() {
@@ -102,6 +107,11 @@ type PolicyStatuses struct {
 	BackendTLSPolicyStatuses     watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
 	EnvoyExtensionPolicyStatuses watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
 	ExtensionPolicyStatuses      watchable.Map[NamespacedNameAndGVK, *gwapiv1a2.PolicyStatus]
+}
+
+// ExtensionStatuses contains statuses related to gw-api extension resources
+type ExtensionStatuses struct {
+	BackendStatuses watchable.Map[types.NamespacedName, *egv1a1.BackendStatus]
 }
 
 func (p *PolicyStatuses) Close() {

@@ -28,35 +28,131 @@ type Authorization struct {
 // AuthorizationRule defines a single authorization rule.
 type AuthorizationRule struct {
 	// Name is a user-friendly name for the rule.
-	// If not specified, Envoy Gateway will generate a unique name for the rule.n
+	// If not specified, Envoy Gateway will generate a unique name for the rule.
+	//
 	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
 	Name *string `json:"name,omitempty"`
 
 	// Action defines the action to be taken if the rule matches.
 	Action AuthorizationAction `json:"action"`
 
 	// Principal specifies the client identity of a request.
+	// If there are multiple principal types, all principals must match for the rule to match.
+	// For example, if there are two principals: one for client IP and one for JWT claim,
+	// the rule will match only if both the client IP and the JWT claim match.
 	Principal Principal `json:"principal"`
 }
 
 // Principal specifies the client identity of a request.
 // A client identity can be a client IP, a JWT claim, username from the Authorization header,
 // or any other identity that can be extracted from a custom header.
-// Currently, only the client IP is supported.
+
+// If there are multiple principal types, all principals must match for the rule to match.
+//
+// +kubebuilder:validation:XValidation:rule="(has(self.clientCIDRs) || has(self.jwt))",message="at least one of clientCIDRs or jwt must be specified"
 type Principal struct {
 	// ClientCIDRs are the IP CIDR ranges of the client.
 	// Valid examples are "192.168.1.0/24" or "2001:db8::/64"
+	//
+	// If multiple CIDR ranges are specified, one of the CIDR ranges must match
+	// the client IP for the rule to match.
 	//
 	// The client IP is inferred from the X-Forwarded-For header, a custom header,
 	// or the proxy protocol.
 	// You can use the `ClientIPDetection` or the `EnableProxyProtocol` field in
 	// the `ClientTrafficPolicy` to configure how the client IP is detected.
+	// +optional
 	// +kubebuilder:validation:MinItems=1
-	ClientCIDRs []CIDR `json:"clientCIDRs"`
+	ClientCIDRs []CIDR `json:"clientCIDRs,omitempty"`
 
-	// TODO: Zhaohuabing the MinItems=1 validation can be relaxed to allow empty list
-	// after other principal types are supported. However, at least one principal is required
+	// JWT authorize the request based on the JWT claims and scopes.
+	// Note: in order to use JWT claims for authorization, you must configure the
+	// JWT authentication in the same `SecurityPolicy`.
+	// +optional
+	JWT *JWTPrincipal `json:"jwt,omitempty"`
 }
+
+// JWTPrincipal specifies the client identity of a request based on the JWT claims and scopes.
+// At least one of the claims or scopes must be specified.
+// Claims and scopes are And-ed together if both are specified.
+//
+// +kubebuilder:validation:XValidation:rule="(has(self.claims) || has(self.scopes))",message="at least one of claims or scopes must be specified"
+type JWTPrincipal struct {
+	// Provider is the name of the JWT provider that used to verify the JWT token.
+	// In order to use JWT claims for authorization, you must configure the JWT
+	// authentication with the same provider in the same `SecurityPolicy`.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Provider string `json:"provider"`
+
+	// Claims are the claims in a JWT token.
+	//
+	// If multiple claims are specified, all claims must match for the rule to match.
+	// For example, if there are two claims: one for the audience and one for the issuer,
+	// the rule will match only if both the audience and the issuer match.
+	//
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=16
+	Claims []JWTClaim `json:"claims,omitempty"`
+
+	// Scopes are a special type of claim in a JWT token that represents the permissions of the client.
+	//
+	// The value of the scopes field should be a space delimited string that is expected in the scope parameter,
+	// as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749#page-23.
+	//
+	// If multiple scopes are specified, all scopes must match for the rule to match.
+	//
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=16
+	Scopes []JWTScope `json:"scopes,omitempty"`
+}
+
+// JWTClaim specifies a claim in a JWT token.
+type JWTClaim struct {
+	// Name is the name of the claim.
+	// If it is a nested claim, use a dot (.) separated string as the name to
+	// represent the full path to the claim.
+	// For example, if the claim is in the "department" field in the "organization" field,
+	// the name should be "organization.department".
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Name string `json:"name"`
+
+	// ValueType is the type of the claim value.
+	// Only String and StringArray types are supported for now.
+	//
+	// +kubebuilder:validation:Enum=String;StringArray
+	// +kubebuilder:default=String
+	// +unionDiscriminator
+	// +optional
+	ValueType *JWTClaimValueType `json:"valueType,omitempty"`
+
+	// Values are the values that the claim must match.
+	// If the claim is a string type, the specified value must match exactly.
+	// If the claim is a string array type, the specified value must match one of the values in the array.
+	// If multiple values are specified, one of the values must match for the rule to match.
+	//
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=16
+	Values []string `json:"values"`
+}
+
+// +kubebuilder:validation:MinLength=1
+// +kubebuilder:validation:MaxLength=253
+type JWTScope string
+
+type JWTClaimValueType string
+
+const (
+	JWTClaimValueTypeString      JWTClaimValueType = "String"
+	JWTClaimValueTypeStringArray JWTClaimValueType = "StringArray"
+)
 
 // AuthorizationAction defines the action to be taken if a rule matches.
 // +kubebuilder:validation:Enum=Allow;Deny

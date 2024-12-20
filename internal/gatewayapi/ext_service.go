@@ -12,20 +12,73 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
-// TODO: zhaohuabing combine this function with the one in the route translator
+// translateExtServiceBackendRefs translates external service backend references to route destinations.
+func (t *Translator) translateExtServiceBackendRefs(
+	policy client.Object,
+	backendRefs []egv1a1.BackendRef,
+	protocol ir.AppProtocol,
+	resources *resource.Resources,
+	envoyProxy *egv1a1.EnvoyProxy,
+	configType string,
+	index int, // index is used to differentiate between multiple external services in the same policy
+) (*ir.RouteDestination, error) {
+	var (
+		rs  *ir.RouteDestination
+		ds  []*ir.DestinationSetting
+		err error
+	)
+
+	if len(backendRefs) == 0 {
+		return nil, errors.New("no backendRefs found for external service")
+	}
+
+	pnn := utils.NamespacedName(policy)
+	for _, backendRef := range backendRefs {
+		if err = t.validateExtServiceBackendReference(
+			&backendRef.BackendObjectReference,
+			policy.GetNamespace(),
+			policy.GetObjectKind().GroupVersionKind().Kind,
+			resources); err != nil {
+			return nil, err
+		}
+
+		var extServiceDest *ir.DestinationSetting
+		if extServiceDest, err = t.processExtServiceDestination(
+			&backendRef,
+			pnn,
+			policy.GetObjectKind().GroupVersionKind().Kind,
+			protocol,
+			resources,
+			envoyProxy,
+		); err != nil {
+			return nil, err
+		}
+		ds = append(ds, extServiceDest)
+	}
+
+	rs = &ir.RouteDestination{
+		Name:     irIndexedExtServiceDestinationName(pnn, policy.GetObjectKind().GroupVersionKind().Kind, configType, index),
+		Settings: ds,
+	}
+	return rs, nil
+}
+
 func (t *Translator) processExtServiceDestination(
-	backendRef *gwapiv1.BackendObjectReference,
+	backendRef *egv1a1.BackendRef,
 	policyNamespacedName types.NamespacedName,
 	policyKind string,
 	protocol ir.AppProtocol,
-	resources *Resources,
+	resources *resource.Resources,
 	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.DestinationSetting, error) {
 	var (
@@ -35,14 +88,14 @@ func (t *Translator) processExtServiceDestination(
 
 	backendNamespace := NamespaceDerefOr(backendRef.Namespace, policyNamespacedName.Namespace)
 
-	switch KindDerefOr(backendRef.Kind, KindService) {
-	case KindService:
-		ds = t.processServiceDestinationSetting(*backendRef, backendNamespace, protocol, resources, envoyProxy)
+	switch KindDerefOr(backendRef.Kind, resource.KindService) {
+	case resource.KindService:
+		ds = t.processServiceDestinationSetting(backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
 	case egv1a1.KindBackend:
 		if !t.BackendEnabled {
 			return nil, fmt.Errorf("resource %s of type Backend cannot be used since Backend is disabled in Envoy Gateway configuration", string(backendRef.Name))
 		}
-		ds = t.processBackendDestinationSetting(*backendRef, backendNamespace, resources)
+		ds = t.processBackendDestinationSetting(backendRef.BackendObjectReference, backendNamespace, resources)
 		ds.Protocol = protocol
 	}
 
@@ -57,8 +110,9 @@ func (t *Translator) processExtServiceDestination(
 			"mixed endpointslice address type for the same backendRef is not supported")
 	}
 
-	backendTLS = t.applyBackendTLSSetting(
-		*backendRef,
+	var err error
+	backendTLS, err = t.applyBackendTLSSetting(
+		backendRef.BackendObjectReference,
 		backendNamespace,
 		// Gateway is not the appropriate parent reference here because the owner
 		// of the BackendRef is the policy, and there is no hierarchy
@@ -73,21 +127,29 @@ func (t *Translator) processExtServiceDestination(
 		resources,
 		envoyProxy,
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	ds.TLS = backendTLS
 
 	// TODO: support weighted non-xRoute backends
 	ds.Weight = ptr.To(uint32(1))
-
+	if backendRef.Fallback != nil {
+		// set only the secondary priority, the backend defaults to a primary priority if unset.
+		if ptr.Deref(backendRef.Fallback, false) {
+			ds.Priority = ptr.To(uint32(1))
+		}
+	}
 	return ds, nil
 }
 
-// TODO: also refer to extension type, as Wasm may also introduce destinations
-func irIndexedExtServiceDestinationName(policyNamespacedName types.NamespacedName, policyKind string, idx int) string {
+func irIndexedExtServiceDestinationName(policyNamespacedName types.NamespacedName, policyKind string, configType string, idx int) string {
 	return strings.ToLower(fmt.Sprintf(
-		"%s/%s/%s/%d",
+		"%s/%s/%s/%s/%d",
 		policyKind,
 		policyNamespacedName.Namespace,
 		policyNamespacedName.Name,
+		configType,
 		idx))
 }

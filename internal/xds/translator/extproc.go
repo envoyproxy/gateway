@@ -137,6 +137,18 @@ func extProcConfig(extProc ir.ExtProc) *extprocv3.ExternalProcessor {
 		config.ProcessingMode.ResponseHeaderMode = extprocv3.ProcessingMode_SEND
 	}
 
+	if extProc.RequestAttributes != nil {
+		var attrs []string
+		attrs = append(attrs, extProc.RequestAttributes...)
+		config.RequestAttributes = attrs
+	}
+
+	if extProc.ResponseAttributes != nil {
+		var attrs []string
+		attrs = append(attrs, extProc.ResponseAttributes...)
+		config.ResponseAttributes = attrs
+	}
+
 	return config
 }
 
@@ -173,12 +185,10 @@ func (*extProc) patchResources(tCtx *types.ResourceVersionTable,
 		for i := range route.EnvoyExtensions.ExtProcs {
 			ep := route.EnvoyExtensions.ExtProcs[i]
 			if err := createExtServiceXDSCluster(
-				&ep.Destination, tCtx); err != nil && !errors.Is(
-				err, ErrXdsClusterExists) {
+				&ep.Destination, ep.Traffic, tCtx); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
-
 	}
 
 	return errs

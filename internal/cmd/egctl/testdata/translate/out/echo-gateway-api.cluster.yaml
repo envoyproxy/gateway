@@ -1,4 +1,5 @@
 gatewayClass:
+  kind: GatewayClass
   metadata:
     creationTimestamp: null
     name: eg
@@ -13,7 +14,8 @@ gatewayClass:
       status: "True"
       type: Accepted
 gateways:
-- metadata:
+- kind: Gateway
+  metadata:
     creationTimestamp: null
     name: eg
     namespace: envoy-gateway-system
@@ -98,14 +100,14 @@ xds:
         commonLbConfig:
           localityWeightedLbConfig: {}
         connectTimeout: 10s
-        dnsLookupFamily: V4_ONLY
+        dnsLookupFamily: V4_PREFERRED
         edsClusterConfig:
           edsConfig:
             ads: {}
             resourceApiVersion: V3
           serviceName: httproute/envoy-gateway-system/backend/rule/0
+        ignoreHealthOnHostRemoval: true
         lbPolicy: LEAST_REQUEST
         name: httproute/envoy-gateway-system/backend/rule/0
-        outlierDetection: {}
         perConnectionBufferLimitBytes: 32768
         type: EDS

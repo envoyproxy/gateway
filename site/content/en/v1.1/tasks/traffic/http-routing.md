@@ -141,10 +141,10 @@ kind: SecurityPolicy
 metadata:
   name: jwt-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: jwt-claim-routing
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: jwt-claim-routing
   jwt:
     providers:
       - name: example
@@ -209,10 +209,10 @@ kind: SecurityPolicy
 metadata:
   name: jwt-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: jwt-claim-routing
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: jwt-claim-routing
   jwt:
     providers:
       - name: example
@@ -271,7 +271,7 @@ spec:
 Get the JWT used for testing request authentication:
 
 ```shell
-TOKEN=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/test.jwt -s) && echo "$TOKEN" | cut -d '.' -f2 - | base64 --decode -
+TOKEN=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/test.jwt -s) && echo "$TOKEN" | cut -d '.' -f2 - | base64 --decode
 ```
 
 Test routing to the `foo-svc` backend by specifying a JWT Token with a claim `name: John Doe`.
@@ -284,7 +284,7 @@ curl -sS -H "Host: foo.example.com" -H "Authorization: Bearer $TOKEN" "http://${
 Get another JWT used for testing request authentication:
 
 ```shell
-TOKEN=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/with-different-claim.jwt -s) && echo "$TOKEN" | cut -d '.' -f2 - | base64 --decode -
+TOKEN=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/with-different-claim.jwt -s) && echo "$TOKEN" | cut -d '.' -f2 - | base64 --decode
 ```
 
 Test HTTP routing to the `bar-svc` backend by specifying a JWT Token with a claim `name: Tom`.

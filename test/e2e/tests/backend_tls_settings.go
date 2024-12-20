@@ -4,7 +4,6 @@
 // the root of the repo.
 
 //go:build e2e
-// +build e2e
 
 package tests
 
@@ -47,7 +46,7 @@ func init() {
 }
 
 var BackendTLSSettingsTest = suite.ConformanceTest{
-	ShortName:   "Backend tls settings",
+	ShortName:   "BackendTLSSettings",
 	Description: "Use envoy proxy tls settings with backend",
 	Manifests:   []string{"testdata/backend-tls-settings.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {

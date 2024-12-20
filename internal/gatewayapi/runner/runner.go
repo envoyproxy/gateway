@@ -8,9 +8,7 @@ package runner
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -27,19 +25,33 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extension "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/wasm"
 )
 
 const (
-	wasmCacheDir         = "/var/lib/eg/wasm"
-	serveTLSCertFilename = "/certs/tls.crt"
-	serveTLSKeyFilename  = "/certs/tls.key"
-	serveTLSCaFilename   = "/certs/ca.crt"
+	wasmCacheDir = "/var/lib/eg/wasm"
+
+	// Default certificates path for envoy-gateway with Kubernetes provider.
+	serveTLSCertFilepath = "/certs/tls.crt"
+	serveTLSKeyFilepath  = "/certs/tls.key"
+	serveTLSCaFilepath   = "/certs/ca.crt"
+
+	// TODO: Make these path configurable.
+	// Default certificates path for envoy-gateway with Host infrastructure provider.
+	localTLSCertFilepath = "/tmp/envoy-gateway/certs/envoy-gateway/tls.crt"
+	localTLSKeyFilepath  = "/tmp/envoy-gateway/certs/envoy-gateway/tls.key"
+	localTLSCaFilepath   = "/tmp/envoy-gateway/certs/envoy-gateway/ca.crt"
+
+	hmacSecretName = "envoy-oidc-hmac" // nolint: gosec
+	hmacSecretKey  = "hmac-secret"
+	hmacSecretPath = "/tmp/envoy-gateway/certs/envoy-oidc-hmac/hmac-secret" // nolint: gosec
 )
 
 type Config struct {
@@ -61,12 +73,6 @@ func New(cfg *Config) *Runner {
 	}
 }
 
-const (
-	// nolint: gosec
-	hmacSecretName = "envoy-oidc-hmac"
-	hmacSecretKey  = "hmac-secret"
-)
-
 func (r *Runner) Name() string {
 	return string(egv1a1.LogComponentGatewayAPIRunner)
 }
@@ -85,16 +91,12 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 	// Start the wasm cache server
 	// EG reuse the OIDC HMAC secret as a hash salt to generate an unguessable
 	// downloading path for the Wasm module.
-	salt, err := hmac(ctx, r.Namespace)
+	tlsConfig, salt, err := r.loadTLSConfig(ctx)
 	if err != nil {
-		r.Logger.Error(err, "failed to get hmac secret")
+		r.Logger.Error(err, "failed to start wasm cache")
 		return
 	}
-	tlsConfig, err := r.tlsConfig()
-	if err != nil {
-		r.Logger.Error(err, "failed to create tls config")
-		return
-	}
+
 	// Create the file directory if it does not exist.
 	if err = fileutils.CreateIfNotExists(wasmCacheDir, true); err != nil {
 		r.Logger.Error(err, "Failed to create Wasm cache directory")
@@ -115,7 +117,7 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentGatewayAPIRunner), Message: "provider-resources"}, r.ProviderResources.GatewayAPIResources.Subscribe(ctx),
-		func(update message.Update[string, *gatewayapi.ControllerResources], errChan chan error) {
+		func(update message.Update[string, *resource.ControllerResources], errChan chan error) {
 			r.Logger.Info("received an update")
 			val := update.Value
 			// There is only 1 key which is the controller name
@@ -159,6 +161,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 						extGKs = append(extGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
 					}
 					t.ExtensionGroupKinds = extGKs
+					r.Logger.Info("extension resources", "GVKs count", len(extGKs))
 				}
 				// Translate to IR
 				result, err := t.Translate(resources)
@@ -170,7 +173,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				// Publish the IRs.
 				// Also validate the ir before sending it.
 				for key, val := range result.InfraIR {
-					r.Logger.WithValues("infra-ir", key).Info(val.YAMLString())
+					r.Logger.V(1).WithValues("infra-ir", key).Info(val.JSONString())
 					if err := val.Validate(); err != nil {
 						r.Logger.Error(err, "unable to validate infra ir, skipped sending it")
 						errChan <- err
@@ -181,7 +184,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				}
 
 				for key, val := range result.XdsIR {
-					r.Logger.WithValues("xds-ir", key).Info(val.YAMLString())
+					r.Logger.V(1).WithValues("xds-ir", key).Info(val.JSONString())
 					if err := val.Validate(); err != nil {
 						r.Logger.Error(err, "unable to validate xds ir, skipped sending it")
 						errChan <- err
@@ -227,7 +230,6 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				// their target is not found (not relevant)
 
 				for _, backendTLSPolicy := range result.BackendTLSPolicies {
-					backendTLSPolicy := backendTLSPolicy
 					key := utils.NamespacedName(backendTLSPolicy)
 					if !(reflect.ValueOf(backendTLSPolicy.Status).IsZero()) {
 						r.ProviderResources.BackendTLSPolicyStatuses.Store(key, &backendTLSPolicy.Status)
@@ -257,15 +259,20 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					delete(statusesToDelete.SecurityPolicyStatusKeys, key)
 				}
 				for _, envoyExtensionPolicy := range result.EnvoyExtensionPolicies {
-					envoyExtensionPolicy := envoyExtensionPolicy
 					key := utils.NamespacedName(envoyExtensionPolicy)
 					if !(reflect.ValueOf(envoyExtensionPolicy.Status).IsZero()) {
 						r.ProviderResources.EnvoyExtensionPolicyStatuses.Store(key, &envoyExtensionPolicy.Status)
 					}
 					delete(statusesToDelete.EnvoyExtensionPolicyStatusKeys, key)
 				}
+				for _, backend := range result.Backends {
+					key := utils.NamespacedName(backend)
+					if !(reflect.ValueOf(backend.Status).IsZero()) {
+						r.ProviderResources.BackendStatuses.Store(key, &backend.Status)
+					}
+					delete(statusesToDelete.BackendStatusKeys, key)
+				}
 				for _, extServerPolicy := range result.ExtensionServerPolicies {
-					extServerPolicy := extServerPolicy
 					key := message.NamespacedNameAndGVK{
 						NamespacedName:   utils.NamespacedName(&extServerPolicy),
 						GroupVersionKind: extServerPolicy.GroupVersionKind(),
@@ -291,6 +298,36 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 		},
 	)
 	r.Logger.Info("shutting down")
+}
+
+func (r *Runner) loadTLSConfig(ctx context.Context) (tlsConfig *tls.Config, salt []byte, err error) {
+	switch {
+	case r.EnvoyGateway.Provider.IsRunningOnKubernetes():
+		salt, err = hmac(ctx, r.Namespace)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to get hmac secret: %w", err)
+		}
+
+		tlsConfig, err = crypto.LoadTLSConfig(serveTLSCertFilepath, serveTLSKeyFilepath, serveTLSCaFilepath)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to create tls config: %w", err)
+		}
+
+	case r.EnvoyGateway.Provider.IsRunningOnHost():
+		salt, err = os.ReadFile(hmacSecretPath)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to get hmac secret: %w", err)
+		}
+
+		tlsConfig, err = crypto.LoadTLSConfig(localTLSCertFilepath, localTLSKeyFilepath, localTLSCaFilepath)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to create tls config: %w", err)
+		}
+
+	default:
+		return nil, nil, fmt.Errorf("no valid tls certificates")
+	}
+	return
 }
 
 func unstructuredToPolicyStatus(policyStatus map[string]any) gwapiv1a2.PolicyStatus {
@@ -325,6 +362,8 @@ type StatusesToDelete struct {
 	SecurityPolicyStatusKeys        map[types.NamespacedName]bool
 	EnvoyExtensionPolicyStatusKeys  map[types.NamespacedName]bool
 	ExtensionServerPolicyStatusKeys map[message.NamespacedNameAndGVK]bool
+
+	BackendStatusKeys map[types.NamespacedName]bool
 }
 
 func (r *Runner) getAllStatuses() *StatusesToDelete {
@@ -343,6 +382,8 @@ func (r *Runner) getAllStatuses() *StatusesToDelete {
 		BackendTLSPolicyStatusKeys:      make(map[types.NamespacedName]bool),
 		EnvoyExtensionPolicyStatusKeys:  make(map[types.NamespacedName]bool),
 		ExtensionServerPolicyStatusKeys: make(map[message.NamespacedNameAndGVK]bool),
+
+		BackendStatusKeys: make(map[types.NamespacedName]bool),
 	}
 
 	// Get current status keys
@@ -379,6 +420,9 @@ func (r *Runner) getAllStatuses() *StatusesToDelete {
 	}
 	for key := range r.ProviderResources.EnvoyExtensionPolicyStatuses.LoadAll() {
 		ds.EnvoyExtensionPolicyStatusKeys[key] = true
+	}
+	for key := range r.ProviderResources.BackendStatuses.LoadAll() {
+		ds.BackendStatusKeys[key] = true
 	}
 	return ds
 }
@@ -433,6 +477,10 @@ func (r *Runner) deleteStatusKeys(ds *StatusesToDelete) {
 		r.ProviderResources.ExtensionPolicyStatuses.Delete(key)
 		delete(ds.ExtensionServerPolicyStatusKeys, key)
 	}
+	for key := range ds.BackendStatusKeys {
+		r.ProviderResources.BackendStatuses.Delete(key)
+		delete(ds.BackendStatusKeys, key)
+	}
 }
 
 // deleteAllStatusKeys deletes all status keys stored by the subscriber.
@@ -476,6 +524,9 @@ func (r *Runner) deleteAllStatusKeys() {
 	for key := range r.ProviderResources.ExtensionPolicyStatuses.LoadAll() {
 		r.ProviderResources.ExtensionPolicyStatuses.Delete(key)
 	}
+	for key := range r.ProviderResources.BackendStatuses.LoadAll() {
+		r.ProviderResources.BackendStatuses.Delete(key)
+	}
 }
 
 // getIRKeysToDelete returns the list of IR keys to delete
@@ -516,36 +567,4 @@ func hmac(ctx context.Context, namespace string) (hmac []byte, err error) {
 			"HMAC secret not found in secret %s/%s", namespace, hmacSecretName)
 	}
 	return
-}
-
-func (r *Runner) tlsConfig() (*tls.Config, error) {
-	var (
-		serverCert tls.Certificate // server's certificate and private key
-		caCert     []byte          // the CA certificate for client verification
-		caCertPool *x509.CertPool
-		err        error
-	)
-
-	// Load server's certificate and private key
-	if serverCert, err = tls.LoadX509KeyPair(serveTLSCertFilename, serveTLSKeyFilename); err != nil {
-		return nil, err
-	}
-
-	// Load client's CA certificate
-	if caCert, err = os.ReadFile(serveTLSCaFilename); err != nil {
-		return nil, err
-	}
-
-	caCertPool = x509.NewCertPool()
-	if !caCertPool.AppendCertsFromPEM(caCert) {
-		return nil, errors.New("failed to parse CA certificate")
-	}
-
-	// Configure the server to require client certificates
-	return &tls.Config{
-		Certificates: []tls.Certificate{serverCert},
-		ClientAuth:   tls.RequireAndVerifyClientCert,
-		ClientCAs:    caCertPool,
-		MinVersion:   tls.VersionTLS13,
-	}, nil
 }

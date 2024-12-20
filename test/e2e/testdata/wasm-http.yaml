@@ -20,6 +20,24 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
+  name: http-with-http-wasm-source-no-sha
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  hostnames: ["www.example.com"]
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /wasm-http-no-sha
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
   name: http-without-wasm
   namespace: gateway-conformance-infra
 spec:
@@ -51,5 +69,23 @@ spec:
     code:
       type: HTTP
       http:
-        url: https://raw.githubusercontent.com/envoyproxy/envoy/main/examples/wasm-cc/lib/envoy_filter_http_wasm_example.wasm
+        url: http://static-file-server.gateway-conformance-infra/wasm/envoy_filter_http_wasm_example.wasm
         sha256: 79c9f85128bb0177b6511afa85d587224efded376ac0ef76df56595f1e6315c0
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: http-wasm-source-test-no-sha
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-with-http-wasm-source-no-sha
+  wasm:
+  - name: wasm-filter
+    rootID: my_root_id
+    code:
+      type: HTTP
+      http:
+        url: http://static-file-server.gateway-conformance-infra/wasm/envoy_filter_http_wasm_example.wasm

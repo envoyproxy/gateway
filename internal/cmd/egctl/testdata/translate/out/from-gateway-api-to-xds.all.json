@@ -458,7 +458,7 @@
                   "localityWeightedLbConfig": {}
                 },
                 "connectTimeout": "10s",
-                "dnsLookupFamily": "V4_ONLY",
+                "dnsLookupFamily": "V4_PREFERRED",
                 "edsClusterConfig": {
                   "edsConfig": {
                     "ads": {},
@@ -466,9 +466,9 @@
                   },
                   "serviceName": "httproute/default/backend/rule/0"
                 },
+                "ignoreHealthOnHostRemoval": true,
                 "lbPolicy": "LEAST_REQUEST",
                 "name": "httproute/default/backend/rule/0",
-                "outlierDetection": {},
                 "perConnectionBufferLimitBytes": 32768,
                 "type": "EDS"
               }
@@ -487,7 +487,7 @@
                   "localityWeightedLbConfig": {}
                 },
                 "connectTimeout": "10s",
-                "dnsLookupFamily": "V4_ONLY",
+                "dnsLookupFamily": "V4_PREFERRED",
                 "edsClusterConfig": {
                   "edsConfig": {
                     "ads": {},
@@ -495,16 +495,19 @@
                   },
                   "serviceName": "grpcroute/default/backend/rule/0"
                 },
+                "ignoreHealthOnHostRemoval": true,
                 "lbPolicy": "LEAST_REQUEST",
                 "name": "grpcroute/default/backend/rule/0",
-                "outlierDetection": {},
                 "perConnectionBufferLimitBytes": 32768,
                 "type": "EDS",
                 "typedExtensionProtocolOptions": {
                   "envoy.extensions.upstreams.http.v3.HttpProtocolOptions": {
                     "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions",
                     "explicitHttpConfig": {
-                      "http2ProtocolOptions": {}
+                      "http2ProtocolOptions": {
+                        "initialConnectionWindowSize": 1048576,
+                        "initialStreamWindowSize": 65536
+                      }
                     }
                   }
                 }
@@ -524,7 +527,7 @@
                   "localityWeightedLbConfig": {}
                 },
                 "connectTimeout": "10s",
-                "dnsLookupFamily": "V4_ONLY",
+                "dnsLookupFamily": "V4_PREFERRED",
                 "edsClusterConfig": {
                   "edsConfig": {
                     "ads": {},
@@ -532,9 +535,9 @@
                   },
                   "serviceName": "tcproute/default/backend/rule/-1"
                 },
+                "ignoreHealthOnHostRemoval": true,
                 "lbPolicy": "LEAST_REQUEST",
                 "name": "tcproute/default/backend/rule/-1",
-                "outlierDetection": {},
                 "perConnectionBufferLimitBytes": 32768,
                 "type": "EDS"
               }
@@ -553,7 +556,7 @@
                   "localityWeightedLbConfig": {}
                 },
                 "connectTimeout": "10s",
-                "dnsLookupFamily": "V4_ONLY",
+                "dnsLookupFamily": "V4_PREFERRED",
                 "edsClusterConfig": {
                   "edsConfig": {
                     "ads": {},
@@ -561,9 +564,9 @@
                   },
                   "serviceName": "tlsroute/default/backend/rule/-1"
                 },
+                "ignoreHealthOnHostRemoval": true,
                 "lbPolicy": "LEAST_REQUEST",
                 "name": "tlsroute/default/backend/rule/-1",
-                "outlierDetection": {},
                 "perConnectionBufferLimitBytes": 32768,
                 "type": "EDS"
               }
@@ -582,7 +585,7 @@
                   "localityWeightedLbConfig": {}
                 },
                 "connectTimeout": "10s",
-                "dnsLookupFamily": "V4_ONLY",
+                "dnsLookupFamily": "V4_PREFERRED",
                 "edsClusterConfig": {
                   "edsConfig": {
                     "ads": {},
@@ -590,9 +593,9 @@
                   },
                   "serviceName": "udproute/default/backend/rule/-1"
                 },
+                "ignoreHealthOnHostRemoval": true,
                 "lbPolicy": "LEAST_REQUEST",
                 "name": "udproute/default/backend/rule/-1",
-                "outlierDetection": {},
                 "perConnectionBufferLimitBytes": 32768,
                 "type": "EDS"
               }
@@ -681,14 +684,13 @@
                             "routeConfigName": "default/eg/http"
                           },
                           "serverHeaderTransformation": "PASS_THROUGH",
-                          "statPrefix": "http",
+                          "statPrefix": "http-10080",
                           "useRemoteAddress": true
                         }
                       }
                     ],
                     "name": "default/eg/http"
                   },
-                  "drainType": "MODIFY_ONLY",
                   "name": "default/eg/http",
                   "perConnectionBufferLimitBytes": 32768
                 }
@@ -787,14 +789,13 @@
                             "routeConfigName": "default/eg/grpc"
                           },
                           "serverHeaderTransformation": "PASS_THROUGH",
-                          "statPrefix": "http",
+                          "statPrefix": "http-8080",
                           "useRemoteAddress": true
                         }
                       }
                     ],
                     "name": "default/eg/grpc"
                   },
-                  "drainType": "MODIFY_ONLY",
                   "name": "default/eg/grpc",
                   "perConnectionBufferLimitBytes": 32768
                 }
@@ -831,7 +832,6 @@
                       "portValue": 1234
                     }
                   },
-                  "drainType": "MODIFY_ONLY",
                   "filterChains": [
                     {
                       "filters": [
@@ -854,7 +854,7 @@
                               }
                             ],
                             "cluster": "tcproute/default/backend/rule/-1",
-                            "statPrefix": "tcp"
+                            "statPrefix": "tcp-1234"
                           }
                         }
                       ],
@@ -897,7 +897,6 @@
                       "portValue": 8443
                     }
                   },
-                  "drainType": "MODIFY_ONLY",
                   "filterChains": [
                     {
                       "filterChainMatch": {
@@ -925,7 +924,7 @@
                               }
                             ],
                             "cluster": "tlsroute/default/backend/rule/-1",
-                            "statPrefix": "passthrough"
+                            "statPrefix": "tls-passthrough-8443"
                           }
                         }
                       ],
@@ -1035,7 +1034,7 @@
                         "envoy-gateway": {
                           "resources": [
                             {
-                              "kind": "",
+                              "kind": "Gateway",
                               "name": "eg",
                               "namespace": "default",
                               "sectionName": "http"
@@ -1093,7 +1092,7 @@
                         "envoy-gateway": {
                           "resources": [
                             {
-                              "kind": "",
+                              "kind": "Gateway",
                               "name": "eg",
                               "namespace": "default",
                               "sectionName": "grpc"

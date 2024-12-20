@@ -7,6 +7,7 @@ package ir
 
 import (
 	"cmp"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -29,9 +30,14 @@ type Infra struct {
 	Proxy *ProxyInfra `json:"proxy" yaml:"proxy"`
 }
 
-func (i Infra) YAMLString() string {
-	y, _ := yaml.Marshal(&i)
+func (i *Infra) YAMLString() string {
+	y, _ := yaml.Marshal(i)
 	return string(y)
+}
+
+func (i *Infra) JSONString() string {
+	j, _ := json.Marshal(i)
+	return string(j)
 }
 
 // ProxyInfra defines managed proxy infrastructure.

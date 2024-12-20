@@ -44,6 +44,26 @@ func newTestInfra() *ir.Infra {
 	return newTestInfraWithAnnotations(nil)
 }
 
+func newTestIPv6Infra() *ir.Infra {
+	i := newTestInfra()
+	i.Proxy.Config = &egv1a1.EnvoyProxy{
+		Spec: egv1a1.EnvoyProxySpec{
+			IPFamily: ptr.To(egv1a1.IPv6),
+		},
+	}
+	return i
+}
+
+func newTestDualStackInfra() *ir.Infra {
+	i := newTestInfra()
+	i.Proxy.Config = &egv1a1.EnvoyProxy{
+		Spec: egv1a1.EnvoyProxySpec{
+			IPFamily: ptr.To(egv1a1.DualStack),
+		},
+	}
+	return i
+}
+
 func newTestInfraWithAnnotations(annotations map[string]string) *ir.Infra {
 	return newTestInfraWithAnnotationsAndLabels(annotations, nil)
 }
@@ -199,6 +219,16 @@ func TestDeployment(t *testing.T) {
 			infra:     newTestInfra(),
 			deploy:    nil,
 			bootstrap: `test bootstrap config`,
+		},
+		{
+			caseName: "ipv6",
+			infra:    newTestIPv6Infra(),
+			deploy:   nil,
+		},
+		{
+			caseName: "dual-stack",
+			infra:    newTestDualStackInfra(),
+			deploy:   nil,
 		},
 		{
 			caseName: "extension-env",
@@ -529,9 +559,10 @@ func TestDeployment(t *testing.T) {
 
 			replace := egv1a1.BootstrapTypeReplace
 			if tc.bootstrap != "" {
+				bsValue := tc.bootstrap
 				tc.infra.Proxy.Config.Spec.Bootstrap = &egv1a1.ProxyBootstrap{
 					Type:  &replace,
-					Value: tc.bootstrap,
+					Value: &bsValue,
 				}
 			}
 
@@ -563,18 +594,9 @@ func TestDeployment(t *testing.T) {
 				tc.infra.Proxy.Config.Spec.ExtraArgs = tc.extraArgs
 			}
 
-			r := NewResourceRender(cfg.Namespace, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
+			r := NewResourceRender(cfg.Namespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
 			dp, err := r.Deployment()
 			require.NoError(t, err)
-
-			expected, err := loadDeployment(tc.caseName)
-			require.NoError(t, err)
-
-			sortEnv := func(env []corev1.EnvVar) {
-				sort.Slice(env, func(i, j int) bool {
-					return env[i].Name > env[j].Name
-				})
-			}
 
 			if *overrideTestData {
 				deploymentYAML, err := yaml.Marshal(dp)
@@ -585,8 +607,17 @@ func TestDeployment(t *testing.T) {
 				return
 			}
 
+			expected, err := loadDeployment(tc.caseName)
+			require.NoError(t, err)
+
+			sortEnv := func(env []corev1.EnvVar) {
+				sort.Slice(env, func(i, j int) bool {
+					return env[i].Name > env[j].Name
+				})
+			}
 			sortEnv(dp.Spec.Template.Spec.Containers[0].Env)
 			sortEnv(expected.Spec.Template.Spec.Containers[0].Env)
+
 			assert.Equal(t, expected, dp)
 		})
 	}
@@ -963,9 +994,10 @@ func TestDaemonSet(t *testing.T) {
 
 			replace := egv1a1.BootstrapTypeReplace
 			if tc.bootstrap != "" {
+				bsValue := tc.bootstrap
 				tc.infra.Proxy.Config.Spec.Bootstrap = &egv1a1.ProxyBootstrap{
 					Type:  &replace,
-					Value: tc.bootstrap,
+					Value: &bsValue,
 				}
 			}
 
@@ -991,7 +1023,7 @@ func TestDaemonSet(t *testing.T) {
 				tc.infra.Proxy.Config.Spec.ExtraArgs = tc.extraArgs
 			}
 
-			r := NewResourceRender(cfg.Namespace, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
+			r := NewResourceRender(cfg.Namespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
 			ds, err := r.DaemonSet()
 			require.NoError(t, err)
 
@@ -1049,6 +1081,9 @@ func TestService(t *testing.T) {
 			caseName: "custom",
 			infra:    newTestInfra(),
 			service: &egv1a1.KubernetesServiceSpec{
+				Labels: map[string]string{
+					"key1": "value1",
+				},
 				Annotations: map[string]string{
 					"key1": "value1",
 				},
@@ -1074,6 +1109,31 @@ func TestService(t *testing.T) {
 			service: &egv1a1.KubernetesServiceSpec{
 				Annotations: map[string]string{
 					"anno1": "value1-override",
+				},
+			},
+		},
+		{
+			caseName: "with-svc-labels",
+			infra:    newTestInfra(),
+			service: &egv1a1.KubernetesServiceSpec{
+				Labels: map[string]string{
+					"label1": "value1",
+					"label2": "value2",
+				},
+			},
+		},
+		{
+			caseName: "override-labels",
+			infra: newTestInfraWithAnnotationsAndLabels(map[string]string{
+				"anno1": "value1",
+				"anno2": "value2",
+			}, map[string]string{
+				"label1": "value1",
+				"label2": "value2",
+			}),
+			service: &egv1a1.KubernetesServiceSpec{
+				Labels: map[string]string{
+					"label1": "value1-override",
 				},
 			},
 		},
@@ -1113,7 +1173,7 @@ func TestService(t *testing.T) {
 				provider.EnvoyService = tc.service
 			}
 
-			r := NewResourceRender(cfg.Namespace, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
+			r := NewResourceRender(cfg.Namespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
 			svc, err := r.Service()
 			require.NoError(t, err)
 
@@ -1156,7 +1216,7 @@ func TestConfigMap(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			r := NewResourceRender(cfg.Namespace, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
+			r := NewResourceRender(cfg.Namespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
 			cm, err := r.ConfigMap()
 			require.NoError(t, err)
 
@@ -1199,7 +1259,7 @@ func TestServiceAccount(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			r := NewResourceRender(cfg.Namespace, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
+			r := NewResourceRender(cfg.Namespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
 			sa, err := r.ServiceAccount()
 			require.NoError(t, err)
 
@@ -1238,6 +1298,32 @@ func TestPDB(t *testing.T) {
 				MinAvailable: ptr.To(int32(1)),
 			},
 		},
+		{
+			caseName: "patch-json-pdb",
+			infra:    newTestInfra(),
+			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
+				MinAvailable: ptr.To(int32(1)),
+				Patch: &egv1a1.KubernetesPatchSpec{
+					Type: ptr.To(egv1a1.JSONMerge),
+					Value: apiextensionsv1.JSON{
+						Raw: []byte("{\"metadata\":{\"name\":\"foo\"}, \"spec\": {\"selector\": {\"matchLabels\": {\"app\": \"bar\"}}}}"),
+					},
+				},
+			},
+		},
+		{
+			caseName: "patch-strategic-pdb",
+			infra:    newTestInfra(),
+			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
+				MinAvailable: ptr.To(int32(1)),
+				Patch: &egv1a1.KubernetesPatchSpec{
+					Type: ptr.To(egv1a1.StrategicMerge),
+					Value: apiextensionsv1.JSON{
+						Raw: []byte("{\"metadata\":{\"name\":\"foo\"}, \"spec\": {\"selector\": {\"matchLabels\": {\"app\": \"bar\"}}}}"),
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range cases {
@@ -1255,7 +1341,7 @@ func TestPDB(t *testing.T) {
 
 			provider.GetEnvoyProxyKubeProvider()
 
-			r := NewResourceRender(cfg.Namespace, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
+			r := NewResourceRender(cfg.Namespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
 
 			pdb, err := r.PodDisruptionBudget()
 			require.NoError(t, err)
@@ -1316,6 +1402,32 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 			},
 		},
 		{
+			caseName: "patch-json-hpa",
+			infra:    newTestInfra(),
+			hpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+				MaxReplicas: ptr.To[int32](1),
+				Patch: &egv1a1.KubernetesPatchSpec{
+					Type: ptr.To(egv1a1.JSONMerge),
+					Value: apiextensionsv1.JSON{
+						Raw: []byte("{\"metadata\":{\"name\":\"foo\"}, \"spec\": {\"scaleTargetRef\": {\"name\": \"bar\"}}}"),
+					},
+				},
+			},
+		},
+		{
+			caseName: "patch-strategic-hpa",
+			infra:    newTestInfra(),
+			hpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+				MaxReplicas: ptr.To[int32](1),
+				Patch: &egv1a1.KubernetesPatchSpec{
+					Type: ptr.To(egv1a1.StrategicMerge),
+					Value: apiextensionsv1.JSON{
+						Raw: []byte("{\"metadata\":{\"name\":\"foo\"}, \"spec\": {\"metrics\": [{\"resource\": {\"name\": \"cpu\", \"target\": {\"averageUtilization\": 50, \"type\": \"Utilization\"}}, \"type\": \"Resource\"}]}}"),
+					},
+				},
+			},
+		},
+		{
 			caseName: "with-deployment-name",
 			infra:    newTestInfra(),
 			hpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
@@ -1341,7 +1453,7 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 			}
 			provider.GetEnvoyProxyKubeProvider()
 
-			r := NewResourceRender(cfg.Namespace, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
+			r := NewResourceRender(cfg.Namespace, cfg.DNSDomain, tc.infra.GetProxyInfra(), cfg.EnvoyGateway)
 			hpa, err := r.HorizontalPodAutoscaler()
 			require.NoError(t, err)
 

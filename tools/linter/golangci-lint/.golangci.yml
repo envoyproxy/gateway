@@ -4,9 +4,10 @@ run:
 linters:
   enable:
     - bodyclose
+    - copyloopvar
     - depguard
     - errorlint
-    - exportloopref
+    - copyloopvar
     - importas
     - gci
     - gofmt
@@ -24,6 +25,9 @@ linters:
     - unparam
 
 linters-settings:
+  gosec:
+    excludes:
+      - G115
   depguard:
     rules:
       Main:
@@ -114,6 +118,8 @@ linters-settings:
       - suite-extra-assert-call
   unparam:
     check-exported: false
+  copyloopvar:
+    check-alias: true
 
 issues:
   exclude-rules:

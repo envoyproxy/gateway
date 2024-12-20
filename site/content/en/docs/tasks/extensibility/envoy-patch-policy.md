@@ -22,8 +22,7 @@ not exposed by Envoy Gateway APIs today.
 
 ### Prerequisites
 
-* Follow the steps from the [Quickstart](../../quickstart) task to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+{{< boilerplate prerequisites >}}
 
 ### Enable EnvoyPatchPolicy
 
@@ -81,11 +80,7 @@ data:
 {{% /tab %}}
 {{< /tabpane >}}
 
-* After updating the `ConfigMap`, you will need to restart the `envoy-gateway` deployment so the configuration kicks in
-
-```shell
-kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
-```
+{{< boilerplate rollout-envoy-gateway >}}
 
 ## Testing
 
@@ -111,7 +106,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
   type: JSONPatch
   jsonPatches:
     - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
@@ -151,7 +145,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
   type: JSONPatch
   jsonPatches:
     - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
@@ -195,7 +188,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: GatewayClass
     name: eg
-    namespace: default
   type: JSONPatch
   jsonPatches:
     - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
@@ -235,7 +227,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: GatewayClass
     name: eg
-    namespace: default
   type: JSONPatch
   jsonPatches:
     - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
@@ -273,10 +264,89 @@ kubectl patch httproute backend --type=json --patch '
 
 * Test it out by specifying a path apart from `/get`
 
-```
-$ curl --header "Host: www.example.com" http://localhost:8888/find
+```shell
+$ curl --header "Host: www.example.com" http://$GATEWAY_HOST/find
 Handling connection for 8888
 could not find what you are looking for
+```
+
+### Customize VirtualHost by name
+
+* Use EnvoyProxy's `include_attempt_count_in_response` feature to include the attempt count as header  in the downstream response.
+* Apply the configuration
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyPatchPolicy
+metadata:
+  name: include-attempts
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  type: JSONPatch
+  jsonPatches:
+    - type: "type.googleapis.com/envoy.config.route.v3.RouteConfiguration"
+      # The RouteConfiguration name is of the form <GatewayNamespace>/<GatewayName>/<GatewayListenerName>
+      name: default/eg/http
+      operation:
+        op: add
+        # Every virtual_host that ends with 'www_example_com' (using RegEx Filter)
+        jsonPath: "..virtual_hosts[?match(@.name, '.*www_example_com')]"
+        # If the property does not exists, it can not be selected with jsonPath 
+        # Therefore the new property must be set in path
+        path: "include_attempt_count_in_response"
+        value: true
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyPatchPolicy
+metadata:
+  name: include-attempts
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  type: JSONPatch
+  jsonPatches:
+    - type: "type.googleapis.com/envoy.config.route.v3.RouteConfiguration"
+      # The RouteConfiguration name is of the form <GatewayNamespace>/<GatewayName>/<GatewayListenerName>
+      name: default/eg/http
+      operation:
+        op: add
+        # Every virtual_host that ends with 'www_example_com' (using RegEx Filter)
+        jsonPath: "..virtual_hosts[?match(@.name, '.*www_example_com')]"
+        # If the property does not exists, it can not be selected with jsonPath 
+        # Therefore the new property must be set in path
+        path: "include_attempt_count_in_response"
+        value: true
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+* Test it out by looking at the response headers
+
+```
+$ curl -v --header "Host: www.example.com" http://localhost:8888/
+...
+< x-envoy-attempt-count: 1
+...
 ```
 
 ## Debugging
@@ -322,7 +392,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
   type: JSONPatch
 status:
   conditions:

@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -97,7 +98,6 @@ func TestValidateGRPCFilterRef(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			err := ValidateGRPCRouteFilter(tc.filter, schema.GroupKind{Group: "example.io", Kind: "Foo"})
 			if tc.expected {
@@ -189,7 +189,6 @@ func TestValidateHTTPFilterRef(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			err := ValidateHTTPRouteFilter(tc.filter, schema.GroupKind{Group: "example.io", Kind: "Foo"})
 			if tc.expected {
@@ -479,7 +478,6 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			results := getPolicyTargetRefs(tc.policy, tc.targets)
 			require.ElementsMatch(t, results, tc.results)
@@ -551,6 +549,70 @@ func TestIsRefToGateway(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			got := IsRefToGateway(tc.routeNamespace, tc.parentRef, tc.gatewayNN)
 			require.Equal(t, tc.expected, got)
+		})
+	}
+}
+
+func TestGetServiceIPFamily(t *testing.T) {
+	testCases := []struct {
+		name     string
+		service  *corev1.Service
+		expected *egv1a1.IPFamily
+	}{
+		{
+			name:     "nil service",
+			service:  nil,
+			expected: nil,
+		},
+		{
+			name: "require dual stack",
+			service: &corev1.Service{
+				Spec: corev1.ServiceSpec{
+					IPFamilyPolicy: ptr.To(corev1.IPFamilyPolicyRequireDualStack),
+				},
+			},
+			expected: ptr.To(egv1a1.DualStack),
+		},
+		{
+			name: "multiple ip families",
+			service: &corev1.Service{
+				Spec: corev1.ServiceSpec{
+					IPFamilies: []corev1.IPFamily{corev1.IPv4Protocol, corev1.IPv6Protocol},
+				},
+			},
+			expected: ptr.To(egv1a1.DualStack),
+		},
+		{
+			name: "ipv4 only",
+			service: &corev1.Service{
+				Spec: corev1.ServiceSpec{
+					IPFamilies: []corev1.IPFamily{corev1.IPv4Protocol},
+				},
+			},
+			expected: ptr.To(egv1a1.IPv4),
+		},
+		{
+			name: "ipv6 only",
+			service: &corev1.Service{
+				Spec: corev1.ServiceSpec{
+					IPFamilies: []corev1.IPFamily{corev1.IPv6Protocol},
+				},
+			},
+			expected: ptr.To(egv1a1.IPv6),
+		},
+		{
+			name: "no ip family specified",
+			service: &corev1.Service{
+				Spec: corev1.ServiceSpec{},
+			},
+			expected: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := getServiceIPFamily(tc.service)
+			require.Equal(t, tc.expected, result)
 		})
 	}
 }

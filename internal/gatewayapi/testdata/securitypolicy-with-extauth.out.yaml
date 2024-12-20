@@ -263,7 +263,7 @@ xdsIR:
             grpc:
               authority: grpc-backend.default:9000
               destination:
-                name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
+                name: securitypolicy/default/policy-for-http-route-1/extauth/0
                 settings:
                 - addressType: IP
                   endpoints:
@@ -301,7 +301,7 @@ xdsIR:
             grpc:
               authority: grpc-backend.default:9000
               destination:
-                name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
+                name: securitypolicy/default/policy-for-http-route-1/extauth/0
                 settings:
                 - addressType: IP
                   endpoints:
@@ -339,7 +339,7 @@ xdsIR:
             http:
               authority: http-backend.envoy-gateway:80
               destination:
-                name: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
+                name: securitypolicy/default/policy-for-gateway-1/extauth/0
                 settings:
                 - addressType: IP
                   endpoints:

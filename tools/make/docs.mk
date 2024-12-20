@@ -26,7 +26,7 @@ copy-current-release-docs:  ## Copy the current release docs to the docs folder
 	cp -r $(ROOT_DIR)/site/content/en/$$CURRENT_RELEASE/** $(ROOT_DIR)/site/content/en/docs
 
 .PHONY: docs-release
-docs-release: docs-release-prepare release-notes-docs docs-release-gen docs  ## Generate Envoy Gateway Release Docs
+docs-release: docs-release-prepare docs-release-gen docs  ## Generate Envoy Gateway Release Docs
 
 .PHONY: docs-serve
 docs-serve: copy-current-release-docs ## Start Envoy Gateway Site Locally
@@ -89,7 +89,7 @@ docs-api-gen: $(tools/crd-ref-docs)
 	--config=tools/crd-ref-docs/config.yaml \
 	--templates-dir=tools/crd-ref-docs/templates \
 	--output-path=site/content/en/latest/api/extension_types.md \
-	--max-depth 10 \
+	--max-depth 100 \
 	--renderer=markdown
 	# below line copy command for sync English api doc into Chinese
 	cp site/content/en/latest/api/extension_types.md site/content/zh/latest/api/extension_types.md
@@ -118,8 +118,11 @@ docs-check-links: # Check for broken links in the docs
 	@$(LOG_TARGET)
 	linkinator site/public/ -r --concurrency 25 --skip $(LINKINATOR_IGNORE)
 
+docs-markdown-lint:
+	markdownlint -c .github/markdown_lint_config.json site/content/*
+
 release-notes-docs: $(tools/release-notes-docs)
 	@$(LOG_TARGET)
-	@for file in $(wildcard release-notes/*.yaml); do \
+	@for file in $(wildcard release-notes/v*.yaml); do \
 		$(tools/release-notes-docs) $$file site/content/en/news/releases/notes; \
 	done

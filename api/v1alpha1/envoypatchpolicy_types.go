@@ -109,9 +109,18 @@ type JSONPatchOperationType string
 type JSONPatchOperation struct {
 	// Op is the type of operation to perform
 	Op JSONPatchOperationType `json:"op"`
-	// Path is the location of the target document/field where the operation will be performed
-	// Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details.
-	Path string `json:"path"`
+	// Path is a JSONPointer expression. Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details.
+	// It specifies the location of the target document/field where the operation will be performed
+	// +optional
+	Path *string `json:"path,omitempty"`
+	// JSONPath is a JSONPath expression. Refer to https://datatracker.ietf.org/doc/rfc9535/ for more details.
+	// It produces one or more JSONPointer expressions based on the given JSON document.
+	// If no JSONPointer is found, it will result in an error.
+	// If the 'Path' property is also set, it will be appended to the resulting JSONPointer expressions from the JSONPath evaluation.
+	// This is useful when creating a property that does not yet exist in the JSON document.
+	// The final JSONPointer expressions specifies the locations in the target document/field where the operation will be applied.
+	// +optional
+	JSONPath *string `json:"jsonPath,omitempty"`
 	// From is the source location of the value to be copied or moved. Only valid
 	// for move or copy operations
 	// Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details.

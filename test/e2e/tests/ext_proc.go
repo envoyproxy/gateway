@@ -4,7 +4,6 @@
 // the root of the repo.
 
 //go:build e2e
-// +build e2e
 
 package tests
 
@@ -20,6 +19,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
 
 func init() {
@@ -40,7 +40,7 @@ var ExtProcTest = suite.ConformanceTest{
 
 			ancestorRef := gwapiv1a2.ParentReference{
 				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-				Kind:      gatewayapi.KindPtr(gatewayapi.KindGateway),
+				Kind:      gatewayapi.KindPtr(resource.KindGateway),
 				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 				Name:      gwapiv1.ObjectName(gwNN.Name),
 			}
@@ -63,16 +63,24 @@ var ExtProcTest = suite.ConformanceTest{
 					Request: http.Request{
 						Path: "/processor",
 						Headers: map[string]string{
-							"x-request-ext-processed":          "true",     // header added by ext-processor to backend-bound request
-							"x-request-client-header-received": "original", // this is the original client header preserved by ext-proc in a new header
-							"x-request-client-header":          "mutated",  // this is the mutated value expected to reach upstream
+							// header added by ext-processor to backend-bound request
+							"x-request-ext-processed": "true",
+							// this is the original client header preserved by ext-proc in a new header
+							"x-request-client-header-received": "original",
+							// this is the mutated value expected to reach upstream
+							"x-request-client-header": "mutated",
+							// header added by ext-processor to request based on the xds.route_name attribute
+							"x-request-xds-route-name": "httproute/gateway-conformance-infra/http-with-ext-proc/rule/0/match/0/www_example_com",
 						},
 					},
 				},
 				Response: http.Response{
 					StatusCode: 200,
 					Headers: map[string]string{
-						"x-response-ext-processed": "true", // header added by ext-processor to client-bound response
+						// header added by ext-processor to client-bound response
+						"x-response-ext-processed": "true",
+						// header added by ext-processor to response based on the xds.cluster_name attribute
+						"x-response-xds-route-name": "httproute/gateway-conformance-infra/http-with-ext-proc/rule/0/match/0/www_example_com",
 					},
 				},
 				Namespace: ns,
@@ -89,7 +97,7 @@ var ExtProcTest = suite.ConformanceTest{
 
 			ancestorRef := gwapiv1a2.ParentReference{
 				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-				Kind:      gatewayapi.KindPtr(gatewayapi.KindGateway),
+				Kind:      gatewayapi.KindPtr(resource.KindGateway),
 				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 				Name:      gwapiv1.ObjectName(gwNN.Name),
 			}
@@ -134,7 +142,7 @@ var ExtProcTest = suite.ConformanceTest{
 
 			ancestorRef := gwapiv1a2.ParentReference{
 				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-				Kind:      gatewayapi.KindPtr(gatewayapi.KindGateway),
+				Kind:      gatewayapi.KindPtr(resource.KindGateway),
 				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 				Name:      gwapiv1.ObjectName(gwNN.Name),
 			}

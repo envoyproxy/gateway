@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.15.0
+    controller-gen.kubebuilder.io/version: v0.16.1
   name: backendtrafficpolicies.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -123,20 +123,48 @@ spec:
                 description: Connection includes backend connection settings.
                 properties:
                   bufferLimit:
+                    allOf:
+                    - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
                     anyOf:
                     - type: integer
                     - type: string
                     description: |-
                       BufferLimit Soft limit on size of the cluster’s connections read and write buffers.
+                      BufferLimit applies to connection streaming (maybe non-streaming) channel between processes, it's in user space.
                       If unspecified, an implementation defined default is applied (32768 bytes).
                       For example, 20Mi, 1Gi, 256Ki etc.
                       Note: that when the suffix is not provided, the value is interpreted as bytes.
-                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
-                    x-kubernetes-validations:
-                    - message: BufferLimit must be of the format "^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
-                      rule: 'type(self) == string ? self.matches(r"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$")
-                        : type(self) == int'
+                  socketBufferLimit:
+                    allOf:
+                    - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      SocketBufferLimit provides configuration for the maximum buffer size in bytes for each socket
+                      to backend.
+                      SocketBufferLimit applies to socket streaming channel between TCP/IP stacks, it's in kernel space.
+                      For example, 20Mi, 1Gi, 256Ki etc.
+                      Note that when the suffix is not provided, the value is interpreted as bytes.
+                    x-kubernetes-int-or-string: true
+                type: object
+              dns:
+                description: DNS includes dns resolution settings.
+                properties:
+                  dnsRefreshRate:
+                    description: |-
+                      DNSRefreshRate specifies the rate at which DNS records should be refreshed.
+                      Defaults to 30 seconds.
+                    type: string
+                  respectDnsTtl:
+                    description: |-
+                      RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.
+                      If the value is set to true, the DNS refresh rate will be set to the resource record’s TTL.
+                      Defaults to true.
+                    type: boolean
                 type: object
               faultInjection:
                 description: |-
@@ -198,6 +226,18 @@ spec:
                   active:
                     description: Active health check configuration
                     properties:
+                      grpc:
+                        description: |-
+                          GRPC defines the configuration of the GRPC health checker.
+                          It's optional, and can only be used if the specified type is GRPC.
+                        properties:
+                          service:
+                            description: |-
+                              Service to send in the health check request.
+                              If this is not specified, then the health check request applies to the entire
+                              server and not to a specific service.
+                            type: string
+                        type: object
                       healthyThreshold:
                         default: 1
                         description: HealthyThreshold defines the number of healthy
@@ -352,9 +392,11 @@ spec:
                         - enum:
                           - HTTP
                           - TCP
+                          - GRPC
                         - enum:
                           - HTTP
                           - TCP
+                          - GRPC
                         description: Type defines the type of health checker.
                         type: string
                       unhealthyThreshold:
@@ -374,6 +416,9 @@ spec:
                     - message: If Health Checker type is TCP, tcp field needs to be
                         set.
                       rule: 'self.type == ''TCP'' ? has(self.tcp) : !has(self.tcp)'
+                    - message: The grpc field can only be set if the Health Checker
+                        type is GRPC.
+                      rule: 'has(self.grpc) ? self.type == ''GRPC'' : true'
                   passive:
                     description: Passive passive check configuration
                     properties:
@@ -421,10 +466,51 @@ spec:
                         type: boolean
                     type: object
                 type: object
+              http2:
+                description: HTTP2 provides HTTP/2 configuration for backend connections.
+                properties:
+                  initialConnectionWindowSize:
+                    allOf:
+                    - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      InitialConnectionWindowSize sets the initial window size for HTTP/2 connections.
+                      If not set, the default value is 1 MiB.
+                    x-kubernetes-int-or-string: true
+                  initialStreamWindowSize:
+                    allOf:
+                    - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      InitialStreamWindowSize sets the initial window size for HTTP/2 streams.
+                      If not set, the default value is 64 KiB(64*1024).
+                    x-kubernetes-int-or-string: true
+                  maxConcurrentStreams:
+                    description: |-
+                      MaxConcurrentStreams sets the maximum number of concurrent streams allowed per connection.
+                      If not set, the default value is 100.
+                    format: int32
+                    maximum: 2147483647
+                    minimum: 1
+                    type: integer
+                  onInvalidMessage:
+                    description: |-
+                      OnInvalidMessage determines if Envoy will terminate the connection or just the offending stream in the event of HTTP messaging error
+                      It's recommended for L2 Envoy deployments to set this value to TerminateStream.
+                      https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/level_two
+                      Default: TerminateConnection
+                    type: string
+                type: object
               loadBalancer:
                 description: |-
                   LoadBalancer policy to apply when routing traffic from the gateway to
-                  the backend endpoints
+                  the backend endpoints. Defaults to `LeastRequest`.
                 properties:
                   consistentHash:
                     description: |-
@@ -585,10 +671,8 @@ spec:
                                 All individual select conditions must hold True for this rule
                                 and its limit to be applied.
 
-
                                 If no client selectors are specified, the rule applies to all traffic of
                                 the targeted Route.
-
 
                                 If the policy targets a Gateway, the rule applies to each Route of the Gateway.
                                 Please note that each Route has its own rate limit counters. For example,
@@ -609,6 +693,13 @@ spec:
                                       description: HeaderMatch defines the match attributes
                                         within the HTTP Headers of the request.
                                       properties:
+                                        invert:
+                                          default: false
+                                          description: |-
+                                            Invert specifies whether the value match result will be inverted.
+                                            Do not set this field when Type="Distinct", implying matching on any/all unique
+                                            values within the header.
+                                          type: boolean
                                         name:
                                           description: Name of the HTTP header.
                                           maxLength: 256
@@ -636,9 +727,6 @@ spec:
                                       type: object
                                     maxItems: 16
                                     type: array
-                                    x-kubernetes-list-map-keys:
-                                    - name
-                                    x-kubernetes-list-type: map
                                   sourceCIDR:
                                     description: |-
                                       SourceCIDR is the client IP Address range to match on.
@@ -718,10 +806,8 @@ spec:
                                 All individual select conditions must hold True for this rule
                                 and its limit to be applied.
 
-
                                 If no client selectors are specified, the rule applies to all traffic of
                                 the targeted Route.
-
 
                                 If the policy targets a Gateway, the rule applies to each Route of the Gateway.
                                 Please note that each Route has its own rate limit counters. For example,
@@ -742,6 +828,13 @@ spec:
                                       description: HeaderMatch defines the match attributes
                                         within the HTTP Headers of the request.
                                       properties:
+                                        invert:
+                                          default: false
+                                          description: |-
+                                            Invert specifies whether the value match result will be inverted.
+                                            Do not set this field when Type="Distinct", implying matching on any/all unique
+                                            values within the header.
+                                          type: boolean
                                         name:
                                           description: Name of the HTTP header.
                                           maxLength: 256
@@ -769,9 +862,6 @@ spec:
                                       type: object
                                     maxItems: 16
                                     type: array
-                                    x-kubernetes-list-map-keys:
-                                    - name
-                                    x-kubernetes-list-type: map
                                   sourceCIDR:
                                     description: |-
                                       SourceCIDR is the client IP Address range to match on.
@@ -839,6 +929,156 @@ spec:
                 required:
                 - type
                 type: object
+              responseOverride:
+                description: |-
+                  ResponseOverride defines the configuration to override specific responses with a custom one.
+                  If multiple configurations are specified, the first one to match wins.
+                items:
+                  description: ResponseOverride defines the configuration to override
+                    specific responses with a custom one.
+                  properties:
+                    match:
+                      description: Match configuration.
+                      properties:
+                        statusCodes:
+                          description: Status code to match on. The match evaluates
+                            to true if any of the matches are successful.
+                          items:
+                            description: StatusCodeMatch defines the configuration
+                              for matching a status code.
+                            properties:
+                              range:
+                                description: Range contains the range of status codes.
+                                properties:
+                                  end:
+                                    description: End of the range, including the end
+                                      value.
+                                    type: integer
+                                  start:
+                                    description: Start of the range, including the
+                                      start value.
+                                    type: integer
+                                required:
+                                - end
+                                - start
+                                type: object
+                                x-kubernetes-validations:
+                                - message: end must be greater than start
+                                  rule: self.end > self.start
+                              type:
+                                allOf:
+                                - enum:
+                                  - Value
+                                  - Range
+                                - enum:
+                                  - Value
+                                  - Range
+                                default: Value
+                                description: |-
+                                  Type is the type of value.
+                                  Valid values are Value and Range, default is Value.
+                                type: string
+                              value:
+                                description: Value contains the value of the status
+                                  code.
+                                type: integer
+                            required:
+                            - type
+                            type: object
+                            x-kubernetes-validations:
+                            - message: value must be set for type Value
+                              rule: '(!has(self.type) || self.type == ''Value'')?
+                                has(self.value) : true'
+                            - message: range must be set for type Range
+                              rule: '(has(self.type) && self.type == ''Range'')? has(self.range)
+                                : true'
+                          maxItems: 50
+                          minItems: 1
+                          type: array
+                      required:
+                      - statusCodes
+                      type: object
+                    response:
+                      description: Response configuration.
+                      properties:
+                        body:
+                          description: Body of the Custom Response
+                          properties:
+                            inline:
+                              description: Inline contains the value as an inline
+                                string.
+                              type: string
+                            type:
+                              allOf:
+                              - enum:
+                                - Inline
+                                - ValueRef
+                              - enum:
+                                - Inline
+                                - ValueRef
+                              default: Inline
+                              description: |-
+                                Type is the type of method to use to read the body value.
+                                Valid values are Inline and ValueRef, default is Inline.
+                              type: string
+                            valueRef:
+                              description: |-
+                                ValueRef contains the contents of the body
+                                specified as a local object reference.
+                                Only a reference to ConfigMap is supported.
+
+                                The value of key `response.body` in the ConfigMap will be used as the response body.
+                                If the key is not found, the first value in the ConfigMap will be used.
+                              properties:
+                                group:
+                                  description: |-
+                                    Group is the group of the referent. For example, "gateway.networking.k8s.io".
+                                    When unspecified or empty string, core API group is inferred.
+                                  maxLength: 253
+                                  pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                  type: string
+                                kind:
+                                  description: Kind is kind of the referent. For example
+                                    "HTTPRoute" or "Service".
+                                  maxLength: 63
+                                  minLength: 1
+                                  pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                                  type: string
+                                name:
+                                  description: Name is the name of the referent.
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - group
+                              - kind
+                              - name
+                              type: object
+                          required:
+                          - type
+                          type: object
+                          x-kubernetes-validations:
+                          - message: inline must be set for type Inline
+                            rule: '(!has(self.type) || self.type == ''Inline'')? has(self.inline)
+                              : true'
+                          - message: valueRef must be set for type ValueRef
+                            rule: '(has(self.type) && self.type == ''ValueRef'')?
+                              has(self.valueRef) : true'
+                          - message: only ConfigMap is supported for ValueRef
+                            rule: 'has(self.valueRef) ? self.valueRef.kind == ''ConfigMap''
+                              : true'
+                        contentType:
+                          description: Content Type of the response. This will be
+                            set in the Content-Type header.
+                          type: string
+                      required:
+                      - body
+                      type: object
+                  required:
+                  - match
+                  - response
+                  type: object
+                type: array
               retry:
                 description: |-
                   Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.
@@ -882,7 +1122,6 @@ spec:
                     description: |-
                       RetryOn specifies the retry trigger condition.
 
-
                       If not specified, the default is to retry on connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes(503).
                     properties:
                       httpStatusCodes:
@@ -924,7 +1163,6 @@ spec:
                   This policy and the TargetRef MUST be in the same namespace for this
                   Policy to have effect
 
-
                   Deprecated: use targetRefs/targetSelectors instead
                 properties:
                   group:
@@ -949,11 +1187,9 @@ spec:
                       unspecified, this targetRef targets the entire resource. In the following
                       resources, SectionName is interpreted as the following:
 
-
                       * Gateway: Listener name
                       * HTTPRoute: HTTPRouteRule name
                       * Service: Port name
-
 
                       If a SectionName is specified, but does not exist on the targeted object,
                       the Policy must fail to attach, and the policy implementation should record
@@ -978,7 +1214,6 @@ spec:
                     target single resources. For more information on how this policy attachment
                     mode works, and a sample Policy resource, refer to the policy attachment
                     documentation for Gateway API.
-
 
                     Note: This should only be used for direct policy attachment when references
                     to SectionName are actually needed. In all other cases,
@@ -1006,11 +1241,9 @@ spec:
                         unspecified, this targetRef targets the entire resource. In the following
                         resources, SectionName is interpreted as the following:
 
-
                         * Gateway: Listener name
                         * HTTPRoute: HTTPRouteRule name
                         * Service: Port name
-
 
                         If a SectionName is specified, but does not exist on the targeted object,
                         the Policy must fail to attach, and the policy implementation should record
@@ -1103,6 +1336,11 @@ spec:
                           Default: unlimited.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                      requestTimeout:
+                        description: RequestTimeout is the time until which entire
+                          response is received from the upstream.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
                     type: object
                   tcp:
                     description: Timeout settings for TCP.
@@ -1157,26 +1395,21 @@ spec:
                   the controller first sees the policy and SHOULD update the entry as
                   appropriate when the relevant ancestor is modified.
 
-
                   Note that choosing the relevant ancestor is left to the Policy designers;
                   an important part of Policy design is designing the right object level at
                   which to namespace this status.
-
 
                   Note also that implementations MUST ONLY populate ancestor status for
                   the Ancestor resources they are responsible for. Implementations MUST
                   use the ControllerName field to uniquely identify the entries in this list
                   that they are responsible for.
 
-
                   Note that to achieve this, the list of PolicyAncestorStatus structs
                   MUST be treated as a map with a composite key, made up of the AncestorRef
                   and ControllerName fields combined.
 
-
                   A maximum of 16 ancestors will be represented in this list. An empty list
                   means the Policy is not relevant for any ancestors.
-
 
                   If this slice is full, implementations MUST NOT add further entries.
                   Instead they MUST consider the policy unimplementable and signal that
@@ -1189,7 +1422,6 @@ spec:
                     PolicyAncestorStatus describes the status of a route with respect to an
                     associated Ancestor.
 
-
                     Ancestors refer to objects that are either the Target of a policy or above it
                     in terms of object hierarchy. For example, if a policy targets a Service, the
                     Policy's Ancestors are, in order, the Service, the HTTPRoute, the Gateway, and
@@ -1198,27 +1430,22 @@ spec:
                     SHOULD use Gateway as the PolicyAncestorStatus object unless the designers
                     have a _very_ good reason otherwise.
 
-
                     In the context of policy attachment, the Ancestor is used to distinguish which
                     resource results in a distinct application of this policy. For example, if a policy
                     targets a Service, it may have a distinct result per attached Gateway.
-
 
                     Policies targeting the same resource may have different effects depending on the
                     ancestors of those resources. For example, different Gateways targeting the same
                     Service may have different capabilities, especially if they have different underlying
                     implementations.
 
-
                     For example, in BackendTLSPolicy, the Policy attaches to a Service that is
                     used as a backend in a HTTPRoute that is itself attached to a Gateway.
                     In this case, the relevant object for status is the Gateway, and that is the
                     ancestor object referred to in this status.
 
-
                     Note that a parent is also an ancestor, so for objects where the parent is the
                     relevant object for status, this struct SHOULD still be used.
-
 
                     This struct is intended to be used in a slice that's effectively a map,
                     with a composite key made up of the AncestorRef and the ControllerName.
@@ -1236,7 +1463,6 @@ spec:
                             To set the core API group (such as for a "Service" kind referent),
                             Group must be explicitly set to "" (empty string).
 
-
                             Support: Core
                           maxLength: 253
                           pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -1246,13 +1472,10 @@ spec:
                           description: |-
                             Kind is kind of the referent.
 
-
                             There are two kinds of parent resources with "Core" support:
-
 
                             * Gateway (Gateway conformance profile)
                             * Service (Mesh conformance profile, ClusterIP Services only)
-
 
                             Support for other resources is Implementation-Specific.
                           maxLength: 63
@@ -1263,7 +1486,6 @@ spec:
                           description: |-
                             Name is the name of the referent.
 
-
                             Support: Core
                           maxLength: 253
                           minLength: 1
@@ -1273,19 +1495,16 @@ spec:
                             Namespace is the namespace of the referent. When unspecified, this refers
                             to the local namespace of the Route.
 
-
                             Note that there are specific rules for ParentRefs which cross namespace
                             boundaries. Cross-namespace references are only valid if they are explicitly
                             allowed by something in the namespace they are referring to. For example:
                             Gateway has the AllowedRoutes field, and ReferenceGrant provides a
                             generic way to enable any other kind of cross-namespace reference.
 
-
                             <gateway:experimental:description>
                             ParentRefs from a Route to a Service in the same namespace are "producer"
                             routes, which apply default routing rules to inbound connections from
                             any namespace to the Service.
-
 
                             ParentRefs from a Route to a Service in a different namespace are
                             "consumer" routes, and these routing rules are only applied to outbound
@@ -1293,7 +1512,6 @@ spec:
                             the intended destination of the connections are a Service targeted as a
                             ParentRef of the Route.
                             </gateway:experimental:description>
-
 
                             Support: Core
                           maxLength: 63
@@ -1305,7 +1523,6 @@ spec:
                             Port is the network port this Route targets. It can be interpreted
                             differently based on the type of parent resource.
 
-
                             When the parent resource is a Gateway, this targets all listeners
                             listening on the specified port that also support this kind of Route(and
                             select this Route). It's not recommended to set `Port` unless the
@@ -1314,18 +1531,15 @@ spec:
                             and SectionName are specified, the name and port of the selected listener
                             must match both specified values.
 
-
                             <gateway:experimental:description>
                             When the parent resource is a Service, this targets a specific port in the
                             Service spec. When both Port (experimental) and SectionName are specified,
                             the name and port of the selected port must match both specified values.
                             </gateway:experimental:description>
 
-
                             Implementations MAY choose to support other parent resources.
                             Implementations supporting other types of parent resources MUST clearly
                             document how/if Port is interpreted.
-
 
                             For the purpose of status, an attachment is considered successful as
                             long as the parent resource accepts it partially. For example, Gateway
@@ -1334,7 +1548,6 @@ spec:
                             from the referencing Route, the Route MUST be considered successfully
                             attached. If no Gateway listeners accept attachment from this Route,
                             the Route MUST be considered detached from the Gateway.
-
 
                             Support: Extended
                           format: int32
@@ -1346,7 +1559,6 @@ spec:
                             SectionName is the name of a section within the target resource. In the
                             following resources, SectionName is interpreted as the following:
 
-
                             * Gateway: Listener name. When both Port (experimental) and SectionName
                             are specified, the name and port of the selected listener must match
                             both specified values.
@@ -1354,11 +1566,9 @@ spec:
                             are specified, the name and port of the selected listener must match
                             both specified values.
 
-
                             Implementations MAY choose to support attaching Routes to other resources.
                             If that is the case, they MUST clearly document how SectionName is
                             interpreted.
-
 
                             When unspecified (empty string), this will reference the entire resource.
                             For the purpose of status, an attachment is considered successful if at
@@ -1368,7 +1578,6 @@ spec:
                             the referencing Route, the Route MUST be considered successfully
                             attached. If no Gateway listeners accept attachment from this Route, the
                             Route MUST be considered detached from the Gateway.
-
 
                             Support: Core
                           maxLength: 253
@@ -1382,18 +1591,8 @@ spec:
                       description: Conditions describes the status of the Policy with
                         respect to the given Ancestor.
                       items:
-                        description: "Condition contains details for one aspect of
-                          the current state of this API Resource.\n---\nThis struct
-                          is intended for direct use as an array at the field path
-                          .status.conditions.  For example,\n\n\n\ttype FooStatus
-                          struct{\n\t    // Represents the observations of a foo's
-                          current state.\n\t    // Known .status.conditions.type are:
-                          \"Available\", \"Progressing\", and \"Degraded\"\n\t    //
-                          +patchMergeKey=type\n\t    // +patchStrategy=merge\n\t    //
-                          +listType=map\n\t    // +listMapKey=type\n\t    Conditions
-                          []metav1.Condition `json:\"conditions,omitempty\" patchStrategy:\"merge\"
-                          patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`\n\n\n\t
-                          \   // other fields\n\t}"
+                        description: Condition contains details for one aspect of
+                          the current state of this API Resource.
                         properties:
                           lastTransitionTime:
                             description: |-
@@ -1435,12 +1634,7 @@ spec:
                             - Unknown
                             type: string
                           type:
-                            description: |-
-                              type of condition in CamelCase or in foo.example.com/CamelCase.
-                              ---
-                              Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
-                              useful (see .node.status.conditions), the ability to deconflict is important.
-                              The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                            description: type of condition in CamelCase or in foo.example.com/CamelCase.
                             maxLength: 316
                             pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                             type: string
@@ -1463,14 +1657,11 @@ spec:
                         controller that wrote this status. This corresponds with the
                         controllerName field on GatewayClass.
 
-
                         Example: "example.net/gateway-controller".
-
 
                         The format of this field is DOMAIN "/" PATH, where DOMAIN and PATH are
                         valid Kubernetes names
                         (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names).
-
 
                         Controllers MUST populate this field when writing status. Controllers should ensure that
                         entries to status populated with their ControllerName are cleaned up when they are no

@@ -13,23 +13,35 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 )
+
+var _ ResourceRender = &proxy.ResourceRender{}
+
+var _ ResourceRender = &ratelimit.ResourceRender{}
 
 // ResourceRender renders Kubernetes infrastructure resources
 // based on Infra IR resources.
 type ResourceRender interface {
 	Name() string
+	LabelSelector() labels.Selector
 	ServiceAccount() (*corev1.ServiceAccount, error)
 	Service() (*corev1.Service, error)
 	ConfigMap() (*corev1.ConfigMap, error)
 	Deployment() (*appsv1.Deployment, error)
+	DeploymentSpec() (*egv1a1.KubernetesDeploymentSpec, error)
 	DaemonSet() (*appsv1.DaemonSet, error)
+	DaemonSetSpec() (*egv1a1.KubernetesDaemonSetSpec, error)
 	HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPodAutoscaler, error)
+	HorizontalPodAutoscalerSpec() (*egv1a1.KubernetesHorizontalPodAutoscalerSpec, error)
 	PodDisruptionBudget() (*policyv1.PodDisruptionBudget, error)
+	PodDisruptionBudgetSpec() (*egv1a1.KubernetesPodDisruptionBudgetSpec, error)
 }
 
 // Infra manages the creation and deletion of Kubernetes infrastructure
@@ -37,6 +49,9 @@ type ResourceRender interface {
 type Infra struct {
 	// Namespace is the Namespace used for managed infra.
 	Namespace string
+
+	// DNSDomain is the dns domain used by k8s services. Defaults to "cluster.local".
+	DNSDomain string
 
 	// EnvoyGateway is the configuration used to startup Envoy Gateway.
 	EnvoyGateway *egv1a1.EnvoyGateway
@@ -49,6 +64,7 @@ type Infra struct {
 func NewInfra(cli client.Client, cfg *config.Server) *Infra {
 	return &Infra{
 		Namespace:    cfg.Namespace,
+		DNSDomain:    cfg.DNSDomain,
 		EnvoyGateway: cfg.EnvoyGateway,
 		Client:       New(cli),
 	}

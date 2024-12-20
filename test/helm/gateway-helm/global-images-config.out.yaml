@@ -1,5 +1,5 @@
 ---
-# Source: gateway-helm/templates/envoy-gateway-deployment.yaml
+# Source: gateway-helm/templates/envoy-gateway-serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -109,6 +109,7 @@ rules:
   - apps
   resources:
   - deployments
+  - daemonsets
   verbs:
   - get
   - list
@@ -131,6 +132,7 @@ rules:
   - securitypolicies
   - envoyextensionpolicies
   - backends
+  - httproutefilters
   verbs:
   - get
   - list
@@ -206,10 +208,12 @@ rules:
   resources:
   - serviceaccounts
   - services
+  - configmaps
   verbs:
   - create
   - get
   - delete
+  - deletecollection
   - patch
 - apiGroups:
   - apps
@@ -220,6 +224,7 @@ rules:
   - create
   - get
   - delete
+  - deletecollection
   - patch
 - apiGroups:
   - autoscaling
@@ -231,6 +236,7 @@ rules:
   - create
   - get
   - delete
+  - deletecollection
   - patch
 ---
 # Source: gateway-helm/templates/leader-election-rbac.yaml
@@ -420,13 +426,21 @@ spec:
           periodSeconds: 10
         resources:
           limits:
-            cpu: 500m
             memory: 1024Mi
           requests:
             cpu: 100m
             memory: 256Mi
         securityContext:
           allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          runAsGroup: 65532
+          runAsNonRoot: true
+          runAsUser: 65532
+          seccompProfile:
+            type: RuntimeDefault
         volumeMounts:
         - mountPath: /config
           name: envoy-gateway-config
@@ -437,8 +451,6 @@ spec:
       imagePullSecrets:
       - name: secret1
       - name: secret2
-      securityContext:
-        runAsNonRoot: true
       serviceAccountName: envoy-gateway
       terminationGracePeriodSeconds: 10
       volumes:
@@ -550,13 +562,21 @@ spec:
         image: private-hub/envoyproxy/gateway:abcdef12
         imagePullPolicy: Always
         name: envoy-gateway-certgen
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          readOnlyRootFilesystem: true
+          runAsGroup: 65534
+          runAsNonRoot: true
+          runAsUser: 65534
+          seccompProfile:
+            type: RuntimeDefault
       imagePullSecrets:
       - name: secret1
       - name: secret2
       restartPolicy: Never
-      securityContext:
-        runAsGroup: 65534
-        runAsNonRoot: true
-        runAsUser: 65534
       serviceAccountName: gateway-helm-certgen
   ttlSecondsAfterFinished: 30

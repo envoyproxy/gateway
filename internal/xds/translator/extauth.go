@@ -103,6 +103,10 @@ func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
 		config.FailureModeAllow = *extAuth.FailOpen
 	}
 
+	if extAuth.RecomputeRoute != nil {
+		config.ClearRouteCache = *extAuth.RecomputeRoute
+	}
+
 	var headersToExtAuth []*matcherv3.StringMatcher
 	for _, header := range extAuth.HeadersToExtAuth {
 		headersToExtAuth = append(headersToExtAuth, &matcherv3.StringMatcher{
@@ -111,6 +115,12 @@ func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
 			},
 			IgnoreCase: true,
 		})
+	}
+
+	if extAuth.BodyToExtAuth != nil {
+		config.WithRequestBody = &extauthv3.BufferSettings{
+			MaxRequestBytes: extAuth.BodyToExtAuth.MaxRequestBytes,
+		}
 	}
 
 	if len(headersToExtAuth) > 0 {
@@ -222,14 +232,12 @@ func (*extAuth) patchResources(tCtx *types.ResourceVersionTable,
 		}
 		if route.Security.ExtAuth.HTTP != nil {
 			if err := createExtServiceXDSCluster(
-				&route.Security.ExtAuth.HTTP.Destination, tCtx); err != nil && !errors.Is(
-				err, ErrXdsClusterExists) {
+				&route.Security.ExtAuth.HTTP.Destination, route.Security.ExtAuth.Traffic, tCtx); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		} else {
 			if err := createExtServiceXDSCluster(
-				&route.Security.ExtAuth.GRPC.Destination, tCtx); err != nil && !errors.Is(
-				err, ErrXdsClusterExists) {
+				&route.Security.ExtAuth.GRPC.Destination, route.Security.ExtAuth.Traffic, tCtx); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}

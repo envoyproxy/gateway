@@ -4,20 +4,22 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
       resourceApiVersion: V3
     serviceName: httproute/default/httproute-1/rule/0
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: httproute/default/httproute-1/rule/0
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
   typedExtensionProtocolOptions:
     envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
       '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
       useDownstreamProtocolConfig:
-        http2ProtocolOptions: {}
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
         httpProtocolOptions: {}

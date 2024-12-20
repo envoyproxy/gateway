@@ -1,16 +1,19 @@
 ---
-# Source: gateway-addons-helm/charts/fluent-bit/templates/serviceaccount.yaml
+# Source: gateway-addons-helm/charts/alloy/templates/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: fluent-bit
+  name: alloy
   namespace: monitoring
   labels:
-    helm.sh/chart: fluent-bit-0.30.4
-    app.kubernetes.io/name: fluent-bit
+    helm.sh/chart: alloy-0.9.2
+    app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "2.1.4"
+    
+    app.kubernetes.io/version: "v1.4.3"
     app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: alloy
+    app.kubernetes.io/component: rbac
 ---
 # Source: gateway-addons-helm/charts/loki/templates/serviceaccount.yaml
 apiVersion: v1
@@ -32,10 +35,10 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.73.1
+    helm.sh/chart: opentelemetry-collector-0.108.0
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.88.0"
+    app.kubernetes.io/version: "0.111.0"
     app.kubernetes.io/managed-by: Helm
 ---
 # Source: gateway-addons-helm/charts/prometheus/templates/serviceaccount.yaml
@@ -69,73 +72,117 @@ metadata:
     app.kubernetes.io/managed-by: Helm
 automountServiceAccountToken: true
 ---
-# Source: gateway-addons-helm/charts/fluent-bit/templates/configmap.yaml
+# Source: gateway-addons-helm/charts/alloy/templates/configmap.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: fluent-bit
-  namespace: monitoring
+  name: alloy
   labels:
-    helm.sh/chart: fluent-bit-0.30.4
-    app.kubernetes.io/name: fluent-bit
+    helm.sh/chart: alloy-0.9.2
+    app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "2.1.4"
+    
+    app.kubernetes.io/version: "v1.4.3"
     app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: alloy
+    app.kubernetes.io/component: config
 data:
-  custom_parsers.conf: |
-    [PARSER]
-        Name docker_no_time
-        Format json
-        Time_Keep Off
-        Time_Key time
-        Time_Format %Y-%m-%dT%H:%M:%S.%L
+  config.alloy: |-
+    // Write your Alloy config here:
+    logging {
+      level = "info"
+      format = "logfmt"
+    }
+    loki.write "alloy" {
+      endpoint {
+        url = "http://loki.monitoring.svc:3100/loki/api/v1/push"
+      }
+    }
+    // discovery.kubernetes allows you to find scrape targets from Kubernetes resources.
+    // It watches cluster state and ensures targets are continually synced with what is currently running in your cluster.
+    discovery.kubernetes "pod" {
+      role = "pod"
+    }
     
-  fluent-bit.conf: |
-    [SERVICE]
-        Daemon Off
-        Flush 1
-        Log_Level info
-        Parsers_File parsers.conf
-        Parsers_File custom_parsers.conf
-        HTTP_Server On
-        HTTP_Listen 0.0.0.0
-        HTTP_Port 2020
-        Health_Check On
+    // discovery.relabel rewrites the label set of the input targets by applying one or more relabeling rules.
+    // If no rules are defined, then the input targets are exported as-is.
+    discovery.relabel "pod_logs" {
+      targets = discovery.kubernetes.pod.targets
     
-    [INPUT]
-        Name tail
-        Path /var/log/containers/*.log
-        multiline.parser docker, cri
-        Tag kube.*
-        Mem_Buf_Limit 5MB
-        Skip_Long_Lines On
+      // Label creation - "namespace" field from "__meta_kubernetes_namespace"
+      rule {
+        source_labels = ["__meta_kubernetes_namespace"]
+        action = "replace"
+        target_label = "namespace"
+      }
     
-    [FILTER]
-        Name kubernetes
-        Match kube.*
-        Merge_Log On
-        Keep_Log Off
-        K8S-Logging.Parser On
-        K8S-Logging.Exclude On
+      // Label creation - "pod" field from "__meta_kubernetes_pod_name"
+      rule {
+        source_labels = ["__meta_kubernetes_pod_name"]
+        action = "replace"
+        target_label = "pod"
+      }
     
-    [FILTER]
-        Name grep
-        Match kube.*
-        Regex $kubernetes['container_name'] ^envoy$
+      // Label creation - "container" field from "__meta_kubernetes_pod_container_name"
+      rule {
+        source_labels = ["__meta_kubernetes_pod_container_name"]
+        action = "replace"
+        target_label = "container"
+      }
     
-    [FILTER]
-        Name parser
-        Match kube.*
-        Key_Name log
-        Parser envoy
-        Reserve_Data True
+      // Label creation -  "app" field from "__meta_kubernetes_pod_label_app_kubernetes_io_name"
+      rule {
+        source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+        action = "replace"
+        target_label = "app"
+      }
     
-    [OUTPUT]
-        Name                   loki
-        Match                  kube.*
-        Host                   loki.monitoring.svc.cluster.local
-        Port                   3100
-        Labels                 job=fluentbit, app=$kubernetes['labels']['app'], k8s_namespace_name=$kubernetes['namespace_name'], k8s_pod_name=$kubernetes['pod_name'], k8s_container_name=$kubernetes['container_name']
+      // Label creation -  "job" field from "__meta_kubernetes_namespace" and "__meta_kubernetes_pod_container_name"
+      // Concatenate values __meta_kubernetes_namespace/__meta_kubernetes_pod_container_name
+      rule {
+        source_labels = ["__meta_kubernetes_namespace", "__meta_kubernetes_pod_container_name"]
+        action = "replace"
+        target_label = "job"
+        separator = "/"
+        replacement = "$1"
+      }
+    
+      // Label creation - "container" field from "__meta_kubernetes_pod_uid" and "__meta_kubernetes_pod_container_name"
+      // Concatenate values __meta_kubernetes_pod_uid/__meta_kubernetes_pod_container_name.log
+      rule {
+        source_labels = ["__meta_kubernetes_pod_uid", "__meta_kubernetes_pod_container_name"]
+        action = "replace"
+        target_label = "__path__"
+        separator = "/"
+        replacement = "/var/log/pods/*$1/*.log"
+      }
+    
+      // Label creation -  "container_runtime" field from "__meta_kubernetes_pod_container_id"
+      rule {
+        source_labels = ["__meta_kubernetes_pod_container_id"]
+        action = "replace"
+        target_label = "container_runtime"
+        regex = "^(\\S+):\\/\\/.+$"
+        replacement = "$1"
+      }
+    }
+    
+    // loki.source.kubernetes tails logs from Kubernetes containers using the Kubernetes API.
+    loki.source.kubernetes "pod_logs" {
+      targets    = discovery.relabel.pod_logs.output
+      forward_to = [loki.process.pod_logs.receiver]
+    }
+    // loki.process receives log entries from other Loki components, applies one or more processing stages,
+    // and forwards the results to the list of receivers in the component’s arguments.
+    loki.process "pod_logs" {
+      stage.static_labels {
+          values = {
+            cluster = "envoy-gateway",
+          }
+      }
+    
+      forward_to = [loki.write.alloy.receiver]
+    }
 ---
 # Source: gateway-addons-helm/charts/loki/templates/configmap.yaml
 apiVersion: v1
@@ -219,16 +266,16 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.73.1
+    helm.sh/chart: opentelemetry-collector-0.108.0
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.88.0"
+    app.kubernetes.io/version: "0.111.0"
     app.kubernetes.io/managed-by: Helm
+    
 data:
   relay: |
     exporters:
-      debug: {}
-      logging:
+      debug:
         verbosity: detailed
       loki:
         endpoint: http://loki.monitoring.svc:3100/loki/api/v1/push
@@ -237,11 +284,10 @@ data:
         tls:
           insecure: true
       prometheus:
-        endpoint: 0.0.0.0:19001
+        endpoint: '[${env:MY_POD_IP}]:19001'
     extensions:
-      health_check: {}
-      memory_ballast:
-        size_in_percentage: 40
+      health_check:
+        endpoint: '[${env:MY_POD_IP}]:13133'
     processors:
       attributes:
         actions:
@@ -254,20 +300,22 @@ data:
         limit_percentage: 80
         spike_limit_percentage: 25
     receivers:
+      datadog:
+        endpoint: '[${env:MY_POD_IP}]:8126'
       jaeger:
         protocols:
           grpc:
-            endpoint: ${env:MY_POD_IP}:14250
+            endpoint: '[${env:MY_POD_IP}]:14250'
           thrift_compact:
-            endpoint: ${env:MY_POD_IP}:6831
+            endpoint: '[${env:MY_POD_IP}]:6831'
           thrift_http:
-            endpoint: ${env:MY_POD_IP}:14268
+            endpoint: '[${env:MY_POD_IP}]:14268'
       otlp:
         protocols:
           grpc:
-            endpoint: ${env:MY_POD_IP}:4317
+            endpoint: '[${env:MY_POD_IP}]:4317'
           http:
-            endpoint: ${env:MY_POD_IP}:4318
+            endpoint: '[${env:MY_POD_IP}]:4318'
       prometheus:
         config:
           scrape_configs:
@@ -275,9 +323,9 @@ data:
             scrape_interval: 10s
             static_configs:
             - targets:
-              - ${env:MY_POD_IP}:8888
+              - '[${env:MY_POD_IP}]:8888'
       zipkin:
-        endpoint: ${env:MY_POD_IP}:9411
+        endpoint: '[${env:MY_POD_IP}]:9411'
     service:
       extensions:
       - health_check
@@ -296,6 +344,7 @@ data:
           - memory_limiter
           - batch
           receivers:
+          - datadog
           - otlp
         traces:
           exporters:
@@ -304,11 +353,12 @@ data:
           - memory_limiter
           - batch
           receivers:
+          - datadog
           - otlp
           - zipkin
       telemetry:
         metrics:
-          address: ${env:MY_POD_IP}:8888
+          address: '[${env:MY_POD_IP}]:8888'
 ---
 # Source: gateway-addons-helm/charts/prometheus/templates/cm.yaml
 apiVersion: v1
@@ -973,7 +1023,7 @@ data:
                   "uid": "$datasource"
                 },
                 "editorMode": "builder",
-                "expr": "SUM(envoy_server_memory_allocated{})",
+                "expr": "sum(envoy_server_memory_allocated{})",
                 "format": "time_series",
                 "intervalFactor": 1,
                 "legendFormat": "",
@@ -1053,7 +1103,7 @@ data:
                   "uid": "$datasource"
                 },
                 "editorMode": "code",
-                "expr": "SUM(envoy_server_memory_heap_size)",
+                "expr": "sum(envoy_server_memory_heap_size)",
                 "format": "time_series",
                 "intervalFactor": 1,
                 "legendFormat": "",
@@ -7279,7 +7329,7 @@ data:
                   "uid": "${datasource}"
                 },
                 "editorMode": "builder",
-                "expr": "sum by(namespace) (rate(envoy_cluster_upstream_cx_rx_bytes_total{namespace=~\"$Namespace\"}[5m]))",
+                "expr": "sum by(namespace) (rate(envoy_cluster_upstream_cx_tx_bytes_total{namespace=~\"$Namespace\"}[5m]))",
                 "instant": false,
                 "legendFormat": "{{namespace}}",
                 "range": true,
@@ -8410,6 +8460,640 @@ data:
         "version": 1,
         "weekStart": ""
       }
+  global-ratelimit.json: |-
+      {
+          "annotations": {
+              "list": [
+                  {
+                      "builtIn": 1,
+                      "datasource": {
+                          "type": "grafana",
+                          "uid": "-- Grafana --"
+                      },
+                      "enable": true,
+                      "hide": true,
+                      "iconColor": "rgba(0, 211, 255, 1)",
+                      "name": "Annotations & Alerts",
+                      "type": "dashboard"
+                  }
+              ]
+          },
+          "description": "Envoy Gateway monitoring Dashboard with exported metrics.",
+          "editable": true,
+          "fiscalYearStartMonth": 0,
+          "graphTooltip": 0,
+          "id": 6,
+          "links": [],
+          "panels": [
+              {
+                  "collapsed": false,
+                  "gridPos": {
+                      "h": 1,
+                      "w": 24,
+                      "x": 0,
+                      "y": 0
+                  },
+                  "id": 273,
+                  "panels": [],
+                  "title": "Global Ratelimit",
+                  "type": "row"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "PBFA97CFB590B2093"
+                  },
+                  "description": "The fraction of this program's available CPU time used by the GC since the program started.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "color": {
+                              "mode": "palette-classic"
+                          },
+                          "custom": {
+                              "axisBorderShow": false,
+                              "axisCenteredZero": false,
+                              "axisColorMode": "series",
+                              "axisGridShow": false,
+                              "axisLabel": "",
+                              "axisPlacement": "auto",
+                              "barAlignment": 0,
+                              "drawStyle": "line",
+                              "fillOpacity": 25,
+                              "gradientMode": "none",
+                              "hideFrom": {
+                                  "legend": false,
+                                  "tooltip": false,
+                                  "viz": false
+                              },
+                              "insertNulls": false,
+                              "lineInterpolation": "linear",
+                              "lineWidth": 1,
+                              "pointSize": 5,
+                              "scaleDistribution": {
+                                  "type": "linear"
+                              },
+                              "showPoints": "auto",
+                              "spanNulls": false,
+                              "stacking": {
+                                  "group": "A",
+                                  "mode": "none"
+                              },
+                              "thresholdsStyle": {
+                                  "mode": "off"
+                              }
+                          },
+                          "mappings": [],
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  },
+                                  {
+                                      "color": "red",
+                                      "value": 80
+                                  }
+                              ]
+                          },
+                          "unit": "miu"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 8,
+                      "x": 0,
+                      "y": 1
+                  },
+                  "id": 274,
+                  "options": {
+                      "legend": {
+                          "calcs": [],
+                          "displayMode": "hidden",
+                          "placement": "right",
+                          "showLegend": false
+                      },
+                      "tooltip": {
+                          "maxHeight": 600,
+                          "mode": "single",
+                          "sort": "none"
+                      }
+                  },
+                  "pluginVersion": "11.0.0",
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "PBFA97CFB590B2093"
+                          },
+                          "disableTextWrap": false,
+                          "editorMode": "code",
+                          "exemplar": false,
+                          "expr": "(go_memstats_gc_cpu_fraction)*1000000",
+                          "format": "time_series",
+                          "fullMetaSearch": false,
+                          "includeNullMetadata": true,
+                          "instant": false,
+                          "legendFormat": "__auto",
+                          "range": true,
+                          "refId": "A",
+                          "useBackend": false
+                      }
+                  ],
+                  "title": "CPU Fraction",
+                  "transparent": true,
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "PBFA97CFB590B2093"
+                  },
+                  "description": "Resident memory size",
+                  "fieldConfig": {
+                      "defaults": {
+                          "color": {
+                              "mode": "thresholds"
+                          },
+                          "mappings": [],
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  }
+                              ]
+                          },
+                          "unit": "decmbytes"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 7,
+                      "x": 9,
+                      "y": 1
+                  },
+                  "id": 291,
+                  "options": {
+                      "minVizHeight": 75,
+                      "minVizWidth": 75,
+                      "orientation": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "showThresholdLabels": false,
+                      "showThresholdMarkers": false,
+                      "sizing": "auto"
+                  },
+                  "pluginVersion": "11.0.0",
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "PBFA97CFB590B2093"
+                          },
+                          "disableTextWrap": false,
+                          "editorMode": "code",
+                          "exemplar": false,
+                          "expr": "(process_resident_memory_bytes{app_kubernetes_io_component=\"ratelimit\"})/1000000",
+                          "fullMetaSearch": false,
+                          "includeNullMetadata": true,
+                          "instant": false,
+                          "legendFormat": "__auto",
+                          "range": true,
+                          "refId": "A",
+                          "useBackend": false
+                      }
+                  ],
+                  "title": "Resident Memory",
+                  "transparent": true,
+                  "type": "gauge"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "PBFA97CFB590B2093"
+                  },
+                  "description": "Virtual memory size",
+                  "fieldConfig": {
+                      "defaults": {
+                          "color": {
+                              "mode": "thresholds"
+                          },
+                          "mappings": [],
+                          "min": 0,
+                          "thresholds": {
+                              "mode": "percentage",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  }
+                              ]
+                          },
+                          "unit": "decmbytes"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 7,
+                      "x": 16,
+                      "y": 1
+                  },
+                  "id": 325,
+                  "options": {
+                      "minVizHeight": 75,
+                      "minVizWidth": 75,
+                      "orientation": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "showThresholdLabels": false,
+                      "showThresholdMarkers": false,
+                      "sizing": "auto"
+                  },
+                  "pluginVersion": "11.0.0",
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "PBFA97CFB590B2093"
+                          },
+                          "disableTextWrap": false,
+                          "editorMode": "code",
+                          "exemplar": false,
+                          "expr": "(process_virtual_memory_bytes{app_kubernetes_io_component=\"ratelimit\"})/1000000",
+                          "fullMetaSearch": false,
+                          "includeNullMetadata": true,
+                          "instant": false,
+                          "legendFormat": "__auto",
+                          "range": true,
+                          "refId": "A",
+                          "useBackend": false
+                      }
+                  ],
+                  "title": "Virtual Memory",
+                  "transparent": true,
+                  "type": "gauge"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "PBFA97CFB590B2093"
+                  },
+                  "description": "Number of ratelimit rule hits in total",
+                  "fieldConfig": {
+                      "defaults": {
+                          "color": {
+                              "fixedColor": "light-blue",
+                              "mode": "shades"
+                          },
+                          "fieldMinMax": false,
+                          "mappings": [],
+                          "noValue": "0",
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  }
+                              ]
+                          },
+                          "unit": "none"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 6,
+                      "x": 0,
+                      "y": 8
+                  },
+                  "id": 308,
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "none",
+                      "justifyMode": "center",
+                      "orientation": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "showPercentChange": false,
+                      "textMode": "value",
+                      "wideLayout": false
+                  },
+                  "pluginVersion": "11.0.0",
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "PBFA97CFB590B2093"
+                          },
+                          "disableTextWrap": false,
+                          "editorMode": "builder",
+                          "exemplar": false,
+                          "expr": "ratelimit_service_rate_limit_total_hits{domain=\"$DefaultDomain\", key1=\"httproute/default/http-ratelimit/rule/0/match/0/ratelimit_example_httproute/default/http-ratelimit/rule/0/match/0/ratelimit_example\", key2=\"rule-0-match-0_rule-0-match-0\"}",
+                          "fullMetaSearch": false,
+                          "includeNullMetadata": true,
+                          "instant": false,
+                          "interval": "",
+                          "legendFormat": "__auto",
+                          "range": true,
+                          "refId": "A",
+                          "useBackend": false
+                      }
+                  ],
+                  "title": "Total Hits",
+                  "type": "stat"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "PBFA97CFB590B2093"
+                  },
+                  "description": "Number of rule hits over the NearLimit ratio threshold (currently 80%) but under the threshold rate.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "color": {
+                              "fixedColor": "light-blue",
+                              "mode": "shades"
+                          },
+                          "fieldMinMax": false,
+                          "mappings": [],
+                          "noValue": "0",
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  }
+                              ]
+                          },
+                          "unit": "none"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 6,
+                      "x": 6,
+                      "y": 8
+                  },
+                  "id": 326,
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "none",
+                      "justifyMode": "center",
+                      "orientation": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "showPercentChange": false,
+                      "textMode": "value",
+                      "wideLayout": false
+                  },
+                  "pluginVersion": "11.0.0",
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "PBFA97CFB590B2093"
+                          },
+                          "disableTextWrap": false,
+                          "editorMode": "builder",
+                          "exemplar": false,
+                          "expr": "ratelimit_service_rate_limit_near_limit{domain=\"$DefaultDomain\", key1=\"httproute/default/http-ratelimit/rule/0/match/0/ratelimit_example_httproute/default/http-ratelimit/rule/0/match/0/ratelimit_example\", key2=\"rule-0-match-0_rule-0-match-0\"}",
+                          "fullMetaSearch": false,
+                          "includeNullMetadata": true,
+                          "instant": false,
+                          "interval": "",
+                          "legendFormat": "__auto",
+                          "range": true,
+                          "refId": "A",
+                          "useBackend": false
+                      }
+                  ],
+                  "title": "Near Limit",
+                  "type": "stat"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "PBFA97CFB590B2093"
+                  },
+                  "description": "Number of rule hits exceeding the threshold rate",
+                  "fieldConfig": {
+                      "defaults": {
+                          "color": {
+                              "fixedColor": "light-blue",
+                              "mode": "shades"
+                          },
+                          "fieldMinMax": false,
+                          "mappings": [],
+                          "noValue": "0",
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  }
+                              ]
+                          },
+                          "unit": "none"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 6,
+                      "x": 12,
+                      "y": 8
+                  },
+                  "id": 327,
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "none",
+                      "justifyMode": "center",
+                      "orientation": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "showPercentChange": false,
+                      "textMode": "value",
+                      "wideLayout": false
+                  },
+                  "pluginVersion": "11.0.0",
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "PBFA97CFB590B2093"
+                          },
+                          "disableTextWrap": false,
+                          "editorMode": "builder",
+                          "exemplar": false,
+                          "expr": "ratelimit_service_rate_limit_over_limit{domain=\"$DefaultDomain\", key1=\"httproute/default/http-ratelimit/rule/0/match/0/ratelimit_example_httproute/default/http-ratelimit/rule/0/match/0/ratelimit_example\", key2=\"rule-0-match-0_rule-0-match-0\"}",
+                          "fullMetaSearch": false,
+                          "includeNullMetadata": true,
+                          "instant": false,
+                          "interval": "",
+                          "legendFormat": "__auto",
+                          "range": true,
+                          "refId": "A",
+                          "useBackend": false
+                      }
+                  ],
+                  "title": "Over Limit",
+                  "type": "stat"
+              }
+          ],
+          "refresh": "",
+          "schemaVersion": 39,
+          "tags": [
+              "Control Plane"
+          ],
+          "templating": {
+              "list": [
+                  {
+                      "current": {
+                          "selected": false,
+                          "text": "Prometheus",
+                          "value": "PBFA97CFB590B2093"
+                      },
+                      "hide": 0,
+                      "includeAll": false,
+                      "multi": false,
+                      "name": "datasource",
+                      "options": [],
+                      "query": "prometheus",
+                      "refresh": 1,
+                      "regex": "",
+                      "skipUrlSync": false,
+                      "type": "datasource"
+                  },
+                  {
+                      "allValue": ".*",
+                      "current": {
+                          "selected": false,
+                          "text": "envoy-gateway-system",
+                          "value": "envoy-gateway-system"
+                      },
+                      "datasource": {
+                          "type": "prometheus",
+                          "uid": "$datasource"
+                      },
+                      "definition": "label_values(watchable_depth,namespace)",
+                      "hide": 0,
+                      "includeAll": false,
+                      "multi": false,
+                      "name": "Namespace",
+                      "options": [],
+                      "query": {
+                          "qryType": 1,
+                          "query": "label_values(watchable_depth,namespace)",
+                          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+                      },
+                      "refresh": 1,
+                      "regex": "",
+                      "skipUrlSync": false,
+                      "sort": 0,
+                      "type": "query"
+                  },
+                  {
+                      "allValue": ".*",
+                      "current": {
+                          "selected": true,
+                          "text": [
+                              "All"
+                          ],
+                          "value": [
+                              "$__all"
+                          ]
+                      },
+                      "datasource": {
+                          "type": "prometheus",
+                          "uid": "$datasource"
+                      },
+                      "definition": "label_values(watchable_depth,runner)",
+                      "hide": 0,
+                      "includeAll": true,
+                      "multi": true,
+                      "name": "Runner",
+                      "options": [],
+                      "query": {
+                          "qryType": 1,
+                          "query": "label_values(watchable_depth,runner)",
+                          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+                      },
+                      "refresh": 2,
+                      "regex": "",
+                      "skipUrlSync": false,
+                      "sort": 0,
+                      "type": "query"
+                  },
+                  {
+                      "current": {
+                          "selected": false,
+                          "text": "default/eg/http",
+                          "value": "default/eg/http"
+                      },
+                      "description": "DefaultDomain is set to default/eg/http",
+                      "hide": 0,
+                      "includeAll": false,
+                      "multi": false,
+                      "name": "DefaultDomain",
+                      "options": [
+                          {
+                              "selected": true,
+                              "text": "default/eg/http",
+                              "value": "default/eg/http"
+                          }
+                      ],
+                      "query": "default/eg/http",
+                      "skipUrlSync": false,
+                      "type": "custom"
+                  }
+              ]
+          },
+          "time": {
+              "from": "now-6h",
+              "to": "now"
+          },
+          "timeRangeUpdatedDuringEditOrView": false,
+          "timepicker": {},
+          "timezone": "browser",
+          "title": "Global Ratelimit",
+          "uid": "R2xvYmFsIFJhdGVsaW1pdAo",
+          "version": 4,
+          "weekStart": ""
+      }
   resources-monitor.gen.json: |-
       {
          "description": "Memory and CPU Usage Monitor for Envoy Gateway and Envoy Proxy.\n",
@@ -8661,27 +9345,105 @@ data:
          "uid": "f7aeb41676b7865cf31ae49691325f91"
       }
 ---
-# Source: gateway-addons-helm/charts/fluent-bit/templates/clusterrole.yaml
+# Source: gateway-addons-helm/charts/alloy/templates/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: fluent-bit
+  name: alloy
   labels:
-    helm.sh/chart: fluent-bit-0.30.4
-    app.kubernetes.io/name: fluent-bit
+    helm.sh/chart: alloy-0.9.2
+    app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "2.1.4"
+    
+    app.kubernetes.io/version: "v1.4.3"
     app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: alloy
+    app.kubernetes.io/component: rbac
 rules:
+  # Rules which allow discovery.kubernetes to function.
   - apiGroups:
       - ""
+      - "discovery.k8s.io"
+      - "networking.k8s.io"
     resources:
-      - namespaces
+      - endpoints
+      - endpointslices
+      - ingresses
+      - nodes
+      - nodes/proxy
+      - nodes/metrics
       - pods
+      - services
     verbs:
       - get
       - list
       - watch
+  # Rules which allow loki.source.kubernetes and loki.source.podlogs to work.
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+      - pods/log
+      - namespaces
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - "monitoring.grafana.com"
+    resources:
+      - podlogs
+    verbs:
+      - get
+      - list
+      - watch
+  # Rules which allow mimir.rules.kubernetes to work.
+  - apiGroups: ["monitoring.coreos.com"]
+    resources:
+      - prometheusrules
+    verbs:
+      - get
+      - list
+      - watch
+  - nonResourceURLs:
+      - /metrics
+    verbs:
+      - get
+  # Rules for prometheus.kubernetes.*
+  - apiGroups: ["monitoring.coreos.com"]
+    resources:
+      - podmonitors
+      - servicemonitors
+      - probes
+    verbs:
+      - get
+      - list
+      - watch
+  # Rules which allow eventhandler to work.
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - get
+      - list
+      - watch
+  # needed for remote.kubernetes.*
+  - apiGroups: [""]
+    resources:
+      - "configmaps"
+      - "secrets"
+    verbs:
+      - get
+      - list
+      - watch
+  # needed for otelcol.processor.k8sattributes
+  - apiGroups: ["apps"]
+    resources: ["replicasets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["extensions"]
+    resources: ["replicasets"]
+    verbs: ["get", "list", "watch"]
 ---
 # Source: gateway-addons-helm/charts/prometheus/templates/clusterrole.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -8735,24 +9497,27 @@ rules:
     verbs:
       - get
 ---
-# Source: gateway-addons-helm/charts/fluent-bit/templates/clusterrolebinding.yaml
+# Source: gateway-addons-helm/charts/alloy/templates/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: fluent-bit
+  name: alloy
   labels:
-    helm.sh/chart: fluent-bit-0.30.4
-    app.kubernetes.io/name: fluent-bit
+    helm.sh/chart: alloy-0.9.2
+    app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "2.1.4"
+    
+    app.kubernetes.io/version: "v1.4.3"
     app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: alloy
+    app.kubernetes.io/component: rbac
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: fluent-bit
+  name: alloy
 subjects:
   - kind: ServiceAccount
-    name: fluent-bit
+    name: alloy
     namespace: monitoring
 ---
 # Source: gateway-addons-helm/charts/prometheus/templates/clusterrolebinding.yaml
@@ -8777,28 +9542,31 @@ roleRef:
   kind: ClusterRole
   name: prometheus
 ---
-# Source: gateway-addons-helm/charts/fluent-bit/templates/service.yaml
+# Source: gateway-addons-helm/charts/alloy/templates/service.yaml
 apiVersion: v1
 kind: Service
 metadata:
-  name: fluent-bit
-  namespace: monitoring
+  name: alloy
   labels:
-    helm.sh/chart: fluent-bit-0.30.4
-    app.kubernetes.io/name: fluent-bit
+    helm.sh/chart: alloy-0.9.2
+    app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "2.1.4"
+    
+    app.kubernetes.io/version: "v1.4.3"
     app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: alloy
+    app.kubernetes.io/component: networking
 spec:
   type: ClusterIP
-  ports:
-    - port: 2020
-      targetPort: http
-      protocol: TCP
-      name: http
   selector:
-    app.kubernetes.io/name: fluent-bit
+    app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
+  internalTrafficPolicy: Cluster
+  ports:
+    - name: http-metrics
+      port: 12345
+      targetPort: 12345
+      protocol: "TCP"
 ---
 # Source: gateway-addons-helm/charts/loki/templates/service-memberlist.yaml
 apiVersion: v1
@@ -8883,11 +9651,12 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.73.1
+    helm.sh/chart: opentelemetry-collector-0.108.0
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.88.0"
+    app.kubernetes.io/version: "0.111.0"
     app.kubernetes.io/managed-by: Helm
+    
     component: standalone-collector
 spec:
   type: ClusterIP
@@ -9013,84 +9782,82 @@ spec:
     app.kubernetes.io/name: tempo
     app.kubernetes.io/instance: gateway-addons-helm
 ---
-# Source: gateway-addons-helm/charts/fluent-bit/templates/daemonset.yaml
+# Source: gateway-addons-helm/charts/alloy/templates/controllers/daemonset.yaml
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: fluent-bit
-  namespace: monitoring
+  name: alloy
   labels:
-    helm.sh/chart: fluent-bit-0.30.4
-    app.kubernetes.io/name: fluent-bit
+    helm.sh/chart: alloy-0.9.2
+    app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "2.1.4"
+    
+    app.kubernetes.io/version: "v1.4.3"
     app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: alloy
 spec:
+  minReadySeconds: 10
   selector:
     matchLabels:
-      app.kubernetes.io/name: fluent-bit
+      app.kubernetes.io/name: alloy
       app.kubernetes.io/instance: gateway-addons-helm
   template:
     metadata:
       annotations:
-        checksum/config: 03d122555879033ccf6443369f73463490b100f195550b1483d337f497c749e3
-        checksum/luascripts: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-        fluentbit.io/exclude: "true"
-        prometheus.io/path: /api/v1/metrics/prometheus
-        prometheus.io/port: "2020"
-        prometheus.io/scrape: "true"
+        kubectl.kubernetes.io/default-container: alloy
       labels:
-        app.kubernetes.io/name: fluent-bit
+        app.kubernetes.io/name: alloy
         app.kubernetes.io/instance: gateway-addons-helm
     spec:
-      serviceAccountName: fluent-bit
-      hostNetwork: false
-      dnsPolicy: ClusterFirst
+      serviceAccountName: alloy
       containers:
-        - name: fluent-bit
-          image: "fluent/fluent-bit:2.1.4"
-          imagePullPolicy: Always
+        - name: alloy
+          image: docker.io/grafana/alloy:v1.4.3
+          imagePullPolicy: IfNotPresent
+          args:
+            - run
+            - /etc/alloy/config.alloy
+            - --storage.path=/tmp/alloy
+            - --server.http.listen-addr=0.0.0.0:12345
+            - --server.http.ui-path-prefix=/
+            - --stability.level=generally-available
+          env:
+            - name: ALLOY_DEPLOY_MODE
+              value: "helm"
+            - name: HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
           ports:
-            - name: http
-              containerPort: 2020
-              protocol: TCP
-          livenessProbe:
-            httpGet:
-              path: /
-              port: http
+            - containerPort: 12345
+              name: http-metrics
           readinessProbe:
             httpGet:
-              path: /api/v1/health
-              port: http
+              path: /-/ready
+              port: 12345
+              scheme: HTTP
+            initialDelaySeconds: 10
+            timeoutSeconds: 1
           volumeMounts:
-            - mountPath: /fluent-bit/etc/fluent-bit.conf
-              name: config
-              subPath: fluent-bit.conf
-            - mountPath: /fluent-bit/etc/custom_parsers.conf
-              name: config
-              subPath: custom_parsers.conf
-            - mountPath: /var/log
-              name: varlog
-            - mountPath: /var/lib/docker/containers
-              name: varlibdockercontainers
-              readOnly: true
-            - mountPath: /etc/machine-id
-              name: etcmachineid
-              readOnly: true
+            - name: config
+              mountPath: /etc/alloy
+        - name: config-reloader
+          image: ghcr.io/jimmidyson/configmap-reload:v0.12.0
+          args:
+            - --volume-dir=/etc/alloy
+            - --webhook-url=http://localhost:12345/-/reload
+          volumeMounts:
+            - name: config
+              mountPath: /etc/alloy
+          resources:
+            requests:
+              cpu: 1m
+              memory: 5Mi
+      dnsPolicy: ClusterFirst
       volumes:
         - name: config
           configMap:
-            name: fluent-bit
-        - hostPath:
-            path: /var/log
-          name: varlog
-        - hostPath:
-            path: /var/lib/docker/containers
-          name: varlibdockercontainers
-        - hostPath:
-            path: /etc/machine-id
-            type: File
-          name: etcmachineid
+            name: alloy
 ---
 # Source: gateway-addons-helm/charts/opentelemetry-collector/templates/deployment.yaml
 apiVersion: apps/v1
@@ -9099,11 +9866,12 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.73.1
+    helm.sh/chart: opentelemetry-collector-0.108.0
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.88.0"
+    app.kubernetes.io/version: "0.111.0"
     app.kubernetes.io/managed-by: Helm
+    
 spec:
   replicas: 1
   revisionHistoryLimit: 10
@@ -9117,7 +9885,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: 4eb06aca6ff4da4de927cb9ba7d8ceb883d2484011fbd670683037b8ea4d996c
+        checksum/config: 77c11cf41a890ec6a75a644880450d53887eca3e37511c3139cf0b3e8ebbe1ee
         
       labels:
         app.kubernetes.io/name: opentelemetry-collector
@@ -9131,12 +9899,11 @@ spec:
         {}
       containers:
         - name: opentelemetry-collector
-          command:
-            - /otelcol-contrib
+          args:
             - --config=/conf/relay.yaml
           securityContext:
             {}
-          image: "otel/opentelemetry-collector-contrib:0.88.0"
+          image: "otel/opentelemetry-collector-contrib:0.111.0"
           imagePullPolicy: IfNotPresent
           ports:
             

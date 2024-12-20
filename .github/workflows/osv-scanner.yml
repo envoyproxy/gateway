@@ -13,34 +13,40 @@ on:
   schedule:
   - cron: '44 15 * * 5'
 
+permissions:
+  contents: read
+
 jobs:
   scan-scheduled:
     if: ${{ github.event_name == 'push' || github.event_name == 'schedule' }}
-    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@7ac94f9d40028db4cacf8d53adec6626f5d3d2f7"  # v1.8.2
+    runs-on: ubuntu-latest
+    steps:
+    - uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@19ec1116569a47416e11a45848722b1af31a857b"  # v1.9.0
+      with:
+        scan-args: |-
+          --skip-git
+          --recursive
+          ./
     permissions:
       actions: read
       contents: read
       # Require writing security events to upload SARIF file to security tab
       security-events: write
-    with:
-      scan-args: |-
-        --skip-git
-        --recursive
-        ./
-        --config
-        tools/osv-scanner/config.toml
 
   scan-pr:
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
-    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@7ac94f9d40028db4cacf8d53adec6626f5d3d2f7"  # v1.8.2
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/setup-go@v5
+      with:
+        go-version: '1.23.4' # The Go version to download (if necessary) and use.
+    - uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@19ec1116569a47416e11a45848722b1af31a857b"  # v1.9.0
+      with:
+        scan-args: |-
+          --skip-git
+          --recursive
+          ./
     permissions:
       actions: read
       contents: read
       security-events: write
-    with:
-      scan-args: |-
-        --skip-git
-        --recursive
-        ./
-        --config
-        tools/osv-scanner/config.toml

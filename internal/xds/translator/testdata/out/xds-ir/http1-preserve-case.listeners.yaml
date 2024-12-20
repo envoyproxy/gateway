@@ -1,6 +1,6 @@
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       portValue: 10080
   defaultFilterChain:
     filters:
@@ -33,15 +33,14 @@
             resourceApiVersion: V3
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: http-10080
         useRemoteAddress: true
     name: first-listener
-  drainType: MODIFY_ONLY
   name: first-listener
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       portValue: 10081
   defaultFilterChain:
     filters:
@@ -75,9 +74,8 @@
             resourceApiVersion: V3
           routeConfigName: second-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: http-10081
         useRemoteAddress: true
     name: second-listener
-  drainType: MODIFY_ONLY
   name: second-listener
   perConnectionBufferLimitBytes: 32768

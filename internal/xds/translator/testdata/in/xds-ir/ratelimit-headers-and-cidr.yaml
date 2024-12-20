@@ -1,0 +1,88 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    traffic:
+      rateLimit:
+        global:
+          rules:
+          - headerMatches:
+            - name: "x-user-id"
+              exact: "one"
+            cidrMatch:
+              cidr: 192.168.0.0/16
+              maskLen: 16
+            limit:
+              requests: 5
+              unit: second
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "second-route"
+    hostname: "*"
+    traffic:
+      rateLimit:
+        global:
+          rules:
+          - headerMatches:
+            - name: "x-user-id"
+              distinct: true
+            - name: "foobar"
+              distinct: true
+            cidrMatch:
+              cidr: 192.168.0.0/16
+              maskLen: 16
+            limit:
+              requests: 5
+              unit: second
+    pathMatch:
+      exact: "example"
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "third-route"
+    hostname: "*"
+    traffic:
+      rateLimit:
+        global:
+          rules:
+          - headerMatches:
+            - name: "x-user-id"
+              exact: "one"
+            cidrMatch:
+              cidr: 192.168.0.0/16
+              maskLen: 16
+            limit:
+              requests: 5
+              unit: second
+          - headerMatches:
+            - name: "x-user-id"
+              exact: "two"
+            - name: "foobar"
+              distinct: true
+            cidrMatch:
+              cidr: 192.169.0.0/16
+              maskLen: 16
+            limit:
+              requests: 10
+              unit: second
+    destination:
+      name: "third-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000

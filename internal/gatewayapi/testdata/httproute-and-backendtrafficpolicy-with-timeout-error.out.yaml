@@ -158,6 +158,8 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+        directResponse:
+          statusCode: 500
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
@@ -169,7 +171,4 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        traffic:
-          timeout:
-            http:
-              requestTimeout: 1s
+        timeout: 1s

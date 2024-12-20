@@ -16,6 +16,7 @@ metadata:
   name: proxy-config
   namespace: envoy-gateway-system
 spec:
+  ipFamily: IPv4
   provider:
     type: Kubernetes
     kubernetes:
@@ -68,6 +69,15 @@ spec:
                     namespace: monitoring
                     port: 8080
                 type: HTTP
+        - type: Listener
+          format:
+            type: Text
+            text: |
+              LISTENER ACCESS LOG %UPSTREAM_PROTOCOL% %RESPONSE_CODE%
+          sinks:
+            - type: File
+              file:
+                path: /dev/stdout
     tracing:
       provider:
         backendRefs:
@@ -115,6 +125,7 @@ metadata:
   name: upgrade-config
   namespace: envoy-gateway-system
 spec:
+  ipFamily: IPv4
   provider:
     type: Kubernetes
     kubernetes:
@@ -149,6 +160,7 @@ metadata:
   name: merge-gateways-config
   namespace: envoy-gateway-system
 spec:
+  ipFamily: IPv4
   mergeGateways: true
 ---
 kind: GatewayClass
@@ -157,6 +169,11 @@ metadata:
   name: internet
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: proxy-config
+    namespace: envoy-gateway-system
 ---
 kind: GatewayClass
 apiVersion: gateway.networking.k8s.io/v1
@@ -164,5 +181,10 @@ metadata:
   name: private
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: proxy-config
+    namespace: envoy-gateway-system
 ---
 

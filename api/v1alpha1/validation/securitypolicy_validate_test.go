@@ -41,7 +41,7 @@ func TestValidateSecurityPolicy(t *testing.T) {
 			expected: false,
 		},
 		{
-			name: "valid security policy with url",
+			name: "valid security policy with URI issuer",
 			policy: &egv1a1.SecurityPolicy{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       egv1a1.KindSecurityPolicy,
@@ -69,7 +69,7 @@ func TestValidateSecurityPolicy(t *testing.T) {
 			expected: true,
 		},
 		{
-			name: "valid security policy with email",
+			name: "valid security policy with Email issuer",
 			policy: &egv1a1.SecurityPolicy{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       egv1a1.KindSecurityPolicy,
@@ -86,6 +86,34 @@ func TestValidateSecurityPolicy(t *testing.T) {
 								Name:      "test",
 								Issuer:    "test@test.local",
 								Audiences: []string{"test.local"},
+								RemoteJWKS: egv1a1.RemoteJWKS{
+									URI: "https://test.local/jwt/public-key/jwks.json",
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "valid security policy with non URI/Email Issuer",
+			policy: &egv1a1.SecurityPolicy{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       egv1a1.KindSecurityPolicy,
+					APIVersion: egv1a1.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.SecurityPolicySpec{
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{
+							{
+								Name:      "test",
+								Issuer:    "foo.bar.local",
+								Audiences: []string{"foo.bar.local"},
 								RemoteJWKS: egv1a1.RemoteJWKS{
 									URI: "https://test.local/jwt/public-key/jwks.json",
 								},

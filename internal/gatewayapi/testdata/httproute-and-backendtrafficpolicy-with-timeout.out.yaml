@@ -332,6 +332,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
+        timeout: 1s
         traffic:
           timeout:
             http:

@@ -88,10 +88,13 @@ func validateTLSSecretsData(secrets []*corev1.Secret, host *gwapiv1.Hostname) er
 func verifyHostname(cert *x509.Certificate, host *gwapiv1.Hostname) ([]string, error) {
 	var matchedHosts []string
 
+	listenerContext := ListenerContext{
+		Listener: &gwapiv1.Listener{Hostname: host},
+	}
 	if len(cert.DNSNames) > 0 {
-		matchedHosts = computeHosts(cert.DNSNames, host)
+		matchedHosts = computeHosts(cert.DNSNames, &listenerContext)
 	} else {
-		matchedHosts = computeHosts([]string{cert.Subject.CommonName}, host)
+		matchedHosts = computeHosts([]string{cert.Subject.CommonName}, &listenerContext)
 	}
 
 	if len(matchedHosts) > 0 {

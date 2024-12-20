@@ -11,7 +11,8 @@ accesslog:
       protocol: "%PROTOCOL%"
       response_code: "%RESPONSE_CODE%"
   als:
-  - destination:
+  - name: als
+    destination:
       name: accesslog/monitoring/envoy-als/port/9000
       settings:
       - addressType: IP
@@ -43,7 +44,7 @@ accesslog:
         protocol: "GRPC"
 http:
 - name: "first-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 10080
   hostnames:
   - "*"
@@ -59,6 +60,3 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
-    directResponse:
-      body: "Unknown custom filter type: UnsupportedType"
-      statusCode: 500

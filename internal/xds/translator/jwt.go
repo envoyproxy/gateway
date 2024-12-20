@@ -22,6 +22,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/protocov"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -76,11 +77,7 @@ func buildHCMJWTFilter(irListener *ir.HTTPListener) (*hcmv3.HttpFilter, error) {
 		return nil, err
 	}
 
-	if err := jwtAuthnProto.ValidateAll(); err != nil {
-		return nil, err
-	}
-
-	jwtAuthnAny, err := anypb.New(jwtAuthnProto)
+	jwtAuthnAny, err := protocov.ToAnyWithValidation(jwtAuthnProto)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +120,6 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 					},
 					CacheDuration: &durationpb.Duration{Seconds: 5 * 60},
 					AsyncFetch:    &jwtauthnv3.JwksAsyncFetch{},
-					RetryPolicy:   &corev3.RetryPolicy{},
 				},
 			}
 
@@ -139,9 +135,13 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 				Issuer:              irProvider.Issuer,
 				Audiences:           irProvider.Audiences,
 				JwksSourceSpecifier: remote,
-				PayloadInMetadata:   irProvider.Issuer,
+				PayloadInMetadata:   irProvider.Name,
 				ClaimToHeaders:      claimToHeaders,
 				Forward:             true,
+				NormalizePayloadInMetadata: &jwtauthnv3.JwtProvider_NormalizePayload{
+					// Normalize the scopes to facilitate matching in Authorization.
+					SpaceDelimitedClaims: []string{"scope"},
+				},
 			}
 
 			if irProvider.RecomputeRoute != nil {
@@ -210,7 +210,7 @@ func buildXdsUpstreamTLSSocket(sni string) (*corev3.TransportSocket, error) {
 		},
 	}
 
-	tlsCtxAny, err := anypb.New(tlsCtxProto)
+	tlsCtxAny, err := protocov.ToAnyWithValidation(tlsCtxProto)
 	if err != nil {
 		return nil, err
 	}
@@ -243,7 +243,7 @@ func (*jwt) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 			RequirementSpecifier: &jwtauthnv3.PerRouteConfig_RequirementName{RequirementName: irRoute.Name},
 		}
 
-		routeCfgAny, err := anypb.New(routeCfgProto)
+		routeCfgAny, err := protocov.ToAnyWithValidation(routeCfgProto)
 		if err != nil {
 			return err
 		}

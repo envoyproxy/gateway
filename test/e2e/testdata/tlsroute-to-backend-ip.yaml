@@ -1,0 +1,29 @@
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TLSRoute
+metadata:
+  name: tlsroute-to-backend-ip
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+    sectionName: tls
+  hostnames:
+  - "example.com"
+  rules:
+  - backendRefs:
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: backend-tls-ip
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tls-backend-2-clusterip
+  namespace: gateway-conformance-infra
+spec:
+  selector:
+    app: tls-backend-2
+  ports:
+  - protocol: TCP
+    port: 443
+    targetPort: 8443

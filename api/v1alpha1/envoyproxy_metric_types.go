@@ -15,6 +15,7 @@ type ProxyMetrics struct {
 	// Prometheus defines the configuration for Admin endpoint `/stats/prometheus`.
 	Prometheus *ProxyPrometheusProvider `json:"prometheus,omitempty"`
 	// Sinks defines the metric sinks where metrics are sent to.
+	// +kubebuilder:validation:MaxItems=16
 	Sinks []ProxyMetricSink `json:"sinks,omitempty"`
 	// Matches defines configuration for selecting specific metrics instead of generating all metrics stats
 	// that are enabled by default. This helps reduce CPU and memory overhead in Envoy, but eliminating some stats
@@ -26,11 +27,20 @@ type ProxyMetrics struct {
 	Matches []StringMatch `json:"matches,omitempty"`
 
 	// EnableVirtualHostStats enables envoy stat metrics for virtual hosts.
-	EnableVirtualHostStats bool `json:"enableVirtualHostStats,omitempty"`
+	//
+	// +optional
+	EnableVirtualHostStats *bool `json:"enableVirtualHostStats,omitempty"`
 
 	// EnablePerEndpointStats enables per endpoint envoy stats metrics.
 	// Please use with caution.
-	EnablePerEndpointStats bool `json:"enablePerEndpointStats,omitempty"`
+	//
+	// +optional
+	EnablePerEndpointStats *bool `json:"enablePerEndpointStats,omitempty"`
+
+	// EnableRequestResponseSizesStats enables publishing of histograms tracking header and body sizes of requests and responses.
+	//
+	// +optional
+	EnableRequestResponseSizesStats *bool `json:"enableRequestResponseSizesStats,omitempty"`
 }
 
 // ProxyMetricSink defines the sink of metrics.
@@ -54,7 +64,11 @@ type ProxyMetricSink struct {
 // ProxyOpenTelemetrySink defines the configuration for OpenTelemetry sink.
 //
 // +kubebuilder:validation:XValidation:message="host or backendRefs needs to be set",rule="has(self.host) || self.backendRefs.size() > 0"
+// +kubebuilder:validation:XValidation:message="BackendRefs must be used, backendRef is not supported.",rule="!has(self.backendRef)"
+// +kubebuilder:validation:XValidation:message="only supports Service kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service') : true"
+// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core group.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\")) : true"
 type ProxyOpenTelemetrySink struct {
+	BackendCluster `json:",inline"`
 	// Host define the service hostname.
 	// Deprecated: Use BackendRefs instead.
 	//
@@ -68,15 +82,6 @@ type ProxyOpenTelemetrySink struct {
 	// +kubebuilder:validation:Maximum=65535
 	// +kubebuilder:default=4317
 	Port int32 `json:"port,omitempty"`
-	// BackendRefs references a Kubernetes object that represents the
-	// backend server to which the metric will be sent.
-	// Only Service kind is supported for now.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxItems=1
-	// +kubebuilder:validation:XValidation:message="only support Service kind.",rule="self.all(f, f.kind == 'Service')"
-	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core group.",rule="self.all(f, f.group == '')"
-	BackendRefs []BackendRef `json:"backendRefs,omitempty"`
 
 	// TODO: add support for customizing OpenTelemetry sink in https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/stat_sinks/open_telemetry/v3/open_telemetry.proto#envoy-v3-api-msg-extensions-stat-sinks-open-telemetry-v3-sinkconfig
 }

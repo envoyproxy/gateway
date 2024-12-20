@@ -16,6 +16,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
 
 // GatewayContext wraps a Gateway and provides helper methods for
@@ -29,7 +30,7 @@ type GatewayContext struct {
 
 // ResetListeners resets the listener statuses and re-generates the GatewayContext
 // ListenerContexts from the Gateway spec.
-func (g *GatewayContext) ResetListeners(resource *Resources) {
+func (g *GatewayContext) ResetListeners(resource *resource.Resources) {
 	numListeners := len(g.Spec.Listeners)
 	g.Status.Listeners = make([]gwapiv1.ListenerStatus, numListeners)
 	g.listeners = make([]*ListenerContext, numListeners)
@@ -46,7 +47,7 @@ func (g *GatewayContext) ResetListeners(resource *Resources) {
 	g.attachEnvoyProxy(resource)
 }
 
-func (g *GatewayContext) attachEnvoyProxy(resources *Resources) {
+func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources) {
 	if g.Spec.Infrastructure != nil && g.Spec.Infrastructure.ParametersRef != nil && !IsMergeGatewaysEnabled(resources) {
 		ref := g.Spec.Infrastructure.ParametersRef
 		if string(ref.Group) == egv1a1.GroupVersion.Group && ref.Kind == egv1a1.KindEnvoyProxy {
@@ -75,7 +76,8 @@ type ListenerContext struct {
 }
 
 func (l *ListenerContext) SetSupportedKinds(kinds ...gwapiv1.RouteGroupKind) {
-	l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds = kinds
+	l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds = make([]gwapiv1.RouteGroupKind, 0, len(kinds))
+	l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds = append(l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds, kinds...)
 }
 
 func (l *ListenerContext) IncrementAttachedRoutes() {
@@ -210,7 +212,7 @@ func GetRouteType(route RouteContext) gwapiv1.Kind {
 func GetHostnames(route RouteContext) []string {
 	rv := reflect.ValueOf(route).Elem()
 	kind := rv.FieldByName("Kind").String()
-	if kind == KindTCPRoute || kind == KindUDPRoute {
+	if kind == resource.KindTCPRoute || kind == resource.KindUDPRoute {
 		return nil
 	}
 
@@ -236,21 +238,26 @@ func GetRouteStatus(route RouteContext) *gwapiv1.RouteStatus {
 	return &rs
 }
 
-// GetRouteParentContext returns RouteParentContext by using the Route
-// objects' ParentReference.
+// GetRouteParentContext returns RouteParentContext by using the Route objects' ParentReference.
+// It creates a new RouteParentContext and add a new RouteParentStatus to the Route's Status if the ParentReference is not found.
 func GetRouteParentContext(route RouteContext, forParentRef gwapiv1.ParentReference) *RouteParentContext {
 	rv := reflect.ValueOf(route).Elem()
 	pr := rv.FieldByName("ParentRefs")
+
+	// If the ParentRefs field is nil, initialize it.
 	if pr.IsNil() {
 		mm := reflect.MakeMap(reflect.TypeOf(map[gwapiv1.ParentReference]*RouteParentContext{}))
 		pr.Set(mm)
 	}
 
+	// If the RouteParentContext is already in the RouteContext, return it.
 	if p := pr.MapIndex(reflect.ValueOf(forParentRef)); p.IsValid() && !p.IsZero() {
 		ctx := p.Interface().(*RouteParentContext)
 		return ctx
 	}
 
+	// Verify that the ParentReference is present in the Route.Spec.ParentRefs.
+	// This is just a sanity check, the parentRef should always be present, otherwise it's a programming error.
 	var parentRef *gwapiv1.ParentReference
 	specParentRefs := rv.FieldByName("Spec").FieldByName("ParentRefs")
 	for i := 0; i < specParentRefs.Len(); i++ {
@@ -264,25 +271,19 @@ func GetRouteParentContext(route RouteContext, forParentRef gwapiv1.ParentRefere
 		panic("parentRef not found")
 	}
 
+	// Find the parent in the Route's Status.
 	routeParentStatusIdx := -1
-	defaultNamespace := gwapiv1.Namespace(metav1.NamespaceDefault)
 	statusParents := rv.FieldByName("Status").FieldByName("Parents")
+
 	for i := 0; i < statusParents.Len(); i++ {
 		p := statusParents.Index(i).FieldByName("ParentRef").Interface().(gwapiv1.ParentReference)
-		// For those non-v1 routes, their underlying type of `ParentReference` is v1 as well.
-		// So we can skip upgrading these routes for simplicity.
-		if forParentRef.Namespace == nil {
-			forParentRef.Namespace = &defaultNamespace
-		}
-		if p.Namespace == nil {
-			p.Namespace = &defaultNamespace
-		}
-		if reflect.DeepEqual(p, forParentRef) {
+		if isParentRefEqual(p, *parentRef, route.GetNamespace()) {
 			routeParentStatusIdx = i
 			break
 		}
 	}
 
+	// If the parent is not found in the Route's Status, create a new RouteParentStatus and add it to the Route's Status.
 	if routeParentStatusIdx == -1 {
 		rParentStatus := gwapiv1a2.RouteParentStatus{
 			ControllerName: gwapiv1a2.GatewayController(rv.FieldByName("GatewayControllerName").String()),
@@ -292,6 +293,7 @@ func GetRouteParentContext(route RouteContext, forParentRef gwapiv1.ParentRefere
 		routeParentStatusIdx = statusParents.Len() - 1
 	}
 
+	// Also add the RouteParentContext to the RouteContext.
 	ctx := &RouteParentContext{
 		ParentReference:      parentRef,
 		routeParentStatusIdx: routeParentStatusIdx,
@@ -300,6 +302,34 @@ func GetRouteParentContext(route RouteContext, forParentRef gwapiv1.ParentRefere
 	rctx.Elem().FieldByName(string(GetRouteType(route))).Set(rv.Field(1))
 	pr.SetMapIndex(reflect.ValueOf(forParentRef), rctx)
 	return ctx
+}
+
+func isParentRefEqual(ref1, ref2 gwapiv1.ParentReference, routeNS string) bool {
+	defaultGroup := (*gwapiv1.Group)(&gwapiv1.GroupVersion.Group)
+	if ref1.Group == nil {
+		ref1.Group = defaultGroup
+	}
+	if ref2.Group == nil {
+		ref2.Group = defaultGroup
+	}
+
+	defaultKind := gwapiv1.Kind(resource.KindGateway)
+	if ref1.Kind == nil {
+		ref1.Kind = &defaultKind
+	}
+	if ref2.Kind == nil {
+		ref2.Kind = &defaultKind
+	}
+
+	// If the parent's namespace is not set, default to the namespace of the Route.
+	defaultNS := gwapiv1.Namespace(routeNS)
+	if ref1.Namespace == nil {
+		ref1.Namespace = &defaultNS
+	}
+	if ref2.Namespace == nil {
+		ref2.Namespace = &defaultNS
+	}
+	return reflect.DeepEqual(ref1, ref2)
 }
 
 // RouteParentContext wraps a ParentReference and provides helper methods for

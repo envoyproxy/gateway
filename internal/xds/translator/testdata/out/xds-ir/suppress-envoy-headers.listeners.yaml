@@ -1,8 +1,7 @@
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       portValue: 10080
-  drainType: MODIFY_ONLY
   filterChains:
   - filterChainMatch:
       serverNames:
@@ -30,7 +29,7 @@
             resourceApiVersion: V3
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: https
+        statPrefix: https-10080
         useRemoteAddress: true
     name: first-listener
     transportSocket:
@@ -50,6 +49,8 @@
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
+        disableStatefulSessionResumption: true
+        disableStatelessSessionResumption: true
   listenerFilters:
   - name: envoy.filters.listener.tls_inspector
     typedConfig:

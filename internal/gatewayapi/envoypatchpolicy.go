@@ -14,11 +14,12 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.EnvoyPatchPolicy, xdsIR XdsIRMap) {
+func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.EnvoyPatchPolicy, xdsIR resource.XdsIRMap) {
 	// Sort based on priority
 	sort.Slice(envoyPatchPolicies, func(i, j int) bool {
 		return envoyPatchPolicies[i].Spec.Priority < envoyPatchPolicies[j].Spec.Priority
@@ -33,10 +34,8 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 			irKey        string
 		)
 
-		targetNs := policy.Namespace
-
 		if t.MergeGateways {
-			targetKind = KindGatewayClass
+			targetKind = resource.KindGatewayClass
 			irKey = string(t.GatewayClassName)
 
 			ancestorRefs = []gwapiv1a2.ParentReference{
@@ -47,9 +46,9 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 				},
 			}
 		} else {
-			targetKind = KindGateway
+			targetKind = resource.KindGateway
 			gatewayNN := types.NamespacedName{
-				Namespace: targetNs,
+				Namespace: policy.Namespace,
 				Name:      string(policy.Spec.TargetRef.Name),
 			}
 			// It must exist since the gateways have already been processed
@@ -109,32 +108,14 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 			continue
 		}
 
-		// Ensure EnvoyPatchPolicy and target Gateway are in the same namespace
-		if policy.Namespace != targetNs {
-			message := fmt.Sprintf("Namespace:%s TargetRef.Namespace:%s, EnvoyPatchPolicy can only target a %s in the same namespace.",
-				policy.Namespace, targetNs, targetKind)
-
-			resolveErr = &status.PolicyResolveError{
-				Reason:  gwapiv1a2.PolicyReasonInvalid,
-				Message: message,
-			}
-			status.SetResolveErrorForPolicyAncestors(&policy.Status,
-				ancestorRefs,
-				t.GatewayControllerName,
-				policy.Generation,
-				resolveErr,
-			)
-
-			continue
-		}
-
 		// Save the patch
 		for _, patch := range policy.Spec.JSONPatches {
 			irPatch := ir.JSONPatchConfig{}
 			irPatch.Type = string(patch.Type)
 			irPatch.Name = patch.Name
-			irPatch.Operation.Op = string(patch.Operation.Op)
+			irPatch.Operation.Op = ir.JSONPatchOp(patch.Operation.Op)
 			irPatch.Operation.Path = patch.Operation.Path
+			irPatch.Operation.JSONPath = patch.Operation.JSONPath
 			irPatch.Operation.From = patch.Operation.From
 			irPatch.Operation.Value = patch.Operation.Value
 

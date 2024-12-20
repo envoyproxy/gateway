@@ -1,0 +1,60 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    pathMatch:
+      exact: "baz"
+    destination:
+      name: "third-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+    security:
+      oidc:
+        name: securitypolicy/envoy-gateway/policy-for-gateway
+        clientID: client1.apps.googleusercontent.com
+        clientSecret: Y2xpZW50MTpzZWNyZXQK
+        cookieSuffix: b0a1b740
+        defaultRefreshTokenTTL: 24h0m0s
+        defaultTokenTTL: 30m0s
+        forwardAccessToken: true
+        hmacSecret: qrOYACHXoe7UEDI/raOjNSx+Z9ufXSc/22C3T6X/zPY=
+        logoutPath: /bar/logout
+        provider:
+          authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
+          destination:
+            name: securitypolicy/envoy-gateway/policy-for-gateway/0
+            settings:
+            - addressType: FQDN
+              endpoints:
+              - host: oauth.foo.com
+                port: 443
+              protocol: HTTPS
+              weight: 1
+          tokenEndpoint: https://oauth.foo.com/token
+          traffic:
+            retry:
+              numRetries: 3
+              perRetry:
+                backOff:
+                  baseInterval: 1s
+                  maxInterval: 5s
+              retryOn:
+                triggers:
+                - "5xx"
+                - gateway-error
+                - reset
+        redirectPath: /bar/oauth2/callback
+        redirectURL: https://www.example.com/bar/oauth2/callback
+        refreshToken: true
+        scopes:
+        - openid

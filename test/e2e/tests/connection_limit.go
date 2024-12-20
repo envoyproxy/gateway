@@ -4,7 +4,6 @@
 // the root of the repo.
 
 //go:build e2e
-// +build e2e
 
 package tests
 
@@ -26,6 +25,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/test/utils/prometheus"
 )
 
@@ -51,7 +51,7 @@ var ConnectionLimitTest = suite.ConformanceTest{
 
 			ancestorRef := gwapiv1a2.ParentReference{
 				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-				Kind:      gatewayapi.KindPtr(gatewayapi.KindGateway),
+				Kind:      gatewayapi.KindPtr(resource.KindGateway),
 				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 				Name:      gwapiv1.ObjectName(gwNN.Name),
 			}
@@ -84,7 +84,7 @@ var ConnectionLimitTest = suite.ConformanceTest{
 				}
 			}
 
-			prefix := "http"
+			prefix := "http-10080"
 			gtwName := "connection-limit-gateway"
 			promQL := fmt.Sprintf(`envoy_connection_limit_limited_connections{envoy_connection_limit_prefix="%s",gateway_envoyproxy_io_owning_gateway_name="%s"}`, prefix, gtwName)
 

@@ -90,6 +90,10 @@
                       timeout: 10s
                       uri: https://envoy-gateway:18002/42d30b4a4cc631415e6e48c02d244700da327201eb273f752cacf745715b31d9.wasm
                     sha256: 2a19e4f337e5223d7287e7fccd933fb01905deaff804292e5257f8c681b82bee
+                environmentVariables:
+                  hostEnvKeys:
+                  - SOME_KEY
+                  - ANOTHER_KEY
                 runtime: envoy.wasm.runtime.v8
                 vmId: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/2
         - name: envoy.filters.http.router
@@ -105,9 +109,8 @@
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/http
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: http-10080
         useRemoteAddress: true
     name: envoy-gateway/gateway-1/http
-  drainType: MODIFY_ONLY
   name: envoy-gateway/gateway-1/http
   perConnectionBufferLimitBytes: 32768

@@ -1,0 +1,63 @@
+envoyPatchPolicies:
+- status:
+    ancestors:
+    - ancestorRef:
+        group: "gateway.networking.k8s.io"
+        kind: "Gateway"
+        namespace: "default"
+        name: "foobar"
+  name: "first-policy"
+  namespace: "default"
+  jsonPatches:
+  - type: "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
+    name: second-listener
+    operation:
+      op: add
+      value:
+        clusterName: second-route-dest
+        endpoints:
+        - lbEndpoints:
+          - endpoint:
+              address:
+                socketAddress:
+                  address: 4.5.6.7
+                  portValue: 50000
+            loadBalancingWeight: 1
+          loadBalancingWeight: 1
+          locality:
+            region: second-route-dest/backend/0
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  tls:
+    alpnProtocols:
+    - h2
+    - http/1.1
+    certificates:
+    - name: secret-1
+      # byte slice representation of "key-data"
+      serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+      # byte slice representation of "key-data"
+      privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+    - name: secret-2
+      serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+      privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    headerMatches:
+    - name: user
+      stringMatch:
+      exact: "jason"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000

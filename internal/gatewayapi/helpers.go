@@ -24,6 +24,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
@@ -81,9 +82,11 @@ var (
 	PathMatchTypeDerefOr       = ptr.Deref[gwapiv1.PathMatchType]
 	GRPCMethodMatchTypeDerefOr = ptr.Deref[gwapiv1.GRPCMethodMatchType]
 	HeaderMatchTypeDerefOr     = ptr.Deref[gwapiv1.HeaderMatchType]
+	GRPCHeaderMatchTypeDerefOr = ptr.Deref[gwapiv1.GRPCHeaderMatchType]
 	QueryParamMatchTypeDerefOr = ptr.Deref[gwapiv1.QueryParamMatchType]
 )
 
+// Deprecated: use k8s.io/utils/ptr ptr.Deref instead
 func NamespaceDerefOr(namespace *gwapiv1.Namespace, defaultNamespace string) string {
 	if namespace != nil && *namespace != "" {
 		return string(*namespace)
@@ -114,7 +117,7 @@ func IsRefToGateway(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.ParentRe
 		return false
 	}
 
-	if parentRef.Kind != nil && string(*parentRef.Kind) != KindGateway {
+	if parentRef.Kind != nil && string(*parentRef.Kind) != resource.KindGateway {
 		return false
 	}
 
@@ -178,6 +181,9 @@ func ValidateHTTPRouteFilter(filter *gwapiv1.HTTPRouteFilter, extGKs ...schema.G
 		switch {
 		case filter.ExtensionRef == nil:
 			return errors.New("extensionRef field must be specified for an extended filter")
+		case string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
+			string(filter.ExtensionRef.Kind) == egv1a1.KindHTTPRouteFilter:
+			return nil
 		default:
 			for _, gk := range extGKs {
 				if filter.ExtensionRef.Group == gwapiv1.Group(gk.Group) &&
@@ -262,12 +268,12 @@ func servicePortToContainerPort(servicePort int32, envoyProxy *egv1a1.EnvoyProxy
 	return servicePort
 }
 
-// computeHosts returns a list of the intersecting hostnames between the route
-// and the listener.
-func computeHosts(routeHostnames []string, listenerHostname *gwapiv1.Hostname) []string {
+// computeHosts returns a list of intersecting listener hostnames and route hostnames
+// that don't intersect with other listener hostnames.
+func computeHosts(routeHostnames []string, listenerContext *ListenerContext) []string {
 	var listenerHostnameVal string
-	if listenerHostname != nil {
-		listenerHostnameVal = string(*listenerHostname)
+	if listenerContext != nil && listenerContext.Hostname != nil {
+		listenerHostnameVal = string(*listenerContext.Hostname)
 	}
 
 	// No route hostnames specified: use the listener hostname if specified,
@@ -280,8 +286,9 @@ func computeHosts(routeHostnames []string, listenerHostname *gwapiv1.Hostname) [
 		return []string{"*"}
 	}
 
-	var hostnames []string
+	hostnamesSet := sets.NewString()
 
+	// Find intersecting hostnames
 	for i := range routeHostnames {
 		routeHostname := routeHostnames[i]
 
@@ -290,28 +297,47 @@ func computeHosts(routeHostnames []string, listenerHostname *gwapiv1.Hostname) [
 		switch {
 		// No listener hostname: use the route hostname.
 		case len(listenerHostnameVal) == 0:
-			hostnames = append(hostnames, routeHostname)
+			hostnamesSet.Insert(routeHostname)
 
 		// Listener hostname matches the route hostname: use it.
 		case listenerHostnameVal == routeHostname:
-			hostnames = append(hostnames, routeHostname)
+			hostnamesSet.Insert(routeHostname)
 
 		// Listener has a wildcard hostname: check if the route hostname matches.
 		case strings.HasPrefix(listenerHostnameVal, "*"):
 			if hostnameMatchesWildcardHostname(routeHostname, listenerHostnameVal) {
-				hostnames = append(hostnames, routeHostname)
+				hostnamesSet.Insert(routeHostname)
 			}
 
 		// Route has a wildcard hostname: check if the listener hostname matches.
 		case strings.HasPrefix(routeHostname, "*"):
 			if hostnameMatchesWildcardHostname(listenerHostnameVal, routeHostname) {
-				hostnames = append(hostnames, listenerHostnameVal)
+				hostnamesSet.Insert(listenerHostnameVal)
 			}
 
 		}
 	}
 
-	return hostnames
+	// Filter out route hostnames that intersect with other listener hostnames
+	var listeners []*ListenerContext
+	if listenerContext != nil && listenerContext.gateway != nil {
+		listeners = listenerContext.gateway.listeners
+	}
+
+	for _, listener := range listeners {
+		if listenerContext == listener {
+			continue
+		}
+		if listenerContext != nil && listenerContext.Port != listener.Port {
+			continue
+		}
+		if listener.Hostname == nil {
+			continue
+		}
+		hostnamesSet.Delete(string(*listener.Hostname))
+	}
+
+	return hostnamesSet.List()
 }
 
 // hostnameMatchesWildcardHostname returns true if hostname has the non-wildcard
@@ -396,6 +422,7 @@ func irRouteDestinationName(route RouteContext, ruleIdx int) string {
 	return fmt.Sprintf("%srule/%d", irRoutePrefix(route), ruleIdx)
 }
 
+// irTLSConfigs produces a defaulted IR TLSConfig
 func irTLSConfigs(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
 	if len(tlsSecrets) == 0 {
 		return nil
@@ -411,6 +438,21 @@ func irTLSConfigs(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
 			PrivateKey:  tlsSecret.Data[corev1.TLSPrivateKeyKey],
 		}
 	}
+
+	return tlsListenerConfigs
+}
+
+// irTLSConfigsForTCPListener creates an IR TLSConfig with defaults appropriate
+// for TCP/TLS routes, e.g. disabling ALPN
+func irTLSConfigsForTCPListener(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
+	tlsListenerConfigs := irTLSConfigs(tlsSecrets...)
+
+	// Envoy Gateway disables ALPN by default for non-HTTPS listeners
+	// by setting an empty slice instead of a nil slice
+	if tlsListenerConfigs != nil {
+		tlsListenerConfigs.ALPNProtocols = []string{}
+	}
+
 	return tlsListenerConfigs
 }
 
@@ -422,7 +464,7 @@ func irTLSCACertName(namespace, name string) string {
 	return fmt.Sprintf("%s/%s/%s", namespace, name, caCertKey)
 }
 
-func IsMergeGatewaysEnabled(resources *Resources) bool {
+func IsMergeGatewaysEnabled(resources *resource.Resources) bool {
 	return resources.EnvoyProxyForGatewayClass != nil && resources.EnvoyProxyForGatewayClass.Spec.MergeGateways != nil && *resources.EnvoyProxyForGatewayClass.Spec.MergeGateways
 }
 
@@ -438,7 +480,7 @@ func protocolSliceToStringSlice(protocols []gwapiv1.ProtocolType) []string {
 func getAncestorRefForPolicy(gatewayNN types.NamespacedName, sectionName *gwapiv1a2.SectionName) gwapiv1a2.ParentReference {
 	return gwapiv1a2.ParentReference{
 		Group:       GroupPtr(gwapiv1.GroupName),
-		Kind:        KindPtr(KindGateway),
+		Kind:        KindPtr(resource.KindGateway),
 		Namespace:   NamespacePtr(gatewayNN.Namespace),
 		Name:        gwapiv1.ObjectName(gatewayNN.Name),
 		SectionName: sectionName,
@@ -559,4 +601,65 @@ func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, 
 	}
 
 	return ret
+}
+
+// Sets *target to value if and only if *target is nil
+func setIfNil[T any](target **T, value *T) {
+	if *target == nil {
+		*target = value
+	}
+}
+
+// getServiceIPFamily returns the IP family configuration from a Kubernetes Service
+// following the dual-stack service configuration scenarios:
+// https://kubernetes.io/docs/concepts/services-networking/dual-stack/#dual-stack-service-configuration-scenarios
+//
+// The IP family is determined in the following order:
+// 1. Service.Spec.IPFamilyPolicy == RequireDualStack -> DualStack
+// 2. Service.Spec.IPFamilies length > 1 -> DualStack
+// 3. Service.Spec.IPFamilies[0] -> IPv4 or IPv6
+// 4. nil if not specified
+func getServiceIPFamily(service *corev1.Service) *egv1a1.IPFamily {
+	if service == nil {
+		return nil
+	}
+
+	// If ipFamilyPolicy is RequireDualStack, return DualStack
+	if service.Spec.IPFamilyPolicy != nil &&
+		*service.Spec.IPFamilyPolicy == corev1.IPFamilyPolicyRequireDualStack {
+		return ptr.To(egv1a1.DualStack)
+	}
+
+	// Check ipFamilies array
+	if len(service.Spec.IPFamilies) > 0 {
+		if len(service.Spec.IPFamilies) > 1 {
+			return ptr.To(egv1a1.DualStack)
+		}
+		switch service.Spec.IPFamilies[0] {
+		case corev1.IPv4Protocol:
+			return ptr.To(egv1a1.IPv4)
+		case corev1.IPv6Protocol:
+			return ptr.To(egv1a1.IPv6)
+		}
+	}
+
+	return nil
+}
+
+// getEnvoyIPFamily returns the IPFamily configuration from EnvoyProxy
+func getEnvoyIPFamily(envoyProxy *egv1a1.EnvoyProxy) *egv1a1.IPFamily {
+	if envoyProxy == nil || envoyProxy.Spec.IPFamily == nil {
+		return nil
+	}
+
+	switch *envoyProxy.Spec.IPFamily {
+	case egv1a1.IPv4:
+		return ptr.To(egv1a1.IPv4)
+	case egv1a1.IPv6:
+		return ptr.To(egv1a1.IPv6)
+	case egv1a1.DualStack:
+		return ptr.To(egv1a1.DualStack)
+	default:
+		return nil
+	}
 }

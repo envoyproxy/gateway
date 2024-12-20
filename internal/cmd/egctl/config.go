@@ -79,7 +79,6 @@ func retrieveConfigDump(args []string, includeEds bool, configType envoyConfigTy
 	var wg sync.WaitGroup
 	wg.Add(len(pods))
 	for _, pod := range pods {
-		pod := pod
 		go func() {
 			fw, err := portForwarder(cli, pod, adminPort)
 			if err != nil {
@@ -170,7 +169,6 @@ func fetchRunningEnvoyPods(c kube.CLIClient, nn types.NamespacedName, labelSelec
 
 	podsNamespacedNames := []types.NamespacedName{}
 	for _, pod := range pods {
-		pod := pod
 		podNsName := utils.NamespacedName(&pod)
 		if pod.Status.Phase != "Running" {
 			return podsNamespacedNames, fmt.Errorf("pod %s is not running", podNsName)

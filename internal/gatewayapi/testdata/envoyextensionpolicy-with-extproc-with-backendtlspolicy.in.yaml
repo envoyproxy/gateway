@@ -160,7 +160,7 @@ backendTLSPolicies:
     - group: ''
       kind: Service
       name: grpc-backend
-      sectionName: "8000"
+      sectionName: grpc
     validation:
       caCertificateRefs:
       - name: ca-cmap
@@ -177,7 +177,7 @@ backendTLSPolicies:
     - group: ''
       kind: Service
       name: grpc-backend-2
-      sectionName: "9000"
+      sectionName: grpc
     validation:
       caCertificateRefs:
       - name: ca-cmap
@@ -203,8 +203,13 @@ envoyExtensionPolicies:
       processingMode:
         request:
           body: Buffered
+          attributes:
+          - request.path
         response:
           body: Streamed
+          attributes:
+          - xds.route_metadata
+          - connection.requested_server_name
       messageTimeout: 5s
       failOpen: true
 - apiVersion: gateway.envoyproxy.io/v1alpha1

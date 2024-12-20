@@ -6,7 +6,6 @@
 package translator
 
 import (
-	"errors"
 	"fmt"
 	"sort"
 
@@ -28,6 +27,7 @@ import (
 const (
 	envoyOpenTelemetry = "envoy.tracers.opentelemetry"
 	envoyZipkin        = "envoy.traces.zipkin"
+	envoyDatadog       = "envoy.tracers.datadog"
 )
 
 type typConfigGen func() (*anypb.Any, error)
@@ -41,6 +41,16 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 	var providerConfig typConfigGen
 
 	switch tracing.Provider.Type {
+	case egv1a1.TracingProviderTypeDatadog:
+		providerName = envoyDatadog
+
+		providerConfig = func() (*anypb.Any, error) {
+			config := &tracecfg.DatadogConfig{
+				ServiceName:      tracing.ServiceName,
+				CollectorCluster: tracing.Destination.Name,
+			}
+			return protocov.ToAnyWithValidation(config)
+		}
 	case egv1a1.TracingProviderTypeOpenTelemetry:
 		providerName = envoyOpenTelemetry
 
@@ -57,7 +67,7 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 				ServiceName: tracing.ServiceName,
 			}
 
-			return protocov.ToAnyWithError(config)
+			return protocov.ToAnyWithValidation(config)
 		}
 	case egv1a1.TracingProviderTypeZipkin:
 		providerName = envoyZipkin
@@ -71,7 +81,7 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 				CollectorEndpointVersion: tracecfg.ZipkinConfig_HTTP_JSON,
 			}
 
-			return protocov.ToAnyWithError(config)
+			return protocov.ToAnyWithValidation(config)
 		}
 	default:
 		return nil, fmt.Errorf("unknown tracing provider type: %s", tracing.Provider.Type)
@@ -160,14 +170,25 @@ func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Trac
 		return nil
 	}
 
-	if err := addXdsCluster(tCtx, &xdsClusterArgs{
-		name:         tracing.Destination.Name,
-		settings:     tracing.Destination.Settings,
-		tSocket:      nil,
-		endpointType: EndpointTypeDNS,
-		metrics:      metrics,
-	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
-		return err
+	traffic := tracing.Traffic
+	// Make sure that there are safe defaults for the traffic
+	if traffic == nil {
+		traffic = &ir.TrafficFeatures{}
 	}
-	return nil
+	return addXdsCluster(tCtx, &xdsClusterArgs{
+		name:              tracing.Destination.Name,
+		settings:          tracing.Destination.Settings,
+		tSocket:           nil,
+		endpointType:      EndpointTypeDNS,
+		metrics:           metrics,
+		loadBalancer:      traffic.LoadBalancer,
+		proxyProtocol:     traffic.ProxyProtocol,
+		circuitBreaker:    traffic.CircuitBreaker,
+		healthCheck:       traffic.HealthCheck,
+		timeout:           traffic.Timeout,
+		tcpkeepalive:      traffic.TCPKeepalive,
+		backendConnection: traffic.BackendConnection,
+		dns:               traffic.DNS,
+		http2Settings:     traffic.HTTP2,
+	})
 }

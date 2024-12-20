@@ -4,7 +4,6 @@
 // the root of the repo.
 
 //go:build e2e
-// +build e2e
 
 package tests
 
@@ -19,6 +18,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
 
 func init() {
@@ -27,54 +27,16 @@ func init() {
 
 // HTTPWasmTest tests Wasm extension for an http route with HTTP Wasm configured.
 var HTTPWasmTest = suite.ConformanceTest{
-	ShortName:   "Wasm HTTP Code Source",
+	ShortName:   "WasmHTTPCodeSource",
 	Description: "Test Wasm extension that adds response headers",
 	Manifests:   []string{"testdata/wasm-http.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("http route with http wasm source", func(t *testing.T) {
-			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "http-with-http-wasm-source", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			testWasmHTTPCodeSource(t, suite, "http-with-http-wasm-source", "http-wasm-source-test", "/wasm-http")
+		})
 
-			ancestorRef := gwapiv1a2.ParentReference{
-				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-				Kind:      gatewayapi.KindPtr(gatewayapi.KindGateway),
-				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
-				Name:      gwapiv1.ObjectName(gwNN.Name),
-			}
-			EnvoyExtensionPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "http-wasm-source-test", Namespace: ns}, suite.ControllerName, ancestorRef)
-
-			expectedResponse := http.ExpectedResponse{
-				Request: http.Request{
-					Host: "www.example.com",
-					Path: "/wasm-http",
-				},
-
-				// Set the expected request properties to empty strings.
-				// This is a workaround to avoid the test failure.
-				// These values can't be extracted from the json format response
-				// body because the test wasm code appends a "Hello, world" text
-				// to the response body, invalidating the json format.
-				ExpectedRequest: &http.ExpectedRequest{
-					Request: http.Request{
-						Host:    "",
-						Method:  "",
-						Path:    "",
-						Headers: nil,
-					},
-				},
-				Namespace: "",
-
-				Response: http.Response{
-					StatusCode: 200,
-					Headers: map[string]string{
-						"x-wasm-custom": "FOO", // response header added by wasm
-					},
-				},
-			}
-
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		t.Run("http route with http wasm source no sha", func(t *testing.T) {
+			testWasmHTTPCodeSource(t, suite, "http-with-http-wasm-source-no-sha", "http-wasm-source-test-no-sha", "/wasm-http-no-sha")
 		})
 
 		t.Run("http route without wasm", func(t *testing.T) {
@@ -85,7 +47,7 @@ var HTTPWasmTest = suite.ConformanceTest{
 
 			ancestorRef := gwapiv1a2.ParentReference{
 				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-				Kind:      gatewayapi.KindPtr(gatewayapi.KindGateway),
+				Kind:      gatewayapi.KindPtr(resource.KindGateway),
 				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 				Name:      gwapiv1.ObjectName(gwNN.Name),
 			}
@@ -114,4 +76,50 @@ var HTTPWasmTest = suite.ConformanceTest{
 			}
 		})
 	},
+}
+
+func testWasmHTTPCodeSource(t *testing.T, suite *suite.ConformanceTestSuite, route, eep, path string) {
+	ns := "gateway-conformance-infra"
+	routeNN := types.NamespacedName{Name: route, Namespace: ns}
+	gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+	gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+	ancestorRef := gwapiv1a2.ParentReference{
+		Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+		Kind:      gatewayapi.KindPtr(resource.KindGateway),
+		Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+		Name:      gwapiv1.ObjectName(gwNN.Name),
+	}
+	EnvoyExtensionPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: eep, Namespace: ns}, suite.ControllerName, ancestorRef)
+
+	expectedResponse := http.ExpectedResponse{
+		Request: http.Request{
+			Host: "www.example.com",
+			Path: path,
+		},
+
+		// Set the expected request properties to empty strings.
+		// This is a workaround to avoid the test failure.
+		// These values can't be extracted from the json format response
+		// body because the test wasm code appends a "Hello, world" text
+		// to the response body, invalidating the json format.
+		ExpectedRequest: &http.ExpectedRequest{
+			Request: http.Request{
+				Host:    "",
+				Method:  "",
+				Path:    "",
+				Headers: nil,
+			},
+		},
+		Namespace: "",
+
+		Response: http.Response{
+			StatusCode: 200,
+			Headers: map[string]string{
+				"x-wasm-custom": "FOO", // response header added by wasm
+			},
+		},
+	}
+
+	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 }

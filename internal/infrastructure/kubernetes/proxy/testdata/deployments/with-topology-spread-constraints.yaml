@@ -78,7 +78,7 @@ spec:
             - name: envoy-gateway-proxy-ready-0.0.0.0-19001
               address:
                 socket_address:
-                  address: 0.0.0.0
+                  address: '0.0.0.0'
                   port_value: 19001
                   protocol: TCP
               filter_chains:
@@ -134,7 +134,7 @@ spec:
                     endpoint:
                       address:
                         socket_address:
-                          address: envoy-gateway
+                          address: envoy-gateway.envoy-gateway-system.svc.cluster.local
                           port_value: 18000
               typed_extension_protocol_options:
                 envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
@@ -157,13 +157,13 @@ spec:
                     - name: xds_certificate
                       sds_config:
                         path_config_source:
-                          path: "/sds/xds-certificate.json"
+                          path: /sds/xds-certificate.json
                         resource_api_version: V3
                     validation_context_sds_secret_config:
                       name: xds_trusted_ca
                       sds_config:
                         path_config_source:
-                          path: "/sds/xds-trusted-ca.json"
+                          path: /sds/xds-trusted-ca.json
                         resource_api_version: V3
             - name: wasm_cluster
               type: STRICT_DNS
@@ -195,13 +195,13 @@ spec:
                     - name: xds_certificate
                       sds_config:
                         path_config_source:
-                          path: "/sds/xds-certificate.json"
+                          path: /sds/xds-certificate.json
                         resource_api_version: V3
                     validation_context_sds_secret_config:
                       name: xds_trusted_ca
                       sds_config:
                         path_config_source:
-                          path: "/sds/xds-trusted-ca.json"
+                          path: /sds/xds-trusted-ca.json
                         resource_api_version: V3
           overload_manager:
             refresh_interval: 0.25s
@@ -212,6 +212,8 @@ spec:
                 max_active_downstream_connections: 50000
         - --log-level warn
         - --cpuset-threads
+        - --drain-strategy immediate
+        - --drain-time-s 60
         command:
         - envoy
         env:
@@ -225,7 +227,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.name
-        image: envoyproxy/envoy:distroless-dev
+        image: docker.io/envoyproxy/envoy:distroless-dev
         imagePullPolicy: IfNotPresent
         lifecycle:
           preStop:
@@ -235,28 +237,33 @@ spec:
               scheme: HTTP
         name: envoy
         ports:
-        - containerPort: 8080
-          name: EnvoyHTTPPort
-          protocol: TCP
-        - containerPort: 8443
-          name: EnvoyHTTPSPort
-          protocol: TCP
         - containerPort: 19001
           name: metrics
           protocol: TCP
         readinessProbe:
-          failureThreshold: 3
+          failureThreshold: 1
           httpGet:
             path: /ready
             port: 19001
             scheme: HTTP
-          periodSeconds: 10
+          periodSeconds: 5
           successThreshold: 1
           timeoutSeconds: 1
         resources:
           requests:
             cpu: 100m
             memory: 512Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          runAsGroup: 65532
+          runAsNonRoot: true
+          runAsUser: 65532
+          seccompProfile:
+            type: RuntimeDefault
         startupProbe:
           failureThreshold: 30
           httpGet:
@@ -290,7 +297,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.name
-        image: envoyproxy/gateway-dev:latest
+        image: docker.io/envoyproxy/gateway-dev:latest
         imagePullPolicy: IfNotPresent
         lifecycle:
           preStop:
@@ -322,6 +329,17 @@ spec:
           requests:
             cpu: 10m
             memory: 32Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          runAsGroup: 65532
+          runAsNonRoot: true
+          runAsUser: 65532
+          seccompProfile:
+            type: RuntimeDefault
         startupProbe:
           failureThreshold: 30
           httpGet:
@@ -337,7 +355,7 @@ spec:
       restartPolicy: Always
       schedulerName: default-scheduler
       serviceAccountName: envoy-default-37a8eec1
-      terminationGracePeriodSeconds: 900
+      terminationGracePeriodSeconds: 360
       topologySpreadConstraints:
       - labelSelector:
           matchLabels:

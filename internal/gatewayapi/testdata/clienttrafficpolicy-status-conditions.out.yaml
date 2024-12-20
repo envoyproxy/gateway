@@ -75,8 +75,8 @@ clientTrafficPolicies:
         sectionName: https
       conditions:
       - lastTransitionTime: null
-        message: Unable to target section, another ClientTrafficPolicy has already
-          attached to it
+        message: Unable to target section of gateway-2, another ClientTrafficPolicy
+          has already attached to it
         reason: Conflicted
         status: "False"
         type: Accepted
@@ -153,8 +153,8 @@ clientTrafficPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Unable to target Gateway, another ClientTrafficPolicy has already
-          attached to it
+        message: Unable to target Gateway gateway-1, another ClientTrafficPolicy has
+          already attached to it
         reason: Conflicted
         status: "False"
         type: Accepted

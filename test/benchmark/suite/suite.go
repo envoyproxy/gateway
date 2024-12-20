@@ -4,7 +4,6 @@
 // the root of the repo.
 
 //go:build benchmark
-// +build benchmark
 
 package suite
 
@@ -104,14 +103,8 @@ func NewBenchmarkTestSuite(client client.Client, options BenchmarkOptions,
 
 	// Ensure the report directory exist.
 	if len(reportDir) > 0 {
-		if _, err = os.Stat(reportDir); err != nil {
-			if os.IsNotExist(err) {
-				if err = os.MkdirAll(reportDir, os.ModePerm); err != nil {
-					return nil, err
-				}
-			} else {
-				return nil, err
-			}
+		if err = createDirIfNotExist(reportDir); err != nil {
+			return nil, err
 		}
 	}
 
@@ -232,7 +225,11 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, name, 
 
 	t.Logf("Running benchmark test: %s successfully", name)
 
-	report := NewBenchmarkReport(name, b.kubeClient, b.promClient)
+	report, err := NewBenchmarkReport(name, path.Join(b.ReportSaveDir, "profiles"), b.kubeClient, b.promClient)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create benchmark report: %w", err)
+	}
+
 	// Get all the reports from this benchmark test run.
 	if err = report.Collect(ctx, jobNN); err != nil {
 		return nil, err
@@ -391,4 +388,16 @@ func (b *BenchmarkTestSuite) RegisterCleanup(t *testing.T, ctx context.Context, 
 
 		t.Logf("Clean up complete!")
 	})
+}
+
+func createDirIfNotExist(dir string) (err error) {
+	if _, err = os.Stat(dir); err != nil {
+		if os.IsNotExist(err) {
+			if err = os.MkdirAll(dir, os.ModePerm); err == nil {
+				return nil
+			}
+		}
+		return err
+	}
+	return nil
 }

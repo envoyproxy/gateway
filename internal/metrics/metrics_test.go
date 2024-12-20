@@ -16,6 +16,7 @@ import (
 	"os"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -95,24 +96,7 @@ func TestGauge(t *testing.T) {
 
 	// simulate a function that builds an indicator and changes its value
 	metricsFunc := []func(){
-		func() {
-			metricName := "current_irs_queue_num"
-			description := "current number of ir in queue, by ir type"
-
-			currentIRsNum := NewGauge(
-				metricName,
-				description,
-			)
-
-			// only the last recorded value (2) will be exported for this gauge
-			currentIRsNum.With(NewLabel("ir-type").Value("xds")).Record(1)
-			currentIRsNum.With(NewLabel("ir-type").Value("xds")).Record(3)
-			currentIRsNum.With(NewLabel("ir-type").Value("xds")).Record(2)
-
-			currentIRsNum.With(NewLabel("ir-type").Value("xds")).Record(1)
-			currentIRsNum.With(NewLabel("ir-type").Value("xds")).Record(3)
-			currentIRsNum.With(NewLabel("ir-type").Value("xds")).Record(2)
-		},
+		metricFunc,
 	}
 	for _, f := range metricsFunc {
 		f()
@@ -123,6 +107,25 @@ func TestGauge(t *testing.T) {
 	require.NoError(t, err)
 
 	loadMetricsFile(t, name, writer)
+}
+
+func metricFunc() {
+	metricName := "current_irs_queue_num"
+	description := "current number of ir in queue, by ir type"
+
+	currentIRsNum := NewGauge(
+		metricName,
+		description,
+	)
+
+	// only the last recorded value (2) will be exported for this gauge
+	currentIRsNum.With(NewLabel("ir-type").Value("xds")).Record(1)
+	currentIRsNum.With(NewLabel("ir-type").Value("xds")).Record(3)
+	currentIRsNum.With(NewLabel("ir-type").Value("xds")).Record(2)
+
+	currentIRsNum.With(NewLabel("ir-type").Value("xds")).Record(1)
+	currentIRsNum.With(NewLabel("ir-type").Value("xds")).Record(3)
+	currentIRsNum.With(NewLabel("ir-type").Value("xds")).Record(2)
 }
 
 func TestHistogram(t *testing.T) {
@@ -163,6 +166,22 @@ func TestHistogram(t *testing.T) {
 	require.NoError(t, err)
 
 	loadMetricsFile(t, name, writer)
+}
+
+func TestConcurrentMetricAccess(t *testing.T) {
+	var wg sync.WaitGroup
+	const concurrency = 100
+
+	for i := 0; i < concurrency; i++ {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			t.Logf("concurrency metric access at %d", idx)
+			metricFunc()
+		}(i)
+	}
+
+	wg.Wait()
 }
 
 // newTestMetricsProvider Create an OTEL Metrics Provider for testing use only

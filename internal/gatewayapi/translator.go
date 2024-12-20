@@ -16,31 +16,12 @@ import (
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/wasm"
 )
 
 const (
-	KindConfigMap            = "ConfigMap"
-	KindClientTrafficPolicy  = "ClientTrafficPolicy"
-	KindBackendTrafficPolicy = "BackendTrafficPolicy"
-	KindBackendTLSPolicy     = "BackendTLSPolicy"
-	KindEnvoyPatchPolicy     = "EnvoyPatchPolicy"
-	KindEnvoyExtensionPolicy = "EnvoyExtensionPolicy"
-	KindSecurityPolicy       = "SecurityPolicy"
-	KindEnvoyProxy           = "EnvoyProxy"
-	KindGateway              = "Gateway"
-	KindGatewayClass         = "GatewayClass"
-	KindGRPCRoute            = "GRPCRoute"
-	KindHTTPRoute            = "HTTPRoute"
-	KindNamespace            = "Namespace"
-	KindTLSRoute             = "TLSRoute"
-	KindTCPRoute             = "TCPRoute"
-	KindUDPRoute             = "UDPRoute"
-	KindService              = "Service"
-	KindServiceImport        = "ServiceImport"
-	KindSecret               = "Secret"
-
 	GroupMultiClusterService = "multicluster.x-k8s.io"
 	// OwningGatewayNamespaceLabel is the owner reference label used for managed infra.
 	// The value should be the namespace of the accepted Envoy Gateway.
@@ -61,8 +42,8 @@ const (
 var _ TranslatorManager = (*Translator)(nil)
 
 type TranslatorManager interface {
-	Translate(resources *Resources) (*TranslateResult, error)
-	GetRelevantGateways(resources *Resources) []*GatewayContext
+	Translate(resources *resource.Resources) (*TranslateResult, error)
+	GetRelevantGateways(resources *resource.Resources) []*GatewayContext
 
 	RoutesTranslator
 	ListenersTranslator
@@ -113,9 +94,9 @@ type Translator struct {
 }
 
 type TranslateResult struct {
-	Resources
-	XdsIR   XdsIRMap   `json:"xdsIR" yaml:"xdsIR"`
-	InfraIR InfraIRMap `json:"infraIR" yaml:"infraIR"`
+	resource.Resources
+	XdsIR   resource.XdsIRMap   `json:"xdsIR" yaml:"xdsIR"`
+	InfraIR resource.InfraIRMap `json:"infraIR" yaml:"infraIR"`
 }
 
 func newTranslateResult(gateways []*GatewayContext,
@@ -131,7 +112,7 @@ func newTranslateResult(gateways []*GatewayContext,
 	envoyExtensionPolicies []*egv1a1.EnvoyExtensionPolicy,
 	extPolicies []unstructured.Unstructured,
 	backends []*egv1a1.Backend,
-	xdsIR XdsIRMap, infraIR InfraIRMap,
+	xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap,
 ) *TranslateResult {
 	translateResult := &TranslateResult{
 		XdsIR:   xdsIR,
@@ -168,7 +149,7 @@ func newTranslateResult(gateways []*GatewayContext,
 	return translateResult
 }
 
-func (t *Translator) Translate(resources *Resources) (*TranslateResult, error) {
+func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult, error) {
 	// Get Gateways belonging to our GatewayClass.
 	gateways := t.GetRelevantGateways(resources)
 
@@ -178,7 +159,7 @@ func (t *Translator) Translate(resources *Resources) (*TranslateResult, error) {
 	})
 
 	// Build IR maps.
-	xdsIR, infraIR := t.InitIRs(gateways, resources)
+	xdsIR, infraIR := t.InitIRs(gateways)
 
 	// Process all Listeners for all relevant Gateways.
 	t.ProcessListeners(gateways, xdsIR, infraIR, resources)
@@ -186,11 +167,8 @@ func (t *Translator) Translate(resources *Resources) (*TranslateResult, error) {
 	// Process EnvoyPatchPolicies
 	t.ProcessEnvoyPatchPolicies(resources.EnvoyPatchPolicies, xdsIR)
 
-	// Process ClientTrafficPolicies
-	clientTrafficPolicies := t.ProcessClientTrafficPolicies(resources, gateways, xdsIR, infraIR)
-
 	// Process all Addresses for all relevant Gateways.
-	t.ProcessAddresses(gateways, xdsIR, infraIR, resources)
+	t.ProcessAddresses(gateways, xdsIR, infraIR)
 
 	// process all Backends
 	backends := t.ProcessBackends(resources.Backends)
@@ -209,6 +187,9 @@ func (t *Translator) Translate(resources *Resources) (*TranslateResult, error) {
 
 	// Process all relevant UDPRoutes.
 	udpRoutes := t.ProcessUDPRoutes(resources.UDPRoutes, gateways, resources, xdsIR)
+
+	// Process ClientTrafficPolicies
+	clientTrafficPolicies := t.ProcessClientTrafficPolicies(resources, gateways, xdsIR, infraIR)
 
 	// Process BackendTrafficPolicies
 	routes := []RouteContext{}
@@ -230,7 +211,7 @@ func (t *Translator) Translate(resources *Resources) (*TranslateResult, error) {
 
 	// Process BackendTrafficPolicies
 	backendTrafficPolicies := t.ProcessBackendTrafficPolicies(
-		resources.BackendTrafficPolicies, gateways, routes, xdsIR)
+		resources, gateways, routes, xdsIR)
 
 	// Process SecurityPolicies
 	securityPolicies := t.ProcessSecurityPolicies(
@@ -263,7 +244,7 @@ func (t *Translator) Translate(resources *Resources) (*TranslateResult, error) {
 
 // GetRelevantGateways returns GatewayContexts, containing a copy of the original
 // Gateway with the Listener statuses reset.
-func (t *Translator) GetRelevantGateways(resources *Resources) []*GatewayContext {
+func (t *Translator) GetRelevantGateways(resources *resource.Resources) []*GatewayContext {
 	var relevant []*GatewayContext
 
 	for _, gateway := range resources.Gateways {
@@ -285,9 +266,9 @@ func (t *Translator) GetRelevantGateways(resources *Resources) []*GatewayContext
 }
 
 // InitIRs checks if mergeGateways is enabled in EnvoyProxy config and initializes XdsIR and InfraIR maps with adequate keys.
-func (t *Translator) InitIRs(gateways []*GatewayContext, resources *Resources) (map[string]*ir.Xds, map[string]*ir.Infra) {
-	xdsIR := make(XdsIRMap)
-	infraIR := make(InfraIRMap)
+func (t *Translator) InitIRs(gateways []*GatewayContext) (map[string]*ir.Xds, map[string]*ir.Infra) {
+	xdsIR := make(resource.XdsIRMap)
+	infraIR := make(resource.InfraIRMap)
 
 	var irKey string
 	for _, gateway := range gateways {

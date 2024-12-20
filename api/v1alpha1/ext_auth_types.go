@@ -5,18 +5,10 @@
 
 package v1alpha1
 
-import (
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-)
-
 // ExtAuth defines the configuration for External Authorization.
 //
 // +kubebuilder:validation:XValidation:rule="(has(self.grpc) || has(self.http))",message="one of grpc or http must be specified"
 // +kubebuilder:validation:XValidation:rule="(has(self.grpc) && !has(self.http)) || (!has(self.grpc) && has(self.http))",message="only one of grpc or http can be specified"
-// +kubebuilder:validation:XValidation:rule="has(self.grpc) ? (!has(self.grpc.backendRef) || !has(self.grpc.backendRef.group) || self.grpc.backendRef.group == \"\") : true", message="group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) is supported"
-// +kubebuilder:validation:XValidation:rule="has(self.grpc) ? (!has(self.grpc.backendRef) || !has(self.grpc.backendRef.kind) || self.grpc.backendRef.kind == 'Service') : true", message="kind is invalid, only Service (specified by omitting the kind field or setting it to 'Service') is supported"
-// +kubebuilder:validation:XValidation:rule="has(self.http) ? (!has(self.http.backendRef) || !has(self.http.backendRef.group) || self.http.backendRef.group == \"\") : true", message="group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) is supported"
-// +kubebuilder:validation:XValidation:rule="has(self.http) ? (!has(self.http.backendRef) || !has(self.http.backendRef.kind) || self.http.backendRef.kind == 'Service') : true", message="kind is invalid, only Service (specified by omitting the kind field or setting it to 'Service') is supported"
 type ExtAuth struct {
 	// GRPC defines the gRPC External Authorization service.
 	// Either GRPCService or HTTPService must be specified,
@@ -41,6 +33,10 @@ type ExtAuth struct {
 	// +optional
 	HeadersToExtAuth []string `json:"headersToExtAuth,omitempty"`
 
+	// BodyToExtAuth defines the Body to Ext Auth configuration.
+	// +optional
+	BodyToExtAuth *BodyToExtAuth `json:"bodyToExtAuth,omitempty"`
+
 	// FailOpen is a switch used to control the behavior when a response from the External Authorization service cannot be obtained.
 	// If FailOpen is set to true, the system allows the traffic to pass through.
 	// Otherwise, if it is set to false or not set (defaulting to false),
@@ -50,51 +46,35 @@ type ExtAuth struct {
 	// +optional
 	// +kubebuilder:default=false
 	FailOpen *bool `json:"failOpen,omitempty"`
+
+	// RecomputeRoute clears the route cache and recalculates the routing decision.
+	// This field must be enabled if the headers added or modified by the ExtAuth are used for
+	// route matching decisions. If the recomputation selects a new route, features targeting
+	// the new matched route will be applied.
+	//
+	// +optional
+	RecomputeRoute *bool `json:"recomputeRoute,omitempty"`
 }
 
 // GRPCExtAuthService defines the gRPC External Authorization service
 // The authorization request message is defined in
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/auth/v3/external_auth.proto
 // +kubebuilder:validation:XValidation:message="backendRef or backendRefs needs to be set",rule="has(self.backendRef) || self.backendRefs.size() > 0"
+// +kubebuilder:validation:XValidation:message="BackendRefs only supports Service and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'Backend') : true"
+// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core and gateway.envoyproxy.io group.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'gateway.envoyproxy.io')) : true"
 type GRPCExtAuthService struct {
-	// BackendRef references a Kubernetes object that represents the
-	// backend server to which the authorization request will be sent.
 	// Only Service kind is supported for now.
-	//
-	// Deprecated: Use BackendRefs instead.
-	BackendRef *gwapiv1.BackendObjectReference `json:"backendRef,omitempty"`
-
-	// BackendRefs references a Kubernetes object that represents the
-	// backend server to which the authorization request will be sent.
-	// Only Service kind is supported for now.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxItems=1
-	// +kubebuilder:validation:XValidation:message="only support Service kind.",rule="self.all(f, f.kind == 'Service')"
-	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core group.",rule="self.all(f, f.group == '')"
-	BackendRefs []BackendRef `json:"backendRefs,omitempty"`
+	BackendCluster `json:",inline"`
 }
 
 // HTTPExtAuthService defines the HTTP External Authorization service
 //
 // +kubebuilder:validation:XValidation:message="backendRef or backendRefs needs to be set",rule="has(self.backendRef) || self.backendRefs.size() > 0"
+// +kubebuilder:validation:XValidation:message="BackendRefs only supports Service and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'Backend') : true"
+// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core and gateway.envoyproxy.io group.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'gateway.envoyproxy.io')) : true"
 type HTTPExtAuthService struct {
-	// BackendRef references a Kubernetes object that represents the
-	// backend server to which the authorization request will be sent.
 	// Only Service kind is supported for now.
-	//
-	// Deprecated: Use BackendRefs instead.
-	BackendRef *gwapiv1.BackendObjectReference `json:"backendRef,omitempty"`
-
-	// BackendRefs references a Kubernetes object that represents the
-	// backend server to which the authorization request will be sent.
-	// Only Service kind is supported for now.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxItems=1
-	// +kubebuilder:validation:XValidation:message="only support Service kind.",rule="self.all(f, f.kind == 'Service')"
-	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core group.",rule="self.all(f, f.group == '')"
-	BackendRefs []BackendRef `json:"backendRefs,omitempty"`
+	BackendCluster `json:",inline"`
 
 	// Path is the path of the HTTP External Authorization service.
 	// If path is specified, the authorization request will be sent to that path,
@@ -108,4 +88,15 @@ type HTTPExtAuthService struct {
 	// original client request.
 	// +optional
 	HeadersToBackend []string `json:"headersToBackend,omitempty"`
+}
+
+// BodyToExtAuth defines the Body to Ext Auth configuration
+type BodyToExtAuth struct {
+	// MaxRequestBytes is the maximum size of a message body that the filter will hold in memory.
+	// Envoy will return HTTP 413 and will not initiate the authorization process when buffer
+	// reaches the number set in this field.
+	// Note that this setting will have precedence over failOpen mode.
+	//
+	// +kubebuilder:validation:Minimum=1
+	MaxRequestBytes uint32 `json:"maxRequestBytes"`
 }

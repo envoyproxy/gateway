@@ -1,6 +1,6 @@
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       portValue: 10080
   defaultFilterChain:
     filters:
@@ -27,9 +27,8 @@
             resourceApiVersion: V3
           routeConfigName: listener-enable-endpoint-stats
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: http-10080
         useRemoteAddress: true
     name: listener-enable-endpoint-stats
-  drainType: MODIFY_ONLY
   name: listener-enable-endpoint-stats
   perConnectionBufferLimitBytes: 32768

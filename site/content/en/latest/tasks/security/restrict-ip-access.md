@@ -32,8 +32,8 @@ kind: SecurityPolicy
 metadata:
   name: authorization-client-ip
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: backend
   authorization:
@@ -57,17 +57,17 @@ kind: SecurityPolicy
 metadata:
   name: authorization-client-ip
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: backend
   authorization:
     defaultAction: Deny
     rules:
-      - action: Allow
-        principal:
-          clientCIDRs:
-            - 10.0.1.0/24
+    - action: Allow
+      principal:
+        clientCIDRs:
+        - 10.0.1.0/24
 ```
 
 {{% /tab %}}
@@ -101,10 +101,10 @@ spec:
   clientIPDetection:
     xForwardedFor:
       numTrustedHops: 1
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: eg
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
 EOF
 ```
 
@@ -122,10 +122,10 @@ spec:
   clientIPDetection:
     xForwardedFor:
       numTrustedHops: 1
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: eg
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
 ```
 
 {{% /tab %}}

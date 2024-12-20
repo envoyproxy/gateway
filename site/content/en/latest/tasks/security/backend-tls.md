@@ -17,7 +17,7 @@ Envoy Gateway supports the Gateway-API defined [BackendTLSPolicy][].
 
 ## TLS Certificates
 
-Generate the certificates and keys used by the backend to terminate TLS connections from the Gateways. 
+Generate the certificates and keys used by the backend to terminate TLS connections from the Gateways.
 
 Create a root certificate and private key to sign certificates:
 
@@ -25,11 +25,30 @@ Create a root certificate and private key to sign certificates:
 openssl req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 -subj '/O=example Inc./CN=example.com' -keyout ca.key -out ca.crt
 ```
 
-Create a certificate and a private key for `www.example.com`:
+Create a certificate and a private key for `www.example.com`.
+
+First, create an openssl configuration file:
 
 ```shell
-openssl req -out www.example.com.csr -newkey rsa:2048 -nodes -keyout www.example.com.key -subj "/CN=www.example.com/O=example organization" -addext "subjectAltName = DNS:www.example.com"
-openssl x509 -req -days 365 -CA ca.crt -CAkey ca.key -set_serial 0 -in www.example.com.csr -out www.example.com.crt
+cat > openssl.conf  <<EOF
+[req]
+req_extensions = v3_req
+prompt = no
+
+[v3_req]
+keyUsage = keyEncipherment, digitalSignature
+extendedKeyUsage = serverAuth
+subjectAltName = @alt_names
+[alt_names]
+DNS.1 = www.example.com
+EOF
+```
+
+Then create a certificate using this openssl configuration file:
+
+```shell
+openssl req -out www.example.com.csr -newkey rsa:2048 -nodes -keyout www.example.com.key -subj "/CN=www.example.com/O=example organization"
+openssl x509 -req -days 365 -CA ca.crt -CAkey ca.key -set_serial 0 -in www.example.com.csr -out www.example.com.crt -extfile openssl.conf -extensions v3_req
 ```
 
 Note that the certificate must contain a DNS SAN for the relevant domain.
@@ -48,7 +67,7 @@ kubectl create configmap example-ca --from-file=ca.crt
 
 ## Setup TLS on the backend
 
-Patch the existing quickstart backend to enable TLS. The patch will mount the TLS certificate secret into the backend as volume. 
+Patch the existing quickstart backend to enable TLS. The patch will mount the TLS certificate secret into the backend as volume.
 
 ```shell
 kubectl patch deployment backend --type=json --patch '
@@ -81,7 +100,7 @@ kubectl patch deployment backend --type=json --patch '
   '
 ```
 
-Create a service that exposes port 443 on the backend service. 
+Create a service that exposes port 443 on the backend service.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -136,6 +155,9 @@ spec:
 
 Create a [BackendTLSPolicy][] instructing Envoy Gateway to establish a TLS connection with the backend and validate the backend certificate is issued by a trusted CA and contains an appropriate DNS SAN.
 
+Note: SectionName is an optional field that specifies the name of the port in the target backend. This example uses a Kubernetes Service as the backend target, so the sectionName is set to `https` to match the port name in the Service.
+If the target is a [Backend] resource, the `sectionName` field should be set to the port number of the backend.
+
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
 
@@ -151,7 +173,7 @@ spec:
   - group: ''
     kind: Service
     name: tls-backend
-    sectionName: "443"
+    sectionName: https
   validation:
     caCertificateRefs:
     - name: example-ca
@@ -177,7 +199,7 @@ spec:
   - group: ''
     kind: Service
     name: tls-backend
-    sectionName: "443"
+    sectionName: https
   validation:
     caCertificateRefs:
     - name: example-ca
@@ -279,8 +301,8 @@ Inspect the output and see that the response contains the details of the TLS han
 
 ## Customize backend TLS Parameters
 
-In addition to enablement of backend TLS with the Gateway-API BackendTLSPolicy, Envoy Gateway supports customizing  TLS parameters. 
-To achieve this, the [EnvoyProxy][] resource can be used to specify TLS parameters. We will customize the TLS version in this example. 
+In addition to enablement of backend TLS with the Gateway-API BackendTLSPolicy, Envoy Gateway supports customizing  TLS parameters.
+To achieve this, the [EnvoyProxy][] resource can be used to specify TLS parameters. We will customize the TLS version in this example.
 
 First, you need to add ParametersRef in GatewayClass, and refer to EnvoyProxy Config:
 
@@ -371,7 +393,7 @@ curl -v -HHost:www.example.com --resolve "www.example.com:80:127.0.0.1" \
 http://www.example.com:80/get
 ```
 
-Inspect the output and see that the response contains the details of the TLS handshake between Envoy and the backend. 
+Inspect the output and see that the response contains the details of the TLS handshake between Envoy and the backend.
 The TLS version is now TLS1.3, as configured in the EnvoyProxy resource. The TLS cipher is also changed, since TLS1.3 supports different ciphers from TLS1.2.
 
 ```shell
@@ -387,3 +409,4 @@ The TLS version is now TLS1.3, as configured in the EnvoyProxy resource. The TLS
 
 [BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/
 [EnvoyProxy]: ../../api/extension_types#envoyproxy
+[Backend]: ../../api/extension_types#backend

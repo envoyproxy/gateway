@@ -144,19 +144,24 @@ xdsIR:
       - addResponseHeaders:
         - append: true
           name: Set-Header-1
-          value: some-value
+          value:
+          - some-value
         - append: true
           name: set-header-2
-          value: some-value
+          value:
+          - some-value
         - append: true
           name: set-header-3
-          value: some-value
+          value:
+          - some-value
         - append: true
           name: set-header-5
-          value: some-value
+          value:
+          - some-value
         - append: false
           name: set-header-4
-          value: some-value
+          value:
+          - some-value
         destination:
           name: httproute/default/httproute-1/rule/0
           settings:

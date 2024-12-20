@@ -214,11 +214,7 @@ data:
 {{% /tab %}}
 {{< /tabpane >}}
 
-* After updating the `ConfigMap`, you will need to restart the `envoy-gateway` deployment so the configuration kicks in
-
-```shell
-kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
-```
+{{< boilerplate rollout-envoy-gateway >}}
 
 ## Rate Limit Specific User 
 
@@ -235,8 +231,8 @@ kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
@@ -264,8 +260,8 @@ kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
@@ -437,11 +433,11 @@ server: envoy
 
 ```
 
-## Rate Limit Distinct Users 
+## Rate Limit Distinct Users Except Admin 
 
 Here is an example of a rate limit implemented by the application developer to limit distinct users who can be differentiated based on the 
 value in the `x-user-id` header. Here, user `one` (recognised from the traffic flow using the header `x-user-id` and value `one`) will be rate limited at 3 requests/hour
-and so will user `two` (recognised from the traffic flow using the header `x-user-id` and value `two`).
+and so will user `two` (recognised from the traffic flow using the header `x-user-id` and value `two`). But if `x-user-id` is `admin`, it will not be rate limited even beyond 3 requests/hour.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -453,8 +449,8 @@ kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
@@ -465,6 +461,9 @@ spec:
         - headers:
           - type: Distinct
             name: x-user-id
+          - name: x-user-id
+            value: admin
+            invert: true
         limit:
           requests: 3
           unit: Hour
@@ -482,8 +481,8 @@ kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
@@ -640,6 +639,47 @@ transfer-encoding: chunked
 
 ```
 
+But when the value for header `x-user-id` is set to `admin` and 4 requests are sent, all 4 of them should respond with 200 OK.
+
+```shell
+for i in {1..4}; do curl -I --header "Host: ratelimit.example" --header "x-user-id: admin" http://${GATEWAY_HOST}/get ; sleep 1; done
+```
+
+```console
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:31 GMT
+content-length: 460
+x-envoy-upstream-service-time: 4
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:32 GMT
+content-length: 460
+x-envoy-upstream-service-time: 2
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:33 GMT
+content-length: 460
+x-envoy-upstream-service-time: 0
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:33 GMT
+content-length: 460
+x-envoy-upstream-service-time: 0
+server: envoy
+
+```
+
 ## Rate Limit All Requests 
 
 This example shows you how to rate limit all requests matching the HTTPRoute rule at 3 requests/Hour by leaving the `clientSelectors` field unset.
@@ -654,8 +694,8 @@ kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
@@ -679,8 +719,8 @@ kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
@@ -810,10 +850,10 @@ kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
-    name: http-ratelimit 
+    name: http-ratelimit
   rateLimit:
     type: Global
     global:
@@ -859,10 +899,10 @@ kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
-    name: http-ratelimit 
+    name: http-ratelimit
   rateLimit:
     type: Global
     global:
@@ -870,7 +910,7 @@ spec:
       - clientSelectors:
         - sourceCIDR: 
             value: 0.0.0.0/0
-            type: distinct
+            type: Distinct
         limit:
           requests: 3
           unit: Hour
@@ -950,8 +990,8 @@ kind: SecurityPolicy
 metadata:
   name: jwt-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: example
   jwt:
@@ -968,8 +1008,8 @@ kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: example 
   rateLimit:
@@ -1018,8 +1058,8 @@ kind: SecurityPolicy
 metadata:
   name: jwt-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: example
   jwt:
@@ -1036,8 +1076,8 @@ kind: BackendTrafficPolicy
 metadata:
   name: policy-httproute
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: example 
   rateLimit:
@@ -1080,11 +1120,11 @@ spec:
 Get the JWT used for testing request authentication:
 
 ```shell
-TOKEN=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/test.jwt -s) && echo "$TOKEN" | cut -d '.' -f2 - | base64 --decode -
+TOKEN=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/test.jwt -s) && echo "$TOKEN" | cut -d '.' -f2 - | base64 --decode
 ```
 
 ```shell
-TOKEN1=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/with-different-claim.jwt -s) && echo "$TOKEN1" | cut -d '.' -f2 - | base64 --decode -
+TOKEN1=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/with-different-claim.jwt -s) && echo "$TOKEN1" | cut -d '.' -f2 - | base64 --decode
 ```
 
 ### Rate limit by carrying `TOKEN`
@@ -1287,11 +1327,7 @@ data:
 {{% /tab %}}
 {{< /tabpane >}}
 
-* After updating the `ConfigMap`, you will need to restart the `envoy-gateway` deployment so the configuration kicks in
-
-```shell
-kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
-```
+{{< boilerplate rollout-envoy-gateway >}}
 
 [Global Rate Limiting]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/global_rate_limiting
 [Local rate limiting]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/local_rate_limiting

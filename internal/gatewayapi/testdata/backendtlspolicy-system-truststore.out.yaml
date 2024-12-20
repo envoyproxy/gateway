@@ -10,7 +10,7 @@ backendTLSPolicies:
     - group: ""
       kind: Service
       name: http-backend
-      sectionName: "8080"
+      sectionName: http
     validation:
       hostname: example.com
       wellKnownCACertificates: System
@@ -153,6 +153,7 @@ xdsIR:
               port: 8080
             protocol: HTTP
             tls:
+              alpnProtocols: null
               sni: example.com
               useSystemTrustStore: true
             weight: 1

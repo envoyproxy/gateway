@@ -75,3 +75,32 @@ func TestLoggerWithName(t *testing.T) {
 	assert.Contains(t, capturedOutput, "info message")
 	assert.Contains(t, capturedOutput, "debug message")
 }
+
+func TestLoggerSugarName(t *testing.T) {
+	originalStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	defer func() {
+		// Restore the original stdout and close the pipe
+		os.Stdout = originalStdout
+		err := w.Close()
+		require.NoError(t, err)
+	}()
+
+	const logName = "loggerName"
+
+	config := egv1a1.DefaultEnvoyGatewayLogging()
+	config.Level[logName] = egv1a1.LogLevelDebug
+
+	logger := NewLogger(config).WithName(logName)
+
+	logger.Sugar().Debugf("debugging message")
+
+	// Read from the pipe (captured stdout)
+	outputBytes := make([]byte, 200)
+	_, err := r.Read(outputBytes)
+	require.NoError(t, err)
+	capturedOutput := string(outputBytes)
+	assert.Contains(t, capturedOutput, "debugging message", logName)
+}

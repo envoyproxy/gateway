@@ -89,6 +89,67 @@ clientTrafficPolicies:
         status: "False"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    creationTimestamp: null
+    name: target-gateway-1-section-http-4
+    namespace: envoy-gateway
+  spec:
+    http1:
+      http10:
+        useDefaultHost: true
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      sectionName: http-4
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-4
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    creationTimestamp: null
+    name: target-gateway-1-section-http-5
+    namespace: envoy-gateway
+  spec:
+    http1:
+      http10:
+        useDefaultHost: true
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      sectionName: http-5
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-5
+      conditions:
+      - lastTransitionTime: null
+        message: 'HTTP1: cannot set http10 default host on listener with only wildcard
+          hostnames and more than one possible default route.'
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -117,6 +178,18 @@ gateways:
           from: Same
       name: http-3
       port: 8081
+      protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http-4
+      port: 8082
+      protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http-5
+      port: 8083
       protocol: HTTP
   status:
     listeners:
@@ -189,6 +262,148 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http-4
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 2
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http-5
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-1
+    namespace: envoy-gateway
+  spec:
+    hostnames:
+    - route.example.com
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http-4
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http-5
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Service envoy-gateway/service-1 not found
+        reason: BackendNotFound
+        status: "False"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-4
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Service envoy-gateway/service-1 not found
+        reason: BackendNotFound
+        status: "False"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-5
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-2
+    namespace: envoy-gateway
+  spec:
+    hostnames:
+    - route2.example.com
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http-5
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Service envoy-gateway/service-1 not found
+        reason: BackendNotFound
+        status: "False"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-5
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -214,6 +429,20 @@ infraIR:
           name: http-8081
           protocol: HTTP
           servicePort: 8081
+      - address: null
+        name: envoy-gateway/gateway-1/http-4
+        ports:
+        - containerPort: 8082
+          name: http-8082
+          protocol: HTTP
+          servicePort: 8082
+      - address: null
+        name: envoy-gateway/gateway-1/http-5
+        ports:
+        - containerPort: 8083
+          name: http-8083
+          protocol: HTTP
+          servicePort: 8083
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
@@ -273,3 +502,76 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 8081
+    - address: 0.0.0.0
+      hostnames:
+      - '*'
+      http1:
+        http10:
+          defaultHost: route.example.com
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-4
+      name: envoy-gateway/gateway-1/http-4
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 8082
+      routes:
+      - directResponse:
+          statusCode: 500
+        hostname: route.example.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: envoy-gateway
+        name: httproute/envoy-gateway/httproute-1/rule/0/match/0/route_example_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+    - address: 0.0.0.0
+      hostnames:
+      - '*'
+      http1: {}
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-5
+      name: envoy-gateway/gateway-1/http-5
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 8083
+      routes:
+      - directResponse:
+          statusCode: 500
+        hostname: route.example.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: envoy-gateway
+        name: httproute/envoy-gateway/httproute-1/rule/0/match/0/route_example_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+      - directResponse:
+          statusCode: 500
+        hostname: route2.example.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: envoy-gateway
+        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/route2_example_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /

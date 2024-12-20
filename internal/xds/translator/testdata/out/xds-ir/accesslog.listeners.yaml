@@ -43,6 +43,7 @@
         grpcService:
           envoyGrpc:
             clusterName: accesslog/monitoring/envoy-als/port/9000
+        logName: als
         transportApiVersion: V3
   - filter:
       responseFlagFilter:
@@ -79,7 +80,7 @@
             stringValue: cluster1
   address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       portValue: 10080
   defaultFilterChain:
     filters:
@@ -119,6 +120,7 @@
               grpcService:
                 envoyGrpc:
                   clusterName: accesslog/monitoring/envoy-als/port/9000
+              logName: als
               transportApiVersion: V3
         - name: envoy.access_loggers.open_telemetry
           typedConfig:
@@ -169,9 +171,8 @@
             resourceApiVersion: V3
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: http-10080
         useRemoteAddress: true
     name: first-listener
-  drainType: MODIFY_ONLY
   name: first-listener
   perConnectionBufferLimitBytes: 32768

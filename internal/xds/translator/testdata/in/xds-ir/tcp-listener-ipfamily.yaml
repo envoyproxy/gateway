@@ -1,0 +1,13 @@
+tcp:
+  - name: tcp-listener-dual
+    address: 0.0.0.0
+    port: 8082
+    ipFamily: DualStack
+    routes:
+      - name: tcp-route-dual
+        destination:
+          name: tcp-route-dual-dest
+          settings:
+            - endpoints:
+                - host: 192.168.1.2
+                - host: '2001:db8::2'

@@ -44,6 +44,8 @@ spec:
         - --config-yaml test bootstrap config
         - --log-level warn
         - --cpuset-threads
+        - --drain-strategy immediate
+        - --drain-time-s 60
         command:
         - envoy
         env:
@@ -57,7 +59,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.name
-        image: envoyproxy/envoy:distroless-dev
+        image: docker.io/envoyproxy/envoy:distroless-dev
         imagePullPolicy: IfNotPresent
         lifecycle:
           preStop:
@@ -67,28 +69,33 @@ spec:
               scheme: HTTP
         name: envoy
         ports:
-        - containerPort: 8080
-          name: EnvoyHTTPPort
-          protocol: TCP
-        - containerPort: 8443
-          name: EnvoyHTTPSPort
-          protocol: TCP
         - containerPort: 19001
           name: metrics
           protocol: TCP
         readinessProbe:
-          failureThreshold: 3
+          failureThreshold: 1
           httpGet:
             path: /ready
             port: 19001
             scheme: HTTP
-          periodSeconds: 10
+          periodSeconds: 5
           successThreshold: 1
           timeoutSeconds: 1
         resources:
           requests:
             cpu: 100m
             memory: 512Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          runAsGroup: 65532
+          runAsNonRoot: true
+          runAsUser: 65532
+          seccompProfile:
+            type: RuntimeDefault
         startupProbe:
           failureThreshold: 30
           httpGet:
@@ -122,7 +129,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.name
-        image: envoyproxy/gateway-dev:latest
+        image: docker.io/envoyproxy/gateway-dev:latest
         imagePullPolicy: IfNotPresent
         lifecycle:
           preStop:
@@ -154,6 +161,17 @@ spec:
           requests:
             cpu: 10m
             memory: 32Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          runAsGroup: 65532
+          runAsNonRoot: true
+          runAsUser: 65532
+          seccompProfile:
+            type: RuntimeDefault
         startupProbe:
           failureThreshold: 30
           httpGet:
@@ -169,7 +187,7 @@ spec:
       restartPolicy: Always
       schedulerName: default-scheduler
       serviceAccountName: envoy-default-37a8eec1
-      terminationGracePeriodSeconds: 900
+      terminationGracePeriodSeconds: 360
       volumes:
       - name: certs
         secret:

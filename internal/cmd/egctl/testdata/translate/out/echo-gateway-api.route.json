@@ -1,5 +1,6 @@
 {
   "gatewayClass": {
+    "kind": "GatewayClass",
     "metadata": {
       "name": "eg",
       "namespace": "envoy-gateway-system",
@@ -22,6 +23,7 @@
   },
   "gateways": [
     {
+      "kind": "Gateway",
       "metadata": {
         "name": "eg",
         "namespace": "envoy-gateway-system",

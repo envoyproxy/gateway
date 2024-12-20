@@ -4,7 +4,6 @@
 // the root of the repo.
 
 //go:build e2e
-// +build e2e
 
 package tests
 
@@ -31,9 +30,9 @@ var FileAccessLogTest = suite.ConformanceTest{
 	Manifests:   []string{"testdata/accesslog-file.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		labels := map[string]string{
-			"job":                "fluentbit",
-			"k8s_namespace_name": "envoy-gateway-system",
-			"k8s_container_name": "envoy",
+			"job":       "envoy-gateway-system/envoy",
+			"namespace": "envoy-gateway-system",
+			"container": "envoy",
 		}
 		match := "test-annotation-value"
 
@@ -81,6 +80,38 @@ var FileAccessLogTest = suite.ConformanceTest{
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
 			runLogTest(t, suite, gwAddr, expectedResponse, labels, match, 0)
+		})
+
+		t.Run("Listener Logs", func(t *testing.T) {
+			// Ensure that Listener is emitting the log: protocol and response code should be
+			// empty in listener logs as they are upstream L7 attributes
+			expectedMatch := "LISTENER ACCESS LOG - 0"
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "accesslog-file", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+			expectedResponse := httputils.ExpectedResponse{
+				Request: httputils.Request{
+					Path: "/file",
+					Headers: map[string]string{
+						"connection": "close",
+					},
+				},
+				ExpectedRequest: &httputils.ExpectedRequest{
+					Request: httputils.Request{
+						Path: "/file",
+					},
+				},
+				Response: httputils.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+			// make sure listener is ready
+			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+
+			runLogTest(t, suite, gwAddr, expectedResponse, labels, expectedMatch, 0)
 		})
 	},
 }
@@ -202,7 +233,7 @@ var ALSTest = suite.ConformanceTest{
 func runLogTest(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string,
 	expectedResponse httputils.ExpectedResponse, expectedLabels map[string]string, expectedMatch string, expectedDelta int,
 ) {
-	if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
+	if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, 3*time.Minute, true,
 		func(ctx context.Context) (bool, error) {
 			// query log count from loki
 			preCount, err := QueryLogCountFromLoki(t, suite.Client, expectedLabels, expectedMatch)
@@ -215,7 +246,7 @@ func runLogTest(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string,
 
 			// it will take some time for fluent-bit to collect the log and send to loki
 			// let's wait for a while
-			if err := wait.PollUntilContextTimeout(ctx, 500*time.Millisecond, 15*time.Second, true, func(_ context.Context) (bool, error) {
+			if err := wait.PollUntilContextTimeout(ctx, time.Second, 1*time.Minute, true, func(_ context.Context) (bool, error) {
 				count, err := QueryLogCountFromLoki(t, suite.Client, expectedLabels, expectedMatch)
 				if err != nil {
 					tlog.Logf(t, "failed to get log count from loki: %v", err)

@@ -18,9 +18,11 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
@@ -28,11 +30,7 @@ import (
 
 const (
 	// Use an invalid string to represent all sections (listeners) within a Gateway
-	AllSections                         = "/"
-	MinHTTP2InitialStreamWindowSize     = 65535      // https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-http2protocoloptions-initial-stream-window-size
-	MaxHTTP2InitialStreamWindowSize     = 2147483647 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-http2protocoloptions-initial-stream-window-size
-	MinHTTP2InitialConnectionWindowSize = MinHTTP2InitialStreamWindowSize
-	MaxHTTP2InitialConnectionWindowSize = MaxHTTP2InitialStreamWindowSize
+	AllSections = "/"
 )
 
 func hasSectionName(target *gwapiv1a2.LocalPolicyTargetReferenceWithSectionName) bool {
@@ -40,10 +38,10 @@ func hasSectionName(target *gwapiv1a2.LocalPolicyTargetReferenceWithSectionName)
 }
 
 func (t *Translator) ProcessClientTrafficPolicies(
-	resources *Resources,
+	resources *resource.Resources,
 	gateways []*GatewayContext,
-	xdsIR XdsIRMap,
-	infraIR InfraIRMap,
+	xdsIR resource.XdsIRMap,
+	infraIR resource.InfraIRMap,
 ) []*egv1a1.ClientTrafficPolicy {
 	var res []*egv1a1.ClientTrafficPolicy
 
@@ -110,7 +108,8 @@ func (t *Translator) ProcessClientTrafficPolicies(
 				section := string(*(currTarget.SectionName))
 				s, ok := policyMap[key]
 				if ok && s.Has(section) {
-					message := "Unable to target section, another ClientTrafficPolicy has already attached to it"
+					message := fmt.Sprintf("Unable to target section of %s, another ClientTrafficPolicy has already attached to it",
+						string(currTarget.Name))
 
 					resolveErr = &status.PolicyResolveError{
 						Reason:  gwapiv1a2.PolicyReasonConflicted,
@@ -206,7 +205,8 @@ func (t *Translator) ProcessClientTrafficPolicies(
 				// Check if another policy targeting the same Gateway exists
 				s, ok := policyMap[key]
 				if ok && s.Has(AllSections) {
-					message := "Unable to target Gateway, another ClientTrafficPolicy has already attached to it"
+					message := fmt.Sprintf("Unable to target Gateway %s, another ClientTrafficPolicy has already attached to it",
+						string(currTarget.Name))
 
 					resolveErr = &status.PolicyResolveError{
 						Reason:  gwapiv1a2.PolicyReasonConflicted,
@@ -290,29 +290,16 @@ func resolveCTPolicyTargetRef(
 	targetRef *gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
 	gateways map[types.NamespacedName]*policyGatewayTargetContext,
 ) (*GatewayContext, *status.PolicyResolveError) {
-	targetNs := policy.Namespace
-
 	// Check if the gateway exists
 	key := types.NamespacedName{
 		Name:      string(targetRef.Name),
-		Namespace: targetNs,
+		Namespace: policy.Namespace,
 	}
 	gateway, ok := gateways[key]
 
 	// Gateway not found
 	if !ok {
 		return nil, nil
-	}
-
-	// Ensure Policy and target Gateway are in the same namespace
-	if policy.Namespace != targetNs {
-		message := fmt.Sprintf("Namespace:%s TargetRef.Namespace:%s, ClientTrafficPolicy can only target a Gateway in the same namespace.",
-			policy.Namespace, targetNs)
-
-		return gateway.GatewayContext, &status.PolicyResolveError{
-			Reason:  gwapiv1a2.PolicyReasonInvalid,
-			Message: message,
-		}
 	}
 
 	// If sectionName is set, make sure its valid
@@ -380,7 +367,7 @@ func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds, 
 }
 
 func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.ClientTrafficPolicy, l *ListenerContext,
-	xdsIR XdsIRMap, infraIR InfraIRMap, resources *Resources,
+	xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap, resources *resource.Resources,
 ) error {
 	// Find IR
 	irKey := t.getIRKey(l.gateway.Gateway)
@@ -432,7 +419,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 	}
 
 	// Translate Proxy Protocol
-	enableProxyProtocol = buildProxyProtocol(policy.Spec.EnableProxyProtocol)
+	enableProxyProtocol = ptr.Deref(policy.Spec.EnableProxyProtocol, false)
 
 	// Translate Client Timeout Settings
 	timeout, err = buildClientTimeout(policy.Spec.Timeout)
@@ -447,7 +434,10 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 		translateClientIPDetection(policy.Spec.ClientIPDetection, httpIR)
 
 		// Translate Header Settings
-		translateListenerHeaderSettings(policy.Spec.Headers, httpIR)
+		if err = translateListenerHeaderSettings(policy.Spec.Headers, httpIR); err != nil {
+			err = perr.WithMessage(err, "Headers")
+			errs = errors.Join(errs, err)
+		}
 
 		// Translate Path Settings
 		translatePathSettings(policy.Spec.Path, httpIR)
@@ -619,14 +609,6 @@ func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout,
 	return irClientTimeout, nil
 }
 
-func buildProxyProtocol(enableProxyProtocol *bool) bool {
-	if enableProxyProtocol != nil && *enableProxyProtocol {
-		return true
-	}
-
-	return false
-}
-
 func translateClientIPDetection(clientIPDetection *egv1a1.ClientIPDetectionSettings, httpIR *ir.HTTPListener) {
 	// Return early if not set
 	if clientIPDetection == nil {
@@ -636,9 +618,9 @@ func translateClientIPDetection(clientIPDetection *egv1a1.ClientIPDetectionSetti
 	httpIR.ClientIPDetection = (*ir.ClientIPDetectionSettings)(clientIPDetection)
 }
 
-func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, httpIR *ir.HTTPListener) {
+func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, httpIR *ir.HTTPListener) error {
 	if headerSettings == nil {
-		return
+		return nil
 	}
 	httpIR.Headers = &ir.HeaderSettings{
 		EnableEnvoyHeaders:      ptr.Deref(headerSettings.EnableEnvoyHeaders, false),
@@ -657,6 +639,16 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 			httpIR.Headers.XForwardedClientCert.CertDetailsToAdd = headerSettings.XForwardedClientCert.CertDetailsToAdd
 		}
 	}
+
+	if headerSettings.EarlyRequestHeaders != nil {
+		headersToAdd, headersToRemove, err := translateEarlyRequestHeaders(headerSettings.EarlyRequestHeaders)
+		if err != nil {
+			return err
+		}
+		httpIR.Headers.EarlyAddRequestHeaders = headersToAdd
+		httpIR.Headers.EarlyRemoveRequestHeaders = headersToRemove
+	}
+	return nil
 }
 
 func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, httpIR *ir.HTTPListener) error {
@@ -670,6 +662,7 @@ func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, httpIR *ir.HTTP
 	if http1Settings.HTTP10 != nil {
 		var defaultHost *string
 		if ptr.Deref(http1Settings.HTTP10.UseDefaultHost, false) {
+			// First level of precedence - the first non-wildcard hostname associated with the listener
 			for _, hostname := range httpIR.Hostnames {
 				if !strings.Contains(hostname, "*") {
 					// make linter happy
@@ -678,8 +671,27 @@ func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, httpIR *ir.HTTP
 					break
 				}
 			}
+			// second level of precedence - try to get a hostname from the HTTPRoutes
+			numMatchingRoutes := 0
 			if defaultHost == nil {
-				return fmt.Errorf("cannot set http10 default host on listener with only wildcard hostnames")
+				// When taken from the routes, a default hostname can only be chosen if there
+				// is exactly one HTTPRoute with a non-wildcard hostname configured.
+				for _, route := range httpIR.Routes {
+					if route.Hostname != "" && !strings.Contains(route.Hostname, "*") {
+						numMatchingRoutes++
+						// make the linter happy
+						theHost := route.Hostname
+						defaultHost = ptr.To(theHost)
+					}
+					if numMatchingRoutes > 1 {
+						break
+					}
+				}
+				if numMatchingRoutes == 0 {
+					return fmt.Errorf("cannot set http10 default host on listener with only wildcard hostnames")
+				} else if numMatchingRoutes > 1 {
+					return fmt.Errorf("cannot set http10 default host on listener with only wildcard hostnames and more than one possible default route")
+				}
 			}
 		}
 		// If useDefaultHost was set, then defaultHost will have the hostname to use.
@@ -747,7 +759,7 @@ func translateHealthCheckSettings(healthCheckSettings *egv1a1.HealthCheckSetting
 }
 
 func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPolicy,
-	irTLSConfig *ir.TLSConfig, resources *Resources,
+	irTLSConfig *ir.TLSConfig, resources *resource.Resources,
 ) (*ir.TLSConfig, error) {
 	// Return if this listener isn't a TLS listener. There has to be
 	// at least one certificate defined, which would cause httpIR/tcpIR to
@@ -768,7 +780,7 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 		return irTLSConfig, nil
 	}
 
-	if len(tlsParams.ALPNProtocols) > 0 {
+	if tlsParams.ALPNProtocols != nil {
 		irTLSConfig.ALPNProtocols = make([]string, len(tlsParams.ALPNProtocols))
 		for i := range tlsParams.ALPNProtocols {
 			irTLSConfig.ALPNProtocols[i] = string(tlsParams.ALPNProtocols[i])
@@ -794,7 +806,7 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 	if tlsParams.ClientValidation != nil {
 		from := crossNamespaceFrom{
 			group:     egv1a1.GroupName,
-			kind:      KindClientTrafficPolicy,
+			kind:      resource.KindClientTrafficPolicy,
 			namespace: policy.Namespace,
 		}
 
@@ -803,7 +815,7 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 		}
 
 		for _, caCertRef := range tlsParams.ClientValidation.CACertificateRefs {
-			if caCertRef.Kind == nil || string(*caCertRef.Kind) == KindSecret { // nolint
+			if caCertRef.Kind == nil || string(*caCertRef.Kind) == resource.KindSecret { // nolint
 				secret, err := t.validateSecretRef(false, from, caCertRef, resources)
 				if err != nil {
 					return irTLSConfig, err
@@ -822,7 +834,7 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 
 				irCACert.Certificate = append(irCACert.Certificate, secretBytes...)
 
-			} else if string(*caCertRef.Kind) == KindConfigMap {
+			} else if string(*caCertRef.Kind) == resource.KindConfigMap {
 				configMap, err := t.validateConfigMapRef(false, from, caCertRef, resources)
 				if err != nil {
 					return irTLSConfig, err
@@ -849,6 +861,15 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 		if len(irCACert.Certificate) > 0 {
 			irTLSConfig.CACertificate = irCACert
 			irTLSConfig.RequireClientCertificate = !tlsParams.ClientValidation.Optional
+		}
+	}
+
+	if tlsParams.Session != nil && tlsParams.Session.Resumption != nil {
+		if tlsParams.Session.Resumption.Stateless != nil {
+			irTLSConfig.StatelessSessionResumption = true
+		}
+		if tlsParams.Session.Resumption.Stateful != nil {
+			irTLSConfig.StatefulSessionResumption = true
 		}
 	}
 
@@ -891,4 +912,131 @@ func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection,
 	}
 
 	return irConnection, nil
+}
+
+func translateEarlyRequestHeaders(headerModifier *gwapiv1.HTTPHeaderFilter) ([]ir.AddHeader, []string, error) {
+	// Make sure the header modifier config actually exists
+	if headerModifier == nil {
+		return nil, nil, nil
+	}
+	var errs error
+	emptyFilterConfig := true // keep track of whether the provided config is empty or not
+
+	var AddRequestHeaders []ir.AddHeader
+	var RemoveRequestHeaders []string
+
+	// Add request headers
+	if headersToAdd := headerModifier.Add; headersToAdd != nil {
+		if len(headersToAdd) > 0 {
+			emptyFilterConfig = false
+		}
+		for _, addHeader := range headersToAdd {
+			emptyFilterConfig = false
+			if addHeader.Name == "" {
+				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaders cannot add a header with an empty name"))
+				// try to process the rest of the headers and produce a valid config.
+				continue
+			}
+			// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
+			if strings.ContainsAny(string(addHeader.Name), "/:") {
+				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaders Filter cannot set headers with a '/' or ':' character in them. Header: %q", string(addHeader.Name)))
+				continue
+			}
+			// Check if the header is a duplicate
+			headerKey := string(addHeader.Name)
+			canAddHeader := true
+			for _, h := range AddRequestHeaders {
+				if strings.EqualFold(h.Name, headerKey) {
+					canAddHeader = false
+					break
+				}
+			}
+
+			if !canAddHeader {
+				continue
+			}
+
+			newHeader := ir.AddHeader{
+				Name:   headerKey,
+				Append: true,
+				Value:  strings.Split(addHeader.Value, ","),
+			}
+
+			AddRequestHeaders = append(AddRequestHeaders, newHeader)
+		}
+	}
+
+	// Set headers
+	if headersToSet := headerModifier.Set; headersToSet != nil {
+		if len(headersToSet) > 0 {
+			emptyFilterConfig = false
+		}
+		for _, setHeader := range headersToSet {
+
+			if setHeader.Name == "" {
+				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaders cannot set a header with an empty name"))
+				continue
+			}
+			// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
+			if strings.ContainsAny(string(setHeader.Name), "/:") {
+				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaders cannot set headers with a '/' or ':' character in them. Header: '%s'", string(setHeader.Name)))
+				continue
+			}
+
+			// Check if the header to be set has already been configured
+			headerKey := string(setHeader.Name)
+			canAddHeader := true
+			for _, h := range AddRequestHeaders {
+				if strings.EqualFold(h.Name, headerKey) {
+					canAddHeader = false
+					break
+				}
+			}
+			if !canAddHeader {
+				continue
+			}
+			newHeader := ir.AddHeader{
+				Name:   string(setHeader.Name),
+				Append: false,
+				Value:  strings.Split(setHeader.Value, ","),
+			}
+
+			AddRequestHeaders = append(AddRequestHeaders, newHeader)
+		}
+	}
+
+	// Remove request headers
+	// As far as Envoy is concerned, it is ok to configure a header to be added/set and also in the list of
+	// headers to remove. It will remove the original header if present and then add/set the header after.
+	if headersToRemove := headerModifier.Remove; headersToRemove != nil {
+		if len(headersToRemove) > 0 {
+			emptyFilterConfig = false
+		}
+		for _, removedHeader := range headersToRemove {
+			if removedHeader == "" {
+				errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaders cannot remove a header with an empty name"))
+				continue
+			}
+
+			canRemHeader := true
+			for _, h := range RemoveRequestHeaders {
+				if strings.EqualFold(h, removedHeader) {
+					canRemHeader = false
+					break
+				}
+			}
+			if !canRemHeader {
+				continue
+			}
+
+			RemoveRequestHeaders = append(RemoveRequestHeaders, removedHeader)
+		}
+	}
+
+	// Update the status if the filter failed to configure any valid headers to add/remove
+	if len(AddRequestHeaders) == 0 && len(RemoveRequestHeaders) == 0 && !emptyFilterConfig {
+		errs = errors.Join(errs, fmt.Errorf("EarlyRequestHeaders did not provide valid configuration to add/set/remove any headers"))
+	}
+
+	return AddRequestHeaders, RemoveRequestHeaders, errs
 }

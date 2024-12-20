@@ -16,12 +16,12 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
     - name: Checkout code
-      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
     - name: Run scanner
-      uses: google/osv-scanner-action/osv-scanner-action@7ac94f9d40028db4cacf8d53adec6626f5d3d2f7  # v1.8.2
+      uses: google/osv-scanner-action/osv-scanner-action@19ec1116569a47416e11a45848722b1af31a857b  # v1.9.0
       with:
         scan-args: |-
           --skip-git
           --experimental-licenses=Apache-2.0,BSD-2-Clause,BSD-2-Clause-FreeBSD,BSD-3-Clause,MIT,ISC,Python-2.0,PostgreSQL,X11,Zlib
+          --config tools/osv-scanner/license-scan-config.toml
           ./
-      continue-on-error: true  # TODO remove once all issues are resolved

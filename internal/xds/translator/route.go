@@ -16,6 +16,7 @@ import (
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/protocov"
@@ -96,12 +97,11 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 	}
 
 	// Timeouts
-	if router.GetRoute() != nil &&
-		httpRoute.Traffic != nil &&
-		httpRoute.Traffic.Timeout != nil &&
-		httpRoute.Traffic.Timeout.HTTP != nil &&
-		httpRoute.Traffic.Timeout.HTTP.RequestTimeout != nil {
-		router.GetRoute().Timeout = durationpb.New(httpRoute.Traffic.Timeout.HTTP.RequestTimeout.Duration)
+	if router.GetRoute() != nil {
+		rt := getEffectiveRequestTimeout(httpRoute)
+		if rt != nil {
+			router.GetRoute().Timeout = durationpb.New(rt.Duration)
+		}
 	}
 
 	// Retries
@@ -244,39 +244,33 @@ func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*
 			Weight: &wrapperspb.UInt32Value{Value: backendWeights.Invalid},
 		}
 		weightedClusters = append(weightedClusters, invalidCluster)
-		return &routev3.RouteAction{
-			// Intentionally route to a non-existent cluster and return a 500 error when it is not found
-			ClusterNotFoundResponseCode: routev3.RouteAction_INTERNAL_SERVER_ERROR,
-			ClusterSpecifier: &routev3.RouteAction_WeightedClusters{
-				WeightedClusters: &routev3.WeightedCluster{
-					Clusters: weightedClusters,
-				},
-			},
-		}
 	}
 
 	for _, destinationSetting := range settings {
-		if destinationSetting.Filters != nil {
+		if len(destinationSetting.Endpoints) > 0 {
 			validCluster := &routev3.WeightedCluster_ClusterWeight{
 				Name:   backendWeights.Name,
 				Weight: &wrapperspb.UInt32Value{Value: *destinationSetting.Weight},
 			}
 
-			if len(destinationSetting.Filters.AddRequestHeaders) > 0 {
-				validCluster.RequestHeadersToAdd = append(validCluster.RequestHeadersToAdd, buildXdsAddedHeaders(destinationSetting.Filters.AddRequestHeaders)...)
+			if destinationSetting.Filters != nil {
+				if len(destinationSetting.Filters.AddRequestHeaders) > 0 {
+					validCluster.RequestHeadersToAdd = append(validCluster.RequestHeadersToAdd, buildXdsAddedHeaders(destinationSetting.Filters.AddRequestHeaders)...)
+				}
+
+				if len(destinationSetting.Filters.RemoveRequestHeaders) > 0 {
+					validCluster.RequestHeadersToRemove = append(validCluster.RequestHeadersToRemove, destinationSetting.Filters.RemoveRequestHeaders...)
+				}
+
+				if len(destinationSetting.Filters.AddResponseHeaders) > 0 {
+					validCluster.ResponseHeadersToAdd = append(validCluster.ResponseHeadersToAdd, buildXdsAddedHeaders(destinationSetting.Filters.AddResponseHeaders)...)
+				}
+
+				if len(destinationSetting.Filters.RemoveResponseHeaders) > 0 {
+					validCluster.ResponseHeadersToRemove = append(validCluster.ResponseHeadersToRemove, destinationSetting.Filters.RemoveResponseHeaders...)
+				}
 			}
 
-			if len(destinationSetting.Filters.RemoveRequestHeaders) > 0 {
-				validCluster.RequestHeadersToRemove = append(validCluster.RequestHeadersToRemove, destinationSetting.Filters.RemoveRequestHeaders...)
-			}
-
-			if len(destinationSetting.Filters.AddResponseHeaders) > 0 {
-				validCluster.ResponseHeadersToAdd = append(validCluster.ResponseHeadersToAdd, buildXdsAddedHeaders(destinationSetting.Filters.AddResponseHeaders)...)
-			}
-
-			if len(destinationSetting.Filters.RemoveResponseHeaders) > 0 {
-				validCluster.ResponseHeadersToRemove = append(validCluster.ResponseHeadersToRemove, destinationSetting.Filters.RemoveResponseHeaders...)
-			}
 			weightedClusters = append(weightedClusters, validCluster)
 		}
 	}
@@ -292,14 +286,26 @@ func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*
 	}
 }
 
-func idleTimeout(httpRoute *ir.HTTPRoute) *durationpb.Duration {
+func getEffectiveRequestTimeout(httpRoute *ir.HTTPRoute) *metav1.Duration {
+	// gateway-api timeout takes precedence
+	if httpRoute.Timeout != nil {
+		return httpRoute.Timeout
+	}
+
 	if httpRoute.Traffic != nil &&
 		httpRoute.Traffic.Timeout != nil &&
 		httpRoute.Traffic.Timeout.HTTP != nil &&
 		httpRoute.Traffic.Timeout.HTTP.RequestTimeout != nil {
-		rt := httpRoute.Traffic.Timeout.HTTP.RequestTimeout
-		timeout := time.Hour // Default to 1 hour
+		return httpRoute.Traffic.Timeout.HTTP.RequestTimeout
+	}
 
+	return nil
+}
+
+func idleTimeout(httpRoute *ir.HTTPRoute) *durationpb.Duration {
+	rt := getEffectiveRequestTimeout(httpRoute)
+	timeout := time.Hour // Default to 1 hour
+	if rt != nil {
 		// Ensure is not less than the request timeout
 		if timeout < rt.Duration {
 			timeout = rt.Duration
@@ -386,14 +392,15 @@ func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite, pathMa
 	}
 
 	if urlRewrite.Path != nil {
-		if urlRewrite.Path.FullReplace != nil {
+		switch {
+		case urlRewrite.Path.FullReplace != nil:
 			routeAction.RegexRewrite = &matcherv3.RegexMatchAndSubstitute{
 				Pattern: &matcherv3.RegexMatcher{
 					Regex: "^/.*$",
 				},
 				Substitution: *urlRewrite.Path.FullReplace,
 			}
-		} else if urlRewrite.Path.PrefixMatchReplace != nil {
+		case urlRewrite.Path.PrefixMatchReplace != nil:
 			// Circumvent the case of "//" when the replace string is "/"
 			// An empty replace string does not seem to solve the issue so we are using
 			// a regex match and replace instead
@@ -401,14 +408,36 @@ func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite, pathMa
 			if useRegexRewriteForPrefixMatchReplace(pathMatch, *urlRewrite.Path.PrefixMatchReplace) {
 				routeAction.RegexRewrite = prefix2RegexRewrite(*pathMatch.Prefix)
 			} else {
-				routeAction.PrefixRewrite = *urlRewrite.Path.PrefixMatchReplace
+				// remove trailing / to fix #3989
+				// when the pathMath.Prefix has suffix / but EG has removed it,
+				// and the urlRewrite.Path.PrefixMatchReplace suffix with / the upstream will get unwanted /
+				routeAction.PrefixRewrite = strings.TrimSuffix(*urlRewrite.Path.PrefixMatchReplace, "/")
+			}
+		case urlRewrite.Path.RegexMatchReplace != nil:
+			routeAction.RegexRewrite = &matcherv3.RegexMatchAndSubstitute{
+				Pattern: &matcherv3.RegexMatcher{
+					Regex: urlRewrite.Path.RegexMatchReplace.Pattern,
+				},
+				Substitution: urlRewrite.Path.RegexMatchReplace.Substitution,
 			}
 		}
 	}
 
-	if urlRewrite.Hostname != nil {
-		routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewriteLiteral{
-			HostRewriteLiteral: *urlRewrite.Hostname,
+	if urlRewrite.Host != nil {
+
+		switch {
+		case urlRewrite.Host.Name != nil:
+			routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewriteLiteral{
+				HostRewriteLiteral: *urlRewrite.Host.Name,
+			}
+		case urlRewrite.Host.Header != nil:
+			routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewriteHeader{
+				HostRewriteHeader: *urlRewrite.Host.Header,
+			}
+		case urlRewrite.Host.Backend != nil:
+			routeAction.HostRewriteSpecifier = &routev3.RouteAction_AutoHostRewrite{
+				AutoHostRewrite: wrapperspb.Bool(true),
+			}
 		}
 
 		routeAction.AppendXForwardedHost = true
@@ -417,8 +446,20 @@ func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite, pathMa
 	return routeAction
 }
 
-func buildXdsDirectResponseAction(res *ir.DirectResponse) *routev3.DirectResponseAction {
-	routeAction := &routev3.DirectResponseAction{Status: res.StatusCode}
+func buildXdsDirectResponseAction(res *ir.CustomResponse) *routev3.DirectResponseAction {
+	routeAction := &routev3.DirectResponseAction{}
+	if res.StatusCode != nil {
+		routeAction.Status = *res.StatusCode
+	}
+
+	if res.Body != nil && *res.Body != "" {
+		routeAction.Body = &corev3.DataSource{
+			Specifier: &corev3.DataSource_InlineString{
+				InlineString: *res.Body,
+			},
+		}
+	}
+
 	return routeAction
 }
 
@@ -435,9 +476,9 @@ func buildXdsRequestMirrorPolicies(mirrorDestinations []*ir.RouteDestination) []
 }
 
 func buildXdsAddedHeaders(headersToAdd []ir.AddHeader) []*corev3.HeaderValueOption {
-	headerValueOptions := make([]*corev3.HeaderValueOption, len(headersToAdd))
+	headerValueOptions := []*corev3.HeaderValueOption{}
 
-	for i, header := range headersToAdd {
+	for _, header := range headersToAdd {
 		var appendAction corev3.HeaderValueOption_HeaderAppendAction
 
 		if header.Append {
@@ -445,18 +486,26 @@ func buildXdsAddedHeaders(headersToAdd []ir.AddHeader) []*corev3.HeaderValueOpti
 		} else {
 			appendAction = corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD
 		}
-
-		headerValueOptions[i] = &corev3.HeaderValueOption{
-			Header: &corev3.HeaderValue{
-				Key:   header.Name,
-				Value: header.Value,
-			},
-			AppendAction: appendAction,
-		}
-
 		// Allow empty headers to be set, but don't add the config to do so unless necessary
-		if header.Value == "" {
-			headerValueOptions[i].KeepEmptyValue = true
+		if len(header.Value) == 0 {
+			headerValueOptions = append(headerValueOptions, &corev3.HeaderValueOption{
+				Header: &corev3.HeaderValue{
+					Key: header.Name,
+				},
+				AppendAction:   appendAction,
+				KeepEmptyValue: true,
+			})
+		} else {
+			for _, val := range header.Value {
+				headerValueOptions = append(headerValueOptions, &corev3.HeaderValueOption{
+					Header: &corev3.HeaderValue{
+						Key:   header.Name,
+						Value: val,
+					},
+					AppendAction:   appendAction,
+					KeepEmptyValue: val == "",
+				})
+			}
 		}
 	}
 
@@ -545,7 +594,7 @@ func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
 	}
 
 	if rr.RetryOn != nil {
-		if rr.RetryOn.Triggers != nil && len(rr.RetryOn.Triggers) > 0 {
+		if len(rr.RetryOn.Triggers) > 0 {
 			if ro, err := buildRetryOn(rr.RetryOn.Triggers); err == nil {
 				rp.RetryOn = ro
 			} else {
@@ -553,7 +602,7 @@ func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
 			}
 		}
 
-		if rr.RetryOn.HTTPStatusCodes != nil && len(rr.RetryOn.HTTPStatusCodes) > 0 {
+		if len(rr.RetryOn.HTTPStatusCodes) > 0 {
 			rp.RetriableStatusCodes = buildRetryStatusCodes(rr.RetryOn.HTTPStatusCodes)
 		}
 	}

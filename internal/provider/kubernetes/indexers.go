@@ -19,6 +19,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
 
 const (
@@ -39,25 +40,33 @@ const (
 	backendSecurityPolicyIndex       = "backendSecurityPolicyIndex"
 	configMapCtpIndex                = "configMapCtpIndex"
 	secretCtpIndex                   = "secretCtpIndex"
+	secretBtlsIndex                  = "secretBtlsIndex"
 	configMapBtlsIndex               = "configMapBtlsIndex"
 	backendEnvoyExtensionPolicyIndex = "backendEnvoyExtensionPolicyIndex"
 	backendEnvoyProxyTelemetryIndex  = "backendEnvoyProxyTelemetryIndex"
 	secretEnvoyProxyIndex            = "secretEnvoyProxyIndex"
 	secretEnvoyExtensionPolicyIndex  = "secretEnvoyExtensionPolicyIndex"
+	httpRouteFilterHTTPRouteIndex    = "httpRouteFilterHTTPRouteIndex"
+	configMapBtpIndex                = "configMapBtpIndex"
+	configMapHTTPRouteFilterIndex    = "configMapHTTPRouteFilterIndex"
 )
 
 func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1b1.ReferenceGrant{}, targetRefGrantRouteIndex, func(rawObj client.Object) []string {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1b1.ReferenceGrant{}, targetRefGrantRouteIndex, getReferenceGrantIndexerFunc()); err != nil {
+		return err
+	}
+	return nil
+}
+
+func getReferenceGrantIndexerFunc() func(rawObj client.Object) []string {
+	return func(rawObj client.Object) []string {
 		refGrant := rawObj.(*gwapiv1b1.ReferenceGrant)
 		var referredServices []string
 		for _, target := range refGrant.Spec.To {
 			referredServices = append(referredServices, string(target.Kind))
 		}
 		return referredServices
-	}); err != nil {
-		return err
 	}
-	return nil
 }
 
 // addHTTPRouteIndexers adds indexing on HTTPRoute.
@@ -72,6 +81,10 @@ func addHTTPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 		return err
 	}
 
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.HTTPRoute{}, httpRouteFilterHTTPRouteIndex, httpRouteFilterHTTPRouteIndexFunc); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -79,7 +92,7 @@ func gatewayHTTPRouteIndexFunc(rawObj client.Object) []string {
 	httproute := rawObj.(*gwapiv1.HTTPRoute)
 	var gateways []string
 	for _, parent := range httproute.Spec.ParentRefs {
-		if parent.Kind == nil || string(*parent.Kind) == gatewayapi.KindGateway {
+		if parent.Kind == nil || string(*parent.Kind) == resource.KindGateway {
 			// If an explicit Gateway namespace is not provided, use the HTTPRoute namespace to
 			// lookup the provided Gateway Name.
 			gateways = append(gateways,
@@ -98,9 +111,7 @@ func backendHTTPRouteIndexFunc(rawObj client.Object) []string {
 	var backendRefs []string
 	for _, rule := range httproute.Spec.Rules {
 		for _, backend := range rule.BackendRefs {
-			if backend.Kind == nil || string(*backend.Kind) == gatewayapi.KindService || string(*backend.Kind) == egv1a1.KindBackend {
-				// If an explicit Backend namespace is not provided, use the HTTPRoute namespace to
-				// lookup the provided Gateway Name.
+			if backend.Kind == nil || string(*backend.Kind) == resource.KindService || string(*backend.Kind) == egv1a1.KindBackend {
 				backendRefs = append(backendRefs,
 					types.NamespacedName{
 						Namespace: gatewayapi.NamespaceDerefOr(backend.Namespace, httproute.Namespace),
@@ -113,12 +124,32 @@ func backendHTTPRouteIndexFunc(rawObj client.Object) []string {
 	return backendRefs
 }
 
+func httpRouteFilterHTTPRouteIndexFunc(rawObj client.Object) []string {
+	httproute := rawObj.(*gwapiv1.HTTPRoute)
+	var httpRouteFilterRefs []string
+	for _, rule := range httproute.Spec.Rules {
+		for _, filter := range rule.Filters {
+			if filter.ExtensionRef != nil && string(filter.ExtensionRef.Kind) == resource.KindHTTPRouteFilter {
+				// If an explicit Backend namespace is not provided, use the HTTPRoute namespace to
+				// lookup the provided Gateway Name.
+				httpRouteFilterRefs = append(httpRouteFilterRefs,
+					types.NamespacedName{
+						Namespace: httproute.Namespace,
+						Name:      string(filter.ExtensionRef.Name),
+					}.String(),
+				)
+			}
+		}
+	}
+	return httpRouteFilterRefs
+}
+
 func secretEnvoyProxyIndexFunc(rawObj client.Object) []string {
 	ep := rawObj.(*egv1a1.EnvoyProxy)
 	var secretReferences []string
 	if ep.Spec.BackendTLS != nil {
 		if ep.Spec.BackendTLS.ClientCertificateRef != nil {
-			if *ep.Spec.BackendTLS.ClientCertificateRef.Kind == gatewayapi.KindSecret {
+			if *ep.Spec.BackendTLS.ClientCertificateRef.Kind == resource.KindSecret {
 				secretReferences = append(secretReferences,
 					types.NamespacedName{
 						Namespace: gatewayapi.NamespaceDerefOr(ep.Spec.BackendTLS.ClientCertificateRef.Namespace, ep.Namespace),
@@ -172,7 +203,7 @@ func accessLogRefs(ep *egv1a1.EnvoyProxy) []string {
 			}
 
 			for _, ref := range backendRefs {
-				if ref.Kind == nil || string(*ref.Kind) == gatewayapi.KindService {
+				if ref.Kind == nil || string(*ref.Kind) == resource.KindService {
 					refs = append(refs,
 						types.NamespacedName{
 							Namespace: gatewayapi.NamespaceDerefOr(ref.Namespace, ep.Namespace),
@@ -197,7 +228,7 @@ func metricRefs(ep *egv1a1.EnvoyProxy) []string {
 	for _, sink := range ep.Spec.Telemetry.Metrics.Sinks {
 		if sink.OpenTelemetry != nil {
 			for _, backend := range sink.OpenTelemetry.BackendRefs {
-				if backend.Kind == nil || string(*backend.Kind) == gatewayapi.KindService {
+				if backend.Kind == nil || string(*backend.Kind) == resource.KindService {
 					refs = append(refs,
 						types.NamespacedName{
 							Namespace: gatewayapi.NamespaceDerefOr(backend.Namespace, ep.Namespace),
@@ -220,7 +251,7 @@ func traceRefs(ep *egv1a1.EnvoyProxy) []string {
 	}
 
 	for _, ref := range ep.Spec.Telemetry.Tracing.Provider.BackendRefs {
-		if ref.Kind == nil || string(*ref.Kind) == gatewayapi.KindService {
+		if ref.Kind == nil || string(*ref.Kind) == resource.KindService {
 			refs = append(refs,
 				types.NamespacedName{
 					Namespace: gatewayapi.NamespaceDerefOr(ref.Namespace, ep.Namespace),
@@ -252,7 +283,7 @@ func gatewayGRPCRouteIndexFunc(rawObj client.Object) []string {
 	grpcroute := rawObj.(*gwapiv1.GRPCRoute)
 	var gateways []string
 	for _, parent := range grpcroute.Spec.ParentRefs {
-		if parent.Kind == nil || string(*parent.Kind) == gatewayapi.KindGateway {
+		if parent.Kind == nil || string(*parent.Kind) == resource.KindGateway {
 			// If an explicit Gateway namespace is not provided, use the GRPCRoute namespace to
 			// lookup the provided Gateway Name.
 			gateways = append(gateways,
@@ -271,7 +302,7 @@ func backendGRPCRouteIndexFunc(rawObj client.Object) []string {
 	var backendRefs []string
 	for _, rule := range grpcroute.Spec.Rules {
 		for _, backend := range rule.BackendRefs {
-			if backend.Kind == nil || string(*backend.Kind) == gatewayapi.KindService || string(*backend.Kind) == egv1a1.KindBackend {
+			if backend.Kind == nil || string(*backend.Kind) == resource.KindService || string(*backend.Kind) == egv1a1.KindBackend {
 				// If an explicit Backend namespace is not provided, use the GRPCRoute namespace to
 				// lookup the provided Gateway Name.
 				backendRefs = append(backendRefs,
@@ -294,7 +325,7 @@ func addTLSRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 		tlsRoute := rawObj.(*gwapiv1a2.TLSRoute)
 		var gateways []string
 		for _, parent := range tlsRoute.Spec.ParentRefs {
-			if string(*parent.Kind) == gatewayapi.KindGateway {
+			if string(*parent.Kind) == resource.KindGateway {
 				// If an explicit Gateway namespace is not provided, use the TLSRoute namespace to
 				// lookup the provided Gateway Name.
 				gateways = append(gateways,
@@ -321,7 +352,7 @@ func backendTLSRouteIndexFunc(rawObj client.Object) []string {
 	var backendRefs []string
 	for _, rule := range tlsroute.Spec.Rules {
 		for _, backend := range rule.BackendRefs {
-			if backend.Kind == nil || string(*backend.Kind) == gatewayapi.KindService || string(*backend.Kind) == egv1a1.KindBackend {
+			if backend.Kind == nil || string(*backend.Kind) == resource.KindService || string(*backend.Kind) == egv1a1.KindBackend {
 				// If an explicit Backend namespace is not provided, use the TLSRoute namespace to
 				// lookup the provided Gateway Name.
 				backendRefs = append(backendRefs,
@@ -344,7 +375,7 @@ func addTCPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 		tcpRoute := rawObj.(*gwapiv1a2.TCPRoute)
 		var gateways []string
 		for _, parent := range tcpRoute.Spec.ParentRefs {
-			if string(*parent.Kind) == gatewayapi.KindGateway {
+			if string(*parent.Kind) == resource.KindGateway {
 				// If an explicit Gateway namespace is not provided, use the TCPRoute namespace to
 				// lookup the provided Gateway Name.
 				gateways = append(gateways,
@@ -371,7 +402,7 @@ func backendTCPRouteIndexFunc(rawObj client.Object) []string {
 	var backendRefs []string
 	for _, rule := range tcpRoute.Spec.Rules {
 		for _, backend := range rule.BackendRefs {
-			if backend.Kind == nil || string(*backend.Kind) == gatewayapi.KindService || string(*backend.Kind) == egv1a1.KindBackend {
+			if backend.Kind == nil || string(*backend.Kind) == resource.KindService || string(*backend.Kind) == egv1a1.KindBackend {
 				// If an explicit Backend namespace is not provided, use the TCPRoute namespace to
 				// lookup the provided Gateway Name.
 				backendRefs = append(backendRefs,
@@ -396,7 +427,7 @@ func addUDPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 		udpRoute := rawObj.(*gwapiv1a2.UDPRoute)
 		var gateways []string
 		for _, parent := range udpRoute.Spec.ParentRefs {
-			if string(*parent.Kind) == gatewayapi.KindGateway {
+			if string(*parent.Kind) == resource.KindGateway {
 				// If an explicit Gateway namespace is not provided, use the UDPRoute namespace to
 				// lookup the provided Gateway Name.
 				gateways = append(gateways,
@@ -423,7 +454,7 @@ func backendUDPRouteIndexFunc(rawObj client.Object) []string {
 	var backendRefs []string
 	for _, rule := range udproute.Spec.Rules {
 		for _, backend := range rule.BackendRefs {
-			if backend.Kind == nil || string(*backend.Kind) == gatewayapi.KindService || string(*backend.Kind) == egv1a1.KindBackend {
+			if backend.Kind == nil || string(*backend.Kind) == resource.KindService || string(*backend.Kind) == egv1a1.KindBackend {
 				// If an explicit Backend namespace is not provided, use the UDPRoute namespace to
 				// lookup the provided Gateway Name.
 				backendRefs = append(backendRefs,
@@ -463,7 +494,7 @@ func secretGatewayIndexFunc(rawObj client.Object) []string {
 			continue
 		}
 		for _, cert := range listener.TLS.CertificateRefs {
-			if *cert.Kind == gatewayapi.KindSecret {
+			if *cert.Kind == resource.KindSecret {
 				// If an explicit Secret namespace is not provided, use the Gateway namespace to
 				// lookup the provided Secret Name.
 				secretReferences = append(secretReferences,
@@ -507,7 +538,7 @@ func secretSecurityPolicyIndexFunc(rawObj client.Object) []string {
 	securityPolicy := rawObj.(*egv1a1.SecurityPolicy)
 
 	var (
-		secretReferences []gwapiv1b1.SecretObjectReference
+		secretReferences []gwapiv1.SecretObjectReference
 		values           []string
 	)
 
@@ -582,7 +613,7 @@ func configMapCtpIndexFunc(rawObj client.Object) []string {
 	var configMapReferences []string
 	if ctp.Spec.TLS != nil && ctp.Spec.TLS.ClientValidation != nil {
 		for _, caCertRef := range ctp.Spec.TLS.ClientValidation.CACertificateRefs {
-			if caCertRef.Kind != nil && string(*caCertRef.Kind) == gatewayapi.KindConfigMap {
+			if caCertRef.Kind != nil && string(*caCertRef.Kind) == resource.KindConfigMap {
 				// If an explicit configmap namespace is not provided, use the ctp namespace to
 				// lookup the provided config map Name.
 				configMapReferences = append(configMapReferences,
@@ -602,7 +633,7 @@ func secretCtpIndexFunc(rawObj client.Object) []string {
 	var secretReferences []string
 	if ctp.Spec.TLS != nil && ctp.Spec.TLS.ClientValidation != nil {
 		for _, caCertRef := range ctp.Spec.TLS.ClientValidation.CACertificateRefs {
-			if caCertRef.Kind == nil || (string(*caCertRef.Kind) == gatewayapi.KindSecret) {
+			if caCertRef.Kind == nil || (string(*caCertRef.Kind) == resource.KindSecret) {
 				// If an explicit namespace is not provided, use the ctp namespace to
 				// lookup the provided secrent Name.
 				secretReferences = append(secretReferences,
@@ -617,7 +648,66 @@ func secretCtpIndexFunc(rawObj client.Object) []string {
 	return secretReferences
 }
 
-// addBtlsIndexers adds indexing on BackendTLSPolicy, for ConfigMap objects that are
+// addBtpIndexers adds indexing on BackendTrafficPolicy, for ConfigMap objects that are
+// referenced in BackendTrafficPolicy objects. This helps in querying for BackendTrafficPolies that are
+// affected by a particular ConfigMap CRUD.
+func addBtpIndexers(ctx context.Context, mgr manager.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.BackendTrafficPolicy{}, configMapBtpIndex, configMapBtpIndexFunc); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func configMapBtpIndexFunc(rawObj client.Object) []string {
+	btp := rawObj.(*egv1a1.BackendTrafficPolicy)
+	var configMapReferences []string
+
+	for _, ro := range btp.Spec.ResponseOverride {
+		if ro.Response.Body.ValueRef != nil {
+			if string(ro.Response.Body.ValueRef.Kind) == resource.KindConfigMap {
+				configMapReferences = append(configMapReferences,
+					types.NamespacedName{
+						Namespace: btp.Namespace,
+						Name:      string(ro.Response.Body.ValueRef.Name),
+					}.String(),
+				)
+			}
+		}
+	}
+	return configMapReferences
+}
+
+// addRouteFilterIndexers adds indexing on HTTPRouteFilter, for ConfigMap objects that are
+// referenced in HTTPRouteFilter objects. This helps in querying for HTTPRouteFilters that are
+// affected by a particular ConfigMap CRUD.
+func addRouteFilterIndexers(ctx context.Context, mgr manager.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.HTTPRouteFilter{},
+		configMapHTTPRouteFilterIndex, configMapRouteFilterIndexFunc); err != nil {
+		return err
+	}
+	return nil
+}
+
+func configMapRouteFilterIndexFunc(rawObj client.Object) []string {
+	filter := rawObj.(*egv1a1.HTTPRouteFilter)
+	var configMapReferences []string
+	if filter.Spec.DirectResponse != nil &&
+		filter.Spec.DirectResponse.Body != nil &&
+		filter.Spec.DirectResponse.Body.ValueRef != nil {
+		if string(filter.Spec.DirectResponse.Body.ValueRef.Kind) == resource.KindConfigMap {
+			configMapReferences = append(configMapReferences,
+				types.NamespacedName{
+					Namespace: filter.Namespace,
+					Name:      string(filter.Spec.DirectResponse.Body.ValueRef.Name),
+				}.String(),
+			)
+		}
+	}
+	return configMapReferences
+}
+
+// addBtlsIndexers adds indexing on BackendTLSPolicy, for ConfigMap and Secret objects that are
 // referenced in BackendTLSPolicy objects. This helps in querying for BackendTLSPolicies that are
 // affected by a particular ConfigMap CRUD.
 func addBtlsIndexers(ctx context.Context, mgr manager.Manager) error {
@@ -625,6 +715,9 @@ func addBtlsIndexers(ctx context.Context, mgr manager.Manager) error {
 		return err
 	}
 
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a3.BackendTLSPolicy{}, secretBtlsIndex, secretBtlsIndexFunc); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -633,7 +726,7 @@ func configMapBtlsIndexFunc(rawObj client.Object) []string {
 	var configMapReferences []string
 	if btls.Spec.Validation.CACertificateRefs != nil {
 		for _, caCertRef := range btls.Spec.Validation.CACertificateRefs {
-			if string(caCertRef.Kind) == gatewayapi.KindConfigMap {
+			if string(caCertRef.Kind) == resource.KindConfigMap {
 				configMapReferences = append(configMapReferences,
 					types.NamespacedName{
 						Namespace: btls.Namespace,
@@ -644,6 +737,24 @@ func configMapBtlsIndexFunc(rawObj client.Object) []string {
 		}
 	}
 	return configMapReferences
+}
+
+func secretBtlsIndexFunc(rawObj client.Object) []string {
+	btls := rawObj.(*gwapiv1a3.BackendTLSPolicy)
+	var secretReferences []string
+	if btls.Spec.Validation.CACertificateRefs != nil {
+		for _, caCertRef := range btls.Spec.Validation.CACertificateRefs {
+			if string(caCertRef.Kind) == resource.KindSecret {
+				secretReferences = append(secretReferences,
+					types.NamespacedName{
+						Namespace: btls.Namespace,
+						Name:      string(caCertRef.Name),
+					}.String(),
+				)
+			}
+		}
+	}
+	return secretReferences
 }
 
 // addEnvoyExtensionPolicyIndexers adds indexing on EnvoyExtensionPolicy.

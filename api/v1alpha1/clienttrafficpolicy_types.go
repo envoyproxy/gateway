@@ -6,8 +6,8 @@
 package v1alpha1
 
 import (
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
@@ -135,6 +135,12 @@ type HeaderSettings struct {
 	//
 	// +optional
 	PreserveXRequestID *bool `json:"preserveXRequestID,omitempty"`
+
+	// EarlyRequestHeaders defines settings for early request header modification, before envoy performs
+	// routing, tracing and built-in header manipulation.
+	//
+	// +optional
+	EarlyRequestHeaders *gwapiv1.HTTPHeaderFilter `json:"earlyRequestHeaders,omitempty"`
 }
 
 // WithUnderscoresAction configures the action to take when an HTTP header with underscores
@@ -231,14 +237,29 @@ type ClientIPDetectionSettings struct {
 }
 
 // XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address.
+// Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
+// for more details.
+// +kubebuilder:validation:XValidation:rule="(has(self.numTrustedHops) && !has(self.trustedCIDRs)) || (!has(self.numTrustedHops) && has(self.trustedCIDRs))", message="only one of numTrustedHops or trustedCIDRs must be set"
 type XForwardedForSettings struct {
 	// NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP
 	// headers to trust when determining the origin client's IP address.
-	// Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
-	// for more details.
+	// Only one of NumTrustedHops and TrustedCIDRs must be set.
 	//
 	// +optional
 	NumTrustedHops *uint32 `json:"numTrustedHops,omitempty"`
+
+	// TrustedCIDRs is a list of CIDR ranges to trust when evaluating
+	// the remote IP address to determine the original client’s IP address.
+	// When the remote IP address matches a trusted CIDR and the x-forwarded-for header was sent,
+	// each entry in the x-forwarded-for header is evaluated from right to left
+	// and the first public non-trusted address is used as the original client address.
+	// If all addresses in x-forwarded-for are within the trusted list, the first (leftmost) entry is used.
+	// Only one of NumTrustedHops and TrustedCIDRs must be set.
+	//
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +notImplementedHide
+	TrustedCIDRs []CIDR `json:"trustedCIDRs,omitempty"`
 }
 
 // CustomHeaderExtensionSettings provides configuration for determining the client IP address for a request based on
@@ -287,30 +308,6 @@ type HTTP10Settings struct {
 	// it will be rejected.
 	// +optional
 	UseDefaultHost *bool `json:"useDefaultHost,omitempty"`
-}
-
-// HTTP2Settings provides HTTP/2 configuration on the listener.
-type HTTP2Settings struct {
-	// InitialStreamWindowSize sets the initial window size for HTTP/2 streams.
-	// If not set, the default value is 64 KiB(64*1024).
-	//
-	// +kubebuilder:validation:XValidation:rule="type(self) == string ? self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\") : type(self) == int",message="initialStreamWindowSize must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
-	// +optional
-	InitialStreamWindowSize *resource.Quantity `json:"initialStreamWindowSize,omitempty"`
-
-	// InitialConnectionWindowSize sets the initial window size for HTTP/2 connections.
-	// If not set, the default value is 1 MiB.
-	//
-	// +kubebuilder:validation:XValidation:rule="type(self) == string ? self.matches(r\"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\") : type(self) == int",message="initialConnectionWindowSize must be of the format \"^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$\""
-	// +optional
-	InitialConnectionWindowSize *resource.Quantity `json:"initialConnectionWindowSize,omitempty"`
-
-	// MaxConcurrentStreams sets the maximum number of concurrent streams allowed per connection.
-	// If not set, the default value is 100.
-	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2147483647
-	// +optional
-	MaxConcurrentStreams *uint32 `json:"maxConcurrentStreams,omitempty"`
 }
 
 // HealthCheckSettings provides HealthCheck configuration on the HTTP/HTTPS listener.

@@ -1,8 +1,7 @@
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       portValue: 10080
-  drainType: MODIFY_ONLY
   filterChains:
   - filterChainMatch:
       serverNames:
@@ -14,7 +13,7 @@
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tcp-route-complex-dest
-        statPrefix: passthrough
+        statPrefix: tls-passthrough-10080
     name: tcp-route-complex
   listenerFilters:
   - name: envoy.filters.listener.tls_inspector

@@ -195,15 +195,15 @@ xds:
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
-          dnsLookupFamily: V4_ONLY
+          dnsLookupFamily: V4_PREFERRED
           edsClusterConfig:
             edsConfig:
               ads: {}
               resourceApiVersion: V3
             serviceName: httproute/envoy-gateway-system/backend/rule/0
+          ignoreHealthOnHostRemoval: true
           lbPolicy: LEAST_REQUEST
           name: httproute/envoy-gateway-system/backend/rule/0
-          outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
           type: EDS
       - cluster:
@@ -214,7 +214,7 @@ xds:
           commonLbConfig:
             localityWeightedLbConfig: {}
           connectTimeout: 10s
-          dnsLookupFamily: V4_ONLY
+          dnsLookupFamily: V4_PREFERRED
           dnsRefreshRate: 30s
           lbPolicy: LEAST_REQUEST
           loadAssignment:
@@ -231,7 +231,6 @@ xds:
               locality:
                 region: raw_githubusercontent_com_443/backend/0
           name: raw_githubusercontent_com_443
-          outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
           respectDnsTtl: true
           transportSocket:
@@ -293,6 +292,10 @@ xds:
                       providers:
                         httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com/example:
                           forward: true
+                          normalizePayloadInMetadata:
+                            spaceDelimitedClaims:
+                            - scope
+                          payloadInMetadata: example
                           remoteJwks:
                             asyncFetch: {}
                             cacheDuration: 300s
@@ -300,7 +303,6 @@ xds:
                               cluster: raw_githubusercontent_com_443
                               timeout: 10s
                               uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
-                            retryPolicy: {}
                       requirementMap:
                         httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com:
                           providerName: httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com/example
@@ -317,10 +319,9 @@ xds:
                       resourceApiVersion: V3
                     routeConfigName: envoy-gateway-system/eg/http
                   serverHeaderTransformation: PASS_THROUGH
-                  statPrefix: http
+                  statPrefix: http-10080
                   useRemoteAddress: true
               name: envoy-gateway-system/eg/http
-            drainType: MODIFY_ONLY
             name: envoy-gateway-system/eg/http
             perConnectionBufferLimitBytes: 32768
     - '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
@@ -336,7 +337,7 @@ xds:
               filterMetadata:
                 envoy-gateway:
                   resources:
-                  - kind: ""
+                  - kind: Gateway
                     name: eg
                     namespace: envoy-gateway-system
                     sectionName: http

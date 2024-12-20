@@ -46,7 +46,7 @@ kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for
 Install the GatewayClass, Gateway, HTTPRoute and example app:
 
 ```shell
-kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/latest/quickstart.yaml -n default
+kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/{{< yaml-version >}}/quickstart.yaml -n default
 ```
 
 **Note**: [`quickstart.yaml`] defines that Envoy Gateway will listen for
@@ -57,7 +57,13 @@ unprivileged port, so that Envoy Gateway doesn't need additional privileges.
 It's important to be aware of this mapping, since you may need to take it into
 consideration when debugging.
 
-[`quickstart.yaml`]: https://github.com/envoyproxy/gateway/releases/download/latest/quickstart.yaml
+[`quickstart.yaml`]: https://github.com/envoyproxy/gateway/releases/download/{{< yaml-version >}}/quickstart.yaml
+
+## Upgrading from a previous version
+
+[Helm](https://helm.sh/docs/chart_best_practices/custom_resource_definitions/#some-caveats-and-explanations) does not update CRDs
+that live in the `/crds` folder in the Helm Chart. So you will manually need to update the CRDs.
+Follow the steps outlined in [this](./install-yaml/#upgrading-from-v1.1) section if you're upgrading from a previous version.
 
 ## Helm chart customizations
 

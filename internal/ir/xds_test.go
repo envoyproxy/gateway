@@ -6,6 +6,7 @@
 package ir
 
 import (
+	"encoding/json"
 	"net/http"
 	"testing"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
@@ -253,8 +255,8 @@ var (
 		PathMatch: &StringMatch{
 			Exact: ptr.To("filter-error"),
 		},
-		DirectResponse: &DirectResponse{
-			StatusCode: uint32(500),
+		DirectResponse: &CustomResponse{
+			StatusCode: ptr.To(uint32(500)),
 		},
 	}
 
@@ -295,8 +297,8 @@ var (
 		PathMatch: &StringMatch{
 			Exact: ptr.To("redirect"),
 		},
-		DirectResponse: &DirectResponse{
-			StatusCode: uint32(799),
+		DirectResponse: &CustomResponse{
+			StatusCode: ptr.To(uint32(799)),
 		},
 	}
 
@@ -307,9 +309,13 @@ var (
 			Exact: ptr.To("rewrite"),
 		},
 		URLRewrite: &URLRewrite{
-			Hostname: ptr.To("rewrite.example.com"),
-			Path: &HTTPPathModifier{
-				FullReplace: ptr.To("/rewrite"),
+			Host: &HTTPHostModifier{
+				Name: ptr.To("rewrite.example.com"),
+			},
+			Path: &ExtendedHTTPPathModifier{
+				HTTPPathModifier: HTTPPathModifier{
+					FullReplace: ptr.To("/rewrite"),
+				},
 			},
 		},
 	}
@@ -321,10 +327,14 @@ var (
 			Exact: ptr.To("rewrite"),
 		},
 		URLRewrite: &URLRewrite{
-			Hostname: ptr.To("rewrite.example.com"),
-			Path: &HTTPPathModifier{
-				FullReplace:        ptr.To("/rewrite"),
-				PrefixMatchReplace: ptr.To("/rewrite"),
+			Host: &HTTPHostModifier{
+				Name: ptr.To("rewrite.example.com"),
+			},
+			Path: &ExtendedHTTPPathModifier{
+				HTTPPathModifier: HTTPPathModifier{
+					FullReplace:        ptr.To("/rewrite"),
+					PrefixMatchReplace: ptr.To("/rewrite"),
+				},
 			},
 		},
 	}
@@ -338,17 +348,16 @@ var (
 		AddRequestHeaders: []AddHeader{
 			{
 				Name:   "example-header",
-				Value:  "example-value",
+				Value:  []string{"example-value"},
 				Append: true,
 			},
 			{
 				Name:   "example-header-2",
-				Value:  "example-value-2",
+				Value:  []string{"example-value-2"},
 				Append: false,
 			},
 			{
 				Name:   "empty-header",
-				Value:  "",
 				Append: false,
 			},
 		},
@@ -376,12 +385,12 @@ var (
 		AddRequestHeaders: []AddHeader{
 			{
 				Name:   "example-header",
-				Value:  "example-value",
+				Value:  []string{"example-value"},
 				Append: true,
 			},
 			{
 				Name:   "example-header",
-				Value:  "example-value-2",
+				Value:  []string{"example-value-2"},
 				Append: false,
 			},
 		},
@@ -401,7 +410,7 @@ var (
 		AddRequestHeaders: []AddHeader{
 			{
 				Name:   "",
-				Value:  "example-value",
+				Value:  []string{"example-value"},
 				Append: true,
 			},
 		},
@@ -416,17 +425,16 @@ var (
 		AddResponseHeaders: []AddHeader{
 			{
 				Name:   "example-header",
-				Value:  "example-value",
+				Value:  []string{"example-value"},
 				Append: true,
 			},
 			{
 				Name:   "example-header-2",
-				Value:  "example-value-2",
+				Value:  []string{"example-value-2"},
 				Append: false,
 			},
 			{
 				Name:   "empty-header",
-				Value:  "",
 				Append: false,
 			},
 		},
@@ -454,12 +462,12 @@ var (
 		AddResponseHeaders: []AddHeader{
 			{
 				Name:   "example-header",
-				Value:  "example-value",
+				Value:  []string{"example-value"},
 				Append: true,
 			},
 			{
 				Name:   "example-header",
-				Value:  "example-value-2",
+				Value:  []string{"example-value-2"},
 				Append: false,
 			},
 		},
@@ -479,7 +487,7 @@ var (
 		AddResponseHeaders: []AddHeader{
 			{
 				Name:   "",
-				Value:  "example-value",
+				Value:  []string{"example-value"},
 				Append: true,
 			},
 		},
@@ -579,7 +587,6 @@ func TestValidateXds(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
 				require.NoError(t, test.input.Validate())
@@ -634,7 +641,6 @@ func TestValidateHTTPListener(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
 				require.NoError(t, test.input.Validate())
@@ -686,7 +692,6 @@ func TestValidateTCPListener(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
 				require.NoError(t, test.input.Validate())
@@ -736,7 +741,6 @@ func TestValidateTLSListenerConfig(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
 				require.NoError(t, test.input.Validate())
@@ -849,7 +853,6 @@ func TestValidateUDPListener(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
 				require.NoError(t, test.input.Validate())
@@ -1001,7 +1004,6 @@ func TestValidateHTTPRoute(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
 				require.NoError(t, test.input.Validate())
@@ -1043,7 +1045,6 @@ func TestValidateTCPRoute(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
 				require.NoError(t, test.input.Validate())
@@ -1169,7 +1170,6 @@ func TestValidateRouteDestination(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
 				require.NoError(t, test.input.Validate())
@@ -1187,9 +1187,17 @@ func TestValidateStringMatch(t *testing.T) {
 		want  error
 	}{
 		{
-			name: "happy",
+			name: "happy exact",
 			input: StringMatch{
 				Exact: ptr.To("example"),
+			},
+			want: nil,
+		},
+		{
+			name: "happy distinct",
+			input: StringMatch{
+				Distinct: true,
+				Name:     "example",
 			},
 			want: nil,
 		},
@@ -1207,9 +1215,17 @@ func TestValidateStringMatch(t *testing.T) {
 			},
 			want: ErrStringMatchConditionInvalid,
 		},
+		{
+			name: "both invert and distinct fields are set",
+			input: StringMatch{
+				Distinct: true,
+				Name:     "example",
+				Invert:   ptr.To(true),
+			},
+			want: ErrStringMatchInvertDistinctInvalid,
+		},
 	}
 	for _, test := range tests {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
 				require.NoError(t, test.input.Validate())
@@ -1316,11 +1332,12 @@ func TestValidateLoadBalancer(t *testing.T) {
 	}
 }
 
-func TestPrintable(t *testing.T) {
+func TestRedaction(t *testing.T) {
 	tests := []struct {
-		name  string
-		input Xds
-		want  *Xds
+		name    string
+		input   Xds
+		want    *Xds
+		wantStr string
 	}{
 		{
 			name:  "empty",
@@ -1345,11 +1362,59 @@ func TestPrintable(t *testing.T) {
 				HTTP: []*HTTPListener{&redactedHappyHTTPSListener},
 			},
 		},
+		{
+			name: "explicit string check",
+			input: Xds{
+				HTTP: []*HTTPListener{{
+					TLS: &TLSConfig{
+						Certificates: []TLSCertificate{{
+							Name:        "server",
+							Certificate: []byte("---"),
+							PrivateKey:  []byte("secret"),
+						}},
+						ClientCertificates: []TLSCertificate{{
+							Name:        "client",
+							Certificate: []byte("---"),
+							PrivateKey:  []byte("secret"),
+						}},
+					},
+					Routes: []*HTTPRoute{{
+						Security: &SecurityFeatures{
+							OIDC: &OIDC{
+								ClientSecret: []byte("secret"),
+								HMACSecret:   []byte("secret"),
+							},
+							BasicAuth: &BasicAuth{
+								Users: []byte("secret"),
+							},
+						},
+					}},
+				}},
+			},
+			wantStr: `{"http":[{"name":"","address":"","port":0,"hostnames":null,` +
+				`"tls":{` +
+				`"certificates":[{"name":"server","serverCertificate":"LS0t","privateKey":"[redacted]"}],` +
+				`"clientCertificates":[{"name":"client","serverCertificate":"LS0t","privateKey":"[redacted]"}],` +
+				`"alpnProtocols":null},` +
+				`"routes":[{` +
+				`"name":"","hostname":"","isHTTP2":false,"security":{` +
+				`"oidc":{"name":"","provider":{},"clientID":"","clientSecret":"[redacted]","hmacSecret":"[redacted]"},` +
+				`"basicAuth":{"name":"","users":"[redacted]"}` +
+				`}}],` +
+				`"isHTTP2":false,"path":{"mergeSlashes":false,"escapedSlashesAction":""}}]}`,
+		},
 	}
 	for _, test := range tests {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
-			assert.Equal(t, *test.want, *test.input.Printable())
+			if test.want != nil {
+				if test.wantStr != "" {
+					t.Fatalf("Don't set both want and wantStr")
+				}
+				wantJSON, err := json.Marshal(test.want)
+				require.NoError(t, err)
+				test.wantStr = string(wantJSON)
+			}
+			assert.Equal(t, test.wantStr, test.input.JSONString())
 		})
 	}
 }
@@ -1626,6 +1691,126 @@ func TestValidateHealthCheck(t *testing.T) {
 				require.NoError(t, test.input.Validate())
 			} else {
 				require.EqualError(t, test.input.Validate(), test.want.Error())
+			}
+		})
+	}
+}
+
+func TestJSONPatchOperationValidation(t *testing.T) {
+	tests := []struct {
+		name  string
+		input JSONPatchOperation
+		want  *string
+	}{
+		{
+			name: "no path or jsonpath",
+			input: JSONPatchOperation{
+				Op: TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("remove")),
+			},
+			want: ptr.To("a patch operation must specify a path or jsonPath"),
+		},
+		{
+			name: "replace with from",
+			input: JSONPatchOperation{
+				Op:       TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("replace")),
+				JSONPath: ptr.To("$.some.json[@?name=='lala'].key"),
+				Value: &apiextensionsv1.JSON{
+					Raw: []byte{},
+				},
+				From: ptr.To("/some/from"),
+			},
+			want: ptr.To("the replace operation doesn't support a from attribute"),
+		},
+		{
+			name: "add with no value",
+			input: JSONPatchOperation{
+				Op:       TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("add")),
+				JSONPath: ptr.To("$.some.json[@?name=='lala'].key"),
+			},
+			want: ptr.To("the add operation requires a value"),
+		},
+		{
+			name: "remove with from",
+			input: JSONPatchOperation{
+				Op:       TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("remove")),
+				JSONPath: ptr.To("$.some.json[@?name=='lala'].key"),
+				From:     ptr.To("/some/from"),
+			},
+			want: ptr.To("value and from can't be specified with the remove operation"),
+		},
+		{
+			name: "remove with value",
+			input: JSONPatchOperation{
+				Op:       TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("remove")),
+				JSONPath: ptr.To("$.some.json[@?name=='lala'].key"),
+				Value: &apiextensionsv1.JSON{
+					Raw: []byte{},
+				},
+			},
+			want: ptr.To("value and from can't be specified with the remove operation"),
+		},
+		{
+			name: "move without from",
+			input: JSONPatchOperation{
+				Op:       TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("move")),
+				JSONPath: ptr.To("$.some.json[@?name=='lala'].key"),
+			},
+			want: ptr.To("the move operation requires a valid from attribute"),
+		},
+		{
+			name: "copy with value",
+			input: JSONPatchOperation{
+				Op:       TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("copy")),
+				JSONPath: ptr.To("$.some.json[@?name=='lala'].key"),
+				From:     ptr.To("/some/from"),
+				Value: &apiextensionsv1.JSON{
+					Raw: []byte{},
+				},
+			},
+			want: ptr.To("the copy operation doesn't support a value attribute"),
+		},
+		{
+			name: "invalid operation",
+			input: JSONPatchOperation{
+				Op:   TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("invalid")),
+				Path: ptr.To("/some/path"),
+			},
+			want: ptr.To("unsupported JSONPatch operation"),
+		},
+		{
+			name: "valid test operation",
+			input: JSONPatchOperation{
+				Op:   TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("test")),
+				Path: ptr.To("/some/path"),
+				Value: &apiextensionsv1.JSON{
+					Raw: []byte{},
+				},
+			},
+		},
+		{
+			name: "valid remove operation",
+			input: JSONPatchOperation{
+				Op:   TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("remove")),
+				Path: ptr.To("/some/path"),
+			},
+		},
+		{
+			name: "valid copy operation",
+			input: JSONPatchOperation{
+				Op:   TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("copy")),
+				Path: ptr.To("/some/path"),
+				From: ptr.To("/some/other/path"),
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.input.Validate()
+			if tc.want != nil {
+				require.EqualError(t, err, *tc.want)
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}

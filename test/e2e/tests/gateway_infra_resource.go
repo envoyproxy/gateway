@@ -4,7 +4,6 @@
 // the root of the repo.
 
 //go:build e2e
-// +build e2e
 
 package tests
 
@@ -28,7 +27,7 @@ func init() {
 }
 
 var GatewayInfraResourceTest = suite.ConformanceTest{
-	ShortName:   "GatewayInfraResourceTest",
+	ShortName:   "GatewayInfraResource",
 	Description: "Gateway Infra Resource E2E Test",
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		gatewayTypeMeta := metav1.TypeMeta{

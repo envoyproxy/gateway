@@ -286,8 +286,8 @@ securityPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Unable to target HTTPRoute, another SecurityPolicy has already attached
-          to it
+        message: Unable to target HTTPRoute httproute-1, another SecurityPolicy has
+          already attached to it
         reason: Conflicted
         status: "False"
         type: Accepted
@@ -381,8 +381,8 @@ securityPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Unable to target Gateway, another SecurityPolicy has already attached
-          to it
+        message: Unable to target Gateway gateway-1, another SecurityPolicy has already
+          attached to it
         reason: Conflicted
         status: "False"
         type: Accepted
@@ -421,11 +421,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - destination:
-          name: httproute/envoy-gateway/httproute-1/rule/0
-          settings:
-          - weight: 1
-        directResponse:
+      - directResponse:
           statusCode: 500
         hostname: '*'
         isHTTP2: false
@@ -459,11 +455,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - destination:
-          name: grpcroute/envoy-gateway/grpcroute-1/rule/0
-          settings:
-          - weight: 1
-        directResponse:
+      - directResponse:
           statusCode: 500
         headerMatches:
         - distinct: false

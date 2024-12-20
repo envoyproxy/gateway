@@ -14,6 +14,8 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -22,9 +24,7 @@ import (
 	"fortio.org/fortio/periodic"
 	flog "fortio.org/log"
 	"github.com/go-logfmt/logfmt"
-	"github.com/gogo/protobuf/jsonpb" // nolint: depguard // tempopb use gogo/protobuf
 	"github.com/google/go-cmp/cmp"
-	"github.com/grafana/tempo/pkg/tempopb"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
 	"github.com/stretchr/testify/require"
@@ -41,8 +41,11 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/kubernetes"
 	tb "github.com/envoyproxy/gateway/internal/troubleshoot"
 )
+
+var IPFamily = os.Getenv("IP_FAMILY")
 
 const defaultServiceStartupTimeout = 5 * time.Minute
 
@@ -159,6 +162,33 @@ func BackendTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, poli
 	})
 
 	require.NoErrorf(t, waitErr, "error waiting for BackendTrafficPolicy to be accepted")
+}
+
+// BackendTrafficPolicyMustFail waits for an BackendTrafficPolicy to fail with the specified reason.
+func BackendTrafficPolicyMustFail(
+	t *testing.T, client client.Client, policyName types.NamespacedName,
+	controllerName string, ancestorRef gwapiv1a2.ParentReference, message string,
+) {
+	t.Helper()
+
+	policy := &egv1a1.BackendTrafficPolicy{}
+	waitErr := wait.PollUntilContextTimeout(
+		context.Background(), 1*time.Second, 60*time.Second,
+		true, func(ctx context.Context) (bool, error) {
+			err := client.Get(ctx, policyName, policy)
+			if err != nil {
+				return false, fmt.Errorf("error fetching BackendTrafficPolicy: %w", err)
+			}
+
+			if policyFailAcceptedByAncestor(policy.Status.Ancestors, controllerName, ancestorRef, message) {
+				t.Logf("BackendTrafficPolicy has been failed: %v", policy)
+				return true, nil
+			}
+
+			return false, nil
+		})
+
+	require.NoErrorf(t, waitErr, "error waiting for BackendTrafficPolicy to fail with message: %s policy %v", message, policy)
 }
 
 // ClientTrafficPolicyMustBeAccepted waits for the specified ClientTrafficPolicy to be accepted.
@@ -311,6 +341,30 @@ func EnvoyExtensionPolicyMustBeAccepted(t *testing.T, client client.Client, poli
 	require.NoErrorf(t, waitErr, "error waiting for EnvoyExtensionPolicy to be accepted")
 }
 
+// BackendMustBeAccepted waits for the specified Backend to be accepted.
+func BackendMustBeAccepted(t *testing.T, client client.Client, backendName types.NamespacedName) {
+	t.Helper()
+
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+		backend := &egv1a1.Backend{}
+		err := client.Get(ctx, backendName, backend)
+		if err != nil {
+			return false, fmt.Errorf("error fetching Backend: %w", err)
+		}
+
+		for _, condition := range backend.Status.Conditions {
+			if condition.Type == string(egv1a1.BackendConditionAccepted) && condition.Status == metav1.ConditionTrue {
+				return true, nil
+			}
+		}
+
+		tlog.Logf(t, "Backend not yet accepted: %v", backend)
+		return false, nil
+	})
+
+	require.NoErrorf(t, waitErr, "error waiting for Backend to be accepted")
+}
+
 func ScrapeMetrics(t *testing.T, c client.Client, nn types.NamespacedName, port int32, path string) error {
 	url, err := RetrieveURL(c, nn, port, path)
 	if err != nil {
@@ -350,7 +404,7 @@ func RetrieveURL(c client.Client, nn types.NamespacedName, port int32, path stri
 	default:
 		host = fmt.Sprintf("%s.%s.svc", nn.Name, nn.Namespace)
 	}
-	return fmt.Sprintf("http://%s:%d%s", host, port, path), nil
+	return fmt.Sprintf("http://%s%s", net.JoinHostPort(host, strconv.Itoa(int(port))), path), nil
 }
 
 var metricParser = &expfmt.TextParser{}
@@ -434,6 +488,53 @@ func ALSLogCount(suite *suite.ConformanceTestSuite) (int, error) {
 	return total, nil
 }
 
+func OverLimitCount(suite *suite.ConformanceTestSuite) (int, error) {
+	cli, err := kubernetes.NewForRestConfig(suite.RestConfig)
+	if err != nil {
+		return -1, err
+	}
+
+	pods, err := cli.PodsForSelector("envoy-gateway-system", "app.kubernetes.io/name=envoy-ratelimit")
+	if err != nil {
+		return -1, err
+	}
+
+	if len(pods.Items) == 0 {
+		return -1, fmt.Errorf("no envoy-ratelimit pod found")
+	}
+
+	fwd, err := kubernetes.NewLocalPortForwarder(cli, types.NamespacedName{
+		Namespace: "envoy-gateway-system",
+		Name:      pods.Items[0].Name,
+	}, 0, 19001)
+	if err != nil {
+		return -1, err
+	}
+	if err := fwd.Start(); err != nil {
+		return -1, err
+	}
+	defer fwd.Stop()
+
+	countMetric, err := RetrieveMetric(fmt.Sprintf("http://%s/metrics", fwd.Address()), "ratelimit_service_rate_limit_over_limit", time.Second)
+	if err != nil {
+		return -1, err
+	}
+
+	// metric not found or empty
+	if countMetric == nil {
+		return 0, nil
+	}
+
+	total := 0
+	for _, m := range countMetric.Metric {
+		if m.Counter != nil && m.Counter.Value != nil {
+			total += int(*m.Counter.Value)
+		}
+	}
+
+	return total, nil
+}
+
 // QueryLogCountFromLoki queries log count from loki
 func QueryLogCountFromLoki(t *testing.T, c client.Client, keyValues map[string]string, match string) (int, error) {
 	svc := corev1.Service{}
@@ -463,7 +564,7 @@ func QueryLogCountFromLoki(t *testing.T, c client.Client, keyValues map[string]s
 	params := url.Values{}
 	params.Add("query", q)
 	params.Add("start", fmt.Sprintf("%d", time.Now().Add(-10*time.Minute).Unix())) // query logs from last 10 minutes
-	lokiQueryURL := fmt.Sprintf("http://%s:3100/loki/api/v1/query_range?%s", lokiHost, params.Encode())
+	lokiQueryURL := fmt.Sprintf("http://%s/loki/api/v1/query_range?%s", net.JoinHostPort(lokiHost, "3100"), params.Encode())
 	res, err := http.DefaultClient.Get(lokiQueryURL)
 	if err != nil {
 		return -1, err
@@ -546,19 +647,31 @@ func QueryTraceFromTempo(t *testing.T, c client.Client, tags map[string]string) 
 	if err != nil {
 		return -1, err
 	}
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	if res.StatusCode != http.StatusOK {
 		return -1, fmt.Errorf("failed to query tempo, url=%s, status=%s", tempoURL.String(), res.Status)
 	}
 
-	tempoResponse := &tempopb.SearchResponse{}
-	if err := jsonpb.Unmarshal(res.Body, tempoResponse); err != nil {
+	resp := &tempoResponse{}
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return -1, err
+	}
+	if err := json.Unmarshal(data, &resp); err != nil {
+		t.Logf("Failed to unmarshall response: %s", string(data))
 		return -1, err
 	}
 
-	total := len(tempoResponse.Traces)
-	tlog.Logf(t, "get response from tempo, url=%s, response=%v, total=%d", tempoURL.String(), tempoResponse, total)
+	total := len(resp.Traces)
+	tlog.Logf(t, "get response from tempo, url=%s, response=%v, total=%d", tempoURL.String(), string(data), total)
 	return total, nil
+}
+
+type tempoResponse struct {
+	Traces []map[string]interface{} `json:"traces,omitempty"`
 }
 
 // copy from https://github.com/grafana/tempo/blob/c0127c78c368319433c7c67ca8967adbfed2259e/cmd/tempo-query/tempo/plugin.go#L361
@@ -577,9 +690,45 @@ func createTagsQueryParam(tags map[string]string) (string, error) {
 // CollectAndDump collects and dumps the cluster data for troubleshooting and log.
 // This function should be call within t.Cleanup.
 func CollectAndDump(t *testing.T, rest *rest.Config) {
-	result := tb.CollectResult(context.TODO(), rest, "", "envoy-gateway")
+	result := tb.CollectResult(context.TODO(), rest, "", "envoy-gateway-system")
 	for r, data := range result {
-		tlog.Logf(t, "filename: %s", r)
-		tlog.Logf(t, "data: \n%s", data)
+		tlog.Logf(t, "\nfilename: %s", r)
+		tlog.Logf(t, "\ndata: \n%s", data)
 	}
+}
+
+func GetService(c client.Client, nn types.NamespacedName) (*corev1.Service, error) {
+	svc := &corev1.Service{}
+	if err := c.Get(context.Background(), nn, svc); err != nil {
+		return nil, err
+	}
+	return svc, nil
+}
+
+func CreateBackend(c client.Client, nn types.NamespacedName, clusterIP string, port int32) error {
+	backend := &egv1a1.Backend{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: nn.Namespace,
+			Name:      nn.Name,
+		},
+		Spec: egv1a1.BackendSpec{
+			Endpoints: []egv1a1.BackendEndpoint{
+				{
+					IP: &egv1a1.IPEndpoint{
+						Address: clusterIP,
+						Port:    port,
+					},
+				},
+			},
+		},
+	}
+	return c.Create(context.TODO(), backend)
+}
+
+func DeleteBackend(c client.Client, nn types.NamespacedName) error {
+	backend := &egv1a1.Backend{}
+	if err := c.Get(context.Background(), nn, backend); err != nil {
+		return err
+	}
+	return c.Delete(context.Background(), backend)
 }

@@ -4,7 +4,6 @@
 // the root of the repo.
 
 //go:build benchmark
-// +build benchmark
 
 package tests
 
@@ -45,7 +44,7 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 		require.NoError(t, err)
 
 		routeNameFormat := "benchmark-route-%d"
-		routeScales := []uint16{10, 50, 100, 300, 500}
+		routeScales := []uint16{10, 50, 100, 300, 500, 1000}
 		routeScalesN := len(routeScales)
 		routeNNs := make([]types.NamespacedName, 0, routeScales[routeScalesN-1])
 

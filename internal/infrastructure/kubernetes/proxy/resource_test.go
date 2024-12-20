@@ -30,7 +30,6 @@ func TestEnvoyPodSelector(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
 		t.Run("", func(t *testing.T) {
 			got := envoyLabels(tc.in)
 			require.Equal(t, tc.expected, got)

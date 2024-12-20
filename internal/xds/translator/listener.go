@@ -7,9 +7,12 @@ package translator
 
 import (
 	"errors"
+	"strconv"
+	"strings"
 
 	xdscore "github.com/cncf/xds/go/xds/core/v3"
 	matcher "github.com/cncf/xds/go/xds/type/matcher/v3"
+	mutation_rulesv3 "github.com/envoyproxy/go-control-plane/envoy/config/common/mutation_rules/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	tls_inspectorv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/tls_inspector/v3"
@@ -17,6 +20,7 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tcpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/tcp_proxy/v3"
 	udpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/udp/udp_proxy/v3"
+	early_header_mutationv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/early_header_mutation/header_mutation/v3"
 	preservecasev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/header_formatters/preserve_case/v3"
 	customheaderv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/original_ip_detection/custom_header/v3"
 	quicv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/quic/v3"
@@ -25,7 +29,6 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/utils/ptr"
@@ -62,7 +65,7 @@ func http1ProtocolOptions(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
 		EnableTrailers: opts.EnableTrailers,
 	}
 	if opts.PreserveHeaderCase {
-		preservecaseAny, _ := anypb.New(&preservecasev3.PreserveCaseFormatterConfig{})
+		preservecaseAny, _ := protocov.ToAnyWithValidation(&preservecasev3.PreserveCaseFormatterConfig{})
 		r.HeaderKeyFormat = &corev3.Http1ProtocolOptions_HeaderKeyFormat{
 			HeaderFormat: &corev3.Http1ProtocolOptions_HeaderKeyFormat_StatefulFormatter{
 				StatefulFormatter: &corev3.TypedExtensionConfig{
@@ -84,7 +87,7 @@ func http2ProtocolOptions(opts *ir.HTTP2Settings) *corev3.Http2ProtocolOptions {
 		opts = &ir.HTTP2Settings{}
 	}
 
-	return &corev3.Http2ProtocolOptions{
+	out := &corev3.Http2ProtocolOptions{
 		MaxConcurrentStreams: &wrapperspb.UInt32Value{
 			Value: ptr.Deref(opts.MaxConcurrentStreams, http2MaxConcurrentStreamsLimit),
 		},
@@ -95,6 +98,14 @@ func http2ProtocolOptions(opts *ir.HTTP2Settings) *corev3.Http2ProtocolOptions {
 			Value: ptr.Deref(opts.InitialConnectionWindowSize, http2InitialConnectionWindowSize),
 		},
 	}
+
+	if opts.ResetStreamOnError != nil {
+		out.OverrideStreamErrorOnInvalidHttpMessage = &wrapperspb.BoolValue{
+			Value: *opts.ResetStreamOnError,
+		}
+	}
+
+	return out
 }
 
 func xffNumTrustedHops(clientIPDetection *ir.ClientIPDetectionSettings) uint32 {
@@ -119,7 +130,7 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 			rejectWithStatus = &typev3.HttpStatus{Code: typev3.StatusCode_Forbidden}
 		}
 
-		customHeaderConfigAny, _ := anypb.New(&customheaderv3.CustomHeaderConfig{
+		customHeaderConfigAny, _ := protocov.ToAnyWithValidation(&customheaderv3.CustomHeaderConfig{
 			HeaderName:       clientIPDetection.CustomHeader.Name,
 			RejectWithStatus: rejectWithStatus,
 
@@ -137,11 +148,21 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 
 // buildXdsTCPListener creates a xds Listener resource
 // TODO: Improve function parameters
-func buildXdsTCPListener(name, address string, port uint32, keepalive *ir.TCPKeepalive, connection *ir.ClientConnection, accesslog *ir.AccessLog) *listenerv3.Listener {
+func buildXdsTCPListener(
+	name, address string,
+	port uint32,
+	ipFamily *ir.IPFamily,
+	keepalive *ir.TCPKeepalive,
+	connection *ir.ClientConnection,
+	accesslog *ir.AccessLog,
+) (*listenerv3.Listener, error) {
 	socketOptions := buildTCPSocketOptions(keepalive)
-	al := buildXdsAccessLog(accesslog, true)
+	al, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeListener)
+	if err != nil {
+		return nil, err
+	}
 	bufferLimitBytes := buildPerConnectionBufferLimitBytes(connection)
-	return &listenerv3.Listener{
+	listener := &listenerv3.Listener{
 		Name:                          name,
 		AccessLog:                     al,
 		SocketOptions:                 socketOptions,
@@ -157,10 +178,14 @@ func buildXdsTCPListener(name, address string, port uint32, keepalive *ir.TCPKee
 				},
 			},
 		},
-		// Remove /healthcheck/fail from endpoints that trigger a drain of listeners for better control
-		// over the drain process while still allowing the healthcheck to be failed during pod shutdown.
-		DrainType: listenerv3.Listener_MODIFY_ONLY,
 	}
+
+	if ipFamily != nil && *ipFamily == egv1a1.DualStack {
+		socketAddress := listener.Address.GetSocketAddress()
+		socketAddress.Ipv4Compat = true
+	}
+
+	return listener, nil
 }
 
 func buildPerConnectionBufferLimitBytes(connection *ir.ClientConnection) *wrapperspb.UInt32Value {
@@ -171,10 +196,14 @@ func buildPerConnectionBufferLimitBytes(connection *ir.ClientConnection) *wrappe
 }
 
 // buildXdsQuicListener creates a xds Listener resource for quic
-func buildXdsQuicListener(name, address string, port uint32, accesslog *ir.AccessLog) *listenerv3.Listener {
+func buildXdsQuicListener(name, address string, port uint32, ipFamily *ir.IPFamily, accesslog *ir.AccessLog) (*listenerv3.Listener, error) {
+	log, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeListener)
+	if err != nil {
+		return nil, err
+	}
 	xdsListener := &listenerv3.Listener{
 		Name:      name + "-quic",
-		AccessLog: buildXdsAccessLog(accesslog, true),
+		AccessLog: log,
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{
 				SocketAddress: &corev3.SocketAddress{
@@ -195,7 +224,12 @@ func buildXdsQuicListener(name, address string, port uint32, accesslog *ir.Acces
 		DrainType: listenerv3.Listener_MODIFY_ONLY,
 	}
 
-	return xdsListener
+	if ipFamily != nil && *ipFamily == egv1a1.DualStack {
+		socketAddress := xdsListener.Address.GetSocketAddress()
+		socketAddress.Ipv4Compat = true
+	}
+
+	return xdsListener, nil
 }
 
 // addHCMToXDSListener adds a HCM filter to the listener's filter chain, and adds
@@ -211,7 +245,10 @@ func buildXdsQuicListener(name, address string, port uint32, accesslog *ir.Acces
 func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irListener *ir.HTTPListener,
 	accesslog *ir.AccessLog, tracing *ir.Tracing, http3Listener bool, connection *ir.ClientConnection,
 ) error {
-	al := buildXdsAccessLog(accesslog, false)
+	al, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute)
+	if err != nil {
+		return err
+	}
 
 	hcmTracing, err := buildHCMTracing(tracing)
 	if err != nil {
@@ -225,6 +262,9 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 	} else {
 		statPrefix = "http"
 	}
+
+	// Append port to the statPrefix.
+	statPrefix = strings.Join([]string{statPrefix, strconv.Itoa(int(irListener.Port))}, "-")
 
 	// Client IP detection
 	useRemoteAddress := true
@@ -261,9 +301,10 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 		CommonHttpProtocolOptions: &corev3.HttpProtocolOptions{
 			HeadersWithUnderscoresAction: buildHeadersWithUnderscoresAction(irListener.Headers),
 		},
-		Tracing:                   hcmTracing,
-		ForwardClientCertDetails:  buildForwardClientCertDetailsAction(irListener.Headers),
-		PreserveExternalRequestId: ptr.Deref(irListener.Headers, ir.HeaderSettings{}).PreserveXRequestID,
+		Tracing:                       hcmTracing,
+		ForwardClientCertDetails:      buildForwardClientCertDetailsAction(irListener.Headers),
+		PreserveExternalRequestId:     ptr.Deref(irListener.Headers, ir.HeaderSettings{}).PreserveXRequestID,
+		EarlyHeaderMutationExtensions: buildEarlyHeaderMutation(irListener.Headers),
 	}
 
 	if mgr.ForwardClientCertDetails == hcmv3.HttpConnectionManager_APPEND_FORWARD || mgr.ForwardClientCertDetails == hcmv3.HttpConnectionManager_SANITIZE_SET {
@@ -352,6 +393,73 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 	return nil
 }
 
+func buildEarlyHeaderMutation(headers *ir.HeaderSettings) []*corev3.TypedExtensionConfig {
+	if headers == nil || (len(headers.EarlyAddRequestHeaders) == 0 && len(headers.EarlyRemoveRequestHeaders) == 0) {
+		return nil
+	}
+
+	var mutationRules []*mutation_rulesv3.HeaderMutation
+
+	for _, header := range headers.EarlyAddRequestHeaders {
+		var appendAction corev3.HeaderValueOption_HeaderAppendAction
+		if header.Append {
+			appendAction = corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD
+		} else {
+			appendAction = corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD
+		}
+		// Allow empty headers to be set, but don't add the config to do so unless necessary
+		if len(header.Value) == 0 {
+			mutationRules = append(mutationRules, &mutation_rulesv3.HeaderMutation{
+				Action: &mutation_rulesv3.HeaderMutation_Append{
+					Append: &corev3.HeaderValueOption{
+						Header: &corev3.HeaderValue{
+							Key: header.Name,
+						},
+						AppendAction:   appendAction,
+						KeepEmptyValue: true,
+					},
+				},
+			})
+		} else {
+			for _, val := range header.Value {
+				mutationRules = append(mutationRules, &mutation_rulesv3.HeaderMutation{
+					Action: &mutation_rulesv3.HeaderMutation_Append{
+						Append: &corev3.HeaderValueOption{
+							Header: &corev3.HeaderValue{
+								Key:   header.Name,
+								Value: val,
+							},
+							AppendAction:   appendAction,
+							KeepEmptyValue: val == "",
+						},
+					},
+				})
+			}
+		}
+	}
+
+	for _, header := range headers.EarlyRemoveRequestHeaders {
+		mr := &mutation_rulesv3.HeaderMutation{
+			Action: &mutation_rulesv3.HeaderMutation_Remove{
+				Remove: header,
+			},
+		}
+
+		mutationRules = append(mutationRules, mr)
+	}
+
+	earlyHeaderMutationAny, _ := protocov.ToAnyWithValidation(&early_header_mutationv3.HeaderMutation{
+		Mutations: mutationRules,
+	})
+
+	return []*corev3.TypedExtensionConfig{
+		{
+			Name:        "envoy.http.early_header_mutation.header_mutation",
+			TypedConfig: earlyHeaderMutationAny,
+		},
+	}
+}
+
 func addServerNamesMatch(xdsListener *listenerv3.Listener, filterChain *listenerv3.FilterChain, hostnames []string) error {
 	// Dont add a filter chain match if the hostname is a wildcard character.
 	if len(hostnames) > 0 && hostnames[0] != "*" {
@@ -403,15 +511,21 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute
 	isTLSTerminate := irRoute.TLS != nil && irRoute.TLS.Terminate != nil
 	statPrefix := "tcp"
 	if isTLSPassthrough {
-		statPrefix = "passthrough"
+		statPrefix = "tls-passthrough"
 	}
 
 	if isTLSTerminate {
-		statPrefix = "terminate"
+		statPrefix = "tls-terminate"
 	}
 
+	// Append port to the statPrefix.
+	statPrefix = strings.Join([]string{statPrefix, strconv.Itoa(int(xdsListener.Address.GetSocketAddress().GetPortValue()))}, "-")
+	al, error := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute)
+	if error != nil {
+		return error
+	}
 	mgr := &tcpv3.TcpProxy{
-		AccessLog:  buildXdsAccessLog(accesslog, false),
+		AccessLog:  al,
 		StatPrefix: statPrefix,
 		ClusterSpecifier: &tcpv3.TcpProxy_Cluster{
 			Cluster: clusterName,
@@ -495,7 +609,7 @@ func addXdsTLSInspectorFilter(xdsListener *listenerv3.Listener) error {
 	}
 
 	tlsInspector := &tls_inspectorv3.TlsInspector{}
-	tlsInspectorAny, err := anypb.New(tlsInspector)
+	tlsInspectorAny, err := protocov.ToAnyWithValidation(tlsInspector)
 	if err != nil {
 		return err
 	}
@@ -541,7 +655,9 @@ func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSConfig) (*corev3.Transp
 		}
 	}
 
-	tlsCtxAny, err := anypb.New(tlsCtx)
+	setDownstreamTLSSessionSettings(tlsConfig, tlsCtx.DownstreamTlsContext)
+
+	tlsCtxAny, err := protocov.ToAnyWithValidation(tlsCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -581,7 +697,9 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 		}
 	}
 
-	tlsCtxAny, err := anypb.New(tlsCtx)
+	setDownstreamTLSSessionSettings(tlsConfig, tlsCtx)
+
+	tlsCtxAny, err := protocov.ToAnyWithValidation(tlsCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -592,6 +710,18 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 			TypedConfig: tlsCtxAny,
 		},
 	}, nil
+}
+
+func setDownstreamTLSSessionSettings(tlsConfig *ir.TLSConfig, tlsCtx *tlsv3.DownstreamTlsContext) {
+	if !tlsConfig.StatefulSessionResumption {
+		tlsCtx.DisableStatefulSessionResumption = true
+	}
+
+	if !tlsConfig.StatelessSessionResumption {
+		tlsCtx.SessionTicketKeysType = &tlsv3.DownstreamTlsContext_DisableStatelessSessionResumption{
+			DisableStatelessSessionResumption: true,
+		}
+	}
 }
 
 func buildTLSParams(tlsConfig *ir.TLSConfig) *tlsv3.TlsParameters {
@@ -637,11 +767,12 @@ func buildTLSVersion(version *ir.TLSVersion) tlsv3.TlsParameters_TlsProtocol {
 }
 
 func buildALPNProtocols(alpn []string) []string {
-	if len(alpn) == 0 {
+	if alpn == nil { // not set - default to h2 and http/1.1
 		out := []string{"h2", "http/1.1"}
 		return out
+	} else {
+		return alpn
 	}
-	return alpn
 }
 
 func buildXdsTLSCertSecret(tlsConfig ir.TLSCertificate) *tlsv3.Secret {
@@ -683,14 +814,18 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener, access
 	route := &udpv3.Route{
 		Cluster: clusterName,
 	}
-	routeAny, err := anypb.New(route)
+	routeAny, err := protocov.ToAnyWithValidation(route)
 	if err != nil {
 		return nil, err
 	}
 
+	al, error := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute)
+	if error != nil {
+		return nil, error
+	}
 	udpProxy := &udpv3.UdpProxyConfig{
 		StatPrefix: statPrefix,
-		AccessLog:  buildXdsAccessLog(accesslog, false),
+		AccessLog:  al,
 		RouteSpecifier: &udpv3.UdpProxyConfig_Matcher{
 			Matcher: &matcher.Matcher{
 				OnNoMatch: &matcher.Matcher_OnMatch{
@@ -704,14 +839,17 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener, access
 			},
 		},
 	}
-	udpProxyAny, err := anypb.New(udpProxy)
+	udpProxyAny, err := protocov.ToAnyWithValidation(udpProxy)
 	if err != nil {
 		return nil, err
 	}
 
+	if al, err = buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeListener); err != nil {
+		return nil, err
+	}
 	xdsListener := &listenerv3.Listener{
 		Name:      udpListener.Name,
-		AccessLog: buildXdsAccessLog(accesslog, true),
+		AccessLog: al,
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{
 				SocketAddress: &corev3.SocketAddress{
@@ -729,6 +867,11 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener, access
 				TypedConfig: udpProxyAny,
 			},
 		}},
+	}
+
+	if udpListener.IPFamily != nil && *udpListener.IPFamily == egv1a1.DualStack {
+		socketAddress := xdsListener.Address.GetSocketAddress()
+		socketAddress.Ipv4Compat = true
 	}
 
 	return xdsListener, nil
@@ -758,7 +901,7 @@ func translateEscapePath(in ir.PathEscapedSlashAction) hcmv3.HttpConnectionManag
 }
 
 func toNetworkFilter(filterName string, filterProto proto.Message) (*listenerv3.Filter, error) {
-	filterAny, err := protocov.ToAnyWithError(filterProto)
+	filterAny, err := protocov.ToAnyWithValidation(filterProto)
 	if err != nil {
 		return nil, err
 	}

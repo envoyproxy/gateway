@@ -1,15 +1,14 @@
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       portValue: 10080
-  drainType: MODIFY_ONLY
   filterChains:
   - filters:
     - name: envoy.filters.network.tcp_proxy
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tcp-route-simple-dest
-        statPrefix: tcp
+        statPrefix: tcp-10080
     name: tcp-route-simple
   name: tcp-listener-simple
   perConnectionBufferLimitBytes: 32768

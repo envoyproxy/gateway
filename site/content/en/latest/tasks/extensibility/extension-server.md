@@ -1,5 +1,6 @@
 ---
 title: "Envoy Gateway Extension Server"
+linkTitle: "Extension Server"
 ---
 
 This task explains how to extend Envoy Gateway using an Extension Server. Envoy Gateway
@@ -87,12 +88,20 @@ image name and tag.
 * Grant Envoy Gateway's `ServiceAccount` permission to access the extension server's CRD
 
   ```shell
+  kubectl create clusterrole listener-context-example-status-update \
+             --verb=update  \
+             --resource=ListenerContextExample/status
+
   kubectl create clusterrole listener-context-example-viewer \
              --verb=get,list,watch  \
              --resource=ListenerContextExample
 
   kubectl create clusterrolebinding envoy-gateway-listener-context \
              --clusterrole=listener-context-example-viewer \
+             --serviceaccount=envoy-gateway-system:envoy-gateway
+
+  kubectl create clusterrolebinding envoy-gateway-listener-context-status \
+             --clusterrole=listener-context-example-status-update \
              --serviceaccount=envoy-gateway-system:envoy-gateway
   ```
 

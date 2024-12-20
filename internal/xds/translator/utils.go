@@ -129,13 +129,16 @@ func hcmContainsFilter(mgr *hcmv3.HttpConnectionManager, filterName string) bool
 	return false
 }
 
-func createExtServiceXDSCluster(rd *ir.RouteDestination, tCtx *types.ResourceVersionTable) error {
+func createExtServiceXDSCluster(rd *ir.RouteDestination, traffic *ir.TrafficFeatures, tCtx *types.ResourceVersionTable) error {
 	var (
 		endpointType EndpointType
 		tSocket      *corev3.TransportSocket
-		err          error
 	)
 
+	// Make sure that there are safe defaults for the traffic
+	if traffic == nil {
+		traffic = &ir.TrafficFeatures{}
+	}
 	// Get the address type from the first setting.
 	// This is safe because no mixed address types in the settings.
 	addrTypeState := rd.Settings[0].AddressType
@@ -144,16 +147,21 @@ func createExtServiceXDSCluster(rd *ir.RouteDestination, tCtx *types.ResourceVer
 	} else {
 		endpointType = EndpointTypeStatic
 	}
-
-	if err = addXdsCluster(tCtx, &xdsClusterArgs{
-		name:         rd.Name,
-		settings:     rd.Settings,
-		tSocket:      tSocket,
-		endpointType: endpointType,
-	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
-		return err
-	}
-	return nil
+	return addXdsCluster(tCtx, &xdsClusterArgs{
+		name:              rd.Name,
+		settings:          rd.Settings,
+		tSocket:           tSocket,
+		loadBalancer:      traffic.LoadBalancer,
+		proxyProtocol:     traffic.ProxyProtocol,
+		circuitBreaker:    traffic.CircuitBreaker,
+		healthCheck:       traffic.HealthCheck,
+		timeout:           traffic.Timeout,
+		tcpkeepalive:      traffic.TCPKeepalive,
+		backendConnection: traffic.BackendConnection,
+		endpointType:      endpointType,
+		dns:               traffic.DNS,
+		http2Settings:     traffic.HTTP2,
+	})
 }
 
 // addClusterFromURL adds a cluster to the resource version table from the provided URL.
@@ -186,8 +194,45 @@ func addClusterFromURL(url string, tCtx *types.ResourceVersionTable) error {
 		clusterArgs.tSocket = tSocket
 	}
 
-	if err = addXdsCluster(tCtx, clusterArgs); err != nil && !errors.Is(err, ErrXdsClusterExists) {
-		return err
+	return addXdsCluster(tCtx, clusterArgs)
+}
+
+// determineIPFamily determines the IP family based on multiple destination settings
+func determineIPFamily(settings []*ir.DestinationSetting) *egv1a1.IPFamily {
+	// If there's only one setting, return its IPFamily directly
+	if len(settings) == 1 {
+		return settings[0].IPFamily
 	}
-	return nil
+
+	hasIPv4 := false
+	hasIPv6 := false
+	hasDualStack := false
+
+	for _, setting := range settings {
+		if setting.IPFamily == nil {
+			continue
+		}
+
+		switch *setting.IPFamily {
+		case egv1a1.IPv4:
+			hasIPv4 = true
+		case egv1a1.IPv6:
+			hasIPv6 = true
+		case egv1a1.DualStack:
+			hasDualStack = true
+		}
+	}
+
+	switch {
+	case hasDualStack:
+		return ptr.To(egv1a1.DualStack)
+	case hasIPv4 && hasIPv6:
+		return ptr.To(egv1a1.DualStack)
+	case hasIPv4:
+		return ptr.To(egv1a1.IPv4)
+	case hasIPv6:
+		return ptr.To(egv1a1.IPv6)
+	default:
+		return nil
+	}
 }

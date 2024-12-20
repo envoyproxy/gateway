@@ -23,7 +23,7 @@ kubectl get gateway/eg -o yaml
 
 ## Configuration
 
-Envoy Gateway supports two types of Wasm extensions: 
+Envoy Gateway supports two types of Wasm extensions:
 * HTTP Wasm Extension: The Wasm extension is fetched from a remote URL.
 * Image Wasm Extension: The Wasm extension is packaged as an OCI image and fetched from an image registry.
 
@@ -44,17 +44,17 @@ kind: EnvoyExtensionPolicy
 metadata:
   name: wasm-test
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: backend
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
   wasm:
   - name: wasm-filter
     rootID: my_root_id
     code:
       type: HTTP
       http:
-        url: https://raw.githubusercontent.com/envoyproxy/envoy/main/examples/wasm-cc/lib/envoy_filter_http_wasm_example.wasm
+        url: https://raw.githubusercontent.com/envoyproxy/examples/main/wasm-cc/lib/envoy_filter_http_wasm_example.wasm
         sha256: 79c9f85128bb0177b6511afa85d587224efded376ac0ef76df56595f1e6315c0
 EOF
 ```
@@ -70,17 +70,17 @@ kind: EnvoyExtensionPolicy
 metadata:
   name: wasm-test
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: backend
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
   wasm:
     - name: wasm-filter
       rootID: my_root_id
       code:
         type: HTTP
         http:
-          url: https://raw.githubusercontent.com/envoyproxy/envoy/main/examples/wasm-cc/lib/envoy_filter_http_wasm_example.wasm
+          url: https://raw.githubusercontent.com/envoyproxy/examples/main/wasm-cc/lib/envoy_filter_http_wasm_example.wasm
           sha256: 79c9f85128bb0177b6511afa85d587224efded376ac0ef76df56595f1e6315c0
 ```
 
@@ -90,7 +90,7 @@ spec:
 Verify the EnvoyExtensionPolicy status:
 
 ```shell
-kubectl get envoyextensionpolicy/http-wasm-source-test -o yaml
+kubectl get envoyextensionpolicy/wasm-test -o yaml
 ```
 
 ### Image Wasm Extension
@@ -107,8 +107,8 @@ kind: EnvoyExtensionPolicy
 metadata:
   name: wasm-test
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: backend
   wasm:
@@ -132,17 +132,17 @@ kind: EnvoyExtensionPolicy
 metadata:
   name: wasm-test
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: backend
   wasm:
-    - name: wasm-filter
-      rootID: my_root_id
-      code:
-        type: Image
-        image:
-          url: zhaohuabing/testwasm:v0.0.1
+  - name: wasm-filter
+    rootID: my_root_id
+    code:
+      type: Image
+      image:
+        url: zhaohuabing/testwasm:v0.0.1
 ```
 
 {{% /tab %}}
@@ -151,8 +151,147 @@ spec:
 Verify the EnvoyExtensionPolicy status:
 
 ```shell
-kubectl get envoyextensionpolicy/http-wasm-source-test -o yaml
+kubectl get envoyextensionpolicy/wasm-test -o yaml
 ```
+
+### Wasm Extension Configuration
+
+This [EnvoyExtensionPolicy][] configuration fetches the Wasm extension from an OCI image and uses a config block to pass parameters to the extension when it's loaded.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: wasm-test
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: backend
+  wasm:
+  - name: wasm-filter
+    rootID: my_root_id
+    code:
+      type: Image
+      image:
+        url: zhaohuabing/testwasm:v0.0.1
+    config:
+      parameter1:
+        key1: value1
+        key2: value2
+      parameter2: value3
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: wasm-test
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: backend
+  wasm:
+  - name: wasm-filter
+    rootID: my_root_id
+    code:
+      type: Image
+      image:
+        url: zhaohuabing/testwasm:v0.0.1
+    config:
+      parameter1:
+        key1: value1
+        key2: value2
+      parameter2: value3
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+Verify the EnvoyExtensionPolicy status:
+
+```shell
+kubectl get envoyextensionpolicy/wasm-test-o yaml
+```
+
+### Wasm Extension Configuration through Environment variables
+
+It is also possible to configure a wasm extension using environment variables from the host envoy process. Keys for the env vars to be shared are defined in a `hostKeys` block.
+
+This is especially useful for sharing secure data from environment vars on the envoy process set using [valueFrom](https://kubernetes.io/docs/concepts/configuration/secret/#using-secrets-as-environment-variables) a Kubernetes secret.
+
+Note that setting an env var on the envoy process requires a custom [EnvoyProxy](../../api/extension_types#envoyproxy) configuration.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: wasm-test
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: backend
+  wasm:
+  - name: wasm-filter
+    rootID: my_root_id
+    code:
+      type: Image
+      image:
+        url: zhaohuabing/testwasm:v0.0.1
+    env:
+      hostKeys:
+      - SOME_KEY
+      - ANOTHER_KEY
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: wasm-test
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: backend
+  wasm:
+  - name: wasm-filter
+    rootID: my_root_id
+    code:
+      type: Image
+      image:
+        url: zhaohuabing/testwasm:v0.0.1
+    env:
+      hostKeys:
+      - SOME_KEY
+      - ANOTHER_KEY
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 
 ### Testing
 

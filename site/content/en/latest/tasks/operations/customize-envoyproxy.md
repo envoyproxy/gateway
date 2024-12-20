@@ -3,14 +3,68 @@ title: "Customize EnvoyProxy"
 ---
 
 Envoy Gateway provides an [EnvoyProxy][] CRD that can be linked to the ParametersRef
-in GatewayClass, allowing cluster admins to customize the managed EnvoyProxy Deployment and
+in a Gateway and GatewayClass, allowing cluster admins to customize the managed EnvoyProxy Deployment and
 Service. To learn more about GatewayClass and ParametersRef, please refer to [Gateway API documentation][].
 
 ## Prerequisites
 
 {{< boilerplate prerequisites >}}
 
-Before you start, you need to add `ParametersRef` in GatewayClass, and refer to EnvoyProxy Config:
+Before you start, you need to add `Infrastructure.ParametersRef` in Gateway, and refer to EnvoyProxy Config:
+**Note**: `MergeGateways` cannot be set to `true` in your EnvoyProxy config if attaching to the Gateway.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: eg
+spec:
+  gatewayClassName: eg
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: custom-proxy-config
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: eg
+spec:
+  gatewayClassName: eg
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: custom-proxy-config
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+You can also attach the EnvoyProxy resource to the GatewayClass using the `parametersRef` field.
+This configuration is discouraged if you plan on creating multiple Gateways linking to the same
+GatewayClass and would like different infrastructure configurations for each of them.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -27,7 +81,7 @@ spec:
     group: gateway.envoyproxy.io
     kind: EnvoyProxy
     name: custom-proxy-config
-    namespace: envoy-gateway-system
+    namespace: default
 EOF
 ```
 
@@ -47,7 +101,7 @@ spec:
     group: gateway.envoyproxy.io
     kind: EnvoyProxy
     name: custom-proxy-config
-    namespace: envoy-gateway-system
+    namespace: default
 ```
 
 {{% /tab %}}
@@ -66,7 +120,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -86,7 +140,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -118,7 +172,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -139,7 +193,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -167,7 +221,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -190,7 +244,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -220,7 +274,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -247,7 +301,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -279,7 +333,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -304,7 +358,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -338,7 +392,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -367,7 +421,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -403,7 +457,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -425,7 +479,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -444,13 +498,14 @@ After applying the config, you can get the envoyproxy service, and see annotatio
 ## Customize EnvoyProxy Bootstrap Config
 
 You can customize the EnvoyProxy bootstrap config via EnvoyProxy Config.
-There are two ways to customize it:
+There are three ways to customize it:
 
 * Replace: the whole bootstrap config will be replaced by the config you provided.
 * Merge: the config you provided will be merged into the default bootstrap config.
+* JSONPatch: the list of JSON Patches you provided will be applied to the bootstrap config. JSON Patch is a standard format specified in [RFC 6902](https://datatracker.ietf.org/doc/html/rfc6902/).
 
 {{< tabpane text=true >}}
-{{% tab header="Apply from stdin" %}}
+{{% tab header="Replace: apply from stdin" %}}
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -458,7 +513,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default 
 spec:
   bootstrap:
     type: Replace
@@ -537,7 +592,7 @@ EOF
 ```
 
 {{% /tab %}}
-{{% tab header="Apply from file" %}}
+{{% tab header="Replace: apply from file" %}}
 Save and apply the following resource to your cluster:
 
 ```yaml
@@ -546,7 +601,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   bootstrap:
     type: Replace
@@ -624,14 +679,53 @@ spec:
 ```
 
 {{% /tab %}}
+{{% tab header="JSONPatch: apply from stdin" %}}
+Save and apply the following resource to your cluster:
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: default 
+spec:
+  bootstrap:
+    type: JSONPatch
+    jsonPatches:
+    - {"op": "add", "path": "/static_resources/clusters/0/dns_lookup_family", "value": "V4_ONLY"}
+    - {"op": "replace", "path": "/admin/address/socket_address/port_value", "value": 9901}
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="JSONPatch: apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: default
+spec:
+  bootstrap:
+    type: JSONPatch
+    jsonPatches:
+      - {"op": "add", "path": "/static_resources/clusters/0/dns_lookup_family", "value": "V4_ONLY"}
+      - {"op": "replace", "path": "/admin/address/socket_address/port_value", "value": 9901}
+```
+
+{{% /tab %}}
 {{< /tabpane >}}
 
-You can use [egctl translate][]
+You can use [egctl x translate][]
 to get the default xDS Bootstrap configuration used by Envoy Gateway.
 
 After applying the config, the bootstrap config will be overridden by the new config you provided.
 Any errors in the configuration will be surfaced as status within the `GatewayClass` resource.
-You can also validate this configuration using [egctl translate][].
+You can also validate this configuration using [egctl x translate][].
 
 ## Customize EnvoyProxy Horizontal Pod Autoscaler
 
@@ -648,7 +742,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default 
 spec:
   provider:
     type: Kubernetes
@@ -676,7 +770,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default 
 spec:
   provider:
     type: Kubernetes
@@ -712,7 +806,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default 
 spec:
   extraArgs:
     - --disable-extensions envoy.access_loggers/envoy.access_loggers.wasm 
@@ -729,7 +823,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default 
 spec:
   extraArgs:
     - --disable-extensions envoy.access_loggers/envoy.access_loggers.wasm 
@@ -755,7 +849,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: eg
-  namespace: envoy-gateway-system
+  namespace: default 
 spec:
   provider:
     type: Kubernetes
@@ -791,7 +885,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: eg
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -834,7 +928,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: eg
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -859,7 +953,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: eg
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -917,7 +1011,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   filterOrder:
     - name: envoy.filters.http.wasm
@@ -937,7 +1031,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: envoy-gateway-system
+  namespace: default
 spec:
   filterOrder:
     - name: envoy.filters.http.wasm
@@ -949,6 +1043,53 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
+## Customize EnvoyProxy IP Family
+
+You can customize the IP family configuration for EnvoyProxy via the EnvoyProxy Config.
+This allows the Envoy Proxy fleet to serve external clients over IPv4 as well as IPv6.
+
+The below configuration sets the `ipFamily` to `DualStack` to allow ingressing IPv4 as well as IPv6 traffic.
+
+**Note**: Envoy Gateway relies on the [Service](https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services) spec of the BackendRef resource (linked to xRoutes) to decide which type of IP addresses to use to route to them.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: default
+spec:
+  ipFamily: DualStack
+EOF
+```
+
+{{% /tab %}}
+
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: default
+spec:
+  ipFamily: DualStack  # Supports: IPv4, IPv6, or DualStack
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+After applying the config, the EnvoyProxy deployment will be configured to use the specified IP family. When set to `DualStack`, both IPv4 and IPv6 networking will be enabled.
+
+**Note**: Your cluster must support the selected IP family configuration. For DualStack support, ensure your Kubernetes cluster is properly configured for dual-stack networking.
+
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
 [EnvoyProxy]: ../../../api/extension_types#envoyproxy
-[egctl translate]: ../egctl/#validating-gateway-api-configuration
+[egctl x translate]: ../operations/egctl#egctl-experimental-translate
