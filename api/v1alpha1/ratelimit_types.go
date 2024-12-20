@@ -101,7 +101,7 @@ type RateLimitRule struct {
 	// Currently, this is only supported for HTTP Global Rate Limits.
 	//
 	// +optional
-	UsageSpecifier *RateLimitUsageSpecifier
+	UsageSpecifier *RateLimitUsageSpecifier `json:"usageSpecifier,omitempty"`
 }
 
 // RateLimitUsageSpecifier specifies the attributes within the request context from which
