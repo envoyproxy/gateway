@@ -35,21 +35,21 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: Gateway
-metadata:
-  name: all-namespaces
-  namespace: gateway-conformance-infra
-spec:
-  gatewayClassName: "{GATEWAY_CLASS_NAME}"
-  listeners:
-    - name: http
-      port: 80
-      protocol: HTTP
-      allowedRoutes:
-        namespaces:
-          from: All
+#---
+#apiVersion: gateway.networking.k8s.io/v1
+#kind: Gateway
+#metadata:
+#  name: all-namespaces
+#  namespace: gateway-conformance-infra
+#spec:
+#  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+#  listeners:
+#    - name: http
+#      port: 80
+#      protocol: HTTP
+#      allowedRoutes:
+#        namespaces:
+#          from: All
 ---
 apiVersion: v1
 kind: Service

@@ -1,0 +1,112 @@
+clientTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-gateway-1
+  spec:
+    preserveRouteOrder: false
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-gateway-1-section-http-1
+  spec:
+    preserveRouteOrder: true
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      sectionName: http-preserve-order
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http-preserve-order
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: http-2
+      protocol: HTTP
+      port: 8080
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+    rules:
+    - matches:
+      - path:
+          type: PathPrefix
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
+    - matches:
+      - path:
+          type: RegularExpression
+          value: "/regex/between/prefixes/*"
+      backendRefs:
+      - name: service-1
+        port: 8080
+    - matches:
+      - path:
+          type: PathPrefix
+          value: "/specific/prefix/after/less/specific"
+      backendRefs:
+      - name: service-1
+        port: 8080
+    - matches:
+      - path:
+          type: Exact
+          value: "/exact"
+      backendRefs:
+      - name: service-1
+        port: 8080
+    - matches:
+      - path:
+          type: RegularExpression
+          value: "/regex/between/exacts/*"
+      backendRefs:
+      - name: service-1
+        port: 8080
+    - matches:
+      - path:
+          type: Exact
+          value: "/specific/exact/after/less/specific"
+      backendRefs:
+      - name: service-1
+        port: 8080
+    - matches:
+      - path:
+          type: RegularExpression
+          value: "/short/regex/*"
+      backendRefs:
+      - name: service-1
+        port: 8080
+    - matches:
+      - path:
+          type: RegularExpression
+          value: "/longer/regex/after/shorter/regex/*"
+      backendRefs:
+      - name: service-1
+        port: 8080
