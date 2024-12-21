@@ -1,4 +1,8 @@
 # Ignore vulnerabilities on license scan
+[[PackageOverrides]]
+ecosystem = "Go"
+
+vulnerability.ignore = true
 
 [[PackageOverrides]]
 name = "github.com/AdaLogics/go-fuzz-headers"
