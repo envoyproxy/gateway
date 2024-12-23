@@ -124,7 +124,11 @@ type RateLimitRule struct {
 // If there's no such metadata or the number stored in the metadata is invalid, it will use the default
 // usage number of 1.
 //
-// This default behavior can be overridden by specifying one of the fields in this RateLimitUsage.
+// This default behavior can be overridden by specifying exactly one of the fields in this RateLimitUsage.
+// If either of the fields is not specified, Envoy will use the default behavior described above.
+//
+// See https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto.html#config-route-v3-ratelimit-hitsaddend
+// for more information.
 //
 // +kubebuilder:validation:XValidation:rule="!(has(self.number) && has(self.format))",message="only one of number or format can be specified"
 type RateLimitHitsAddend struct {
@@ -133,8 +137,13 @@ type RateLimitHitsAddend struct {
 	// +optional
 	// +notImplementedHide
 	Number *uint64 `json:"number,omitempty"`
-	// Format specifies the format of the usage number. See the Envoy documentation for the supported formats:
-	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto.html#config-route-v3-ratelimit-hitsaddend
+	// Format specifies the format of the usage number. See the Envoy documentation for the supported format which
+	// is the same as the access log format:
+	// https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format
+	//
+	// For example `%DYNAMIC_METADATA(com.test.my_filter:test_key)%"` will retrieve the usage number from the
+	// `com.test.my_filter` filter metadata namespace with the key `test_key`.
+	// Another example is `%BYTES_RECEIVED%` which will retrieve the usage number from the bytes received by the client.
 	//
 	// +optional
 	// +notImplementedHide

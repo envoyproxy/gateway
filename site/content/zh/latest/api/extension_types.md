@@ -3419,7 +3419,12 @@ If there's no such metadata or the number stored in the metadata is invalid, it 
 usage number of 1.
 
 
-This default behavior can be overridden by specifying one of the fields in this RateLimitUsage.
+This default behavior can be overridden by specifying exactly one of the fields in this RateLimitUsage.
+If either of the fields is not specified, Envoy will use the default behavior described above.
+
+
+See https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto.html#config-route-v3-ratelimit-hitsaddend
+for more information.
 
 _Appears in:_
 - [RateLimitRule](#ratelimitrule)

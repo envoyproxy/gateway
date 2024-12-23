@@ -789,8 +789,13 @@ spec:
                               properties:
                                 format:
                                   description: |-
-                                    Format specifies the format of the usage number. See the Envoy documentation for the supported formats:
-                                    https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto.html#config-route-v3-ratelimit-hitsaddend
+                                    Format specifies the format of the usage number. See the Envoy documentation for the supported format which
+                                    is the same as the access log format:
+                                    https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format
+
+                                    For example `%DYNAMIC_METADATA(com.test.my_filter:test_key)%"` will retrieve the usage number from the
+                                    `com.test.my_filter` filter metadata namespace with the key `test_key`.
+                                    Another example is `%BYTES_RECEIVED%` which will retrieve the usage number from the bytes received by the client.
                                   type: string
                                 number:
                                   description: Number specifies the fixed usage number
@@ -817,8 +822,13 @@ spec:
                               properties:
                                 format:
                                   description: |-
-                                    Format specifies the format of the usage number. See the Envoy documentation for the supported formats:
-                                    https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto.html#config-route-v3-ratelimit-hitsaddend
+                                    Format specifies the format of the usage number. See the Envoy documentation for the supported format which
+                                    is the same as the access log format:
+                                    https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format
+
+                                    For example `%DYNAMIC_METADATA(com.test.my_filter:test_key)%"` will retrieve the usage number from the
+                                    `com.test.my_filter` filter metadata namespace with the key `test_key`.
+                                    Another example is `%BYTES_RECEIVED%` which will retrieve the usage number from the bytes received by the client.
                                   type: string
                                 number:
                                   description: Number specifies the fixed usage number
@@ -976,8 +986,13 @@ spec:
                               properties:
                                 format:
                                   description: |-
-                                    Format specifies the format of the usage number. See the Envoy documentation for the supported formats:
-                                    https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto.html#config-route-v3-ratelimit-hitsaddend
+                                    Format specifies the format of the usage number. See the Envoy documentation for the supported format which
+                                    is the same as the access log format:
+                                    https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format
+
+                                    For example `%DYNAMIC_METADATA(com.test.my_filter:test_key)%"` will retrieve the usage number from the
+                                    `com.test.my_filter` filter metadata namespace with the key `test_key`.
+                                    Another example is `%BYTES_RECEIVED%` which will retrieve the usage number from the bytes received by the client.
                                   type: string
                                 number:
                                   description: Number specifies the fixed usage number
@@ -1004,8 +1019,13 @@ spec:
                               properties:
                                 format:
                                   description: |-
-                                    Format specifies the format of the usage number. See the Envoy documentation for the supported formats:
-                                    https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto.html#config-route-v3-ratelimit-hitsaddend
+                                    Format specifies the format of the usage number. See the Envoy documentation for the supported format which
+                                    is the same as the access log format:
+                                    https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format
+
+                                    For example `%DYNAMIC_METADATA(com.test.my_filter:test_key)%"` will retrieve the usage number from the
+                                    `com.test.my_filter` filter metadata namespace with the key `test_key`.
+                                    Another example is `%BYTES_RECEIVED%` which will retrieve the usage number from the bytes received by the client.
                                   type: string
                                 number:
                                   description: Number specifies the fixed usage number
