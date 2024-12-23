@@ -91,36 +91,50 @@ type RateLimitRule struct {
 	// 429 HTTP status code is sent back to the client when
 	// the selected requests have reached the limit.
 	Limit RateLimitValue `json:"limit"`
-	// UsageSpecifier specifies the "usage" of each request that matches the rule.
+	// RequestUsage specifies the number to reduce the rate limit counters
+	// on the request path. If the usage is not specified, the default behavior
+	// is to reduce the rate limit counters by 1.
+	//
+	// When Envoy receives a request that matches the rule, it tries to reduce the
+	// rate limit counters by the specified number. If the counter doesn't have
+	// enough capacity, the request is rate limited.
+	//
+	// +optional
+	RequestUsage *RateLimitUsage `json:"requestUsage,omitempty"`
+	// ResponseUsage specifies the number to reduce the rate limit counters
+	// when the response is sent back to the client or the request stream is closed.
+	//
 	// The usage is used to reduce the rate limit counters for the matching requests.
-	// The reduction happens after the request stream is complete, so the rate limit
-	// won't be enforced for the current request, but for the subsequent requests.
+	// Since the reduction happens after the request stream is complete, the rate limit
+	// won't be enforced for the current request, but for the subsequent matching requests.
 	//
 	// This is optional and if not specified, the rate limit counters are not reduced.
 	//
 	// Currently, this is only supported for HTTP Global Rate Limits.
 	//
 	// +optional
-	UsageSpecifier *RateLimitUsageSpecifier `json:"usageSpecifier,omitempty"`
+	ResponseUsage *RateLimitUsage `json:"responseUsage,omitempty"`
 }
 
-// RateLimitUsageSpecifier specifies the attributes within the request context from which
-// the Envoy retrieves the usage number to reduce the rate limit counters.
+// RateLimitUsage specifies the attributes within the request/response context from which
+// the Envoy retrieves the number to reduce the rate limit counters.
 //
 // By default, Envoy looks up the usage number from the `envoy.ratelimit.hits_addend` filter metadata.
 // If there's no such metadata or the number stored in the metadata is invalid, it will use the default
 // usage number of 1.
 //
-// This default behavior can be overridden by specifying one of the fields in this RateLimitUsageSpecifier.
-type RateLimitUsageSpecifier struct {
+// This default behavior can be overridden by specifying one of the fields in this RateLimitUsage.
+type RateLimitUsage struct {
 	// Number specifies the fixed usage number to reduce the rate limit counters.
 	//
 	// +optional
+	// +notImplementedHide
 	Number *uint64 `json:"number,omitempty"`
 	// Format specifies the format of the usage number. See the Envoy documentation for the supported formats:
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto.html#config-route-v3-ratelimit-hitsaddend
 	//
 	// +optional
+	// +notImplementedHide
 	Format *string `json:"format,omitempty"`
 }
 

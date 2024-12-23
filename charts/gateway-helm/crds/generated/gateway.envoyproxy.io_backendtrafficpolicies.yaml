@@ -777,12 +777,35 @@ spec:
                               - requests
                               - unit
                               type: object
-                            usageSpecifier:
+                            requestUsage:
                               description: |-
-                                UsageSpecifier specifies the "usage" of each request that matches the rule.
+                                RequestUsage specifies the number to reduce the rate limit counters
+                                on the request path. If the usage is not specified, the default behavior
+                                is to reduce the rate limit counters by 1.
+
+                                When Envoy receives a request that matches the rule, it tries to reduce the
+                                rate limit counters by the specified number. If the counter doesn't have
+                                enough capacity, the request is rate limited.
+                              properties:
+                                format:
+                                  description: |-
+                                    Format specifies the format of the usage number. See the Envoy documentation for the supported formats:
+                                    https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto.html#config-route-v3-ratelimit-hitsaddend
+                                  type: string
+                                number:
+                                  description: Number specifies the fixed usage number
+                                    to reduce the rate limit counters.
+                                  format: int64
+                                  type: integer
+                              type: object
+                            responseUsage:
+                              description: |-
+                                ResponseUsage specifies the number to reduce the rate limit counters
+                                when the response is sent back to the client or the request stream is closed.
+
                                 The usage is used to reduce the rate limit counters for the matching requests.
-                                The reduction happens after the request stream is complete, so the rate limit
-                                won't be enforced for the current request, but for the subsequent requests.
+                                Since the reduction happens after the request stream is complete, the rate limit
+                                won't be enforced for the current request, but for the subsequent matching requests.
 
                                 This is optional and if not specified, the rate limit counters are not reduced.
 
@@ -816,6 +839,8 @@ spec:
                           multiple rules, the strictest limit is applied. For example, if a request
                           matches two rules, one with 10rps and one with 20rps, the final limit will
                           be based on the rule with 10rps.
+
+                          Add the validation that any RateLimitRule doesn't have UsageSpecifier set:
                         items:
                           description: |-
                             RateLimitRule defines the semantics for matching attributes
@@ -934,12 +959,35 @@ spec:
                               - requests
                               - unit
                               type: object
-                            usageSpecifier:
+                            requestUsage:
                               description: |-
-                                UsageSpecifier specifies the "usage" of each request that matches the rule.
+                                RequestUsage specifies the number to reduce the rate limit counters
+                                on the request path. If the usage is not specified, the default behavior
+                                is to reduce the rate limit counters by 1.
+
+                                When Envoy receives a request that matches the rule, it tries to reduce the
+                                rate limit counters by the specified number. If the counter doesn't have
+                                enough capacity, the request is rate limited.
+                              properties:
+                                format:
+                                  description: |-
+                                    Format specifies the format of the usage number. See the Envoy documentation for the supported formats:
+                                    https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto.html#config-route-v3-ratelimit-hitsaddend
+                                  type: string
+                                number:
+                                  description: Number specifies the fixed usage number
+                                    to reduce the rate limit counters.
+                                  format: int64
+                                  type: integer
+                              type: object
+                            responseUsage:
+                              description: |-
+                                ResponseUsage specifies the number to reduce the rate limit counters
+                                when the response is sent back to the client or the request stream is closed.
+
                                 The usage is used to reduce the rate limit counters for the matching requests.
-                                The reduction happens after the request stream is complete, so the rate limit
-                                won't be enforced for the current request, but for the subsequent requests.
+                                Since the reduction happens after the request stream is complete, the rate limit
+                                won't be enforced for the current request, but for the subsequent matching requests.
 
                                 This is optional and if not specified, the rate limit counters are not reduced.
 
@@ -961,6 +1009,10 @@ spec:
                           type: object
                         maxItems: 16
                         type: array
+                        x-kubernetes-validations:
+                        - message: usageSpecifier is not supported for Local Rate
+                            Limits
+                          rule: self.all(foo, !has(foo.usageSpecifier))
                     type: object
                   type:
                     description: |-
