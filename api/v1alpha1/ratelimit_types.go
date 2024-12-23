@@ -62,8 +62,6 @@ type LocalRateLimit struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
-	//
-	// Add the validation that any RateLimitRule doesn't have UsageSpecifier set:
 	// +kubebuilder:validation:XValidation:rule="self.all(foo, !has(foo.responseHitsAddend))", message="responseHitsAddend is not supported for Local Rate Limits"
 	Rules []RateLimitRule `json:"rules"`
 }
