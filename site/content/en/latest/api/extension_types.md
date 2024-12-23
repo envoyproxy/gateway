@@ -2740,7 +2740,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `rules` | _[RateLimitRule](#ratelimitrule) array_ |  false  | Rules are a list of RateLimit selectors and limits. If a request matches<br />multiple rules, the strictest limit is applied. For example, if a request<br />matches two rules, one with 10rps and one with 20rps, the final limit will<br />be based on the rule with 10rps. |
+| `rules` | _[RateLimitRule](#ratelimitrule) array_ |  false  | Rules are a list of RateLimit selectors and limits. If a request matches<br />multiple rules, the strictest limit is applied. For example, if a request<br />matches two rules, one with 10rps and one with 20rps, the final limit will<br />be based on the rule with 10rps.<br /><br />Add the validation that any RateLimitRule doesn't have UsageSpecifier set: |
 
 
 #### LogLevel
@@ -3465,7 +3465,8 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `clientSelectors` | _[RateLimitSelectCondition](#ratelimitselectcondition) array_ |  false  | ClientSelectors holds the list of select conditions to select<br />specific clients using attributes from the traffic flow.<br />All individual select conditions must hold True for this rule<br />and its limit to be applied.<br /><br />If no client selectors are specified, the rule applies to all traffic of<br />the targeted Route.<br /><br />If the policy targets a Gateway, the rule applies to each Route of the Gateway.<br />Please note that each Route has its own rate limit counters. For example,<br />if a Gateway has two Routes, and the policy has a rule with limit 10rps,<br />each Route will have its own 10rps limit. |
 | `limit` | _[RateLimitValue](#ratelimitvalue)_ |  true  | Limit holds the rate limit values.<br />This limit is applied for traffic flows when the selectors<br />compute to True, causing the request to be counted towards the limit.<br />The limit is enforced and the request is ratelimited, i.e. a response with<br />429 HTTP status code is sent back to the client when<br />the selected requests have reached the limit. |
-| `UsageSpecifier` | _[RateLimitUsageSpecifier](#ratelimitusagespecifier)_ |  false  | UsageSpecifier specifies the "usage" of each request that matches the rule.<br />The usage is used to reduce the rate limit counters for the matching requests.<br />The reduction happens after the request stream is complete, so the rate limit<br />won't be enforced for the current request, but for the subsequent requests.<br /><br />This is optional and if not specified, the rate limit counters are not reduced.<br /><br />Currently, this is only supported for HTTP Global Rate Limits. |
+| `requestUsage` | _[RateLimitUsage](#ratelimitusage)_ |  false  | RequestUsage specifies the number to reduce the rate limit counters<br />on the request path. If the usage is not specified, the default behavior<br />is to reduce the rate limit counters by 1.<br /><br />When Envoy receives a request that matches the rule, it tries to reduce the<br />rate limit counters by the specified number. If the counter doesn't have<br />enough capacity, the request is rate limited. |
+| `responseUsage` | _[RateLimitUsage](#ratelimitusage)_ |  false  | ResponseUsage specifies the number to reduce the rate limit counters<br />when the response is sent back to the client or the request stream is closed.<br /><br />The usage is used to reduce the rate limit counters for the matching requests.<br />Since the reduction happens after the request stream is complete, the rate limit<br />won't be enforced for the current request, but for the subsequent matching requests.<br /><br />This is optional and if not specified, the rate limit counters are not reduced.<br /><br />Currently, this is only supported for HTTP Global Rate Limits. |
 
 
 #### RateLimitSelectCondition
@@ -3590,12 +3591,12 @@ _Appears in:_
 | `Day` | RateLimitUnitDay specifies the rate limit interval to be 1 day.<br /> | 
 
 
-#### RateLimitUsageSpecifier
+#### RateLimitUsage
 
 
 
-RateLimitUsageSpecifier specifies the attributes within the request context from which
-the Envoy retrieves the usage number to reduce the rate limit counters.
+RateLimitUsage specifies the attributes within the request/response context from which
+the Envoy retrieves the number to reduce the rate limit counters.
 
 
 By default, Envoy looks up the usage number from the `envoy.ratelimit.hits_addend` filter metadata.
@@ -3610,8 +3611,6 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `number` | _integer_ |  false  | Number specifies the fixed usage number to reduce the rate limit counters. |
-| `format` | _string_ |  false  | Format specifies the format of the usage number. See the Envoy documentation for the supported formats:<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto.html#config-route-v3-ratelimit-hitsaddend |
 
 
 #### RateLimitValue
