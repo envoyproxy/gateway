@@ -239,10 +239,10 @@ func (service *KubernetesServiceSpec) ApplyMergePatch(old *corev1.Service) (*cor
 	var patchedJSON []byte
 	var err error
 
-	// Serialize the current deployment to JSON
+	// Serialize the current service to JSON
 	originalJSON, err := json.Marshal(old)
 	if err != nil {
-		return nil, fmt.Errorf("error marshaling original deployment: %w", err)
+		return nil, fmt.Errorf("error marshaling original service: %w", err)
 	}
 
 	switch {
