@@ -62,6 +62,9 @@ type LocalRateLimit struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
+	//
+	// Add the validation that any RateLimitRule doesn't have UsageSpecifier set:
+	// +kubebuilder:validation:XValidation:rule="self.all(foo, !has(foo.responseHitsAddend))", message="responseHitsAddend is not supported for Local Rate Limits"
 	Rules []RateLimitRule `json:"rules"`
 }
 
@@ -91,8 +94,8 @@ type RateLimitRule struct {
 	// 429 HTTP status code is sent back to the client when
 	// the selected requests have reached the limit.
 	Limit RateLimitValue `json:"limit"`
-	// RequestUsage specifies the number to reduce the rate limit counters
-	// on the request path. If the usage is not specified, the default behavior
+	// RequestHitsAddend specifies the number to reduce the rate limit counters
+	// on the request path. If the addend is not specified, the default behavior
 	// is to reduce the rate limit counters by 1.
 	//
 	// When Envoy receives a request that matches the rule, it tries to reduce the
@@ -100,31 +103,33 @@ type RateLimitRule struct {
 	// enough capacity, the request is rate limited.
 	//
 	// +optional
-	RequestUsage *RateLimitUsage `json:"requestUsage,omitempty"`
-	// ResponseUsage specifies the number to reduce the rate limit counters
-	// when the response is sent back to the client or the request stream is closed.
+	RequestHitsAddend *RateLimitHitsAddend `json:"requestHitsAddend,omitempty"`
+	// ResponseHitsAddend specifies the number to reduce the rate limit counters
+	// after the response is sent back to the client or the request stream is closed.
 	//
-	// The usage is used to reduce the rate limit counters for the matching requests.
+	// The addend is used to reduce the rate limit counters for the matching requests.
 	// Since the reduction happens after the request stream is complete, the rate limit
 	// won't be enforced for the current request, but for the subsequent matching requests.
 	//
-	// This is optional and if not specified, the rate limit counters are not reduced.
+	// This is optional and if not specified, the rate limit counters are not reduced
+	// on the response path.
 	//
 	// Currently, this is only supported for HTTP Global Rate Limits.
 	//
 	// +optional
-	ResponseUsage *RateLimitUsage `json:"responseUsage,omitempty"`
+	ResponseHitsAddend *RateLimitHitsAddend `json:"responseHitsAddend,omitempty"`
 }
 
-// RateLimitUsage specifies the attributes within the request/response context from which
-// the Envoy retrieves the number to reduce the rate limit counters.
+// RateLimitHitsAddend specifies where the Envoy retrieves the number to reduce the rate limit counters.
 //
-// By default, Envoy looks up the usage number from the `envoy.ratelimit.hits_addend` filter metadata.
+// By default, Envoy looks up the addend from the `envoy.ratelimit.hits_addend` filter metadata.
 // If there's no such metadata or the number stored in the metadata is invalid, it will use the default
 // usage number of 1.
 //
 // This default behavior can be overridden by specifying one of the fields in this RateLimitUsage.
-type RateLimitUsage struct {
+//
+// +kubebuilder:validation:XValidation:rule="!(has(self.number) && has(self.format))",message="only one of number or format can be specified"
+type RateLimitHitsAddend struct {
 	// Number specifies the fixed usage number to reduce the rate limit counters.
 	//
 	// +optional

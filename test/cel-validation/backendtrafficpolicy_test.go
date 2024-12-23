@@ -1502,6 +1502,126 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				"only ConfigMap is supported for ValueRe",
 			},
 		},
+		{
+			desc: "valid Global rate limit rules with request and response hit addends",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				rules := []egv1a1.RateLimitRule{
+					{
+						Limit: egv1a1.RateLimitValue{Requests: 10, Unit: "Minute"},
+						// Default values for RequestHitsAddend and ResponseHitsAddend.
+						ResponseHitsAddend: &egv1a1.RateLimitHitsAddend{},
+						RequestHitsAddend:  &egv1a1.RateLimitHitsAddend{},
+					},
+					{
+						Limit: egv1a1.RateLimitValue{Requests: 10, Unit: "Minute"},
+						// Only ResponseHitsAddend is set.
+						RequestHitsAddend: &egv1a1.RateLimitHitsAddend{},
+					},
+					{
+						Limit: egv1a1.RateLimitValue{Requests: 10, Unit: "Minute"},
+						// Only RequestHitsAddend is set.
+						ResponseHitsAddend: &egv1a1.RateLimitHitsAddend{},
+					},
+					{
+						Limit: egv1a1.RateLimitValue{Requests: 10, Unit: "Minute"},
+						// Both RequestHitsAddend and ResponseHitsAddend are set with values.
+						RequestHitsAddend:  &egv1a1.RateLimitHitsAddend{Number: ptr.To[uint64](200)},
+						ResponseHitsAddend: &egv1a1.RateLimitHitsAddend{Number: ptr.To[uint64](200)},
+					},
+					{
+						Limit: egv1a1.RateLimitValue{Requests: 10, Unit: "Minute"},
+						// Both RequestHitsAddend and ResponseHitsAddend are set with formats.
+						RequestHitsAddend:  &egv1a1.RateLimitHitsAddend{Format: ptr.To[string]("%DYNAMIC_METADATA(com.test.my_filter:test_key)%")},
+						ResponseHitsAddend: &egv1a1.RateLimitHitsAddend{Format: ptr.To[string]("%DYNAMIC_METADATA(com.test.my_filter:test_key)%")},
+					},
+				}
+
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
+						},
+					},
+					RateLimit: &egv1a1.RateLimitSpec{
+						Type: egv1a1.GlobalRateLimitType,
+						Global: &egv1a1.GlobalRateLimit{
+							Rules: rules,
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid Global rate limit rules with request and response hit addends specifying both number and format fields",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
+						},
+					},
+					RateLimit: &egv1a1.RateLimitSpec{
+						Type: egv1a1.GlobalRateLimitType,
+						Global: &egv1a1.GlobalRateLimit{
+							Rules: []egv1a1.RateLimitRule{
+								{
+									Limit: egv1a1.RateLimitValue{Requests: 10, Unit: "Minute"},
+									RequestHitsAddend: &egv1a1.RateLimitHitsAddend{
+										Format: ptr.To[string]("foo"),
+										Number: ptr.To[uint64](200),
+									},
+									ResponseHitsAddend: &egv1a1.RateLimitHitsAddend{
+										Format: ptr.To[string]("bar"),
+										Number: ptr.To[uint64](200),
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				`only one of number or format can be specified, spec.rateLimit.global.rules[0].responseHitsAddend`,
+			},
+		},
+		{
+			desc: "invalid count of local rate limit rules specifying ResponseHitsAddend",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
+						},
+					},
+					RateLimit: &egv1a1.RateLimitSpec{
+						Type: egv1a1.GlobalRateLimitType,
+						Local: &egv1a1.LocalRateLimit{
+							Rules: []egv1a1.RateLimitRule{
+								{
+									Limit: egv1a1.RateLimitValue{Requests: 10, Unit: "Minute"},
+									// This is not supported for LocalRateLimit.
+									ResponseHitsAddend: &egv1a1.RateLimitHitsAddend{},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{`responseHitsAddend is not supported for Local Rate Limits`},
+		},
 	}
 
 	for _, tc := range cases {
