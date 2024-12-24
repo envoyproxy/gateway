@@ -74,9 +74,9 @@ jobs:
       run: |
         make build-multiarch
         tar -zcvf envoy-gateway_latest_linux_amd64.tar.gz bin/linux/amd64/envoy-gateway
-        tar -zcvf envoy-gateway_linux_arm64.tar.gz bin/linux/arm64/envoy-gateway
-        tar -zcvf envoy-gateway_darwin_amd64.tar.gz bin/darwin/amd64/envoy-gateway
-        tar -zcvf envoy-gateway_darwin_arm64.tar.gz bin/darwin/arm64/envoy-gateway
+        tar -zcvf envoy-gateway_latest_linux_arm64.tar.gz bin/linux/arm64/envoy-gateway
+        tar -zcvf envoy-gateway_latest_darwin_amd64.tar.gz bin/darwin/amd64/envoy-gateway
+        tar -zcvf envoy-gateway_latest_darwin_arm64.tar.gz bin/darwin/arm64/envoy-gateway
         tar -zcvf egctl_latest_linux_amd64.tar.gz bin/linux/amd64/egctl
         tar -zcvf egctl_latest_linux_arm64.tar.gz bin/linux/arm64/egctl
         tar -zcvf egctl_latest_darwin_amd64.tar.gz bin/darwin/amd64/egctl
