@@ -855,6 +855,15 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 			hpa, err := r.HorizontalPodAutoscaler()
 			require.NoError(t, err)
 
+			if *overrideTestData {
+				hpaYAML, err := yaml.Marshal(hpa)
+				require.NoError(t, err)
+				// nolint:gosec
+				err = os.WriteFile(fmt.Sprintf("testdata/hpa/%s.yaml", tc.caseName), hpaYAML, 0o644)
+				require.NoError(t, err)
+				return
+			}
+
 			expected, err := loadHpa(tc.caseName)
 			require.NoError(t, err)
 
