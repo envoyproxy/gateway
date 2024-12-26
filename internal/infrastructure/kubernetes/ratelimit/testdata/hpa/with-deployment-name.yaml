@@ -21,6 +21,3 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: foo
-status:
-  currentMetrics: null
-  desiredReplicas: 0
