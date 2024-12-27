@@ -101,6 +101,7 @@ type RateLimitRule struct {
 	// enough capacity, the request is rate limited.
 	//
 	// +optional
+	// +notImplementedHide
 	RequestHitsAddend *RateLimitHitsAddend `json:"requestHitsAddend,omitempty"`
 	// ResponseHitsAddend specifies the number to reduce the rate limit counters
 	// after the response is sent back to the client or the request stream is closed.
@@ -115,6 +116,7 @@ type RateLimitRule struct {
 	// Currently, this is only supported for HTTP Global Rate Limits.
 	//
 	// +optional
+	// +notImplementedHide
 	ResponseHitsAddend *RateLimitHitsAddend `json:"responseHitsAddend,omitempty"`
 }
 
@@ -135,6 +137,7 @@ type RateLimitHitsAddend struct {
 	// Number specifies the fixed usage number to reduce the rate limit counters.
 	//
 	// +optional
+	// +notImplementedHide
 	Number *uint64 `json:"number,omitempty"`
 	// Format specifies the format of the usage number. See the Envoy documentation for the supported format which
 	// is the same as the access log format:
@@ -145,6 +148,7 @@ type RateLimitHitsAddend struct {
 	// Another example is `%BYTES_RECEIVED%` which will retrieve the usage number from the bytes received by the client.
 	//
 	// +optional
+	// +notImplementedHide
 	Format *string `json:"format,omitempty"`
 }
 

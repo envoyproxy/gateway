@@ -3431,8 +3431,6 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `number` | _integer_ |  false  | Number specifies the fixed usage number to reduce the rate limit counters. |
-| `format` | _string_ |  false  | Format specifies the format of the usage number. See the Envoy documentation for the supported format which<br />is the same as the access log format:<br />https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format<br /><br />For example `%DYNAMIC_METADATA(com.test.my_filter:test_key)%"` will retrieve the usage number from the<br />`com.test.my_filter` filter metadata namespace with the key `test_key`.<br />Another example is `%BYTES_RECEIVED%` which will retrieve the usage number from the bytes received by the client. |
 
 
 #### RateLimitMetrics
@@ -3493,8 +3491,6 @@ _Appears in:_
 | ---   | ---  | ---      | ---         |
 | `clientSelectors` | _[RateLimitSelectCondition](#ratelimitselectcondition) array_ |  false  | ClientSelectors holds the list of select conditions to select<br />specific clients using attributes from the traffic flow.<br />All individual select conditions must hold True for this rule<br />and its limit to be applied.<br /><br />If no client selectors are specified, the rule applies to all traffic of<br />the targeted Route.<br /><br />If the policy targets a Gateway, the rule applies to each Route of the Gateway.<br />Please note that each Route has its own rate limit counters. For example,<br />if a Gateway has two Routes, and the policy has a rule with limit 10rps,<br />each Route will have its own 10rps limit. |
 | `limit` | _[RateLimitValue](#ratelimitvalue)_ |  true  | Limit holds the rate limit values.<br />This limit is applied for traffic flows when the selectors<br />compute to True, causing the request to be counted towards the limit.<br />The limit is enforced and the request is ratelimited, i.e. a response with<br />429 HTTP status code is sent back to the client when<br />the selected requests have reached the limit. |
-| `requestHitsAddend` | _[RateLimitHitsAddend](#ratelimithitsaddend)_ |  false  | RequestHitsAddend specifies the number to reduce the rate limit counters<br />on the request path. If the addend is not specified, the default behavior<br />is to reduce the rate limit counters by 1.<br /><br />When Envoy receives a request that matches the rule, it tries to reduce the<br />rate limit counters by the specified number. If the counter doesn't have<br />enough capacity, the request is rate limited. |
-| `responseHitsAddend` | _[RateLimitHitsAddend](#ratelimithitsaddend)_ |  false  | ResponseHitsAddend specifies the number to reduce the rate limit counters<br />after the response is sent back to the client or the request stream is closed.<br /><br />The addend is used to reduce the rate limit counters for the matching requests.<br />Since the reduction happens after the request stream is complete, the rate limit<br />won't be enforced for the current request, but for the subsequent matching requests.<br /><br />This is optional and if not specified, the rate limit counters are not reduced<br />on the response path.<br /><br />Currently, this is only supported for HTTP Global Rate Limits. |
 
 
 #### RateLimitSelectCondition
