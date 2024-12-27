@@ -135,7 +135,6 @@ type RateLimitHitsAddend struct {
 	// Number specifies the fixed usage number to reduce the rate limit counters.
 	//
 	// +optional
-	// +notImplementedHide
 	Number *uint64 `json:"number,omitempty"`
 	// Format specifies the format of the usage number. See the Envoy documentation for the supported format which
 	// is the same as the access log format:
@@ -146,7 +145,6 @@ type RateLimitHitsAddend struct {
 	// Another example is `%BYTES_RECEIVED%` which will retrieve the usage number from the bytes received by the client.
 	//
 	// +optional
-	// +notImplementedHide
 	Format *string `json:"format,omitempty"`
 }
 

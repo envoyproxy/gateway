@@ -3431,6 +3431,8 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
+| `number` | _integer_ |  false  | Number specifies the fixed usage number to reduce the rate limit counters. |
+| `format` | _string_ |  false  | Format specifies the format of the usage number. See the Envoy documentation for the supported format which<br />is the same as the access log format:<br />https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format<br /><br />For example `%DYNAMIC_METADATA(com.test.my_filter:test_key)%"` will retrieve the usage number from the<br />`com.test.my_filter` filter metadata namespace with the key `test_key`.<br />Another example is `%BYTES_RECEIVED%` which will retrieve the usage number from the bytes received by the client. |
 
 
 #### RateLimitMetrics
