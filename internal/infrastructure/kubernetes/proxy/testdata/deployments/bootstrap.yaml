@@ -82,6 +82,8 @@ spec:
           successThreshold: 1
           timeoutSeconds: 1
         resources:
+          limits:
+            memory: 512Mi
           requests:
             cpu: 100m
             memory: 512Mi
@@ -158,6 +160,8 @@ spec:
           successThreshold: 1
           timeoutSeconds: 1
         resources:
+          limits:
+            memory: 32Mi
           requests:
             cpu: 10m
             memory: 32Mi

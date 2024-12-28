@@ -206,6 +206,21 @@ spec:
               typed_config:
                 "@type": type.googleapis.com/envoy.extensions.resource_monitors.downstream_connections.v3.DownstreamConnectionsConfig
                 max_active_downstream_connections: 50000
+            - name: "envoy.resource_monitors.fixed_heap"
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.resource_monitors.fixed_heap.v3.FixedHeapConfig
+                max_heap_size_bytes: 429496729
+            actions:
+            - name: "envoy.overload_actions.shrink_heap"
+              triggers:
+              - name: "envoy.resource_monitors.fixed_heap"
+                threshold:
+                  value: 0.95
+            - name: "envoy.overload_actions.stop_accepting_requests"
+              triggers:
+              - name: "envoy.resource_monitors.fixed_heap"
+                threshold:
+                  value: 0.98
         - --log-level warn
         - --cpuset-threads
         - --drain-strategy immediate
@@ -246,6 +261,8 @@ spec:
           successThreshold: 1
           timeoutSeconds: 1
         resources:
+          limits:
+            memory: 512Mi
           requests:
             cpu: 100m
             memory: 512Mi
