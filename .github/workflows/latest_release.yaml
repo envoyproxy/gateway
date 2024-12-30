@@ -74,9 +74,9 @@ jobs:
       run: |
         make build-multiarch
         tar -zcvf envoy-gateway_latest_linux_amd64.tar.gz bin/linux/amd64/envoy-gateway
-        tar -zcvf envoy-gateway_linux_arm64.tar.gz bin/linux/arm64/envoy-gateway
-        tar -zcvf envoy-gateway_darwin_amd64.tar.gz bin/darwin/amd64/envoy-gateway
-        tar -zcvf envoy-gateway_darwin_arm64.tar.gz bin/darwin/arm64/envoy-gateway
+        tar -zcvf envoy-gateway_latest_linux_arm64.tar.gz bin/linux/arm64/envoy-gateway
+        tar -zcvf envoy-gateway_latest_darwin_amd64.tar.gz bin/darwin/amd64/envoy-gateway
+        tar -zcvf envoy-gateway_latest_darwin_arm64.tar.gz bin/darwin/arm64/envoy-gateway
         tar -zcvf egctl_latest_linux_amd64.tar.gz bin/linux/amd64/egctl
         tar -zcvf egctl_latest_linux_arm64.tar.gz bin/linux/arm64/egctl
         tar -zcvf egctl_latest_darwin_amd64.tar.gz bin/darwin/amd64/egctl
@@ -107,7 +107,7 @@ jobs:
         GITHUB_REPOSITORY: ${{ github.repository_owner }}/${{ github.event.repository.name }}
 
     - name: Recreate the Latest Release and Tag
-      uses: softprops/action-gh-release@7b4da11513bf3f43f9999e90eabced41ab8bb048  # v0.1.15
+      uses: softprops/action-gh-release@01570a1f39cb168c169c802c3bceb9e93fb10974  # v2.1.0
       with:
         draft: false
         prerelease: true
