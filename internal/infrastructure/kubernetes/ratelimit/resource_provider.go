@@ -320,7 +320,6 @@ func (r *ResourceRender) HorizontalPodAutoscalerSpec() (*egv1a1.KubernetesHorizo
 }
 
 func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPodAutoscaler, error) {
-
 	hpaConfig, err := r.HorizontalPodAutoscalerSpec()
 	if hpaConfig == nil {
 		return nil, err
