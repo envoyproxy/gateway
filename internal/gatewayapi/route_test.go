@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,10 +51,59 @@ func TestGetIREndpointsFromEndpointSlices(t *testing.T) {
 						{Name: ptr.To("http"), Port: ptr.To(int32(80)), Protocol: ptr.To(corev1.ProtocolTCP)},
 					},
 				},
+				{
+					ObjectMeta:  metav1.ObjectMeta{Name: "slice3"},
+					AddressType: discoveryv1.AddressTypeIPv6,
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses: []string{"2001:db8::2"},
+							Conditions: discoveryv1.EndpointConditions{
+								Ready: ptr.To(false),
+							},
+						},
+					},
+					Ports: []discoveryv1.EndpointPort{
+						{Name: ptr.To("http"), Port: ptr.To(int32(80)), Protocol: ptr.To(corev1.ProtocolTCP)},
+					},
+				},
+				{
+					ObjectMeta:  metav1.ObjectMeta{Name: "slice4"},
+					AddressType: discoveryv1.AddressTypeIPv6,
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses: []string{"2001:db8::3"},
+							Conditions: discoveryv1.EndpointConditions{
+								Ready:       ptr.To(false),
+								Serving:     ptr.To(true),
+								Terminating: ptr.To(true),
+							},
+						},
+					},
+					Ports: []discoveryv1.EndpointPort{
+						{Name: ptr.To("http"), Port: ptr.To(int32(80)), Protocol: ptr.To(corev1.ProtocolTCP)},
+					},
+				},
+				{
+					ObjectMeta:  metav1.ObjectMeta{Name: "slice5"},
+					AddressType: discoveryv1.AddressTypeIPv6,
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses: []string{"2001:db8::4"},
+							Conditions: discoveryv1.EndpointConditions{
+								Ready:       ptr.To(false),
+								Serving:     ptr.To(false),
+								Terminating: ptr.To(true),
+							},
+						},
+					},
+					Ports: []discoveryv1.EndpointPort{
+						{Name: ptr.To("http"), Port: ptr.To(int32(80)), Protocol: ptr.To(corev1.ProtocolTCP)},
+					},
+				},
 			},
 			portName:          "http",
 			portProtocol:      corev1.ProtocolTCP,
-			expectedEndpoints: 3,
+			expectedEndpoints: 4,
 			expectedAddrType:  ir.IP,
 		},
 		{
@@ -174,6 +224,8 @@ func TestGetIREndpointsFromEndpointSlices(t *testing.T) {
 			}
 
 			fmt.Println()
+			require.Len(t, endpoints, tt.expectedEndpoints)
+			require.Equal(t, tt.expectedAddrType, *addrType)
 		})
 	}
 }
