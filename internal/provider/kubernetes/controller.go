@@ -1067,6 +1067,11 @@ func (r *gatewayAPIReconciler) processSecurityPolicies(
 	}
 
 	for _, policy := range securityPolicies.Items {
+		if err := validation.ValidateSecurityPolicy(&policy); err != nil {
+			r.log.Error(err, "failed to process SecurityPolicy", "namespace", policy.Namespace, "name", policy.Name)
+			continue
+		}
+
 		securityPolicy := policy //nolint:copyloopvar
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
