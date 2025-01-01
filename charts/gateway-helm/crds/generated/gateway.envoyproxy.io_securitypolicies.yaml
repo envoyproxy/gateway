@@ -68,9 +68,6 @@ spec:
                       This is an Opaque secret.
                       Each API key is stored in the key representing the client id,
                       which can be used in AllowedClients to authorize the client in a simple way.
-                      If this is attached to a HTTPRoute while the other SecurityPolicies with APIKeyAuth is attached to a Gateway,
-                      this credentials takes precedence.
-                      This field is optional, but it doesn't make sense that any attached APIKeyAuth for the route/gateway doesn't have credentials at all.
                     properties:
                       group:
                         default: ""
@@ -114,16 +111,13 @@ spec:
                     description: |-
                       KeySources is where to fetch the key from the coming request.
                       The value from the first source that has a key will be used.
-                      If this is attached to a HTTPRoute while the other SecurityPolicies with APIKeyAuth is attached to a Gateway,
-                      this key sources takes precedence.
-                      This field is optional, but it doesn't make sense that any attached APIKeyAuth for the route/gateway doesn't have key sources at all.
                     items:
                       description: |-
                         KeySource is where to fetch the key from the coming request.
                         Only one of header, query or cookie is supposed to be specified.
 
                         Note: we intentionally don't add the validation for the only one of header, query or cookie is supposed to be specified with +kubebuilder:validation:XValidation:rule.
-                        Instead, we add the validation in the webhook.
+                        Instead, we add the validation in the controller reconciliation.
                         Technically we can define CEL, but the CEL estimated cost exceeds the threshold and it wouldn't be accepted.
                       properties:
                         cookie:
@@ -146,6 +140,9 @@ spec:
                       - message: one of header, query or cookie must be specified
                         rule: (has(self.header) || has(self.query) || has(self.cookie))
                     type: array
+                required:
+                - credentials
+                - keySources
                 type: object
               authorization:
                 description: Authorization defines the authorization configuration.
