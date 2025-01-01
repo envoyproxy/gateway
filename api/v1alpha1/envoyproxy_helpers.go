@@ -155,9 +155,6 @@ func DefaultShutdownManagerContainerResourceRequirements() *corev1.ResourceRequi
 			corev1.ResourceCPU:    resource.MustParse(DefaultShutdownManagerCPUResourceRequests),
 			corev1.ResourceMemory: resource.MustParse(DefaultShutdownManagerMemoryResourceRequests),
 		},
-		Limits: corev1.ResourceList{
-			corev1.ResourceMemory: resource.MustParse(DefaultShutdownManagerMemoryResourceLimits),
-		},
 	}
 }
 

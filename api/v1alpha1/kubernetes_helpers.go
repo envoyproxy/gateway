@@ -76,9 +76,6 @@ func DefaultResourceRequirements() *corev1.ResourceRequirements {
 			corev1.ResourceCPU:    resource.MustParse(DefaultDeploymentCPUResourceRequests),
 			corev1.ResourceMemory: resource.MustParse(DefaultDeploymentMemoryResourceRequests),
 		},
-		Limits: corev1.ResourceList{
-			corev1.ResourceMemory: resource.MustParse(DefaultDeploymentMemoryResourceLimits),
-		},
 	}
 }
 

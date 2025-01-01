@@ -1,8 +1,8 @@
 # Ignore vulnerabilities on license scan
 [[PackageOverrides]]
 ecosystem = "Go"
-# TODO uncomment once osv-scanner-action is updated to v1.9.1
-# vulnerability.ignore = true
+
+vulnerability.ignore = true
 
 [[PackageOverrides]]
 name = "github.com/AdaLogics/go-fuzz-headers"
