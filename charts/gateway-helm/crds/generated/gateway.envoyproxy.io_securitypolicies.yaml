@@ -49,6 +49,104 @@ spec:
           spec:
             description: Spec defines the desired state of SecurityPolicy.
             properties:
+              apiKeyAuth:
+                description: APIKeyAuth defines the configuration for the API Key
+                  Authentication.
+                properties:
+                  allowedClients:
+                    description: |-
+                      AllowedClients is a list of clients that are allowed to access the route or vhost.
+                      The clients listed here should be subset of the clients listed in the `Credentials` to provide authorization control
+                      after the authentication is successful. If the list is empty, then all authenticated clients
+                      are allowed. This provides very limited but simple authorization.
+                    items:
+                      type: string
+                    type: array
+                  credentials:
+                    description: |-
+                      Credentials is the Kubernetes secret which contains the API keys.
+                      This is an Opaque secret.
+                      Each API key is stored in the key representing the client id,
+                      which can be used in AllowedClients to authorize the client in a simple way.
+                      If this is attached to a HTTPRoute while the other SecurityPolicies with APIKeyAuth is attached to a Gateway,
+                      this credentials takes precedence.
+                      This field is optional, but it doesn't make sense that any attached APIKeyAuth for the route/gateway doesn't have credentials at all.
+                    properties:
+                      group:
+                        default: ""
+                        description: |-
+                          Group is the group of the referent. For example, "gateway.networking.k8s.io".
+                          When unspecified or empty string, core API group is inferred.
+                        maxLength: 253
+                        pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                        type: string
+                      kind:
+                        default: Secret
+                        description: Kind is kind of the referent. For example "Secret".
+                        maxLength: 63
+                        minLength: 1
+                        pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                        type: string
+                      name:
+                        description: Name is the name of the referent.
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      namespace:
+                        description: |-
+                          Namespace is the namespace of the referenced object. When unspecified, the local
+                          namespace is inferred.
+
+                          Note that when a namespace different than the local namespace is specified,
+                          a ReferenceGrant object is required in the referent namespace to allow that
+                          namespace's owner to accept the reference. See the ReferenceGrant
+                          documentation for details.
+
+                          Support: Core
+                        maxLength: 63
+                        minLength: 1
+                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  keySources:
+                    description: |-
+                      KeySources is where to fetch the key from the coming request.
+                      The value from the first source that has a key will be used.
+                      If this is attached to a HTTPRoute while the other SecurityPolicies with APIKeyAuth is attached to a Gateway,
+                      this key sources takes precedence.
+                      This field is optional, but it doesn't make sense that any attached APIKeyAuth for the route/gateway doesn't have key sources at all.
+                    items:
+                      description: |-
+                        KeySource is where to fetch the key from the coming request.
+                        Only one of header, query or cookie is supposed to be specified.
+
+                        Note: we intentionally don't add the validation for the only one of header, query or cookie is supposed to be specified with +kubebuilder:validation:XValidation:rule.
+                        Instead, we add the validation in the webhook.
+                        Technically we can define CEL, but the CEL estimated cost exceeds the threshold and it wouldn't be accepted.
+                      properties:
+                        cookie:
+                          description: |-
+                            Cookie is the name of the cookie to fetch the key from.
+                            This field is optional, but only one of header, query or cookie is supposed to be specified.
+                          type: string
+                        header:
+                          description: |-
+                            Header is the name of the header to fetch the key from.
+                            This field is optional, but only one of header, query or cookie is supposed to be specified.
+                          type: string
+                        query:
+                          description: |-
+                            Query is the name of the query parameter to fetch the key from.
+                            This field is optional, but only one of header, query or cookie is supposed to be specified.
+                          type: string
+                      type: object
+                      x-kubernetes-validations:
+                      - message: one of header, query or cookie must be specified
+                        rule: (has(self.header) || has(self.query) || has(self.cookie))
+                    type: array
+                type: object
               authorization:
                 description: Authorization defines the authorization configuration.
                 properties:
