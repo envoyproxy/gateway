@@ -811,6 +811,8 @@ type SecurityFeatures struct {
 	JWT *JWT `json:"jwt,omitempty" yaml:"jwt,omitempty"`
 	// OIDC defines the schema for authenticating HTTP requests using OpenID Connect (OIDC).
 	OIDC *OIDC `json:"oidc,omitempty" yaml:"oidc,omitempty"`
+	// APIKeyAuth defines the schema for the API Key Authentication.
+	APIKeyAuth *APIKeyAuth `json:"apiKeyAuth,omitempty" yaml:"apiKeyAuth,omitempty"`
 	// BasicAuth defines the schema for the HTTP Basic Authentication.
 	BasicAuth *BasicAuth `json:"basicAuth,omitempty" yaml:"basicAuth,omitempty"`
 	// ExtAuth defines the schema for the external authorization.
@@ -989,6 +991,51 @@ type BasicAuth struct {
 
 	// The username-password pairs in htpasswd format.
 	Users PrivateBytes `json:"users,omitempty" yaml:"users,omitempty"`
+}
+
+// APIKeyAuth defines the schema for the API Key Authentication.
+//
+// +k8s:deepcopy-gen=true
+type APIKeyAuth struct {
+	// Name is a unique name for an APIKeyAuth configuration.
+	// The xds translator only generates one API key filter for each unique name.
+	Name string `json:"name" yaml:"name"`
+
+	// The API key to be used for authentication.
+	// Key is the client id and the value is the API key to be used for authentication.
+	Credentials map[string]PrivateBytes `json:"credentials,omitempty" yaml:"credentials,omitempty"`
+
+	// KeySources is where to fetch the key from the coming request.
+	// The value from the first source that has a key will be used.
+	KeySources []*KeySource `json:"keySources"`
+
+	// AllowedClients is a list of clients that are allowed to access the route or vhost.
+	// The clients listed here should be subset of the clients listed in the `Credentials` to provide authorization control
+	// after the authentication is successful. If the list is empty, then all authenticated clients
+	// are allowed. This provides very limited but simple authorization.
+	// It's supposed to be filled only when SecurityPolicy is attached to a HTTPRoute
+	// otherwise it will be just ignored.
+	//
+	// +optional
+	AllowedClients []string `json:"allowedClients,omitempty"`
+}
+
+// KeySource defines the source of the key.
+//
+// +k8s:deepcopy-gen=true
+type KeySource struct {
+	// Header is the name of the header to fetch the key from.
+	// If multiple header values are present, the first one will be
+	// used. If the header value starts with 'Bearer ', this prefix will be stripped to get the
+	// key value.
+	// This field is optional, but only one of header, query or cookie is supposed to be specified.
+	Header string `json:"header,omitempty"`
+	// Query is the name of the query parameter to fetch the key from.
+	// This field is optional, but only one of header, query or cookie is supposed to be specified.
+	Query string `json:"query,omitempty"`
+	// Cookie is the name of the cookie to fetch the key from.
+	// This field is optional, but only one of header, query or cookie is supposed to be specified.
+	Cookie string `json:"cookie,omitempty"`
 }
 
 // ExtAuth defines the schema for the external authorization.

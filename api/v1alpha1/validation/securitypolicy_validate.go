@@ -64,7 +64,30 @@ func validateSecurityPolicySpec(spec *egv1a1.SecurityPolicySpec) error {
 		return utilerrors.NewAggregate(errs)
 	}
 
+	if err := ValidateJWTProvider(spec.JWT.Providers); err != nil {
+		errs = append(errs, err)
+	}
+
+	if err := ValidateAPIKeyAuth(spec.APIKeyAuth); err != nil {
+		errs = append(errs, err)
+	}
+
 	return utilerrors.NewAggregate(errs)
+}
+
+func ValidateAPIKeyAuth(p *egv1a1.APIKeyAuth) error {
+	if p == nil {
+		return nil
+	}
+
+	for _, keySource := range p.KeySources {
+		if (keySource.Header != nil && keySource.Query != nil) ||
+			(keySource.Header != nil && keySource.Cookie != nil) ||
+			(keySource.Query != nil && keySource.Cookie != nil) {
+			return errors.New("only one of header, query or cookie is supposed to be specified")
+		}
+	}
+	return nil
 }
 
 // ValidateJWTProvider validates the provided JWT authentication configuration.

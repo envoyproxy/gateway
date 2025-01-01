@@ -98,6 +98,22 @@ _Appears in:_
 | `responseTrailers` | _string array_ |  false  |  | ResponseTrailers defines response trailers to include in log entries sent to the access log service. |
 
 
+#### APIKeyAuth
+
+
+
+APIKeyAuth defines the configuration for the API Key Authentication.
+
+_Appears in:_
+- [SecurityPolicySpec](#securitypolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `credentials` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  true  | Credentials is the Kubernetes secret which contains the API keys.<br />This is an Opaque secret.<br />Each API key is stored in the key representing the client id,<br />which can be used in AllowedClients to authorize the client in a simple way. |
+| `keySources` | _[KeySource](#keysource) array_ |  true  | KeySources is where to fetch the key from the coming request.<br />The value from the first source that has a key will be used. |
+| `allowedClients` | _string array_ |  false  | AllowedClients is a list of clients that are allowed to access the route or vhost.<br />The clients listed here should be subset of the clients listed in the `Credentials` to provide authorization control<br />after the authentication is successful. If the list is empty, then all authenticated clients<br />are allowed. This provides very limited but simple authorization. |
+
+
 #### ActiveHealthCheck
 
 
@@ -998,6 +1014,7 @@ _Appears in:_
 | `envoy.filters.http.fault` | EnvoyFilterFault defines the Envoy HTTP fault filter.<br /> | 
 | `envoy.filters.http.cors` | EnvoyFilterCORS defines the Envoy HTTP CORS filter.<br /> | 
 | `envoy.filters.http.ext_authz` | EnvoyFilterExtAuthz defines the Envoy HTTP external authorization filter.<br /> | 
+| `envoy.filters.http.api_key_auth` | EnvoyFilterAPIKeyAuth defines the Envoy HTTP api key authentication filter.<br /> | 
 | `envoy.filters.http.basic_auth` | EnvoyFilterBasicAuth defines the Envoy HTTP basic authentication filter.<br /> | 
 | `envoy.filters.http.oauth2` | EnvoyFilterOAuth2 defines the Envoy HTTP OAuth2 filter.<br /> | 
 | `envoy.filters.http.jwt_authn` | EnvoyFilterJWTAuthn defines the Envoy HTTP JWT authentication filter.<br /> | 
@@ -2467,6 +2484,28 @@ _Appears in:_
 
 
 
+#### KeySource
+
+
+
+KeySource is where to fetch the key from the coming request.
+Only one of header, query or cookie is supposed to be specified.
+
+
+Note: we intentionally don't add the validation for the only one of header, query or cookie is supposed to be specified with +kubebuilder:validation:XValidation:rule.
+Instead, we add the validation in the controller reconciliation.
+Technically we can define CEL, but the CEL estimated cost exceeds the threshold and it wouldn't be accepted.
+
+_Appears in:_
+- [APIKeyAuth](#apikeyauth)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `header` | _string_ |  false  | Header is the name of the header to fetch the key from.<br />This field is optional, but only one of header, query or cookie is supposed to be specified. |
+| `query` | _string_ |  false  | Query is the name of the query parameter to fetch the key from.<br />This field is optional, but only one of header, query or cookie is supposed to be specified. |
+| `cookie` | _string_ |  false  | Cookie is the name of the cookie to fetch the key from.<br />This field is optional, but only one of header, query or cookie is supposed to be specified. |
+
+
 #### KubernetesContainerSpec
 
 
@@ -3862,6 +3901,7 @@ _Appears in:_
 | `targetRef` | _[LocalPolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName)_ |  true  |  | TargetRef is the name of the resource this policy is being attached to.<br />This policy and the TargetRef MUST be in the same namespace for this<br />Policy to have effect<br /><br />Deprecated: use targetRefs/targetSelectors instead |
 | `targetRefs` | _[LocalPolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName) array_ |  true  |  | TargetRefs are the names of the Gateway resources this policy<br />is being attached to. |
 | `targetSelectors` | _[TargetSelector](#targetselector) array_ |  true  |  | TargetSelectors allow targeting resources for this policy based on labels |
+| `apiKeyAuth` | _[APIKeyAuth](#apikeyauth)_ |  false  | APIKeyAuth defines the configuration for the API Key Authentication. |
 | `cors` | _[CORS](#cors)_ |  false  |  | CORS defines the configuration for Cross-Origin Resource Sharing (CORS). |
 | `basicAuth` | _[BasicAuth](#basicauth)_ |  false  |  | BasicAuth defines the configuration for the HTTP Basic Authentication. |
 | `jwt` | _[JWT](#jwt)_ |  false  |  | JWT defines the configuration for JSON Web Token (JWT) authentication. |

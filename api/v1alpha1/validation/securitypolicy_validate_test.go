@@ -491,6 +491,32 @@ func TestValidateSecurityPolicy(t *testing.T) {
 			},
 			expected: true,
 		},
+		{
+			name: "only one of header, query or cookie is supposed to be specified",
+			policy: &egv1a1.SecurityPolicy{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       egv1a1.KindSecurityPolicy,
+					APIVersion: egv1a1.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.SecurityPolicySpec{
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{
+							{
+								Name:   "test",
+								Issuer: "https://www.test.local",
+								RemoteJWKS: egv1a1.RemoteJWKS{
+									URI: "https://test.local/jwt/public-key/jwks.json",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for i := range testCases {
