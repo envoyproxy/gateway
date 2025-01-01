@@ -219,6 +219,9 @@ func TestTranslateXdsWithExtension(t *testing.T) {
 		"http-route-extension-listener-error": {
 			errMsg: "rpc error: code = Unknown desc = extension post xds listener hook error",
 		},
+		"http-route-extension-translate-error": {
+			errMsg: "rpc error: code = Unknown desc = cluster hook resource error: fail-close-error",
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "extension-xds-ir", "*.yaml"))
@@ -282,28 +285,28 @@ func TestTranslateXdsWithExtension(t *testing.T) {
 				require.EqualError(t, err, cfg.errMsg)
 			} else {
 				require.NoError(t, err)
-				listeners := tCtx.XdsResources[resourcev3.ListenerType]
-				routes := tCtx.XdsResources[resourcev3.RouteType]
-				clusters := tCtx.XdsResources[resourcev3.ClusterType]
-				endpoints := tCtx.XdsResources[resourcev3.EndpointType]
-				if *overrideTestData {
-					require.NoError(t, file.Write(requireResourcesToYAMLString(t, listeners), filepath.Join("testdata", "out", "extension-xds-ir", inputFileName+".listeners.yaml")))
-					require.NoError(t, file.Write(requireResourcesToYAMLString(t, routes), filepath.Join("testdata", "out", "extension-xds-ir", inputFileName+".routes.yaml")))
-					require.NoError(t, file.Write(requireResourcesToYAMLString(t, clusters), filepath.Join("testdata", "out", "extension-xds-ir", inputFileName+".clusters.yaml")))
-					require.NoError(t, file.Write(requireResourcesToYAMLString(t, endpoints), filepath.Join("testdata", "out", "extension-xds-ir", inputFileName+".endpoints.yaml")))
-				}
-				require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", inputFileName+".listeners.yaml"), requireResourcesToYAMLString(t, listeners))
-				require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", inputFileName+".routes.yaml"), requireResourcesToYAMLString(t, routes))
-				require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", inputFileName+".clusters.yaml"), requireResourcesToYAMLString(t, clusters))
-				require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", inputFileName+".endpoints.yaml"), requireResourcesToYAMLString(t, endpoints))
+			}
+			listeners := tCtx.XdsResources[resourcev3.ListenerType]
+			routes := tCtx.XdsResources[resourcev3.RouteType]
+			clusters := tCtx.XdsResources[resourcev3.ClusterType]
+			endpoints := tCtx.XdsResources[resourcev3.EndpointType]
+			if *overrideTestData {
+				require.NoError(t, file.Write(requireResourcesToYAMLString(t, listeners), filepath.Join("testdata", "out", "extension-xds-ir", inputFileName+".listeners.yaml")))
+				require.NoError(t, file.Write(requireResourcesToYAMLString(t, routes), filepath.Join("testdata", "out", "extension-xds-ir", inputFileName+".routes.yaml")))
+				require.NoError(t, file.Write(requireResourcesToYAMLString(t, clusters), filepath.Join("testdata", "out", "extension-xds-ir", inputFileName+".clusters.yaml")))
+				require.NoError(t, file.Write(requireResourcesToYAMLString(t, endpoints), filepath.Join("testdata", "out", "extension-xds-ir", inputFileName+".endpoints.yaml")))
+			}
+			require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", inputFileName+".listeners.yaml"), requireResourcesToYAMLString(t, listeners))
+			require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", inputFileName+".routes.yaml"), requireResourcesToYAMLString(t, routes))
+			require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", inputFileName+".clusters.yaml"), requireResourcesToYAMLString(t, clusters))
+			require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", inputFileName+".endpoints.yaml"), requireResourcesToYAMLString(t, endpoints))
 
-				secrets, ok := tCtx.XdsResources[resourcev3.SecretType]
-				if ok {
-					if *overrideTestData {
-						require.NoError(t, file.Write(requireResourcesToYAMLString(t, secrets), filepath.Join("testdata", "out", "extension-xds-ir", inputFileName+".secrets.yaml")))
-					}
-					require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", inputFileName+".secrets.yaml"), requireResourcesToYAMLString(t, secrets))
+			secrets, ok := tCtx.XdsResources[resourcev3.SecretType]
+			if ok {
+				if *overrideTestData {
+					require.NoError(t, file.Write(requireResourcesToYAMLString(t, secrets), filepath.Join("testdata", "out", "extension-xds-ir", inputFileName+".secrets.yaml")))
 				}
+				require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", inputFileName+".secrets.yaml"), requireResourcesToYAMLString(t, secrets))
 			}
 		})
 	}
