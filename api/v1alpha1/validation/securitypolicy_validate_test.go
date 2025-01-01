@@ -58,7 +58,7 @@ func TestValidateSecurityPolicy(t *testing.T) {
 								Name:      "test",
 								Issuer:    "https://www.test.local",
 								Audiences: []string{"test.local"},
-								RemoteJWKS: egv1a1.RemoteJWKS{
+								RemoteJWKS: &egv1a1.RemoteJWKS{
 									URI: "https://test.local/jwt/public-key/jwks.json",
 								},
 							},
@@ -86,7 +86,7 @@ func TestValidateSecurityPolicy(t *testing.T) {
 								Name:      "test",
 								Issuer:    "test@test.local",
 								Audiences: []string{"test.local"},
-								RemoteJWKS: egv1a1.RemoteJWKS{
+								RemoteJWKS: &egv1a1.RemoteJWKS{
 									URI: "https://test.local/jwt/public-key/jwks.json",
 								},
 							},
@@ -142,7 +142,7 @@ func TestValidateSecurityPolicy(t *testing.T) {
 								Name:      "test",
 								Issuer:    "test@test.local",
 								Audiences: []string{"test.local"},
-								RemoteJWKS: egv1a1.RemoteJWKS{
+								RemoteJWKS: &egv1a1.RemoteJWKS{
 									URI: "https://test.local/jwt/public-key/jwks.json",
 								},
 								ClaimToHeaders: []egv1a1.ClaimToHeader{
@@ -176,7 +176,7 @@ func TestValidateSecurityPolicy(t *testing.T) {
 								Name:      "unqualified_...",
 								Issuer:    "https://www.test.local",
 								Audiences: []string{"test.local"},
-								RemoteJWKS: egv1a1.RemoteJWKS{
+								RemoteJWKS: &egv1a1.RemoteJWKS{
 									URI: "https://test.local/jwt/public-key/jwks.json",
 								},
 							},
@@ -204,7 +204,7 @@ func TestValidateSecurityPolicy(t *testing.T) {
 								Name:      "",
 								Issuer:    "https://www.test.local",
 								Audiences: []string{"test.local"},
-								RemoteJWKS: egv1a1.RemoteJWKS{
+								RemoteJWKS: &egv1a1.RemoteJWKS{
 									URI: "https://test.local/jwt/public-key/jwks.json",
 								},
 							},
@@ -232,7 +232,7 @@ func TestValidateSecurityPolicy(t *testing.T) {
 								Name:      "unique",
 								Issuer:    "https://www.test.local",
 								Audiences: []string{"test.local"},
-								RemoteJWKS: egv1a1.RemoteJWKS{
+								RemoteJWKS: &egv1a1.RemoteJWKS{
 									URI: "https://test.local/jwt/public-key/jwks.json",
 								},
 							},
@@ -240,7 +240,7 @@ func TestValidateSecurityPolicy(t *testing.T) {
 								Name:      "non-unique",
 								Issuer:    "https://www.test.local",
 								Audiences: []string{"test.local"},
-								RemoteJWKS: egv1a1.RemoteJWKS{
+								RemoteJWKS: &egv1a1.RemoteJWKS{
 									URI: "https://test.local/jwt/public-key/jwks.json",
 								},
 							},
@@ -248,7 +248,7 @@ func TestValidateSecurityPolicy(t *testing.T) {
 								Name:      "non-unique",
 								Issuer:    "https://www.test.local",
 								Audiences: []string{"test.local"},
-								RemoteJWKS: egv1a1.RemoteJWKS{
+								RemoteJWKS: &egv1a1.RemoteJWKS{
 									URI: "https://test.local/jwt/public-key/jwks.json",
 								},
 							},
@@ -276,7 +276,7 @@ func TestValidateSecurityPolicy(t *testing.T) {
 								Name:      "test",
 								Issuer:    "http://invalid url.local",
 								Audiences: []string{"test.local"},
-								RemoteJWKS: egv1a1.RemoteJWKS{
+								RemoteJWKS: &egv1a1.RemoteJWKS{
 									URI: "http://www.test.local",
 								},
 							},
@@ -304,7 +304,7 @@ func TestValidateSecurityPolicy(t *testing.T) {
 								Name:      "test",
 								Issuer:    "test@!123...",
 								Audiences: []string{"test.local"},
-								RemoteJWKS: egv1a1.RemoteJWKS{
+								RemoteJWKS: &egv1a1.RemoteJWKS{
 									URI: "https://test.local/jwt/public-key/jwks.json",
 								},
 							},
@@ -332,7 +332,7 @@ func TestValidateSecurityPolicy(t *testing.T) {
 								Name:      "test",
 								Issuer:    "http://www.test.local",
 								Audiences: []string{"test.local"},
-								RemoteJWKS: egv1a1.RemoteJWKS{
+								RemoteJWKS: &egv1a1.RemoteJWKS{
 									URI: "invalid/local",
 								},
 							},
@@ -359,7 +359,7 @@ func TestValidateSecurityPolicy(t *testing.T) {
 							{
 								Name:      "test",
 								Audiences: []string{"test.local"},
-								RemoteJWKS: egv1a1.RemoteJWKS{
+								RemoteJWKS: &egv1a1.RemoteJWKS{
 									URI: "",
 								},
 							},
@@ -387,7 +387,7 @@ func TestValidateSecurityPolicy(t *testing.T) {
 								Name:      "test",
 								Issuer:    "test@test.local",
 								Audiences: []string{"test.local"},
-								RemoteJWKS: egv1a1.RemoteJWKS{
+								RemoteJWKS: &egv1a1.RemoteJWKS{
 									URI: "https://test.local/jwt/public-key/jwks.json",
 								},
 								ClaimToHeaders: []egv1a1.ClaimToHeader{
@@ -421,7 +421,7 @@ func TestValidateSecurityPolicy(t *testing.T) {
 								Name:      "test",
 								Issuer:    "test@test.local",
 								Audiences: []string{"test.local"},
-								RemoteJWKS: egv1a1.RemoteJWKS{
+								RemoteJWKS: &egv1a1.RemoteJWKS{
 									URI: "https://test.local/jwt/public-key/jwks.json",
 								},
 								ClaimToHeaders: []egv1a1.ClaimToHeader{
@@ -454,7 +454,7 @@ func TestValidateSecurityPolicy(t *testing.T) {
 							{
 								Name:      "test",
 								Audiences: []string{"test.local"},
-								RemoteJWKS: egv1a1.RemoteJWKS{
+								RemoteJWKS: &egv1a1.RemoteJWKS{
 									URI: "https://test.local/jwt/public-key/jwks.json",
 								},
 							},
@@ -481,7 +481,34 @@ func TestValidateSecurityPolicy(t *testing.T) {
 							{
 								Name:   "test",
 								Issuer: "https://www.test.local",
-								RemoteJWKS: egv1a1.RemoteJWKS{
+								RemoteJWKS: &egv1a1.RemoteJWKS{
+									URI: "https://test.local/jwt/public-key/jwks.json",
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "unspecified audiences",
+			policy: &egv1a1.SecurityPolicy{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       egv1a1.KindSecurityPolicy,
+					APIVersion: egv1a1.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.SecurityPolicySpec{
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{
+							{
+								Name:   "test",
+								Issuer: "https://www.test.local",
+								RemoteJWKS: &egv1a1.RemoteJWKS{
 									URI: "https://test.local/jwt/public-key/jwks.json",
 								},
 							},
