@@ -1,27 +1,11 @@
-clientTrafficPolicies:
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: ClientTrafficPolicy
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
   metadata:
-    namespace: envoy-gateway
-    name: target-gateway-1
-  spec:
-    preserveRouteOrder: false
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-1
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: ClientTrafficPolicy
-  metadata:
-    namespace: envoy-gateway
-    name: target-gateway-1-section-http-1
+    namespace: envoy-gateway-system
+    name: test
   spec:
     preserveRouteOrder: true
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-1
-      sectionName: http-preserve-order
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -34,12 +18,6 @@ gateways:
     - name: http-preserve-order
       protocol: HTTP
       port: 80
-      allowedRoutes:
-        namespaces:
-          from: All
-    - name: http-2
-      protocol: HTTP
-      port: 8080
       allowedRoutes:
         namespaces:
           from: All

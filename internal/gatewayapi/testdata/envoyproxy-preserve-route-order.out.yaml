@@ -1,64 +1,3 @@
-clientTrafficPolicies:
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: ClientTrafficPolicy
-  metadata:
-    creationTimestamp: null
-    name: target-gateway-1-section-http-1
-    namespace: envoy-gateway
-  spec:
-    preserveRouteOrder: true
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-1
-      sectionName: http-preserve-order
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: http-preserve-order
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: ClientTrafficPolicy
-  metadata:
-    creationTimestamp: null
-    name: target-gateway-1
-    namespace: envoy-gateway
-  spec:
-    preserveRouteOrder: false
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-1
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: There are existing ClientTrafficPolicies that are overriding these
-          sections [http-preserve-order]
-        reason: Overridden
-        status: "True"
-        type: Overridden
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -75,12 +14,6 @@ gateways:
       name: http-preserve-order
       port: 80
       protocol: HTTP
-    - allowedRoutes:
-        namespaces:
-          from: All
-      name: http-2
-      port: 8080
-      protocol: HTTP
   status:
     listeners:
     - attachedRoutes: 1
@@ -101,29 +34,6 @@ gateways:
         status: "True"
         type: ResolvedRefs
       name: http-preserve-order
-      supportedKinds:
-      - group: gateway.networking.k8s.io
-        kind: HTTPRoute
-      - group: gateway.networking.k8s.io
-        kind: GRPCRoute
-    - attachedRoutes: 1
-      conditions:
-      - lastTransitionTime: null
-        message: Sending translated listener configuration to the data plane
-        reason: Programmed
-        status: "True"
-        type: Programmed
-      - lastTransitionTime: null
-        message: Listener has been successfully translated
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Listener references have been resolved
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      name: http-2
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
@@ -217,6 +127,17 @@ httpRoutes:
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
+      config:
+        apiVersion: gateway.envoyproxy.io/v1alpha1
+        kind: EnvoyProxy
+        metadata:
+          creationTimestamp: null
+          name: test
+          namespace: envoy-gateway-system
+        spec:
+          logging: {}
+          preserveRouteOrder: true
+        status: {}
       listeners:
       - address: null
         name: envoy-gateway/gateway-1/http-preserve-order
@@ -225,13 +146,6 @@ infraIR:
           name: http-80
           protocol: HTTP
           servicePort: 80
-      - address: null
-        name: envoy-gateway/gateway-1/http-2
-        ports:
-        - containerPort: 8080
-          name: http-8080
-          protocol: HTTP
-          servicePort: 8080
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
@@ -257,7 +171,7 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
-      preserverRouteOrder: true
+      preserveRouteOrder: true
       routes:
       - destination:
           name: httproute/default/httproute-1/rule/0
@@ -419,178 +333,3 @@ xdsIR:
           distinct: false
           name: ""
           safeRegex: /longer/regex/after/shorter/regex/*
-    - address: 0.0.0.0
-      hostnames:
-      - '*'
-      isHTTP2: false
-      metadata:
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: http-2
-      name: envoy-gateway/gateway-1/http-2
-      path:
-        escapedSlashesAction: UnescapeAndRedirect
-        mergeSlashes: true
-      port: 8080
-      routes:
-      - destination:
-          name: httproute/default/httproute-1/rule/5
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            protocol: HTTP
-            weight: 1
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-1
-          namespace: default
-        name: httproute/default/httproute-1/rule/5/match/0/*
-        pathMatch:
-          distinct: false
-          exact: /specific/exact/after/less/specific
-          name: ""
-      - destination:
-          name: httproute/default/httproute-1/rule/3
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            protocol: HTTP
-            weight: 1
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-1
-          namespace: default
-        name: httproute/default/httproute-1/rule/3/match/0/*
-        pathMatch:
-          distinct: false
-          exact: /exact
-          name: ""
-      - destination:
-          name: httproute/default/httproute-1/rule/7
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            protocol: HTTP
-            weight: 1
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-1
-          namespace: default
-        name: httproute/default/httproute-1/rule/7/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          safeRegex: /longer/regex/after/shorter/regex/*
-      - destination:
-          name: httproute/default/httproute-1/rule/1
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            protocol: HTTP
-            weight: 1
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-1
-          namespace: default
-        name: httproute/default/httproute-1/rule/1/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          safeRegex: /regex/between/prefixes/*
-      - destination:
-          name: httproute/default/httproute-1/rule/4
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            protocol: HTTP
-            weight: 1
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-1
-          namespace: default
-        name: httproute/default/httproute-1/rule/4/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          safeRegex: /regex/between/exacts/*
-      - destination:
-          name: httproute/default/httproute-1/rule/6
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            protocol: HTTP
-            weight: 1
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-1
-          namespace: default
-        name: httproute/default/httproute-1/rule/6/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          safeRegex: /short/regex/*
-      - destination:
-          name: httproute/default/httproute-1/rule/2
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            protocol: HTTP
-            weight: 1
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-1
-          namespace: default
-        name: httproute/default/httproute-1/rule/2/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /specific/prefix/after/less/specific
-      - destination:
-          name: httproute/default/httproute-1/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            protocol: HTTP
-            weight: 1
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-1
-          namespace: default
-        name: httproute/default/httproute-1/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /

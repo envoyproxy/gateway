@@ -315,7 +315,7 @@ type HTTPListener struct {
 	// Connection settings
 	Connection *ClientConnection `json:"connection,omitempty" yaml:"connection,omitempty"`
 	// PreserveRouteOrder determines if routes should be sorted according to GW-API specs
-	PreserverRouteOrder bool `json:"preserverRouteOrder,omitempty" yaml:"preserverRouteOrder,omitempty"`
+	PreserveRouteOrder bool `json:"preserveRouteOrder,omitempty" yaml:"preserveRouteOrder,omitempty"`
 }
 
 // Validate the fields within the HTTPListener structure

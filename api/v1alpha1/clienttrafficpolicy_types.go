@@ -98,13 +98,6 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	HealthCheck *HealthCheckSettings `json:"healthCheck,omitempty"`
-	// PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API
-	// specification (https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteRule)
-	// or preserves the order defined by users in the HTTPRoute's HTTPRouteRule list.
-	// Default: False
-	//
-	// +optional
-	PreserveRouteOrder *bool `json:"preserveRouteOrder,omitempty"`
 }
 
 // HeaderSettings provides configuration options for headers on the listener.

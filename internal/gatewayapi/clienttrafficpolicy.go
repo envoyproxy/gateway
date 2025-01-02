@@ -482,10 +482,6 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 			errs = errors.Join(errs, err)
 		}
 
-		if policy.Spec.PreserveRouteOrder != nil && *policy.Spec.PreserveRouteOrder {
-			httpIR.PreserverRouteOrder = true
-		}
-
 		// Early return if got any errors
 		if errs != nil {
 			return errs

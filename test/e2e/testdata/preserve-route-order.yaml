@@ -1,14 +1,27 @@
 apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: ClientTrafficPolicy
+kind: EnvoyProxy
 metadata:
-  name: preserve-route-order-ctp
+  name: preserve-route-order-proxy-config
   namespace: gateway-conformance-infra
 spec:
-  targetRefs:
-    - group: gateway.networking.k8s.io
-      kind: Gateway
-      name: same-namespace
   preserveRouteOrder: true
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: preserve-route-order-gateway
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: envoy-gateway
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: preserve-route-order-proxy-config
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -17,7 +30,7 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-    - name: same-namespace
+    - name: preserve-route-order-gateway
   rules:
     - matches:
         - path:
