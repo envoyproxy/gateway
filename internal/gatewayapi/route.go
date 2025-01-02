@@ -7,6 +7,9 @@ package gatewayapi
 
 import (
 	"fmt"
+	"github.com/golang/protobuf/ptypes/duration"
+	"github.com/golang/protobuf/ptypes/wrappers"
+	"k8s.io/apimachinery/pkg/runtime"
 	"net"
 	"strconv"
 	"strings"
@@ -176,7 +179,7 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRef *RouteParentContext, resources *resource.Resources) ([]*ir.HTTPRoute, error) {
 	var routeRoutes []*ir.HTTPRoute
 	var envoyProxy *egv1a1.EnvoyProxy
-
+	bandWidthLimit := &ir.BandWidthLimit{}
 	gatewayCtx := httpRoute.ParentRefs[*parentRef.ParentReference].GetGateway()
 	if gatewayCtx != nil {
 		envoyProxy = gatewayCtx.envoyProxy
@@ -187,6 +190,29 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		httpFiltersContext, err := t.ProcessHTTPFilters(parentRef, httpRoute, rule.Filters, ruleIdx, resources)
 		if err != nil {
 			return nil, err
+		}
+		for _, extensionRef := range httpFiltersContext.ExtensionRefs {
+			policy := egv1a1.BandwidthLimitPolicy{}
+			// unstructObj
+			err := runtime.DefaultUnstructuredConverter.FromUnstructured(extensionRef.Object.UnstructuredContent(), policy)
+			if err == nil {
+				limit := wrappers.UInt64Value{}
+				limit.Value = uint64(policy.Spec.Limit)
+				bandWidthLimit.Limit = &limit
+				enable := wrappers.BoolValue{}
+				enable.Value = policy.Spec.Enable
+				bandWidthLimit.Enable = &enable
+				dura := duration.Duration{}
+				_duration, err := time.ParseDuration(fmt.Sprint(policy.Spec.Interval))
+				if err != nil {
+					continue
+				}
+				dura.Seconds = int64(_duration.Seconds())
+				bandWidthLimit.Interval = &dura
+				bandWidthLimit.Mode = policy.Spec.Mode
+
+			}
+
 		}
 		// A rule is matched if any one of its matches
 		// is satisfied (i.e. a logical "OR"), so generate
@@ -257,7 +283,11 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		// TODO handle:
 		//	- sum of weights for valid backend refs is 0
 		//	- etc.
-
+		for i := 0; i < len(ruleRoutes); i++ {
+			if bandWidthLimit != nil {
+				ruleRoutes[i].BandWidthLimit = bandWidthLimit
+			}
+		}
 		routeRoutes = append(routeRoutes, ruleRoutes...)
 	}
 
