@@ -89,7 +89,6 @@ type HTTPClientTimeout struct {
 	// during which Envoy will wait for the peer to close (i.e., a TCP FIN/RST is received by Envoy
 	// from the downstream connection) prior to Envoy closing the socket associated with that
 	// connection.
-
 	//The default timeout is 1000 ms if this option is not specified.
 	// +optional
 	DelayedCloseTimeout *gwapiv1.Duration `json:"delayedCloseTimeout,omitempty" yaml:"delayedCloseTimeout,omitempty"`
