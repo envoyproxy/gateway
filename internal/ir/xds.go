@@ -11,6 +11,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/golang/protobuf/ptypes/duration"
+	"github.com/golang/protobuf/ptypes/wrappers"
 	"net/http"
 	"net/netip"
 	"reflect"
@@ -692,7 +694,14 @@ type HTTPRoute struct {
 	// SessionPersistence holds the configuration for session persistence.
 	SessionPersistence *SessionPersistence `json:"sessionPersistence,omitempty" yaml:"sessionPersistence,omitempty"`
 	// Timeout is the time until which entire response is received from the upstream.
-	Timeout *metav1.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	Timeout        *metav1.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	BandWidthLimit *BandWidthLimit
+}
+type BandWidthLimit struct {
+	Mode     string
+	Interval *duration.Duration
+	Limit    *wrappers.UInt64Value
+	Enable   *wrappers.BoolValue
 }
 
 // DNS contains configuration options for DNS resolution.
