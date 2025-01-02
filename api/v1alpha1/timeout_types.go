@@ -86,7 +86,6 @@ type HTTPClientTimeout struct {
 	// connection.
 
 	//The default timeout is 1000 ms if this option is not specified.
-
 	// +optional
 	DelayedCloseTimeout *gwapiv1.Duration `json:"delayedCloseTimeout,omitempty" yaml:"delayedCloseTimeout,omitempty"`
 }
