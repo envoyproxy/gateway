@@ -316,6 +316,9 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 			errs = errors.Join(errs, err)
 		}
 	}
+	if policy.Spec.OriginalSrc != nil {
+		sr = t.buildOriginalSrc(policy)
+	}
 	if lb, err = buildLoadBalancer(policy.Spec.ClusterSettings); err != nil {
 		err = perr.WithMessage(err, "LoadBalancer")
 		errs = errors.Join(errs, err)
@@ -370,6 +373,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 					r.HealthCheck = hc
 					r.CircuitBreaker = cb
 					r.TCPKeepalive = ka
+					r.OriginalSrc = sr
 					r.Timeout = to
 					r.BackendConnection = bc
 					r.DNS = ds
@@ -608,7 +612,12 @@ func (t *Translator) buildRateLimit(policy *egv1a1.BackendTrafficPolicy) (*ir.Ra
 
 	return nil, fmt.Errorf("invalid rateLimit type: %s", policy.Spec.RateLimit.Type)
 }
-
+func (t *Translator) buildOriginalSrc(policy *egv1a1.BackendTrafficPolicy) *ir.OriginalSrc {
+	src := &ir.OriginalSrc{}
+	src.BindPort = policy.Spec.OriginalSrc.BindPort
+	src.Mark = policy.Spec.OriginalSrc.Mark
+	return src
+}
 func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*ir.RateLimit, error) {
 	if policy.Spec.RateLimit.Local == nil {
 		return nil, fmt.Errorf("local configuration empty for rateLimit")
