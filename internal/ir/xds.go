@@ -741,6 +741,8 @@ type TrafficFeatures struct {
 	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty" yaml:"loadBalancer,omitempty"`
 	// Proxy Protocol Settings
 	ProxyProtocol *ProxyProtocol `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
+	// Original Src Settings
+	OriginalSrc *OriginalSrc `json:"originalSrc,omitempty" yaml:"originalSrc,omitempty"`
 	// HealthCheck defines the configuration for health checking on the upstream.
 	HealthCheck *HealthCheck `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
 	// FaultInjection defines the schema for injecting faults into HTTP requests.
@@ -1659,6 +1661,9 @@ type TCPRoute struct {
 	HealthCheck *HealthCheck `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
 	// Proxy Protocol Settings
 	ProxyProtocol *ProxyProtocol `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
+	// Original Src Settings
+	OriginalSrc *OriginalSrc `json:"originalSrc,omitempty" yaml:"originalSrc,omitempty"`
+	// settings of upstream connection
 	// settings of upstream connection
 	BackendConnection *BackendConnection `json:"backendConnection,omitempty" yaml:"backendConnection,omitempty"`
 	// DNS is used to configure how DNS resolution is handled for the route
@@ -2191,6 +2196,17 @@ const (
 type ProxyProtocol struct {
 	// Version of proxy protocol to use
 	Version ProxyProtocolVersion `json:"version,omitempty" yaml:"version,omitempty"`
+}
+
+// OriginalSrc upstream settings
+// +k8s:deepcopy-gen=true
+type OriginalSrc struct {
+	// Whether to bind the port to the one used in the original downstream connection.
+	BindPort bool `json:"bindPort,omitempty" yaml:"bindPort,omitempty"`
+	// Sets the SO_MARK option on the upstream connection's socket to the provided value. Used to
+	// ensure that non-local addresses may be routed back through envoy when binding to the original
+	// source address. The option will not be applied if the mark is 0.
+	Mark int32 `json:"mark,omitempty" yaml:"mark,omitempty"`
 }
 
 // SlowStart defines the slow start configuration.

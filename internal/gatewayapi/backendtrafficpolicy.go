@@ -295,6 +295,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 		rl        *ir.RateLimit
 		lb        *ir.LoadBalancer
 		pp        *ir.ProxyProtocol
+		sr        *ir.OriginalSrc
 		hc        *ir.HealthCheck
 		cb        *ir.CircuitBreaker
 		fi        *ir.FaultInjection
