@@ -579,6 +579,12 @@ type ClusterSettings struct {
 	//
 	// +optional
 	HTTP2 *HTTP2Settings `json:"http2,omitempty"`
+
+	// The Original Src filter binds upstream connections to the original source address determined
+	// for the connection. This address could come from something like the Proxy Protocol filter, or it
+	// could come from trusted http headers.
+	// +optional
+	OriginalSrc *OriginalSrc `json:"originalSrc,omitempty"`
 }
 
 // CIDR defines a CIDR Address range.
