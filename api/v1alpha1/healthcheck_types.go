@@ -9,6 +9,11 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 // HealthCheck configuration to decide which endpoints
 // are healthy and can be used for routing.
+//
+// Please note that Envoy load balancer may behave differently when lots of endpoints are unhealthy because of the "panic mode".
+// When the percentage of unhealthy endpoints exceeds 50%, Envoy will disregard health status and balance across all endpoints.
+// This is called "panic mode". It's designed to prevent a situation in which host failures cascade throughout the cluster
+// as load increases.
 type HealthCheck struct {
 	// Active health check configuration
 	// +optional
