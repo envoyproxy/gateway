@@ -6,7 +6,8 @@
 package v1alpha1
 
 import (
-	"fmt"
+	"net"
+	"strconv"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -80,7 +81,7 @@ func (e *EnvoyGateway) GetEnvoyGatewayAdmin() *EnvoyGatewayAdmin {
 func (e *EnvoyGateway) GetEnvoyGatewayAdminAddress() string {
 	address := e.GetEnvoyGatewayAdmin().Address
 	if address != nil {
-		return fmt.Sprintf("%s:%d", address.Host, address.Port)
+		return net.JoinHostPort(address.Host, strconv.Itoa(address.Port))
 	}
 
 	return ""
@@ -237,7 +238,18 @@ func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubern
 	if r.Kubernetes.ShutdownManager == nil {
 		r.Kubernetes.ShutdownManager = &ShutdownManager{Image: ptr.To(DefaultShutdownManagerImage)}
 	}
+
 	return r.Kubernetes
+}
+
+func (r *EnvoyGatewayProvider) IsRunningOnKubernetes() bool {
+	return r.Type == ProviderTypeKubernetes
+}
+
+func (r *EnvoyGatewayProvider) IsRunningOnHost() bool {
+	return r.Type == ProviderTypeCustom &&
+		r.Custom.Infrastructure != nil &&
+		r.Custom.Infrastructure.Type == InfrastructureProviderTypeHost
 }
 
 // DefaultEnvoyGatewayLoggingLevel returns a new EnvoyGatewayLogging with default configuration parameters.

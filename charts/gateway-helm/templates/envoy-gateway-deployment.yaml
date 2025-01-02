@@ -1,25 +1,3 @@
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: envoy-gateway
-  namespace: '{{ .Release.Namespace }}'
-  labels:
-  {{- include "eg.labels" . | nindent 4 }}
----
-{{- if and .Values.podDisruptionBudget.minAvailable (ge (int .Values.podDisruptionBudget.minAvailable) 1) }}
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: envoy-gateway
-  namespace: '{{ .Release.Namespace }}'
-spec:
-  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
-  selector:
-    matchLabels:
-      control-plane: envoy-gateway
-    {{- include "eg.selectorLabels" . | nindent 6 }}
----
-{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -50,6 +28,10 @@ spec:
       {{- with .Values.deployment.pod.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.deployment.pod.nodeSelector }}
+      nodeSelector:
+        {{ toYaml . | nindent 8 }}
       {{- end }}
       {{- with .Values.deployment.pod.topologySpreadConstraints }}
       topologySpreadConstraints:
@@ -91,10 +73,10 @@ spec:
             port: 8081
           initialDelaySeconds: 5
           periodSeconds: 10
-        resources: {{- toYaml .Values.deployment.envoyGateway.resources | nindent 10
-          }}
+        resources:
+          {{- toYaml .Values.deployment.envoyGateway.resources | nindent 10 }}
         securityContext:
-          allowPrivilegeEscalation: false
+          {{- toYaml .Values.deployment.envoyGateway.securityContext | nindent 10 }}
         volumeMounts:
         - mountPath: /config
           name: envoy-gateway-config
@@ -103,8 +85,9 @@ spec:
           name: certs
           readOnly: true
       {{- include "eg.image.pullSecrets" . | nindent 6 }}
-      securityContext:
-        runAsNonRoot: true
+      {{- with .Values.deployment.priorityClassName }}
+      priorityClassName: {{ . | quote }}
+      {{- end }}
       serviceAccountName: envoy-gateway
       terminationGracePeriodSeconds: 10
       volumes:

@@ -1,0 +1,79 @@
+- address:
+    socketAddress:
+      address: '::'
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - disabled: true
+          name: envoy.filters.http.stateful_session/header-based-session-persistence-route
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.stateful_session.v3.StatefulSession
+            sessionState:
+              name: envoy.http.stateful_session.header
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.http.stateful_session.header.v3.HeaderBasedSessionState
+                name: session-header
+        - disabled: true
+          name: envoy.filters.http.stateful_session/cookie-based-session-persistence-route-regex
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.stateful_session.v3.StatefulSession
+            sessionState:
+              name: envoy.http.stateful_session.cookie
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.http.stateful_session.cookie.v3.CookieBasedSessionState
+                cookie:
+                  name: session-header
+                  path: /v1
+                  ttl: 3600s
+        - disabled: true
+          name: envoy.filters.http.stateful_session/cookie-based-session-persistence-route-prefix
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.stateful_session.v3.StatefulSession
+            sessionState:
+              name: envoy.http.stateful_session.cookie
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.http.stateful_session.cookie.v3.CookieBasedSessionState
+                cookie:
+                  name: session-header
+                  path: /v2/
+                  ttl: 3600s
+        - disabled: true
+          name: envoy.filters.http.stateful_session/cookie-based-session-persistence-route-exact
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.stateful_session.v3.StatefulSession
+            sessionState:
+              name: envoy.http.stateful_session.cookie
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.http.stateful_session.cookie.v3.CookieBasedSessionState
+                cookie:
+                  name: session-cookie
+                  path: /v3/user
+                  ttl: 3600s
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: first-listener
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10080
+        useRemoteAddress: true
+    name: first-listener
+  name: first-listener
+  perConnectionBufferLimitBytes: 32768

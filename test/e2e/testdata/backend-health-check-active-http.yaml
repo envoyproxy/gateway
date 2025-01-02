@@ -1,0 +1,107 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: health-check-active-http-pass-btp
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-with-health-check-active-http-pass
+  healthCheck:
+    active:
+      timeout: 3s
+      interval: 5s
+      unhealthyThreshold: 3
+      healthyThreshold: 1
+      type: HTTP
+      http:
+        path: "/status/200"
+        expectedStatuses:
+          - 200
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: health-check-active-http-fail-btp
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-with-health-check-active-http-fail
+  healthCheck:
+    active:
+      timeout: 3s
+      interval: 5s
+      unhealthyThreshold: 3
+      healthyThreshold: 1
+      type: HTTP
+      http:
+        path: "/status/418"
+        expectedStatuses:
+          - 200
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-health-check-active-http-pass
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /health-check-active-http-pass
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-health-check-active-http-fail
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /health-check-active-http-fail
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+# cluster panic threshold should be set to 0.0 to disable panic, to check whether health check works.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyPatchPolicy
+metadata:
+  name: disable-cluster-panic-patch-policy
+  namespace: gateway-conformance-infra
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: same-namespace
+  type: JSONPatch
+  jsonPatches:
+    - type: "type.googleapis.com/envoy.config.cluster.v3.Cluster"
+      name: "httproute/gateway-conformance-infra/http-with-health-check-active-http-pass/rule/0"
+      operation:
+        op: add
+        path: "/common_lb_config"
+        value:
+          healthy_panic_threshold:
+            value: 0.0
+    - type: "type.googleapis.com/envoy.config.cluster.v3.Cluster"
+      name: "httproute/gateway-conformance-infra/http-with-health-check-active-http-fail/rule/0"
+      operation:
+        op: add
+        path: "/common_lb_config"
+        value:
+          healthy_panic_threshold:
+            value: 0.0

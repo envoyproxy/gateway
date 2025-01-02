@@ -4,7 +4,6 @@
 // the root of the repo.
 
 //go:build experimental
-// +build experimental
 
 package conformance
 
@@ -15,6 +14,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/gateway-api/conformance"
 	conformancev1 "sigs.k8s.io/gateway-api/conformance/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
@@ -27,6 +28,7 @@ import (
 
 func TestExperimentalConformance(t *testing.T) {
 	flag.Parse()
+	log.SetLogger(zap.New(zap.WriteTo(os.Stderr), zap.UseDevMode(true)))
 
 	opts := conformance.DefaultOptions(t)
 	opts.SkipTests = internalconf.EnvoyGatewaySuite.SkipTests
@@ -35,6 +37,7 @@ func TestExperimentalConformance(t *testing.T) {
 	opts.ConformanceProfiles = sets.New(
 		suite.GatewayHTTPConformanceProfileName,
 		suite.GatewayTLSConformanceProfileName,
+		suite.GatewayGRPCConformanceProfileName,
 	)
 
 	t.Logf("Running experimental conformance tests with %s GatewayClass\n cleanup: %t\n debug: %t\n enable all features: %t \n conformance profiles: [%v]",

@@ -1,7 +1,7 @@
 name: "http-route"
 http:
 - name: "first-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 10080
   hostnames:
   - "*"
@@ -23,6 +23,43 @@ http:
         - host: "1.2.3.4"
           port: 50000
     urlRewrite:
-      hostname: "3.3.3.3"
+      host:
+        name: "3.3.3.3"
+      path:
+        prefixMatchReplace: /rewrite
+  - name: "rewrite-host-header"
+    pathMatch:
+      prefix: "/host-header"
+    hostname: gateway.envoyproxy.io
+    headerMatches:
+    - name: ":authority"
+      exact: gateway.envoyproxy.io
+    destination:
+      name: "rewrite-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+    urlRewrite:
+      host:
+        header: "foo"
+      path:
+        prefixMatchReplace: /rewrite
+  - name: "rewrite-host-backend"
+    pathMatch:
+      prefix: "/host-backend"
+    hostname: gateway.envoyproxy.io
+    headerMatches:
+    - name: ":authority"
+      exact: gateway.envoyproxy.io
+    destination:
+      name: "rewrite-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+    urlRewrite:
+      host:
+        backend: true
       path:
         prefixMatchReplace: /rewrite

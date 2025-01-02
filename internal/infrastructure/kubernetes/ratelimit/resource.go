@@ -71,6 +71,8 @@ const (
 	LogLevelEnvVar = "LOG_LEVEL"
 	// UseStatsdEnvVar is the use statsd.
 	UseStatsdEnvVar = "USE_STATSD"
+	// StatsdPortEnvVar is the use statsd port.
+	StatsdPortEnvVar = "STATSD_PORT"
 	// ForceStartWithoutInitialConfigEnvVar enables start the ratelimit server without initial config.
 	ForceStartWithoutInitialConfigEnvVar = "FORCE_START_WITHOUT_INITIAL_CONFIG"
 	// ConfigTypeEnvVar is the configuration loading method for ratelimit.
@@ -158,11 +160,11 @@ func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeploymen
 			Env:                      expectedRateLimitContainerEnv(rateLimit, rateLimitDeployment, namespace),
 			Ports:                    ports,
 			Resources:                *rateLimitDeployment.Container.Resources,
-			SecurityContext:          rateLimitDeployment.Container.SecurityContext,
+			SecurityContext:          expectedRateLimitContainerSecurityContext(rateLimitDeployment),
 			VolumeMounts:             expectedContainerVolumeMounts(rateLimit, rateLimitDeployment),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
-			ReadinessProbe: &corev1.Probe{
+			StartupProbe: &corev1.Probe{
 				ProbeHandler: corev1.ProbeHandler{
 					HTTPGet: &corev1.HTTPGetAction{
 						Path:   ReadinessPath,
@@ -173,50 +175,25 @@ func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeploymen
 				TimeoutSeconds:   1,
 				PeriodSeconds:    10,
 				SuccessThreshold: 1,
-				FailureThreshold: 3,
+				FailureThreshold: 30,
+			},
+			ReadinessProbe: &corev1.Probe{
+				ProbeHandler: corev1.ProbeHandler{
+					HTTPGet: &corev1.HTTPGetAction{
+						Path:   ReadinessPath,
+						Port:   intstr.IntOrString{Type: intstr.Int, IntVal: ReadinessPort},
+						Scheme: corev1.URISchemeHTTP,
+					},
+				},
+				TimeoutSeconds:   1,
+				PeriodSeconds:    5,
+				SuccessThreshold: 1,
+				FailureThreshold: 1,
 			},
 		},
-	}
-
-	if enablePrometheus(rateLimit) {
-		containers = append(containers, promStatsdExporterContainer())
 	}
 
 	return containers
-}
-
-func promStatsdExporterContainer() corev1.Container {
-	return corev1.Container{
-		Name:            "prom-statsd-exporter",
-		Image:           "prom/statsd-exporter:v0.18.0",
-		ImagePullPolicy: corev1.PullIfNotPresent,
-		Command: []string{
-			"/bin/statsd_exporter",
-			fmt.Sprintf("--web.listen-address=:%d", PrometheusPort),
-			"--statsd.mapping-config=/etc/statsd-exporter/conf.yaml",
-		},
-		Ports: []corev1.ContainerPort{
-			{
-				Name:          "statsd",
-				ContainerPort: StatsdPort,
-				Protocol:      corev1.ProtocolTCP,
-			},
-			{
-				Name:          "metrics",
-				ContainerPort: PrometheusPort,
-				Protocol:      corev1.ProtocolTCP,
-			},
-		},
-		VolumeMounts: []corev1.VolumeMount{
-			{
-				Name:      "statsd-exporter-config",
-				ReadOnly:  true,
-				MountPath: "/etc/statsd-exporter",
-			},
-		},
-		TerminationMessagePolicy: corev1.TerminationMessageReadFile,
-		TerminationMessagePath:   "/dev/termination-log",
-	}
 }
 
 // expectedContainerVolumeMounts returns expected rateLimit container volume mounts.
@@ -229,6 +206,14 @@ func expectedContainerVolumeMounts(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 		MountPath: "/certs",
 		ReadOnly:  true,
 	})
+
+	if enablePrometheus(rateLimit) {
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "statsd-exporter-config",
+			MountPath: "/etc/statsd-exporter",
+			ReadOnly:  true,
+		})
+	}
 
 	if rateLimit.Backend.Redis.TLS != nil {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
@@ -399,6 +384,19 @@ func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 		}
 	}
 
+	if enablePrometheus(rateLimit) {
+		env = append(env, corev1.EnvVar{
+			Name:  "USE_PROMETHEUS",
+			Value: "true",
+		}, corev1.EnvVar{
+			Name:  "PROMETHEUS_ADDR",
+			Value: ":19001",
+		}, corev1.EnvVar{
+			Name:  "PROMETHEUS_MAPPER_YAML",
+			Value: "/etc/statsd-exporter/conf.yaml",
+		})
+	}
+
 	if enableTracing(rateLimit) {
 		sampleRate := 1.0
 		if rateLimit.Telemetry.Tracing.SamplingRate != nil {
@@ -489,4 +487,19 @@ func checkTraceEndpointScheme(url string) string {
 	}
 
 	return fmt.Sprintf("%s%s", httpScheme, url)
+}
+
+func expectedRateLimitContainerSecurityContext(rateLimitDeployment *egv1a1.KubernetesDeploymentSpec) *corev1.SecurityContext {
+	if rateLimitDeployment.Container.SecurityContext != nil {
+		return rateLimitDeployment.Container.SecurityContext
+	}
+	return defaultSecurityContext()
+}
+
+func defaultSecurityContext() *corev1.SecurityContext {
+	defaultSC := resource.DefaultSecurityContext()
+	// run as non-root user
+	defaultSC.RunAsGroup = ptr.To(int64(65534))
+	defaultSC.RunAsUser = ptr.To(int64(65534))
+	return defaultSC
 }

@@ -20,6 +20,11 @@ import (
 )
 
 func TestGetRenderedBootstrapConfig(t *testing.T) {
+	sds := SdsConfigPath{
+		Certificate: "/sds/xds-certificate.json",
+		TrustedCA:   "/sds/xds-trusted-ca.json",
+	}
+
 	cases := []struct {
 		name string
 		opts *RenderBootstrapConfigOptions
@@ -32,6 +37,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 						Disable: true,
 					},
 				},
+				SdsConfig: sds,
 			},
 		},
 		{
@@ -40,6 +46,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 				ProxyMetrics: &egv1a1.ProxyMetrics{
 					Prometheus: &egv1a1.ProxyPrometheusProvider{},
 				},
+				SdsConfig: sds,
 			},
 		},
 		{
@@ -52,6 +59,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 						},
 					},
 				},
+				SdsConfig: sds,
 			},
 		},
 		{
@@ -71,6 +79,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 						},
 					},
 				},
+				SdsConfig: sds,
 			},
 		},
 		{
@@ -86,12 +95,14 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
 								Host: ptr.To("otel-collector.monitoring.svc"),
 								Port: 4317,
-								BackendRefs: []egv1a1.BackendRef{
-									{
-										BackendObjectReference: gwapiv1.BackendObjectReference{
-											Name:      "otel-collector",
-											Namespace: ptr.To(gwapiv1.Namespace("monitoring")),
-											Port:      ptr.To(gwapiv1.PortNumber(4317)),
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name:      "otel-collector",
+												Namespace: ptr.To(gwapiv1.Namespace("monitoring")),
+												Port:      ptr.To(gwapiv1.PortNumber(4317)),
+											},
 										},
 									},
 								},
@@ -99,6 +110,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 						},
 					},
 				},
+				SdsConfig: sds,
 			},
 		},
 		{
@@ -128,12 +140,31 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 						},
 					},
 				},
+				SdsConfig: sds,
+			},
+		},
+		{
+			name: "custom-server-port",
+			opts: &RenderBootstrapConfigOptions{
+				XdsServerHost:   ptr.To("foo.bar"),
+				XdsServerPort:   ptr.To(int32(12345)),
+				WasmServerPort:  ptr.To(int32(1111)),
+				AdminServerPort: ptr.To(int32(2222)),
+				ReadyServerPort: ptr.To(int32(3333)),
+				SdsConfig:       sds,
 			},
 		},
 		{
 			name: "with-max-heap-size-bytes",
 			opts: &RenderBootstrapConfigOptions{
 				MaxHeapSizeBytes: 1073741824,
+				SdsConfig:        sds,
+			},
+		},
+		{
+			name: "ipv6",
+			opts: &RenderBootstrapConfigOptions{
+				IPFamily: ptr.To(egv1a1.IPv6),
 			},
 		},
 	}

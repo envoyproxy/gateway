@@ -55,7 +55,7 @@
             resourceApiVersion: V3
           routeConfigName: default/gateway-1/http
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: http-10080
         useRemoteAddress: true
     name: default/gateway-1/http
   drainType: MODIFY_ONLY
@@ -122,6 +122,7 @@
                   idToken: IdToken-5F93C2E4
                   oauthExpires: OauthExpires-5F93C2E4
                   oauthHmac: OauthHMAC-5F93C2E4
+                  oauthNonce: OauthNonce-5F93C2E4
                   refreshToken: RefreshToken-5F93C2E4
                 hmacSecret:
                   name: oauth2/hmac_secret/securitypolicy/default/policy-for-gateway-2
@@ -159,9 +160,8 @@
             resourceApiVersion: V3
           routeConfigName: default/gateway-1/http
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: http-10080
         useRemoteAddress: true
     name: default/gateway-1/http
-  drainType: MODIFY_ONLY
   name: default/gateway-1/http
   perConnectionBufferLimitBytes: 32768

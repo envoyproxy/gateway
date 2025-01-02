@@ -7,7 +7,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 const OIDCClientSecretKey = "client-secret"
@@ -29,13 +29,21 @@ type OIDC struct {
 	// This is an Opaque secret. The client secret should be stored in the key
 	// "client-secret".
 	// +kubebuilder:validation:Required
-	ClientSecret gwapiv1b1.SecretObjectReference `json:"clientSecret"`
+	ClientSecret gwapiv1.SecretObjectReference `json:"clientSecret"`
 
 	// The optional cookie name overrides to be used for Bearer and IdToken cookies in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	// If not specified, uses a randomly generated suffix
 	// +optional
 	CookieNames *OIDCCookieNames `json:"cookieNames,omitempty"`
+
+	// The optional domain to set the access and ID token cookies on.
+	// If not set, the cookies will default to the host of the request, not including the subdomains.
+	// If set, the cookies will be set on the specified domain and all subdomains.
+	// This means that requests to any subdomain will not require reauthentication after users log in to the parent domain.
+	// +optional
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9]))*$`
+	CookieDomain *string `json:"cookieDomain,omitempty"`
 
 	// The OIDC scopes to be used in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
@@ -97,7 +105,21 @@ type OIDC struct {
 }
 
 // OIDCProvider defines the OIDC Provider configuration.
+// +kubebuilder:validation:XValidation:rule="!has(self.backendRef)",message="BackendRefs must be used, backendRef is not supported."
+// +kubebuilder:validation:XValidation:rule="has(self.backendSettings)? (has(self.backendSettings.retry)?(has(self.backendSettings.retry.perRetry)? !has(self.backendSettings.retry.perRetry.timeout):true):true):true",message="Retry timeout is not supported."
+// +kubebuilder:validation:XValidation:rule="has(self.backendSettings)? (has(self.backendSettings.retry)?(has(self.backendSettings.retry.retryOn)? !has(self.backendSettings.retry.retryOn.httpStatusCodes):true):true):true",message="HTTPStatusCodes is not supported."
 type OIDCProvider struct {
+	// BackendRefs is used to specify the address of the OIDC Provider.
+	// If the BackendRefs is not specified, The host and port of the OIDC Provider's token endpoint
+	// will be used as the address of the OIDC Provider.
+	//
+	// TLS configuration can be specified in a BackendTLSConfig resource and target the BackendRefs.
+	//
+	// Other settings for the connection to the OIDC Provider can be specified in the BackendSettings resource.
+	//
+	// +optional
+	BackendCluster `json:",inline"`
+
 	// The OIDC Provider's [issuer identifier](https://openid.net/specs/openid-connect-discovery-1_0.html#IssuerDiscovery).
 	// Issuer MUST be a URI RFC 3986 [RFC3986] with a scheme component that MUST
 	// be https, a host component, and optionally, port and path components and

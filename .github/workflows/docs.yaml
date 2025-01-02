@@ -3,14 +3,12 @@ on:
   push:
     branches:
     - "main"
-    - "release/v*"
     paths:
     - 'site/**'
     - 'tools/make/docs.mk'
   pull_request:
     branches:
     - "main"
-    - "release/v*"
     paths:
     - 'site/**'
     - 'tools/make/docs.mk'
@@ -23,7 +21,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
     - name: Check out code
-      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       with:
         ref: ${{ github.event.pull_request.head.sha }}
 
@@ -40,7 +38,6 @@ jobs:
 
     - name: Check links
       run: make docs docs-check-links
-      continue-on-error: true
 
   docs-build:
     runs-on: ubuntu-latest
@@ -49,7 +46,7 @@ jobs:
       contents: write
     steps:
     - name: Git checkout
-      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       with:
         submodules: true
         ref: ${{ github.event.pull_request.head.sha }}
@@ -63,7 +60,7 @@ jobs:
         extended: true
 
     - name: Setup Node
-      uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8  # v4.1.0
+      uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af  # v4.1.0
       with:
         node-version: '18'
 

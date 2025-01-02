@@ -1,6 +1,6 @@
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       portValue: 10080
   defaultFilterChain:
     filters:
@@ -23,7 +23,10 @@
                 - foo.com
                 forward: true
                 issuer: https://www.example.com
-                payloadInMetadata: https://www.example.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scope
+                payloadInMetadata: example
                 remoteJwks:
                   asyncFetch: {}
                   cacheDuration: 300s
@@ -31,7 +34,6 @@
                     cluster: "192_168_1_250_443"
                     timeout: 10s
                     uri: https://192.168.1.250/jwt/public-key/jwks.json
-                  retryPolicy: {}
             requirementMap:
               first-route:
                 providerName: first-route/example
@@ -58,9 +60,8 @@
             resourceApiVersion: V3
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: http-10080
         useRemoteAddress: true
     name: first-listener
-  drainType: MODIFY_ONLY
   name: first-listener
   perConnectionBufferLimitBytes: 32768

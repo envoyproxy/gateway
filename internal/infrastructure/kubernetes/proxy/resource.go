@@ -7,6 +7,7 @@ package proxy
 
 import (
 	"fmt"
+	"path/filepath"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -15,6 +16,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/cmd/envoy"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/infrastructure/common"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
@@ -22,33 +24,12 @@ import (
 )
 
 const (
-	SdsCAFilename   = "xds-trusted-ca.json"
-	SdsCertFilename = "xds-certificate.json"
-	// XdsTLSCertFilename is the fully qualified path of the file containing Envoy's
-	// xDS server TLS certificate.
-	XdsTLSCertFilename = "/certs/tls.crt"
-	// XdsTLSKeyFilename is the fully qualified path of the file containing Envoy's
-	// xDS server TLS key.
-	XdsTLSKeyFilename = "/certs/tls.key"
-	// XdsTLSCaFilename is the fully qualified path of the file containing Envoy's
-	// trusted CA certificate.
-	XdsTLSCaFilename = "/certs/ca.crt"
 	// envoyContainerName is the name of the Envoy container.
 	envoyContainerName = "envoy"
 	// envoyNsEnvVar is the name of the Envoy Gateway namespace environment variable.
 	envoyNsEnvVar = "ENVOY_GATEWAY_NAMESPACE"
 	// envoyPodEnvVar is the name of the Envoy pod name environment variable.
 	envoyPodEnvVar = "ENVOY_POD_NAME"
-)
-
-var (
-	// xDS certificate rotation is supported by using SDS path-based resource files.
-	SdsCAConfigMapData = fmt.Sprintf(`{"resources":[{"@type":"type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret",`+
-		`"name":"xds_trusted_ca","validation_context":{"trusted_ca":{"filename":"%s"},`+
-		`"match_typed_subject_alt_names":[{"san_type":"DNS","matcher":{"exact":"envoy-gateway"}}]}}]}`, XdsTLSCaFilename)
-	SdsCertConfigMapData = fmt.Sprintf(`{"resources":[{"@type":"type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret",`+
-		`"name":"xds_certificate","tls_certificate":{"certificate_chain":{"filename":"%s"},`+
-		`"private_key":{"filename":"%s"}}}]}`, XdsTLSCertFilename, XdsTLSKeyFilename)
 )
 
 // ExpectedResourceHashedName returns expected resource hashed name including up to the 48 characters of the original name.
@@ -102,30 +83,11 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 	containerSpec *egv1a1.KubernetesContainerSpec,
 	shutdownConfig *egv1a1.ShutdownConfig,
 	shutdownManager *egv1a1.ShutdownManager,
+	namespace string,
+	dnsDomain string,
 ) ([]corev1.Container, error) {
 	// Define slice to hold container ports
 	var ports []corev1.ContainerPort
-
-	// Iterate over listeners and ports to get container ports
-	for _, listener := range infra.Listeners {
-		for _, p := range listener.Ports {
-			var protocol corev1.Protocol
-			switch p.Protocol {
-			case ir.HTTPProtocolType, ir.HTTPSProtocolType, ir.TLSProtocolType, ir.TCPProtocolType:
-				protocol = corev1.ProtocolTCP
-			case ir.UDPProtocolType:
-				protocol = corev1.ProtocolUDP
-			default:
-				return nil, fmt.Errorf("invalid protocol %q", p.Protocol)
-			}
-			port := corev1.ContainerPort{
-				Name:          p.Name,
-				ContainerPort: p.ContainerPort,
-				Protocol:      protocol,
-			}
-			ports = append(ports, port)
-		}
-	}
 
 	if enablePrometheus(infra) {
 		ports = append(ports, corev1.ContainerPort{
@@ -134,8 +96,6 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			Protocol:      corev1.ProtocolTCP,
 		})
 	}
-
-	var bootstrapConfigurations string
 
 	var proxyMetrics *egv1a1.ProxyMetrics
 	if infra.Config != nil &&
@@ -146,48 +106,19 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 	maxHeapSizeBytes := calculateMaxHeapSizeBytes(containerSpec.Resources)
 
 	// Get the default Bootstrap
-	bootstrapConfigurations, err := bootstrap.GetRenderedBootstrapConfig(&bootstrap.RenderBootstrapConfigOptions{
-		ProxyMetrics:     proxyMetrics,
+	bootstrapConfigOptions := &bootstrap.RenderBootstrapConfigOptions{
+		ProxyMetrics: proxyMetrics,
+		SdsConfig: bootstrap.SdsConfigPath{
+			Certificate: filepath.Join("/sds", common.SdsCertFilename),
+			TrustedCA:   filepath.Join("/sds", common.SdsCAFilename),
+		},
 		MaxHeapSizeBytes: maxHeapSizeBytes,
-	})
+		XdsServerHost:    ptr.To(fmt.Sprintf("%s.%s.svc.%s", config.EnvoyGatewayServiceName, namespace, dnsDomain)),
+	}
+
+	args, err := common.BuildProxyArgs(infra, shutdownConfig, bootstrapConfigOptions, fmt.Sprintf("$(%s)", envoyPodEnvVar))
 	if err != nil {
 		return nil, err
-	}
-
-	// Apply Bootstrap from EnvoyProxy API if set by the user
-	// The config should have been validated already
-	if infra.Config != nil && infra.Config.Spec.Bootstrap != nil {
-		bootstrapConfigurations, err = bootstrap.ApplyBootstrapConfig(infra.Config.Spec.Bootstrap, bootstrapConfigurations)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	logging := infra.Config.Spec.Logging
-
-	args := []string{
-		fmt.Sprintf("--service-cluster %s", infra.Name),
-		fmt.Sprintf("--service-node $(%s)", envoyPodEnvVar),
-		fmt.Sprintf("--config-yaml %s", bootstrapConfigurations),
-		fmt.Sprintf("--log-level %s", logging.DefaultEnvoyProxyLoggingLevel()),
-		"--cpuset-threads",
-	}
-
-	if infra.Config != nil &&
-		infra.Config.Spec.Concurrency != nil {
-		args = append(args, fmt.Sprintf("--concurrency %d", *infra.Config.Spec.Concurrency))
-	}
-
-	if componentsLogLevel := logging.GetEnvoyProxyComponentLevel(); componentsLogLevel != "" {
-		args = append(args, fmt.Sprintf("--component-log-level %s", componentsLogLevel))
-	}
-
-	if shutdownConfig != nil && shutdownConfig.DrainTimeout != nil {
-		args = append(args, fmt.Sprintf("--drain-time-s %.0f", shutdownConfig.DrainTimeout.Seconds()))
-	}
-
-	if infra.Config != nil {
-		args = append(args, infra.Config.Spec.ExtraArgs...)
 	}
 
 	containers := []corev1.Container{
@@ -199,12 +130,12 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			Args:                     args,
 			Env:                      expectedContainerEnv(containerSpec),
 			Resources:                *containerSpec.Resources,
-			SecurityContext:          containerSpec.SecurityContext,
+			SecurityContext:          expectedEnvoySecurityContext(containerSpec),
 			Ports:                    ports,
 			VolumeMounts:             expectedContainerVolumeMounts(containerSpec),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
-			ReadinessProbe: &corev1.Probe{
+			StartupProbe: &corev1.Probe{
 				ProbeHandler: corev1.ProbeHandler{
 					HTTPGet: &corev1.HTTPGetAction{
 						Path:   bootstrap.EnvoyReadinessPath,
@@ -215,7 +146,20 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 				TimeoutSeconds:   1,
 				PeriodSeconds:    10,
 				SuccessThreshold: 1,
-				FailureThreshold: 3,
+				FailureThreshold: 30,
+			},
+			ReadinessProbe: &corev1.Probe{
+				ProbeHandler: corev1.ProbeHandler{
+					HTTPGet: &corev1.HTTPGetAction{
+						Path:   bootstrap.EnvoyReadinessPath,
+						Port:   intstr.IntOrString{Type: intstr.Int, IntVal: bootstrap.EnvoyReadinessPort},
+						Scheme: corev1.URISchemeHTTP,
+					},
+				},
+				TimeoutSeconds:   1,
+				PeriodSeconds:    5,
+				SuccessThreshold: 1,
+				FailureThreshold: 1,
 			},
 			Lifecycle: &corev1.Lifecycle{
 				PreStop: &corev1.LifecycleHandler{
@@ -237,6 +181,19 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			Resources:                *egv1a1.DefaultShutdownManagerContainerResourceRequirements(),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
+			StartupProbe: &corev1.Probe{
+				ProbeHandler: corev1.ProbeHandler{
+					HTTPGet: &corev1.HTTPGetAction{
+						Path:   envoy.ShutdownManagerHealthCheckPath,
+						Port:   intstr.IntOrString{Type: intstr.Int, IntVal: envoy.ShutdownManagerPort},
+						Scheme: corev1.URISchemeHTTP,
+					},
+				},
+				TimeoutSeconds:   1,
+				PeriodSeconds:    10,
+				SuccessThreshold: 1,
+				FailureThreshold: 30,
+			},
 			ReadinessProbe: &corev1.Probe{
 				ProbeHandler: corev1.ProbeHandler{
 					HTTPGet: &corev1.HTTPGetAction{
@@ -270,6 +227,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 					},
 				},
 			},
+			SecurityContext: expectedShutdownManagerSecurityContext(),
 		},
 	}
 
@@ -347,12 +305,12 @@ func expectedVolumes(name string, pod *egv1a1.KubernetesPodSpec) []corev1.Volume
 					},
 					Items: []corev1.KeyToPath{
 						{
-							Key:  SdsCAFilename,
-							Path: SdsCAFilename,
+							Key:  common.SdsCAFilename,
+							Path: common.SdsCAFilename,
 						},
 						{
-							Key:  SdsCertFilename,
-							Path: SdsCertFilename,
+							Key:  common.SdsCertFilename,
+							Path: common.SdsCertFilename,
 						},
 					},
 					DefaultMode: ptr.To[int32](420),
@@ -408,4 +366,33 @@ func calculateMaxHeapSizeBytes(envoyResourceRequirements *corev1.ResourceRequire
 	}
 
 	return 0
+}
+
+func expectedEnvoySecurityContext(containerSpec *egv1a1.KubernetesContainerSpec) *corev1.SecurityContext {
+	if containerSpec != nil && containerSpec.SecurityContext != nil {
+		return containerSpec.SecurityContext
+	}
+
+	sc := resource.DefaultSecurityContext()
+
+	// run as non-root user
+	sc.RunAsGroup = ptr.To(int64(65532))
+	sc.RunAsUser = ptr.To(int64(65532))
+
+	// Envoy container needs to write to the log file/UDS socket.
+	sc.ReadOnlyRootFilesystem = nil
+	return sc
+}
+
+func expectedShutdownManagerSecurityContext() *corev1.SecurityContext {
+	sc := resource.DefaultSecurityContext()
+
+	// run as non-root user
+	sc.RunAsGroup = ptr.To(int64(65532))
+	sc.RunAsUser = ptr.To(int64(65532))
+
+	// ShutdownManger creates a file to indicate the connection drain process is completed,
+	// so it needs file write permission.
+	sc.ReadOnlyRootFilesystem = nil
+	return sc
 }

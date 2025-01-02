@@ -20,6 +20,8 @@ global:
       pullSecrets: []
 podDisruptionBudget:
   minAvailable: 0
+  # maxUnavailable: 1
+
 deployment:
   envoyGateway:
     image:
@@ -29,11 +31,21 @@ deployment:
     imagePullSecrets: []
     resources:
       limits:
-        cpu: 500m
         memory: 1024Mi
       requests:
         cpu: 100m
         memory: 256Mi
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+      privileged: false
+      runAsNonRoot: true
+      runAsGroup: 65532
+      runAsUser: 65532
+      seccompProfile:
+        type: RuntimeDefault
   ports:
     - name: grpc
       port: 18000
@@ -41,9 +53,13 @@ deployment:
     - name: ratelimit
       port: 18001
       targetPort: 18001
+    - name: wasm
+      port: 18002
+      targetPort: 18002
     - name: metrics
       port: 19001
       targetPort: 19001
+  priorityClassName: null
   replicas: 1
   pod:
     affinity: {}
@@ -53,6 +69,10 @@ deployment:
     labels: {}
     topologySpreadConstraints: []
     tolerations: []
+    nodeSelector: {}
+
+service:
+  annotations: {}
 
 config:
   envoyGateway:
@@ -73,7 +93,22 @@ certgen:
   job:
     annotations: {}
     resources: {}
+    affinity: {}
+    tolerations: []
+    nodeSelector: {}
     ttlSecondsAfterFinished: 30
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+      privileged: false
+      readOnlyRootFilesystem: true
+      runAsNonRoot: true
+      runAsGroup: 65534
+      runAsUser: 65534
+      seccompProfile:
+        type: RuntimeDefault
   rbac:
     annotations: {}
     labels: {}

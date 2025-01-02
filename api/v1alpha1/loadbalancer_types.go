@@ -58,7 +58,10 @@ const (
 // +kubebuilder:validation:XValidation:rule="self.type == 'Header' ? has(self.header) : !has(self.header)",message="If consistent hash type is header, the header field must be set."
 // +kubebuilder:validation:XValidation:rule="self.type == 'Cookie' ? has(self.cookie) : !has(self.cookie)",message="If consistent hash type is cookie, the cookie field must be set."
 type ConsistentHash struct {
-	// ConsistentHashType defines the type of input to hash on. Valid Type values are "SourceIP" or "Header".
+	// ConsistentHashType defines the type of input to hash on. Valid Type values are
+	// "SourceIP",
+	// "Header",
+	// "Cookie".
 	//
 	// +unionDiscriminator
 	Type ConsistentHashType `json:"type"`
@@ -71,7 +74,6 @@ type ConsistentHash struct {
 	// Cookie configures the cookie hash policy when the consistent hash type is set to Cookie.
 	//
 	// +optional
-	// +notImplementedHide
 	Cookie *Cookie `json:"cookie,omitempty"`
 
 	// The table size for consistent hashing, must be prime number limited to 5000011.
@@ -103,12 +105,10 @@ type Cookie struct {
 	// Max-Age attribute value.
 	//
 	// +optional
-	// +notImplementedHide
 	TTL *metav1.Duration `json:"ttl,omitempty"`
 	// Additional Attributes to set for the generated cookie.
 	//
 	// +optional
-	// +notImplementedHide
 	Attributes map[string]string `json:"attributes,omitempty"`
 }
 

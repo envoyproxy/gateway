@@ -1,8 +1,7 @@
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       portValue: 10080
-  drainType: MODIFY_ONLY
   filterChains:
   - filters:
     - name: envoy.filters.network.http_connection_manager
@@ -28,7 +27,7 @@
             resourceApiVersion: V3
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: https
+        statPrefix: https-10080
         useRemoteAddress: true
     name: first-listener
     transportSocket:
@@ -48,5 +47,7 @@
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
+        disableStatefulSessionResumption: true
+        disableStatelessSessionResumption: true
   name: first-listener
   perConnectionBufferLimitBytes: 32768

@@ -10,7 +10,7 @@ backendTLSPolicies:
     - group: ""
       kind: Service
       name: http-backend
-      sectionName: "8080"
+      sectionName: http
     validation:
       caCertificateRefs:
       - group: ""
@@ -136,23 +136,25 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-btls
+        namespace: envoy-gateway
+        sectionName: http
       name: envoy-gateway/gateway-btls/http
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
       routes:
-      - destination:
-          name: httproute/envoy-gateway/httproute-btls/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 10.244.0.11
-              port: 8080
-            protocol: HTTP
-            weight: 1
+      - directResponse:
+          statusCode: 500
         hostname: '*'
         isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-btls
+          namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-btls/rule/0/match/0/*
         pathMatch:
           distinct: false

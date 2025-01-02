@@ -7,24 +7,22 @@ package runner
 
 import (
 	"context"
-	"crypto/rand"
 	"crypto/tls"
-	"crypto/x509"
 	"fmt"
 	"math"
 	"net"
-	"os"
 	"strconv"
 
 	discoveryv3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+	cachetype "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	cachev3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	serverv3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
-	testv3 "github.com/envoyproxy/go-control-plane/pkg/test/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -36,12 +34,20 @@ import (
 const (
 	// XdsGrpcSotwConfigServerAddress is the listening address of the ratelimit xDS config server.
 	XdsGrpcSotwConfigServerAddress = "0.0.0.0"
-	// rateLimitTLSCertFilename is the ratelimit tls cert file.
-	rateLimitTLSCertFilename = "/certs/tls.crt"
-	// rateLimitTLSKeyFilename is the ratelimit key file.
-	rateLimitTLSKeyFilename = "/certs/tls.key"
-	// rateLimitTLSCACertFilename is the ratelimit ca cert file.
-	rateLimitTLSCACertFilename = "/certs/ca.crt"
+
+	// Default certificates path for envoy-gateway with Kubernetes provider.
+	// rateLimitTLSCertFilepath is the ratelimit tls cert file.
+	rateLimitTLSCertFilepath = "/certs/tls.crt"
+	// rateLimitTLSKeyFilepath is the ratelimit key file.
+	rateLimitTLSKeyFilepath = "/certs/tls.key"
+	// rateLimitTLSCACertFilepath is the ratelimit ca cert file.
+	rateLimitTLSCACertFilepath = "/certs/ca.crt"
+
+	// TODO: Make these path configurable.
+	// Default certificates path for envoy-gateway with Host infrastructure provider.
+	localTLSCertFilepath = "/tmp/envoy-gateway/certs/envoy-gateway/tls.crt"
+	localTLSKeyFilepath  = "/tmp/envoy-gateway/certs/envoy-gateway/tls.key"
+	localTLSCaFilepath   = "/tmp/envoy-gateway/certs/envoy-gateway/ca.crt"
 )
 
 type Config struct {
@@ -71,14 +77,18 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	// Set up the gRPC server and register the xDS handler.
 	// Create SnapshotCache before start subscribeAndTranslate,
 	// prevent panics in case cache is nil.
-	cfg := r.tlsConfig(rateLimitTLSCertFilename, rateLimitTLSKeyFilename, rateLimitTLSCACertFilename)
-	r.grpc = grpc.NewServer(grpc.Creds(credentials.NewTLS(cfg)))
+	tlsConfig, err := r.loadTLSConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load TLS config: %w", err)
+	}
+	r.Logger.Info("loaded TLS certificate and key")
+
+	r.grpc = grpc.NewServer(grpc.Creds(credentials.NewTLS(tlsConfig)))
 
 	r.cache = cachev3.NewSnapshotCache(false, cachev3.IDHash{}, r.Logger.Sugar())
 
 	// Register xDS Config server.
-	cb := &testv3.Callbacks{}
-	discoveryv3.RegisterAggregatedDiscoveryServiceServer(r.grpc, serverv3.NewServer(ctx, r.cache, cb))
+	discoveryv3.RegisterAggregatedDiscoveryServiceServer(r.grpc, serverv3.NewServer(ctx, r.cache, serverv3.CallbackFuncs{}))
 
 	// Start and listen xDS gRPC config Server.
 	go r.serveXdsConfigServer(ctx)
@@ -109,27 +119,40 @@ func (r *Runner) serveXdsConfigServer(ctx context.Context) {
 	}
 }
 
+func buildXDSResourceFromCache(rateLimitConfigsCache map[string][]cachetype.Resource) types.XdsResources {
+	xdsResourcesToUpdate := types.XdsResources{}
+	for _, xdsR := range rateLimitConfigsCache {
+		xdsResourcesToUpdate[resourcev3.RateLimitConfigType] = append(xdsResourcesToUpdate[resourcev3.RateLimitConfigType], xdsR...)
+	}
+
+	return xdsResourcesToUpdate
+}
+
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
+	// rateLimitConfigsCache is a cache of the rate limit config, which is keyed by the xdsIR key.
+	rateLimitConfigsCache := map[string][]cachetype.Resource{}
+
 	// Subscribe to resources.
 	message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentGlobalRateLimitRunner), Message: "xds-ir"}, r.XdsIR.Subscribe(ctx),
 		func(update message.Update[string, *ir.Xds], errChan chan error) {
 			r.Logger.Info("received a notification")
 
 			if update.Delete {
-				if err := r.addNewSnapshot(ctx, nil); err != nil {
-					r.Logger.Error(err, "failed to update the config snapshot")
-					errChan <- err
-				}
+				delete(rateLimitConfigsCache, update.Key)
+				r.updateSnapshot(ctx, buildXDSResourceFromCache(rateLimitConfigsCache))
 			} else {
 				// Translate to ratelimit xDS Config.
 				rvt, err := r.translate(update.Value)
 				if err != nil {
-					r.Logger.Error(err, err.Error())
+					r.Logger.Error(err, "failed to translate an updated xds-ir to ratelimit xDS Config")
+					errChan <- err
 				}
 
 				// Update ratelimit xDS config cache.
 				if rvt != nil {
-					r.updateSnapshot(ctx, rvt.XdsResources)
+					// Build XdsResources to use for the snapshot update from the cache.
+					rateLimitConfigsCache[update.Key] = rvt.XdsResources[resourcev3.RateLimitConfigType]
+					r.updateSnapshot(ctx, buildXDSResourceFromCache(rateLimitConfigsCache))
 				}
 			}
 		},
@@ -181,44 +204,22 @@ func (r *Runner) addNewSnapshot(ctx context.Context, resource types.XdsResources
 	return nil
 }
 
-func (r *Runner) tlsConfig(cert, key, ca string) *tls.Config {
-	loadConfig := func() (*tls.Config, error) {
-		cert, err := tls.LoadX509KeyPair(cert, key)
+func (r *Runner) loadTLSConfig() (tlsConfig *tls.Config, err error) {
+	switch {
+	case r.EnvoyGateway.Provider.IsRunningOnKubernetes():
+		tlsConfig, err = crypto.LoadTLSConfig(rateLimitTLSCertFilepath, rateLimitTLSKeyFilepath, rateLimitTLSCACertFilepath)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to create tls config: %w", err)
 		}
 
-		// Load the CA cert.
-		ca, err := os.ReadFile(ca)
+	case r.EnvoyGateway.Provider.IsRunningOnHost():
+		tlsConfig, err = crypto.LoadTLSConfig(localTLSCertFilepath, localTLSKeyFilepath, localTLSCaFilepath)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to create tls config: %w", err)
 		}
 
-		certPool := x509.NewCertPool()
-		if !certPool.AppendCertsFromPEM(ca) {
-			return nil, fmt.Errorf("failed to parse CA certificate")
-		}
-
-		return &tls.Config{
-			Certificates: []tls.Certificate{cert},
-			ClientAuth:   tls.RequireAndVerifyClientCert,
-			ClientCAs:    certPool,
-			MinVersion:   tls.VersionTLS13,
-		}, nil
+	default:
+		return nil, fmt.Errorf("no valid tls certificates")
 	}
-
-	// Attempt to load certificates and key to catch configuration errors early.
-	if _, lerr := loadConfig(); lerr != nil {
-		r.Logger.Error(lerr, "failed to load certificate and key")
-	}
-	r.Logger.Info("loaded TLS certificate and key")
-
-	return &tls.Config{
-		MinVersion: tls.VersionTLS13,
-		ClientAuth: tls.RequireAndVerifyClientCert,
-		Rand:       rand.Reader,
-		GetConfigForClient: func(*tls.ClientHelloInfo) (*tls.Config, error) {
-			return loadConfig()
-		},
-	}
+	return
 }

@@ -6,7 +6,6 @@
 # namespace):
 # - same-namespace (only supports route in same ns)
 # - all-namespaces (supports routes in all ns)
-# - backend-namespaces (supports routes in ns with backend label)
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -22,12 +21,20 @@ metadata:
 spec:
   gatewayClassName: "{GATEWAY_CLASS_NAME}"
   listeners:
-  - name: http
-    port: 80
-    protocol: HTTP
-    allowedRoutes:
-      namespaces:
-        from: Same
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: tls
+      protocol: TLS
+      port: 443
+      tls:
+        mode: Passthrough
+      allowedRoutes:
+        namespaces:
+          from: Same
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
@@ -37,60 +44,12 @@ metadata:
 spec:
   gatewayClassName: "{GATEWAY_CLASS_NAME}"
   listeners:
-  - name: http
-    port: 80
-    protocol: HTTP
-    allowedRoutes:
-      namespaces:
-        from: All
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: Gateway
-metadata:
-  name: backend-namespaces
-  namespace: gateway-conformance-infra
-spec:
-  gatewayClassName: "{GATEWAY_CLASS_NAME}"
-  listeners:
-  - name: https
-    port: 443
-    protocol: HTTPS
-    tls:
-      certificateRefs:
-      - group: ""
-        kind: Secret
-        name: backend-tls-certificate
-      mode: Terminate
-  - name: http
-    port: 80
-    protocol: HTTP
-    allowedRoutes:
-      namespaces:
-        from: Selector
-        selector:
-          matchLabels:
-            gateway-conformance: backend
----
-apiVersion: gateway.networking.k8s.io/v1beta1
-kind: Gateway
-metadata:
-  name: my-tcp-gateway
-  namespace: gateway-conformance-infra
-spec:
-  gatewayClassName: "{GATEWAY_CLASS_NAME}"
-  listeners:
-  - name: foo
-    protocol: TCP
-    port: 8080
-    allowedRoutes:
-      kinds:
-      - kind: TCPRoute
-  - name: bar
-    protocol: TCP
-    port: 8090
-    allowedRoutes:
-      kinds:
-      - kind: TCPRoute
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: All
 ---
 apiVersion: v1
 kind: Service
@@ -101,14 +60,14 @@ spec:
   selector:
     app: infra-backend-v1
   ports:
-  - protocol: TCP
-    port: 8080
-    name: http11
-    targetPort: 3000
-  - protocol: TCP
-    port: 8081
-    name: http2
-    targetPort: 3001
+    - protocol: TCP
+      port: 8080
+      name: http11
+      targetPort: 3000
+    - protocol: TCP
+      port: 8081
+      name: http2
+      targetPort: 3001
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -128,23 +87,23 @@ spec:
         app: infra-backend-v1
     spec:
       containers:
-      - name: infra-backend-v1
-        # From https://github.com/kubernetes-sigs/gateway-api/blob/main/conformance/echo-basic/echo-basic.go
-        image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
-        env:
-        - name: POD_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.name
-        - name: NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
-        - name: SERVICE_NAME
-          value: infra-backend-v1
-        resources:
-          requests:
-            cpu: 10m
+        - name: infra-backend-v1
+          # From https://github.com/kubernetes-sigs/gateway-api/blob/main/conformance/echo-basic/echo-basic.go
+          image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: SERVICE_NAME
+              value: infra-backend-v1
+          resources:
+            requests:
+              cpu: 10m
 ---
 apiVersion: v1
 kind: Service
@@ -155,9 +114,9 @@ spec:
   selector:
     app: infra-backend-v2
   ports:
-  - protocol: TCP
-    port: 8080
-    targetPort: 3000
+    - protocol: TCP
+      port: 8080
+      targetPort: 3000
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -177,22 +136,22 @@ spec:
         app: infra-backend-v2
     spec:
       containers:
-      - name: infra-backend-v2
-        image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
-        env:
-        - name: POD_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.name
-        - name: NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
-        - name: SERVICE_NAME
-          value: infra-backend-v2
-        resources:
-          requests:
-            cpu: 10m
+        - name: infra-backend-v2
+          image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: SERVICE_NAME
+              value: infra-backend-v2
+          resources:
+            requests:
+              cpu: 10m
 ---
 apiVersion: v1
 kind: Service
@@ -203,9 +162,9 @@ spec:
   selector:
     app: infra-backend-v3
   ports:
-  - protocol: TCP
-    port: 8080
-    targetPort: 3000
+    - protocol: TCP
+      port: 8080
+      targetPort: 3000
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -225,22 +184,22 @@ spec:
         app: infra-backend-v3
     spec:
       containers:
-      - name: infra-backend-v3
-        image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
-        env:
-        - name: POD_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.name
-        - name: NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
-        - name: SERVICE_NAME
-          value: infra-backend-v3
-        resources:
-          requests:
-            cpu: 10m
+        - name: infra-backend-v3
+          image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: SERVICE_NAME
+              value: infra-backend-v3
+          resources:
+            requests:
+              cpu: 10m
 ---
 apiVersion: v1
 kind: Service
@@ -251,9 +210,9 @@ spec:
   selector:
     app: tls-backend
   ports:
-  - protocol: TCP
-    port: 443
-    targetPort: 8443
+    - protocol: TCP
+      port: 443
+      targetPort: 8443
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -273,38 +232,38 @@ spec:
         app: tls-backend
     spec:
       containers:
-      - name: tls-backend
-        image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
-        volumeMounts:
-        - name: secret-volume
-          mountPath: /etc/secret-volume
-        env:
-        - name: POD_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.name
-        - name: NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
-        - name: SERVICE_NAME
-          value: tls-backend
-        - name: TLS_SERVER_CERT
-          value: /etc/secret-volume/crt
-        - name: TLS_SERVER_PRIVKEY
-          value: /etc/secret-volume/key
-        resources:
-          requests:
-            cpu: 10m
+        - name: tls-backend
+          image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+          volumeMounts:
+            - name: secret-volume
+              mountPath: /etc/secret-volume
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: SERVICE_NAME
+              value: tls-backend
+            - name: TLS_SERVER_CERT
+              value: /etc/secret-volume/crt
+            - name: TLS_SERVER_PRIVKEY
+              value: /etc/secret-volume/key
+          resources:
+            requests:
+              cpu: 10m
       volumes:
-      - name: secret-volume
-        secret:
-          secretName: tls-passthrough-checks-certificate
-          items:
-          - key: tls.crt
-            path: crt
-          - key: tls.key
-            path: key
+        - name: secret-volume
+          secret:
+            secretName: tls-passthrough-checks-certificate
+            items:
+              - key: tls.crt
+                path: crt
+              - key: tls.key
+                path: key
 ---
 apiVersion: v1
 kind: Namespace
@@ -322,9 +281,9 @@ spec:
   selector:
     app: app-backend-v1
   ports:
-  - protocol: TCP
-    port: 8080
-    targetPort: 3000
+    - protocol: TCP
+      port: 8080
+      targetPort: 3000
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -344,22 +303,22 @@ spec:
         app: app-backend-v1
     spec:
       containers:
-      - name: app-backend-v1
-        image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
-        env:
-        - name: POD_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.name
-        - name: NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
-        - name: SERVICE_NAME
-          value: app-backend-v1
-        resources:
-          requests:
-            cpu: 10m
+        - name: app-backend-v1
+          image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: SERVICE_NAME
+              value: app-backend-v1
+          resources:
+            requests:
+              cpu: 10m
 ---
 apiVersion: v1
 kind: Service
@@ -370,9 +329,9 @@ spec:
   selector:
     app: app-backend-v2
   ports:
-  - protocol: TCP
-    port: 8080
-    targetPort: 3000
+    - protocol: TCP
+      port: 8080
+      targetPort: 3000
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -392,22 +351,22 @@ spec:
         app: app-backend-v2
     spec:
       containers:
-      - name: app-backend-v2
-        image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
-        env:
-        - name: POD_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.name
-        - name: NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
-        - name: SERVICE_NAME
-          value: app-backend-v2
-        resources:
-          requests:
-            cpu: 10m
+        - name: app-backend-v2
+          image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: SERVICE_NAME
+              value: app-backend-v2
+          resources:
+            requests:
+              cpu: 10m
 ---
 apiVersion: v1
 kind: Namespace
@@ -425,9 +384,9 @@ spec:
   selector:
     app: web-backend
   ports:
-  - protocol: TCP
-    port: 8080
-    targetPort: 3000
+    - protocol: TCP
+      port: 8080
+      targetPort: 3000
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -447,235 +406,22 @@ spec:
         app: web-backend
     spec:
       containers:
-      - name: web-backend
-        image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
-        env:
-        - name: POD_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.name
-        - name: NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
-        - name: SERVICE_NAME
-          value: web-backend
-        resources:
-          requests:
-            cpu: 10m
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: gateway-conformance-udp
-  labels:
-    gateway-conformance: udp
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: coredns
-  namespace: gateway-conformance-udp
-  labels:
-    app: udp
-spec:
-  ports:
-  - name: udp-dns
-    port: 53
-    protocol: UDP
-    targetPort: 53
-  selector:
-    app: udp
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: coredns
-  namespace: gateway-conformance-udp
-  labels:
-    app: udp
-spec:
-  selector:
-    matchLabels:
-      app: udp
-  template:
-    metadata:
-      labels:
-        app: udp
-    spec:
-      containers:
-      - args:
-        - -conf
-        - /root/Corefile
-        image: coredns/coredns
-        name: coredns
-        volumeMounts:
-        - mountPath: /root
-          name: conf
-      volumes:
-      - configMap:
-          defaultMode: 420
-          name: coredns
-        name: conf
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: coredns
-  namespace: gateway-conformance-udp
-data:
-  Corefile: |
-    .:53 {
-        forward . 8.8.8.8 9.9.9.9
-        log
-        errors
-    }
-
-    foo.bar.com:53 {
-      whoami
-    }
----
-apiVersion: gateway.networking.k8s.io/v1beta1
-kind: Gateway
-metadata:
-  name: udp-gateway
-  namespace: gateway-conformance-udp
-spec:
-  gatewayClassName: "{GATEWAY_CLASS_NAME}"
-  listeners:
-  - name: coredns
-    protocol: UDP
-    port: 5300
-    allowedRoutes:
-      kinds:
-      - kind: UDPRoute
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: gateway-preserve-case-backend
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: go-server
-  namespace: gateway-preserve-case-backend
-data:
-  go.mod: |
-         module srvr
-         go 1.22
-         require (
-         	github.com/andybalholm/brotli v1.0.5 // indirect
-         	github.com/klauspost/compress v1.17.0 // indirect
-         	github.com/valyala/bytebufferpool v1.0.0 // indirect
-         	github.com/valyala/fasthttp v1.51.0 // indirect
-         )
-  go.sum: |
-         github.com/andybalholm/brotli v1.0.5 h1:8uQZIdzKmjc/iuPu7O2ioW48L81FgatrcpfFmiq/cCs=
-         github.com/andybalholm/brotli v1.0.5/go.mod h1:fO7iG3H7G2nSZ7m0zPUDn85XEX2GTukHGRSepvi9Eig=
-         github.com/klauspost/compress v1.17.0 h1:Rnbp4K9EjcDuVuHtd0dgA4qNuv9yKDYKK1ulpJwgrqM=
-         github.com/klauspost/compress v1.17.0/go.mod h1:ntbaceVETuRiXiv4DpjP66DpAtAGkEQskQzEyD//IeE=
-         github.com/valyala/bytebufferpool v1.0.0 h1:GqA5TC/0021Y/b9FG4Oi9Mr3q7XYx6KllzawFIhcdPw=
-         github.com/valyala/bytebufferpool v1.0.0/go.mod h1:6bBcMArwyJ5K/AmCkWv1jt77kVWyCJ6HpOuEn7z0Csc=
-         github.com/valyala/fasthttp v1.51.0 h1:8b30A5JlZ6C7AS81RsWjYMQmrZG6feChmgAolCl1SqA=
-         github.com/valyala/fasthttp v1.51.0/go.mod h1:oI2XroL+lI7vdXyYoQk03bXBThfFl2cVdIA3Xl7cH8g=
-  main.go: |
-         package main
-         import (
-         	"encoding/json"
-         	"fmt"
-         	"log"
-         	"github.com/valyala/fasthttp"
-         )
-         func HandleFastHTTP(ctx *fasthttp.RequestCtx) {
-         	ctx.QueryArgs().VisitAll(func(key, value []byte) {
-         		if string(key) == "headers" {
-         			ctx.Response.Header.Add(string(value), "PrEsEnT")
-         		}
-         	})
-         	headers := map[string][]string{}
-         	ctx.Request.Header.VisitAll(func(key, value []byte) {
-         		headers[string(key)] = append(headers[string(key)], string(value))
-         	})
-         	if d, err := json.MarshalIndent(headers, "", "  "); err != nil {
-         		ctx.Error(fmt.Sprintf("%s", err), fasthttp.StatusBadRequest)
-         	} else {
-         		fmt.Fprintf(ctx, string(d)+"\n")
-         	}
-         }
-         func main() {
-         	s := fasthttp.Server{
-         		Handler:                       HandleFastHTTP,
-         		DisableHeaderNamesNormalizing: true,
-         	}
-            log.Printf("Starting on port 8000")
-         	log.Fatal(s.ListenAndServe(":8000"))
-         }
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: golang-app-deployment
-  namespace: gateway-preserve-case-backend
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: golang-app
-  template:
-    metadata:
-      labels:
-        app: golang-app
-    spec:
-      containers:
-      - name: golang-app-container
-        command:
-        - sh
-        - "-c"
-        - "cp -a /app /app-live && cd /app-live && go  run . "
-        image: golang:1.22.3-alpine
-        ports:
-        - containerPort: 8000
-        volumeMounts:
-        - name: go-server
-          mountPath: /app
-      volumes:
-      - name: go-server
-        configMap:
-          name: go-server
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: fasthttp-backend
-  namespace: gateway-preserve-case-backend
-spec:
-  selector:
-    app: golang-app
-  ports:
-  - protocol: TCP
-    port: 8000
-    targetPort: 8000
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: gateway-upgrade-infra
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: Gateway
-metadata:
-  name: ha-gateway
-  namespace: gateway-upgrade-infra
-spec:
-  gatewayClassName: upgrade
-  listeners:
-  - allowedRoutes:
-      namespaces:
-        from: Same
-    name: http1
-    port: 80
-    protocol: HTTP
+        - name: web-backend
+          image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: SERVICE_NAME
+              value: web-backend
+          resources:
+            requests:
+              cpu: 10m
 ---
 apiVersion: v1
 data:
@@ -686,71 +432,6 @@ metadata:
   name: my-tls-secret
   namespace: envoy-gateway-system
 type: kubernetes.io/tls
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: infra-backend
-  namespace: gateway-upgrade-infra
-spec:
-  selector:
-    app: infra-backend
-  ports:
-  - protocol: TCP
-    port: 8080
-    targetPort: 3000
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: infra-backend
-  namespace: gateway-upgrade-infra
-  labels:
-    app: infra-backend
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: infra-backend
-  template:
-    metadata:
-      labels:
-        app: infra-backend
-    spec:
-      containers:
-      - name: infra-backend
-        # From https://github.com/kubernetes-sigs/gateway-api/blob/main/conformance/echo-basic/echo-basic.go
-        image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
-        env:
-        - name: POD_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.name
-        - name: NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
-        - name: SERVICE_NAME
-          value: infra-backend
-        resources:
-          requests:
-            cpu: 10m
-
----
-apiVersion: gateway.networking.k8s.io/v1beta1
-kind: Gateway
-metadata:
-  name: connection-limit-gateway
-  namespace: gateway-conformance-infra
-spec:
-  gatewayClassName: "{GATEWAY_CLASS_NAME}"
-  listeners:
-  - name: http
-    port: 80
-    protocol: HTTP
-    allowedRoutes:
-      namespaces:
-        from: Same
 ---
 apiVersion: v1
 data:
@@ -799,9 +480,10 @@ spec:
   selector:
     app: tls-backend-2
   ports:
-  - protocol: TCP
-    port: 443
-    targetPort: 8443
+    - name: https
+      protocol: TCP
+      port: 443
+      targetPort: 8443
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -821,38 +503,38 @@ spec:
         app: tls-backend-2
     spec:
       containers:
-      - name: tls-backend
-        image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
-        volumeMounts:
-        - name: secret-volume
-          mountPath: /etc/secret-volume
-        env:
-        - name: POD_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.name
-        - name: NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
-        - name: SERVICE_NAME
-          value: tls-backend-2
-        - name: TLS_SERVER_CERT
-          value: /etc/secret-volume/crt
-        - name: TLS_SERVER_PRIVKEY
-          value: /etc/secret-volume/key
-        resources:
-          requests:
-            cpu: 10m
+        - name: tls-backend
+          image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+          volumeMounts:
+            - name: secret-volume
+              mountPath: /etc/secret-volume
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: SERVICE_NAME
+              value: tls-backend-2
+            - name: TLS_SERVER_CERT
+              value: /etc/secret-volume/crt
+            - name: TLS_SERVER_PRIVKEY
+              value: /etc/secret-volume/key
+          resources:
+            requests:
+              cpu: 10m
       volumes:
-      - name: secret-volume
-        secret:
-          secretName: backend-tls-checks-certificate
-          items:
-          - key: tls.crt
-            path: crt
-          - key: tls.key
-            path: key
+        - name: secret-volume
+          secret:
+            secretName: backend-tls-checks-certificate
+            items:
+              - key: tls.crt
+                path: crt
+              - key: tls.key
+                path: key
 ---
 apiVersion: v1
 data:
@@ -863,3 +545,61 @@ metadata:
   name: backend-tls-certificate
   namespace: gateway-conformance-infra
 type: kubernetes.io/tls
+# This is a trick to pass EnvoyProxy BackendRef check.
+# In the future, plan to make OTel-collector support envoy ALS receiver,
+# then we can remove this.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: envoy-als
+  namespace: monitoring
+spec:
+  selector:
+    app: envoy-als
+  type: LoadBalancer
+  ports:
+    - name: grpc-als
+      protocol: TCP
+      appProtocol: grpc
+      port: 8080
+      targetPort: 8080
+    - name: http-monitoring
+      protocol: TCP
+      port: 19001
+      targetPort: 19001
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: static-file-server
+  namespace: gateway-conformance-infra
+spec:
+  selector:
+    app: static-file-server
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: static-file-server
+  namespace: gateway-conformance-infra
+  labels:
+    app: static-file-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: static-file-server
+  template:
+    metadata:
+      labels:
+        app: static-file-server
+    spec:
+      containers:
+        - name: static-file-server
+          image: envoyproxy/gateway-static-file-server
+          imagePullPolicy: IfNotPresent

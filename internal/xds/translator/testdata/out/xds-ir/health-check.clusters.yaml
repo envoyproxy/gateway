@@ -4,7 +4,7 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
@@ -25,6 +25,7 @@
     interval: 3s
     timeout: 0.500s
     unhealthyThreshold: 3
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: first-route-dest
   outlierDetection:
@@ -42,7 +43,7 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
@@ -61,6 +62,7 @@
     interval: 5s
     timeout: 1s
     unhealthyThreshold: 3
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: second-route-dest
   outlierDetection:
@@ -78,7 +80,7 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
@@ -94,6 +96,7 @@
         text: "70696e67"
     timeout: 1s
     unhealthyThreshold: 3
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: third-route-dest
   outlierDetection:
@@ -111,7 +114,7 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
@@ -127,6 +130,7 @@
         binary: cGluZw==
     timeout: 1s
     unhealthyThreshold: 3
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: fourth-route-dest
   outlierDetection:
@@ -137,5 +141,29 @@
     interval: 1s
     maxEjectionPercent: 90
     splitExternalLocalOriginErrors: true
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: fifth-route-dest
+  healthChecks:
+  - grpcHealthCheck:
+      serviceName: my-service
+    healthyThreshold: 3
+    interval: 5s
+    timeout: 1s
+    unhealthyThreshold: 3
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  name: fifth-route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS

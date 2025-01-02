@@ -16,7 +16,7 @@ backends:
       message: The Backend was accepted
       reason: Accepted
       status: "True"
-      type: Invalid
+      type: Accepted
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -82,6 +82,7 @@ grpcRoutes:
       - method:
           service: com.[A-Z]+
           type: RegularExpression
+      name: grpcrule-1
   status:
     parents:
     - conditions:
@@ -127,33 +128,40 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: true
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
       name: envoy-gateway/gateway-1/http
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
       routes:
-      - destination:
-          name: grpcroute/default/grpcroute-1/rule/0
-          settings:
-          - weight: 1
-        directResponse:
+      - directResponse:
           statusCode: 500
         hostname: '*'
         isHTTP2: true
+        metadata:
+          kind: GRPCRoute
+          name: grpcroute-1
+          namespace: default
+          sectionName: grpcrule-1
         name: grpcroute/default/grpcroute-1/rule/0/match/1/*
         pathMatch:
           distinct: false
           name: ""
           safeRegex: /com.[A-Z]+/[A-Za-z_][A-Za-z_0-9]*
-      - destination:
-          name: grpcroute/default/grpcroute-1/rule/0
-          settings:
-          - weight: 1
-        directResponse:
+      - directResponse:
           statusCode: 500
         hostname: '*'
         isHTTP2: true
+        metadata:
+          kind: GRPCRoute
+          name: grpcroute-1
+          namespace: default
+          sectionName: grpcrule-1
         name: grpcroute/default/grpcroute-1/rule/0/match/0/*
         pathMatch:
           distinct: false

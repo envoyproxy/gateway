@@ -44,8 +44,8 @@ envoyExtensionPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Unable to target HTTPRoute, another EnvoyExtensionPolicy has already
-          attached to it
+        message: Unable to target HTTPRoute httproute-1, another EnvoyExtensionPolicy
+          has already attached to it
         reason: Conflicted
         status: "False"
         type: Accepted
@@ -152,8 +152,8 @@ envoyExtensionPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Unable to target Gateway, another EnvoyExtensionPolicy has already
-          attached to it
+        message: Unable to target Gateway gateway-1, another EnvoyExtensionPolicy
+          has already attached to it
         reason: Conflicted
         status: "False"
         type: Accepted
@@ -525,6 +525,11 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: not-same-namespace-gateway
+        namespace: another-namespace
+        sectionName: http
       name: another-namespace/not-same-namespace-gateway/http
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -539,20 +544,26 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
       name: envoy-gateway/gateway-1/http
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
       routes:
-      - destination:
-          name: httproute/envoy-gateway/httproute-1/rule/0
-          settings:
-          - weight: 1
-        directResponse:
+      - directResponse:
           statusCode: 500
+        envoyExtensions: {}
         hostname: '*'
         isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -567,24 +578,30 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: true
+      metadata:
+        kind: Gateway
+        name: gateway-2
+        namespace: envoy-gateway
+        sectionName: http
       name: envoy-gateway/gateway-2/http
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
       routes:
-      - destination:
-          name: grpcroute/envoy-gateway/grpcroute-1/rule/0
-          settings:
-          - weight: 1
-        directResponse:
+      - directResponse:
           statusCode: 500
+        envoyExtensions: {}
         headerMatches:
         - distinct: false
           exact: foo
           name: magic
         hostname: '*'
         isHTTP2: true
+        metadata:
+          kind: GRPCRoute
+          name: grpcroute-1
+          namespace: envoy-gateway
         name: grpcroute/envoy-gateway/grpcroute-1/rule/0/match/0/*
     tcp:
     - address: 0.0.0.0

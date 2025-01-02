@@ -143,7 +143,6 @@ func TestCreateProxyInfra(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			kube := newTestInfra(t)
@@ -210,7 +209,6 @@ func TestDeleteProxyInfra(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			kube := newTestInfra(t)

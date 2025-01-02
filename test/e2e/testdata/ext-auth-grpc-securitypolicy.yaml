@@ -41,8 +41,8 @@ metadata:
   name: ext-auth-test
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-with-ext-auth
   extAuth:
@@ -62,7 +62,7 @@ spec:
   - group: ''
     kind: Service
     name: grpc-ext-auth
-    sectionName: "9002"
+    sectionName: grpc
   validation:
     caCertificateRefs:
     - name: grpc-ext-auth-ca

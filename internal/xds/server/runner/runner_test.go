@@ -10,6 +10,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -23,9 +24,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
-	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
@@ -107,15 +107,10 @@ func TestTLSConfig(t *testing.T) {
 	require.NoError(t, err)
 
 	// Start a dummy server.
-	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
+	tlsCfg, err := crypto.LoadTLSConfig(certFile, keyFile, caFile)
+	require.NoError(t, err)
 
-	cfg := &Config{
-		Server: config.Server{
-			Logger: logger,
-		},
-	}
-	r := New(cfg)
-	g := grpc.NewServer(grpc.Creds(credentials.NewTLS(r.tlsConfig(certFile, keyFile, caFile))))
+	g := grpc.NewServer(grpc.Creds(credentials.NewTLS(tlsCfg)))
 	if g == nil {
 		t.Error("failed to create server")
 	}
@@ -131,7 +126,6 @@ func TestTLSConfig(t *testing.T) {
 	defer g.GracefulStop()
 
 	for name, tc := range tests {
-		tc := tc
 		t.Run(name, func(t *testing.T) {
 			// Store certificate and key to temp dir used by serveContext.
 			err = tc.serverCredentials.WritePEM(certFile, keyFile)
@@ -157,6 +151,7 @@ func tryConnect(address string, clientCert tls.Certificate, caCertPool *x509.Cer
 		ServerName:   "localhost",
 		MinVersion:   tls.VersionTLS13,
 		Certificates: []tls.Certificate{clientCert},
+		NextProtos:   []string{"h2"},
 		RootCAs:      caCertPool,
 	}
 	conn, err := tls.Dial("tcp", address, clientConfig)
@@ -181,6 +176,10 @@ func peekError(conn net.Conn) error {
 	_ = conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
 	_, err := conn.Read(make([]byte, 1))
 	if err != nil {
+		if errors.Is(err, io.EOF) {
+			return nil
+		}
+
 		var netErr net.Error
 		if !errors.As(netErr, &netErr) || !netErr.Timeout() {
 			return err

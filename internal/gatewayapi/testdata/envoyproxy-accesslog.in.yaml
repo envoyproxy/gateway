@@ -1,4 +1,4 @@
-envoyproxy:
+envoyProxyForGatewayClass:
   apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyProxy
   metadata:
@@ -16,6 +16,28 @@ envoyproxy:
           - type: File
             file:
               path: /dev/stdout
+          - type: ALS
+            als:
+              logName: accesslog
+              backendRefs:
+              - name: envoy-als
+                namespace: monitoring
+                port: 9000
+              http:
+                requestHeaders:
+                - x-client-ip-address
+                responseHeaders:
+                - cache-control
+                responseTrailers:
+                - expires
+              type: HTTP
+          - type: ALS
+            als:
+              backendRefs:
+              - name: envoy-als
+                namespace: monitoring
+                port: 9000
+              type: TCP
           - type: OpenTelemetry
             openTelemetry:
               host: otel-collector.monitoring.svc.cluster.local
@@ -85,3 +107,36 @@ gateways:
       allowedRoutes:
         namespaces:
           from: Same
+services:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: envoy-als
+    namespace: monitoring
+  spec:
+    type: ClusterIP
+    ports:
+    - name: grpc
+      port: 9000
+      appProtocol: grpc
+      protocol: TCP
+      targetPort: 9000
+endpointSlices:
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    name: endpointslice-envoy-als
+    namespace: monitoring
+    labels:
+      kubernetes.io/service-name: envoy-als
+  addressType: IPv4
+  ports:
+  - name: grpc
+    protocol: TCP
+    appProtocol: grpc
+    port: 9090
+  endpoints:
+  - addresses:
+    - "10.240.0.10"
+    conditions:
+      ready: true

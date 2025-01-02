@@ -15,7 +15,7 @@ backends:
       message: The Backend was accepted
       reason: Accepted
       status: "True"
-      type: Invalid
+      type: Accepted
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
@@ -33,7 +33,7 @@ backends:
       message: The Backend was accepted
       reason: Accepted
       status: "True"
-      type: Invalid
+      type: Accepted
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
@@ -51,7 +51,7 @@ backends:
       message: The Backend was accepted
       reason: Accepted
       status: "True"
-      type: Invalid
+      type: Accepted
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -206,6 +206,11 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
       name: envoy-gateway/gateway-1/http
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -234,6 +239,10 @@ xdsIR:
             weight: 1
         hostname: '*'
         isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-static
+          namespace: default
         name: httproute/default/httproute-static/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -261,6 +270,10 @@ xdsIR:
             weight: 1
         hostname: '*'
         isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-fqdn
+          namespace: default
         name: httproute/default/httproute-fqdn/rule/0/match/0/*
         pathMatch:
           distinct: false

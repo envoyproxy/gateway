@@ -4,11 +4,10 @@ metadata:
   name: backend-upgrade-example
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-backend-upgrade
-    namespace: gateway-conformance-infra
   circuitBreaker:
     maxParallelRequests: 10000
     maxConnections: 10000

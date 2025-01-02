@@ -15,11 +15,16 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/infrastructure/host"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/logging"
 )
 
-var _ Manager = (*kubernetes.Infra)(nil)
+var (
+	_ Manager = (*kubernetes.Infra)(nil)
+	_ Manager = (*host.Infra)(nil)
+)
 
 // Manager provides the scaffolding for managing infrastructure.
 type Manager interface {
@@ -34,18 +39,34 @@ type Manager interface {
 }
 
 // NewManager returns a new infrastructure Manager.
-func NewManager(cfg *config.Server) (Manager, error) {
-	var mgr Manager
-	if cfg.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes {
-		cli, err := client.New(clicfg.GetConfigOrDie(), client.Options{Scheme: envoygateway.GetScheme()})
-		if err != nil {
-			return nil, err
-		}
-		mgr = kubernetes.NewInfra(cli, cfg)
-	} else {
-		// Kube is the only supported provider type for now.
-		return nil, fmt.Errorf("unsupported provider type %v", cfg.EnvoyGateway.Provider.Type)
+func NewManager(ctx context.Context, cfg *config.Server, logger logging.Logger) (mgr Manager, err error) {
+	switch cfg.EnvoyGateway.Provider.Type {
+	case egv1a1.ProviderTypeKubernetes:
+		mgr, err = newManagerForKubernetes(cfg)
+	case egv1a1.ProviderTypeCustom:
+		mgr, err = newManagerForCustom(ctx, cfg, logger)
 	}
 
+	if err != nil {
+		return nil, err
+	}
 	return mgr, nil
+}
+
+func newManagerForKubernetes(cfg *config.Server) (Manager, error) {
+	cli, err := client.New(clicfg.GetConfigOrDie(), client.Options{Scheme: envoygateway.GetScheme()})
+	if err != nil {
+		return nil, err
+	}
+	return kubernetes.NewInfra(cli, cfg), nil
+}
+
+func newManagerForCustom(ctx context.Context, cfg *config.Server, logger logging.Logger) (Manager, error) {
+	infra := cfg.EnvoyGateway.Provider.Custom.Infrastructure
+	switch infra.Type {
+	case egv1a1.InfrastructureProviderTypeHost:
+		return host.NewInfra(ctx, cfg, logger)
+	default:
+		return nil, fmt.Errorf("unsupported provider type: %s", infra.Type)
+	}
 }

@@ -7,37 +7,40 @@ package gatewayapi
 
 import (
 	"fmt"
+	"reflect"
 
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func (t *Translator) applyBackendTLSSetting(backendRef gwapiv1.BackendObjectReference, backendNamespace string, parent gwapiv1a2.ParentReference, resources *Resources) *ir.TLSUpstreamConfig {
-	upstreamConfig, policy := t.processBackendTLSPolicy(backendRef, backendNamespace, parent, resources)
-	return t.applyEnvoyProxyBackendTLSSetting(policy, upstreamConfig, resources, parent)
+func (t *Translator) applyBackendTLSSetting(backendRef gwapiv1.BackendObjectReference, backendNamespace string, parent gwapiv1a2.ParentReference, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) (*ir.TLSUpstreamConfig, error) {
+	upstreamConfig, policy, err := t.processBackendTLSPolicy(backendRef, backendNamespace, parent, resources)
+	if err != nil {
+		return nil, err
+	}
+	return t.applyEnvoyProxyBackendTLSSetting(policy, upstreamConfig, resources, parent, envoyProxy)
 }
 
 func (t *Translator) processBackendTLSPolicy(
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
 	parent gwapiv1a2.ParentReference,
-	resources *Resources,
-) (*ir.TLSUpstreamConfig, *gwapiv1a3.BackendTLSPolicy) {
-	policy := getBackendTLSPolicy(resources.BackendTLSPolicies, backendRef, backendNamespace)
+	resources *resource.Resources,
+) (*ir.TLSUpstreamConfig, *gwapiv1a3.BackendTLSPolicy, error) {
+	policy := getBackendTLSPolicy(resources.BackendTLSPolicies, backendRef, backendNamespace, resources)
 	if policy == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	tlsBundle, err := getBackendTLSBundle(policy, resources)
-	if err == nil && tlsBundle == nil {
-		return nil, nil
-	}
-
 	ancestorRefs := getAncestorRefs(policy)
 	ancestorRefs = append(ancestorRefs, parent)
 
@@ -48,44 +51,16 @@ func (t *Translator) processBackendTLSPolicy(
 			policy.Generation,
 			status.Error2ConditionMsg(err),
 		)
-		return nil, nil
+		return nil, nil, err
 	}
 
 	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
-	// apply defaults as per envoyproxy
-	if resources.EnvoyProxy != nil {
-		if resources.EnvoyProxy.Spec.BackendTLS != nil {
-			if len(resources.EnvoyProxy.Spec.BackendTLS.Ciphers) > 0 {
-				tlsBundle.Ciphers = resources.EnvoyProxy.Spec.BackendTLS.Ciphers
-			}
-			if len(resources.EnvoyProxy.Spec.BackendTLS.ECDHCurves) > 0 {
-				tlsBundle.ECDHCurves = resources.EnvoyProxy.Spec.BackendTLS.ECDHCurves
-			}
-			if len(resources.EnvoyProxy.Spec.BackendTLS.SignatureAlgorithms) > 0 {
-				tlsBundle.SignatureAlgorithms = resources.EnvoyProxy.Spec.BackendTLS.SignatureAlgorithms
-			}
-			if resources.EnvoyProxy.Spec.BackendTLS.MinVersion != nil {
-				tlsBundle.MinVersion = ptr.To(ir.TLSVersion(*resources.EnvoyProxy.Spec.BackendTLS.MinVersion))
-			}
-			if resources.EnvoyProxy.Spec.BackendTLS.MinVersion != nil {
-				tlsBundle.MaxVersion = ptr.To(ir.TLSVersion(*resources.EnvoyProxy.Spec.BackendTLS.MaxVersion))
-			}
-			if len(resources.EnvoyProxy.Spec.BackendTLS.ALPNProtocols) > 0 {
-				tlsBundle.ALPNProtocols = make([]string, len(resources.EnvoyProxy.Spec.BackendTLS.ALPNProtocols))
-				for i := range resources.EnvoyProxy.Spec.BackendTLS.ALPNProtocols {
-					tlsBundle.ALPNProtocols[i] = string(resources.EnvoyProxy.Spec.BackendTLS.ALPNProtocols[i])
-				}
-			}
-		}
-	}
-	return tlsBundle, policy
+	return tlsBundle, policy, nil
 }
 
-func (t *Translator) applyEnvoyProxyBackendTLSSetting(policy *gwapiv1a3.BackendTLSPolicy, tlsConfig *ir.TLSUpstreamConfig, resources *Resources, parent gwapiv1a2.ParentReference) *ir.TLSUpstreamConfig {
-	ep := resources.EnvoyProxy
-
+func (t *Translator) applyEnvoyProxyBackendTLSSetting(policy *gwapiv1a3.BackendTLSPolicy, tlsConfig *ir.TLSUpstreamConfig, resources *resource.Resources, parent gwapiv1a2.ParentReference, ep *egv1a1.EnvoyProxy) (*ir.TLSUpstreamConfig, error) {
 	if ep == nil || ep.Spec.BackendTLS == nil || tlsConfig == nil {
-		return tlsConfig
+		return tlsConfig, nil
 	}
 
 	if len(ep.Spec.BackendTLS.Ciphers) > 0 {
@@ -114,28 +89,41 @@ func (t *Translator) applyEnvoyProxyBackendTLSSetting(policy *gwapiv1a3.BackendT
 		ancestorRefs := []gwapiv1a2.ParentReference{
 			parent,
 		}
+		var err error
 		if ns != ep.Namespace {
+			err = fmt.Errorf("ClientCertificateRef Secret is not located in the same namespace as Envoyproxy. Secret namespace: %s does not match Envoyproxy namespace: %s", ns, ep.Namespace)
 			status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 				ancestorRefs,
 				t.GatewayControllerName,
 				policy.Generation,
-				status.Error2ConditionMsg(fmt.Errorf("client authentication TLS secret is not located in the same namespace as Envoyproxy. Secret namespace: %s does not match Envoyproxy namespace: %s", ns, ep.Namespace)))
-			return tlsConfig
+				status.Error2ConditionMsg(err))
+			return tlsConfig, err
 		}
 		secret := resources.GetSecret(ns, string(ep.Spec.BackendTLS.ClientCertificateRef.Name))
 		if secret == nil {
+			err = fmt.Errorf(
+				"failed to locate TLS secret for client auth: %s specified in EnvoyProxy %s",
+				types.NamespacedName{
+					Namespace: ep.Namespace,
+					Name:      string(ep.Spec.BackendTLS.ClientCertificateRef.Name),
+				}.String(),
+				types.NamespacedName{
+					Namespace: ep.Namespace,
+					Name:      ep.Name,
+				}.String(),
+			)
 			status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 				ancestorRefs,
 				t.GatewayControllerName,
 				policy.Generation,
-				status.Error2ConditionMsg(fmt.Errorf("failed to locate TLS secret for client auth: %s in namespace: %s", ep.Spec.BackendTLS.ClientCertificateRef.Name, ns)),
+				status.Error2ConditionMsg(err),
 			)
-			return tlsConfig
+			return tlsConfig, err
 		}
 		tlsConf := irTLSConfigs(secret)
 		tlsConfig.ClientCertificates = tlsConf.Certificates
 	}
-	return tlsConfig
+	return tlsConfig, nil
 }
 
 func backendTLSTargetMatched(policy gwapiv1a3.BackendTLSPolicy, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, backendNamespace string) bool {
@@ -144,17 +132,25 @@ func backendTLSTargetMatched(policy gwapiv1a3.BackendTLSPolicy, target gwapiv1a2
 			target.Kind == currTarget.Kind &&
 			backendNamespace == policy.Namespace &&
 			target.Name == currTarget.Name {
-			if currTarget.SectionName != nil && *currTarget.SectionName != *target.SectionName {
-				return false
+			// if section name is not set, then it targets the entire backend
+			if currTarget.SectionName == nil {
+				return true
+			} else if reflect.DeepEqual(currTarget.SectionName, target.SectionName) {
+				return true
 			}
-			return true
 		}
 	}
 	return false
 }
 
-func getBackendTLSPolicy(policies []*gwapiv1a3.BackendTLSPolicy, backendRef gwapiv1a2.BackendObjectReference, backendNamespace string) *gwapiv1a3.BackendTLSPolicy {
-	target := getTargetBackendReference(backendRef)
+func getBackendTLSPolicy(
+	policies []*gwapiv1a3.BackendTLSPolicy,
+	backendRef gwapiv1a2.BackendObjectReference,
+	backendNamespace string,
+	resources *resource.Resources,
+) *gwapiv1a3.BackendTLSPolicy {
+	// SectionName is port number for EG Backend object
+	target := getTargetBackendReference(backendRef, backendNamespace, resources)
 	for _, policy := range policies {
 		if backendTLSTargetMatched(*policy, target, backendNamespace) {
 			return policy
@@ -163,7 +159,7 @@ func getBackendTLSPolicy(policies []*gwapiv1a3.BackendTLSPolicy, backendRef gwap
 	return nil
 }
 
-func getBackendTLSBundle(backendTLSPolicy *gwapiv1a3.BackendTLSPolicy, resources *Resources) (*ir.TLSUpstreamConfig, error) {
+func getBackendTLSBundle(backendTLSPolicy *gwapiv1a3.BackendTLSPolicy, resources *resource.Resources) (*ir.TLSUpstreamConfig, error) {
 	tlsBundle := &ir.TLSUpstreamConfig{
 		SNI:                 string(backendTLSPolicy.Spec.Validation.Hostname),
 		UseSystemTrustStore: ptr.Deref(backendTLSPolicy.Spec.Validation.WellKnownCACertificates, "") == gwapiv1a3.WellKnownCACertificatesSystem,
@@ -177,7 +173,7 @@ func getBackendTLSBundle(backendTLSPolicy *gwapiv1a3.BackendTLSPolicy, resources
 		kind := string(caRef.Kind)
 
 		switch kind {
-		case KindConfigMap:
+		case resource.KindConfigMap:
 			for _, cmap := range resources.ConfigMaps {
 				if cmap.Name == string(caRef.Name) {
 					if crt, dataOk := cmap.Data["ca.crt"]; dataOk {
@@ -190,7 +186,7 @@ func getBackendTLSBundle(backendTLSPolicy *gwapiv1a3.BackendTLSPolicy, resources
 					}
 				}
 			}
-		case KindSecret:
+		case resource.KindSecret:
 			for _, secret := range resources.Secrets {
 				if secret.Name == string(caRef.Name) {
 					if crt, dataOk := secret.Data["ca.crt"]; dataOk {

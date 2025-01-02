@@ -30,6 +30,25 @@
       responseFlagFilter:
         flags:
         - NR
+    name: envoy.access_loggers.http_grpc
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.access_loggers.grpc.v3.HttpGrpcAccessLogConfig
+      additionalRequestHeadersToLog:
+      - x-client-ip-address
+      additionalResponseHeadersToLog:
+      - cache-control
+      additionalResponseTrailersToLog:
+      - expires
+      commonConfig:
+        grpcService:
+          envoyGrpc:
+            clusterName: accesslog/monitoring/envoy-als/port/9000
+        logName: als
+        transportApiVersion: V3
+  - filter:
+      responseFlagFilter:
+        flags:
+        - NR
     name: envoy.access_loggers.open_telemetry
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.access_loggers.open_telemetry.v3.OpenTelemetryAccessLogConfig
@@ -61,7 +80,7 @@
             stringValue: cluster1
   address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       portValue: 10080
   defaultFilterChain:
     filters:
@@ -88,6 +107,21 @@
                 response_code: '%RESPONSE_CODE%'
                 start_time: '%START_TIME%'
             path: /dev/stdout
+        - name: envoy.access_loggers.http_grpc
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.access_loggers.grpc.v3.HttpGrpcAccessLogConfig
+            additionalRequestHeadersToLog:
+            - x-client-ip-address
+            additionalResponseHeadersToLog:
+            - cache-control
+            additionalResponseTrailersToLog:
+            - expires
+            commonConfig:
+              grpcService:
+                envoyGrpc:
+                  clusterName: accesslog/monitoring/envoy-als/port/9000
+              logName: als
+              transportApiVersion: V3
         - name: envoy.access_loggers.open_telemetry
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.access_loggers.open_telemetry.v3.OpenTelemetryAccessLogConfig
@@ -137,9 +171,8 @@
             resourceApiVersion: V3
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: http-10080
         useRemoteAddress: true
     name: first-listener
-  drainType: MODIFY_ONLY
   name: first-listener
   perConnectionBufferLimitBytes: 32768

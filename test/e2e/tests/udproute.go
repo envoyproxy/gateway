@@ -6,7 +6,6 @@
 // This file contains code derived from upstream gateway-api, it will be moved to upstream.
 
 //go:build e2e
-// +build e2e
 
 package tests
 
@@ -28,6 +27,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/config"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 )
 
 func init() {
@@ -51,12 +51,13 @@ var UDPRouteTest = suite.ConformanceTest{
 
 			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
 				func(_ context.Context) (done bool, err error) {
-					t.Logf("performing DNS query %s on %s", domain, gwAddr)
-					_, err = dns.Exchange(msg, gwAddr)
+					tlog.Logf(t, "performing DNS query %s on %s", domain, gwAddr)
+					r, err := dns.Exchange(msg, gwAddr)
 					if err != nil {
-						t.Logf("failed to perform a UDP query: %v", err)
+						tlog.Logf(t, "failed to perform a UDP query: %v", err)
 						return false, nil
 					}
+					tlog.Logf(t, "got DNS response: %s", r.String())
 					return true, nil
 				}); err != nil {
 				t.Errorf("failed to perform DNS query: %v", err)
@@ -158,31 +159,31 @@ func parentsForRouteMatch(t *testing.T, routeName types.NamespacedName, expected
 	t.Helper()
 
 	if len(expected) != len(actual) {
-		t.Logf("Route %s/%s expected %d Parents got %d", routeName.Namespace, routeName.Name, len(expected), len(actual))
+		tlog.Logf(t, "Route %s/%s expected %d Parents got %d", routeName.Namespace, routeName.Name, len(expected), len(actual))
 		return false
 	}
 
 	for i, expectedParent := range expected {
 		actualParent := actual[i]
 		if actualParent.ControllerName != expectedParent.ControllerName {
-			t.Logf("Route %s/%s ControllerName doesn't match", routeName.Namespace, routeName.Name)
+			tlog.Logf(t, "Route %s/%s ControllerName doesn't match", routeName.Namespace, routeName.Name)
 			return false
 		}
 		if !reflect.DeepEqual(actualParent.ParentRef.Group, expectedParent.ParentRef.Group) {
-			t.Logf("Route %s/%s expected ParentReference.Group to be %v, got %v", routeName.Namespace, routeName.Name, expectedParent.ParentRef.Group, actualParent.ParentRef.Group)
+			tlog.Logf(t, "Route %s/%s expected ParentReference.Group to be %v, got %v", routeName.Namespace, routeName.Name, expectedParent.ParentRef.Group, actualParent.ParentRef.Group)
 			return false
 		}
 		if !reflect.DeepEqual(actualParent.ParentRef.Kind, expectedParent.ParentRef.Kind) {
-			t.Logf("Route %s/%s expected ParentReference.Kind to be %v, got %v", routeName.Namespace, routeName.Name, expectedParent.ParentRef.Kind, actualParent.ParentRef.Kind)
+			tlog.Logf(t, "Route %s/%s expected ParentReference.Kind to be %v, got %v", routeName.Namespace, routeName.Name, expectedParent.ParentRef.Kind, actualParent.ParentRef.Kind)
 			return false
 		}
 		if actualParent.ParentRef.Name != expectedParent.ParentRef.Name {
-			t.Logf("Route %s/%s ParentReference.Name doesn't match", routeName.Namespace, routeName.Name)
+			tlog.Logf(t, "Route %s/%s ParentReference.Name doesn't match", routeName.Namespace, routeName.Name)
 			return false
 		}
 		if !reflect.DeepEqual(actualParent.ParentRef.Namespace, expectedParent.ParentRef.Namespace) {
 			if namespaceRequired || actualParent.ParentRef.Namespace != nil {
-				t.Logf("Route %s/%s expected ParentReference.Namespace to be %v, got %v", routeName.Namespace, routeName.Name, expectedParent.ParentRef.Namespace, actualParent.ParentRef.Namespace)
+				tlog.Logf(t, "Route %s/%s expected ParentReference.Namespace to be %v, got %v", routeName.Namespace, routeName.Name, expectedParent.ParentRef.Namespace, actualParent.ParentRef.Namespace)
 				return false
 			}
 		}
@@ -191,7 +192,7 @@ func parentsForRouteMatch(t *testing.T, routeName types.NamespacedName, expected
 		}
 	}
 
-	t.Logf("Route %s/%s Parents matched expectations", routeName.Namespace, routeName.Name)
+	tlog.Logf(t, "Route %s/%s Parents matched expectations", routeName.Namespace, routeName.Name)
 	return true
 }
 
@@ -199,7 +200,7 @@ func conditionsMatch(t *testing.T, expected, actual []metav1.Condition) bool {
 	t.Helper()
 
 	if len(actual) < len(expected) {
-		t.Logf("Expected more conditions to be present")
+		tlog.Logf(t, "Expected more conditions to be present")
 		return false
 	}
 	for _, condition := range expected {
@@ -208,7 +209,7 @@ func conditionsMatch(t *testing.T, expected, actual []metav1.Condition) bool {
 		}
 	}
 
-	t.Logf("Conditions matched expectations")
+	tlog.Logf(t, "Conditions matched expectations")
 	return true
 }
 
@@ -226,13 +227,13 @@ func findConditionInList(t *testing.T, conditions []metav1.Condition, condName, 
 				if expectedReason == "" || cond.Reason == expectedReason {
 					return true
 				}
-				t.Logf("%s condition Reason set to %s, expected %s", condName, cond.Reason, expectedReason)
+				tlog.Logf(t, "%s condition Reason set to %s, expected %s", condName, cond.Reason, expectedReason)
 			}
 
-			t.Logf("%s condition set to Status %s with Reason %v, expected Status %s", condName, cond.Status, cond.Reason, expectedStatus)
+			tlog.Logf(t, "%s condition set to Status %s with Reason %v, expected Status %s", condName, cond.Status, cond.Reason, expectedStatus)
 		}
 	}
 
-	t.Logf("%s was not in conditions list [%v]", condName, conditions)
+	tlog.Logf(t, "%s was not in conditions list [%v]", condName, conditions)
 	return false
 }

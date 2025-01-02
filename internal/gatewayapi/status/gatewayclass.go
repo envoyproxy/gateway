@@ -37,7 +37,10 @@ const (
 // for the provided GatewayClass.
 func SetGatewayClassAccepted(gc *gwapiv1.GatewayClass, accepted bool, reason, msg string) *gwapiv1.GatewayClass {
 	gc.Status.Conditions = MergeConditions(gc.Status.Conditions, computeGatewayClassAcceptedCondition(gc, accepted, reason, msg))
-	gc.Status.SupportedFeatures = GatewaySupportedFeatures
+	// Disable SupportedFeatures until the field moves from experimental to stable to avoid
+	// status failures due to changes in the datatype. This can occur because we cannot control
+	// how a CRD is installed in the cluster
+	// gc.Status.SupportedFeatures = GatewaySupportedFeatures
 	return gc
 }
 
@@ -79,12 +82,19 @@ func getSupportedFeatures(gatewaySuite suite.ConformanceOptions, skippedTests []
 
 	ret := sets.New[gwapiv1.SupportedFeature]()
 	for _, feature := range supportedFeatures.UnsortedList() {
-		ret.Insert(gwapiv1.SupportedFeature(feature))
+		ret.Insert(gwapiv1.SupportedFeature{
+			Name: gwapiv1.FeatureName(feature),
+		})
 	}
-	return sets.List(ret)
+
+	var featureList []gwapiv1.SupportedFeature
+	for feature := range ret {
+		featureList = append(featureList, feature)
+	}
+	return featureList
 }
 
-func getUnsupportedFeatures(gatewaySuite suite.ConformanceOptions, skippedTests []suite.ConformanceTest) []features.SupportedFeature {
+func getUnsupportedFeatures(gatewaySuite suite.ConformanceOptions, skippedTests []suite.ConformanceTest) []features.FeatureName {
 	unsupportedFeatures := gatewaySuite.ExemptFeatures.UnsortedList()
 
 	for _, skippedTest := range skippedTests {

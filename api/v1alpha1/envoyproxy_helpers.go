@@ -157,3 +157,8 @@ func DefaultShutdownManagerContainerResourceRequirements() *corev1.ResourceRequi
 		},
 	}
 }
+
+// String returns the string representation of the EnvoyFilter type.
+func (f EnvoyFilter) String() string {
+	return string(f)
+}

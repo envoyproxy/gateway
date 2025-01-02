@@ -15,12 +15,10 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	"google.golang.org/protobuf/types/known/anypb"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/protocov"
 	"github.com/envoyproxy/gateway/internal/xds/types"
-)
-
-const (
-	basicAuthFilter = "envoy.filters.http.basic_auth"
 )
 
 func init() {
@@ -40,7 +38,7 @@ func (*basicAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTP
 	if irListener == nil {
 		return errors.New("ir listener is nil")
 	}
-	if hcmContainsFilter(mgr, basicAuthFilter) {
+	if hcmContainsFilter(mgr, egv1a1.EnvoyFilterBasicAuth.String()) {
 		return nil
 	}
 
@@ -87,12 +85,12 @@ func buildHCMBasicAuthFilter(basicAuth *ir.BasicAuth) (*hcmv3.HttpFilter, error)
 	if err = basicAuthProto.ValidateAll(); err != nil {
 		return nil, err
 	}
-	if basicAuthAny, err = anypb.New(basicAuthProto); err != nil {
+	if basicAuthAny, err = protocov.ToAnyWithValidation(basicAuthProto); err != nil {
 		return nil, err
 	}
 
 	return &hcmv3.HttpFilter{
-		Name: basicAuthFilter,
+		Name: egv1a1.EnvoyFilterBasicAuth.String(),
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: basicAuthAny,
 		},
@@ -124,11 +122,11 @@ func (*basicAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error 
 	)
 
 	perFilterCfg = route.GetTypedPerFilterConfig()
-	if _, ok := perFilterCfg[basicAuthFilter]; ok {
+	if _, ok := perFilterCfg[egv1a1.EnvoyFilterBasicAuth.String()]; ok {
 		// This should not happen since this is the only place where the filter
 		// config is added in a route.
 		return fmt.Errorf("route already contains filter config: %s, %+v",
-			basicAuthFilter, route)
+			egv1a1.EnvoyFilterBasicAuth.String(), route)
 	}
 
 	// Overwrite the HCM level filter config with the per route filter config.
@@ -137,14 +135,14 @@ func (*basicAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error 
 		return err
 	}
 
-	if basicAuthAny, err = anypb.New(basicAuthProto); err != nil {
+	if basicAuthAny, err = protocov.ToAnyWithValidation(basicAuthProto); err != nil {
 		return err
 	}
 
 	if perFilterCfg == nil {
 		route.TypedPerFilterConfig = make(map[string]*anypb.Any)
 	}
-	route.TypedPerFilterConfig[basicAuthFilter] = basicAuthAny
+	route.TypedPerFilterConfig[egv1a1.EnvoyFilterBasicAuth.String()] = basicAuthAny
 
 	return nil
 }

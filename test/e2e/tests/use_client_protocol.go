@@ -4,7 +4,6 @@
 // the root of the repo.
 
 //go:build e2e
-// +build e2e
 
 package tests
 
@@ -44,6 +43,7 @@ var UseClientProtocolTest = suite.ConformanceTest{
 				Namespace: ns,
 			}
 
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
 			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
 			if err != nil {
@@ -68,6 +68,7 @@ var UseClientProtocolTest = suite.ConformanceTest{
 				Namespace: ns,
 			}
 
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 			req = http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
 			cReq, cResp, err = suite.RoundTripper.CaptureRoundTrip(req)
 			if err != nil {
@@ -90,6 +91,7 @@ var UseClientProtocolTest = suite.ConformanceTest{
 				Namespace: ns,
 			}
 
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 			req = http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
 			cReq, cResp, err = suite.RoundTripper.CaptureRoundTrip(req)
 			if err != nil {
@@ -115,6 +117,7 @@ var UseClientProtocolTest = suite.ConformanceTest{
 				Namespace: ns,
 			}
 
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 			req = http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
 			cReq, cResp, err = suite.RoundTripper.CaptureRoundTrip(req)
 			if err != nil {

@@ -15,7 +15,7 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
-          name: envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-route-2/0
+          name: envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-route-2/extproc/0
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor
             failureModeAllow: true
@@ -32,8 +32,13 @@
               responseBodyMode: STREAMED
               responseHeaderMode: SKIP
               responseTrailerMode: SKIP
+            requestAttributes:
+            - xds.route_metadata
+            - connection.requested_server_name
+            responseAttributes:
+            - request.path
         - disabled: true
-          name: envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-route-1/0
+          name: envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-route-1/extproc/0
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor
             failureModeAllow: true
@@ -50,7 +55,7 @@
               responseHeaderMode: SEND
               responseTrailerMode: SKIP
         - disabled: true
-          name: envoy.filters.http.ext_proc/envoyextensionpolicy/envoy-gateway/policy-for-gateway-2/0
+          name: envoy.filters.http.ext_proc/envoyextensionpolicy/envoy-gateway/policy-for-gateway-2/extproc/0
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor
             grpcService:
@@ -64,7 +69,7 @@
               responseHeaderMode: SKIP
               responseTrailerMode: SKIP
         - disabled: true
-          name: envoy.filters.http.ext_proc/envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/0
+          name: envoy.filters.http.ext_proc/envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/extproc/0
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor
             grpcService:
@@ -78,6 +83,11 @@
               requestTrailerMode: SKIP
               responseHeaderMode: SKIP
               responseTrailerMode: SKIP
+            requestAttributes:
+            - xds.route_metadata
+            - connection.requested_server_name
+            responseAttributes:
+            - request.path
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -91,9 +101,8 @@
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/http
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: http-10080
         useRemoteAddress: true
     name: envoy-gateway/gateway-1/http
-  drainType: MODIFY_ONLY
   name: envoy-gateway/gateway-1/http
   perConnectionBufferLimitBytes: 32768

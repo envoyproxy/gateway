@@ -1,3 +1,9 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gateway-preserve-case-backend
+---
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: ReferenceGrant
 metadata:
@@ -5,12 +11,12 @@ metadata:
   namespace: gateway-preserve-case-backend
 spec:
   from:
-  - group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    namespace: gateway-conformance-infra
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: gateway-conformance-infra
   to:
-  - group: ""
-    kind: Service
+    - group: ""
+      kind: Service
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: ClientTrafficPolicy
@@ -18,11 +24,10 @@ metadata:
   name: preserve-case
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: same-namespace
-    namespace: gateway-conformance-infra
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: same-namespace
   http1:
     preserveHeaderCase: true
 ---
@@ -33,13 +38,48 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-  - name: same-namespace
+    - name: same-namespace
   rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /preserve
-    backendRefs:
-    - name: fasthttp-backend
-      namespace: gateway-preserve-case-backend
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /preserve
+      backendRefs:
+        - name: fasthttp-backend
+          namespace: gateway-preserve-case-backend
+          port: 8000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: preserve-case
+  namespace: gateway-preserve-case-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: preserve-case
+  template:
+    metadata:
+      labels:
+        app: preserve-case
+    spec:
+      containers:
+        - name: preserve-case
+          image: envoyproxy/gateway-preserve-case-backend
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fasthttp-backend
+  namespace: gateway-preserve-case-backend
+spec:
+  selector:
+    app: preserve-case
+  ports:
+    - protocol: TCP
       port: 8000
+      targetPort: 8000

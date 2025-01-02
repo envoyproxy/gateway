@@ -52,6 +52,9 @@ backendTrafficPolicies:
               value: one
             - name: x-org-id
               type: Distinct
+            - invert: true
+              name: x-org-id
+              value: admin
           limit:
             requests: 10
             unit: Hour
@@ -269,6 +272,11 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: true
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
       name: envoy-gateway/gateway-1/http
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -286,6 +294,10 @@ xdsIR:
             weight: 1
         hostname: '*'
         isHTTP2: true
+        metadata:
+          kind: GRPCRoute
+          name: grpcroute-1
+          namespace: default
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         traffic:
           rateLimit:
@@ -296,6 +308,10 @@ xdsIR:
                   exact: one
                   name: x-user-id
                 - distinct: true
+                  name: x-org-id
+                - distinct: false
+                  exact: admin
+                  invert: true
                   name: x-org-id
                 limit:
                   requests: 10
@@ -309,6 +325,11 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-2
+        namespace: envoy-gateway
+        sectionName: http
       name: envoy-gateway/gateway-2/http
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -326,6 +347,10 @@ xdsIR:
             weight: 1
         hostname: gateway.envoyproxy.io
         isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false

@@ -38,12 +38,22 @@ spec:
         resources:
           {{- toYaml . | nindent 10 }}
         {{- end }}
+        securityContext:
+          {{- toYaml .Values.certgen.job.securityContext | nindent 10 }}
       {{- include "eg.image.pullSecrets" . | nindent 6 }}
+      {{- with .Values.certgen.job.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.certgen.job.nodeSelector }}
+      nodeSelector:
+        {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.certgen.job.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 6 }}
+      {{- end }}
       restartPolicy: Never
-      securityContext:
-        runAsGroup: 65534
-        runAsNonRoot: true
-        runAsUser: 65534
       serviceAccountName: {{ include "eg.fullname" . }}-certgen
   {{- if not ( kindIs "invalid" .Values.certgen.job.ttlSecondsAfterFinished) }}
   ttlSecondsAfterFinished: {{ .Values.certgen.job.ttlSecondsAfterFinished }}

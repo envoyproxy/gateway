@@ -75,8 +75,8 @@ clientTrafficPolicies:
         sectionName: https
       conditions:
       - lastTransitionTime: null
-        message: Unable to target section, another ClientTrafficPolicy has already
-          attached to it
+        message: Unable to target section of gateway-2, another ClientTrafficPolicy
+          has already attached to it
         reason: Conflicted
         status: "False"
         type: Accepted
@@ -153,8 +153,8 @@ clientTrafficPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Unable to target Gateway, another ClientTrafficPolicy has already
-          attached to it
+        message: Unable to target Gateway gateway-1, another ClientTrafficPolicy has
+          already attached to it
         reason: Conflicted
         status: "False"
         type: Accepted
@@ -506,6 +506,11 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
       name: envoy-gateway/gateway-1/http
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -520,6 +525,11 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-2
+        namespace: envoy-gateway
+        sectionName: http
       name: envoy-gateway/gateway-2/http
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -538,6 +548,11 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-3
+        namespace: envoy-gateway
+        sectionName: bar-foo
       name: envoy-gateway/gateway-3/bar-foo
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -552,6 +567,11 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: not-same-namespace-gateway
+        namespace: not-same-namespace
+        sectionName: http
       name: not-same-namespace/not-same-namespace-gateway/http
       path:
         escapedSlashesAction: UnescapeAndRedirect

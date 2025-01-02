@@ -27,10 +27,9 @@
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-btls/http
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: http-10080
         useRemoteAddress: true
     name: envoy-gateway/gateway-btls/http
-  drainType: MODIFY_ONLY
   name: envoy-gateway/gateway-btls/http
   perConnectionBufferLimitBytes: 32768
 - address:
@@ -62,9 +61,8 @@
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-btls-2/http
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: http-10081
         useRemoteAddress: true
     name: envoy-gateway/gateway-btls-2/http
-  drainType: MODIFY_ONLY
   name: envoy-gateway/gateway-btls-2/http
   perConnectionBufferLimitBytes: 32768

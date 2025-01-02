@@ -55,6 +55,17 @@ func TestTranslateXds(t *testing.T) {
 		"jsonpatch": {
 			requireEnvoyPatchPolicies: true,
 		},
+		"jsonpatch-with-jsonpath": {
+			requireEnvoyPatchPolicies: true,
+		},
+		"jsonpatch-with-jsonpath-invalid": {
+			requireEnvoyPatchPolicies: true,
+			errMsg:                    "no jsonPointers were found while evaluating the jsonPath",
+		},
+		"jsonpatch-add-op-empty-jsonpath": {
+			requireEnvoyPatchPolicies: true,
+			errMsg:                    "a patch operation must specify a path or jsonPath",
+		},
 		"jsonpatch-missing-resource": {
 			requireEnvoyPatchPolicies: true,
 		},
@@ -68,7 +79,7 @@ func TestTranslateXds(t *testing.T) {
 		},
 		"jsonpatch-move-op-with-value": {
 			requireEnvoyPatchPolicies: true,
-			errMsg:                    "the value field can not be set for the remove operation",
+			errMsg:                    "value and from can't be specified with the remove operation",
 		},
 		"http-route-invalid": {
 			errMsg: "validation failed for xds resource",
@@ -94,13 +105,15 @@ func TestTranslateXds(t *testing.T) {
 		"tracing-invalid": {
 			errMsg: "validation failed for xds resource",
 		},
+		"tracing-unknown-provider-type": {
+			errMsg: "unknown tracing provider type: AwesomeTelemetry",
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "xds-ir", "*.yaml"))
 	require.NoError(t, err)
 
 	for _, inputFile := range inputFiles {
-		inputFile := inputFile
 		inputFileName := testName(inputFile)
 		t.Run(inputFileName, func(t *testing.T) {
 			cfg, ok := testConfigs[inputFileName]
@@ -124,9 +137,9 @@ func TestTranslateXds(t *testing.T) {
 				},
 				FilterOrder: x.FilterOrder,
 			}
-
 			tCtx, err := tr.Translate(x)
 			if !strings.HasSuffix(inputFileName, "partial-invalid") && len(cfg.errMsg) == 0 {
+				t.Log(inputFileName)
 				require.NoError(t, err)
 			} else if len(cfg.errMsg) > 0 {
 				require.Error(t, err)
@@ -183,7 +196,6 @@ func TestTranslateRateLimitConfig(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, inputFile := range inputFiles {
-		inputFile := inputFile
 		inputFileName := testName(inputFile)
 		t.Run(inputFileName, func(t *testing.T) {
 			in := requireXdsIRListenerFromInputTestData(t, inputFile)
@@ -213,7 +225,6 @@ func TestTranslateXdsWithExtension(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, inputFile := range inputFiles {
-		inputFile := inputFile
 		inputFileName := testName(inputFile)
 		t.Run(inputFileName, func(t *testing.T) {
 			cfg, ok := testConfigs[inputFileName]

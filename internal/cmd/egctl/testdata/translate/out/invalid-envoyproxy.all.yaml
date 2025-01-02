@@ -1,4 +1,5 @@
-envoyProxy:
+envoyProxyForGatewayClass:
+  kind: EnvoyProxy
   metadata:
     creationTimestamp: null
     name: example
@@ -6,7 +7,7 @@ envoyProxy:
   spec:
     bootstrap:
       type: Replace
-      value: |-
+      value: |
         admin:
           access_log:
           - name: envoy.access_loggers.file
@@ -20,6 +21,7 @@ envoyProxy:
     logging: {}
   status: {}
 gatewayClass:
+  kind: GatewayClass
   metadata:
     creationTimestamp: null
     name: eg
@@ -38,31 +40,9 @@ gatewayClass:
       reason: InvalidParameters
       status: "False"
       type: Accepted
-    supportedFeatures:
-    - GRPCRoute
-    - Gateway
-    - GatewayPort8080
-    - HTTPRoute
-    - HTTPRouteBackendProtocolH2C
-    - HTTPRouteBackendProtocolWebSocket
-    - HTTPRouteBackendTimeout
-    - HTTPRouteDestinationPortMatching
-    - HTTPRouteHostRewrite
-    - HTTPRouteMethodMatching
-    - HTTPRouteParentRefPort
-    - HTTPRoutePathRedirect
-    - HTTPRoutePathRewrite
-    - HTTPRoutePortRedirect
-    - HTTPRouteQueryParamMatching
-    - HTTPRouteRequestMirror
-    - HTTPRouteRequestMultipleMirrors
-    - HTTPRouteRequestTimeout
-    - HTTPRouteResponseHeaderModification
-    - HTTPRouteSchemeRedirect
-    - ReferenceGrant
-    - TLSRoute
 gateways:
-- metadata:
+- kind: Gateway
+  metadata:
     creationTimestamp: null
     name: eg
     namespace: default

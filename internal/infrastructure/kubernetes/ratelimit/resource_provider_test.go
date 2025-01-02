@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -56,7 +57,6 @@ func TestRateLimitLabelSelector(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			got := LabelSelector()
 			require.ElementsMatch(t, tc.expected, got)
@@ -80,7 +80,6 @@ func TestRateLimitLabels(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			got := rateLimitLabels()
 			require.Equal(t, tc.expected, got)
@@ -676,6 +675,50 @@ func TestDeployment(t *testing.T) {
 						Provider: &egv1a1.RateLimitTracingProvider{
 							URL: "trace-collector.envoy-gateway-system.svc.cluster.local:4317",
 						},
+					},
+				},
+			},
+		},
+		{
+			caseName: "merge-labels",
+			rateLimit: &egv1a1.RateLimit{
+				Backend: egv1a1.RateLimitDatabaseBackend{
+					Type: egv1a1.RedisBackendType,
+					Redis: &egv1a1.RateLimitRedisSettings{
+						URL: "redis.redis.svc:6379",
+					},
+				},
+			},
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Pod: &egv1a1.KubernetesPodSpec{
+					Labels: map[string]string{
+						"app.kubernetes.io/name":       InfraName,
+						"app.kubernetes.io/component":  "ratelimit",
+						"app.kubernetes.io/managed-by": "envoy-gateway",
+						"key1":                         "value1",
+						"key2":                         "value2",
+					},
+				},
+			},
+		},
+		{
+			caseName: "merge-annotations",
+			rateLimit: &egv1a1.RateLimit{
+				Backend: egv1a1.RateLimitDatabaseBackend{
+					Type: egv1a1.RedisBackendType,
+					Redis: &egv1a1.RateLimitRedisSettings{
+						URL: "redis.redis.svc:6379",
+					},
+				},
+			},
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Pod: &egv1a1.KubernetesPodSpec{
+					Annotations: map[string]string{
+						"prometheus.io/path":   "/metrics",
+						"prometheus.io/port":   strconv.Itoa(PrometheusPort),
+						"prometheus.io/scrape": "true",
+						"key1":                 "value1",
+						"key2":                 "value2",
 					},
 				},
 			},

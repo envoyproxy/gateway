@@ -1,6 +1,6 @@
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       portValue: 8081
   defaultFilterChain:
     filters:
@@ -25,15 +25,14 @@
             resourceApiVersion: V3
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: http-8081
         useRemoteAddress: true
     name: first-listener
-  drainType: MODIFY_ONLY
   name: first-listener
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       portValue: 8082
   defaultFilterChain:
     filters:
@@ -57,15 +56,14 @@
             resourceApiVersion: V3
           routeConfigName: second-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: http-8082
         useRemoteAddress: true
     name: second-listener
-  drainType: MODIFY_ONLY
   name: second-listener
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       portValue: 8083
   defaultFilterChain:
     filters:
@@ -90,15 +88,14 @@
             resourceApiVersion: V3
           routeConfigName: third-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: http-8083
         useRemoteAddress: true
     name: third-listener
-  drainType: MODIFY_ONLY
   name: third-listener
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       portValue: 8084
   defaultFilterChain:
     filters:
@@ -123,9 +120,8 @@
             resourceApiVersion: V3
           routeConfigName: fourth-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: http-8084
         useRemoteAddress: true
     name: fourth-listener
-  drainType: MODIFY_ONLY
   name: fourth-listener
   perConnectionBufferLimitBytes: 32768

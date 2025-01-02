@@ -41,14 +41,14 @@ metadata:
   name: ext-auth-test
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-with-ext-auth
   extAuth:
     http:
-      backendRefs:
-      - name: http-ext-auth
+      backendRef:
+        name: http-ext-auth
         namespace: gateway-conformance-infra
         port: 9002
       headersToBackend: ["x-current-user"]

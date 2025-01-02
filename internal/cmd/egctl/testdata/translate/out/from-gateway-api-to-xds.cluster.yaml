@@ -10,15 +10,15 @@ xds:
         commonLbConfig:
           localityWeightedLbConfig: {}
         connectTimeout: 10s
-        dnsLookupFamily: V4_ONLY
+        dnsLookupFamily: V4_PREFERRED
         edsClusterConfig:
           edsConfig:
             ads: {}
             resourceApiVersion: V3
           serviceName: httproute/default/backend/rule/0
+        ignoreHealthOnHostRemoval: true
         lbPolicy: LEAST_REQUEST
         name: httproute/default/backend/rule/0
-        outlierDetection: {}
         perConnectionBufferLimitBytes: 32768
         type: EDS
     - cluster:
@@ -29,22 +29,24 @@ xds:
         commonLbConfig:
           localityWeightedLbConfig: {}
         connectTimeout: 10s
-        dnsLookupFamily: V4_ONLY
+        dnsLookupFamily: V4_PREFERRED
         edsClusterConfig:
           edsConfig:
             ads: {}
             resourceApiVersion: V3
           serviceName: grpcroute/default/backend/rule/0
+        ignoreHealthOnHostRemoval: true
         lbPolicy: LEAST_REQUEST
         name: grpcroute/default/backend/rule/0
-        outlierDetection: {}
         perConnectionBufferLimitBytes: 32768
         type: EDS
         typedExtensionProtocolOptions:
           envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
             '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
             explicitHttpConfig:
-              http2ProtocolOptions: {}
+              http2ProtocolOptions:
+                initialConnectionWindowSize: 1048576
+                initialStreamWindowSize: 65536
     - cluster:
         '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
         circuitBreakers:
@@ -53,15 +55,15 @@ xds:
         commonLbConfig:
           localityWeightedLbConfig: {}
         connectTimeout: 10s
-        dnsLookupFamily: V4_ONLY
+        dnsLookupFamily: V4_PREFERRED
         edsClusterConfig:
           edsConfig:
             ads: {}
             resourceApiVersion: V3
           serviceName: tcproute/default/backend/rule/-1
+        ignoreHealthOnHostRemoval: true
         lbPolicy: LEAST_REQUEST
         name: tcproute/default/backend/rule/-1
-        outlierDetection: {}
         perConnectionBufferLimitBytes: 32768
         type: EDS
     - cluster:
@@ -72,15 +74,15 @@ xds:
         commonLbConfig:
           localityWeightedLbConfig: {}
         connectTimeout: 10s
-        dnsLookupFamily: V4_ONLY
+        dnsLookupFamily: V4_PREFERRED
         edsClusterConfig:
           edsConfig:
             ads: {}
             resourceApiVersion: V3
           serviceName: tlsroute/default/backend/rule/-1
+        ignoreHealthOnHostRemoval: true
         lbPolicy: LEAST_REQUEST
         name: tlsroute/default/backend/rule/-1
-        outlierDetection: {}
         perConnectionBufferLimitBytes: 32768
         type: EDS
     - cluster:
@@ -91,14 +93,14 @@ xds:
         commonLbConfig:
           localityWeightedLbConfig: {}
         connectTimeout: 10s
-        dnsLookupFamily: V4_ONLY
+        dnsLookupFamily: V4_PREFERRED
         edsClusterConfig:
           edsConfig:
             ads: {}
             resourceApiVersion: V3
           serviceName: udproute/default/backend/rule/-1
+        ignoreHealthOnHostRemoval: true
         lbPolicy: LEAST_REQUEST
         name: udproute/default/backend/rule/-1
-        outlierDetection: {}
         perConnectionBufferLimitBytes: 32768
         type: EDS

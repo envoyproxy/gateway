@@ -16,6 +16,7 @@ metadata:
   name: proxy-config
   namespace: envoy-gateway-system
 spec:
+  ipFamily: IPv4
   provider:
     type: Kubernetes
     kubernetes:
@@ -29,7 +30,7 @@ spec:
             - name: socket-dir
               hostPath:
                 path: /var/run/ext-proc
-                type: ''
+                type: ""
   telemetry:
     metrics:
       prometheus: {}
@@ -45,7 +46,9 @@ spec:
         - format:
             type: Text
             text: |
-              [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
+              [%START_TIME%] %METADATA(ROUTE:envoy-gateway:resources)% "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
+          matches:
+            - "'x-envoy-logged' in request.headers"
           sinks:
             - type: File
               file:
@@ -58,6 +61,23 @@ spec:
                     port: 4317
                 resources:
                   k8s.cluster.name: "envoy-gateway"
+        - sinks:
+            - type: ALS
+              als:
+                backendRefs:
+                  - name: envoy-als
+                    namespace: monitoring
+                    port: 8080
+                type: HTTP
+        - type: Listener
+          format:
+            type: Text
+            text: |
+              LISTENER ACCESS LOG %UPSTREAM_PROTOCOL% %RESPONSE_CODE%
+          sinks:
+            - type: File
+              file:
+                path: /dev/stdout
     tracing:
       provider:
         backendRefs:
@@ -65,6 +85,10 @@ spec:
             namespace: monitoring
             port: 4317
       customTags:
+        "provider":
+          type: Literal
+          literal:
+            value: "otel"
         "k8s.cluster.name":
           type: Literal
           literal:
@@ -101,11 +125,22 @@ metadata:
   name: upgrade-config
   namespace: envoy-gateway-system
 spec:
+  ipFamily: IPv4
   provider:
     type: Kubernetes
     kubernetes:
       envoyDeployment:
         replicas: 2
+        patch:
+          type: StrategicMerge
+          value:
+            spec:
+              template:
+                spec:
+                  containers:
+                    - name: envoy
+                      readinessProbe:
+                        initialDelaySeconds: 5
 ---
 kind: GatewayClass
 apiVersion: gateway.networking.k8s.io/v1
@@ -125,6 +160,7 @@ metadata:
   name: merge-gateways-config
   namespace: envoy-gateway-system
 spec:
+  ipFamily: IPv4
   mergeGateways: true
 ---
 kind: GatewayClass
@@ -133,6 +169,11 @@ metadata:
   name: internet
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: proxy-config
+    namespace: envoy-gateway-system
 ---
 kind: GatewayClass
 apiVersion: gateway.networking.k8s.io/v1
@@ -140,4 +181,10 @@ metadata:
   name: private
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: proxy-config
+    namespace: envoy-gateway-system
 ---
+

@@ -1,0 +1,53 @@
+### Nighthawk test server deployment & service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nighthawk-test-server
+  namespace: benchmark-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nighthawk-test-server
+  template:
+    metadata:
+      labels:
+        app: nighthawk-test-server
+    spec:
+      serviceAccountName: default
+      containers:
+        - name: nighthawk-server
+          image: envoyproxy/nighthawk-dev:latest
+          imagePullPolicy: IfNotPresent
+          args: ["nighthawk_test_server", "-c", "/etc/test-server-config/nighthawk-test-server-config.yaml"]
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: test-server-config
+              mountPath: "/etc/test-server-config"
+          env:
+            - name: PORT
+              value: "8080"
+          resources:
+            requests:
+              cpu: "2"
+            limits:
+              cpu: "2"
+      volumes:
+        - name: test-server-config
+          configMap:
+            name: test-server-config  # Created directly from file
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nighthawk-test-server
+  namespace: benchmark-test
+spec:
+  type: ClusterIP
+  selector:
+    app: nighthawk-test-server
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080

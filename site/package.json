@@ -1,25 +1,28 @@
 {
   "name": "docsy-example-site",
-  "version": "0.7.1",
+  "version": "0.10.0",
+  "version.next": "0.10.1-dev.0-unreleased",
   "description": "Example site that uses Docsy theme for technical documentation.",
   "repository": "github:google/docsy-example",
   "homepage": "https://example.docsy.dev",
   "author": "Docsy Authors",
   "license": "Apache-2.0",
   "bugs": "https://github.com/google/docsy-example/issues",
-  "spelling": "cSpell:ignore HTMLTEST precheck postbuild -",
+  "spelling": "cSpell:ignore docsy hugo htmltest precheck postbuild rtlcss -",
   "scripts": {
-    "_build": "npm run _hugo-dev",
+    "_build": "npm run _hugo-dev --",
     "_check:links": "echo IMPLEMENTATION PENDING for check-links; echo",
     "_hugo": "hugo --cleanDestinationDir",
-    "_hugo-dev": "npm run _hugo -- -e dev -DFE --baseURL http://localhost --bind 0.0.0.0",
-    "_serve": "npm run _hugo-dev -- --minify serve",
+    "_hugo-dev": "npm run _hugo -- -e dev -DFE",
+    "_local": "npx cross-env HUGO_MODULE_WORKSPACE=docsy.work",
+    "_serve": "npm run _hugo-dev -- --minify serve --renderToMemory",
     "build:preview": "npm run _hugo-dev -- --minify --baseURL \"${DEPLOY_PRIME_URL:-/}\"",
     "build:production": "npm run _hugo -- --minify",
-    "build": "npm run _build",
+    "build": "npm run _build -- ",
     "check:links:all": "HTMLTEST_ARGS= npm run _check:links",
     "check:links": "npm run _check:links",
     "clean": "rm -Rf public/* resources",
+    "local": "npm run _local -- npm run",
     "make:public": "git init -b main public",
     "precheck:links:all": "npm run build",
     "precheck:links": "npm run build",
@@ -27,12 +30,23 @@
     "postbuild:production": "npm run _check:links",
     "serve": "npm run _serve",
     "test": "npm run check:links",
-    "update:pkg:dep": "npm install --save-dev autoprefixer@latest postcss-cli@latest",
-    "update:pkg:hugo": "npm install --save-dev --save-exact hugo-extended@latest"
+    "update:dep": "npm install --save-dev autoprefixer@latest postcss-cli@latest",
+    "update:hugo": "npm install --save-dev --save-exact hugo-extended@latest",
+    "update:pkgs": "npx npm-check-updates -u"
   },
   "devDependencies": {
-    "autoprefixer": "^10.4.14",
-    "hugo-extended": "0.123.8",
-    "postcss-cli": "^10.1.0"
+    "autoprefixer": "^10.4.20",
+    "cross-env": "^7.0.3",
+    "hugo-extended": "0.136.2",
+    "postcss-cli": "^11.0.0",
+    "rtlcss": "^4.3.0"
+  },
+  "optionalDependencies": {
+    "npm-check-updates": "^17.1.4"
+  },
+  "private": true,
+  "prettier": {
+    "proseWrap": "always",
+    "singleQuote": true
   }
 }

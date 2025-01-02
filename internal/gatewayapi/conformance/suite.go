@@ -15,8 +15,7 @@ import (
 // SkipTests is a list of tests that are skipped in the conformance suite.
 var SkipTests = []suite.ConformanceTest{
 	tests.GatewayStaticAddresses,
-	tests.GatewayHTTPListenerIsolation,          // https://github.com/kubernetes-sigs/gateway-api/issues/3352
-	tests.HTTPRouteBackendRequestHeaderModifier, // https://github.com/envoyproxy/gateway/issues/3338
+	tests.GatewayInfrastructure,
 }
 
 func skipTestsShortNames(skipTests []suite.ConformanceTest) []string {
@@ -29,9 +28,26 @@ func skipTestsShortNames(skipTests []suite.ConformanceTest) []string {
 
 // EnvoyGatewaySuite is the conformance suite configuration for the Gateway API.
 var EnvoyGatewaySuite = suite.ConformanceOptions{
-	SupportedFeatures: features.AllFeatures,
-	ExemptFeatures: sets.New[features.SupportedFeature]().
-		Insert(features.MeshCoreFeatures.UnsortedList()...).
-		Insert(features.MeshExtendedFeatures.UnsortedList()...),
-	SkipTests: skipTestsShortNames(SkipTests),
+	SupportedFeatures: allFeatures(),
+	ExemptFeatures:    meshFeatures(),
+	SkipTests:         skipTestsShortNames(SkipTests),
+}
+
+func allFeatures() sets.Set[features.FeatureName] {
+	allFeatures := sets.New[features.FeatureName]()
+	for _, feature := range features.AllFeatures.UnsortedList() {
+		allFeatures.Insert(feature.Name)
+	}
+	return allFeatures
+}
+
+func meshFeatures() sets.Set[features.FeatureName] {
+	meshFeatures := sets.New[features.FeatureName]()
+	for _, feature := range features.MeshCoreFeatures.UnsortedList() {
+		meshFeatures.Insert(feature.Name)
+	}
+	for _, feature := range features.MeshExtendedFeatures.UnsortedList() {
+		meshFeatures.Insert(feature.Name)
+	}
+	return meshFeatures
 }

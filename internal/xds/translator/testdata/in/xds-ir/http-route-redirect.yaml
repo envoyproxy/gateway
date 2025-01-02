@@ -1,7 +1,7 @@
 name: "http-route"
 http:
 - name: "first-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 10080
   hostnames:
   - "*"
@@ -50,3 +50,32 @@ http:
     redirect:
       path:
         prefixMatchReplace: /
+  - name: "redirect-route-4"
+    hostname: "*"
+    destination:
+      name: "redirect-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+    redirect:
+      scheme: https
+      statusCode: 302
+      hostname: "redirected.com"
+      path:
+        prefixMatchReplace: /redirected
+  - name: "redirect-route-5"
+    hostname: "*"
+    destination:
+      name: "redirect-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+    redirect:
+      scheme: https
+      statusCode: 302
+      port: 443
+      hostname: "redirected.com"
+      path:
+        prefixMatchReplace: /redirected

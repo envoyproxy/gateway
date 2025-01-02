@@ -15,12 +15,9 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
-)
-
-const (
-	extProcFilter = "envoy.filters.http.ext_proc"
 )
 
 func init() {
@@ -51,7 +48,7 @@ func (*extProc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPLi
 			continue
 		}
 
-		for _, ep := range route.ExtProcs {
+		for _, ep := range route.EnvoyExtensions.ExtProcs {
 			if hcmContainsFilter(mgr, extProcFilterName(ep)) {
 				continue
 			}
@@ -93,7 +90,7 @@ func buildHCMExtProcFilter(extProc ir.ExtProc) (*hcmv3.HttpFilter, error) {
 }
 
 func extProcFilterName(extProc ir.ExtProc) string {
-	return perRouteFilterName(extProcFilter, extProc.Name)
+	return perRouteFilterName(egv1a1.EnvoyFilterExtProc, extProc.Name)
 }
 
 func extProcConfig(extProc ir.ExtProc) *extprocv3.ExternalProcessor {
@@ -140,6 +137,18 @@ func extProcConfig(extProc ir.ExtProc) *extprocv3.ExternalProcessor {
 		config.ProcessingMode.ResponseHeaderMode = extprocv3.ProcessingMode_SEND
 	}
 
+	if extProc.RequestAttributes != nil {
+		var attrs []string
+		attrs = append(attrs, extProc.RequestAttributes...)
+		config.RequestAttributes = attrs
+	}
+
+	if extProc.ResponseAttributes != nil {
+		var attrs []string
+		attrs = append(attrs, extProc.ResponseAttributes...)
+		config.ResponseAttributes = attrs
+	}
+
 	return config
 }
 
@@ -156,7 +165,7 @@ func routeContainsExtProc(irRoute *ir.HTTPRoute) bool {
 		return false
 	}
 
-	return len(irRoute.ExtProcs) > 0
+	return irRoute.EnvoyExtensions != nil && len(irRoute.EnvoyExtensions.ExtProcs) > 0
 }
 
 // patchResources patches the cluster resources for the external services.
@@ -173,15 +182,13 @@ func (*extProc) patchResources(tCtx *types.ResourceVersionTable,
 			continue
 		}
 
-		for i := range route.ExtProcs {
-			ep := route.ExtProcs[i]
+		for i := range route.EnvoyExtensions.ExtProcs {
+			ep := route.EnvoyExtensions.ExtProcs[i]
 			if err := createExtServiceXDSCluster(
-				&ep.Destination, tCtx); err != nil && !errors.Is(
-				err, ErrXdsClusterExists) {
+				&ep.Destination, ep.Traffic, tCtx); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
-
 	}
 
 	return errs
@@ -196,8 +203,11 @@ func (*extProc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	if irRoute == nil {
 		return errors.New("ir route is nil")
 	}
+	if irRoute.EnvoyExtensions == nil {
+		return nil
+	}
 
-	for _, ep := range irRoute.ExtProcs {
+	for _, ep := range irRoute.EnvoyExtensions.ExtProcs {
 		filterName := extProcFilterName(ep)
 		if err := enableFilterOnRoute(route, filterName); err != nil {
 			return err

@@ -1,4 +1,5 @@
-envoyProxy:
+envoyProxyForGatewayClass:
+  kind: EnvoyProxy
   metadata:
     creationTimestamp: null
     name: example
@@ -13,6 +14,7 @@ envoyProxy:
       type: Kubernetes
   status: {}
 gatewayClass:
+  kind: GatewayClass
   metadata:
     creationTimestamp: null
     name: eg
@@ -31,31 +33,9 @@ gatewayClass:
       reason: Accepted
       status: "True"
       type: Accepted
-    supportedFeatures:
-    - GRPCRoute
-    - Gateway
-    - GatewayPort8080
-    - HTTPRoute
-    - HTTPRouteBackendProtocolH2C
-    - HTTPRouteBackendProtocolWebSocket
-    - HTTPRouteBackendTimeout
-    - HTTPRouteDestinationPortMatching
-    - HTTPRouteHostRewrite
-    - HTTPRouteMethodMatching
-    - HTTPRouteParentRefPort
-    - HTTPRoutePathRedirect
-    - HTTPRoutePathRewrite
-    - HTTPRoutePortRedirect
-    - HTTPRouteQueryParamMatching
-    - HTTPRouteRequestMirror
-    - HTTPRouteRequestMultipleMirrors
-    - HTTPRouteRequestTimeout
-    - HTTPRouteResponseHeaderModification
-    - HTTPRouteSchemeRedirect
-    - ReferenceGrant
-    - TLSRoute
 gateways:
-- metadata:
+- kind: Gateway
+  metadata:
     creationTimestamp: null
     name: eg
     namespace: default

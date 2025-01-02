@@ -1,3 +1,30 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: backend-namespaces
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+    - name: https
+      port: 443
+      protocol: HTTPS
+      tls:
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: backend-tls-certificate
+        mode: Terminate
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              gateway-conformance: backend
+---
 apiVersion: v1
 data:
   ca.crt: |
@@ -35,7 +62,8 @@ spec:
   selector:
     app: tls-backend
   ports:
-    - protocol: TCP
+    - name: https
+      protocol: TCP
       port: 443
       targetPort: 8443
 ---
@@ -110,7 +138,7 @@ spec:
     - group: ""
       kind: Service
       name: tls-backend
-      sectionName: "443"
+      sectionName: https
   validation:
     caCertificateRefs:
       - name: backend-tls-certificate

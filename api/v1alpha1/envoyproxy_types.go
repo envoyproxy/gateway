@@ -98,17 +98,21 @@ type EnvoyProxySpec struct {
 	// If unspecified, the default filter order is applied.
 	// Default filter order is:
 	//
+	// - envoy.filters.http.health_check
+	//
 	// - envoy.filters.http.fault
 	//
 	// - envoy.filters.http.cors
 	//
 	// - envoy.filters.http.ext_authz
 	//
-	// - envoy.filters.http.basic_authn
+	// - envoy.filters.http.basic_auth
 	//
 	// - envoy.filters.http.oauth2
 	//
 	// - envoy.filters.http.jwt_authn
+	//
+	// - envoy.filters.http.stateful_session
 	//
 	// - envoy.filters.http.ext_proc
 	//
@@ -120,7 +124,11 @@ type EnvoyProxySpec struct {
 	//
 	// - envoy.filters.http.ratelimit
 	//
+	// - envoy.filters.http.custom_response
+	//
 	// - envoy.filters.http.router
+	//
+	// Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain.
 	//
 	// +optional
 	FilterOrder []FilterPosition `json:"filterOrder,omitempty"`
@@ -128,6 +136,17 @@ type EnvoyProxySpec struct {
 	// These settings are applied on backends for which TLS policies are specified.
 	// +optional
 	BackendTLS *BackendTLSConfig `json:"backendTLS,omitempty"`
+
+	// IPFamily specifies the IP family for the EnvoyProxy fleet.
+	// This setting only affects the Gateway listener port and does not impact
+	// other aspects of the Envoy proxy configuration.
+	// If not specified, the system will operate as follows:
+	// - It defaults to IPv4 only.
+	// - IPv6 and dual-stack environments are not supported in this default configuration.
+	// Note: To enable IPv6 or dual-stack functionality, explicit configuration is required.
+	// +kubebuilder:validation:Enum=IPv4;IPv6;DualStack
+	// +optional
+	IPFamily *IPFamily `json:"ipFamily,omitempty"`
 }
 
 // RoutingType defines the type of routing of this Envoy proxy.
@@ -168,20 +187,24 @@ type FilterPosition struct {
 }
 
 // EnvoyFilter defines the type of Envoy HTTP filter.
-// +kubebuilder:validation:Enum=envoy.filters.http.cors;envoy.filters.http.ext_authz;envoy.filters.http.basic_authn;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.fault;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.wasm;envoy.filters.http.ext_proc;envoy.filters.http.rbac
+// +kubebuilder:validation:Enum=envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.ext_authz;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.custom_response
 type EnvoyFilter string
 
 const (
+	// EnvoyFilterHealthCheck defines the Envoy HTTP health check filter.
+	EnvoyFilterHealthCheck EnvoyFilter = "envoy.filters.http.health_check"
+
 	// EnvoyFilterFault defines the Envoy HTTP fault filter.
 	EnvoyFilterFault EnvoyFilter = "envoy.filters.http.fault"
+
 	// EnvoyFilterCORS defines the Envoy HTTP CORS filter.
 	EnvoyFilterCORS EnvoyFilter = "envoy.filters.http.cors"
 
 	// EnvoyFilterExtAuthz defines the Envoy HTTP external authorization filter.
 	EnvoyFilterExtAuthz EnvoyFilter = "envoy.filters.http.ext_authz"
 
-	// EnvoyFilterBasicAuthn defines the Envoy HTTP basic authentication filter.
-	EnvoyFilterBasicAuthn EnvoyFilter = "envoy.filters.http.basic_authn"
+	// EnvoyFilterBasicAuth defines the Envoy HTTP basic authentication filter.
+	EnvoyFilterBasicAuth EnvoyFilter = "envoy.filters.http.basic_auth"
 
 	// EnvoyFilterOAuth2 defines the Envoy HTTP OAuth2 filter.
 	EnvoyFilterOAuth2 EnvoyFilter = "envoy.filters.http.oauth2"
@@ -189,11 +212,17 @@ const (
 	// EnvoyFilterJWTAuthn defines the Envoy HTTP JWT authentication filter.
 	EnvoyFilterJWTAuthn EnvoyFilter = "envoy.filters.http.jwt_authn"
 
+	// EnvoyFilterSessionPersistence defines the Envoy HTTP session persistence filter.
+	EnvoyFilterSessionPersistence EnvoyFilter = "envoy.filters.http.stateful_session"
+
 	// EnvoyFilterExtProc defines the Envoy HTTP external process filter.
 	EnvoyFilterExtProc EnvoyFilter = "envoy.filters.http.ext_proc"
 
 	// EnvoyFilterWasm defines the Envoy HTTP WebAssembly filter.
 	EnvoyFilterWasm EnvoyFilter = "envoy.filters.http.wasm"
+
+	// EnvoyFilterRBAC defines the Envoy RBAC filter.
+	EnvoyFilterRBAC EnvoyFilter = "envoy.filters.http.rbac"
 
 	// EnvoyFilterLocalRateLimit defines the Envoy HTTP local rate limit filter.
 	EnvoyFilterLocalRateLimit EnvoyFilter = "envoy.filters.http.local_ratelimit"
@@ -201,8 +230,8 @@ const (
 	// EnvoyFilterRateLimit defines the Envoy HTTP rate limit filter.
 	EnvoyFilterRateLimit EnvoyFilter = "envoy.filters.http.ratelimit"
 
-	// EnvoyFilterRBAC defines the Envoy RBAC filter.
-	EnvoyFilterRBAC EnvoyFilter = "envoy.filters.http.rbac"
+	// EnvoyFilterCustomResponse defines the Envoy HTTP custom response filter.
+	EnvoyFilterCustomResponse EnvoyFilter = "envoy.filters.http.custom_response"
 
 	// EnvoyFilterRouter defines the Envoy HTTP router filter.
 	EnvoyFilterRouter EnvoyFilter = "envoy.filters.http.router"
@@ -243,12 +272,12 @@ type EnvoyProxyProvider struct {
 // ShutdownConfig defines configuration for graceful envoy shutdown process.
 type ShutdownConfig struct {
 	// DrainTimeout defines the graceful drain timeout. This should be less than the pod's terminationGracePeriodSeconds.
-	// If unspecified, defaults to 600 seconds.
+	// If unspecified, defaults to 60 seconds.
 	//
 	// +optional
 	DrainTimeout *metav1.Duration `json:"drainTimeout,omitempty"`
 	// MinDrainDuration defines the minimum drain duration allowing time for endpoint deprogramming to complete.
-	// If unspecified, defaults to 5 seconds.
+	// If unspecified, defaults to 10 seconds.
 	//
 	// +optional
 	MinDrainDuration *metav1.Duration `json:"minDrainDuration,omitempty"`
@@ -345,19 +374,27 @@ const (
 )
 
 // ProxyBootstrap defines Envoy Bootstrap configuration.
+// +union
+// +kubebuilder:validation:XValidation:rule="self.type == 'JSONPatch' ? self.jsonPatches.size() > 0 : has(self.value)", message="provided bootstrap patch doesn't match the configured patch type"
 type ProxyBootstrap struct {
-	// Type is the type of the bootstrap configuration, it should be either Replace or Merge.
+	// Type is the type of the bootstrap configuration, it should be either Replace,  Merge, or JSONPatch.
 	// If unspecified, it defaults to Replace.
 	// +optional
 	// +kubebuilder:default=Replace
+	// +unionDiscriminator
 	Type *BootstrapType `json:"type"`
 
 	// Value is a YAML string of the bootstrap.
-	Value string `json:"value"`
+	// +optional
+	Value *string `json:"value,omitempty"`
+
+	// JSONPatches is an array of JSONPatches to be applied to the default bootstrap. Patches are
+	// applied in the order in which they are defined.
+	JSONPatches []JSONPatchOperation `json:"jsonPatches,omitempty"`
 }
 
 // BootstrapType defines the types of bootstrap supported by Envoy Gateway.
-// +kubebuilder:validation:Enum=Merge;Replace
+// +kubebuilder:validation:Enum=Merge;Replace;JSONPatch
 type BootstrapType string
 
 const (
@@ -368,6 +405,9 @@ const (
 
 	// Replace replaces the default bootstrap with the provided one.
 	BootstrapTypeReplace BootstrapType = "Replace"
+
+	// JSONPatch applies the provided JSONPatches to the default bootstrap.
+	BootstrapTypeJSONPatch BootstrapType = "JSONPatch"
 )
 
 // EnvoyProxyStatus defines the observed state of EnvoyProxy. This type is not implemented
@@ -385,6 +425,20 @@ type EnvoyProxyList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []EnvoyProxy `json:"items"`
 }
+
+// IPFamily defines the IP family to use for the Envoy proxy.
+type IPFamily string
+
+const (
+	// IPv4 defines the IPv4 family.
+	IPv4 IPFamily = "IPv4"
+	// IPv6 defines the IPv6 family.
+	IPv6 IPFamily = "IPv6"
+	// DualStack defines the dual-stack family.
+	// When set to DualStack, Envoy proxy will listen on both IPv4 and IPv6 addresses
+	// for incoming client traffic, enabling support for both IP protocol versions.
+	DualStack IPFamily = "DualStack"
+)
 
 func init() {
 	SchemeBuilder.Register(&EnvoyProxy{}, &EnvoyProxyList{})

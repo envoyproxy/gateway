@@ -22,11 +22,21 @@ const (
 )
 
 // ProcessingModeOptions defines if headers or body should be processed by the external service
+// and which attributes are sent to the processor
 type ProcessingModeOptions struct {
 	// Defines body processing mode
 	//
 	// +optional
 	Body *ExtProcBodyProcessingMode `json:"body,omitempty"`
+
+	// Defines which attributes are sent to the external processor. Envoy Gateway currently
+	// supports only the following attribute prefixes: connection, source, destination,
+	// request, response, upstream and xds.route.
+	// https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/advanced/attributes
+	//
+	// +optional
+	// +kubebuilder:validation:items:Pattern=`^(connection\.|source\.|destination\.|request\.|response\.|upstream\.|xds\.route_)[a-z_1-9]*$`
+	Attributes []string `json:"attributes,omitempty"`
 }
 
 // ExtProcProcessingMode defines if and how headers and bodies are sent to the service.
@@ -46,14 +56,11 @@ type ExtProcProcessingMode struct {
 }
 
 // ExtProc defines the configuration for External Processing filter.
+// +kubebuilder:validation:XValidation:message="BackendRefs must be used, backendRef is not supported.",rule="!has(self.backendRef)"
+// +kubebuilder:validation:XValidation:message="BackendRefs only supports Service and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'Backend') : true"
+// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core and gateway.envoyproxy.io group.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'gateway.envoyproxy.io')) : true"
 type ExtProc struct {
-	// BackendRefs defines the configuration of the external processing service
-	//
-	// +kubebuilder:validation:MinItems=1
-	// +kubebuilder:validation:MaxItems=1
-	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Service and Backend kind.",rule="self.all(f, f.kind == 'Service' || f.kind == 'Backend')"
-	// +kubebuilder:validation:XValidation:message="BackendRefs only supports Core and gateway.envoyproxy.io group.",rule="self.all(f, f.group == '' || f.group == 'gateway.envoyproxy.io')"
-	BackendRefs []BackendRef `json:"backendRefs"`
+	BackendCluster `json:",inline"`
 
 	// MessageTimeout is the timeout for a response to be returned from the external processor
 	// Default: 200ms

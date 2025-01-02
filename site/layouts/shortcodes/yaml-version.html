@@ -1,0 +1,13 @@
+{{- $pagePrefix := (index (split $.Page.File.Dir "/") 0) -}}
+{{- with (eq $pagePrefix "latest") -}}
+{{- "latest" -}}
+{{- end -}}
+{{- with (strings.HasPrefix $pagePrefix "v1.1") -}}
+{{- "v1.1.4" -}}
+{{- end -}}
+{{- with (strings.HasPrefix $pagePrefix "v1.2") -}}
+{{- "v1.2.4" -}}
+{{- end -}}
+{{- with (strings.HasPrefix $pagePrefix "doc") -}}
+{{- "v1.2.4" -}}
+{{- end -}}

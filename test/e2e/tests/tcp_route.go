@@ -6,7 +6,6 @@
 // This file contains code derived from upstream gateway-api, it will be moved to upstream.
 
 //go:build e2e
-// +build e2e
 
 package tests
 
@@ -29,6 +28,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 )
 
 func init() {
@@ -85,7 +85,7 @@ func GatewayAndTCPRoutesMustBeAccepted(t *testing.T, c client.Client, timeoutCon
 	tcpRoute := &gwapiv1a2.TCPRoute{}
 	err := c.Get(context.Background(), routeNNs[0], tcpRoute)
 	if err != nil {
-		t.Logf("error fetching TCPRoute: %v", err)
+		tlog.Logf(t, "error fetching TCPRoute: %v", err)
 	}
 
 	gwAddr, err := WaitForGatewayAddress(t, c, timeoutConfig, gw.NamespacedName, string(*tcpRoute.Spec.ParentRefs[0].SectionName))
@@ -134,7 +134,7 @@ func WaitForGatewayAddress(t *testing.T, client client.Client, timeoutConfig con
 		gw := &gwapiv1.Gateway{}
 		err := client.Get(ctx, gwName, gw)
 		if err != nil {
-			t.Logf("error fetching Gateway: %v", err)
+			tlog.Logf(t, "error fetching Gateway: %v", err)
 			return false, fmt.Errorf("error fetching Gateway: %w", err)
 		}
 

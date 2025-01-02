@@ -1,6 +1,6 @@
 http:
 - name: "first-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 10080
   hostnames:
   - "*"
@@ -100,6 +100,34 @@ http:
           tableSize: 524287
     destination:
       name: "eighth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "ninth-route"
+    hostname: "*"
+    traffic:
+      loadBalancer:
+        consistentHash:
+          cookie:
+            name: "test"
+    destination:
+      name: "ninth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "tenth-route"
+    hostname: "*"
+    traffic:
+      loadBalancer:
+        consistentHash:
+          cookie:
+            name: "test"
+            attributes:
+              foo: bar
+    destination:
+      name: "tenth-route-dest"
       settings:
       - endpoints:
         - host: "1.2.3.4"

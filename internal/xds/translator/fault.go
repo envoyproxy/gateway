@@ -18,12 +18,10 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/protocov"
 	"github.com/envoyproxy/gateway/internal/xds/types"
-)
-
-const (
-	faultFilter = "envoy.filters.http.fault"
 )
 
 func init() {
@@ -52,7 +50,7 @@ func (*fault) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPList
 
 	// Return early if the fault filter already exists.
 	for _, existingFilter := range mgr.HttpFilters {
-		if existingFilter.Name == faultFilter {
+		if existingFilter.Name == egv1a1.EnvoyFilterFault.String() {
 			return nil
 		}
 	}
@@ -74,13 +72,13 @@ func buildHCMFaultFilter() (*hcmv3.HttpFilter, error) {
 		return nil, err
 	}
 
-	faultAny, err := anypb.New(faultProto)
+	faultAny, err := protocov.ToAnyWithValidation(faultProto)
 	if err != nil {
 		return nil, err
 	}
 
 	return &hcmv3.HttpFilter{
-		Name: faultFilter,
+		Name: egv1a1.EnvoyFilterFault.String(),
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: faultAny,
 		},
@@ -168,7 +166,7 @@ func (*fault) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 		return nil
 	}
 
-	routeCfgAny, err := anypb.New(routeCfgProto)
+	routeCfgAny, err := protocov.ToAnyWithValidation(routeCfgProto)
 	if err != nil {
 		return err
 	}

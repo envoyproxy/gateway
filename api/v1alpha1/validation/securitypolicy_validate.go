@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/mail"
 	"net/url"
+	"strings"
 
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -69,13 +70,21 @@ func ValidateJWTProvider(providers []egv1a1.JWTProvider) error {
 		case len(provider.Name) == 0:
 			errs = append(errs, errors.New("jwt provider cannot be an empty string"))
 		case len(provider.Issuer) != 0:
-			// Issuer can take the format of a URL or an email address.
-			if _, err := url.ParseRequestURI(provider.Issuer); err != nil {
-				_, err := mail.ParseAddress(provider.Issuer)
-				if err != nil {
-					errs = append(errs, fmt.Errorf("invalid issuer; must be a URL or email address: %w", err))
+			switch {
+			// Issuer follows StringOrURI format based on https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.1.
+			// Hence, when it contains ':', it MUST be a valid URI.
+			case strings.Contains(provider.Issuer, ":"):
+				if _, err := url.ParseRequestURI(provider.Issuer); err != nil {
+					errs = append(errs, fmt.Errorf("invalid issuer; when issuer contains ':' character, it MUST be a valid URI"))
+				}
+			// Adding reserved character for '@', to represent an email address.
+			// Hence, when it contains '@', it MUST be a valid Email Address.
+			case strings.Contains(provider.Issuer, "@"):
+				if _, err := mail.ParseAddress(provider.Issuer); err != nil {
+					errs = append(errs, fmt.Errorf("invalid issuer; when issuer contains '@' character, it MUST be a valid Email Address format: %w", err))
 				}
 			}
+
 		case len(provider.RemoteJWKS.URI) == 0:
 			errs = append(errs, fmt.Errorf("uri must be set for remote JWKS provider: %s", provider.Name))
 		}

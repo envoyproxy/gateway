@@ -27,10 +27,9 @@
             resourceApiVersion: V3
           routeConfigName: policyextension-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http
+        statPrefix: http-10081
         useRemoteAddress: true
     name: policyextension-listener
-  drainType: MODIFY_ONLY
   name: policyextension-listener
   perConnectionBufferLimitBytes: 32768
   statPrefix: from-the-policy

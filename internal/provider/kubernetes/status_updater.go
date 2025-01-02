@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -23,7 +24,8 @@ import (
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/metrics"
 )
 
 // Update contains an all the information needed to update an object's status.
@@ -55,17 +57,21 @@ func (m MutatorFunc) Mutate(old client.Object) client.Object {
 type UpdateHandler struct {
 	log           logr.Logger
 	client        client.Client
-	sendUpdates   chan struct{}
 	updateChannel chan Update
+	wg            *sync.WaitGroup
 }
 
 func NewUpdateHandler(log logr.Logger, client client.Client) *UpdateHandler {
-	return &UpdateHandler{
+	u := &UpdateHandler{
 		log:           log,
 		client:        client,
-		sendUpdates:   make(chan struct{}),
-		updateChannel: make(chan Update, 100),
+		updateChannel: make(chan Update, 1000),
+		wg:            new(sync.WaitGroup),
 	}
+
+	u.wg.Add(1)
+
+	return u
 }
 
 func (u *UpdateHandler) apply(update Update) {
@@ -75,8 +81,6 @@ func (u *UpdateHandler) apply(update Update) {
 		objKind   = kindOf(obj)
 	)
 
-	statusUpdateTotal.With(kindLabel.Value(objKind)).Increment()
-
 	defer func() {
 		updateDuration := time.Since(startTime)
 		statusUpdateDurationSeconds.With(kindLabel.Value(objKind)).Record(updateDuration.Seconds())
@@ -84,7 +88,7 @@ func (u *UpdateHandler) apply(update Update) {
 
 	if err := retry.OnError(retry.DefaultBackoff, func(err error) bool {
 		if kerrors.IsConflict(err) {
-			statusUpdateConflict.With(kindLabel.Value(objKind)).Increment()
+			statusUpdateTotal.WithFailure(metrics.ReasonConflict, kindLabel.Value(objKind)).Increment()
 			return true
 		}
 		return false
@@ -104,7 +108,7 @@ func (u *UpdateHandler) apply(update Update) {
 				WithName(update.NamespacedName.Namespace).
 				Info("status unchanged, bypassing update")
 
-			statusUpdateNoop.With(kindLabel.Value(objKind)).Increment()
+			statusUpdateTotal.WithStatus(statusNoAction, kindLabel.Value(objKind)).Increment()
 			return nil
 		}
 
@@ -115,9 +119,9 @@ func (u *UpdateHandler) apply(update Update) {
 		u.log.Error(err, "unable to update status", "name", update.NamespacedName.Name,
 			"namespace", update.NamespacedName.Namespace)
 
-		statusUpdateFailed.With(kindLabel.Value(objKind)).Increment()
+		statusUpdateTotal.WithFailure(metrics.ReasonError, kindLabel.Value(objKind)).Increment()
 	} else {
-		statusUpdateSuccess.With(kindLabel.Value(objKind)).Increment()
+		statusUpdateTotal.WithSuccess(kindLabel.Value(objKind)).Increment()
 	}
 }
 
@@ -131,7 +135,7 @@ func (u *UpdateHandler) Start(ctx context.Context) error {
 	defer u.log.Info("stopped status update handler")
 
 	// Enable Updaters to start sending updates to this handler.
-	close(u.sendUpdates)
+	u.wg.Done()
 
 	for {
 		select {
@@ -149,8 +153,8 @@ func (u *UpdateHandler) Start(ctx context.Context) error {
 // Writer retrieves the interface that should be used to write to the UpdateHandler.
 func (u *UpdateHandler) Writer() Updater {
 	return &UpdateWriter{
-		enabled:       u.sendUpdates,
 		updateChannel: u.updateChannel,
+		wg:            u.wg,
 	}
 }
 
@@ -161,18 +165,15 @@ type Updater interface {
 
 // UpdateWriter takes status updates and sends these to the UpdateHandler via a channel.
 type UpdateWriter struct {
-	enabled       <-chan struct{}
 	updateChannel chan<- Update
+	wg            *sync.WaitGroup
 }
 
 // Send sends the given Update off to the update channel for writing by the UpdateHandler.
 func (u *UpdateWriter) Send(update Update) {
-	// Non-blocking receive to see if we should pass along update.
-	select {
-	case <-u.enabled:
-		u.updateChannel <- update
-	default:
-	}
+	// Wait until updater is ready
+	u.wg.Wait()
+	u.updateChannel <- update
 }
 
 // isStatusEqual checks if two objects have equivalent status.
@@ -319,35 +320,35 @@ func kindOf(obj interface{}) string {
 	var kind string
 	switch o := obj.(type) {
 	case *gwapiv1.GatewayClass:
-		kind = gatewayapi.KindGatewayClass
+		kind = resource.KindGatewayClass
 	case *gwapiv1.Gateway:
-		kind = gatewayapi.KindGateway
+		kind = resource.KindGateway
 	case *gwapiv1.HTTPRoute:
-		kind = gatewayapi.KindHTTPRoute
+		kind = resource.KindHTTPRoute
 	case *gwapiv1a2.TLSRoute:
-		kind = gatewayapi.KindTLSRoute
+		kind = resource.KindTLSRoute
 	case *gwapiv1a2.TCPRoute:
-		kind = gatewayapi.KindTCPRoute
+		kind = resource.KindTCPRoute
 	case *gwapiv1a2.UDPRoute:
-		kind = gatewayapi.KindUDPRoute
+		kind = resource.KindUDPRoute
 	case *gwapiv1.GRPCRoute:
-		kind = gatewayapi.KindGRPCRoute
+		kind = resource.KindGRPCRoute
 	case *egv1a1.EnvoyPatchPolicy:
-		kind = gatewayapi.KindEnvoyPatchPolicy
+		kind = resource.KindEnvoyPatchPolicy
 	case *egv1a1.ClientTrafficPolicy:
-		kind = gatewayapi.KindClientTrafficPolicy
+		kind = resource.KindClientTrafficPolicy
 	case *egv1a1.BackendTrafficPolicy:
-		kind = gatewayapi.KindBackendTrafficPolicy
+		kind = resource.KindBackendTrafficPolicy
 	case *egv1a1.SecurityPolicy:
-		kind = gatewayapi.KindSecurityPolicy
+		kind = resource.KindSecurityPolicy
 	case *egv1a1.EnvoyExtensionPolicy:
-		kind = gatewayapi.KindEnvoyExtensionPolicy
+		kind = resource.KindEnvoyExtensionPolicy
 	case *gwapiv1a3.BackendTLSPolicy:
-		kind = gatewayapi.KindBackendTLSPolicy
+		kind = resource.KindBackendTLSPolicy
 	case *unstructured.Unstructured:
 		kind = o.GetKind()
 	case *egv1a1.Backend:
-		kind = egv1a1.KindBackend
+		kind = resource.KindBackend
 	default:
 		kind = "Unknown"
 	}

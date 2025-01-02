@@ -4,16 +4,15 @@ metadata:
   name: jwt-example
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-ratelimit-based-jwt-claims
-    namespace: gateway-conformance-infra
   jwt:
     providers:
     - name: example
       remoteJWKS:
-        uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
+        uri: http://static-file-server.gateway-conformance-infra/jwt/jwks.json
       claimToHeaders:
       - claim: name
         header: x-claim-name
@@ -24,11 +23,10 @@ metadata:
   name: ratelimit-specific-user
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: http-ratelimit-based-jwt-claims
-    namespace: gateway-conformance-infra
   rateLimit:
     type: Global
     global:

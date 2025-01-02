@@ -4,7 +4,6 @@
 // the root of the repo.
 
 //go:build celvalidation
-// +build celvalidation
 
 package celvalidation
 
@@ -278,7 +277,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
+									Format: &egv1a1.ProxyAccessLogFormat{
 										Type: "foo",
 									},
 								},
@@ -297,7 +296,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
+									Format: &egv1a1.ProxyAccessLogFormat{
 										Type: egv1a1.ProxyAccessLogFormatTypeText,
 									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
@@ -324,7 +323,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
+									Format: &egv1a1.ProxyAccessLogFormat{
 										Type: egv1a1.ProxyAccessLogFormatTypeJSON,
 									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
@@ -351,7 +350,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
+									Format: &egv1a1.ProxyAccessLogFormat{
 										Type: egv1a1.ProxyAccessLogFormatTypeJSON,
 										Text: ptr.To("[%START_TIME%]"),
 									},
@@ -379,7 +378,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
+									Format: &egv1a1.ProxyAccessLogFormat{
 										Type: egv1a1.ProxyAccessLogFormatTypeJSON,
 										JSON: map[string]string{
 											"foo": "bar",
@@ -406,7 +405,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
+									Format: &egv1a1.ProxyAccessLogFormat{
 										Type: egv1a1.ProxyAccessLogFormatTypeText,
 										Text: ptr.To("[%START_TIME%]"),
 									},
@@ -431,7 +430,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
+									Format: &egv1a1.ProxyAccessLogFormat{
 										Type: egv1a1.ProxyAccessLogFormatTypeText,
 										Text: ptr.To("[%START_TIME%]"),
 									},
@@ -456,7 +455,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
+									Format: &egv1a1.ProxyAccessLogFormat{
 										Type: egv1a1.ProxyAccessLogFormatTypeText,
 										Text: ptr.To("[%START_TIME%]"),
 									},
@@ -484,22 +483,17 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
-										Type: egv1a1.ProxyAccessLogFormatTypeJSON,
-										JSON: map[string]string{
-											"attr1": "value1",
-											"attr2": "value2",
-										},
-									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
 										{
 											Type: egv1a1.ProxyAccessLogSinkTypeALS,
 											ALS: &egv1a1.ALSEnvoyProxyAccessLog{
-												BackendRefs: []egv1a1.BackendRef{
-													{
-														BackendObjectReference: gwapiv1.BackendObjectReference{
-															Name: "fake-service",
-															Port: ptr.To(gwapiv1.PortNumber(9000)),
+												BackendCluster: egv1a1.BackendCluster{
+													BackendRefs: []egv1a1.BackendRef{
+														{
+															BackendObjectReference: gwapiv1.BackendObjectReference{
+																Name: "fake-service",
+																Port: ptr.To(gwapiv1.PortNumber(9000)),
+															},
 														},
 													},
 												},
@@ -522,19 +516,17 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
-										Type: "Text",
-										Text: ptr.To("[%START_TIME%]"),
-									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
 										{
 											Type: egv1a1.ProxyAccessLogSinkTypeALS,
 											ALS: &egv1a1.ALSEnvoyProxyAccessLog{
-												BackendRefs: []egv1a1.BackendRef{
-													{
-														BackendObjectReference: gwapiv1.BackendObjectReference{
-															Name: "fake-service",
-															Port: ptr.To(gwapiv1.PortNumber(9000)),
+												BackendCluster: egv1a1.BackendCluster{
+													BackendRefs: []egv1a1.BackendRef{
+														{
+															BackendObjectReference: gwapiv1.BackendObjectReference{
+																Name: "fake-service",
+																Port: ptr.To(gwapiv1.PortNumber(9000)),
+															},
 														},
 													},
 												},
@@ -559,19 +551,17 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
-										Type: "Text",
-										Text: ptr.To("[%START_TIME%]"),
-									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
 										{
 											Type: egv1a1.ProxyAccessLogSinkTypeALS,
 											ALS: &egv1a1.ALSEnvoyProxyAccessLog{
-												BackendRefs: []egv1a1.BackendRef{
-													{
-														BackendObjectReference: gwapiv1.BackendObjectReference{
-															Name: "fake-service",
-															Kind: ptr.To(gwapiv1.Kind("foo")),
+												BackendCluster: egv1a1.BackendCluster{
+													BackendRefs: []egv1a1.BackendRef{
+														{
+															BackendObjectReference: gwapiv1.BackendObjectReference{
+																Name: "fake-service",
+																Kind: ptr.To(gwapiv1.Kind("foo")),
+															},
 														},
 													},
 												},
@@ -595,19 +585,17 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
-										Type: "Text",
-										Text: ptr.To("[%START_TIME%]"),
-									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
 										{
 											Type: egv1a1.ProxyAccessLogSinkTypeALS,
 											ALS: &egv1a1.ALSEnvoyProxyAccessLog{
-												BackendRefs: []egv1a1.BackendRef{
-													{
-														BackendObjectReference: gwapiv1.BackendObjectReference{
-															Name:  "fake-service",
-															Group: ptr.To(gwapiv1.Group("foo")),
+												BackendCluster: egv1a1.BackendCluster{
+													BackendRefs: []egv1a1.BackendRef{
+														{
+															BackendObjectReference: gwapiv1.BackendObjectReference{
+																Name:  "fake-service",
+																Group: ptr.To(gwapiv1.Group("foo")),
+															},
 														},
 													},
 												},
@@ -631,10 +619,6 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
-										Type: "Text",
-										Text: ptr.To("[%START_TIME%]"),
-									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
 										{
 											Type: egv1a1.ProxyAccessLogSinkTypeALS,
@@ -649,7 +633,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"Invalid value: \"null\""},
+			wantErrors: []string{"Invalid value: \"object\": must have at least one backend in backendRefs"},
 		},
 		{
 			desc: "invalid-accesslog-ALS-empty-backendrefs",
@@ -659,56 +643,12 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
-										Type: "Text",
-										Text: ptr.To("[%START_TIME%]"),
-									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
 										{
 											Type: egv1a1.ProxyAccessLogSinkTypeALS,
 											ALS: &egv1a1.ALSEnvoyProxyAccessLog{
-												BackendRefs: []egv1a1.BackendRef{},
-												Type:        egv1a1.ALSEnvoyProxyAccessLogTypeHTTP,
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				}
-			},
-			wantErrors: []string{"should have at least 1 items"},
-		},
-		{
-			desc: "invalid-accesslog-ALS-multi-backendrefs",
-			mutate: func(envoy *egv1a1.EnvoyProxy) {
-				envoy.Spec = egv1a1.EnvoyProxySpec{
-					Telemetry: &egv1a1.ProxyTelemetry{
-						AccessLog: &egv1a1.ProxyAccessLog{
-							Settings: []egv1a1.ProxyAccessLogSetting{
-								{
-									Format: egv1a1.ProxyAccessLogFormat{
-										Type: "Text",
-										Text: ptr.To("[%START_TIME%]"),
-									},
-									Sinks: []egv1a1.ProxyAccessLogSink{
-										{
-											Type: egv1a1.ProxyAccessLogSinkTypeALS,
-											ALS: &egv1a1.ALSEnvoyProxyAccessLog{
-												BackendRefs: []egv1a1.BackendRef{
-													{
-														BackendObjectReference: gwapiv1.BackendObjectReference{
-															Name: "fake-service",
-															Port: ptr.To(gwapiv1.PortNumber(8080)),
-														},
-													},
-													{
-														BackendObjectReference: gwapiv1.BackendObjectReference{
-															Name: "fake-service",
-															Port: ptr.To(gwapiv1.PortNumber(8080)),
-														},
-													},
+												BackendCluster: egv1a1.BackendCluster{
+													BackendRefs: []egv1a1.BackendRef{},
 												},
 												Type: egv1a1.ALSEnvoyProxyAccessLogTypeHTTP,
 											},
@@ -720,7 +660,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"must have at most 1 items"},
+			wantErrors: []string{"must have at least one backend in backendRefs"},
 		},
 		{
 			desc: "accesslog-OpenTelemetry",
@@ -730,7 +670,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
+									Format: &egv1a1.ProxyAccessLogFormat{
 										Type: "Text",
 										Text: ptr.To("[%START_TIME%]"),
 									},
@@ -758,7 +698,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
+									Format: &egv1a1.ProxyAccessLogFormat{
 										Type: "Text",
 										Text: ptr.To("[%START_TIME%]"),
 									},
@@ -766,11 +706,13 @@ func TestEnvoyProxyProvider(t *testing.T) {
 										{
 											Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
 											OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
-												BackendRefs: []egv1a1.BackendRef{
-													{
-														BackendObjectReference: gwapiv1.BackendObjectReference{
-															Name: "fake-service",
-															Kind: ptr.To(gwapiv1.Kind("foo")),
+												BackendCluster: egv1a1.BackendCluster{
+													BackendRefs: []egv1a1.BackendRef{
+														{
+															BackendObjectReference: gwapiv1.BackendObjectReference{
+																Name: "fake-service",
+																Kind: ptr.To(gwapiv1.Kind("foo")),
+															},
 														},
 													},
 												},
@@ -783,7 +725,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"only support Service Kind."},
+			wantErrors: []string{"Invalid value: \"object\": BackendRefs only supports Service kind."},
 		},
 		{
 			desc: "invalid-accesslog-backendref-group",
@@ -793,7 +735,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
+									Format: &egv1a1.ProxyAccessLogFormat{
 										Type: "Text",
 										Text: ptr.To("[%START_TIME%]"),
 									},
@@ -801,11 +743,13 @@ func TestEnvoyProxyProvider(t *testing.T) {
 										{
 											Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
 											OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
-												BackendRefs: []egv1a1.BackendRef{
-													{
-														BackendObjectReference: gwapiv1.BackendObjectReference{
-															Name:  "fake-service",
-															Group: ptr.To(gwapiv1.Group("foo")),
+												BackendCluster: egv1a1.BackendCluster{
+													BackendRefs: []egv1a1.BackendRef{
+														{
+															BackendObjectReference: gwapiv1.BackendObjectReference{
+																Name:  "fake-service",
+																Group: ptr.To(gwapiv1.Group("foo")),
+															},
 														},
 													},
 												},
@@ -828,7 +772,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
+									Format: &egv1a1.ProxyAccessLogFormat{
 										Type: "Text",
 										Text: ptr.To("[%START_TIME%]"),
 									},
@@ -836,12 +780,14 @@ func TestEnvoyProxyProvider(t *testing.T) {
 										{
 											Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
 											OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
-												BackendRefs: []egv1a1.BackendRef{
-													{
-														BackendObjectReference: gwapiv1.BackendObjectReference{
-															Name: "fake-service",
-															Kind: ptr.To(gwapiv1.Kind("Service")),
-															Port: ptr.To(gwapiv1.PortNumber(8080)),
+												BackendCluster: egv1a1.BackendCluster{
+													BackendRefs: []egv1a1.BackendRef{
+														{
+															BackendObjectReference: gwapiv1.BackendObjectReference{
+																Name: "fake-service",
+																Kind: ptr.To(gwapiv1.Kind("Service")),
+																Port: ptr.To(gwapiv1.PortNumber(8080)),
+															},
 														},
 													},
 												},
@@ -854,49 +800,6 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-		},
-		{
-			desc: "multi-accesslog-backendref",
-			mutate: func(envoy *egv1a1.EnvoyProxy) {
-				envoy.Spec = egv1a1.EnvoyProxySpec{
-					Telemetry: &egv1a1.ProxyTelemetry{
-						AccessLog: &egv1a1.ProxyAccessLog{
-							Settings: []egv1a1.ProxyAccessLogSetting{
-								{
-									Format: egv1a1.ProxyAccessLogFormat{
-										Type: "Text",
-										Text: ptr.To("[%START_TIME%]"),
-									},
-									Sinks: []egv1a1.ProxyAccessLogSink{
-										{
-											Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
-											OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
-												BackendRefs: []egv1a1.BackendRef{
-													{
-														BackendObjectReference: gwapiv1.BackendObjectReference{
-															Name: "fake-service",
-															Kind: ptr.To(gwapiv1.Kind("Service")),
-															Port: ptr.To(gwapiv1.PortNumber(8080)),
-														},
-													},
-													{
-														BackendObjectReference: gwapiv1.BackendObjectReference{
-															Name: "fake-service",
-															Kind: ptr.To(gwapiv1.Kind("Service")),
-															Port: ptr.To(gwapiv1.PortNumber(8080)),
-														},
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				}
-			},
-			wantErrors: []string{"must have at most 1 items"},
 		},
 		{
 			desc: "accesslog-backendref-empty-kind",
@@ -906,7 +809,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
+									Format: &egv1a1.ProxyAccessLogFormat{
 										Type: "Text",
 										Text: ptr.To("[%START_TIME%]"),
 									},
@@ -914,11 +817,13 @@ func TestEnvoyProxyProvider(t *testing.T) {
 										{
 											Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
 											OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
-												BackendRefs: []egv1a1.BackendRef{
-													{
-														BackendObjectReference: gwapiv1.BackendObjectReference{
-															Name: "fake-service",
-															Port: ptr.To(gwapiv1.PortNumber(8080)),
+												BackendCluster: egv1a1.BackendCluster{
+													BackendRefs: []egv1a1.BackendRef{
+														{
+															BackendObjectReference: gwapiv1.BackendObjectReference{
+																Name: "fake-service",
+																Port: ptr.To(gwapiv1.PortNumber(8080)),
+															},
 														},
 													},
 												},
@@ -940,7 +845,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egv1a1.ProxyAccessLogFormat{
+									Format: &egv1a1.ProxyAccessLogFormat{
 										Type: "Text",
 										Text: ptr.To("[%START_TIME%]"),
 									},
@@ -1024,11 +929,13 @@ func TestEnvoyProxyProvider(t *testing.T) {
 								{
 									Type: egv1a1.MetricSinkTypeOpenTelemetry,
 									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
-										BackendRefs: []egv1a1.BackendRef{
-											{
-												BackendObjectReference: gwapiv1.BackendObjectReference{
-													Name: "fake-service",
-													Port: ptr.To(gwapiv1.PortNumber(8080)),
+										BackendCluster: egv1a1.BackendCluster{
+											BackendRefs: []egv1a1.BackendRef{
+												{
+													BackendObjectReference: gwapiv1.BackendObjectReference{
+														Name: "fake-service",
+														Port: ptr.To(gwapiv1.PortNumber(8080)),
+													},
 												},
 											},
 										},
@@ -1042,39 +949,6 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "ProxyMetrics-sinks-multi-backendref",
-			mutate: func(envoy *egv1a1.EnvoyProxy) {
-				envoy.Spec = egv1a1.EnvoyProxySpec{
-					Telemetry: &egv1a1.ProxyTelemetry{
-						Metrics: &egv1a1.ProxyMetrics{
-							Sinks: []egv1a1.ProxyMetricSink{
-								{
-									Type: egv1a1.MetricSinkTypeOpenTelemetry,
-									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
-										BackendRefs: []egv1a1.BackendRef{
-											{
-												BackendObjectReference: gwapiv1.BackendObjectReference{
-													Name: "fake-service",
-													Port: ptr.To(gwapiv1.PortNumber(8080)),
-												},
-											},
-											{
-												BackendObjectReference: gwapiv1.BackendObjectReference{
-													Name: "fake-service",
-													Port: ptr.To(gwapiv1.PortNumber(8080)),
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				}
-			},
-			wantErrors: []string{"must have at most 1 items"},
-		},
-		{
 			desc: "ProxyMetrics-sinks-backendref-empty-kind",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
@@ -1084,11 +958,13 @@ func TestEnvoyProxyProvider(t *testing.T) {
 								{
 									Type: egv1a1.MetricSinkTypeOpenTelemetry,
 									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
-										BackendRefs: []egv1a1.BackendRef{
-											{
-												BackendObjectReference: gwapiv1.BackendObjectReference{
-													Name: "fake-service",
-													Port: ptr.To(gwapiv1.PortNumber(8080)),
+										BackendCluster: egv1a1.BackendCluster{
+											BackendRefs: []egv1a1.BackendRef{
+												{
+													BackendObjectReference: gwapiv1.BackendObjectReference{
+														Name: "fake-service",
+														Port: ptr.To(gwapiv1.PortNumber(8080)),
+													},
 												},
 											},
 										},
@@ -1111,12 +987,14 @@ func TestEnvoyProxyProvider(t *testing.T) {
 								{
 									Type: egv1a1.MetricSinkTypeOpenTelemetry,
 									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
-										BackendRefs: []egv1a1.BackendRef{
-											{
-												BackendObjectReference: gwapiv1.BackendObjectReference{
-													Name: "fake-service",
-													Kind: ptr.To(gwapiv1.Kind("foo")),
-													Port: ptr.To(gwapiv1.PortNumber(8080)),
+										BackendCluster: egv1a1.BackendCluster{
+											BackendRefs: []egv1a1.BackendRef{
+												{
+													BackendObjectReference: gwapiv1.BackendObjectReference{
+														Name: "fake-service",
+														Kind: ptr.To(gwapiv1.Kind("foo")),
+														Port: ptr.To(gwapiv1.PortNumber(8080)),
+													},
 												},
 											},
 										},
@@ -1127,7 +1005,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"only support Service Kind."},
+			wantErrors: []string{"only supports Service Kind."},
 		},
 		{
 			desc: "ProxyMetrics-sinks-invalid-backendref-group",
@@ -1139,12 +1017,14 @@ func TestEnvoyProxyProvider(t *testing.T) {
 								{
 									Type: egv1a1.MetricSinkTypeOpenTelemetry,
 									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
-										BackendRefs: []egv1a1.BackendRef{
-											{
-												BackendObjectReference: gwapiv1.BackendObjectReference{
-													Name:  "fake-service",
-													Group: ptr.To(gwapiv1.Group("foo")),
-													Port:  ptr.To(gwapiv1.PortNumber(8080)),
+										BackendCluster: egv1a1.BackendCluster{
+											BackendRefs: []egv1a1.BackendRef{
+												{
+													BackendObjectReference: gwapiv1.BackendObjectReference{
+														Name:  "fake-service",
+														Group: ptr.To(gwapiv1.Group("foo")),
+														Port:  ptr.To(gwapiv1.PortNumber(8080)),
+													},
 												},
 											},
 										},
@@ -1165,11 +1045,13 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						Tracing: &egv1a1.ProxyTracing{
 							Provider: egv1a1.TracingProvider{
 								Type: egv1a1.TracingProviderTypeOpenTelemetry,
-								BackendRefs: []egv1a1.BackendRef{
-									{
-										BackendObjectReference: gwapiv1.BackendObjectReference{
-											Name: "fake-service",
-											Kind: ptr.To(gwapiv1.Kind("foo")),
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "fake-service",
+												Kind: ptr.To(gwapiv1.Kind("foo")),
+											},
 										},
 									},
 								},
@@ -1178,7 +1060,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"only support Service Kind."},
+			wantErrors: []string{"only supports Service Kind."},
 		},
 		{
 			desc: "tracing-backendref-empty-kind",
@@ -1188,11 +1070,13 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						Tracing: &egv1a1.ProxyTracing{
 							Provider: egv1a1.TracingProvider{
 								Type: egv1a1.TracingProviderTypeOpenTelemetry,
-								BackendRefs: []egv1a1.BackendRef{
-									{
-										BackendObjectReference: gwapiv1.BackendObjectReference{
-											Name: "fake-service",
-											Port: ptr.To(gwapiv1.PortNumber(8080)),
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "fake-service",
+												Port: ptr.To(gwapiv1.PortNumber(8080)),
+											},
 										},
 									},
 								},
@@ -1210,12 +1094,14 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						Tracing: &egv1a1.ProxyTracing{
 							Provider: egv1a1.TracingProvider{
 								Type: egv1a1.TracingProviderTypeOpenTelemetry,
-								BackendRefs: []egv1a1.BackendRef{
-									{
-										BackendObjectReference: gwapiv1.BackendObjectReference{
-											Name: "fake-service",
-											Kind: ptr.To(gwapiv1.Kind("Service")),
-											Port: ptr.To(gwapiv1.PortNumber(8080)),
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "fake-service",
+												Kind: ptr.To(gwapiv1.Kind("Service")),
+												Port: ptr.To(gwapiv1.PortNumber(8080)),
+											},
 										},
 									},
 								},
@@ -1224,37 +1110,6 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-		},
-		{
-			desc: "tracing-multi-backendref",
-			mutate: func(envoy *egv1a1.EnvoyProxy) {
-				envoy.Spec = egv1a1.EnvoyProxySpec{
-					Telemetry: &egv1a1.ProxyTelemetry{
-						Tracing: &egv1a1.ProxyTracing{
-							Provider: egv1a1.TracingProvider{
-								Type: egv1a1.TracingProviderTypeOpenTelemetry,
-								BackendRefs: []egv1a1.BackendRef{
-									{
-										BackendObjectReference: gwapiv1.BackendObjectReference{
-											Name: "fake-service",
-											Kind: ptr.To(gwapiv1.Kind("Service")),
-											Port: ptr.To(gwapiv1.PortNumber(8080)),
-										},
-									},
-									{
-										BackendObjectReference: gwapiv1.BackendObjectReference{
-											Name: "fake-service",
-											Kind: ptr.To(gwapiv1.Kind("Service")),
-											Port: ptr.To(gwapiv1.PortNumber(8080)),
-										},
-									},
-								},
-							},
-						},
-					},
-				}
-			},
-			wantErrors: []string{"must have at most 1 items"},
 		},
 		{
 			desc: "tracing-empty-backend",
@@ -1376,7 +1231,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						{
 							Name:   egv1a1.EnvoyFilterRateLimit,
 							Before: ptr.To(egv1a1.EnvoyFilterCORS),
-							After:  ptr.To(egv1a1.EnvoyFilterBasicAuthn),
+							After:  ptr.To(egv1a1.EnvoyFilterBasicAuth),
 						},
 					},
 				}
@@ -1417,7 +1272,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					FilterOrder: []egv1a1.FilterPosition{
 						{
 							Name:  egv1a1.EnvoyFilterRateLimit,
-							After: ptr.To(egv1a1.EnvoyFilterBasicAuthn),
+							After: ptr.To(egv1a1.EnvoyFilterBasicAuth),
 						},
 					},
 				}
@@ -1489,6 +1344,65 @@ func TestEnvoyProxyProvider(t *testing.T) {
 				}
 			},
 			wantErrors: []string{"cannot use envoyHpa if envoyDaemonSet is used"},
+		},
+		{
+			desc: "mismatched bootstrap patch configured - one",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Bootstrap: &egv1a1.ProxyBootstrap{
+						Type: ptr.To(egv1a1.BootstrapType("Merge")),
+						JSONPatches: []egv1a1.JSONPatchOperation{
+							{
+								Op:   egv1a1.JSONPatchOperationType("remove"),
+								Path: ptr.To("/some/path"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"provided bootstrap patch doesn't match the configured patch type",
+			},
+		},
+		{
+			desc: "mismatched bootstrap patch configured - two",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Bootstrap: &egv1a1.ProxyBootstrap{
+						Type:  ptr.To(egv1a1.BootstrapType("JSONPatch")),
+						Value: ptr.To("some value"),
+					},
+				}
+			},
+			wantErrors: []string{
+				"provided bootstrap patch doesn't match the configured patch type",
+			},
+		},
+		{
+			desc: "missing bootstrap patch - one",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Bootstrap: &egv1a1.ProxyBootstrap{
+						Type: ptr.To(egv1a1.BootstrapType("JSONPatch")),
+					},
+				}
+			},
+			wantErrors: []string{
+				"provided bootstrap patch doesn't match the configured patch type",
+			},
+		},
+		{
+			desc: "missing bootstrap patch - two",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Bootstrap: &egv1a1.ProxyBootstrap{
+						Type: ptr.To(egv1a1.BootstrapType("Merge")),
+					},
+				}
+			},
+			wantErrors: []string{
+				"provided bootstrap patch doesn't match the configured patch type",
+			},
 		},
 	}
 

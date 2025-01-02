@@ -24,7 +24,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
-	"k8s.io/utils/ptr"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
@@ -34,12 +34,11 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
-var (
-	ErrXdsClusterExists = errors.New("xds cluster exists")
-	ErrXdsSecretExists  = errors.New("xds secret exists")
+const (
+	AuthorityHeaderKey = ":authority"
+	// The dummy cluster for TCP listeners that have no routes
+	emptyClusterName = "EmptyCluster"
 )
-
-const AuthorityHeaderKey = ":authority"
 
 // Translator translates the xDS IR into xDS resources.
 type Translator struct {
@@ -168,13 +167,13 @@ func (t *Translator) notifyExtensionServerAboutListeners(
 	for _, l := range tCtx.XdsResources[resourcev3.ListenerType] {
 		listener := l.(*listenerv3.Listener)
 		policies := []*ir.UnstructuredRef{}
-		alreadyIncludedPolicies := map[utils.NamespacedNameWithGroupKind]bool{}
+		alreadyIncludedPolicies := sets.New[utils.NamespacedNameWithGroupKind]()
 		for _, irListener := range findIRListenersByXDSListener(xdsIR, listener) {
 			for _, pol := range irListener.GetExtensionRefs() {
 				key := utils.GetNamespacedNameWithGroupKind(pol.Object)
-				if _, found := alreadyIncludedPolicies[key]; !found {
+				if !alreadyIncludedPolicies.Has(key) {
 					policies = append(policies, pol)
-					alreadyIncludedPolicies[key] = true
+					alreadyIncludedPolicies.Insert(key)
 				}
 			}
 		}
@@ -217,7 +216,12 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		case !xdsListenerOnSameAddressPortExists:
 			// Create a new UDP(QUIC) listener for HTTP3 traffic if HTTP3 is enabled
 			if http3Enabled {
-				quicXDSListener = buildXdsQuicListener(httpListener.Name, httpListener.Address, httpListener.Port, accessLog)
+				if quicXDSListener, err = buildXdsQuicListener(httpListener.Name, httpListener.Address,
+					httpListener.Port, httpListener.IPFamily, accessLog); err != nil {
+					errs = errors.Join(errs, err)
+					continue
+				}
+
 				if err = tCtx.AddXdsResource(resourcev3.ListenerType, quicXDSListener); err != nil {
 					errs = errors.Join(errs, err)
 					continue
@@ -225,7 +229,13 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			}
 
 			// Create a new TCP listener for HTTP1/HTTP2 traffic.
-			tcpXDSListener = buildXdsTCPListener(httpListener.Name, httpListener.Address, httpListener.Port, httpListener.TCPKeepalive, httpListener.Connection, accessLog)
+			if tcpXDSListener, err = buildXdsTCPListener(
+				httpListener.Name, httpListener.Address, httpListener.Port, httpListener.IPFamily,
+				httpListener.TCPKeepalive, httpListener.Connection, accessLog); err != nil {
+				errs = errors.Join(errs, err)
+				continue
+			}
+
 			if err = tCtx.AddXdsResource(resourcev3.ListenerType, tcpXDSListener); err != nil {
 				errs = errors.Join(errs, err)
 				continue
@@ -320,16 +330,17 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 				}
 			}
 
-			// add http route client certs
-			for _, route := range httpListener.Routes {
-				if route.Destination != nil {
-					for _, st := range route.Destination.Settings {
-						if st.TLS != nil {
-							for _, cert := range st.TLS.ClientCertificates {
-								secret := buildXdsTLSCertSecret(cert)
-								if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
-									errs = errors.Join(errs, err)
-								}
+		}
+
+		// add http route client certs
+		for _, route := range httpListener.Routes {
+			if route.Destination != nil {
+				for _, st := range route.Destination.Settings {
+					if st.TLS != nil {
+						for _, cert := range st.TLS.ClientCertificates {
+							secret := buildXdsTLSCertSecret(cert)
+							if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+								errs = errors.Join(errs, err)
 							}
 						}
 					}
@@ -398,8 +409,9 @@ func (t *Translator) addRouteToRouteConfig(
 			underscoredHostname := strings.ReplaceAll(httpRoute.Hostname, ".", "_")
 			// Allocate virtual host for this httpRoute.
 			vHost = &routev3.VirtualHost{
-				Name:    fmt.Sprintf("%s/%s", httpListener.Name, underscoredHostname),
-				Domains: []string{httpRoute.Hostname},
+				Name:     fmt.Sprintf("%s/%s", httpListener.Name, underscoredHostname),
+				Domains:  []string{httpRoute.Hostname},
+				Metadata: buildXdsMetadata(httpListener.Metadata),
 			}
 			if metrics != nil && metrics.EnableVirtualHostStats {
 				vHost.VirtualClusters = []*routev3.VirtualCluster{
@@ -449,11 +461,20 @@ func (t *Translator) addRouteToRouteConfig(
 		vHost.Routes = append(vHost.Routes, xdsRoute)
 
 		if httpRoute.Destination != nil {
+			ea := &ExtraArgs{
+				metrics:       metrics,
+				http1Settings: httpListener.HTTP1,
+				ipFamily:      determineIPFamily(httpRoute.Destination.Settings),
+			}
+
+			if httpRoute.Traffic != nil && httpRoute.Traffic.HTTP2 != nil {
+				ea.http2Settings = httpRoute.Traffic.HTTP2
+			}
+
 			if err = processXdsCluster(
 				tCtx,
-				httpRoute,
-				httpListener.HTTP1,
-				metrics,
+				&HTTPRouteTranslator{httpRoute},
+				ea,
 			); err != nil {
 				errs = errors.Join(errs, err)
 			}
@@ -467,7 +488,7 @@ func (t *Translator) addRouteToRouteConfig(
 					tSocket:      nil,
 					endpointType: EndpointTypeStatic,
 					metrics:      metrics,
-				}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+				}); err != nil {
 					errs = errors.Join(errs, err)
 				}
 			}
@@ -504,7 +525,7 @@ func (t *Translator) addHTTPFiltersToHCM(filterChain *listenerv3.FilterChain, ht
 	for i, filter := range filterChain.Filters {
 		if filter.Name == wellknown.HTTPConnectionManager {
 			var mgrAny *anypb.Any
-			if mgrAny, err = protocov.ToAnyWithError(hcm); err != nil {
+			if mgrAny, err = protocov.ToAnyWithValidation(hcm); err != nil {
 				return err
 			}
 
@@ -550,12 +571,19 @@ func (t *Translator) processTCPListenerXdsTranslation(
 ) error {
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
-	var errs error
+	var errs, err error
 	for _, tcpListener := range tcpListeners {
 		// Search for an existing listener, if it does not exist, create one.
 		xdsListener := findXdsListenerByHostPort(tCtx, tcpListener.Address, tcpListener.Port, corev3.SocketAddress_TCP)
 		if xdsListener == nil {
-			xdsListener = buildXdsTCPListener(tcpListener.Name, tcpListener.Address, tcpListener.Port, tcpListener.TCPKeepalive, tcpListener.Connection, accesslog)
+			if xdsListener, err = buildXdsTCPListener(
+				tcpListener.Name, tcpListener.Address, tcpListener.Port, tcpListener.IPFamily,
+				tcpListener.TCPKeepalive, tcpListener.Connection, accesslog); err != nil {
+				// skip this listener if failed to build xds listener
+				errs = errors.Join(errs, err)
+				continue
+			}
+
 			if err := tCtx.AddXdsResource(resourcev3.ListenerType, xdsListener); err != nil {
 				// skip this listener if failed to add xds listener to the
 				errs = errors.Join(errs, err)
@@ -571,19 +599,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 		patchProxyProtocolFilter(xdsListener, tcpListener.EnableProxyProtocol)
 
 		for _, route := range tcpListener.Routes {
-			if err := addXdsCluster(tCtx, &xdsClusterArgs{
-				name:              route.Destination.Name,
-				settings:          route.Destination.Settings,
-				loadBalancer:      route.LoadBalancer,
-				proxyProtocol:     route.ProxyProtocol,
-				circuitBreaker:    route.CircuitBreaker,
-				tcpkeepalive:      route.TCPKeepalive,
-				healthCheck:       route.HealthCheck,
-				timeout:           route.Timeout,
-				endpointType:      buildEndpointType(route.Destination.Settings),
-				metrics:           metrics,
-				backendConnection: route.BackendConnection,
-			}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+			if err := processXdsCluster(tCtx, &TCPRouteTranslator{route}, &ExtraArgs{metrics: metrics}); err != nil {
 				errs = errors.Join(errs, err)
 			}
 			if route.TLS != nil && route.TLS.Terminate != nil {
@@ -609,6 +625,31 @@ func (t *Translator) processTCPListenerXdsTranslation(
 				}
 			}
 			if err := addXdsTCPFilterChain(xdsListener, route, route.Destination.Name, accesslog, tcpListener.Timeout, tcpListener.Connection); err != nil {
+				errs = errors.Join(errs, err)
+			}
+		}
+
+		// If there are no routes, add a route without a destination to the listener to create a filter chain
+		// This is needed because Envoy requires a filter chain to be present in the listener, otherwise it will reject the listener and report a warning
+		if len(tcpListener.Routes) == 0 {
+			emptyRouteCluster := &clusterv3.Cluster{
+				Name:                 emptyClusterName,
+				ClusterDiscoveryType: &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STATIC},
+			}
+
+			if findXdsCluster(tCtx, emptyClusterName) == nil {
+				if err := tCtx.AddXdsResource(resourcev3.ClusterType, emptyRouteCluster); err != nil {
+					errs = errors.Join(errs, err)
+				}
+			}
+
+			emptyRoute := &ir.TCPRoute{
+				Name: emptyClusterName,
+				Destination: &ir.RouteDestination{
+					Name: emptyClusterName,
+				},
+			}
+			if err := addXdsTCPFilterChain(xdsListener, emptyRoute, emptyClusterName, accesslog, tcpListener.Timeout, tcpListener.Connection); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
@@ -645,16 +686,7 @@ func processUDPListenerXdsTranslation(
 			}
 
 			// 1:1 between IR UDPRoute and xDS Cluster
-			if err := addXdsCluster(tCtx, &xdsClusterArgs{
-				name:              route.Destination.Name,
-				settings:          route.Destination.Settings,
-				loadBalancer:      route.LoadBalancer,
-				timeout:           route.Timeout,
-				tSocket:           nil,
-				endpointType:      buildEndpointType(route.Destination.Settings),
-				metrics:           metrics,
-				backendConnection: route.BackendConnection,
-			}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+			if err := processXdsCluster(tCtx, &UDPRouteTranslator{route}, &ExtraArgs{metrics: metrics}); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
@@ -746,35 +778,9 @@ func findXdsEndpoint(tCtx *types.ResourceVersionTable, name string) *endpointv3.
 	return nil
 }
 
-// processXdsCluster processes a xds cluster by its endpoint address type.
-func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute, http1Settings *ir.HTTP1Settings, metrics *ir.Metrics) error {
-	clusterArgs := &xdsClusterArgs{
-		name:              httpRoute.Destination.Name,
-		settings:          httpRoute.Destination.Settings,
-		tSocket:           nil,
-		endpointType:      buildEndpointType(httpRoute.Destination.Settings),
-		http1Settings:     http1Settings,
-		metrics:           metrics,
-		useClientProtocol: ptr.Deref(httpRoute.UseClientProtocol, false),
-	}
-
-	// Populate traffic features.
-	bt := httpRoute.Traffic
-	if bt != nil {
-		clusterArgs.loadBalancer = bt.LoadBalancer
-		clusterArgs.proxyProtocol = bt.ProxyProtocol
-		clusterArgs.circuitBreaker = bt.CircuitBreaker
-		clusterArgs.healthCheck = bt.HealthCheck
-		clusterArgs.timeout = bt.Timeout
-		clusterArgs.tcpkeepalive = bt.TCPKeepalive
-		clusterArgs.backendConnection = bt.BackendConnection
-	}
-
-	if err := addXdsCluster(tCtx, clusterArgs); err != nil && !errors.Is(err, ErrXdsClusterExists) {
-		return err
-	}
-
-	return nil
+// processXdsCluster processes xds cluster with args per route.
+func processXdsCluster(tCtx *types.ResourceVersionTable, route clusterArgs, extras *ExtraArgs) error {
+	return addXdsCluster(tCtx, route.asClusterArgs(extras))
 }
 
 // findXdsSecret finds a xds secret with the same name, and returns nil if there is no match.
@@ -793,10 +799,12 @@ func findXdsSecret(tCtx *types.ResourceVersionTable, name string) *tlsv3.Secret 
 	return nil
 }
 
+// addXdsSecret adds a xds secret with args.
+// If the secret already exists, it skips adding the secret and returns nil
 func addXdsSecret(tCtx *types.ResourceVersionTable, secret *tlsv3.Secret) error {
-	// Return early if cluster with the same name exists
+	// Return early if secret with the same name exists
 	if c := findXdsSecret(tCtx, secret.Name); c != nil {
-		return ErrXdsSecretExists
+		return nil
 	}
 
 	if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
@@ -805,10 +813,15 @@ func addXdsSecret(tCtx *types.ResourceVersionTable, secret *tlsv3.Secret) error 
 	return nil
 }
 
+// addXdsCluster adds a xds cluster with args.
+// If the cluster already exists, it skips adding the cluster and returns nil.
 func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error {
-	// Return early if cluster with the same name exists
+	// Return early if cluster with the same name exists.
+	// All the current callers can all safely assume the xdsClusterArgs is the same for the clusters with the same name.
+	// If this assumption changes, the callers should call findXdsCluster first to check if the cluster already exists
+	// before calling addXdsCluster.
 	if c := findXdsCluster(tCtx, args.name); c != nil {
-		return ErrXdsClusterExists
+		return nil
 	}
 
 	xdsCluster := buildXdsCluster(args)
@@ -930,8 +943,8 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.
 		tlsCtx.CommonTlsContext.TlsParams = tlsParams
 	}
 
-	if len(tlsConfig.ALPNProtocols) > 0 {
-		tlsCtx.CommonTlsContext.AlpnProtocols = buildALPNProtocols(tlsConfig.ALPNProtocols)
+	if tlsConfig.ALPNProtocols != nil {
+		tlsCtx.CommonTlsContext.AlpnProtocols = tlsConfig.ALPNProtocols
 	}
 
 	if len(tlsConfig.ClientCertificates) > 0 {
@@ -945,7 +958,7 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.
 		}
 	}
 
-	tlsCtxAny, err := anypb.New(tlsCtx)
+	tlsCtxAny, err := protocov.ToAnyWithValidation(tlsCtx)
 	if err != nil {
 		return nil, err
 	}

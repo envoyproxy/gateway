@@ -22,11 +22,11 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/protocov"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 const (
-	jwtAuthn         = "envoy.filters.http.jwt_authn"
 	envoyTrustBundle = "/etc/ssl/certs/ca-certificates.crt"
 )
 
@@ -55,7 +55,7 @@ func (*jwt) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListen
 
 	// Return early if filter already exists.
 	for _, httpFilter := range mgr.HttpFilters {
-		if httpFilter.Name == jwtAuthn {
+		if httpFilter.Name == egv1a1.EnvoyFilterJWTAuthn.String() {
 			return nil
 		}
 	}
@@ -77,17 +77,13 @@ func buildHCMJWTFilter(irListener *ir.HTTPListener) (*hcmv3.HttpFilter, error) {
 		return nil, err
 	}
 
-	if err := jwtAuthnProto.ValidateAll(); err != nil {
-		return nil, err
-	}
-
-	jwtAuthnAny, err := anypb.New(jwtAuthnProto)
+	jwtAuthnAny, err := protocov.ToAnyWithValidation(jwtAuthnProto)
 	if err != nil {
 		return nil, err
 	}
 
 	return &hcmv3.HttpFilter{
-		Name: jwtAuthn,
+		Name: egv1a1.EnvoyFilterJWTAuthn.String(),
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: jwtAuthnAny,
 		},
@@ -124,7 +120,6 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 					},
 					CacheDuration: &durationpb.Duration{Seconds: 5 * 60},
 					AsyncFetch:    &jwtauthnv3.JwksAsyncFetch{},
-					RetryPolicy:   &corev3.RetryPolicy{},
 				},
 			}
 
@@ -140,9 +135,13 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 				Issuer:              irProvider.Issuer,
 				Audiences:           irProvider.Audiences,
 				JwksSourceSpecifier: remote,
-				PayloadInMetadata:   irProvider.Issuer,
+				PayloadInMetadata:   irProvider.Name,
 				ClaimToHeaders:      claimToHeaders,
 				Forward:             true,
+				NormalizePayloadInMetadata: &jwtauthnv3.JwtProvider_NormalizePayload{
+					// Normalize the scopes to facilitate matching in Authorization.
+					SpaceDelimitedClaims: []string{"scope"},
+				},
 			}
 
 			if irProvider.RecomputeRoute != nil {
@@ -211,7 +210,7 @@ func buildXdsUpstreamTLSSocket(sni string) (*corev3.TransportSocket, error) {
 		},
 	}
 
-	tlsCtxAny, err := anypb.New(tlsCtxProto)
+	tlsCtxAny, err := protocov.ToAnyWithValidation(tlsCtxProto)
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +234,7 @@ func (*jwt) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	}
 
 	filterCfg := route.GetTypedPerFilterConfig()
-	if _, ok := filterCfg[jwtAuthn]; !ok {
+	if _, ok := filterCfg[egv1a1.EnvoyFilterJWTAuthn.String()]; !ok {
 		if !routeContainsJWTAuthn(irRoute) {
 			return nil
 		}
@@ -244,7 +243,7 @@ func (*jwt) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 			RequirementSpecifier: &jwtauthnv3.PerRouteConfig_RequirementName{RequirementName: irRoute.Name},
 		}
 
-		routeCfgAny, err := anypb.New(routeCfgProto)
+		routeCfgAny, err := protocov.ToAnyWithValidation(routeCfgProto)
 		if err != nil {
 			return err
 		}
@@ -253,7 +252,7 @@ func (*jwt) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 			route.TypedPerFilterConfig = make(map[string]*anypb.Any)
 		}
 
-		route.TypedPerFilterConfig[jwtAuthn] = routeCfgAny
+		route.TypedPerFilterConfig[egv1a1.EnvoyFilterJWTAuthn.String()] = routeCfgAny
 	}
 
 	return nil

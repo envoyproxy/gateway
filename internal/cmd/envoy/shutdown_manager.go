@@ -114,7 +114,7 @@ func shutdownReadyHandler(w http.ResponseWriter, readyTimeout time.Duration, rea
 }
 
 // Shutdown is called from a preStop hook on the shutdown-manager container where
-// it will initiate a graceful drain sequence on the Envoy proxy and block until
+// it will initiate a drain sequence on the Envoy proxy and block until
 // connections are drained or a timeout is exceeded.
 func Shutdown(drainTimeout time.Duration, minDrainDuration time.Duration, exitAtConnections int) error {
 	startTime := time.Now()
@@ -125,17 +125,12 @@ func Shutdown(drainTimeout time.Duration, minDrainDuration time.Duration, exitAt
 		logger = logging.FileLogger("/proc/1/fd/1", "shutdown-manager", egv1a1.LogLevelInfo)
 	}
 
-	logger.Info(fmt.Sprintf("initiating graceful drain with %.0f second minimum drain period and %.0f second timeout",
+	logger.Info(fmt.Sprintf("initiating drain with %.0f second minimum drain period and %.0f second timeout",
 		minDrainDuration.Seconds(), drainTimeout.Seconds()))
 
 	// Start failing active health checks
 	if err := postEnvoyAdminAPI("healthcheck/fail"); err != nil {
 		logger.Error(err, "error failing active health checks")
-	}
-
-	// Initiate graceful drain sequence
-	if err := postEnvoyAdminAPI("drain_listeners?graceful&skip_exit"); err != nil {
-		logger.Error(err, "error initiating graceful drain")
 	}
 
 	// Poll total connections from Envoy admin API until minimum drain period has
@@ -154,10 +149,10 @@ func Shutdown(drainTimeout time.Duration, minDrainDuration time.Duration, exitAt
 		}
 
 		if elapsedTime > drainTimeout {
-			logger.Info("graceful drain sequence timeout exceeded")
+			logger.Info("drain sequence timeout exceeded")
 			break
 		} else if allowedToExit && conn != nil && *conn <= exitAtConnections {
-			logger.Info("graceful drain sequence completed")
+			logger.Info("drain sequence completed")
 			break
 		}
 
@@ -176,7 +171,7 @@ func Shutdown(drainTimeout time.Duration, minDrainDuration time.Duration, exitAt
 // postEnvoyAdminAPI sends a POST request to the Envoy admin API
 func postEnvoyAdminAPI(path string) error {
 	if resp, err := http.Post(fmt.Sprintf("http://%s:%d/%s",
-		bootstrap.EnvoyAdminAddress, bootstrap.EnvoyAdminPort, path), "application/json", nil); err != nil {
+		"localhost", bootstrap.EnvoyAdminPort, path), "application/json", nil); err != nil {
 		return err
 	} else {
 		defer resp.Body.Close()
@@ -192,7 +187,7 @@ func postEnvoyAdminAPI(path string) error {
 func getTotalConnections() (*int, error) {
 	// Send request to Envoy admin API to retrieve server.total_connections stat
 	if resp, err := http.Get(fmt.Sprintf("http://%s:%d//stats?filter=^server\\.total_connections$&format=json",
-		bootstrap.EnvoyAdminAddress, bootstrap.EnvoyAdminPort)); err != nil {
+		"localhost", bootstrap.EnvoyAdminPort)); err != nil {
 		return nil, err
 	} else {
 		defer resp.Body.Close()

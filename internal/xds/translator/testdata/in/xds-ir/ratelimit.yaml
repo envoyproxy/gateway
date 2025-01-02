@@ -1,6 +1,6 @@
 http:
 - name: "first-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 10080
   hostnames:
   - "*"
@@ -61,6 +61,27 @@ http:
       exact: "test"
     destination:
       name: "third-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "fourth-route"
+    hostname: "*"
+    traffic:
+      rateLimit:
+        global:
+          rules:
+          - headerMatches:
+            - name: "x-org-id"
+              exact: "admin"
+              invert: true
+            limit:
+              requests: 5
+              unit: second
+    pathMatch:
+      exact: "foo/bar/login"
+    destination:
+      name: "fourth-route-dest"
       settings:
       - endpoints:
         - host: "1.2.3.4"

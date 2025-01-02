@@ -149,8 +149,8 @@ securityPolicies:
     extAuth:
       failOpen: true
       grpc:
-        backendRef:
-          name: grpc-backend
+        backendRefs:
+        - name: grpc-backend
           port: 9000
       headersToExtAuth:
       - header1
@@ -184,8 +184,8 @@ securityPolicies:
     extAuth:
       failOpen: false
       http:
-        backendRef:
-          name: http-backend
+        backendRefs:
+        - name: http-backend
           namespace: envoy-gateway
           port: 80
         headersToBackend:
@@ -226,6 +226,11 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+        sectionName: http
       name: default/gateway-1/http
       path:
         escapedSlashesAction: UnescapeAndRedirect
@@ -243,6 +248,10 @@ xdsIR:
             weight: 1
         hostname: www.foo.com
         isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
         name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
         pathMatch:
           distinct: false
@@ -254,7 +263,7 @@ xdsIR:
             grpc:
               authority: grpc-backend.default:9000
               destination:
-                name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
+                name: securitypolicy/default/policy-for-http-route-1/extauth/0
                 settings:
                 - addressType: IP
                   endpoints:
@@ -277,6 +286,10 @@ xdsIR:
             weight: 1
         hostname: www.foo.com
         isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
         name: httproute/default/httproute-1/rule/1/match/0/www_foo_com
         pathMatch:
           distinct: false
@@ -288,7 +301,7 @@ xdsIR:
             grpc:
               authority: grpc-backend.default:9000
               destination:
-                name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
+                name: securitypolicy/default/policy-for-http-route-1/extauth/0
                 settings:
                 - addressType: IP
                   endpoints:
@@ -311,6 +324,10 @@ xdsIR:
             weight: 1
         hostname: www.bar.com
         isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: default
         name: httproute/default/httproute-2/rule/0/match/0/www_bar_com
         pathMatch:
           distinct: false
@@ -322,7 +339,7 @@ xdsIR:
             http:
               authority: http-backend.envoy-gateway:80
               destination:
-                name: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
+                name: securitypolicy/default/policy-for-gateway-1/extauth/0
                 settings:
                 - addressType: IP
                   endpoints:

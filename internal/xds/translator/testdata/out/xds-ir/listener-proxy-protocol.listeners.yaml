@@ -1,8 +1,7 @@
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       portValue: 10080
-  drainType: MODIFY_ONLY
   filterChains:
   - filterChainMatch:
       serverNames:
@@ -31,7 +30,7 @@
             resourceApiVersion: V3
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: https
+        statPrefix: https-10080
         useRemoteAddress: true
     name: first-listener
     transportSocket:
@@ -51,6 +50,8 @@
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
+        disableStatefulSessionResumption: true
+        disableStatelessSessionResumption: true
   listenerFilters:
   - name: envoy.filters.listener.proxy_protocol
     typedConfig:
@@ -62,16 +63,15 @@
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       portValue: 10081
-  drainType: MODIFY_ONLY
   filterChains:
   - filters:
     - name: envoy.filters.network.tcp_proxy
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tls-route-dest
-        statPrefix: tcp
+        statPrefix: tcp-10081
     name: tcp-route-dest
   listenerFilters:
   - name: envoy.filters.listener.proxy_protocol
