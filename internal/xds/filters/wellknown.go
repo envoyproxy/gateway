@@ -16,33 +16,48 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils/protocov"
 )
 
-var (
+var GRPCWeb, GRPCStats *hcm.HttpFilter
+
+func init() {
+	any, err := protocov.ToAnyWithValidation(&grpcweb.GrpcWeb{})
+	if err != nil {
+		panic(err)
+	}
 	GRPCWeb = &hcm.HttpFilter{
 		Name: wellknown.GRPCWeb,
 		ConfigType: &hcm.HttpFilter_TypedConfig{
-			TypedConfig: protocov.ToAny(&grpcweb.GrpcWeb{}),
+			TypedConfig: any,
 		},
+	}
+
+	any, err = protocov.ToAnyWithValidation(&grpcstats.FilterConfig{
+		EmitFilterState: true,
+		PerMethodStatSpecifier: &grpcstats.FilterConfig_StatsForAllMethods{
+			StatsForAllMethods: &wrapperspb.BoolValue{Value: true},
+		},
+	})
+	if err != nil {
+		panic(err)
 	}
 	GRPCStats = &hcm.HttpFilter{
 		Name: wellknown.HTTPGRPCStats,
 		ConfigType: &hcm.HttpFilter_TypedConfig{
-			TypedConfig: protocov.ToAny(&grpcstats.FilterConfig{
-				EmitFilterState: true,
-				PerMethodStatSpecifier: &grpcstats.FilterConfig_StatsForAllMethods{
-					StatsForAllMethods: &wrapperspb.BoolValue{Value: true},
-				},
-			}),
+			TypedConfig: any,
 		},
 	}
-)
+}
 
-func GenerateRouterFilter(enableEnvoyHeaders bool) *hcm.HttpFilter {
+func GenerateRouterFilter(enableEnvoyHeaders bool) (*hcm.HttpFilter, error) {
+	any, err := protocov.ToAnyWithValidation(&httprouter.Router{
+		SuppressEnvoyHeaders: !enableEnvoyHeaders,
+	})
+	if err != nil {
+		return nil, err
+	}
 	return &hcm.HttpFilter{
 		Name: wellknown.Router,
 		ConfigType: &hcm.HttpFilter_TypedConfig{
-			TypedConfig: protocov.ToAny(&httprouter.Router{
-				SuppressEnvoyHeaders: !enableEnvoyHeaders,
-			}),
+			TypedConfig: any,
 		},
-	}
+	}, nil
 }
