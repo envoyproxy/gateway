@@ -31,6 +31,7 @@ const (
 	MsgOlderGatewayClassExists   = "Invalid GatewayClass: another older GatewayClass with the same Spec.Controller exists"
 	MsgValidGatewayClass         = "Valid GatewayClass"
 	MsgGatewayClassInvalidParams = "Invalid parametersRef"
+	MsgInvalidSecurityPolicy     = "Invalid SecurityPolicy"
 )
 
 // SetGatewayClassAccepted inserts or updates the Accepted condition

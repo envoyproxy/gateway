@@ -322,6 +322,14 @@ func translateGatewayAPIToGatewayAPI(resources *resource.Resources) (resource.Re
 		}
 		gRes.EnvoyProxyForGatewayClass = resources.EnvoyProxyForGatewayClass
 	}
+	for _, sp := range resources.SecurityPolicies {
+		if err := validation.ValidateSecurityPolicy(sp); err != nil {
+			epInvalid = true
+			msg := fmt.Sprintf("%s: %v", status.MsgInvalidSecurityPolicy, err)
+			status.SetGatewayClassAccepted(resources.GatewayClass, false, string(gwapiv1.GatewayClassReasonInvalidParameters), msg)
+		}
+	}
+
 	if !epInvalid {
 		status.SetGatewayClassAccepted(resources.GatewayClass, true, string(gwapiv1.GatewayClassReasonAccepted), status.MsgValidGatewayClass)
 	}
