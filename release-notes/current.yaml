@@ -17,6 +17,7 @@ new features: |
   Added support for trusted CIDRs in the ClientIPDetectionSettings API
   Added support for sending attributes to external processor in EnvoyExtensionPolicy API
   Added support for patching EnvoyProxy.spec.provider.kubernetes.envoyHpa and EnvoyProxy.spec.provider.kubernetes.envoyPDB
+  Added support for preserving the user defined HTTPRoute match order in EnvoyProxy API
 
 # Fixes for bugs identified in previous versions.
 bug fixes: |
