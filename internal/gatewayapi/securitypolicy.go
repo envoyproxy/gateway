@@ -955,10 +955,16 @@ func backendRefAuthority(resources *resource.Resources, backendRef *gwapiv1.Back
 		}
 	}
 
-	return net.JoinHostPort(
-		fmt.Sprintf("%s.%s", backendRef.Name, backendNamespace),
-		strconv.Itoa(int(*backendRef.Port)),
-	)
+	// Port is mandatory for Kubernetes services
+	if backendKind == resource.KindService {
+		return net.JoinHostPort(
+			fmt.Sprintf("%s.%s", backendRef.Name, backendNamespace),
+			strconv.Itoa(int(*backendRef.Port)),
+		)
+	}
+
+	// Fallback to the backendRef name, normally it's a unix domain socket in this case
+	return fmt.Sprintf("%s.%s", backendRef.Name, backendNamespace)
 }
 
 func (t *Translator) buildAuthorization(policy *egv1a1.SecurityPolicy) (*ir.Authorization, error) {
