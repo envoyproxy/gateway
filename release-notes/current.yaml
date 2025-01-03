@@ -22,6 +22,7 @@ new features: |
 # Fixes for bugs identified in previous versions.
 bug fixes: |
   Fixed a nil pointer error that occurs when a SecurityPolicy refers to a UDS backend
+  Fixed validation failure when multiple HTTPRoutes refer to the same extension filter
 
 # Enhancements that improve performance.
 performance improvements: |
