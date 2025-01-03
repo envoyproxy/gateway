@@ -663,3 +663,11 @@ func getEnvoyIPFamily(envoyProxy *egv1a1.EnvoyProxy) *egv1a1.IPFamily {
 		return nil
 	}
 }
+
+// getPreserveRouteOrder returns true if route order should be preserved according to EnvoyProxy spec
+func getPreserveRouteOrder(envoyProxy *egv1a1.EnvoyProxy) bool {
+	if envoyProxy != nil && envoyProxy.Spec.PreserveRouteOrder != nil && *envoyProxy.Spec.PreserveRouteOrder {
+		return true
+	}
+	return false
+}

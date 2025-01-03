@@ -134,6 +134,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 					// see more https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/gwapiv1.Listener.
 					irListener.Hostnames = append(irListener.Hostnames, "*")
 				}
+				irListener.PreserveRouteOrder = getPreserveRouteOrder(gateway.envoyProxy)
 				xdsIR[irKey].HTTP = append(xdsIR[irKey].HTTP, irListener)
 			case gwapiv1.TCPProtocolType, gwapiv1.TLSProtocolType:
 				irListener := &ir.TCPListener{

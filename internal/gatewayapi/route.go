@@ -8,6 +8,7 @@ package gatewayapi
 import (
 	"fmt"
 	"net"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -52,6 +53,12 @@ type RoutesTranslator interface {
 
 func (t *Translator) ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*HTTPRouteContext {
 	var relevantHTTPRoutes []*HTTPRouteContext
+
+	// always sort initially by creation time stamp. Later on, additional sorting based on matcher type and
+	// match length may occur.
+	sort.Slice(httpRoutes, func(i, j int) bool {
+		return httpRoutes[i].CreationTimestamp.Before(&(httpRoutes[j].CreationTimestamp))
+	})
 
 	for _, h := range httpRoutes {
 		if h == nil {
