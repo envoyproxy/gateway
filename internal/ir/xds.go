@@ -731,6 +731,12 @@ type HeaderBasedSessionPersistence struct {
 	Name string `json:"name"`
 }
 
+// Compression holds the configuration for HTTP compression.
+// Currently, only the default compressor(gzip) is supported.
+// +k8s:deepcopy-gen=true
+type Compression struct {
+}
+
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.
 // +k8s:deepcopy-gen=true
 type TrafficFeatures struct {
@@ -762,6 +768,8 @@ type TrafficFeatures struct {
 	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
 	// ResponseOverride defines the schema for overriding the response.
 	ResponseOverride *ResponseOverride `json:"responseOverride,omitempty" yaml:"responseOverride,omitempty"`
+	// Compression settings for HTTP Response
+	Compression *Compression
 }
 
 func (b *TrafficFeatures) Validate() error {
