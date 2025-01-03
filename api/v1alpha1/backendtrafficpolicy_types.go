@@ -67,7 +67,6 @@ type BackendTrafficPolicySpec struct {
 	// The compression config for the http streams.
 	//
 	// +optional
-	// +notImplementedHide
 	Compression []*Compression `json:"compression,omitempty"`
 
 	// ResponseOverride defines the configuration to override specific responses with a custom one.
