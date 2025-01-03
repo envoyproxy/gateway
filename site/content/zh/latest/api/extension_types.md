@@ -2488,6 +2488,20 @@ data plane fleet.
 _Appears in:_
 - [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
 
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `type` | _[KubernetesDeployModeType](#kubernetesdeploymodetype)_ |  true  | Type indicates what deploy mode to use. KubernetesDeployModeTypeControllerNamespace and<br />KubernetesDeployModeTypeGatewayNamespace are currently supported.<br />By default, when this field is unset or empty, Envoy Gateway will deploy Envoy Proxy fleet in the Controller namespace. |
+
+
+#### KubernetesDeployModeType
+
+_Underlying type:_ _string_
+
+KubernetesDeployModeType defines the type of KubernetesDeployMode
+
+_Appears in:_
+- [KubernetesDeployMode](#kubernetesdeploymode)
+
 
 
 #### KubernetesDeploymentSpec
