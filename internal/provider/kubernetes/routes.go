@@ -421,7 +421,10 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 							r.log.Error(err, "HTTPRouteFilters not found; bypassing rule", "index", i)
 							continue
 						}
-						resourceTree.HTTPRouteFilters = append(resourceTree.HTTPRouteFilters, httpFilter)
+						if !resourceMap.allAssociatedHTTPRouteExtensionFilters.Has(key) {
+							resourceMap.allAssociatedHTTPRouteExtensionFilters.Insert(key)
+							resourceTree.HTTPRouteFilters = append(resourceTree.HTTPRouteFilters, httpFilter)
+						}
 					default:
 						extRefFilter, ok := resourceMap.extensionRefFilters[key]
 						if !ok {
@@ -433,7 +436,10 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 							continue
 						}
 
-						resourceTree.ExtensionRefFilters = append(resourceTree.ExtensionRefFilters, extRefFilter)
+						if !resourceMap.allAssociatedHTTPRouteExtensionFilters.Has(key) {
+							resourceMap.allAssociatedHTTPRouteExtensionFilters.Insert(key)
+							resourceTree.ExtensionRefFilters = append(resourceTree.ExtensionRefFilters, extRefFilter)
+						}
 					}
 				}
 			}
