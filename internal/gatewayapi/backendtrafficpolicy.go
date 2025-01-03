@@ -305,6 +305,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 		ds        *ir.DNS
 		h2        *ir.HTTP2Settings
 		ro        *ir.ResponseOverride
+		cp        *ir.Compression
 		err, errs error
 	)
 
@@ -354,6 +355,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 		err = perr.WithMessage(err, "ResponseOverride")
 		errs = errors.Join(errs, err)
 	}
+	cp = buildCompression(policy.Spec.Compression)
 
 	ds = translateDNS(policy.Spec.ClusterSettings)
 
@@ -417,6 +419,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 						DNS:               ds,
 						Timeout:           to,
 						ResponseOverride:  ro,
+						Compression:       cp,
 					}
 
 					// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
@@ -453,6 +456,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 		ds        *ir.DNS
 		h2        *ir.HTTP2Settings
 		ro        *ir.ResponseOverride
+		cp        *ir.Compression
 		err, errs error
 	)
 
@@ -495,6 +499,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 		err = perr.WithMessage(err, "ResponseOverride")
 		errs = errors.Join(errs, err)
 	}
+	cp = buildCompression(policy.Spec.Compression)
 
 	ds = translateDNS(policy.Spec.ClusterSettings)
 
@@ -579,6 +584,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 				HTTP2:            h2,
 				DNS:              ds,
 				ResponseOverride: ro,
+				Compression:      cp,
 			}
 
 			// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
@@ -929,4 +935,15 @@ func defaultResponseOverrideRuleName(policy *egv1a1.BackendTrafficPolicy, index 
 		"%s/responseoverride/rule/%s",
 		irConfigName(policy),
 		strconv.Itoa(index))
+}
+
+func buildCompression(compression []*egv1a1.Compression) *ir.Compression {
+	if len(compression) == 0 {
+		return nil
+	}
+
+	// Only Gzip is supported for now, so we don't need to do anything special here
+	return &ir.Compression{
+		Type: "GZip",
+	}
 }
