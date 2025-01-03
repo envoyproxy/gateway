@@ -227,7 +227,7 @@ status:
 
 ## Caveats
 
-This API will always be an unstable API and the same outcome cannot be garunteed
+This API will always be an unstable API and the same outcome cannot be guaranteed
 across versions for these reasons
 * The Envoy Proxy API might deprecate and remove API fields
 * Envoy Gateway might alter the xDS translation creating a different xDS output

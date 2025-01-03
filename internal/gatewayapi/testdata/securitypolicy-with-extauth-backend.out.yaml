@@ -17,6 +17,23 @@ backends:
       reason: Accepted
       status: "True"
       type: Accepted
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    creationTimestamp: null
+    name: backend-uds
+    namespace: default
+  spec:
+    endpoints:
+    - unix:
+        path: /var/run/uds.sock
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: The Backend was accepted
+      reason: Accepted
+      status: "True"
+      type: Accepted
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -322,8 +339,7 @@ securityPolicies:
         backendRef:
           group: gateway.envoyproxy.io
           kind: Backend
-          name: backend-fqdn
-          port: 3000
+          name: backend-uds
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -526,14 +542,15 @@ xdsIR:
         security:
           extAuth:
             http:
-              authority: primary.foo.com:3000
+              authority: backend-uds.default
               destination:
                 name: securitypolicy/default/policy-for-http-route-3-http-backendref/extauth/0
                 settings:
-                - addressType: FQDN
+                - addressType: IP
                   endpoints:
-                  - host: primary.foo.com
-                    port: 3000
+                  - host: ""
+                    path: /var/run/uds.sock
+                    port: 0
                   protocol: HTTP
                   weight: 1
               path: ""
