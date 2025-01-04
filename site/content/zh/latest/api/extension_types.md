@@ -3352,6 +3352,32 @@ _Appears in:_
 | `Redis` | RedisBackendType uses a redis database for the rate limit service.<br /> | 
 
 
+#### RateLimitHitsAddend
+
+
+
+RateLimitHitsAddend specifies where the Envoy retrieves the number to reduce the rate limit counters.
+
+
+By default, Envoy looks up the addend from the `envoy.ratelimit.hits_addend` filter metadata.
+If there's no such metadata or the number stored in the metadata is invalid, it will use the default
+usage number of 1.
+
+
+This default behavior can be overridden by specifying exactly one of the fields in this RateLimitUsage.
+If either of the fields is not specified, Envoy will use the default behavior described above.
+
+
+See https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto.html#config-route-v3-ratelimit-hitsaddend
+for more information.
+
+_Appears in:_
+- [RateLimitRule](#ratelimitrule)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+
+
 #### RateLimitMetrics
 
 
