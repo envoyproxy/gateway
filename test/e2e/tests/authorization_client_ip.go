@@ -23,6 +23,7 @@ import (
 
 func init() {
 	ConformanceTests = append(ConformanceTests, AuthorizationClientIPTest)
+	ConformanceTests = append(ConformanceTests, AuthorizationClientIPTrustedCidrsTest)
 }
 
 var AuthorizationClientIPTest = suite.ConformanceTest{
@@ -142,6 +143,51 @@ var AuthorizationClientIPTest = suite.ConformanceTest{
 				},
 				Response: http.Response{
 					StatusCode: 403,
+				},
+				Namespace: ns,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+	},
+}
+
+var AuthorizationClientIPTrustedCidrsTest = suite.ConformanceTest{
+	ShortName:   "AuthzWithClientIPTrustedCIDRs",
+	Description: "Authorization with client IP Allow/Deny list using trusted CIDRs",
+	Manifests:   []string{"testdata/authorization-client-ip-trusted-cidrs.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		route1NN := types.NamespacedName{Name: "http-with-authorization-client-ip-trusted-cidr-1", Namespace: ns}
+		route2NN := types.NamespacedName{Name: "http-with-authorization-client-ip-trusted-cidr-2", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), route1NN, route2NN)
+
+		ancestorRef := gwapiv1a2.ParentReference{
+			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+			Kind:      gatewayapi.KindPtr(resource.KindGateway),
+			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+			Name:      gwapiv1.ObjectName(gwNN.Name),
+		}
+		SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "authorization-client-ip-trusted-cidr-1", Namespace: ns}, suite.ControllerName, ancestorRef)
+		SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "authorization-client-ip-trusted-cidr-2", Namespace: ns}, suite.ControllerName, ancestorRef)
+
+		t.Run("first route-allowed IP", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/protected3",
+					Headers: map[string]string{
+						"X-Forwarded-For": "192.168.2.1", // in the allowed list
+					},
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Path:    "/protected3",
+						Headers: nil, // don't check headers since Envoy will append the client IP to the X-Forwarded-For header
+					},
+				},
+				Response: http.Response{
+					StatusCode: 200,
 				},
 				Namespace: ns,
 			}
