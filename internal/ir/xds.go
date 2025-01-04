@@ -642,6 +642,13 @@ type HTTPClientTimeout struct {
 	RequestReceivedTimeout *metav1.Duration `json:"requestReceivedTimeout,omitempty" yaml:"requestReceivedTimeout,omitempty"`
 	// IdleTimeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.
 	IdleTimeout *metav1.Duration `json:"idleTimeout,omitempty" yaml:"idleTimeout,omitempty"`
+	// The delayed close timeout is for downstream connections managed by the HTTP connection manager.
+	// It is defined as a grace period after connection close processing has been locally initiated
+	// during which Envoy will wait for the peer to close (i.e., a TCP FIN/RST is received by Envoy
+	// from the downstream connection) prior to Envoy closing the socket associated with that
+	// connection.
+	//The default timeout is 1000 ms if this option is not specified.
+	DelayedCloseTimeout *metav1.Duration `json:"delayedCloseTimeout,omitempty" yaml:"delayedCloseTimeout,omitempty"`
 }
 
 // HTTPRoute holds the route information associated with the HTTP Route
