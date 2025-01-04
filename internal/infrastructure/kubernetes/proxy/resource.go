@@ -227,7 +227,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 					},
 				},
 			},
-			SecurityContext: expectedShutdownManagerSecurityContext(),
+			SecurityContext: expectedShutdownManagerSecurityContext(containerSpec),
 		},
 	}
 
@@ -384,7 +384,11 @@ func expectedEnvoySecurityContext(containerSpec *egv1a1.KubernetesContainerSpec)
 	return sc
 }
 
-func expectedShutdownManagerSecurityContext() *corev1.SecurityContext {
+func expectedShutdownManagerSecurityContext(containerSpec *egv1a1.KubernetesContainerSpec) *corev1.SecurityContext {
+	if containerSpec != nil && containerSpec.SecurityContext != nil {
+		return containerSpec.SecurityContext
+	}
+
 	sc := resource.DefaultSecurityContext()
 
 	// run as non-root user
