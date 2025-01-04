@@ -1536,6 +1536,11 @@ func (in *EnvoyGatewayKubernetesProvider) DeepCopyInto(out *EnvoyGatewayKubernet
 		*out = new(KubernetesDeploymentSpec)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.RateLimitHpa != nil {
+		in, out := &in.RateLimitHpa, &out.RateLimitHpa
+		*out = new(KubernetesHorizontalPodAutoscalerSpec)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.Watch != nil {
 		in, out := &in.Watch, &out.Watch
 		*out = new(KubernetesWatchMode)

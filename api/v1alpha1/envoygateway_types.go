@@ -202,6 +202,12 @@ type EnvoyGatewayKubernetesProvider struct {
 	// +optional
 	RateLimitDeployment *KubernetesDeploymentSpec `json:"rateLimitDeployment,omitempty"`
 
+	// RateLimitHpa defines the Horizontal Pod Autoscaler settings for Envoy ratelimit Deployment.
+	// If the HPA is set, Replicas field from RateLimitDeployment will be ignored.
+	//
+	// +optional
+	RateLimitHpa *KubernetesHorizontalPodAutoscalerSpec `json:"rateLimitHpa,omitempty"`
+
 	// Watch holds configuration of which input resources should be watched and reconciled.
 	// +optional
 	Watch *KubernetesWatchMode `json:"watch,omitempty"`
