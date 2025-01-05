@@ -33,7 +33,7 @@ http:
         name: securitypolicy/default/policy-for-http-route-1
         credentials:
           client-1: "a2V5MQ=="
-        keySources:
+        extractFrom:
         - header: "X-API-KEY"
         allowedClients:
         - "client-1"
@@ -61,7 +61,7 @@ http:
         name: securitypolicy/default/policy-for-http-route-1
         credentials:
           client-2: "a2V5Mg=="
-        keySources:
+        extractFrom:
         - query: "X-API-KEY"
         allowedClients:
         - "client-2"
@@ -89,7 +89,7 @@ http:
         name: securitypolicy/default/policy-for-http-route-1
         credentials:
           client-3: "a2V5Mw=="
-        keySources:
+        extractFrom:
         - cookie: "X-API-KEY"
         allowedClients:
         - "client-3"

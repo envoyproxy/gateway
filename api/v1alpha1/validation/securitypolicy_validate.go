@@ -80,7 +80,7 @@ func ValidateAPIKeyAuth(p *egv1a1.APIKeyAuth) error {
 		return nil
 	}
 
-	for _, keySource := range p.KeySources {
+	for _, keySource := range p.ExtractFrom {
 		if (keySource.Header != nil && keySource.Query != nil) ||
 			(keySource.Header != nil && keySource.Cookie != nil) ||
 			(keySource.Query != nil && keySource.Cookie != nil) {

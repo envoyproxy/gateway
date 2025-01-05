@@ -907,9 +907,9 @@ func (t *Translator) buildAPIKeyAuth(
 		credentials[clientid] = key
 	}
 
-	keySources := make([]*ir.KeySource, 0, len(policy.Spec.APIKeyAuth.KeySources))
-	for _, keySource := range policy.Spec.APIKeyAuth.KeySources {
-		keySources = append(keySources, &ir.KeySource{
+	extractFrom := make([]*ir.KeySource, 0, len(policy.Spec.APIKeyAuth.ExtractFrom))
+	for _, keySource := range policy.Spec.APIKeyAuth.ExtractFrom {
+		extractFrom = append(extractFrom, &ir.KeySource{
 			Header: ptr.Deref(keySource.Header, ""),
 			Cookie: ptr.Deref(keySource.Cookie, ""),
 			Query:  ptr.Deref(keySource.Query, ""),
@@ -919,7 +919,7 @@ func (t *Translator) buildAPIKeyAuth(
 	return &ir.APIKeyAuth{
 		Name:           irConfigName(policy),
 		Credentials:    credentials,
-		KeySources:     keySources,
+		ExtractFrom:    extractFrom,
 		AllowedClients: policy.Spec.APIKeyAuth.AllowedClients,
 	}, nil
 }

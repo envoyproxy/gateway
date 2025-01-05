@@ -1005,9 +1005,9 @@ type APIKeyAuth struct {
 	// Key is the client id and the value is the API key to be used for authentication.
 	Credentials map[string]PrivateBytes `json:"credentials,omitempty" yaml:"credentials,omitempty"`
 
-	// KeySources is where to fetch the key from the coming request.
+	// ExtractFrom is where to fetch the key from the coming request.
 	// The value from the first source that has a key will be used.
-	KeySources []*KeySource `json:"keySources"`
+	ExtractFrom []*KeySource `json:"extractFrom"`
 
 	// AllowedClients is a list of clients that are allowed to access the route or vhost.
 	// The clients listed here should be subset of the clients listed in the `Credentials` to provide authorization control

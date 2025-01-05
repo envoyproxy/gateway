@@ -20,7 +20,7 @@
           credentials:
           - client: client-1
             key: key1
-          keySources:
+          extractFrom:
           - header: X-API-KEY
     - match:
         pathSeparatedPrefix: /foo2
@@ -37,7 +37,7 @@
           credentials:
           - client: client-2
             key: key2
-          keySources:
+          extractFrom:
           - query: X-API-KEY
   - domains:
     - www.bar.com
@@ -58,5 +58,5 @@
           credentials:
           - client: client-3
             key: key3
-          keySources:
+          extractFrom:
           - cookie: X-API-KEY

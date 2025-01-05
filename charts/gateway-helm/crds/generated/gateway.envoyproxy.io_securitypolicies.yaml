@@ -107,7 +107,7 @@ spec:
                     required:
                     - name
                     type: object
-                  keySources:
+                  extractFrom:
                     description: |-
                       KeySources is where to fetch the key from the coming request.
                       The value from the first source that has a key will be used.
@@ -142,7 +142,7 @@ spec:
                     type: array
                 required:
                 - credentials
-                - keySources
+                - extractFrom
                 type: object
               authorization:
                 description: Authorization defines the authorization configuration.

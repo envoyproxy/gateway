@@ -70,7 +70,7 @@ spec:
     kind: HTTPRoute
     name: http-with-api-key-auth-header
   apiKeyAuth:
-    keySources:
+    extractFrom:
     - header: "X-API-KEY"
     credentials:
       name: "api-key-auth-users-secret-1"
@@ -86,7 +86,7 @@ spec:
     kind: HTTPRoute
     name: http-with-api-key-auth-cookie
   apiKeyAuth:
-    keySources:
+    extractFrom:
     - cookie: "X-API-KEY"
     credentials:
       name: "api-key-auth-users-secret-1"
@@ -103,7 +103,7 @@ spec:
     kind: HTTPRoute
     name: http-with-api-key-auth-query
   apiKeyAuth:
-    keySources:
+    extractFrom:
     - query: "X-API-KEY"
     credentials:
       name: "api-key-auth-users-secret-1"

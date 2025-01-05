@@ -113,8 +113,8 @@ func (in *APIKeyAuth) DeepCopyInto(out *APIKeyAuth) {
 			(*out)[key] = outVal
 		}
 	}
-	if in.KeySources != nil {
-		in, out := &in.KeySources, &out.KeySources
+	if in.ExtractFrom != nil {
+		in, out := &in.ExtractFrom, &out.ExtractFrom
 		*out = make([]*KeySource, len(*in))
 		for i := range *in {
 			if (*in)[i] != nil {

@@ -110,7 +110,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `credentials` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  true  | Credentials is the Kubernetes secret which contains the API keys.<br />This is an Opaque secret.<br />Each API key is stored in the key representing the client id,<br />which can be used in AllowedClients to authorize the client in a simple way. |
-| `keySources` | _[KeySource](#keysource) array_ |  true  | KeySources is where to fetch the key from the coming request.<br />The value from the first source that has a key will be used. |
+| `extractFrom` | _[ExtractFrom](#extractfrom) array_ |  true  | ExtractFrom is where to fetch the key from the coming request.<br />The value from the first source that has a key will be used. |
 | `allowedClients` | _string array_ |  false  | AllowedClients is a list of clients that are allowed to access the route or vhost.<br />The clients listed here should be subset of the clients listed in the `Credentials` to provide authorization control<br />after the authentication is successful. If the list is empty, then all authenticated clients<br />are allowed. This provides very limited but simple authorization. |
 
 
@@ -1667,6 +1667,28 @@ _Appears in:_
 | `certificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  true  |  | CertificateRef contains a references to objects (Kubernetes objects or otherwise) that<br />contains a TLS certificate and private keys. These certificates are used to<br />establish a TLS handshake to the extension server.<br /><br />CertificateRef can only reference a Kubernetes Secret at this time. |
 
 
+#### ExtractFrom
+
+
+
+ExtractFrom is where to fetch the key from the coming request.
+Only one of header, query or cookie is supposed to be specified.
+
+
+Note: we intentionally don't add the validation for the only one of header, query or cookie is supposed to be specified with +kubebuilder:validation:XValidation:rule.
+Instead, we add the validation in the controller reconciliation.
+Technically we can define CEL, but the CEL estimated cost exceeds the threshold and it wouldn't be accepted.
+
+_Appears in:_
+- [APIKeyAuth](#apikeyauth)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `header` | _string_ |  false  | Header is the name of the header to fetch the key from.<br />This field is optional, but only one of header, query or cookie is supposed to be specified. |
+| `query` | _string_ |  false  | Query is the name of the query parameter to fetch the key from.<br />This field is optional, but only one of header, query or cookie is supposed to be specified. |
+| `cookie` | _string_ |  false  | Cookie is the name of the cookie to fetch the key from.<br />This field is optional, but only one of header, query or cookie is supposed to be specified. |
+
+
 #### FQDNEndpoint
 
 
@@ -2482,28 +2504,6 @@ _Underlying type:_ _string_
 _Appears in:_
 - [JWTPrincipal](#jwtprincipal)
 
-
-
-#### KeySource
-
-
-
-KeySource is where to fetch the key from the coming request.
-Only one of header, query or cookie is supposed to be specified.
-
-
-Note: we intentionally don't add the validation for the only one of header, query or cookie is supposed to be specified with +kubebuilder:validation:XValidation:rule.
-Instead, we add the validation in the controller reconciliation.
-Technically we can define CEL, but the CEL estimated cost exceeds the threshold and it wouldn't be accepted.
-
-_Appears in:_
-- [APIKeyAuth](#apikeyauth)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
-| `header` | _string_ |  false  | Header is the name of the header to fetch the key from.<br />This field is optional, but only one of header, query or cookie is supposed to be specified. |
-| `query` | _string_ |  false  | Query is the name of the query parameter to fetch the key from.<br />This field is optional, but only one of header, query or cookie is supposed to be specified. |
-| `cookie` | _string_ |  false  | Cookie is the name of the cookie to fetch the key from.<br />This field is optional, but only one of header, query or cookie is supposed to be specified. |
 
 
 #### KubernetesContainerSpec
