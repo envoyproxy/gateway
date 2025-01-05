@@ -27,6 +27,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -142,6 +143,17 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 						t.GatewayControllerName,
 						policy.Generation,
 						resolveErr,
+					)
+
+					continue
+				}
+
+				if err := validation.ValidateSecurityPolicy(policy); err != nil {
+					status.SetTranslationErrorForPolicyAncestors(&policy.Status,
+						parentGateways,
+						t.GatewayControllerName,
+						policy.Generation,
+						fmt.Sprintf("Invalid SecurityPolicy: %v", err),
 					)
 
 					continue
