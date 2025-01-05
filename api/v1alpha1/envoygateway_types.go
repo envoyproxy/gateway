@@ -269,7 +269,7 @@ type KubernetesDeployModeType string
 // data plane fleet.
 type KubernetesDeployMode struct {
 	// Type indicates what deployment mode to use. "ControllerNamespace" and
-	// KubernetesDeployModeTypeGatewayNamespace are currently supported.
+	// "GatewayNamespace" are currently supported.
 	// By default, when this field is unset or empty, Envoy Gateway will deploy Envoy Proxy fleet in the Controller namespace.
 	Type KubernetesDeployModeType `json:"type,omitempty"`
 }
