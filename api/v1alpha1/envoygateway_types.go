@@ -271,7 +271,10 @@ type KubernetesDeployMode struct {
 	// Type indicates what deployment mode to use. "ControllerNamespace" and
 	// "GatewayNamespace" are currently supported.
 	// By default, when this field is unset or empty, Envoy Gateway will deploy Envoy Proxy fleet in the Controller namespace.
-	Type KubernetesDeployModeType `json:"type,omitempty"`
+	// +optional
+	// +kubebuilder:default=ControllerNamespace
+	// +kubebuilder:validation:Enum=ControllerNamespace;GatewayNamespace
+	Type *KubernetesDeployModeType `json:"type,omitempty"`
 }
 
 // EnvoyGatewayCustomProvider defines configuration for the Custom provider.
