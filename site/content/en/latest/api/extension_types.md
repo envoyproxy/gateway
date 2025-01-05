@@ -2490,7 +2490,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `type` | _[KubernetesDeployModeType](#kubernetesdeploymodetype)_ |  true  | Type indicates what deploy mode to use. KubernetesDeployModeTypeControllerNamespace and<br />KubernetesDeployModeTypeGatewayNamespace are currently supported.<br />By default, when this field is unset or empty, Envoy Gateway will deploy Envoy Proxy fleet in the Controller namespace. |
+| `type` | _[KubernetesDeployModeType](#kubernetesdeploymodetype)_ |  false  | Type indicates what deployment mode to use. "ControllerNamespace" and<br />"GatewayNamespace" are currently supported.<br />By default, when this field is unset or empty, Envoy Gateway will deploy Envoy Proxy fleet in the Controller namespace. |
 
 
 #### KubernetesDeployModeType
