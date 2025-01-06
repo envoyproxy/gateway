@@ -16,6 +16,7 @@ security updates: |
 new features: |
 
 bug fixes: |
+  Fixed a nil pointer error that occurs when a SecurityPolicy refers to a UDS backend
   Fixed the Gateway API translator didn't use the TLS configuration from the BackendTLSPolicy when connecting to the OIDC provider's well-known endpoint.
 
 # Enhancements that improve performance.
