@@ -140,7 +140,7 @@ func (d *DefaultRoundTripper) defaultRoundTrip(request roundtripper.Request, tra
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), d.TimeoutConfig.RequestTimeout)
 	defer cancel()
-	ctx = withT(ctx, request.T)
+	ctx = withT(ctx, request.T) // codespell:ignore
 	req, err := http.NewRequestWithContext(ctx, method, request.URL.String(), nil)
 	if err != nil {
 		return nil, nil, err
@@ -292,8 +292,8 @@ func IsTimeoutError(statusCode int) bool {
 // testingTContextKey is the key for adding testing.T to the context.Context
 type testingTContextKey struct{}
 
-// withT returns a context with the testing.T added as a value.
-func withT(ctx context.Context, t *testing.T) context.Context {
+// withT returns a context with the testing.T added as a value. // codespell:ignore
+func withT(ctx context.Context, t *testing.T) context.Context { // codespell:ignore
 	return context.WithValue(ctx, testingTContextKey{}, t)
 }
 
