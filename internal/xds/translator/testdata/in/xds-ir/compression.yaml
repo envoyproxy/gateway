@@ -35,5 +35,4 @@ http:
       name: ""
       prefix: /
     traffic:
-      compression:
-        type: GZip
+      compression: {}
