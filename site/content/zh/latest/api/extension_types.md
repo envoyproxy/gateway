@@ -3376,6 +3376,51 @@ _Appears in:_
 | `telemetry` | _[RateLimitTelemetry](#ratelimittelemetry)_ |  false  | Telemetry defines telemetry configuration for RateLimit. |
 
 
+#### RateLimitCost
+
+
+
+RateLimitCost specifies where the Envoy retrieves the number to reduce the rate limit counters.
+
+_Appears in:_
+- [RateLimitRule](#ratelimitrule)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `type` | _[RateLimitCostType](#ratelimitcosttype)_ |  true  | Type specifies the source of the rate limit cost. Currently, only "Number" and "DynamicMetadata" are supported. |
+
+
+#### RateLimitCostDynamicMetadata
+
+
+
+RateLimitCostDynamicMetadata specifies the filter metadata to retrieve the usage number from.
+
+_Appears in:_
+- [RateLimitCost](#ratelimitcost)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `filterNamespace` | _string_ |  true  | Namespace is the namespace of the dynamic metadata. |
+| `key` | _string_ |  true  | Key is the key to retrieve the usage number from the filter metadata. |
+
+
+#### RateLimitCostType
+
+_Underlying type:_ _string_
+
+RateLimitCostType specifies the source of the rate limit cost.
+Valid RateLimitCostType values are "Number" and "DynamicMetadata".
+
+_Appears in:_
+- [RateLimitCost](#ratelimitcost)
+
+| Value | Description |
+| ----- | ----------- |
+| `Number` | RateLimitCostTypeNumber specifies the rate limit cost to be a fixed number.<br /> | 
+| `DynamicMetadata` | RateLimitCostTypeDynamicMetadata specifies the rate limit cost to be retrieved from the dynamic metadata.<br /> | 
+
+
 #### RateLimitDatabaseBackend
 
 
@@ -3405,32 +3450,6 @@ _Appears in:_
 | Value | Description |
 | ----- | ----------- |
 | `Redis` | RedisBackendType uses a redis database for the rate limit service.<br /> | 
-
-
-#### RateLimitHitsAddend
-
-
-
-RateLimitHitsAddend specifies where the Envoy retrieves the number to reduce the rate limit counters.
-
-
-By default, Envoy looks up the addend from the `envoy.ratelimit.hits_addend` filter metadata.
-If there's no such metadata or the number stored in the metadata is invalid, it will use the default
-usage number of 1.
-
-
-This default behavior can be overridden by specifying exactly one of the fields in this RateLimitUsage.
-If either of the fields is not specified, Envoy will use the default behavior described above.
-
-
-See https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto.html#config-route-v3-ratelimit-hitsaddend
-for more information.
-
-_Appears in:_
-- [RateLimitRule](#ratelimitrule)
-
-| Field | Type | Required | Description |
-| ---   | ---  | ---      | ---         |
 
 
 #### RateLimitMetrics

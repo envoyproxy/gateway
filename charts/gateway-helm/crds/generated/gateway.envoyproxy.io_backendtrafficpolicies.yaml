@@ -752,6 +752,104 @@ spec:
                                 type: object
                               maxItems: 8
                               type: array
+                            costPerRequest:
+                              description: |-
+                                CostPerRequest specifies the number to reduce the rate limit counters
+                                on the request path. If this is not specified, the default behavior
+                                is to reduce the rate limit counters by 1.
+
+                                When Envoy receives a request that matches the rule, it tries to reduce the
+                                rate limit counters by the specified number. If the counter doesn't have
+                                enough capacity, the request is rate limited.
+                              properties:
+                                dynamicMetadata:
+                                  description: DynamicMetadata specifies the filter
+                                    metadata to retrieve the usage number from.
+                                  properties:
+                                    filterNamespace:
+                                      description: Namespace is the namespace of the
+                                        dynamic metadata.
+                                      type: string
+                                    key:
+                                      description: Key is the key to retrieve the
+                                        usage number from the filter metadata.
+                                      type: string
+                                  required:
+                                  - filterNamespace
+                                  - key
+                                  type: object
+                                number:
+                                  description: |-
+                                    Number specifies the fixed usage number to reduce the rate limit counters.
+                                    Using zero can be used to only check the rate limit counters without reducing them.
+                                  format: int64
+                                  type: integer
+                                type:
+                                  description: Type specifies the source of the rate
+                                    limit cost. Currently, only "Number" and "DynamicMetadata"
+                                    are supported.
+                                  enum:
+                                  - Number
+                                  - DynamicMetadata
+                                  type: string
+                              required:
+                              - type
+                              type: object
+                              x-kubernetes-validations:
+                              - message: only one of number or dynamicMetadata can
+                                  be specified
+                                rule: '!(has(self.number) && has(self.dynamicMetadata))'
+                            costPerResponse:
+                              description: |-
+                                CostPerResponse specifies the number to reduce the rate limit counters
+                                after the response is sent back to the client or the request stream is closed.
+
+                                The cost is used to reduce the rate limit counters for the matching requests.
+                                Since the reduction happens after the request stream is complete, the rate limit
+                                won't be enforced for the current request, but for the subsequent matching requests.
+
+                                This is optional and if not specified, the rate limit counters are not reduced
+                                on the response path.
+
+                                Currently, this is only supported for HTTP Global Rate Limits.
+                              properties:
+                                dynamicMetadata:
+                                  description: DynamicMetadata specifies the filter
+                                    metadata to retrieve the usage number from.
+                                  properties:
+                                    filterNamespace:
+                                      description: Namespace is the namespace of the
+                                        dynamic metadata.
+                                      type: string
+                                    key:
+                                      description: Key is the key to retrieve the
+                                        usage number from the filter metadata.
+                                      type: string
+                                  required:
+                                  - filterNamespace
+                                  - key
+                                  type: object
+                                number:
+                                  description: |-
+                                    Number specifies the fixed usage number to reduce the rate limit counters.
+                                    Using zero can be used to only check the rate limit counters without reducing them.
+                                  format: int64
+                                  type: integer
+                                type:
+                                  description: Type specifies the source of the rate
+                                    limit cost. Currently, only "Number" and "DynamicMetadata"
+                                    are supported.
+                                  enum:
+                                  - Number
+                                  - DynamicMetadata
+                                  type: string
+                              required:
+                              - type
+                              type: object
+                              x-kubernetes-validations:
+                              - message: only one of number or dynamicMetadata can
+                                  be specified
+                                rule: '!(has(self.number) && has(self.dynamicMetadata))'
                             limit:
                               description: |-
                                 Limit holds the rate limit values.
@@ -777,68 +875,6 @@ spec:
                               - requests
                               - unit
                               type: object
-                            requestHitsAddend:
-                              description: |-
-                                RequestHitsAddend specifies the number to reduce the rate limit counters
-                                on the request path. If the addend is not specified, the default behavior
-                                is to reduce the rate limit counters by 1.
-
-                                When Envoy receives a request that matches the rule, it tries to reduce the
-                                rate limit counters by the specified number. If the counter doesn't have
-                                enough capacity, the request is rate limited.
-                              properties:
-                                format:
-                                  description: |-
-                                    Format specifies the format of the usage number. See the Envoy documentation for the supported format which
-                                    is the same as the access log format:
-                                    https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format
-
-                                    For example `%DYNAMIC_METADATA(com.test.my_filter:test_key)%"` will retrieve the usage number from the
-                                    `com.test.my_filter` filter metadata namespace with the key `test_key`.
-                                    Another example is `%BYTES_RECEIVED%` which will retrieve the usage number from the bytes received by the client.
-                                  type: string
-                                number:
-                                  description: Number specifies the fixed usage number
-                                    to reduce the rate limit counters.
-                                  format: int64
-                                  type: integer
-                              type: object
-                              x-kubernetes-validations:
-                              - message: only one of number or format can be specified
-                                rule: '!(has(self.number) && has(self.format))'
-                            responseHitsAddend:
-                              description: |-
-                                ResponseHitsAddend specifies the number to reduce the rate limit counters
-                                after the response is sent back to the client or the request stream is closed.
-
-                                The addend is used to reduce the rate limit counters for the matching requests.
-                                Since the reduction happens after the request stream is complete, the rate limit
-                                won't be enforced for the current request, but for the subsequent matching requests.
-
-                                This is optional and if not specified, the rate limit counters are not reduced
-                                on the response path.
-
-                                Currently, this is only supported for HTTP Global Rate Limits.
-                              properties:
-                                format:
-                                  description: |-
-                                    Format specifies the format of the usage number. See the Envoy documentation for the supported format which
-                                    is the same as the access log format:
-                                    https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format
-
-                                    For example `%DYNAMIC_METADATA(com.test.my_filter:test_key)%"` will retrieve the usage number from the
-                                    `com.test.my_filter` filter metadata namespace with the key `test_key`.
-                                    Another example is `%BYTES_RECEIVED%` which will retrieve the usage number from the bytes received by the client.
-                                  type: string
-                                number:
-                                  description: Number specifies the fixed usage number
-                                    to reduce the rate limit counters.
-                                  format: int64
-                                  type: integer
-                              type: object
-                              x-kubernetes-validations:
-                              - message: only one of number or format can be specified
-                                rule: '!(has(self.number) && has(self.format))'
                           required:
                           - limit
                           type: object
@@ -949,6 +985,104 @@ spec:
                                 type: object
                               maxItems: 8
                               type: array
+                            costPerRequest:
+                              description: |-
+                                CostPerRequest specifies the number to reduce the rate limit counters
+                                on the request path. If this is not specified, the default behavior
+                                is to reduce the rate limit counters by 1.
+
+                                When Envoy receives a request that matches the rule, it tries to reduce the
+                                rate limit counters by the specified number. If the counter doesn't have
+                                enough capacity, the request is rate limited.
+                              properties:
+                                dynamicMetadata:
+                                  description: DynamicMetadata specifies the filter
+                                    metadata to retrieve the usage number from.
+                                  properties:
+                                    filterNamespace:
+                                      description: Namespace is the namespace of the
+                                        dynamic metadata.
+                                      type: string
+                                    key:
+                                      description: Key is the key to retrieve the
+                                        usage number from the filter metadata.
+                                      type: string
+                                  required:
+                                  - filterNamespace
+                                  - key
+                                  type: object
+                                number:
+                                  description: |-
+                                    Number specifies the fixed usage number to reduce the rate limit counters.
+                                    Using zero can be used to only check the rate limit counters without reducing them.
+                                  format: int64
+                                  type: integer
+                                type:
+                                  description: Type specifies the source of the rate
+                                    limit cost. Currently, only "Number" and "DynamicMetadata"
+                                    are supported.
+                                  enum:
+                                  - Number
+                                  - DynamicMetadata
+                                  type: string
+                              required:
+                              - type
+                              type: object
+                              x-kubernetes-validations:
+                              - message: only one of number or dynamicMetadata can
+                                  be specified
+                                rule: '!(has(self.number) && has(self.dynamicMetadata))'
+                            costPerResponse:
+                              description: |-
+                                CostPerResponse specifies the number to reduce the rate limit counters
+                                after the response is sent back to the client or the request stream is closed.
+
+                                The cost is used to reduce the rate limit counters for the matching requests.
+                                Since the reduction happens after the request stream is complete, the rate limit
+                                won't be enforced for the current request, but for the subsequent matching requests.
+
+                                This is optional and if not specified, the rate limit counters are not reduced
+                                on the response path.
+
+                                Currently, this is only supported for HTTP Global Rate Limits.
+                              properties:
+                                dynamicMetadata:
+                                  description: DynamicMetadata specifies the filter
+                                    metadata to retrieve the usage number from.
+                                  properties:
+                                    filterNamespace:
+                                      description: Namespace is the namespace of the
+                                        dynamic metadata.
+                                      type: string
+                                    key:
+                                      description: Key is the key to retrieve the
+                                        usage number from the filter metadata.
+                                      type: string
+                                  required:
+                                  - filterNamespace
+                                  - key
+                                  type: object
+                                number:
+                                  description: |-
+                                    Number specifies the fixed usage number to reduce the rate limit counters.
+                                    Using zero can be used to only check the rate limit counters without reducing them.
+                                  format: int64
+                                  type: integer
+                                type:
+                                  description: Type specifies the source of the rate
+                                    limit cost. Currently, only "Number" and "DynamicMetadata"
+                                    are supported.
+                                  enum:
+                                  - Number
+                                  - DynamicMetadata
+                                  type: string
+                              required:
+                              - type
+                              type: object
+                              x-kubernetes-validations:
+                              - message: only one of number or dynamicMetadata can
+                                  be specified
+                                rule: '!(has(self.number) && has(self.dynamicMetadata))'
                             limit:
                               description: |-
                                 Limit holds the rate limit values.
@@ -974,77 +1108,15 @@ spec:
                               - requests
                               - unit
                               type: object
-                            requestHitsAddend:
-                              description: |-
-                                RequestHitsAddend specifies the number to reduce the rate limit counters
-                                on the request path. If the addend is not specified, the default behavior
-                                is to reduce the rate limit counters by 1.
-
-                                When Envoy receives a request that matches the rule, it tries to reduce the
-                                rate limit counters by the specified number. If the counter doesn't have
-                                enough capacity, the request is rate limited.
-                              properties:
-                                format:
-                                  description: |-
-                                    Format specifies the format of the usage number. See the Envoy documentation for the supported format which
-                                    is the same as the access log format:
-                                    https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format
-
-                                    For example `%DYNAMIC_METADATA(com.test.my_filter:test_key)%"` will retrieve the usage number from the
-                                    `com.test.my_filter` filter metadata namespace with the key `test_key`.
-                                    Another example is `%BYTES_RECEIVED%` which will retrieve the usage number from the bytes received by the client.
-                                  type: string
-                                number:
-                                  description: Number specifies the fixed usage number
-                                    to reduce the rate limit counters.
-                                  format: int64
-                                  type: integer
-                              type: object
-                              x-kubernetes-validations:
-                              - message: only one of number or format can be specified
-                                rule: '!(has(self.number) && has(self.format))'
-                            responseHitsAddend:
-                              description: |-
-                                ResponseHitsAddend specifies the number to reduce the rate limit counters
-                                after the response is sent back to the client or the request stream is closed.
-
-                                The addend is used to reduce the rate limit counters for the matching requests.
-                                Since the reduction happens after the request stream is complete, the rate limit
-                                won't be enforced for the current request, but for the subsequent matching requests.
-
-                                This is optional and if not specified, the rate limit counters are not reduced
-                                on the response path.
-
-                                Currently, this is only supported for HTTP Global Rate Limits.
-                              properties:
-                                format:
-                                  description: |-
-                                    Format specifies the format of the usage number. See the Envoy documentation for the supported format which
-                                    is the same as the access log format:
-                                    https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format
-
-                                    For example `%DYNAMIC_METADATA(com.test.my_filter:test_key)%"` will retrieve the usage number from the
-                                    `com.test.my_filter` filter metadata namespace with the key `test_key`.
-                                    Another example is `%BYTES_RECEIVED%` which will retrieve the usage number from the bytes received by the client.
-                                  type: string
-                                number:
-                                  description: Number specifies the fixed usage number
-                                    to reduce the rate limit counters.
-                                  format: int64
-                                  type: integer
-                              type: object
-                              x-kubernetes-validations:
-                              - message: only one of number or format can be specified
-                                rule: '!(has(self.number) && has(self.format))'
                           required:
                           - limit
                           type: object
                         maxItems: 16
                         type: array
                         x-kubernetes-validations:
-                        - message: responseHitsAddend is not supported for Local Rate
+                        - message: costPerResponse is not supported for Local Rate
                             Limits
-                          rule: self.all(foo, !has(foo.responseHitsAddend))
+                          rule: self.all(foo, !has(foo.costPerResponse))
                     type: object
                   type:
                     description: |-
