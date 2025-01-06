@@ -755,8 +755,7 @@ type HeaderBasedSessionPersistence struct {
 // Compression holds the configuration for HTTP compression.
 // Currently, only the default compressor(gzip) is supported.
 // +k8s:deepcopy-gen=true
-type Compression struct {
-}
+type Compression struct{}
 
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.
 // +k8s:deepcopy-gen=true
