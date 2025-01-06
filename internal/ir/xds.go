@@ -756,7 +756,6 @@ type HeaderBasedSessionPersistence struct {
 // Currently, only the default compressor(gzip) is supported.
 // +k8s:deepcopy-gen=true
 type Compression struct {
-	Type string `json:"type" yaml:"type"`
 }
 
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.

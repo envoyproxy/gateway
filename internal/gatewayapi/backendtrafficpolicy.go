@@ -943,7 +943,5 @@ func buildCompression(compression []*egv1a1.Compression) *ir.Compression {
 	}
 
 	// Only Gzip is supported for now, so we don't need to do anything special here
-	return &ir.Compression{
-		Type: "GZip",
-	}
+	return &ir.Compression{}
 }

@@ -165,5 +165,4 @@ xdsIR:
           name: ""
           prefix: /
         traffic:
-          compression:
-            type: GZip
+          compression: {}
