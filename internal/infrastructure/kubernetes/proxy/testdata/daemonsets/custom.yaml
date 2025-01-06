@@ -336,16 +336,7 @@ spec:
             cpu: 10m
             memory: 32Mi
         securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
-          privileged: false
-          runAsGroup: 65532
-          runAsNonRoot: true
-          runAsUser: 65532
-          seccompProfile:
-            type: RuntimeDefault
+          privileged: true
         startupProbe:
           failureThreshold: 30
           httpGet:
