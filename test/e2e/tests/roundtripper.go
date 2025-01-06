@@ -65,10 +65,10 @@ type DefaultRoundTripper struct {
 func (d *DefaultRoundTripper) httpTransport(request roundtripper.Request) (http.RoundTripper, error) {
 	transport := &http.Transport{
 		DialContext: d.CustomDialContext,
-		// We disable keep-alives so that we don't leak established TCP connections.
+		// We disable keepalives so that we don't leak established TCP connections.
 		// Leaking TCP connections is bad because we could eventually hit the
 		// threshold of maximum number of open TCP connections to a specific
-		// destination. Keep-alives are not presently utilized so disabling this has
+		// destination. Keepalives are not presently utilized so disabling this has
 		// no adverse affect.
 		//
 		// Ref. https://github.com/kubernetes-sigs/gateway-api/issues/2357
@@ -163,7 +163,7 @@ func (d *DefaultRoundTripper) defaultRoundTrip(request roundtripper.Request, tra
 			return nil, nil, err
 		}
 
-		tlog.Logf(request.T, "Sending Request:\n%s\n\n", formatDump(dump, "< "))
+		tlog.Logf(request.T, "Sending Request:\n%s\n\n", formatDump(dump))
 	}
 
 	resp, err := client.Do(req)
@@ -179,7 +179,7 @@ func (d *DefaultRoundTripper) defaultRoundTrip(request roundtripper.Request, tra
 			return nil, nil, err
 		}
 
-		tlog.Logf(request.T, "Received Response:\n%s\n\n", formatDump(dump, "< "))
+		tlog.Logf(request.T, "Received Response:\n%s\n\n", formatDump(dump))
 	}
 
 	cReq := &roundtripper.CapturedRequest{}
