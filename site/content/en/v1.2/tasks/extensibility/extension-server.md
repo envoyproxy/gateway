@@ -116,7 +116,7 @@ image name and tag.
         - HTTPListener
     service:
       # The service that is hosting the extension server
-      fqdn: 
+      fqdn:
         hostname: extension-server.envoy-gateway-system.svc.cluster.local
         port: 5005
   ```
