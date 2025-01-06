@@ -19,6 +19,7 @@ new features: |
   Added support for patching EnvoyProxy.spec.provider.kubernetes.envoyHpa and EnvoyProxy.spec.provider.kubernetes.envoyPDB
   Added support for defining rateLimitHpa in EnvoyGateway API
   Added support for preserving the user defined HTTPRoute match order in EnvoyProxy API
+  Added support for response compression in the BackendTrafficPolicy API
 
 bug fixes: |
   Fixed a nil pointer error that occurs when a SecurityPolicy refers to a UDS backend
