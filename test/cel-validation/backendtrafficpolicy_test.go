@@ -1521,13 +1521,15 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 					{
 						Limit: egv1a1.RateLimitValue{Requests: 10, Unit: "Minute"},
-						CostPerRequest: &egv1a1.RateLimitCost{Type: egv1a1.RateLimitCostTypeDynamicMetadata,
+						CostPerRequest: &egv1a1.RateLimitCost{
+							Type: egv1a1.RateLimitCostTypeDynamicMetadata,
 							DynamicMetadata: &egv1a1.RateLimitCostDynamicMetadata{
 								Namespace: "com.test.my_filter",
 								Key:       "on_request_key",
 							},
 						},
-						CostPerResponse: &egv1a1.RateLimitCost{Type: egv1a1.RateLimitCostTypeDynamicMetadata,
+						CostPerResponse: &egv1a1.RateLimitCost{
+							Type: egv1a1.RateLimitCostTypeDynamicMetadata,
 							DynamicMetadata: &egv1a1.RateLimitCostDynamicMetadata{
 								Namespace: "com.test.my_filter",
 								Key:       "on_response_key",
