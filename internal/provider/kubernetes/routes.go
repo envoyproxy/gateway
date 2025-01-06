@@ -404,15 +404,17 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 
 					switch string(filter.ExtensionRef.Kind) {
 					case egv1a1.KindHTTPRouteFilter:
-						httpFilter, err := r.getHTTPRouteFilter(ctx, key.Name, key.Namespace)
-						if err != nil {
-							r.log.Error(err, "HTTPRouteFilters not found; bypassing rule", "index", i)
-							continue
-						}
-						if !resourceMap.allAssociatedHTTPRouteExtensionFilters.Has(key) {
-							r.processRouteFilterConfigMapRef(ctx, httpFilter, resourceMap, resourceTree)
-							resourceMap.allAssociatedHTTPRouteExtensionFilters.Insert(key)
-							resourceTree.HTTPRouteFilters = append(resourceTree.HTTPRouteFilters, httpFilter)
+						if r.hrfCRDExists {
+							httpFilter, err := r.getHTTPRouteFilter(ctx, key.Name, key.Namespace)
+							if err != nil {
+								r.log.Error(err, "HTTPRouteFilters not found; bypassing rule", "index", i)
+								continue
+							}
+							if !resourceMap.allAssociatedHTTPRouteExtensionFilters.Has(key) {
+								r.processRouteFilterConfigMapRef(ctx, httpFilter, resourceMap, resourceTree)
+								resourceMap.allAssociatedHTTPRouteExtensionFilters.Insert(key)
+								resourceTree.HTTPRouteFilters = append(resourceTree.HTTPRouteFilters, httpFilter)
+							}
 						}
 					default:
 						extRefFilter, ok := resourceMap.extensionRefFilters[key]
