@@ -1132,6 +1132,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `rateLimitDeployment` | _[KubernetesDeploymentSpec](#kubernetesdeploymentspec)_ |  false  | RateLimitDeployment defines the desired state of the Envoy ratelimit deployment resource.<br />If unspecified, default settings for the managed Envoy ratelimit deployment resource<br />are applied. |
+| `rateLimitHpa` | _[KubernetesHorizontalPodAutoscalerSpec](#kuberneteshorizontalpodautoscalerspec)_ |  false  | RateLimitHpa defines the Horizontal Pod Autoscaler settings for Envoy ratelimit Deployment.<br />If the HPA is set, Replicas field from RateLimitDeployment will be ignored. |
 | `watch` | _[KubernetesWatchMode](#kuberneteswatchmode)_ |  false  | Watch holds configuration of which input resources should be watched and reconciled. |
 | `deploy` | _[KubernetesDeployMode](#kubernetesdeploymode)_ |  false  | Deploy holds configuration of how output managed resources such as the Envoy Proxy data plane<br />should be deployed |
 | `overwriteControlPlaneCerts` | _boolean_ |  false  | OverwriteControlPlaneCerts updates the secrets containing the control plane certs, when set. |
@@ -2488,6 +2489,20 @@ data plane fleet.
 _Appears in:_
 - [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
 
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `type` | _[KubernetesDeployModeType](#kubernetesdeploymodetype)_ |  false  | Type indicates what deployment mode to use. "ControllerNamespace" and<br />"GatewayNamespace" are currently supported.<br />By default, when this field is unset or empty, Envoy Gateway will deploy Envoy Proxy fleet in the Controller namespace. |
+
+
+#### KubernetesDeployModeType
+
+_Underlying type:_ _string_
+
+KubernetesDeployModeType defines the type of KubernetesDeployMode
+
+_Appears in:_
+- [KubernetesDeployMode](#kubernetesdeploymode)
+
 
 
 #### KubernetesDeploymentSpec
@@ -2521,6 +2536,7 @@ Envoy Gateway will revert back to this value every time reconciliation occurs.
 See k8s.io.autoscaling.v2.HorizontalPodAutoScalerSpec.
 
 _Appears in:_
+- [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
 - [EnvoyProxyKubernetesProvider](#envoyproxykubernetesprovider)
 
 | Field | Type | Required | Description |
