@@ -316,6 +316,8 @@ type HTTPListener struct {
 	Timeout *ClientTimeout `json:"timeout,omitempty" yaml:"clientTimeout,omitempty"`
 	// Connection settings
 	Connection *ClientConnection `json:"connection,omitempty" yaml:"connection,omitempty"`
+	// PreserveRouteOrder determines if routes should be sorted according to GW-API specs
+	PreserveRouteOrder bool `json:"preserveRouteOrder,omitempty" yaml:"preserveRouteOrder,omitempty"`
 }
 
 // Validate the fields within the HTTPListener structure
