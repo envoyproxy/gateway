@@ -3,10 +3,11 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-// Import all Envoy filter types so they are registered and deserialization does not fail
-// when using them in the "typed_config" attributes.
 package extensions
 
+// Import all Envoy filter types so they are registered and deserialization does not fail
+// when using them in the "typed_config" attributes.
+// DO NOT REMOVE THE FOLLOWING IMPORTS
 import _ "github.com/envoyproxy/go-control-plane/contrib/envoy/extensions/compression/qatzip/compressor/v3alpha"
 
 // nolint: lll
