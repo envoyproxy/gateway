@@ -12,15 +12,6 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
-// Deprecated: error should not be ignored, use ToAnyWithValidation instead.
-func ToAny(msg proto.Message) *anypb.Any {
-	res, err := ToAnyWithValidation(msg)
-	if err != nil {
-		return nil
-	}
-	return res
-}
-
 func ToAnyWithValidation(msg proto.Message) (*anypb.Any, error) {
 	if msg == nil {
 		return nil, errors.New("empty message received")
