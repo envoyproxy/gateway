@@ -1175,6 +1175,21 @@ func TestService(t *testing.T) {
 				Name: ptr.To("custom-service-name"),
 			},
 		},
+		{
+			caseName: "dualstack",
+			infra:    newTestInfraWithIPFamily(ptr.To(egv1a1.DualStack)),
+			service:  nil,
+		},
+		{
+			caseName: "ipv4-singlestack",
+			infra:    newTestInfraWithIPFamily(ptr.To(egv1a1.IPv4)),
+			service:  nil,
+		},
+		{
+			caseName: "ipv6-singlestack",
+			infra:    newTestInfraWithIPFamily(ptr.To(egv1a1.IPv6)),
+			service:  nil,
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
