@@ -169,6 +169,20 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 		serviceSpec.ExternalIPs = r.infra.Addresses
 	}
 
+	// Set IP family policy and families based on proxy config request
+	ipFamily := r.infra.GetProxyConfig().Spec.IPFamily
+	if ipFamily != nil {
+		// SingleStack+IPv4 is default behavior from K8s and so is omitted
+		switch *ipFamily {
+		case egv1a1.IPv6:
+			serviceSpec.IPFamilies = []corev1.IPFamily{corev1.IPv6Protocol}
+			serviceSpec.IPFamilyPolicy = ptr.To(corev1.IPFamilyPolicySingleStack)
+		case egv1a1.DualStack:
+			serviceSpec.IPFamilies = []corev1.IPFamily{corev1.IPv4Protocol, corev1.IPv6Protocol}
+			serviceSpec.IPFamilyPolicy = ptr.To(corev1.IPFamilyPolicyRequireDualStack)
+		}
+	}
+
 	svc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
