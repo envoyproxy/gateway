@@ -290,11 +290,6 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		}
 	}
 
-	// omit the deployment replicas if HPA is being set
-	if r.rateLimitHpa != nil {
-		deployment.Spec.Replicas = nil
-	}
-
 	// apply merge patch to deployment
 	var err error
 	if deployment, err = r.rateLimitDeployment.ApplyMergePatch(deployment); err != nil {
