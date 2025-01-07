@@ -10,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
 
@@ -61,35 +60,35 @@ type resourceMappings struct {
 	// The key is the namespaced name, group and kind of the filter and the value is the
 	// unstructured form of the resource.
 	extensionRefFilters map[utils.NamespacedNameWithGroupKind]unstructured.Unstructured
-	// httpRouteFilters is a map of HTTPRouteFilters, where the key is the namespaced name,
-	// group and kind of the HTTPFilter.
-	httpRouteFilters map[utils.NamespacedNameWithGroupKind]*egv1a1.HTTPRouteFilter
+	// Set for storing HTTPRouteExtensions (Envoy Gateway or Custom) NamespacedNames referenced by various
+	// route rules objects.
+	allAssociatedHTTPRouteExtensionFilters sets.Set[utils.NamespacedNameWithGroupKind]
 }
 
 func newResourceMapping() *resourceMappings {
 	return &resourceMappings{
-		allAssociatedGateways:               sets.New[string](),
-		allAssociatedReferenceGrants:        sets.New[string](),
-		allAssociatedServiceImports:         sets.New[string](),
-		allAssociatedEndpointSlices:         sets.New[string](),
-		allAssociatedBackends:               sets.New[string](),
-		allAssociatedSecrets:                sets.New[string](),
-		allAssociatedConfigMaps:             sets.New[string](),
-		allAssociatedNamespaces:             sets.New[string](),
-		allAssociatedEnvoyProxies:           sets.New[string](),
-		allAssociatedEnvoyPatchPolicies:     sets.New[string](),
-		allAssociatedTLSRoutes:              sets.New[string](),
-		allAssociatedHTTPRoutes:             sets.New[string](),
-		allAssociatedGRPCRoutes:             sets.New[string](),
-		allAssociatedTCPRoutes:              sets.New[string](),
-		allAssociatedUDPRoutes:              sets.New[string](),
-		allAssociatedBackendRefs:            sets.New[gwapiv1.BackendObjectReference](),
-		allAssociatedClientTrafficPolicies:  sets.New[string](),
-		allAssociatedBackendTrafficPolicies: sets.New[string](),
-		allAssociatedSecurityPolicies:       sets.New[string](),
-		allAssociatedBackendTLSPolicies:     sets.New[string](),
-		allAssociatedEnvoyExtensionPolicies: sets.New[string](),
-		extensionRefFilters:                 map[utils.NamespacedNameWithGroupKind]unstructured.Unstructured{},
-		httpRouteFilters:                    map[utils.NamespacedNameWithGroupKind]*egv1a1.HTTPRouteFilter{},
+		allAssociatedGateways:                  sets.New[string](),
+		allAssociatedReferenceGrants:           sets.New[string](),
+		allAssociatedServiceImports:            sets.New[string](),
+		allAssociatedEndpointSlices:            sets.New[string](),
+		allAssociatedBackends:                  sets.New[string](),
+		allAssociatedSecrets:                   sets.New[string](),
+		allAssociatedConfigMaps:                sets.New[string](),
+		allAssociatedNamespaces:                sets.New[string](),
+		allAssociatedEnvoyProxies:              sets.New[string](),
+		allAssociatedEnvoyPatchPolicies:        sets.New[string](),
+		allAssociatedTLSRoutes:                 sets.New[string](),
+		allAssociatedHTTPRoutes:                sets.New[string](),
+		allAssociatedGRPCRoutes:                sets.New[string](),
+		allAssociatedTCPRoutes:                 sets.New[string](),
+		allAssociatedUDPRoutes:                 sets.New[string](),
+		allAssociatedBackendRefs:               sets.New[gwapiv1.BackendObjectReference](),
+		allAssociatedClientTrafficPolicies:     sets.New[string](),
+		allAssociatedBackendTrafficPolicies:    sets.New[string](),
+		allAssociatedSecurityPolicies:          sets.New[string](),
+		allAssociatedBackendTLSPolicies:        sets.New[string](),
+		allAssociatedEnvoyExtensionPolicies:    sets.New[string](),
+		extensionRefFilters:                    map[utils.NamespacedNameWithGroupKind]unstructured.Unstructured{},
+		allAssociatedHTTPRouteExtensionFilters: sets.New[utils.NamespacedNameWithGroupKind](),
 	}
 }

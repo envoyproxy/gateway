@@ -202,6 +202,12 @@ type EnvoyGatewayKubernetesProvider struct {
 	// +optional
 	RateLimitDeployment *KubernetesDeploymentSpec `json:"rateLimitDeployment,omitempty"`
 
+	// RateLimitHpa defines the Horizontal Pod Autoscaler settings for Envoy ratelimit Deployment.
+	// If the HPA is set, Replicas field from RateLimitDeployment will be ignored.
+	//
+	// +optional
+	RateLimitHpa *KubernetesHorizontalPodAutoscalerSpec `json:"rateLimitHpa,omitempty"`
+
 	// Watch holds configuration of which input resources should be watched and reconciled.
 	// +optional
 	Watch *KubernetesWatchMode `json:"watch,omitempty"`
@@ -254,10 +260,27 @@ type KubernetesWatchMode struct {
 	NamespaceSelector *metav1.LabelSelector `json:"namespaceSelector,omitempty"`
 }
 
+const (
+	// KubernetesDeployModeTypeControllerNamespace indicates that the controller namespace is used for the infra proxy deployments.
+	KubernetesDeployModeTypeControllerNamespace = "ControllerNamespace"
+
+	// KubernetesDeployModeTypeGatewayNamespace indicates that the gateway namespace is used for the infra proxy deployments.
+	KubernetesDeployModeTypeGatewayNamespace = "GatewayNamespace"
+)
+
+// KubernetesDeployModeType defines the type of KubernetesDeployMode
+type KubernetesDeployModeType string
+
 // KubernetesDeployMode holds configuration for how to deploy managed resources such as the Envoy Proxy
 // data plane fleet.
 type KubernetesDeployMode struct {
-	// TODO
+	// Type indicates what deployment mode to use. "ControllerNamespace" and
+	// "GatewayNamespace" are currently supported.
+	// By default, when this field is unset or empty, Envoy Gateway will deploy Envoy Proxy fleet in the Controller namespace.
+	// +optional
+	// +kubebuilder:default=ControllerNamespace
+	// +kubebuilder:validation:Enum=ControllerNamespace;GatewayNamespace
+	Type *KubernetesDeployModeType `json:"type,omitempty"`
 }
 
 // EnvoyGatewayCustomProvider defines configuration for the Custom provider.
