@@ -161,7 +161,7 @@ type RateLimitCostDynamicMetadata struct {
 	// Namespace is the namespace of the dynamic metadata.
 	//
 	// +kubebuilder:validation:Required
-	Namespace string `json:"filterNamespace"`
+	Namespace string `json:"namespace"`
 	// Key is the key to retrieve the usage number from the filter metadata.
 	//
 	// +kubebuilder:validation:Required

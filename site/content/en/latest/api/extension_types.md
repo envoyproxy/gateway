@@ -3401,7 +3401,7 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `filterNamespace` | _string_ |  true  | Namespace is the namespace of the dynamic metadata. |
+| `namespace` | _string_ |  true  | Namespace is the namespace of the dynamic metadata. |
 | `key` | _string_ |  true  | Key is the key to retrieve the usage number from the filter metadata. |
 
 

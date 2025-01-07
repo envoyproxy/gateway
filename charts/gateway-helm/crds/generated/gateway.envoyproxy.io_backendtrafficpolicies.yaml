@@ -766,17 +766,17 @@ spec:
                                   description: DynamicMetadata specifies the filter
                                     metadata to retrieve the usage number from.
                                   properties:
-                                    filterNamespace:
-                                      description: Namespace is the namespace of the
-                                        dynamic metadata.
-                                      type: string
                                     key:
                                       description: Key is the key to retrieve the
                                         usage number from the filter metadata.
                                       type: string
+                                    namespace:
+                                      description: Namespace is the namespace of the
+                                        dynamic metadata.
+                                      type: string
                                   required:
-                                  - filterNamespace
                                   - key
+                                  - namespace
                                   type: object
                                 number:
                                   description: |-
@@ -817,17 +817,17 @@ spec:
                                   description: DynamicMetadata specifies the filter
                                     metadata to retrieve the usage number from.
                                   properties:
-                                    filterNamespace:
-                                      description: Namespace is the namespace of the
-                                        dynamic metadata.
-                                      type: string
                                     key:
                                       description: Key is the key to retrieve the
                                         usage number from the filter metadata.
                                       type: string
+                                    namespace:
+                                      description: Namespace is the namespace of the
+                                        dynamic metadata.
+                                      type: string
                                   required:
-                                  - filterNamespace
                                   - key
+                                  - namespace
                                   type: object
                                 number:
                                   description: |-
@@ -999,17 +999,17 @@ spec:
                                   description: DynamicMetadata specifies the filter
                                     metadata to retrieve the usage number from.
                                   properties:
-                                    filterNamespace:
-                                      description: Namespace is the namespace of the
-                                        dynamic metadata.
-                                      type: string
                                     key:
                                       description: Key is the key to retrieve the
                                         usage number from the filter metadata.
                                       type: string
+                                    namespace:
+                                      description: Namespace is the namespace of the
+                                        dynamic metadata.
+                                      type: string
                                   required:
-                                  - filterNamespace
                                   - key
+                                  - namespace
                                   type: object
                                 number:
                                   description: |-
@@ -1050,17 +1050,17 @@ spec:
                                   description: DynamicMetadata specifies the filter
                                     metadata to retrieve the usage number from.
                                   properties:
-                                    filterNamespace:
-                                      description: Namespace is the namespace of the
-                                        dynamic metadata.
-                                      type: string
                                     key:
                                       description: Key is the key to retrieve the
                                         usage number from the filter metadata.
                                       type: string
+                                    namespace:
+                                      description: Namespace is the namespace of the
+                                        dynamic metadata.
+                                      type: string
                                   required:
-                                  - filterNamespace
                                   - key
+                                  - namespace
                                   type: object
                                 number:
                                   description: |-
