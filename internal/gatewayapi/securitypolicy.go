@@ -578,7 +578,8 @@ func wildcard2regex(wildcard string) string {
 func (t *Translator) buildJWT(
 	policy *egv1a1.SecurityPolicy,
 	resources *resource.Resources,
-	envoyProxy *egv1a1.EnvoyProxy) (*ir.JWT, error) {
+	envoyProxy *egv1a1.EnvoyProxy,
+) (*ir.JWT, error) {
 	if err := validateJWTProvider(policy.Spec.JWT.Providers); err != nil {
 		return nil, err
 	}
@@ -677,7 +678,8 @@ func (t *Translator) buildRemoteJWKS(
 	remoteJWKS *egv1a1.RemoteJWKS,
 	index int,
 	resources *resource.Resources,
-	envoyProxy *egv1a1.EnvoyProxy) (*ir.RemoteJWKS, error) {
+	envoyProxy *egv1a1.EnvoyProxy,
+) (*ir.RemoteJWKS, error) {
 	var (
 		protocol ir.AppProtocol
 		rd       *ir.RouteDestination
