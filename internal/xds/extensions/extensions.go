@@ -7,6 +7,8 @@
 // when using them in the "typed_config" attributes.
 package extensions
 
+import _ "github.com/envoyproxy/go-control-plane/contrib/envoy/extensions/compression/qatzip/compressor/v3alpha"
+
 // nolint: lll
 //
 //go:generate sh -c "echo '// Copyright Envoy Gateway Authors' > extensions.gen.go"
