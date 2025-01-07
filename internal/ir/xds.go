@@ -27,7 +27,6 @@ import (
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	egv1a1validation "github.com/envoyproxy/gateway/api/v1alpha1/validation"
 )
 
 const (
@@ -819,18 +818,6 @@ type SecurityFeatures struct {
 	Authorization *Authorization `json:"authorization,omitempty" yaml:"authorization,omitempty"`
 }
 
-func (s *SecurityFeatures) Validate() error {
-	var errs error
-
-	if s.JWT != nil {
-		if err := s.JWT.Validate(); err != nil {
-			errs = errors.Join(errs, err)
-		}
-	}
-
-	return errs
-}
-
 // EnvoyExtensionFeatures holds the information associated with the Envoy Extension Policy.
 // +k8s:deepcopy-gen=true
 type EnvoyExtensionFeatures struct {
@@ -885,7 +872,6 @@ type CORS struct {
 // +k8s:deepcopy-gen=true
 type JWT struct {
 	// AllowMissing determines whether a missing JWT is acceptable.
-	//
 	AllowMissing bool `json:"allowMissing,omitempty" yaml:"allowMissing,omitempty"`
 
 	// Providers defines a list of JSON Web Token (JWT) authentication providers.
@@ -896,21 +882,52 @@ type JWT struct {
 //
 // +k8s:deepcopy-gen=true
 type JWTProvider struct {
-	egv1a1.JWTProvider `json:",inline" yaml:",inline"`
+	// Name defines a unique name for the JWT provider. A name can have a variety of forms,
+	// including RFC1123 subdomains, RFC 1123 labels, or RFC 1035 labels.
+	Name string `json:"name"`
 
-	// RemoteJWKSBackend holds the configuration for a remote JWKS backend.
-    RemoteJWKSBackend *RemoteJWKSBackend `json:"remoteJWKSBackend,omitempty" yaml:"remoteJWKSBackend,omitempty"`
+	// Issuer is the principal that issued the JWT and takes the form of a URL or email address.
+	Issuer string `json:"issuer,omitempty"`
+
+	// Audiences is a list of JWT audiences allowed access. For additional details, see
+	// https://tools.ietf.org/html/rfc7519#section-4.1.3. If not provided, JWT audiences
+	// are not checked.
+	Audiences []string `json:"audiences,omitempty"`
+
+	// RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote
+	// HTTP/HTTPS endpoint.
+	RemoteJWKS RemoteJWKS `json:"remoteJWKS"`
+
+	// ClaimToHeaders is a list of JWT claims that must be extracted into HTTP request headers
+	// For examples, following config:
+	// The claim must be of type; string, int, double, bool. Array type claims are not supported
+	ClaimToHeaders []egv1a1.ClaimToHeader `json:"claimToHeaders,omitempty"`
+
+	// RecomputeRoute clears the route cache and recalculates the routing decision.
+	// This field must be enabled if the headers generated from the claim are used for
+	// route matching decisions. If the recomputation selects a new route, features targeting
+	// the new matched route will be applied.
+	RecomputeRoute *bool `json:"recomputeRoute,omitempty"`
+
+	// ExtractFrom defines different ways to extract the JWT token from HTTP request.
+	// If empty, it defaults to extract JWT token from the Authorization HTTP request header using Bearer schema
+	// or access_token from query parameters.
+	ExtractFrom *egv1a1.JWTExtractor `json:"extractFrom,omitempty"`
 }
 
 // RemoteJWKSBackend holds the configuration for a remote JWKS backend.
 //
 // +k8s:deepcopy-gen=true
-type RemoteJWKSBackend struct {
+type RemoteJWKS struct {
 	// Destination defines the destination for the OIDC Provider.
 	Destination *RouteDestination `json:"destination,omitempty"`
 
 	// Traffic contains configuration for traffic features for the OIDC Provider
 	Traffic *TrafficFeatures `json:"traffic,omitempty"`
+
+	// URI is the HTTPS URI to fetch the JWKS. Envoy's system trust bundle is used to validate the server certificate.
+	// If a custom trust bundle is needed, it can be specified in a BackendTLSConfig resource and target the BackendRefs.
+	URI string `json:"uri"`
 }
 
 // OIDC defines the schema for authenticating HTTP requests using
@@ -1278,26 +1295,6 @@ func (h HTTPRoute) Validate() error {
 		if err := h.Traffic.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
-	}
-	if h.Security != nil {
-		if err := h.Security.Validate(); err != nil {
-			errs = errors.Join(errs, err)
-		}
-	}
-
-	return errs
-}
-
-func (j *JWT) Validate() error {
-	var errs error
-
-	var providers []egv1a1.JWTProvider
-	for _, provider := range j.Providers {
-		providers = append(providers, provider.JWTProvider)
-	}
-
-	if err := egv1a1validation.ValidateJWTProvider(providers); err != nil {
-		errs = errors.Join(errs, err)
 	}
 
 	return errs

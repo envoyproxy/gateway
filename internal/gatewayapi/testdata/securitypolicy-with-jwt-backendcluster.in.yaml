@@ -1,0 +1,82 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: default
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: default
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
+backends:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    name: backend-fqdn
+    namespace: default
+  spec:
+    endpoints:
+    - fqdn:
+        hostname: 'foo.bar.com'
+        port: 443
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+    jwt:
+      providers:
+      - name: foobar
+        issuer: https://foo.bar.com
+        audiences:
+        - foo.bar.com
+        remoteJWKS:
+          backendRefs:
+          - group: gateway.envoyproxy.io
+            kind: Backend
+            name: backend-fqdn
+            port: 443
+          backendSettings:
+            retry:
+              numRetries: 3
+              perRetry:
+                backOff:
+                  baseInterval: 1s
+                  maxInterval: 5s
+              retryOn:
+                triggers: ["5xx", "gateway-error", "reset"]
+          uri: https://foo.bar.com/jwt/public-key/jwks.json
+        claimToHeaders:
+        - header: claim-header
+          claim: claim

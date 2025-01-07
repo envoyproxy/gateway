@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/mail"
 	"net/netip"
 	"net/url"
 	"sort"
@@ -25,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -388,7 +390,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 			}
 		}
 
-		var jwt           *ir.JWT
+		var jwt *ir.JWT
 		if policy.Spec.JWT != nil {
 			if jwt, err = t.buildJWT(
 				policy,
@@ -577,17 +579,26 @@ func (t *Translator) buildJWT(
 	policy *egv1a1.SecurityPolicy,
 	resources *resource.Resources,
 	envoyProxy *egv1a1.EnvoyProxy) (*ir.JWT, error) {
+	if err := validateJWTProvider(policy.Spec.JWT.Providers); err != nil {
+		return nil, err
+	}
+
 	var providers []ir.JWTProvider
 	for i, p := range policy.Spec.JWT.Providers {
-		provider := ir.JWTProvider{JWTProvider: p}
-
-		if len(p.RemoteJWKS.BackendRefs) > 0 {
-			backendSettings, err := t.buildRemoteJWKSBackend(policy, &p.RemoteJWKS, i, resources, envoyProxy)
-			if err != nil {
-				return nil, err
-			}
-			provider.RemoteJWKSBackend = backendSettings
+		provider := ir.JWTProvider{
+			Name:           p.Name,
+			Issuer:         p.Issuer,
+			Audiences:      p.Audiences,
+			ClaimToHeaders: p.ClaimToHeaders,
+			RecomputeRoute: p.RecomputeRoute,
+			ExtractFrom:    p.ExtractFrom,
 		}
+
+		remoteJWKS, err := t.buildRemoteJWKS(policy, &p.RemoteJWKS, i, resources, envoyProxy)
+		if err != nil {
+			return nil, err
+		}
+		provider.RemoteJWKS = *remoteJWKS
 		providers = append(providers, provider)
 	}
 
@@ -597,12 +608,76 @@ func (t *Translator) buildJWT(
 	}, nil
 }
 
-func (t *Translator) buildRemoteJWKSBackend(
+func validateJWTProvider(providers []egv1a1.JWTProvider) error {
+	var errs []error
+
+	var names []string
+	for _, provider := range providers {
+		switch {
+		case len(provider.Name) == 0:
+			errs = append(errs, errors.New("jwt provider cannot be an empty string"))
+		case len(provider.Issuer) != 0:
+			switch {
+			// Issuer follows StringOrURI format based on https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.1.
+			// Hence, when it contains ':', it MUST be a valid URI.
+			case strings.Contains(provider.Issuer, ":"):
+				if _, err := url.ParseRequestURI(provider.Issuer); err != nil {
+					errs = append(errs, fmt.Errorf("invalid issuer; when issuer contains ':' character, it MUST be a valid URI"))
+				}
+			// Adding reserved character for '@', to represent an email address.
+			// Hence, when it contains '@', it MUST be a valid Email Address.
+			case strings.Contains(provider.Issuer, "@"):
+				if _, err := mail.ParseAddress(provider.Issuer); err != nil {
+					errs = append(errs, fmt.Errorf("invalid issuer; when issuer contains '@' character, it MUST be a valid Email Address format: %w", err))
+				}
+			}
+
+		case len(provider.RemoteJWKS.URI) == 0:
+			errs = append(errs, fmt.Errorf("uri must be set for remote JWKS provider: %s", provider.Name))
+		}
+		if _, err := url.ParseRequestURI(provider.RemoteJWKS.URI); err != nil {
+			errs = append(errs, fmt.Errorf("invalid remote JWKS URI: %w", err))
+		}
+
+		if len(errs) == 0 {
+			if strErrs := validation.IsQualifiedName(provider.Name); len(strErrs) != 0 {
+				for _, strErr := range strErrs {
+					errs = append(errs, errors.New(strErr))
+				}
+			}
+			// Ensure uniqueness among provider names.
+			if names == nil {
+				names = append(names, provider.Name)
+			} else {
+				for _, name := range names {
+					if name == provider.Name {
+						errs = append(errs, fmt.Errorf("provider name %s must be unique", provider.Name))
+					} else {
+						names = append(names, provider.Name)
+					}
+				}
+			}
+		}
+
+		for _, claimToHeader := range provider.ClaimToHeaders {
+			switch {
+			case len(claimToHeader.Header) == 0:
+				errs = append(errs, fmt.Errorf("header must be set for claimToHeader provider: %s", claimToHeader.Header))
+			case len(claimToHeader.Claim) == 0:
+				errs = append(errs, fmt.Errorf("claim must be set for claimToHeader provider: %s", claimToHeader.Claim))
+			}
+		}
+	}
+
+	return errors.Join(errs...)
+}
+
+func (t *Translator) buildRemoteJWKS(
 	policy *egv1a1.SecurityPolicy,
 	remoteJWKS *egv1a1.RemoteJWKS,
 	index int,
 	resources *resource.Resources,
-	envoyProxy *egv1a1.EnvoyProxy) (*ir.RemoteJWKSBackend, error) {
+	envoyProxy *egv1a1.EnvoyProxy) (*ir.RemoteJWKS, error) {
 	var (
 		protocol ir.AppProtocol
 		rd       *ir.RouteDestination
@@ -628,13 +703,16 @@ func (t *Translator) buildRemoteJWKSBackend(
 		}
 	}
 
-	if traffic, err = translateTrafficFeatures(remoteJWKS.BackendSettings); err != nil {
-		return nil, err
+	if remoteJWKS.BackendSettings != nil {
+		if traffic, err = translateTrafficFeatures(remoteJWKS.BackendSettings); err != nil {
+			return nil, err
+		}
 	}
 
-	return &ir.RemoteJWKSBackend{
+	return &ir.RemoteJWKS{
 		Destination: rd,
 		Traffic:     traffic,
+		URI:         remoteJWKS.URI,
 	}, nil
 }
 
