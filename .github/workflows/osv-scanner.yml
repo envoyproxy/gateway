@@ -1,6 +1,9 @@
 name: OSV-Scanner
 
 on:
+  pull_request:
+    branches:
+    - "main"
   merge_group:
     branches:
     - "main"
@@ -11,10 +14,7 @@ on:
   - cron: '44 15 * * 5'
 
 permissions:
-  actions: read
   contents: read
-  # Require writing security events to upload SARIF file to security tab
-  security-events: write
 
 jobs:
   scan-scheduled:
@@ -25,6 +25,11 @@ jobs:
         --skip-git
         --recursive
         ./
+    permissions:
+      actions: read
+      contents: read
+      # Require writing security events to upload SARIF file to security tab
+      security-events: write
 
   scan-pr:
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
@@ -34,3 +39,8 @@ jobs:
         --skip-git
         --recursive
         ./
+    permissions:
+      actions: read
+      contents: read
+      # Require writing security events to upload SARIF file to security tab
+      security-events: write
