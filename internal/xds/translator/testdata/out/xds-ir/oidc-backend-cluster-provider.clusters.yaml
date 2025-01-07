@@ -34,10 +34,35 @@
               address: oauth.foo.com
               portValue: 443
         loadBalancingWeight: 1
+        metadata:
+          filterMetadata:
+            envoy.transport_socket_match:
+              name: securitypolicy/envoy-gateway/policy-for-gateway/0/tls/0
       loadBalancingWeight: 1
       locality:
         region: securitypolicy/envoy-gateway/policy-for-gateway/0/backend/0
   name: securitypolicy/envoy-gateway/policy-for-gateway/0
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
+  transportSocketMatches:
+  - match:
+      name: securitypolicy/envoy-gateway/policy-for-gateway/0/tls/0
+    name: securitypolicy/envoy-gateway/policy-for-gateway/0/tls/0
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        commonTlsContext:
+          combinedValidationContext:
+            defaultValidationContext:
+              matchTypedSubjectAltNames:
+              - matcher:
+                  exact: oauth.foo.com
+                sanType: DNS
+            validationContextSdsSecretConfig:
+              name: policy-btls-backend-fqdn/envoy-gateway-ca
+              sdsConfig:
+                ads: {}
+                resourceApiVersion: V3
+        sni: oauth.foo.com
   type: STRICT_DNS

@@ -227,7 +227,7 @@ install-eg-addons: helm-generate.gateway-addons-helm
 	kubectl rollout status --watch --timeout=5m -n monitoring deployment/otel-collector
 
 .PHONY: uninstall-eg-addons
-uninstall-eg-addons: 
+uninstall-eg-addons:
 	@$(LOG_TARGET)
 	helm delete $(shell helm list -n monitoring -q) -n monitoring
 

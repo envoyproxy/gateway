@@ -19,9 +19,9 @@ new features: |
   Added support for patching EnvoyProxy.spec.provider.kubernetes.envoyHpa and EnvoyProxy.spec.provider.kubernetes.envoyPDB
   Added support for defining rateLimitHpa in EnvoyGateway API
 
-# Fixes for bugs identified in previous versions.
 bug fixes: |
   Fixed a nil pointer error that occurs when a SecurityPolicy refers to a UDS backend
+  Fixed the Gateway API translator didn't use the TLS configuration from the BackendTLSPolicy when connecting to the OIDC provider's well-known endpoint.
   Fixed a validation failure when multiple HTTPRoutes refer to the same extension filter
 
 # Enhancements that improve performance.
