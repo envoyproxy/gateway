@@ -3134,9 +3134,6 @@ spec:
                           x-kubernetes-validations:
                           - message: BackendRefs must be used, backendRef is not supported.
                             rule: '!has(self.backendRef)'
-                          - message: Only one backendRefs is allowed.
-                            rule: 'has(self.backendRefs)? self.backendRefs.size()
-                              > 1 : true'
                       required:
                       - name
                       - remoteJWKS

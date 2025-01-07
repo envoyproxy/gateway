@@ -889,7 +889,28 @@ type JWT struct {
 	AllowMissing bool `json:"allowMissing,omitempty" yaml:"allowMissing,omitempty"`
 
 	// Providers defines a list of JSON Web Token (JWT) authentication providers.
-	Providers []egv1a1.JWTProvider `json:"providers,omitempty" yaml:"providers,omitempty"`
+	Providers []JWTProvider `json:"providers,omitempty" yaml:"providers,omitempty"`
+}
+
+// JWTProvider defines the schema for the JWT Provider.
+//
+// +k8s:deepcopy-gen=true
+type JWTProvider struct {
+	egv1a1.JWTProvider `json:",inline" yaml:",inline"`
+
+	// RemoteJWKSBackend holds the configuration for a remote JWKS backend.
+    RemoteJWKSBackend *RemoteJWKSBackend `json:"remoteJWKSBackend,omitempty" yaml:"remoteJWKSBackend,omitempty"`
+}
+
+// RemoteJWKSBackend holds the configuration for a remote JWKS backend.
+//
+// +k8s:deepcopy-gen=true
+type RemoteJWKSBackend struct {
+	// Destination defines the destination for the OIDC Provider.
+	Destination *RouteDestination `json:"destination,omitempty"`
+
+	// Traffic contains configuration for traffic features for the OIDC Provider
+	Traffic *TrafficFeatures `json:"traffic,omitempty"`
 }
 
 // OIDC defines the schema for authenticating HTTP requests using
@@ -1270,7 +1291,12 @@ func (h HTTPRoute) Validate() error {
 func (j *JWT) Validate() error {
 	var errs error
 
-	if err := egv1a1validation.ValidateJWTProvider(j.Providers); err != nil {
+	var providers []egv1a1.JWTProvider
+	for _, provider := range j.Providers {
+		providers = append(providers, provider.JWTProvider)
+	}
+
+	if err := egv1a1validation.ValidateJWTProvider(providers); err != nil {
 		errs = errors.Join(errs, err)
 	}
 

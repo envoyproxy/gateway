@@ -77,7 +77,6 @@ type JWTProvider struct {
 
 // RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote HTTP/HTTPS endpoint.
 // +kubebuilder:validation:XValidation:rule="!has(self.backendRef)",message="BackendRefs must be used, backendRef is not supported."
-// +kubebuilder:validation:XValidation:rule="has(self.backendRefs)? self.backendRefs.size() > 1 : true",message="Only one backendRefs is allowed."
 type RemoteJWKS struct {
 	// BackendRefs is used to specify the address of the Remote JWKS.
 	//

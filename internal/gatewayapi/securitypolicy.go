@@ -332,7 +332,6 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	// Build IR
 	var (
 		cors          *ir.CORS
-		jwt           *ir.JWT
 		basicAuth     *ir.BasicAuth
 		authorization *ir.Authorization
 		err, errs     error
@@ -340,10 +339,6 @@ func (t *Translator) translateSecurityPolicyForRoute(
 
 	if policy.Spec.CORS != nil {
 		cors = t.buildCORS(policy.Spec.CORS)
-	}
-
-	if policy.Spec.JWT != nil {
-		jwt = t.buildJWT(policy.Spec.JWT)
 	}
 
 	if policy.Spec.BasicAuth != nil {
@@ -387,8 +382,19 @@ func (t *Translator) translateSecurityPolicyForRoute(
 			if oidc, err = t.buildOIDC(
 				policy,
 				resources,
-				gtwCtx.envoyProxy); err != nil { // TODO zhaohuabing: Only the last EnvoyProxy is used
+				gtwCtx.envoyProxy); err != nil {
 				err = perr.WithMessage(err, "OIDC")
+				errs = errors.Join(errs, err)
+			}
+		}
+
+		var jwt           *ir.JWT
+		if policy.Spec.JWT != nil {
+			if jwt, err = t.buildJWT(
+				policy,
+				resources,
+				gtwCtx.envoyProxy); err != nil {
+				err = perr.WithMessage(err, "JWT")
 				errs = errors.Join(errs, err)
 			}
 		}
@@ -444,7 +450,13 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	}
 
 	if policy.Spec.JWT != nil {
-		jwt = t.buildJWT(policy.Spec.JWT)
+		if jwt, err = t.buildJWT(
+			policy,
+			resources,
+			gateway.envoyProxy); err != nil {
+			err = perr.WithMessage(err, "JWT")
+			errs = errors.Join(errs, err)
+		}
 	}
 
 	if policy.Spec.OIDC != nil {
@@ -561,11 +573,69 @@ func wildcard2regex(wildcard string) string {
 	return regexStr
 }
 
-func (t *Translator) buildJWT(jwt *egv1a1.JWT) *ir.JWT {
-	return &ir.JWT{
-		AllowMissing: ptr.Deref(jwt.Optional, false),
-		Providers:    jwt.Providers,
+func (t *Translator) buildJWT(
+	policy *egv1a1.SecurityPolicy,
+	resources *resource.Resources,
+	envoyProxy *egv1a1.EnvoyProxy) (*ir.JWT, error) {
+	var providers []ir.JWTProvider
+	for i, p := range policy.Spec.JWT.Providers {
+		provider := ir.JWTProvider{JWTProvider: p}
+
+		if len(p.RemoteJWKS.BackendRefs) > 0 {
+			backendSettings, err := t.buildRemoteJWKSBackend(policy, &p.RemoteJWKS, i, resources, envoyProxy)
+			if err != nil {
+				return nil, err
+			}
+			provider.RemoteJWKSBackend = backendSettings
+		}
+		providers = append(providers, provider)
 	}
+
+	return &ir.JWT{
+		AllowMissing: ptr.Deref(policy.Spec.JWT.Optional, false),
+		Providers:    providers,
+	}, nil
+}
+
+func (t *Translator) buildRemoteJWKSBackend(
+	policy *egv1a1.SecurityPolicy,
+	remoteJWKS *egv1a1.RemoteJWKS,
+	index int,
+	resources *resource.Resources,
+	envoyProxy *egv1a1.EnvoyProxy) (*ir.RemoteJWKSBackend, error) {
+	var (
+		protocol ir.AppProtocol
+		rd       *ir.RouteDestination
+		traffic  *ir.TrafficFeatures
+		err      error
+	)
+
+	u, err := url.Parse(remoteJWKS.URI)
+	if err != nil {
+		return nil, err
+	}
+
+	if u.Scheme == "https" {
+		protocol = ir.HTTPS
+	} else {
+		protocol = ir.HTTP
+	}
+
+	if len(remoteJWKS.BackendRefs) > 0 {
+		if rd, err = t.translateExtServiceBackendRefs(
+			policy, remoteJWKS.BackendRefs, protocol, resources, envoyProxy, "jwt", index); err != nil {
+			return nil, err
+		}
+	}
+
+	if traffic, err = translateTrafficFeatures(remoteJWKS.BackendSettings); err != nil {
+		return nil, err
+	}
+
+	return &ir.RemoteJWKSBackend{
+		Destination: rd,
+		Traffic:     traffic,
+	}, nil
 }
 
 func (t *Translator) buildOIDC(
