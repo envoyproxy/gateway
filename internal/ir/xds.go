@@ -756,7 +756,7 @@ type HeaderBasedSessionPersistence struct {
 // +k8s:deepcopy-gen=true
 type Compression struct {
 	// Type of compression to be used.
-	Type egv1a1.CompressorType `json:"type,omitempty" yaml:"type,omitempty"`
+	Type egv1a1.CompressorType `json:"type" yaml:"type"`
 }
 
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.

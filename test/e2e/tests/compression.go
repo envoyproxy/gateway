@@ -125,7 +125,7 @@ func testCompression(t *testing.T, suite *suite.ConformanceTestSuite, compressio
 	http.MakeRequestAndExpectEventuallyConsistentResponse(t, roundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 }
 
-// CompressionRoundTripper implements roundtripper.RoundTripper and adds support for gzip encoding.
+// CompressionRoundTripper implements roundtripper.RoundTripper and adds support for compression.
 type CompressionRoundTripper struct {
 	Debug             bool
 	TimeoutConfig     config.TimeoutConfig
