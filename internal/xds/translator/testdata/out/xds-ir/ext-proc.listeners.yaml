@@ -25,6 +25,13 @@
                 clusterName: envoyextensionpolicy/default/policy-for-route-2/0/grpc-backend-4
               timeout: 10s
             messageTimeout: 5s
+            metadataOptions:
+              forwardingNamespaces:
+                untyped:
+                - envoy.filters.http.ext_authz
+              receivingNamespaces:
+                untyped:
+                - envoy.filters.http.my_custom
             processingMode:
               requestBodyMode: BUFFERED
               requestHeaderMode: SEND
@@ -78,6 +85,13 @@
                 clusterName: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/0/grpc-backend
               timeout: 10s
             messageTimeout: 15s
+            metadataOptions:
+              forwardingNamespaces:
+                untyped:
+                - envoy.filters.http.ext_proc
+              receivingNamespaces:
+                untyped:
+                - envoy.filters.http.prc_ext
             processingMode:
               requestHeaderMode: SKIP
               requestTrailerMode: SKIP

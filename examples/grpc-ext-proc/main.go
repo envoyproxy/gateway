@@ -18,14 +18,14 @@ import (
 	"os"
 	"strings"
 
-	"google.golang.org/grpc/credentials"
-
 	envoy_api_v3_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_service_proc_v3 "github.com/envoyproxy/go-control-plane/envoy/service/ext_proc/v3"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type extProcServer struct{}
@@ -220,6 +220,12 @@ func (s *extProcServer) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 				}
 			}
 
+			emittedDynamicMetadata, _ := structpb.NewStruct(map[string]interface{}{
+				"io.envoyproxy.gateway.e2e": map[string]interface{}{
+					"ext-proc-emitted-metadata": "received",
+				},
+			})
+
 			xrch := ""
 			if v.RequestHeaders != nil {
 				hdrs := v.RequestHeaders.Headers.GetHeaders()
@@ -272,6 +278,7 @@ func (s *extProcServer) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 				Response: &envoy_service_proc_v3.ProcessingResponse_RequestHeaders{
 					RequestHeaders: rhq,
 				},
+				DynamicMetadata: emittedDynamicMetadata,
 			}
 
 			break
@@ -286,6 +293,16 @@ func (s *extProcServer) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 					}
 				}
 			}
+			forwardedDynamicMetadata := ""
+			fmt.Printf("req: %+v\n", req)
+			if req.MetadataContext != nil && req.MetadataContext.FilterMetadata != nil {
+				if md, ok := req.MetadataContext.FilterMetadata["envoy.filters.http.rbac"]; ok {
+					if mdf, ok := md.Fields["enforced_engine_result"]; ok {
+						forwardedDynamicMetadata = mdf.GetStringValue()
+					}
+				}
+			}
+
 			rhq := &envoy_service_proc_v3.HeadersResponse{
 				Response: &envoy_service_proc_v3.CommonResponse{
 					HeaderMutation: &envoy_service_proc_v3.HeaderMutation{
@@ -300,6 +317,12 @@ func (s *extProcServer) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 								Header: &envoy_api_v3_core.HeaderValue{
 									Key:      "x-response-xds-route-name",
 									RawValue: []byte(respXDSRouteName),
+								},
+							},
+							{
+								Header: &envoy_api_v3_core.HeaderValue{
+									Key:      "x-request-rbac-result-metadata",
+									RawValue: []byte(forwardedDynamicMetadata),
 								},
 							},
 						},
