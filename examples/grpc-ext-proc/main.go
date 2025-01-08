@@ -321,7 +321,7 @@ func (s *extProcServer) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 							},
 							{
 								Header: &envoy_api_v3_core.HeaderValue{
-									Key:      "x-request-rbac-result-metadata",
+									Key:      "x-response-rbac-result-metadata",
 									RawValue: []byte(forwardedDynamicMetadata),
 								},
 							},

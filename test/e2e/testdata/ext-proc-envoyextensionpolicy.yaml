@@ -16,12 +16,12 @@ spec:
     backendRefs:
     - name: infra-backend-v1
       port: 8080
-  filters:
-  - type: RequestHeaderModifier
-    requestHeaderModifier:
-      add:
-      - name: "x-request-from-ext-proc-metadata"
-        value: '%DYNAMIC_METADATA(["io.envoyproxy.gateway.e2e", "ext-proc-emitted-metadata"])%'
+    filters:
+    - type: RequestHeaderModifier
+      requestHeaderModifier:
+        add:
+        - name: "x-request-from-ext-proc-metadata"
+          value: '%DYNAMIC_METADATA(io.envoyproxy.gateway.e2e:ext-proc-emitted-metadata)%'
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
