@@ -714,6 +714,21 @@ type HTTPRoute struct {
 	SessionPersistence *SessionPersistence `json:"sessionPersistence,omitempty" yaml:"sessionPersistence,omitempty"`
 	// Timeout is the time until which entire response is received from the upstream.
 	Timeout *metav1.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	// Retry defines the retry policy for the route.
+	// This's from core Gateway API, and should take precedence over Traffic.Retry.
+	Retry *Retry `json:"retry,omitempty" yaml:"retry,omitempty"`
+}
+
+func (h *HTTPRoute) GetRetry() *Retry {
+	if h.Retry != nil {
+		return h.Retry
+	}
+
+	if h.Traffic != nil {
+		return h.Traffic.Retry
+	}
+
+	return nil
 }
 
 // DNS contains configuration options for DNS resolution.
@@ -1196,7 +1211,7 @@ type FaultInjectionAbort struct {
 }
 
 // Validate the fields within the HTTPRoute structure
-func (h HTTPRoute) Validate() error {
+func (h *HTTPRoute) Validate() error {
 	var errs error
 	if h.Name == "" {
 		errs = errors.Join(errs, ErrRouteNameEmpty)
@@ -2567,6 +2582,7 @@ const (
 	Unavailable          = TriggerEnum(egv1a1.Unavailable)
 )
 
+// RetryOn specifies the retry policy.
 // +k8s:deepcopy-gen=true
 type RetryOn struct {
 	// Triggers specifies the retry trigger condition(Http/Grpc).
