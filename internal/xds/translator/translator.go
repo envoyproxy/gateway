@@ -122,6 +122,8 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 	// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op
 	if err := processExtensionPostTranslationHook(tCtx, t.ExtensionManager); err != nil {
 		errs = errors.Join(errs, err)
+		// Setting the configuration to fail open will mean that Envoy Gateway ignores the error and keeps the resources
+		// as they were before the extension server was called.
 		if t.ExtensionManager != nil && !(*t.ExtensionManager).FailOpen() {
 			for _, listener := range tCtx.XdsResources[resourcev3.ListenerType] {
 				errs = errors.Join(errs, clearListenerRoutes(listener.(*listenerv3.Listener)))
@@ -186,6 +188,10 @@ func (t *Translator) notifyExtensionServerAboutListeners(
 		}
 		if err := processExtensionPostListenerHook(tCtx, listener, policies, t.ExtensionManager); err != nil {
 			errs = errors.Join(errs, err)
+			// If the extension server returns an error, and the extension server is not configured to fail open,
+			// then replace all of the routes in the virtual host with a single route that returns an InternalServerError result.
+			// Setting the configuration to fail open will mean that Envoy Gateway ignores the error and keeps the routes
+			// as they were before the extension server was called.
 			if !(*t.ExtensionManager).FailOpen() {
 				errs = errors.Join(errs, clearListenerRoutes(listener))
 			}
@@ -516,6 +522,10 @@ func (t *Translator) addRouteToRouteConfig(
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
 		if err = processExtensionPostRouteHook(xdsRoute, vHost, httpRoute, t.ExtensionManager); err != nil {
 			errs = errors.Join(errs, err)
+			// If the extension server returns an error, and the extension server is not configured to fail open,
+			// then replace the route with one that returns an InternalServerError result.
+			// Setting the configuration to fail open will mean that Envoy Gateway ignores the error and keeps the route
+			// as it was before the extension server was called.
 			if t.ExtensionManager != nil && !(*t.ExtensionManager).FailOpen() {
 				xdsRoute.Action = &routev3.Route_DirectResponse{DirectResponse: buildXdsDirectResponseAction(&ir.CustomResponse{
 					StatusCode: ptr.To(uint32(http.StatusInternalServerError)),
@@ -572,6 +582,10 @@ func (t *Translator) addRouteToRouteConfig(
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
 		if err = processExtensionPostVHostHook(vHost, t.ExtensionManager); err != nil {
 			errs = errors.Join(errs, err)
+			// If the extension server returns an error, and the extension server is not configured to fail open,
+			// then replace all of the virtual hosts such that accessing them returns an InternalServerError result.
+			// Setting the configuration to fail open will mean that Envoy Gateway ignores the error and keeps the routes
+			// as they were before the extension server was called.
 			if t.ExtensionManager != nil && !(*t.ExtensionManager).FailOpen() {
 				vHost.Routes = []*routev3.Route{
 					{
