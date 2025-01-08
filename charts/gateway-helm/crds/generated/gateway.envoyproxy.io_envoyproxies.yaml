@@ -12497,6 +12497,9 @@ spec:
                               scarce and large payloads can be effectively compressed
                               at the expense of higher CPU load.
                             properties:
+                              brotli:
+                                description: The configuration for Brotli compressor.
+                                type: object
                               gzip:
                                 description: The configuration for GZIP compressor.
                                 type: object
@@ -12505,10 +12508,19 @@ spec:
                                   type to use for compression.
                                 enum:
                                 - Gzip
+                                - Brotli
                                 type: string
                             required:
                             - type
                             type: object
+                            x-kubernetes-validations:
+                            - message: If compression type is Brotli, brotli field
+                                needs to be set.
+                              rule: 'self.type == ''Brotli'' ? has(self.brotli) :
+                                !has(self.brotli)'
+                            - message: If compression type is Gzip, gzip field needs
+                                to be set.
+                              rule: 'self.type == ''Gzip'' ? has(self.gzip) : !has(self.gzip)'
                           disable:
                             description: Disable the Prometheus endpoint.
                             type: boolean

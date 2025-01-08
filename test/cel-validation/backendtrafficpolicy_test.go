@@ -1502,6 +1502,62 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				"only ConfigMap is supported for ValueRe",
 			},
 		},
+		{
+			desc: "valid compressor",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
+						},
+					},
+					Compression: []*egv1a1.Compression{
+						{
+							Type:   egv1a1.BrotliCompressorType,
+							Brotli: &egv1a1.BrotliCompressor{},
+						},
+						{
+							Type: egv1a1.GzipCompressorType,
+							Gzip: &egv1a1.GzipCompressor{},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid compressor",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
+						},
+					},
+					Compression: []*egv1a1.Compression{
+						{
+							Type: egv1a1.BrotliCompressorType,
+							Gzip: &egv1a1.GzipCompressor{},
+						},
+						{
+							Type: egv1a1.GzipCompressorType,
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"If compression type is Brotli, brotli field needs to be set.",
+				"If compression type is Gzip, gzip field needs to be set.",
+			},
+		},
 	}
 
 	for _, tc := range cases {

@@ -18,6 +18,7 @@ import (
 	"net/http/httputil"
 	"testing"
 
+	"github.com/andybalholm/brotli"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -28,6 +29,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
@@ -41,37 +43,12 @@ var CompressionTest = suite.ConformanceTest{
 	Description: "Test response compression on HTTPRoute",
 	Manifests:   []string{"testdata/compression.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("HTTPRoute with compression", func(t *testing.T) {
-			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "compression", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+		t.Run("HTTPRoute with brotli compression", func(t *testing.T) {
+			testCompression(t, suite, egv1a1.BrotliCompressorType)
+		})
 
-			ancestorRef := gwapiv1a2.ParentReference{
-				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-				Kind:      gatewayapi.KindPtr(resource.KindGateway),
-				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
-				Name:      gwapiv1.ObjectName(gwNN.Name),
-			}
-			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "compression", Namespace: ns}, suite.ControllerName, ancestorRef)
-
-			expectedResponse := http.ExpectedResponse{
-				Request: http.Request{
-					Path: "/compression",
-					Headers: map[string]string{
-						"Accept-encoding": "gzip",
-					},
-				},
-				Response: http.Response{
-					StatusCode: 200,
-					Headers: map[string]string{
-						"content-encoding": "gzip",
-					},
-				},
-				Namespace: ns,
-			}
-			roundTripper := &CompressionRoundTripper{Debug: suite.Debug, TimeoutConfig: suite.TimeoutConfig}
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, roundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		t.Run("HTTPRoute with gzip compression", func(t *testing.T) {
+			testCompression(t, suite, egv1a1.GzipCompressorType)
 		})
 
 		t.Run("HTTPRoute without compression", func(t *testing.T) {
@@ -105,6 +82,47 @@ var CompressionTest = suite.ConformanceTest{
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
 	},
+}
+
+func testCompression(t *testing.T, suite *suite.ConformanceTestSuite, compressionType egv1a1.CompressorType) {
+	ns := "gateway-conformance-infra"
+	routeNN := types.NamespacedName{Name: "compression", Namespace: ns}
+	gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+	gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+	ancestorRef := gwapiv1a2.ParentReference{
+		Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+		Kind:      gatewayapi.KindPtr(resource.KindGateway),
+		Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+		Name:      gwapiv1.ObjectName(gwNN.Name),
+	}
+	BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "compression", Namespace: ns}, suite.ControllerName, ancestorRef)
+
+	var encoding string
+	switch compressionType {
+	case egv1a1.BrotliCompressorType:
+		encoding = "br"
+	case egv1a1.GzipCompressorType:
+		encoding = "gzip"
+	}
+
+	expectedResponse := http.ExpectedResponse{
+		Request: http.Request{
+			Path: "/compression",
+			Headers: map[string]string{
+				"Accept-encoding": encoding,
+			},
+		},
+		Response: http.Response{
+			StatusCode: 200,
+			Headers: map[string]string{
+				"content-encoding": encoding,
+			},
+		},
+		Namespace: ns,
+	}
+	roundTripper := &CompressionRoundTripper{Debug: suite.Debug, TimeoutConfig: suite.TimeoutConfig}
+	http.MakeRequestAndExpectEventuallyConsistentResponse(t, roundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 }
 
 // CompressionRoundTripper implements roundtripper.RoundTripper and adds support for gzip encoding.
@@ -172,19 +190,20 @@ func (d *CompressionRoundTripper) defaultRoundTrip(request roundtripper.Request,
 
 	cReq := &roundtripper.CapturedRequest{}
 	var body []byte
-	if resp.Header.Get("Content-Encoding") == "gzip" {
-		reader, err := gzip.NewReader(resp.Body)
-		if err != nil {
+
+	var reader io.Reader
+	switch resp.Header.Get("Content-Encoding") {
+	case "gzip":
+		if reader, err = gzip.NewReader(resp.Body); err != nil {
 			return nil, nil, err
 		}
-		defer reader.Close()
-		if body, err = io.ReadAll(reader); err != nil {
-			return nil, nil, err
-		}
-	} else {
-		if body, err = io.ReadAll(resp.Body); err != nil {
-			return nil, nil, err
-		}
+	case "br":
+		reader = brotli.NewReader(resp.Body)
+	default:
+		reader = resp.Body
+	}
+	if body, err = io.ReadAll(reader); err != nil {
+		return nil, nil, err
 	}
 
 	// we cannot assume the response is JSON

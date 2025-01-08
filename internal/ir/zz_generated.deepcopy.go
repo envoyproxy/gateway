@@ -3357,8 +3357,14 @@ func (in *TrafficFeatures) DeepCopyInto(out *TrafficFeatures) {
 	}
 	if in.Compression != nil {
 		in, out := &in.Compression, &out.Compression
-		*out = new(Compression)
-		**out = **in
+		*out = make([]*Compression, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(Compression)
+				**out = **in
+			}
+		}
 	}
 }
 

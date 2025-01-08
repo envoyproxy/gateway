@@ -35,4 +35,7 @@ http:
       name: ""
       prefix: /
     traffic:
-      compression: {}
+      compression:
+      - type: Brotli
+      - type: Gzip
+      - type: Brotli

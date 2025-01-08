@@ -499,6 +499,19 @@ _Appears in:_
 | `JSONPatch` | JSONPatch applies the provided JSONPatches to the default bootstrap.<br /> | 
 
 
+#### BrotliCompressor
+
+
+
+BrotliCompressor defines the config for the Brotli compressor.
+The default values can be found here:
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/brotli/compressor/v3/brotli.proto#extension-envoy-compression-brotli-compressor
+
+_Appears in:_
+- [Compression](#compression)
+
+
+
 #### CIDR
 
 _Underlying type:_ _string_
@@ -741,6 +754,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `type` | _[CompressorType](#compressortype)_ |  true  | CompressorType defines the compressor type to use for compression. |
+| `brotli` | _[BrotliCompressor](#brotlicompressor)_ |  false  | The configuration for Brotli compressor. |
 | `gzip` | _[GzipCompressor](#gzipcompressor)_ |  false  | The configuration for GZIP compressor. |
 
 
@@ -753,6 +767,10 @@ CompressorType defines the types of compressor library supported by Envoy Gatewa
 _Appears in:_
 - [Compression](#compression)
 
+| Value | Description |
+| ----- | ----------- |
+| `Gzip` |  | 
+| `Brotli` |  | 
 
 
 #### ConnectionLimit

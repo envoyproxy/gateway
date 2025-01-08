@@ -753,9 +753,11 @@ type HeaderBasedSessionPersistence struct {
 }
 
 // Compression holds the configuration for HTTP compression.
-// Currently, only the default compressor(gzip) is supported.
 // +k8s:deepcopy-gen=true
-type Compression struct{}
+type Compression struct {
+	// Type of compression to be used.
+	Type egv1a1.CompressorType `json:"type,omitempty" yaml:"type,omitempty"`
+}
 
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.
 // +k8s:deepcopy-gen=true
@@ -789,7 +791,7 @@ type TrafficFeatures struct {
 	// ResponseOverride defines the schema for overriding the response.
 	ResponseOverride *ResponseOverride `json:"responseOverride,omitempty" yaml:"responseOverride,omitempty"`
 	// Compression settings for HTTP Response
-	Compression *Compression `json:"compression,omitempty" yaml:"compression,omitempty"`
+	Compression []*Compression `json:"compression,omitempty" yaml:"compression,omitempty"`
 }
 
 func (b *TrafficFeatures) Validate() error {

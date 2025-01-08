@@ -305,7 +305,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 		ds        *ir.DNS
 		h2        *ir.HTTP2Settings
 		ro        *ir.ResponseOverride
-		cp        *ir.Compression
+		cp        []*ir.Compression
 		err, errs error
 	)
 
@@ -456,7 +456,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 		ds        *ir.DNS
 		h2        *ir.HTTP2Settings
 		ro        *ir.ResponseOverride
-		cp        *ir.Compression
+		cp        []*ir.Compression
 		err, errs error
 	)
 
@@ -937,11 +937,13 @@ func defaultResponseOverrideRuleName(policy *egv1a1.BackendTrafficPolicy, index 
 		strconv.Itoa(index))
 }
 
-func buildCompression(compression []*egv1a1.Compression) *ir.Compression {
-	if len(compression) == 0 {
-		return nil
+func buildCompression(compression []*egv1a1.Compression) []*ir.Compression {
+	irCompression := make([]*ir.Compression, 0, len(compression))
+	for _, c := range compression {
+		irCompression = append(irCompression, &ir.Compression{
+			Type: c.Type,
+		})
 	}
 
-	// Only Gzip is supported for now, so we don't need to do anything special here
-	return &ir.Compression{}
+	return irCompression
 }
