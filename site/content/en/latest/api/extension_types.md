@@ -2167,6 +2167,12 @@ _Appears in:_
 HealthCheck configuration to decide which endpoints
 are healthy and can be used for routing.
 
+
+Note: Once the overall health of the backendRef drops below 50% (e.g. a backendRef having 10 endpoints
+with more than 5 unhealthy endpoints), Envoy will disregard health status and balance across all endpoints.
+This is called "panic mode". It's designed to prevent a situation in which host failures cascade throughout the cluster
+as load increases.
+
 _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [ClusterSettings](#clustersettings)
