@@ -316,7 +316,7 @@ func processRouteRetry(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 					BaseInterval: ptr.To(metav1.Duration{Duration: backoff}),
 				},
 			}
-
+			// xref: https://gateway-api.sigs.k8s.io/geps/gep-1742/#timeout-values
 			if rule.Timeouts != nil && rule.Timeouts.BackendRequest != nil {
 				backendRequestTimeout, err := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
 				if err == nil {
@@ -796,11 +796,6 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					SessionPersistence:    routeRoute.SessionPersistence,
 					Timeout:               routeRoute.Timeout,
 					Retry:                 routeRoute.Retry,
-				}
-				if retry := routeRoute.GetRetry(); retry != nil {
-					hostRoute.Traffic = &ir.TrafficFeatures{
-						Retry: retry,
-					}
 				}
 				perHostRoutes = append(perHostRoutes, hostRoute)
 			}
