@@ -44,6 +44,16 @@ func newTestInfra() *ir.Infra {
 	return newTestInfraWithAnnotations(nil)
 }
 
+func newTestInfraWithIPFamily(family *egv1a1.IPFamily) *ir.Infra {
+	i := newTestInfra()
+	i.Proxy.Config = &egv1a1.EnvoyProxy{
+		Spec: egv1a1.EnvoyProxySpec{
+			IPFamily: family,
+		},
+	}
+	return i
+}
+
 func newTestIPv6Infra() *ir.Infra {
 	i := newTestInfra()
 	i.Proxy.Config = &egv1a1.EnvoyProxy{
@@ -1165,6 +1175,21 @@ func TestService(t *testing.T) {
 				Name: ptr.To("custom-service-name"),
 			},
 		},
+		{
+			caseName: "dualstack",
+			infra:    newTestInfraWithIPFamily(ptr.To(egv1a1.DualStack)),
+			service:  nil,
+		},
+		{
+			caseName: "ipv4-singlestack",
+			infra:    newTestInfraWithIPFamily(ptr.To(egv1a1.IPv4)),
+			service:  nil,
+		},
+		{
+			caseName: "ipv6-singlestack",
+			infra:    newTestInfraWithIPFamily(ptr.To(egv1a1.IPv6)),
+			service:  nil,
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
@@ -1533,6 +1558,51 @@ func TestOwningGatewayLabelsAbsent(t *testing.T) {
 		t.Run(tc.caseName, func(t *testing.T) {
 			actual := OwningGatewayLabelsAbsent(tc.labels)
 			require.Equal(t, tc.expect, actual)
+		})
+	}
+}
+
+func TestIPFamilyPresentInSpec(t *testing.T) {
+	cases := []struct {
+		name             string
+		requestedFamily  *egv1a1.IPFamily
+		expectedFamilies []corev1.IPFamily
+		expectedPolicy   *corev1.IPFamilyPolicy
+	}{
+		{
+			"no family specified",
+			nil,
+			nil,
+			nil,
+		},
+		{
+			"ipv4 specified",
+			ptr.To(egv1a1.IPv4),
+			nil,
+			nil,
+		},
+		{
+			"ipv6 specified",
+			ptr.To(egv1a1.IPv6),
+			[]corev1.IPFamily{corev1.IPv6Protocol},
+			ptr.To(corev1.IPFamilyPolicySingleStack),
+		},
+		{
+			"dual stack",
+			ptr.To(egv1a1.DualStack),
+			[]corev1.IPFamily{corev1.IPv4Protocol, corev1.IPv6Protocol},
+			ptr.To(corev1.IPFamilyPolicyRequireDualStack),
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := ResourceRender{infra: newTestInfraWithIPFamily(tc.requestedFamily).Proxy}
+			svc, err := r.Service()
+			require.NoError(t, err, "service render func")
+
+			assert.ElementsMatch(t, tc.expectedFamilies, svc.Spec.IPFamilies, "families slice")
+			assert.Equal(t, tc.expectedPolicy, svc.Spec.IPFamilyPolicy, "policy")
 		})
 	}
 }

@@ -7,6 +7,8 @@ package ir
 
 import (
 	"cmp"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding"
 	"encoding/json"
 	"errors"
@@ -314,6 +316,8 @@ type HTTPListener struct {
 	Timeout *ClientTimeout `json:"timeout,omitempty" yaml:"clientTimeout,omitempty"`
 	// Connection settings
 	Connection *ClientConnection `json:"connection,omitempty" yaml:"connection,omitempty"`
+	// PreserveRouteOrder determines if routes should be sorted according to GW-API specs
+	PreserveRouteOrder bool `json:"preserveRouteOrder,omitempty" yaml:"preserveRouteOrder,omitempty"`
 }
 
 // Validate the fields within the HTTPListener structure
@@ -358,6 +362,23 @@ const (
 	// TLSv13 specifies TLS version 1.3
 	TLSv13 = TLSVersion(egv1a1.TLSv13)
 )
+
+func (t TLSVersion) Int() uint16 {
+	switch t {
+	case TLSAuto:
+		return tls.VersionTLS13
+	case TLSv10:
+		return tls.VersionTLS10
+	case TLSv11:
+		return tls.VersionTLS11
+	case TLSv12:
+		return tls.VersionTLS12
+	case TLSv13:
+		return tls.VersionTLS13
+	default:
+		return tls.VersionTLS13
+	}
+}
 
 // TLSConfig holds the configuration for downstream TLS context.
 // +k8s:deepcopy-gen=true
@@ -2539,6 +2560,32 @@ type TLSUpstreamConfig struct {
 	UseSystemTrustStore bool              `json:"useSystemTrustStore,omitempty" yaml:"useSystemTrustStore,omitempty"`
 	CACertificate       *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
 	TLSConfig           `json:",inline"`
+}
+
+func (t *TLSUpstreamConfig) ToTLSConfig() (*tls.Config, error) {
+	// nolint:gosec
+	tlsConfig := &tls.Config{
+		ServerName: t.SNI,
+	}
+	if t.MinVersion != nil {
+		tlsConfig.MinVersion = t.MinVersion.Int()
+	}
+	if t.MaxVersion != nil {
+		tlsConfig.MaxVersion = t.MaxVersion.Int()
+	}
+	if t.CACertificate != nil {
+		caCertPool := x509.NewCertPool()
+		caCertPool.AppendCertsFromPEM(t.CACertificate.Certificate)
+		tlsConfig.RootCAs = caCertPool
+	}
+	for _, cert := range t.ClientCertificates {
+		cert, err := tls.X509KeyPair(cert.Certificate, cert.PrivateKey)
+		if err != nil {
+			return nil, err
+		}
+		tlsConfig.Certificates = append(tlsConfig.Certificates, cert)
+	}
+	return tlsConfig, nil
 }
 
 // BackendConnection settings for upstream connections

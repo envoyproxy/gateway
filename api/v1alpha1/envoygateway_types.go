@@ -202,6 +202,12 @@ type EnvoyGatewayKubernetesProvider struct {
 	// +optional
 	RateLimitDeployment *KubernetesDeploymentSpec `json:"rateLimitDeployment,omitempty"`
 
+	// RateLimitHpa defines the Horizontal Pod Autoscaler settings for Envoy ratelimit Deployment.
+	// If the HPA is set, Replicas field from RateLimitDeployment will be ignored.
+	//
+	// +optional
+	RateLimitHpa *KubernetesHorizontalPodAutoscalerSpec `json:"rateLimitHpa,omitempty"`
+
 	// Watch holds configuration of which input resources should be watched and reconciled.
 	// +optional
 	Watch *KubernetesWatchMode `json:"watch,omitempty"`
@@ -254,10 +260,27 @@ type KubernetesWatchMode struct {
 	NamespaceSelector *metav1.LabelSelector `json:"namespaceSelector,omitempty"`
 }
 
+const (
+	// KubernetesDeployModeTypeControllerNamespace indicates that the controller namespace is used for the infra proxy deployments.
+	KubernetesDeployModeTypeControllerNamespace = "ControllerNamespace"
+
+	// KubernetesDeployModeTypeGatewayNamespace indicates that the gateway namespace is used for the infra proxy deployments.
+	KubernetesDeployModeTypeGatewayNamespace = "GatewayNamespace"
+)
+
+// KubernetesDeployModeType defines the type of KubernetesDeployMode
+type KubernetesDeployModeType string
+
 // KubernetesDeployMode holds configuration for how to deploy managed resources such as the Envoy Proxy
 // data plane fleet.
 type KubernetesDeployMode struct {
-	// TODO
+	// Type indicates what deployment mode to use. "ControllerNamespace" and
+	// "GatewayNamespace" are currently supported.
+	// By default, when this field is unset or empty, Envoy Gateway will deploy Envoy Proxy fleet in the Controller namespace.
+	// +optional
+	// +kubebuilder:default=ControllerNamespace
+	// +kubebuilder:validation:Enum=ControllerNamespace;GatewayNamespace
+	Type *KubernetesDeployModeType `json:"type,omitempty"`
 }
 
 // EnvoyGatewayCustomProvider defines configuration for the Custom provider.
@@ -477,6 +500,18 @@ type ExtensionManager struct {
 	//
 	// +kubebuilder:validation:Required
 	Service *ExtensionService `json:"service,omitempty"`
+
+	// FailOpen defines if Envoy Gateway should ignore errors returned from the Extension Service hooks.
+	// The default is false, which means Envoy Gateway will fail closed if the Extension Service returns an error.
+	//
+	// Fail-close means that if the Extension Service hooks return an error, the relevant route/listener/resource
+	// will be replaced with a default configuration returning Internal Server Error (HTTP 500).
+	//
+	// Fail-open means that if the Extension Service hooks return an error, no changes will be applied to the
+	// source of the configuration which was sent to the extension server.
+	//
+	// +optional
+	FailOpen bool `json:"failOpen,omitempty"`
 }
 
 // ExtensionHooks defines extension hooks across all supported runners

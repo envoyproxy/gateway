@@ -12,15 +12,11 @@ spec:
       targetPort: 8080
       name: http-keycloak
       protocol: TCP
+    - port: 443
+      targetPort: 8443
+      name: https
+      protocol: TCP
   selector:
-    app: keycloak
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: keycloak
-  namespace: gateway-conformance-infra
-  labels:
     app: keycloak
 ---
 apiVersion: apps/v1
@@ -40,7 +36,6 @@ spec:
         app: keycloak
         version: v1
     spec:
-      serviceAccountName: keycloak
       containers:
         - name: keycloak
           image: quay.io/keycloak/keycloak:26.0.4
@@ -48,19 +43,50 @@ spec:
           args:
             - "start-dev"
           ports:
-            - name: keycloak
+            - name: https
+              containerPort: 8443
+              protocol: TCP
+            - name: http
               containerPort: 8080
               protocol: TCP
           env:
-            - name: KEYCLOAK_ADMIN
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
               value: admin
-            - name: KEYCLOAK_ADMIN_PASSWORD
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
               value: admin
+            - name: KC_HOSTNAME
+              value: "keycloak.gateway-conformance-infra"
+            - name: KC_HTTPS_CERTIFICATE_FILE
+              value: "/etc/tls/tls.crt"
+            - name: KC_HTTPS_CERTIFICATE_KEY_FILE
+              value: "/etc/tls/tls.key"
+            - name: KC_HTTPS_PORT
+              value: "8443"
+            - name: KC_HTTP_PORT
+              value: "8080"
           readinessProbe:
             initialDelaySeconds: 5
             periodSeconds: 5
             tcpSocket:
-              port: 8080
+              port: 8443
+          volumeMounts:
+            - name: tls-volume
+              mountPath: /etc/tls
+              readOnly: true
+      volumes:
+        - name: tls-volume
+          secret:
+            secretName: keycloak-tls
+---
+apiVersion: v1
+data:
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURpVENDQW5HZ0F3SUJBZ0lCQURBTkJna3Foa2lHOXcwQkFRc0ZBREF0TVJVd0V3WURWUVFLREF4bGVHRnQKY0d4bElFbHVZeTR4RkRBU0JnTlZCQU1NQzJWNFlXMXdiR1V1WTI5dE1CNFhEVEkwTVRJeE1EQTBNamcxTWxvWApEVE0wTVRJd09EQTBNamcxTWxvd1RERXJNQ2tHQTFVRUF3d2lhMlY1WTJ4dllXc3VaMkYwWlhkaGVTMWpiMjVtCmIzSnRZVzVqWlMxcGJtWnlZVEVkTUJzR0ExVUVDZ3dVWlhoaGJYQnNaU0J2Y21kaGJtbDZZWFJwYjI0d2dnRWkKTUEwR0NTcUdTSWIzRFFFQkFRVUFBNElCRHdBd2dnRUtBb0lCQVFDYzZJN3NicGo2OVJhak02L3UxMmpZdmdyUgpYNUx3ZUZmMFVGNlFTWWY5N2xqcHNqYnJ0Und1eFhya09qZDROUSs3em1nZGlBWGEzV2pLNUhZNURPRE9EMW1BCm55VVFRb1JtbTM3bTBEM0kra0ljdmduZzhRSHdoeEtlVDJXUnpRV0tUWmVmZmNTblNLTHJDYmxVZ0kvaFRiaVIKZHNwbnBrNlRKUmEzZ0NEUGwvT1NKNkkrcHUxd1N3ZjIxUURxQS9CVDNqRDB2MjBsejB0a3ZSblgrcDRKby9kMwoxQlFsall3RVhZcGtSWWN4d1I3cFpCM1I0eE5TVWNHaDkxeHRpUnBBdU9qVnNoTmRibThLcHkzdmJkSFZNWFBtClN0aElzZjJhYkU4ZGdFL2hVMHNOengwSWh4SzdVaFJMVjNib0dwSkF5UTNCeHVDcGMwTldhSEpUS2hKL0FnTUIKQUFHamdaUXdnWkV3Q3dZRFZSMFBCQVFEQWdXZ01CTUdBMVVkSlFRTU1Bb0dDQ3NHQVFVRkJ3TUJNQzBHQTFVZApFUVFtTUNTQ0ltdGxlV05zYjJGckxtZGhkR1YzWVhrdFkyOXVabTl5YldGdVkyVXRhVzVtY21Fd0hRWURWUjBPCkJCWUVGRW9QQTA3VHZhVDZRU1NrSk1FMCs5cmNHMWliTUI4R0ExVWRJd1FZTUJhQUZNY1BVdjhtUndaVWdmd0QKNHdGeHZHeWNTVnpvTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFDdWxrakMxYW9NOTIxclVzcTdUMjdTNTlkTApxRjhDTUFUei8xayttck9RR0QrWkkrV1N6NEYwZTllQjBJRDFNbnZNRzZSdmtmRmU4NU1HNEw1NGdETzQ0aDBrClRHeHFaZDV1Ujc3QVRWNXZ0Q01Nc1VJQWlzR2c0eHh0djI2ZlRiSkhmbnVKdnQ0TmJZNWYzTi8yZEYxNmhQOHEKWVZVZVBzUWdMUXR6enhzNndkSmx4cW9vdWVkNHlCWUxlcVlZYW55cHcvMWNEM2V1Ynk1TnpxbFB2dXlhTDJ2VApKQ0x0MmpxaWRiaXl4M2RhYWJHVnZDTVluNlFOcWhSQkN0ZlFuSklTM1hyWmZDZExyWHMzWml2MHFnTjhraWs3ClBHbXo2NTRzOGd2c1F3QkxYU0pSSEFnZ0hHNUkydy9FOHFZTWVVNTZDTHdTbWcwQTNWRWttSDJoa1FGdwotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+  tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2UUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktjd2dnU2pBZ0VBQW9JQkFRQ2M2STdzYnBqNjlSYWoKTTYvdTEyall2Z3JSWDVMd2VGZjBVRjZRU1lmOTdsanBzamJydFJ3dXhYcmtPamQ0TlErN3ptZ2RpQVhhM1dqSwo1SFk1RE9ET0QxbUFueVVRUW9SbW0zN20wRDNJK2tJY3Znbmc4UUh3aHhLZVQyV1J6UVdLVFplZmZjU25TS0xyCkNibFVnSS9oVGJpUmRzcG5wazZUSlJhM2dDRFBsL09TSjZJK3B1MXdTd2YyMVFEcUEvQlQzakQwdjIwbHowdGsKdlJuWCtwNEpvL2QzMUJRbGpZd0VYWXBrUlljeHdSN3BaQjNSNHhOU1VjR2g5MXh0aVJwQXVPalZzaE5kYm04SwpweTN2YmRIVk1YUG1TdGhJc2YyYWJFOGRnRS9oVTBzTnp4MEloeEs3VWhSTFYzYm9HcEpBeVEzQnh1Q3BjME5XCmFISlRLaEovQWdNQkFBRUNnZ0VBUUptbXJrVGlpdi80Ny94SnhNVy9EdTAvT3ZCa2FNakRQWDBSVWNwVVNRR20KYmFESDU4ZEs4UjZ3OStIWUVJK1lDTFIwUFNSUmRNaVBhbWtoRzEvbjlpNXZwUHJnb1k4aFA3VnBTOUlVZmZnNgoyK2FKM3FpYktkSVNva2NDQkVNcXNzUTdWcGpMTEN4Rmx3c0wySFNOeUM3ZGZGWXlBdlovaHlsUDd3QzdnWHZpCjdkbk5yK2Q5c2ZqUGV1eElhUEEyek1tMGs3bmVESlpPSzNqWUpqUjNLWGFpd0NtV09FTlVJWEVVK0VoOFo3TFcKWXFmdWdad255Q1E4MEppdm1Ic0ROalZsTDV5ZUpUQ3hnMWFoWHY4OFlTeG4wYUFqMi9EalNUdC9TUkhRaU8rUAplRVZ2ZlZWUDdKR3hUQWxRUkY5QUc5a2NGZlRDaVhFL25KemJIWnlJOFFLQmdRREk4dnl1WDYyLzlIdDFGQ0s3CjIwWmhhK0ZDZCtpWFh1eWZhQXQveloraTk4eWNZVGVSK0k4WkNUanFuc2Q0a1E1OWQycTU4YytIRURzSTJDZGoKeW5qMURqcGhnblh4U1FabTFKTkgxRSs2ZjF6NjlYamZnMlBJa1RTcUJjVStMTXJDWjErVGhFci96TWFyclpoawp3MjdmMUg1MHh4Q2VIM0twRjVCM3FoQ2VBd0tCZ1FESDVPVnVLKzFnN242aEJsOXR0ZktZK1FYNFVvblFyK2NSCkplL20rZ0wxZVBuQnJwQ2Jid2lLV2dkU1pSbjVKVVRDMC8vSytXSXdSOUczcVMzWGZwWVBJdENNQllNOHIzSzYKUnpFL1ZUSTJFbWIwYWl0dGZTd084Mmd0K2phVnptcElabnF5ZFdnMzRPTEJNbW9kT2wxSkFNaHh5TnJnMEEvMgpkK0ZDdzNEZTFRS0JnUUNqM3FONGY4WHRONjVGOTdtcmdGR1F1S3pseTJyOXBnZElwMHhaV0pIS0VGSG5aTkF3ClZZWThZR3p0eDdYYStFL2N1VGxya1dvdk5ta3QrVGVHQldOR1UrZ0FCS2V4c0Y5c0ZBWlhHU2c3YWdtbERmRVkKTk1sMmtoTmtZM2hLRDdUNWU5dFJMUjBNSlM0T2FtNVFIWitaSUd4UFJ0YWlXL3JoTWJvNkc1R1ppUUtCZ0V6RgpXbUJQdXFGcHQzUjhrQllBdFNXUExuM0twV2RpeDJuTW1qQ3BnSTFxWXZIQjY0UG14dTdyMkxnS1lFbFJ5UERTCm53RURlblIwZ05UNndzSnF1Wk1pbWRuTkhEUW9aZldvOWY4TzUzUGc2VzJoZ1FCUi9LUFpVLytrZzJaUm1ud24KNzZPdWQ5Sk9Lb2hzcGxpSFcrQjN6b1AwMGl0WmZXZjVicWhIaTRmcEFvR0FZb3hxUnQrQVlyRGQvb3dkK3QwaApHajErd0JKdjVMM1J2QWVwbjhqVjQ4bXNidWJKQnJ1b1k2YVNaMTMrRHVma0xFbU1CS1BYeGhRUmI4YXR0YlBKClRHbVRLb2J4c3RMK0F6WWVuNHZ2YTd0Q0E4MTd1Nk4wK2lPcVpDRmZxZXBpUG5MRUt5UHBpbW42d25xQUlaN3AKRkZoZGo2NXJTRUIwYWFWWkc3bzhqQzA9Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
+kind: Secret
+metadata:
+  name: keycloak-tls
+  namespace: gateway-conformance-infra
+type: kubernetes.io/tls
 ---
 apiVersion: batch/v1
 kind: Job
@@ -72,11 +98,11 @@ spec:
     spec:
       initContainers:
         - name: wait-for-keycloak
-          image: busybox:stable
-          command: ["sh", "-c", "until nc -v -z -w3 keycloak 80; do sleep 2; done"]
+          image: curlimages/curl:latest
+          command: ["sh", "-c", "until curl -s -o /dev/null -w '%{http_code}' http://keycloak:80; do sleep 2; done"]
       containers:
         - name: setup-keycloak
-          image: quay.io/keycloak/keycloak:23.0.6
+          image: quay.io/keycloak/keycloak:26.0.4
           command: ["bash", "/opt/keycloak/scripts/setup.sh"]
           env:
             - name: KEYCLOAK_ADMIN
@@ -100,7 +126,7 @@ metadata:
   namespace: gateway-conformance-infra
 data:
   setup.sh: |
-    KEYCLOAK_SERVER="http://keycloak"
+    KEYCLOAK_SERVER="http://keycloak.gateway-conformance-infra"
     REALM="master"
     USERNAME=oidcuser                  # This is the user name that will be used for user authentication in Authorization Code Flow
     PASSWORD=oidcpassword              # This is the user password that will be used for user authentication in Authorization Code Flow

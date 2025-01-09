@@ -574,6 +574,10 @@ func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy 
 
 func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
 	rr := route.Traffic.Retry
+	any, err := protocov.ToAnyWithValidation(&previoushost.PreviousHostsPredicate{})
+	if err != nil {
+		return nil, err
+	}
 	rp := &routev3.RetryPolicy{
 		RetryOn:              retryDefaultRetryOn,
 		RetriableStatusCodes: []uint32{retryDefaultRetriableStatusCode},
@@ -582,7 +586,7 @@ func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
 			{
 				Name: "envoy.retry_host_predicates.previous_hosts",
 				ConfigType: &routev3.RetryPolicy_RetryHostPredicate_TypedConfig{
-					TypedConfig: protocov.ToAny(&previoushost.PreviousHostsPredicate{}),
+					TypedConfig: any,
 				},
 			},
 		},

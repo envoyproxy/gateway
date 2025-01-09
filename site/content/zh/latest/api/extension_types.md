@@ -980,7 +980,7 @@ _Appears in:_
 | `targetRefs` | _[LocalPolicyTargetReferenceWithSectionName](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName) array_ |  true  | TargetRefs are the names of the Gateway resources this policy<br />is being attached to. |
 | `targetSelectors` | _[TargetSelector](#targetselector) array_ |  true  | TargetSelectors allow targeting resources for this policy based on labels |
 | `wasm` | _[Wasm](#wasm) array_ |  false  | Wasm is a list of Wasm extensions to be loaded by the Gateway.<br />Order matters, as the extensions will be loaded in the order they are<br />defined in this list. |
-| `extProc` | _[ExtProc](#extproc) array_ |  false  | ExtProc is an ordered list of external processing filters<br />that should added to the envoy filter chain |
+| `extProc` | _[ExtProc](#extproc) array_ |  false  | ExtProc is an ordered list of external processing filters<br />that should be added to the envoy filter chain |
 
 
 #### EnvoyFilter
@@ -1132,6 +1132,7 @@ _Appears in:_
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
 | `rateLimitDeployment` | _[KubernetesDeploymentSpec](#kubernetesdeploymentspec)_ |  false  | RateLimitDeployment defines the desired state of the Envoy ratelimit deployment resource.<br />If unspecified, default settings for the managed Envoy ratelimit deployment resource<br />are applied. |
+| `rateLimitHpa` | _[KubernetesHorizontalPodAutoscalerSpec](#kuberneteshorizontalpodautoscalerspec)_ |  false  | RateLimitHpa defines the Horizontal Pod Autoscaler settings for Envoy ratelimit Deployment.<br />If the HPA is set, Replicas field from RateLimitDeployment will be ignored. |
 | `watch` | _[KubernetesWatchMode](#kuberneteswatchmode)_ |  false  | Watch holds configuration of which input resources should be watched and reconciled. |
 | `deploy` | _[KubernetesDeployMode](#kubernetesdeploymode)_ |  false  | Deploy holds configuration of how output managed resources such as the Envoy Proxy data plane<br />should be deployed |
 | `overwriteControlPlaneCerts` | _boolean_ |  false  | OverwriteControlPlaneCerts updates the secrets containing the control plane certs, when set. |
@@ -1447,6 +1448,7 @@ _Appears in:_
 | `filterOrder` | _[FilterPosition](#filterposition) array_ |  false  | FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.<br />The FilterPosition in the list will be applied in the order they are defined.<br />If unspecified, the default filter order is applied.<br />Default filter order is:<br /><br />- envoy.filters.http.health_check<br /><br />- envoy.filters.http.fault<br /><br />- envoy.filters.http.cors<br /><br />- envoy.filters.http.ext_authz<br /><br />- envoy.filters.http.basic_auth<br /><br />- envoy.filters.http.oauth2<br /><br />- envoy.filters.http.jwt_authn<br /><br />- envoy.filters.http.stateful_session<br /><br />- envoy.filters.http.ext_proc<br /><br />- envoy.filters.http.wasm<br /><br />- envoy.filters.http.rbac<br /><br />- envoy.filters.http.local_ratelimit<br /><br />- envoy.filters.http.ratelimit<br /><br />- envoy.filters.http.custom_response<br /><br />- envoy.filters.http.router<br /><br />Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain. |
 | `backendTLS` | _[BackendTLSConfig](#backendtlsconfig)_ |  false  | BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.<br />These settings are applied on backends for which TLS policies are specified. |
 | `ipFamily` | _[IPFamily](#ipfamily)_ |  false  | IPFamily specifies the IP family for the EnvoyProxy fleet.<br />This setting only affects the Gateway listener port and does not impact<br />other aspects of the Envoy proxy configuration.<br />If not specified, the system will operate as follows:<br />- It defaults to IPv4 only.<br />- IPv6 and dual-stack environments are not supported in this default configuration.<br />Note: To enable IPv6 or dual-stack functionality, explicit configuration is required. |
+| `preserveRouteOrder` | _boolean_ |  false  | PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API<br />specification (https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteRule)<br />or preserves the order defined by users in the HTTPRoute's HTTPRouteRule list.<br />Default: False |
 
 
 #### EnvoyProxyStatus
@@ -1595,6 +1597,7 @@ _Appears in:_
 | `policyResources` | _[GroupVersionKind](#groupversionkind) array_ |  false  | PolicyResources defines the set of K8S resources the extension server will handle<br />as directly attached GatewayAPI policies |
 | `hooks` | _[ExtensionHooks](#extensionhooks)_ |  true  | Hooks defines the set of hooks the extension supports |
 | `service` | _[ExtensionService](#extensionservice)_ |  true  | Service defines the configuration of the extension service that the Envoy<br />Gateway Control Plane will call through extension hooks. |
+| `failOpen` | _boolean_ |  false  | FailOpen defines if Envoy Gateway should ignore errors returned from the Extension Service hooks.<br />The default is false, which means Envoy Gateway will fail closed if the Extension Service returns an error.<br /><br />Fail-close means that if the Extension Service hooks return an error, the relevant route/listener/resource<br />will be replaced with a default configuration returning Internal Server Error (HTTP 500).<br /><br />Fail-open means that if the Extension Service hooks return an error, no changes will be applied to the<br />source of the configuration which was sent to the extension server. |
 
 
 #### ExtensionService
@@ -2165,6 +2168,12 @@ _Appears in:_
 HealthCheck configuration to decide which endpoints
 are healthy and can be used for routing.
 
+
+Note: Once the overall health of the backendRef drops below 50% (e.g. a backendRef having 10 endpoints
+with more than 5 unhealthy endpoints), Envoy will disregard health status and balance across all endpoints.
+This is called "panic mode". It's designed to prevent a situation in which host failures cascade throughout the cluster
+as load increases.
+
 _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [ClusterSettings](#clustersettings)
@@ -2488,6 +2497,20 @@ data plane fleet.
 _Appears in:_
 - [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
 
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `type` | _[KubernetesDeployModeType](#kubernetesdeploymodetype)_ |  false  | Type indicates what deployment mode to use. "ControllerNamespace" and<br />"GatewayNamespace" are currently supported.<br />By default, when this field is unset or empty, Envoy Gateway will deploy Envoy Proxy fleet in the Controller namespace. |
+
+
+#### KubernetesDeployModeType
+
+_Underlying type:_ _string_
+
+KubernetesDeployModeType defines the type of KubernetesDeployMode
+
+_Appears in:_
+- [KubernetesDeployMode](#kubernetesdeploymode)
+
 
 
 #### KubernetesDeploymentSpec
@@ -2521,6 +2544,7 @@ Envoy Gateway will revert back to this value every time reconciliation occurs.
 See k8s.io.autoscaling.v2.HorizontalPodAutoScalerSpec.
 
 _Appears in:_
+- [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
 - [EnvoyProxyKubernetesProvider](#envoyproxykubernetesprovider)
 
 | Field | Type | Required | Description |
@@ -2736,6 +2760,38 @@ _Appears in:_
 | `info` | LogLevelInfo defines the "Info" logging level.<br /> | 
 | `warn` | LogLevelWarn defines the "Warn" logging level.<br /> | 
 | `error` | LogLevelError defines the "Error" logging level.<br /> | 
+
+
+#### Lua
+
+
+
+Lua defines a Lua extension
+Only one of Inline or ValueRef must be set
+
+_Appears in:_
+- [EnvoyExtensionPolicySpec](#envoyextensionpolicyspec)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `type` | _[LuaValueType](#luavaluetype)_ |  true  | Type is the type of method to use to read the Lua value.<br />Valid values are Inline and ValueRef, default is Inline. |
+| `inline` | _string_ |  false  | Inline contains the source code as an inline string. |
+| `valueRef` | _[LocalObjectReference](#localobjectreference)_ |  false  | ValueRef has the source code specified as a local object reference.<br />Only a reference to ConfigMap is supported.<br />The value of key `lua` in the ConfigMap will be used.<br />If the key is not found, the first value in the ConfigMap will be used. |
+
+
+#### LuaValueType
+
+_Underlying type:_ _string_
+
+LuaValueType defines the types of values for Lua supported by Envoy Gateway.
+
+_Appears in:_
+- [Lua](#lua)
+
+| Value | Description |
+| ----- | ----------- |
+| `Inline` | LuaValueTypeInline defines the "Inline" Lua type.<br /> | 
+| `ValueRef` | LuaValueTypeValueRef defines the "ValueRef" Lua type.<br /> | 
 
 
 #### MergeType

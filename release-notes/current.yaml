@@ -7,6 +7,7 @@ breaking changes: |
   An empty TLS ALPNProtocols list is now treated as user-defined disablement of the TLS ALPN extension.
   Outlier detection (passive health check) is now disabled by default.
   refer to https://gateway.envoyproxy.io/docs/api/extension_types/#backendtrafficpolicy for working with passive health checks.
+  Envoy Gateway treats errors in calls to an extension service as fail-closed by default. Any error returned from the extension server will replace the affected resource with an "Internal Server Error" immediate response. The previous behavior can be enabled by setting the `failOpen` field to `true` in the extension service configuration.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
@@ -17,10 +18,13 @@ new features: |
   Added support for trusted CIDRs in the ClientIPDetectionSettings API
   Added support for sending attributes to external processor in EnvoyExtensionPolicy API
   Added support for patching EnvoyProxy.spec.provider.kubernetes.envoyHpa and EnvoyProxy.spec.provider.kubernetes.envoyPDB
+  Added support for defining rateLimitHpa in EnvoyGateway API
+  Added support for preserving the user defined HTTPRoute match order in EnvoyProxy API
 
-# Fixes for bugs identified in previous versions.
 bug fixes: |
   Fixed a nil pointer error that occurs when a SecurityPolicy refers to a UDS backend
+  Fixed the Gateway API translator didn't use the TLS configuration from the BackendTLSPolicy when connecting to the OIDC provider's well-known endpoint.
+  Fixed a validation failure when multiple HTTPRoutes refer to the same extension filter
 
 # Enhancements that improve performance.
 performance improvements: |

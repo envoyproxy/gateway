@@ -23,6 +23,7 @@ package tests
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"net"
@@ -150,6 +151,8 @@ func NewOIDCTestClient(opts ...Option) (*OIDCTestClient, error) {
 	if client.mappings != nil {
 		defaultTransport.DialContext = client.mappings.DialContext
 	}
+	// nolint: gosec
+	defaultTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
 	return client, nil
 }
