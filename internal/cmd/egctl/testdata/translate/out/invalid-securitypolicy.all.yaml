@@ -108,7 +108,7 @@ securityPolicies:
         namespace: envoy-gateway-system
       conditions:
       - lastTransitionTime: null
-        message: 'Invalid SecurityPolicy: policy is nil'
+        message: 'Invalid SecurityPolicy: no security policy is specified.'
         reason: Invalid
         status: "False"
         type: Accepted

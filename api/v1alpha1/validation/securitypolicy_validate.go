@@ -25,7 +25,7 @@ func ValidateSecurityPolicy(policy *egv1a1.SecurityPolicy) error {
 		return errors.New("policy is nil")
 	}
 	if err := validateSecurityPolicySpec(&policy.Spec); err != nil {
-		errs = append(errs, errors.New("policy is nil"))
+		errs = append(errs, err)
 	}
 
 	return utilerrors.NewAggregate(errs)
