@@ -17,6 +17,7 @@ import (
 	cookiev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/stateful_session/cookie/v3"
 	headerv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/stateful_session/header/v3"
 	httpv3 "github.com/envoyproxy/go-control-plane/envoy/type/http/v3"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 
@@ -60,15 +61,12 @@ func (s *sessionPersistence) patchHCM(mgr *hcmv3.HttpConnectionManager, irListen
 			continue
 		}
 
-		var (
-			sessionCfgAny *anypb.Any
-			err           error
-			configName    string
-		)
+		var sessionCfg proto.Message
+		var configName string
 		switch {
 		case sp.Cookie != nil:
 			configName = cookieConfigName
-			sessionCfg := &cookiev3.CookieBasedSessionState{
+			cookieCfg := &cookiev3.CookieBasedSessionState{
 				Cookie: &httpv3.Cookie{
 					Name: sp.Cookie.Name,
 					Path: routePathToCookiePath(route.PathMatch),
@@ -76,25 +74,20 @@ func (s *sessionPersistence) patchHCM(mgr *hcmv3.HttpConnectionManager, irListen
 			}
 
 			if sp.Cookie.TTL != nil {
-				sessionCfg.Cookie.Ttl = durationpb.New(sp.Cookie.TTL.Duration)
+				cookieCfg.Cookie.Ttl = durationpb.New(sp.Cookie.TTL.Duration)
 			}
 
-			sessionCfgAny, err = anypb.New(sessionCfg)
-			if err != nil {
-				return fmt.Errorf("failed to marshal %s config: %w", egv1a1.EnvoyFilterSessionPersistence.String(), err)
-			}
-
+			sessionCfg = cookieCfg
 		case sp.Header != nil:
 			configName = headerConfigName
-			sessionCfg := &headerv3.HeaderBasedSessionState{
+			sessionCfg = &headerv3.HeaderBasedSessionState{
 				Name: sp.Header.Name,
 			}
+		}
 
-			sessionCfgAny, err = anypb.New(sessionCfg)
-			if err != nil {
-				return fmt.Errorf("failed to marshal %s config: %w", egv1a1.EnvoyFilterSessionPersistence.String(), err)
-			}
-
+		sessionCfgAny, err := anypb.New(sessionCfg)
+		if err != nil {
+			return fmt.Errorf("failed to marshal %s config: %w", egv1a1.EnvoyFilterSessionPersistence.String(), err)
 		}
 
 		cfg := &statefulsessionv3.StatefulSession{
