@@ -500,6 +500,18 @@ type ExtensionManager struct {
 	//
 	// +kubebuilder:validation:Required
 	Service *ExtensionService `json:"service,omitempty"`
+
+	// FailOpen defines if Envoy Gateway should ignore errors returned from the Extension Service hooks.
+	// The default is false, which means Envoy Gateway will fail closed if the Extension Service returns an error.
+	//
+	// Fail-close means that if the Extension Service hooks return an error, the relevant route/listener/resource
+	// will be replaced with a default configuration returning Internal Server Error (HTTP 500).
+	//
+	// Fail-open means that if the Extension Service hooks return an error, no changes will be applied to the
+	// source of the configuration which was sent to the extension server.
+	//
+	// +optional
+	FailOpen bool `json:"failOpen,omitempty"`
 }
 
 // ExtensionHooks defines extension hooks across all supported runners
