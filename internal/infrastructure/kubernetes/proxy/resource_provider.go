@@ -340,13 +340,6 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		deployment.ObjectMeta.Name = r.Name()
 	}
 
-	provider := proxyConfig.GetEnvoyProxyProvider()
-
-	// omit the deployment replicas if HPA is being set
-	if provider.GetEnvoyProxyKubeProvider().EnvoyHpa != nil {
-		deployment.Spec.Replicas = nil
-	}
-
 	// apply merge patch to deployment
 	if deployment, err = deploymentConfig.ApplyMergePatch(deployment); err != nil {
 		return nil, err
