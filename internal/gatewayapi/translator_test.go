@@ -827,9 +827,9 @@ func TestServicePortToContainerPort(t *testing.T) {
 			},
 		},
 	}
-
+	translator := &Translator{}
 	for _, tc := range testCases {
-		got := servicePortToContainerPort(tc.servicePort, tc.envoyProxy)
+		got := translator.servicePortToContainerPort(tc.servicePort, tc.envoyProxy)
 		assert.Equal(t, tc.containerPort, got)
 	}
 }
