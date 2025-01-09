@@ -93,7 +93,7 @@ type Translator struct {
 	WasmCache wasm.Cache
 
 	// ListenerPortShiftDisabled disables translating the
-	// gateway listener port into a non priviledged port
+	// gateway listener port into a non privileged port
 	// and reuses the specified value.
 	ListenerPortShiftDisabled bool
 }
