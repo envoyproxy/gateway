@@ -100,7 +100,7 @@ image name and tag.
              --clusterrole=listener-context-example-viewer \
              --serviceaccount=envoy-gateway-system:envoy-gateway
 
-kubectl create clusterrolebinding envoy-gateway-listener-context-status \
+  kubectl create clusterrolebinding envoy-gateway-listener-context-status \
              --clusterrole=listener-context-example-status-update \
              --serviceaccount=envoy-gateway-system:envoy-gateway
   ```
