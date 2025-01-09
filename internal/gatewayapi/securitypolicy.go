@@ -914,9 +914,9 @@ func (t *Translator) buildAPIKeyAuth(
 			extractFrom = append(extractFrom, &ir.ExtractFrom{
 				Cookie: ptr.Deref(e.Cookie, ""),
 			})
-		case egv1a1.ExtractFromQueryParams:
+		case egv1a1.ExtractFromQueryParam:
 			extractFrom = append(extractFrom, &ir.ExtractFrom{
-				QueryParams: ptr.Deref(e.QueryParams, ""),
+				QueryParam: ptr.Deref(e.QueryParam, ""),
 			})
 		}
 	}

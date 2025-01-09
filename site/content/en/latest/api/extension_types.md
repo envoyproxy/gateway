@@ -1671,16 +1671,16 @@ _Appears in:_
 
 
 ExtractFrom is where to fetch the key from the coming request.
-Only one of header, queryParams or cookie is supposed to be specified.
+Only one of header, queryParam or cookie is supposed to be specified.
 
 _Appears in:_
 - [APIKeyAuth](#apikeyauth)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `type` | _[ExtractFromType](#extractfromtype)_ |  true  | Type is the type of the source to fetch the key from.<br />It can be either Header, QueryParams or Cookie, and the corresponding field must be specified. |
+| `type` | _[ExtractFromType](#extractfromtype)_ |  true  | Type is the type of the source to fetch the key from.<br />It can be either Header, QueryParam or Cookie, and the corresponding field must be specified. |
 | `header` | _string_ |  false  | Header is the name of the header to fetch the key from.<br />This field is marked as optional, but should be specified if the type is Header. |
-| `queryParams` | _string_ |  false  | QueryParams is the name of the query parameter to fetch the key from.<br />This field is marked as optional, but should be specified if the type is QueryParams. |
+| `queryParam` | _string_ |  false  | QueryParam is the name of the query parameter to fetch the key from.<br />This field is marked as optional, but should be specified if the type is QueryParam. |
 | `cookie` | _string_ |  false  | Cookie is the name of the cookie to fetch the key from.<br />This field is marked as optional, but should be specified if the type is Cookie. |
 
 
@@ -1696,7 +1696,7 @@ _Appears in:_
 | Value | Description |
 | ----- | ----------- |
 | `Header` |  | 
-| `QueryParams` |  | 
+| `QueryParam` |  | 
 | `Cookie` |  | 
 
 

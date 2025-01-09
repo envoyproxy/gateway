@@ -1018,13 +1018,13 @@ type ExtractFrom struct {
 	// If multiple header values are present, the first one will be
 	// used. If the header value starts with 'Bearer ', this prefix will be stripped to get the
 	// key value.
-	// This field is optional, but only one of header, queryParams or cookie is supposed to be specified.
+	// This field is optional, but only one of header, queryParam or cookie is supposed to be specified.
 	Header string `json:"header,omitempty"`
-	// QueryParams is the name of the query parameter to fetch the key from.
-	// This field is optional, but only one of header, queryParams or cookie is supposed to be specified.
-	QueryParams string `json:"queryParams,omitempty"`
+	// QueryParam is the name of the query parameter to fetch the key from.
+	// This field is optional, but only one of header, queryParam or cookie is supposed to be specified.
+	QueryParam string `json:"queryParam,omitempty"`
 	// Cookie is the name of the cookie to fetch the key from.
-	// This field is optional, but only one of header, queryParams or cookie is supposed to be specified.
+	// This field is optional, but only one of header, queryParam or cookie is supposed to be specified.
 	Cookie string `json:"cookie,omitempty"`
 }
 

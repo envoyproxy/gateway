@@ -38,7 +38,7 @@
           - client: client-2
             key: key2
           keySources:
-          - queryParams: X-API-KEY
+          - queryParam: X-API-KEY
   - domains:
     - www.bar.com
     name: default/gateway-1/http/www_bar_com

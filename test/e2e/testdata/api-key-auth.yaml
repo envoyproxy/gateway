@@ -106,7 +106,7 @@ spec:
     name: http-with-api-key-auth-query
   apiKeyAuth:
     extractFrom:
-    - queryParams: "X-API-KEY"
+    - queryParam: "X-API-KEY"
       type: QueryParams
     credentialRefs:
       name: "api-key-auth-users-secret-1"

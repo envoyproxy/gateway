@@ -2408,8 +2408,8 @@ func (in *ExtractFrom) DeepCopyInto(out *ExtractFrom) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.QueryParams != nil {
-		in, out := &in.QueryParams, &out.QueryParams
+	if in.QueryParam != nil {
+		in, out := &in.QueryParam, &out.QueryParam
 		*out = new(string)
 		**out = **in
 	}

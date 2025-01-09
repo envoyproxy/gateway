@@ -141,11 +141,11 @@ func buildAPIKeyAuthFilterConfig(apiKeyAuth *ir.APIKeyAuth) *apikeyauthv3.ApiKey
 			Key:    string(key),
 		})
 	}
-	for _, keySource := range apiKeyAuth.ExtractFrom {
+	for _, e := range apiKeyAuth.ExtractFrom {
 		source := &apikeyauthv3.KeySource{
-			Header: keySource.Header,
-			Query:  keySource.QueryParams,
-			Cookie: keySource.Cookie,
+			Header: e.Header,
+			Query:  e.QueryParam,
+			Cookie: e.Cookie,
 		}
 		apiKeyAuthProto.KeySources = append(apiKeyAuthProto.KeySources, source)
 	}

@@ -117,7 +117,7 @@ spec:
                     items:
                       description: |-
                         ExtractFrom is where to fetch the key from the coming request.
-                        Only one of header, queryParams or cookie is supposed to be specified.
+                        Only one of header, queryParam or cookie is supposed to be specified.
                       properties:
                         cookie:
                           description: |-
@@ -129,18 +129,18 @@ spec:
                             Header is the name of the header to fetch the key from.
                             This field is marked as optional, but should be specified if the type is Header.
                           type: string
-                        queryParams:
+                        queryParam:
                           description: |-
-                            QueryParams is the name of the query parameter to fetch the key from.
-                            This field is marked as optional, but should be specified if the type is QueryParams.
+                            QueryParam is the name of the query parameter to fetch the key from.
+                            This field is marked as optional, but should be specified if the type is QueryParam.
                           type: string
                         type:
                           description: |-
                             Type is the type of the source to fetch the key from.
-                            It can be either Header, QueryParams or Cookie, and the corresponding field must be specified.
+                            It can be either Header, QueryParam or Cookie, and the corresponding field must be specified.
                           enum:
                           - Header
-                          - QueryParams
+                          - QueryParam
                           - Cookie
                           type: string
                       required:
@@ -149,9 +149,9 @@ spec:
                       x-kubernetes-validations:
                       - message: When 'type' is 'Header', 'header' must be set.
                         rule: (self.type == 'Header' && has(self.header))
-                      - message: When 'type' is 'QueryParams', 'queryParams' must
-                          be set.
-                        rule: (self.type == 'QueryParams' && has(self.queryParams))
+                      - message: When 'type' is 'QueryParam', 'queryParam' must be
+                          set.
+                        rule: (self.type == 'QueryParam' && has(self.queryParam))
                       - message: When 'type' is 'Cookie', 'cookie' must be set.
                         rule: (self.type == 'Cookie' && has(self.cookie))
                     type: array

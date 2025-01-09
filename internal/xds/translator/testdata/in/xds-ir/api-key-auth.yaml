@@ -63,7 +63,7 @@ http:
         credentialRefs:
           client-2: "a2V5Mg=="
         extractFrom:
-        - queryParams: "X-API-KEY"
+        - queryParam: "X-API-KEY"
           type: QueryParams
         allowedClients:
         - "client-2"
