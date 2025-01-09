@@ -15,10 +15,7 @@ import (
 	"testing"
 	"time"
 
-	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
@@ -30,6 +27,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	provider "github.com/envoyproxy/gateway/internal/provider/kubernetes"
+	"github.com/envoyproxy/gateway/test/utils/prometheus"
 )
 
 func init() {
@@ -66,20 +64,23 @@ var CertificateRotationTest = suite.ConformanceTest{
 			crt, key, ca, err := GetTLSSecret(suite.Client, certNN)
 			require.NoError(t, err)
 
-			// create a gRPC client with envoy's TLS credentials
+			// create a TLS connection with envoy's TLS credentials towards EG
 			tlsConfig, err := tlsClientConfig(crt, key, ca)
 			require.NoError(t, err)
-			conn, err := grpc.NewClient(envoyGatewayAddr,
-				grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)))
+			conn, err := tls.Dial("tcp", envoyGatewayAddr, tlsConfig)
 			require.NoError(t, err)
-
-			// Connect to Envoy Gateway's XDS endpoint with Envoy TLS credentials
-			streamClient, err := discovery.NewAggregatedDiscoveryServiceClient(conn).
-				StreamAggregatedResources(ctx)
-			require.NoError(t, err)
-			require.NotNil(t, streamClient)
 			err = conn.Close()
 			require.NoError(t, err)
+
+			// fetch the current value of envoy's ssl context updates by SDS
+			promClient, err := prometheus.NewClient(suite.Client, types.NamespacedName{Name: "prometheus", Namespace: "monitoring"})
+			require.NoError(t, err)
+			clusterName := "xds_cluster"
+			gtwName := "same-namespace"
+			promQL := fmt.Sprintf(`envoy_cluster_client_ssl_socket_factory_ssl_context_update_by_sds{envoy_cluster_name="%s",gateway_envoyproxy_io_owning_gateway_name="%s"}`, clusterName, gtwName)
+			sslContextUpdateCounter, err := promClient.QuerySum(ctx, promQL)
+			require.NoError(t, err)
+			tlog.Logf(t, "Envoy SSL context updates before rotation: %f", sslContextUpdateCounter)
 
 			// rotate certs and apply them similar to how EG certgen works
 			certs, err := crypto.GenerateCerts(&config.Server{
@@ -99,7 +100,7 @@ var CertificateRotationTest = suite.ConformanceTest{
 			_, err = provider.CreateOrUpdateSecrets(ctx, suite.Client, secrets, true)
 			require.NoError(t, err)
 
-			// Wait for connection with new credentials to succeed
+			// Wait for connection with new credentials to Envoy Gateway to succeed
 			http.AwaitConvergence(
 				t,
 				1,
@@ -109,17 +110,13 @@ var CertificateRotationTest = suite.ConformanceTest{
 					tlsConfig, err = tlsClientConfig(certs.EnvoyCertificate, certs.EnvoyPrivateKey,
 						certs.CACertificate)
 					require.NoError(t, err)
-					conn, err = grpc.NewClient(envoyGatewayAddr,
-						grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)))
-					require.NoError(t, err)
-
-					// Connect to Envoy Gateway's XDS endpoint with Envoy TLS credentials
-					streamClient, err = discovery.NewAggregatedDiscoveryServiceClient(conn).
-						StreamAggregatedResources(ctx)
+					conn, err = tls.Dial("tcp", envoyGatewayAddr, tlsConfig)
 					if err != nil {
 						tlog.Logf(t, "failed to connect to Envoy Gateway with new tls credentials: %v", err)
-						err = conn.Close()
-						require.NoError(t, err)
+						if conn != nil {
+							err = conn.Close()
+							require.NoError(t, err)
+						}
 						time.Sleep(1 * time.Second)
 						return false
 					}
@@ -129,6 +126,24 @@ var CertificateRotationTest = suite.ConformanceTest{
 					require.NoError(t, err)
 					return true
 				})
+
+			// Wait for Envoy's ssl context to be updated by SDS
+			http.AwaitConvergence(
+				t,
+				1,
+				suite.TimeoutConfig.NamespacesMustBeReady,
+				func(_ time.Duration) bool {
+					// check ssl context was updated in envoy stats from Prometheus
+					v, err := promClient.QuerySum(ctx, promQL)
+					if err != nil {
+						// wait until Prometheus sync stats
+						return false
+					}
+
+					tlog.Logf(t, "Envoy SSL context updates after rotation: %f", v)
+					return v > sslContextUpdateCounter
+				},
+			)
 
 			// Apply a new config and confirm that it's programmed successfully on proxies
 			suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/certificate-rotation.yaml", false)
@@ -167,7 +182,8 @@ func tlsClientConfig(certPem []byte, keyPem []byte, caPem []byte) (*tls.Config, 
 	return &tls.Config{
 		Certificates: []tls.Certificate{cert},
 		RootCAs:      certPool,
-		ServerName:   "envoy-gateway.envoy-gateway-system.svc.cluster.local",
+		ServerName:   "envoy-gateway",
 		MinVersion:   tls.VersionTLS13,
+		NextProtos:   []string{"h2", "http/1.1"},
 	}, nil
 }
