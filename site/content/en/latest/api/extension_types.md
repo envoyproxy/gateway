@@ -3380,24 +3380,39 @@ _Appears in:_
 
 
 
-RateLimitCost specifies where the Envoy retrieves the number to reduce the rate limit counters.
+
 
 _Appears in:_
 - [RateLimitRule](#ratelimitrule)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `type` | _[RateLimitCostType](#ratelimitcosttype)_ |  true  | Type specifies the source of the rate limit cost. Currently, only "Number" and "DynamicMetadata" are supported. |
 
 
-#### RateLimitCostDynamicMetadata
+#### RateLimitCostFrom
 
+_Underlying type:_ _string_
 
-
-RateLimitCostDynamicMetadata specifies the filter metadata to retrieve the usage number from.
+RateLimitCostFrom specifies the source of the rate limit cost.
+Valid RateLimitCostType values are "Number" and "Metadata".
 
 _Appears in:_
-- [RateLimitCost](#ratelimitcost)
+- [RateLimitCostSpecifier](#ratelimitcostspecifier)
+
+| Value | Description |
+| ----- | ----------- |
+| `Number` | RateLimitCostFromNumber specifies the rate limit cost to be a fixed number.<br /> | 
+| `Metadata` | RateLimitCostFromMetadata specifies the rate limit cost to be retrieved from the per-request dynamic metadata.<br /> | 
+
+
+#### RateLimitCostMetadata
+
+
+
+RateLimitCostMetadata specifies the filter metadata to retrieve the usage number from.
+
+_Appears in:_
+- [RateLimitCostSpecifier](#ratelimitcostspecifier)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
@@ -3405,20 +3420,18 @@ _Appears in:_
 | `key` | _string_ |  true  | Key is the key to retrieve the usage number from the filter metadata. |
 
 
-#### RateLimitCostType
+#### RateLimitCostSpecifier
 
-_Underlying type:_ _string_
 
-RateLimitCostType specifies the source of the rate limit cost.
-Valid RateLimitCostType values are "Number" and "DynamicMetadata".
+
+RateLimitCostSpecifier specifies where the Envoy retrieves the number to reduce the rate limit counters.
 
 _Appears in:_
 - [RateLimitCost](#ratelimitcost)
 
-| Value | Description |
-| ----- | ----------- |
-| `Number` | RateLimitCostTypeNumber specifies the rate limit cost to be a fixed number.<br /> | 
-| `DynamicMetadata` | RateLimitCostTypeDynamicMetadata specifies the rate limit cost to be retrieved from the dynamic metadata.<br /> | 
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `from` | _[RateLimitCostFrom](#ratelimitcostfrom)_ |  true  | From specifies where to get the rate limit cost. Currently, only "Number" and "Metadata" are supported. |
 
 
 #### RateLimitDatabaseBackend

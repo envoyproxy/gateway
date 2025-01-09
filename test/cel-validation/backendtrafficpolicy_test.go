@@ -1507,32 +1507,40 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				rules := []egv1a1.RateLimitRule{
 					{
-						Limit:          egv1a1.RateLimitValue{Requests: 10, Unit: "Minute"},
-						CostPerRequest: &egv1a1.RateLimitCost{Type: egv1a1.RateLimitCostTypeNumber, Number: ptr.To[uint64](200)},
-					},
-					{
-						Limit:           egv1a1.RateLimitValue{Requests: 10, Unit: "Minute"},
-						CostPerResponse: &egv1a1.RateLimitCost{Type: egv1a1.RateLimitCostTypeNumber, Number: ptr.To[uint64](200)},
-					},
-					{
-						Limit:           egv1a1.RateLimitValue{Requests: 10, Unit: "Minute"},
-						CostPerRequest:  &egv1a1.RateLimitCost{Type: egv1a1.RateLimitCostTypeNumber, Number: ptr.To[uint64](200)},
-						CostPerResponse: &egv1a1.RateLimitCost{Type: egv1a1.RateLimitCostTypeNumber, Number: ptr.To[uint64](200)},
+						Limit: egv1a1.RateLimitValue{Requests: 10, Unit: "Minute"},
+						Cost: &egv1a1.RateLimitCost{
+							Request: &egv1a1.RateLimitCostSpecifier{From: egv1a1.RateLimitCostFromNumber, Number: ptr.To[uint64](200)},
+						},
 					},
 					{
 						Limit: egv1a1.RateLimitValue{Requests: 10, Unit: "Minute"},
-						CostPerRequest: &egv1a1.RateLimitCost{
-							Type: egv1a1.RateLimitCostTypeDynamicMetadata,
-							DynamicMetadata: &egv1a1.RateLimitCostDynamicMetadata{
-								Namespace: "com.test.my_filter",
-								Key:       "on_request_key",
-							},
+						Cost: &egv1a1.RateLimitCost{
+							Response: &egv1a1.RateLimitCostSpecifier{From: egv1a1.RateLimitCostFromNumber, Number: ptr.To[uint64](200)},
 						},
-						CostPerResponse: &egv1a1.RateLimitCost{
-							Type: egv1a1.RateLimitCostTypeDynamicMetadata,
-							DynamicMetadata: &egv1a1.RateLimitCostDynamicMetadata{
-								Namespace: "com.test.my_filter",
-								Key:       "on_response_key",
+					},
+					{
+						Limit: egv1a1.RateLimitValue{Requests: 10, Unit: "Minute"},
+						Cost: &egv1a1.RateLimitCost{
+							Request:  &egv1a1.RateLimitCostSpecifier{From: egv1a1.RateLimitCostFromNumber, Number: ptr.To[uint64](200)},
+							Response: &egv1a1.RateLimitCostSpecifier{From: egv1a1.RateLimitCostFromNumber, Number: ptr.To[uint64](200)},
+						},
+					},
+					{
+						Limit: egv1a1.RateLimitValue{Requests: 10, Unit: "Minute"},
+						Cost: &egv1a1.RateLimitCost{
+							Request: &egv1a1.RateLimitCostSpecifier{
+								From: egv1a1.RateLimitCostFromMetadata,
+								Metadata: &egv1a1.RateLimitCostMetadata{
+									Namespace: "com.test.my_filter",
+									Key:       "on_request_key",
+								},
+							},
+							Response: &egv1a1.RateLimitCostSpecifier{
+								From: egv1a1.RateLimitCostFromMetadata,
+								Metadata: &egv1a1.RateLimitCostMetadata{
+									Namespace: "com.test.my_filter",
+									Key:       "on_response_key",
+								},
 							},
 						},
 					},
@@ -1559,7 +1567,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "invalid Global rate limit rules with request cost specifying both number and dynamicMetadata fields",
+			desc: "invalid Global rate limit rules with request cost specifying both number and metadata fields",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -1577,10 +1585,12 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							Rules: []egv1a1.RateLimitRule{
 								{
 									Limit: egv1a1.RateLimitValue{Requests: 10, Unit: "Minute"},
-									CostPerRequest: &egv1a1.RateLimitCost{
-										Type:            egv1a1.RateLimitCostTypeNumber,
-										DynamicMetadata: &egv1a1.RateLimitCostDynamicMetadata{},
-										Number:          ptr.To[uint64](200),
+									Cost: &egv1a1.RateLimitCost{
+										Request: &egv1a1.RateLimitCostSpecifier{
+											From:     egv1a1.RateLimitCostFromNumber,
+											Metadata: &egv1a1.RateLimitCostMetadata{},
+											Number:   ptr.To[uint64](200),
+										},
 									},
 								},
 							},
@@ -1589,7 +1599,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				` spec.rateLimit.global.rules[0].costPerRequest: Invalid value: "object": only one of number or dynamicMetadata can be specified`,
+				`spec.rateLimit.global.rules[0].cost.request: Invalid value: "object": only one of number or metadata can be specified`,
 			},
 		},
 		{
@@ -1611,15 +1621,17 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							Rules: []egv1a1.RateLimitRule{
 								{
 									Limit: egv1a1.RateLimitValue{Requests: 10, Unit: "Minute"},
-									// This is not supported for LocalRateLimit.
-									CostPerResponse: &egv1a1.RateLimitCost{Type: egv1a1.RateLimitCostTypeNumber, Number: ptr.To[uint64](200)},
+									Cost: &egv1a1.RateLimitCost{
+										// This is not supported for LocalRateLimit.
+										Response: &egv1a1.RateLimitCostSpecifier{From: egv1a1.RateLimitCostFromNumber, Number: ptr.To[uint64](200)},
+									},
 								},
 							},
 						},
 					},
 				}
 			},
-			wantErrors: []string{`costPerResponse is not supported for Local Rate Limits`},
+			wantErrors: []string{`response cost is not supported for Local Rate Limits`},
 		},
 	}
 

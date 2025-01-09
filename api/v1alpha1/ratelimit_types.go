@@ -62,7 +62,7 @@ type LocalRateLimit struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
-	// +kubebuilder:validation:XValidation:rule="self.all(foo, !has(foo.costPerResponse))", message="costPerResponse is not supported for Local Rate Limits"
+	// +kubebuilder:validation:XValidation:rule="self.all(foo, !has(foo.cost.response))", message="response cost is not supported for Local Rate Limits"
 	Rules []RateLimitRule `json:"rules"`
 }
 
@@ -92,7 +92,18 @@ type RateLimitRule struct {
 	// 429 HTTP status code is sent back to the client when
 	// the selected requests have reached the limit.
 	Limit RateLimitValue `json:"limit"`
-	// CostPerRequest specifies the number to reduce the rate limit counters
+	// Cost specifies the cost of requests and responses for the rule.
+	//
+	// This is optional and if not specified, the default behavior is to reduce the rate limit counters by 1 on
+	// the request path and do not reduce the rate limit counters on the response path.
+	//
+	// +optional
+	// +notImplementedHide
+	Cost *RateLimitCost `json:"cost,omitempty"`
+}
+
+type RateLimitCost struct {
+	// Request specifies the number to reduce the rate limit counters
 	// on the request path. If this is not specified, the default behavior
 	// is to reduce the rate limit counters by 1.
 	//
@@ -102,8 +113,8 @@ type RateLimitRule struct {
 	//
 	// +optional
 	// +notImplementedHide
-	CostPerRequest *RateLimitCost `json:"costPerRequest,omitempty"`
-	// CostPerResponse specifies the number to reduce the rate limit counters
+	Request *RateLimitCostSpecifier `json:"request,omitempty"`
+	// Response specifies the number to reduce the rate limit counters
 	// after the response is sent back to the client or the request stream is closed.
 	//
 	// The cost is used to reduce the rate limit counters for the matching requests.
@@ -117,47 +128,47 @@ type RateLimitRule struct {
 	//
 	// +optional
 	// +notImplementedHide
-	CostPerResponse *RateLimitCost `json:"costPerResponse,omitempty"`
+	Response *RateLimitCostSpecifier `json:"response,omitempty"`
 }
 
-// RateLimitCost specifies where the Envoy retrieves the number to reduce the rate limit counters.
+// RateLimitCostSpecifier specifies where the Envoy retrieves the number to reduce the rate limit counters.
 //
-// +kubebuilder:validation:XValidation:rule="!(has(self.number) && has(self.dynamicMetadata))",message="only one of number or dynamicMetadata can be specified"
-type RateLimitCost struct {
-	// Type specifies the source of the rate limit cost. Currently, only "Number" and "DynamicMetadata" are supported.
+// +kubebuilder:validation:XValidation:rule="!(has(self.number) && has(self.metadata))",message="only one of number or metadata can be specified"
+type RateLimitCostSpecifier struct {
+	// From specifies where to get the rate limit cost. Currently, only "Number" and "Metadata" are supported.
 	//
 	// +kubebuilder:validation:Required
-	Type RateLimitCostType `json:"type"`
+	From RateLimitCostFrom `json:"from"`
 	// Number specifies the fixed usage number to reduce the rate limit counters.
 	// Using zero can be used to only check the rate limit counters without reducing them.
 	//
 	// +optional
 	// +notImplementedHide
 	Number *uint64 `json:"number,omitempty"`
-	// DynamicMetadata specifies the filter metadata to retrieve the usage number from.
+	// Metadata specifies the per-request metadata to retrieve the usage number from.
 	//
 	// +optional
 	// +notImplementedHide
-	DynamicMetadata *RateLimitCostDynamicMetadata `json:"dynamicMetadata,omitempty"`
+	Metadata *RateLimitCostMetadata `json:"metadata,omitempty"`
 }
 
-// RateLimitCostType specifies the source of the rate limit cost.
-// Valid RateLimitCostType values are "Number" and "DynamicMetadata".
+// RateLimitCostFrom specifies the source of the rate limit cost.
+// Valid RateLimitCostType values are "Number" and "Metadata".
 //
-// +kubebuilder:validation:Enum=Number;DynamicMetadata
-type RateLimitCostType string
+// +kubebuilder:validation:Enum=Number;Metadata
+type RateLimitCostFrom string
 
 const (
-	// RateLimitCostTypeNumber specifies the rate limit cost to be a fixed number.
-	RateLimitCostTypeNumber RateLimitCostType = "Number"
-	// RateLimitCostTypeDynamicMetadata specifies the rate limit cost to be retrieved from the dynamic metadata.
-	RateLimitCostTypeDynamicMetadata RateLimitCostType = "DynamicMetadata"
+	// RateLimitCostFromNumber specifies the rate limit cost to be a fixed number.
+	RateLimitCostFromNumber RateLimitCostFrom = "Number"
+	// RateLimitCostFromMetadata specifies the rate limit cost to be retrieved from the per-request dynamic metadata.
+	RateLimitCostFromMetadata RateLimitCostFrom = "Metadata"
 	// TODO: add headers, etc. Anything that can be represented in "Format" can be added here.
 	// 	https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format
 )
 
-// RateLimitCostDynamicMetadata specifies the filter metadata to retrieve the usage number from.
-type RateLimitCostDynamicMetadata struct {
+// RateLimitCostMetadata specifies the filter metadata to retrieve the usage number from.
+type RateLimitCostMetadata struct {
 	// Namespace is the namespace of the dynamic metadata.
 	//
 	// +kubebuilder:validation:Required
