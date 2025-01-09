@@ -107,7 +107,7 @@ image name and tag.
 
 * Configure Envoy Gateway to use the Extension Server
 
-  Add the following fragment to Envoy Gateway's configmap file:
+  Add the following fragment to Envoy Gateway's configmap:
 
   ```shell
   cat <<EOF | kubectl apply -f -
