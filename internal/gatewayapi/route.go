@@ -271,7 +271,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 	return routeRoutes, nil
 }
 
-func processHTTPRouteRule(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
+func processRouteTrafficFeatures(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 	processRouteTimeout(irRoute, rule)
 	processRouteRetry(irRoute, rule)
 }
@@ -309,12 +309,19 @@ func processRouteRetry(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 		res.NumRetries = ptr.To(uint32(*retry.Attempts))
 	}
 	if retry.Backoff != nil {
-		d, err := time.ParseDuration(string(*retry.Backoff))
+		backoff, err := time.ParseDuration(string(*retry.Backoff))
 		if err == nil {
 			res.PerRetry = &ir.PerRetryPolicy{
 				BackOff: &ir.BackOffPolicy{
-					BaseInterval: ptr.To(metav1.Duration{Duration: d}),
+					BaseInterval: ptr.To(metav1.Duration{Duration: backoff}),
 				},
+			}
+
+			if rule.Timeouts != nil && rule.Timeouts.BackendRequest != nil {
+				backendRequestTimeout, err := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
+				if err == nil {
+					res.PerRetry.Timeout = &metav1.Duration{Duration: backendRequestTimeout}
+				}
 			}
 		}
 	}
@@ -339,7 +346,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 			Name: irRouteName(httpRoute, ruleIdx, -1),
 		}
 		irRoute.Metadata = buildRouteMetadata(httpRoute, rule.Name)
-		processHTTPRouteRule(irRoute, rule)
+		processRouteTrafficFeatures(irRoute, rule)
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
 		ruleRoutes = append(ruleRoutes, irRoute)
 	}
@@ -400,7 +407,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 			SessionPersistence: sessionPersistence,
 		}
 		irRoute.Metadata = buildRouteMetadata(httpRoute, rule.Name)
-		processHTTPRouteRule(irRoute, rule)
+		processRouteTrafficFeatures(irRoute, rule)
 
 		if match.Path != nil {
 			switch PathMatchTypeDerefOr(match.Path.Type, gwapiv1.PathMatchPathPrefix) {

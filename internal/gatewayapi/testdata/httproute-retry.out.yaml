@@ -180,6 +180,8 @@ httpRoutes:
         backoff: 200ms
         codes:
         - 500
+      timeouts:
+        backendRequest: 3s
   status:
     parents:
     - conditions:
@@ -294,9 +296,11 @@ xdsIR:
           perRetry:
             backOff:
               baseInterval: 200ms
+            timeout: 3s
           retryOn:
             httpStatusCodes:
             - 500
+        timeout: 3s
         traffic:
           retry:
             numRetries: 5

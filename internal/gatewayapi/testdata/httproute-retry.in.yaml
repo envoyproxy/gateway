@@ -49,6 +49,8 @@ httpRoutes:
         - 500
         attempts: 3
         backoff: 200ms
+      timeouts:
+        backendRequest: 3s
       backendRefs:
       - name: service-1
         port: 8080

@@ -715,7 +715,7 @@ type HTTPRoute struct {
 	// Timeout is the time until which entire response is received from the upstream.
 	Timeout *metav1.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	// Retry defines the retry policy for the route.
-	// This's from core Gateway API, and should take precedence over Traffic.Retry.
+	// This is derived from the core Gateway API, and should take precedence over Traffic.Retry.
 	Retry *Retry `json:"retry,omitempty" yaml:"retry,omitempty"`
 }
 
