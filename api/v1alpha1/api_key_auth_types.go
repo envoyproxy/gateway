@@ -11,6 +11,14 @@ import (
 
 const APIKeysSecretKey = "credentials"
 
+type ExtractFromType string
+
+const (
+	ExtractFromHeader      ExtractFromType = "Header"
+	ExtractFromQueryParams ExtractFromType = "QueryParams"
+	ExtractFromCookie      ExtractFromType = "Cookie"
+)
+
 // APIKeyAuth defines the configuration for the API Key Authentication.
 type APIKeyAuth struct {
 	// CredentialRefs is the Kubernetes secret which contains the API keys.
@@ -27,24 +35,27 @@ type APIKeyAuth struct {
 // ExtractFrom is where to fetch the key from the coming request.
 // Only one of header, queryParams or cookie is supposed to be specified.
 //
-// Note: we intentionally don't add the validation for the only one of header, queryParams or cookie is supposed to be specified with +kubebuilder:validation:XValidation:rule.
-// Instead, we add the validation in the controller reconciliation.
-// Technically we can define CEL, but the CEL estimated cost exceeds the threshold and it wouldn't be accepted.
-//
-// +kubebuilder:validation:XValidation:rule="(has(self.header) || has(self.queryParams) || has(self.cookie))",message="one of header, queryParams or cookie must be specified"
+// +kubebuilder:validation:XValidation:rule="(self.type == 'Header' && has(self.header))",message="When 'type' is 'Header', 'header' must be set."
+// +kubebuilder:validation:XValidation:rule="(self.type == 'QueryParams' && has(self.queryParams))",message="When 'type' is 'QueryParams', 'queryParams' must be set."
+// +kubebuilder:validation:XValidation:rule="(self.type == 'Cookie' && has(self.cookie))",message="When 'type' is 'Cookie', 'cookie' must be set."
 type ExtractFrom struct {
+	// Type is the type of the source to fetch the key from.
+	// It can be either Header, QueryParams or Cookie, and the corresponding field must be specified.
+	//
+	// +kubebuilder:validation:Enum=Header;QueryParams;Cookie
+	Type ExtractFromType `json:"type"`
 	// Header is the name of the header to fetch the key from.
-	// This field is optional, but only one of header, queryParams or cookie is supposed to be specified.
+	// This field is marked as optional, but should be specified if the type is Header.
 	//
 	// +optional
 	Header *string `json:"header,omitempty"`
 	// QueryParams is the name of the query parameter to fetch the key from.
-	// This field is optional, but only one of header, queryParams or cookie is supposed to be specified.
+	// This field is marked as optional, but should be specified if the type is QueryParams.
 	//
 	// +optional
 	QueryParams *string `json:"queryParams,omitempty"`
 	// Cookie is the name of the cookie to fetch the key from.
-	// This field is optional, but only one of header, queryParams or cookie is supposed to be specified.
+	// This field is marked as optional, but should be specified if the type is Cookie.
 	//
 	// +optional
 	Cookie *string `json:"cookie,omitempty"`

@@ -1007,13 +1007,13 @@ type APIKeyAuth struct {
 
 	// ExtractFrom is where to fetch the key from the coming request.
 	// The value from the first source that has a key will be used.
-	ExtractFrom []*KeySource `json:"extractFrom"`
+	ExtractFrom []*ExtractFrom `json:"extractFrom"`
 }
 
-// KeySource defines the source of the key.
+// ExtractFrom defines the source of the key.
 //
 // +k8s:deepcopy-gen=true
-type KeySource struct {
+type ExtractFrom struct {
 	// Header is the name of the header to fetch the key from.
 	// If multiple header values are present, the first one will be
 	// used. If the header value starts with 'Bearer ', this prefix will be stripped to get the

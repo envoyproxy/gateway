@@ -17,10 +17,10 @@
           '@type': type.googleapis.com/envoy.extensions.filters.http.api_key_auth.v3.ApiKeyAuthPerRoute
           allowedClients:
           - client-1
-          credentialRefs:
+          credentials:
           - client: client-1
             key: key1
-          extractFrom:
+          keySources:
           - header: X-API-KEY
     - match:
         pathSeparatedPrefix: /foo2
@@ -34,10 +34,10 @@
           '@type': type.googleapis.com/envoy.extensions.filters.http.api_key_auth.v3.ApiKeyAuthPerRoute
           allowedClients:
           - client-2
-          credentialRefs:
+          credentials:
           - client: client-2
             key: key2
-          extractFrom:
+          keySources:
           - queryParams: X-API-KEY
   - domains:
     - www.bar.com
@@ -55,8 +55,8 @@
           '@type': type.googleapis.com/envoy.extensions.filters.http.api_key_auth.v3.ApiKeyAuthPerRoute
           allowedClients:
           - client-3
-          credentialRefs:
+          credentials:
           - client: client-3
             key: key3
-          extractFrom:
+          keySources:
           - cookie: X-API-KEY

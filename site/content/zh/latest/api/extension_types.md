@@ -1673,19 +1673,31 @@ _Appears in:_
 ExtractFrom is where to fetch the key from the coming request.
 Only one of header, queryParams or cookie is supposed to be specified.
 
-
-Note: we intentionally don't add the validation for the only one of header, queryParams or cookie is supposed to be specified with +kubebuilder:validation:XValidation:rule.
-Instead, we add the validation in the controller reconciliation.
-Technically we can define CEL, but the CEL estimated cost exceeds the threshold and it wouldn't be accepted.
-
 _Appears in:_
 - [APIKeyAuth](#apikeyauth)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `header` | _string_ |  false  | Header is the name of the header to fetch the key from.<br />This field is optional, but only one of header, queryParams or cookie is supposed to be specified. |
-| `queryParams` | _string_ |  false  | QueryParams is the name of the query parameter to fetch the key from.<br />This field is optional, but only one of header, queryParams or cookie is supposed to be specified. |
-| `cookie` | _string_ |  false  | Cookie is the name of the cookie to fetch the key from.<br />This field is optional, but only one of header, queryParams or cookie is supposed to be specified. |
+| `type` | _[ExtractFromType](#extractfromtype)_ |  true  | Type is the type of the source to fetch the key from.<br />It can be either Header, QueryParams or Cookie, and the corresponding field must be specified. |
+| `header` | _string_ |  false  | Header is the name of the header to fetch the key from.<br />This field is marked as optional, but should be specified if the type is Header. |
+| `queryParams` | _string_ |  false  | QueryParams is the name of the query parameter to fetch the key from.<br />This field is marked as optional, but should be specified if the type is QueryParams. |
+| `cookie` | _string_ |  false  | Cookie is the name of the cookie to fetch the key from.<br />This field is marked as optional, but should be specified if the type is Cookie. |
+
+
+#### ExtractFromType
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [ExtractFrom](#extractfrom)
+
+| Value | Description |
+| ----- | ----------- |
+| `Header` |  | 
+| `QueryParams` |  | 
+| `Cookie` |  | 
 
 
 #### FQDNEndpoint

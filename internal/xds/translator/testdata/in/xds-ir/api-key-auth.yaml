@@ -35,6 +35,7 @@ http:
           client-1: "a2V5MQ=="
         extractFrom:
         - header: "X-API-KEY"
+          type: Header
         allowedClients:
         - "client-1"
   - name: httproute/default/httproute-1/rule/1/match/0/www_foo_com
@@ -63,6 +64,7 @@ http:
           client-2: "a2V5Mg=="
         extractFrom:
         - queryParams: "X-API-KEY"
+          type: QueryParams
         allowedClients:
         - "client-2"
   - name: httproute/default/httproute-2/rule/0/match/0/www_bar_com
@@ -91,5 +93,6 @@ http:
           client-3: "a2V5Mw=="
         extractFrom:
         - cookie: "X-API-KEY"
+          type: Cookie
         allowedClients:
         - "client-3"

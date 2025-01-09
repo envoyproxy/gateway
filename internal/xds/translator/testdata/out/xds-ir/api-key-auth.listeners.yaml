@@ -21,7 +21,7 @@
             credentials:
             - client: client-1
               key: key1
-            extractFrom:
+            keySources:
             - header: X-API-KEY
         - name: envoy.filters.http.router
           typedConfig:
