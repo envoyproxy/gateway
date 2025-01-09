@@ -1131,7 +1131,7 @@ spec:
                         type: array
                         x-kubernetes-validations:
                         - message: response cost is not supported for Local Rate Limits
-                          rule: self.all(foo, !has(foo.cost.response))
+                          rule: self.all(foo, !has(foo.cost) || !has(foo.cost.response))
                     type: object
                   type:
                     description: |-

@@ -62,7 +62,7 @@ type LocalRateLimit struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
-	// +kubebuilder:validation:XValidation:rule="self.all(foo, !has(foo.cost.response))", message="response cost is not supported for Local Rate Limits"
+	// +kubebuilder:validation:XValidation:rule="self.all(foo, !has(foo.cost) || !has(foo.cost.response))", message="response cost is not supported for Local Rate Limits"
 	Rules []RateLimitRule `json:"rules"`
 }
 
