@@ -15,8 +15,6 @@
       typedPerFilterConfig:
         envoy.filters.http.api_key_auth:
           '@type': type.googleapis.com/envoy.extensions.filters.http.api_key_auth.v3.ApiKeyAuthPerRoute
-          allowedClients:
-          - client-1
           credentials:
           - client: client-1
             key: key1
@@ -32,8 +30,6 @@
       typedPerFilterConfig:
         envoy.filters.http.api_key_auth:
           '@type': type.googleapis.com/envoy.extensions.filters.http.api_key_auth.v3.ApiKeyAuthPerRoute
-          allowedClients:
-          - client-2
           credentials:
           - client: client-2
             key: key2
@@ -53,8 +49,6 @@
       typedPerFilterConfig:
         envoy.filters.http.api_key_auth:
           '@type': type.googleapis.com/envoy.extensions.filters.http.api_key_auth.v3.ApiKeyAuthPerRoute
-          allowedClients:
-          - client-3
           credentials:
           - client: client-3
             key: key3
