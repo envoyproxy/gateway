@@ -887,40 +887,35 @@ func (t *Translator) buildAPIKeyAuth(
 		kind:      resource.KindSecurityPolicy,
 		namespace: policy.Namespace,
 	}
-	credentialsSecret, err := t.validateSecretRef(
-		false, from, policy.Spec.APIKeyAuth.Credentials, resources)
-	if err != nil {
-		return nil, err
-	}
 
-	allowedClients := sets.New[string]()
-	for _, client := range policy.Spec.APIKeyAuth.AllowedClients {
-		allowedClients.Insert(client)
-	}
-
-	credentials := make(map[string]ir.PrivateBytes, len(credentialsSecret.Data))
-	for clientid, key := range credentialsSecret.Data {
-		if allowedClients.Has(clientid) {
-			continue
+	credentials := make(map[string]ir.PrivateBytes)
+	for _, ref := range policy.Spec.APIKeyAuth.CredentialRefs {
+		credentialsSecret, err := t.validateSecretRef(
+			false, from, ref, resources)
+		if err != nil {
+			return nil, err
 		}
-
-		credentials[clientid] = key
+		for clientid, key := range credentialsSecret.Data {
+			if _, ok := credentials[clientid]; ok {
+				continue
+			}
+			credentials[clientid] = key
+		}
 	}
 
 	extractFrom := make([]*ir.KeySource, 0, len(policy.Spec.APIKeyAuth.ExtractFrom))
 	for _, keySource := range policy.Spec.APIKeyAuth.ExtractFrom {
 		extractFrom = append(extractFrom, &ir.KeySource{
-			Header: ptr.Deref(keySource.Header, ""),
-			Cookie: ptr.Deref(keySource.Cookie, ""),
-			Query:  ptr.Deref(keySource.Query, ""),
+			Header:      ptr.Deref(keySource.Header, ""),
+			Cookie:      ptr.Deref(keySource.Cookie, ""),
+			QueryParams: ptr.Deref(keySource.QueryParams, ""),
 		})
 	}
 
 	return &ir.APIKeyAuth{
-		Name:           irConfigName(policy),
-		Credentials:    credentials,
-		ExtractFrom:    extractFrom,
-		AllowedClients: policy.Spec.APIKeyAuth.AllowedClients,
+		Name:        irConfigName(policy),
+		Credentials: credentials,
+		ExtractFrom: extractFrom,
 	}, nil
 }
 

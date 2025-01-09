@@ -290,8 +290,10 @@ func TestValidateSecretForReconcile(t *testing.T) {
 							},
 						},
 						APIKeyAuth: &egv1a1.APIKeyAuth{
-							Credentials: gwapiv1.SecretObjectReference{
-								Name: "secret",
+							CredentialRefs: []gwapiv1.SecretObjectReference{
+								{
+									Name: "secret",
+								},
 							},
 						},
 					},

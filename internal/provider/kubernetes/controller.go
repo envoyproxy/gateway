@@ -515,17 +515,19 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 		// Add the referenced Secretes in APIKeyAuth to the resourceTree.
 		apiKeyAuth := policy.Spec.APIKeyAuth
 		if apiKeyAuth != nil {
-			if err := r.processSecretRef(
-				ctx,
-				resourceMap,
-				resourceTree,
-				resource.KindSecurityPolicy,
-				policy.Namespace,
-				policy.Name,
-				apiKeyAuth.Credentials); err != nil {
-				r.log.Error(err,
-					"failed to process APIKeyAuth SecretRef for SecurityPolicy",
-					"policy", policy, "secretRef", apiKeyAuth.Credentials)
+			for _, credRef := range apiKeyAuth.CredentialRefs {
+				if err := r.processSecretRef(
+					ctx,
+					resourceMap,
+					resourceTree,
+					resource.KindSecurityPolicy,
+					policy.Namespace,
+					policy.Name,
+					credRef); err != nil {
+					r.log.Error(err,
+						"failed to process APIKeyAuth SecretRef for SecurityPolicy",
+						"policy", policy, "secretRef", apiKeyAuth.CredentialRefs)
+				}
 			}
 		}
 

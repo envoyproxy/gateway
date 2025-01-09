@@ -53,95 +53,98 @@ spec:
                 description: APIKeyAuth defines the configuration for the API Key
                   Authentication.
                 properties:
-                  allowedClients:
+                  credentialRefs:
                     description: |-
-                      AllowedClients is a list of clients that are allowed to access the route or vhost.
-                      The clients listed here should be subset of the clients listed in the `Credentials` to provide authorization control
-                      after the authentication is successful. If the list is empty, then all authenticated clients
-                      are allowed. This provides very limited but simple authorization.
-                    items:
-                      type: string
-                    type: array
-                  credentials:
-                    description: |-
-                      Credentials is the Kubernetes secret which contains the API keys.
+                      CredentialRefs is the Kubernetes secret which contains the API keys.
                       This is an Opaque secret.
-                      Each API key is stored in the key representing the client id,
-                      which can be used in AllowedClients to authorize the client in a simple way.
-                    properties:
-                      group:
-                        default: ""
-                        description: |-
-                          Group is the group of the referent. For example, "gateway.networking.k8s.io".
-                          When unspecified or empty string, core API group is inferred.
-                        maxLength: 253
-                        pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-                        type: string
-                      kind:
-                        default: Secret
-                        description: Kind is kind of the referent. For example "Secret".
-                        maxLength: 63
-                        minLength: 1
-                        pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
-                        type: string
-                      name:
-                        description: Name is the name of the referent.
-                        maxLength: 253
-                        minLength: 1
-                        type: string
-                      namespace:
-                        description: |-
-                          Namespace is the namespace of the referenced object. When unspecified, the local
-                          namespace is inferred.
+                      Each API key is stored in the key representing the client id.
+                      If the secrets have a key for a duplicated client, the first one will be used.
+                    items:
+                      description: |-
+                        SecretObjectReference identifies an API object including its namespace,
+                        defaulting to Secret.
 
-                          Note that when a namespace different than the local namespace is specified,
-                          a ReferenceGrant object is required in the referent namespace to allow that
-                          namespace's owner to accept the reference. See the ReferenceGrant
-                          documentation for details.
+                        The API object must be valid in the cluster; the Group and Kind must
+                        be registered in the cluster for this reference to be valid.
 
-                          Support: Core
-                        maxLength: 63
-                        minLength: 1
-                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-                        type: string
-                    required:
-                    - name
-                    type: object
+                        References to objects with invalid Group and Kind are not valid, and must
+                        be rejected by the implementation, with appropriate Conditions set
+                        on the containing object.
+                      properties:
+                        group:
+                          default: ""
+                          description: |-
+                            Group is the group of the referent. For example, "gateway.networking.k8s.io".
+                            When unspecified or empty string, core API group is inferred.
+                          maxLength: 253
+                          pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                          type: string
+                        kind:
+                          default: Secret
+                          description: Kind is kind of the referent. For example "Secret".
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                          type: string
+                        name:
+                          description: Name is the name of the referent.
+                          maxLength: 253
+                          minLength: 1
+                          type: string
+                        namespace:
+                          description: |-
+                            Namespace is the namespace of the referenced object. When unspecified, the local
+                            namespace is inferred.
+
+                            Note that when a namespace different than the local namespace is specified,
+                            a ReferenceGrant object is required in the referent namespace to allow that
+                            namespace's owner to accept the reference. See the ReferenceGrant
+                            documentation for details.
+
+                            Support: Core
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
                   extractFrom:
                     description: |-
-                      KeySources is where to fetch the key from the coming request.
+                      ExtractFrom is where to fetch the key from the coming request.
                       The value from the first source that has a key will be used.
                     items:
                       description: |-
-                        KeySource is where to fetch the key from the coming request.
-                        Only one of header, query or cookie is supposed to be specified.
+                        ExtractFrom is where to fetch the key from the coming request.
+                        Only one of header, queryParams or cookie is supposed to be specified.
 
-                        Note: we intentionally don't add the validation for the only one of header, query or cookie is supposed to be specified with +kubebuilder:validation:XValidation:rule.
+                        Note: we intentionally don't add the validation for the only one of header, queryParams or cookie is supposed to be specified with +kubebuilder:validation:XValidation:rule.
                         Instead, we add the validation in the controller reconciliation.
                         Technically we can define CEL, but the CEL estimated cost exceeds the threshold and it wouldn't be accepted.
                       properties:
                         cookie:
                           description: |-
                             Cookie is the name of the cookie to fetch the key from.
-                            This field is optional, but only one of header, query or cookie is supposed to be specified.
+                            This field is optional, but only one of header, queryParams or cookie is supposed to be specified.
                           type: string
                         header:
                           description: |-
                             Header is the name of the header to fetch the key from.
-                            This field is optional, but only one of header, query or cookie is supposed to be specified.
+                            This field is optional, but only one of header, queryParams or cookie is supposed to be specified.
                           type: string
-                        query:
+                        queryParams:
                           description: |-
-                            Query is the name of the query parameter to fetch the key from.
-                            This field is optional, but only one of header, query or cookie is supposed to be specified.
+                            QueryParams is the name of the query parameter to fetch the key from.
+                            This field is optional, but only one of header, queryParams or cookie is supposed to be specified.
                           type: string
                       type: object
                       x-kubernetes-validations:
-                      - message: one of header, query or cookie must be specified
-                        rule: (has(self.header) || has(self.query) || has(self.cookie))
+                      - message: one of header, queryParams or cookie must be specified
+                        rule: (has(self.header) || has(self.queryParams) || has(self.cookie))
                     type: array
                 required:
-                - credentials
+                - credentialRefs
                 - extractFrom
                 type: object
               authorization:

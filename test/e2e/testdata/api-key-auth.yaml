@@ -72,7 +72,7 @@ spec:
   apiKeyAuth:
     extractFrom:
     - header: "X-API-KEY"
-    credentials:
+    credentialRefs:
       name: "api-key-auth-users-secret-1"
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -88,7 +88,7 @@ spec:
   apiKeyAuth:
     extractFrom:
     - cookie: "X-API-KEY"
-    credentials:
+    credentialRefs:
       name: "api-key-auth-users-secret-1"
 
 ---
@@ -104,6 +104,6 @@ spec:
     name: http-with-api-key-auth-query
   apiKeyAuth:
     extractFrom:
-    - query: "X-API-KEY"
-    credentials:
+    - queryParams: "X-API-KEY"
+    credentialRefs:
       name: "api-key-auth-users-secret-1"

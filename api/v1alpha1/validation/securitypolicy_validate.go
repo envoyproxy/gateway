@@ -81,9 +81,9 @@ func ValidateAPIKeyAuth(p *egv1a1.APIKeyAuth) error {
 	}
 
 	for _, keySource := range p.ExtractFrom {
-		if (keySource.Header != nil && keySource.Query != nil) ||
+		if (keySource.Header != nil && keySource.QueryParams != nil) ||
 			(keySource.Header != nil && keySource.Cookie != nil) ||
-			(keySource.Query != nil && keySource.Cookie != nil) {
+			(keySource.QueryParams != nil && keySource.Cookie != nil) {
 			return errors.New("only one of header, query or cookie is supposed to be specified")
 		}
 	}

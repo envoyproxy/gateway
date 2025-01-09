@@ -109,9 +109,8 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `credentials` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  true  | Credentials is the Kubernetes secret which contains the API keys.<br />This is an Opaque secret.<br />Each API key is stored in the key representing the client id,<br />which can be used in AllowedClients to authorize the client in a simple way. |
+| `credentialRefs` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference) array_ |  true  | CredentialRefs is the Kubernetes secret which contains the API keys.<br />This is an Opaque secret.<br />Each API key is stored in the key representing the client id.<br />If the secrets have a key for a duplicated client, the first one will be used. |
 | `extractFrom` | _[ExtractFrom](#extractfrom) array_ |  true  | ExtractFrom is where to fetch the key from the coming request.<br />The value from the first source that has a key will be used. |
-| `allowedClients` | _string array_ |  false  | AllowedClients is a list of clients that are allowed to access the route or vhost.<br />The clients listed here should be subset of the clients listed in the `Credentials` to provide authorization control<br />after the authentication is successful. If the list is empty, then all authenticated clients<br />are allowed. This provides very limited but simple authorization. |
 
 
 #### ActiveHealthCheck
@@ -1672,10 +1671,10 @@ _Appears in:_
 
 
 ExtractFrom is where to fetch the key from the coming request.
-Only one of header, query or cookie is supposed to be specified.
+Only one of header, queryParams or cookie is supposed to be specified.
 
 
-Note: we intentionally don't add the validation for the only one of header, query or cookie is supposed to be specified with +kubebuilder:validation:XValidation:rule.
+Note: we intentionally don't add the validation for the only one of header, queryParams or cookie is supposed to be specified with +kubebuilder:validation:XValidation:rule.
 Instead, we add the validation in the controller reconciliation.
 Technically we can define CEL, but the CEL estimated cost exceeds the threshold and it wouldn't be accepted.
 
@@ -1684,9 +1683,9 @@ _Appears in:_
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `header` | _string_ |  false  | Header is the name of the header to fetch the key from.<br />This field is optional, but only one of header, query or cookie is supposed to be specified. |
-| `query` | _string_ |  false  | Query is the name of the query parameter to fetch the key from.<br />This field is optional, but only one of header, query or cookie is supposed to be specified. |
-| `cookie` | _string_ |  false  | Cookie is the name of the cookie to fetch the key from.<br />This field is optional, but only one of header, query or cookie is supposed to be specified. |
+| `header` | _string_ |  false  | Header is the name of the header to fetch the key from.<br />This field is optional, but only one of header, queryParams or cookie is supposed to be specified. |
+| `queryParams` | _string_ |  false  | QueryParams is the name of the query parameter to fetch the key from.<br />This field is optional, but only one of header, queryParams or cookie is supposed to be specified. |
+| `cookie` | _string_ |  false  | Cookie is the name of the cookie to fetch the key from.<br />This field is optional, but only one of header, queryParams or cookie is supposed to be specified. |
 
 
 #### FQDNEndpoint

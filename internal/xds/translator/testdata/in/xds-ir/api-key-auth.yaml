@@ -31,7 +31,7 @@ http:
     security:
       apiKeyAuth:
         name: securitypolicy/default/policy-for-http-route-1
-        credentials:
+        credentialRefs:
           client-1: "a2V5MQ=="
         extractFrom:
         - header: "X-API-KEY"
@@ -59,10 +59,10 @@ http:
     security:
       apiKeyAuth:
         name: securitypolicy/default/policy-for-http-route-1
-        credentials:
+        credentialRefs:
           client-2: "a2V5Mg=="
         extractFrom:
-        - query: "X-API-KEY"
+        - queryParams: "X-API-KEY"
         allowedClients:
         - "client-2"
   - name: httproute/default/httproute-2/rule/0/match/0/www_bar_com
@@ -87,7 +87,7 @@ http:
     security:
       apiKeyAuth:
         name: securitypolicy/default/policy-for-http-route-1
-        credentials:
+        credentialRefs:
           client-3: "a2V5Mw=="
         extractFrom:
         - cookie: "X-API-KEY"

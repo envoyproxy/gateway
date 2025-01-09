@@ -1008,16 +1008,6 @@ type APIKeyAuth struct {
 	// ExtractFrom is where to fetch the key from the coming request.
 	// The value from the first source that has a key will be used.
 	ExtractFrom []*KeySource `json:"extractFrom"`
-
-	// AllowedClients is a list of clients that are allowed to access the route or vhost.
-	// The clients listed here should be subset of the clients listed in the `Credentials` to provide authorization control
-	// after the authentication is successful. If the list is empty, then all authenticated clients
-	// are allowed. This provides very limited but simple authorization.
-	// It's supposed to be filled only when SecurityPolicy is attached to a HTTPRoute
-	// otherwise it will be just ignored.
-	//
-	// +optional
-	AllowedClients []string `json:"allowedClients,omitempty"`
 }
 
 // KeySource defines the source of the key.
@@ -1028,13 +1018,13 @@ type KeySource struct {
 	// If multiple header values are present, the first one will be
 	// used. If the header value starts with 'Bearer ', this prefix will be stripped to get the
 	// key value.
-	// This field is optional, but only one of header, query or cookie is supposed to be specified.
+	// This field is optional, but only one of header, queryParams or cookie is supposed to be specified.
 	Header string `json:"header,omitempty"`
-	// Query is the name of the query parameter to fetch the key from.
-	// This field is optional, but only one of header, query or cookie is supposed to be specified.
-	Query string `json:"query,omitempty"`
+	// QueryParams is the name of the query parameter to fetch the key from.
+	// This field is optional, but only one of header, queryParams or cookie is supposed to be specified.
+	QueryParams string `json:"queryParams,omitempty"`
 	// Cookie is the name of the cookie to fetch the key from.
-	// This field is optional, but only one of header, query or cookie is supposed to be specified.
+	// This field is optional, but only one of header, queryParams or cookie is supposed to be specified.
 	Cookie string `json:"cookie,omitempty"`
 }
 

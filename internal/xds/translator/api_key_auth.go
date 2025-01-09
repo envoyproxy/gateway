@@ -144,7 +144,7 @@ func buildAPIKeyAuthFilterConfig(apiKeyAuth *ir.APIKeyAuth) *apikeyauthv3.ApiKey
 	for _, keySource := range apiKeyAuth.ExtractFrom {
 		source := &apikeyauthv3.KeySource{
 			Header: keySource.Header,
-			Query:  keySource.Query,
+			Query:  keySource.QueryParams,
 			Cookie: keySource.Cookie,
 		}
 		apiKeyAuthProto.KeySources = append(apiKeyAuthProto.KeySources, source)
@@ -156,8 +156,7 @@ func buildAPIKeyAuthFilterConfig(apiKeyAuth *ir.APIKeyAuth) *apikeyauthv3.ApiKey
 func buildAPIKeyAuthFilterPerRouteConfig(apiKeyAuth *ir.APIKeyAuth) *apikeyauthv3.ApiKeyAuthPerRoute {
 	apiKeyAuthProto := buildAPIKeyAuthFilterConfig(apiKeyAuth)
 	return &apikeyauthv3.ApiKeyAuthPerRoute{
-		Credentials:    apiKeyAuthProto.Credentials,
-		KeySources:     apiKeyAuthProto.KeySources,
-		AllowedClients: apiKeyAuth.AllowedClients,
+		Credentials: apiKeyAuthProto.Credentials,
+		KeySources:  apiKeyAuthProto.KeySources,
 	}
 }

@@ -17,7 +17,7 @@
           '@type': type.googleapis.com/envoy.extensions.filters.http.api_key_auth.v3.ApiKeyAuthPerRoute
           allowedClients:
           - client-1
-          credentials:
+          credentialRefs:
           - client: client-1
             key: key1
           extractFrom:
@@ -34,11 +34,11 @@
           '@type': type.googleapis.com/envoy.extensions.filters.http.api_key_auth.v3.ApiKeyAuthPerRoute
           allowedClients:
           - client-2
-          credentials:
+          credentialRefs:
           - client: client-2
             key: key2
           extractFrom:
-          - query: X-API-KEY
+          - queryParams: X-API-KEY
   - domains:
     - www.bar.com
     name: default/gateway-1/http/www_bar_com
@@ -55,7 +55,7 @@
           '@type': type.googleapis.com/envoy.extensions.filters.http.api_key_auth.v3.ApiKeyAuthPerRoute
           allowedClients:
           - client-3
-          credentials:
+          credentialRefs:
           - client: client-3
             key: key3
           extractFrom:
