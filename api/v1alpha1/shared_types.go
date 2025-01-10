@@ -579,6 +579,9 @@ type ClusterSettings struct {
 	//
 	// +optional
 	HTTP2 *HTTP2Settings `json:"http2,omitempty"`
+
+	// +optional
+	BandwidthLimit *BandwidthLimit `json:"bandwidthLimit,omitempty"`
 }
 
 // CIDR defines a CIDR Address range.
