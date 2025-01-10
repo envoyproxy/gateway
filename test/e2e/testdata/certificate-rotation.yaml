@@ -5,7 +5,7 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-  - name: same-namespace
+  - name: cert-rotation-gateway
   rules:
   - matches:
     - path:

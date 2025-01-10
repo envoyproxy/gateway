@@ -16,6 +16,7 @@ import (
 	"net/http/httputil"
 	"regexp"
 	"testing"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -126,15 +127,25 @@ var PreserveCaseTest = suite.ConformanceTest{
 			}
 
 			var rt nethttp.RoundTripper
-			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
-			respBody, err := casePreservingRoundTrip(req, rt, suite)
-			if err != nil {
-				t.Errorf("failed to get expected response: %v", err)
-			}
-
-			if _, found := respBody["SpEcIaL"]; !found {
-				t.Errorf("case was not preserved for test header: %+v", respBody)
-			}
+			http.AwaitConvergence(
+				t,
+				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
+				suite.TimeoutConfig.MaxTimeToConsistency,
+				func(_ time.Duration) bool {
+					// check membership_healthy stats from Prometheus
+					req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+					respBody, err := casePreservingRoundTrip(req, rt, suite)
+					if err != nil {
+						t.Logf("failed to get expected response: %v", err)
+						return false
+					}
+					if _, found := respBody["SpEcIaL"]; !found {
+						t.Logf("case was not preserved for test header: %+v", respBody)
+						return false
+					}
+					return true
+				},
+			)
 		})
 	},
 }
