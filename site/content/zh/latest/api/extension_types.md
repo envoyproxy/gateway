@@ -3377,6 +3377,64 @@ _Appears in:_
 | `telemetry` | _[RateLimitTelemetry](#ratelimittelemetry)_ |  false  | Telemetry defines telemetry configuration for RateLimit. |
 
 
+#### RateLimitCost
+
+
+
+
+
+_Appears in:_
+- [RateLimitRule](#ratelimitrule)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+
+
+#### RateLimitCostFrom
+
+_Underlying type:_ _string_
+
+RateLimitCostFrom specifies the source of the rate limit cost.
+Valid RateLimitCostType values are "Number" and "Metadata".
+
+_Appears in:_
+- [RateLimitCostSpecifier](#ratelimitcostspecifier)
+
+| Value | Description |
+| ----- | ----------- |
+| `Number` | RateLimitCostFromNumber specifies the rate limit cost to be a fixed number.<br /> | 
+| `Metadata` | RateLimitCostFromMetadata specifies the rate limit cost to be retrieved from the per-request dynamic metadata.<br /> | 
+
+
+#### RateLimitCostMetadata
+
+
+
+RateLimitCostMetadata specifies the filter metadata to retrieve the usage number from.
+
+_Appears in:_
+- [RateLimitCostSpecifier](#ratelimitcostspecifier)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `namespace` | _string_ |  true  | Namespace is the namespace of the dynamic metadata. |
+| `key` | _string_ |  true  | Key is the key to retrieve the usage number from the filter metadata. |
+
+
+#### RateLimitCostSpecifier
+
+
+
+RateLimitCostSpecifier specifies where the Envoy retrieves the number to reduce the rate limit counters.
+
+_Appears in:_
+- [RateLimitCost](#ratelimitcost)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `from` | _[RateLimitCostFrom](#ratelimitcostfrom)_ |  true  | From specifies where to get the rate limit cost. Currently, only "Number" and "Metadata" are supported. |
+
+
 #### RateLimitDatabaseBackend
 
 

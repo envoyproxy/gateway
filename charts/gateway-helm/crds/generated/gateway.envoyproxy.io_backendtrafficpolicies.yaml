@@ -752,6 +752,112 @@ spec:
                                 type: object
                               maxItems: 8
                               type: array
+                            cost:
+                              description: |-
+                                Cost specifies the cost of requests and responses for the rule.
+
+                                This is optional and if not specified, the default behavior is to reduce the rate limit counters by 1 on
+                                the request path and do not reduce the rate limit counters on the response path.
+                              properties:
+                                request:
+                                  description: |-
+                                    Request specifies the number to reduce the rate limit counters
+                                    on the request path. If this is not specified, the default behavior
+                                    is to reduce the rate limit counters by 1.
+
+                                    When Envoy receives a request that matches the rule, it tries to reduce the
+                                    rate limit counters by the specified number. If the counter doesn't have
+                                    enough capacity, the request is rate limited.
+                                  properties:
+                                    from:
+                                      description: From specifies where to get the
+                                        rate limit cost. Currently, only "Number"
+                                        and "Metadata" are supported.
+                                      enum:
+                                      - Number
+                                      - Metadata
+                                      type: string
+                                    metadata:
+                                      description: Metadata specifies the per-request
+                                        metadata to retrieve the usage number from.
+                                      properties:
+                                        key:
+                                          description: Key is the key to retrieve
+                                            the usage number from the filter metadata.
+                                          type: string
+                                        namespace:
+                                          description: Namespace is the namespace
+                                            of the dynamic metadata.
+                                          type: string
+                                      required:
+                                      - key
+                                      - namespace
+                                      type: object
+                                    number:
+                                      description: |-
+                                        Number specifies the fixed usage number to reduce the rate limit counters.
+                                        Using zero can be used to only check the rate limit counters without reducing them.
+                                      format: int64
+                                      type: integer
+                                  required:
+                                  - from
+                                  type: object
+                                  x-kubernetes-validations:
+                                  - message: only one of number or metadata can be
+                                      specified
+                                    rule: '!(has(self.number) && has(self.metadata))'
+                                response:
+                                  description: |-
+                                    Response specifies the number to reduce the rate limit counters
+                                    after the response is sent back to the client or the request stream is closed.
+
+                                    The cost is used to reduce the rate limit counters for the matching requests.
+                                    Since the reduction happens after the request stream is complete, the rate limit
+                                    won't be enforced for the current request, but for the subsequent matching requests.
+
+                                    This is optional and if not specified, the rate limit counters are not reduced
+                                    on the response path.
+
+                                    Currently, this is only supported for HTTP Global Rate Limits.
+                                  properties:
+                                    from:
+                                      description: From specifies where to get the
+                                        rate limit cost. Currently, only "Number"
+                                        and "Metadata" are supported.
+                                      enum:
+                                      - Number
+                                      - Metadata
+                                      type: string
+                                    metadata:
+                                      description: Metadata specifies the per-request
+                                        metadata to retrieve the usage number from.
+                                      properties:
+                                        key:
+                                          description: Key is the key to retrieve
+                                            the usage number from the filter metadata.
+                                          type: string
+                                        namespace:
+                                          description: Namespace is the namespace
+                                            of the dynamic metadata.
+                                          type: string
+                                      required:
+                                      - key
+                                      - namespace
+                                      type: object
+                                    number:
+                                      description: |-
+                                        Number specifies the fixed usage number to reduce the rate limit counters.
+                                        Using zero can be used to only check the rate limit counters without reducing them.
+                                      format: int64
+                                      type: integer
+                                  required:
+                                  - from
+                                  type: object
+                                  x-kubernetes-validations:
+                                  - message: only one of number or metadata can be
+                                      specified
+                                    rule: '!(has(self.number) && has(self.metadata))'
+                              type: object
                             limit:
                               description: |-
                                 Limit holds the rate limit values.
@@ -887,6 +993,112 @@ spec:
                                 type: object
                               maxItems: 8
                               type: array
+                            cost:
+                              description: |-
+                                Cost specifies the cost of requests and responses for the rule.
+
+                                This is optional and if not specified, the default behavior is to reduce the rate limit counters by 1 on
+                                the request path and do not reduce the rate limit counters on the response path.
+                              properties:
+                                request:
+                                  description: |-
+                                    Request specifies the number to reduce the rate limit counters
+                                    on the request path. If this is not specified, the default behavior
+                                    is to reduce the rate limit counters by 1.
+
+                                    When Envoy receives a request that matches the rule, it tries to reduce the
+                                    rate limit counters by the specified number. If the counter doesn't have
+                                    enough capacity, the request is rate limited.
+                                  properties:
+                                    from:
+                                      description: From specifies where to get the
+                                        rate limit cost. Currently, only "Number"
+                                        and "Metadata" are supported.
+                                      enum:
+                                      - Number
+                                      - Metadata
+                                      type: string
+                                    metadata:
+                                      description: Metadata specifies the per-request
+                                        metadata to retrieve the usage number from.
+                                      properties:
+                                        key:
+                                          description: Key is the key to retrieve
+                                            the usage number from the filter metadata.
+                                          type: string
+                                        namespace:
+                                          description: Namespace is the namespace
+                                            of the dynamic metadata.
+                                          type: string
+                                      required:
+                                      - key
+                                      - namespace
+                                      type: object
+                                    number:
+                                      description: |-
+                                        Number specifies the fixed usage number to reduce the rate limit counters.
+                                        Using zero can be used to only check the rate limit counters without reducing them.
+                                      format: int64
+                                      type: integer
+                                  required:
+                                  - from
+                                  type: object
+                                  x-kubernetes-validations:
+                                  - message: only one of number or metadata can be
+                                      specified
+                                    rule: '!(has(self.number) && has(self.metadata))'
+                                response:
+                                  description: |-
+                                    Response specifies the number to reduce the rate limit counters
+                                    after the response is sent back to the client or the request stream is closed.
+
+                                    The cost is used to reduce the rate limit counters for the matching requests.
+                                    Since the reduction happens after the request stream is complete, the rate limit
+                                    won't be enforced for the current request, but for the subsequent matching requests.
+
+                                    This is optional and if not specified, the rate limit counters are not reduced
+                                    on the response path.
+
+                                    Currently, this is only supported for HTTP Global Rate Limits.
+                                  properties:
+                                    from:
+                                      description: From specifies where to get the
+                                        rate limit cost. Currently, only "Number"
+                                        and "Metadata" are supported.
+                                      enum:
+                                      - Number
+                                      - Metadata
+                                      type: string
+                                    metadata:
+                                      description: Metadata specifies the per-request
+                                        metadata to retrieve the usage number from.
+                                      properties:
+                                        key:
+                                          description: Key is the key to retrieve
+                                            the usage number from the filter metadata.
+                                          type: string
+                                        namespace:
+                                          description: Namespace is the namespace
+                                            of the dynamic metadata.
+                                          type: string
+                                      required:
+                                      - key
+                                      - namespace
+                                      type: object
+                                    number:
+                                      description: |-
+                                        Number specifies the fixed usage number to reduce the rate limit counters.
+                                        Using zero can be used to only check the rate limit counters without reducing them.
+                                      format: int64
+                                      type: integer
+                                  required:
+                                  - from
+                                  type: object
+                                  x-kubernetes-validations:
+                                  - message: only one of number or metadata can be
+                                      specified
+                                    rule: '!(has(self.number) && has(self.metadata))'
+                              type: object
                             limit:
                               description: |-
                                 Limit holds the rate limit values.
@@ -917,6 +1129,9 @@ spec:
                           type: object
                         maxItems: 16
                         type: array
+                        x-kubernetes-validations:
+                        - message: response cost is not supported for Local Rate Limits
+                          rule: self.all(foo, !has(foo.cost) || !has(foo.cost.response))
                     type: object
                   type:
                     description: |-

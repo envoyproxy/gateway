@@ -322,6 +322,7 @@ func translateGatewayAPIToGatewayAPI(resources *resource.Resources) (resource.Re
 		}
 		gRes.EnvoyProxyForGatewayClass = resources.EnvoyProxyForGatewayClass
 	}
+
 	if !epInvalid {
 		status.SetGatewayClassAccepted(resources.GatewayClass, true, string(gwapiv1.GatewayClassReasonAccepted), status.MsgValidGatewayClass)
 	}

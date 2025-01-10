@@ -25,7 +25,7 @@ func ValidateSecurityPolicy(policy *egv1a1.SecurityPolicy) error {
 		return errors.New("policy is nil")
 	}
 	if err := validateSecurityPolicySpec(&policy.Spec); err != nil {
-		errs = append(errs, errors.New("policy is nil"))
+		errs = append(errs, err)
 	}
 
 	return utilerrors.NewAggregate(errs)
@@ -43,6 +43,17 @@ func validateSecurityPolicySpec(spec *egv1a1.SecurityPolicySpec) error {
 		sum++
 	case spec.JWT != nil:
 		sum++
+		if err := ValidateJWTProvider(spec.JWT.Providers); err != nil {
+			errs = append(errs, err)
+		}
+	case spec.Authorization != nil:
+		sum++
+	case spec.BasicAuth != nil:
+		sum++
+	case spec.ExtAuth != nil:
+		sum++
+	case spec.OIDC != nil:
+		sum++
 	}
 	if sum == 0 {
 		errs = append(errs, errors.New("no security policy is specified"))
@@ -51,10 +62,6 @@ func validateSecurityPolicySpec(spec *egv1a1.SecurityPolicySpec) error {
 	// Return early if any errors exist.
 	if len(errs) != 0 {
 		return utilerrors.NewAggregate(errs)
-	}
-
-	if err := ValidateJWTProvider(spec.JWT.Providers); err != nil {
-		errs = append(errs, err)
 	}
 
 	return utilerrors.NewAggregate(errs)
