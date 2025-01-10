@@ -40,26 +40,25 @@ var CertificateRotationTest = suite.ConformanceTest{
 	Manifests:   []string{"testdata/certificate-rotation-gateway.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("Envoy Gateway uses new TLS credentials after rotation", func(t *testing.T) {
+			var envoyGatewayAddr string
 			envoyGatewayNS := "envoy-gateway-system"
 			EnvoyGatewayLBSVC := "envoy-gateway-ext-lb"
 			EnvoyCertificateSecret := "envoy"
+			gtwName := "cert-rotation-gateway"
+			ns := "gateway-conformance-infra"
 			EnvoyGatewayXDSPort := 18000
 			epNN := types.NamespacedName{Name: "cert-rotation-proxy-config", Namespace: "envoy-gateway-system"}
-			gtwName := "cert-rotation-gateway"
-
-			ns := "gateway-conformance-infra"
 			baseRouteNN := types.NamespacedName{Name: "http-base-for-cert-rotation", Namespace: ns}
 			gwNN := types.NamespacedName{Name: gtwName, Namespace: ns}
+			ctx := context.Background()
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), baseRouteNN)
 
-			var envoyGatewayAddr string
-
-			ctx := context.Background()
+			// get Envoy Gateway LB address
 			envoyGatewaySvc := &corev1.Service{}
 			err := suite.Client.Get(ctx, types.NamespacedName{Namespace: envoyGatewayNS, Name: EnvoyGatewayLBSVC}, envoyGatewaySvc)
 			require.NoError(t, err)
 			require.Len(t, envoyGatewaySvc.Status.LoadBalancer.Ingress, 1)
-			// require.NotEmpty(t, envoyGatewaySvc.Status.LoadBalancer.Ingress[0].IP)
+			require.NotEmpty(t, envoyGatewaySvc.Status.LoadBalancer.Ingress[0].IP)
 
 			if IPFamily == "ipv6" {
 				envoyGatewayAddr = fmt.Sprintf("[%s]:%d", envoyGatewaySvc.Status.LoadBalancer.Ingress[0].IP, EnvoyGatewayXDSPort)
@@ -105,55 +104,11 @@ var CertificateRotationTest = suite.ConformanceTest{
 
 			// Wait for connection with new credentials to Envoy Gateway to succeed
 			t.Log("Waiting for connection to Envoy Gateway with new Envoy certs succeeds")
-			http.AwaitConvergence(
-				t,
-				1,
-				suite.TimeoutConfig.NamespacesMustBeReady,
-				func(_ time.Duration) bool {
-					// create gRPC client with envoy's TLS credentials
-					tlsConfig, err = tlsClientConfig(certs.EnvoyCertificate, certs.EnvoyPrivateKey,
-						certs.CACertificate)
-					require.NoError(t, err)
-					conn, err = tls.Dial("tcp", envoyGatewayAddr, tlsConfig)
-					if err != nil {
-						tlog.Logf(t, "failed to connect to Envoy Gateway with new tls credentials: %v", err)
-						if conn != nil {
-							err = conn.Close()
-							require.NoError(t, err)
-						}
-						time.Sleep(1 * time.Second)
-						return false
-					}
-
-					tlog.Logf(t, "Connected to Envoy Gateway with new tls credentials")
-					err = conn.Close()
-					require.NoError(t, err)
-					return true
-				})
+			awaitSSLConnectionWithCertsToSucceed(t, suite, certs, envoyGatewayAddr)
 
 			// Waiting for Envoy's ssl context to be updated by SDS
 			t.Log("Waiting for Envoy XDS Cluster ssl context to be updated by SDS")
-			promClient, err := prometheus.NewClient(suite.Client, types.NamespacedName{Name: "prometheus", Namespace: "monitoring"})
-			require.NoError(t, err)
-			clusterName := "xds_cluster"
-			promQL := fmt.Sprintf(`envoy_cluster_client_ssl_socket_factory_ssl_context_update_by_sds{envoy_cluster_name="%s",gateway_envoyproxy_io_owning_gateway_name="%s"}`, clusterName, gtwName)
-
-			http.AwaitConvergence(
-				t,
-				1,
-				suite.TimeoutConfig.NamespacesMustBeReady,
-				func(_ time.Duration) bool {
-					// check ssl context was updated in envoy stats from Prometheus
-					v, err := promClient.QuerySum(ctx, promQL)
-					if err != nil {
-						// wait until Prometheus sync stats
-						return false
-					}
-
-					tlog.Logf(t, "Envoy SSL context updates after rotation: %f", v)
-					return v > 2 // the proxy starts with 2 sds updates for the CA and Key-Cert pair
-				},
-			)
+			awaitEnvoyXDSSSLContextUpdate(t, suite, ctx, gtwName)
 
 			// Apply a new config and confirm that it's programmed successfully on proxies
 			t.Log("Applying new HTTP Route")
@@ -182,11 +137,64 @@ var CertificateRotationTest = suite.ConformanceTest{
 			// restart the proxy and ensure that new connections to XDS server using the new certificate succeed as well
 			t.Log("Restarting Envoy proxy")
 			err = restartProxyAndWaitForRollout(t, suite.TimeoutConfig, suite.Client, epNN, dp)
+			require.NoError(t, err)
 
 			t.Log("Checking that after restart Envoy proxy uses new certificate to connect to XDS successfully")
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expected)
 		})
 	},
+}
+
+func awaitSSLConnectionWithCertsToSucceed(t *testing.T, suite *suite.ConformanceTestSuite, certs *crypto.Certificates, envoyGatewayAddr string) {
+	http.AwaitConvergence(
+		t,
+		1,
+		suite.TimeoutConfig.NamespacesMustBeReady,
+		func(_ time.Duration) bool {
+			// create gRPC client with envoy's TLS credentials
+			tlsConfig, err := tlsClientConfig(certs.EnvoyCertificate, certs.EnvoyPrivateKey,
+				certs.CACertificate)
+			require.NoError(t, err)
+			conn, err := tls.Dial("tcp", envoyGatewayAddr, tlsConfig)
+			if err != nil {
+				tlog.Logf(t, "failed to connect to Envoy Gateway with new tls credentials: %v", err)
+				if conn != nil {
+					err = conn.Close()
+					require.NoError(t, err)
+				}
+				time.Sleep(1 * time.Second)
+				return false
+			}
+
+			tlog.Logf(t, "Connected to Envoy Gateway with new tls credentials")
+			err = conn.Close()
+			require.NoError(t, err)
+			return true
+		})
+}
+
+func awaitEnvoyXDSSSLContextUpdate(t *testing.T, suite *suite.ConformanceTestSuite, ctx context.Context, gtwName string) {
+	promClient, err := prometheus.NewClient(suite.Client, types.NamespacedName{Name: "prometheus", Namespace: "monitoring"})
+	require.NoError(t, err)
+	clusterName := "xds_cluster"
+	promQL := fmt.Sprintf(`envoy_cluster_client_ssl_socket_factory_ssl_context_update_by_sds{envoy_cluster_name="%s",gateway_envoyproxy_io_owning_gateway_name="%s"}`, clusterName, gtwName)
+
+	http.AwaitConvergence(
+		t,
+		1,
+		suite.TimeoutConfig.NamespacesMustBeReady,
+		func(_ time.Duration) bool {
+			// check ssl context was updated in envoy stats from Prometheus
+			v, err := promClient.QuerySum(ctx, promQL)
+			if err != nil {
+				// wait until Prometheus sync stats
+				return false
+			}
+
+			tlog.Logf(t, "Envoy SSL context updates after rotation: %f", v)
+			return v > 2 // the proxy starts with 2 sds updates for the CA and Key-Cert pair
+		},
+	)
 }
 
 func tlsClientConfig(certPem []byte, keyPem []byte, caPem []byte) (*tls.Config, error) {
