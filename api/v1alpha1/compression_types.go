@@ -28,8 +28,6 @@ type BrotliCompressor struct{}
 
 // Compression defines the config of enabling compression.
 // This can help reduce the bandwidth at the expense of higher CPU.
-// +kubebuilder:validation:XValidation:rule="self.type == 'Brotli' ? has(self.brotli) : !has(self.brotli)",message="If compression type is Brotli, brotli field needs to be set."
-// +kubebuilder:validation:XValidation:rule="self.type == 'Gzip' ? has(self.gzip) : !has(self.gzip)",message="If compression type is Gzip, gzip field needs to be set."
 type Compression struct {
 	// CompressorType defines the compressor type to use for compression.
 	//

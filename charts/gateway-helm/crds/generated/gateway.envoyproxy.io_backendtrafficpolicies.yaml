@@ -122,12 +122,6 @@ spec:
                   required:
                   - type
                   type: object
-                  x-kubernetes-validations:
-                  - message: If compression type is Brotli, brotli field needs to
-                      be set.
-                    rule: 'self.type == ''Brotli'' ? has(self.brotli) : !has(self.brotli)'
-                  - message: If compression type is Gzip, gzip field needs to be set.
-                    rule: 'self.type == ''Gzip'' ? has(self.gzip) : !has(self.gzip)'
                 type: array
               connection:
                 description: Connection includes backend connection settings.
