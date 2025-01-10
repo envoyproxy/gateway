@@ -153,7 +153,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 						parentGateways,
 						t.GatewayControllerName,
 						policy.Generation,
-						status.Error2ConditionMsg(fmt.Errorf("Invalid SecurityPolicy: %w", err)),
+						status.Error2ConditionMsg(fmt.Errorf("invalid SecurityPolicy: %w", err)),
 					)
 
 					continue
