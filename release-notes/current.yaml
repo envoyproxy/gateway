@@ -26,6 +26,7 @@ bug fixes: |
   Fixed a nil pointer error that occurs when a SecurityPolicy refers to a UDS backend
   Fixed the Gateway API translator didn't use the TLS configuration from the BackendTLSPolicy when connecting to the OIDC provider's well-known endpoint.
   Fixed a validation failure when multiple HTTPRoutes refer to the same extension filter
+  Fixed the ability to overwrite control plane certs with the certgen command by using a new command flag (-o).
 
 # Enhancements that improve performance.
 performance improvements: |
