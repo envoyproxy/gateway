@@ -43,6 +43,9 @@ func validateSecurityPolicySpec(spec *egv1a1.SecurityPolicySpec) error {
 		sum++
 	case spec.JWT != nil:
 		sum++
+		if err := ValidateJWTProvider(spec.JWT.Providers); err != nil {
+			errs = append(errs, err)
+		}
 	case spec.Authorization != nil:
 		sum++
 	case spec.BasicAuth != nil:
@@ -59,10 +62,6 @@ func validateSecurityPolicySpec(spec *egv1a1.SecurityPolicySpec) error {
 	// Return early if any errors exist.
 	if len(errs) != 0 {
 		return utilerrors.NewAggregate(errs)
-	}
-
-	if err := ValidateJWTProvider(spec.JWT.Providers); err != nil {
-		errs = append(errs, err)
 	}
 
 	return utilerrors.NewAggregate(errs)
