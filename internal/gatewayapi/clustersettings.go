@@ -11,7 +11,6 @@ import (
 	"math"
 	"math/big"
 	"net/http"
-	"reflect"
 	"strings"
 	"time"
 
@@ -77,7 +76,7 @@ func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatur
 	// If nothing was set in any of the above calls, return nil instead of an empty
 	// container
 	var empty ir.TrafficFeatures
-	if reflect.DeepEqual(empty, *ret) {
+	if empty == *ret {
 		ret = nil
 	}
 
