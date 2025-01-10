@@ -91,6 +91,11 @@ type Translator struct {
 
 	// WasmCache is the cache for Wasm modules.
 	WasmCache wasm.Cache
+
+	// ListenerPortShiftDisabled disables translating the
+	// gateway listener port into a non privileged port
+	// and reuses the specified value.
+	ListenerPortShiftDisabled bool
 }
 
 type TranslateResult struct {
