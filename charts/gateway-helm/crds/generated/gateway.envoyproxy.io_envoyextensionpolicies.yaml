@@ -928,7 +928,12 @@ spec:
                             that the external processor can write to
                           items:
                             type: string
+                          maxItems: 8
                           type: array
+                          x-kubernetes-validations:
+                          - message: writableNamespaces cannot contain well-known
+                              Envoy HTTP filter namespaces
+                            rule: self.all(f, !f.startsWith('envoy.filters.http'))
                       type: object
                     processingMode:
                       description: |-

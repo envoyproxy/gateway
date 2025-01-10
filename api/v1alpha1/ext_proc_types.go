@@ -102,6 +102,8 @@ type ExtProcMetadata struct {
 
 	// WritableNamespaces are metadata namespaces that the external processor can write to
 	//
+	// +kubebuilder:validation:XValidation:rule="self.all(f, !f.startsWith('envoy.filters.http'))",message="writableNamespaces cannot contain well-known Envoy HTTP filter namespaces"
+	// +kubebuilder:validation:MaxItems=8
 	// +optional
 	WritableNamespaces []string `json:"writableNamespaces,omitempty"`
 }
