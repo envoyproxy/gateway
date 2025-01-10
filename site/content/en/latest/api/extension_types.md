@@ -1671,33 +1671,16 @@ _Appears in:_
 
 
 ExtractFrom is where to fetch the key from the coming request.
-Only one of header, queryParam or cookie is supposed to be specified.
+Only one of header, param or cookie is supposed to be specified.
 
 _Appears in:_
 - [APIKeyAuth](#apikeyauth)
 
 | Field | Type | Required | Description |
 | ---   | ---  | ---      | ---         |
-| `type` | _[ExtractFromType](#extractfromtype)_ |  true  | Type is the type of the source to fetch the key from.<br />It can be either Header, QueryParam or Cookie, and the corresponding field must be specified. |
-| `header` | _string_ |  false  | Header is the name of the header to fetch the key from.<br />This field is marked as optional, but should be specified if the type is Header. |
-| `queryParam` | _string_ |  false  | QueryParam is the name of the query parameter to fetch the key from.<br />This field is marked as optional, but should be specified if the type is QueryParam. |
-| `cookie` | _string_ |  false  | Cookie is the name of the cookie to fetch the key from.<br />This field is marked as optional, but should be specified if the type is Cookie. |
-
-
-#### ExtractFromType
-
-_Underlying type:_ _string_
-
-
-
-_Appears in:_
-- [ExtractFrom](#extractfrom)
-
-| Value | Description |
-| ----- | ----------- |
-| `Header` |  | 
-| `QueryParam` |  | 
-| `Cookie` |  | 
+| `headers` | _string array_ |  false  | Headers is the names of the header to fetch the key from.<br />If multiple headers are specified, envoy will look for the api key in the order of the list.<br />This field is optional, but only one of headers, params or cookies is supposed to be specified. |
+| `params` | _string array_ |  false  | Params is the names of the query parameter to fetch the key from.<br />If multiple params are specified, envoy will look for the api key in the order of the list.<br />This field is optional, but only one of headers, params or cookies is supposed to be specified. |
+| `cookies` | _string array_ |  false  | Cookies is the names of the cookie to fetch the key from.<br />If multiple cookies are specified, envoy will look for the api key in the order of the list.<br />This field is optional, but only one of headers, params or cookies is supposed to be specified. |
 
 
 #### FQDNEndpoint

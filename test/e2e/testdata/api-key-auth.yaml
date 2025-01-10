@@ -71,8 +71,7 @@ spec:
     name: http-with-api-key-auth-header
   apiKeyAuth:
     extractFrom:
-    - header: "X-API-KEY"
-      type: Header
+    - headers: ["X-API-KEY"]
     credentialRefs:
       name: "api-key-auth-users-secret-1"
 ---
@@ -88,8 +87,7 @@ spec:
     name: http-with-api-key-auth-cookie
   apiKeyAuth:
     extractFrom:
-    - cookie: "X-API-KEY"
-      type: Cookie
+    - cookies: ["X-API-KEY"]
     credentialRefs:
       name: "api-key-auth-users-secret-1"
 
@@ -106,7 +104,6 @@ spec:
     name: http-with-api-key-auth-query
   apiKeyAuth:
     extractFrom:
-    - queryParam: "X-API-KEY"
-      type: QueryParams
+    - params: ["X-API-KEY"]
     credentialRefs:
       name: "api-key-auth-users-secret-1"

@@ -11,14 +11,6 @@ import (
 
 const APIKeysSecretKey = "credentials"
 
-type ExtractFromType string
-
-const (
-	ExtractFromHeader     ExtractFromType = "Header"
-	ExtractFromQueryParam ExtractFromType = "QueryParam"
-	ExtractFromCookie     ExtractFromType = "Cookie"
-)
-
 // APIKeyAuth defines the configuration for the API Key Authentication.
 type APIKeyAuth struct {
 	// CredentialRefs is the Kubernetes secret which contains the API keys.
@@ -33,30 +25,26 @@ type APIKeyAuth struct {
 }
 
 // ExtractFrom is where to fetch the key from the coming request.
-// Only one of header, queryParam or cookie is supposed to be specified.
+// Only one of header, param or cookie is supposed to be specified.
 //
-// +kubebuilder:validation:XValidation:rule="(self.type == 'Header' && has(self.header))",message="When 'type' is 'Header', 'header' must be set."
-// +kubebuilder:validation:XValidation:rule="(self.type == 'QueryParam' && has(self.queryParam))",message="When 'type' is 'QueryParam', 'queryParam' must be set."
-// +kubebuilder:validation:XValidation:rule="(self.type == 'Cookie' && has(self.cookie))",message="When 'type' is 'Cookie', 'cookie' must be set."
+// +kubebuilder:validation:XValidation:rule="(((size(self.headers) > 0 ? 1 : 0) + (size(self.params) > 0 ? 1 : 0) + (size(self.cookies) > 0 ? 1 : 0)) == 1)",message="one of headers, params or cookies must be specified"
 type ExtractFrom struct {
-	// Type is the type of the source to fetch the key from.
-	// It can be either Header, QueryParam or Cookie, and the corresponding field must be specified.
-	//
-	// +kubebuilder:validation:Enum=Header;QueryParam;Cookie
-	Type ExtractFromType `json:"type"`
-	// Header is the name of the header to fetch the key from.
-	// This field is marked as optional, but should be specified if the type is Header.
+	// Headers is the names of the header to fetch the key from.
+	// If multiple headers are specified, envoy will look for the api key in the order of the list.
+	// This field is optional, but only one of headers, params or cookies is supposed to be specified.
 	//
 	// +optional
-	Header *string `json:"header,omitempty"`
-	// QueryParam is the name of the query parameter to fetch the key from.
-	// This field is marked as optional, but should be specified if the type is QueryParam.
+	Headers []string `json:"headers,omitempty"`
+	// Params is the names of the query parameter to fetch the key from.
+	// If multiple params are specified, envoy will look for the api key in the order of the list.
+	// This field is optional, but only one of headers, params or cookies is supposed to be specified.
 	//
 	// +optional
-	QueryParam *string `json:"queryParam,omitempty"`
-	// Cookie is the name of the cookie to fetch the key from.
-	// This field is marked as optional, but should be specified if the type is Cookie.
+	Params []string `json:"params,omitempty"`
+	// Cookies is the names of the cookie to fetch the key from.
+	// If multiple cookies are specified, envoy will look for the api key in the order of the list.
+	// This field is optional, but only one of headers, params or cookies is supposed to be specified.
 	//
 	// +optional
-	Cookie *string `json:"cookie,omitempty"`
+	Cookies []string `json:"cookies,omitempty"`
 }

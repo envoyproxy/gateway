@@ -23,6 +23,7 @@
               key: key1
             keySources:
             - header: X-API-KEY
+            - header: X-API-KEY-2
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

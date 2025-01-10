@@ -117,43 +117,37 @@ spec:
                     items:
                       description: |-
                         ExtractFrom is where to fetch the key from the coming request.
-                        Only one of header, queryParam or cookie is supposed to be specified.
+                        Only one of header, param or cookie is supposed to be specified.
                       properties:
-                        cookie:
+                        cookies:
                           description: |-
-                            Cookie is the name of the cookie to fetch the key from.
-                            This field is marked as optional, but should be specified if the type is Cookie.
-                          type: string
-                        header:
+                            Cookies is the names of the cookie to fetch the key from.
+                            If multiple cookies are specified, envoy will look for the api key in the order of the list.
+                            This field is optional, but only one of headers, params or cookies is supposed to be specified.
+                          items:
+                            type: string
+                          type: array
+                        headers:
                           description: |-
-                            Header is the name of the header to fetch the key from.
-                            This field is marked as optional, but should be specified if the type is Header.
-                          type: string
-                        queryParam:
+                            Headers is the names of the header to fetch the key from.
+                            If multiple headers are specified, envoy will look for the api key in the order of the list.
+                            This field is optional, but only one of headers, params or cookies is supposed to be specified.
+                          items:
+                            type: string
+                          type: array
+                        params:
                           description: |-
-                            QueryParam is the name of the query parameter to fetch the key from.
-                            This field is marked as optional, but should be specified if the type is QueryParam.
-                          type: string
-                        type:
-                          description: |-
-                            Type is the type of the source to fetch the key from.
-                            It can be either Header, QueryParam or Cookie, and the corresponding field must be specified.
-                          enum:
-                          - Header
-                          - QueryParam
-                          - Cookie
-                          type: string
-                      required:
-                      - type
+                            Params is the names of the query parameter to fetch the key from.
+                            If multiple params are specified, envoy will look for the api key in the order of the list.
+                            This field is optional, but only one of headers, params or cookies is supposed to be specified.
+                          items:
+                            type: string
+                          type: array
                       type: object
                       x-kubernetes-validations:
-                      - message: When 'type' is 'Header', 'header' must be set.
-                        rule: (self.type == 'Header' && has(self.header))
-                      - message: When 'type' is 'QueryParam', 'queryParam' must be
-                          set.
-                        rule: (self.type == 'QueryParam' && has(self.queryParam))
-                      - message: When 'type' is 'Cookie', 'cookie' must be set.
-                        rule: (self.type == 'Cookie' && has(self.cookie))
+                      - message: one of headers, params or cookies must be specified
+                        rule: '(((size(self.headers) > 0 ? 1 : 0) + (size(self.params)
+                          > 0 ? 1 : 0) + (size(self.cookies) > 0 ? 1 : 0)) == 1)'
                     type: array
                 required:
                 - credentialRefs

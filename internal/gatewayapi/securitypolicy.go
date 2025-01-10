@@ -905,20 +905,11 @@ func (t *Translator) buildAPIKeyAuth(
 
 	extractFrom := make([]*ir.ExtractFrom, 0, len(policy.Spec.APIKeyAuth.ExtractFrom))
 	for _, e := range policy.Spec.APIKeyAuth.ExtractFrom {
-		switch e.Type {
-		case egv1a1.ExtractFromHeader:
-			extractFrom = append(extractFrom, &ir.ExtractFrom{
-				Header: ptr.Deref(e.Header, ""),
-			})
-		case egv1a1.ExtractFromCookie:
-			extractFrom = append(extractFrom, &ir.ExtractFrom{
-				Cookie: ptr.Deref(e.Cookie, ""),
-			})
-		case egv1a1.ExtractFromQueryParam:
-			extractFrom = append(extractFrom, &ir.ExtractFrom{
-				QueryParam: ptr.Deref(e.QueryParam, ""),
-			})
-		}
+		extractFrom = append(extractFrom, &ir.ExtractFrom{
+			Headers: e.Headers,
+			Cookies: e.Cookies,
+			Params:  e.Params,
+		})
 	}
 
 	return &ir.APIKeyAuth{

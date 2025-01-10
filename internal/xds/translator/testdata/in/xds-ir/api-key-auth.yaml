@@ -31,11 +31,10 @@ http:
     security:
       apiKeyAuth:
         name: securitypolicy/default/policy-for-http-route-1
-        credentialRefs:
+        credentials:
           client-1: "a2V5MQ=="
         extractFrom:
-        - header: "X-API-KEY"
-          type: Header
+        - headers: ["X-API-KEY", "X-API-KEY-2"]
   - name: httproute/default/httproute-1/rule/1/match/0/www_foo_com
     backendWeights:
     hostname: www.foo.com
@@ -58,11 +57,10 @@ http:
     security:
       apiKeyAuth:
         name: securitypolicy/default/policy-for-http-route-1
-        credentialRefs:
+        credentials:
           client-2: "a2V5Mg=="
         extractFrom:
-        - queryParam: "X-API-KEY"
-          type: QueryParams
+        - params: ["X-API-KEY", "X-API-KEY-2"]
   - name: httproute/default/httproute-2/rule/0/match/0/www_bar_com
     hostname: www.bar.com
     isHTTP2: false
@@ -85,8 +83,35 @@ http:
     security:
       apiKeyAuth:
         name: securitypolicy/default/policy-for-http-route-1
-        credentialRefs:
+        credentials:
           client-3: "a2V5Mw=="
         extractFrom:
-        - cookie: "X-API-KEY"
-          type: Cookie
+        - cookies: ["X-API-KEY", "X-API-KEY-2"]
+  - name: httproute/default/httproute-2/rule/0/match/0/www_bar_com
+    hostname: www.bar.com
+    isHTTP2: false
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /bar2
+    backendWeights:
+      invalid: 0
+      valid: 0
+    destination:
+      name: httproute/default/httproute-2/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        protocol: HTTP
+        weight: 1
+    security:
+      apiKeyAuth:
+        name: securitypolicy/default/policy-for-http-route-1
+        credentials:
+          client-3: "a2V5Mw=="
+        extractFrom: # multiple kind of extractFrom with multiple values
+        - cookies: ["X-API-KEY", "X-API-KEY-2"]
+        - headers: ["X-API-KEY", "X-API-KEY-2"]
+        - params: ["X-API-KEY", "X-API-KEY-2"]

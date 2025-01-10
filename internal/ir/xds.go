@@ -1014,18 +1014,24 @@ type APIKeyAuth struct {
 //
 // +k8s:deepcopy-gen=true
 type ExtractFrom struct {
-	// Header is the name of the header to fetch the key from.
-	// If multiple header values are present, the first one will be
-	// used. If the header value starts with 'Bearer ', this prefix will be stripped to get the
-	// key value.
-	// This field is optional, but only one of header, queryParam or cookie is supposed to be specified.
-	Header string `json:"header,omitempty"`
-	// QueryParam is the name of the query parameter to fetch the key from.
-	// This field is optional, but only one of header, queryParam or cookie is supposed to be specified.
-	QueryParam string `json:"queryParam,omitempty"`
-	// Cookie is the name of the cookie to fetch the key from.
-	// This field is optional, but only one of header, queryParam or cookie is supposed to be specified.
-	Cookie string `json:"cookie,omitempty"`
+	// Headers is the names of the header to fetch the key from.
+	// If multiple headers are specified, envoy will look for the api key in the order of the list.
+	// This field is optional, but only one of headers, params or cookies is supposed to be specified.
+	//
+	// +optional
+	Headers []string `json:"headers,omitempty"`
+	// Params is the names of the query parameter to fetch the key from.
+	// If multiple params are specified, envoy will look for the api key in the order of the list.
+	// This field is optional, but only one of headers, params or cookies is supposed to be specified.
+	//
+	// +optional
+	Params []string `json:"params,omitempty"`
+	// Cookies is the names of the cookie to fetch the key from.
+	// If multiple cookies are specified, envoy will look for the api key in the order of the list.
+	// This field is optional, but only one of headers, params or cookies is supposed to be specified.
+	//
+	// +optional
+	Cookies []string `json:"cookies,omitempty"`
 }
 
 // ExtAuth defines the schema for the external authorization.
