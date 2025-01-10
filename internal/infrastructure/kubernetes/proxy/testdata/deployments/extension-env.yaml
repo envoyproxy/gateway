@@ -340,6 +340,8 @@ spec:
           successThreshold: 1
           timeoutSeconds: 1
         resources:
+          limits:
+            memory: 32Mi
           requests:
             cpu: 10m
             memory: 32Mi
