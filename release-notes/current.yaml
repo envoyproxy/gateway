@@ -8,6 +8,8 @@ breaking changes: |
   Outlier detection (passive health check) is now disabled by default.
   refer to https://gateway.envoyproxy.io/docs/api/extension_types/#backendtrafficpolicy for working with passive health checks.
   Envoy Gateway treats errors in calls to an extension service as fail-closed by default. Any error returned from the extension server will replace the affected resource with an "Internal Server Error" immediate response. The previous behavior can be enabled by setting the `failOpen` field to `true` in the extension service configuration.
+  Envoy Gateway now return a 503 response when a ClientTrafficPolicy translation fails for HTTP/GRPC routes, and send
+  client requests to an empty dummy cluster when a ClientTrafficPolicy translation fails for TCP routes.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
