@@ -938,6 +938,9 @@ func defaultResponseOverrideRuleName(policy *egv1a1.BackendTrafficPolicy, index 
 }
 
 func buildCompression(compression []*egv1a1.Compression) []*ir.Compression {
+	if compression == nil {
+		return nil
+	}
 	irCompression := make([]*ir.Compression, 0, len(compression))
 	for _, c := range compression {
 		irCompression = append(irCompression, &ir.Compression{
