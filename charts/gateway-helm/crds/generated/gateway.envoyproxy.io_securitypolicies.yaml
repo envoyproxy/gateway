@@ -144,10 +144,6 @@ spec:
                             type: string
                           type: array
                       type: object
-                      x-kubernetes-validations:
-                      - message: one of headers, params or cookies must be specified
-                        rule: '(((size(self.headers) > 0 ? 1 : 0) + (size(self.params)
-                          > 0 ? 1 : 0) + (size(self.cookies) > 0 ? 1 : 0)) == 1)'
                     type: array
                 required:
                 - credentialRefs
