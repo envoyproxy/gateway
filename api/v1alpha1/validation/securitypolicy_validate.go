@@ -48,6 +48,8 @@ func validateSecurityPolicySpec(spec *egv1a1.SecurityPolicySpec) error {
 		}
 	case spec.Authorization != nil:
 		sum++
+	case spec.APIKeyAuth != nil:
+		sum++
 	case spec.BasicAuth != nil:
 		sum++
 	case spec.ExtAuth != nil:
@@ -64,11 +66,26 @@ func validateSecurityPolicySpec(spec *egv1a1.SecurityPolicySpec) error {
 		return utilerrors.NewAggregate(errs)
 	}
 
-	if err := ValidateJWTProvider(spec.JWT.Providers); err != nil {
+	if err := ValidateAPIKeyAuth(spec.APIKeyAuth); err != nil {
 		errs = append(errs, err)
 	}
-
 	return utilerrors.NewAggregate(errs)
+}
+
+func ValidateAPIKeyAuth(p *egv1a1.APIKeyAuth) error {
+	if p == nil {
+		return nil
+	}
+
+	for _, keySource := range p.ExtractFrom {
+		// only one of headers, params or cookies is supposed to be specified.
+		if len(keySource.Headers) > 0 && len(keySource.Params) > 0 ||
+			len(keySource.Headers) > 0 && len(keySource.Cookies) > 0 ||
+			len(keySource.Params) > 0 && len(keySource.Cookies) > 0 {
+			return errors.New("only one of headers, params or cookies must be specified")
+		}
+	}
+	return nil
 }
 
 // ValidateJWTProvider validates the provided JWT authentication configuration.

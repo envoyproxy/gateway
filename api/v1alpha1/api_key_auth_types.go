@@ -26,8 +26,6 @@ type APIKeyAuth struct {
 
 // ExtractFrom is where to fetch the key from the coming request.
 // Only one of header, param or cookie is supposed to be specified.
-//
-// +kubebuilder:validation:XValidation:rule="(((size(self.headers) > 0 ? 1 : 0) + (size(self.params) > 0 ? 1 : 0) + (size(self.cookies) > 0 ? 1 : 0)) == 1)",message="one of headers, params or cookies must be specified"
 type ExtractFrom struct {
 	// Headers is the names of the header to fetch the key from.
 	// If multiple headers are specified, envoy will look for the api key in the order of the list.
