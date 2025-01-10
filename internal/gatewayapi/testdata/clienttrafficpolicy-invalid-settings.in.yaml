@@ -45,6 +45,23 @@ gateways:
       allowedRoutes:
         namespaces:
           from: Same
+    - name: tcp-1
+      protocol: TLS
+      port: 8443
+      allowedRoutes:
+        namespaces:
+          from: Same
+      tls:
+        mode: Terminate
+        certificateRefs:
+        - name: tls-secret-1
+          namespace: default
+    - name: tcp-2
+      protocol: TCP
+      port: 5000
+      allowedRoutes:
+        namespaces:
+          from: Same
 httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
@@ -84,6 +101,35 @@ httpRoutes:
     - namespace: default
       name: gateway-1
       sectionName: http-2
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+tcpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TCPRoute
+  metadata:
+    name: tcp-route-1
+    namespace: default
+  spec:
+    parentRefs:
+    - namespace: default
+      name: gateway-1
+      sectionName: tcp-1
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TCPRoute
+  metadata:
+    name: tcp-route-1
+    namespace: default
+  spec:
+    parentRefs:
+    - namespace: default
+      name: gateway-1
+      sectionName: tcp-2
     rules:
     - backendRefs:
       - name: service-1
