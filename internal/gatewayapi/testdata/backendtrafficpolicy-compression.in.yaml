@@ -46,6 +46,4 @@ backendTrafficPolicies:
         name: httproute-1
       compression:
         - type: Brotli
-          brotli: {}
         - type: Gzip
-          gzip: {}

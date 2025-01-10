@@ -7,10 +7,8 @@ backendTrafficPolicies:
     namespace: default
   spec:
     compression:
-    - brotli: {}
-      type: Brotli
-    - gzip: {}
-      type: Gzip
+    - type: Brotli
+    - type: Gzip
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute

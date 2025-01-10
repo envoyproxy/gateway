@@ -45,6 +45,4 @@ spec:
     name: compression
   compression:
     - type: Brotli
-      brotli: {}
     - type: Gzip
-      gzip: {}
