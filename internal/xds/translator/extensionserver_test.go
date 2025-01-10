@@ -202,6 +202,18 @@ func (t *testingExtensionServer) PostHTTPListenerModify(_ context.Context, req *
 
 // PostTranslateModifyHook inserts and overrides some clusters/secrets
 func (t *testingExtensionServer) PostTranslateModify(_ context.Context, req *pb.PostTranslateModifyRequest) (*pb.PostTranslateModifyResponse, error) {
+	for _, cluster := range req.Clusters {
+		// This simulates an extension server that returns an error. It allows verifying that fail-close is working.
+		if edsConfig := cluster.GetEdsClusterConfig(); edsConfig != nil {
+			if strings.Contains(edsConfig.ServiceName, "fail-close-error") {
+				return &pb.PostTranslateModifyResponse{
+					Clusters: req.Clusters,
+					Secrets:  req.Secrets,
+				}, fmt.Errorf("cluster hook resource error: %s", edsConfig.ServiceName)
+			}
+		}
+	}
+
 	extensionSvcEndpoint := &endpointV3.LbEndpoint_Endpoint{
 		Endpoint: &endpointV3.Endpoint{
 			Address: &coreV3.Address{

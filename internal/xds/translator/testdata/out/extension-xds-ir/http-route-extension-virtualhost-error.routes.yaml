@@ -1,0 +1,12 @@
+- ignorePortInHostMatching: true
+  name: extension-post-xdsvirtualhost-hook-error
+  virtualHosts:
+  - domains:
+    - '*'
+    name: extension-post-xdsvirtualhost-hook-error/*
+    routes:
+    - directResponse:
+        status: 500
+      match:
+        prefix: /
+      name: error_route

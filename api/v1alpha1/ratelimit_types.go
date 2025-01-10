@@ -62,6 +62,7 @@ type LocalRateLimit struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
+	// +kubebuilder:validation:XValidation:rule="self.all(foo, !has(foo.cost) || !has(foo.cost.response))", message="response cost is not supported for Local Rate Limits"
 	Rules []RateLimitRule `json:"rules"`
 }
 
@@ -91,6 +92,91 @@ type RateLimitRule struct {
 	// 429 HTTP status code is sent back to the client when
 	// the selected requests have reached the limit.
 	Limit RateLimitValue `json:"limit"`
+	// Cost specifies the cost of requests and responses for the rule.
+	//
+	// This is optional and if not specified, the default behavior is to reduce the rate limit counters by 1 on
+	// the request path and do not reduce the rate limit counters on the response path.
+	//
+	// +optional
+	// +notImplementedHide
+	Cost *RateLimitCost `json:"cost,omitempty"`
+}
+
+type RateLimitCost struct {
+	// Request specifies the number to reduce the rate limit counters
+	// on the request path. If this is not specified, the default behavior
+	// is to reduce the rate limit counters by 1.
+	//
+	// When Envoy receives a request that matches the rule, it tries to reduce the
+	// rate limit counters by the specified number. If the counter doesn't have
+	// enough capacity, the request is rate limited.
+	//
+	// +optional
+	// +notImplementedHide
+	Request *RateLimitCostSpecifier `json:"request,omitempty"`
+	// Response specifies the number to reduce the rate limit counters
+	// after the response is sent back to the client or the request stream is closed.
+	//
+	// The cost is used to reduce the rate limit counters for the matching requests.
+	// Since the reduction happens after the request stream is complete, the rate limit
+	// won't be enforced for the current request, but for the subsequent matching requests.
+	//
+	// This is optional and if not specified, the rate limit counters are not reduced
+	// on the response path.
+	//
+	// Currently, this is only supported for HTTP Global Rate Limits.
+	//
+	// +optional
+	// +notImplementedHide
+	Response *RateLimitCostSpecifier `json:"response,omitempty"`
+}
+
+// RateLimitCostSpecifier specifies where the Envoy retrieves the number to reduce the rate limit counters.
+//
+// +kubebuilder:validation:XValidation:rule="!(has(self.number) && has(self.metadata))",message="only one of number or metadata can be specified"
+type RateLimitCostSpecifier struct {
+	// From specifies where to get the rate limit cost. Currently, only "Number" and "Metadata" are supported.
+	//
+	// +kubebuilder:validation:Required
+	From RateLimitCostFrom `json:"from"`
+	// Number specifies the fixed usage number to reduce the rate limit counters.
+	// Using zero can be used to only check the rate limit counters without reducing them.
+	//
+	// +optional
+	// +notImplementedHide
+	Number *uint64 `json:"number,omitempty"`
+	// Metadata specifies the per-request metadata to retrieve the usage number from.
+	//
+	// +optional
+	// +notImplementedHide
+	Metadata *RateLimitCostMetadata `json:"metadata,omitempty"`
+}
+
+// RateLimitCostFrom specifies the source of the rate limit cost.
+// Valid RateLimitCostType values are "Number" and "Metadata".
+//
+// +kubebuilder:validation:Enum=Number;Metadata
+type RateLimitCostFrom string
+
+const (
+	// RateLimitCostFromNumber specifies the rate limit cost to be a fixed number.
+	RateLimitCostFromNumber RateLimitCostFrom = "Number"
+	// RateLimitCostFromMetadata specifies the rate limit cost to be retrieved from the per-request dynamic metadata.
+	RateLimitCostFromMetadata RateLimitCostFrom = "Metadata"
+	// TODO: add headers, etc. Anything that can be represented in "Format" can be added here.
+	// 	https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format
+)
+
+// RateLimitCostMetadata specifies the filter metadata to retrieve the usage number from.
+type RateLimitCostMetadata struct {
+	// Namespace is the namespace of the dynamic metadata.
+	//
+	// +kubebuilder:validation:Required
+	Namespace string `json:"namespace"`
+	// Key is the key to retrieve the usage number from the filter metadata.
+	//
+	// +kubebuilder:validation:Required
+	Key string `json:"key"`
 }
 
 // RateLimitSelectCondition specifies the attributes within the traffic flow that can

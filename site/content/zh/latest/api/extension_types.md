@@ -1617,6 +1617,7 @@ _Appears in:_
 | `policyResources` | _[GroupVersionKind](#groupversionkind) array_ |  false  | PolicyResources defines the set of K8S resources the extension server will handle<br />as directly attached GatewayAPI policies |
 | `hooks` | _[ExtensionHooks](#extensionhooks)_ |  true  | Hooks defines the set of hooks the extension supports |
 | `service` | _[ExtensionService](#extensionservice)_ |  true  | Service defines the configuration of the extension service that the Envoy<br />Gateway Control Plane will call through extension hooks. |
+| `failOpen` | _boolean_ |  false  | FailOpen defines if Envoy Gateway should ignore errors returned from the Extension Service hooks.<br />The default is false, which means Envoy Gateway will fail closed if the Extension Service returns an error.<br /><br />Fail-close means that if the Extension Service hooks return an error, the relevant route/listener/resource<br />will be replaced with a default configuration returning Internal Server Error (HTTP 500).<br /><br />Fail-open means that if the Extension Service hooks return an error, no changes will be applied to the<br />source of the configuration which was sent to the extension server. |
 
 
 #### ExtensionService
@@ -3394,6 +3395,64 @@ _Appears in:_
 | `timeout` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  | Timeout specifies the timeout period for the proxy to access the ratelimit server<br />If not set, timeout is 20ms. |
 | `failClosed` | _boolean_ |  true  | FailClosed is a switch used to control the flow of traffic<br />when the response from the ratelimit server cannot be obtained.<br />If FailClosed is false, let the traffic pass,<br />otherwise, don't let the traffic pass and return 500.<br />If not set, FailClosed is False. |
 | `telemetry` | _[RateLimitTelemetry](#ratelimittelemetry)_ |  false  | Telemetry defines telemetry configuration for RateLimit. |
+
+
+#### RateLimitCost
+
+
+
+
+
+_Appears in:_
+- [RateLimitRule](#ratelimitrule)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+
+
+#### RateLimitCostFrom
+
+_Underlying type:_ _string_
+
+RateLimitCostFrom specifies the source of the rate limit cost.
+Valid RateLimitCostType values are "Number" and "Metadata".
+
+_Appears in:_
+- [RateLimitCostSpecifier](#ratelimitcostspecifier)
+
+| Value | Description |
+| ----- | ----------- |
+| `Number` | RateLimitCostFromNumber specifies the rate limit cost to be a fixed number.<br /> | 
+| `Metadata` | RateLimitCostFromMetadata specifies the rate limit cost to be retrieved from the per-request dynamic metadata.<br /> | 
+
+
+#### RateLimitCostMetadata
+
+
+
+RateLimitCostMetadata specifies the filter metadata to retrieve the usage number from.
+
+_Appears in:_
+- [RateLimitCostSpecifier](#ratelimitcostspecifier)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `namespace` | _string_ |  true  | Namespace is the namespace of the dynamic metadata. |
+| `key` | _string_ |  true  | Key is the key to retrieve the usage number from the filter metadata. |
+
+
+#### RateLimitCostSpecifier
+
+
+
+RateLimitCostSpecifier specifies where the Envoy retrieves the number to reduce the rate limit counters.
+
+_Appears in:_
+- [RateLimitCost](#ratelimitcost)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `from` | _[RateLimitCostFrom](#ratelimitcostfrom)_ |  true  | From specifies where to get the rate limit cost. Currently, only "Number" and "Metadata" are supported. |
 
 
 #### RateLimitDatabaseBackend
