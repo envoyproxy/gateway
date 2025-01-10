@@ -510,11 +510,9 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 
 		// Early return if got any errors
 		if errs != nil {
-			if errs != nil {
-				// Remove all TCP routes if there are any errors
-				// The listener will still be created, but any client traffic will be forwarded to the default empty cluster
-				tcpIR.Routes = nil
-			}
+			// Remove all TCP routes if there are any errors
+			// The listener will still be created, but any client traffic will be forwarded to the default empty cluster
+			tcpIR.Routes = nil
 			return errs
 		}
 
