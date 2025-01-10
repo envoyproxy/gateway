@@ -1280,9 +1280,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 		} else {
 			backendIps := resources.GetServiceImport(backendNamespace, string(backendRef.Name)).Spec.IPs
 			for _, ip := range backendIps {
-				ep := ir.NewDestEndpoint(
-					ip,
-					uint32(*backendRef.Port))
+				ep := ir.NewDestEndpoint(ip, uint32(*backendRef.Port), false)
 				endpoints = append(endpoints, ep)
 			}
 		}
@@ -1412,9 +1410,7 @@ func (t *Translator) processServiceDestinationSetting(
 		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
 	} else {
 		// Fall back to Service ClusterIP routing
-		ep := ir.NewDestEndpoint(
-			service.Spec.ClusterIP,
-			uint32(*backendRef.Port))
+		ep := ir.NewDestEndpoint(service.Spec.ClusterIP, uint32(*backendRef.Port), false)
 		endpoints = append(endpoints, ep)
 	}
 
@@ -1625,15 +1621,25 @@ func getIREndpointsFromEndpointSlice(endpointSlice *discoveryv1.EndpointSlice, p
 	for _, endpoint := range endpointSlice.Endpoints {
 		for _, endpointPort := range endpointSlice.Ports {
 			// Check if the endpoint port matches the service port
-			// and if endpoint is Ready
-			if *endpointPort.Name == portName &&
-				*endpointPort.Protocol == portProtocol &&
-				// Unknown state (nil) should be interpreted as Ready, see https://pkg.go.dev/k8s.io/api/discovery/v1#EndpointConditions
-				(endpoint.Conditions.Ready == nil || *endpoint.Conditions.Ready) {
+			if *endpointPort.Name != portName || *endpointPort.Protocol != portProtocol {
+				continue
+			}
+			conditions := endpoint.Conditions
+			// Unknown Serving/Terminating (nil) should fall-back to Ready, see https://pkg.go.dev/k8s.io/api/discovery/v1#EndpointConditions
+			if conditions.Serving != nil && conditions.Terminating != nil {
+				// Check if the endpoint is serving
+				if !*conditions.Serving {
+					continue
+				}
+				// Drain the endpoint if it is being terminated
+				draining := *conditions.Terminating
 				for _, address := range endpoint.Addresses {
-					ep := ir.NewDestEndpoint(
-						address,
-						uint32(*endpointPort.Port))
+					ep := ir.NewDestEndpoint(address, uint32(*endpointPort.Port), draining)
+					endpoints = append(endpoints, ep)
+				}
+			} else if conditions.Ready == nil || *conditions.Ready {
+				for _, address := range endpoint.Addresses {
+					ep := ir.NewDestEndpoint(address, uint32(*endpointPort.Port), false)
 					endpoints = append(endpoints, ep)
 				}
 			}

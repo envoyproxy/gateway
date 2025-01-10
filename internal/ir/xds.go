@@ -1414,6 +1414,8 @@ type DestinationEndpoint struct {
 	Port uint32 `json:"port" yaml:"port"`
 	// Path refers to the Unix Domain Socket
 	Path *string `json:"path,omitempty" yaml:"path,omitempty"`
+	// Draining is true if this endpoint should be drained
+	Draining bool `json:"draining,omitempty" yaml:"draining,omitempty"`
 }
 
 // Validate the fields within the DestinationEndpoint structure
@@ -1445,10 +1447,11 @@ func (d DestinationEndpoint) Validate() error {
 }
 
 // NewDestEndpoint creates a new DestinationEndpoint.
-func NewDestEndpoint(host string, port uint32) *DestinationEndpoint {
+func NewDestEndpoint(host string, port uint32, draining bool) *DestinationEndpoint {
 	return &DestinationEndpoint{
-		Host: host,
-		Port: port,
+		Host:     host,
+		Port:     port,
+		Draining: draining,
 	}
 }
 
