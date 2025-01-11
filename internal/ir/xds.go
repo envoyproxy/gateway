@@ -997,10 +997,6 @@ type BasicAuth struct {
 //
 // +k8s:deepcopy-gen=true
 type APIKeyAuth struct {
-	// Name is a unique name for an APIKeyAuth configuration.
-	// The xds translator only generates one API key filter for each unique name.
-	Name string `json:"name" yaml:"name"`
-
 	// The API key to be used for authentication.
 	// Key is the client id and the value is the API key to be used for authentication.
 	Credentials map[string]PrivateBytes `json:"credentials,omitempty" yaml:"credentials,omitempty"`

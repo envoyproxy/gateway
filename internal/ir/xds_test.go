@@ -1402,7 +1402,7 @@ func TestRedaction(t *testing.T) {
 				`"routes":[{` +
 				`"name":"","hostname":"","isHTTP2":false,"security":{` +
 				`"oidc":{"name":"","provider":{},"clientID":"","clientSecret":"[redacted]","hmacSecret":"[redacted]"},` +
-				`"apiKeyAuth":{"name":"","credentials":{"client-id":"[redacted]"},"extractFrom":null},` +
+				`"apiKeyAuth":{"credentials":{"client-id":"[redacted]"},"extractFrom":null},` +
 				`"basicAuth":{"name":"","users":"[redacted]"}` +
 				`}}],` +
 				`"isHTTP2":false,"path":{"mergeSlashes":false,"escapedSlashesAction":""}}]}`,

@@ -913,7 +913,6 @@ func (t *Translator) buildAPIKeyAuth(
 	}
 
 	return &ir.APIKeyAuth{
-		Name:        irConfigName(policy),
 		Credentials: credentials,
 		ExtractFrom: extractFrom,
 	}, nil
