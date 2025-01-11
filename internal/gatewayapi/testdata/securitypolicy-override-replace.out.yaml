@@ -218,6 +218,10 @@ securityPolicies:
     name: policy-for-route-3
     namespace: default
   spec:
+    cors:
+      allowOrigins:
+      - http://*.example.com
+      maxAge: 16m40s
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -427,4 +431,10 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /baz
-        security: {}
+        security:
+          cors:
+            allowOrigins:
+            - distinct: false
+              name: ""
+              safeRegex: http://.*\.example\.com
+            maxAge: 16m40s

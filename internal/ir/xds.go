@@ -2678,6 +2678,12 @@ type ExtProc struct {
 	// ResponseAttributes defines which envoy attributes are provided as context to external processor
 	// when processing responses
 	ResponseAttributes []string `json:"responseAttributes,omitempty" yaml:"responseAttributes,omitempty"`
+
+	// ForwardingMetadataNamespaces are metadata namespaces forwarded to external processor
+	ForwardingMetadataNamespaces []string `json:"forwardingMetadataNamespaces,omitempty" yaml:"forwardingMetadataNamespaces,omitempty"`
+
+	// ReceivingMetadataNamespaces are metadata namespaces updatable by external processor
+	ReceivingMetadataNamespaces []string `json:"receivingMetadataNamespaces,omitempty" yaml:"receivingMetadataNamespaces,omitempty"`
 }
 
 // Wasm holds the information associated with the Wasm extensions.

@@ -144,14 +144,15 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			for _, resources := range *val {
 				// Translate and publish IRs.
 				t := &gatewayapi.Translator{
-					GatewayControllerName:   r.Server.EnvoyGateway.Gateway.ControllerName,
-					GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
-					GlobalRateLimitEnabled:  r.EnvoyGateway.RateLimit != nil,
-					EnvoyPatchPolicyEnabled: r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
-					BackendEnabled:          r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
-					Namespace:               r.Namespace,
-					MergeGateways:           gatewayapi.IsMergeGatewaysEnabled(resources),
-					WasmCache:               r.wasmCache,
+					GatewayControllerName:     r.Server.EnvoyGateway.Gateway.ControllerName,
+					GatewayClassName:          gwapiv1.ObjectName(resources.GatewayClass.Name),
+					GlobalRateLimitEnabled:    r.EnvoyGateway.RateLimit != nil,
+					EnvoyPatchPolicyEnabled:   r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
+					BackendEnabled:            r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
+					Namespace:                 r.Namespace,
+					MergeGateways:             gatewayapi.IsMergeGatewaysEnabled(resources),
+					WasmCache:                 r.wasmCache,
+					ListenerPortShiftDisabled: r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
 				}
 
 				// If an extension is loaded, pass its supported groups/kinds to the translator

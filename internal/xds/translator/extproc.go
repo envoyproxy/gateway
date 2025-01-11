@@ -149,6 +149,26 @@ func extProcConfig(extProc ir.ExtProc) *extprocv3.ExternalProcessor {
 		config.ResponseAttributes = attrs
 	}
 
+	if extProc.ForwardingMetadataNamespaces != nil || extProc.ReceivingMetadataNamespaces != nil {
+		config.MetadataOptions = &extprocv3.MetadataOptions{}
+
+		if extProc.ForwardingMetadataNamespaces != nil {
+			var ns []string
+			ns = append(ns, extProc.ForwardingMetadataNamespaces...)
+			config.MetadataOptions.ForwardingNamespaces = &extprocv3.MetadataOptions_MetadataNamespaces{
+				Untyped: ns,
+			}
+		}
+
+		if extProc.ReceivingMetadataNamespaces != nil {
+			var ns []string
+			ns = append(ns, extProc.ReceivingMetadataNamespaces...)
+			config.MetadataOptions.ReceivingNamespaces = &extprocv3.MetadataOptions_MetadataNamespaces{
+				Untyped: ns,
+			}
+		}
+	}
+
 	return config
 }
 

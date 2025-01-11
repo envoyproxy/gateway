@@ -111,6 +111,11 @@ envoyExtensionPolicies:
         port: 8000
       failOpen: true
       messageTimeout: 5s
+      metadata:
+        accessibleNamespaces:
+        - envoy.filters.http.ext_authz
+        writableNamespaces:
+        - envoy.filters.http.my_custom
       processingMode:
         request:
           attributes:
@@ -366,8 +371,12 @@ xdsIR:
                   sni: grpc-backend
                 weight: 1
             failOpen: true
+            forwardingMetadataNamespaces:
+            - envoy.filters.http.ext_authz
             messageTimeout: 5s
             name: envoyextensionpolicy/default/policy-for-gateway/extproc/0
+            receivingMetadataNamespaces:
+            - envoy.filters.http.my_custom
             requestAttributes:
             - request.path
             requestBodyProcessingMode: Buffered
