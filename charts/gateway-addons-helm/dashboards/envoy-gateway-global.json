@@ -466,7 +466,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "sum by(runner) (watchable_panics_recovered_total{runner=~\"$Runner\", namespace=\"$Namespace\"})",
+          "expr": "sum(watchable_panics_recovered_total{namespace=\"$Namespace\"})",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
