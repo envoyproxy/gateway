@@ -456,7 +456,6 @@
         "wideLayout": false
       },
       "pluginVersion": "11.0.0",
-      "repeat": "Runner",
       "repeatDirection": "v",
       "targets": [
         {
