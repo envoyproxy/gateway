@@ -743,6 +743,81 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				"spec.extProc[0].processingMode.response.attributes[2]: Invalid value: \"plugin_name\": spec.extProc[0].processingMode.response.attributes[2] in body should match '^(connection\\.|source\\.|destination\\.|request\\.|response\\.|upstream\\.|xds\\.route_)[a-z_1-9]*$'",
 			},
 		},
+		{
+			desc: "ExtProc with invalid writableNamespaces",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					ExtProc: []egv1a1.ExtProc{
+						{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-proc-service",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
+										},
+									},
+								},
+							},
+							Metadata: &egv1a1.ExtProcMetadata{
+								WritableNamespaces: []string{
+									"envoy.filters.http.rbac",
+									"com.foocorp.custom",
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.extProc[0].metadata.writableNamespaces: Invalid value: \"array\": writableNamespaces cannot contain well-known Envoy HTTP filter namespaces",
+			},
+		},
+		{
+			desc: "ExtProc with valid writableNamespaces",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					ExtProc: []egv1a1.ExtProc{
+						{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-proc-service",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
+										},
+									},
+								},
+							},
+							Metadata: &egv1a1.ExtProcMetadata{
+								WritableNamespaces: []string{
+									"envoy.foocrop.rbac",
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
 	}
 
 	for _, tc := range cases {

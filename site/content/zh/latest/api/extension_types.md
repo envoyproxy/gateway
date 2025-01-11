@@ -1516,6 +1516,7 @@ _Appears in:_
 | `messageTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | MessageTimeout is the timeout for a response to be returned from the external processor<br />Default: 200ms |
 | `failOpen` | _boolean_ |  false  | FailOpen defines if requests or responses that cannot be processed due to connectivity to the<br />external processor are terminated or passed-through.<br />Default: false |
 | `processingMode` | _[ExtProcProcessingMode](#extprocprocessingmode)_ |  false  | ProcessingMode defines how request and response body is processed<br />Default: header and body are not sent to the external processor |
+| `metadata` | _[ExtProcMetadata](#extprocmetadata)_ |  false  | Refer to Kubernetes API documentation for fields of `metadata`. |
 
 
 #### ExtProcBodyProcessingMode
@@ -1532,6 +1533,22 @@ _Appears in:_
 | `Streamed` | StreamedExtProcBodyProcessingMode will stream the body to the server in pieces as they arrive at the proxy.<br /> | 
 | `Buffered` | BufferedExtProcBodyProcessingMode will buffer the message body in memory and send the entire body at once. If the body exceeds the configured buffer limit, then the downstream system will receive an error.<br /> | 
 | `BufferedPartial` | BufferedPartialExtBodyHeaderProcessingMode will buffer the message body in memory and send the entire body in one chunk. If the body exceeds the configured buffer limit, then the body contents up to the buffer limit will be sent.<br /> | 
+
+
+#### ExtProcMetadata
+
+
+
+ExtProcMetadata defines options related to the sending and receiving of dynamic metadata to and from the
+external processor service
+
+_Appears in:_
+- [ExtProc](#extproc)
+
+| Field | Type | Required | Description |
+| ---   | ---  | ---      | ---         |
+| `accessibleNamespaces` | _string array_ |  false  | AccessibleNamespaces are metadata namespaces that are sent to the external processor as context |
+| `writableNamespaces` | _string array_ |  false  | WritableNamespaces are metadata namespaces that the external processor can write to |
 
 
 #### ExtProcProcessingMode
