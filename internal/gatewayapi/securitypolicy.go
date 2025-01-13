@@ -345,6 +345,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	var (
 		cors          *ir.CORS
 		jwt           *ir.JWT
+		apiKeyAuth    *ir.APIKeyAuth
 		basicAuth     *ir.BasicAuth
 		authorization *ir.Authorization
 		err, errs     error
@@ -363,6 +364,15 @@ func (t *Translator) translateSecurityPolicyForRoute(
 			policy,
 			resources); err != nil {
 			err = perr.WithMessage(err, "BasicAuth")
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	if policy.Spec.APIKeyAuth != nil {
+		if apiKeyAuth, err = t.buildAPIKeyAuth(
+			policy,
+			resources); err != nil {
+			err = perr.WithMessage(err, "APIKeyAuth")
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -415,6 +425,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 							CORS:          cors,
 							JWT:           jwt,
 							OIDC:          oidc,
+							APIKeyAuth:    apiKeyAuth,
 							BasicAuth:     basicAuth,
 							ExtAuth:       extAuth,
 							Authorization: authorization,
@@ -445,6 +456,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		cors          *ir.CORS
 		jwt           *ir.JWT
 		oidc          *ir.OIDC
+		apiKeyAuth    *ir.APIKeyAuth
 		basicAuth     *ir.BasicAuth
 		extAuth       *ir.ExtAuth
 		authorization *ir.Authorization
@@ -474,6 +486,15 @@ func (t *Translator) translateSecurityPolicyForGateway(
 			policy,
 			resources); err != nil {
 			err = perr.WithMessage(err, "BasicAuth")
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	if policy.Spec.APIKeyAuth != nil {
+		if apiKeyAuth, err = t.buildAPIKeyAuth(
+			policy,
+			resources); err != nil {
+			err = perr.WithMessage(err, "APIKeyAuth")
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -522,6 +543,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 				CORS:          cors,
 				JWT:           jwt,
 				OIDC:          oidc,
+				APIKeyAuth:    apiKeyAuth,
 				BasicAuth:     basicAuth,
 				ExtAuth:       extAuth,
 				Authorization: authorization,
@@ -854,6 +876,46 @@ func validateTokenEndpoint(tokenEndpoint string) error {
 		}
 	}
 	return nil
+}
+
+func (t *Translator) buildAPIKeyAuth(
+	policy *egv1a1.SecurityPolicy,
+	resources *resource.Resources,
+) (*ir.APIKeyAuth, error) {
+	from := crossNamespaceFrom{
+		group:     egv1a1.GroupName,
+		kind:      resource.KindSecurityPolicy,
+		namespace: policy.Namespace,
+	}
+
+	credentials := make(map[string]ir.PrivateBytes)
+	for _, ref := range policy.Spec.APIKeyAuth.CredentialRefs {
+		credentialsSecret, err := t.validateSecretRef(
+			false, from, ref, resources)
+		if err != nil {
+			return nil, err
+		}
+		for clientid, key := range credentialsSecret.Data {
+			if _, ok := credentials[clientid]; ok {
+				continue
+			}
+			credentials[clientid] = key
+		}
+	}
+
+	extractFrom := make([]*ir.ExtractFrom, 0, len(policy.Spec.APIKeyAuth.ExtractFrom))
+	for _, e := range policy.Spec.APIKeyAuth.ExtractFrom {
+		extractFrom = append(extractFrom, &ir.ExtractFrom{
+			Headers: e.Headers,
+			Cookies: e.Cookies,
+			Params:  e.Params,
+		})
+	}
+
+	return &ir.APIKeyAuth{
+		Credentials: credentials,
+		ExtractFrom: extractFrom,
+	}, nil
 }
 
 func (t *Translator) buildBasicAuth(

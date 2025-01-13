@@ -811,6 +811,8 @@ type SecurityFeatures struct {
 	JWT *JWT `json:"jwt,omitempty" yaml:"jwt,omitempty"`
 	// OIDC defines the schema for authenticating HTTP requests using OpenID Connect (OIDC).
 	OIDC *OIDC `json:"oidc,omitempty" yaml:"oidc,omitempty"`
+	// APIKeyAuth defines the schema for the API Key Authentication.
+	APIKeyAuth *APIKeyAuth `json:"apiKeyAuth,omitempty" yaml:"apiKeyAuth,omitempty"`
 	// BasicAuth defines the schema for the HTTP Basic Authentication.
 	BasicAuth *BasicAuth `json:"basicAuth,omitempty" yaml:"basicAuth,omitempty"`
 	// ExtAuth defines the schema for the external authorization.
@@ -989,6 +991,43 @@ type BasicAuth struct {
 
 	// The username-password pairs in htpasswd format.
 	Users PrivateBytes `json:"users,omitempty" yaml:"users,omitempty"`
+}
+
+// APIKeyAuth defines the schema for the API Key Authentication.
+//
+// +k8s:deepcopy-gen=true
+type APIKeyAuth struct {
+	// The API key to be used for authentication.
+	// Key is the client id and the value is the API key to be used for authentication.
+	Credentials map[string]PrivateBytes `json:"credentials,omitempty" yaml:"credentials,omitempty"`
+
+	// ExtractFrom is where to fetch the key from the coming request.
+	// The value from the first source that has a key will be used.
+	ExtractFrom []*ExtractFrom `json:"extractFrom"`
+}
+
+// ExtractFrom defines the source of the key.
+//
+// +k8s:deepcopy-gen=true
+type ExtractFrom struct {
+	// Headers is the names of the header to fetch the key from.
+	// If multiple headers are specified, envoy will look for the api key in the order of the list.
+	// This field is optional, but only one of headers, params or cookies is supposed to be specified.
+	//
+	// +optional
+	Headers []string `json:"headers,omitempty"`
+	// Params is the names of the query parameter to fetch the key from.
+	// If multiple params are specified, envoy will look for the api key in the order of the list.
+	// This field is optional, but only one of headers, params or cookies is supposed to be specified.
+	//
+	// +optional
+	Params []string `json:"params,omitempty"`
+	// Cookies is the names of the cookie to fetch the key from.
+	// If multiple cookies are specified, envoy will look for the api key in the order of the list.
+	// This field is optional, but only one of headers, params or cookies is supposed to be specified.
+	//
+	// +optional
+	Cookies []string `json:"cookies,omitempty"`
 }
 
 // ExtAuth defines the schema for the external authorization.
