@@ -28,7 +28,7 @@ spec:
             response:
               from: Metadata
               metadata:
-                namespace: something.com
+                namespace: io.envoyproxy.gateway.e2e
                 key: request_cost_set_by_ext_proc
 ---
 apiVersion: gateway.networking.k8s.io/v1
