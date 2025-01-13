@@ -14,20 +14,20 @@ http:
       rateLimit:
         global:
           rules:
-            - headerMatches:
-              - name: "x-user-id"
-                exact: "one"
-              limit:
-                requests: 5
-                unit: second
+          - headerMatches:
+            - name: "x-user-id"
+              exact: "one"
+            limit:
+              requests: 5
+              unit: second
     pathMatch:
       exact: "foo/bar"
     destination:
       name: "first-route-dest"
       settings:
-        - endpoints:
-          - host: "1.2.3.4"
-            port: 50000
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
   - name: "second-route"
     hostname: "*"
     traffic:
