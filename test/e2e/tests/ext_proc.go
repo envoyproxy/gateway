@@ -71,6 +71,9 @@ var ExtProcTest = suite.ConformanceTest{
 							"x-request-client-header": "mutated",
 							// header added by ext-processor to request based on the xds.route_name attribute
 							"x-request-xds-route-name": "httproute/gateway-conformance-infra/http-with-ext-proc/rule/0/match/0/www_example_com",
+							// header added by router based on metadata emitted by the external processor to
+							// the io.envoyproxy.gateway.e2e namespace with key ext-proc-emitted-metadata
+							"x-request-from-ext-proc-metadata": "received",
 						},
 					},
 				},
@@ -81,6 +84,9 @@ var ExtProcTest = suite.ConformanceTest{
 						"x-response-ext-processed": "true",
 						// header added by ext-processor to response based on the xds.cluster_name attribute
 						"x-response-xds-route-name": "httproute/gateway-conformance-infra/http-with-ext-proc/rule/0/match/0/www_example_com",
+						// header added by ext-processor to response based on envoy.filters.http.rbac.enforced_engine_result
+						// dynamic metadata emitted by RBAC filter
+						"x-response-rbac-result-metadata": "allowed",
 					},
 				},
 				Namespace: ns,

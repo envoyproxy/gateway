@@ -109,7 +109,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 
 			// Add the listener to the Xds IR
 			servicePort := &protocolPort{protocol: listener.Protocol, port: int32(listener.Port)}
-			containerPort := servicePortToContainerPort(int32(listener.Port), gateway.envoyProxy)
+			containerPort := t.servicePortToContainerPort(int32(listener.Port), gateway.envoyProxy)
 			switch listener.Protocol {
 			case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
 				irListener := &ir.HTTPListener{
@@ -551,4 +551,28 @@ var celEnv, _ = cel.NewEnv()
 func validCELExpression(expr string) bool {
 	_, issue := celEnv.Parse(expr)
 	return issue.Err() == nil
+}
+
+// servicePortToContainerPort translates a service port into an ephemeral
+// container port.
+func (t *Translator) servicePortToContainerPort(servicePort int32, envoyProxy *egv1a1.EnvoyProxy) int32 {
+	if t.ListenerPortShiftDisabled {
+		return servicePort
+	}
+
+	if envoyProxy != nil {
+		if !envoyProxy.NeedToSwitchPorts() {
+			return servicePort
+		}
+	}
+
+	// If the service port is a privileged port (1-1023)
+	// add a constant to the value converting it into an ephemeral port.
+	// This allows the container to bind to the port without needing a
+	// CAP_NET_BIND_SERVICE capability.
+	if servicePort < minEphemeralPort {
+		return servicePort + wellKnownPortShift
+	}
+
+	return servicePort
 }

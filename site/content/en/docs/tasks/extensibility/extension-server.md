@@ -99,29 +99,44 @@ image name and tag.
 
 * Configure Envoy Gateway to use the Extension Server
 
-  Add the following fragment to Envoy Gateway's [configuration][] file:
+  Add the following fragment to Envoy Gateway's configmap:
 
-  ```yaml
-  extensionManager:
-    # Envoy Gateway will watch these resource kinds and use them as extension policies
-    # which can be attached to Gateway resources.
-    policyResources:
-    - group: example.extensions.io
-      version: v1alpha1
-      kind: ListenerContextExample
-    hooks:
-      # The type of hooks that should be invoked
-      xdsTranslator:
-        post:
-        - HTTPListener
-    service:
-      # The service that is hosting the extension server
-      fqdn: 
-        hostname: extension-server.envoy-gateway-system.svc.cluster.local
-        port: 5005
+  ```shell
+  cat <<EOF | kubectl apply -f -
+  apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: envoy-gateway-config
+    namespace: envoy-gateway-system
+  data:
+    envoy-gateway.yaml: |
+      apiVersion: gateway.envoyproxy.io/v1alpha1
+      kind: EnvoyGateway
+      provider:
+        type: Kubernetes
+      gateway:
+        controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      extensionManager:
+        # Envoy Gateway will watch these resource kinds and use them as extension policies
+        # which can be attached to Gateway resources.
+        policyResources:
+        - group: example.extensions.io
+          version: v1alpha1
+          kind: ListenerContextExample
+        hooks:
+          # The type of hooks that should be invoked
+          xdsTranslator:
+            post:
+            - HTTPListener
+        service:
+          # The service that is hosting the extension server
+          fqdn:
+            hostname: extension-server.envoy-gateway-system.svc.cluster.local
+            port: 5005
+  EOF
   ```
 
-  After updating Envoy Gateway's configuration file, restart Envoy Gateway.
+  After updating Envoy Gateway's configmap, restart Envoy Gateway.
 
 ## Testing
 
@@ -206,4 +221,3 @@ $ curl -v http://${GATEWAY_HOST}/example  -H "Host: www.example.com"   --user 'u
 [xDS]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/dynamic_configuration
 [design documentation]: /contributions/design/extending-envoy-gateway
 [SecurityPolicy]: /latest/api/extension_types/#securitypolicy
-[configuration]: /latest/api/extension_types/#extensionmanager
