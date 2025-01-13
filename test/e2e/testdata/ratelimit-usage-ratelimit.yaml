@@ -77,9 +77,9 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
-  - group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: usage-rate-limit
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: usage-rate-limit
   authorization:
     defaultAction: Allow
 ---
@@ -90,13 +90,13 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
-  - group: ''
-    kind: Service
-    name: grpc-ext-proc
-    sectionName: grpc
+    - group: ''
+      kind: Service
+      name: grpc-ext-proc
+      sectionName: grpc
   validation:
     caCertificateRefs:
-    - name: grpc-ext-proc-ca
-      group: ''
-      kind: ConfigMap
+      - name: grpc-ext-proc-ca
+        group: ''
+        kind: ConfigMap
     hostname: grpc-ext-proc.envoygateway
