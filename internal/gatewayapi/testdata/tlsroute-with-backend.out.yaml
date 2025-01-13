@@ -125,6 +125,7 @@ xdsIR:
             endpoints:
             - host: 1.1.1.1
               port: 3001
+            protocol: HTTPS
             weight: 1
         name: tlsroute/default/tlsroute-1
         tls:
