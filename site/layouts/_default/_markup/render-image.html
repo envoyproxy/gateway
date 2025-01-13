@@ -1,0 +1,6 @@
+{{ $baseURL := site.BaseURL }}
+<img src="{{ $baseURL }}{{ .Destination | safeURL }}"
+     {{- with .PlainText }} alt="{{ . }}"{{ end -}}
+     {{- with .Title }} title="{{ . }}"{{ end -}}
+>
+{{- /* chomp trailing newline */ -}}

@@ -82,6 +82,9 @@ id = "G-DXJEH1ZRXX"
       block = true
     [markup.goldmark.renderer]
       unsafe = true
+    [markup.goldmark.renderHooks]
+      [markup.goldmark.renderHooks.image]
+        enableDefault = true
   [markup.highlight]
     # See a complete list of available styles at https://xyproto.github.io/splash/docs/all.html
     style = "tango"
