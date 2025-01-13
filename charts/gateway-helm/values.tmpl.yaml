@@ -92,6 +92,7 @@ kubernetesClusterDomain: cluster.local
 certgen:
   job:
     annotations: {}
+    args: []
     command: []
     resources: {}
     affinity: {}

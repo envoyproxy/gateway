@@ -570,7 +570,8 @@ spec:
         app: certgen
     spec:
       containers:
-      - command:
+      - args:
+        command:
         - envoy-gateway
         - certgen
         env:

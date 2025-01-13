@@ -45,13 +45,13 @@ func getCertGenCommand() *cobra.Command {
 	cmd.PersistentFlags().BoolVarP(&local, "local", "l", false,
 		"Generate all the certificates locally.")
 	cmd.PersistentFlags().BoolVarP(&overwriteControlPlaneCerts, "overwrite", "o", false,
-		"updates the secrets containing the control plane certs.")
+		"Updates the secrets containing the control plane certs.")
 	return cmd
 }
 
 // certGen generates control plane certificates.
 func certGen(local bool) error {
-	cfg, err := getConfig()
+	cfg, err := config.New()
 	if err != nil {
 		return err
 	}
