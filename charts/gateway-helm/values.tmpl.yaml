@@ -93,7 +93,6 @@ certgen:
   job:
     annotations: {}
     args: []
-    command: []
     resources: {}
     affinity: {}
     tolerations: []
