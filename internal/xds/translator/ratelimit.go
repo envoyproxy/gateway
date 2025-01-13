@@ -7,6 +7,7 @@ package translator
 
 import (
 	"bytes"
+	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
@@ -26,6 +27,7 @@ import (
 	goyaml "gopkg.in/yaml.v3" // nolint: depguard
 	"k8s.io/utils/ptr"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
@@ -118,7 +120,7 @@ func (t *Translator) buildRateLimitFilter(irListener *ir.HTTPListener) *hcmv3.Ht
 	}
 
 	rateLimitFilter := &hcmv3.HttpFilter{
-		Name: wellknown.HTTPRateLimit,
+		Name: egv1a1.EnvoyFilterRateLimit.String(),
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: rateLimitFilterAny,
 		},
@@ -127,20 +129,46 @@ func (t *Translator) buildRateLimitFilter(irListener *ir.HTTPListener) *hcmv3.Ht
 }
 
 // patchRouteWithRateLimit builds rate limit actions and appends to the route.
-func patchRouteWithRateLimit(xdsRouteAction *routev3.RouteAction, irRoute *ir.HTTPRoute) error { //nolint:unparam
+func patchRouteWithRateLimit(route *routev3.Route, irRoute *ir.HTTPRoute) error { //nolint:unparam
 	// Return early if no rate limit config exists.
+	xdsRouteAction := route.GetRoute()
 	if !routeContainsGlobalRateLimit(irRoute) || xdsRouteAction == nil {
 		return nil
 	}
-
-	rateLimits := buildRouteRateLimits(irRoute.Name, irRoute.Traffic.RateLimit.Global)
+	global := irRoute.Traffic.RateLimit.Global
+	rateLimits, costSpecified := buildRouteRateLimits(irRoute.Name, global)
+	if costSpecified {
+		return patchRouteWithRateLimitOnTypedFilterConfig(route, rateLimits)
+	}
 	xdsRouteAction.RateLimits = rateLimits
 	return nil
 }
 
-func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) []*routev3.RateLimit {
-	var rateLimits []*routev3.RateLimit
+// patchRouteWithRateLimitOnTypedFilterConfig builds rate limit actions and appends to the route via
+// the TypedPerFilterConfig field. This only happens when the response cost is specified which allows us to assume that
+// users are using Envoy >= v1.33.0.
+func patchRouteWithRateLimitOnTypedFilterConfig(route *routev3.Route, rateLimits []*routev3.RateLimit) error { //nolint:unparam
+	filterCfg := route.TypedPerFilterConfig
+	if filterCfg == nil {
+		filterCfg = make(map[string]*anypb.Any)
+		route.TypedPerFilterConfig = filterCfg
+	}
+	if _, ok := filterCfg[egv1a1.EnvoyFilterRateLimit.String()]; ok {
+		// This should not happen since this is the only place where the filter
+		// config is added in a route.
+		return fmt.Errorf(
+			"route already contains local rate limit filter config: %s", route.Name)
+	}
 
+	g, err := anypb.New(&ratelimitfilterv3.RateLimitPerRoute{RateLimits: rateLimits})
+	if err != nil {
+		return fmt.Errorf("failed to marshal per-route ratelimit filter config: %w", err)
+	}
+	filterCfg[egv1a1.EnvoyFilterRateLimit.String()] = g
+	return nil
+}
+
+func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) (rateLimits []*routev3.RateLimit, costSpecified bool) {
 	// Route descriptor for each route rule action
 	routeDescriptor := &routev3.RateLimit_Action{
 		ActionSpecifier: &routev3.RateLimit_Action_GenericKey_{
@@ -262,6 +290,7 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 		rateLimit := &routev3.RateLimit{Actions: rlActions}
 		if c := rule.RequestCost; c != nil {
 			rateLimit.HitsAddend = rateLimitCostToHitsAddend(c)
+			costSpecified = true
 		}
 		rateLimits = append(rateLimits, rateLimit)
 		if c := rule.ResponseCost; c != nil {
@@ -270,10 +299,10 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 			responseRule := &routev3.RateLimit{Actions: rlActions, ApplyOnStreamDone: true}
 			responseRule.HitsAddend = rateLimitCostToHitsAddend(c)
 			rateLimits = append(rateLimits, responseRule)
+			costSpecified = true
 		}
 	}
-
-	return rateLimits
+	return
 }
 
 func rateLimitCostToHitsAddend(c *ir.RateLimitCost) *routev3.RateLimit_HitsAddend {

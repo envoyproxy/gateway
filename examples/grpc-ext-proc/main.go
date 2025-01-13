@@ -20,7 +20,6 @@ import (
 
 	envoy_api_v3_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_service_proc_v3 "github.com/envoyproxy/go-control-plane/envoy/service/ext_proc/v3"
-
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
