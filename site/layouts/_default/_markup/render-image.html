@@ -1,5 +1,9 @@
 {{ $baseURL := site.BaseURL }}
-<img src="{{ $baseURL }}{{ .Destination | safeURL }}"
+{{ $safeURL := .Destination | safeURL }}
+{{ if and (ne $baseURL "/") (not (or (strings.HasPrefix $safeURL "https://") (strings.HasPrefix $safeURL "http://") (strings.HasPrefix $safeURL "mailto:"))) }}
+{{ $safeURL = printf "%s%s" $baseURL $safeURL }}
+{{ end }}
+<img src="{{ $safeURL }}"
      {{- with .PlainText }} alt="{{ . }}"{{ end -}}
      {{- with .Title }} title="{{ . }}"{{ end -}}
 >

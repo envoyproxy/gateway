@@ -9,7 +9,11 @@
         {{ $path = .Page.RelPermalink -}}
         {{ end -}}
         {{ range .Site.Params.versions -}}
+        {{ if ne $baseURL "/" }}
         <li><a class="dropdown-item" href="{{ $baseURL }}{{ .url }}{{ $path }}">{{ .version }}</a></li>
+        {{ else }}
+        <li><a class="dropdown-item" href="{{ .url }}{{ $path }}">{{ .version }}</a></li>
+        {{ end }}
         {{ end -}}
     </ul>
 </div>
