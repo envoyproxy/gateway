@@ -211,6 +211,10 @@ const (
 	// EnvoyFilterExtAuthz defines the Envoy HTTP external authorization filter.
 	EnvoyFilterExtAuthz EnvoyFilter = "envoy.filters.http.ext_authz"
 
+	// EnvoyFilterAPIKeyAuth defines the Envoy HTTP api key authentication filter.
+	//nolint:gosec // this is not an API key credential.
+	EnvoyFilterAPIKeyAuth EnvoyFilter = "envoy.filters.http.api_key_auth"
+
 	// EnvoyFilterBasicAuth defines the Envoy HTTP basic authentication filter.
 	EnvoyFilterBasicAuth EnvoyFilter = "envoy.filters.http.basic_auth"
 
@@ -240,6 +244,9 @@ const (
 
 	// EnvoyFilterCustomResponse defines the Envoy HTTP custom response filter.
 	EnvoyFilterCustomResponse EnvoyFilter = "envoy.filters.http.custom_response"
+
+	// EnvoyFilterCompressor defines the Envoy HTTP compressor filter.
+	EnvoyFilterCompressor EnvoyFilter = "envoy.filters.http.compressor"
 
 	// EnvoyFilterRouter defines the Envoy HTTP router filter.
 	EnvoyFilterRouter EnvoyFilter = "envoy.filters.http.router"

@@ -32,8 +32,8 @@ func init() {
 // Copied from the conformance suite because it's needed in casePreservingRoundTrip
 var startLineRegex = regexp.MustCompile(`(?m)^`)
 
-func formatDump(data []byte, prefix string) string {
-	data = startLineRegex.ReplaceAllLiteral(data, []byte(prefix))
+func formatDump(data []byte) string {
+	data = startLineRegex.ReplaceAllLiteral(data, []byte("< "))
 	return string(data)
 }
 
@@ -67,7 +67,7 @@ func casePreservingRoundTrip(request roundtripper.Request, transport nethttp.Rou
 			return nil, err
 		}
 
-		fmt.Printf("Sending Request:\n%s\n\n", formatDump(dump, "< "))
+		fmt.Printf("Sending Request:\n%s\n\n", formatDump(dump))
 	}
 
 	resp, err := client.Do(req)
@@ -83,7 +83,7 @@ func casePreservingRoundTrip(request roundtripper.Request, transport nethttp.Rou
 			return nil, err
 		}
 
-		fmt.Printf("Received Response:\n%s\n\n", formatDump(dump, "< "))
+		fmt.Printf("Received Response:\n%s\n\n", formatDump(dump))
 	}
 
 	cReq := map[string]any{}

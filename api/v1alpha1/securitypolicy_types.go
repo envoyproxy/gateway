@@ -47,6 +47,11 @@ type SecurityPolicy struct {
 type SecurityPolicySpec struct {
 	PolicyTargetReferences `json:",inline"`
 
+	// APIKeyAuth defines the configuration for the API Key Authentication.
+	//
+	// +optional
+	APIKeyAuth *APIKeyAuth `json:"apiKeyAuth,omitempty"`
+
 	// CORS defines the configuration for Cross-Origin Resource Sharing (CORS).
 	//
 	// +optional
