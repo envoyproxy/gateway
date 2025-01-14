@@ -49,7 +49,7 @@ var UDPRouteBackendIPTest = suite.ConformanceTest{
 		t.Run("UDPRoute with a IP type Backend", func(t *testing.T) {
 			svcNN := types.NamespacedName{
 				Name:      "coredns",
-				Namespace: "gateway-conformance-udp",
+				Namespace: "gateway-conformance-infra",
 			}
 			svc, err := GetService(suite.Client, svcNN)
 			if err != nil {
@@ -57,7 +57,7 @@ var UDPRouteBackendIPTest = suite.ConformanceTest{
 			}
 
 			backendIPName := "backend-ip"
-			ns := "gateway-conformance-udp"
+			ns := "gateway-conformance-infra"
 			err = CreateBackend(suite.Client, types.NamespacedName{Name: backendIPName, Namespace: ns}, svc.Spec.ClusterIP, 53)
 			if err != nil {
 				t.Fatalf("failed to create backend %s: %v", backendIPName, err)
@@ -73,7 +73,7 @@ var UDPRouteBackendIPTest = suite.ConformanceTest{
 }
 
 func testUDPRouteWithBackend(t *testing.T, suite *suite.ConformanceTestSuite, backend string) {
-	namespace := "gateway-conformance-udp"
+	namespace := "gateway-conformance-infra"
 	domain := "foo.bar.com."
 	routeNN := types.NamespacedName{Name: "udp-coredns", Namespace: namespace}
 	gwNN := types.NamespacedName{Name: "udp-gateway", Namespace: namespace}

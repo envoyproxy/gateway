@@ -60,7 +60,7 @@ spec:
     - method:
         service: gateway_api_conformance.echo_basic.grpcecho.GrpcEcho
         method: Echo
-  - backendRefs:
+    backendRefs:
     - group: gateway.envoyproxy.io
       kind: Backend
       name: backend-ip
