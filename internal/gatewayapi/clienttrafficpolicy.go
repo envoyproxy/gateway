@@ -484,6 +484,12 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 
 		// Early return if got any errors
 		if errs != nil {
+			for _, route := range httpIR.Routes {
+				// Return a 500 direct response
+				route.DirectResponse = &ir.CustomResponse{
+					StatusCode: ptr.To(uint32(500)),
+				}
+			}
 			return errs
 		}
 
@@ -504,6 +510,9 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 
 		// Early return if got any errors
 		if errs != nil {
+			// Remove all TCP routes if there are any errors
+			// The listener will still be created, but any client traffic will be forwarded to the default empty cluster
+			tcpIR.Routes = nil
 			return errs
 		}
 
