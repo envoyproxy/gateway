@@ -6,6 +6,8 @@ description: Get started with Envoy Gateway in a few simple steps.
 
 This "quick start" will help you get started with Envoy Gateway in a few simple steps.
 
+
+
 ## Prerequisites
 
 A Kubernetes cluster.
