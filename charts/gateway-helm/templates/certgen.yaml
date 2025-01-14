@@ -20,8 +20,8 @@ spec:
         app: certgen
     spec:
       containers:
-      - args:
-        {{- if .Values.certgen.job.args }}
+      - {{- if .Values.certgen.job.args }}
+        args:
         {{- toYaml .Values.certgen.job.args | nindent 8 }}
         {{- end }}
         command:
