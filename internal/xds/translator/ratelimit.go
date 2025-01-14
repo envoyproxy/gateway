@@ -138,6 +138,19 @@ func patchRouteWithRateLimit(route *routev3.Route, irRoute *ir.HTTPRoute) error 
 	global := irRoute.Traffic.RateLimit.Global
 	rateLimits, costSpecified := buildRouteRateLimits(irRoute.Name, global)
 	if costSpecified {
+		// PerRoute global rate limit configuration via typed_per_filter_config can its own rate routev3.RateLimit that overrides the route level rate limits.
+		// Per-descriptor level hits_addend can only be configured there: https://github.com/envoyproxy/envoy/pull/37972
+		// vs the "legacy" core route-embedded rate limits doesn't have this feature.
+		//
+		// This branch is only reached when the response cost is specified which allows us to assume that
+		// users are using Envoy >= v1.33.0 which also supports the typed_per_filter_config.
+		//
+		// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ratelimit/v3/rate_limit.proto#extensions-filters-http-ratelimit-v3-ratelimitperroute
+		//
+		// Though this is not explicitly documented, the rate limit functionality is the same as the core route-embedded rate limits.
+		// So this is a safe assumption. Only code path different is at
+		// https://github.com/envoyproxy/envoy/blob/47f99c5aacdb582606a48c85c6c54904fd439179/source/extensions/filters/http/ratelimit/ratelimit.cc#L93-L114
+		// which is identical for both core and typed_per_filter_config as we are not using virtual_host level rate limits.
 		return patchRouteWithRateLimitOnTypedFilterConfig(route, rateLimits)
 	}
 	xdsRouteAction.RateLimits = rateLimits
@@ -145,8 +158,7 @@ func patchRouteWithRateLimit(route *routev3.Route, irRoute *ir.HTTPRoute) error 
 }
 
 // patchRouteWithRateLimitOnTypedFilterConfig builds rate limit actions and appends to the route via
-// the TypedPerFilterConfig field. This only happens when the response cost is specified which allows us to assume that
-// users are using Envoy >= v1.33.0.
+// the TypedPerFilterConfig field.
 func patchRouteWithRateLimitOnTypedFilterConfig(route *routev3.Route, rateLimits []*routev3.RateLimit) error { //nolint:unparam
 	filterCfg := route.TypedPerFilterConfig
 	if filterCfg == nil {
@@ -157,7 +169,7 @@ func patchRouteWithRateLimitOnTypedFilterConfig(route *routev3.Route, rateLimits
 		// This should not happen since this is the only place where the filter
 		// config is added in a route.
 		return fmt.Errorf(
-			"route already contains local rate limit filter config: %s", route.Name)
+			"route already contains global rate limit filter config: %s", route.Name)
 	}
 
 	g, err := anypb.New(&ratelimitfilterv3.RateLimitPerRoute{RateLimits: rateLimits})
