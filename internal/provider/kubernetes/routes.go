@@ -238,18 +238,6 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) error {
 	httpRouteList := &gwapiv1.HTTPRouteList{}
-	if r.hrfCRDExists {
-		httpFilters, err := r.getHTTPRouteFilters(ctx)
-		if err != nil {
-			return err
-		}
-
-		for i := range httpFilters {
-			filter := httpFilters[i]
-			resourceMap.httpRouteFilters[utils.GetNamespacedNameWithGroupKind(&filter)] = &filter
-			r.processRouteFilterConfigMapRef(ctx, &filter, resourceMap, resourceTree)
-		}
-	}
 
 	extensionRefFilters, err := r.getExtensionRefFilters(ctx)
 	if err != nil {
@@ -416,12 +404,18 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 
 					switch string(filter.ExtensionRef.Kind) {
 					case egv1a1.KindHTTPRouteFilter:
-						httpFilter, ok := resourceMap.httpRouteFilters[key]
-						if !ok {
-							r.log.Error(err, "HTTPRouteFilters not found; bypassing rule", "index", i)
-							continue
+						if r.hrfCRDExists {
+							httpFilter, err := r.getHTTPRouteFilter(ctx, key.Name, key.Namespace)
+							if err != nil {
+								r.log.Error(err, "HTTPRouteFilters not found; bypassing rule", "index", i)
+								continue
+							}
+							if !resourceMap.allAssociatedHTTPRouteExtensionFilters.Has(key) {
+								r.processRouteFilterConfigMapRef(ctx, httpFilter, resourceMap, resourceTree)
+								resourceMap.allAssociatedHTTPRouteExtensionFilters.Insert(key)
+								resourceTree.HTTPRouteFilters = append(resourceTree.HTTPRouteFilters, httpFilter)
+							}
 						}
-						resourceTree.HTTPRouteFilters = append(resourceTree.HTTPRouteFilters, httpFilter)
 					default:
 						extRefFilter, ok := resourceMap.extensionRefFilters[key]
 						if !ok {
@@ -433,7 +427,10 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 							continue
 						}
 
-						resourceTree.ExtensionRefFilters = append(resourceTree.ExtensionRefFilters, extRefFilter)
+						if !resourceMap.allAssociatedHTTPRouteExtensionFilters.Has(key) {
+							resourceMap.allAssociatedHTTPRouteExtensionFilters.Insert(key)
+							resourceTree.ExtensionRefFilters = append(resourceTree.ExtensionRefFilters, extRefFilter)
+						}
 					}
 				}
 			}

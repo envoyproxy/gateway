@@ -43,7 +43,6 @@ http:
     sessionPersistence:
       cookie:
         name: "session-header"
-        ttl: "1h"
     destination:
       name: "regex-route-dest"
       settings:
