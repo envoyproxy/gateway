@@ -260,10 +260,31 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 		}
 
 		rateLimit := &routev3.RateLimit{Actions: rlActions}
+		if c := rule.RequestCost; c != nil {
+			rateLimit.HitsAddend = rateLimitCostToHitsAddend(c)
+		}
 		rateLimits = append(rateLimits, rateLimit)
+		if c := rule.ResponseCost; c != nil {
+			// To apply the cost to the response, we need to set ApplyOnStreamDone to true which is per Rule option,
+			// so we need to create a new RateLimit for the response with the option set.
+			responseRule := &routev3.RateLimit{Actions: rlActions, ApplyOnStreamDone: true}
+			responseRule.HitsAddend = rateLimitCostToHitsAddend(c)
+			rateLimits = append(rateLimits, responseRule)
+		}
 	}
 
 	return rateLimits
+}
+
+func rateLimitCostToHitsAddend(c *ir.RateLimitCost) *routev3.RateLimit_HitsAddend {
+	ret := &routev3.RateLimit_HitsAddend{}
+	if c.Number != nil {
+		ret.Number = &wrapperspb.UInt64Value{Value: *c.Number}
+	}
+	if c.Format != nil {
+		ret.Format = *c.Format
+	}
+	return ret
 }
 
 // GetRateLimitServiceConfigStr returns the PB string for the rate limit service configuration.

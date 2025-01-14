@@ -329,9 +329,25 @@ func (s *extProcServer) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 					},
 				},
 			}
+
 			resp = &envoy_service_proc_v3.ProcessingResponse{
 				Response: &envoy_service_proc_v3.ProcessingResponse_ResponseHeaders{
 					ResponseHeaders: rhq,
+				},
+				DynamicMetadata: &structpb.Struct{
+					Fields: map[string]*structpb.Value{
+						"io.envoyproxy.gateway.e2e": {
+							Kind: &structpb.Value_StructValue{
+								StructValue: &structpb.Struct{
+									Fields: map[string]*structpb.Value{
+										"request_cost_set_by_ext_proc": {
+											Kind: &structpb.Value_NumberValue{NumberValue: float64(10)},
+										},
+									},
+								},
+							},
+						},
+					},
 				},
 			}
 			break

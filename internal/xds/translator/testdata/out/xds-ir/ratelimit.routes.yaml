@@ -23,6 +23,23 @@
               - name: x-user-id
                 stringMatch:
                   exact: one
+          hitsAddend:
+            number: "12345"
+        - actions:
+          - genericKey:
+              descriptorKey: first-route
+              descriptorValue: first-route
+          - headerValueMatch:
+              descriptorKey: rule-0-match-0
+              descriptorValue: rule-0-match-0
+              expectMatch: true
+              headers:
+              - name: x-user-id
+                stringMatch:
+                  exact: one
+          applyOnStreamDone: true
+          hitsAddend:
+            format: '%DYNAMIC_METADATA(something.com:key)%'
         upgradeConfigs:
         - upgradeType: websocket
     - match:
@@ -38,6 +55,18 @@
           - requestHeaders:
               descriptorKey: rule-0-match-0
               headerName: x-user-id
+          hitsAddend:
+            number: "0"
+        - actions:
+          - genericKey:
+              descriptorKey: second-route
+              descriptorValue: second-route
+          - requestHeaders:
+              descriptorKey: rule-0-match-0
+              headerName: x-user-id
+          applyOnStreamDone: true
+          hitsAddend:
+            format: '%DYNAMIC_METADATA(something.com:key)%'
         upgradeConfigs:
         - upgradeType: websocket
     - match:
@@ -53,6 +82,8 @@
           - genericKey:
               descriptorKey: rule-0-match--1
               descriptorValue: rule-0-match--1
+          hitsAddend:
+            number: "12345"
         upgradeConfigs:
         - upgradeType: websocket
     - match:
@@ -73,5 +104,20 @@
               - name: x-org-id
                 stringMatch:
                   exact: admin
+        - actions:
+          - genericKey:
+              descriptorKey: fourth-route
+              descriptorValue: fourth-route
+          - headerValueMatch:
+              descriptorKey: rule-0-match-0
+              descriptorValue: rule-0-match-0
+              expectMatch: false
+              headers:
+              - name: x-org-id
+                stringMatch:
+                  exact: admin
+          applyOnStreamDone: true
+          hitsAddend:
+            format: '%DYNAMIC_METADATA(something.com:key)%'
         upgradeConfigs:
         - upgradeType: websocket

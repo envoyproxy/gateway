@@ -20,6 +20,10 @@ http:
             limit:
               requests: 5
               unit: second
+            requestCost:
+              number: 12345
+            responseCost:
+              format: "%DYNAMIC_METADATA(something.com:key)%"
     pathMatch:
       exact: "foo/bar"
     destination:
@@ -40,6 +44,10 @@ http:
             limit:
               requests: 5
               unit: second
+            requestCost:
+              number: 0
+            responseCost:
+              format: "%DYNAMIC_METADATA(something.com:key)%"
     pathMatch:
       exact: "example"
     destination:
@@ -57,6 +65,8 @@ http:
           - limit:
               requests: 5
               unit: second
+            requestCost:
+              number: 12345
     pathMatch:
       exact: "test"
     destination:
@@ -78,6 +88,8 @@ http:
             limit:
               requests: 5
               unit: second
+            responseCost:
+              format: "%DYNAMIC_METADATA(something.com:key)%"
     pathMatch:
       exact: "foo/bar/login"
     destination:
