@@ -51,3 +51,12 @@ backendTrafficPolicies:
           limit:
             requests: 10
             unit: Hour
+          cost:
+            request:
+              from: Number
+              number: 1
+            response:
+              from: Metadata
+              metadata:
+                namespace: something.com
+                key: some_cost_set_by_foo
