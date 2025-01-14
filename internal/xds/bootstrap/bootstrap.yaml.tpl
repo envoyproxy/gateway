@@ -68,7 +68,7 @@ static_resources:
         address: '{{ .ReadyServer.Address }}'
         port_value: {{ .ReadyServer.Port }}
         protocol: TCP
-        {{- if eq .IPFamily "DualStack"}}
+        {{- if eq .IPFamily "DualStack" "IPv6" }}
         ipv4_compat: true
         {{- end }}
     filter_chains:

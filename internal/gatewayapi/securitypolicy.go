@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,7 +17,9 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	perr "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -672,26 +675,17 @@ func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources 
 		protocol              ir.AppProtocol
 		rd                    *ir.RouteDestination
 		traffic               *ir.TrafficFeatures
+		providerTLS           *ir.TLSUpstreamConfig
 		err                   error
 	)
 
-	// Discover the token and authorization endpoints from the issuer's
-	// well-known url if not explicitly specified
-	if provider.TokenEndpoint == nil || provider.AuthorizationEndpoint == nil {
-		tokenEndpoint, authorizationEndpoint, err = fetchEndpointsFromIssuer(provider.Issuer)
-		if err != nil {
-			return nil, fmt.Errorf("error fetching endpoints from issuer: %w", err)
-		}
+	var u *url.URL
+	if provider.TokenEndpoint != nil {
+		u, err = url.Parse(*provider.TokenEndpoint)
 	} else {
-		tokenEndpoint = *provider.TokenEndpoint
-		authorizationEndpoint = *provider.AuthorizationEndpoint
+		u, err = url.Parse(provider.Issuer)
 	}
 
-	if err = validateTokenEndpoint(tokenEndpoint); err != nil {
-		return nil, err
-	}
-
-	u, err := url.Parse(tokenEndpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -706,6 +700,32 @@ func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources 
 		if rd, err = t.translateExtServiceBackendRefs(policy, provider.BackendRefs, protocol, resources, envoyProxy, "oidc", 0); err != nil {
 			return nil, err
 		}
+	}
+
+	if rd != nil {
+		for _, st := range rd.Settings {
+			if st.TLS != nil {
+				providerTLS = st.TLS
+				break
+			}
+		}
+	}
+
+	// Discover the token and authorization endpoints from the issuer's well-known url if not explicitly specified.
+	// EG assumes that the issuer url uses the same protocol and CA as the token endpoint.
+	// If we need to support different protocols or CAs, we need to add more fields to the OIDCProvider CRD.
+	if provider.TokenEndpoint == nil || provider.AuthorizationEndpoint == nil {
+		tokenEndpoint, authorizationEndpoint, err = fetchEndpointsFromIssuer(provider.Issuer, providerTLS)
+		if err != nil {
+			return nil, fmt.Errorf("error fetching endpoints from issuer: %w", err)
+		}
+	} else {
+		tokenEndpoint = *provider.TokenEndpoint
+		authorizationEndpoint = *provider.AuthorizationEndpoint
+	}
+
+	if err = validateTokenEndpoint(tokenEndpoint); err != nil {
+		return nil, err
 	}
 
 	if traffic, err = translateTrafficFeatures(provider.BackendSettings); err != nil {
@@ -764,18 +784,38 @@ type OpenIDConfig struct {
 	AuthorizationEndpoint string `json:"authorization_endpoint"`
 }
 
-func fetchEndpointsFromIssuer(issuerURL string) (string, string, error) {
-	// Fetch the OpenID configuration from the issuer URL
-	resp, err := http.Get(fmt.Sprintf("%s/.well-known/openid-configuration", issuerURL))
-	if err != nil {
-		return "", "", err
+func fetchEndpointsFromIssuer(issuerURL string, providerTLS *ir.TLSUpstreamConfig) (string, string, error) {
+	var (
+		tlsConfig *tls.Config
+		err       error
+	)
+
+	if providerTLS != nil {
+		if tlsConfig, err = providerTLS.ToTLSConfig(); err != nil {
+			return "", "", err
+		}
 	}
-	defer resp.Body.Close()
+
+	client := &http.Client{}
+	if tlsConfig != nil {
+		client.Transport = &http.Transport{
+			TLSClientConfig: tlsConfig,
+		}
+	}
 
 	// Parse the OpenID configuration response
 	var config OpenIDConfig
-	err = json.NewDecoder(resp.Body).Decode(&config)
-	if err != nil {
+	if err = backoff.Retry(func() error {
+		resp, err := client.Get(fmt.Sprintf("%s/.well-known/openid-configuration", issuerURL))
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+		if err = json.NewDecoder(resp.Body).Decode(&config); err != nil {
+			return err
+		}
+		return nil
+	}, backoff.NewExponentialBackOff(backoff.WithMaxElapsedTime(5*time.Second))); err != nil {
 		return "", "", err
 	}
 
@@ -955,10 +995,16 @@ func backendRefAuthority(resources *resource.Resources, backendRef *gwapiv1.Back
 		}
 	}
 
-	return net.JoinHostPort(
-		fmt.Sprintf("%s.%s", backendRef.Name, backendNamespace),
-		strconv.Itoa(int(*backendRef.Port)),
-	)
+	// Port is mandatory for Kubernetes services
+	if backendKind == resource.KindService {
+		return net.JoinHostPort(
+			fmt.Sprintf("%s.%s", backendRef.Name, backendNamespace),
+			strconv.Itoa(int(*backendRef.Port)),
+		)
+	}
+
+	// Fallback to the backendRef name, normally it's a unix domain socket in this case
+	return fmt.Sprintf("%s.%s", backendRef.Name, backendNamespace)
 }
 
 func (t *Translator) buildAuthorization(policy *egv1a1.SecurityPolicy) (*ir.Authorization, error) {

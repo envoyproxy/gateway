@@ -50,13 +50,12 @@ func (r *gatewayAPIReconciler) getExtensionRefFilters(ctx context.Context) ([]un
 	return resourceItems, nil
 }
 
-func (r *gatewayAPIReconciler) getHTTPRouteFilters(ctx context.Context) ([]egv1a1.HTTPRouteFilter, error) {
-	httpFilterList := new(egv1a1.HTTPRouteFilterList)
-	if err := r.client.List(ctx, httpFilterList); err != nil {
-		return nil, fmt.Errorf("failed to list HTTPRouteFilters: %w", err)
+func (r *gatewayAPIReconciler) getHTTPRouteFilter(ctx context.Context, name, namespace string) (*egv1a1.HTTPRouteFilter, error) {
+	hrf := new(egv1a1.HTTPRouteFilter)
+	if err := r.client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, hrf); err != nil {
+		return nil, fmt.Errorf("failed to get HTTPRouteFilter: %w", err)
 	}
-
-	return httpFilterList.Items, nil
+	return hrf, nil
 }
 
 // processRouteFilterConfigMapRef adds the referenced ConfigMap in a HTTPRouteFilter

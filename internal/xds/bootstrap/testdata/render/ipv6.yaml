@@ -37,6 +37,7 @@ static_resources:
         address: '::'
         port_value: 19001
         protocol: TCP
+        ipv4_compat: true
     filter_chains:
     - filters:
       - name: envoy.filters.network.http_connection_manager
