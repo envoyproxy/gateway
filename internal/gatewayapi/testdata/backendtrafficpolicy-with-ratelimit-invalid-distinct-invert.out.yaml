@@ -14,15 +14,6 @@ backendTrafficPolicies:
             - invert: true
               name: x-org-id
               type: Distinct
-          cost:
-            request:
-              from: Number
-              number: 1
-            response:
-              from: Metadata
-              metadata:
-                key: some_cost_set_by_foo
-                namespace: something.com
           limit:
             requests: 10
             unit: Hour
