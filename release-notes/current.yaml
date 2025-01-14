@@ -22,6 +22,8 @@ new features: |
   Added support for preserving the user defined HTTPRoute match order in EnvoyProxy API
   Added support for response compression in the BackendTrafficPolicy API
   Added support for specifying dynamic metadata namespaces that External Processing services can access read from and write to in EnvoyExtensionPolicy API
+  Added support for API Key Authentication in the SecurityPolicy API
+  Added support for GEP-1731 (HTTPRoute Retries)
 
 bug fixes: |
   Fixed a nil pointer error that occurs when a SecurityPolicy refers to a UDS backend
@@ -38,5 +40,6 @@ deprecations: |
 
 # Other notable changes not covered by the above sections.
 Other changes: |
+  Modified the base container image to gcr.io/distroless/base-nossl:nonroot
   [SecurityPolicy] Modify the JWT Provider Issuer validation constraint
   Add support for Kubernetes 1.32.x in the test matrix, and remove support for Kubernetes 1.28.x.
