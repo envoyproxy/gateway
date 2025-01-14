@@ -14,9 +14,6 @@ backendTrafficPolicies:
             - invert: true
               name: x-org-id
               type: Distinct
-          limit:
-            requests: 10
-            unit: Hour
           cost:
             request:
               from: Number
@@ -24,8 +21,11 @@ backendTrafficPolicies:
             response:
               from: Metadata
               metadata:
-                namespace: something.com
                 key: some_cost_set_by_foo
+                namespace: something.com
+          limit:
+            requests: 10
+            unit: Hour
       type: Global
     targetRef:
       group: gateway.networking.k8s.io
