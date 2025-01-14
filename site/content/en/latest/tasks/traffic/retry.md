@@ -3,7 +3,8 @@ title: Retry
 ---
 
 {{% alert color="warning" %}}
-Start from `v1.3`, Envoy Gateway supports [GEP-1731](https://gateway-api.sigs.k8s.io/geps/gep-1731/), and the core Gateway API takes precedence over the BackendTrafficPolicy CRD.
+Starting from `v1.3`, Envoy Gateway supports [HTTPRoute Retries(GEP-1731)](https://gateway-api.sigs.k8s.io/geps/gep-1731/), 
+this setting in the core Gateway API takes precedence over the BackendTrafficPolicy configuration.
 {{% /alert %}}
 
 A retry setting specifies the maximum number of times an Envoy proxy attempts to connect to a service if the initial call fails. Retries can enhance service availability and application performance by making sure that calls don’t fail permanently because of transient problems such as a temporarily overloaded service or network. The interval between retries prevents the called service from being overwhelmed with requests.
