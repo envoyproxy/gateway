@@ -1,0 +1,40 @@
+name: Preview Cleanup
+
+permissions:
+  contents: write
+
+on:
+  pull_request_target:
+    types:
+      - closed
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    # Only run this job if the PR has the 'docs-preview' label,
+    # which is added by the Preview Build workflow.
+    if: contains(github.event.pull_request.labels.*.name, 'docs-preview')
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - run: mkdir -p empty_dir
+      - name: Generate URL_SLUG
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          URL_SLUG: ${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.ref }}
+        run: |
+          # Sanitize the URL_SLUG to only contain alphanumeric characters and dashes
+          URL_SLUG=$(echo $URL_SLUG | tr -cd '[:alnum:]-')
+          echo "URL_SLUG=$URL_SLUG" >> $GITHUB_ENV
+
+      - name: Deploy
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: empty_dir
+          repository-name: zirain/eg-pr-preview
+          branch: "main"
+          clean: true
+          target-folder: ${{ env.URL_SLUG }}
+          token: ${{ secrets.DEPLOY_PAT }}
+          commit-message: "Remove preview for PR ${{ env.URL_SLUG }}"
+          single-commit: true

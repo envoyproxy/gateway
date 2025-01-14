@@ -1,0 +1,73 @@
+# This action builds and deploys egui_demo_app on each pull request created
+# Security notes:
+# The preview deployment is split in two workflows, preview_build and preview_deploy.
+# `preview_build` runs on pull_request, so it won't have any access to the repositories secrets, so it is safe to
+# build / execute untrusted code.
+# `preview_deploy` has access to the repositories secrets (so it can push to the pr preview repo) but won't run
+# any untrusted code (it will just extract the build artifact and push it to the pages branch where it will
+# automatically be deployed).
+
+name: Preview Build
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "site/**"
+      - "tools/make/docs.mk"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          submodules: true
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      # - uses: ./tools/github-actions/setup-deps
+
+      - name: Setup Hugo
+        uses: peaceiris/actions-hugo@75d2e84710de30f6ff7268e08f310b60ef14033f # v3.0.0
+        with:
+          hugo-version: "latest"
+          extended: true
+
+      - name: Setup Node
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: "18"
+
+      - name: Generate meta.json
+        env:
+          PR_NUMBER: ${{ github.event.number }}
+          URL_SLUG: ${{ github.event.number }}-${{ github.head_ref }}
+        run: |
+          # Sanitize the URL_SLUG to only contain alphanumeric characters and dashes
+          URL_SLUG=$(echo $URL_SLUG | tr -cd '[:alnum:]-')
+          echo "{\"pr_number\": \"$PR_NUMBER\", \"url_slug\": \"$URL_SLUG\"}" > meta.json
+          echo "PR_NUMBER=$(jq -r .pr_number meta.json)" >> $GITHUB_ENV
+          echo "URL_SLUG=$(jq -r .url_slug meta.json)" >> $GITHUB_ENV
+
+      - name: Sed base URL
+        run: |
+          sed -i -e 's/baseURL = "\/"/baseURL = "https:\/\/zirain.github.io\/eg-pr-preview\/${{ env.URL_SLUG }}\/"/g' site/hugo.toml
+
+      - name: Install Site Dependencies and Build Site
+        run: make docs
+
+      # Upload docs for GitHub Pages
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gateway_docs
+          path: site/public
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: meta.json
+          path: meta.json
