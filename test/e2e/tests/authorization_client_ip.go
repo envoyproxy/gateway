@@ -23,8 +23,7 @@ import (
 
 func init() {
 	ConformanceTests = append(ConformanceTests, AuthorizationClientIPTest)
-	// Uncomment once https://github.com/envoyproxy/gateway/issues/5063 is fixed
-	// ConformanceTests = append(ConformanceTests, AuthorizationClientIPTrustedCidrsTest)
+	ConformanceTests = append(ConformanceTests, AuthorizationClientIPTrustedCidrsTest)
 }
 
 var AuthorizationClientIPTest = suite.ConformanceTest{
