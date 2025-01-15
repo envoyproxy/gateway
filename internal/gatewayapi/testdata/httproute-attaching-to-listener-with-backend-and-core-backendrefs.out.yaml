@@ -224,6 +224,7 @@ xdsIR:
             endpoints:
             - host: 1.1.1.1
               port: 3001
+            protocol: HTTP
             weight: 1
           - addressType: IP
             endpoints:
@@ -255,6 +256,7 @@ xdsIR:
             endpoints:
             - host: primary.foo.com
               port: 3000
+            protocol: HTTP
             weight: 1
           - addressType: FQDN
             endpoints:

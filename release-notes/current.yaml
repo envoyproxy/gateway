@@ -27,6 +27,7 @@ new features: |
   Added support for specifying dynamic metadata namespaces that External Processing services can access read from and write to in EnvoyExtensionPolicy API
   Added support for API Key Authentication in the SecurityPolicy API
   Added support for GEP-1731 (HTTPRoute Retries)
+  Added support for routing to Backend resources in the GRPCRoute, TCPRoute and UDPRoute APIs
 
 bug fixes: |
 

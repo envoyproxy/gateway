@@ -1359,7 +1359,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 		}
 		ds.IPFamily = getServiceIPFamily(resources.GetService(backendNamespace, string(backendRef.Name)))
 	case egv1a1.KindBackend:
-		ds = t.processBackendDestinationSetting(backendRef.BackendObjectReference, backendNamespace, resources)
+		ds = t.processBackendDestinationSetting(backendRef.BackendObjectReference, backendNamespace, protocol, resources)
 		ds.TLS, err = t.applyBackendTLSSetting(
 			backendRef.BackendObjectReference,
 			backendNamespace,
@@ -1725,11 +1725,10 @@ func getTargetBackendReference(backendRef gwapiv1a2.BackendObjectReference, back
 	return ref
 }
 
-func (t *Translator) processBackendDestinationSetting(backendRef gwapiv1.BackendObjectReference, backendNamespace string, resources *resource.Resources) *ir.DestinationSetting {
+func (t *Translator) processBackendDestinationSetting(backendRef gwapiv1.BackendObjectReference, backendNamespace string, protocol ir.AppProtocol, resources *resource.Resources) *ir.DestinationSetting {
 	var (
 		dstEndpoints []*ir.DestinationEndpoint
 		dstAddrType  *ir.DestinationAddressType
-		dstProtocol  ir.AppProtocol
 	)
 
 	addrTypeMap := make(map[ir.DestinationAddressType]int)
@@ -1775,14 +1774,16 @@ func (t *Translator) processBackendDestinationSetting(backendRef gwapiv1.Backend
 	}
 
 	for _, ap := range backend.Spec.AppProtocols {
-		if ap == egv1a1.AppProtocolTypeH2C {
-			dstProtocol = ir.HTTP2
-			break
+		switch ap {
+		case egv1a1.AppProtocolTypeH2C:
+			protocol = ir.HTTP2
+		case "grpc":
+			protocol = ir.GRPC
 		}
 	}
 
 	ds := &ir.DestinationSetting{
-		Protocol:    dstProtocol,
+		Protocol:    protocol,
 		Endpoints:   dstEndpoints,
 		AddressType: dstAddrType,
 	}
