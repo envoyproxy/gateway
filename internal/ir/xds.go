@@ -1946,6 +1946,17 @@ type RateLimitRule struct {
 	CIDRMatch *CIDRMatch `json:"cidrMatch,omitempty" yaml:"cidrMatch,omitempty"`
 	// Limit holds the rate limit values.
 	Limit RateLimitValue `json:"limit,omitempty" yaml:"limit,omitempty"`
+	// RequestCost specifies the cost of the request.
+	RequestCost *RateLimitCost `json:"requestCost,omitempty" yaml:"requestCost,omitempty"`
+	// ResponseCost specifies the cost of the response.
+	ResponseCost *RateLimitCost `json:"responseCost,omitempty" yaml:"responseCost,omitempty"`
+}
+
+// RateLimitCost specifies the cost of the request or response.
+// +k8s:deepcopy-gen=true
+type RateLimitCost struct {
+	Number *uint64 `json:"number,omitempty" yaml:"number,omitempty"`
+	Format *string `json:"format,omitempty" yaml:"format,omitempty"`
 }
 
 type CIDRMatch struct {
