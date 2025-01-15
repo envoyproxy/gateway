@@ -45,8 +45,9 @@ spec:
   clientIPDetection:
     xForwardedFor:
       trustedCIDRs:
-      - "172.16.0.0/12"
-      - "10.0.1.0/24"
+      - "172.0.0.0/8"
+      - "10.0.0.0/8"
+      - "::/0" # trust all IPv6 addresses for E2E
   targetRefs:
   - group: gateway.networking.k8s.io
     kind: Gateway

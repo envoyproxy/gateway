@@ -300,6 +300,7 @@ xdsIR:
             endpoints:
             - host: 2.2.2.2
               port: 3443
+            protocol: HTTP
             tls:
               alpnProtocols: null
               caCertificate:
@@ -357,6 +358,7 @@ xdsIR:
             endpoints:
             - host: 2.2.2.2
               port: 3443
+            protocol: HTTP
             tls:
               alpnProtocols: null
               caCertificate:

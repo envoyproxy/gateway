@@ -1,0 +1,102 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: usage-rate-limit
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: usage-rate-limit
+  rateLimit:
+    type: Global
+    global:
+      rules:
+        - clientSelectors:
+            - headers:
+                - name: x-user-id
+                  type: Exact
+                  value: one
+          limit:
+            # 21 instead of 20 to test the zero request cost.
+            requests: 21
+            unit: Hour
+          cost:
+            request:
+              from: Number
+              number: 0
+            response:
+              from: Metadata
+              metadata:
+                namespace: io.envoyproxy.gateway.e2e
+                key: request_cost_set_by_ext_proc
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: usage-rate-limit
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /get
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: usage-rate-limit
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: usage-rate-limit
+  extProc:
+    - backendRefs:
+        - name: grpc-ext-proc
+          namespace: gateway-conformance-infra
+          port: 9002
+      metadata:
+        writableNamespaces:
+          - io.envoyproxy.gateway.e2e
+      processingMode:
+        request: {}
+        response: {}
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: authorization-client-ip
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: usage-rate-limit
+  authorization:
+    defaultAction: Allow
+---
+apiVersion: gateway.networking.k8s.io/v1alpha3
+kind: BackendTLSPolicy
+metadata:
+  name: grpc-ext-proc-btls
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: ''
+      kind: Service
+      name: grpc-ext-proc
+      sectionName: grpc
+  validation:
+    caCertificateRefs:
+      - name: grpc-ext-proc-ca
+        group: ''
+        kind: ConfigMap
+    hostname: grpc-ext-proc.envoygateway

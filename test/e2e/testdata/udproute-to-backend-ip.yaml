@@ -88,5 +88,7 @@ spec:
       sectionName: coredns
   rules:
     - backendRefs:
-        - name: coredns
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-ip
           port: 53

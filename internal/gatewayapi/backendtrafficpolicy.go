@@ -791,7 +791,28 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 			irRule.CIDRMatch = cidrMatch
 		}
 	}
+
+	if cost := rule.Cost; cost != nil {
+		if cost.Request != nil {
+			irRule.RequestCost = translateRateLimitCost(cost.Request)
+		}
+		if cost.Response != nil {
+			irRule.ResponseCost = translateRateLimitCost(cost.Response)
+		}
+	}
 	return irRule, nil
+}
+
+func translateRateLimitCost(cost *egv1a1.RateLimitCostSpecifier) *ir.RateLimitCost {
+	ret := &ir.RateLimitCost{}
+	if cost.Number != nil {
+		ret.Number = cost.Number
+	}
+	if cost.Metadata != nil {
+		ret.Format = ptr.To(fmt.Sprintf("%%DYNAMIC_METADATA(%s:%s)%%",
+			cost.Metadata.Namespace, cost.Metadata.Key))
+	}
+	return ret
 }
 
 func int64ToUint32(in int64) (uint32, bool) {
