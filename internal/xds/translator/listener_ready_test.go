@@ -91,7 +91,7 @@ func TestBuildReadyListener(t *testing.T) {
 			if *overrideTestData {
 				data, err := proto.ToYAML(got)
 				require.NoError(t, err)
-				err = os.WriteFile(path.Join("testdata", "readylistener", tc.name+".yaml"), data, 0600)
+				err = os.WriteFile(path.Join("testdata", "readylistener", tc.name+".yaml"), data, 0o600)
 				require.NoError(t, err)
 				return
 			}
@@ -129,7 +129,7 @@ func TestBuildReadyRouteConfig(t *testing.T) {
 			if *overrideTestData {
 				data, err := proto.ToYAML(got)
 				require.NoError(t, err)
-				err = os.WriteFile(path.Join("testdata", "readyroute", caseName+".yaml"), data, 0600)
+				err = os.WriteFile(path.Join("testdata", "readyroute", caseName+".yaml"), data, 0o600)
 				return
 			}
 

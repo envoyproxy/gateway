@@ -33,7 +33,6 @@ func FromYAML(content []byte, pb proto.Message) error {
 }
 
 func ToYAML(pb proto.Message) ([]byte, error) {
-
 	json, err := marshaler.MarshalToString(protov1.MessageV1(pb))
 	if err != nil {
 		return nil, err
