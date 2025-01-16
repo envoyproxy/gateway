@@ -134,41 +134,6 @@ xds:
                 '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
                 explicitHttpConfig:
                   http2ProtocolOptions: {}
-          listeners:
-          - address:
-              socketAddress:
-                address: 0.0.0.0
-                portValue: 19001
-            filterChains:
-            - filters:
-              - name: envoy.filters.network.http_connection_manager
-                typedConfig:
-                  '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-                  httpFilters:
-                  - name: envoy.filters.http.health_check
-                    typedConfig:
-                      '@type': type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck
-                      headers:
-                      - name: :path
-                        stringMatch:
-                          exact: /ready
-                      passThroughMode: false
-                  - name: envoy.filters.http.router
-                    typedConfig:
-                      '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-                  routeConfig:
-                    name: local_route
-                    virtualHosts:
-                    - domains:
-                      - '*'
-                      name: prometheus_stats
-                      routes:
-                      - match:
-                          prefix: /stats/prometheus
-                        route:
-                          cluster: prometheus_stats
-                  statPrefix: eg-ready-http
-            name: envoy-gateway-proxy-ready-0.0.0.0-19001
     - '@type': type.googleapis.com/envoy.admin.v3.EndpointsConfigDump
       dynamicEndpointConfigs:
       - endpointConfig:

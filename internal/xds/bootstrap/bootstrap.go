@@ -83,6 +83,7 @@ type bootstrapParameters struct {
 	// EnablePrometheusCompression defines whether to enable HTTP compression on metrics endpoint for prometheus.
 	EnablePrometheusCompression bool
 	// PrometheusCompressionLibrary defines the HTTP compression library for metrics endpoint for prometheus.
+	// TODO: remove this field because it is not used.
 	PrometheusCompressionLibrary string
 
 	// OtelMetricSinks defines the configuration of the OpenTelemetry sinks.
