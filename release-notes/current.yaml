@@ -30,7 +30,7 @@ new features: |
   Added support for routing to Backend resources in the GRPCRoute, TCPRoute and UDPRoute APIs
 
 bug fixes: |
-
+  Fixed the ability to overwrite control plane certs with the certgen command by using a new command arg (-o)
 
 # Enhancements that improve performance.
 performance improvements: |
