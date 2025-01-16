@@ -29,6 +29,7 @@ new features: |
   Continue using and drain endpoints during their graceful termination, as indicated by their respective EndpointConditions
   Added support for GEP-1731 (HTTPRoute Retries)
   Added support for routing to Backend resources in the GRPCRoute, TCPRoute and UDPRoute APIs
+  Added support for configuring Max GRPC message size for the Extension Manager in EnvoyGateway config
 
 bug fixes: |
   Fixed the ability to overwrite control plane certs with the certgen command by using a new command arg (-o)

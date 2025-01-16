@@ -1653,6 +1653,7 @@ _Appears in:_
 | `hooks` | _[ExtensionHooks](#extensionhooks)_ |  true  |  | Hooks defines the set of hooks the extension supports |
 | `service` | _[ExtensionService](#extensionservice)_ |  true  |  | Service defines the configuration of the extension service that the Envoy<br />Gateway Control Plane will call through extension hooks. |
 | `failOpen` | _boolean_ |  false  |  | FailOpen defines if Envoy Gateway should ignore errors returned from the Extension Service hooks.<br />The default is false, which means Envoy Gateway will fail closed if the Extension Service returns an error.<br /><br />Fail-close means that if the Extension Service hooks return an error, the relevant route/listener/resource<br />will be replaced with a default configuration returning Internal Server Error (HTTP 500).<br /><br />Fail-open means that if the Extension Service hooks return an error, no changes will be applied to the<br />source of the configuration which was sent to the extension server. |
+| `grpcMaxMessageSize` | _integer_ |  false  |  | GRPCMaxMessageSizeBytes defines the maximum message size in bytes that can be<br />sent to or received from the Extension Service.<br />Default: 4 MB |
 
 
 #### ExtensionService
