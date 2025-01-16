@@ -513,13 +513,13 @@ type ExtensionManager struct {
 	// +optional
 	FailOpen bool `json:"failOpen,omitempty"`
 
-	// GRPCMaxMessageSizeBytes defines the maximum message size in bytes that can be
+	// MaxMessageSizeBytes defines the maximum message size in bytes that can be
 	// sent to or received from the Extension Service.
 	// Default: 4 MB
 	// +kubebuilder:validation:Minimum=1
 	//
 	// +optional
-	GRPCMaxMessageSizeBytes *int `json:"grpcMaxMessageSize,omitempty"`
+	MaxMessageSizeBytes *int `json:"grpcMaxMessageSize,omitempty"`
 }
 
 // ExtensionHooks defines extension hooks across all supported runners
