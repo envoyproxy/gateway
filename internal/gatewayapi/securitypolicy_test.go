@@ -411,3 +411,82 @@ func Test_JWTProvider(t *testing.T) {
 		})
 	}
 }
+
+func Test_APIAuth(t *testing.T) {
+	tests := []struct {
+		name       string
+		APIKeyAuth egv1a1.APIKeyAuth
+		wantError  bool
+	}{
+		{
+			name: "only one of header, query or cookie is supposed to be specified",
+			APIKeyAuth: egv1a1.APIKeyAuth{
+				ExtractFrom: []*egv1a1.ExtractFrom{
+					{
+						Headers: []string{"header"},
+						Params:  []string{"param"},
+					},
+				},
+			},
+			wantError: true,
+		},
+		{
+			name: "only one of header, query or cookie is supposed to be specified",
+			APIKeyAuth: egv1a1.APIKeyAuth{
+				ExtractFrom: []*egv1a1.ExtractFrom{
+					{
+						Headers: []string{"header"},
+						Cookies: []string{"cookie"},
+					},
+				},
+			},
+			wantError: true,
+		},
+		{
+			name: "only one of header, query or cookie is supposed to be specified",
+			APIKeyAuth: egv1a1.APIKeyAuth{
+				ExtractFrom: []*egv1a1.ExtractFrom{
+					{
+						Params:  []string{"param"},
+						Cookies: []string{"cookie"},
+					},
+				},
+			},
+			wantError: true,
+		},
+		{
+			name: "only one of header, query or cookie is supposed to be specified",
+			APIKeyAuth: egv1a1.APIKeyAuth{
+				ExtractFrom: []*egv1a1.ExtractFrom{
+					{
+						Headers: []string{"header"},
+						Params:  []string{"param"},
+						Cookies: []string{"cookie"},
+					},
+				},
+			},
+			wantError: true,
+		},
+		{
+			name: "valid APIKeyAuth",
+			APIKeyAuth: egv1a1.APIKeyAuth{
+				ExtractFrom: []*egv1a1.ExtractFrom{
+					{
+						Headers: []string{"header"},
+					},
+				},
+			},
+			wantError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateAPIKeyAuth(&tt.APIKeyAuth)
+			if (err != nil) != tt.wantError {
+				t.Errorf("validateAPIKeyAuth() error = %v, wantErr %v", err, tt.wantError)
+				return
+			}
+		})
+	}
+}
