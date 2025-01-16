@@ -267,15 +267,15 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 	// Validate APIKeyAuth
 	apiKeyAuth := p.Spec.APIKeyAuth
 	if apiKeyAuth != nil {
-	for _, keySource := range apiKeyAuth.ExtractFrom {
-		// only one of headers, params or cookies is supposed to be specified.
-		if len(keySource.Headers) > 0 && len(keySource.Params) > 0 ||
-			len(keySource.Headers) > 0 && len(keySource.Cookies) > 0 ||
-			len(keySource.Params) > 0 && len(keySource.Cookies) > 0 {
-			return errors.New("only one of headers, params or cookies must be specified")
+		for _, keySource := range apiKeyAuth.ExtractFrom {
+			// only one of headers, params or cookies is supposed to be specified.
+			if len(keySource.Headers) > 0 && len(keySource.Params) > 0 ||
+				len(keySource.Headers) > 0 && len(keySource.Cookies) > 0 ||
+				len(keySource.Params) > 0 && len(keySource.Cookies) > 0 {
+				return errors.New("only one of headers, params or cookies must be specified")
+			}
 		}
 	}
-}
 	return nil
 }
 
