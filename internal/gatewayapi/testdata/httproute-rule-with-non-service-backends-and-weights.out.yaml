@@ -201,6 +201,7 @@ xdsIR:
             endpoints:
             - host: 10.244.0.28
               port: 3000
+            protocol: HTTP
             weight: 2
         hostname: '*'
         isHTTP2: false
@@ -220,6 +221,7 @@ xdsIR:
             endpoints:
             - host: primary.foo.com
               port: 3000
+            protocol: HTTP
             weight: 1
         hostname: '*'
         isHTTP2: false

@@ -7,10 +7,10 @@ metadata:
     app: udp
 spec:
   ports:
-    - name: udp-dns
-      port: 53
-      protocol: UDP
-      targetPort: 53
+  - name: udp-dns
+    port: 53
+    protocol: UDP
+    targetPort: 53
   selector:
     app: udp
 ---
@@ -31,19 +31,19 @@ spec:
         app: udp
     spec:
       containers:
-        - args:
-            - -conf
-            - /root/Corefile
-          image: coredns/coredns
-          name: coredns
-          volumeMounts:
-            - mountPath: /root
-              name: conf
-      volumes:
-        - configMap:
-            defaultMode: 420
-            name: coredns
+      - args:
+        - -conf
+        - /root/Corefile
+        image: coredns/coredns
+        name: coredns
+        volumeMounts:
+        - mountPath: /root
           name: conf
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: coredns
+        name: conf
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -70,12 +70,12 @@ metadata:
 spec:
   gatewayClassName: "{GATEWAY_CLASS_NAME}"
   listeners:
-    - name: coredns
-      protocol: UDP
-      port: 5300
-      allowedRoutes:
-        kinds:
-          - kind: UDPRoute
+  - name: coredns
+    protocol: UDP
+    port: 5300
+    allowedRoutes:
+      kinds:
+      - kind: UDPRoute
 ---
 apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: UDPRoute
@@ -84,9 +84,22 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-    - name: udp-gateway
-      sectionName: coredns
+  - name: udp-gateway
+    sectionName: coredns
   rules:
-    - backendRefs:
-        - name: coredns
-          port: 53
+  - backendRefs:
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: backend-fqdn
+      port: 53
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-fqdn
+  namespace: gateway-conformance-infra
+spec:
+  endpoints:
+  - fqdn:
+      hostname: coredns.gateway-conformance-infra.svc.cluster.local
+      port: 53

@@ -14,12 +14,18 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
 
 func init() {
@@ -30,6 +36,7 @@ func init() {
 	ConformanceTests = append(ConformanceTests, RateLimitBasedJwtClaimsTest)
 	ConformanceTests = append(ConformanceTests, RateLimitMultipleListenersTest)
 	ConformanceTests = append(ConformanceTests, RateLimitHeadersAndCIDRMatchTest)
+	ConformanceTests = append(ConformanceTests, UsageRateLimitTest)
 }
 
 var RateLimitCIDRMatchTest = suite.ConformanceTest{
@@ -659,6 +666,68 @@ var RateLimitHeadersAndCIDRMatchTest = suite.ConformanceTest{
 				t.Errorf("failed to get expected responses for the request: %v", err)
 			}
 		})
+	},
+}
+
+var UsageRateLimitTest = suite.ConformanceTest{
+	ShortName:   "UsageRateLimit",
+	Description: "Perform usage-based rate limit based on response content",
+	Manifests:   []string{"testdata/ext-proc-service.yaml", "testdata/ratelimit-usage-ratelimit.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "usage-rate-limit", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+		// Waiting for the extproc service to be ready.
+		ancestorRef := gwapiv1a2.ParentReference{
+			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+			Kind:      gatewayapi.KindPtr(resource.KindGateway),
+			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+			Name:      gwapiv1.ObjectName(gwNN.Name),
+		}
+		EnvoyExtensionPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "usage-rate-limit", Namespace: ns}, suite.ControllerName, ancestorRef)
+		podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
+		// Wait for the grpc ext auth service pod to be ready
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "grpc-ext-proc"}, corev1.PodRunning, podReady)
+
+		requestHeaders := map[string]string{"x-user-id": "one"}
+
+		ratelimitHeader := make(map[string]string)
+		expectOkResp := http.ExpectedResponse{
+			Request: http.Request{
+				Path:    "/get",
+				Headers: requestHeaders,
+			},
+			Response:  http.Response{StatusCode: 200, Headers: ratelimitHeader},
+			Namespace: ns,
+		}
+		expectOkResp.Response.Headers["X-Ratelimit-Limit"] = "21, 21;w=3600"
+		expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
+
+		expectLimitResp := http.ExpectedResponse{
+			Request: http.Request{
+				Path:    "/get",
+				Headers: requestHeaders,
+			},
+			Response: http.Response{
+				StatusCode: 429,
+			},
+			Namespace: ns,
+		}
+		expectLimitReq := http.MakeRequest(t, &expectLimitResp, gwAddr, "HTTP", "http")
+
+		// Keep sending requests till get 200 first, that will cost 10 usage.
+		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectOkResp)
+
+		// The next two request will be fine as the limit is set to 21.
+		if err := GotExactExpectedResponse(t, 2, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
+			t.Errorf("failed to get expected response for the first three requests: %v", err)
+		}
+		// At this point, the budget must be zero (21 -> 11 -> 1 -> 0), so the next request will be limited.
+		if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
+			t.Errorf("failed to get expected response for the last (fourth) request: %v", err)
+		}
 	},
 }
 

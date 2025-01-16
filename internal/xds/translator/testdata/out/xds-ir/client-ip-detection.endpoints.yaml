@@ -34,3 +34,15 @@
     loadBalancingWeight: 1
     locality:
       region: third-route-dest/backend/0
+- clusterName: fourth-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 4.4.4.4
+            portValue: 8084
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: fourth-route-dest/backend/0

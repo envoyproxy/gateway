@@ -8,6 +8,8 @@ breaking changes: |
   Outlier detection (passive health check) is now disabled by default.
   refer to https://gateway.envoyproxy.io/docs/api/extension_types/#backendtrafficpolicy for working with passive health checks.
   Envoy Gateway treats errors in calls to an extension service as fail-closed by default. Any error returned from the extension server will replace the affected resource with an "Internal Server Error" immediate response. The previous behavior can be enabled by setting the `failOpen` field to `true` in the extension service configuration.
+  Envoy Gateway now return a 500 response when a ClientTrafficPolicy translation fails for HTTP/GRPC routes, and forwards
+  client traffic to an empty cluster when a ClientTrafficPolicy translation fails for TCP routes.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
@@ -21,9 +23,11 @@ new features: |
   Added support for defining rateLimitHpa in EnvoyGateway API
   Added support for preserving the user defined HTTPRoute match order in EnvoyProxy API
   Added support for response compression in the BackendTrafficPolicy API
+  Added support for cost specifier in the rate limit API.
   Added support for specifying dynamic metadata namespaces that External Processing services can access read from and write to in EnvoyExtensionPolicy API
   Added support for API Key Authentication in the SecurityPolicy API
   Added support for GEP-1731 (HTTPRoute Retries)
+  Added support for routing to Backend resources in the GRPCRoute, TCPRoute and UDPRoute APIs
 
 bug fixes: |
 
