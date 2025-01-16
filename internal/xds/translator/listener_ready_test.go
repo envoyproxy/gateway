@@ -130,6 +130,7 @@ func TestBuildReadyRouteConfig(t *testing.T) {
 				data, err := proto.ToYAML(got)
 				require.NoError(t, err)
 				err = os.WriteFile(path.Join("testdata", "readyroute", caseName+".yaml"), data, 0o600)
+				require.NoError(t, err)
 				return
 			}
 
