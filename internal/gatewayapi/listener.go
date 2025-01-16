@@ -188,24 +188,29 @@ func (t *Translator) processProxyObservability(gwCtx *GatewayContext, xdsIR *ir.
 
 	xdsIR.AccessLog, err = t.processAccessLog(envoyProxy, resources)
 	if err != nil {
-		status.UpdateGatewayListenersNotValidCondition(gwCtx.Gateway, gwapiv1.GatewayReasonInvalid, metav1.ConditionFalse,
+		status.SetGatewayAccepted(gwCtx.Gateway, false, gwapiv1.GatewayReasonInvalidParameters,
 			fmt.Sprintf("Invalid access log backendRefs: %v", err))
 		return
 	}
 
 	xdsIR.Tracing, err = t.processTracing(gwCtx.Gateway, envoyProxy, t.MergeGateways, resources)
 	if err != nil {
-		status.UpdateGatewayListenersNotValidCondition(gwCtx.Gateway, gwapiv1.GatewayReasonInvalid, metav1.ConditionFalse,
+		status.SetGatewayAccepted(gwCtx.Gateway, false, gwapiv1.GatewayReasonInvalidParameters,
 			fmt.Sprintf("Invalid tracing backendRefs: %v", err))
 		return
 	}
 
 	xdsIR.Metrics, err = t.processMetrics(envoyProxy, resources)
 	if err != nil {
-		status.UpdateGatewayListenersNotValidCondition(gwCtx.Gateway, gwapiv1.GatewayReasonInvalid, metav1.ConditionFalse,
+		status.SetGatewayAccepted(gwCtx.Gateway, false, gwapiv1.GatewayReasonInvalidParameters,
 			fmt.Sprintf("Invalid metrics backendRefs: %v", err))
 		return
 	}
+
+	// need explicit setting accepted status to true, as the status may have been set to false in previous loop,
+	// e.g. when access log backendRefs created later than the Gateway or EnvoyProxy.
+	status.SetGatewayAccepted(gwCtx.Gateway, true, gwapiv1.GatewayReasonAccepted,
+		"The Gateway has been scheduled by Envoy Gateway")
 }
 
 func (t *Translator) processInfraIRListener(listener *ListenerContext, infraIR resource.InfraIRMap, irKey string, servicePort *protocolPort, containerPort int32) {

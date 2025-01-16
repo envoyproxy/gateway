@@ -335,41 +335,35 @@ func TestUpdateGatewayProgrammedCondition(t *testing.T) {
 	}
 }
 
-func TestComputeGatewayScheduledCondition(t *testing.T) {
-	testCases := []struct {
-		name   string
-		sched  bool
-		expect metav1.Condition
+func TestSetGatewayAccepted(t *testing.T) {
+	cases := []struct {
+		name     string
+		gtw      *gwapiv1.Gateway
+		accepted bool
+		expected metav1.ConditionStatus
 	}{
 		{
-			name:  "scheduled gateway",
-			sched: true,
-			expect: metav1.Condition{
-				Type:   string(gwapiv1.GatewayReasonAccepted),
-				Status: metav1.ConditionTrue,
-			},
+			name:     "true",
+			gtw:      &gwapiv1.Gateway{},
+			accepted: true,
+			expected: metav1.ConditionTrue,
 		},
 		{
-			name:  "not scheduled gateway",
-			sched: false,
-			expect: metav1.Condition{
-				Type:   string(gwapiv1.GatewayReasonAccepted),
-				Status: metav1.ConditionFalse,
-			},
+			name:     "false",
+			gtw:      &gwapiv1.Gateway{},
+			accepted: false,
+			expected: metav1.ConditionFalse,
 		},
 	}
 
-	for _, tc := range testCases {
-		gw := &gwapiv1.Gateway{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "test",
-				Name:      "test",
-			},
-		}
-
-		got := computeGatewayAcceptedCondition(gw, tc.sched)
-
-		assert.Equal(t, tc.expect.Type, got.Type)
-		assert.Equal(t, tc.expect.Status, got.Status)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			SetGatewayAccepted(tc.gtw, tc.accepted, "reason", "message")
+			for _, condition := range tc.gtw.Status.Conditions {
+				if condition.Type == string(gwapiv1.GatewayConditionAccepted) {
+					assert.Equal(t, tc.expected, condition.Status)
+				}
+			}
+		})
 	}
 }

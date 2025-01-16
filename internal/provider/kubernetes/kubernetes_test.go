@@ -1367,13 +1367,11 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 		if err := cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc); err != nil {
 			return false
 		}
-
 		for _, cond := range gc.Status.Conditions {
 			if cond.Type == string(gwapiv1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
 				return true
 			}
 		}
-
 		return false
 	}, defaultWait, defaultTick)
 

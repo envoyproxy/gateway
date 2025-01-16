@@ -207,6 +207,12 @@ gateways:
       port: 8080
       protocol: HTTP
   status:
+    conditions:
+    - lastTransitionTime: null
+      message: The Gateway has been scheduled by Envoy Gateway
+      reason: Accepted
+      status: "True"
+      type: Accepted
     listeners:
     - attachedRoutes: 0
       conditions:
@@ -277,6 +283,12 @@ gateways:
           namespace: envoy-gateway
         mode: Terminate
   status:
+    conditions:
+    - lastTransitionTime: null
+      message: The Gateway has been scheduled by Envoy Gateway
+      reason: Accepted
+      status: "True"
+      type: Accepted
     listeners:
     - attachedRoutes: 0
       conditions:
@@ -324,6 +336,12 @@ gateways:
           namespace: envoy-gateway
         mode: Terminate
   status:
+    conditions:
+    - lastTransitionTime: null
+      message: The Gateway has been scheduled by Envoy Gateway
+      reason: Accepted
+      status: "True"
+      type: Accepted
     listeners:
     - attachedRoutes: 0
       conditions:
@@ -371,6 +389,12 @@ gateways:
           namespace: envoy-gateway
         mode: Terminate
   status:
+    conditions:
+    - lastTransitionTime: null
+      message: The Gateway has been scheduled by Envoy Gateway
+      reason: Accepted
+      status: "True"
+      type: Accepted
     listeners:
     - attachedRoutes: 0
       conditions:
@@ -418,6 +442,12 @@ gateways:
           namespace: envoy-gateway
         mode: Terminate
   status:
+    conditions:
+    - lastTransitionTime: null
+      message: The Gateway has been scheduled by Envoy Gateway
+      reason: Accepted
+      status: "True"
+      type: Accepted
     listeners:
     - attachedRoutes: 0
       conditions:

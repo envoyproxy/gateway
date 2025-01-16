@@ -18,9 +18,9 @@ gateways:
     conditions:
     - lastTransitionTime: null
       message: 'Invalid access log backendRefs: invalid CEL expression: )++++'
-      reason: Invalid
+      reason: InvalidParameters
       status: "False"
-      type: ListenersNotValid
+      type: Accepted
     listeners:
     - attachedRoutes: 0
       conditions:

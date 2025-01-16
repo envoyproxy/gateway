@@ -40,6 +40,15 @@
         ]
       },
       "status": {
+        "conditions": [
+          {
+            "type": "Accepted",
+            "status": "True",
+            "lastTransitionTime": null,
+            "reason": "Accepted",
+            "message": "The Gateway has been scheduled by Envoy Gateway"
+          }
+        ],
         "listeners": [
           {
             "name": "http",

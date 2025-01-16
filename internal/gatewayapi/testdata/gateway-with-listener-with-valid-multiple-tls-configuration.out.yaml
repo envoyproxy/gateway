@@ -24,6 +24,12 @@ gateways:
           name: tls-secret-ecdsa-1
         mode: Terminate
   status:
+    conditions:
+    - lastTransitionTime: null
+      message: The Gateway has been scheduled by Envoy Gateway
+      reason: Accepted
+      status: "True"
+      type: Accepted
     listeners:
     - attachedRoutes: 1
       conditions:

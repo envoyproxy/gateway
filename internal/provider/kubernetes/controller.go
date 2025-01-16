@@ -940,7 +940,13 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 
 		if err := r.processGatewayParamsRef(ctx, &gtw, resourceMap, resourceTree); err != nil {
 			r.log.Error(err, "failed to process infrastructure.parametersRef for gateway", "namespace", gtw.Namespace, "name", gtw.Name)
+			status.SetGatewayAccepted(&gtw, false, gwapiv1.GatewayReasonInvalidParameters, err.Error())
+			r.updateGatewayStatus(&gtw)
+			continue
 		}
+		// Set Gateway as accepted to passed test?
+		status.SetGatewayAccepted(&gtw, true, gwapiv1.GatewayReasonAccepted, "The Gateway has not been scheduled by Envoy Gateway")
+		r.updateGatewayStatus(&gtw)
 
 		for _, listener := range gtw.Spec.Listeners {
 			// Get Secret for gateway if it exists.

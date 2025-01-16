@@ -654,7 +654,7 @@ func (r *gatewayAPIReconciler) updateGatewayStatus(gateway *gwapiv1.Gateway) {
 	// Since the status does not reflect the actual changed status, we need to delete it first
 	// to prevent it from being considered unchanged. This ensures that subscribers receive the update event.
 	r.resources.GatewayStatuses.Delete(gwName)
-	// The status that is stored in the GatewayStatuses GatewayStatuses is solely used to trigger the status updater
+	// The status that is stored in the GatewayStatuses is solely used to trigger the status updater
 	// and does not reflect the real changed status.
 	//
 	// The status updater will check the Envoy Proxy service to get the addresses of the Gateway,

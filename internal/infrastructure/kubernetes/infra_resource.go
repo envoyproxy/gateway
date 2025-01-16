@@ -406,11 +406,6 @@ func (i *Infra) deleteServiceAccount(ctx context.Context, r ResourceRender) (err
 
 // deleteDeployment deletes the Envoy Deployment in the kube api server, if it exists.
 func (i *Infra) deleteDeployment(ctx context.Context, r ResourceRender) (err error) {
-	// If deployment config is nil,ignore Deployment.
-	if deploymentConfig, er := r.DeploymentSpec(); deploymentConfig == nil {
-		return er
-	}
-
 	var (
 		name, ns   = r.Name(), i.Namespace
 		deployment = &appsv1.Deployment{
@@ -446,11 +441,6 @@ func (i *Infra) deleteDeployment(ctx context.Context, r ResourceRender) (err err
 
 // deleteDaemonSet deletes the Envoy DaemonSet in the kube api server, if it exists.
 func (i *Infra) deleteDaemonSet(ctx context.Context, r ResourceRender) (err error) {
-	// If daemonset config is nil, ignore DaemonSet.
-	if daemonSetConfig, er := r.DaemonSetSpec(); daemonSetConfig == nil {
-		return er
-	}
-
 	var (
 		name, ns  = r.Name(), i.Namespace
 		daemonSet = &appsv1.DaemonSet{

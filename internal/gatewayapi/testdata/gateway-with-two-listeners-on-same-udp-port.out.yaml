@@ -21,6 +21,12 @@ gateways:
       port: 162
       protocol: UDP
   status:
+    conditions:
+    - lastTransitionTime: null
+      message: The Gateway has been scheduled by Envoy Gateway
+      reason: Accepted
+      status: "True"
+      type: Accepted
     listeners:
     - attachedRoutes: 1
       conditions:

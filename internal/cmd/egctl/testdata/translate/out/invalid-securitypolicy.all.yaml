@@ -77,7 +77,7 @@ httpRoutes:
       matches:
       - path:
           type: PathPrefix
-          value: /
+          value: /foo
   status:
     parents:
     - conditions:
@@ -94,26 +94,28 @@ httpRoutes:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: eg
-xds:
-  envoy-gateway-system/eg:
-    '@type': type.googleapis.com/envoy.admin.v3.ClustersConfigDump
-    dynamicActiveClusters:
-    - cluster:
-        '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
-        circuitBreakers:
-          thresholds:
-          - maxRetries: 1024
-        commonLbConfig:
-          localityWeightedLbConfig: {}
-        connectTimeout: 10s
-        dnsLookupFamily: V4_PREFERRED
-        edsClusterConfig:
-          edsConfig:
-            ads: {}
-            resourceApiVersion: V3
-          serviceName: httproute/envoy-gateway-system/backend/rule/0
-        ignoreHealthOnHostRemoval: true
-        lbPolicy: LEAST_REQUEST
-        name: httproute/envoy-gateway-system/backend/rule/0
-        perConnectionBufferLimitBytes: 32768
-        type: EDS
+securityPolicies:
+- kind: SecurityPolicy
+  metadata:
+    creationTimestamp: null
+    name: jwt-example
+    namespace: envoy-gateway-system
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: eg
+        namespace: envoy-gateway-system
+      conditions:
+      - lastTransitionTime: null
+        message: 'Invalid SecurityPolicy: no security policy is specified.'
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller

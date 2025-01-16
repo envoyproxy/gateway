@@ -568,8 +568,7 @@ func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *
 		r.log.Info("failed to get Service for gateway",
 			"namespace", gtw.Namespace, "name", gtw.Name)
 	}
-	// update accepted condition
-	status.UpdateGatewayStatusAcceptedCondition(gtw, true)
+
 	// update address field and programmed condition
 	status.UpdateGatewayStatusProgrammedCondition(gtw, svc, envoyObj, r.store.listNodeAddresses()...)
 

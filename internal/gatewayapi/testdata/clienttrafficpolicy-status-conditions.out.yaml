@@ -233,6 +233,12 @@ gateways:
       port: 80
       protocol: HTTP
   status:
+    conditions:
+    - lastTransitionTime: null
+      message: The Gateway has been scheduled by Envoy Gateway
+      reason: Accepted
+      status: "True"
+      type: Accepted
     listeners:
     - attachedRoutes: 0
       conditions:
@@ -285,6 +291,12 @@ gateways:
       port: 53
       protocol: TCP
   status:
+    conditions:
+    - lastTransitionTime: null
+      message: The Gateway has been scheduled by Envoy Gateway
+      reason: Accepted
+      status: "True"
+      type: Accepted
     listeners:
     - attachedRoutes: 0
       conditions:
@@ -364,6 +376,12 @@ gateways:
       port: 80
       protocol: HTTP
   status:
+    conditions:
+    - lastTransitionTime: null
+      message: The Gateway has been scheduled by Envoy Gateway
+      reason: Accepted
+      status: "True"
+      type: Accepted
     listeners:
     - attachedRoutes: 0
       conditions:
@@ -404,6 +422,12 @@ gateways:
       port: 80
       protocol: HTTP
   status:
+    conditions:
+    - lastTransitionTime: null
+      message: The Gateway has been scheduled by Envoy Gateway
+      reason: Accepted
+      status: "True"
+      type: Accepted
     listeners:
     - attachedRoutes: 0
       conditions:
