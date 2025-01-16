@@ -412,7 +412,7 @@ func Test_JWTProvider(t *testing.T) {
 	}
 }
 
-func Test_APIAuth(t *testing.T) {
+func Test_APIKeyAuth(t *testing.T) {
 	tests := []struct {
 		name       string
 		APIKeyAuth egv1a1.APIKeyAuth
