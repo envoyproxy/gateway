@@ -7,11 +7,11 @@ package translator
 
 import (
 	"fmt"
-	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	"os"
 	"path"
 	"testing"
 
+	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
