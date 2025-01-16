@@ -165,6 +165,9 @@ func getBackendTLSBundle(backendTLSPolicy *gwapiv1a3.BackendTLSPolicy, resources
 		UseSystemTrustStore: ptr.Deref(backendTLSPolicy.Spec.Validation.WellKnownCACertificates, "") == gwapiv1a3.WellKnownCACertificatesSystem,
 	}
 	if tlsBundle.UseSystemTrustStore {
+		tlsBundle.CACertificate = &ir.TLSCACertificate{
+			Name: fmt.Sprintf("%s/%s-ca", backendTLSPolicy.Name, backendTLSPolicy.Namespace),
+		}
 		return tlsBundle, nil
 	}
 
