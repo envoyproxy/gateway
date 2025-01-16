@@ -271,6 +271,11 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 	return routeRoutes, nil
 }
 
+func processRouteTrafficFeatures(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
+	processRouteTimeout(irRoute, rule)
+	processRouteRetry(irRoute, rule)
+}
+
 func processRouteTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 	if rule.Timeouts != nil {
 		if rule.Timeouts.Request != nil {
@@ -293,6 +298,45 @@ func processRouteTimeout(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
 	}
 }
 
+func processRouteRetry(irRoute *ir.HTTPRoute, rule gwapiv1.HTTPRouteRule) {
+	if rule.Retry == nil {
+		return
+	}
+
+	retry := rule.Retry
+	res := &ir.Retry{}
+	if retry.Attempts != nil {
+		res.NumRetries = ptr.To(uint32(*retry.Attempts))
+	}
+	if retry.Backoff != nil {
+		backoff, err := time.ParseDuration(string(*retry.Backoff))
+		if err == nil {
+			res.PerRetry = &ir.PerRetryPolicy{
+				BackOff: &ir.BackOffPolicy{
+					BaseInterval: ptr.To(metav1.Duration{Duration: backoff}),
+				},
+			}
+			// xref: https://gateway-api.sigs.k8s.io/geps/gep-1742/#timeout-values
+			if rule.Timeouts != nil && rule.Timeouts.BackendRequest != nil {
+				backendRequestTimeout, err := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
+				if err == nil {
+					res.PerRetry.Timeout = &metav1.Duration{Duration: backendRequestTimeout}
+				}
+			}
+		}
+	}
+	if len(retry.Codes) > 0 {
+		codes := make([]ir.HTTPStatus, 0, len(retry.Codes))
+		for _, code := range retry.Codes {
+			codes = append(codes, ir.HTTPStatus(code))
+		}
+		res.RetryOn = &ir.RetryOn{
+			HTTPStatusCodes: codes,
+		}
+	}
+	irRoute.Retry = res
+}
+
 func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx int, httpFiltersContext *HTTPFiltersContext, rule gwapiv1.HTTPRouteRule) ([]*ir.HTTPRoute, error) {
 	var ruleRoutes []*ir.HTTPRoute
 
@@ -302,7 +346,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 			Name: irRouteName(httpRoute, ruleIdx, -1),
 		}
 		irRoute.Metadata = buildRouteMetadata(httpRoute, rule.Name)
-		processRouteTimeout(irRoute, rule)
+		processRouteTrafficFeatures(irRoute, rule)
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
 		ruleRoutes = append(ruleRoutes, irRoute)
 	}
@@ -363,7 +407,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 			SessionPersistence: sessionPersistence,
 		}
 		irRoute.Metadata = buildRouteMetadata(httpRoute, rule.Name)
-		processRouteTimeout(irRoute, rule)
+		processRouteTrafficFeatures(irRoute, rule)
 
 		if match.Path != nil {
 			switch PathMatchTypeDerefOr(match.Path.Type, gwapiv1.PathMatchPathPrefix) {
@@ -751,11 +795,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					IsHTTP2:               routeRoute.IsHTTP2,
 					SessionPersistence:    routeRoute.SessionPersistence,
 					Timeout:               routeRoute.Timeout,
-				}
-				if routeRoute.Traffic != nil {
-					hostRoute.Traffic = &ir.TrafficFeatures{
-						Retry: routeRoute.Traffic.Retry,
-					}
+					Retry:                 routeRoute.Retry,
 				}
 				perHostRoutes = append(perHostRoutes, hostRoute)
 			}
@@ -1319,7 +1359,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 		}
 		ds.IPFamily = getServiceIPFamily(resources.GetService(backendNamespace, string(backendRef.Name)))
 	case egv1a1.KindBackend:
-		ds = t.processBackendDestinationSetting(backendRef.BackendObjectReference, backendNamespace, resources)
+		ds = t.processBackendDestinationSetting(backendRef.BackendObjectReference, backendNamespace, protocol, resources)
 		ds.TLS, err = t.applyBackendTLSSetting(
 			backendRef.BackendObjectReference,
 			backendNamespace,
@@ -1685,11 +1725,10 @@ func getTargetBackendReference(backendRef gwapiv1a2.BackendObjectReference, back
 	return ref
 }
 
-func (t *Translator) processBackendDestinationSetting(backendRef gwapiv1.BackendObjectReference, backendNamespace string, resources *resource.Resources) *ir.DestinationSetting {
+func (t *Translator) processBackendDestinationSetting(backendRef gwapiv1.BackendObjectReference, backendNamespace string, protocol ir.AppProtocol, resources *resource.Resources) *ir.DestinationSetting {
 	var (
 		dstEndpoints []*ir.DestinationEndpoint
 		dstAddrType  *ir.DestinationAddressType
-		dstProtocol  ir.AppProtocol
 	)
 
 	addrTypeMap := make(map[ir.DestinationAddressType]int)
@@ -1735,14 +1774,16 @@ func (t *Translator) processBackendDestinationSetting(backendRef gwapiv1.Backend
 	}
 
 	for _, ap := range backend.Spec.AppProtocols {
-		if ap == egv1a1.AppProtocolTypeH2C {
-			dstProtocol = ir.HTTP2
-			break
+		switch ap {
+		case egv1a1.AppProtocolTypeH2C:
+			protocol = ir.HTTP2
+		case "grpc":
+			protocol = ir.GRPC
 		}
 	}
 
 	ds := &ir.DestinationSetting{
-		Protocol:    dstProtocol,
+		Protocol:    protocol,
 		Endpoints:   dstEndpoints,
 		AddressType: dstAddrType,
 	}

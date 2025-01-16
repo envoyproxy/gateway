@@ -106,6 +106,9 @@ spec:
                     Compression defines the config of enabling compression.
                     This can help reduce the bandwidth at the expense of higher CPU.
                   properties:
+                    brotli:
+                      description: The configuration for Brotli compressor.
+                      type: object
                     gzip:
                       description: The configuration for GZIP compressor.
                       type: object
@@ -114,6 +117,7 @@ spec:
                         for compression.
                       enum:
                       - Gzip
+                      - Brotli
                       type: string
                   required:
                   - type

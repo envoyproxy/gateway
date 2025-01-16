@@ -108,16 +108,18 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 2
 	case isFilterType(filter, egv1a1.EnvoyFilterExtAuthz):
 		order = 3
-	case isFilterType(filter, egv1a1.EnvoyFilterBasicAuth):
+	case isFilterType(filter, egv1a1.EnvoyFilterAPIKeyAuth):
 		order = 4
-	case isFilterType(filter, egv1a1.EnvoyFilterOAuth2):
+	case isFilterType(filter, egv1a1.EnvoyFilterBasicAuth):
 		order = 5
-	case isFilterType(filter, egv1a1.EnvoyFilterJWTAuthn):
+	case isFilterType(filter, egv1a1.EnvoyFilterOAuth2):
 		order = 6
-	case isFilterType(filter, egv1a1.EnvoyFilterSessionPersistence):
+	case isFilterType(filter, egv1a1.EnvoyFilterJWTAuthn):
 		order = 7
+	case isFilterType(filter, egv1a1.EnvoyFilterSessionPersistence):
+		order = 8
 	case isFilterType(filter, egv1a1.EnvoyFilterExtProc):
-		order = 8 + mustGetFilterIndex(filter.Name)
+		order = 9 + mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterWasm):
 		order = 100 + mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterRBAC):
@@ -297,8 +299,8 @@ func patchRouteWithPerRouteConfig(
 	}
 
 	// RateLimit filter is handled separately because it relies on the global
-	// rate limit server configuration.
-	if err := patchRouteWithRateLimit(route.GetRoute(), irRoute); err != nil {
+	// rate limit server configuration if costs are not provided.
+	if err := patchRouteWithRateLimit(route, irRoute); err != nil {
 		return nil
 	}
 

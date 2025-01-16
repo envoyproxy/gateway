@@ -491,6 +491,29 @@ func TestValidateSecurityPolicy(t *testing.T) {
 			},
 			expected: true,
 		},
+		{
+			name: "only one of header, query or cookie is supposed to be specified",
+			policy: &egv1a1.SecurityPolicy{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       egv1a1.KindSecurityPolicy,
+					APIVersion: egv1a1.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.SecurityPolicySpec{
+					APIKeyAuth: &egv1a1.APIKeyAuth{
+						ExtractFrom: []*egv1a1.ExtractFrom{
+							{
+								Headers: []string{"header"},
+								Params:  []string{"param"},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for i := range testCases {

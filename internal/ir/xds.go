@@ -35,47 +35,49 @@ const (
 )
 
 var (
-	ErrListenerNameEmpty                       = errors.New("field Name must be specified")
-	ErrListenerAddressInvalid                  = errors.New("field Address must be a valid IP address")
-	ErrListenerPortInvalid                     = errors.New("field Port specified is invalid")
-	ErrHTTPListenerHostnamesEmpty              = errors.New("field Hostnames must be specified with at least a single hostname entry")
-	ErrTCPRouteSNIsEmpty                       = errors.New("field SNIs must be specified with at least a single server name entry")
-	ErrTLSServerCertEmpty                      = errors.New("field ServerCertificate must be specified")
-	ErrTLSPrivateKey                           = errors.New("field PrivateKey must be specified")
-	ErrRouteNameEmpty                          = errors.New("field Name must be specified")
-	ErrHTTPRouteHostnameEmpty                  = errors.New("field Hostname must be specified")
-	ErrDestinationNameEmpty                    = errors.New("field Name must be specified")
-	ErrDestEndpointHostInvalid                 = errors.New("field Address must be a valid IP or FQDN address")
-	ErrDestEndpointPortInvalid                 = errors.New("field Port specified is invalid")
-	ErrDestEndpointUDSPortInvalid              = errors.New("field Port must not be specified for Unix Domain Socket address")
-	ErrDestEndpointUDSHostInvalid              = errors.New("field Host must not be specified for Unix Domain Socket address")
-	ErrStringMatchConditionInvalid             = errors.New("only one of the Exact, Prefix, SafeRegex or Distinct fields must be set")
-	ErrStringMatchInvertDistinctInvalid        = errors.New("only one of the Invert or Distinct fields can be set")
-	ErrStringMatchNameIsEmpty                  = errors.New("field Name must be specified")
-	ErrDirectResponseStatusInvalid             = errors.New("only HTTP status codes 100 - 599 are supported for DirectResponse")
-	ErrRedirectUnsupportedStatus               = errors.New("only HTTP status codes 301 and 302 are supported for redirect filters")
-	ErrRedirectUnsupportedScheme               = errors.New("only http and https are supported for the scheme in redirect filters")
-	ErrHTTPPathModifierDoubleReplace           = errors.New("redirect filter cannot have a path modifier that supplies more than one of fullPathReplace, prefixMatchReplace and regexMatchReplace")
-	ErrHTTPPathModifierNoReplace               = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace, prefixMatchReplace or regexMatchReplace")
-	ErrHTTPPathRegexModifierNoSetting          = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace, prefixMatchReplace or regexMatchReplace")
-	ErrHTTPHostModifierDoubleReplace           = errors.New("redirect filter cannot have a host modifier that supplies more than one of Hostname, Header and Backend")
-	ErrAddHeaderEmptyName                      = errors.New("header modifier filter cannot configure a header without a name to be added")
-	ErrAddHeaderDuplicate                      = errors.New("header modifier filter attempts to add the same header more than once (case insensitive)")
-	ErrRemoveHeaderDuplicate                   = errors.New("header modifier filter attempts to remove the same header more than once (case insensitive)")
-	ErrLoadBalancerInvalid                     = errors.New("loadBalancer setting is invalid, only one setting can be set")
-	ErrHealthCheckTimeoutInvalid               = errors.New("field HealthCheck.Timeout must be specified")
-	ErrHealthCheckIntervalInvalid              = errors.New("field HealthCheck.Interval must be specified")
-	ErrHealthCheckUnhealthyThresholdInvalid    = errors.New("field HealthCheck.UnhealthyThreshold should be greater than 0")
-	ErrHealthCheckHealthyThresholdInvalid      = errors.New("field HealthCheck.HealthyThreshold should be greater than 0")
-	ErrHealthCheckerInvalid                    = errors.New("health checker setting is invalid, only one health checker can be set")
-	ErrHCHTTPHostInvalid                       = errors.New("field HTTPHealthChecker.Host should be specified")
-	ErrHCHTTPPathInvalid                       = errors.New("field HTTPHealthChecker.Path should be specified")
-	ErrHCHTTPMethodInvalid                     = errors.New("only one of the GET, HEAD, POST, DELETE, OPTIONS, TRACE, PATCH of HTTPHealthChecker.Method could be set")
-	ErrHCHTTPExpectedStatusesInvalid           = errors.New("field HTTPHealthChecker.ExpectedStatuses should be specified")
-	ErrHealthCheckPayloadInvalid               = errors.New("one of Text, Binary fields must be set in payload")
-	ErrHTTPStatusInvalid                       = errors.New("HTTPStatus should be in [200,600)")
-	ErrOutlierDetectionBaseEjectionTimeInvalid = errors.New("field OutlierDetection.BaseEjectionTime must be specified")
-	ErrOutlierDetectionIntervalInvalid         = errors.New("field OutlierDetection.Interval must be specified")
+	ErrListenerNameEmpty                        = errors.New("field Name must be specified")
+	ErrListenerAddressInvalid                   = errors.New("field Address must be a valid IP address")
+	ErrListenerPortInvalid                      = errors.New("field Port specified is invalid")
+	ErrHTTPListenerHostnamesEmpty               = errors.New("field Hostnames must be specified with at least a single hostname entry")
+	ErrTCPRouteSNIsEmpty                        = errors.New("field SNIs must be specified with at least a single server name entry")
+	ErrTLSServerCertEmpty                       = errors.New("field ServerCertificate must be specified")
+	ErrTLSPrivateKey                            = errors.New("field PrivateKey must be specified")
+	ErrRouteNameEmpty                           = errors.New("field Name must be specified")
+	ErrHTTPRouteHostnameEmpty                   = errors.New("field Hostname must be specified")
+	ErrDestinationNameEmpty                     = errors.New("field Name must be specified")
+	ErrDestEndpointHostInvalid                  = errors.New("field Address must be a valid IP or FQDN address")
+	ErrDestEndpointPortInvalid                  = errors.New("field Port specified is invalid")
+	ErrDestEndpointUDSPortInvalid               = errors.New("field Port must not be specified for Unix Domain Socket address")
+	ErrDestEndpointUDSHostInvalid               = errors.New("field Host must not be specified for Unix Domain Socket address")
+	ErrStringMatchConditionInvalid              = errors.New("only one of the Exact, Prefix, SafeRegex or Distinct fields must be set")
+	ErrStringMatchInvertDistinctInvalid         = errors.New("only one of the Invert or Distinct fields can be set")
+	ErrStringMatchNameIsEmpty                   = errors.New("field Name must be specified")
+	ErrDirectResponseStatusInvalid              = errors.New("only HTTP status codes 100 - 599 are supported for DirectResponse")
+	ErrRedirectUnsupportedStatus                = errors.New("only HTTP status codes 301 and 302 are supported for redirect filters")
+	ErrRedirectUnsupportedScheme                = errors.New("only http and https are supported for the scheme in redirect filters")
+	ErrHTTPPathModifierDoubleReplace            = errors.New("redirect filter cannot have a path modifier that supplies more than one of fullPathReplace, prefixMatchReplace and regexMatchReplace")
+	ErrHTTPPathModifierNoReplace                = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace, prefixMatchReplace or regexMatchReplace")
+	ErrHTTPPathRegexModifierNoSetting           = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace, prefixMatchReplace or regexMatchReplace")
+	ErrHTTPHostModifierDoubleReplace            = errors.New("redirect filter cannot have a host modifier that supplies more than one of Hostname, Header and Backend")
+	ErrAddHeaderEmptyName                       = errors.New("header modifier filter cannot configure a header without a name to be added")
+	ErrAddHeaderDuplicate                       = errors.New("header modifier filter attempts to add the same header more than once (case insensitive)")
+	ErrRemoveHeaderDuplicate                    = errors.New("header modifier filter attempts to remove the same header more than once (case insensitive)")
+	ErrLoadBalancerInvalid                      = errors.New("loadBalancer setting is invalid, only one setting can be set")
+	ErrHealthCheckTimeoutInvalid                = errors.New("field HealthCheck.Timeout must be specified")
+	ErrHealthCheckIntervalInvalid               = errors.New("field HealthCheck.Interval must be specified")
+	ErrHealthCheckUnhealthyThresholdInvalid     = errors.New("field HealthCheck.UnhealthyThreshold should be greater than 0")
+	ErrHealthCheckHealthyThresholdInvalid       = errors.New("field HealthCheck.HealthyThreshold should be greater than 0")
+	ErrHealthCheckerInvalid                     = errors.New("health checker setting is invalid, only one health checker can be set")
+	ErrHCHTTPHostInvalid                        = errors.New("field HTTPHealthChecker.Host should be specified")
+	ErrHCHTTPPathInvalid                        = errors.New("field HTTPHealthChecker.Path should be specified")
+	ErrHCHTTPMethodInvalid                      = errors.New("only one of the GET, HEAD, POST, DELETE, OPTIONS, TRACE, PATCH of HTTPHealthChecker.Method could be set")
+	ErrHCHTTPExpectedStatusesInvalid            = errors.New("field HTTPHealthChecker.ExpectedStatuses should be specified")
+	ErrHealthCheckPayloadInvalid                = errors.New("one of Text, Binary fields must be set in payload")
+	ErrHTTPStatusInvalid                        = errors.New("HTTPStatus should be in [200,600)")
+	ErrOutlierDetectionBaseEjectionTimeInvalid  = errors.New("field OutlierDetection.BaseEjectionTime must be specified")
+	ErrOutlierDetectionIntervalInvalid          = errors.New("field OutlierDetection.Interval must be specified")
+	ErrBothXForwardedForAndCustomHeaderInvalid  = errors.New("only one of ClientIPDetection.XForwardedFor and ClientIPDetection.CustomHeader must be set")
+	ErrBothNumTrustedHopsAndTrustedCIDRsInvalid = errors.New("only one of ClientIPDetection.XForwardedFor.NumTrustedHops and ClientIPDetection.XForwardedFor.TrustedCIDRs must be set")
 
 	redacted = []byte("[redacted]")
 )
@@ -343,6 +345,15 @@ func (h HTTPListener) Validate() error {
 	for _, route := range h.Routes {
 		if err := route.Validate(); err != nil {
 			errs = errors.Join(errs, err)
+		}
+	}
+	if h.ClientIPDetection != nil {
+		if h.ClientIPDetection.XForwardedFor != nil && h.ClientIPDetection.CustomHeader != nil {
+			errs = errors.Join(errs, ErrBothXForwardedForAndCustomHeaderInvalid)
+		} else if h.ClientIPDetection.XForwardedFor != nil {
+			if h.ClientIPDetection.XForwardedFor.NumTrustedHops != nil && h.ClientIPDetection.XForwardedFor.TrustedCIDRs != nil {
+				errs = errors.Join(errs, ErrBothNumTrustedHopsAndTrustedCIDRsInvalid)
+			}
 		}
 	}
 	return errs
@@ -714,6 +725,21 @@ type HTTPRoute struct {
 	SessionPersistence *SessionPersistence `json:"sessionPersistence,omitempty" yaml:"sessionPersistence,omitempty"`
 	// Timeout is the time until which entire response is received from the upstream.
 	Timeout *metav1.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	// Retry defines the retry policy for the route.
+	// This is derived from the core Gateway API, and should take precedence over Traffic.Retry.
+	Retry *Retry `json:"retry,omitempty" yaml:"retry,omitempty"`
+}
+
+func (h *HTTPRoute) GetRetry() *Retry {
+	if h.Retry != nil {
+		return h.Retry
+	}
+
+	if h.Traffic != nil {
+		return h.Traffic.Retry
+	}
+
+	return nil
 }
 
 // DNS contains configuration options for DNS resolution.
@@ -752,6 +778,13 @@ type HeaderBasedSessionPersistence struct {
 	Name string `json:"name"`
 }
 
+// Compression holds the configuration for HTTP compression.
+// +k8s:deepcopy-gen=true
+type Compression struct {
+	// Type of compression to be used.
+	Type egv1a1.CompressorType `json:"type" yaml:"type"`
+}
+
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.
 // +k8s:deepcopy-gen=true
 type TrafficFeatures struct {
@@ -783,6 +816,8 @@ type TrafficFeatures struct {
 	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
 	// ResponseOverride defines the schema for overriding the response.
 	ResponseOverride *ResponseOverride `json:"responseOverride,omitempty" yaml:"responseOverride,omitempty"`
+	// Compression settings for HTTP Response
+	Compression []*Compression `json:"compression,omitempty" yaml:"compression,omitempty"`
 }
 
 func (b *TrafficFeatures) Validate() error {
@@ -811,6 +846,8 @@ type SecurityFeatures struct {
 	JWT *JWT `json:"jwt,omitempty" yaml:"jwt,omitempty"`
 	// OIDC defines the schema for authenticating HTTP requests using OpenID Connect (OIDC).
 	OIDC *OIDC `json:"oidc,omitempty" yaml:"oidc,omitempty"`
+	// APIKeyAuth defines the schema for the API Key Authentication.
+	APIKeyAuth *APIKeyAuth `json:"apiKeyAuth,omitempty" yaml:"apiKeyAuth,omitempty"`
 	// BasicAuth defines the schema for the HTTP Basic Authentication.
 	BasicAuth *BasicAuth `json:"basicAuth,omitempty" yaml:"basicAuth,omitempty"`
 	// ExtAuth defines the schema for the external authorization.
@@ -991,6 +1028,43 @@ type BasicAuth struct {
 	Users PrivateBytes `json:"users,omitempty" yaml:"users,omitempty"`
 }
 
+// APIKeyAuth defines the schema for the API Key Authentication.
+//
+// +k8s:deepcopy-gen=true
+type APIKeyAuth struct {
+	// The API key to be used for authentication.
+	// Key is the client id and the value is the API key to be used for authentication.
+	Credentials map[string]PrivateBytes `json:"credentials,omitempty" yaml:"credentials,omitempty"`
+
+	// ExtractFrom is where to fetch the key from the coming request.
+	// The value from the first source that has a key will be used.
+	ExtractFrom []*ExtractFrom `json:"extractFrom"`
+}
+
+// ExtractFrom defines the source of the key.
+//
+// +k8s:deepcopy-gen=true
+type ExtractFrom struct {
+	// Headers is the names of the header to fetch the key from.
+	// If multiple headers are specified, envoy will look for the api key in the order of the list.
+	// This field is optional, but only one of headers, params or cookies is supposed to be specified.
+	//
+	// +optional
+	Headers []string `json:"headers,omitempty"`
+	// Params is the names of the query parameter to fetch the key from.
+	// If multiple params are specified, envoy will look for the api key in the order of the list.
+	// This field is optional, but only one of headers, params or cookies is supposed to be specified.
+	//
+	// +optional
+	Params []string `json:"params,omitempty"`
+	// Cookies is the names of the cookie to fetch the key from.
+	// If multiple cookies are specified, envoy will look for the api key in the order of the list.
+	// This field is optional, but only one of headers, params or cookies is supposed to be specified.
+	//
+	// +optional
+	Cookies []string `json:"cookies,omitempty"`
+}
+
 // ExtAuth defines the schema for the external authorization.
 //
 // +k8s:deepcopy-gen=true
@@ -1157,7 +1231,7 @@ type FaultInjectionAbort struct {
 }
 
 // Validate the fields within the HTTPRoute structure
-func (h HTTPRoute) Validate() error {
+func (h *HTTPRoute) Validate() error {
 	var errs error
 	if h.Name == "" {
 		errs = errors.Join(errs, ErrRouteNameEmpty)
@@ -1872,6 +1946,17 @@ type RateLimitRule struct {
 	CIDRMatch *CIDRMatch `json:"cidrMatch,omitempty" yaml:"cidrMatch,omitempty"`
 	// Limit holds the rate limit values.
 	Limit RateLimitValue `json:"limit,omitempty" yaml:"limit,omitempty"`
+	// RequestCost specifies the cost of the request.
+	RequestCost *RateLimitCost `json:"requestCost,omitempty" yaml:"requestCost,omitempty"`
+	// ResponseCost specifies the cost of the response.
+	ResponseCost *RateLimitCost `json:"responseCost,omitempty" yaml:"responseCost,omitempty"`
+}
+
+// RateLimitCost specifies the cost of the request or response.
+// +k8s:deepcopy-gen=true
+type RateLimitCost struct {
+	Number *uint64 `json:"number,omitempty" yaml:"number,omitempty"`
+	Format *string `json:"format,omitempty" yaml:"format,omitempty"`
 }
 
 type CIDRMatch struct {
@@ -2528,6 +2613,7 @@ const (
 	Unavailable          = TriggerEnum(egv1a1.Unavailable)
 )
 
+// RetryOn specifies the retry policy.
 // +k8s:deepcopy-gen=true
 type RetryOn struct {
 	// Triggers specifies the retry trigger condition(Http/Grpc).

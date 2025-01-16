@@ -12497,6 +12497,9 @@ spec:
                               scarce and large payloads can be effectively compressed
                               at the expense of higher CPU load.
                             properties:
+                              brotli:
+                                description: The configuration for Brotli compressor.
+                                type: object
                               gzip:
                                 description: The configuration for GZIP compressor.
                                 type: object
@@ -12505,6 +12508,7 @@ spec:
                                   type to use for compression.
                                 enum:
                                 - Gzip
+                                - Brotli
                                 type: string
                             required:
                             - type

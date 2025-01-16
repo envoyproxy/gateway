@@ -106,8 +106,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 
 	// Retries
 	if router.GetRoute() != nil &&
-		httpRoute.Traffic != nil &&
-		httpRoute.Traffic.Retry != nil {
+		httpRoute.GetRetry() != nil {
 		if rp, err := buildRetryPolicy(httpRoute); err == nil {
 			router.GetRoute().RetryPolicy = rp
 		} else {
@@ -573,8 +572,8 @@ func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy 
 }
 
 func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
-	rr := route.Traffic.Retry
-	any, err := protocov.ToAnyWithValidation(&previoushost.PreviousHostsPredicate{})
+	rr := route.GetRetry()
+	anyCfg, err := protocov.ToAnyWithValidation(&previoushost.PreviousHostsPredicate{})
 	if err != nil {
 		return nil, err
 	}
@@ -586,7 +585,7 @@ func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
 			{
 				Name: "envoy.retry_host_predicates.previous_hosts",
 				ConfigType: &routev3.RetryPolicy_RetryHostPredicate_TypedConfig{
-					TypedConfig: any,
+					TypedConfig: anyCfg,
 				},
 			},
 		},

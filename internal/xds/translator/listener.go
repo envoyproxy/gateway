@@ -7,6 +7,7 @@ package translator
 
 import (
 	"errors"
+	"net"
 	"strconv"
 	"strings"
 
@@ -23,12 +24,14 @@ import (
 	early_header_mutationv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/early_header_mutation/header_mutation/v3"
 	preservecasev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/header_formatters/preserve_case/v3"
 	customheaderv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/original_ip_detection/custom_header/v3"
+	xffv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/original_ip_detection/xff/v3"
 	quicv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/quic/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/utils/ptr"
@@ -108,9 +111,13 @@ func http2ProtocolOptions(opts *ir.HTTP2Settings) *corev3.Http2ProtocolOptions {
 	return out
 }
 
+// xffNumTrustedHops returns the number of hops to be configured in proxy
+// Need to decrement number of hops configured by EGW user by 1 for backward compatibility
+// See for more: https://github.com/envoyproxy/envoy/issues/34241
 func xffNumTrustedHops(clientIPDetection *ir.ClientIPDetectionSettings) uint32 {
-	if clientIPDetection != nil && clientIPDetection.XForwardedFor != nil && clientIPDetection.XForwardedFor.NumTrustedHops != nil {
-		return *clientIPDetection.XForwardedFor.NumTrustedHops
+	if clientIPDetection != nil && clientIPDetection.XForwardedFor != nil &&
+		clientIPDetection.XForwardedFor.NumTrustedHops != nil && *clientIPDetection.XForwardedFor.NumTrustedHops > 0 {
+		return *clientIPDetection.XForwardedFor.NumTrustedHops - 1
 	}
 	return 0
 }
@@ -140,6 +147,34 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 		extensionConfig = append(extensionConfig, &corev3.TypedExtensionConfig{
 			Name:        "envoy.extensions.http.original_ip_detection.custom_header",
 			TypedConfig: customHeaderConfigAny,
+		})
+	} else if clientIPDetection.XForwardedFor != nil {
+		var xffHeaderConfigAny *anypb.Any
+		if clientIPDetection.XForwardedFor.TrustedCIDRs != nil {
+			trustedCidrs := make([]*corev3.CidrRange, 0)
+			for _, cidr := range clientIPDetection.XForwardedFor.TrustedCIDRs {
+				ip, nw, _ := net.ParseCIDR(string(cidr))
+				prefixLen, _ := nw.Mask.Size()
+				trustedCidrs = append(trustedCidrs, &corev3.CidrRange{
+					AddressPrefix: ip.String(),
+					PrefixLen:     wrapperspb.UInt32(uint32(prefixLen)),
+				})
+			}
+			xffHeaderConfigAny, _ = protocov.ToAnyWithValidation(&xffv3.XffConfig{
+				XffTrustedCidrs: &xffv3.XffTrustedCidrs{
+					Cidrs: trustedCidrs,
+				},
+				SkipXffAppend: wrapperspb.Bool(false),
+			})
+		} else if clientIPDetection.XForwardedFor.NumTrustedHops != nil {
+			xffHeaderConfigAny, _ = protocov.ToAnyWithValidation(&xffv3.XffConfig{
+				XffNumTrustedHops: xffNumTrustedHops(clientIPDetection),
+				SkipXffAppend:     wrapperspb.Bool(false),
+			})
+		}
+		extensionConfig = append(extensionConfig, &corev3.TypedExtensionConfig{
+			Name:        "envoy.extensions.http.original_ip_detection.xff",
+			TypedConfig: xffHeaderConfigAny,
 		})
 	}
 
@@ -292,7 +327,6 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 		Http2ProtocolOptions: http2ProtocolOptions(irListener.HTTP2),
 		// https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
 		UseRemoteAddress:              &wrapperspb.BoolValue{Value: useRemoteAddress},
-		XffNumTrustedHops:             xffNumTrustedHops(irListener.ClientIPDetection),
 		OriginalIpDetectionExtensions: originalIPDetectionExtensions,
 		// normalize paths according to RFC 3986
 		NormalizePath:                &wrapperspb.BoolValue{Value: true},

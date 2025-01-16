@@ -305,6 +305,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 		ds        *ir.DNS
 		h2        *ir.HTTP2Settings
 		ro        *ir.ResponseOverride
+		cp        []*ir.Compression
 		err, errs error
 	)
 
@@ -354,6 +355,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 		err = perr.WithMessage(err, "ResponseOverride")
 		errs = errors.Join(errs, err)
 	}
+	cp = buildCompression(policy.Spec.Compression)
 
 	ds = translateDNS(policy.Spec.ClusterSettings)
 
@@ -417,6 +419,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 						DNS:               ds,
 						Timeout:           to,
 						ResponseOverride:  ro,
+						Compression:       cp,
 					}
 
 					// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
@@ -453,6 +456,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 		ds        *ir.DNS
 		h2        *ir.HTTP2Settings
 		ro        *ir.ResponseOverride
+		cp        []*ir.Compression
 		err, errs error
 	)
 
@@ -495,6 +499,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 		err = perr.WithMessage(err, "ResponseOverride")
 		errs = errors.Join(errs, err)
 	}
+	cp = buildCompression(policy.Spec.Compression)
 
 	ds = translateDNS(policy.Spec.ClusterSettings)
 
@@ -579,6 +584,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 				HTTP2:            h2,
 				DNS:              ds,
 				ResponseOverride: ro,
+				Compression:      cp,
 			}
 
 			// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
@@ -785,7 +791,28 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 			irRule.CIDRMatch = cidrMatch
 		}
 	}
+
+	if cost := rule.Cost; cost != nil {
+		if cost.Request != nil {
+			irRule.RequestCost = translateRateLimitCost(cost.Request)
+		}
+		if cost.Response != nil {
+			irRule.ResponseCost = translateRateLimitCost(cost.Response)
+		}
+	}
 	return irRule, nil
+}
+
+func translateRateLimitCost(cost *egv1a1.RateLimitCostSpecifier) *ir.RateLimitCost {
+	ret := &ir.RateLimitCost{}
+	if cost.Number != nil {
+		ret.Number = cost.Number
+	}
+	if cost.Metadata != nil {
+		ret.Format = ptr.To(fmt.Sprintf("%%DYNAMIC_METADATA(%s:%s)%%",
+			cost.Metadata.Namespace, cost.Metadata.Key))
+	}
+	return ret
 }
 
 func int64ToUint32(in int64) (uint32, bool) {
@@ -929,4 +956,18 @@ func defaultResponseOverrideRuleName(policy *egv1a1.BackendTrafficPolicy, index 
 		"%s/responseoverride/rule/%s",
 		irConfigName(policy),
 		strconv.Itoa(index))
+}
+
+func buildCompression(compression []*egv1a1.Compression) []*ir.Compression {
+	if compression == nil {
+		return nil
+	}
+	irCompression := make([]*ir.Compression, 0, len(compression))
+	for _, c := range compression {
+		irCompression = append(irCompression, &ir.Compression{
+			Type: c.Type,
+		})
+	}
+
+	return irCompression
 }

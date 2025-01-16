@@ -98,7 +98,6 @@ type RateLimitRule struct {
 	// the request path and do not reduce the rate limit counters on the response path.
 	//
 	// +optional
-	// +notImplementedHide
 	Cost *RateLimitCost `json:"cost,omitempty"`
 }
 
@@ -112,7 +111,6 @@ type RateLimitCost struct {
 	// enough capacity, the request is rate limited.
 	//
 	// +optional
-	// +notImplementedHide
 	Request *RateLimitCostSpecifier `json:"request,omitempty"`
 	// Response specifies the number to reduce the rate limit counters
 	// after the response is sent back to the client or the request stream is closed.
@@ -127,7 +125,6 @@ type RateLimitCost struct {
 	// Currently, this is only supported for HTTP Global Rate Limits.
 	//
 	// +optional
-	// +notImplementedHide
 	Response *RateLimitCostSpecifier `json:"response,omitempty"`
 }
 
@@ -143,12 +140,10 @@ type RateLimitCostSpecifier struct {
 	// Using zero can be used to only check the rate limit counters without reducing them.
 	//
 	// +optional
-	// +notImplementedHide
 	Number *uint64 `json:"number,omitempty"`
 	// Metadata specifies the per-request metadata to retrieve the usage number from.
 	//
 	// +optional
-	// +notImplementedHide
 	Metadata *RateLimitCostMetadata `json:"metadata,omitempty"`
 }
 
