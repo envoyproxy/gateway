@@ -312,3 +312,9 @@ xdsIR:
               name: example2
               remoteJWKS:
                 uri: http://two.example.com/jwt/public-key/jwks.json
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19001
+      prometheusEnabled: true

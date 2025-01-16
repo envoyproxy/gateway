@@ -352,3 +352,9 @@ xdsIR:
               - header2
               path: /auth
             name: securitypolicy/default/policy-for-gateway-1
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19001
+      prometheusEnabled: true

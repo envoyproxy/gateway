@@ -1,0 +1,51 @@
+address:
+  socketAddress:
+    address: 0.0.0.0
+    portValue: 19001
+filterChains:
+- filters:
+  - name: envoy.filters.network.http_connection_manager
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+      httpFilters:
+      - name: envoy.filters.http.health_check
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck
+          headers:
+          - name: :path
+            stringMatch:
+              exact: /ready
+          passThroughMode: false
+      - name: envoy.filters.http.compression
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.compressor.v3.Compressor
+          compressorLibrary:
+            name: text_optimized
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.compression.gzip.compressor.v3.Gzip
+      - name: envoy.filters.http.router
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+          suppressEnvoyHeaders: true
+      routeConfig:
+        name: local_route
+        typedPerFilterConfig:
+          envoy.filters.http.compression:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.compressor.v3.CompressorPerRoute
+            disabled: true
+        virtualHosts:
+        - domains:
+          - '*'
+          name: prometheus_stats
+          routes:
+          - match:
+              prefix: /stats/prometheus
+            route:
+              cluster: prometheus_stats
+            typedPerFilterConfig:
+              envoy.filters.http.compression:
+                '@type': type.googleapis.com/envoy.extensions.filters.http.compressor.v3.CompressorPerRoute
+                overrides:
+                  responseDirectionConfig: {}
+      statPrefix: eg-ready-http
+name: envoy-gateway-proxy-ready-0.0.0.0-19001

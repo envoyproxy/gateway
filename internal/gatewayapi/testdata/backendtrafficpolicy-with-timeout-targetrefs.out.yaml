@@ -268,6 +268,12 @@ xdsIR:
               maxConnectionDuration: 17s
             tcp:
               connectTimeout: 15s
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19001
+      prometheusEnabled: true
   envoy-gateway/gateway-2:
     accessLog:
       text:
@@ -308,3 +314,9 @@ xdsIR:
               maxConnectionDuration: 17s
             tcp:
               connectTimeout: 15s
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19001
+      prometheusEnabled: true

@@ -360,3 +360,9 @@ xdsIR:
         urlRewrite:
           host:
             header: my-host
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19001
+      prometheusEnabled: true

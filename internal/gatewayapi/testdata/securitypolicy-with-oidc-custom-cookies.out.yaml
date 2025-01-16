@@ -193,3 +193,9 @@ xdsIR:
             redirectURL: https://www.example.com/bar/oauth2/callback
             scopes:
             - openid
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19001
+      prometheusEnabled: true

@@ -23,6 +23,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/naming"
 	"github.com/envoyproxy/gateway/internal/utils/net"
+	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
 var _ ListenersTranslator = (*Translator)(nil)
@@ -50,6 +51,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 		if gateway.envoyProxy != nil {
 			infraIR[irKey].Proxy.Config = gateway.envoyProxy
 		}
+		t.processProxyReadyListener(xdsIR[irKey], gateway.envoyProxy)
 		t.processProxyObservability(gateway, xdsIR[irKey], infraIR[irKey].Proxy.Config, resources)
 
 		for _, listener := range gateway.listeners {
@@ -180,6 +182,44 @@ func buildListenerMetadata(listener *ListenerContext, gateway *GatewayContext) *
 		Namespace:   gateway.GetNamespace(),
 		Annotations: filterEGPrefix(gateway.GetAnnotations()),
 		SectionName: string(listener.Name),
+	}
+}
+
+func (t *Translator) processProxyReadyListener(xdsIR *ir.Xds, envoyProxy *egv1a1.EnvoyProxy) {
+	var (
+		ipFamily                 = egv1a1.IPv4
+		address                  = net.IPv4ListenerAddress
+		prometheusEnabled        = true
+		prometheusCompressorType *egv1a1.CompressorType
+	)
+
+	if envoyProxy != nil && envoyProxy.Spec.IPFamily != nil {
+		ipFamily = *envoyProxy.Spec.IPFamily
+	}
+	if ipFamily == egv1a1.IPv6 || ipFamily == egv1a1.DualStack {
+		address = net.IPv6ListenerAddress
+	}
+	if envoyProxy != nil &&
+		envoyProxy.Spec.Telemetry != nil &&
+		envoyProxy.Spec.Telemetry.Metrics != nil &&
+		envoyProxy.Spec.Telemetry.Metrics.Prometheus != nil {
+		prom := envoyProxy.Spec.Telemetry.Metrics.Prometheus
+		if prom.Disable {
+			prometheusEnabled = false
+		}
+
+		if prom.Compression != nil {
+			prometheusCompressorType = ptr.To(prom.Compression.Type)
+		}
+	}
+	xdsIR.ReadyListener = &ir.ReadyListener{
+		Address:  address,
+		Port:     uint32(bootstrap.EnvoyReadinessPort),
+		Path:     bootstrap.EnvoyReadinessPath,
+		IPFamily: ipFamily,
+
+		PrometheusEnabled:        prometheusEnabled,
+		PrometheusCompressorType: prometheusCompressorType,
 	}
 }
 

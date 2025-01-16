@@ -165,3 +165,9 @@ xdsIR:
           namespace: default
           sectionName: rule-1
         name: httproute/default/httproute-1/rule/0/match/-1/*
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19001
+      prometheusEnabled: true

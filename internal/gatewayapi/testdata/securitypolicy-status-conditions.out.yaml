@@ -449,6 +449,12 @@ xdsIR:
               name: ""
               safeRegex: http://.*\.example\.com
             maxAge: 16m40s
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19001
+      prometheusEnabled: true
   envoy-gateway/gateway-2:
     accessLog:
       text:
@@ -489,6 +495,12 @@ xdsIR:
               name: ""
               safeRegex: http://.*\.example\.com
             maxAge: 16m40s
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19001
+      prometheusEnabled: true
     tcp:
     - address: 0.0.0.0
       name: envoy-gateway/gateway-2/tcp

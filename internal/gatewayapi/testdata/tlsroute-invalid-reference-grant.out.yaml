@@ -96,6 +96,12 @@ xdsIR:
     accessLog:
       text:
       - path: /dev/stdout
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19001
+      prometheusEnabled: true
     tcp:
     - address: 0.0.0.0
       name: gateway-conformance-infra/gateway-tlsroute-referencegrant/https

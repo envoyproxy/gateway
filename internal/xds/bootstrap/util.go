@@ -16,7 +16,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/jsonpatch"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
-	_ "github.com/envoyproxy/gateway/internal/xds/extensions" // DON'T REMOVE: import of all extensions
 )
 
 // ApplyBootstrapConfig applies the bootstrap config to the default bootstrap config and return the result config.

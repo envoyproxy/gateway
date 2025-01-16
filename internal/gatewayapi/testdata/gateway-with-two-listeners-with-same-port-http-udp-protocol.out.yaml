@@ -198,6 +198,12 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19001
+      prometheusEnabled: true
     udp:
     - address: 0.0.0.0
       name: envoy-gateway/gateway-1/udp

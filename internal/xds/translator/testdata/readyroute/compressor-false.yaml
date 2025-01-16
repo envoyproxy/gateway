@@ -1,0 +1,10 @@
+name: local_route
+virtualHosts:
+- domains:
+  - '*'
+  name: prometheus_stats
+  routes:
+  - match:
+      prefix: /stats/prometheus
+    route:
+      cluster: prometheus_stats

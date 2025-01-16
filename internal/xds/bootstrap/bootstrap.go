@@ -42,9 +42,6 @@ const (
 	// DefaultWasmServerPort is the default listening port of the wasm HTTP server.
 	wasmServerPort = 18002
 
-	envoyReadinessAddressv4 = "0.0.0.0"
-	envoyReadinessAddressv6 = "::"
-
 	EnvoyReadinessPort = 19001
 	EnvoyReadinessPath = "/ready"
 
@@ -263,7 +260,7 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 				AccessLogPath: envoyAdminAccessLogPath,
 			},
 			ReadyServer: readyServerParameters{
-				Address:       envoyReadinessAddressv4,
+				Address:       netutils.IPv4ListenerAddress,
 				Port:          EnvoyReadinessPort,
 				ReadinessPath: EnvoyReadinessPath,
 			},
@@ -312,9 +309,9 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 			cfg.parameters.IPFamily = string(*opts.IPFamily)
 			if *opts.IPFamily == egv1a1.IPv6 {
 				cfg.parameters.AdminServer.Address = EnvoyAdminAddressV6
-				cfg.parameters.ReadyServer.Address = envoyReadinessAddressv6
+				cfg.parameters.ReadyServer.Address = netutils.IPv6ListenerAddress
 			} else if *opts.IPFamily == egv1a1.DualStack {
-				cfg.parameters.ReadyServer.Address = envoyReadinessAddressv6
+				cfg.parameters.ReadyServer.Address = netutils.IPv6ListenerAddress
 			}
 		}
 

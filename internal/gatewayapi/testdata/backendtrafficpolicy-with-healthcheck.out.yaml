@@ -782,6 +782,12 @@ xdsIR:
               interval: 3s
               timeout: 1s
               unhealthyThreshold: 3
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19001
+      prometheusEnabled: true
   envoy-gateway/gateway-2:
     accessLog:
       text:
@@ -961,3 +967,9 @@ xdsIR:
               interval: 1s
               maxEjectionPercent: 100
               splitExternalLocalOriginErrors: false
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19001
+      prometheusEnabled: true

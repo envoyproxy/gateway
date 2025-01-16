@@ -160,3 +160,9 @@ xdsIR:
           name: grpcroute-1
           namespace: default
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19001
+      prometheusEnabled: true

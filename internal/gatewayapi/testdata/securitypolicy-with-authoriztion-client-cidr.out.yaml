@@ -413,3 +413,9 @@ xdsIR:
                   ip: 10.0.2.0
                   isIPv6: false
                   maskLen: 24
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19001
+      prometheusEnabled: true

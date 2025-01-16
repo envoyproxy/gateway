@@ -273,3 +273,9 @@ xdsIR:
               cookie:
                 name: test
         useClientProtocol: true
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19001
+      prometheusEnabled: true

@@ -438,3 +438,9 @@ xdsIR:
               name: ""
               safeRegex: http://.*\.example\.com
             maxAge: 16m40s
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19001
+      prometheusEnabled: true

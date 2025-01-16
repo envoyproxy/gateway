@@ -169,3 +169,9 @@ xdsIR:
           compression:
           - type: Brotli
           - type: Gzip
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19001
+      prometheusEnabled: true

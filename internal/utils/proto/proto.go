@@ -15,6 +15,13 @@ import (
 	protov1 "github.com/golang/protobuf/proto"
 	"google.golang.org/protobuf/proto"
 	"sigs.k8s.io/yaml"
+
+	_ "github.com/envoyproxy/gateway/internal/xds/extensions" // DON'T REMOVE: import of all extensions
+)
+
+var (
+	marshaler   = &jsonpb.Marshaler{}
+	unmarshaler = &jsonpb.Unmarshaler{AllowUnknownFields: true}
 )
 
 func FromYAML(content []byte, pb proto.Message) error {
@@ -26,7 +33,7 @@ func FromYAML(content []byte, pb proto.Message) error {
 }
 
 func ToYAML(pb proto.Message) ([]byte, error) {
-	marshaler := &jsonpb.Marshaler{}
+
 	json, err := marshaler.MarshalToString(protov1.MessageV1(pb))
 	if err != nil {
 		return nil, err
@@ -35,6 +42,5 @@ func ToYAML(pb proto.Message) ([]byte, error) {
 }
 
 func FromJSON(content []byte, out proto.Message) error {
-	unmarshaler := &jsonpb.Unmarshaler{AllowUnknownFields: true}
 	return unmarshaler.Unmarshal(bytes.NewReader(content), protov1.MessageV1(out))
 }
