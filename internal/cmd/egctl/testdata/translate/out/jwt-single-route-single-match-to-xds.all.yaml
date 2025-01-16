@@ -145,14 +145,6 @@ xds:
                 typedConfig:
                   '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
                   httpFilters:
-                  - name: envoy.filters.http.health_check
-                    typedConfig:
-                      '@type': type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck
-                      headers:
-                      - name: :path
-                        stringMatch:
-                          exact: /ready
-                      passThroughMode: false
                   - name: envoy.filters.http.router
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -171,8 +163,8 @@ xds:
                           path: /stats/prometheus
                         route:
                           cluster: prometheus_stats
-                  statPrefix: eg-ready-http
-            name: envoy-gateway-proxy-ready-0.0.0.0-19001
+                  statPrefix: eg-stats-http
+            name: envoy-gateway-proxy-stats-0.0.0.0-19001
     - '@type': type.googleapis.com/envoy.admin.v3.EndpointsConfigDump
       dynamicEndpointConfigs:
       - endpointConfig:
@@ -249,6 +241,44 @@ xds:
           type: STRICT_DNS
     - '@type': type.googleapis.com/envoy.admin.v3.ListenersConfigDump
       dynamicListeners:
+      - activeState:
+          listener:
+            '@type': type.googleapis.com/envoy.config.listener.v3.Listener
+            address:
+              socketAddress:
+                address: 0.0.0.0
+                portValue: 19003
+            filterChains:
+            - filters:
+              - name: envoy.filters.network.http_connection_manager
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                  httpFilters:
+                  - name: envoy.filters.http.health_check
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck
+                      headers:
+                      - name: :path
+                        stringMatch:
+                          exact: /ready
+                      passThroughMode: false
+                  - name: envoy.filters.http.router
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                      suppressEnvoyHeaders: true
+                  routeConfig:
+                    name: ready_route
+                    virtualHosts:
+                    - domains:
+                      - '*'
+                      name: ready_route
+                      routes:
+                      - directResponse:
+                          status: 200
+                        match:
+                          prefix: /
+                  statPrefix: eg-ready-http
+            name: envoy-gateway-proxy-ready-0.0.0.0-19003
       - activeState:
           listener:
             '@type': type.googleapis.com/envoy.config.listener.v3.Listener

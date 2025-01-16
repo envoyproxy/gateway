@@ -131,6 +131,8 @@ func (p *PrivateBytes) UnmarshalJSON(data []byte) error {
 // used by the xDS Translator to convert it into xDS resources.
 // +k8s:deepcopy-gen=true
 type Xds struct {
+	// ReadyListener is the listener that is ready to accept traffic.
+	ReadyListener *ReadyListener `json:"readyListener,omitempty" yaml:"readyListener,omitempty"`
 	// AccessLog configuration for the gateway.
 	AccessLog *AccessLog `json:"accessLog,omitempty" yaml:"accessLog,omitempty"`
 	// Tracing configuration for the gateway.
@@ -2028,6 +2030,15 @@ const (
 	ProxyAccessLogTypeRoute    = ProxyAccessLogType(egv1a1.ProxyAccessLogTypeRoute)
 	ProxyAccessLogTypeListener = ProxyAccessLogType(egv1a1.ProxyAccessLogTypeListener)
 )
+
+// ReadyListener holds the configuration for ready listener.
+// +k8s:deepcopy-gen=true
+type ReadyListener struct {
+	IPFamily IPFamily `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
+	Address  string   `json:"address" yaml:"address"`
+	Port     uint32   `json:"port" yaml:"port"`
+	Path     string   `json:"path" yaml:"path"`
+}
 
 // AccessLog holds the access logging configuration.
 // +k8s:deepcopy-gen=true

@@ -62,11 +62,11 @@ stats_sinks:
 {{- end }}
 static_resources:
   listeners:
-  - name: envoy-gateway-proxy-ready-{{ .ReadyServer.Address }}-{{ .ReadyServer.Port }}
+  - name: envoy-gateway-proxy-stats-{{ .StatsServer.Address }}-{{ .StatsServer.Port }}
     address:
       socket_address:
-        address: '{{ .ReadyServer.Address }}'
-        port_value: {{ .ReadyServer.Port }}
+        address: '{{ .StatsServer.Address }}'
+        port_value: {{ .StatsServer.Port }}
         protocol: TCP
         {{- if eq .IPFamily "DualStack" "IPv6" }}
         ipv4_compat: true
@@ -76,7 +76,7 @@ static_resources:
       - name: envoy.filters.network.http_connection_manager
         typed_config:
           "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-          stat_prefix: eg-ready-http
+          stat_prefix: eg-stats-http
           normalize_path: true
           route_config:
             name: local_route
@@ -118,14 +118,6 @@ static_resources:
                 {{- end }}
             {{- end }}
           http_filters:
-          - name: envoy.filters.http.health_check
-            typed_config:
-              "@type": type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck
-              pass_through_mode: false
-              headers:
-              - name: ":path"
-                string_match:
-                  exact: {{ .ReadyServer.ReadinessPath }}
           - name: envoy.filters.http.router
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
