@@ -152,6 +152,17 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 					continue
 				}
 
+				if err := validateSecurityPolicy(policy); err != nil {
+					status.SetTranslationErrorForPolicyAncestors(&policy.Status,
+						parentGateways,
+						t.GatewayControllerName,
+						policy.Generation,
+						status.Error2ConditionMsg(fmt.Errorf("invalid SecurityPolicy: %w", err)),
+					)
+
+					continue
+				}
+
 				if err := t.translateSecurityPolicyForRoute(policy, targetedRoute, resources, xdsIR); err != nil {
 					status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 						parentGateways,
@@ -248,6 +259,21 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 	}
 
 	return res
+}
+
+// validateSecurityPolicy validates the SecurityPolicy.
+// It checks some constraints that are not covered by the CRD schema validation.
+func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
+	// Validate APIKeyAuth
+	for _, keySource := range p.Spec.APIKeyAuth.ExtractFrom {
+		// only one of headers, params or cookies is supposed to be specified.
+		if len(keySource.Headers) > 0 && len(keySource.Params) > 0 ||
+			len(keySource.Headers) > 0 && len(keySource.Cookies) > 0 ||
+			len(keySource.Params) > 0 && len(keySource.Cookies) > 0 {
+			return errors.New("only one of headers, params or cookies must be specified")
+		}
+	}
+	return nil
 }
 
 func resolveSecurityPolicyGatewayTargetRef(
