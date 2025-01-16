@@ -7,6 +7,7 @@ package translator
 
 import (
 	"fmt"
+	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	"os"
 	"path"
 	"testing"
@@ -97,7 +98,7 @@ func TestBuildReadyListener(t *testing.T) {
 			}
 
 			data := readTestData(t, "readylistener", tc.name)
-			expected := &routev3.RouteConfiguration{}
+			expected := &listenerv3.Listener{}
 			err = proto.FromYAML(data, expected)
 			require.NoError(t, err)
 
