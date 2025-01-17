@@ -285,8 +285,8 @@ func setupGRPCOpts(ctx context.Context, client k8scli.Client, ext *egv1a1.Extens
 		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
 	opts = append(opts, grpc.WithDefaultServiceConfig(grpcServiceConfig))
-	if ext.MaxMessageSizeBytes != nil {
-		opts = append(opts, grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(*ext.MaxMessageSizeBytes), grpc.MaxCallSendMsgSize(*ext.MaxMessageSizeBytes)))
+	if ext.MaxMessageSize != nil {
+		opts = append(opts, grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(*ext.MaxMessageSize), grpc.MaxCallSendMsgSize(*ext.MaxMessageSize)))
 	}
 
 	return opts, nil
