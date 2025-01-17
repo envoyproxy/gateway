@@ -501,10 +501,10 @@ var (
 		},
 		Security: &SecurityFeatures{
 			JWT: &JWT{
-				Providers: []egv1a1.JWTProvider{
+				Providers: []JWTProvider{
 					{
 						Name: "test1",
-						RemoteJWKS: egv1a1.RemoteJWKS{
+						RemoteJWKS: RemoteJWKS{
 							URI: "https://test1.local",
 						},
 					},
@@ -1226,48 +1226,6 @@ func TestValidateStringMatch(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			if test.want == nil {
-				require.NoError(t, test.input.Validate())
-			} else {
-				require.EqualError(t, test.input.Validate(), test.want.Error())
-			}
-		})
-	}
-}
-
-func TestValidateJWT(t *testing.T) {
-	tests := []struct {
-		name  string
-		input JWT
-		want  error
-	}{
-		{
-			name: "nil rules",
-			input: JWT{
-				Providers: nil,
-			},
-			want: nil,
-		},
-		{
-			name: "provider with remote jwks uri",
-			input: JWT{
-				Providers: []egv1a1.JWTProvider{
-					{
-						Name:      "test",
-						Issuer:    "https://test.local",
-						Audiences: []string{"test1", "test2"},
-						RemoteJWKS: egv1a1.RemoteJWKS{
-							URI: "https://test.local",
-						},
-					},
-				},
-			},
-			want: nil,
-		},
-	}
-	for i := range tests {
-		test := tests[i]
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
 				require.NoError(t, test.input.Validate())
