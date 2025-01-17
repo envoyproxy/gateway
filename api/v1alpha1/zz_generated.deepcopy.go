@@ -1611,11 +1611,6 @@ func (in *EnvoyGatewayKubernetesProvider) DeepCopyInto(out *EnvoyGatewayKubernet
 		*out = new(KubernetesDeployMode)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.OverwriteControlPlaneCerts != nil {
-		in, out := &in.OverwriteControlPlaneCerts, &out.OverwriteControlPlaneCerts
-		*out = new(bool)
-		**out = **in
-	}
 	if in.LeaderElection != nil {
 		in, out := &in.LeaderElection, &out.LeaderElection
 		*out = new(LeaderElection)
