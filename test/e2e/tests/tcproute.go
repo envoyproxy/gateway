@@ -38,7 +38,7 @@ func init() {
 var TCPRouteTest = suite.ConformanceTest{
 	ShortName:   "TCPRoute",
 	Description: "Testing TCP Route",
-	Manifests:   []string{"testdata/tcp-route.yaml"},
+	Manifests:   []string{"testdata/tcproute.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("tcp-route-1", func(t *testing.T) {
 			ns := "gateway-conformance-infra"

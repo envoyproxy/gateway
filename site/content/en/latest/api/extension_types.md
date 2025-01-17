@@ -298,6 +298,7 @@ _Appears in:_
 - [OIDCProvider](#oidcprovider)
 - [OpenTelemetryEnvoyProxyAccessLog](#opentelemetryenvoyproxyaccesslog)
 - [ProxyOpenTelemetrySink](#proxyopentelemetrysink)
+- [RemoteJWKS](#remotejwks)
 - [TracingProvider](#tracingprovider)
 
 | Field | Type | Required | Default | Description |
@@ -359,6 +360,7 @@ _Appears in:_
 - [OIDCProvider](#oidcprovider)
 - [OpenTelemetryEnvoyProxyAccessLog](#opentelemetryenvoyproxyaccesslog)
 - [ProxyOpenTelemetrySink](#proxyopentelemetrysink)
+- [RemoteJWKS](#remotejwks)
 - [TracingProvider](#tracingprovider)
 
 | Field | Type | Required | Default | Description |
@@ -466,6 +468,7 @@ _Appears in:_
 | `rateLimit` | _[RateLimitSpec](#ratelimitspec)_ |  false  |  | RateLimit allows the user to limit the number of incoming requests<br />to a predefined value based on attributes within the traffic flow. |
 | `faultInjection` | _[FaultInjection](#faultinjection)_ |  false  |  | FaultInjection defines the fault injection policy to be applied. This configuration can be used to<br />inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
 | `useClientProtocol` | _boolean_ |  false  |  | UseClientProtocol configures Envoy to prefer sending requests to backends using<br />the same HTTP protocol that the incoming request used. Defaults to false, which means<br />that Envoy will use the protocol indicated by the attached BackendRef. |
+| `compression` | _[Compression](#compression) array_ |  false  |  | The compression config for the http streams. |
 | `responseOverride` | _[ResponseOverride](#responseoverride) array_ |  false  |  | ResponseOverride defines the configuration to override specific responses with a custom one.<br />If multiple configurations are specified, the first one to match wins. |
 
 
@@ -511,6 +514,19 @@ _Appears in:_
 | `Merge` | Merge merges the provided bootstrap with the default one. The provided bootstrap can add or override a value<br />within a map, or add a new value to a list.<br />Please note that the provided bootstrap can't override a value within a list.<br /> | 
 | `Replace` | Replace replaces the default bootstrap with the provided one.<br /> | 
 | `JSONPatch` | JSONPatch applies the provided JSONPatches to the default bootstrap.<br /> | 
+
+
+#### BrotliCompressor
+
+
+
+BrotliCompressor defines the config for the Brotli compressor.
+The default values can be found here:
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/brotli/compressor/v3/brotli.proto#extension-envoy-compression-brotli-compressor
+
+_Appears in:_
+- [Compression](#compression)
+
 
 
 #### CIDR
@@ -725,6 +741,7 @@ _Appears in:_
 - [OIDCProvider](#oidcprovider)
 - [OpenTelemetryEnvoyProxyAccessLog](#opentelemetryenvoyproxyaccesslog)
 - [ProxyOpenTelemetrySink](#proxyopentelemetrysink)
+- [RemoteJWKS](#remotejwks)
 - [TracingProvider](#tracingprovider)
 
 | Field | Type | Required | Default | Description |
@@ -755,6 +772,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `type` | _[CompressorType](#compressortype)_ |  true  |  | CompressorType defines the compressor type to use for compression. |
+| `brotli` | _[BrotliCompressor](#brotlicompressor)_ |  false  |  | The configuration for Brotli compressor. |
 | `gzip` | _[GzipCompressor](#gzipcompressor)_ |  false  |  | The configuration for GZIP compressor. |
 
 
@@ -767,6 +785,10 @@ CompressorType defines the types of compressor library supported by Envoy Gatewa
 _Appears in:_
 - [Compression](#compression)
 
+| Value | Description |
+| ----- | ----------- |
+| `Gzip` |  | 
+| `Brotli` |  | 
 
 
 #### ConnectionLimit
@@ -1024,6 +1046,7 @@ _Appears in:_
 | `envoy.filters.http.local_ratelimit` | EnvoyFilterLocalRateLimit defines the Envoy HTTP local rate limit filter.<br /> | 
 | `envoy.filters.http.ratelimit` | EnvoyFilterRateLimit defines the Envoy HTTP rate limit filter.<br /> | 
 | `envoy.filters.http.custom_response` | EnvoyFilterCustomResponse defines the Envoy HTTP custom response filter.<br /> | 
+| `envoy.filters.http.compressor` | EnvoyFilterCompressor defines the Envoy HTTP compressor filter.<br /> | 
 | `envoy.filters.http.router` | EnvoyFilterRouter defines the Envoy HTTP router filter.<br /> | 
 
 
@@ -3438,6 +3461,8 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
+| `request` | _[RateLimitCostSpecifier](#ratelimitcostspecifier)_ |  false  |  | Request specifies the number to reduce the rate limit counters<br />on the request path. If this is not specified, the default behavior<br />is to reduce the rate limit counters by 1.<br /><br />When Envoy receives a request that matches the rule, it tries to reduce the<br />rate limit counters by the specified number. If the counter doesn't have<br />enough capacity, the request is rate limited. |
+| `response` | _[RateLimitCostSpecifier](#ratelimitcostspecifier)_ |  false  |  | Response specifies the number to reduce the rate limit counters<br />after the response is sent back to the client or the request stream is closed.<br /><br />The cost is used to reduce the rate limit counters for the matching requests.<br />Since the reduction happens after the request stream is complete, the rate limit<br />won't be enforced for the current request, but for the subsequent matching requests.<br /><br />This is optional and if not specified, the rate limit counters are not reduced<br />on the response path.<br /><br />Currently, this is only supported for HTTP Global Rate Limits. |
 
 
 #### RateLimitCostFrom
@@ -3483,6 +3508,8 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `from` | _[RateLimitCostFrom](#ratelimitcostfrom)_ |  true  |  | From specifies where to get the rate limit cost. Currently, only "Number" and "Metadata" are supported. |
+| `number` | _integer_ |  false  |  | Number specifies the fixed usage number to reduce the rate limit counters.<br />Using zero can be used to only check the rate limit counters without reducing them. |
+| `metadata` | _[RateLimitCostMetadata](#ratelimitcostmetadata)_ |  false  |  | Refer to Kubernetes API documentation for fields of `metadata`. |
 
 
 #### RateLimitDatabaseBackend
@@ -3574,6 +3601,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `clientSelectors` | _[RateLimitSelectCondition](#ratelimitselectcondition) array_ |  false  |  | ClientSelectors holds the list of select conditions to select<br />specific clients using attributes from the traffic flow.<br />All individual select conditions must hold True for this rule<br />and its limit to be applied.<br /><br />If no client selectors are specified, the rule applies to all traffic of<br />the targeted Route.<br /><br />If the policy targets a Gateway, the rule applies to each Route of the Gateway.<br />Please note that each Route has its own rate limit counters. For example,<br />if a Gateway has two Routes, and the policy has a rule with limit 10rps,<br />each Route will have its own 10rps limit. |
 | `limit` | _[RateLimitValue](#ratelimitvalue)_ |  true  |  | Limit holds the rate limit values.<br />This limit is applied for traffic flows when the selectors<br />compute to True, causing the request to be counted towards the limit.<br />The limit is enforced and the request is ratelimited, i.e. a response with<br />429 HTTP status code is sent back to the client when<br />the selected requests have reached the limit. |
+| `cost` | _[RateLimitCost](#ratelimitcost)_ |  false  |  | Cost specifies the cost of requests and responses for the rule.<br /><br />This is optional and if not specified, the default behavior is to reduce the rate limit counters by 1 on<br />the request path and do not reduce the rate limit counters on the response path. |
 
 
 #### RateLimitSelectCondition
@@ -3731,15 +3759,17 @@ _Appears in:_
 
 
 
-RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote
-HTTP/HTTPS endpoint.
+RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote HTTP/HTTPS endpoint.
 
 _Appears in:_
 - [JWTProvider](#jwtprovider)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `uri` | _string_ |  true  |  | URI is the HTTPS URI to fetch the JWKS. Envoy's system trust bundle is used to<br />validate the server certificate. |
+| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.BackendObjectReference)_ |  false  |  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br /><br />Deprecated: Use BackendRefs instead. |
+| `backendRefs` | _[BackendRef](#backendref) array_ |  false  |  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent. |
+| `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  |  | BackendSettings holds configuration for managing the connection<br />to the backend. |
+| `uri` | _string_ |  true  |  | URI is the HTTPS URI to fetch the JWKS. Envoy's system trust bundle is used to validate the server certificate.<br />If a custom trust bundle is needed, it can be specified in a BackendTLSConfig resource and target the BackendRefs. |
 
 
 #### ReplaceRegexMatch

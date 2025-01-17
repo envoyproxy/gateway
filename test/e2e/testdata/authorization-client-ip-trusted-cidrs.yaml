@@ -1,0 +1,55 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-authorization-client-ip-trusted-cidr
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: Exact
+            value: /protected1
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: authorization-client-ip-trusted-cidr
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-with-authorization-client-ip-trusted-cidr
+  authorization:
+    defaultAction: Allow
+    rules:
+      - name: "deny-location-1"
+        action: Deny
+        principal:
+          clientCIDRs:
+            - 192.168.1.0/24
+---
+# This is a client traffic policy that enables client IP detection using the XFF header.
+# So, the client IP can be detected from the XFF header and used for authorization.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: enable-client-ip-detection-trusted-cidr
+  namespace: gateway-conformance-infra
+spec:
+  clientIPDetection:
+    xForwardedFor:
+      trustedCIDRs:
+        - "172.0.0.0/8"
+        - "10.0.0.0/8"
+        # trust all IPv6 addresses for E2E
+        - "::/0"
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: same-namespace

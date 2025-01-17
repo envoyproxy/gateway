@@ -12,6 +12,7 @@ import (
 	"path"
 
 	"github.com/spf13/cobra"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	clicfg "sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -22,6 +23,9 @@ import (
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes"
 	"github.com/envoyproxy/gateway/internal/utils/file"
 )
+
+// cfgPath is the path to the EnvoyGateway configuration file.
+var overwriteControlPlaneCerts bool
 
 // TODO: make this path configurable or use server config directly.
 const defaultLocalCertPath = "/tmp/envoy-gateway/certs"
@@ -40,17 +44,22 @@ func getCertGenCommand() *cobra.Command {
 
 	cmd.PersistentFlags().BoolVarP(&local, "local", "l", false,
 		"Generate all the certificates locally.")
-
+	cmd.PersistentFlags().BoolVarP(&overwriteControlPlaneCerts, "overwrite", "o", false,
+		"Updates the secrets containing the control plane certs.")
 	return cmd
 }
 
 // certGen generates control plane certificates.
 func certGen(local bool) error {
-	cfg, err := getConfig()
+	cfg, err := config.New()
 	if err != nil {
 		return err
 	}
 	log := cfg.Logger
+
+	if overwriteControlPlaneCerts {
+		cfg.EnvoyGateway.Provider.Kubernetes.OverwriteControlPlaneCerts = ptr.To(true)
+	}
 
 	certs, err := crypto.GenerateCerts(cfg)
 	if err != nil {
