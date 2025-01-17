@@ -75,17 +75,28 @@ type JWTProvider struct {
 	ExtractFrom *JWTExtractor `json:"extractFrom,omitempty"`
 }
 
-// RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote
-// HTTP/HTTPS endpoint.
+// RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote HTTP/HTTPS endpoint.
+// +kubebuilder:validation:XValidation:rule="!has(self.backendRef)",message="BackendRefs must be used, backendRef is not supported."
+// +kubebuilder:validation:XValidation:rule="has(self.backendSettings)? (has(self.backendSettings.retry)?(has(self.backendSettings.retry.perRetry)? !has(self.backendSettings.retry.perRetry.timeout):true):true):true",message="Retry timeout is not supported."
+// +kubebuilder:validation:XValidation:rule="has(self.backendSettings)? (has(self.backendSettings.retry)?(has(self.backendSettings.retry.retryOn)? !has(self.backendSettings.retry.retryOn.httpStatusCodes):true):true):true",message="HTTPStatusCodes is not supported."
 type RemoteJWKS struct {
-	// URI is the HTTPS URI to fetch the JWKS. Envoy's system trust bundle is used to
-	// validate the server certificate.
+	// BackendRefs is used to specify the address of the Remote JWKS. The BackendRefs are optional, if not specified,
+	// the backend service is extracted from the host and port of the URI field.
+	//
+	// TLS configuration can be specified in a BackendTLSConfig resource and target the BackendRefs.
+	//
+	// Other settings for the connection to remote JWKS can be specified in the BackendSettings resource.
+	// Currently, only the retry policy is supported.
+	//
+	// +optional
+	BackendCluster `json:",inline"`
+
+	// URI is the HTTPS URI to fetch the JWKS. Envoy's system trust bundle is used to validate the server certificate.
+	// If a custom trust bundle is needed, it can be specified in a BackendTLSConfig resource and target the BackendRefs.
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	URI string `json:"uri"`
-
-	// TODO: Add TBD remote JWKS fields based on defined use cases.
 }
 
 // ClaimToHeader defines a configuration to convert JWT claims into HTTP headers

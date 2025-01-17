@@ -1,0 +1,68 @@
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: httproute/default/httproute-1/rule/0
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  name: httproute/default/httproute-1/rule/0
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  dnsRefreshRate: 30s
+  lbPolicy: LEAST_REQUEST
+  loadAssignment:
+    clusterName: securitypolicy/default/policy-for-route/jwt/0
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: foo.bar.com
+              portValue: 443
+        loadBalancingWeight: 1
+        metadata:
+          filterMetadata:
+            envoy.transport_socket_match:
+              name: securitypolicy/default/policy-for-route/jwt/0/tls/0
+      loadBalancingWeight: 1
+      locality:
+        region: securitypolicy/default/policy-for-route/jwt/0/backend/0
+  name: securitypolicy/default/policy-for-route/jwt/0
+  perConnectionBufferLimitBytes: 32768
+  respectDnsTtl: true
+  transportSocketMatches:
+  - match:
+      name: securitypolicy/default/policy-for-route/jwt/0/tls/0
+    name: securitypolicy/default/policy-for-route/jwt/0/tls/0
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        commonTlsContext:
+          combinedValidationContext:
+            defaultValidationContext:
+              matchTypedSubjectAltNames:
+              - matcher:
+                  exact: foo.bar.com
+                sanType: DNS
+            validationContextSdsSecretConfig:
+              name: policy-btls/default-ca
+              sdsConfig:
+                ads: {}
+                resourceApiVersion: V3
+        sni: foo.bar.com
+  type: STRICT_DNS
