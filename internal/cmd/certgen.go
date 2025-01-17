@@ -83,7 +83,8 @@ func certGen(local bool) error {
 
 // outputCertsForKubernetes outputs the provided certs to a secret in namespace ns.
 func outputCertsForKubernetes(ctx context.Context, cli client.Client, cfg *config.Server,
-	updateSecrets bool, certs *crypto.Certificates) error {
+	updateSecrets bool, certs *crypto.Certificates,
+) error {
 	secrets, err := kubernetes.CreateOrUpdateSecrets(ctx, cli, kubernetes.CertsToSecret(cfg.Namespace, certs), updateSecrets)
 	log := cfg.Logger
 
