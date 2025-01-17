@@ -8,10 +8,8 @@ metadata:
   {{- if .Values.certgen.rbac.labels }}
   {{- toYaml .Values.certgen.rbac.labels | nindent 4 }}
   {{- end }}
-  annotations:
-    "helm.sh/hook": pre-install
-    "helm.sh/hook-weight": "-1"
   {{- if .Values.certgen.rbac.annotations }}
+  annotations:
     {{- toYaml .Values.certgen.rbac.annotations | nindent 4 -}}
   {{- end }}
 ---
@@ -25,10 +23,8 @@ metadata:
   {{- if .Values.certgen.rbac.labels }}
   {{- toYaml .Values.certgen.rbac.labels | nindent 4 }}
   {{- end }}
-  annotations:
-    "helm.sh/hook": pre-install
-    "helm.sh/hook-weight": "-1"
   {{- if .Values.certgen.rbac.annotations }}
+  annotations:
     {{- toYaml .Values.certgen.rbac.annotations | nindent 4 -}}
   {{- end }}
 rules:
@@ -51,10 +47,8 @@ metadata:
   {{- if .Values.certgen.rbac.labels }}
   {{- toYaml .Values.certgen.rbac.labels | nindent 4 }}
   {{- end }}
-  annotations:
-    "helm.sh/hook": pre-install
-    "helm.sh/hook-weight": "-1"
   {{- if .Values.certgen.rbac.annotations }}
+  annotations:
     {{- toYaml .Values.certgen.rbac.annotations | nindent 4 -}}
   {{- end }}
 roleRef:

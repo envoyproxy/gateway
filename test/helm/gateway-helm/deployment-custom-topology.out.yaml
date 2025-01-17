@@ -496,9 +496,6 @@ metadata:
     app.kubernetes.io/instance: gateway-helm
     app.kubernetes.io/version: "latest"
     app.kubernetes.io/managed-by: Helm
-  annotations:
-    "helm.sh/hook": pre-install
-    "helm.sh/hook-weight": "-1"
 ---
 # Source: gateway-helm/templates/certgen-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -512,9 +509,6 @@ metadata:
     app.kubernetes.io/instance: gateway-helm
     app.kubernetes.io/version: "latest"
     app.kubernetes.io/managed-by: Helm
-  annotations:
-    "helm.sh/hook": pre-install
-    "helm.sh/hook-weight": "-1"
 rules:
 - apiGroups:
   - ""
@@ -537,9 +531,6 @@ metadata:
     app.kubernetes.io/instance: gateway-helm
     app.kubernetes.io/version: "latest"
     app.kubernetes.io/managed-by: Helm
-  annotations:
-    "helm.sh/hook": pre-install
-    "helm.sh/hook-weight": "-1"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -563,7 +554,6 @@ metadata:
     app.kubernetes.io/managed-by: Helm
   annotations:
     "helm.sh/hook": pre-install, pre-upgrade
-    "helm.sh/hook-weight": "0"
 spec:
   backoffLimit: 1
   completions: 1
