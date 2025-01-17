@@ -74,6 +74,15 @@ deployment:
 service:
   annotations: {}
 
+hpa:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 1
+  targetCPU: 50
+  targetMemory: 50
+  behavior: {}
+
+
 config:
   envoyGateway:
     gateway:

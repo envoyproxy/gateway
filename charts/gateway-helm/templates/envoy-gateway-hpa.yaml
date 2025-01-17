@@ -1,0 +1,37 @@
+{{- if .Values.hpa.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: envoy-gateway
+  namespace: '{{ $.Release.Namespace }}'
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: envoy-gateway
+  {{- if .Values.hpa.minReplicas }}
+  minReplicas: {{ .Values.hpa.minReplicas }}
+  {{- end }}
+  maxReplicas: {{ .Values.hpa.maxReplicas }}
+  {{- if .Values.hpa.behavior }}
+  behavior:
+  {{ toYaml .Values.hpa.behavior | indent 4 }}
+  {{- end }}
+  metrics:
+    {{- if .Values.hpa.targetCPU }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.hpa.targetCPU }}
+    {{- end }}
+    {{- if .Values.hpa.targetMemory }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.hpa.targetMemory }}
+    {{- end }}
+{{- end }}
