@@ -1,4 +1,17 @@
 ---
+# Source: gateway-helm/templates/certgen-rbac.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: gateway-helm-certgen
+  namespace: 'envoy-gateway-system'
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: gateway-helm
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
+---
 # Source: gateway-helm/templates/envoy-gateway-serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
@@ -186,6 +199,28 @@ subjects:
   name: 'envoy-gateway'
   namespace: 'envoy-gateway-system'
 ---
+# Source: gateway-helm/templates/certgen-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: gateway-helm-certgen
+  namespace: 'envoy-gateway-system'
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: gateway-helm
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - create
+  - update
+---
 # Source: gateway-helm/templates/infra-manager-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -279,6 +314,27 @@ rules:
   verbs:
   - create
   - patch
+---
+# Source: gateway-helm/templates/certgen-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gateway-helm-certgen
+  namespace: 'envoy-gateway-system'
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: gateway-helm
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: 'gateway-helm-certgen'
+subjects:
+- kind: ServiceAccount
+  name: 'gateway-helm-certgen'
+  namespace: 'envoy-gateway-system'
 ---
 # Source: gateway-helm/templates/infra-manager-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -483,62 +539,6 @@ spec:
       - name: certs
         secret:
           secretName: envoy-gateway
----
-# Source: gateway-helm/templates/certgen-rbac.yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: gateway-helm-certgen
-  namespace: 'envoy-gateway-system'
-  labels:
-    helm.sh/chart: gateway-helm-v0.0.0-latest
-    app.kubernetes.io/name: gateway-helm
-    app.kubernetes.io/instance: gateway-helm
-    app.kubernetes.io/version: "latest"
-    app.kubernetes.io/managed-by: Helm
----
-# Source: gateway-helm/templates/certgen-rbac.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: gateway-helm-certgen
-  namespace: 'envoy-gateway-system'
-  labels:
-    helm.sh/chart: gateway-helm-v0.0.0-latest
-    app.kubernetes.io/name: gateway-helm
-    app.kubernetes.io/instance: gateway-helm
-    app.kubernetes.io/version: "latest"
-    app.kubernetes.io/managed-by: Helm
-rules:
-- apiGroups:
-  - ""
-  resources:
-  - secrets
-  verbs:
-  - get
-  - create
-  - update
----
-# Source: gateway-helm/templates/certgen-rbac.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: gateway-helm-certgen
-  namespace: 'envoy-gateway-system'
-  labels:
-    helm.sh/chart: gateway-helm-v0.0.0-latest
-    app.kubernetes.io/name: gateway-helm
-    app.kubernetes.io/instance: gateway-helm
-    app.kubernetes.io/version: "latest"
-    app.kubernetes.io/managed-by: Helm
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: 'gateway-helm-certgen'
-subjects:
-- kind: ServiceAccount
-  name: 'gateway-helm-certgen'
-  namespace: 'envoy-gateway-system'
 ---
 # Source: gateway-helm/templates/certgen.yaml
 apiVersion: batch/v1
