@@ -6,7 +6,7 @@ This task provides instructions for configuring [JSON Web Token (JWT)][jwt] auth
 if an incoming request has a valid JWT before routing the request to a backend service. Currently, Envoy Gateway only
 supports validating a JWT from an HTTP header, e.g. `Authorization: Bearer <token>`.
 
-Envoy Gateway introduces a new CRD called [SecurityPolicy][SecurityPolicy] that allows the user to configure JWT authentication.
+Envoy Gateway introduces a new CRD called [SecurityPolicy][SecurityPolicy] that allows the user to configure JWT authentication. 
 This instantiated resource can be linked to a [Gateway][Gateway], [HTTPRoute][HTTPRoute] or [GRPCRoute][GRPCRoute] resource.
 
 ## Prerequisites
@@ -27,7 +27,7 @@ kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/exa
 ```
 
 Two HTTPRoute has been created, one for `/foo` and another for `/bar`. A SecurityPolicy has been created and targeted
-HTTPRoute foo to authenticate requests for `/foo`. The HTTPRoute bar is not targeted by the SecurityPolicy and will allow
+HTTPRoute foo to authenticate requests for `/foo`. The HTTPRoute bar is not targeted by the SecurityPolicy and will allow   
 unauthenticated requests to `/bar`.
 
 Verify the HTTPRoute configuration and status:
@@ -148,147 +148,6 @@ You should see the below response
 }
 ```
 
-## Connect to a remote JWKS with Self-Signed Certificate
-
-To connect to a remote JWKS with a self-signed certificate, you need to configure it using the [Backend] resource within the [SecurityPolicy]. Additionally, use the [BackendTLSPolicy] to specify the CA certificate required to authenticate the JWKS host.
-
-The following example demonstrates how to configure the remote JWKS with a self-signed certificate.
-
-{{< tabpane text=true >}}
-{{% tab header="Apply from stdin" %}}
-
-```shell
-cat <<EOF | kubectl apply -f -
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: SecurityPolicy
-metadata:
-  name: jwt-example
-spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: foo
-  jwt:
-    providers:
-    - name: example
-      remoteJWKS:
-        backendRefs:
-          - group: gateway.envoyproxy.io
-            kind: Backend
-            name: remote-jwks
-            port: 443
-        backendSettings:
-          retry:
-            numRetries: 3
-            perRetry:
-              backOff:
-                baseInterval: 1s
-                maxInterval: 5s
-            retryOn:
-              triggers: ["5xx", "gateway-error", "reset"]
-        uri: https://foo.bar.com/jwks.json
----
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: Backend
-metadata:
-  name: remote-jwks
-spec:
-  endpoints:
-  - fqdn:
-      hostname: foo.bar.com
-      port: 443
----
-apiVersion: gateway.networking.k8s.io/v1alpha3
-kind: BackendTLSPolicy
-metadata:
-  name: remote-jwks-btls
-spec:
-  targetRefs:
-  - group: gateway.envoyproxy.io
-    kind: Backend
-    name: remote-jwks
-    sectionName: "443"
-  validation:
-    caCertificateRefs:
-    - name: remote-jwks-server-ca
-      group: ""
-      kind: ConfigMap
-    hostname: foo.bar.com
-EOF
-```
-
-{{% /tab %}}
-{{% tab header="Apply from file" %}}
-Save and apply the following resource to your cluster:
-
-```yaml
----
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: SecurityPolicy
-metadata:
-  name: jwt-example
-spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: foo
-  jwt:
-    providers:
-    - name: example
-      remoteJWKS:
-        backendRefs:
-          - group: gateway.envoyproxy.io
-            kind: Backend
-            name: remote-jwks
-            port: 443
-        backendSettings:
-          retry:
-            numRetries: 3
-            perRetry:
-              backOff:
-                baseInterval: 1s
-                maxInterval: 5s
-            retryOn:
-              triggers: ["5xx", "gateway-error", "reset"]
-        uri: https://foo.bar.com/jwks.json
----
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: Backend
-metadata:
-  name: remote-jwks
-spec:
-  endpoints:
-  - fqdn:
-      hostname: foo.bar.com
-      port: 443
----
-apiVersion: gateway.networking.k8s.io/v1alpha3
-kind: BackendTLSPolicy
-metadata:
-  name: remote-jwks-btls
-spec:
-  targetRefs:
-  - group: gateway.envoyproxy.io
-    kind: Backend
-    name: remote-jwks
-    sectionName: "443"
-  validation:
-    caCertificateRefs:
-    - name: remote-jwks-server-ca
-      group: ""
-      kind: ConfigMap
-    hostname: foo.bar.com
-```
-
-{{% /tab %}}
-{{< /tabpane >}}
-
-As shown in the example above, the [SecurityPolicy] resource is configured with a remote JWKS within its JWT settings. The `backendRefs` field references the [Backend] resource that defines the JWKS host. The [BackendTLSPolicy] resource specifies the CA certificate required to authenticate the JWKS host.
-
-Additional connection settings for the remote JWKS host can be configured in the [backendSettings]. Currently, only the retry policy is supported.
-
-For more information about [Backend] and [BackendTLSPolicy], refer to the [Backend Routing][backend-routing] and [Backend TLS: Gateway to Backend][backend-tls] tasks.
-
 ## Clean-Up
 
 Follow the steps from the [Quickstart](../../quickstart) to uninstall Envoy Gateway and the example manifest.
@@ -309,8 +168,3 @@ Checkout the [Developer Guide](../../../contributions/develop) to get involved i
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
 [GRPCRoute]: https://gateway-api.sigs.k8s.io/api-types/grpcroute
-[Backend]: ../../../api/extension_types#backend
-[BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/
-[backend-routing]: ../traffic/backend
-[backend-tls]: ../backend-tls
-[BackendSettings]: ../../../api/extension_types/#clustersettings
