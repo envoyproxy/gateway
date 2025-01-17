@@ -2371,8 +2371,8 @@ func (in *ExtensionManager) DeepCopyInto(out *ExtensionManager) {
 		*out = new(ExtensionService)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.MaxMessageSizeBytes != nil {
-		in, out := &in.MaxMessageSizeBytes, &out.MaxMessageSizeBytes
+	if in.MaxMessageSize != nil {
+		in, out := &in.MaxMessageSize, &out.MaxMessageSize
 		*out = new(int)
 		**out = **in
 	}
