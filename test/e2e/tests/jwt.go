@@ -39,75 +39,79 @@ var JWTTest = suite.ConformanceTest{
 	Manifests:   []string{"testdata/jwt.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("jwt claim base routing", func(t *testing.T) {
-			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "jwt-claim-routing", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-
-			testCases := []http.ExpectedResponse{
-				{
-					Request: http.Request{
-						Path: "/get",
-						Headers: map[string]string{
-							"Authorization": "Bearer " + v1Token,
-						},
-					},
-					Backend: "infra-backend-v1",
-					Response: http.Response{
-						StatusCode: 200,
-					},
-					Namespace: ns,
-				},
-				{
-					Request: http.Request{
-						Path: "/get",
-						Headers: map[string]string{
-							"Authorization": "Bearer " + v2Token,
-						},
-					},
-					Backend: "infra-backend-v2",
-					Response: http.Response{
-						StatusCode: 200,
-					},
-					Namespace: ns,
-				},
-				{
-					Request: http.Request{
-						Path: "/get",
-						Headers: map[string]string{
-							"Authorization": "Bearer " + anotherToken,
-						},
-					},
-					Backend: "infra-backend-v1",
-					Response: http.Response{
-						StatusCode: 500,
-					},
-					Namespace: ns,
-				},
-				{
-					Request: http.Request{
-						Path: "/get",
-						Headers: map[string]string{
-							"x-name": "Tom",
-						},
-					},
-					Backend: "infra-backend-v2",
-					Response: http.Response{
-						StatusCode: 401,
-					},
-					Namespace: ns,
-				},
-			}
-
-			for i := range testCases {
-				tc := testCases[i]
-				t.Run(tc.GetTestCaseName(i), func(t *testing.T) {
-					t.Parallel()
-					http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, tc)
-				})
-			}
+			testClaimBasedRouting(t, suite)
 		})
 	},
+}
+
+func testClaimBasedRouting(t *testing.T, suite *suite.ConformanceTestSuite) {
+	ns := "gateway-conformance-infra"
+	routeNN := types.NamespacedName{Name: "jwt-claim-routing", Namespace: ns}
+	gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+	gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+	testCases := []http.ExpectedResponse{
+		{
+			Request: http.Request{
+				Path: "/get",
+				Headers: map[string]string{
+					"Authorization": "Bearer " + v1Token,
+				},
+			},
+			Backend: "infra-backend-v1",
+			Response: http.Response{
+				StatusCode: 200,
+			},
+			Namespace: ns,
+		},
+		{
+			Request: http.Request{
+				Path: "/get",
+				Headers: map[string]string{
+					"Authorization": "Bearer " + v2Token,
+				},
+			},
+			Backend: "infra-backend-v2",
+			Response: http.Response{
+				StatusCode: 200,
+			},
+			Namespace: ns,
+		},
+		{
+			Request: http.Request{
+				Path: "/get",
+				Headers: map[string]string{
+					"Authorization": "Bearer " + anotherToken,
+				},
+			},
+			Backend: "infra-backend-v1",
+			Response: http.Response{
+				StatusCode: 500,
+			},
+			Namespace: ns,
+		},
+		{
+			Request: http.Request{
+				Path: "/get",
+				Headers: map[string]string{
+					"x-name": "Tom",
+				},
+			},
+			Backend: "infra-backend-v2",
+			Response: http.Response{
+				StatusCode: 401,
+			},
+			Namespace: ns,
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+		t.Run(tc.GetTestCaseName(i), func(t *testing.T) {
+			t.Parallel()
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, tc)
+		})
+	}
 }
 
 var OptionalJWTTest = suite.ConformanceTest{

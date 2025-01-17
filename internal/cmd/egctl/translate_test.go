@@ -270,13 +270,6 @@ func TestTranslate(t *testing.T) {
 			expect: true,
 		},
 		{
-			name:   "invalid-securitypolicy",
-			from:   "gateway-api",
-			to:     "gateway-api",
-			output: yamlOutput,
-			expect: true,
-		},
-		{
 			name:   "no-gateway-class-resources",
 			from:   "gateway-api",
 			to:     "xds",
