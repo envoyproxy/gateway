@@ -32,15 +32,6 @@ spec:
                 path: /var/run/ext-proc
                 type: ""
   telemetry:
-    metrics:
-      prometheus: {}
-      sinks:
-        - type: OpenTelemetry
-          openTelemetry:
-            backendRefs:
-              - name: otel-collector
-                namespace: monitoring
-                port: 4317
     accessLog:
       settings:
         - format:
