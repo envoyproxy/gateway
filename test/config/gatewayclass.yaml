@@ -53,22 +53,6 @@ spec:
             - type: File
               file:
                 path: /dev/stdout
-            - type: OpenTelemetry
-              openTelemetry:
-                backendRefs:
-                  - name: otel-collector
-                    namespace: monitoring
-                    port: 4317
-                resources:
-                  k8s.cluster.name: "envoy-gateway"
-        - sinks:
-            - type: ALS
-              als:
-                backendRefs:
-                  - name: envoy-als
-                    namespace: monitoring
-                    port: 8080
-                type: HTTP
         - type: Listener
           format:
             type: Text
