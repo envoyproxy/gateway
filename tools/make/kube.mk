@@ -47,12 +47,18 @@ endif
 
 ##@ Kubernetes Development
 
+GNU_SED := $(shell sed --version >/dev/null 2>&1 && echo "yes" || echo "no")
+
 YEAR := $(shell date +%Y)
 CONTROLLERGEN_OBJECT_FLAGS :=  object:headerFile="$(ROOT_DIR)/tools/boilerplate/boilerplate.generatego.txt",year=$(YEAR)
 
 .PHONY: prepare-ip-family
 prepare-ip-family:
-	@find ./test -type f -name "*.yaml" | xargs sed -i -e 's/ipFamily: IPv4/ipFamily: $(ENVOY_PROXY_IP_FAMILY)/g'
+ifeq ($(GNU_SED),yes)
+	@find ./test -type f -name "*.yaml" | xargs sed -i'' 's/ipFamily: IPv4/ipFamily: $(ENVOY_PROXY_IP_FAMILY)/g'
+else
+	@find ./test -type f -name "*.yaml" | xargs sed -i '' 's/ipFamily: IPv4/ipFamily: $(ENVOY_PROXY_IP_FAMILY)/g'
+endif
 
 .PHONY: manifests
 manifests: $(tools/controller-gen) generate-gwapi-manifests ## Generate WebhookConfiguration and CustomResourceDefinition objects.
