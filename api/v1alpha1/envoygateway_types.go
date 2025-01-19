@@ -327,7 +327,7 @@ type EnvoyGatewayResourceProvider struct {
 // EnvoyGatewayFileResourceProvider defines configuration for the File Resource provider.
 type EnvoyGatewayFileResourceProvider struct {
 	// Paths are the paths to a directory or file containing the resource configuration.
-	// Recursive subdirectories are not currently supported.
+	// The directories are scanned recursively to load resources from all files.
 	Paths []string `json:"paths"`
 }
 

@@ -15,6 +15,7 @@ import (
 )
 
 // loadFromFilesAndDirs loads resources from specific files and directories.
+// The directories are traversed recursively to load resources from all files.
 func loadFromFilesAndDirs(files, dirs []string) ([]*resource.Resources, error) {
 	var rs []*resource.Resources
 
@@ -54,27 +55,48 @@ func loadFromFile(path string) (*resource.Resources, error) {
 	return resource.LoadResourcesFromYAMLBytes(bytes, false)
 }
 
-// loadFromDir loads resources from all the files under a specific directory excluding subdirectories.
 func loadFromDir(path string) ([]*resource.Resources, error) {
-	entries, err := os.ReadDir(path)
+	rs := make([]*resource.Resources, 0)
+
+	// This function modifies the `rs` slice directly.
+	err := traverseDirectory(path, &rs)
 	if err != nil {
 		return nil, err
 	}
 
-	var rs []*resource.Resources
+	return rs, nil
+}
+
+// traverseDirectory is a helper function that recursively traverses the directory
+// and loads resources from all files while skipping hidden files and directories.
+func traverseDirectory(dirPath string, rs *[]*resource.Resources) error {
+	entries, err := os.ReadDir(dirPath)
+	if err != nil {
+		return err
+	}
+
 	for _, entry := range entries {
-		// Ignoring subdirectories and all hidden files and directories.
-		if entry.IsDir() || strings.HasPrefix(entry.Name(), ".") {
+		fullPath := filepath.Join(dirPath, entry.Name())
+
+		// Skip hidden files and directories.
+		if strings.HasPrefix(entry.Name(), ".") {
 			continue
 		}
 
-		r, err := loadFromFile(filepath.Join(path, entry.Name()))
-		if err != nil {
-			return nil, err
+		if entry.IsDir() {
+			// Recursively process subdirectories.
+			if err := traverseDirectory(fullPath, rs); err != nil {
+				return err
+			}
+		} else {
+			// Load resources from files.
+			r, err := loadFromFile(fullPath)
+			if err != nil {
+				return err
+			}
+			*rs = append(*rs, r)
 		}
-
-		rs = append(rs, r)
 	}
 
-	return rs, nil
+	return nil
 }
