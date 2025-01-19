@@ -10,8 +10,6 @@ package celvalidation
 import (
 	"context"
 	"fmt"
-	"github.com/envoyproxy/gateway/internal/gatewayapi"
-	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"strings"
 	"testing"
 	"time"
@@ -21,6 +19,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
 )
 
 func TestEnvoyProxyProvider(t *testing.T) {
@@ -1421,7 +1420,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 											BackendObjectReference: gwapiv1.BackendObjectReference{
 												Namespace: gatewayapi.NamespacePtr("ns-2"),
 												Name:      "test-backend",
-												Kind:      gatewayapi.KindPtr(resource.KindBackend),
+												Kind:      gatewayapi.KindPtr("Backend"),
 												Group:     gatewayapi.GroupPtr(egv1a1.GroupName),
 											},
 										},
