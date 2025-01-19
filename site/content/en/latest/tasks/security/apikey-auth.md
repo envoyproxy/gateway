@@ -183,8 +183,6 @@ kubectl delete secret/apikey-secret
 Checkout the [Developer Guide](../../../contributions/develop) to get involved in the project.
 
 [SecurityPolicy]: ../../../contributions/design/security-policy
-[http Basic authentication]: https://tools.ietf.org/html/rfc2617
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
 [GRPCRoute]: https://gateway-api.sigs.k8s.io/api-types/grpcroute
-[.htpasswd]: https://httpd.apache.org/docs/current/programs/htpasswd.html
