@@ -54,6 +54,11 @@ spec:
                   description: ExtProc defines the configuration for External Processing
                     filter.
                   properties:
+                    allowModeOverride:
+                      description: |-
+                        AllowModeOverride allows the external processor to override the processing mode set via the
+                        `mode_override` field in the gRPC response message. This defaults to false.
+                      type: boolean
                     backendRef:
                       description: |-
                         BackendRef references a Kubernetes object that represents the

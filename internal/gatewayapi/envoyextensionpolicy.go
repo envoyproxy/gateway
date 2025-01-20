@@ -511,6 +511,7 @@ func (t *Translator) buildExtProc(
 		}
 	}
 
+	extProcIR.AllowModeOverride = extProc.AllowModeOverride
 	return extProcIR, err
 }
 

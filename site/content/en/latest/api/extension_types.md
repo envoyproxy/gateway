@@ -1556,6 +1556,7 @@ _Appears in:_
 | `failOpen` | _boolean_ |  false  |  | FailOpen defines if requests or responses that cannot be processed due to connectivity to the<br />external processor are terminated or passed-through.<br />Default: false |
 | `processingMode` | _[ExtProcProcessingMode](#extprocprocessingmode)_ |  false  |  | ProcessingMode defines how request and response body is processed<br />Default: header and body are not sent to the external processor |
 | `metadata` | _[ExtProcMetadata](#extprocmetadata)_ |  false  |  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `allowModeOverride` | _boolean_ |  false  |  | AllowModeOverride allows the external processor to override the processing mode set via the<br />`mode_override` field in the gRPC response message. This defaults to false. |
 
 
 #### ExtProcBodyProcessingMode
