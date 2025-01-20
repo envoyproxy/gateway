@@ -35,7 +35,7 @@ var OpenTelemetryTracingTest = suite.ConformanceTest{
 		t.Run("tempo", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "tracing-otel", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "tracing-otel", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
 			expectedResponse := httputils.ExpectedResponse{
@@ -83,7 +83,7 @@ var ZipkinTracingTest = suite.ConformanceTest{
 		t.Run("tempo", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "tracing-zipkin", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "eg-special-case", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "tracing-zipkin", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
 			expectedResponse := httputils.ExpectedResponse{
