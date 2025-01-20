@@ -83,11 +83,9 @@ type gatewayAPIReconciler struct {
 }
 
 // newGatewayAPIController
-func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su Updater,
+func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *config.Server, su Updater,
 	resources *message.ProviderResources,
 ) error {
-	ctx := context.Background()
-
 	// Gather additional resources to watch from registered extensions
 	var extServerPoliciesGVKs []schema.GroupVersionKind
 	var extGVKs []schema.GroupVersionKind
@@ -138,8 +136,12 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su Updater
 	if cfg.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes &&
 		!ptr.Deref(cfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable, false) {
 		go func() {
-			cfg.Elected.Wait()
-			r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.EnvoyGatewaySpec.ExtensionManager != nil)
+			select {
+			case <-ctx.Done():
+				return
+			case <-cfg.Elected:
+				r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.EnvoyGatewaySpec.ExtensionManager != nil)
+			}
 		}()
 	} else {
 		r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.EnvoyGatewaySpec.ExtensionManager != nil)
