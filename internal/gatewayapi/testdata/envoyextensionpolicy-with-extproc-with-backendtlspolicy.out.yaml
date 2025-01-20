@@ -105,7 +105,8 @@ envoyExtensionPolicies:
     namespace: default
   spec:
     extProc:
-    - backendRefs:
+    - allowModeOverride: true
+      backendRefs:
       - name: grpc-backend
         namespace: envoy-gateway
         port: 8000
@@ -357,7 +358,8 @@ xdsIR:
             weight: 1
         envoyExtensions:
           extProcs:
-          - authority: grpc-backend.envoy-gateway:8000
+          - allowModeOverride: true
+            authority: grpc-backend.envoy-gateway:8000
             destination:
               name: envoyextensionpolicy/default/policy-for-gateway/extproc/0
               settings:
