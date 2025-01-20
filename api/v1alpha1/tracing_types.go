@@ -28,6 +28,7 @@ type ProxyTracing struct {
 	// Only one of SamplingRate or SamplingFraction may be specified.
 	// If neither field is specified, 1% of requests will be sampled.
 	//
+	// +notImplementedHide
 	// +optional
 	SamplingFraction *gwapiv1.Fraction `json:"samplingFraction,omitempty"`
 	// CustomTags defines the custom tags to add to each span.
