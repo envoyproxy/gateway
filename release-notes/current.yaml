@@ -10,12 +10,9 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
-  Add support for modifying container securityContext for Envoy Gateway deployment in Helm
 
 bug fixes: |
-  Fixed a nil pointer error that occurs when a SecurityPolicy refers to a UDS backend
-  Fixed the Gateway API translator didn't use the TLS configuration from the BackendTLSPolicy when connecting to the OIDC provider's well-known endpoint.
-  Fixed a validation failure when multiple HTTPRoutes refer to the same extension filter
+  Fixed a panic that occurred following update to the envoy-gateway-config ConfigMap
 
 # Enhancements that improve performance.
 performance improvements: |
@@ -27,4 +24,3 @@ deprecations: |
 
 # Other notable changes not covered by the above sections.
 Other changes: |
-  Bumped the version of Envoy to 1.32.3.
