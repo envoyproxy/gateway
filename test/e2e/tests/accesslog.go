@@ -126,12 +126,12 @@ var OpenTelemetryTest = suite.ConformanceTest{
 			"exporter":           "OTLP",
 		}
 
-		t.Run("Positive", func(t *testing.T) {
-			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "accesslog-otel", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "accesslog-otel", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "accesslog-gtw", Namespace: ns}
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
+		t.Run("Positive", func(t *testing.T) {
 			expectedResponse := httputils.ExpectedResponse{
 				Request: httputils.Request{
 					Path: "/otel",
@@ -151,11 +151,6 @@ var OpenTelemetryTest = suite.ConformanceTest{
 		})
 
 		t.Run("Negative", func(t *testing.T) {
-			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "accesslog-otel", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-
 			expectedResponse := httputils.ExpectedResponse{
 				Request: httputils.Request{
 					Path: "/otel",
@@ -182,7 +177,7 @@ var ALSTest = suite.ConformanceTest{
 		t.Run("HTTP", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "accesslog-als", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "accesslog-gtw", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
 			preCount := 0
@@ -191,13 +186,13 @@ var ALSTest = suite.ConformanceTest{
 				func(ctx context.Context) (bool, error) {
 					curCount, err := ALSLogCount(suite)
 					if err != nil {
-						tlog.Logf(t, "failed to get log count from loki: %v", err)
+						tlog.Logf(t, "failed to get log count from envoy als: %v", err)
 						return false, nil
 					}
 					preCount = curCount
 					return true, nil
 				}); err != nil {
-				t.Errorf("failed to get log count from loki: %v", err)
+				t.Errorf("failed to get log count from envoy als: %v", err)
 			}
 
 			expectedResponse := httputils.ExpectedResponse{
@@ -219,12 +214,12 @@ var ALSTest = suite.ConformanceTest{
 				func(ctx context.Context) (bool, error) {
 					curCount, err := ALSLogCount(suite)
 					if err != nil {
-						tlog.Logf(t, "failed to get log count from loki: %v", err)
+						tlog.Logf(t, "failed to get log count from envoy als: %v", err)
 						return false, nil
 					}
 					return preCount < curCount, nil
 				}); err != nil {
-				t.Errorf("failed to get log count from loki: %v", err)
+				t.Errorf("failed to get log count from envoy als: %v", err)
 			}
 		})
 	},
