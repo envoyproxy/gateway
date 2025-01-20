@@ -32,6 +32,7 @@ new features: |
 
 bug fixes: |
   Fixed the ability to overwrite control plane certs with the certgen command by using a new command arg (-o)
+  Fixed a panic that occurred following update to the envoy-gateway-config ConfigMap
 
 # Enhancements that improve performance.
 performance improvements: |
