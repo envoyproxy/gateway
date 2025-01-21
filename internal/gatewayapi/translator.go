@@ -17,6 +17,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/wasm"
 )
@@ -156,7 +157,17 @@ func newTranslateResult(gateways []*GatewayContext,
 
 func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult, error) {
 	// Get Gateways belonging to our GatewayClass.
-	gateways := t.GetRelevantGateways(resources)
+	allGateways := t.GetRelevantGateways(resources)
+
+	// Filter out Gateways that are not accepted.
+	// This will only happen if the Gateway referenced Envoyproxy(directly or indirectly through GatewayClass) is invalid.
+	gateways := make([]*GatewayContext, 0)
+	for _, gateway := range allGateways {
+		if status.GatewayNotAccepted(gateway.Gateway) {
+			continue
+		}
+		gateways = append(gateways, gateway)
+	}
 
 	// Sort gateways based on timestamp.
 	sort.Slice(gateways, func(i, j int) bool {
@@ -241,7 +252,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 		}
 	}
 
-	return newTranslateResult(gateways, httpRoutes, grpcRoutes, tlsRoutes,
+	return newTranslateResult(allGateways, httpRoutes, grpcRoutes, tlsRoutes,
 		tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies,
 		securityPolicies, resources.BackendTLSPolicies, envoyExtensionPolicies,
 		extServerPolicies, backends, xdsIR, infraIR), translateErrs
