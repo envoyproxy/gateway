@@ -497,6 +497,7 @@ func (t *Translator) buildExtProc(
 				extProcIR.ResponseAttributes = append(extProcIR.ResponseAttributes, extProc.ProcessingMode.Response.Attributes...)
 			}
 		}
+		extProcIR.AllowModeOverride = extProc.ProcessingMode.AllowModeOverride
 	}
 
 	if extProc.Metadata != nil {
@@ -511,7 +512,6 @@ func (t *Translator) buildExtProc(
 		}
 	}
 
-	extProcIR.AllowModeOverride = extProc.AllowModeOverride
 	return extProcIR, err
 }
 

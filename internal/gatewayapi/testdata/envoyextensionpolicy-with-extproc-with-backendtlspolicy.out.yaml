@@ -105,8 +105,7 @@ envoyExtensionPolicies:
     namespace: default
   spec:
     extProc:
-    - allowModeOverride: true
-      backendRefs:
+    - backendRefs:
       - name: grpc-backend
         namespace: envoy-gateway
         port: 8000
@@ -118,6 +117,7 @@ envoyExtensionPolicies:
         writableNamespaces:
         - envoy.filters.http.my_custom
       processingMode:
+        allowModeOverride: true
         request:
           attributes:
           - request.path
