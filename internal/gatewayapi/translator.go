@@ -160,7 +160,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	allGateways := t.GetRelevantGateways(resources)
 
 	// Filter out Gateways that are not accepted.
-	// This will only happen if the Gateway referenced Envoyproxy(directly or indirectly through GatewayClass) is invalid.
+	// This will only happen if the Gateway references an invalid Envoyproxy, either directly or indirectly through GatewayClass.
 	gateways := make([]*GatewayContext, 0)
 	for _, gateway := range allGateways {
 		if status.GatewayNotAccepted(gateway.Gateway) {
