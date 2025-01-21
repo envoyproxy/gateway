@@ -568,10 +568,17 @@ func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *
 		r.log.Info("failed to get Service for gateway",
 			"namespace", gtw.Namespace, "name", gtw.Name)
 	}
-	// update accepted condition
-	status.UpdateGatewayStatusAcceptedCondition(gtw, true)
-	// update address field and programmed condition
-	status.UpdateGatewayStatusProgrammedCondition(gtw, svc, envoyObj, r.store.listNodeAddresses()...)
+
+	// clear the listeners status if the gateway is not accepted
+	// Currently, this only happens when the referenced EnvoyProxy(directly referenced or through GatewayClass ) is invalid.
+	if status.GatewayNotAccepted(gtw) {
+		gtw.Status.Listeners = nil
+	} else {
+		// update accepted condition to true if it is not false
+		status.UpdateGatewayStatusAccepted(gtw)
+		// update address field and programmed condition
+		status.UpdateGatewayStatusProgrammedCondition(gtw, svc, envoyObj, r.store.listNodeAddresses()...)
+	}
 
 	key := utils.NamespacedName(gtw)
 
