@@ -17,8 +17,8 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
-func UpdateGatewayListenersNotValidCondition(gw *gwapiv1.Gateway, reason gwapiv1.GatewayConditionReason, status metav1.ConditionStatus, msg string) *gwapiv1.Gateway {
-	cond := newCondition(string(gwapiv1.GatewayReasonListenersNotValid), status, string(reason), msg, time.Now(), gw.Generation)
+func UpdateGatewayStatusNotAccepted(gw *gwapiv1.Gateway, reason gwapiv1.GatewayConditionReason, msg string) *gwapiv1.Gateway {
+	cond := newCondition(string(gwapiv1.GatewayConditionAccepted), metav1.ConditionFalse, string(reason), msg, time.Now(), gw.Generation)
 	gw.Status.Conditions = MergeConditions(gw.Status.Conditions, cond)
 	return gw
 }
@@ -120,11 +120,11 @@ func SetGatewayListenerStatusCondition(gateway *gwapiv1.Gateway, listenerStatusI
 func computeGatewayAcceptedCondition(gw *gwapiv1.Gateway, accepted bool) metav1.Condition {
 	switch accepted {
 	case true:
-		return newCondition(string(gwapiv1.GatewayReasonAccepted), metav1.ConditionTrue,
+		return newCondition(string(gwapiv1.GatewayConditionAccepted), metav1.ConditionTrue,
 			string(gwapiv1.GatewayReasonAccepted),
 			"The Gateway has been scheduled by Envoy Gateway", time.Now(), gw.Generation)
 	default:
-		return newCondition(string(gwapiv1.GatewayReasonAccepted), metav1.ConditionFalse,
+		return newCondition(string(gwapiv1.GatewayConditionAccepted), metav1.ConditionFalse,
 			string(gwapiv1.GatewayReasonAccepted),
 			"The Gateway has not been scheduled by Envoy Gateway", time.Now(), gw.Generation)
 	}
