@@ -328,6 +328,7 @@ spec:
                       - envoy.filters.http.fault
                       - envoy.filters.http.cors
                       - envoy.filters.http.ext_authz
+                      - envoy.filters.http.api_key_auth
                       - envoy.filters.http.basic_auth
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
@@ -338,6 +339,7 @@ spec:
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.custom_response
+                      - envoy.filters.http.compressor
                       type: string
                     before:
                       description: |-
@@ -348,6 +350,7 @@ spec:
                       - envoy.filters.http.fault
                       - envoy.filters.http.cors
                       - envoy.filters.http.ext_authz
+                      - envoy.filters.http.api_key_auth
                       - envoy.filters.http.basic_auth
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
@@ -358,6 +361,7 @@ spec:
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.custom_response
+                      - envoy.filters.http.compressor
                       type: string
                     name:
                       description: Name of the filter.
@@ -366,6 +370,7 @@ spec:
                       - envoy.filters.http.fault
                       - envoy.filters.http.cors
                       - envoy.filters.http.ext_authz
+                      - envoy.filters.http.api_key_auth
                       - envoy.filters.http.basic_auth
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
@@ -376,6 +381,7 @@ spec:
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.custom_response
+                      - envoy.filters.http.compressor
                       type: string
                   required:
                   - name
