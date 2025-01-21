@@ -202,13 +202,15 @@ func (t *Translator) notifyExtensionServerAboutListeners(
 
 func clearListenerRoutes(listener *listenerv3.Listener) error {
 	var errs error
-	hcm, err := findHCMinFilterChain(listener.DefaultFilterChain)
-	if err != nil {
-		// no HCM found, skip
-	} else {
-		clearAllRoutes(hcm)
-		if err := replaceHCMInFilterChain(hcm, listener.DefaultFilterChain); err != nil {
-			errs = errors.Join(errs, err)
+	if listener.DefaultFilterChain != nil {
+		hcm, err := findHCMinFilterChain(listener.DefaultFilterChain)
+		if err != nil {
+			// no HCM found, skip
+		} else {
+			clearAllRoutes(hcm)
+			if err := replaceHCMInFilterChain(hcm, listener.DefaultFilterChain); err != nil {
+				errs = errors.Join(errs, err)
+			}
 		}
 	}
 	for _, filter := range listener.FilterChains {
