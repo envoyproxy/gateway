@@ -1173,7 +1173,6 @@ _Appears in:_
 | `rateLimitDeployment` | _[KubernetesDeploymentSpec](#kubernetesdeploymentspec)_ |  false  |  | RateLimitDeployment defines the desired state of the Envoy ratelimit deployment resource.<br />If unspecified, default settings for the managed Envoy ratelimit deployment resource<br />are applied. |
 | `rateLimitHpa` | _[KubernetesHorizontalPodAutoscalerSpec](#kuberneteshorizontalpodautoscalerspec)_ |  false  |  | RateLimitHpa defines the Horizontal Pod Autoscaler settings for Envoy ratelimit Deployment.<br />If the HPA is set, Replicas field from RateLimitDeployment will be ignored. |
 | `watch` | _[KubernetesWatchMode](#kuberneteswatchmode)_ |  false  |  | Watch holds configuration of which input resources should be watched and reconciled. |
-| `deploy` | _[KubernetesDeployMode](#kubernetesdeploymode)_ |  false  |  | Deploy holds configuration of how output managed resources such as the Envoy Proxy data plane<br />should be deployed |
 | `leaderElection` | _[LeaderElection](#leaderelection)_ |  false  |  | LeaderElection specifies the configuration for leader election.<br />If it's not set up, leader election will be active by default, using Kubernetes' standard settings. |
 | `shutdownManager` | _[ShutdownManager](#shutdownmanager)_ |  false  |  | ShutdownManager defines the configuration for the shutdown manager. |
 
@@ -4580,6 +4579,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `numTrustedHops` | _integer_ |  false  |  | NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP<br />headers to trust when determining the origin client's IP address.<br />Only one of NumTrustedHops and TrustedCIDRs must be set. |
+| `trustedCIDRs` | _[CIDR](#cidr) array_ |  false  |  | TrustedCIDRs is a list of CIDR ranges to trust when evaluating<br />the remote IP address to determine the original client’s IP address.<br />When the remote IP address matches a trusted CIDR and the x-forwarded-for header was sent,<br />each entry in the x-forwarded-for header is evaluated from right to left<br />and the first public non-trusted address is used as the original client address.<br />If all addresses in x-forwarded-for are within the trusted list, the first (leftmost) entry is used.<br />Only one of NumTrustedHops and TrustedCIDRs must be set. |
 
 
 #### ZipkinTracingProvider
