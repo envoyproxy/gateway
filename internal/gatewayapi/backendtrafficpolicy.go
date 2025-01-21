@@ -362,7 +362,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 
 	if policy.Spec.CommonLbSettings != nil {
 		if lbSettings, err = buildCommonLbSettings(policy.Spec.CommonLbSettings); err != nil {
-			err = perr.WithMessage(err, "RateLimit")
+			err = perr.WithMessage(err, "CommonLbSettings")
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -489,7 +489,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 	}
 	if policy.Spec.CommonLbSettings != nil {
 		if lbSettings, err = buildCommonLbSettings(policy.Spec.CommonLbSettings); err != nil {
-			err = perr.WithMessage(err, "RateLimit")
+			err = perr.WithMessage(err, "CommonLbSettings")
 			errs = errors.Join(errs, err)
 		}
 	}
