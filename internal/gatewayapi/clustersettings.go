@@ -549,3 +549,16 @@ func buildRetry(r *egv1a1.Retry) (*ir.Retry, error) {
 
 	return rt, nil
 }
+
+func buildCommonLbSettings(commonLbSettings *egv1a1.CommonLbSettings) (*ir.CommonLbSettings, error) {
+	if commonLbSettings == nil {
+		return nil, nil
+	}
+	healthyPanicThreshold := commonLbSettings.HealthyPanicThreshold
+	if *healthyPanicThreshold < 0 || *healthyPanicThreshold > 100 {
+		return nil, fmt.Errorf("HealthyPanicThreshold value %d is out of 0-100 range", healthyPanicThreshold)
+	}
+	return &ir.CommonLbSettings{
+		HealthyPanicThreshold: healthyPanicThreshold,
+	}, nil
+}

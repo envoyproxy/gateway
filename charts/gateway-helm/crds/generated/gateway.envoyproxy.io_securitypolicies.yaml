@@ -681,6 +681,17 @@ spec:
                                 minimum: 0
                                 type: integer
                             type: object
+                          commonLbSettings:
+                            description: Common settings for load balancer behaviour.
+                            properties:
+                              healthyPanicThreshold:
+                                description: |-
+                                  HealthyPanicThreshold sets the maximum number of concurrent streams allowed per connection.
+                                  If not set, the default value is 50%. To disable panic mode, set value to `0`.
+                                maximum: 100
+                                minimum: 0
+                                type: number
+                            type: object
                           connection:
                             description: Connection includes backend connection settings.
                             properties:
@@ -1561,6 +1572,17 @@ spec:
                                 maximum: 4294967295
                                 minimum: 0
                                 type: integer
+                            type: object
+                          commonLbSettings:
+                            description: Common settings for load balancer behaviour.
+                            properties:
+                              healthyPanicThreshold:
+                                description: |-
+                                  HealthyPanicThreshold sets the maximum number of concurrent streams allowed per connection.
+                                  If not set, the default value is 50%. To disable panic mode, set value to `0`.
+                                maximum: 100
+                                minimum: 0
+                                type: number
                             type: object
                           connection:
                             description: Connection includes backend connection settings.
@@ -2570,6 +2592,17 @@ spec:
                                       maximum: 4294967295
                                       minimum: 0
                                       type: integer
+                                  type: object
+                                commonLbSettings:
+                                  description: Common settings for load balancer behaviour.
+                                  properties:
+                                    healthyPanicThreshold:
+                                      description: |-
+                                        HealthyPanicThreshold sets the maximum number of concurrent streams allowed per connection.
+                                        If not set, the default value is 50%. To disable panic mode, set value to `0`.
+                                      maximum: 100
+                                      minimum: 0
+                                      type: number
                                   type: object
                                 connection:
                                   description: Connection includes backend connection
@@ -3592,6 +3625,17 @@ spec:
                                 maximum: 4294967295
                                 minimum: 0
                                 type: integer
+                            type: object
+                          commonLbSettings:
+                            description: Common settings for load balancer behaviour.
+                            properties:
+                              healthyPanicThreshold:
+                                description: |-
+                                  HealthyPanicThreshold sets the maximum number of concurrent streams allowed per connection.
+                                  If not set, the default value is 50%. To disable panic mode, set value to `0`.
+                                maximum: 100
+                                minimum: 0
+                                type: number
                             type: object
                           connection:
                             description: Connection includes backend connection settings.

@@ -292,21 +292,22 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 	resources *resource.Resources,
 ) error {
 	var (
-		rl        *ir.RateLimit
-		lb        *ir.LoadBalancer
-		pp        *ir.ProxyProtocol
-		hc        *ir.HealthCheck
-		cb        *ir.CircuitBreaker
-		fi        *ir.FaultInjection
-		to        *ir.Timeout
-		ka        *ir.TCPKeepalive
-		rt        *ir.Retry
-		bc        *ir.BackendConnection
-		ds        *ir.DNS
-		h2        *ir.HTTP2Settings
-		ro        *ir.ResponseOverride
-		cp        []*ir.Compression
-		err, errs error
+		rl         *ir.RateLimit
+		lb         *ir.LoadBalancer
+		pp         *ir.ProxyProtocol
+		hc         *ir.HealthCheck
+		cb         *ir.CircuitBreaker
+		fi         *ir.FaultInjection
+		to         *ir.Timeout
+		ka         *ir.TCPKeepalive
+		rt         *ir.Retry
+		bc         *ir.BackendConnection
+		ds         *ir.DNS
+		h2         *ir.HTTP2Settings
+		ro         *ir.ResponseOverride
+		cp         []*ir.Compression
+		lbSettings *ir.CommonLbSettings
+		err, errs  error
 	)
 
 	// Build IR
@@ -358,6 +359,14 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 		err = perr.WithMessage(err, "ResponseOverride")
 		errs = errors.Join(errs, err)
 	}
+
+	if policy.Spec.CommonLbSettings != nil {
+		if lbSettings, err = buildCommonLbSettings(policy.Spec.CommonLbSettings); err != nil {
+			err = perr.WithMessage(err, "RateLimit")
+			errs = errors.Join(errs, err)
+		}
+	}
+
 	cp = buildCompression(policy.Spec.Compression)
 
 	ds = translateDNS(policy.Spec.ClusterSettings)
@@ -377,6 +386,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 					r.Timeout = to
 					r.BackendConnection = bc
 					r.DNS = ds
+					r.CommonLbSettings = lbSettings
 				}
 			}
 		}
@@ -388,6 +398,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 				if strings.HasPrefix(r.Destination.Name, prefix) {
 					r.LoadBalancer = lb
 					r.DNS = ds
+					r.CommonLbSettings = lbSettings
 				}
 			}
 		}
@@ -423,6 +434,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 						Timeout:           to,
 						ResponseOverride:  ro,
 						Compression:       cp,
+						CommonLbSettings:  lbSettings,
 					}
 
 					// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
@@ -447,20 +459,21 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 	resources *resource.Resources,
 ) error {
 	var (
-		rl        *ir.RateLimit
-		lb        *ir.LoadBalancer
-		pp        *ir.ProxyProtocol
-		hc        *ir.HealthCheck
-		cb        *ir.CircuitBreaker
-		fi        *ir.FaultInjection
-		ct        *ir.Timeout
-		ka        *ir.TCPKeepalive
-		rt        *ir.Retry
-		ds        *ir.DNS
-		h2        *ir.HTTP2Settings
-		ro        *ir.ResponseOverride
-		cp        []*ir.Compression
-		err, errs error
+		rl         *ir.RateLimit
+		lb         *ir.LoadBalancer
+		pp         *ir.ProxyProtocol
+		hc         *ir.HealthCheck
+		cb         *ir.CircuitBreaker
+		fi         *ir.FaultInjection
+		ct         *ir.Timeout
+		ka         *ir.TCPKeepalive
+		rt         *ir.Retry
+		ds         *ir.DNS
+		h2         *ir.HTTP2Settings
+		ro         *ir.ResponseOverride
+		cp         []*ir.Compression
+		lbSettings *ir.CommonLbSettings
+		err, errs  error
 	)
 
 	// Build IR
@@ -473,6 +486,12 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 	if lb, err = buildLoadBalancer(policy.Spec.ClusterSettings); err != nil {
 		err = perr.WithMessage(err, "LoadBalancer")
 		errs = errors.Join(errs, err)
+	}
+	if policy.Spec.CommonLbSettings != nil {
+		if lbSettings, err = buildCommonLbSettings(policy.Spec.CommonLbSettings); err != nil {
+			err = perr.WithMessage(err, "RateLimit")
+			errs = errors.Join(errs, err)
+		}
 	}
 	pp = buildProxyProtocol(policy.Spec.ClusterSettings)
 	hc = buildHealthCheck(policy.Spec.ClusterSettings)
@@ -534,6 +553,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 			setIfNil(&r.TCPKeepalive, ka)
 			setIfNil(&r.Timeout, ct)
 			setIfNil(&r.DNS, ds)
+			setIfNil(&r.CommonLbSettings, lbSettings)
 		}
 	}
 
@@ -553,6 +573,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 		// specific policy
 		setIfNil(&route.LoadBalancer, lb)
 		setIfNil(&route.DNS, ds)
+		setIfNil(&route.CommonLbSettings, lbSettings)
 	}
 
 	for _, http := range x.HTTP {
@@ -591,6 +612,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 				DNS:              ds,
 				ResponseOverride: ro,
 				Compression:      cp,
+				CommonLbSettings: lbSettings,
 			}
 
 			// Update the Host field in HealthCheck, now that we have access to the Route Hostname.

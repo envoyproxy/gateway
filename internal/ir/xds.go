@@ -817,6 +817,8 @@ type TrafficFeatures struct {
 	ResponseOverride *ResponseOverride `json:"responseOverride,omitempty" yaml:"responseOverride,omitempty"`
 	// Compression settings for HTTP Response
 	Compression []*Compression `json:"compression,omitempty" yaml:"compression,omitempty"`
+	// Common load balancer settings for traffic distribution across the backend endpoints.
+	CommonLbSettings *CommonLbSettings `json:"commonLbSettings,omitempty" yaml:"commonLbSettings,omitempty"`
 }
 
 func (b *TrafficFeatures) Validate() error {
@@ -1784,6 +1786,8 @@ type TCPRoute struct {
 	BackendConnection *BackendConnection `json:"backendConnection,omitempty" yaml:"backendConnection,omitempty"`
 	// DNS is used to configure how DNS resolution is handled for the route
 	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
+	// Common load balancer settings for traffic distribution across the backend endpoints.
+	CommonLbSettings *CommonLbSettings `json:"commonLbSettings,omitempty" yaml:"commonLbSettings,omitempty"`
 }
 
 // TLS holds information for configuring TLS on a listener
@@ -1893,6 +1897,8 @@ type UDPRoute struct {
 	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty" yaml:"loadBalancer,omitempty"`
 	// DNS is used to configure how DNS resolution is handled by the Envoy Proxy cluster
 	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
+	// Common load balancer settings for traffic distribution across the backend endpoints.
+	CommonLbSettings *CommonLbSettings `json:"commonLbSettings,omitempty" yaml:"commonLbSettings,omitempty"`
 }
 
 // Validate the fields within the UDPListener structure
@@ -2357,6 +2363,12 @@ type HealthCheck struct {
 	Active *ActiveHealthCheck `json:"active,omitempty" yaml:"active,omitempty"`
 
 	Passive *OutlierDetection `json:"passive,omitempty" yaml:"passive,omitempty"`
+}
+
+// CommonLbSettings defines common load balancer settings for backend.
+// +k8s:deepcopy-gen=true
+type CommonLbSettings struct {
+	HealthyPanicThreshold *float64 `json:"healthyPanicThreshold,omitempty" yaml:"healthyPanicThreshold,omitempty"`
 }
 
 // OutlierDetection defines passive health check settings

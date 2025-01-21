@@ -58,6 +58,7 @@ type xdsClusterArgs struct {
 	dns               *ir.DNS
 	useClientProtocol bool
 	ipFamily          *egv1a1.IPFamily
+	lbSettings        *ir.CommonLbSettings
 }
 
 type EndpointType int
@@ -228,6 +229,14 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 					TableSize: &wrapperspb.UInt64Value{Value: *args.loadBalancer.ConsistentHash.TableSize},
 				},
 			}
+		}
+	}
+
+	if args.lbSettings != nil && args.lbSettings.HealthyPanicThreshold != nil {
+		cluster.CommonLbConfig = &clusterv3.Cluster_CommonLbConfig{
+			HealthyPanicThreshold: &xdstype.Percent{
+				Value: *args.lbSettings.HealthyPanicThreshold,
+			},
 		}
 	}
 
@@ -722,6 +731,7 @@ func (route *UDPRouteTranslator) asClusterArgs(extra *ExtraArgs) *xdsClusterArgs
 		metrics:      extra.metrics,
 		dns:          route.DNS,
 		ipFamily:     extra.ipFamily,
+		lbSettings:   route.CommonLbSettings,
 	}
 }
 
@@ -744,6 +754,7 @@ func (route *TCPRouteTranslator) asClusterArgs(extra *ExtraArgs) *xdsClusterArgs
 		backendConnection: route.BackendConnection,
 		dns:               route.DNS,
 		ipFamily:          extra.ipFamily,
+		lbSettings:        route.CommonLbSettings,
 	}
 }
 
@@ -775,6 +786,7 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(extra *ExtraArgs) *xdsCluste
 		clusterArgs.tcpkeepalive = bt.TCPKeepalive
 		clusterArgs.backendConnection = bt.BackendConnection
 		clusterArgs.dns = bt.DNS
+		clusterArgs.lbSettings = bt.CommonLbSettings
 	}
 
 	return clusterArgs

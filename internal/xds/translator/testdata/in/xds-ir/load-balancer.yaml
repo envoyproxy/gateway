@@ -13,6 +13,8 @@ http:
     traffic:
       loadBalancer:
         roundRobin: {}
+      lbSettings:
+        healthyPanicThreshold: 66
     destination:
       name: "first-route-dest"
       settings:
