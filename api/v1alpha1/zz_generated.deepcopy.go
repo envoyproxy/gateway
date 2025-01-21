@@ -4659,6 +4659,11 @@ func (in *ProxyTracing) DeepCopyInto(out *ProxyTracing) {
 		*out = new(uint32)
 		**out = **in
 	}
+	if in.SamplingFraction != nil {
+		in, out := &in.SamplingFraction, &out.SamplingFraction
+		*out = new(v1.Fraction)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.CustomTags != nil {
 		in, out := &in.CustomTags, &out.CustomTags
 		*out = make(map[string]CustomTag, len(*in))
