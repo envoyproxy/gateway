@@ -2373,8 +2373,8 @@ func (in *ExtensionManager) DeepCopyInto(out *ExtensionManager) {
 	}
 	if in.MaxMessageSize != nil {
 		in, out := &in.MaxMessageSize, &out.MaxMessageSize
-		*out = new(int)
-		**out = **in
+		x := (*in).DeepCopy()
+		*out = &x
 	}
 }
 
