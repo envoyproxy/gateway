@@ -1603,6 +1603,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `request` | _[ProcessingModeOptions](#processingmodeoptions)_ |  false  |  | Defines processing mode for requests. If present, request headers are sent. Request body is processed according<br />to the specified mode. |
 | `response` | _[ProcessingModeOptions](#processingmodeoptions)_ |  false  |  | Defines processing mode for responses. If present, response headers are sent. Response body is processed according<br />to the specified mode. |
+| `allowModeOverride` | _boolean_ |  false  |  | AllowModeOverride allows the external processor to override the processing mode set via the<br />`mode_override` field in the gRPC response message. This defaults to false. |
 
 
 #### ExtensionAPISettings

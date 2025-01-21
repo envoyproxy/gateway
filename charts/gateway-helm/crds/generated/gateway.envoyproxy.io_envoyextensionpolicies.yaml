@@ -940,6 +940,11 @@ spec:
                         ProcessingMode defines how request and response body is processed
                         Default: header and body are not sent to the external processor
                       properties:
+                        allowModeOverride:
+                          description: |-
+                            AllowModeOverride allows the external processor to override the processing mode set via the
+                            `mode_override` field in the gRPC response message. This defaults to false.
+                          type: boolean
                         request:
                           description: |-
                             Defines processing mode for requests. If present, request headers are sent. Request body is processed according

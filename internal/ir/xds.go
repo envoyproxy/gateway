@@ -2787,6 +2787,9 @@ type ExtProc struct {
 
 	// ReceivingMetadataNamespaces are metadata namespaces updatable by external processor
 	ReceivingMetadataNamespaces []string `json:"receivingMetadataNamespaces,omitempty" yaml:"receivingMetadataNamespaces,omitempty"`
+
+	// AllowModeOverride allows the external processor to modify the processing mode.
+	AllowModeOverride bool `json:"allowModeOverride,omitempty" yaml:"allowModeOverride,omitempty"`
 }
 
 // Wasm holds the information associated with the Wasm extensions.
