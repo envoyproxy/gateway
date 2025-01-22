@@ -159,7 +159,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	// Get Gateways belonging to our GatewayClass.
 	allGateways := t.GetRelevantGateways(resources)
 
-	// Filter out Gateways that are not accepted.
+	// Filter out Gateways that are marked as not accepted by the controller.
 	// This will only happen if the Gateway references an invalid Envoyproxy.
 	gateways := make([]*GatewayContext, 0, len(allGateways))
 	for _, gateway := range allGateways {
