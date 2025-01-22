@@ -1611,11 +1611,6 @@ func (in *EnvoyGatewayKubernetesProvider) DeepCopyInto(out *EnvoyGatewayKubernet
 		*out = new(KubernetesDeployMode)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.OverwriteControlPlaneCerts != nil {
-		in, out := &in.OverwriteControlPlaneCerts, &out.OverwriteControlPlaneCerts
-		*out = new(bool)
-		**out = **in
-	}
 	if in.LeaderElection != nil {
 		in, out := &in.LeaderElection, &out.LeaderElection
 		*out = new(LeaderElection)
@@ -2370,6 +2365,11 @@ func (in *ExtensionManager) DeepCopyInto(out *ExtensionManager) {
 		in, out := &in.Service, &out.Service
 		*out = new(ExtensionService)
 		(*in).DeepCopyInto(*out)
+	}
+	if in.MaxMessageSize != nil {
+		in, out := &in.MaxMessageSize, &out.MaxMessageSize
+		x := (*in).DeepCopy()
+		*out = &x
 	}
 }
 
@@ -4663,6 +4663,11 @@ func (in *ProxyTracing) DeepCopyInto(out *ProxyTracing) {
 		in, out := &in.SamplingRate, &out.SamplingRate
 		*out = new(uint32)
 		**out = **in
+	}
+	if in.SamplingFraction != nil {
+		in, out := &in.SamplingFraction, &out.SamplingFraction
+		*out = new(v1.Fraction)
+		(*in).DeepCopyInto(*out)
 	}
 	if in.CustomTags != nil {
 		in, out := &in.CustomTags, &out.CustomTags
