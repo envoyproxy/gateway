@@ -570,7 +570,7 @@ func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *
 	}
 
 	// Clear the listeners status if the gateway is not accepted.
-	// This will only happen if the Gateway references an invalid Envoyproxy, either directly or indirectly through GatewayClass.
+	// This will only happen if the Gateway references an invalid Envoyproxy.
 	if status.GatewayNotAccepted(gtw) {
 		gtw.Status.Listeners = nil
 	} else {
