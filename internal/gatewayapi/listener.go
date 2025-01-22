@@ -8,6 +8,7 @@ package gatewayapi
 import (
 	"errors"
 	"fmt"
+	"math"
 
 	"github.com/google/cel-go/cel"
 	corev1 "k8s.io/api/core/v1"
@@ -459,11 +460,6 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 		authority = host
 	}
 
-	samplingRate := 100.0
-	if tracing.SamplingRate != nil {
-		samplingRate = float64(*tracing.SamplingRate)
-	}
-
 	serviceName := naming.ServiceName(utils.NamespacedName(gw))
 	if mergeGateways {
 		serviceName = string(gw.Spec.GatewayClassName)
@@ -472,7 +468,7 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 	return &ir.Tracing{
 		Authority:    authority,
 		ServiceName:  serviceName,
-		SamplingRate: samplingRate,
+		SamplingRate: proxySamplingRate(tracing),
 		CustomTags:   tracing.CustomTags,
 		Destination: ir.RouteDestination{
 			// TODO: rename this, so that we can share backend with accesslog?
@@ -482,6 +478,25 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 		Provider: tracing.Provider,
 		Traffic:  traffic,
 	}, nil
+}
+
+func proxySamplingRate(tracing *egv1a1.ProxyTracing) float64 {
+	rate := 100.0
+	if tracing.SamplingRate != nil {
+		rate = float64(*tracing.SamplingRate)
+	} else if tracing.SamplingFraction != nil {
+		numerator := float64(tracing.SamplingFraction.Numerator)
+		denominator := float64(100)
+		if tracing.SamplingFraction.Denominator != nil {
+			denominator = float64(*tracing.SamplingFraction.Denominator)
+		}
+
+		rate = numerator / denominator
+		// Identifies a percentage, in the range [0.0, 100.0]
+		rate = math.Max(0, rate)
+		rate = math.Min(100, rate)
+	}
+	return rate
 }
 
 func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy, resources *resource.Resources) (*ir.Metrics, error) {
