@@ -78,7 +78,7 @@ func traverseDirectory(dirPath string, rs *[]*resource.Resources) error {
 	for _, entry := range entries {
 		fullPath := filepath.Join(dirPath, entry.Name())
 
-		// Skip hidden files and directories.
+		// Skip hidden files
 		if strings.HasPrefix(entry.Name(), ".") {
 			continue
 		}
