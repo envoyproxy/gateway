@@ -76,7 +76,7 @@ func TestFileProvider(t *testing.T) {
 	watchDirPath, _ := os.MkdirTemp(os.TempDir(), "test-dir-*")
 
 	// Prepare the watched test file.
-	writeResourcesFile(t, "testdata/resources.tmpl", watchFilePath, newDefaultResourcesParam("eg"))
+	writeResourcesFile(t, watchFilePath, newDefaultResourcesParam("eg"))
 	require.FileExists(t, watchFilePath)
 	require.DirExists(t, watchDirPath)
 
@@ -144,7 +144,7 @@ func TestFileProvider(t *testing.T) {
 	t.Run("add a file in watched dir", func(t *testing.T) {
 		// Write a new file under watched directory.
 		newFilePath := filepath.Join(watchDirPath, "test.yaml")
-		writeResourcesFile(t, "testdata/resources.tmpl", newFilePath, newDefaultResourcesParam("eg"))
+		writeResourcesFile(t, newFilePath, newDefaultResourcesParam("eg"))
 		expectResourcesToBePresent(t, pResources, "eg")
 
 		resources := pResources.GetResourcesByGatewayClass("eg")
@@ -188,11 +188,11 @@ func TestRecursiveFileProvider(t *testing.T) {
 
 	// Create the watched files.
 	configBase := filepath.Join(baseDir, "config_base.yaml")
-	writeResourcesFile(t, "testdata/resources.tmpl", configBase, newDefaultResourcesParam("eg"))
+	writeResourcesFile(t, configBase, newDefaultResourcesParam("eg"))
 	configSubDir1 := filepath.Join(subDir1, "config_1.yaml")
-	writeResourcesFile(t, "testdata/resources.tmpl", configSubDir1, newDefaultResourcesParam("eg1"))
+	writeResourcesFile(t, configSubDir1, newDefaultResourcesParam("eg1"))
 	configSubDir2 := filepath.Join(subDir2, "config_2.yaml")
-	writeResourcesFile(t, "testdata/resources.tmpl", configSubDir2, newDefaultResourcesParam("eg2"))
+	writeResourcesFile(t, configSubDir2, newDefaultResourcesParam("eg2"))
 
 	// Define locations for move tests
 	moveLocation1 := filepath.Join(baseDir, "new_config.yaml")
@@ -263,7 +263,7 @@ func TestRecursiveFileProvider(t *testing.T) {
 	})
 
 	t.Run("add a new file to a watched sub dir", func(t *testing.T) {
-		writeResourcesFile(t, "testdata/resources.tmpl", configSubDir2, newDefaultResourcesParam("eg2"))
+		writeResourcesFile(t, configSubDir2, newDefaultResourcesParam("eg2"))
 		expectResourcesToBePresent(t, pResources, "eg", "eg1", "eg2")
 	})
 
@@ -284,14 +284,14 @@ func TestRecursiveFileProvider(t *testing.T) {
 	})
 }
 
-func writeResourcesFile(t *testing.T, tmpl, dst string, params *resourcesParam) {
+func writeResourcesFile(t *testing.T, dst string, params *resourcesParam) {
 	t.Helper()
 
 	dstFile, err := os.Create(dst)
 	require.NoError(t, err)
 
 	// Write parameters into target file.
-	tmplFile, err := template.ParseFiles(tmpl)
+	tmplFile, err := template.ParseFiles("testdata/resources.tmpl")
 	require.NoError(t, err)
 
 	err = tmplFile.Execute(dstFile, params)
