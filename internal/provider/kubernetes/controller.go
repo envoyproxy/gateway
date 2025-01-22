@@ -938,10 +938,6 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 		r.log.Info("processing Gateway", "namespace", gtw.Namespace, "name", gtw.Name)
 		resourceMap.allAssociatedNamespaces.Insert(gtw.Namespace)
 
-		if err := r.processGatewayParamsRef(ctx, &gtw, resourceMap, resourceTree); err != nil {
-			r.log.Error(err, "failed to process infrastructure.parametersRef for gateway", "namespace", gtw.Namespace, "name", gtw.Name)
-		}
-
 		for _, listener := range gtw.Spec.Listeners {
 			// Get Secret for gateway if it exists.
 			if terminatesTLS(&listener) {
@@ -999,9 +995,20 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 				return err
 			}
 		}
+
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		gtw.Status = gwapiv1.GatewayStatus{}
+
+		if err := r.processGatewayParamsRef(ctx, &gtw, resourceMap, resourceTree); err != nil {
+			// Update the Gateway status to not accepted if there is an error processing the parametersRef.
+			// These not-accepted gateways will not be processed by the gateway-api layer, but their status will be
+			// updated in the gateway-api layer along with other gateways. This is to avoid the potential race condition
+			// of updating the status in both the controller and the gateway-api layer.
+			status.UpdateGatewayStatusNotAccepted(&gtw, gwapiv1.GatewayReasonInvalidParameters, err.Error())
+			r.log.Error(err, "failed to process infrastructure.parametersRef for gateway", "namespace", gtw.Namespace, "name", gtw.Name)
+		}
+
 		if !resourceMap.allAssociatedGateways.Has(gtwNamespacedName) {
 			resourceMap.allAssociatedGateways.Insert(gtwNamespacedName)
 			resourceTree.Gateways = append(resourceTree.Gateways, &gtw)
