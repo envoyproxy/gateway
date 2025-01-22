@@ -8,8 +8,10 @@
 package tests
 
 import (
+	"context"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -27,21 +29,29 @@ var GatewayInvalidParameterTest = suite.ConformanceTest{
 	Manifests:   []string{"testdata/gateway-invalid-parameter.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("Positive", func(t *testing.T) {
+			gwNN := types.NamespacedName{Name: "gateway-invalid-parameter", Namespace: "gateway-conformance-infra"}
 			kubernetes.GatewayMustHaveLatestConditions(
 				t,
 				suite.Client,
 				suite.TimeoutConfig,
-				types.NamespacedName{Name: "gateway-invalid-parameter", Namespace: "gateway-conformance-infra"})
+				gwNN)
 			kubernetes.GatewayMustHaveCondition(
 				t,
 				suite.Client,
 				suite.TimeoutConfig,
-				types.NamespacedName{Name: "gateway-invalid-parameter", Namespace: "gateway-conformance-infra"},
+				gwNN,
 				metav1.Condition{
 					Type:   string(gwapiv1.GatewayConditionAccepted),
 					Status: metav1.ConditionFalse,
 					Reason: string(gwapiv1.GatewayReasonInvalidParameters),
 				})
+			gw := &gwapiv1.Gateway{}
+			err := suite.Client.Get(context.Background(), gwNN, gw)
+			if err != nil {
+				t.Fatalf("Failed to get gateway: %v", err)
+			}
+			require.Empty(t, gw.Status.Addresses)
+			require.Empty(t, gw.Status.Listeners)
 		})
 	},
 }
