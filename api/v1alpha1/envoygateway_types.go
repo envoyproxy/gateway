@@ -6,6 +6,7 @@
 package v1alpha1
 
 import (
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
@@ -510,6 +511,15 @@ type ExtensionManager struct {
 	//
 	// +optional
 	FailOpen bool `json:"failOpen,omitempty"`
+
+	// MaxMessageSize defines the maximum message size in bytes that can be
+	// sent to or received from the Extension Service.
+	// Default: 4M
+	//
+	// +kubebuilder:validation:XIntOrString
+	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+	// +optional
+	MaxMessageSize *resource.Quantity `json:"maxMessageSize,omitempty"`
 }
 
 // ExtensionHooks defines extension hooks across all supported runners
