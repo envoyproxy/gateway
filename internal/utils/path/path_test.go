@@ -65,6 +65,73 @@ func TestListDirsAndFiles(t *testing.T) {
 	}
 }
 
+func TestGetSubDirs(t *testing.T) {
+	basePath, _ := os.MkdirTemp(os.TempDir(), "sub-dir-test")
+	defer func() {
+		_ = os.RemoveAll(basePath)
+	}()
+
+	// |- dir/
+	// 	   |- sub1/
+	// 	      |- sub1a/
+	// 	   |- sub2/
+	dirPath, err := os.MkdirTemp(basePath, "dir")
+	require.NoError(t, err)
+	subDir1, err := os.MkdirTemp(dirPath, "sub1")
+	require.NoError(t, err)
+	subDir2, err := os.MkdirTemp(dirPath, "sub2")
+	require.NoError(t, err)
+	subDir1A, err := os.MkdirTemp(subDir1, "sub1a")
+	require.NoError(t, err)
+
+	testCases := []struct {
+		name         string
+		initDirs     []string
+		expectSubDir []string
+	}{
+		{
+			name:     "one level nesting",
+			initDirs: []string{subDir1},
+			expectSubDir: []string{
+				subDir1,
+				subDir1A,
+			},
+		},
+		{
+			name:         "no nested dir",
+			initDirs:     []string{subDir2},
+			expectSubDir: []string{subDir2},
+		},
+		{
+			name:     "two level nesting",
+			initDirs: []string{dirPath},
+			expectSubDir: []string{
+				dirPath,
+				subDir1,
+				subDir1A,
+				subDir2,
+			},
+		},
+		{
+			name:     "overlapping directories",
+			initDirs: []string{subDir1, dirPath},
+			expectSubDir: []string{
+				subDir1,
+				subDir1A,
+				dirPath,
+				subDir2,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			subDirs := GetSubDirs(tc.initDirs)
+			require.ElementsMatch(t, subDirs.UnsortedList(), tc.expectSubDir)
+		})
+	}
+}
+
 func TestGetParentDirs(t *testing.T) {
 	aPaths := path.Join("a")
 	bPaths := path.Join("a", "b")
