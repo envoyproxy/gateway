@@ -905,6 +905,10 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resou
 			ContentType: ro.Response.ContentType,
 		}
 
+		if ro.Response.StatusCode != nil {
+			response.StatusCode = ptr.To(uint32(*ro.Response.StatusCode))
+		}
+
 		var err error
 		response.Body, err = getCustomResponseBody(ro.Response.Body, resources, policy.Namespace)
 		if err != nil {
@@ -923,8 +927,8 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resou
 	}, nil
 }
 
-func getCustomResponseBody(body egv1a1.CustomResponseBody, resources *resource.Resources, policyNs string) (*string, error) {
-	if body.Type != nil && *body.Type == egv1a1.ResponseValueTypeValueRef {
+func getCustomResponseBody(body *egv1a1.CustomResponseBody, resources *resource.Resources, policyNs string) (*string, error) {
+	if body != nil && body.Type != nil && *body.Type == egv1a1.ResponseValueTypeValueRef {
 		cm := resources.GetConfigMap(policyNs, string(body.ValueRef.Name))
 		if cm != nil {
 			b, dataOk := cm.Data["response.body"]
@@ -944,7 +948,7 @@ func getCustomResponseBody(body egv1a1.CustomResponseBody, resources *resource.R
 		} else {
 			return nil, fmt.Errorf("can't find the referenced configmap %s", body.ValueRef.Name)
 		}
-	} else if body.Inline != nil {
+	} else if body != nil && body.Inline != nil {
 		return body.Inline, nil
 	}
 

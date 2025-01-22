@@ -188,22 +188,22 @@ func (t *Translator) processProxyObservability(gwCtx *GatewayContext, xdsIR *ir.
 
 	xdsIR.AccessLog, err = t.processAccessLog(envoyProxy, resources)
 	if err != nil {
-		status.UpdateGatewayListenersNotValidCondition(gwCtx.Gateway, gwapiv1.GatewayReasonInvalid, metav1.ConditionFalse,
-			fmt.Sprintf("Invalid access log backendRefs: %v", err))
+		status.UpdateGatewayStatusNotAccepted(gwCtx.Gateway, gwapiv1.GatewayReasonInvalidParameters,
+			fmt.Sprintf("Invalid access log backendRefs in the referenced EnvoyProxy: %v", err))
 		return
 	}
 
 	xdsIR.Tracing, err = t.processTracing(gwCtx.Gateway, envoyProxy, t.MergeGateways, resources)
 	if err != nil {
-		status.UpdateGatewayListenersNotValidCondition(gwCtx.Gateway, gwapiv1.GatewayReasonInvalid, metav1.ConditionFalse,
-			fmt.Sprintf("Invalid tracing backendRefs: %v", err))
+		status.UpdateGatewayStatusNotAccepted(gwCtx.Gateway, gwapiv1.GatewayReasonInvalidParameters,
+			fmt.Sprintf("Invalid tracing backendRefs in the referenced EnvoyProxy: %v", err))
 		return
 	}
 
 	xdsIR.Metrics, err = t.processMetrics(envoyProxy, resources)
 	if err != nil {
-		status.UpdateGatewayListenersNotValidCondition(gwCtx.Gateway, gwapiv1.GatewayReasonInvalid, metav1.ConditionFalse,
-			fmt.Sprintf("Invalid metrics backendRefs: %v", err))
+		status.UpdateGatewayStatusNotAccepted(gwCtx.Gateway, gwapiv1.GatewayReasonInvalidParameters,
+			fmt.Sprintf("Invalid metrics backendRefs in the referenced EnvoyProxy: %v", err))
 		return
 	}
 }

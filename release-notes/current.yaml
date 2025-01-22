@@ -10,6 +10,7 @@ breaking changes: |
   Envoy Gateway treats errors in calls to an extension service as fail-closed by default. Any error returned from the extension server will replace the affected resource with an "Internal Server Error" immediate response. The previous behavior can be enabled by setting the `failOpen` field to `true` in the extension service configuration.
   Envoy Gateway now return a 500 response when a ClientTrafficPolicy translation fails for HTTP/GRPC routes, and forwards
   client traffic to an empty cluster when a ClientTrafficPolicy translation fails for TCP routes.
+  Any issues with `EnvoyProxy` reference in a `Gateway` will prevent the Envoy fleet from being created or result in the deletion of an existing Envoy fleet.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
