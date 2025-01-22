@@ -887,7 +887,8 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `contentType` | _string_ |  false  |  | Content Type of the response. This will be set in the Content-Type header. |
-| `body` | _[CustomResponseBody](#customresponsebody)_ |  true  |  | Body of the Custom Response |
+| `body` | _[CustomResponseBody](#customresponsebody)_ |  false  |  | Body of the Custom Response |
+| `statusCode` | _integer_ |  false  |  | Status Code of the Custom Response<br />If unset, does not override the status of response. |
 
 
 #### CustomResponseBody

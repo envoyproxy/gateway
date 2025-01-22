@@ -694,7 +694,15 @@ type CustomResponse struct {
 	ContentType *string `json:"contentType,omitempty"`
 
 	// Body of the Custom Response
-	Body CustomResponseBody `json:"body"`
+	//
+	// +optional
+	Body *CustomResponseBody `json:"body,omitempty"`
+
+	// Status Code of the Custom Response
+	// If unset, does not override the status of response.
+	//
+	// +optional
+	StatusCode *int `json:"statusCode,omitempty"`
 }
 
 // ResponseValueType defines the types of values for the response body supported by Envoy Gateway.
