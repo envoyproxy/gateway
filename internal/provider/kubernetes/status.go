@@ -569,12 +569,11 @@ func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *
 			"namespace", gtw.Namespace, "name", gtw.Name)
 	}
 
-	// Clear the listeners status if the gateway is not accepted.
-	// This will only happen if the Gateway references an invalid Envoyproxy.
-	if status.GatewayNotAccepted(gtw) {
-		gtw.Status.Listeners = nil
-	} else {
+	if status.GatewayAccepted(gtw) {
 		// update accepted condition to true if it is not false
+		// this is needed because the accepted condition is not set to true by the Gateway API translator
+		// TODO (huabing): this is tricky and confusing for later readers, we should remove this and set the accepted condition
+		// to true in the Gateway API translator
 		status.UpdateGatewayStatusAccepted(gtw)
 		// update address field and programmed condition
 		status.UpdateGatewayStatusProgrammedCondition(gtw, svc, envoyObj, r.store.listNodeAddresses()...)

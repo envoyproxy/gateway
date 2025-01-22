@@ -39,6 +39,10 @@ func GatewayNotAccepted(gw *gwapiv1.Gateway) bool {
 	return false
 }
 
+func GatewayAccepted(gw *gwapiv1.Gateway) bool {
+	return !GatewayNotAccepted(gw)
+}
+
 // UpdateGatewayStatusProgrammedCondition updates the status addresses for the provided gateway
 // based on the status IP/Hostname of svc and updates the Programmed condition based on the
 // service and deployment or daemonset state.
