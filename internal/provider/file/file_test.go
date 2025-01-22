@@ -93,7 +93,6 @@ func TestFileProvider(t *testing.T) {
 
 	// Wait for file provider to be ready.
 	waitFileProviderReady(t)
-
 	require.Equal(t, "gateway.envoyproxy.io/gatewayclass-controller", fp.resourcesStore.name)
 
 	t.Run("initial resource load", func(t *testing.T) {
@@ -145,12 +144,7 @@ func TestFileProvider(t *testing.T) {
 		// Write a new file under watched directory.
 		newFilePath := filepath.Join(watchDirPath, "test.yaml")
 		writeResourcesFile(t, "testdata/resources.tmpl", newFilePath, newDefaultResourcesParam("eg"))
-
 		expectResourcesToBePresent(t, pResources, "eg")
-
-		require.Eventually(t, func() bool {
-			return pResources.GetResourcesByGatewayClass("eg") != nil
-		}, resourcesUpdateTimeout, resourcesUpdateTick)
 
 		resources := pResources.GetResourcesByGatewayClass("eg")
 		want := &resource.Resources{}
@@ -346,7 +340,10 @@ func mustUnmarshal(t *testing.T, className string, out any) {
 	require.NoError(t, yaml.UnmarshalStrict(content, out, yaml.DisallowUnknownFields))
 }
 
+// expectResourcesToBePresent waits for the resources to be present in the provider.
 func expectResourcesToBePresent(t *testing.T, resources *message.ProviderResources, classNames ...string) {
+	t.Helper()
+
 	require.Eventually(t, func() bool {
 		for _, name := range classNames {
 			if resources.GetResourcesByGatewayClass(name) == nil {
@@ -357,7 +354,10 @@ func expectResourcesToBePresent(t *testing.T, resources *message.ProviderResourc
 	}, resourcesUpdateTimeout, resourcesUpdateTick)
 }
 
+// expectResourcesToBeAbsent waits for the resources to be absent from the provider.
 func expectResourcesToBeAbsent(t *testing.T, resources *message.ProviderResources, classNames ...string) {
+	t.Helper()
+
 	require.Eventually(t, func() bool {
 		for _, name := range classNames {
 			if resources.GetResourcesByGatewayClass(name) != nil {
@@ -368,7 +368,10 @@ func expectResourcesToBeAbsent(t *testing.T, resources *message.ProviderResource
 	}, resourcesUpdateTimeout, resourcesUpdateTick)
 }
 
+// moveFile moves a file from sourcePath to destPath.
 func moveFile(t *testing.T, sourcePath, destPath string) {
+	t.Helper()
+
 	inputFile, err := os.Open(sourcePath)
 	require.NoError(t, err)
 
