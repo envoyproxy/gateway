@@ -15,7 +15,7 @@ spec:
   maxReplicas: {{ .Values.hpa.maxReplicas }}
   {{- if .Values.hpa.behavior }}
   behavior:
-  {{ toYaml .Values.hpa.behavior | indent 4 }}
+{{ toYaml .Values.hpa.behavior | indent 4 }}
   {{- end }}
   metrics:
     {{- if .Values.hpa.targetCPU }}
