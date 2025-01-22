@@ -176,7 +176,16 @@ e2e-prepare: prepare-ip-family ## Prepare the environment for running e2e tests
 
 .PHONY: run-e2e
 run-e2e: e2e-prepare ## Run e2e tests
+	@$(LOG_TARGET)
+ifeq ($(E2E_RUN_TEST),)
 	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=false
+	go test $(E2E_TEST_ARGS) ./test/e2e/merge_gateways --gateway-class=merge-gateways --debug=true --cleanup-base-resources=false
+	go test $(E2E_TEST_ARGS) ./test/e2e/multiple_gc --debug=true --cleanup-base-resources=true
+	LAST_VERSION_TAG=$(shell cat VERSION) go test $(E2E_TEST_ARGS) ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
+else
+	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
+		--run-test $(E2E_RUN_TEST)
+endif
 
 .PHONY: run-resilience
 run-resilience: ## Run resilience tests
