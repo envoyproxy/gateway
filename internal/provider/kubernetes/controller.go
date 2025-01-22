@@ -1001,7 +1001,10 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 		gtw.Status = gwapiv1.GatewayStatus{}
 
 		if err := r.processGatewayParamsRef(ctx, &gtw, resourceMap, resourceTree); err != nil {
-			// Update the Gateway status to not accepted if there is an error processing the parametersRef
+			// Update the Gateway status to not accepted if there is an error processing the parametersRef.
+			// These not-accepted gateways will not be processed by the gateway-api layer, but their status will be
+			// updated in the gateway-api layer along with other gateways. This is to avoid the potential race condition
+			// of updating the status in both the controller and the gateway-api layer.
 			status.UpdateGatewayStatusNotAccepted(&gtw, gwapiv1.GatewayReasonInvalidParameters, err.Error())
 			r.log.Error(err, "failed to process infrastructure.parametersRef for gateway", "namespace", gtw.Namespace, "name", gtw.Name)
 		}
