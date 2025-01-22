@@ -76,9 +76,12 @@ func (p *Provider) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to load resources into store: %w", err)
 	}
 
+	allDirs := path.GetSubDirs(initDirs.UnsortedList())
+	allWatchPaths := allDirs.Clone().Insert(p.paths...)
+
 	// Add paths to the watcher, and aggregate all path channels into one.
 	aggCh := make(chan fsnotify.Event)
-	for _, path := range p.paths {
+	for path := range allWatchPaths {
 		if err := p.watcher.Add(path); err != nil {
 			p.logger.Error(err, "failed to add watch", "path", path)
 		} else {
@@ -94,8 +97,9 @@ func (p *Provider) Start(ctx context.Context) error {
 	}
 
 	p.ready.Store(true)
-	curDirs, curFiles := initDirs.Clone(), initFiles.Clone()
+	curDirs, curFiles := allDirs.Clone(), initFiles.Clone()
 	initFilesParent := path.GetParentDirs(initFiles.UnsortedList())
+
 	for {
 		select {
 		case <-ctx.Done():

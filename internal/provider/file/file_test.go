@@ -168,8 +168,6 @@ func TestFileProvider(t *testing.T) {
 	t.Cleanup(func() {
 		_ = os.RemoveAll(watchFileBase)
 		_ = os.RemoveAll(watchDirPath)
-
-		// Kill the server.
 	})
 }
 
@@ -182,8 +180,8 @@ func TestRecursiveFileProvider(t *testing.T) {
 	// 	  |- subDir2/
 	// 	     |- config_2.yaml
 	baseDir, _ := os.MkdirTemp(os.TempDir(), "test-base-*")
-	subDir1, _ := os.MkdirTemp(baseDir, "test-dir1-*")
-	subDir2, _ := os.MkdirTemp(baseDir, "test-dir2-*")
+	subDir1, _ := os.MkdirTemp(baseDir, "subdir-1")
+	subDir2, _ := os.MkdirTemp(baseDir, "subdir-2")
 	require.DirExists(t, baseDir)
 	require.DirExists(t, subDir1)
 	require.DirExists(t, subDir2)
@@ -287,6 +285,8 @@ func TestRecursiveFileProvider(t *testing.T) {
 }
 
 func writeResourcesFile(t *testing.T, tmpl, dst string, params *resourcesParam) {
+	t.Helper()
+
 	dstFile, err := os.Create(dst)
 	require.NoError(t, err)
 
@@ -300,6 +300,8 @@ func writeResourcesFile(t *testing.T, tmpl, dst string, params *resourcesParam) 
 }
 
 func waitFileProviderReady(t *testing.T) {
+	t.Helper()
+
 	require.Eventually(t, func() bool {
 		resp, err := http.Get("http://localhost:8081/readyz")
 		if err != nil {
