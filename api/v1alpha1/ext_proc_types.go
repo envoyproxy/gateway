@@ -53,6 +53,12 @@ type ExtProcProcessingMode struct {
 	//
 	// +optional
 	Response *ProcessingModeOptions `json:"response,omitempty"`
+
+	// AllowModeOverride allows the external processor to override the processing mode set via the
+	// `mode_override` field in the gRPC response message. This defaults to false.
+	//
+	// +optional
+	AllowModeOverride bool `json:"allowModeOverride,omitempty"`
 }
 
 // ExtProc defines the configuration for External Processing filter.

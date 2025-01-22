@@ -10,6 +10,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"strconv"
 
@@ -285,5 +286,17 @@ func setupGRPCOpts(ctx context.Context, client k8scli.Client, ext *egv1a1.Extens
 		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
 	opts = append(opts, grpc.WithDefaultServiceConfig(grpcServiceConfig))
+	if ext.MaxMessageSize != nil {
+		maxMessageSize, ok := ext.MaxMessageSize.AsInt64()
+		if !ok {
+			return nil, fmt.Errorf("invalid Extension Manager MaxMessageSize value %s", ext.MaxMessageSize.String())
+		}
+		if maxMessageSize < 1 || maxMessageSize > math.MaxInt {
+			return nil, fmt.Errorf("extension Manager MaxMessageSize value %s is out of range, must be between 1 and %d",
+				ext.MaxMessageSize.String(), math.MaxInt)
+		}
+		opts = append(opts, grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(int(maxMessageSize)), grpc.MaxCallSendMsgSize(int(maxMessageSize))))
+	}
+
 	return opts, nil
 }

@@ -168,7 +168,7 @@ func extProcConfig(extProc ir.ExtProc) *extprocv3.ExternalProcessor {
 			}
 		}
 	}
-
+	config.AllowModeOverride = extProc.AllowModeOverride
 	return config
 }
 

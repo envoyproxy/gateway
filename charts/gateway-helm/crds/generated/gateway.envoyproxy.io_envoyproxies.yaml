@@ -328,6 +328,7 @@ spec:
                       - envoy.filters.http.fault
                       - envoy.filters.http.cors
                       - envoy.filters.http.ext_authz
+                      - envoy.filters.http.api_key_auth
                       - envoy.filters.http.basic_auth
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
@@ -338,6 +339,7 @@ spec:
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.custom_response
+                      - envoy.filters.http.compressor
                       type: string
                     before:
                       description: |-
@@ -348,6 +350,7 @@ spec:
                       - envoy.filters.http.fault
                       - envoy.filters.http.cors
                       - envoy.filters.http.ext_authz
+                      - envoy.filters.http.api_key_auth
                       - envoy.filters.http.basic_auth
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
@@ -358,6 +361,7 @@ spec:
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.custom_response
+                      - envoy.filters.http.compressor
                       type: string
                     name:
                       description: Name of the filter.
@@ -366,6 +370,7 @@ spec:
                       - envoy.filters.http.fault
                       - envoy.filters.http.cors
                       - envoy.filters.http.ext_authz
+                      - envoy.filters.http.api_key_auth
                       - envoy.filters.http.basic_auth
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
@@ -376,6 +381,7 @@ spec:
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.custom_response
+                      - envoy.filters.http.compressor
                       type: string
                   required:
                   - name
@@ -14431,12 +14437,38 @@ spec:
                         - message: BackendRefs only supports Core group.
                           rule: 'has(self.backendRefs) ? (self.backendRefs.all(f,
                             f.group == "")) : true'
+                      samplingFraction:
+                        description: |-
+                          SamplingFraction represents the fraction of requests that should be
+                          selected for tracing if no prior sampling decision has been made.
+
+                          Only one of SamplingRate or SamplingFraction may be specified.
+                          If neither field is specified, 1% of requests will be sampled.
+                        properties:
+                          denominator:
+                            default: 100
+                            format: int32
+                            minimum: 1
+                            type: integer
+                          numerator:
+                            format: int32
+                            minimum: 0
+                            type: integer
+                        required:
+                        - numerator
+                        type: object
+                        x-kubernetes-validations:
+                        - message: numerator must be less than or equal to denominator
+                          rule: self.numerator <= self.denominator
                       samplingRate:
                         default: 100
                         description: |-
                           SamplingRate controls the rate at which traffic will be
                           selected for tracing if no prior sampling decision has been made.
                           Defaults to 100, valid values [0-100]. 100 indicates 100% sampling.
+
+                          Only one of SamplingRate or SamplingFraction may be specified.
+                          If neither field is specified, 1% of requests will be sampled.
                         format: int32
                         maximum: 100
                         minimum: 0
@@ -14444,6 +14476,10 @@ spec:
                     required:
                     - provider
                     type: object
+                    x-kubernetes-validations:
+                    - message: only one of SamplingRate or SamplingFraction can be
+                        specified
+                      rule: '!(has(self.samplingRate) && has(self.samplingFraction))'
                 type: object
             type: object
           status:

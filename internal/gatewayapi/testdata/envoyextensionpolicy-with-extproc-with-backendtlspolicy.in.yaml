@@ -201,6 +201,7 @@ envoyExtensionPolicies:
         Namespace: envoy-gateway
         Port: 8000
       processingMode:
+        allowModeOverride: true
         request:
           body: Buffered
           attributes:
