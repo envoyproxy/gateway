@@ -98,6 +98,7 @@ func TestFileProvider(t *testing.T) {
 
 	t.Run("initial resource load", func(t *testing.T) {
 		require.NotZero(t, pResources.GatewayAPIResources.Len())
+		expectResourcesToBePresent(t, pResources, "eg")
 		resources := pResources.GetResourcesByGatewayClass("eg")
 		require.NotNil(t, resources)
 
@@ -116,16 +117,12 @@ func TestFileProvider(t *testing.T) {
 		renameFilePath := filepath.Join(watchFileBase, "foobar.yaml")
 		err := os.Rename(watchFilePath, renameFilePath)
 		require.NoError(t, err)
-		require.Eventually(t, func() bool {
-			return pResources.GetResourcesByGatewayClass("eg") == nil
-		}, resourcesUpdateTimeout, resourcesUpdateTick)
+		expectResourcesToBeAbsent(t, pResources, "eg")
 
 		// Rename it back
 		err = os.Rename(renameFilePath, watchFilePath)
 		require.NoError(t, err)
-		require.Eventually(t, func() bool {
-			return pResources.GetResourcesByGatewayClass("eg") != nil
-		}, resourcesUpdateTimeout, resourcesUpdateTick)
+		expectResourcesToBePresent(t, pResources, "eg")
 
 		resources := pResources.GetResourcesByGatewayClass("eg")
 		want := &resource.Resources{}
@@ -141,15 +138,15 @@ func TestFileProvider(t *testing.T) {
 	t.Run("remove the watched file", func(t *testing.T) {
 		err := os.Remove(watchFilePath)
 		require.NoError(t, err)
-		require.Eventually(t, func() bool {
-			return pResources.GetResourcesByGatewayClass("eg") == nil
-		}, resourcesUpdateTimeout, resourcesUpdateTick)
+		expectResourcesToBeAbsent(t, pResources, "eg")
 	})
 
 	t.Run("add a file in watched dir", func(t *testing.T) {
 		// Write a new file under watched directory.
 		newFilePath := filepath.Join(watchDirPath, "test.yaml")
 		writeResourcesFile(t, "testdata/resources.tmpl", newFilePath, newDefaultResourcesParam("eg"))
+
+		expectResourcesToBePresent(t, pResources, "eg")
 
 		require.Eventually(t, func() bool {
 			return pResources.GetResourcesByGatewayClass("eg") != nil
@@ -170,14 +167,124 @@ func TestFileProvider(t *testing.T) {
 		newFilePath := filepath.Join(watchDirPath, "test.yaml")
 		err := os.Remove(newFilePath)
 		require.NoError(t, err)
-		require.Eventually(t, func() bool {
-			return pResources.GetResourcesByGatewayClass("eg") == nil
-		}, resourcesUpdateTimeout, resourcesUpdateTick)
+		expectResourcesToBeAbsent(t, pResources, "eg")
 	})
 
 	t.Cleanup(func() {
 		_ = os.RemoveAll(watchFileBase)
 		_ = os.RemoveAll(watchDirPath)
+	})
+}
+
+func TestRecursiveFileProvider(t *testing.T) {
+	// Create nested temporary directories with the following structure:
+	// |- baseDir/
+	//    | config_base.yaml
+	//    |- subDir1/
+	//       |- config_1.yaml
+	// 	  |- subDir2/
+	// 	     |- config_2.yaml
+	baseDir, _ := os.MkdirTemp(os.TempDir(), "test-base-*")
+	subDir1, _ := os.MkdirTemp(baseDir, "test-dir1-*")
+	subDir2, _ := os.MkdirTemp(baseDir, "test-dir2-*")
+	require.DirExists(t, baseDir)
+	require.DirExists(t, subDir1)
+	require.DirExists(t, subDir2)
+
+	// Create the watched files.
+	configBase := filepath.Join(baseDir, "config_base.yaml")
+	writeResourcesFile(t, "testdata/resources.tmpl", configBase, newDefaultResourcesParam("eg"))
+	configSubDir1 := filepath.Join(subDir1, "config_1.yaml")
+	writeResourcesFile(t, "testdata/resources.tmpl", configSubDir1, newDefaultResourcesParam("eg1"))
+	configSubDir2 := filepath.Join(subDir2, "config_2.yaml")
+	writeResourcesFile(t, "testdata/resources.tmpl", configSubDir2, newDefaultResourcesParam("eg2"))
+
+	// Define locations for move tests
+	moveLocation1 := filepath.Join(baseDir, "new_config.yaml")
+	unwatchedDir, err := os.MkdirTemp(os.TempDir(), "unwatched-dir-*")
+	require.NoError(t, err)
+	moveLocation2 := filepath.Join(unwatchedDir, "new_config.yaml")
+
+	require.FileExists(t, configBase)
+	require.FileExists(t, configSubDir1)
+	require.FileExists(t, configSubDir2)
+
+	// Create the file provider configuration.
+	cfg, err := newFileProviderConfig([]string{baseDir})
+	require.NoError(t, err)
+	pResources := new(message.ProviderResources)
+	fp, err := New(cfg, pResources)
+	require.NoError(t, err)
+
+	// Start file provider.
+	go func() {
+		if err := fp.Start(context.Background()); err != nil {
+			t.Errorf("failed to start file provider: %v", err)
+		}
+	}()
+
+	// Wait for file provider to be ready.
+	waitFileProviderReady(t)
+	require.Equal(t, "gateway.envoyproxy.io/gatewayclass-controller", fp.resourcesStore.name)
+
+	t.Run("initial resource load", func(t *testing.T) {
+		require.NotZero(t, pResources.GatewayAPIResources.Len())
+
+		testClasses := []string{"eg", "eg1", "eg2"}
+		for _, className := range testClasses {
+			resources := pResources.GetResourcesByGatewayClass(className)
+			require.NotNil(t, resources)
+
+			want := &resource.Resources{}
+			mustUnmarshal(t, className, want)
+
+			opts := []cmp.Option{
+				cmpopts.IgnoreFields(resource.Resources{}, "serviceMap"),
+				cmpopts.EquateEmpty(),
+			}
+			require.Empty(t, cmp.Diff(want, resources, opts...))
+		}
+	})
+
+	t.Run("rename a file in watched sub dir and then rename it back", func(t *testing.T) {
+		// Rename the file
+		renameFilePath := filepath.Join(subDir1, "config_1_renamed.yaml")
+		err := os.Rename(configSubDir1, renameFilePath)
+		require.NoError(t, err)
+		expectResourcesToBePresent(t, pResources, "eg", "eg1", "eg2")
+
+		// Rename the file back
+		err = os.Rename(renameFilePath, configSubDir1)
+		require.NoError(t, err)
+		expectResourcesToBePresent(t, pResources, "eg", "eg1", "eg2")
+	})
+
+	t.Run("remove a file from watched sub dir", func(t *testing.T) {
+		err := os.Remove(configSubDir2)
+		require.NoError(t, err)
+
+		expectResourcesToBeAbsent(t, pResources, "eg2")
+		expectResourcesToBePresent(t, pResources, "eg", "eg1")
+	})
+
+	t.Run("add a new file to a watched sub dir", func(t *testing.T) {
+		writeResourcesFile(t, "testdata/resources.tmpl", configSubDir2, newDefaultResourcesParam("eg2"))
+		expectResourcesToBePresent(t, pResources, "eg", "eg1", "eg2")
+	})
+
+	t.Run("move a file from one subdirectory to other subdirectory", func(t *testing.T) {
+		moveFile(t, configSubDir2, moveLocation1)
+		expectResourcesToBePresent(t, pResources, "eg", "eg1", "eg2")
+	})
+
+	t.Run("move a file from one subdirectory to an unwatched subdirectory", func(t *testing.T) {
+		moveFile(t, moveLocation1, moveLocation2)
+		expectResourcesToBePresent(t, pResources, "eg", "eg1")
+		expectResourcesToBeAbsent(t, pResources, "eg2")
+	})
+
+	t.Cleanup(func() {
+		_ = os.RemoveAll(baseDir)
 	})
 }
 
@@ -217,77 +324,6 @@ func waitFileProviderReady(t *testing.T) {
 	}, 3*resourcesUpdateTimeout, resourcesUpdateTick)
 }
 
-func TestRecursiveFileProvider(t *testing.T) {
-	// Create nested temporary directories with the following structure:
-	// |- baseDir/
-	//    | config_base.yaml
-	//    |- subDir1/
-	//       |- config_1.yaml
-	// 	  |- subDir2/
-	// 	     |- config_2.yaml
-	baseDir, _ := os.MkdirTemp(os.TempDir(), "test-base-*")
-	subDir1, _ := os.MkdirTemp(baseDir, "test-dir1-*")
-	subDir2, _ := os.MkdirTemp(baseDir, "test-dir2-*")
-	require.DirExists(t, baseDir)
-	require.DirExists(t, subDir1)
-	require.DirExists(t, subDir2)
-
-	// Create the watched files.
-	watchFilePathBase := filepath.Join(baseDir, "config_base.yaml")
-	writeResourcesFile(t, "testdata/resources.tmpl", watchFilePathBase, newDefaultResourcesParam("eg"))
-
-	watchFilePath1 := filepath.Join(subDir1, "config_1.yaml")
-	writeResourcesFile(t, "testdata/resources.tmpl", watchFilePath1, newDefaultResourcesParam("eg1"))
-
-	watchFilePath2 := filepath.Join(subDir2, "config_2.yaml")
-	writeResourcesFile(t, "testdata/resources.tmpl", watchFilePath2, newDefaultResourcesParam("eg2"))
-
-	require.FileExists(t, watchFilePathBase)
-	require.FileExists(t, watchFilePath1)
-	require.FileExists(t, watchFilePath2)
-
-	// Create the file provider configuration.
-	cfg, err := newFileProviderConfig([]string{baseDir})
-	require.NoError(t, err)
-	pResources := new(message.ProviderResources)
-	fp, err := New(cfg, pResources)
-	require.NoError(t, err)
-
-	// Start file provider.
-	go func() {
-		if err := fp.Start(context.Background()); err != nil {
-			t.Errorf("failed to start file provider: %v", err)
-		}
-	}()
-
-	// Wait for file provider to be ready.
-	waitFileProviderReady(t)
-	require.Equal(t, "gateway.envoyproxy.io/gatewayclass-controller", fp.resourcesStore.name)
-
-	t.Run("initial resource load", func(t *testing.T) {
-		require.NotZero(t, pResources.GatewayAPIResources.Len())
-
-		testClasses := []string{"eg", "eg1", "eg2"}
-		for _, className := range testClasses {
-			resources := pResources.GetResourcesByGatewayClass(className)
-			require.NotNil(t, resources)
-
-			want := &resource.Resources{}
-			mustUnmarshal(t, className, want)
-
-			opts := []cmp.Option{
-				cmpopts.IgnoreFields(resource.Resources{}, "serviceMap"),
-				cmpopts.EquateEmpty(),
-			}
-			require.Empty(t, cmp.Diff(want, resources, opts...))
-		}
-	})
-
-	t.Cleanup(func() {
-		_ = os.RemoveAll(baseDir)
-	})
-}
-
 // Generates the expected YAML for resources based on `testdata/resources.all.tmpl`
 // and ensures that `out` unmarshalls to the same configuration.
 func mustUnmarshal(t *testing.T, className string, out any) {
@@ -308,4 +344,42 @@ func mustUnmarshal(t *testing.T, className string, out any) {
 	content, err := os.ReadFile(dstFile.Name())
 	require.NoError(t, err)
 	require.NoError(t, yaml.UnmarshalStrict(content, out, yaml.DisallowUnknownFields))
+}
+
+func expectResourcesToBePresent(t *testing.T, resources *message.ProviderResources, classNames ...string) {
+	require.Eventually(t, func() bool {
+		for _, name := range classNames {
+			if resources.GetResourcesByGatewayClass(name) == nil {
+				return false
+			}
+		}
+		return true
+	}, resourcesUpdateTimeout, resourcesUpdateTick)
+}
+
+func expectResourcesToBeAbsent(t *testing.T, resources *message.ProviderResources, classNames ...string) {
+	require.Eventually(t, func() bool {
+		for _, name := range classNames {
+			if resources.GetResourcesByGatewayClass(name) != nil {
+				return false
+			}
+		}
+		return true
+	}, resourcesUpdateTimeout, resourcesUpdateTick)
+}
+
+func moveFile(t *testing.T, sourcePath, destPath string) {
+	inputFile, err := os.Open(sourcePath)
+	require.NoError(t, err)
+
+	outputFile, err := os.Create(destPath)
+	require.NoError(t, err)
+	defer outputFile.Close()
+
+	_, err = io.Copy(outputFile, inputFile)
+	require.NoError(t, err)
+	inputFile.Close()
+
+	err = os.Remove(sourcePath)
+	require.NoError(t, err)
 }

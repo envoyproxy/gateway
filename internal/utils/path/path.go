@@ -8,7 +8,6 @@ package path
 import (
 	"os"
 	"path/filepath"
-	"strings"
 
 	"k8s.io/apimachinery/pkg/util/sets"
 )
@@ -59,7 +58,6 @@ func ListDirsAndFiles(paths []string) (dirs sets.Set[string], files sets.Set[str
 }
 
 // Traverses the directory recursively and adds the same to the subDirs.
-// It only traverses the non-hidden directories.
 func traverseSubDirs(curDir string, subDirs sets.Set[string]) {
 	subDirs.Insert(curDir)
 	files, err := os.ReadDir(curDir)
@@ -69,7 +67,7 @@ func traverseSubDirs(curDir string, subDirs sets.Set[string]) {
 	}
 
 	for _, file := range files {
-		if file.IsDir() && !strings.HasPrefix(file.Name(), ".") {
+		if file.IsDir() {
 			fpath := filepath.Join(curDir, file.Name())
 			traverseSubDirs(fpath, subDirs)
 		}
@@ -77,7 +75,6 @@ func traverseSubDirs(curDir string, subDirs sets.Set[string]) {
 }
 
 // GetSubDirs returns all the subdirectories of given directories.
-// It only traverses the non-hidden directories recursively.
 // The passed directories are also included in the result.
 func GetSubDirs(initDirs []string) sets.Set[string] {
 	dirs := sets.New[string]()
