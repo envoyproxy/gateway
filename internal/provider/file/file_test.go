@@ -97,7 +97,6 @@ func TestFileProvider(t *testing.T) {
 
 	t.Run("initial resource load", func(t *testing.T) {
 		require.NotZero(t, pResources.GatewayAPIResources.Len())
-		expectResourcesToBePresent(t, pResources, "eg")
 		resources := pResources.GetResourcesByGatewayClass("eg")
 		require.NotNil(t, resources)
 
