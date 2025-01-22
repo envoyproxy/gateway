@@ -1130,7 +1130,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `paths` | _string array_ |  true  |  | Paths are the paths to a directory or file containing the resource configuration.<br />Recursive subdirectories are not currently supported. |
+| `paths` | _string array_ |  true  |  | Paths are the paths to a directory or file containing the resource configuration.<br />The directories are scanned recursively to load resources from all sub-folders. |
 
 
 #### EnvoyGatewayHostInfrastructureProvider
