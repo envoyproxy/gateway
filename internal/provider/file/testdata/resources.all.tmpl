@@ -2,7 +2,7 @@ backends:
 - kind: Backend
   metadata:
     creationTimestamp: null
-    name: backend
+    name: {{.BackendName}}
     namespace: envoy-gateway-system
   spec:
     endpoints:
@@ -14,7 +14,7 @@ gatewayClass:
   kind: GatewayClass
   metadata:
     creationTimestamp: null
-    name: eg
+    name: {{.GatewayClassName}}
     namespace: envoy-gateway-system
   spec:
     controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -23,10 +23,10 @@ gateways:
 - kind: Gateway
   metadata:
     creationTimestamp: null
-    name: eg
+    name: {{.GatewayName}}
     namespace: envoy-gateway-system
   spec:
-    gatewayClassName: eg
+    gatewayClassName: {{.GatewayClassName}}
     listeners:
     - name: http
       port: 8888
@@ -36,18 +36,18 @@ httpRoutes:
 - kind: HTTPRoute
   metadata:
     creationTimestamp: null
-    name: backend
+    name: {{.HTTPRouteName}}
     namespace: envoy-gateway-system
   spec:
     hostnames:
     - www.example.com
     parentRefs:
-    - name: eg
+    - name: {{.GatewayName}}
     rules:
     - backendRefs:
       - group: gateway.envoyproxy.io
         kind: Backend
-        name: backend
+        name: {{.BackendName}}
       matches:
       - path:
           type: PathPrefix
