@@ -8,9 +8,10 @@ package gatewayapi
 import (
 	"testing"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 func TestProxySamplingRate(t *testing.T) {
