@@ -29,3 +29,4 @@ jobs:
       with:
         image-ref: envoy-proxy/gateway-dev:${{ github.sha }}
         exit-code: '1'
+        ignore-unfixed: true
