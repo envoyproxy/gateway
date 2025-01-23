@@ -6,6 +6,7 @@
 package translator
 
 import (
+	"k8s.io/utils/ptr"
 	"testing"
 
 	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
@@ -32,6 +33,9 @@ func TestBuildXdsCluster(t *testing.T) {
 		name:         bootstrapXdsCluster.Name,
 		tSocket:      bootstrapXdsCluster.TransportSocket,
 		endpointType: EndpointTypeDNS,
+		healthCheck: &ir.HealthCheck{
+			PanicThreshold: ptr.To[uint32](200),
+		},
 	}
 	dynamicXdsCluster := buildXdsCluster(args)
 

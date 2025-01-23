@@ -18,6 +18,7 @@ import (
 	proxyprotocolv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/proxy_protocol/v3"
 	rawbufferv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/raw_buffer/v3"
 	httpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/upstreams/http/v3"
+	v33 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
@@ -95,6 +96,12 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 			dnsLookupFamily = clusterv3.Cluster_ALL
 		}
 	}
+	panicThreshold := &v33.Percent{
+		Value: float64(50),
+	}
+	if args.healthCheck.PanicThreshold != nil {
+		panicThreshold.Value = float64(*args.healthCheck.PanicThreshold)
+	}
 	cluster := &clusterv3.Cluster{
 		Name:            args.name,
 		DnsLookupFamily: dnsLookupFamily,
@@ -102,6 +109,7 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 			LocalityConfigSpecifier: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig_{
 				LocalityWeightedLbConfig: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig{},
 			},
+			HealthyPanicThreshold: panicThreshold,
 		},
 		PerConnectionBufferLimitBytes: buildBackandConnectionBufferLimitBytes(args.backendConnection),
 	}
