@@ -2460,7 +2460,7 @@ func (h *HealthCheck) Validate() error {
 	}
 
 	if h.PanicThreshold != nil {
-		if *h.PanicThreshold < 0 || *h.PanicThreshold > 100 {
+		if *h.PanicThreshold > 100 {
 			errs = errors.Join(errs, ErrPanicThresholdInvalid)
 		}
 	}
