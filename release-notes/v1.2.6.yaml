@@ -5,7 +5,7 @@ breaking changes: |
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
-  Fixed vulnerability which exposed the Envoy admin interface through the prometheus stats endpoint.
+  Fixed vulnerability CVE-2025-24030, which exposed the Envoy admin interface via the Prometheus stats endpoint. For more details, refer to https://github.com/envoyproxy/gateway/security/advisories/GHSA-j777-63hf-hx76.
 
 # New features or capabilities added in this release.
 new features: |
