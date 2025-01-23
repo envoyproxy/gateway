@@ -70,18 +70,19 @@ func (p *Provider) Start(ctx context.Context) error {
 	}
 	go p.startHealthProbeServer(ctx, readyzChecker)
 
-	initDirs, initFiles := path.ListDirsAndFiles(p.paths)
+	inputDirs, inputFiles := path.ListDirsAndFiles(p.paths)
+
 	// Initially load resources from paths on host.
-	if err := p.resourcesStore.LoadAndStore(initFiles.UnsortedList(), initDirs.UnsortedList()); err != nil {
+	allDirs, err := p.resourcesStore.LoadAndStore(inputFiles.UnsortedList(), inputDirs.UnsortedList())
+	if err != nil {
 		return fmt.Errorf("failed to load resources into store: %w", err)
 	}
 
-	allDirs := path.GetSubDirs(initDirs.UnsortedList())
-	allWatchPaths := allDirs.Clone().Insert(p.paths...)
+	allWatchedPaths := allDirs.Clone().Insert(p.paths...)
 
 	// Add paths to the watcher, and aggregate all path channels into one.
 	aggCh := make(chan fsnotify.Event)
-	for path := range allWatchPaths {
+	for path := range allWatchedPaths {
 		if err := p.watcher.Add(path); err != nil {
 			p.logger.Error(err, "failed to add watch", "path", path)
 		} else {
@@ -97,8 +98,8 @@ func (p *Provider) Start(ctx context.Context) error {
 	}
 
 	p.ready.Store(true)
-	curDirs, curFiles := allDirs.Clone(), initFiles.Clone()
-	initFilesParent := path.GetParentDirs(initFiles.UnsortedList())
+	curDirs, curFiles := allDirs.Clone(), inputFiles.Clone()
+	inputFilesParent := path.GetParentDirs(inputFiles.UnsortedList())
 
 	for {
 		select {
@@ -118,16 +119,16 @@ func (p *Provider) Start(ctx context.Context) error {
 			// temporary file when file is saved. So the watcher will only receive:
 			// - Create event, with name "filename~".
 			// - Remove event, with name "filename", but the file actually exist.
-			if initFilesParent.Has(filepath.Dir(event.Name)) {
+			if inputFilesParent.Has(filepath.Dir(event.Name)) {
 				p.logger.Info("file changed", "op", event.Op, "name", event.Name)
 
 				// For Write event, the file definitely exist.
-				if initFiles.Has(event.Name) && event.Has(fsnotify.Write) {
+				if inputFiles.Has(event.Name) && event.Has(fsnotify.Write) {
 					goto handle
 				}
 
 				// Iter over the watched files to see the different.
-				for f := range initFiles {
+				for f := range inputFiles {
 					_, err := os.Lstat(f)
 					if err != nil {
 						if os.IsNotExist(err) {

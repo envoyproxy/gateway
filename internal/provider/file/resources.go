@@ -12,30 +12,34 @@ import (
 	"strings"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 // loadFromFilesAndDirs loads resources from specific files and directories.
-// The directories are traversed recursively to load resources from all files.
-func loadFromFilesAndDirs(files, dirs []string) ([]*resource.Resources, error) {
-	var rs []*resource.Resources
+// It returns a slice of resources loaded, as well as a set of all the subdirectories
+// that were traversed recursively (including the provided directories).
+func loadFromFilesAndDirs(files, dirs []string) ([]*resource.Resources, sets.Set[string], error) {
+	rs := make([]*resource.Resources, 0)
+	subDirs := sets.New[string]()
 
 	for _, file := range files {
 		r, err := loadFromFile(file)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		rs = append(rs, r)
 	}
 
 	for _, dir := range dirs {
-		r, err := loadFromDir(dir)
+		r, s, err := loadFromDir(dir)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		rs = append(rs, r...)
+		subDirs = subDirs.Union(s)
 	}
 
-	return rs, nil
+	return rs, subDirs, nil
 }
 
 // loadFromFile loads resources from a specific file.
@@ -55,21 +59,22 @@ func loadFromFile(path string) (*resource.Resources, error) {
 	return resource.LoadResourcesFromYAMLBytes(bytes, false)
 }
 
-func loadFromDir(path string) ([]*resource.Resources, error) {
+func loadFromDir(path string) ([]*resource.Resources, sets.Set[string], error) {
 	rs := make([]*resource.Resources, 0)
+	subDirs := sets.New[string]()
 
-	// This function modifies the `rs` slice directly.
-	err := traverseDirectory(path, &rs)
+	err := traverseDirectory(path, &rs, &subDirs)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return rs, nil
+	return rs, subDirs, nil
 }
 
 // traverseDirectory is a helper function that recursively traverses the directory
 // and loads resources from all files while skipping hidden files and directories.
-func traverseDirectory(dirPath string, rs *[]*resource.Resources) error {
+func traverseDirectory(dirPath string, rs *[]*resource.Resources, subDirs *sets.Set[string]) error {
+	subDirs.Insert(dirPath)
 	entries, err := os.ReadDir(dirPath)
 	if err != nil {
 		return err
@@ -85,7 +90,7 @@ func traverseDirectory(dirPath string, rs *[]*resource.Resources) error {
 
 		if entry.IsDir() {
 			// Recursively process subdirectories.
-			if err := traverseDirectory(fullPath, rs); err != nil {
+			if err := traverseDirectory(fullPath, rs, subDirs); err != nil {
 				return err
 			}
 		} else {

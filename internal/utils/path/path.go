@@ -57,33 +57,6 @@ func ListDirsAndFiles(paths []string) (dirs sets.Set[string], files sets.Set[str
 	return
 }
 
-// Traverses the directory recursively and adds the same to the subDirs.
-func traverseSubDirs(curDir string, subDirs sets.Set[string]) {
-	subDirs.Insert(curDir)
-	files, err := os.ReadDir(curDir)
-	if err != nil {
-		// skip
-		return
-	}
-
-	for _, file := range files {
-		if file.IsDir() {
-			fpath := filepath.Join(curDir, file.Name())
-			traverseSubDirs(fpath, subDirs)
-		}
-	}
-}
-
-// GetSubDirs returns all the subdirectories of given directories.
-// The passed directories are also included in the result.
-func GetSubDirs(initDirs []string) sets.Set[string] {
-	dirs := sets.New[string]()
-	for _, dir := range initDirs {
-		traverseSubDirs(dir, dirs)
-	}
-	return dirs
-}
-
 // GetParentDirs returns all the parent directories of given files.
 func GetParentDirs(files []string) sets.Set[string] {
 	parents := sets.New[string]()

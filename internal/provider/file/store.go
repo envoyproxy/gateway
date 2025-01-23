@@ -7,6 +7,7 @@ package file
 
 import (
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/message"
@@ -34,16 +35,18 @@ func (r *resourcesStore) HandleEvent(files, dirs []string) {
 	r.logger.Info("reload all resources")
 
 	r.resources.GatewayAPIResources.Delete(r.name)
-	if err := r.LoadAndStore(files, dirs); err != nil {
+	if _, err := r.LoadAndStore(files, dirs); err != nil {
 		r.logger.Error(err, "failed to load and store resources")
 	}
 }
 
 // LoadAndStore loads and stores all resources from files and directories.
-func (r *resourcesStore) LoadAndStore(files, dirs []string) error {
-	resources, err := loadFromFilesAndDirs(files, dirs)
+// It also returns all the sub-directories that were traversed while loading resources recursively
+// (including the provided directories).
+func (r *resourcesStore) LoadAndStore(files, dirs []string) (sets.Set[string], error) {
+	resources, subDirs, err := loadFromFilesAndDirs(files, dirs)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// TODO(sh2): For now, we assume that one file only contains one GatewayClass and all its other
@@ -63,11 +66,11 @@ func (r *resourcesStore) LoadAndStore(files, dirs []string) error {
 		}
 	}
 	if len(gwcResources) == 0 {
-		return nil
+		return subDirs, nil
 	}
 
 	r.resources.GatewayAPIResources.Store(r.name, &gwcResources)
 	r.logger.Info("loaded and stored resources successfully")
 
-	return nil
+	return subDirs, nil
 }
