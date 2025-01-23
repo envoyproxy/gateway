@@ -15,7 +15,7 @@ type ProxyTracing struct {
 	// Defaults to 100, valid values [0-100]. 100 indicates 100% sampling.
 	//
 	// Only one of SamplingRate or SamplingFraction may be specified.
-	// If neither field is specified, 1% of requests will be sampled.
+	// If neither field is specified, all requests will be sampled.
 	//
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=100
@@ -26,9 +26,8 @@ type ProxyTracing struct {
 	// selected for tracing if no prior sampling decision has been made.
 	//
 	// Only one of SamplingRate or SamplingFraction may be specified.
-	// If neither field is specified, 1% of requests will be sampled.
+	// If neither field is specified, all requests will be sampled.
 	//
-	// +notImplementedHide
 	// +optional
 	SamplingFraction *gwapiv1.Fraction `json:"samplingFraction,omitempty"`
 	// CustomTags defines the custom tags to add to each span.
