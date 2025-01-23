@@ -108,6 +108,7 @@ infraIR:
           infra-label1: infra-val1
           infra-label2: infra-val2
       name: default/gateway-1
+      namespace: envoy-gateway-system
 xdsIR:
   default/gateway-1:
     accessLog:
