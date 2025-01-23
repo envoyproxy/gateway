@@ -32,6 +32,7 @@ new features: |
   Added support for routing to Backend resources in the GRPCRoute, TCPRoute and UDPRoute APIs
   Added support for configuring Max GRPC message size for the Extension Manager in EnvoyGateway config
   Added support for configuring tracing sampling rate with Fraction.
+  Added support for dynamic reload of System WellKnownCACertificates in BackendTLSPolicy
 
 bug fixes: |
   Fixed a panic in the provider goroutine when the body in the direct response configuration was nil.
