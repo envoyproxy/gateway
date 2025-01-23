@@ -1634,7 +1634,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{`response cost is not supported for Local Rate Limits`},
 		},
 		{
-			desc: "healthyPanicThreshold is set",
+			desc: "panicThreshold is set",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -1647,8 +1647,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					ClusterSettings: egv1a1.ClusterSettings{
-						CommonLbSettings: &egv1a1.CommonLbSettings{
-							HealthyPanicThreshold: ptr.To[float64](80),
+						HealthCheck: &egv1a1.HealthCheck{
+							PanicThreshold: ptr.To[uint32](80),
 						},
 					},
 				}
@@ -1656,7 +1656,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "healthyPanicThreshold fails validation",
+			desc: "panicThreshold fails validation",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -1669,13 +1669,13 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					ClusterSettings: egv1a1.ClusterSettings{
-						CommonLbSettings: &egv1a1.CommonLbSettings{
-							HealthyPanicThreshold: ptr.To[float64](200),
+						HealthCheck: &egv1a1.HealthCheck{
+							PanicThreshold: ptr.To[uint32](200),
 						},
 					},
 				}
 			},
-			wantErrors: []string{`Invalid value: 200: spec.commonLbSettings.healthyPanicThreshold in body should be less than or equal to 100`},
+			wantErrors: []string{`Invalid value: 200: spec.healthCheck.panicThreshold in body should be less than or equal to 100`},
 		},
 	}
 

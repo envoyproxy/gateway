@@ -10704,18 +10704,6 @@ spec:
                                                 minimum: 0
                                                 type: integer
                                             type: object
-                                          commonLbSettings:
-                                            description: Common settings for load
-                                              balancer behaviour.
-                                            properties:
-                                              healthyPanicThreshold:
-                                                description: |-
-                                                  HealthyPanicThreshold sets the maximum number of concurrent streams allowed per connection.
-                                                  If not set, the default value is 50%. To disable panic mode, set value to `0`.
-                                                maximum: 100
-                                                minimum: 0
-                                                type: number
-                                            type: object
                                           connection:
                                             description: Connection includes backend
                                               connection settings.
@@ -11004,6 +10992,16 @@ spec:
                                                     is GRPC.
                                                   rule: 'has(self.grpc) ? self.type
                                                     == ''GRPC'' : true'
+                                              panicThreshold:
+                                                description: |-
+                                                  When number of unhealthy endpoints for a backend reaches this threshold
+                                                  Envoy will disregard health status and balance across all endpoints.
+                                                  It's designed to prevent a situation in which host failures cascade throughout the cluster
+                                                  as load increases. If not set, the default value is 50%. To disable panic mode, set value to `0`.
+                                                format: int32
+                                                maximum: 100
+                                                minimum: 0
+                                                type: integer
                                               passive:
                                                 description: Passive passive check
                                                   configuration
@@ -11693,18 +11691,6 @@ spec:
                                                 minimum: 0
                                                 type: integer
                                             type: object
-                                          commonLbSettings:
-                                            description: Common settings for load
-                                              balancer behaviour.
-                                            properties:
-                                              healthyPanicThreshold:
-                                                description: |-
-                                                  HealthyPanicThreshold sets the maximum number of concurrent streams allowed per connection.
-                                                  If not set, the default value is 50%. To disable panic mode, set value to `0`.
-                                                maximum: 100
-                                                minimum: 0
-                                                type: number
-                                            type: object
                                           connection:
                                             description: Connection includes backend
                                               connection settings.
@@ -11993,6 +11979,16 @@ spec:
                                                     is GRPC.
                                                   rule: 'has(self.grpc) ? self.type
                                                     == ''GRPC'' : true'
+                                              panicThreshold:
+                                                description: |-
+                                                  When number of unhealthy endpoints for a backend reaches this threshold
+                                                  Envoy will disregard health status and balance across all endpoints.
+                                                  It's designed to prevent a situation in which host failures cascade throughout the cluster
+                                                  as load increases. If not set, the default value is 50%. To disable panic mode, set value to `0`.
+                                                format: int32
+                                                maximum: 100
+                                                minimum: 0
+                                                type: integer
                                               passive:
                                                 description: Passive passive check
                                                   configuration
@@ -12776,18 +12772,6 @@ spec:
                                           minimum: 0
                                           type: integer
                                       type: object
-                                    commonLbSettings:
-                                      description: Common settings for load balancer
-                                        behaviour.
-                                      properties:
-                                        healthyPanicThreshold:
-                                          description: |-
-                                            HealthyPanicThreshold sets the maximum number of concurrent streams allowed per connection.
-                                            If not set, the default value is 50%. To disable panic mode, set value to `0`.
-                                          maximum: 100
-                                          minimum: 0
-                                          type: number
-                                      type: object
                                     connection:
                                       description: Connection includes backend connection
                                         settings.
@@ -13061,6 +13045,16 @@ spec:
                                               if the Health Checker type is GRPC.
                                             rule: 'has(self.grpc) ? self.type == ''GRPC''
                                               : true'
+                                        panicThreshold:
+                                          description: |-
+                                            When number of unhealthy endpoints for a backend reaches this threshold
+                                            Envoy will disregard health status and balance across all endpoints.
+                                            It's designed to prevent a situation in which host failures cascade throughout the cluster
+                                            as load increases. If not set, the default value is 50%. To disable panic mode, set value to `0`.
+                                          format: int32
+                                          maximum: 100
+                                          minimum: 0
+                                          type: integer
                                         passive:
                                           description: Passive passive check configuration
                                           properties:
@@ -13773,17 +13767,6 @@ spec:
                                     minimum: 0
                                     type: integer
                                 type: object
-                              commonLbSettings:
-                                description: Common settings for load balancer behaviour.
-                                properties:
-                                  healthyPanicThreshold:
-                                    description: |-
-                                      HealthyPanicThreshold sets the maximum number of concurrent streams allowed per connection.
-                                      If not set, the default value is 50%. To disable panic mode, set value to `0`.
-                                    maximum: 100
-                                    minimum: 0
-                                    type: number
-                                type: object
                               connection:
                                 description: Connection includes backend connection
                                   settings.
@@ -14055,6 +14038,16 @@ spec:
                                         Health Checker type is GRPC.
                                       rule: 'has(self.grpc) ? self.type == ''GRPC''
                                         : true'
+                                  panicThreshold:
+                                    description: |-
+                                      When number of unhealthy endpoints for a backend reaches this threshold
+                                      Envoy will disregard health status and balance across all endpoints.
+                                      It's designed to prevent a situation in which host failures cascade throughout the cluster
+                                      as load increases. If not set, the default value is 50%. To disable panic mode, set value to `0`.
+                                    format: int32
+                                    maximum: 100
+                                    minimum: 0
+                                    type: integer
                                   passive:
                                     description: Passive passive check configuration
                                     properties:

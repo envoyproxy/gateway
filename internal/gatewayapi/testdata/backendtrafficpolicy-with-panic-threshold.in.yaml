@@ -96,8 +96,8 @@ backendTrafficPolicies:
         group: gateway.networking.k8s.io
         kind: HTTPRoute
         name: httproute-1
-      commonLbSettings:
-        healthyPanicThreshold: 66
+      healthCheck:
+        panicThreshold: 66
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: BackendTrafficPolicy
     metadata:
@@ -108,8 +108,8 @@ backendTrafficPolicies:
         group: gateway.networking.k8s.io
         kind: HTTPRoute
         name: httproute-2
-      commonLbSettings:
-        healthyPanicThreshold: 10
+      healthCheck:
+        panicThreshold: 10
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: BackendTrafficPolicy
     metadata:
@@ -120,5 +120,5 @@ backendTrafficPolicies:
         group: gateway.networking.k8s.io
         kind: Gateway
         name: gateway-1
-      commonLbSettings:
-        healthyPanicThreshold: 80
+      healthCheck:
+        panicThreshold: 80

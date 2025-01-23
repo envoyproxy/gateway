@@ -465,7 +465,6 @@ _Appears in:_
 | `connection` | _[BackendConnection](#backendconnection)_ |  false  |  | Connection includes backend connection settings. |
 | `dns` | _[DNS](#dns)_ |  false  |  | DNS includes dns resolution settings. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for backend connections. |
-| `commonLbSettings` | _[CommonLbSettings](#commonlbsettings)_ |  false  |  | Common settings for load balancer behaviour. |
 | `rateLimit` | _[RateLimitSpec](#ratelimitspec)_ |  false  |  | RateLimit allows the user to limit the number of incoming requests<br />to a predefined value based on attributes within the traffic flow. |
 | `faultInjection` | _[FaultInjection](#faultinjection)_ |  false  |  | FaultInjection defines the fault injection policy to be applied. This configuration can be used to<br />inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
 | `useClientProtocol` | _boolean_ |  false  |  | UseClientProtocol configures Envoy to prefer sending requests to backends using<br />the same HTTP protocol that the incoming request used. Defaults to false, which means<br />that Envoy will use the protocol indicated by the attached BackendRef. |
@@ -757,23 +756,6 @@ _Appears in:_
 | `connection` | _[BackendConnection](#backendconnection)_ |  false  |  | Connection includes backend connection settings. |
 | `dns` | _[DNS](#dns)_ |  false  |  | DNS includes dns resolution settings. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for backend connections. |
-| `commonLbSettings` | _[CommonLbSettings](#commonlbsettings)_ |  false  |  | Common settings for load balancer behaviour. |
-
-
-#### CommonLbSettings
-
-
-
-CommonLoadBalancerSettings exposes various settings that can be applied to all load balancers types for managing
-traffic distribution across the backend instances.
-
-_Appears in:_
-- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
-- [ClusterSettings](#clustersettings)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-| `healthyPanicThreshold` | _float_ |  false  |  | HealthyPanicThreshold sets the maximum number of concurrent streams allowed per connection.<br />If not set, the default value is 50%. To disable panic mode, set value to `0`. |
 
 
 #### Compression
@@ -2260,12 +2242,6 @@ _Appears in:_
 HealthCheck configuration to decide which endpoints
 are healthy and can be used for routing.
 
-
-Note: Once the overall health of the backendRef drops below 50% (e.g. a backendRef having 10 endpoints
-with more than 5 unhealthy endpoints), Envoy will disregard health status and balance across all endpoints.
-This is called "panic mode". It's designed to prevent a situation in which host failures cascade throughout the cluster
-as load increases.
-
 _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [ClusterSettings](#clustersettings)
@@ -2274,6 +2250,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `active` | _[ActiveHealthCheck](#activehealthcheck)_ |  false  |  | Active health check configuration |
 | `passive` | _[PassiveHealthCheck](#passivehealthcheck)_ |  false  |  | Passive passive check configuration |
+| `panicThreshold` | _integer_ |  false  |  | When number of unhealthy endpoints for a backend reaches this threshold<br />Envoy will disregard health status and balance across all endpoints.<br />It's designed to prevent a situation in which host failures cascade throughout the cluster<br />as load increases. If not set, the default value is 50%. To disable panic mode, set value to `0`. |
 
 
 #### HealthCheckSettings

@@ -579,22 +579,6 @@ type ClusterSettings struct {
 	//
 	// +optional
 	HTTP2 *HTTP2Settings `json:"http2,omitempty"`
-
-	// Common settings for load balancer behaviour.
-	//
-	// +optional
-	CommonLbSettings *CommonLbSettings `json:"commonLbSettings,omitempty"`
-}
-
-// CommonLoadBalancerSettings exposes various settings that can be applied to all load balancers types for managing
-// traffic distribution across the backend instances.
-type CommonLbSettings struct {
-	// HealthyPanicThreshold sets the maximum number of concurrent streams allowed per connection.
-	// If not set, the default value is 50%. To disable panic mode, set value to `0`.
-	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=100
-	// +optional
-	HealthyPanicThreshold *float64 `json:"healthyPanicThreshold,omitempty"`
 }
 
 // CIDR defines a CIDR Address range.
