@@ -45,6 +45,10 @@ var BackendTLSTest = suite.ConformanceTest{
 		})
 
 		t.Run("with a backend TLS Policy using Truststore", func(t *testing.T) {
+			// the upstream used is the eg site which doesn't support IPv6 at this time
+			if IPFamily == "ipv6" {
+				t.Skip("Skipping test as IP_FAMILY is IPv6")
+			}
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "http-with-backend-tls-system-trust-store", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
