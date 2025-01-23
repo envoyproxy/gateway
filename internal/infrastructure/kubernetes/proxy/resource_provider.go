@@ -8,6 +8,7 @@ package proxy
 import (
 	"fmt"
 	"strconv"
+	"time"
 
 	"golang.org/x/exp/maps"
 	appsv1 "k8s.io/api/apps/v1"
@@ -530,7 +531,11 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 func expectedTerminationGracePeriodSeconds(cfg *egv1a1.ShutdownConfig) *int64 {
 	s := 360 // default
 	if cfg != nil && cfg.DrainTimeout != nil {
-		s = int(cfg.DrainTimeout.Seconds() + 300) // 5 minutes longer than drain timeout
+		d, err := time.ParseDuration(string(*cfg.DrainTimeout))
+		if err != nil {
+			return nil
+		}
+		s = int(d.Seconds() + 300) // 5 minutes longer than drain timeout
 	}
 	return ptr.To(int64(s))
 }

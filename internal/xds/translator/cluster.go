@@ -173,9 +173,7 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		cluster.RespectDnsTtl = true
 		if args.dns != nil {
 			if args.dns.DNSRefreshRate != nil {
-				if args.dns.DNSRefreshRate.Duration > 0 {
-					cluster.DnsRefreshRate = durationpb.New(args.dns.DNSRefreshRate.Duration)
-				}
+				cluster.DnsRefreshRate = durationpb.New(*args.dns.DNSRefreshRate)
 			}
 			if args.dns.RespectDNSTTL != nil {
 				cluster.RespectDnsTtl = ptr.Deref(args.dns.RespectDNSTTL, true)
@@ -505,11 +503,11 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) map[string]*anypb.
 
 		if args.timeout != nil && args.timeout.HTTP != nil {
 			if args.timeout.HTTP.ConnectionIdleTimeout != nil {
-				protocolOptions.CommonHttpProtocolOptions.IdleTimeout = durationpb.New(args.timeout.HTTP.ConnectionIdleTimeout.Duration)
+				protocolOptions.CommonHttpProtocolOptions.IdleTimeout = durationpb.New(*args.timeout.HTTP.ConnectionIdleTimeout)
 			}
 
 			if args.timeout.HTTP.MaxConnectionDuration != nil {
-				protocolOptions.CommonHttpProtocolOptions.MaxConnectionDuration = durationpb.New(args.timeout.HTTP.MaxConnectionDuration.Duration)
+				protocolOptions.CommonHttpProtocolOptions.MaxConnectionDuration = durationpb.New(*args.timeout.HTTP.MaxConnectionDuration)
 			}
 		}
 
@@ -638,7 +636,7 @@ func buildProxyProtocolSocket(proxyProtocol *ir.ProxyProtocol, tSocket *corev3.T
 
 func buildConnectTimeout(to *ir.Timeout) *durationpb.Duration {
 	if to != nil && to.TCP != nil && to.TCP.ConnectTimeout != nil {
-		return durationpb.New(to.TCP.ConnectTimeout.Duration)
+		return durationpb.New(*to.TCP.ConnectTimeout)
 	}
 	return durationpb.New(tcpClusterPerConnectTimeout)
 }

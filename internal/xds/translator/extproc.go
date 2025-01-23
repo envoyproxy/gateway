@@ -118,7 +118,7 @@ func extProcConfig(extProc ir.ExtProc) *extprocv3.ExternalProcessor {
 	}
 
 	if extProc.MessageTimeout != nil {
-		config.MessageTimeout = durationpb.New(extProc.MessageTimeout.Duration)
+		config.MessageTimeout = durationpb.New(*extProc.MessageTimeout)
 	}
 
 	if extProc.RequestBodyProcessingMode != nil {

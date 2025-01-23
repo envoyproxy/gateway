@@ -11,8 +11,7 @@ package ir
 
 import (
 	"github.com/envoyproxy/gateway/api/v1alpha1"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	timex "time"
 )
@@ -313,12 +312,12 @@ func (in *BackOffPolicy) DeepCopyInto(out *BackOffPolicy) {
 	*out = *in
 	if in.BaseInterval != nil {
 		in, out := &in.BaseInterval, &out.BaseInterval
-		*out = new(v1.Duration)
+		*out = new(timex.Duration)
 		**out = **in
 	}
 	if in.MaxInterval != nil {
 		in, out := &in.MaxInterval, &out.MaxInterval
-		*out = new(v1.Duration)
+		*out = new(timex.Duration)
 		**out = **in
 	}
 }
@@ -419,7 +418,7 @@ func (in *CORS) DeepCopyInto(out *CORS) {
 	}
 	if in.MaxAge != nil {
 		in, out := &in.MaxAge, &out.MaxAge
-		*out = new(v1.Duration)
+		*out = new(timex.Duration)
 		**out = **in
 	}
 }
@@ -574,7 +573,7 @@ func (in *ConnectionLimit) DeepCopyInto(out *ConnectionLimit) {
 	}
 	if in.CloseDelay != nil {
 		in, out := &in.CloseDelay, &out.CloseDelay
-		*out = new(v1.Duration)
+		*out = new(timex.Duration)
 		**out = **in
 	}
 }
@@ -629,7 +628,7 @@ func (in *CookieBasedSessionPersistence) DeepCopyInto(out *CookieBasedSessionPer
 	*out = *in
 	if in.TTL != nil {
 		in, out := &in.TTL, &out.TTL
-		*out = new(v1.Duration)
+		*out = new(timex.Duration)
 		**out = **in
 	}
 }
@@ -737,7 +736,7 @@ func (in *DNS) DeepCopyInto(out *DNS) {
 	*out = *in
 	if in.DNSRefreshRate != nil {
 		in, out := &in.DNSRefreshRate, &out.DNSRefreshRate
-		*out = new(v1.Duration)
+		*out = new(timex.Duration)
 		**out = **in
 	}
 	if in.RespectDNSTTL != nil {
@@ -1009,7 +1008,7 @@ func (in *ExtProc) DeepCopyInto(out *ExtProc) {
 	}
 	if in.MessageTimeout != nil {
 		in, out := &in.MessageTimeout, &out.MessageTimeout
-		*out = new(v1.Duration)
+		*out = new(timex.Duration)
 		**out = **in
 	}
 	if in.FailOpen != nil {
@@ -1332,12 +1331,12 @@ func (in *HTTPClientTimeout) DeepCopyInto(out *HTTPClientTimeout) {
 	*out = *in
 	if in.RequestReceivedTimeout != nil {
 		in, out := &in.RequestReceivedTimeout, &out.RequestReceivedTimeout
-		*out = new(v1.Duration)
+		*out = new(timex.Duration)
 		**out = **in
 	}
 	if in.IdleTimeout != nil {
 		in, out := &in.IdleTimeout, &out.IdleTimeout
-		*out = new(v1.Duration)
+		*out = new(timex.Duration)
 		**out = **in
 	}
 }
@@ -1669,7 +1668,7 @@ func (in *HTTPRoute) DeepCopyInto(out *HTTPRoute) {
 	}
 	if in.Timeout != nil {
 		in, out := &in.Timeout, &out.Timeout
-		*out = new(v1.Duration)
+		*out = new(timex.Duration)
 		**out = **in
 	}
 	if in.Retry != nil {
@@ -1694,17 +1693,17 @@ func (in *HTTPTimeout) DeepCopyInto(out *HTTPTimeout) {
 	*out = *in
 	if in.RequestTimeout != nil {
 		in, out := &in.RequestTimeout, &out.RequestTimeout
-		*out = new(v1.Duration)
+		*out = new(timex.Duration)
 		**out = **in
 	}
 	if in.ConnectionIdleTimeout != nil {
 		in, out := &in.ConnectionIdleTimeout, &out.ConnectionIdleTimeout
-		*out = new(v1.Duration)
+		*out = new(timex.Duration)
 		**out = **in
 	}
 	if in.MaxConnectionDuration != nil {
 		in, out := &in.MaxConnectionDuration, &out.MaxConnectionDuration
-		*out = new(v1.Duration)
+		*out = new(timex.Duration)
 		**out = **in
 	}
 }
@@ -1963,7 +1962,7 @@ func (in *JSONPatchOperation) DeepCopyInto(out *JSONPatchOperation) {
 	}
 	if in.Value != nil {
 		in, out := &in.Value, &out.Value
-		*out = new(apiextensionsv1.JSON)
+		*out = new(v1.JSON)
 		(*in).DeepCopyInto(*out)
 	}
 }
@@ -2174,12 +2173,12 @@ func (in *OIDC) DeepCopyInto(out *OIDC) {
 	}
 	if in.DefaultTokenTTL != nil {
 		in, out := &in.DefaultTokenTTL, &out.DefaultTokenTTL
-		*out = new(v1.Duration)
+		*out = new(timex.Duration)
 		**out = **in
 	}
 	if in.DefaultRefreshTokenTTL != nil {
 		in, out := &in.DefaultRefreshTokenTTL, &out.DefaultRefreshTokenTTL
-		*out = new(v1.Duration)
+		*out = new(timex.Duration)
 		**out = **in
 	}
 	if in.CookieNameOverrides != nil {
@@ -2349,7 +2348,7 @@ func (in *PerRetryPolicy) DeepCopyInto(out *PerRetryPolicy) {
 	*out = *in
 	if in.Timeout != nil {
 		in, out := &in.Timeout, &out.Timeout
-		*out = new(v1.Duration)
+		*out = new(timex.Duration)
 		**out = **in
 	}
 	if in.BackOff != nil {
@@ -3015,7 +3014,7 @@ func (in *TCPClientTimeout) DeepCopyInto(out *TCPClientTimeout) {
 	*out = *in
 	if in.IdleTimeout != nil {
 		in, out := &in.IdleTimeout, &out.IdleTimeout
-		*out = new(v1.Duration)
+		*out = new(timex.Duration)
 		**out = **in
 	}
 }
@@ -3202,7 +3201,7 @@ func (in *TCPTimeout) DeepCopyInto(out *TCPTimeout) {
 	*out = *in
 	if in.ConnectTimeout != nil {
 		in, out := &in.ConnectTimeout, &out.ConnectTimeout
-		*out = new(v1.Duration)
+		*out = new(timex.Duration)
 		**out = **in
 	}
 }
@@ -3672,7 +3671,7 @@ func (in *Wasm) DeepCopyInto(out *Wasm) {
 	}
 	if in.Config != nil {
 		in, out := &in.Config, &out.Config
-		*out = new(apiextensionsv1.JSON)
+		*out = new(v1.JSON)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.Code != nil {

@@ -612,14 +612,23 @@ func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
 		}
 	}
 
-	return &ir.CORS{
+	c := &ir.CORS{
 		AllowOrigins:     allowOrigins,
 		AllowMethods:     cors.AllowMethods,
 		AllowHeaders:     cors.AllowHeaders,
 		ExposeHeaders:    cors.ExposeHeaders,
-		MaxAge:           cors.MaxAge,
 		AllowCredentials: cors.AllowCredentials != nil && *cors.AllowCredentials,
 	}
+
+	if cors.MaxAge != nil {
+		d, err := time.ParseDuration(string(*cors.MaxAge))
+		if err != nil {
+			return nil
+		}
+		c.MaxAge = &d
+	}
+
+	return c
 }
 
 func isWildcard(s string) bool {
@@ -853,25 +862,40 @@ func (t *Translator) buildOIDC(
 			"HMAC secret not found in secret %s/%s", t.Namespace, oidcHMACSecretName)
 	}
 
-	return &ir.OIDC{
-		Name:                   irConfigName(policy),
-		Provider:               *provider,
-		ClientID:               oidc.ClientID,
-		ClientSecret:           clientSecretBytes,
-		Scopes:                 scopes,
-		Resources:              oidc.Resources,
-		RedirectURL:            redirectURL,
-		RedirectPath:           redirectPath,
-		LogoutPath:             logoutPath,
-		ForwardAccessToken:     forwardAccessToken,
-		DefaultTokenTTL:        oidc.DefaultTokenTTL,
-		RefreshToken:           refreshToken,
-		DefaultRefreshTokenTTL: oidc.DefaultRefreshTokenTTL,
-		CookieSuffix:           suffix,
-		CookieNameOverrides:    policy.Spec.OIDC.CookieNames,
-		CookieDomain:           policy.Spec.OIDC.CookieDomain,
-		HMACSecret:             hmacData,
-	}, nil
+	o := &ir.OIDC{
+		Name:                irConfigName(policy),
+		Provider:            *provider,
+		ClientID:            oidc.ClientID,
+		ClientSecret:        clientSecretBytes,
+		Scopes:              scopes,
+		Resources:           oidc.Resources,
+		RedirectURL:         redirectURL,
+		RedirectPath:        redirectPath,
+		LogoutPath:          logoutPath,
+		ForwardAccessToken:  forwardAccessToken,
+		RefreshToken:        refreshToken,
+		CookieSuffix:        suffix,
+		CookieNameOverrides: policy.Spec.OIDC.CookieNames,
+		CookieDomain:        policy.Spec.OIDC.CookieDomain,
+		HMACSecret:          hmacData,
+	}
+
+	if oidc.DefaultTokenTTL != nil {
+		d, err := time.ParseDuration(string(*oidc.DefaultTokenTTL))
+		if err != nil {
+			return nil, err
+		}
+		o.DefaultTokenTTL = &d
+	}
+
+	if oidc.DefaultRefreshTokenTTL != nil {
+		d, err := time.ParseDuration(string(*oidc.DefaultRefreshTokenTTL))
+		if err != nil {
+			return nil, err
+		}
+		o.DefaultRefreshTokenTTL = &d
+	}
+	return o, nil
 }
 
 func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) (*ir.OIDCProvider, error) {

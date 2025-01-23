@@ -16,7 +16,6 @@ import (
 	"time"
 
 	perr "github.com/pkg/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 
@@ -101,22 +100,22 @@ func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings) (*ir.Timeout, er
 			errs = errors.Join(errs, fmt.Errorf("invalid ConnectTimeout value %s", *pto.TCP.ConnectTimeout))
 		} else {
 			to.TCP = &ir.TCPTimeout{
-				ConnectTimeout: ptr.To(metav1.Duration{Duration: d}),
+				ConnectTimeout: &d,
 			}
 		}
 	}
 
 	if pto.HTTP != nil {
-		var cit *metav1.Duration
-		var mcd *metav1.Duration
-		var rt *metav1.Duration
+		var cit *time.Duration
+		var mcd *time.Duration
+		var rt *time.Duration
 
 		if pto.HTTP.ConnectionIdleTimeout != nil {
 			d, err := time.ParseDuration(string(*pto.HTTP.ConnectionIdleTimeout))
 			if err != nil {
 				errs = errors.Join(errs, fmt.Errorf("invalid ConnectionIdleTimeout value %s", *pto.HTTP.ConnectionIdleTimeout))
 			} else {
-				cit = ptr.To(metav1.Duration{Duration: d})
+				cit = &d
 			}
 		}
 
@@ -125,7 +124,7 @@ func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings) (*ir.Timeout, er
 			if err != nil {
 				errs = errors.Join(errs, fmt.Errorf("invalid MaxConnectionDuration value %s", *pto.HTTP.MaxConnectionDuration))
 			} else {
-				mcd = ptr.To(metav1.Duration{Duration: d})
+				mcd = &d
 			}
 		}
 
@@ -134,7 +133,7 @@ func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings) (*ir.Timeout, er
 			if err != nil {
 				errs = errors.Join(errs, fmt.Errorf("invalid RequestTimeout value %s", *pto.HTTP.RequestTimeout))
 			} else {
-				rt = ptr.To(metav1.Duration{Duration: d})
+				rt = &d
 			}
 		}
 
@@ -508,10 +507,20 @@ func translateDNS(policy egv1a1.ClusterSettings) *ir.DNS {
 	if policy.DNS == nil {
 		return nil
 	}
-	return &ir.DNS{
-		RespectDNSTTL:  policy.DNS.RespectDNSTTL,
-		DNSRefreshRate: policy.DNS.DNSRefreshRate,
+
+	dns := &ir.DNS{
+		RespectDNSTTL: policy.DNS.RespectDNSTTL,
 	}
+
+	if policy.DNS.DNSRefreshRate != nil {
+		d, err := time.ParseDuration(string(*policy.DNS.DNSRefreshRate))
+		if err != nil {
+			return nil
+		}
+		dns.DNSRefreshRate = &d
+	}
+
+	return dns
 }
 
 func buildRetry(r *egv1a1.Retry) *ir.Retry {
@@ -548,7 +557,11 @@ func buildRetry(r *egv1a1.Retry) *ir.Retry {
 		bpr := false
 
 		if r.PerRetry.Timeout != nil {
-			pr.Timeout = r.PerRetry.Timeout
+			d, err := time.ParseDuration(string(*r.PerRetry.Timeout))
+			if err != nil {
+				return nil
+			}
+			pr.Timeout = &d
 			bpr = true
 		}
 
@@ -556,11 +569,19 @@ func buildRetry(r *egv1a1.Retry) *ir.Retry {
 			if r.PerRetry.BackOff.MaxInterval != nil || r.PerRetry.BackOff.BaseInterval != nil {
 				bop := &ir.BackOffPolicy{}
 				if r.PerRetry.BackOff.MaxInterval != nil {
-					bop.MaxInterval = r.PerRetry.BackOff.MaxInterval
+					d, err := time.ParseDuration(string(*r.PerRetry.BackOff.MaxInterval))
+					if err != nil {
+						return nil
+					}
+					bop.MaxInterval = &d
 				}
 
 				if r.PerRetry.BackOff.BaseInterval != nil {
-					bop.BaseInterval = r.PerRetry.BackOff.BaseInterval
+					d, err := time.ParseDuration(string(*r.PerRetry.BackOff.BaseInterval))
+					if err != nil {
+						return nil
+					}
+					bop.BaseInterval = &d
 				}
 				pr.BackOff = bop
 				bpr = true

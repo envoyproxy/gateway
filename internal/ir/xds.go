@@ -20,7 +20,6 @@ import (
 
 	"golang.org/x/exp/slices"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -663,7 +662,7 @@ type ClientTimeout struct {
 type TCPClientTimeout struct {
 	// IdleTimeout for a TCP connection. Idle time is defined as a period in which there are no
 	// bytes sent or received on either the upstream or downstream connection.
-	IdleTimeout *metav1.Duration `json:"idleTimeout,omitempty" yaml:"idleTimeout,omitempty"`
+	IdleTimeout *time.Duration `json:"idleTimeout,omitempty" yaml:"idleTimeout,omitempty"`
 }
 
 // HTTPClientTimeout set the configuration for client HTTP.
@@ -671,9 +670,9 @@ type TCPClientTimeout struct {
 type HTTPClientTimeout struct {
 	// The duration envoy waits for the complete request reception. This timer starts upon request
 	// initiation and stops when either the last byte of the request is sent upstream or when the response begins.
-	RequestReceivedTimeout *metav1.Duration `json:"requestReceivedTimeout,omitempty" yaml:"requestReceivedTimeout,omitempty"`
+	RequestReceivedTimeout *time.Duration `json:"requestReceivedTimeout,omitempty" yaml:"requestReceivedTimeout,omitempty"`
 	// IdleTimeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.
-	IdleTimeout *metav1.Duration `json:"idleTimeout,omitempty" yaml:"idleTimeout,omitempty"`
+	IdleTimeout *time.Duration `json:"idleTimeout,omitempty" yaml:"idleTimeout,omitempty"`
 }
 
 // HTTPRoute holds the route information associated with the HTTP Route
@@ -724,7 +723,7 @@ type HTTPRoute struct {
 	// SessionPersistence holds the configuration for session persistence.
 	SessionPersistence *SessionPersistence `json:"sessionPersistence,omitempty" yaml:"sessionPersistence,omitempty"`
 	// Timeout is the time until which entire response is received from the upstream.
-	Timeout *metav1.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	Timeout *time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	// Retry defines the retry policy for the route.
 	// This is derived from the core Gateway API, and should take precedence over Traffic.Retry.
 	Retry *Retry `json:"retry,omitempty" yaml:"retry,omitempty"`
@@ -746,7 +745,7 @@ func (h *HTTPRoute) GetRetry() *Retry {
 // +k8s:deepcopy-gen=true
 type DNS struct {
 	// DNSRefreshRate specifies the rate at which DNS records should be refreshed.
-	DNSRefreshRate *metav1.Duration `json:"dnsRefreshRate,omitempty"`
+	DNSRefreshRate *time.Duration `json:"dnsRefreshRate,omitempty"`
 	// RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.
 	RespectDNSTTL *bool `json:"respectDnsTtl,omitempty"`
 }
@@ -768,7 +767,7 @@ type CookieBasedSessionPersistence struct {
 	// Name defines the name of the persistent session token.
 	Name string `json:"name"`
 
-	TTL *metav1.Duration `json:"ttl,omitempty" yaml:"ttl,omitempty"`
+	TTL *time.Duration `json:"ttl,omitempty" yaml:"ttl,omitempty"`
 }
 
 // HeaderBasedSessionPersistence defines the configuration for header-based session persistence.
@@ -899,7 +898,7 @@ type CORS struct {
 	// ExposeHeaders defines the headers that can be exposed in the responses.
 	ExposeHeaders []string `json:"exposeHeaders,omitempty" yaml:"exposeHeaders,omitempty"`
 	// MaxAge defines how long the results of a preflight request can be cached.
-	MaxAge *metav1.Duration `json:"maxAge,omitempty" yaml:"maxAge,omitempty"`
+	MaxAge *time.Duration `json:"maxAge,omitempty" yaml:"maxAge,omitempty"`
 	// AllowCredentials indicates whether a request can include user credentials.
 	AllowCredentials bool `json:"allowCredentials,omitempty" yaml:"allowCredentials,omitempty"`
 }
@@ -1016,14 +1015,14 @@ type OIDC struct {
 	ForwardAccessToken bool `json:"forwardAccessToken,omitempty"`
 
 	// DefaultTokenTTL is the default lifetime of the id token and access token.
-	DefaultTokenTTL *metav1.Duration `json:"defaultTokenTTL,omitempty"`
+	DefaultTokenTTL *time.Duration `json:"defaultTokenTTL,omitempty"`
 
 	// RefreshToken indicates whether the Envoy should automatically refresh the
 	// id token and access token when they expire.
 	RefreshToken bool `json:"refreshToken,omitempty"`
 
 	// DefaultRefreshTokenTTL is the default lifetime of the refresh token.
-	DefaultRefreshTokenTTL *metav1.Duration `json:"defaultRefreshTokenTTL,omitempty"`
+	DefaultRefreshTokenTTL *time.Duration `json:"defaultRefreshTokenTTL,omitempty"`
 
 	// CookieSuffix will be added to the name of the cookies set by the oauth filter.
 	// Adding a suffix avoids multiple oauth filters from overwriting each other's cookies.
@@ -2594,19 +2593,19 @@ type Timeout struct {
 // +k8s:deepcopy-gen=true
 type TCPTimeout struct {
 	// The timeout for network connection establishment, including TCP and TLS handshakes.
-	ConnectTimeout *metav1.Duration `json:"connectTimeout,omitempty" yaml:"connectTimeout,omitempty"`
+	ConnectTimeout *time.Duration `json:"connectTimeout,omitempty" yaml:"connectTimeout,omitempty"`
 }
 
 // +k8s:deepcopy-gen=true
 type HTTPTimeout struct {
 	// RequestTimeout is the time until which entire response is received from the upstream.
-	RequestTimeout *metav1.Duration `json:"requestTimeout,omitempty" yaml:"requestTimeout,omitempty"`
+	RequestTimeout *time.Duration `json:"requestTimeout,omitempty" yaml:"requestTimeout,omitempty"`
 
 	// The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.
-	ConnectionIdleTimeout *metav1.Duration `json:"connectionIdleTimeout,omitempty" yaml:"connectionIdleTimeout,omitempty"`
+	ConnectionIdleTimeout *time.Duration `json:"connectionIdleTimeout,omitempty" yaml:"connectionIdleTimeout,omitempty"`
 
 	// The maximum duration of an HTTP connection.
-	MaxConnectionDuration *metav1.Duration `json:"maxConnectionDuration,omitempty" yaml:"maxConnectionDuration,omitempty"`
+	MaxConnectionDuration *time.Duration `json:"maxConnectionDuration,omitempty" yaml:"maxConnectionDuration,omitempty"`
 }
 
 // Retry define the retry policy configuration.
@@ -2652,7 +2651,7 @@ type RetryOn struct {
 // +k8s:deepcopy-gen=true
 type PerRetryPolicy struct {
 	// Timeout is the timeout per retry attempt.
-	Timeout *metav1.Duration `json:"timeout,omitempty"`
+	Timeout *time.Duration `json:"timeout,omitempty"`
 	// Backoff is the backoff policy to be applied per retry attempt.
 	BackOff *BackOffPolicy `json:"backOff,omitempty"`
 }
@@ -2660,9 +2659,9 @@ type PerRetryPolicy struct {
 // +k8s:deepcopy-gen=true
 type BackOffPolicy struct {
 	// BaseInterval is the base interval between retries.
-	BaseInterval *metav1.Duration `json:"baseInterval,omitempty"`
+	BaseInterval *time.Duration `json:"baseInterval,omitempty"`
 	// MaxInterval is the maximum interval between retries.
-	MaxInterval *metav1.Duration `json:"maxInterval,omitempty"`
+	MaxInterval *time.Duration `json:"maxInterval,omitempty"`
 }
 
 // TLSUpstreamConfig contains sni and ca file in []byte format.
@@ -2725,7 +2724,7 @@ type ConnectionLimit struct {
 
 	// CloseDelay defines the delay to use before closing connections that are rejected
 	// once the limit value is reached.
-	CloseDelay *metav1.Duration `json:"closeDelay,omitempty" yaml:"closeDelay,omitempty"`
+	CloseDelay *time.Duration `json:"closeDelay,omitempty" yaml:"closeDelay,omitempty"`
 }
 
 type ExtProcBodyProcessingMode egv1a1.ExtProcBodyProcessingMode
@@ -2756,7 +2755,7 @@ type ExtProc struct {
 	Authority string `json:"authority" yaml:"authority"`
 
 	// MessageTimeout is the timeout for a response to be returned from the external processor
-	MessageTimeout *metav1.Duration `json:"messageTimeout,omitempty" yaml:"messageTimeout,omitempty"`
+	MessageTimeout *time.Duration `json:"messageTimeout,omitempty" yaml:"messageTimeout,omitempty"`
 
 	// FailOpen defines if requests or responses that cannot be processed due to connectivity to the
 	// external processor are terminated or passed-through.
