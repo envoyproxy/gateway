@@ -79,6 +79,7 @@ spec:
                   typed_config:
                     "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
                     stat_prefix: eg-ready-http
+                    normalize_path: true
                     route_config:
                       name: local_route
                     http_filters:
