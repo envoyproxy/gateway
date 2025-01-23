@@ -1,0 +1,23 @@
+date: January 23, 2025
+
+# Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
+breaking changes: |
+
+# Updates addressing vulnerabilities, security flaws, or compliance requirements.
+security updates: |
+  Fixed vulnerability CVE-2025-24030, which exposed the Envoy admin interface via the Prometheus stats endpoint. For more details, refer to https://github.com/envoyproxy/gateway/security/advisories/GHSA-j777-63hf-hx76.
+
+# New features or capabilities added in this release.
+new features: |
+
+bug fixes: |
+  Fixed a panic that occurred following update to the envoy-gateway-config ConfigMap.
+
+# Enhancements that improve performance.
+performance improvements: |
+
+# Deprecated features or APIs.
+deprecations: |
+
+# Other notable changes not covered by the above sections.
+Other changes: |

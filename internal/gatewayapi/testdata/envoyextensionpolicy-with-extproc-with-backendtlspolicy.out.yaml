@@ -117,6 +117,7 @@ envoyExtensionPolicies:
         writableNamespaces:
         - envoy.filters.http.my_custom
       processingMode:
+        allowModeOverride: true
         request:
           attributes:
           - request.path
@@ -357,7 +358,8 @@ xdsIR:
             weight: 1
         envoyExtensions:
           extProcs:
-          - authority: grpc-backend.envoy-gateway:8000
+          - allowModeOverride: true
+            authority: grpc-backend.envoy-gateway:8000
             destination:
               name: envoyextensionpolicy/default/policy-for-gateway/extproc/0
               settings:

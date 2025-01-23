@@ -1,11 +1,53 @@
 apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: accesslog-gtw
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: Same
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: als
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: als
+  namespace: gateway-conformance-infra
+spec:
+  ipFamily: IPv4
+  telemetry:
+    accessLog:
+      settings:
+        - sinks:
+            - type: ALS
+              als:
+                backendRefs:
+                  - name: envoy-als
+                    namespace: monitoring
+                    port: 8080
+                type: HTTP
+  shutdown:
+    drainTimeout: 5s
+    minDrainDuration: 1s
+---
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: accesslog-als
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-    - name: same-namespace
+    - name: accesslog-gtw
   rules:
     - matches:
         - path:
@@ -14,6 +56,29 @@ spec:
       backendRefs:
         - name: infra-backend-v1
           port: 8080
+---
+# This is a trick to pass EnvoyProxy BackendRef check.
+# In the future, plan to make OTel-collector support envoy ALS receiver,
+# then we can remove this.
+apiVersion: v1
+kind: Service
+metadata:
+  name: envoy-als
+  namespace: monitoring
+spec:
+  selector:
+    app: envoy-als
+  type: LoadBalancer
+  ports:
+    - name: grpc-als
+      protocol: TCP
+      appProtocol: grpc
+      port: 8080
+      targetPort: 8080
+    - name: http-monitoring
+      protocol: TCP
+      port: 19001
+      targetPort: 19001
 ---
 apiVersion: apps/v1
 kind: Deployment

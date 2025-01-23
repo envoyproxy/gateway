@@ -1,11 +1,68 @@
 apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: tracing-otel
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: All
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: tracing-otel
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: tracing-otel
+  namespace: gateway-conformance-infra
+spec:
+  ipFamily: IPv4
+  telemetry:
+    tracing:
+      provider:
+        backendRefs:
+          - name: otel-collector
+            namespace: monitoring
+            port: 4317
+      customTags:
+        "provider":
+          type: Literal
+          literal:
+            value: "otel"
+        "k8s.cluster.name":
+          type: Literal
+          literal:
+            value: "envoy-gateway"
+        "k8s.pod.name":
+          type: Environment
+          environment:
+            name: ENVOY_POD_NAME
+            defaultValue: "-"
+        "k8s.namespace.name":
+          type: Environment
+          environment:
+            name: ENVOY_GATEWAY_NAMESPACE
+            defaultValue: "envoy-gateway-system"
+  shutdown:
+    drainTimeout: 5s
+    minDrainDuration: 1s
+---
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: tracing-otel
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-    - name: same-namespace
+    - name: tracing-otel
   rules:
     - matches:
         - path:
