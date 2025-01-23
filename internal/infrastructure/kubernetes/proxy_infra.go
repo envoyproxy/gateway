@@ -23,6 +23,10 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 		return errors.New("infra proxy ir is nil")
 	}
 
+	if i.EnvoyGateway.GatewayNamespaceMode() && i.Namespace == "" {
+		i.Namespace = infra.Proxy.Namespace
+	}
+
 	r := proxy.NewResourceRender(i.Namespace, i.DNSDomain, infra.GetProxyInfra(), i.EnvoyGateway)
 	return i.createOrUpdate(ctx, r)
 }
