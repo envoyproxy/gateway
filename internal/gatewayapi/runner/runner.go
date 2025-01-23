@@ -150,6 +150,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					EnvoyPatchPolicyEnabled:   r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
 					BackendEnabled:            r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
 					Namespace:                 r.Namespace,
+					GatewayNamespaceMode:      r.EnvoyGateway.GatewayNamespaceMode(),
 					MergeGateways:             gatewayapi.IsMergeGatewaysEnabled(resources),
 					WasmCache:                 r.wasmCache,
 					ListenerPortShiftDisabled: r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
