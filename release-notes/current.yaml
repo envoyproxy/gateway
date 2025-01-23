@@ -14,7 +14,7 @@ breaking changes: |
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
-  Add a security update here
+  Fixed vulnerability which exposed the Envoy admin interface through the prometheus stats endpoint.
 
 # New features or capabilities added in this release.
 new features: |
