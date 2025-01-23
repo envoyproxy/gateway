@@ -61,8 +61,12 @@ type Infra struct {
 
 // NewInfra returns a new Infra.
 func NewInfra(cli client.Client, cfg *config.Server) *Infra {
+	var ns string
+	if !cfg.EnvoyGateway.GatewayNamespaceMode() {
+		ns = cfg.Namespace
+	}
 	return &Infra{
-		Namespace:    cfg.Namespace,
+		Namespace:    ns,
 		DNSDomain:    cfg.DNSDomain,
 		EnvoyGateway: cfg.EnvoyGateway,
 		Client:       New(cli),

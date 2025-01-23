@@ -101,6 +101,14 @@ func (e *EnvoyGateway) NamespaceMode() bool {
 		len(e.Provider.Kubernetes.Watch.Namespaces) > 0
 }
 
+// GatewayNamespaceMode returns true if controller uses gateway namespace mode for infra deployments.
+func (e *EnvoyGateway) GatewayNamespaceMode() bool {
+	return e.Provider != nil &&
+		e.Provider.Kubernetes != nil &&
+		e.Provider.Kubernetes.Deploy != nil &&
+		*e.Provider.Kubernetes.Deploy.Type == KubernetesDeployModeTypeGatewayNamespace
+}
+
 // DefaultLeaderElection returns a new LeaderElection with default configuration parameters.
 func DefaultLeaderElection() *LeaderElection {
 	return &LeaderElection{
