@@ -14,7 +14,7 @@ breaking changes: |
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
-  Add a security update here
+  Fixed vulnerability which exposed the Envoy admin interface through the prometheus stats endpoint.
 
 # New features or capabilities added in this release.
 new features: |
@@ -31,8 +31,8 @@ new features: |
   Added support for GEP-1731 (HTTPRoute Retries)
   Added support for routing to Backend resources in the GRPCRoute, TCPRoute and UDPRoute APIs
   Added support for configuring Max GRPC message size for the Extension Manager in EnvoyGateway config
+  Added support for configuring tracing sampling rate with Fraction.
   Added support for dynamic reload of System WellKnownCACertificates in BackendTLSPolicy
-
 
 bug fixes: |
   Fixed the ability to overwrite control plane certs with the certgen command by using a new command arg (-o)

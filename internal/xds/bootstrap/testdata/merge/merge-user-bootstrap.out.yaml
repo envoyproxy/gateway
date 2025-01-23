@@ -163,6 +163,7 @@ staticResources:
           - name: envoy.filters.http.router
             typedConfig:
               '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+          normalizePath: true
           routeConfig:
             name: local_route
             virtualHosts:
@@ -171,7 +172,10 @@ staticResources:
               name: prometheus_stats
               routes:
               - match:
-                  prefix: /stats/prometheus
+                  headers:
+                  - exactMatch: GET
+                    name: :method
+                  path: /stats/prometheus
                 route:
                   cluster: prometheus_stats
           statPrefix: eg-ready-http
