@@ -252,6 +252,8 @@ xdsIR:
               alpnProtocols:
               - HTTP/1.1
               - HTTP/2
+              caCertificate:
+                name: policy-tls/default-ca
               ciphers:
               - ECDHE-RSA-AES128-GCM-SHA256
               - ECDHE-ECDSA-AES256-GCM-SHA384
@@ -300,6 +302,8 @@ xdsIR:
               alpnProtocols:
               - HTTP/1.1
               - HTTP/2
+              caCertificate:
+                name: policy-tls/default-ca
               ciphers:
               - ECDHE-RSA-AES128-GCM-SHA256
               - ECDHE-ECDSA-AES256-GCM-SHA384
