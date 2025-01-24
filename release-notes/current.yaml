@@ -2,76 +2,21 @@ date: Pending
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
-  The Container `ports` field of the gateway instance has been removed, which will cause the gateway Pod to be rebuilt when upgrading the version.
-  ClientTrafficPolicy previously treated an empty TLS ALPNProtocols list as being undefined and applied Envoy Gateway defaults.
-  An empty TLS ALPNProtocols list is now treated as user-defined disablement of the TLS ALPN extension.
-  Outlier detection (passive health check) is now disabled by default.
-  refer to https://gateway.envoyproxy.io/docs/api/extension_types/#backendtrafficpolicy for working with passive health checks.
-  Envoy Gateway treats errors in calls to an extension service as fail-closed by default. Any error returned from the extension server will replace the affected resource with an "Internal Server Error" immediate response. The previous behavior can be enabled by setting the `failOpen` field to `true` in the extension service configuration.
-  Envoy Gateway now return a 500 response when a ClientTrafficPolicy translation fails for HTTP/GRPC routes, and forwards
-  client traffic to an empty cluster when a ClientTrafficPolicy translation fails for TCP routes.
-  Any issues with `EnvoyProxy` reference in a `Gateway` will prevent the Envoy fleet from being created or result in the deletion of an existing Envoy fleet.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
-  Fixed vulnerability which exposed the Envoy admin interface through the prometheus stats endpoint.
 
 # New features or capabilities added in this release.
 new features: |
-  Added support for trusted CIDRs in the ClientIPDetectionSettings API
-  Added support for sending attributes to external processor in EnvoyExtensionPolicy API
-  Added support for patching EnvoyProxy.spec.provider.kubernetes.envoyHpa and EnvoyProxy.spec.provider.kubernetes.envoyPDB
-  Added support for defining rateLimitHpa in EnvoyGateway API
-  Added support for preserving the user defined HTTPRoute match order in EnvoyProxy API
-  Added support for response compression in the BackendTrafficPolicy API
-  Added support for cost specifier in the rate limit API.
-  Added support for specifying dynamic metadata namespaces that External Processing services can access read from and write to in EnvoyExtensionPolicy API
-  Added support for API Key Authentication in the SecurityPolicy API
-  Continue using and drain endpoints during their graceful termination, as indicated by their respective EndpointConditions
-  Added support for GEP-1731 (HTTPRoute Retries)
-  Added support for routing to Backend resources in the GRPCRoute, TCPRoute and UDPRoute APIs
-  Added support for configuring Max GRPC message size for the Extension Manager in EnvoyGateway config
-  Added support for configuring tracing sampling rate with Fraction.
-  Added support for dynamic reload of System WellKnownCACertificates in BackendTLSPolicy
 
 bug fixes: |
-  Fixed a panic in the provider goroutine when the body in the direct response configuration was nil.
-  Fixed Envoy rejecting TCP Listeners that have no attached TCPRoutes.
-  Fixed failed to update SecurityPolicy resources with the `backendRef` field specified.
-  Fixed xDS translation failed when oidc tokenEndpoint and jwt remoteJWKS are specified in the same SecurityPolicy and using the same hostname.
-  Fixed frequent 503 errors when connecting to a Service experiencing high Pod churn.
-  Disabled the retry policy for the JWT provider to reduce requests sent to the JWKS endpoint. Failed async fetches will retry every 1s.
-  Used a waitGroup instead of an enabled channel in the status updater.
-  Fixed BackendTLSPolicy not supporting the use of a port name as the sectionName in targetRefs.
-  Fixed reference grant from EnvoyExtensionPolicy to the referenced ext-proc backend not being respected.
-  Fixed BackendTrafficPolicy not applying to Gateway Routes when a Route has a Request Timeout defined.
-  Fixed proxies connected to the secondary Envoy Gateway not receiving xDS configuration.
-  Fixed traffic splitting not working when some backends were invalid.
-  Fixed a nil pointer error that occurred when a SecurityPolicy referred to a UDS backend.
-  Fixed an issue where the Gateway API translator did not use the TLS configuration from the BackendTLSPolicy when connecting to the OIDC provider’s well-known endpoint.
-  Fixed a validation failure that occurred when multiple HTTPRoutes referred to the same extension filter.
-  Fixed a nil pointer error caused by accessing the cookie TTL without verifying if it was valid.
-  Fixed unexpected port number shifting in standalone mode.
-  Fixed an issue where the shutdown-manager did not respect the security context of the container spec.
-  Fixed readiness checks failing for single-stack IPv6 Envoy Gateway deployments on dual-stack clusters.
-  Fixed IPv6 dual-stack support not working as intended.
-  Fixed the ability to overwrite control plane certs with the certgen command by using a new command arg (-o)
-  Fixed a panic that occurred following update to the envoy-gateway-config ConfigMap
 
 # Enhancements that improve performance.
 performance improvements: |
-  Add a performance improvement here
 
 # Deprecated features or APIs.
 deprecations: |
-  Add a deprecation here
 
 # Other notable changes not covered by the above sections.
 Other changes: |
-  Bumped Gateway API to v1.2.1.
-  Always use `::` and `IPv4Compact` enabled on dynamic listeners.
-  Use `V4_PREFERRED` instead of `V4_ONLY` by default for the cluster's `DnsLookupFamily`.
-  EG Listens on IPv4 by default, but if IPFamily is set to IPv6 or DualStack, it listens on :: and enables ipv4_compat for DualStack.
-  Modified the base container image to gcr.io/distroless/base-nossl:nonroot
-  [SecurityPolicy] Modify the JWT Provider Issuer validation constraint
-  Add support for Kubernetes 1.32.x in the test matrix, and remove support for Kubernetes 1.28.x.
+
