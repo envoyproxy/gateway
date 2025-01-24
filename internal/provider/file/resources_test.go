@@ -16,10 +16,8 @@ func TestLoadFromDir(t *testing.T) {
 	// Checks if the function loadFromDir returns the expected subdirectories.
 	// TODO: Add test cases for resource loading.
 
-	basePath, _ := os.MkdirTemp(os.TempDir(), "sub-dir-test")
-	defer func() {
-		_ = os.RemoveAll(basePath)
-	}()
+	basePath, err := os.MkdirTemp(os.TempDir(), "sub-dir-test-*")
+	require.NoError(t, err)
 
 	// |- dir/
 	// 	   |- sub1/
@@ -71,4 +69,9 @@ func TestLoadFromDir(t *testing.T) {
 			require.ElementsMatch(t, subDirs.UnsortedList(), tc.expectSubDir)
 		})
 	}
+
+	t.Cleanup(func() {
+		err := os.RemoveAll(basePath)
+		require.NoError(t, err)
+	})
 }

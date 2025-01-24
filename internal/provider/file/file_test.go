@@ -166,8 +166,10 @@ func TestFileProvider(t *testing.T) {
 	})
 
 	t.Cleanup(func() {
-		_ = os.RemoveAll(watchFileBase)
-		_ = os.RemoveAll(watchDirPath)
+		err := os.RemoveAll(watchFileBase)
+		require.NoError(t, err)
+		err = os.RemoveAll(watchDirPath)
+		require.NoError(t, err)
 	})
 }
 
@@ -279,8 +281,10 @@ func TestRecursiveFileProvider(t *testing.T) {
 	})
 
 	t.Cleanup(func() {
-		_ = os.RemoveAll(baseDir)
-		_ = os.RemoveAll(unwatchedDir)
+		err := os.RemoveAll(baseDir)
+		require.NoError(t, err)
+		err = os.RemoveAll(unwatchedDir)
+		require.NoError(t, err)
 	})
 }
 
