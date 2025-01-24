@@ -11,8 +11,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"k8s.io/apimachinery/pkg/util/sets"
+
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
 
 // loadFromFilesAndDirs loads resources from specific files and directories.
