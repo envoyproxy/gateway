@@ -1197,6 +1197,18 @@ spec:
                       description: MatchLabels are the set of label selectors for
                         identifying the targeted resource
                       type: object
+                    namespaceSelector:
+                      description: |-
+                        NamespaceSelector determines if the label selectors specified in MatchLabels are applied in
+                        the policy namespace or across all namespaces.
+                        Note: when referencing targets in a different namespace, appropriate ReferenceGrants must be
+                        configured to allow the selection.
+                      properties:
+                        any:
+                          description: Boolean describing whether all namespaces are
+                            selected.
+                          type: boolean
+                      type: object
                   required:
                   - kind
                   - matchLabels

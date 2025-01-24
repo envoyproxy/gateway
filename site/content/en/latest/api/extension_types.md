@@ -2898,6 +2898,20 @@ _Appears in:_
 | `OpenTelemetry` |  | 
 
 
+#### NamespaceSelector
+
+
+
+NamespaceSelector is a selector for selecting either all namespaces or the current namespace.
+
+_Appears in:_
+- [TargetSelector](#targetselector)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `any` | _boolean_ |  true  |  | Boolean describing whether all namespaces are selected. |
+
+
 #### OIDC
 
 

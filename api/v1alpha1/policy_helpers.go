@@ -37,6 +37,20 @@ type TargetSelector struct {
 
 	// MatchLabels are the set of label selectors for identifying the targeted resource
 	MatchLabels map[string]string `json:"matchLabels"`
+
+	// NamespaceSelector determines if the label selectors specified in MatchLabels are applied in
+	// the policy namespace or across all namespaces.
+	// Note: when referencing targets in a different namespace, appropriate ReferenceGrants must be
+	// configured to allow the selection.
+	// +optional
+	// +notImplementedHide
+	NamespaceSelector *NamespaceSelector `json:"namespaceSelector,omitempty"`
+}
+
+// NamespaceSelector is a selector for selecting either all namespaces or the current namespace.
+type NamespaceSelector struct {
+	// Boolean describing whether all namespaces are selected.
+	Any bool `json:"any,omitempty"`
 }
 
 func (p PolicyTargetReferences) GetTargetRefs() []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {
