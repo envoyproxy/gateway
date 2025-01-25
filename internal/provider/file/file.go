@@ -209,5 +209,4 @@ func (p *Provider) startHealthProbeServer(ctx context.Context, readyzChecker hea
 	if err := srv.ListenAndServe(); err != nil {
 		p.logger.Error(err, "failed to start health probe server")
 	}
-
 }
