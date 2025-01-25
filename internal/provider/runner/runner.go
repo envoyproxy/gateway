@@ -19,6 +19,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes"
 )
 
+const defaultKubernetesHealthzProbeServerPort = 8081
+
 type Config struct {
 	config.Server
 	ProviderResources *message.ProviderResources
@@ -75,7 +77,7 @@ func (r *Runner) createKubernetesProvider(ctx context.Context) (*kubernetes.Prov
 		return nil, fmt.Errorf("failed to get kubeconfig: %w", err)
 	}
 
-	p, err := kubernetes.New(ctx, cfg, &r.Config.Server, r.ProviderResources)
+	p, err := kubernetes.New(ctx, cfg, &r.Config.Server, r.ProviderResources, defaultKubernetesHealthzProbeServerPort)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create provider %s: %w", egv1a1.ProviderTypeKubernetes, err)
 	}

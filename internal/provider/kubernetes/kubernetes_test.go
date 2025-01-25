@@ -43,6 +43,7 @@ import (
 const (
 	defaultWait = time.Second * 60
 	defaultTick = time.Millisecond * 20
+	healthzPort = 8082
 )
 
 func TestMain(m *testing.M) {
@@ -63,7 +64,7 @@ func TestProvider(t *testing.T) {
 	svr, err := config.New()
 	require.NoError(t, err)
 	resources := new(message.ProviderResources)
-	provider, err := New(context.Background(), cliCfg, svr, resources)
+	provider, err := New(context.Background(), cliCfg, svr, resources, healthzPort)
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())
 	go func() {
@@ -1274,7 +1275,7 @@ func TestNamespacedProvider(t *testing.T) {
 		LeaderElection: egv1a1.DefaultLeaderElection(),
 	}
 	resources := new(message.ProviderResources)
-	provider, err := New(context.Background(), cliCfg, svr, resources)
+	provider, err := New(context.Background(), cliCfg, svr, resources, healthzPort)
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
@@ -1334,7 +1335,7 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 		LeaderElection: egv1a1.DefaultLeaderElection(),
 	}
 	resources := new(message.ProviderResources)
-	provider, err := New(context.Background(), cliCfg, svr, resources)
+	provider, err := New(context.Background(), cliCfg, svr, resources, healthzPort)
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
