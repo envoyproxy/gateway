@@ -13,8 +13,6 @@ proceeding, you should be able to query the example backend using HTTP.
    helm install eg oci://docker.io/envoyproxy/gateway-helm --version {{< helm-version >}} -n envoy-gateway-system --create-namespace
    ```
 
-   **Note**: Wait 2–5 minutes for the Envoy Gateway pod to reach the Running state.
-
 2. Install the GatewayClass, Gateway, HTTPRoute and example app:
 
    ```shell
