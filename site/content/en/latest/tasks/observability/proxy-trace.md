@@ -313,7 +313,7 @@ spec:
   telemetry:
     tracing:
       # sample 0.1% of requests
-      samplingFraction: 1
+      samplingFraction:
         numerator: 1
         denominator: 1000
       provider:
