@@ -35,6 +35,8 @@ type Provider struct {
 
 	// ready indicates whether the provider can start watching filesystem events.
 	ready atomic.Bool
+	// port for healthz probe server. Default is 8081.
+	healthzProbeServerPort int
 }
 
 func New(svr *config.Server, resources *message.ProviderResources) (*Provider, error) {
@@ -45,15 +47,20 @@ func New(svr *config.Server, resources *message.ProviderResources) (*Provider, e
 	}
 
 	return &Provider{
-		paths:          paths.UnsortedList(),
-		logger:         logger,
-		watcher:        filewatcher.NewWatcher(),
-		resourcesStore: newResourcesStore(svr.EnvoyGateway.Gateway.ControllerName, resources, logger),
+		paths:                  paths.UnsortedList(),
+		logger:                 logger,
+		watcher:                filewatcher.NewWatcher(),
+		resourcesStore:         newResourcesStore(svr.EnvoyGateway.Gateway.ControllerName, resources, logger),
+		healthzProbeServerPort: 8081, // Default healthz probe server port.
 	}, nil
 }
 
 func (p *Provider) Type() egv1a1.ProviderType {
 	return egv1a1.ProviderTypeCustom
+}
+
+func (p *Provider) SetHealthzProbeServerPort(port int) {
+	p.healthzProbeServerPort = port
 }
 
 func (p *Provider) Start(ctx context.Context) error {
@@ -68,7 +75,7 @@ func (p *Provider) Start(ctx context.Context) error {
 		}
 		return nil
 	}
-	go p.startHealthProbeServer(ctx, readyzChecker)
+	go p.startHealthProbeServer(ctx, readyzChecker, p.healthzProbeServerPort)
 
 	initDirs, initFiles := path.ListDirsAndFiles(p.paths)
 	// Initially load resources from paths on host.
@@ -160,7 +167,7 @@ func (p *Provider) Start(ctx context.Context) error {
 	}
 }
 
-func (p *Provider) startHealthProbeServer(ctx context.Context, readyzChecker healthz.Checker) {
+func (p *Provider) startHealthProbeServer(ctx context.Context, readyzChecker healthz.Checker, port int) {
 	const (
 		readyzEndpoint  = "/readyz"
 		healthzEndpoint = "/healthz"
@@ -168,7 +175,7 @@ func (p *Provider) startHealthProbeServer(ctx context.Context, readyzChecker hea
 
 	mux := http.NewServeMux()
 	srv := &http.Server{
-		Addr:              ":8081",
+		Addr:              fmt.Sprintf(":%d", port),
 		Handler:           mux,
 		MaxHeaderBytes:    1 << 20,
 		IdleTimeout:       90 * time.Second, // matches http.DefaultTransport keep-alive timeout

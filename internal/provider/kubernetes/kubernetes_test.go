@@ -41,8 +41,9 @@ import (
 )
 
 const (
-	defaultWait = time.Second * 60
-	defaultTick = time.Millisecond * 20
+	defaultWait       = time.Second * 60
+	defaultTick       = time.Millisecond * 20
+	healthServerzPort = 8082
 )
 
 func TestMain(m *testing.M) {
@@ -65,6 +66,7 @@ func TestProvider(t *testing.T) {
 	resources := new(message.ProviderResources)
 	provider, err := New(context.Background(), cliCfg, svr, resources)
 	require.NoError(t, err)
+	provider.SetHealthzProbeServerPort(healthServerzPort)
 	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())
 	go func() {
 		require.NoError(t, provider.Start(ctx))
@@ -1276,6 +1278,7 @@ func TestNamespacedProvider(t *testing.T) {
 	resources := new(message.ProviderResources)
 	provider, err := New(context.Background(), cliCfg, svr, resources)
 	require.NoError(t, err)
+	provider.SetHealthzProbeServerPort(healthServerzPort)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		require.NoError(t, provider.Start(ctx))
@@ -1336,6 +1339,7 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 	resources := new(message.ProviderResources)
 	provider, err := New(context.Background(), cliCfg, svr, resources)
 	require.NoError(t, err)
+	provider.SetHealthzProbeServerPort(healthServerzPort)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		require.NoError(t, provider.Start(ctx))
