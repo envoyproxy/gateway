@@ -151,8 +151,8 @@ func (p *Provider) Start(ctx context.Context) error {
 
 			switch event.Op {
 			case fsnotify.Create, fsnotify.Write, fsnotify.Remove:
-				// Since we do not watch any events in the subdirectories, any events involving files
-				// modifications in current directory will trigger the event handling.
+				// Since we do not watch any events related to creation/deletion of subdirectories,
+				// any events involving files & folder modifications should trigger the event handling.
 				goto handle
 			default:
 				// do nothing
@@ -209,4 +209,5 @@ func (p *Provider) startHealthProbeServer(ctx context.Context, readyzChecker hea
 	if err := srv.ListenAndServe(); err != nil {
 		p.logger.Error(err, "failed to start health probe server")
 	}
+
 }

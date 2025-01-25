@@ -87,8 +87,9 @@ func TestFileProvider(t *testing.T) {
 	require.NoError(t, err)
 
 	// Start file provider.
+	ctx, cancelFpContext := context.WithCancel(context.Background())
 	go func() {
-		if err := fp.Start(context.Background()); err != nil {
+		if err := fp.Start(ctx); err != nil {
 			t.Errorf("failed to start file provider: %v", err)
 		}
 	}()
@@ -166,6 +167,7 @@ func TestFileProvider(t *testing.T) {
 	})
 
 	t.Cleanup(func() {
+		cancelFpContext()
 		err := os.RemoveAll(watchFileBase)
 		require.NoError(t, err)
 		err = os.RemoveAll(watchDirPath)
@@ -214,8 +216,9 @@ func TestRecursiveFileProvider(t *testing.T) {
 	require.NoError(t, err)
 
 	// Start file provider.
+	ctx, cancelFpContext := context.WithCancel(context.Background())
 	go func() {
-		if err := fp.Start(context.Background()); err != nil {
+		if err := fp.Start(ctx); err != nil {
 			t.Errorf("failed to start file provider: %v", err)
 		}
 	}()
@@ -281,6 +284,7 @@ func TestRecursiveFileProvider(t *testing.T) {
 	})
 
 	t.Cleanup(func() {
+		cancelFpContext()
 		err := os.RemoveAll(baseDir)
 		require.NoError(t, err)
 		err = os.RemoveAll(unwatchedDir)
