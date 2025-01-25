@@ -7,6 +7,7 @@ package file
 
 import (
 	"context"
+	"fmt"
 	"html/template"
 	"io"
 	"net/http"
@@ -29,6 +30,7 @@ import (
 const (
 	resourcesUpdateTimeout = 1 * time.Minute
 	resourcesUpdateTick    = 1 * time.Second
+	healthProbeServerPort  = 8081
 )
 
 type resourcesParam struct {
@@ -81,7 +83,7 @@ func TestFileProvider(t *testing.T) {
 	cfg, err := newFileProviderConfig([]string{watchFilePath, watchDirPath})
 	require.NoError(t, err)
 	pResources := new(message.ProviderResources)
-	fp, err := New(cfg, pResources)
+	fp, err := New(cfg, pResources, healthProbeServerPort)
 	require.NoError(t, err)
 	// Start file provider.
 	go func() {
@@ -195,7 +197,7 @@ func writeResourcesFile(t *testing.T, tmpl, dst string, params *resourcesParam) 
 
 func waitFileProviderReady(t *testing.T) {
 	require.Eventually(t, func() bool {
-		resp, err := http.Get("http://localhost:8081/readyz")
+		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/readyz", healthProbeServerPort))
 		if err != nil {
 			t.Logf("failed to get from heathlz server")
 			return false

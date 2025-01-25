@@ -36,13 +36,13 @@ type Provider struct {
 }
 
 // New creates a new Provider from the provided EnvoyGateway.
-func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources *message.ProviderResources, healthzProbeServerPort int) (*Provider, error) {
+func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources *message.ProviderResources, healthProbeServerPort int) (*Provider, error) {
 	// TODO: Decide which mgr opts should be exposed through envoygateway.provider.kubernetes API.
 
 	mgrOpts := manager.Options{
 		Scheme:                  envoygateway.GetScheme(),
 		Logger:                  svrCfg.Logger.Logger,
-		HealthProbeBindAddress:  fmt.Sprintf(":%d", healthzProbeServerPort),
+		HealthProbeBindAddress:  fmt.Sprintf(":%d", healthProbeServerPort),
 		LeaderElectionID:        "5b9825d2.gateway.envoyproxy.io",
 		LeaderElectionNamespace: svrCfg.Namespace,
 	}

@@ -19,7 +19,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes"
 )
 
-const defaultKubernetesHealthzProbeServerPort = 8081
+const defaultHealthProbeServerPort = 8081
 
 type Config struct {
 	config.Server
@@ -77,7 +77,7 @@ func (r *Runner) createKubernetesProvider(ctx context.Context) (*kubernetes.Prov
 		return nil, fmt.Errorf("failed to get kubeconfig: %w", err)
 	}
 
-	p, err := kubernetes.New(ctx, cfg, &r.Config.Server, r.ProviderResources, defaultKubernetesHealthzProbeServerPort)
+	p, err := kubernetes.New(ctx, cfg, &r.Config.Server, r.ProviderResources, defaultHealthProbeServerPort)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create provider %s: %w", egv1a1.ProviderTypeKubernetes, err)
 	}
@@ -88,7 +88,7 @@ func (r *Runner) createKubernetesProvider(ctx context.Context) (*kubernetes.Prov
 func (r *Runner) createCustomResourceProvider() (p provider.Provider, err error) {
 	switch r.EnvoyGateway.Provider.Custom.Resource.Type {
 	case egv1a1.ResourceProviderTypeFile:
-		p, err = file.New(&r.Config.Server, r.ProviderResources)
+		p, err = file.New(&r.Config.Server, r.ProviderResources, defaultHealthProbeServerPort)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create provider %s: %w", egv1a1.ProviderTypeCustom, err)
 		}

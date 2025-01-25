@@ -28,18 +28,17 @@ import (
 )
 
 type Provider struct {
-	paths          []string
-	logger         logr.Logger
-	watcher        filewatcher.FileWatcher
-	resourcesStore *resourcesStore
+	paths                 []string
+	logger                logr.Logger
+	watcher               filewatcher.FileWatcher
+	resourcesStore        *resourcesStore
+	healthProbeServerPort int
 
 	// ready indicates whether the provider can start watching filesystem events.
 	ready atomic.Bool
-	// port for healthz probe server. Default is 8081.
-	healthzProbeServerPort int
 }
 
-func New(svr *config.Server, resources *message.ProviderResources) (*Provider, error) {
+func New(svr *config.Server, resources *message.ProviderResources, healthProbeServerPort int) (*Provider, error) {
 	logger := svr.Logger.Logger
 	paths := sets.New[string]()
 	if svr.EnvoyGateway.Provider.Custom.Resource.File != nil {
@@ -47,20 +46,16 @@ func New(svr *config.Server, resources *message.ProviderResources) (*Provider, e
 	}
 
 	return &Provider{
-		paths:                  paths.UnsortedList(),
-		logger:                 logger,
-		watcher:                filewatcher.NewWatcher(),
-		resourcesStore:         newResourcesStore(svr.EnvoyGateway.Gateway.ControllerName, resources, logger),
-		healthzProbeServerPort: 8081, // Default healthz probe server port.
+		paths:                 paths.UnsortedList(),
+		logger:                logger,
+		watcher:               filewatcher.NewWatcher(),
+		resourcesStore:        newResourcesStore(svr.EnvoyGateway.Gateway.ControllerName, resources, logger),
+		healthProbeServerPort: healthProbeServerPort,
 	}, nil
 }
 
 func (p *Provider) Type() egv1a1.ProviderType {
 	return egv1a1.ProviderTypeCustom
-}
-
-func (p *Provider) SetHealthzProbeServerPort(port int) {
-	p.healthzProbeServerPort = port
 }
 
 func (p *Provider) Start(ctx context.Context) error {
@@ -75,7 +70,7 @@ func (p *Provider) Start(ctx context.Context) error {
 		}
 		return nil
 	}
-	go p.startHealthProbeServer(ctx, readyzChecker, p.healthzProbeServerPort)
+	go p.startHealthProbeServer(ctx, readyzChecker, p.healthProbeServerPort)
 
 	initDirs, initFiles := path.ListDirsAndFiles(p.paths)
 	// Initially load resources from paths on host.
