@@ -667,7 +667,7 @@ func configMapBtpIndexFunc(rawObj client.Object) []string {
 	var configMapReferences []string
 
 	for _, ro := range btp.Spec.ResponseOverride {
-		if ro.Response.Body.ValueRef != nil {
+		if ro.Response.Body != nil && ro.Response.Body.ValueRef != nil {
 			if string(ro.Response.Body.ValueRef.Kind) == resource.KindConfigMap {
 				configMapReferences = append(configMapReferences,
 					types.NamespacedName{

@@ -14443,7 +14443,7 @@ spec:
                           selected for tracing if no prior sampling decision has been made.
 
                           Only one of SamplingRate or SamplingFraction may be specified.
-                          If neither field is specified, 1% of requests will be sampled.
+                          If neither field is specified, all requests will be sampled.
                         properties:
                           denominator:
                             default: 100
@@ -14468,7 +14468,7 @@ spec:
                           Defaults to 100, valid values [0-100]. 100 indicates 100% sampling.
 
                           Only one of SamplingRate or SamplingFraction may be specified.
-                          If neither field is specified, 1% of requests will be sampled.
+                          If neither field is specified, all requests will be sampled.
                         format: int32
                         maximum: 100
                         minimum: 0

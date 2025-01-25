@@ -2,18 +2,9 @@ date: Pending
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
-  The Container `ports` field of the gateway instance has been removed, which will cause the gateway Pod to be rebuilt when upgrading the version.
-  ClientTrafficPolicy previously treated an empty TLS ALPNProtocols list as being undefined and applied Envoy Gateway defaults.
-  An empty TLS ALPNProtocols list is now treated as user-defined disablement of the TLS ALPN extension.
-  Outlier detection (passive health check) is now disabled by default.
-  refer to https://gateway.envoyproxy.io/docs/api/extension_types/#backendtrafficpolicy for working with passive health checks.
-  Envoy Gateway treats errors in calls to an extension service as fail-closed by default. Any error returned from the extension server will replace the affected resource with an "Internal Server Error" immediate response. The previous behavior can be enabled by setting the `failOpen` field to `true` in the extension service configuration.
-  Envoy Gateway now return a 500 response when a ClientTrafficPolicy translation fails for HTTP/GRPC routes, and forwards
-  client traffic to an empty cluster when a ClientTrafficPolicy translation fails for TCP routes.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
-  Add a security update here
 
 # New features or capabilities added in this release.
 new features: |
@@ -33,19 +24,13 @@ new features: |
   Added support to configure the Healthz Probe server port in FileProvider API
 
 bug fixes: |
-  Fixed the ability to overwrite control plane certs with the certgen command by using a new command arg (-o)
-  Fixed a panic that occurred following update to the envoy-gateway-config ConfigMap
 
 # Enhancements that improve performance.
 performance improvements: |
-  Add a performance improvement here
 
 # Deprecated features or APIs.
 deprecations: |
-  Add a deprecation here
 
 # Other notable changes not covered by the above sections.
 Other changes: |
-  Modified the base container image to gcr.io/distroless/base-nossl:nonroot
-  [SecurityPolicy] Modify the JWT Provider Issuer validation constraint
-  Add support for Kubernetes 1.32.x in the test matrix, and remove support for Kubernetes 1.28.x.
+
