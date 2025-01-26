@@ -6,7 +6,6 @@
 package v1alpha1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
@@ -83,7 +82,7 @@ type OIDC struct {
 	// OAuth flow will fail.
 	//
 	// +optional
-	DefaultTokenTTL *metav1.Duration `json:"defaultTokenTTL,omitempty"`
+	DefaultTokenTTL *gwapiv1.Duration `json:"defaultTokenTTL,omitempty"`
 
 	// RefreshToken indicates whether the Envoy should automatically refresh the
 	// id token and access token when they expire.
@@ -100,8 +99,9 @@ type OIDC struct {
 	//
 	// If not specified, defaults to 604800s (one week).
 	// Note: this field is only applicable when the "refreshToken" field is set to true.
+	//
 	// +optional
-	DefaultRefreshTokenTTL *metav1.Duration `json:"defaultRefreshTokenTTL,omitempty"`
+	DefaultRefreshTokenTTL *gwapiv1.Duration `json:"defaultRefreshTokenTTL,omitempty"`
 }
 
 // OIDCProvider defines the OIDC Provider configuration.

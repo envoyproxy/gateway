@@ -74,7 +74,7 @@ func (s *sessionPersistence) patchHCM(mgr *hcmv3.HttpConnectionManager, irListen
 			}
 
 			if sp.Cookie.TTL != nil {
-				cookieCfg.Cookie.Ttl = durationpb.New(sp.Cookie.TTL.Duration)
+				cookieCfg.Cookie.Ttl = durationpb.New(*sp.Cookie.TTL)
 			}
 
 			sessionCfg = cookieCfg

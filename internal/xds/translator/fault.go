@@ -139,7 +139,7 @@ func (*fault) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 		}
 		if delay.FixedDelay != nil {
 			routeCfgProto.Delay.FaultDelaySecifier = &xdsfault.FaultDelay_FixedDelay{
-				FixedDelay: durationpb.New(delay.FixedDelay.Duration),
+				FixedDelay: durationpb.New(*delay.FixedDelay),
 			}
 		}
 	}
