@@ -560,13 +560,16 @@ type ExtensionService struct {
 	TLS *ExtensionTLS `json:"tls,omitempty"`
 }
 
-// ExtensionTLS defines the TLS configuration when connecting to an extension service
+// ExtensionTLS defines the TLS configuration when connecting to an extension service.
 type ExtensionTLS struct {
 	// CertificateRef contains a references to objects (Kubernetes objects or otherwise) that
-	// contains a TLS certificate and private keys. These certificates are used to
-	// establish a TLS handshake to the extension server.
+	// contains a CA certificate.
 	//
-	// CertificateRef can only reference a Kubernetes Secret at this time.
+	// mTLS is not supported at this time.
+	// Do NOT provide a secret with server-side private keys.
+	// For more information, reference https://cert-manager.io/docs/trust/
+	//
+	// At this time, CertificateRef can only reference a Kubernetes Secret with `tls.crt` data.
 	//
 	// +kubebuilder:validation:Required
 	CertificateRef gwapiv1.SecretObjectReference `json:"certificateRef"`
