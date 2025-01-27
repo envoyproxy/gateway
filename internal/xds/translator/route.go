@@ -19,7 +19,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/protocov"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 )
 
 const (
@@ -573,7 +573,7 @@ func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy 
 
 func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
 	rr := route.GetRetry()
-	anyCfg, err := protocov.ToAnyWithValidation(&previoushost.PreviousHostsPredicate{})
+	anyCfg, err := proto.ToAnyWithValidation(&previoushost.PreviousHostsPredicate{})
 	if err != nil {
 		return nil, err
 	}

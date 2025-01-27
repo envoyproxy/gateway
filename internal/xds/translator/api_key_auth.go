@@ -16,7 +16,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/protocov"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -69,11 +69,7 @@ func (*apiKeyAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTT
 // buildHCMAPIKeyAuthFilter returns a api_key_auth HTTP filter from the provided IR HTTPRoute.
 func buildHCMAPIKeyAuthFilter(apiKeyAuth *ir.APIKeyAuth) (*hcmv3.HttpFilter, error) {
 	apiKeyAuthProto := buildAPIKeyAuthFilterConfig(apiKeyAuth)
-	if err := apiKeyAuthProto.ValidateAll(); err != nil {
-		return nil, err
-	}
-
-	apiKeyAuthAny, err := protocov.ToAnyWithValidation(apiKeyAuthProto)
+	apiKeyAuthAny, err := proto.ToAnyWithValidation(apiKeyAuthProto)
 	if err != nil {
 		return nil, err
 	}
@@ -114,11 +110,7 @@ func (*apiKeyAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error
 
 	// Overwrite the HCM level filter config with the per route filter config.
 	apiKeyAuthProto := buildAPIKeyAuthFilterPerRouteConfig(irRoute.Security.APIKeyAuth)
-	if err := apiKeyAuthProto.ValidateAll(); err != nil {
-		return err
-	}
-
-	apiKeyAuthAny, err := protocov.ToAnyWithValidation(apiKeyAuthProto)
+	apiKeyAuthAny, err := proto.ToAnyWithValidation(apiKeyAuthProto)
 	if err != nil {
 		return err
 	}

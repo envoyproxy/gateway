@@ -6,20 +6,19 @@
 package filters
 
 import (
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 	grpcstats "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/grpc_stats/v3"
 	grpcweb "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/grpc_web/v3"
 	httprouter "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/router/v3"
 	hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"google.golang.org/protobuf/types/known/wrapperspb"
-
-	"github.com/envoyproxy/gateway/internal/utils/protocov"
 )
 
 var GRPCWeb, GRPCStats *hcm.HttpFilter
 
 func init() {
-	any, err := protocov.ToAnyWithValidation(&grpcweb.GrpcWeb{})
+	any, err := proto.ToAnyWithValidation(&grpcweb.GrpcWeb{})
 	if err != nil {
 		panic(err)
 	}
@@ -30,7 +29,7 @@ func init() {
 		},
 	}
 
-	any, err = protocov.ToAnyWithValidation(&grpcstats.FilterConfig{
+	any, err = proto.ToAnyWithValidation(&grpcstats.FilterConfig{
 		EmitFilterState: true,
 		PerMethodStatSpecifier: &grpcstats.FilterConfig_StatsForAllMethods{
 			StatsForAllMethods: &wrapperspb.BoolValue{Value: true},
@@ -48,7 +47,7 @@ func init() {
 }
 
 func GenerateRouterFilter(enableEnvoyHeaders bool) (*hcm.HttpFilter, error) {
-	any, err := protocov.ToAnyWithValidation(&httprouter.Router{
+	any, err := proto.ToAnyWithValidation(&httprouter.Router{
 		SuppressEnvoyHeaders: !enableEnvoyHeaders,
 	})
 	if err != nil {

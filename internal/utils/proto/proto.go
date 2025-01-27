@@ -10,10 +10,12 @@ package proto
 
 import (
 	"bytes"
+	"errors"
 
 	"github.com/golang/protobuf/jsonpb"
 	protov1 "github.com/golang/protobuf/proto"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
 	"sigs.k8s.io/yaml"
 )
 
@@ -37,4 +39,35 @@ func ToYAML(pb proto.Message) ([]byte, error) {
 func FromJSON(content []byte, out proto.Message) error {
 	unmarshaler := &jsonpb.Unmarshaler{AllowUnknownFields: true}
 	return unmarshaler.Unmarshal(bytes.NewReader(content), protov1.MessageV1(out))
+}
+
+func ToAnyWithValidation(msg proto.Message) (*anypb.Any, error) {
+	if msg == nil {
+		return nil, errors.New("empty message received")
+	}
+
+	// If the message has a ValidateAll method, call it before marshaling.
+	if err := Validate(msg); err != nil {
+		return nil, err
+	}
+
+	any, err := anypb.New(msg)
+	if err != nil {
+		return nil, err
+	}
+	return any, nil
+}
+
+// Validate validates the given message by calling its ValidateAll or Validate methods.
+func Validate(msg proto.Message) error {
+	// If the message has a ValidateAll method, call it
+	if validator, ok := msg.(interface{ ValidateAll() error }); ok {
+		return validator.ValidateAll()
+	}
+
+	// If the message has a Validate method, call it
+	if validator, ok := msg.(interface{ Validate() error }); ok {
+		return validator.Validate()
+	}
+	return nil
 }
