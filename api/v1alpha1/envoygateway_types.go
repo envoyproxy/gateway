@@ -192,6 +192,14 @@ type EnvoyGatewayProvider struct {
 	//
 	// +optional
 	Custom *EnvoyGatewayCustomProvider `json:"custom,omitempty"`
+
+	// HealthzServerPort defines the port for the healthz probe server.
+	// By default, when this field is unset or empty, Envoy Gateway will use the port 8081 for the healthz server.
+	// +optional
+	// +kubebuilder:default=8081
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=65535
+	HealthzServerPort int `json:"healthzServerPort,omitempty"`
 }
 
 // EnvoyGatewayKubernetesProvider defines configuration for the Kubernetes provider.

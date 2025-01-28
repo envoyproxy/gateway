@@ -28,17 +28,17 @@ import (
 )
 
 type Provider struct {
-	paths                 []string
-	logger                logr.Logger
-	watcher               filewatcher.FileWatcher
-	resourcesStore        *resourcesStore
-	healthProbeServerPort int
+	paths             []string
+	logger            logr.Logger
+	watcher           filewatcher.FileWatcher
+	resourcesStore    *resourcesStore
+	healthzServerPort int
 
 	// ready indicates whether the provider can start watching filesystem events.
 	ready atomic.Bool
 }
 
-func New(svr *config.Server, resources *message.ProviderResources, healthProbeServerPort int) (*Provider, error) {
+func New(svr *config.Server, resources *message.ProviderResources, healthzServerPort int) (*Provider, error) {
 	logger := svr.Logger.Logger
 	paths := sets.New[string]()
 	if svr.EnvoyGateway.Provider.Custom.Resource.File != nil {
@@ -46,11 +46,11 @@ func New(svr *config.Server, resources *message.ProviderResources, healthProbeSe
 	}
 
 	return &Provider{
-		paths:                 paths.UnsortedList(),
-		logger:                logger,
-		watcher:               filewatcher.NewWatcher(),
-		resourcesStore:        newResourcesStore(svr.EnvoyGateway.Gateway.ControllerName, resources, logger),
-		healthProbeServerPort: healthProbeServerPort,
+		paths:             paths.UnsortedList(),
+		logger:            logger,
+		watcher:           filewatcher.NewWatcher(),
+		resourcesStore:    newResourcesStore(svr.EnvoyGateway.Gateway.ControllerName, resources, logger),
+		healthzServerPort: healthzServerPort,
 	}, nil
 }
 
@@ -70,7 +70,7 @@ func (p *Provider) Start(ctx context.Context) error {
 		}
 		return nil
 	}
-	go p.startHealthProbeServer(ctx, readyzChecker, p.healthProbeServerPort)
+	go p.startHealthProbeServer(ctx, readyzChecker, p.healthzServerPort)
 
 	initDirs, initFiles := path.ListDirsAndFiles(p.paths)
 	// Initially load resources from paths on host.

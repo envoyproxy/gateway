@@ -8,7 +8,7 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
-  Added support to configure the Healthz Probe server port in FileProvider API & KubernetesProvider API.
+  Added support to configure custom port for healthz server for EnvoyGatewayProvider.
 
 bug fixes: |
 
