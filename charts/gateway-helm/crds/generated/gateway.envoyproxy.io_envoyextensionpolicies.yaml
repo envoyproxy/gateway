@@ -1069,8 +1069,8 @@ spec:
                       type: object
                       x-kubernetes-validations:
                       - message: Only a reference to an object of kind ConfigMap belonging
-                          to default core API group is supported.
-                        rule: self.kind == 'ConfigMap' && (!has(self.group) || self.group
+                          to default v1 API group is supported.
+                        rule: self.kind == 'ConfigMap' && (self.group == 'v1' || self.group
                           == '')
                   required:
                   - type
