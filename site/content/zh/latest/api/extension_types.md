@@ -1291,6 +1291,7 @@ _Appears in:_
 | `type` | _[ProviderType](#providertype)_ |  true  |  | Type is the type of provider to use. Supported types are "Kubernetes", "Custom". |
 | `kubernetes` | _[EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)_ |  false  |  | Kubernetes defines the configuration of the Kubernetes provider. Kubernetes<br />provides runtime configuration via the Kubernetes API. |
 | `custom` | _[EnvoyGatewayCustomProvider](#envoygatewaycustomprovider)_ |  false  |  | Custom defines the configuration for the Custom provider. This provider<br />allows you to define a specific resource provider and an infrastructure<br />provider. |
+| `healthzServerPort` | _integer_ |  false  | 8081 | HealthzServerPort defines the port for the healthz probe server.<br />By default, when this field is unset or empty, Envoy Gateway will use the port 8081 for the healthz server. |
 
 
 #### EnvoyGatewayResourceProvider
