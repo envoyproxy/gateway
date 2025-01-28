@@ -78,7 +78,7 @@ func (t *ResourceVersionTable) AddXdsResource(rType resourcev3.Type, xdsResource
 		return fmt.Errorf("xds resource is nil")
 	}
 
-	if err:=proto.Validate(xdsResource); err != nil {
+	if err := proto.Validate(xdsResource); err != nil {
 		return fmt.Errorf("validation failed for xds resource %+v, err: %w", xdsResource, err)
 	}
 
@@ -94,17 +94,18 @@ func (t *ResourceVersionTable) AddXdsResource(rType resourcev3.Type, xdsResource
 }
 
 // ValidateAll validates all the xds resources in the ResourceVersionTable
-func (t *ResourceVersionTable) ValidateAll() error{
-	var err error
+func (t *ResourceVersionTable) ValidateAll() error {
+	var errs error
 
 	for _, xdsResource := range t.XdsResources {
 		for _, resource := range xdsResource {
 			if err := proto.Validate(resource); err != nil {
-				errors.Join(err)
+				errs = errors.Join(errs, err)
+				errs = errors.Join(errs, err)
 			}
 		}
 	}
-	return err
+	return errs
 }
 
 // AddOrReplaceXdsResource will update an existing resource of rType according to matchFunc or add as a new resource

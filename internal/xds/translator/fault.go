@@ -67,7 +67,7 @@ func (*fault) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPList
 // buildHCMFaultFilter returns a basic_auth HTTP filter from the provided IR HTTPRoute.
 func buildHCMFaultFilter() (*hcmv3.HttpFilter, error) {
 	faultProto := &xdshttpfaultv3.HTTPFault{}
-    faultAny, err := proto.ToAnyWithValidation(faultProto)
+	faultAny, err := proto.ToAnyWithValidation(faultProto)
 	if err != nil {
 		return nil, err
 	}

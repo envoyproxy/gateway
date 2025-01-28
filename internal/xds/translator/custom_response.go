@@ -82,7 +82,7 @@ func (c *customResponse) buildHCMCustomResponseFilter(ro *ir.ResponseOverride) (
 	if err != nil {
 		return nil, err
 	}
-    any, err := proto.ToAnyWithValidation(config)
+	any, err := proto.ToAnyWithValidation(config)
 	if err != nil {
 		return nil, err
 	}
