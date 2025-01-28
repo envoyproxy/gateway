@@ -9,8 +9,7 @@ assignees: ''
 
 *Description*:
 >What issue is being seen? Describe what should be happening instead of
-the bug, for example: Envoy should not crash, the expected value isn't
-returned, etc.
+the bug, for example: The expected value isn't returned, etc.
 
 *Repro steps*:
 > Include sample requests, environment, etc. All data and inputs
