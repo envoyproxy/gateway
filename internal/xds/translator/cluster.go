@@ -95,12 +95,7 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 			dnsLookupFamily = clusterv3.Cluster_ALL
 		}
 	}
-	panicThreshold := &xdstype.Percent{
-		Value: float64(50),
-	}
-	if args.healthCheck.PanicThreshold != nil {
-		panicThreshold.Value = float64(*args.healthCheck.PanicThreshold)
-	}
+
 	cluster := &clusterv3.Cluster{
 		Name:            args.name,
 		DnsLookupFamily: dnsLookupFamily,
@@ -108,9 +103,15 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 			LocalityConfigSpecifier: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig_{
 				LocalityWeightedLbConfig: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig{},
 			},
-			HealthyPanicThreshold: panicThreshold,
 		},
 		PerConnectionBufferLimitBytes: buildBackandConnectionBufferLimitBytes(args.backendConnection),
+	}
+
+	// 50% is the Envoy default value for panic threshold. No need to explicitly set it in this case.
+	if args.healthCheck != nil && args.healthCheck.PanicThreshold != nil && *args.healthCheck.PanicThreshold != 50 {
+		cluster.CommonLbConfig.HealthyPanicThreshold = &xdstype.Percent{
+			Value: float64(*args.healthCheck.PanicThreshold),
+		}
 	}
 
 	cluster.ConnectTimeout = buildConnectTimeout(args.timeout)
