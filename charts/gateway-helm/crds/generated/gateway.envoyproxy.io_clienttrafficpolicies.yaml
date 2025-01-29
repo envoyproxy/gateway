@@ -614,17 +614,21 @@ spec:
                       description: MatchLabels are the set of label selectors for
                         identifying the targeted resource
                       type: object
-                    namespaceSelector:
+                    namespaces:
                       description: |-
-                        NamespaceSelector determines if the label selectors specified in MatchLabels are applied in
-                        the policy namespace or across all namespaces.
+                        Namespaces determines if the resource from all namespaces or the current namespace
+                        are considered when matching by label selectors specified in MatchLabels.
                         Note: when referencing targets in a different namespace, appropriate ReferenceGrants must be
                         configured to allow the selection.
                       properties:
-                        any:
-                          description: Boolean describing whether all namespaces are
-                            selected.
-                          type: boolean
+                        omitempty:
+                          description: Indicates where targets would be selected for
+                            the Policy's TargetSelector.
+                          enum:
+                          - All
+                          type: string
+                      required:
+                      - omitempty
                       type: object
                   required:
                   - kind

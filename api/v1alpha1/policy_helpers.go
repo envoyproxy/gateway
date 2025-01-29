@@ -38,19 +38,28 @@ type TargetSelector struct {
 	// MatchLabels are the set of label selectors for identifying the targeted resource
 	MatchLabels map[string]string `json:"matchLabels"`
 
-	// NamespaceSelector determines if the label selectors specified in MatchLabels are applied in
-	// the policy namespace or across all namespaces.
+	// Namespaces determines if the resource from all namespaces or the current namespace
+	// are considered when matching by label selectors specified in MatchLabels.
 	// Note: when referencing targets in a different namespace, appropriate ReferenceGrants must be
 	// configured to allow the selection.
 	// +optional
 	// +notImplementedHide
-	NamespaceSelector *NamespaceSelector `json:"namespaceSelector,omitempty"`
+	Namespaces *TargetSelectorNamespaces `json:"namespaces,omitempty"`
 }
 
-// NamespaceSelector is a selector for selecting either all namespaces or the current namespace.
-type NamespaceSelector struct {
-	// Boolean describing whether all namespaces are selected.
-	Any bool `json:"any,omitempty"`
+type FromNamespaces string
+
+const (
+	// FromNamespacesAll indicates that the target selector should apply to targets from all namespaces
+	FromNamespacesAll FromNamespaces = "All"
+)
+
+// TargetSelectorNamespaces determines which namespaces are used when selecting policy targets.
+type TargetSelectorNamespaces struct {
+	// Indicates where targets would be selected for the Policy's TargetSelector.
+	// +kubebuilder:validation:Enum=All
+	// +kubebuilder:validation:Required
+	FromNamespaces FromNamespaces `json:"omitempty"`
 }
 
 func (p PolicyTargetReferences) GetTargetRefs() []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {

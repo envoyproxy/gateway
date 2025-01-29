@@ -1801,6 +1801,20 @@ _Appears in:_
 | `after` | _[EnvoyFilter](#envoyfilter)_ |  true  |  | After defines the filter that should come after the filter.<br />Only one of Before or After must be set. |
 
 
+#### FromNamespaces
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [TargetSelectorNamespaces](#targetselectornamespaces)
+
+| Value | Description |
+| ----- | ----------- |
+| `All` | FromNamespacesAll indicates that the target selector should apply to targets from all namespaces<br /> | 
+
+
 #### GRPCActiveHealthChecker
 
 
@@ -2896,20 +2910,6 @@ _Appears in:_
 | Value | Description |
 | ----- | ----------- |
 | `OpenTelemetry` |  | 
-
-
-#### NamespaceSelector
-
-
-
-NamespaceSelector is a selector for selecting either all namespaces or the current namespace.
-
-_Appears in:_
-- [TargetSelector](#targetselector)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-| `any` | _boolean_ |  true  |  | Boolean describing whether all namespaces are selected. |
 
 
 #### OIDC
@@ -4316,6 +4316,20 @@ _Appears in:_
 | `group` | _[Group](#group)_ |  true  | gateway.networking.k8s.io | Group is the group that this selector targets. Defaults to gateway.networking.k8s.io |
 | `kind` | _[Kind](#kind)_ |  true  |  | Kind is the resource kind that this selector targets. |
 | `matchLabels` | _object (keys:string, values:string)_ |  true  |  | MatchLabels are the set of label selectors for identifying the targeted resource |
+
+
+#### TargetSelectorNamespaces
+
+
+
+TargetSelectorNamespaces determines which namespaces are used when selecting policy targets.
+
+_Appears in:_
+- [TargetSelector](#targetselector)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `omitempty` | _[FromNamespaces](#fromnamespaces)_ |  true  |  | Indicates where targets would be selected for the Policy's TargetSelector. |
 
 
 #### Timeout
