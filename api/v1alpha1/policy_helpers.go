@@ -59,7 +59,7 @@ type TargetSelectorNamespaces struct {
 	// Indicates where targets would be selected for the Policy's TargetSelector.
 	// +kubebuilder:validation:Enum=All
 	// +kubebuilder:validation:Required
-	FromNamespaces FromNamespaces `json:"omitempty"`
+	FromNamespaces FromNamespaces `json:"from,omitempty"`
 }
 
 func (p PolicyTargetReferences) GetTargetRefs() []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {

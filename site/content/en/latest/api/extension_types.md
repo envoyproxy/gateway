@@ -4329,7 +4329,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `omitempty` | _[FromNamespaces](#fromnamespaces)_ |  true  |  | Indicates where targets would be selected for the Policy's TargetSelector. |
+| `from` | _[FromNamespaces](#fromnamespaces)_ |  true  |  | Indicates where targets would be selected for the Policy's TargetSelector. |
 
 
 #### Timeout

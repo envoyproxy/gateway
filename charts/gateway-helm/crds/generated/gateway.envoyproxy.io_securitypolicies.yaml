@@ -4420,14 +4420,14 @@ spec:
                         Note: when referencing targets in a different namespace, appropriate ReferenceGrants must be
                         configured to allow the selection.
                       properties:
-                        omitempty:
+                        from:
                           description: Indicates where targets would be selected for
                             the Policy's TargetSelector.
                           enum:
                           - All
                           type: string
                       required:
-                      - omitempty
+                      - from
                       type: object
                   required:
                   - kind
