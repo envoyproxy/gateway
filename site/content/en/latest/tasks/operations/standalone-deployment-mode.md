@@ -16,7 +16,9 @@ Currently, Envoy Gateway only support the file provider and the host infrastruct
 - The file provider will configure the Envoy Gateway to get all gateway-api resources from file system.
 - The host infrastructure provider will configure the Envoy Gateway to deploy one Envoy Proxy as a host process.
 
-## Quick Start Locally
+# Quick Start
+
+## Running locally on the host machine
 
 In this quick-start, we will run Envoy Gateway in standalone mode with the file provider
 and the host infrastructure provider.
@@ -126,7 +128,7 @@ curl --verbose --header "Host: www.example.com" http://0.0.0.0:8888/
 * Connection #0 to host 0.0.0.0 left intact
 ```
 
-## Quick Start in a Container
+## Running in a Container
 
 In this quick-start, we will run Envoy Gateway in standalone mode with the file provider
 and the host infrastructure provider.
@@ -154,7 +156,7 @@ All runners in Envoy Gateway are using TLS connection, so create these TLS certi
 ensure the Envoy Gateway works properly.
 
 ```shell
-docker run --rm --volume /tmp/envoy-gateway-test:/tmp/envoy-gateway envoyproxy/gateway:v1.3.0-rc.1 certgen --local
+docker run --rm --volume /tmp/envoy-gateway-test:/tmp/envoy-gateway envoyproxy/gateway:{{< helm-version >}} certgen --local
 ```
 
 ### Start Envoy Gateway
@@ -192,7 +194,7 @@ $ docker run \
   --publish 8888:8888 \
   --volume /tmp/envoy-gateway-test:/tmp/envoy-gateway \
   --detach \
-  envoyproxy/gateway:v1.3.0-rc.1 \
+  envoyproxy/gateway:{{< helm-version >}} \
   server --config-path /tmp/envoy-gateway/standalone.yaml
 ```
 
