@@ -521,16 +521,22 @@ func buildRetry(r *egv1a1.Retry) (*ir.Retry, error) {
 		if r.PerRetry.BackOff != nil {
 			if r.PerRetry.BackOff.MaxInterval != nil || r.PerRetry.BackOff.BaseInterval != nil {
 				bop := &ir.BackOffPolicy{}
-				if r.PerRetry.BackOff.MaxInterval != nil {
-					bop.MaxInterval = r.PerRetry.BackOff.MaxInterval
-				}
-
 				if r.PerRetry.BackOff.BaseInterval != nil {
 					bop.BaseInterval = r.PerRetry.BackOff.BaseInterval
 					if bop.BaseInterval.Duration == 0 {
 						return nil, fmt.Errorf("baseInterval cannot be set to 0s")
 					}
 				}
+				if r.PerRetry.BackOff.MaxInterval != nil {
+					bop.MaxInterval = r.PerRetry.BackOff.MaxInterval
+					if bop.MaxInterval.Duration == 0 {
+						return nil, fmt.Errorf("maxInterval cannot be set to 0s")
+					}
+					if bop.BaseInterval != nil && bop.BaseInterval.Duration > bop.MaxInterval.Duration {
+						return nil, fmt.Errorf("maxInterval cannot be less than baseInterval")
+					}
+				}
+
 				pr.BackOff = bop
 				bpr = true
 			}
