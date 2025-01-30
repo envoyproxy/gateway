@@ -72,7 +72,10 @@ func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatur
 		ret.HTTP2 = h2
 	}
 
-	ret.Retry = buildRetry(policy.Retry)
+	var err error
+	if ret.Retry, err = buildRetry(policy.Retry); err != nil {
+		return nil, err
+	}
 
 	// If nothing was set in any of the above calls, return nil instead of an empty
 	// container
@@ -477,9 +480,9 @@ func translateDNS(policy egv1a1.ClusterSettings) *ir.DNS {
 	}
 }
 
-func buildRetry(r *egv1a1.Retry) *ir.Retry {
+func buildRetry(r *egv1a1.Retry) (*ir.Retry, error) {
 	if r == nil {
-		return nil
+		return nil, nil
 	}
 
 	rt := &ir.Retry{}
@@ -524,6 +527,9 @@ func buildRetry(r *egv1a1.Retry) *ir.Retry {
 
 				if r.PerRetry.BackOff.BaseInterval != nil {
 					bop.BaseInterval = r.PerRetry.BackOff.BaseInterval
+					if bop.BaseInterval.Duration == 0 {
+						return nil, fmt.Errorf("baseInterval cannot be set to 0s")
+					}
 				}
 				pr.BackOff = bop
 				bpr = true
@@ -535,5 +541,5 @@ func buildRetry(r *egv1a1.Retry) *ir.Retry {
 		}
 	}
 
-	return rt
+	return rt, nil
 }
