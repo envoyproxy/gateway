@@ -56,7 +56,7 @@ http:
     hostname: "*"
     traffic:
       healthCheck:
-          panicThreshold: 80
+        panicThreshold: 80
     destination:
       name: "fifth-route-dest"
       protocol: GRPC
