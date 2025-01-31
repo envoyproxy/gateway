@@ -239,14 +239,6 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		}
 	}
 
-	if args.healthCheck != nil && args.healthCheck.PanicThreshold != nil {
-		cluster.CommonLbConfig = &clusterv3.Cluster_CommonLbConfig{
-			HealthyPanicThreshold: &xdstype.Percent{
-				Value: float64(*args.healthCheck.PanicThreshold),
-			},
-		}
-	}
-
 	if args.healthCheck != nil && args.healthCheck.Active != nil {
 		cluster.HealthChecks = buildXdsHealthCheck(args.healthCheck.Active)
 	}

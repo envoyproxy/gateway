@@ -34,7 +34,7 @@ func TestBuildXdsCluster(t *testing.T) {
 		tSocket:      bootstrapXdsCluster.TransportSocket,
 		endpointType: EndpointTypeDNS,
 		healthCheck: &ir.HealthCheck{
-			PanicThreshold: ptr.To[uint32](200),
+			PanicThreshold: ptr.To[uint32](66),
 		},
 	}
 	dynamicXdsCluster := buildXdsCluster(args)
