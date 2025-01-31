@@ -456,7 +456,6 @@ spec:
   - group: gateway.envoyproxy.io
     kind: Backend
     name: backend-keycloak
-    sectionName: "443"
   validation:
     caCertificateRefs:
     - name: backend-tls-certificate
@@ -525,7 +524,6 @@ spec:
   - group: gateway.envoyproxy.io
     kind: Backend
     name: backend-keycloak
-    sectionName: "443"
   validation:
     caCertificateRefs:
     - name: backend-tls-certificate
@@ -536,6 +534,10 @@ spec:
 
 {{% /tab %}}
 {{< /tabpane >}}
+
+As shown in the example above, the [SecurityPolicy] resource is configured with an OIDC provider in its OIDC settings. The `backendRefs` field references the [Backend] resource that defines the OIDC provider. The [BackendTLSPolicy] resource specifies the CA certificate required to authenticate the OIDC provider.
+
+Additional connection settings for the OIDC provider can be configured in the [backendSettings]. Currently, only the retry policy is supported.
 
 For more information about [Backend] and [BackendTLSPolicy], refer to the [Backend Routing][backend-routing] and [Backend TLS: Gateway to Backend][backend-tls] tasks.
 
@@ -565,3 +567,4 @@ Checkout the [Developer Guide](../../../../contributions/develop) to get involve
 [BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/
 [backend-routing]: ../traffic/backend
 [backend-tls]: ../backend-tls
+[BackendSettings]: ../../../api/extension_types/#clustersettings
