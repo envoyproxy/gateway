@@ -14,13 +14,14 @@ As Envoy Gateway gains momentum as the preferred API gateway within the CNCF eco
 Getting listed as an Envoy Gateway adopter is quick and easy:  
 
 1. **Fork the repository** – Clone the [Envoy Gateway website repository](https://github.com/envoyproxy/gateway) to your local machine.  
-2. **Update the adopters file** – Add your company name, logo URL, and website link in `site/data/adopters/adopters.yaml`.  
-3. **Submit a Pull Request (PR)** – Open a PR with your changes, and the Envoy Gateway maintainers will review and merge it.  
+2. **Upload your logo** - Add a hi-resolution logo file (SVG or PNG format) in `site/static/logos`.
+3. **Update the adopters file** – Add your company name, logo, and website link in `site/data/adopters.yaml`.
+4. **Submit a Pull Request (PR)** – Open a PR with your changes, and the Envoy Gateway maintainers will review and merge it.
 
 ### Example Entry
 ```yaml
 - name:        Your Company Name
-  logo:        https://your-company.com/logo.png
+  logo:        /logos/your-company-logo.png
   url:         https://your-company.com
   description: (Optional) A brief description of how your company uses Envoy Gateway. Avoid promotional or competitive language.  
 ```
