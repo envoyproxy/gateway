@@ -19,11 +19,12 @@ Getting listed as an Envoy Gateway adopter is quick and easy:
 4. **Submit a Pull Request (PR)** – Open a PR with your changes, and the Envoy Gateway maintainers will review and merge it.
 
 ### Example Entry
+
 ```yaml
 - name:        Your Company Name
   logo:        /logos/your-company-logo.png
   url:         https://your-company.com
-  description: (Optional) A brief description of how your company uses Envoy Gateway. Avoid promotional or competitive language.  
+  description: (Optional) A brief description of how your company uses Envoy Gateway. Avoid promotional or competitive language.
 ```
 
 🔹 By submitting your logo, you confirm that your company consents to being publicly listed as an Envoy Gateway adopter. This listing does not imply an official endorsement or partnership.
