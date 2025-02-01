@@ -5,7 +5,7 @@ a [graduated CNCF project](https://www.cncf.io/projects/envoy/) under the [Cloud
 which is a part of the [Linux Foundation](https://www.linuxfoundation.org), a 501(c)(6) nonprofit organization.
 
 ## Why Add Your Logo?
-As Envoy Gateway gains momentum as the preferred API gateway within the CNCF ecosystem, your company’s support helps drive its adoption and success. By joining the [Envoy Gateway Adopters List](https://gateway.envoyproxy.io/#adopters), you:  
+As Envoy Gateway gains momentum as the preferred API gateway within the CNCF ecosystem, your company's support helps drive its adoption and success. By joining the [Envoy Gateway Adopters List](https://gateway.envoyproxy.io/#adopters), you:  
 
 ✅ **Showcase Your Leadership** – Highlight your commitment to modern, high-performance API gateway technology.  
 ✅ **Support the Open Source Community** – Demonstrate real-world adoption, which strengthens the project's credibility and growth.  
@@ -23,6 +23,7 @@ Getting listed as an Envoy Gateway adopter is quick and easy:
   logo:        https://your-company.com/logo.png
   url:         https://your-company.com
   description: (Optional) A brief description of how your company uses Envoy Gateway. Avoid promotional or competitive language.  
+```
 
 🔹 By submitting your logo, you confirm that your company consents to being publicly listed as an Envoy Gateway adopter. This listing does not imply an official endorsement or partnership.
 
