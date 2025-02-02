@@ -442,6 +442,23 @@ spec:
                   This means that the port, protocol and hostname tuple must be unique for every listener.
                   If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition.
                 type: boolean
+              metricsServer:
+                description: |-
+                  MetricsServer defines the metrics server configuration.
+                  If unspecified, the default metrics server configuration is applied.
+                  Default port is 19001, and the default path is "/stats/prometheus".
+                properties:
+                  path:
+                    description: Path defines the path of the server endpoint.
+                    type: string
+                  port:
+                    description: Port defines the port on which the server listens.
+                    format: int32
+                    type: integer
+                required:
+                - path
+                - port
+                type: object
               preserveRouteOrder:
                 description: |-
                   PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API
@@ -10412,6 +10429,23 @@ spec:
                 required:
                 - type
                 type: object
+              readinessServer:
+                description: |-
+                  ReadinessServer defines the readiness server configuration.
+                  If unspecified, the default readiness server configuration is applied.
+                  Default port is 19002, and the default path is "/ready".
+                properties:
+                  path:
+                    description: Path defines the path of the server endpoint.
+                    type: string
+                  port:
+                    description: Port defines the port on which the server listens.
+                    format: int32
+                    type: integer
+                required:
+                - path
+                - port
+                type: object
               routingType:
                 description: |-
                   RoutingType can be set to "Service" to use the Service Cluster IP for routing to the backend,
@@ -14543,6 +14577,10 @@ spec:
                       rule: '!(has(self.samplingRate) && has(self.samplingFraction))'
                 type: object
             type: object
+            x-kubernetes-validations:
+            - message: metricsServer and readinessServer cannot have the same port
+              rule: '!has(self.metricsServer) || !has(self.readinessServer) || self.metricsServer.port
+                != self.readinessServer.port'
           status:
             description: EnvoyProxyStatus defines the actual state of EnvoyProxy.
             type: object

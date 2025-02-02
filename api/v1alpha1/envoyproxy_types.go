@@ -31,7 +31,24 @@ type EnvoyProxy struct {
 }
 
 // EnvoyProxySpec defines the desired state of EnvoyProxy.
+//
+// +kubebuilder:validation:XValidation:rule="!has(self.metricsServer) || !has(self.readinessServer) || self.metricsServer.port != self.readinessServer.port",message="metricsServer and readinessServer cannot have the same port"
 type EnvoyProxySpec struct {
+	// MetricsServer defines the metrics server configuration.
+	// If unspecified, the default metrics server configuration is applied.
+	// Default port is 19001, and the default path is "/stats/prometheus".
+	//
+	// +optional
+	// +notImplementedHide
+	MetricsServer *ProxyServerConfig `json:"metricsServer,omitempty"`
+	// ReadinessServer defines the readiness server configuration.
+	// If unspecified, the default readiness server configuration is applied.
+	// Default port is 19002, and the default path is "/ready".
+	//
+	// +optional
+	// +notImplementedHide
+	ReadinessServer *ProxyServerConfig `json:"readinessServer,omitempty"`
+
 	// Provider defines the desired resource provider and provider-specific configuration.
 	// If unspecified, the "Kubernetes" resource provider is used with default configuration
 	// parameters.
@@ -161,6 +178,13 @@ type EnvoyProxySpec struct {
 
 // RoutingType defines the type of routing of this Envoy proxy.
 type RoutingType string
+
+type ProxyServerConfig struct {
+	// Port defines the port on which the server listens.
+	Port uint32 `json:"port"`
+	// Path defines the path of the server endpoint.
+	Path string `json:"path"`
+}
 
 const (
 	// ServiceRoutingType is the RoutingType for Service Cluster IP routing.
