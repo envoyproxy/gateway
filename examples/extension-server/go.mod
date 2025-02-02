@@ -10,7 +10,7 @@ require (
 	google.golang.org/grpc v1.69.4
 	google.golang.org/protobuf v1.36.3
 	k8s.io/apimachinery v0.32.1
-	sigs.k8s.io/controller-runtime v0.20.0
+	sigs.k8s.io/controller-runtime v0.20.1
 	sigs.k8s.io/gateway-api v1.2.1
 )
 
