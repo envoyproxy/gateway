@@ -1437,6 +1437,24 @@ func TestEnvoyProxyProvider(t *testing.T) {
 				"only one of SamplingRate or SamplingFraction can be specified",
 			},
 		},
+		{
+			desc: "cannot set same port on metrics and readiness",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					ReadinessServer: &egv1a1.ProxyServerConfig{
+						Port: 19001,
+						Path: "/ready",
+					},
+					MetricsServer: &egv1a1.ProxyServerConfig{
+						Port: 19001,
+						Path: "/stats/prometheus",
+					},
+				}
+			},
+			wantErrors: []string{
+				"metricsServer and readinessServer cannot have the same port",
+			},
+		},
 	}
 
 	for _, tc := range cases {
