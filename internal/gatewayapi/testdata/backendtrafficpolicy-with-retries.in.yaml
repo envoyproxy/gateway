@@ -62,6 +62,44 @@ httpRoutes:
       backendRefs:
       - name: service-1
         port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-2
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-2
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/route2"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-3
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-2
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/route3"
+      backendRefs:
+      - name: service-1
+        port: 8080
 backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -86,7 +124,7 @@ backendTrafficPolicies:
   kind: BackendTrafficPolicy
   metadata:
     namespace: default
-    name: policy-for-route
+    name: policy-for-route-1
   spec:
     targetRef:
       group: gateway.networking.k8s.io
@@ -106,3 +144,32 @@ backendTrafficPolicies:
         backoff:
           baseInterval: 100ms
           maxInterval: 10s
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route-2
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-2
+    retry:
+      perRetry:
+        backoff:
+          baseInterval: 0s
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route-3
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-3
+    retry:
+      perRetry:
+        backoff:
+          baseInterval: 2s
+          maxInterval: 1s

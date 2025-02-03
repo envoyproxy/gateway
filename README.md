@@ -31,6 +31,10 @@ Kubernetes-based application gateway.
 * [Contributing guide](https://gateway.envoyproxy.io/contributions/contributing/)
 * [Developer guide](https://gateway.envoyproxy.io/contributions/develop/)
 
+## Security Reporting
+
+If youve found a security vulnerability or a process crash, please follow the instructions in [SECURITY.md](./SECURITY.md) to submit a report.
+
 ## Community Meeting
 
 The Envoy Gateway team meets every Tuesday and Thursday. We also have a separate meeting to be held in the

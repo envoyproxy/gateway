@@ -72,7 +72,10 @@ func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatur
 		ret.HTTP2 = h2
 	}
 
-	ret.Retry = buildRetry(policy.Retry)
+	var err error
+	if ret.Retry, err = buildRetry(policy.Retry); err != nil {
+		return nil, err
+	}
 
 	// If nothing was set in any of the above calls, return nil instead of an empty
 	// container
@@ -357,7 +360,7 @@ func buildHealthCheck(policy egv1a1.ClusterSettings) *ir.HealthCheck {
 	irhc := &ir.HealthCheck{}
 	irhc.Passive = buildPassiveHealthCheck(*policy.HealthCheck)
 	irhc.Active = buildActiveHealthCheck(*policy.HealthCheck)
-
+	irhc.PanicThreshold = policy.HealthCheck.PanicThreshold
 	return irhc
 }
 
@@ -477,9 +480,9 @@ func translateDNS(policy egv1a1.ClusterSettings) *ir.DNS {
 	}
 }
 
-func buildRetry(r *egv1a1.Retry) *ir.Retry {
+func buildRetry(r *egv1a1.Retry) (*ir.Retry, error) {
 	if r == nil {
-		return nil
+		return nil, nil
 	}
 
 	rt := &ir.Retry{}
@@ -518,13 +521,22 @@ func buildRetry(r *egv1a1.Retry) *ir.Retry {
 		if r.PerRetry.BackOff != nil {
 			if r.PerRetry.BackOff.MaxInterval != nil || r.PerRetry.BackOff.BaseInterval != nil {
 				bop := &ir.BackOffPolicy{}
-				if r.PerRetry.BackOff.MaxInterval != nil {
-					bop.MaxInterval = r.PerRetry.BackOff.MaxInterval
-				}
-
 				if r.PerRetry.BackOff.BaseInterval != nil {
 					bop.BaseInterval = r.PerRetry.BackOff.BaseInterval
+					if bop.BaseInterval.Duration == 0 {
+						return nil, fmt.Errorf("baseInterval cannot be set to 0s")
+					}
 				}
+				if r.PerRetry.BackOff.MaxInterval != nil {
+					bop.MaxInterval = r.PerRetry.BackOff.MaxInterval
+					if bop.MaxInterval.Duration == 0 {
+						return nil, fmt.Errorf("maxInterval cannot be set to 0s")
+					}
+					if bop.BaseInterval != nil && bop.BaseInterval.Duration > bop.MaxInterval.Duration {
+						return nil, fmt.Errorf("maxInterval cannot be less than baseInterval")
+					}
+				}
+
 				pr.BackOff = bop
 				bpr = true
 			}
@@ -535,5 +547,5 @@ func buildRetry(r *egv1a1.Retry) *ir.Retry {
 		}
 	}
 
-	return rt
+	return rt, nil
 }
