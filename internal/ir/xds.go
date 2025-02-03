@@ -152,8 +152,8 @@ type Xds struct {
 // Equal implements the Comparable interface used by watchable.DeepEqual to skip unnecessary updates.
 func (x *Xds) Equal(y *Xds) bool {
 	// Deep copy to avoid modifying the original ordering.
-	x = x.DeepCopy()
-	x.sort()
+	t := x.DeepCopy()
+	t.sort()
 	y = y.DeepCopy()
 	y.sort()
 	return reflect.DeepEqual(x, y)
@@ -255,11 +255,8 @@ type CoreListenerDetails struct {
 	// Metadata is used to enrich envoy resource metadata with user and provider-specific information
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 	// IPFamily specifies the IP address family used by the Gateway for its listening ports.
-	IPFamily *IPFamily `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
+	IPFamily *egv1a1.IPFamily `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
 }
-
-// IPFamily specifies the IP address family used by the Gateway for its listening ports.
-type IPFamily = egv1a1.IPFamily
 
 func (l CoreListenerDetails) GetName() string {
 	return l.Name
@@ -1438,7 +1435,7 @@ type DestinationSetting struct {
 	AddressType *DestinationAddressType `json:"addressType,omitempty" yaml:"addressType,omitempty"`
 	// IPFamily specifies the IP family (IPv4 or IPv6) to use for this destination's endpoints.
 	// This is derived from the backend service and endpoint slice information.
-	IPFamily *IPFamily           `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
+	IPFamily *egv1a1.IPFamily    `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
 	TLS      *TLSUpstreamConfig  `json:"tls,omitempty" yaml:"tls,omitempty"`
 	Filters  *DestinationFilters `json:"filters,omitempty" yaml:"filters,omitempty"`
 }
