@@ -152,8 +152,8 @@ type Xds struct {
 // Equal implements the Comparable interface used by watchable.DeepEqual to skip unnecessary updates.
 func (x *Xds) Equal(y *Xds) bool {
 	// Deep copy to avoid modifying the original ordering.
-	t := x.DeepCopy()
-	t.sort()
+	x = x.DeepCopy()
+	x.sort()
 	y = y.DeepCopy()
 	y.sort()
 	return reflect.DeepEqual(x, y)
