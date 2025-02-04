@@ -1,3 +1,8 @@
+---
+title: "Adopters"
+description: "Steps to become an Envoy Gateway Adopter"
+---
+
 # Join the Envoy Gateway Adopters List
 
 [Envoy Gateway](https://gateway.envoyproxy.io) is a sub-project of [Envoy](https://www.envoyproxy.io),
