@@ -3,10 +3,17 @@ EXAMPLE_IMAGE_PREFIX ?= envoyproxy/gateway-
 EXAMPLE_TAG ?= latest
 
 sync-examples-tools:
+	@$(LOG_TARGET)
 	@cp -r tools/src/controller-gen examples/extension-server/tools/src
 
+kube-generate-examples: sync-examples-tools
+	@$(LOG_TARGET)
+	@pushd $(ROOT_DIR)/examples/extension-server; \
+		make generate; \
+		popd
+
 .PHONY: kube-build-examples-image
-kube-build-examples-image: sync-examples-tools
+kube-build-examples-image:
 	@$(LOG_TARGET)
 	@for app in $(EXAMPLE_APPS); do \
 		pushd $(ROOT_DIR)/examples/$$app; \
