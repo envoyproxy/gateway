@@ -10,6 +10,7 @@ security updates: |
 new features: |
   Added support for configuring maxUnavailable in KubernetesPodDisruptionBudgetSpec
   Added support for percentage-based request mirroring
+  Allow matchExpressions in TargetSelector
 
 bug fixes: |
 
