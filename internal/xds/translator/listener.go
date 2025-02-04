@@ -186,7 +186,7 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 func buildXdsTCPListener(
 	name, address string,
 	port uint32,
-	ipFamily *ir.IPFamily,
+	ipFamily *egv1a1.IPFamily,
 	keepalive *ir.TCPKeepalive,
 	connection *ir.ClientConnection,
 	accesslog *ir.AccessLog,
@@ -231,7 +231,7 @@ func buildPerConnectionBufferLimitBytes(connection *ir.ClientConnection) *wrappe
 }
 
 // buildXdsQuicListener creates a xds Listener resource for quic
-func buildXdsQuicListener(name, address string, port uint32, ipFamily *ir.IPFamily, accesslog *ir.AccessLog) (*listenerv3.Listener, error) {
+func buildXdsQuicListener(name, address string, port uint32, ipFamily *egv1a1.IPFamily, accesslog *ir.AccessLog) (*listenerv3.Listener, error) {
 	log, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeListener)
 	if err != nil {
 		return nil, err
