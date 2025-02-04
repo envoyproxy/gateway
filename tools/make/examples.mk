@@ -1,10 +1,12 @@
-
-EXAMPLE_APPS := grpc-ext-auth envoy-als grpc-ext-proc http-ext-auth preserve-case-backend static-file-server
+EXAMPLE_APPS := extension-server grpc-ext-auth envoy-als grpc-ext-proc http-ext-auth preserve-case-backend static-file-server
 EXAMPLE_IMAGE_PREFIX ?= envoyproxy/gateway-
 EXAMPLE_TAG ?= latest
 
+sync-examples-tools:
+	@cp -r tools/src/controller-gen examples/extension-server/tools/src
+
 .PHONY: kube-build-examples-image
-kube-build-examples-image:
+kube-build-examples-image: sync-examples-tools
 	@$(LOG_TARGET)
 	@for app in $(EXAMPLE_APPS); do \
 		pushd $(ROOT_DIR)/examples/$$app; \
