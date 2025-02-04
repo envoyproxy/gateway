@@ -2034,10 +2034,10 @@ const (
 // ReadyListener holds the configuration for ready listener.
 // +k8s:deepcopy-gen=true
 type ReadyListener struct {
-	IPFamily IPFamily `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
-	Address  string   `json:"address" yaml:"address"`
-	Port     uint32   `json:"port" yaml:"port"`
-	Path     string   `json:"path" yaml:"path"`
+	IPFamily egv1a1.IPFamily `json:"ipFamily" yaml:"ipFamily"`
+	Address  string          `json:"address" yaml:"address"`
+	Port     uint32          `json:"port" yaml:"port"`
+	Path     string          `json:"path" yaml:"path"`
 }
 
 // AccessLog holds the access logging configuration.
