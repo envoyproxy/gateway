@@ -103,8 +103,8 @@ kube-generate-client: $(tools/client-gen) kube-generate-register-gen ## Generate
 	  --clientset-name versioned \
 	  --input-base ${ROOT_PACKAGE} \
 	  --input "api/v1alpha1" \
-	  --output-dir $(ROOT_DIR)/pkg/clientset \
-	  --output-pkg ${ROOT_PACKAGE}/pkg/clientset \
+	  --output-dir $(ROOT_DIR)/pkg/client/clientset \
+	  --output-pkg ${ROOT_PACKAGE}/pkg/client/clientset \
 	  --go-header-file ${ROOT_DIR}/tools/boilerplate/boilerplate.go.txt
 
 
@@ -112,8 +112,8 @@ kube-generate-client: $(tools/client-gen) kube-generate-register-gen ## Generate
 kube-generate-listers: $(tools/lister-gen) kube-generate-client ## Generate lister code for the API group.
 	@$(LOG_TARGET)
 	$(tools/lister-gen) \
-	  --output-dir $(ROOT_DIR)/pkg/listers \
-	  --output-pkg ${ROOT_PACKAGE}/pkg/listers \
+	  --output-dir $(ROOT_DIR)/pkg/client/listers \
+	  --output-pkg ${ROOT_PACKAGE}/pkg/client/listers \
 	  --go-header-file ${ROOT_DIR}/tools/boilerplate/boilerplate.go.txt \
 	  ${ROOT_PACKAGE}/api/v1alpha1
 
@@ -121,10 +121,10 @@ kube-generate-listers: $(tools/lister-gen) kube-generate-client ## Generate list
 kube-generate-informers: $(tools/informer-gen) kube-generate-listers ## Generate informer code for the API group.
 	@$(LOG_TARGET)
 	$(tools/informer-gen) \
-	  --versioned-clientset-package ${ROOT_PACKAGE}/pkg/clientset/versioned \
-	  --listers-package ${ROOT_PACKAGE}/pkg/listers \
-	  --output-dir $(ROOT_DIR)/pkg/informers \
-	  --output-pkg ${ROOT_PACKAGE}/pkg/informers \
+	  --versioned-clientset-package ${ROOT_PACKAGE}/pkg/client/clientset/versioned \
+	  --listers-package ${ROOT_PACKAGE}/pkg/client/listers \
+	  --output-dir $(ROOT_DIR)/pkg/client/informers \
+	  --output-pkg ${ROOT_PACKAGE}/pkg/client/informers \
 	  --go-header-file ${ROOT_DIR}/tools/boilerplate/boilerplate.go.txt \
 	  ${ROOT_PACKAGE}/api/v1alpha1
 
