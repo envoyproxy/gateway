@@ -360,7 +360,7 @@ func buildHealthCheck(policy egv1a1.ClusterSettings) *ir.HealthCheck {
 	irhc := &ir.HealthCheck{}
 	irhc.Passive = buildPassiveHealthCheck(*policy.HealthCheck)
 	irhc.Active = buildActiveHealthCheck(*policy.HealthCheck)
-
+	irhc.PanicThreshold = policy.HealthCheck.PanicThreshold
 	return irhc
 }
 
