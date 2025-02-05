@@ -84,6 +84,46 @@ kube-test: manifests generate $(tools/setup-envtest) ## Run Kubernetes provider 
 	@$(LOG_TARGET)
 	KUBEBUILDER_ASSETS="$(shell $(tools/setup-envtest) use $(ENVTEST_K8S_VERSION) -p path)" go test --tags=integration,celvalidation ./... -coverprofile cover.out
 
+.PHONY: kube-generate-register-gen
+kube-generate-register-gen: $(tools/register-gen) ## Generate register code for the API group.
+	@$(LOG_TARGET)
+	$(tools/register-gen) \
+	  --output-file zz_generated.register.go \
+	  --go-header-file ${ROOT_DIR}/tools/boilerplate/boilerplate.go.txt \
+	  ${ROOT_PACKAGE}/api/v1alpha1
+
+.PHONY: kube-generate-client
+kube-generate-client: $(tools/client-gen) kube-generate-register-gen ## Generate client code for the API group.
+	@$(LOG_TARGET)
+	$(tools/client-gen) \
+	  --clientset-name versioned \
+	  --input-base ${ROOT_PACKAGE} \
+	  --input "api/v1alpha1" \
+	  --output-dir $(ROOT_DIR)/pkg/clientset \
+	  --output-pkg ${ROOT_PACKAGE}/pkg/clientset \
+	  --go-header-file ${ROOT_DIR}/tools/boilerplate/boilerplate.go.txt
+
+
+.PHONY: kube-generate-listers
+kube-generate-listers: $(tools/lister-gen) kube-generate-client ## Generate lister code for the API group.
+	@$(LOG_TARGET)
+	$(tools/lister-gen) \
+	  --output-dir $(ROOT_DIR)/pkg/listers \
+	  --output-pkg ${ROOT_PACKAGE}/pkg/listers \
+	  --go-header-file ${ROOT_DIR}/tools/boilerplate/boilerplate.go.txt \
+	  ${ROOT_PACKAGE}/api/v1alpha1
+
+.PHONY: kube-generate-informers
+kube-generate-informers: $(tools/informer-gen) kube-generate-listers ## Generate informer code for the API group.
+	@$(LOG_TARGET)
+	$(tools/informer-gen) \
+	  --versioned-clientset-package ${ROOT_PACKAGE}/pkg/clientset/versioned \
+	  --listers-package ${ROOT_PACKAGE}/pkg/listers \
+	  --output-dir $(ROOT_DIR)/pkg/informers \
+	  --output-pkg ${ROOT_PACKAGE}/pkg/informers \
+	  --go-header-file ${ROOT_DIR}/tools/boilerplate/boilerplate.go.txt \
+	  ${ROOT_PACKAGE}/api/v1alpha1
+
 ##@ Kubernetes Deployment
 
 ifndef ignore-not-found
