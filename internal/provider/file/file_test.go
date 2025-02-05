@@ -30,7 +30,7 @@ import (
 const (
 	resourcesUpdateTimeout = 1 * time.Minute
 	resourcesUpdateTick    = 1 * time.Second
-	healthzServerPort      = 8081
+	healthzServerPort      = 8082
 )
 
 type resourcesParam struct {
@@ -66,6 +66,7 @@ func newFileProviderConfig(paths []string) (*config.Server, error) {
 					Paths: paths,
 				},
 			},
+			HealthzServerPort: healthzServerPort,
 		},
 	}
 	return cfg, nil
@@ -83,7 +84,7 @@ func TestFileProvider(t *testing.T) {
 	cfg, err := newFileProviderConfig([]string{watchFilePath, watchDirPath})
 	require.NoError(t, err)
 	pResources := new(message.ProviderResources)
-	fp, err := New(cfg, pResources, healthzServerPort)
+	fp, err := New(cfg, pResources)
 	require.NoError(t, err)
 	// Start file provider.
 	go func() {

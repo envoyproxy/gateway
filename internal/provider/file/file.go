@@ -38,7 +38,7 @@ type Provider struct {
 	ready atomic.Bool
 }
 
-func New(svr *config.Server, resources *message.ProviderResources, healthzServerPort int) (*Provider, error) {
+func New(svr *config.Server, resources *message.ProviderResources) (*Provider, error) {
 	logger := svr.Logger.Logger
 	paths := sets.New[string]()
 	if svr.EnvoyGateway.Provider.Custom.Resource.File != nil {
@@ -50,7 +50,7 @@ func New(svr *config.Server, resources *message.ProviderResources, healthzServer
 		logger:            logger,
 		watcher:           filewatcher.NewWatcher(),
 		resourcesStore:    newResourcesStore(svr.EnvoyGateway.Gateway.ControllerName, resources, logger),
-		healthzServerPort: healthzServerPort,
+		healthzServerPort: svr.EnvoyGateway.Provider.Custom.HealthzServerPort,
 	}, nil
 }
 
@@ -70,7 +70,7 @@ func (p *Provider) Start(ctx context.Context) error {
 		}
 		return nil
 	}
-	go p.startHealthProbeServer(ctx, readyzChecker, p.healthzServerPort)
+	go p.startHealthProbeServer(ctx, readyzChecker)
 
 	initDirs, initFiles := path.ListDirsAndFiles(p.paths)
 	// Initially load resources from paths on host.
@@ -162,7 +162,7 @@ func (p *Provider) Start(ctx context.Context) error {
 	}
 }
 
-func (p *Provider) startHealthProbeServer(ctx context.Context, readyzChecker healthz.Checker, port int) {
+func (p *Provider) startHealthProbeServer(ctx context.Context, readyzChecker healthz.Checker) {
 	const (
 		readyzEndpoint  = "/readyz"
 		healthzEndpoint = "/healthz"
@@ -170,7 +170,7 @@ func (p *Provider) startHealthProbeServer(ctx context.Context, readyzChecker hea
 
 	mux := http.NewServeMux()
 	srv := &http.Server{
-		Addr:              fmt.Sprintf(":%d", port),
+		Addr:              fmt.Sprintf(":%d", p.healthzServerPort),
 		Handler:           mux,
 		MaxHeaderBytes:    1 << 20,
 		IdleTimeout:       90 * time.Second, // matches http.DefaultTransport keep-alive timeout

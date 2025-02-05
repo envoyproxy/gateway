@@ -94,7 +94,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			expect: false,
 		},
 		{
-			name: "custom provider with file provider and k8s infra with custom healthz probe port",
+			name: "custom provider with file provider with custom healthz probe port",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
 					Gateway: egv1a1.DefaultGateway(),
@@ -107,8 +107,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 									Paths: []string{"foo", "bar"},
 								},
 							},
+							HealthzServerPort: 1234,
 						},
-						HealthzServerPort: 1234,
 					},
 				},
 			},
