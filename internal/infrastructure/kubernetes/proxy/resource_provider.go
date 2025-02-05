@@ -449,11 +449,12 @@ func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, e
 	pdbSpec := policyv1.PodDisruptionBudgetSpec{
 		Selector: r.stableSelector(),
 	}
-	if podDisruptionBudgetConfig.MinAvailable != nil {
+	switch {
+	case podDisruptionBudgetConfig.MinAvailable != nil:
 		pdbSpec.MinAvailable = &intstr.IntOrString{IntVal: *podDisruptionBudgetConfig.MinAvailable}
-	} else if podDisruptionBudgetConfig.MaxUnavailable != nil {
+	case podDisruptionBudgetConfig.MaxUnavailable != nil:
 		pdbSpec.MaxUnavailable = &intstr.IntOrString{IntVal: *podDisruptionBudgetConfig.MaxUnavailable}
-	} else {
+	default:
 		pdbSpec.MinAvailable = &intstr.IntOrString{IntVal: 0}
 	}
 
