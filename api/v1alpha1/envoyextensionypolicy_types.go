@@ -15,6 +15,7 @@ const (
 	KindEnvoyExtensionPolicy = "EnvoyExtensionPolicy"
 )
 
+// +genclient
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:shortName=eep
 // +kubebuilder:subresource:status
@@ -75,8 +76,4 @@ type EnvoyExtensionPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []EnvoyExtensionPolicy `json:"items"`
-}
-
-func init() {
-	SchemeBuilder.Register(&EnvoyExtensionPolicy{}, &EnvoyExtensionPolicyList{})
 }

@@ -31,6 +31,7 @@ const (
 // Backend allows the user to configure the endpoints of a backend and
 // the behavior of the connection from Envoy Proxy to the backend.
 //
+// +genclient
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:categories=envoy-gateway,shortName=be
 // +kubebuilder:subresource:status
@@ -183,8 +184,4 @@ type BackendList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Backend `json:"items"`
-}
-
-func init() {
-	SchemeBuilder.Register(&Backend{}, &BackendList{})
 }

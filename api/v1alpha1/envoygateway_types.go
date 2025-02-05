@@ -26,8 +26,6 @@ const (
 	GatewayMetricsHost = "0.0.0.0"
 )
 
-// +kubebuilder:object:root=true
-
 // EnvoyGateway is the schema for the envoygateways API.
 type EnvoyGateway struct {
 	metav1.TypeMeta `json:",inline"`
@@ -607,8 +605,4 @@ type EnvoyGatewayAdminAddress struct {
 type ShutdownManager struct {
 	// Image specifies the ShutdownManager container image to be used, instead of the default image.
 	Image *string `json:"image,omitempty"`
-}
-
-func init() {
-	SchemeBuilder.Register(&EnvoyGateway{})
 }

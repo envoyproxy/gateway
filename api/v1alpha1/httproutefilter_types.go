@@ -14,6 +14,7 @@ const (
 	KindHTTPRouteFilter = "HTTPRouteFilter"
 )
 
+// +genclient
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:categories=envoy-gateway,shortName=hrf
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
@@ -147,8 +148,4 @@ type HTTPRouteFilterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []HTTPRouteFilter `json:"items"`
-}
-
-func init() {
-	SchemeBuilder.Register(&HTTPRouteFilter{}, &HTTPRouteFilterList{})
 }

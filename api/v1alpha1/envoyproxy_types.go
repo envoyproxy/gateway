@@ -15,6 +15,7 @@ const (
 	KindEnvoyProxy = "EnvoyProxy"
 )
 
+// +genclient
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:categories=envoy-gateway,shortName=eproxy
 // +kubebuilder:subresource:status
@@ -454,7 +455,3 @@ const (
 	// for incoming client traffic, enabling support for both IP protocol versions.
 	DualStack IPFamily = "DualStack"
 )
-
-func init() {
-	SchemeBuilder.Register(&EnvoyProxy{}, &EnvoyProxyList{})
-}
