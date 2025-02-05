@@ -701,7 +701,7 @@ type HTTPRoute struct {
 	// Redirections to be returned for this route. Takes precedence over Destinations.
 	Redirect *Redirect `json:"redirect,omitempty" yaml:"redirect,omitempty"`
 	// Destination that requests to this HTTPRoute will be mirrored to
-	Mirrors []*RouteDestination `json:"mirrors,omitempty" yaml:"mirrors,omitempty"`
+	Mirrors []*MirrorPolicy `json:"mirrors,omitempty" yaml:"mirrors,omitempty"`
 	// Destination associated with this matched route.
 	Destination *RouteDestination `json:"destination,omitempty" yaml:"destination,omitempty"`
 	// Rewrite to be changed for this route.
@@ -1266,6 +1266,19 @@ type FaultInjectionAbort struct {
 	Percentage *float32 `json:"percentage,omitempty" yaml:"percentage,omitempty"`
 }
 
+// MirrorPolicy specifies a destination to mirror traffic in addition
+// to the original destination
+//
+// +kubebuilder:object:generate=true
+type MirrorPolicy struct {
+	// Destination defines the target where the request will be mirrored.
+	Destination *RouteDestination
+	// Percentage of the traffic to be mirrored by the `destination` field.
+	// When absent, all the traffic (100%) will be mirrored.
+	// Values are in the range of [0.0, 100.0].
+	Percentage *float32
+}
+
 // Validate the fields within the HTTPRoute structure
 func (h *HTTPRoute) Validate() error {
 	var errs error
@@ -1312,7 +1325,8 @@ func (h *HTTPRoute) Validate() error {
 	}
 	if h.Mirrors != nil {
 		for _, mirror := range h.Mirrors {
-			if err := mirror.Validate(); err != nil {
+			// TODO(liorlieberman) add validate on mirrorPolicy?
+			if err := mirror.Destination.Validate(); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
@@ -1440,7 +1454,7 @@ type DestinationSetting struct {
 	Filters  *DestinationFilters `json:"filters,omitempty" yaml:"filters,omitempty"`
 }
 
-// Validate the fields within the RouteDestination structure
+// Validate the fields within the DestinationSetting structure
 func (d *DestinationSetting) Validate() error {
 	var errs error
 	for _, ep := range d.Endpoints {

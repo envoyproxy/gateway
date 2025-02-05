@@ -180,11 +180,20 @@ func (*fault) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	return nil
 }
 
-// translatePercentToFractionalPercent translates a v1alpha3 Percent instance
-// to an envoy.type.FractionalPercent instance.
+// TODO(liorlieberman) Below 2 functions should probably go somewhere else?
+// translatePercentToFractionalPercent translates a float to an envoy.type.FractionalPercent instance.
 func translatePercentToFractionalPercent(p *float32) *xdstype.FractionalPercent {
 	return &xdstype.FractionalPercent{
 		Numerator:   uint32(*p * 10000),
 		Denominator: xdstype.FractionalPercent_MILLION,
+	}
+}
+
+// translateIntegerToFractionalPercent translates an int32 instance to an
+// envoy.type.FractionalPercent instance.
+func translateIntegerToFractionalPercent(p int32) *xdstype.FractionalPercent {
+	return &xdstype.FractionalPercent{
+		Numerator:   uint32(p),
+		Denominator: xdstype.FractionalPercent_HUNDRED,
 	}
 }

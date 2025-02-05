@@ -57,7 +57,7 @@ type HTTPFilterIR struct {
 	AddResponseHeaders    []ir.AddHeader
 	RemoveResponseHeaders []string
 
-	Mirrors []*ir.RouteDestination
+	Mirrors []*ir.MirrorPolicy
 
 	ExtensionRefs []*ir.UnstructuredRef
 }
@@ -1003,11 +1003,19 @@ func (t *Translator) processRequestMirrorFilter(
 		return err
 	}
 
-	newMirror := &ir.RouteDestination{
+	routeDst := &ir.RouteDestination{
 		Name:     fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx),
 		Settings: []*ir.DestinationSetting{ds},
 	}
-	filterContext.Mirrors = append(filterContext.Mirrors, newMirror)
+
+	var percent *float32
+	if f := mirrorFilter.Fraction; f != nil {
+		percent = ptr.To(100 * float32(f.Numerator) / float32(OrDefault(f.Denominator, int32(100))))
+	} else if p := mirrorFilter.Percent; p != nil {
+		percent = ptr.To(float32(*p))
+	}
+
+	filterContext.Mirrors = append(filterContext.Mirrors, &ir.MirrorPolicy{Destination: routeDst, Percentage: percent})
 	return nil
 }
 
@@ -1064,4 +1072,13 @@ func (t *Translator) processInvalidHTTPFilter(filterType string, filterContext *
 	filterContext.DirectResponse = &ir.CustomResponse{
 		StatusCode: ptr.To(uint32(500)),
 	}
+}
+
+// TODO (liorlieberman) is there a better home for this func?
+// OrDefault returns *t if its non-nil, or else def.
+func OrDefault[T any](t *T, def T) T {
+	if t != nil {
+		return *t
+	}
+	return def
 }
