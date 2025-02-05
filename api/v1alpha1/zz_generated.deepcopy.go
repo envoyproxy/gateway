@@ -3710,6 +3710,11 @@ func (in *KubernetesPodDisruptionBudgetSpec) DeepCopyInto(out *KubernetesPodDisr
 		*out = new(int32)
 		**out = **in
 	}
+	if in.MaxUnavailable != nil {
+		in, out := &in.MaxUnavailable, &out.MaxUnavailable
+		*out = new(int32)
+		**out = **in
+	}
 	if in.Patch != nil {
 		in, out := &in.Patch, &out.Patch
 		*out = new(KubernetesPatchSpec)

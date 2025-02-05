@@ -1349,6 +1349,13 @@ func TestPDB(t *testing.T) {
 				},
 			},
 		},
+		{
+			caseName: "max-unavailable",
+			infra:    newTestInfra(),
+			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
+				MaxUnavailable: ptr.To(int32(1)),
+			},
+		},
 	}
 
 	for _, tc := range cases {

@@ -2657,7 +2657,8 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `minAvailable` | _integer_ |  false  |  | MinAvailable specifies the minimum number of pods that must be available at all times during voluntary disruptions,<br />such as node drains or updates. This setting ensures that your envoy proxy maintains a certain level of availability<br />and resilience during maintenance operations. |
+| `minAvailable` | _integer_ |  false  |  | MinAvailable specifies the minimum number of pods that must be available at all times during voluntary disruptions,<br />such as node drains or updates. This setting ensures that your envoy proxy maintains a certain level of availability<br />and resilience during maintenance operations. Cannot be combined with maxUnavailable. |
+| `maxUnvailable` | _integer_ |  false  |  | MaxUnAvailable specifies the maximum number of pods that can be unavailable at all times during voluntary disruptions,<br />such as node drains or updates. This setting ensures that your envoy proxy maintains a certain level of availability<br />and resilience during maintenance operations. Cannot be combined with minAvailable. |
 | `patch` | _[KubernetesPatchSpec](#kubernetespatchspec)_ |  false  |  | Patch defines how to perform the patch operation to the PodDisruptionBudget |
 
 

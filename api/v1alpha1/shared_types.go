@@ -403,9 +403,15 @@ const (
 type KubernetesPodDisruptionBudgetSpec struct {
 	// MinAvailable specifies the minimum number of pods that must be available at all times during voluntary disruptions,
 	// such as node drains or updates. This setting ensures that your envoy proxy maintains a certain level of availability
-	// and resilience during maintenance operations.
+	// and resilience during maintenance operations. Cannot be combined with maxUnavailable.
 	// +optional
 	MinAvailable *int32 `json:"minAvailable,omitempty"`
+
+	// MaxUnAvailable specifies the maximum number of pods that can be unavailable at all times during voluntary disruptions,
+	// such as node drains or updates. This setting ensures that your envoy proxy maintains a certain level of availability
+	// and resilience during maintenance operations. Cannot be combined with minAvailable.
+	// +optional
+	MaxUnavailable *int32 `json:"maxUnvailable,omitempty"`
 
 	// Patch defines how to perform the patch operation to the PodDisruptionBudget
 	//

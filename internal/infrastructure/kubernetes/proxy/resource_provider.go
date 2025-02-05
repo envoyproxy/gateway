@@ -432,7 +432,7 @@ func (r *ResourceRender) PodDisruptionBudgetSpec() (*egv1a1.KubernetesPodDisrupt
 	}
 
 	podDisruptionBudget := provider.GetEnvoyProxyKubeProvider().EnvoyPDB
-	if podDisruptionBudget == nil || podDisruptionBudget.MinAvailable == nil {
+	if podDisruptionBudget == nil || podDisruptionBudget.MinAvailable == nil && podDisruptionBudget.MaxUnavailable == nil {
 		return nil, nil
 	}
 
@@ -441,9 +441,20 @@ func (r *ResourceRender) PodDisruptionBudgetSpec() (*egv1a1.KubernetesPodDisrupt
 
 func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, error) {
 	podDisruptionBudgetConfig, err := r.PodDisruptionBudgetSpec()
-	// If podDisruptionBudget config is nil or MinAvailable is nil, ignore PodDisruptionBudget.
+	// If podDisruptionBudget config is nil, ignore PodDisruptionBudget.
 	if podDisruptionBudgetConfig == nil {
 		return nil, err
+	}
+
+	pdbSpec := policyv1.PodDisruptionBudgetSpec{
+		Selector: r.stableSelector(),
+	}
+	if podDisruptionBudgetConfig.MinAvailable != nil {
+		pdbSpec.MinAvailable = &intstr.IntOrString{IntVal: *podDisruptionBudgetConfig.MinAvailable}
+	} else if podDisruptionBudgetConfig.MaxUnavailable != nil {
+		pdbSpec.MaxUnavailable = &intstr.IntOrString{IntVal: *podDisruptionBudgetConfig.MaxUnavailable}
+	} else {
+		pdbSpec.MinAvailable = &intstr.IntOrString{IntVal: 0}
 	}
 
 	podDisruptionBudget := &policyv1.PodDisruptionBudget{
@@ -455,10 +466,7 @@ func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, e
 			APIVersion: "policy/v1",
 			Kind:       "PodDisruptionBudget",
 		},
-		Spec: policyv1.PodDisruptionBudgetSpec{
-			MinAvailable: &intstr.IntOrString{IntVal: ptr.Deref(podDisruptionBudgetConfig.MinAvailable, 0)},
-			Selector:     r.stableSelector(),
-		},
+		Spec: pdbSpec,
 	}
 
 	// apply merge patch to PodDisruptionBudget
