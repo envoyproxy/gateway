@@ -26,7 +26,12 @@ const (
 	GatewayMetricsHost = "0.0.0.0"
 )
 
+// Note: EnvoyGateway is not a CRD, it's a schema for a configuration in a config map.
+// Hence there is no Go client for this resource.
+
 // EnvoyGateway is the schema for the envoygateways API.
+//
+// +kubebuilder:object:root=true
 type EnvoyGateway struct {
 	metav1.TypeMeta `json:",inline"`
 
