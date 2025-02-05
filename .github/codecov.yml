@@ -15,3 +15,6 @@ ignore:
   - "test"
   - "**/*.pb.go"
   - "**/zz_generated.*.go"
+  - "pkg/clientset"
+  - "pkg/informers"
+  - "pkg/listers"
