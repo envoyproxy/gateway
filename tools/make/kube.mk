@@ -76,10 +76,9 @@ generate-gwapi-manifests: ## Generate GWAPI manifests and make it consistent wit
 .PHONY: kube-generate
 kube-generate: kube-generate-informers
 
-## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 # Note that the paths can't just be "./..." with the header file, or the tool will panic on run. Sorry.
 .PHONY: kube-generate-deep-copy
-kube-generate-deep-copy: $(tools/controller-gen) 
+kube-generate-deep-copy: $(tools/controller-gen) ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	@$(LOG_TARGET)
 	$(tools/controller-gen) $(CONTROLLERGEN_OBJECT_FLAGS) paths="{$(ROOT_DIR)/api/...,$(ROOT_DIR)/internal/ir/...,$(ROOT_DIR)/internal/gatewayapi/...}"
 
