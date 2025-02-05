@@ -6,6 +6,14 @@ tools/controller-gen     = $(tools.bindir)/controller-gen
 $(tools.bindir)/%: $(tools.srcdir)/%/pin.go $(tools.srcdir)/%/go.mod
 	cd $(<D) && GOOS= GOARCH= go build -o $(abspath $@) $$(sed -En 's,^import _ "(.*)".*,\1,p' pin.go)
 
+IMAGE_PREFIX ?= envoyproxy/gateway-
+APP_NAME ?= extension-server
+TAG ?= latest
+
+.PHONY: docker-buildx
+docker-buildx:
+	docker buildx build -f tools/docker/extension-server/Dockerfile . -t $(IMAGE_PREFIX)$(APP_NAME):$(TAG) --build-arg GO_LDFLAGS="$(GO_LDFLAGS)" --load
+
 build: generate manifests
 	mkdir -p bin
 	CGO_ENABLED=0 go build -o bin/extension-server ./cmd/extension-server
