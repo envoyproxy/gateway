@@ -12,21 +12,35 @@ $(tools.bindir)/%: $(tools.srcdir)/%.sh
 # `go get`-able things
 # ====================
 #
-tools/controller-gen     = $(tools.bindir)/controller-gen
-tools/golangci-lint      = $(tools.bindir)/golangci-lint
-tools/gci                = $(tools.bindir)/gci
-tools/kustomize          = $(tools.bindir)/kustomize
-tools/kind               = $(tools.bindir)/kind
-tools/setup-envtest      = $(tools.bindir)/setup-envtest
-tools/crd-ref-docs       = $(tools.bindir)/crd-ref-docs
-tools/buf                = $(tools.bindir)/buf
-tools/protoc-gen-go      = $(tools.bindir)/protoc-gen-go
-tools/protoc-gen-go-grpc = $(tools.bindir)/protoc-gen-go-grpc
-tools/helm-docs          = $(tools.bindir)/helm-docs
-tools/jsonnet            = $(tools.bindir)/jsonnet
-tools/jb                 = $(tools.bindir)/jb
+tools/applyconfiguration-gen = $(tools.bindir)/applyconfiguration-gen
+tools/buf                    = $(tools.bindir)/buf
+tools/client-gen             = $(tools.bindir)/client-gen
+tools/controller-gen         = $(tools.bindir)/controller-gen
+tools/crd-ref-docs           = $(tools.bindir)/crd-ref-docs
+tools/gci                    = $(tools.bindir)/gci
+tools/golangci-lint          = $(tools.bindir)/golangci-lint
+tools/helm-docs              = $(tools.bindir)/helm-docs
+tools/informer-gen           = $(tools.bindir)/informer-gen
+tools/jb                     = $(tools.bindir)/jb
+tools/jsonnet                = $(tools.bindir)/jsonnet
+tools/kind                   = $(tools.bindir)/kind
+tools/kustomize              = $(tools.bindir)/kustomize
+tools/lister-gen             = $(tools.bindir)/lister-gen
+tools/openapi-gen            = $(tools.bindir)/openapi-gen
+tools/protoc-gen-go          = $(tools.bindir)/protoc-gen-go
+tools/protoc-gen-go-grpc     = $(tools.bindir)/protoc-gen-go-grpc
+tools/register-gen           = $(tools.bindir)/register-gen
+# Override register-gen target with custom behavior
+tools/setup-envtest          = $(tools.bindir)/setup-envtest
 $(tools.bindir)/%: $(tools.srcdir)/%/pin.go $(tools.srcdir)/%/go.mod
 	cd $(<D) && GOOS= GOARCH= go build -o $(abspath $@) $$(sed -En 's,^import _ "(.*)".*,\1,p' pin.go)
+
+$(tools.bindir)/register-gen: $(tools.srcdir)/register-gen/pin.go $(tools.srcdir)/register-gen/go.mod $(tools.srcdir)/register-gen/fix.patch
+	cd $(<D) && \
+		go mod vendor && \
+		patch -p1 < fix.patch && \
+		GOOS= GOARCH= go build -o $(abspath $@) $$(sed -En 's,^import _ "(.*)".*,\1,p' pin.go) && \
+		rm -rf vendor
 
 
 # `pip install`-able things
