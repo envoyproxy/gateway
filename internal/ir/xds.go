@@ -280,10 +280,11 @@ func (l CoreListenerDetails) GetExtensionRefs() []*UnstructuredRef {
 // +k8s:deepcopy-gen=true
 type HTTPListener struct {
 	CoreListenerDetails `json:",inline" yaml:",inline"`
+	// GatewayName is the name of the parent Gateway that owns this listener.
+	// This field is automatically populated during IR generation.
+	GatewayName string `json:"gatewayName" yaml:"gatewayName"`
 	// Hostnames (Host/Authority header value) with which the service can be expected to be accessed by clients.
 	// This field is required. Wildcard hosts are supported in the suffix or prefix form.
-	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-virtualhost
-	// for more info.
 	Hostnames []string `json:"hostnames" yaml:"hostnames"`
 	// Tls configuration. If omitted, the gateway will expose a plain text HTTP server.
 	TLS *TLSConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
@@ -1959,10 +1960,17 @@ type RateLimit struct {
 // GlobalRateLimit holds the global rate limiting configuration.
 // +k8s:deepcopy-gen=true
 type GlobalRateLimit struct {
-	// TODO zhaohuabing: add default values for Global rate limiting.
-
 	// Rules for rate limiting.
 	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty"`
+
+	// Shared determines whether this rate limit rule applies globally across the gateway.
+	// If set to true, the rule is treated as a common bucket and is shared across all routes under the gateway.
+	// Must have targetRef set to Gateway
+	// Default: false.
+	//
+	// +optional
+	// +kubebuilder:default=false
+	Shared *bool `json:"shared,omitempty" yaml:"shared,omitempty"`
 }
 
 // LocalRateLimit holds the local rate limiting configuration.

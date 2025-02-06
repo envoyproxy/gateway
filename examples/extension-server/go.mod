@@ -5,7 +5,7 @@ go 1.23.6
 require (
 	github.com/envoyproxy/gateway v1.0.2
 	github.com/envoyproxy/go-control-plane v0.13.4
-	github.com/envoyproxy/go-control-plane/envoy v1.32.3
+	github.com/envoyproxy/go-control-plane/envoy v1.32.4
 	github.com/urfave/cli/v2 v2.27.5
 	google.golang.org/grpc v1.70.0
 	google.golang.org/protobuf v1.36.5
@@ -18,7 +18,7 @@ require (
 	cel.dev/expr v0.19.0 // indirect
 	github.com/cncf/xds/go v0.0.0-20240905190251-b4127c9b8d78 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.6 // indirect
-	github.com/envoyproxy/protoc-gen-validate v1.1.0 // indirect
+	github.com/envoyproxy/protoc-gen-validate v1.2.1 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
