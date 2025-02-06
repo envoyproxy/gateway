@@ -326,7 +326,6 @@ xdsIR:
                 limit:
                   requests: 10
                   unit: Hour
-            shared: true
   envoy-gateway/gateway-2:
     accessLog:
       text:

@@ -719,7 +719,6 @@ func (t *Translator) buildGlobalRateLimit(policy *egv1a1.BackendTrafficPolicy) (
 		Global: &ir.GlobalRateLimit{
 			Rules: make([]*ir.RateLimitRule, len(global.Rules)),
 		},
-		Shared: policy.Spec.RateLimit.Shared,
 	}
 
 	irRules := rateLimit.Global.Rules
