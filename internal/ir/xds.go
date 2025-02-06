@@ -1272,11 +1272,11 @@ type FaultInjectionAbort struct {
 // +kubebuilder:object:generate=true
 type MirrorPolicy struct {
 	// Destination defines the target where the request will be mirrored.
-	Destination *RouteDestination
+	Destination *RouteDestination `json:"destination" yaml:"destination"`
 	// Percentage of the traffic to be mirrored by the `destination` field.
 	// When absent, all the traffic (100%) will be mirrored.
 	// Values are in the range of [0.0, 100.0].
-	Percentage *float32
+	Percentage *float32 `json:"percentage,omitempty" yaml:"percentage,omitempty"`
 }
 
 // Validate the fields within the HTTPRoute structure

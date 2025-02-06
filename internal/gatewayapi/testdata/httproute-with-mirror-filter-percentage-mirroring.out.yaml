@@ -59,29 +59,21 @@ httpRoutes:
       - name: service-1
         port: 8080
       filters:
-      - requestHeaderModifier:
-          add:
-          - name: X-Header-Add
-            value: header-val-1
-          - name: X-Header-Add-Append
-            value: header-val-2
-          remove:
-          - X-Header-Remove
-          set:
-          - name: X-Header-Set
-            value: set-overwrites-values
-        type: RequestHeaderModifier
       - requestMirror:
           backendRef:
             kind: Service
             name: service-1
             port: 8080
+          percent: 20
         type: RequestMirror
       - requestMirror:
           backendRef:
             kind: Service
             name: mirror-service
             port: 8080
+          fraction:
+            numerator: 25
+            denominator: 50
         type: RequestMirror
       matches:
       - path:
@@ -141,20 +133,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - addRequestHeaders:
-        - append: true
-          name: X-Header-Add
-          value:
-          - header-val-1
-        - append: true
-          name: X-Header-Add-Append
-          value:
-          - header-val-2
-        - append: false
-          name: X-Header-Set
-          value:
-          - set-overwrites-values
-        destination:
+      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -171,7 +150,7 @@ xdsIR:
           namespace: default
         mirrors:
         - destination:
-            name: httproute/default/httproute-1/rule/0-mirror-1
+            name: httproute/default/httproute-1/rule/0-mirror-0
             settings:
             - addressType: IP
               endpoints:
@@ -179,8 +158,9 @@ xdsIR:
                 port: 8080
               protocol: HTTP
               weight: 1
+          percentage: 20
         - destination:
-            name: httproute/default/httproute-1/rule/0-mirror-2
+            name: httproute/default/httproute-1/rule/0-mirror-1
             settings:
             - addressType: IP
               endpoints:
@@ -188,10 +168,9 @@ xdsIR:
                 port: 8080
               protocol: HTTP
               weight: 1
+          percentage: 50
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
           prefix: /
-        removeRequestHeaders:
-        - X-Header-Remove

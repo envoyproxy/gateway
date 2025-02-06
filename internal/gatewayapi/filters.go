@@ -1010,7 +1010,7 @@ func (t *Translator) processRequestMirrorFilter(
 
 	var percent *float32
 	if f := mirrorFilter.Fraction; f != nil {
-		percent = ptr.To(100 * float32(f.Numerator) / float32(OrDefault(f.Denominator, int32(100))))
+		percent = ptr.To(100 * float32(f.Numerator) / float32(ptr.Deref(f.Denominator, int32(100))))
 	} else if p := mirrorFilter.Percent; p != nil {
 		percent = ptr.To(float32(*p))
 	}
@@ -1072,13 +1072,4 @@ func (t *Translator) processInvalidHTTPFilter(filterType string, filterContext *
 	filterContext.DirectResponse = &ir.CustomResponse{
 		StatusCode: ptr.To(uint32(500)),
 	}
-}
-
-// TODO (liorlieberman) is there a better home for this func?
-// OrDefault returns *t if its non-nil, or else def.
-func OrDefault[T any](t *T, def T) T {
-	if t != nil {
-		return *t
-	}
-	return def
 }
