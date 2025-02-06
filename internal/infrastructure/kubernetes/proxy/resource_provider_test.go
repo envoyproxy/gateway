@@ -1371,6 +1371,18 @@ func TestPDB(t *testing.T) {
 				MinAvailable: ptr.To(intstr.IntOrString{Type: 1, StrVal: "20%"}),
 			},
 		},
+		{
+			caseName: "patch-pdb-no-minmax",
+			infra:    newTestInfra(),
+			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
+				Patch: &egv1a1.KubernetesPatchSpec{
+					Type: ptr.To(egv1a1.StrategicMerge),
+					Value: apiextensionsv1.JSON{
+						Raw: []byte("{\"metadata\":{\"name\":\"foo\"}, \"spec\": {\"minAvailable\": 1, \"selector\": {\"matchLabels\": {\"app\": \"bar\"}}}}"),
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range cases {

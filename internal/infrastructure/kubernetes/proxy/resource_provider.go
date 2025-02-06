@@ -432,7 +432,7 @@ func (r *ResourceRender) PodDisruptionBudgetSpec() (*egv1a1.KubernetesPodDisrupt
 	}
 
 	podDisruptionBudget := provider.GetEnvoyProxyKubeProvider().EnvoyPDB
-	if podDisruptionBudget == nil || podDisruptionBudget.MinAvailable == nil && podDisruptionBudget.MaxUnavailable == nil {
+	if podDisruptionBudget == nil || podDisruptionBudget.MinAvailable == nil && podDisruptionBudget.MaxUnavailable == nil && podDisruptionBudget.Patch == nil {
 		return nil, nil
 	}
 
