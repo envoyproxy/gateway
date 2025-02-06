@@ -1147,6 +1147,14 @@ spec:
                         - message: response cost is not supported for Local Rate Limits
                           rule: self.all(foo, !has(foo.cost) || !has(foo.cost.response))
                     type: object
+                  shared:
+                    default: false
+                    description: |-
+                      Shared determines whether this rate limit rule applies globally across the gateway.
+                      If set to true, the rule is treated as a common bucket and is shared across all routes under the gateway.
+                      Must have targetRef set to Gateway
+                      Default: false.
+                    type: boolean
                   type:
                     description: |-
                       Type decides the scope for the RateLimits.

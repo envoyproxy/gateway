@@ -309,6 +309,12 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 		err, errs error
 	)
 
+	// **Validation: Shared rate limits can only be applied to Gateways**
+	if policy.Spec.RateLimit != nil && policy.Spec.RateLimit.Shared {
+		return fmt.Errorf("rateLimit.Shared=true is only allowed for Gateway targetRefs, not HTTPRoute: policy=%s/%s",
+			policy.Namespace, policy.Name)
+	}
+
 	// Build IR
 	if policy.Spec.RateLimit != nil {
 		if rl, err = t.buildRateLimit(policy); err != nil {
@@ -713,6 +719,7 @@ func (t *Translator) buildGlobalRateLimit(policy *egv1a1.BackendTrafficPolicy) (
 		Global: &ir.GlobalRateLimit{
 			Rules: make([]*ir.RateLimitRule, len(global.Rules)),
 		},
+		Shared: policy.Spec.RateLimit.Shared,
 	}
 
 	irRules := rateLimit.Global.Rules
