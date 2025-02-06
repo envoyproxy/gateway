@@ -49,5 +49,5 @@ httpRoutes:
             name: mirror-service
             port: 8080
           fraction:
-            numerator: 25
             denominator: 50
+            numerator: 25

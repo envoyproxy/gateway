@@ -1325,7 +1325,6 @@ func (h *HTTPRoute) Validate() error {
 	}
 	if h.Mirrors != nil {
 		for _, mirror := range h.Mirrors {
-			// TODO(liorlieberman) add validate on mirrorPolicy?
 			if err := mirror.Destination.Validate(); err != nil {
 				errs = errors.Join(errs, err)
 			}
