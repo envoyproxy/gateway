@@ -9,16 +9,17 @@ package suite
 
 import (
 	"context"
-	"github.com/envoyproxy/gateway/test/utils/kubernetes"
 	"io/fs"
-	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
 	"testing"
 	"time"
 
-	opt "github.com/envoyproxy/gateway/internal/cmd/options"
-	kube "github.com/envoyproxy/gateway/internal/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/conformance/utils/config"
+	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
+
+	opt "github.com/envoyproxy/gateway/internal/cmd/options"
+	kube "github.com/envoyproxy/gateway/internal/kubernetes"
+	"github.com/envoyproxy/gateway/test/utils/kubernetes"
 )
 
 const (

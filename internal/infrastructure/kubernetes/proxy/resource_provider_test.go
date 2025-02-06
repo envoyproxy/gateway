@@ -8,7 +8,6 @@ package proxy
 import (
 	"flag"
 	"fmt"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"os"
 	"sort"
 	"testing"
@@ -23,6 +22,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
