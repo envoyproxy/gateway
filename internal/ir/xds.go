@@ -1094,6 +1094,11 @@ type OIDC struct {
 
 	// CookieDomain sets the domain of the cookies set by the oauth filter.
 	CookieDomain *string `json:"cookieDomain,omitempty"`
+
+	// Skips OIDC authentication when the request contains any header that will be extracted by the JWT
+	// filter, normally "Authorization: Bearer ...". This is typically used for non-browser clients that
+	// may not be able to handle OIDC redirects and wish to directly supply a token instead.
+	PassThroughAuthHeader bool `json:"passThroughAuthHeader,omitempty"`
 }
 
 // OIDCProvider defines the schema for the OIDC Provider.

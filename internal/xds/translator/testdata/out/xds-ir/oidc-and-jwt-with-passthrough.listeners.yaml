@@ -1,0 +1,161 @@
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - disabled: true
+          name: envoy.filters.http.oauth2/securitypolicy/envoy-gateway/security-policy-1
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.oauth2.v3.OAuth2
+            config:
+              authScopes:
+              - openid
+              authType: BASIC_AUTH
+              authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
+              credentials:
+                clientId: client.oauth.foo.com
+                cookieNames:
+                  bearerToken: AccessToken-b0a1b740
+                  idToken: IdToken-b0a1b740
+                  oauthExpires: OauthExpires-b0a1b740
+                  oauthHmac: OauthHMAC-b0a1b740
+                  oauthNonce: OauthNonce-b0a1b740
+                  refreshToken: RefreshToken-b0a1b740
+                hmacSecret:
+                  name: oauth2/hmac_secret/securitypolicy/envoy-gateway/security-policy-1
+                  sdsConfig:
+                    ads: {}
+                    resourceApiVersion: V3
+                tokenSecret:
+                  name: oauth2/client_secret/securitypolicy/envoy-gateway/security-policy-1
+                  sdsConfig:
+                    ads: {}
+                    resourceApiVersion: V3
+              passThroughMatcher:
+              - name: Authorization
+                stringMatch:
+                  prefix: 'Bearer '
+              - name: MyHeaderPrefixed
+                stringMatch:
+                  prefix: MyPrefix
+              - name: MyHeaderNoPrefix
+              preserveAuthorizationHeader: true
+              redirectPathMatcher:
+                path:
+                  exact: /oauth2/callback
+              redirectUri: https://www.example.com/oauth2/callback
+              signoutPath:
+                path:
+                  exact: /logout
+              tokenEndpoint:
+                cluster: oauth_foo_com_443
+                timeout: 10s
+                uri: https://oauth.foo.com/token
+              useRefreshToken: false
+        - name: envoy.filters.http.jwt_authn
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
+            providers:
+              httproute/default/httproute-1/rule/0/match/0/www_example_com/example1:
+                forward: true
+                issuer: https://oauth.foo.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scope
+                payloadInMetadata: example1
+                remoteJwks:
+                  asyncFetch: {}
+                  cacheDuration: 300s
+                  httpUri:
+                    cluster: oauth_foo_com_443
+                    timeout: 10s
+                    uri: https://oauth.foo.com/jwt/public-key/jwks.json
+              httproute/default/httproute-1/rule/0/match/0/www_example_com/example2:
+                forward: true
+                fromHeaders:
+                - name: MyHeaderPrefixed
+                  valuePrefix: MyPrefix
+                - name: MyHeaderNoPrefix
+                issuer: https://oauth.foo.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scope
+                payloadInMetadata: example2
+                remoteJwks:
+                  asyncFetch: {}
+                  cacheDuration: 300s
+                  httpUri:
+                    cluster: oauth_foo_com_443
+                    timeout: 10s
+                    uri: https://oauth.foo.com/jwt/public-key/jwks.json
+              httproute/default/httproute-1/rule/0/match/0/www_example_com/example3:
+                forward: true
+                fromCookies:
+                - Cookie1
+                - Cookie1
+                issuer: https://oauth.foo.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scope
+                payloadInMetadata: example3
+                remoteJwks:
+                  asyncFetch: {}
+                  cacheDuration: 300s
+                  httpUri:
+                    cluster: oauth_foo_com_443
+                    timeout: 10s
+                    uri: https://oauth.foo.com/jwt/public-key/jwks.json
+              httproute/default/httproute-1/rule/0/match/0/www_example_com/example4:
+                forward: true
+                fromParams:
+                - Param1
+                - Param1
+                issuer: https://oauth.foo.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scope
+                payloadInMetadata: example4
+                remoteJwks:
+                  asyncFetch: {}
+                  cacheDuration: 300s
+                  httpUri:
+                    cluster: oauth_foo_com_443
+                    timeout: 10s
+                    uri: https://oauth.foo.com/jwt/public-key/jwks.json
+            requirementMap:
+              httproute/default/httproute-1/rule/0/match/0/www_example_com:
+                requiresAny:
+                  requirements:
+                  - providerName: httproute/default/httproute-1/rule/0/match/0/www_example_com/example1
+                  - providerName: httproute/default/httproute-1/rule/0/match/0/www_example_com/example2
+                  - providerName: httproute/default/httproute-1/rule/0/match/0/www_example_com/example3
+                  - providerName: httproute/default/httproute-1/rule/0/match/0/www_example_com/example4
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: envoy-gateway/gateway-1/http
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10080
+        useRemoteAddress: true
+    name: envoy-gateway/gateway-1/http
+  name: envoy-gateway/gateway-1/http
+  perConnectionBufferLimitBytes: 32768
