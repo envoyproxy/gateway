@@ -1,6 +1,6 @@
 module github.com/envoyproxy/gateway
 
-go 1.23.3
+go 1.23.6
 
 replace github.com/imdario/mergo => github.com/imdario/mergo v0.3.16
 
