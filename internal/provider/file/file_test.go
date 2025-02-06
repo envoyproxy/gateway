@@ -30,8 +30,9 @@ import (
 const (
 	resourcesUpdateTimeout = 1 * time.Minute
 	resourcesUpdateTick    = 1 * time.Second
-	healthzServerPort      = 8082
 )
+
+var healthzServerPort = 8082
 
 type resourcesParam struct {
 	GatewayClassName    string
@@ -66,7 +67,7 @@ func newFileProviderConfig(paths []string) (*config.Server, error) {
 					Paths: paths,
 				},
 			},
-			HealthzServerPort: healthzServerPort,
+			HealthzServerPort: &healthzServerPort,
 		},
 	}
 	return cfg, nil

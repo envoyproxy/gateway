@@ -17,8 +17,9 @@ import (
 )
 
 var (
-	TLSSecretKind       = gwapiv1.Kind("Secret")
-	TLSUnrecognizedKind = gwapiv1.Kind("Unrecognized")
+	TLSSecretKind         = gwapiv1.Kind("Secret")
+	TLSUnrecognizedKind   = gwapiv1.Kind("Unrecognized")
+	MockHealthzServerPort = 1234
 )
 
 func TestValidateEnvoyGateway(t *testing.T) {
@@ -107,7 +108,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 									Paths: []string{"foo", "bar"},
 								},
 							},
-							HealthzServerPort: 1234,
+							HealthzServerPort: &MockHealthzServerPort,
 						},
 					},
 				},

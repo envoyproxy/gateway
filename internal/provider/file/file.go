@@ -45,12 +45,17 @@ func New(svr *config.Server, resources *message.ProviderResources) (*Provider, e
 		paths.Insert(svr.EnvoyGateway.Provider.Custom.Resource.File.Paths...)
 	}
 
+	healthzServerPort := 8081 // Default healthz server port.
+	if svr.EnvoyGateway.Provider.Custom.HealthzServerPort != nil {
+		healthzServerPort = *svr.EnvoyGateway.Provider.Custom.HealthzServerPort
+	}
+
 	return &Provider{
 		paths:             paths.UnsortedList(),
 		logger:            logger,
 		watcher:           filewatcher.NewWatcher(),
 		resourcesStore:    newResourcesStore(svr.EnvoyGateway.Gateway.ControllerName, resources, logger),
-		healthzServerPort: svr.EnvoyGateway.Provider.Custom.HealthzServerPort,
+		healthzServerPort: healthzServerPort,
 	}, nil
 }
 

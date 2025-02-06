@@ -305,7 +305,7 @@ type EnvoyGatewayCustomProvider struct {
 	// +kubebuilder:default=8081
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=65535
-	HealthzServerPort int `json:"healthzServerPort,omitempty"`
+	HealthzServerPort *int `json:"healthzServerPort,omitempty"`
 }
 
 // ResourceProviderType defines the types of custom resource providers supported by Envoy Gateway.
