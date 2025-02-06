@@ -9,11 +9,13 @@ package suite
 
 import (
 	"context"
-	"github.com/envoyproxy/gateway/test/utils/kubernetes"
 	"io/fs"
-	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
 	"testing"
 	"time"
+
+	"github.com/envoyproxy/gateway/test/utils/kubernetes"
+
+	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
 
 	opt "github.com/envoyproxy/gateway/internal/cmd/options"
 	kube "github.com/envoyproxy/gateway/internal/kubernetes"
@@ -50,9 +52,7 @@ type ResilienceTestSuite struct {
 }
 
 func NewResilienceTestSuite(client client.Client, reportDir string, manifestFS []fs.FS, gcn string) (*ResilienceTestSuite, error) {
-	var (
-		timeoutConfig = config.TimeoutConfig{}
-	)
+	timeoutConfig := config.TimeoutConfig{}
 
 	// Reset some timeout config for the benchmark test.
 	config.SetupTimeoutConfig(&timeoutConfig)
