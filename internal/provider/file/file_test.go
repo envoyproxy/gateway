@@ -7,6 +7,7 @@ package file
 
 import (
 	"context"
+	"fmt"
 	"html/template"
 	"io"
 	"net/http"
@@ -30,6 +31,8 @@ const (
 	resourcesUpdateTimeout = 1 * time.Minute
 	resourcesUpdateTick    = 1 * time.Second
 )
+
+var healthzServerPort = 8082
 
 type resourcesParam struct {
 	GatewayClassName    string
@@ -64,6 +67,7 @@ func newFileProviderConfig(paths []string) (*config.Server, error) {
 					Paths: paths,
 				},
 			},
+			HealthzServerPort: &healthzServerPort,
 		},
 	}
 	return cfg, nil
@@ -195,7 +199,7 @@ func writeResourcesFile(t *testing.T, tmpl, dst string, params *resourcesParam) 
 
 func waitFileProviderReady(t *testing.T) {
 	require.Eventually(t, func() bool {
-		resp, err := http.Get("http://localhost:8081/readyz")
+		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/readyz", healthzServerPort))
 		if err != nil {
 			t.Logf("failed to get from heathlz server")
 			return false

@@ -28,10 +28,11 @@ import (
 )
 
 type Provider struct {
-	paths          []string
-	logger         logr.Logger
-	watcher        filewatcher.FileWatcher
-	resourcesStore *resourcesStore
+	paths             []string
+	logger            logr.Logger
+	watcher           filewatcher.FileWatcher
+	resourcesStore    *resourcesStore
+	healthzServerPort int
 
 	// ready indicates whether the provider can start watching filesystem events.
 	ready atomic.Bool
@@ -44,11 +45,17 @@ func New(svr *config.Server, resources *message.ProviderResources) (*Provider, e
 		paths.Insert(svr.EnvoyGateway.Provider.Custom.Resource.File.Paths...)
 	}
 
+	healthzServerPort := 8081 // Default healthz server port.
+	if svr.EnvoyGateway.Provider.Custom.HealthzServerPort != nil {
+		healthzServerPort = *svr.EnvoyGateway.Provider.Custom.HealthzServerPort
+	}
+
 	return &Provider{
-		paths:          paths.UnsortedList(),
-		logger:         logger,
-		watcher:        filewatcher.NewWatcher(),
-		resourcesStore: newResourcesStore(svr.EnvoyGateway.Gateway.ControllerName, resources, logger),
+		paths:             paths.UnsortedList(),
+		logger:            logger,
+		watcher:           filewatcher.NewWatcher(),
+		resourcesStore:    newResourcesStore(svr.EnvoyGateway.Gateway.ControllerName, resources, logger),
+		healthzServerPort: healthzServerPort,
 	}, nil
 }
 
@@ -168,7 +175,7 @@ func (p *Provider) startHealthProbeServer(ctx context.Context, readyzChecker hea
 
 	mux := http.NewServeMux()
 	srv := &http.Server{
-		Addr:              ":8081",
+		Addr:              fmt.Sprintf(":%d", p.healthzServerPort),
 		Handler:           mux,
 		MaxHeaderBytes:    1 << 20,
 		IdleTimeout:       90 * time.Second, // matches http.DefaultTransport keep-alive timeout

@@ -1118,6 +1118,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `resource` | _[EnvoyGatewayResourceProvider](#envoygatewayresourceprovider)_ |  true  |  | Resource defines the desired resource provider.<br />This provider is used to specify the provider to be used<br />to retrieve the resource configurations such as Gateway API<br />resources |
 | `infrastructure` | _[EnvoyGatewayInfrastructureProvider](#envoygatewayinfrastructureprovider)_ |  false  |  | Infrastructure defines the desired infrastructure provider.<br />This provider is used to specify the provider to be used<br />to provide an environment to deploy the out resources like<br />the Envoy Proxy data plane.<br /><br />Infrastructure is optional, if provider is not specified,<br />No infrastructure provider is available. |
+| `healthzServerPort` | _integer_ |  false  | 8081 | HealthzServerPort defines the port for the healthz probe server.<br />By default, when this field is unset or empty, Envoy Gateway will use the port 8081 for the healthz server. |
 
 
 #### EnvoyGatewayFileResourceProvider

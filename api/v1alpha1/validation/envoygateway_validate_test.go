@@ -17,8 +17,9 @@ import (
 )
 
 var (
-	TLSSecretKind       = gwapiv1.Kind("Secret")
-	TLSUnrecognizedKind = gwapiv1.Kind("Unrecognized")
+	TLSSecretKind         = gwapiv1.Kind("Secret")
+	TLSUnrecognizedKind   = gwapiv1.Kind("Unrecognized")
+	MockHealthzServerPort = 1234
 )
 
 func TestValidateEnvoyGateway(t *testing.T) {
@@ -92,6 +93,27 @@ func TestValidateEnvoyGateway(t *testing.T) {
 				},
 			},
 			expect: false,
+		},
+		{
+			name: "custom provider with file provider with custom healthz probe port",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway: egv1a1.DefaultGateway(),
+					Provider: &egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeCustom,
+						Custom: &egv1a1.EnvoyGatewayCustomProvider{
+							Resource: egv1a1.EnvoyGatewayResourceProvider{
+								Type: egv1a1.ResourceProviderTypeFile,
+								File: &egv1a1.EnvoyGatewayFileResourceProvider{
+									Paths: []string{"foo", "bar"},
+								},
+							},
+							HealthzServerPort: &MockHealthzServerPort,
+						},
+					},
+				},
+			},
+			expect: true,
 		},
 		{
 			name: "custom provider with file resource provider and host infra provider",
