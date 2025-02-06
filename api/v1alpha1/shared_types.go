@@ -11,6 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
@@ -401,17 +402,17 @@ const (
 
 // KubernetesPodDisruptionBudgetSpec defines Kubernetes PodDisruptionBudget settings of Envoy Proxy Deployment.
 type KubernetesPodDisruptionBudgetSpec struct {
-	// MinAvailable specifies the minimum number of pods that must be available at all times during voluntary disruptions,
+	// MinAvailable specifies the minimum amount of pods (can be expressed as integers or as a percentage) that must be available at all times during voluntary disruptions,
 	// such as node drains or updates. This setting ensures that your envoy proxy maintains a certain level of availability
 	// and resilience during maintenance operations. Cannot be combined with maxUnavailable.
 	// +optional
-	MinAvailable *int32 `json:"minAvailable,omitempty"`
+	MinAvailable *intstr.IntOrString `json:"minAvailable,omitempty"`
 
-	// MaxUnAvailable specifies the maximum number of pods that can be unavailable at all times during voluntary disruptions,
+	// MaxUnAvailable specifies the maximum amount of pods (can be expressed as integers or as a percentage) that can be unavailable at all times during voluntary disruptions,
 	// such as node drains or updates. This setting ensures that your envoy proxy maintains a certain level of availability
 	// and resilience during maintenance operations. Cannot be combined with minAvailable.
 	// +optional
-	MaxUnavailable *int32 `json:"maxUnvailable,omitempty"`
+	MaxUnavailable *intstr.IntOrString `json:"maxUnvailable,omitempty"`
 
 	// Patch defines how to perform the patch operation to the PodDisruptionBudget
 	//
