@@ -470,20 +470,22 @@ spec:
   minReplicas: 1
   maxReplicas: 1
   behavior:
-    burger: king
+    scaleDown:
+      policies:
+      - periodSeconds: 60
+        type: Percent
+        value: 10
+      - periodSeconds: 60
+        type: Pods
+        value: 5
+      selectPolicy: Min
   metrics:
-    - type: Resource
-      resource:
+    - resource:
         name: cpu
         target:
+          averageUtilization: 80
           type: Utilization
-          averageUtilization: 50
-    - type: Resource
-      resource:
-        name: memory
-        target:
-          type: Utilization
-          averageUtilization: 50
+      type: Resource
 ---
 # Source: gateway-helm/templates/certgen-rbac.yaml
 apiVersion: v1

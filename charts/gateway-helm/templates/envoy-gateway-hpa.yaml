@@ -17,21 +17,8 @@ spec:
   behavior:
 {{ toYaml .Values.hpa.behavior | indent 4 }}
   {{- end }}
+{{- if .Values.hpa.metrics }}
   metrics:
-    {{- if .Values.hpa.targetCPU }}
-    - type: Resource
-      resource:
-        name: cpu
-        target:
-          type: Utilization
-          averageUtilization: {{ .Values.hpa.targetCPU }}
-    {{- end }}
-    {{- if .Values.hpa.targetMemory }}
-    - type: Resource
-      resource:
-        name: memory
-        target:
-          type: Utilization
-          averageUtilization: {{ .Values.hpa.targetMemory }}
-    {{- end }}
+{{ toYaml .Values.hpa.metrics | indent 4 }}
+{{- end }}
 {{- end }}
