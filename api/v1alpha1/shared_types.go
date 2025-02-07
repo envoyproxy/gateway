@@ -412,7 +412,7 @@ type KubernetesPodDisruptionBudgetSpec struct {
 	// such as node drains or updates. This setting ensures that your envoy proxy maintains a certain level of availability
 	// and resilience during maintenance operations. Cannot be combined with minAvailable.
 	// +optional
-	MaxUnavailable *intstr.IntOrString `json:"maxUnvailable,omitempty"`
+	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
 
 	// Patch defines how to perform the patch operation to the PodDisruptionBudget
 	//
