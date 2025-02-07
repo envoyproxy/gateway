@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/envoyproxy/gateway/test/resilience/suite"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -20,6 +19,8 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
+
+	"github.com/envoyproxy/gateway/test/resilience/suite"
 )
 
 const (
