@@ -202,13 +202,15 @@ func (t *Translator) notifyExtensionServerAboutListeners(
 
 func clearListenerRoutes(listener *listenerv3.Listener) error {
 	var errs error
-	hcm, err := findHCMinFilterChain(listener.DefaultFilterChain)
-	if err != nil {
-		// no HCM found, skip
-	} else {
-		clearAllRoutes(hcm)
-		if err := replaceHCMInFilterChain(hcm, listener.DefaultFilterChain); err != nil {
-			errs = errors.Join(errs, err)
+	if listener.DefaultFilterChain != nil {
+		hcm, err := findHCMinFilterChain(listener.DefaultFilterChain)
+		if err != nil {
+			// no HCM found, skip
+		} else {
+			clearAllRoutes(hcm)
+			if err := replaceHCMInFilterChain(hcm, listener.DefaultFilterChain); err != nil {
+				errs = errors.Join(errs, err)
+			}
 		}
 	}
 	for _, filter := range listener.FilterChains {
@@ -563,15 +565,17 @@ func (t *Translator) addRouteToRouteConfig(
 		}
 
 		if httpRoute.Mirrors != nil {
-			for _, mirrorDest := range httpRoute.Mirrors {
-				if err = addXdsCluster(tCtx, &xdsClusterArgs{
-					name:         mirrorDest.Name,
-					settings:     mirrorDest.Settings,
-					tSocket:      nil,
-					endpointType: EndpointTypeStatic,
-					metrics:      metrics,
-				}); err != nil {
-					errs = errors.Join(errs, err)
+			for _, mrr := range httpRoute.Mirrors {
+				if mrr.Destination != nil {
+					if err = addXdsCluster(tCtx, &xdsClusterArgs{
+						name:         mrr.Destination.Name,
+						settings:     mrr.Destination.Settings,
+						tSocket:      nil,
+						endpointType: EndpointTypeStatic,
+						metrics:      metrics,
+					}); err != nil {
+						errs = errors.Join(errs, err)
+					}
 				}
 			}
 		}
@@ -933,12 +937,10 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings)
 	for _, ds := range args.settings {
 		if ds.TLS != nil {
-			// Create a secret for the CA certificate only if it's not using the system trust store
-			if !ds.TLS.UseSystemTrustStore {
-				secret := buildXdsUpstreamTLSCASecret(ds.TLS)
-				if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
-					return err
-				}
+			// Create an SDS secret for the CA certificate - either with inline bytes or with a filesystem ref
+			secret := buildXdsUpstreamTLSCASecret(ds.TLS)
+			if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+				return err
 			}
 		}
 	}
@@ -964,9 +966,25 @@ const (
 
 func buildXdsUpstreamTLSCASecret(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.Secret {
 	// Build the tls secret
-	// It's just a sanity check, we shouldn't call this function if the system trust store is used
 	if tlsConfig.UseSystemTrustStore {
-		return nil
+		return &tlsv3.Secret{
+			Name: tlsConfig.CACertificate.Name,
+			Type: &tlsv3.Secret_ValidationContext{
+				ValidationContext: &tlsv3.CertificateValidationContext{
+					TrustedCa: &corev3.DataSource{
+						Specifier: &corev3.DataSource_Filename{
+							// This is the default location for the system trust store
+							// on Debian derivatives like the envoy-proxy image being used by the infrastructure
+							// controller.
+							// See https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/security/ssl
+							// TODO: allow customizing this value via EnvoyGateway so that if a non-standard
+							// envoy image is being used, this can be modified to match
+							Filename: "/etc/ssl/certs/ca-certificates.crt",
+						},
+					},
+				},
+			},
+		}
 	}
 	return &tlsv3.Secret{
 		Name: tlsConfig.CACertificate.Name,
@@ -981,24 +999,16 @@ func buildXdsUpstreamTLSCASecret(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.Secret 
 }
 
 func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.TransportSocket, error) {
-	var tlsCtx *tlsv3.UpstreamTlsContext
-	if tlsConfig.UseSystemTrustStore {
-		tlsCtx = &tlsv3.UpstreamTlsContext{
-			CommonTlsContext: &tlsv3.CommonTlsContext{
-				TlsCertificates: nil,
-				ValidationContextType: &tlsv3.CommonTlsContext_ValidationContext{
-					ValidationContext: &tlsv3.CertificateValidationContext{
-						TrustedCa: &corev3.DataSource{
-							Specifier: &corev3.DataSource_Filename{
-								// This is the default location for the system trust store
-								// on Debian derivatives like the envoy-proxy image being used by the infrastructure
-								// controller.
-								// See https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/security/ssl
-								// TODO: allow customizing this value via EnvoyGateway so that if a non-standard
-								// envoy image is being used, this can be modified to match
-								Filename: "/etc/ssl/certs/ca-certificates.crt",
-							},
-						},
+	tlsCtx := &tlsv3.UpstreamTlsContext{
+		CommonTlsContext: &tlsv3.CommonTlsContext{
+			TlsCertificateSdsSecretConfigs: nil,
+			ValidationContextType: &tlsv3.CommonTlsContext_CombinedValidationContext{
+				CombinedValidationContext: &tlsv3.CommonTlsContext_CombinedCertificateValidationContext{
+					ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
+						Name:      tlsConfig.CACertificate.Name,
+						SdsConfig: makeConfigSource(),
+					},
+					DefaultValidationContext: &tlsv3.CertificateValidationContext{
 						MatchTypedSubjectAltNames: []*tlsv3.SubjectAltNameMatcher{
 							{
 								SanType: tlsv3.SubjectAltNameMatcher_DNS,
@@ -1012,35 +1022,8 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.
 					},
 				},
 			},
-			Sni: tlsConfig.SNI,
-		}
-	} else {
-		tlsCtx = &tlsv3.UpstreamTlsContext{
-			CommonTlsContext: &tlsv3.CommonTlsContext{
-				TlsCertificateSdsSecretConfigs: nil,
-				ValidationContextType: &tlsv3.CommonTlsContext_CombinedValidationContext{
-					CombinedValidationContext: &tlsv3.CommonTlsContext_CombinedCertificateValidationContext{
-						ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
-							Name:      tlsConfig.CACertificate.Name,
-							SdsConfig: makeConfigSource(),
-						},
-						DefaultValidationContext: &tlsv3.CertificateValidationContext{
-							MatchTypedSubjectAltNames: []*tlsv3.SubjectAltNameMatcher{
-								{
-									SanType: tlsv3.SubjectAltNameMatcher_DNS,
-									Matcher: &matcherv3.StringMatcher{
-										MatchPattern: &matcherv3.StringMatcher_Exact{
-											Exact: tlsConfig.SNI,
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			Sni: tlsConfig.SNI,
-		}
+		},
+		Sni: tlsConfig.SNI,
 	}
 
 	tlsParams := buildTLSParams(&tlsConfig.TLSConfig)

@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -32,6 +33,9 @@ func TestBuildXdsCluster(t *testing.T) {
 		name:         bootstrapXdsCluster.Name,
 		tSocket:      bootstrapXdsCluster.TransportSocket,
 		endpointType: EndpointTypeDNS,
+		healthCheck: &ir.HealthCheck{
+			PanicThreshold: ptr.To[uint32](66),
+		},
 	}
 	dynamicXdsCluster := buildXdsCluster(args)
 

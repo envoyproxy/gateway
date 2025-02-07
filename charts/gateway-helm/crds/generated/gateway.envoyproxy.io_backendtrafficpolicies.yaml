@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.16.1
+    controller-gen.kubebuilder.io/version: v0.17.1
   name: backendtrafficpolicies.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -423,6 +423,16 @@ spec:
                     - message: The grpc field can only be set if the Health Checker
                         type is GRPC.
                       rule: 'has(self.grpc) ? self.type == ''GRPC'' : true'
+                  panicThreshold:
+                    description: |-
+                      When number of unhealthy endpoints for a backend reaches this threshold
+                      Envoy will disregard health status and balance across all endpoints.
+                      It's designed to prevent a situation in which host failures cascade throughout the cluster
+                      as load increases. If not set, the default value is 50%. To disable panic mode, set value to `0`.
+                    format: int32
+                    maximum: 100
+                    minimum: 0
+                    type: integer
                   passive:
                     description: Passive passive check configuration
                     properties:
@@ -1290,8 +1300,11 @@ spec:
                           description: Content Type of the response. This will be
                             set in the Content-Type header.
                           type: string
-                      required:
-                      - body
+                        statusCode:
+                          description: |-
+                            Status Code of the Custom Response
+                            If unset, does not override the status of response.
+                          type: integer
                       type: object
                   required:
                   - match

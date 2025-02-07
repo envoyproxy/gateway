@@ -272,7 +272,38 @@ func TestDeployment(t *testing.T) {
 				Patch: &egv1a1.KubernetesPatchSpec{
 					Type: ptr.To(egv1a1.StrategicMerge),
 					Value: apiextensionsv1.JSON{
-						Raw: []byte("{\"spec\":{\"template\":{\"spec\":{\"hostNetwork\":true,\"dnsPolicy\":\"ClusterFirstWithHostNet\"}}}}"),
+						Raw: []byte(`{"spec":{"template":{"spec":{"hostNetwork":true,"dnsPolicy":"ClusterFirstWithHostNet"}}}}`),
+					},
+				},
+			},
+		},
+		{
+			caseName:  "patch-deployment-containers",
+			rateLimit: rateLimit,
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Patch: &egv1a1.KubernetesPatchSpec{
+					Type: ptr.To(egv1a1.StrategicMerge),
+					Value: apiextensionsv1.JSON{
+						Raw: []byte(`{
+    "spec": {
+        "template": {
+            "spec": {
+                "containers": [
+                    {
+                        "name": "envoy-ratelimit",
+                        "imagePullPolicy": "Always",
+                        "env": [
+                            {
+                                "name": "REDIS_TYPE",
+                                "value": "sentinel"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    }
+}`),
 					},
 				},
 			},

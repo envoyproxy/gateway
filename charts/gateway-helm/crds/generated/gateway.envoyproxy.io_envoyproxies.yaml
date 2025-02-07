@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.16.1
+    controller-gen.kubebuilder.io/version: v0.17.1
   name: envoyproxies.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -10992,6 +10992,16 @@ spec:
                                                     is GRPC.
                                                   rule: 'has(self.grpc) ? self.type
                                                     == ''GRPC'' : true'
+                                              panicThreshold:
+                                                description: |-
+                                                  When number of unhealthy endpoints for a backend reaches this threshold
+                                                  Envoy will disregard health status and balance across all endpoints.
+                                                  It's designed to prevent a situation in which host failures cascade throughout the cluster
+                                                  as load increases. If not set, the default value is 50%. To disable panic mode, set value to `0`.
+                                                format: int32
+                                                maximum: 100
+                                                minimum: 0
+                                                type: integer
                                               passive:
                                                 description: Passive passive check
                                                   configuration
@@ -11969,6 +11979,16 @@ spec:
                                                     is GRPC.
                                                   rule: 'has(self.grpc) ? self.type
                                                     == ''GRPC'' : true'
+                                              panicThreshold:
+                                                description: |-
+                                                  When number of unhealthy endpoints for a backend reaches this threshold
+                                                  Envoy will disregard health status and balance across all endpoints.
+                                                  It's designed to prevent a situation in which host failures cascade throughout the cluster
+                                                  as load increases. If not set, the default value is 50%. To disable panic mode, set value to `0`.
+                                                format: int32
+                                                maximum: 100
+                                                minimum: 0
+                                                type: integer
                                               passive:
                                                 description: Passive passive check
                                                   configuration
@@ -13025,6 +13045,16 @@ spec:
                                               if the Health Checker type is GRPC.
                                             rule: 'has(self.grpc) ? self.type == ''GRPC''
                                               : true'
+                                        panicThreshold:
+                                          description: |-
+                                            When number of unhealthy endpoints for a backend reaches this threshold
+                                            Envoy will disregard health status and balance across all endpoints.
+                                            It's designed to prevent a situation in which host failures cascade throughout the cluster
+                                            as load increases. If not set, the default value is 50%. To disable panic mode, set value to `0`.
+                                          format: int32
+                                          maximum: 100
+                                          minimum: 0
+                                          type: integer
                                         passive:
                                           description: Passive passive check configuration
                                           properties:
@@ -14008,6 +14038,16 @@ spec:
                                         Health Checker type is GRPC.
                                       rule: 'has(self.grpc) ? self.type == ''GRPC''
                                         : true'
+                                  panicThreshold:
+                                    description: |-
+                                      When number of unhealthy endpoints for a backend reaches this threshold
+                                      Envoy will disregard health status and balance across all endpoints.
+                                      It's designed to prevent a situation in which host failures cascade throughout the cluster
+                                      as load increases. If not set, the default value is 50%. To disable panic mode, set value to `0`.
+                                    format: int32
+                                    maximum: 100
+                                    minimum: 0
+                                    type: integer
                                   passive:
                                     description: Passive passive check configuration
                                     properties:
@@ -14443,7 +14483,7 @@ spec:
                           selected for tracing if no prior sampling decision has been made.
 
                           Only one of SamplingRate or SamplingFraction may be specified.
-                          If neither field is specified, 1% of requests will be sampled.
+                          If neither field is specified, all requests will be sampled.
                         properties:
                           denominator:
                             default: 100
@@ -14468,7 +14508,7 @@ spec:
                           Defaults to 100, valid values [0-100]. 100 indicates 100% sampling.
 
                           Only one of SamplingRate or SamplingFraction may be specified.
-                          If neither field is specified, 1% of requests will be sampled.
+                          If neither field is specified, all requests will be sampled.
                         format: int32
                         maximum: 100
                         minimum: 0

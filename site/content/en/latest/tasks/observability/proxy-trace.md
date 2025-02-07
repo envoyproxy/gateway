@@ -288,6 +288,64 @@ spec:
 EOF
 ```
 
+If you want the sample rate to less than 1%, you can use the `telemetry.tracing.samplingFraction` field in the [EnvoyProxy][envoy-proxy-crd] CRD.
+
+```shell
+kubectl apply -f - <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: otel
+    namespace: envoy-gateway-system
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: otel
+  namespace: envoy-gateway-system
+spec:
+  telemetry:
+    tracing:
+      # sample 0.1% of requests
+      samplingFraction:
+        numerator: 1
+        denominator: 1000
+      provider:
+        backendRefs:
+        - name: otel-collector
+          namespace: monitoring
+          port: 4317
+        type: OpenTelemetry
+      customTags:
+        # This is an example of using a literal as a tag value
+        provider:
+          type: Literal
+          literal:
+            value: "otel"
+        "k8s.pod.name":
+          type: Environment
+          environment:
+            name: ENVOY_POD_NAME
+            defaultValue: "-"
+        "k8s.namespace.name":
+          type: Environment
+          environment:
+            name: ENVOY_GATEWAY_NAMESPACE
+            defaultValue: "envoy-gateway-system"
+        # This is an example of using a header value as a tag value
+        header1:
+          type: RequestHeader
+          requestHeader:
+            name: X-Header-1
+            defaultValue: "-"
+EOF
+```
 
 
 [envoy-proxy-crd]: ../../api/extension_types#envoyproxy
