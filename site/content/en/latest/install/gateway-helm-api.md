@@ -72,9 +72,8 @@ The Helm chart for Envoy Gateway
 | hpa.behavior | object | `{}` |  |
 | hpa.enabled | bool | `false` |  |
 | hpa.maxReplicas | int | `1` |  |
+| hpa.metrics | list | `[]` |  |
 | hpa.minReplicas | int | `1` |  |
-| hpa.targetCPU | int | `50` |  |
-| hpa.targetMemory | int | `50` |  |
 | kubernetesClusterDomain | string | `"cluster.local"` |  |
 | podDisruptionBudget.minAvailable | int | `0` |  |
 | service.annotations | object | `{}` |  |
