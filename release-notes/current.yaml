@@ -8,19 +8,6 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
-  Added support for trusted CIDRs in the ClientIPDetectionSettings API
-  Added support for sending attributes to external processor in EnvoyExtensionPolicy API
-  Added support for patching EnvoyProxy.spec.provider.kubernetes.envoyHpa and EnvoyProxy.spec.provider.kubernetes.envoyPDB
-  Added support for defining rateLimitHpa in EnvoyGateway API
-  Added support for preserving the user defined HTTPRoute match order in EnvoyProxy API
-  Added support for response compression in the BackendTrafficPolicy API
-  Added support for cost specifier in the rate limit API.
-  Added support for specifying dynamic metadata namespaces that External Processing services can access read from and write to in EnvoyExtensionPolicy API
-  Added support for API Key Authentication in the SecurityPolicy API
-  Continue using and drain endpoints during their graceful termination, as indicated by their respective EndpointConditions
-  Added support for GEP-1731 (HTTPRoute Retries)
-  Added support for routing to Backend resources in the GRPCRoute, TCPRoute and UDPRoute APIs
-  Added support for configuring Max GRPC message size for the Extension Manager in EnvoyGateway config
   Added support for percentage-based request mirroring
   Added support for HorizontalPodAutoscaler to helm chart
 
