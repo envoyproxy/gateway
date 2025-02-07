@@ -41,7 +41,7 @@ spec:
         - /bin/ratelimit
         env:
         - name: REDIS_TYPE
-          value: BB_REDIS
+          value: sentinel
         - name: RUNTIME_ROOT
           value: /data
         - name: RUNTIME_SUBDIRECTORY

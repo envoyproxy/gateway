@@ -295,7 +295,7 @@ func TestDeployment(t *testing.T) {
                         "env": [
                             {
                                 "name": "REDIS_TYPE",
-                                "value": "BB_REDIS"
+                                "value": "sentinel"
                             }
                         ]
                     }
