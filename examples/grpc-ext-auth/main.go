@@ -83,7 +83,8 @@ func NewAuthServer(users Users) envoy_service_auth_v3.AuthorizationServer {
 // attributes associated with the incoming request.
 func (s *authServer) Check(
 	_ context.Context,
-	req *envoy_service_auth_v3.CheckRequest) (*envoy_service_auth_v3.CheckResponse, error) {
+	req *envoy_service_auth_v3.CheckRequest,
+) (*envoy_service_auth_v3.CheckResponse, error) {
 	authorization := req.Attributes.Request.Http.Headers["authorization"]
 	log.Println(authorization)
 
