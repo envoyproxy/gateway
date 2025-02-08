@@ -10226,7 +10226,7 @@ spec:
                         description: EnvoyPDB allows to control the pod disruption
                           budget of an Envoy Proxy.
                         properties:
-                          maxUnvailable:
+                          maxUnavailable:
                             anyOf:
                             - type: integer
                             - type: string
