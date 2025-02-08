@@ -83,11 +83,9 @@ type gatewayAPIReconciler struct {
 }
 
 // newGatewayAPIController
-func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su Updater,
+func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *config.Server, su Updater,
 	resources *message.ProviderResources,
 ) error {
-	ctx := context.Background()
-
 	// Gather additional resources to watch from registered extensions
 	var extServerPoliciesGVKs []schema.GroupVersionKind
 	var extGVKs []schema.GroupVersionKind
@@ -129,12 +127,24 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su Updater
 	}
 	r.log.Info("created gatewayapi controller")
 
-	// Subscribe to status updates
-	r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.EnvoyGatewaySpec.ExtensionManager != nil)
-
 	// Watch resources
 	if err := r.watchResources(ctx, mgr, c); err != nil {
 		return fmt.Errorf("error watching resources: %w", err)
+	}
+
+	// When leader election is enabled, only subscribe to status updates upon acquiring leadership.
+	if cfg.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes &&
+		!ptr.Deref(cfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable, false) {
+		go func() {
+			select {
+			case <-ctx.Done():
+				return
+			case <-cfg.Elected:
+				r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.EnvoyGatewaySpec.ExtensionManager != nil)
+			}
+		}()
+	} else {
+		r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.EnvoyGatewaySpec.ExtensionManager != nil)
 	}
 	return nil
 }
@@ -199,9 +209,12 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		if managedGC.Spec.ParametersRef != nil && managedGC.DeletionTimestamp == nil {
 			if err := r.processGatewayClassParamsRef(ctx, managedGC, resourceMappings, gwcResource); err != nil {
 				msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
-				if err := r.updateStatusForGatewayClass(ctx, managedGC, false, string(gwapiv1.GatewayClassReasonInvalidParameters), msg); err != nil {
-					r.log.Error(err, "unable to update GatewayClass status")
-				}
+				gc := status.SetGatewayClassAccepted(
+					managedGC.DeepCopy(),
+					false,
+					string(gwapiv1.GatewayClassReasonInvalidParameters),
+					msg)
+				r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
 				r.log.Error(err, "failed to process parametersRef for gatewayclass", "name", managedGC.Name)
 				return reconcile.Result{}, err
 			}
@@ -293,11 +306,12 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 		// process envoy gateway secret refs
 		r.processEnvoyProxySecretRef(ctx, gwcResource)
-
-		if err := r.updateStatusForGatewayClass(ctx, managedGC, true, string(gwapiv1.GatewayClassReasonAccepted), status.MsgValidGatewayClass); err != nil {
-			r.log.Error(err, "unable to update GatewayClass status")
-			return reconcile.Result{}, err
-		}
+		gc := status.SetGatewayClassAccepted(
+			managedGC.DeepCopy(),
+			true,
+			string(gwapiv1.GatewayClassReasonAccepted),
+			status.MsgValidGatewayClass)
+		r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
 
 		if len(gwcResource.Gateways) == 0 {
 			r.log.Info("No gateways found for accepted gatewayclass")
@@ -497,6 +511,25 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 				r.log.Error(err,
 					"failed to process OIDC SecretRef for SecurityPolicy",
 					"policy", policy, "secretRef", oidc.ClientSecret)
+			}
+		}
+
+		// Add the referenced Secretes in APIKeyAuth to the resourceTree.
+		apiKeyAuth := policy.Spec.APIKeyAuth
+		if apiKeyAuth != nil {
+			for _, credRef := range apiKeyAuth.CredentialRefs {
+				if err := r.processSecretRef(
+					ctx,
+					resourceMap,
+					resourceTree,
+					resource.KindSecurityPolicy,
+					policy.Namespace,
+					policy.Name,
+					credRef); err != nil {
+					r.log.Error(err,
+						"failed to process APIKeyAuth SecretRef for SecurityPolicy",
+						"policy", policy, "secretRef", apiKeyAuth.CredentialRefs)
+				}
 			}
 		}
 
@@ -784,7 +817,7 @@ func (r *gatewayAPIReconciler) processBtpConfigMapRefs(
 ) {
 	for _, policy := range resourceTree.BackendTrafficPolicies {
 		for _, ro := range policy.Spec.ResponseOverride {
-			if ro.Response.Body.ValueRef != nil && string(ro.Response.Body.ValueRef.Kind) == resource.KindConfigMap {
+			if ro.Response.Body != nil && ro.Response.Body.ValueRef != nil && string(ro.Response.Body.ValueRef.Kind) == resource.KindConfigMap {
 				configMap := new(corev1.ConfigMap)
 				err := r.client.Get(ctx,
 					types.NamespacedName{Namespace: policy.Namespace, Name: string(ro.Response.Body.ValueRef.Name)},
@@ -905,10 +938,6 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 		r.log.Info("processing Gateway", "namespace", gtw.Namespace, "name", gtw.Name)
 		resourceMap.allAssociatedNamespaces.Insert(gtw.Namespace)
 
-		if err := r.processGatewayParamsRef(ctx, &gtw, resourceMap, resourceTree); err != nil {
-			r.log.Error(err, "failed to process infrastructure.parametersRef for gateway", "namespace", gtw.Namespace, "name", gtw.Name)
-		}
-
 		for _, listener := range gtw.Spec.Listeners {
 			// Get Secret for gateway if it exists.
 			if terminatesTLS(&listener) {
@@ -966,9 +995,20 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 				return err
 			}
 		}
+
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		gtw.Status = gwapiv1.GatewayStatus{}
+
+		if err := r.processGatewayParamsRef(ctx, &gtw, resourceMap, resourceTree); err != nil {
+			// Update the Gateway status to not accepted if there is an error processing the parametersRef.
+			// These not-accepted gateways will not be processed by the gateway-api layer, but their status will be
+			// updated in the gateway-api layer along with other gateways. This is to avoid the potential race condition
+			// of updating the status in both the controller and the gateway-api layer.
+			status.UpdateGatewayStatusNotAccepted(&gtw, gwapiv1.GatewayReasonInvalidParameters, err.Error())
+			r.log.Error(err, "failed to process infrastructure.parametersRef for gateway", "namespace", gtw.Namespace, "name", gtw.Name)
+		}
+
 		if !resourceMap.allAssociatedGateways.Has(gtwNamespacedName) {
 			resourceMap.allAssociatedGateways.Insert(gtwNamespacedName)
 			resourceTree.Gateways = append(resourceTree.Gateways, &gtw)

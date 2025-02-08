@@ -248,6 +248,10 @@ securityPolicies:
     name: target-httproute-in-gateway-1
     namespace: envoy-gateway
   spec:
+    cors:
+      allowOrigins:
+      - http://*.example.com
+      maxAge: 16m40s
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -299,6 +303,10 @@ securityPolicies:
     name: target-grpcroute-in-gateway-2
     namespace: envoy-gateway
   spec:
+    cors:
+      allowOrigins:
+      - http://*.example.com
+      maxAge: 16m40s
     targetRef:
       group: gateway.networking.k8s.io
       kind: GRPCRoute
@@ -421,11 +429,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - destination:
-          name: httproute/envoy-gateway/httproute-1/rule/0
-          settings:
-          - weight: 1
-        directResponse:
+      - directResponse:
           statusCode: 500
         hostname: '*'
         isHTTP2: false
@@ -438,7 +442,13 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        security: {}
+        security:
+          cors:
+            allowOrigins:
+            - distinct: false
+              name: ""
+              safeRegex: http://.*\.example\.com
+            maxAge: 16m40s
   envoy-gateway/gateway-2:
     accessLog:
       text:
@@ -459,11 +469,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - destination:
-          name: grpcroute/envoy-gateway/grpcroute-1/rule/0
-          settings:
-          - weight: 1
-        directResponse:
+      - directResponse:
           statusCode: 500
         headerMatches:
         - distinct: false
@@ -476,7 +482,13 @@ xdsIR:
           name: grpcroute-1
           namespace: envoy-gateway
         name: grpcroute/envoy-gateway/grpcroute-1/rule/0/match/0/*
-        security: {}
+        security:
+          cors:
+            allowOrigins:
+            - distinct: false
+              name: ""
+              safeRegex: http://.*\.example\.com
+            maxAge: 16m40s
     tcp:
     - address: 0.0.0.0
       name: envoy-gateway/gateway-2/tcp

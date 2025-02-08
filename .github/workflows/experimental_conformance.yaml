@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        version: [ v1.28.13, v1.29.8, v1.30.4, v1.31.0 ]
+        version: [ v1.29.10, v1.30.6, v1.31.4, v1.32.0 ]
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
     - uses: ./tools/github-actions/setup-deps
@@ -33,7 +33,7 @@ jobs:
       run: make experimental-conformance
 
     - name: Upload Conformance Report
-      uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882  # v4.4.3
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08  # v4.6.0
       with:
         name: conformance-report-k8s-${{ matrix.version }}
         path: ./test/conformance/conformance-report-k8s-${{ matrix.version }}.yaml

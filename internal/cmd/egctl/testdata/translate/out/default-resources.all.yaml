@@ -52,6 +52,7 @@ envoyProxyForGatewayClass:
                 typed_config:
                   "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
                   stat_prefix: eg-ready-http
+                  normalize_path: true
                   route_config:
                     name: local_route
                     virtual_hosts:
@@ -60,7 +61,10 @@ envoyProxyForGatewayClass:
                       - "*"
                       routes:
                       - match:
-                          prefix: /stats/prometheus
+                          path: /stats/prometheus
+                          headers:
+                          - name: ":method"
+                            exact_match: GET
                         route:
                           cluster: prometheus_stats
                   http_filters:
@@ -677,6 +681,7 @@ xds:
                   - name: envoy.filters.http.router
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                  normalizePath: true
                   routeConfig:
                     name: local_route
                     virtualHosts:
@@ -685,7 +690,10 @@ xds:
                       name: prometheus_stats
                       routes:
                       - match:
-                          prefix: /stats/prometheus
+                          headers:
+                          - exactMatch: GET
+                            name: :method
+                          path: /stats/prometheus
                         route:
                           cluster: prometheus_stats
                   statPrefix: eg-ready-http
@@ -781,7 +789,6 @@ xds:
           ignoreHealthOnHostRemoval: true
           lbPolicy: LEAST_REQUEST
           name: httproute/default/backend/rule/0
-          outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
           type: EDS
       - cluster:
@@ -801,7 +808,6 @@ xds:
           ignoreHealthOnHostRemoval: true
           lbPolicy: LEAST_REQUEST
           name: grpcroute/default/backend/rule/0
-          outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
           type: EDS
           typedExtensionProtocolOptions:
@@ -828,7 +834,6 @@ xds:
           ignoreHealthOnHostRemoval: true
           lbPolicy: LEAST_REQUEST
           name: tcproute/default/backend/rule/-1
-          outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
           type: EDS
       - cluster:
@@ -848,7 +853,6 @@ xds:
           ignoreHealthOnHostRemoval: true
           lbPolicy: LEAST_REQUEST
           name: tlsroute/default/backend/rule/-1
-          outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
           type: EDS
       - cluster:
@@ -868,7 +872,6 @@ xds:
           ignoreHealthOnHostRemoval: true
           lbPolicy: LEAST_REQUEST
           name: udproute/default/backend/rule/-1
-          outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
           type: EDS
     - '@type': type.googleapis.com/envoy.admin.v3.ListenersConfigDump

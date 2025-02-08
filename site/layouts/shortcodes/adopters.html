@@ -1,6 +1,6 @@
 {{ $adopters := .Site.Data.adopters.adopters }}
-<section id="adopters">
-  <h2 class="adopter-head">Our Adopters</h2>
+<section id="adopters-section">
+  <h2 id="adopters" class="adopter-head">Our Adopters</h2>
   <div class="adopters-list">
     {{ range $adopters }}
     <a class="adopter" href="{{ .url }}" target="_blank">
@@ -14,7 +14,7 @@
 </section>
 
 <style>
-#adopters {
+#adopters-section {
   text-align: center;
   padding: 0px;
 }

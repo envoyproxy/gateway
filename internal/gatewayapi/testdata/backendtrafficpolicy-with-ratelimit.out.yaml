@@ -13,6 +13,15 @@ backendTrafficPolicies:
           - sourceCIDR:
               type: Distinct
               value: 192.168.0.0/16
+          cost:
+            request:
+              from: Number
+              number: 1
+            response:
+              from: Metadata
+              metadata:
+                key: some_cost_set_by_foo
+                namespace: something.com
           limit:
             requests: 20
             unit: Hour
@@ -370,3 +379,7 @@ xdsIR:
                 limit:
                   requests: 20
                   unit: Hour
+                requestCost:
+                  number: 1
+                responseCost:
+                  format: '%DYNAMIC_METADATA(something.com:some_cost_set_by_foo)%'

@@ -37,6 +37,7 @@ communications with the Envoy Gateway community, and the mechanics of the releas
 | 2024 Q1 |    Xunzhuo Liu ([Xunzhuo](https://github.com/Xunzhuo))         |
 | 2024 Q3 |    Guy Daich ([guydc](https://github.com/guydc))               |
 | 2024 Q4 |    Huabing Zhao ([zhaohuabing](https://github.com/zhaohuabing))|
+| 2024 Q1 |    Guy Daich ([guydc](https://github.com/guydc))               |
 
 ## Release Schedule
 
@@ -53,6 +54,7 @@ In order to align with the Envoy Proxy [release schedule][], Envoy Gateway relea
 |  1.0.x  | 2024/03/06  | 2023/03/13  |   +7 days   |  2024/09/13 |
 |  1.1.x  | 2024/07/16	| 2024/07/22  |   +6 days   |  2024/01/22 |
 |  1.2.x  | 2024/10/22	| 2024/11/06  |   +14 days  |  2025/05/06 |
+|  1.3.x  | 2025/01/30	| 2025/01/30  |             |  2025/07/30 |
 
 [v2.0.0 spec]: https://semver.org/spec/v2.0.0.html
 [release guide]: ../../contributions/releasing

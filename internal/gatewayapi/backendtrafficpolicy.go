@@ -305,6 +305,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 		ds        *ir.DNS
 		h2        *ir.HTTP2Settings
 		ro        *ir.ResponseOverride
+		cp        []*ir.Compression
 		err, errs error
 	)
 
@@ -332,10 +333,13 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 		err = perr.WithMessage(err, "TCPKeepalive")
 		errs = errors.Join(errs, err)
 	}
-	if policy.Spec.Retry != nil {
-		rt = buildRetry(policy.Spec.Retry)
+
+	if rt, err = buildRetry(policy.Spec.Retry); err != nil {
+		err = perr.WithMessage(err, "Retry")
+		errs = errors.Join(errs, err)
 	}
-	if to, err = buildClusterSettingsTimeout(policy.Spec.ClusterSettings, nil); err != nil {
+
+	if to, err = buildClusterSettingsTimeout(policy.Spec.ClusterSettings); err != nil {
 		err = perr.WithMessage(err, "Timeout")
 		errs = errors.Join(errs, err)
 	}
@@ -354,6 +358,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 		err = perr.WithMessage(err, "ResponseOverride")
 		errs = errors.Join(errs, err)
 	}
+	cp = buildCompression(policy.Spec.Compression)
 
 	ds = translateDNS(policy.Spec.ClusterSettings)
 
@@ -399,8 +404,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 						continue
 					}
 
-					// Some timeout setting originate from the route.
-					if localTo, err := buildClusterSettingsTimeout(policy.Spec.ClusterSettings, r.Traffic); err == nil {
+					if localTo, err := buildClusterSettingsTimeout(policy.Spec.ClusterSettings); err == nil {
 						to = localTo
 					}
 
@@ -418,6 +422,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 						DNS:               ds,
 						Timeout:           to,
 						ResponseOverride:  ro,
+						Compression:       cp,
 					}
 
 					// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
@@ -454,6 +459,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 		ds        *ir.DNS
 		h2        *ir.HTTP2Settings
 		ro        *ir.ResponseOverride
+		cp        []*ir.Compression
 		err, errs error
 	)
 
@@ -481,10 +487,13 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 		err = perr.WithMessage(err, "TCPKeepalive")
 		errs = errors.Join(errs, err)
 	}
-	if policy.Spec.Retry != nil {
-		rt = buildRetry(policy.Spec.Retry)
+
+	if rt, err = buildRetry(policy.Spec.Retry); err != nil {
+		err = perr.WithMessage(err, "Retry")
+		errs = errors.Join(errs, err)
 	}
-	if ct, err = buildClusterSettingsTimeout(policy.Spec.ClusterSettings, nil); err != nil {
+
+	if ct, err = buildClusterSettingsTimeout(policy.Spec.ClusterSettings); err != nil {
 		err = perr.WithMessage(err, "Timeout")
 		errs = errors.Join(errs, err)
 	}
@@ -496,6 +505,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 		err = perr.WithMessage(err, "ResponseOverride")
 		errs = errors.Join(errs, err)
 	}
+	cp = buildCompression(policy.Spec.Compression)
 
 	ds = translateDNS(policy.Spec.ClusterSettings)
 
@@ -580,12 +590,13 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 				HTTP2:            h2,
 				DNS:              ds,
 				ResponseOverride: ro,
+				Compression:      cp,
 			}
 
 			// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
 			r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 
-			if ct, err = buildClusterSettingsTimeout(policy.Spec.ClusterSettings, r.Traffic); err == nil {
+			if ct, err = buildClusterSettingsTimeout(policy.Spec.ClusterSettings); err == nil {
 				r.Traffic.Timeout = ct
 			}
 
@@ -786,7 +797,28 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 			irRule.CIDRMatch = cidrMatch
 		}
 	}
+
+	if cost := rule.Cost; cost != nil {
+		if cost.Request != nil {
+			irRule.RequestCost = translateRateLimitCost(cost.Request)
+		}
+		if cost.Response != nil {
+			irRule.ResponseCost = translateRateLimitCost(cost.Response)
+		}
+	}
 	return irRule, nil
+}
+
+func translateRateLimitCost(cost *egv1a1.RateLimitCostSpecifier) *ir.RateLimitCost {
+	ret := &ir.RateLimitCost{}
+	if cost.Number != nil {
+		ret.Number = cost.Number
+	}
+	if cost.Metadata != nil {
+		ret.Format = ptr.To(fmt.Sprintf("%%DYNAMIC_METADATA(%s:%s)%%",
+			cost.Metadata.Namespace, cost.Metadata.Key))
+	}
+	return ret
 }
 
 func int64ToUint32(in int64) (uint32, bool) {
@@ -879,6 +911,10 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resou
 			ContentType: ro.Response.ContentType,
 		}
 
+		if ro.Response.StatusCode != nil {
+			response.StatusCode = ptr.To(uint32(*ro.Response.StatusCode))
+		}
+
 		var err error
 		response.Body, err = getCustomResponseBody(ro.Response.Body, resources, policy.Namespace)
 		if err != nil {
@@ -897,8 +933,8 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resou
 	}, nil
 }
 
-func getCustomResponseBody(body egv1a1.CustomResponseBody, resources *resource.Resources, policyNs string) (*string, error) {
-	if body.Type != nil && *body.Type == egv1a1.ResponseValueTypeValueRef {
+func getCustomResponseBody(body *egv1a1.CustomResponseBody, resources *resource.Resources, policyNs string) (*string, error) {
+	if body != nil && body.Type != nil && *body.Type == egv1a1.ResponseValueTypeValueRef {
 		cm := resources.GetConfigMap(policyNs, string(body.ValueRef.Name))
 		if cm != nil {
 			b, dataOk := cm.Data["response.body"]
@@ -918,7 +954,7 @@ func getCustomResponseBody(body egv1a1.CustomResponseBody, resources *resource.R
 		} else {
 			return nil, fmt.Errorf("can't find the referenced configmap %s", body.ValueRef.Name)
 		}
-	} else if body.Inline != nil {
+	} else if body != nil && body.Inline != nil {
 		return body.Inline, nil
 	}
 
@@ -930,4 +966,18 @@ func defaultResponseOverrideRuleName(policy *egv1a1.BackendTrafficPolicy, index 
 		"%s/responseoverride/rule/%s",
 		irConfigName(policy),
 		strconv.Itoa(index))
+}
+
+func buildCompression(compression []*egv1a1.Compression) []*ir.Compression {
+	if compression == nil {
+		return nil
+	}
+	irCompression := make([]*ir.Compression, 0, len(compression))
+	for _, c := range compression {
+		irCompression = append(irCompression, &ir.Compression{
+			Type: c.Type,
+		})
+	}
+
+	return irCompression
 }

@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"reflect"
 
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,6 +27,35 @@ import (
 // subscribeAndUpdateStatus subscribes to gateway API object status updates and
 // writes it into the Kubernetes API Server.
 func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, extensionManagerEnabled bool) {
+	// GatewayClass object status updater
+	go func() {
+		message.HandleSubscription(
+			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: "gatewayclass-status"},
+			r.resources.GatewayClassStatuses.Subscribe(ctx),
+			func(update message.Update[types.NamespacedName, *gwapiv1.GatewayClassStatus], errChan chan error) {
+				// skip delete updates.
+				if update.Delete {
+					return
+				}
+
+				r.statusUpdater.Send(Update{
+					NamespacedName: update.Key,
+					Resource:       new(gwapiv1.GatewayClass),
+					Mutator: MutatorFunc(func(obj client.Object) client.Object {
+						gc, ok := obj.(*gwapiv1.GatewayClass)
+						if !ok {
+							panic(fmt.Sprintf("unsupported object type %T", obj))
+						}
+						gcCopy := gc.DeepCopy()
+						gcCopy.Status = *update.Value
+						return gcCopy
+					}),
+				})
+			},
+		)
+		r.log.Info("gatewayclass status subscriber shutting down")
+	}()
+
 	// Gateway object status updater
 	go func() {
 		message.HandleSubscription(
@@ -540,10 +568,16 @@ func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *
 		r.log.Info("failed to get Service for gateway",
 			"namespace", gtw.Namespace, "name", gtw.Name)
 	}
-	// update accepted condition
-	status.UpdateGatewayStatusAcceptedCondition(gtw, true)
-	// update address field and programmed condition
-	status.UpdateGatewayStatusProgrammedCondition(gtw, svc, envoyObj, r.store.listNodeAddresses()...)
+
+	if status.GatewayAccepted(gtw) {
+		// update accepted condition to true if it is not false
+		// this is needed because the accepted condition is not set to true by the Gateway API translator
+		// TODO (huabing): this is tricky and confusing for later readers, we should remove this and set the accepted condition
+		// to true in the Gateway API translator
+		status.UpdateGatewayStatusAccepted(gtw)
+		// update address field and programmed condition
+		status.UpdateGatewayStatusProgrammedCondition(gtw, svc, envoyObj, r.store.listNodeAddresses()...)
+	}
 
 	key := utils.NamespacedName(gtw)
 
@@ -563,35 +597,4 @@ func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *
 			return gCopy
 		}),
 	})
-}
-
-func (r *gatewayAPIReconciler) updateStatusForGatewayClass(
-	ctx context.Context,
-	gc *gwapiv1.GatewayClass,
-	accepted bool,
-	reason,
-	msg string,
-) error {
-	if r.statusUpdater != nil {
-		r.statusUpdater.Send(Update{
-			NamespacedName: types.NamespacedName{Name: gc.Name},
-			Resource:       &gwapiv1.GatewayClass{},
-			Mutator: MutatorFunc(func(obj client.Object) client.Object {
-				gc, ok := obj.(*gwapiv1.GatewayClass)
-				if !ok {
-					panic(fmt.Sprintf("unsupported object type %T", obj))
-				}
-
-				return status.SetGatewayClassAccepted(gc.DeepCopy(), accepted, reason, msg)
-			}),
-		})
-	} else {
-		// this branch makes testing easier by not going through the status.Updater.
-		duplicate := status.SetGatewayClassAccepted(gc.DeepCopy(), accepted, reason, msg)
-
-		if err := r.client.Status().Update(ctx, duplicate); err != nil && !kerrors.IsNotFound(err) {
-			return fmt.Errorf("error updating status of gatewayclass %s: %w", duplicate.Name, err)
-		}
-	}
-	return nil
 }

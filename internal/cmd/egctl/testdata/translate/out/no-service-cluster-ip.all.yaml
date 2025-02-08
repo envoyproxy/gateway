@@ -156,6 +156,7 @@ xds:
                   - name: envoy.filters.http.router
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                  normalizePath: true
                   routeConfig:
                     name: local_route
                     virtualHosts:
@@ -164,7 +165,10 @@ xds:
                       name: prometheus_stats
                       routes:
                       - match:
-                          prefix: /stats/prometheus
+                          headers:
+                          - exactMatch: GET
+                            name: :method
+                          path: /stats/prometheus
                         route:
                           cluster: prometheus_stats
                   statPrefix: eg-ready-http
@@ -204,7 +208,6 @@ xds:
           ignoreHealthOnHostRemoval: true
           lbPolicy: LEAST_REQUEST
           name: httproute/envoy-gateway-system/routes/rule/0
-          outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
           type: EDS
     - '@type': type.googleapis.com/envoy.admin.v3.ListenersConfigDump

@@ -30,12 +30,15 @@ updates:
       k8s.io:
         patterns:
           - "k8s.io/*"
+          - "sigs.k8s.io/*"
       go.opentelemetry.io:
         patterns:
           - "go.opentelemetry.io/*"
       golang.org:
         patterns:
           - "golang.org/*"
+          - "google.golang.org/*"
+          - "google.golang.org/genproto/googleapis/*"
   - package-ecosystem: pip
     directories:
       - /tools/src/codespell

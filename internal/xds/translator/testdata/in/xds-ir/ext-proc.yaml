@@ -31,7 +31,12 @@ http:
               responseAttributes:
                 - request.path
               responseBodyProcessingMode: Streamed
+              allowModeOverride: true
               authority: grpc-backend-4.default:4000
+              forwardingMetadataNamespaces:
+                - envoy.filters.http.ext_authz
+              receivingMetadataNamespaces:
+                - envoy.filters.http.my_custom
               destination:
                 name: envoyextensionpolicy/default/policy-for-route-2/0/grpc-backend-4
                 settings:
@@ -81,6 +86,10 @@ http:
                 - connection.requested_server_name
               responseAttributes:
                 - request.path
+              forwardingMetadataNamespaces:
+                - envoy.filters.http.ext_proc
+              receivingMetadataNamespaces:
+                - envoy.filters.http.prc_ext
               authority: grpc-backend.envoy-gateway:9000
               destination:
                 name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/0/grpc-backend

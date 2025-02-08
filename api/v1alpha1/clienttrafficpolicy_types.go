@@ -258,7 +258,6 @@ type XForwardedForSettings struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MinItems=1
-	// +notImplementedHide
 	TrustedCIDRs []CIDR `json:"trustedCIDRs,omitempty"`
 }
 

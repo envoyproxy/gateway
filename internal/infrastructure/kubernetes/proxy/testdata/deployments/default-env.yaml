@@ -88,6 +88,7 @@ spec:
                   typed_config:
                     "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
                     stat_prefix: eg-ready-http
+                    normalize_path: true
                     route_config:
                       name: local_route
                       virtual_hosts:
@@ -96,7 +97,10 @@ spec:
                         - "*"
                         routes:
                         - match:
-                            prefix: /stats/prometheus
+                            path: /stats/prometheus
+                            headers:
+                            - name: ":method"
+                              exact_match: GET
                           route:
                             cluster: prometheus_stats
                     http_filters:
@@ -340,16 +344,7 @@ spec:
             cpu: 10m
             memory: 32Mi
         securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
-          privileged: false
-          runAsGroup: 65532
-          runAsNonRoot: true
-          runAsUser: 65532
-          seccompProfile:
-            type: RuntimeDefault
+          privileged: true
         startupProbe:
           failureThreshold: 30
           httpGet:

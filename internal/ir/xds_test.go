@@ -501,10 +501,10 @@ var (
 		},
 		Security: &SecurityFeatures{
 			JWT: &JWT{
-				Providers: []egv1a1.JWTProvider{
+				Providers: []JWTProvider{
 					{
 						Name: "test1",
-						RemoteJWKS: egv1a1.RemoteJWKS{
+						RemoteJWKS: RemoteJWKS{
 							URI: "https://test1.local",
 						},
 					},
@@ -518,7 +518,11 @@ var (
 		PathMatch: &StringMatch{
 			Exact: ptr.To("mirrorfilter"),
 		},
-		Mirrors: []*RouteDestination{&happyRouteDestination},
+		Mirrors: []*MirrorPolicy{
+			{
+				Destination: &happyRouteDestination,
+			},
+		},
 	}
 
 	// RouteDestination
@@ -1236,48 +1240,6 @@ func TestValidateStringMatch(t *testing.T) {
 	}
 }
 
-func TestValidateJWT(t *testing.T) {
-	tests := []struct {
-		name  string
-		input JWT
-		want  error
-	}{
-		{
-			name: "nil rules",
-			input: JWT{
-				Providers: nil,
-			},
-			want: nil,
-		},
-		{
-			name: "provider with remote jwks uri",
-			input: JWT{
-				Providers: []egv1a1.JWTProvider{
-					{
-						Name:      "test",
-						Issuer:    "https://test.local",
-						Audiences: []string{"test1", "test2"},
-						RemoteJWKS: egv1a1.RemoteJWKS{
-							URI: "https://test.local",
-						},
-					},
-				},
-			},
-			want: nil,
-		},
-	}
-	for i := range tests {
-		test := tests[i]
-		t.Run(test.name, func(t *testing.T) {
-			if test.want == nil {
-				require.NoError(t, test.input.Validate())
-			} else {
-				require.EqualError(t, test.input.Validate(), test.want.Error())
-			}
-		})
-	}
-}
-
 func TestValidateLoadBalancer(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -1384,6 +1346,9 @@ func TestRedaction(t *testing.T) {
 								ClientSecret: []byte("secret"),
 								HMACSecret:   []byte("secret"),
 							},
+							APIKeyAuth: &APIKeyAuth{
+								Credentials: map[string]PrivateBytes{"client-id": []byte("secret")},
+							},
 							BasicAuth: &BasicAuth{
 								Users: []byte("secret"),
 							},
@@ -1399,6 +1364,7 @@ func TestRedaction(t *testing.T) {
 				`"routes":[{` +
 				`"name":"","hostname":"","isHTTP2":false,"security":{` +
 				`"oidc":{"name":"","provider":{},"clientID":"","clientSecret":"[redacted]","hmacSecret":"[redacted]"},` +
+				`"apiKeyAuth":{"credentials":{"client-id":"[redacted]"},"extractFrom":null},` +
 				`"basicAuth":{"name":"","users":"[redacted]"}` +
 				`}}],` +
 				`"isHTTP2":false,"path":{"mergeSlashes":false,"escapedSlashesAction":""}}]}`,
@@ -1438,10 +1404,28 @@ func TestValidateHealthCheck(t *testing.T) {
 						Path:             "/healthz",
 						ExpectedStatuses: []HTTPStatus{200, 400},
 					},
-				},
-				&OutlierDetection{},
+				}, &OutlierDetection{},
+				ptr.To[uint32](10),
 			},
 			want: ErrHealthCheckTimeoutInvalid,
+		},
+		{
+			name: "invalid panic threshold",
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Timeout:            &metav1.Duration{Duration: time.Duration(3)},
+					Interval:           &metav1.Duration{Duration: time.Second},
+					UnhealthyThreshold: ptr.To[uint32](3),
+					HealthyThreshold:   ptr.To[uint32](3),
+					HTTP: &HTTPHealthChecker{
+						Host:             "*",
+						Path:             "/healthz",
+						ExpectedStatuses: []HTTPStatus{200, 400},
+					},
+				}, &OutlierDetection{},
+				ptr.To[uint32](200),
+			},
+			want: ErrPanicThresholdInvalid,
 		},
 		{
 			name: "invalid interval",
@@ -1459,6 +1443,7 @@ func TestValidateHealthCheck(t *testing.T) {
 					},
 				},
 				&OutlierDetection{},
+				ptr.To[uint32](10),
 			},
 			want: ErrHealthCheckIntervalInvalid,
 		},
@@ -1478,6 +1463,7 @@ func TestValidateHealthCheck(t *testing.T) {
 					},
 				},
 				&OutlierDetection{},
+				ptr.To[uint32](10),
 			},
 			want: ErrHealthCheckUnhealthyThresholdInvalid,
 		},
@@ -1497,6 +1483,7 @@ func TestValidateHealthCheck(t *testing.T) {
 					},
 				},
 				&OutlierDetection{},
+				ptr.To[uint32](10),
 			},
 			want: ErrHealthCheckHealthyThresholdInvalid,
 		},
@@ -1515,6 +1502,7 @@ func TestValidateHealthCheck(t *testing.T) {
 					},
 				},
 				&OutlierDetection{},
+				ptr.To[uint32](10),
 			},
 			want: ErrHCHTTPHostInvalid,
 		},
@@ -1534,6 +1522,7 @@ func TestValidateHealthCheck(t *testing.T) {
 					},
 				},
 				&OutlierDetection{},
+				ptr.To[uint32](10),
 			},
 			want: ErrHCHTTPPathInvalid,
 		},
@@ -1553,6 +1542,7 @@ func TestValidateHealthCheck(t *testing.T) {
 					},
 				},
 				&OutlierDetection{},
+				ptr.To[uint32](10),
 			},
 			want: ErrHCHTTPMethodInvalid,
 		},
@@ -1572,6 +1562,7 @@ func TestValidateHealthCheck(t *testing.T) {
 					},
 				},
 				&OutlierDetection{},
+				ptr.To[uint32](10),
 			},
 			want: ErrHCHTTPExpectedStatusesInvalid,
 		},
@@ -1591,6 +1582,7 @@ func TestValidateHealthCheck(t *testing.T) {
 					},
 				},
 				&OutlierDetection{},
+				ptr.To[uint32](10),
 			},
 			want: ErrHTTPStatusInvalid,
 		},
@@ -1614,6 +1606,7 @@ func TestValidateHealthCheck(t *testing.T) {
 					},
 				},
 				&OutlierDetection{},
+				ptr.To[uint32](10),
 			},
 			want: ErrHealthCheckPayloadInvalid,
 		},
@@ -1636,6 +1629,7 @@ func TestValidateHealthCheck(t *testing.T) {
 					},
 				},
 				&OutlierDetection{},
+				ptr.To[uint32](10),
 			},
 			want: ErrHealthCheckPayloadInvalid,
 		},
@@ -1658,6 +1652,7 @@ func TestValidateHealthCheck(t *testing.T) {
 					},
 				},
 				&OutlierDetection{},
+				ptr.To[uint32](10),
 			},
 			want: ErrHealthCheckPayloadInvalid,
 		},
@@ -1669,6 +1664,7 @@ func TestValidateHealthCheck(t *testing.T) {
 					Interval:         &metav1.Duration{Duration: time.Duration(0)},
 					BaseEjectionTime: &metav1.Duration{Duration: time.Second},
 				},
+				ptr.To[uint32](10),
 			},
 			want: ErrOutlierDetectionIntervalInvalid,
 		},
@@ -1680,6 +1676,7 @@ func TestValidateHealthCheck(t *testing.T) {
 					Interval:         &metav1.Duration{Duration: time.Second},
 					BaseEjectionTime: &metav1.Duration{Duration: time.Duration(0)},
 				},
+				ptr.To[uint32](10),
 			},
 			want: ErrOutlierDetectionBaseEjectionTimeInvalid,
 		},

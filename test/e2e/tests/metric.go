@@ -25,16 +25,16 @@ func init() {
 }
 
 var MetricTest = suite.ConformanceTest{
-	ShortName:   "Proxy Metrics",
+	ShortName:   "ProxyMetrics",
 	Description: "Make sure metric is working",
 	Manifests:   []string{"testdata/metric.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("prometheus", func(t *testing.T) {
-			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "metric-prometheus", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "metric-prometheus", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "metric-prometheus", Namespace: ns}
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
+		t.Run("prometheus", func(t *testing.T) {
 			expectedResponse := httputils.ExpectedResponse{
 				Request: httputils.Request{
 					Path: "/prom",
@@ -64,11 +64,6 @@ var MetricTest = suite.ConformanceTest{
 		})
 
 		t.Run("otel", func(t *testing.T) {
-			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "metric-prometheus", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-
 			expectedResponse := httputils.ExpectedResponse{
 				Request: httputils.Request{
 					Path: "/prom",

@@ -497,6 +497,19 @@ func (t *Translator) buildExtProc(
 				extProcIR.ResponseAttributes = append(extProcIR.ResponseAttributes, extProc.ProcessingMode.Response.Attributes...)
 			}
 		}
+		extProcIR.AllowModeOverride = extProc.ProcessingMode.AllowModeOverride
+	}
+
+	if extProc.Metadata != nil {
+		if extProc.Metadata.AccessibleNamespaces != nil {
+			extProcIR.ForwardingMetadataNamespaces = append(extProcIR.ForwardingMetadataNamespaces,
+				extProc.Metadata.AccessibleNamespaces...)
+		}
+
+		if extProc.Metadata.WritableNamespaces != nil {
+			extProcIR.ReceivingMetadataNamespaces = append(extProcIR.ReceivingMetadataNamespaces,
+				extProc.Metadata.WritableNamespaces...)
+		}
 	}
 
 	return extProcIR, err

@@ -68,7 +68,7 @@ static_resources:
         address: '{{ .ReadyServer.Address }}'
         port_value: {{ .ReadyServer.Port }}
         protocol: TCP
-        {{- if eq .IPFamily "DualStack"}}
+        {{- if eq .IPFamily "DualStack" "IPv6" }}
         ipv4_compat: true
         {{- end }}
     filter_chains:
@@ -77,6 +77,7 @@ static_resources:
         typed_config:
           "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
           stat_prefix: eg-ready-http
+          normalize_path: true
           route_config:
             name: local_route
             {{- if .EnablePrometheus }}
@@ -86,7 +87,10 @@ static_resources:
               - "*"
               routes:
               - match:
-                  prefix: /stats/prometheus
+                  path: /stats/prometheus
+                  headers:
+                  - name: ":method"
+                    exact_match: GET
                 route:
                   cluster: prometheus_stats
                 {{- if .EnablePrometheusCompression }}

@@ -26,6 +26,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes/test"
 )
 
@@ -262,6 +263,37 @@ func TestValidateSecretForReconcile(t *testing.T) {
 							ClientID: "client-id",
 							ClientSecret: gwapiv1.SecretObjectReference{
 								Name: "secret",
+							},
+						},
+					},
+				},
+			},
+			secret: test.GetSecret(types.NamespacedName{Name: "secret"}),
+			expect: true,
+		},
+		{
+			name: "references SecurityPolicy APIKey Auth",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				test.GetGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc", 8080),
+				&egv1a1.SecurityPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "apikey-auth",
+					},
+					Spec: egv1a1.SecurityPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
+								},
+							},
+						},
+						APIKeyAuth: &egv1a1.APIKeyAuth{
+							CredentialRefs: []gwapiv1.SecretObjectReference{
+								{
+									Name: "secret",
+								},
 							},
 						},
 					},
@@ -854,6 +886,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 		classController:    egv1a1.GatewayControllerName,
 		log:                logger,
 		mergeGateways:      sets.New[string]("test-mg"),
+		resources:          &message.ProviderResources{},
 		grpcRouteCRDExists: true,
 		tcpRouteCRDExists:  true,
 		udpRouteCRDExists:  true,
@@ -972,6 +1005,7 @@ func TestValidateObjectForReconcile(t *testing.T) {
 		classController: egv1a1.GatewayControllerName,
 		log:             logger,
 		mergeGateways:   sets.New[string]("test-mg"),
+		resources:       &message.ProviderResources{},
 	}
 
 	for _, tc := range testCases {

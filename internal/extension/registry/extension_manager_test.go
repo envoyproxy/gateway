@@ -6,11 +6,19 @@
 package registry
 
 import (
+	"context"
+	"fmt"
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc"
+	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/utils/ptr"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/envoygateway"
 )
 
 func TestGetExtensionServerAddress(t *testing.T) {
@@ -68,6 +76,77 @@ func TestGetExtensionServerAddress(t *testing.T) {
 		t.Run(tc.Name, func(t *testing.T) {
 			out := getExtensionServerAddress(tc.Service)
 			require.Equal(t, tc.Expected, out)
+		})
+	}
+}
+
+func Test_setupGRPCOpts(t *testing.T) {
+	type args struct {
+		ext *egv1a1.ExtensionManager
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    []grpc.DialOption
+		wantErr bool
+	}{
+		{
+			args: args{
+				ext: &egv1a1.ExtensionManager{
+					MaxMessageSize: ptr.To(resource.MustParse(fmt.Sprintf("%dM", math.MaxInt))),
+					Service: &egv1a1.ExtensionService{
+						BackendEndpoint: egv1a1.BackendEndpoint{
+							FQDN: &egv1a1.FQDNEndpoint{
+								Hostname: "foo.bar",
+								Port:     44344,
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			args: args{
+				ext: &egv1a1.ExtensionManager{
+					MaxMessageSize: ptr.To(resource.MustParse(fmt.Sprintf("%dM", 0))),
+					Service: &egv1a1.ExtensionService{
+						BackendEndpoint: egv1a1.BackendEndpoint{
+							FQDN: &egv1a1.FQDNEndpoint{
+								Hostname: "foo.bar",
+								Port:     44344,
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			args: args{
+				ext: &egv1a1.ExtensionManager{
+					MaxMessageSize: ptr.To(resource.MustParse(fmt.Sprintf("%dM", 10))),
+					Service: &egv1a1.ExtensionService{
+						BackendEndpoint: egv1a1.BackendEndpoint{
+							FQDN: &egv1a1.FQDNEndpoint{
+								Hostname: "foo.bar",
+								Port:     44344,
+							},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fc := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
+			_, err := setupGRPCOpts(context.TODO(), fc, tt.args.ext, "envoy-gateway-system")
+			if (err != nil) != tt.wantErr {
+				t.Errorf("setupGRPCOpts() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
 		})
 	}
 }

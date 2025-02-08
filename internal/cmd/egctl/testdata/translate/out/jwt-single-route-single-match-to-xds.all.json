@@ -268,6 +268,7 @@
                                 }
                               }
                             ],
+                            "normalizePath": true,
                             "routeConfig": {
                               "name": "local_route",
                               "virtualHosts": [
@@ -279,7 +280,13 @@
                                   "routes": [
                                     {
                                       "match": {
-                                        "prefix": "/stats/prometheus"
+                                        "headers": [
+                                          {
+                                            "exactMatch": "GET",
+                                            "name": ":method"
+                                          }
+                                        ],
+                                        "path": "/stats/prometheus"
                                       },
                                       "route": {
                                         "cluster": "prometheus_stats"
@@ -361,7 +368,6 @@
                 "ignoreHealthOnHostRemoval": true,
                 "lbPolicy": "LEAST_REQUEST",
                 "name": "httproute/envoy-gateway-system/backend/rule/0",
-                "outlierDetection": {},
                 "perConnectionBufferLimitBytes": 32768,
                 "type": "EDS"
               }
@@ -408,7 +414,6 @@
                   ]
                 },
                 "name": "raw_githubusercontent_com_443",
-                "outlierDetection": {},
                 "perConnectionBufferLimitBytes": 32768,
                 "respectDnsTtl": true,
                 "transportSocket": {

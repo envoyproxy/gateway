@@ -545,6 +545,9 @@ func secretSecurityPolicyIndexFunc(rawObj client.Object) []string {
 	if securityPolicy.Spec.OIDC != nil {
 		secretReferences = append(secretReferences, securityPolicy.Spec.OIDC.ClientSecret)
 	}
+	if securityPolicy.Spec.APIKeyAuth != nil {
+		secretReferences = append(secretReferences, securityPolicy.Spec.APIKeyAuth.CredentialRefs...)
+	}
 	if securityPolicy.Spec.BasicAuth != nil {
 		secretReferences = append(secretReferences, securityPolicy.Spec.BasicAuth.Users)
 	}
@@ -664,7 +667,7 @@ func configMapBtpIndexFunc(rawObj client.Object) []string {
 	var configMapReferences []string
 
 	for _, ro := range btp.Spec.ResponseOverride {
-		if ro.Response.Body.ValueRef != nil {
+		if ro.Response.Body != nil && ro.Response.Body.ValueRef != nil {
 			if string(ro.Response.Body.ValueRef.Kind) == resource.KindConfigMap {
 				configMapReferences = append(configMapReferences,
 					types.NamespacedName{

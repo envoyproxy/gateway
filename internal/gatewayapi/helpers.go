@@ -249,25 +249,6 @@ func OwnerLabels(gateway *gwapiv1.Gateway, mergeGateways bool) map[string]string
 	return GatewayOwnerLabels(gateway.Namespace, gateway.Name)
 }
 
-// servicePortToContainerPort translates a service port into an ephemeral
-// container port.
-func servicePortToContainerPort(servicePort int32, envoyProxy *egv1a1.EnvoyProxy) int32 {
-	if envoyProxy != nil {
-		if !envoyProxy.NeedToSwitchPorts() {
-			return servicePort
-		}
-	}
-
-	// If the service port is a privileged port (1-1023)
-	// add a constant to the value converting it into an ephemeral port.
-	// This allows the container to bind to the port without needing a
-	// CAP_NET_BIND_SERVICE capability.
-	if servicePort < minEphemeralPort {
-		return servicePort + wellKnownPortShift
-	}
-	return servicePort
-}
-
 // computeHosts returns a list of intersecting listener hostnames and route hostnames
 // that don't intersect with other listener hostnames.
 func computeHosts(routeHostnames []string, listenerContext *ListenerContext) []string {
@@ -662,4 +643,12 @@ func getEnvoyIPFamily(envoyProxy *egv1a1.EnvoyProxy) *egv1a1.IPFamily {
 	default:
 		return nil
 	}
+}
+
+// getPreserveRouteOrder returns true if route order should be preserved according to EnvoyProxy spec
+func getPreserveRouteOrder(envoyProxy *egv1a1.EnvoyProxy) bool {
+	if envoyProxy != nil && envoyProxy.Spec.PreserveRouteOrder != nil && *envoyProxy.Spec.PreserveRouteOrder {
+		return true
+	}
+	return false
 }

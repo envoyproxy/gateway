@@ -11,6 +11,7 @@ import (
 	"math"
 	"math/big"
 	"net/http"
+	"reflect"
 	"strings"
 	"time"
 
@@ -29,7 +30,7 @@ func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatur
 	}
 	ret := &ir.TrafficFeatures{}
 
-	if timeout, err := buildClusterSettingsTimeout(*policy, nil); err != nil {
+	if timeout, err := buildClusterSettingsTimeout(*policy); err != nil {
 		return nil, err
 	} else {
 		ret.Timeout = timeout
@@ -71,26 +72,26 @@ func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatur
 		ret.HTTP2 = h2
 	}
 
-	ret.Retry = buildRetry(policy.Retry)
+	var err error
+	if ret.Retry, err = buildRetry(policy.Retry); err != nil {
+		return nil, err
+	}
 
 	// If nothing was set in any of the above calls, return nil instead of an empty
 	// container
 	var empty ir.TrafficFeatures
-	if empty == *ret {
+	if reflect.DeepEqual(empty, *ret) {
 		ret = nil
 	}
 
 	return ret, nil
 }
 
-func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings, routeTrafficFeatures *ir.TrafficFeatures) (*ir.Timeout, error) {
+func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings) (*ir.Timeout, error) {
 	if policy.Timeout == nil {
-		if routeTrafficFeatures != nil {
-			// Don't lose any existing timeout definitions.
-			return mergeTimeoutSettings(nil, routeTrafficFeatures.Timeout), nil
-		}
 		return nil, nil
 	}
+
 	var (
 		errs error
 		to   = &ir.Timeout{}
@@ -146,38 +147,7 @@ func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings, routeTrafficFeat
 			RequestTimeout:        rt,
 		}
 	}
-
-	// The timeout from route's TrafficFeatures takes precedence over the timeout in BTP
-	if routeTrafficFeatures != nil {
-		to = mergeTimeoutSettings(routeTrafficFeatures.Timeout, to)
-	}
-
 	return to, errs
-}
-
-// merge secondary into main if both are not nil, otherwise return the
-// one that is not nil. If both are nil, returns nil
-func mergeTimeoutSettings(main, secondary *ir.Timeout) *ir.Timeout {
-	switch {
-	case main == nil && secondary == nil:
-		return nil
-	case main == nil:
-		return secondary.DeepCopy()
-	case secondary == nil:
-		return main
-	default: // Neither main nor secondary are nil here
-		if secondary.HTTP != nil {
-			setIfNil(&main.HTTP, &ir.HTTPTimeout{})
-			setIfNil(&main.HTTP.RequestTimeout, secondary.HTTP.RequestTimeout)
-			setIfNil(&main.HTTP.ConnectionIdleTimeout, secondary.HTTP.ConnectionIdleTimeout)
-			setIfNil(&main.HTTP.MaxConnectionDuration, secondary.HTTP.MaxConnectionDuration)
-		}
-		if secondary.TCP != nil {
-			setIfNil(&main.TCP, &ir.TCPTimeout{})
-			setIfNil(&main.TCP.ConnectTimeout, secondary.TCP.ConnectTimeout)
-		}
-		return main
-	}
 }
 
 func buildBackendConnection(policy egv1a1.ClusterSettings) (*ir.BackendConnection, error) {
@@ -390,7 +360,7 @@ func buildHealthCheck(policy egv1a1.ClusterSettings) *ir.HealthCheck {
 	irhc := &ir.HealthCheck{}
 	irhc.Passive = buildPassiveHealthCheck(*policy.HealthCheck)
 	irhc.Active = buildActiveHealthCheck(*policy.HealthCheck)
-
+	irhc.PanicThreshold = policy.HealthCheck.PanicThreshold
 	return irhc
 }
 
@@ -510,9 +480,9 @@ func translateDNS(policy egv1a1.ClusterSettings) *ir.DNS {
 	}
 }
 
-func buildRetry(r *egv1a1.Retry) *ir.Retry {
+func buildRetry(r *egv1a1.Retry) (*ir.Retry, error) {
 	if r == nil {
-		return nil
+		return nil, nil
 	}
 
 	rt := &ir.Retry{}
@@ -551,13 +521,22 @@ func buildRetry(r *egv1a1.Retry) *ir.Retry {
 		if r.PerRetry.BackOff != nil {
 			if r.PerRetry.BackOff.MaxInterval != nil || r.PerRetry.BackOff.BaseInterval != nil {
 				bop := &ir.BackOffPolicy{}
-				if r.PerRetry.BackOff.MaxInterval != nil {
-					bop.MaxInterval = r.PerRetry.BackOff.MaxInterval
-				}
-
 				if r.PerRetry.BackOff.BaseInterval != nil {
 					bop.BaseInterval = r.PerRetry.BackOff.BaseInterval
+					if bop.BaseInterval.Duration == 0 {
+						return nil, fmt.Errorf("baseInterval cannot be set to 0s")
+					}
 				}
+				if r.PerRetry.BackOff.MaxInterval != nil {
+					bop.MaxInterval = r.PerRetry.BackOff.MaxInterval
+					if bop.MaxInterval.Duration == 0 {
+						return nil, fmt.Errorf("maxInterval cannot be set to 0s")
+					}
+					if bop.BaseInterval != nil && bop.BaseInterval.Duration > bop.MaxInterval.Duration {
+						return nil, fmt.Errorf("maxInterval cannot be less than baseInterval")
+					}
+				}
+
 				pr.BackOff = bop
 				bpr = true
 			}
@@ -568,5 +547,5 @@ func buildRetry(r *egv1a1.Retry) *ir.Retry {
 		}
 	}
 
-	return rt
+	return rt, nil
 }

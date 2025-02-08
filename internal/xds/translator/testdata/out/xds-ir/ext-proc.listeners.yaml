@@ -18,6 +18,7 @@
           name: envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-route-2/extproc/0
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor
+            allowModeOverride: true
             failureModeAllow: true
             grpcService:
               envoyGrpc:
@@ -25,6 +26,13 @@
                 clusterName: envoyextensionpolicy/default/policy-for-route-2/0/grpc-backend-4
               timeout: 10s
             messageTimeout: 5s
+            metadataOptions:
+              forwardingNamespaces:
+                untyped:
+                - envoy.filters.http.ext_authz
+              receivingNamespaces:
+                untyped:
+                - envoy.filters.http.my_custom
             processingMode:
               requestBodyMode: BUFFERED
               requestHeaderMode: SEND
@@ -78,6 +86,13 @@
                 clusterName: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/0/grpc-backend
               timeout: 10s
             messageTimeout: 15s
+            metadataOptions:
+              forwardingNamespaces:
+                untyped:
+                - envoy.filters.http.ext_proc
+              receivingNamespaces:
+                untyped:
+                - envoy.filters.http.prc_ext
             processingMode:
               requestHeaderMode: SKIP
               requestTrailerMode: SKIP

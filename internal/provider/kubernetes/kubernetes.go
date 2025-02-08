@@ -36,40 +36,40 @@ type Provider struct {
 }
 
 // New creates a new Provider from the provided EnvoyGateway.
-func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources) (*Provider, error) {
+func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources *message.ProviderResources) (*Provider, error) {
 	// TODO: Decide which mgr opts should be exposed through envoygateway.provider.kubernetes API.
 
 	mgrOpts := manager.Options{
 		Scheme:                  envoygateway.GetScheme(),
-		Logger:                  svr.Logger.Logger,
+		Logger:                  svrCfg.Logger.Logger,
 		HealthProbeBindAddress:  ":8081",
 		LeaderElectionID:        "5b9825d2.gateway.envoyproxy.io",
-		LeaderElectionNamespace: svr.Namespace,
+		LeaderElectionNamespace: svrCfg.Namespace,
 	}
 
 	log.SetLogger(mgrOpts.Logger)
 	klog.SetLogger(mgrOpts.Logger)
 
-	if !ptr.Deref(svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable, false) {
+	if !ptr.Deref(svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable, false) {
 		mgrOpts.LeaderElection = true
-		if svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.LeaseDuration != nil {
-			ld, err := time.ParseDuration(string(*svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.LeaseDuration))
+		if svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.LeaseDuration != nil {
+			ld, err := time.ParseDuration(string(*svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.LeaseDuration))
 			if err != nil {
 				return nil, err
 			}
 			mgrOpts.LeaseDuration = ptr.To(ld)
 		}
 
-		if svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.RetryPeriod != nil {
-			rp, err := time.ParseDuration(string(*svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.RetryPeriod))
+		if svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.RetryPeriod != nil {
+			rp, err := time.ParseDuration(string(*svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.RetryPeriod))
 			if err != nil {
 				return nil, err
 			}
 			mgrOpts.RetryPeriod = ptr.To(rp)
 		}
 
-		if svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.RenewDeadline != nil {
-			rd, err := time.ParseDuration(string(*svr.EnvoyGateway.Provider.Kubernetes.LeaderElection.RenewDeadline))
+		if svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.RenewDeadline != nil {
+			rd, err := time.ParseDuration(string(*svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.RenewDeadline))
 			if err != nil {
 				return nil, err
 			}
@@ -78,13 +78,13 @@ func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources)
 		mgrOpts.Controller = config.Controller{NeedLeaderElection: ptr.To(false)}
 	}
 
-	if svr.EnvoyGateway.NamespaceMode() {
+	if svrCfg.EnvoyGateway.NamespaceMode() {
 		mgrOpts.Cache.DefaultNamespaces = make(map[string]cache.Config)
-		for _, watchNS := range svr.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces {
+		for _, watchNS := range svrCfg.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces {
 			mgrOpts.Cache.DefaultNamespaces[watchNS] = cache.Config{}
 		}
 	}
-	mgr, err := ctrl.NewManager(cfg, mgrOpts)
+	mgr, err := ctrl.NewManager(restCfg, mgrOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create manager: %w", err)
 	}
@@ -95,7 +95,7 @@ func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources)
 	}
 
 	// Create and register the controllers with the manager.
-	if err := newGatewayAPIController(mgr, svr, updateHandler.Writer(), resources); err != nil {
+	if err := newGatewayAPIController(ctx, mgr, svrCfg, updateHandler.Writer(), resources); err != nil {
 		return nil, fmt.Errorf("failted to create gatewayapi controller: %w", err)
 	}
 
@@ -109,11 +109,12 @@ func New(cfg *rest.Config, svr *ec.Server, resources *message.ProviderResources)
 		return nil, fmt.Errorf("unable to set up ready check: %w", err)
 	}
 
-	// Emit elected & continue with envoyObjects of infra resources
+	// Emit elected & continue with the tasks that require leadership.
 	go func() {
 		<-mgr.Elected()
-		// WARN: DO NOT CLOSE IT
-		svr.Elected <- struct{}{}
+		// Close the elected channel to signal that this EG instance has been elected as leader.
+		// This allows the tasks that require leadership to proceed.
+		close(svrCfg.Elected)
 	}()
 
 	return &Provider{

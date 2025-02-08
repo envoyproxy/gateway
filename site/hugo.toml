@@ -53,7 +53,7 @@ anchor = "smart"
 [services]
 [services.googleAnalytics]
 # Comment out the next line to disable GA tracking. Also disables the feature described in [params.ui.feedback].
-id = "UA-00000000-0"
+id = "G-DXJEH1ZRXX"
 
 # Language configuration
 
@@ -82,6 +82,9 @@ id = "UA-00000000-0"
       block = true
     [markup.goldmark.renderer]
       unsafe = true
+    [markup.goldmark.renderHooks]
+      [markup.goldmark.renderHooks.image]
+        enableDefault = true
   [markup.highlight]
     # See a complete list of available styles at https://xyproto.github.io/splash/docs/all.html
     style = "tango"
@@ -275,6 +278,10 @@ enable = true
   url = "/latest"
 
 [[params.versions]]
+  version = "v1.3"
+  url = "/v1.3"
+
+[[params.versions]]
   version = "v1.2"
   url = "/docs"
 
@@ -305,4 +312,3 @@ enable = true
 [[params.versions]]
   version = "v0.2"
   url = "/v0.2"
-

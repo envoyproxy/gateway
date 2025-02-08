@@ -81,12 +81,14 @@ spec:
                   address: '::'
                   port_value: 19001
                   protocol: TCP
+                  ipv4_compat: true
               filter_chains:
               - filters:
                 - name: envoy.filters.network.http_connection_manager
                   typed_config:
                     "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
                     stat_prefix: eg-ready-http
+                    normalize_path: true
                     route_config:
                       name: local_route
                       virtual_hosts:
@@ -95,7 +97,10 @@ spec:
                         - "*"
                         routes:
                         - match:
-                            prefix: /stats/prometheus
+                            path: /stats/prometheus
+                            headers:
+                            - name: ":method"
+                              exact_match: GET
                           route:
                             cluster: prometheus_stats
                     http_filters:

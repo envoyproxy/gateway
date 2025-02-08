@@ -95,8 +95,7 @@ func (t *Translator) processExtServiceDestination(
 		if !t.BackendEnabled {
 			return nil, fmt.Errorf("resource %s of type Backend cannot be used since Backend is disabled in Envoy Gateway configuration", string(backendRef.Name))
 		}
-		ds = t.processBackendDestinationSetting(backendRef.BackendObjectReference, backendNamespace, resources)
-		ds.Protocol = protocol
+		ds = t.processBackendDestinationSetting(backendRef.BackendObjectReference, backendNamespace, protocol, resources)
 	}
 
 	if ds == nil {
@@ -110,7 +109,8 @@ func (t *Translator) processExtServiceDestination(
 			"mixed endpointslice address type for the same backendRef is not supported")
 	}
 
-	backendTLS = t.applyBackendTLSSetting(
+	var err error
+	backendTLS, err = t.applyBackendTLSSetting(
 		backendRef.BackendObjectReference,
 		backendNamespace,
 		// Gateway is not the appropriate parent reference here because the owner
@@ -126,6 +126,9 @@ func (t *Translator) processExtServiceDestination(
 		resources,
 		envoyProxy,
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	ds.TLS = backendTLS
 

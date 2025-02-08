@@ -169,6 +169,20 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 		serviceSpec.ExternalIPs = r.infra.Addresses
 	}
 
+	// Set IP family policy and families based on proxy config request
+	ipFamily := r.infra.GetProxyConfig().Spec.IPFamily
+	if ipFamily != nil {
+		// SingleStack+IPv4 is default behavior from K8s and so is omitted
+		switch *ipFamily {
+		case egv1a1.IPv6:
+			serviceSpec.IPFamilies = []corev1.IPFamily{corev1.IPv6Protocol}
+			serviceSpec.IPFamilyPolicy = ptr.To(corev1.IPFamilyPolicySingleStack)
+		case egv1a1.DualStack:
+			serviceSpec.IPFamilies = []corev1.IPFamily{corev1.IPv4Protocol, corev1.IPv6Protocol}
+			serviceSpec.IPFamilyPolicy = ptr.To(corev1.IPFamilyPolicyRequireDualStack)
+		}
+	}
+
 	svc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -326,13 +340,6 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		deployment.ObjectMeta.Name = r.Name()
 	}
 
-	provider := proxyConfig.GetEnvoyProxyProvider()
-
-	// omit the deployment replicas if HPA is being set
-	if provider.GetEnvoyProxyKubeProvider().EnvoyHpa != nil {
-		deployment.Spec.Replicas = nil
-	}
-
 	// apply merge patch to deployment
 	if deployment, err = deploymentConfig.ApplyMergePatch(deployment); err != nil {
 		return nil, err
@@ -433,13 +440,13 @@ func (r *ResourceRender) PodDisruptionBudgetSpec() (*egv1a1.KubernetesPodDisrupt
 }
 
 func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, error) {
-	podDisruptionBudget, er := r.PodDisruptionBudgetSpec()
+	podDisruptionBudgetConfig, err := r.PodDisruptionBudgetSpec()
 	// If podDisruptionBudget config is nil or MinAvailable is nil, ignore PodDisruptionBudget.
-	if podDisruptionBudget == nil {
-		return nil, er
+	if podDisruptionBudgetConfig == nil {
+		return nil, err
 	}
 
-	return &policyv1.PodDisruptionBudget{
+	podDisruptionBudget := &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      r.Name(),
 			Namespace: r.Namespace,
@@ -449,10 +456,17 @@ func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, e
 			Kind:       "PodDisruptionBudget",
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
-			MinAvailable: &intstr.IntOrString{IntVal: ptr.Deref(podDisruptionBudget.MinAvailable, 0)},
+			MinAvailable: &intstr.IntOrString{IntVal: ptr.Deref(podDisruptionBudgetConfig.MinAvailable, 0)},
 			Selector:     r.stableSelector(),
 		},
-	}, nil
+	}
+
+	// apply merge patch to PodDisruptionBudget
+	if podDisruptionBudget, err = podDisruptionBudgetConfig.ApplyMergePatch(podDisruptionBudget); err != nil {
+		return nil, err
+	}
+
+	return podDisruptionBudget, nil
 }
 
 // HorizontalPodAutoscalerSpec returns the `HorizontalPodAutoscaler` sets spec.
@@ -504,6 +518,10 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 		hpa.Spec.ScaleTargetRef.Name = *deploymentConfig.Name
 	} else {
 		hpa.Spec.ScaleTargetRef.Name = r.Name()
+	}
+
+	if hpa, err = hpaConfig.ApplyMergePatch(hpa); err != nil {
+		return nil, err
 	}
 
 	return hpa, nil

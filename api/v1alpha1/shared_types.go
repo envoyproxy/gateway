@@ -406,6 +406,11 @@ type KubernetesPodDisruptionBudgetSpec struct {
 	// and resilience during maintenance operations.
 	// +optional
 	MinAvailable *int32 `json:"minAvailable,omitempty"`
+
+	// Patch defines how to perform the patch operation to the PodDisruptionBudget
+	//
+	// +optional
+	Patch *KubernetesPatchSpec `json:"patch,omitempty"`
 }
 
 // KubernetesHorizontalPodAutoscalerSpec defines Kubernetes Horizontal Pod Autoscaler settings of Envoy Proxy Deployment.
@@ -443,6 +448,11 @@ type KubernetesHorizontalPodAutoscalerSpec struct {
 	//
 	// +optional
 	Behavior *autoscalingv2.HorizontalPodAutoscalerBehavior `json:"behavior,omitempty"`
+
+	// Patch defines how to perform the patch operation to the HorizontalPodAutoscaler
+	//
+	// +optional
+	Patch *KubernetesPatchSpec `json:"patch,omitempty"`
 }
 
 // HTTPStatus defines the http status code.
@@ -684,7 +694,15 @@ type CustomResponse struct {
 	ContentType *string `json:"contentType,omitempty"`
 
 	// Body of the Custom Response
-	Body CustomResponseBody `json:"body"`
+	//
+	// +optional
+	Body *CustomResponseBody `json:"body,omitempty"`
+
+	// Status Code of the Custom Response
+	// If unset, does not override the status of response.
+	//
+	// +optional
+	StatusCode *int `json:"statusCode,omitempty"`
 }
 
 // ResponseValueType defines the types of values for the response body supported by Envoy Gateway.

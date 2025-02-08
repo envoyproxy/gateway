@@ -2,32 +2,22 @@ date: Pending
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
-  The Container `ports` field of the gateway instance has been removed, which will cause the gateway Pod to be rebuilt when upgrading the version.
-  ClientTrafficPolicy previously treated an empty TLS ALPNProtocols list as being undefined and applied Envoy Gateway defaults.
-  An empty TLS ALPNProtocols list is now treated as user-defined disablement of the TLS ALPN extension.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
-  Add a security update here
 
 # New features or capabilities added in this release.
 new features: |
-  Added support for trusted CIDRs in the ClientIPDetectionSettings API
-  Added support for sending attributes to external processor in EnvoyExtensionPolicy API
+  Added support for percentage-based request mirroring
 
-# Fixes for bugs identified in previous versions.
 bug fixes: |
-  Fixed BackendTLSPolicy didn't support using port name as the sectionName in the targetRefs
-  Fixed reference grant from EnvoyExtensionPolicy to referenced ext-proc backend not respected
 
 # Enhancements that improve performance.
 performance improvements: |
-  Add a performance improvement here
 
 # Deprecated features or APIs.
 deprecations: |
-  Add a deprecation here
 
 # Other notable changes not covered by the above sections.
 Other changes: |
-  [SecurityPolicy] Modify the JWT Provider Issuer validation constraint
+

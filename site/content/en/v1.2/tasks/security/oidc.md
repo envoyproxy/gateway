@@ -392,6 +392,151 @@ You can also try to access `https://foo.example.com:8443` and `https://www.examp
 be able to see the response from the backend service since these HTTPRoutes are also protected by the same OIDC config,
 and the cookies are shared across subdomains.
 
+## Connect to an OIDC Provider with Self-Signed Certificate
+
+In some scenarios, the OIDC provider may use a self-signed certificate. To connect to an OIDC provider with a self-signed certificate, you need to configure it using the [Backend] resource within the [SecurityPolicy]. Additionally, use the [BackendTLSPolicy] to specify the CA certificate required to authenticate the OIDC provider.
+
+The following example demonstrates how to configure the OIDC provider with a self-signed certificate.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: oidc-example
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: myapp
+  oidc:
+    provider:
+      backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-keycloak
+        port: 443
+      backendSettings:
+        retry:
+          numRetries: 3
+          perRetry:
+            backOff:
+              baseInterval: 1s
+              maxInterval: 5s
+          retryOn:
+            triggers: ["5xx", "gateway-error", "reset"]
+      issuer: "https://my.keycloak.com/realms/master"
+      authorizationEndpoint: "https://my.keycloak.com/realms/master/protocol/openid-connect/auth"
+      tokenEndpoint: "https://my.keycloak.com/realms/master/protocol/openid-connect/token"
+    clientID: "${CLIENT_ID}"
+    clientSecret:
+      name: "my-app-client-secret"
+    redirectURL: "http://www.example.com/myapp/oauth2/callback"
+    logoutPath: "/myapp/logout"
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-keycloak
+spec:
+  endpoints:
+  - fqdn:
+      hostname: 'my.keycloak.com'
+      port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1alpha3
+kind: BackendTLSPolicy
+metadata:
+  name: policy-btls
+spec:
+  targetRefs:
+  - group: gateway.envoyproxy.io
+    kind: Backend
+    name: backend-keycloak
+  validation:
+    caCertificateRefs:
+    - name: backend-tls-certificate
+      group: ""
+      kind: ConfigMap
+    hostname: my.keycloak.com
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: oidc-example
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: myapp
+  oidc:
+    provider:
+      backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-keycloak
+        port: 443
+      backendSettings:
+        retry:
+          numRetries: 3
+          perRetry:
+            backOff:
+              baseInterval: 1s
+              maxInterval: 5s
+          retryOn:
+            triggers: ["5xx", "gateway-error", "reset"]
+      issuer: "https://my.keycloak.com/realms/master"
+      authorizationEndpoint: "https://my.keycloak.com/realms/master/protocol/openid-connect/auth"
+      tokenEndpoint: "https://my.keycloak.com/realms/master/protocol/openid-connect/token"
+    clientID: "${CLIENT_ID}"
+    clientSecret:
+      name: "my-app-client-secret"
+    redirectURL: "http://www.example.com/myapp/oauth2/callback"
+    logoutPath: "/myapp/logout"
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-keycloak
+spec:
+  endpoints:
+  - fqdn:
+      hostname: 'my.keycloak.com'
+      port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1alpha3
+kind: BackendTLSPolicy
+metadata:
+  name: policy-btls
+spec:
+  targetRefs:
+  - group: gateway.envoyproxy.io
+    kind: Backend
+    name: backend-keycloak
+  validation:
+    caCertificateRefs:
+    - name: backend-tls-certificate
+      group: ""
+      kind: ConfigMap
+    hostname: my.keycloak.com
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+For more information about [Backend] and [BackendTLSPolicy], refer to the [Backend Routing][backend-routing] and [Backend TLS: Gateway to Backend][backend-tls] tasks.
+
 ## Clean-Up
 
 Follow the steps from the [Quickstart](../../quickstart) to uninstall Envoy Gateway and the example manifest.
@@ -411,6 +556,10 @@ Checkout the [Developer Guide](../../../../contributions/develop) to get involve
 
 [oidc]: https://openid.net/connect/
 [google-oidc]: https://developers.google.com/identity/protocols/oauth2/openid-connect
-[SecurityPolicy]: ../../../../contributions/design/security-policy
+[SecurityPolicy]: ../../../api/extension_types#securitypolicy
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
+[Backend]: ../../../api/extension_types#backend
+[BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/
+[backend-routing]: ../traffic/backend
+[backend-tls]: ../backend-tls
