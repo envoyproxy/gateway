@@ -74,7 +74,7 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	err = os.Chmod(udsAddr, 0700)
+	err = os.Chmod(udsAddr, 0o700)
 	if err != nil {
 		log.Fatalf("failed to set permissions: %v", err)
 	}

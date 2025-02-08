@@ -23,8 +23,4 @@ http:
         settings:
         - endpoints:
           - host: "2.3.4.5"
-    - destination:
-        name: "mirror-route-dest1"
-        settings:
-        - endpoints:
-          - host: "3.4.5.6"
+      percentage: 29

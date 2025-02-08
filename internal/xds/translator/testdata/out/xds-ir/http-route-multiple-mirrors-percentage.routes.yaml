@@ -14,10 +14,12 @@
         - cluster: mirror-route-dest
           runtimeFraction:
             defaultValue:
-              numerator: 100
+              denominator: MILLION
+              numerator: 250000
         - cluster: mirror-route-dest1
           runtimeFraction:
             defaultValue:
-              numerator: 100
+              denominator: MILLION
+              numerator: 440000
         upgradeConfigs:
         - upgradeType: websocket
