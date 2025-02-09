@@ -7,6 +7,7 @@ package registry
 
 import (
 	"context"
+	"crypto/tls"
 	"crypto/x509"
 	"errors"
 	"fmt"
@@ -246,17 +247,31 @@ func (m *Manager) CleanupHookConns() {
 }
 
 func parseCA(caSecret *corev1.Secret) (*x509.CertPool, error) {
-	caCertPEMBytes, ok := caSecret.Data[corev1.TLSCertKey]
+	caCertPEMBytes, ok := caSecret.Data["ca.crt"]
 	if !ok {
-		return nil, errors.New("no cert found in CA secret")
+		return nil, errors.New("no CA certificate found in secret")
 	}
 	cp := x509.NewCertPool()
 	if ok := cp.AppendCertsFromPEM(caCertPEMBytes); !ok {
-		return nil, errors.New("failed to append certificates")
+		return nil, errors.New("failed to append CA certificates")
 	}
 	return cp, nil
 }
 
+func loadClientCert(clientCertSecret *corev1.Secret) (tls.Certificate, error) {
+	certPEM, certOK := clientCertSecret.Data["tls.crt"]
+	keyPEM, keyOK := clientCertSecret.Data["tls.key"]
+	if !certOK || !keyOK {
+		return tls.Certificate{}, errors.New("client certificate or key missing in Secret")
+	}
+
+	cert, err := tls.X509KeyPair(certPEM, keyPEM)
+	if err != nil {
+		return tls.Certificate{}, fmt.Errorf("failed to load client certificate and key: %v", err)
+	}
+
+	return cert, nil
+}
 func setupGRPCOpts(ctx context.Context, client k8scli.Client, ext *egv1a1.ExtensionManager, namespace string) ([]grpc.DialOption, error) {
 	// These two errors shouldn't happen since we check these conditions when loading the extension
 	if ext == nil {
@@ -269,18 +284,36 @@ func setupGRPCOpts(ctx context.Context, client k8scli.Client, ext *egv1a1.Extens
 	var opts []grpc.DialOption
 	var creds credentials.TransportCredentials
 	if ext.Service.TLS != nil {
-		certRef := ext.Service.TLS.CertificateRef
-		secret, secretNamespace, err := kubernetes.ValidateSecretObjectReference(ctx, client, &certRef, namespace)
+		cacertRef := ext.Service.TLS.CACertificateRef
+		casecret, secretNamespace, err := kubernetes.ValidateSecretObjectReference(ctx, client, &cacertRef, namespace)
 		if err != nil {
 			return nil, err
 		}
 
-		cp, err := parseCA(secret)
+		cp, err := parseCA(casecret)
 		if err != nil {
-			return nil, fmt.Errorf("error parsing cert in Secret %s in namespace %s", string(certRef.Name), secretNamespace)
+			return nil, fmt.Errorf("error parsing cert in Secret %s in namespace %s", cacertRef.Name, secretNamespace)
 		}
 
-		creds = credentials.NewClientTLSFromCert(cp, "")
+		tlsConfig := &tls.Config{RootCAs: cp}
+
+		// Load Client Certificate if provided
+		if ext.Service.TLS.ClientCertificateRef != nil {
+			clientCertRef := ext.Service.TLS.ClientCertificateRef
+			clientCertSecret, _, err := kubernetes.ValidateSecretObjectReference(ctx, client, clientCertRef, namespace)
+			if err != nil {
+				return nil, err
+			}
+
+			clientCreds, err := loadClientCert(clientCertSecret)
+			if err != nil {
+				return nil, fmt.Errorf("error loading client certificate from secret %s", clientCertRef.Name)
+			}
+
+			tlsConfig.Certificates = []tls.Certificate{clientCreds}
+		}
+
+		creds = credentials.NewTLS(tlsConfig)
 		opts = append(opts, grpc.WithTransportCredentials(creds))
 	} else {
 		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))

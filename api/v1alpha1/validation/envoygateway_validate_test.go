@@ -365,9 +365,13 @@ func TestValidateEnvoyGateway(t *testing.T) {
 							Host: "foo.extension",
 							Port: 443,
 							TLS: &egv1a1.ExtensionTLS{
-								CertificateRef: gwapiv1.SecretObjectReference{
+								ClientCertificateRef: &gwapiv1.SecretObjectReference{
 									Kind: &TLSSecretKind,
-									Name: gwapiv1.ObjectName("certificate"),
+									Name: gwapiv1.ObjectName("client-certificate"),
+								},
+								CACertificateRef: gwapiv1.SecretObjectReference{
+									Kind: &TLSSecretKind,
+									Name: gwapiv1.ObjectName("ca-certificate"),
 								},
 							},
 						},
@@ -398,9 +402,13 @@ func TestValidateEnvoyGateway(t *testing.T) {
 							Host: "foo.extension",
 							Port: 443,
 							TLS: &egv1a1.ExtensionTLS{
-								CertificateRef: gwapiv1.SecretObjectReference{
+								ClientCertificateRef: &gwapiv1.SecretObjectReference{
 									Kind: &TLSSecretKind,
-									Name: gwapiv1.ObjectName("certificate"),
+									Name: gwapiv1.ObjectName("client-certificate"),
+								},
+								CACertificateRef: gwapiv1.SecretObjectReference{
+									Kind: &TLSSecretKind,
+									Name: gwapiv1.ObjectName("ca-certificate"),
 								},
 							},
 						},
@@ -438,9 +446,13 @@ func TestValidateEnvoyGateway(t *testing.T) {
 							Host: "foo.extension",
 							Port: 8080,
 							TLS: &egv1a1.ExtensionTLS{
-								CertificateRef: gwapiv1.SecretObjectReference{
+								ClientCertificateRef: &gwapiv1.SecretObjectReference{
 									Kind: &TLSUnrecognizedKind,
-									Name: gwapiv1.ObjectName("certificate"),
+									Name: gwapiv1.ObjectName("client-certificate"),
+								},
+								CACertificateRef: gwapiv1.SecretObjectReference{
+									Kind: &TLSSecretKind,
+									Name: gwapiv1.ObjectName("ca-certificate"),
 								},
 							},
 						},

@@ -201,14 +201,31 @@ func validateEnvoyGatewayExtensionManager(extensionManager *egv1a1.ExtensionMana
 	}
 
 	if extensionManager.Service.TLS != nil {
-		certificateRefKind := extensionManager.Service.TLS.CertificateRef.Kind
+		// Validate CA Certificate Reference
+		cacertificateRefKind := extensionManager.Service.TLS.CACertificateRef.Kind
 
-		if certificateRefKind == nil {
-			return fmt.Errorf("certificateRef empty in extension service server TLS settings")
+		if extensionManager.Service.TLS.CACertificateRef.Name == "" {
+			return fmt.Errorf("caertificateRef name is empty in extension service server TLS settings")
+		}
+		if cacertificateRefKind == nil {
+			return fmt.Errorf("cacertificateRef empty in extension service server TLS settings")
 		}
 
-		if *certificateRefKind != "Secret" {
-			return fmt.Errorf("unsupported extension server TLS certificateRef %v", certificateRefKind)
+		if *cacertificateRefKind != "Secret" {
+			return fmt.Errorf("unsupported extension server TLS cacertificateRef %v", cacertificateRefKind)
+		}
+
+		// Validate Client Certificate Reference
+		clientcertificateRefkind := extensionManager.Service.TLS.ClientCertificateRef.Kind
+
+		if extensionManager.Service.TLS.ClientCertificateRef.Name == "" {
+			return fmt.Errorf("clientcertificateRef name is empty in extension service server TLS settings")
+		}
+		if clientcertificateRefkind == nil {
+			return fmt.Errorf("clientcertificateRef empty in extension service sercer TLS settings")
+		}
+		if *clientcertificateRefkind != "Secret" {
+			return fmt.Errorf("unsupported extension server TLS clientcertificateRef %v", clientcertificateRefkind)
 		}
 	}
 	return nil
