@@ -154,7 +154,7 @@ spec:
       - name: foobar
     extractFrom:
       - headers:
-        - foobar
+          - foobar
   jwt:
     providers:
       - name: example
