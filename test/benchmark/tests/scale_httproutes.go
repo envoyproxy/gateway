@@ -71,7 +71,7 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 
 					// Run benchmark test at different scale.
 					jobName := fmt.Sprintf("scale-up-httproutes-%d", scale)
-					report, err := bSuite.Benchmark(t, ctx, jobName, testName, gatewayAddr, routeHostnameFormat, totalHosts)
+					report, err := bSuite.Benchmark(t, ctx, jobName, testName, gatewayAddr, routeHostnameFormat, int(totalHosts))
 					require.NoError(t, err)
 
 					reports = append(reports, report)
@@ -104,7 +104,7 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 
 					// Run benchmark test at different scale.
 					jobName := fmt.Sprintf("scale-down-httproutes-%d", scale)
-					report, err := bSuite.Benchmark(t, ctx, jobName, testName, gatewayAddr, routeHostnameFormat, totalHosts)
+					report, err := bSuite.Benchmark(t, ctx, jobName, testName, gatewayAddr, routeHostnameFormat, int(totalHosts))
 					require.NoError(t, err)
 
 					reports = append(reports, report)
