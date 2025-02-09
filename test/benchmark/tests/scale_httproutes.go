@@ -29,17 +29,10 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 	Description: "Fixed one Gateway and different scales of HTTPRoutes with different portion of hostnames.",
 	Test: func(t *testing.T, bSuite *suite.BenchmarkTestSuite) (reports []*suite.BenchmarkReport) {
 		var (
-			ctx                   = context.Background()
-			ns                    = "benchmark-test"
-			totalHosts     uint16 = 5
-			err            error
-			requestHeaders = []string{
-				"Host: www.benchmark-1.com",
-				"Host: www.benchmark-2.com",
-				"Host: www.benchmark-3.com",
-				"Host: www.benchmark-4.com",
-				"Host: www.benchmark-5.com",
-			}
+			ctx               = context.Background()
+			ns                = "benchmark-test"
+			totalHosts uint16 = 5
+			err        error
 		)
 
 		gatewayNN := types.NamespacedName{Name: "benchmark", Namespace: ns}
@@ -50,8 +43,7 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 
 		routeNameFormat := "benchmark-route-%d"
 		routeHostnameFormat := "www.benchmark-%d.com"
-		// routeScales := []uint16{10, 50, 100, 300, 500, 1000}
-		routeScales := []uint16{10, 50, 100} // test-only
+		routeScales := []uint16{10, 50, 100, 300, 500, 1000}
 		routeScalesN := len(routeScales)
 		routeNNs := make([]types.NamespacedName, 0, routeScales[routeScalesN-1])
 
@@ -79,7 +71,7 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 
 					// Run benchmark test at different scale.
 					jobName := fmt.Sprintf("scale-up-httproutes-%d", scale)
-					report, err := bSuite.Benchmark(t, ctx, jobName, gatewayAddr, requestHeaders...)
+					report, err := bSuite.Benchmark(t, ctx, jobName, testName, gatewayAddr, routeHostnameFormat, totalHosts)
 					require.NoError(t, err)
 
 					reports = append(reports, report)
@@ -112,7 +104,7 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 
 					// Run benchmark test at different scale.
 					jobName := fmt.Sprintf("scale-down-httproutes-%d", scale)
-					report, err := bSuite.Benchmark(t, ctx, jobName, gatewayAddr, requestHeaders...)
+					report, err := bSuite.Benchmark(t, ctx, jobName, testName, gatewayAddr, routeHostnameFormat, totalHosts)
 					require.NoError(t, err)
 
 					reports = append(reports, report)

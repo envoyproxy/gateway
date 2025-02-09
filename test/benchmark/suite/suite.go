@@ -182,10 +182,15 @@ func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 // TODO: currently running benchmark test via nighthawk_client,
 // consider switching to gRPC nighthawk-service for benchmark test.
 // ref: https://github.com/envoyproxy/nighthawk/blob/main/api/client/service.proto
-func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, name, gatewayHostPort string, requestHeaders ...string) (*BenchmarkReport, error) {
-	t.Logf("Running benchmark test: %s", name)
+func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, jobName, resultTitle, gatewayHostPort, hostnamePattern string, host int) (*BenchmarkReport, error) {
+	t.Logf("Running benchmark test: %s", resultTitle)
 
-	jobNN, err := b.createBenchmarkClientJob(ctx, name, gatewayHostPort, requestHeaders...)
+	requestHeaders := make([]string, 0, host)
+	// hostname index starts with 1
+	for i := 1; i <= host; i++ {
+		requestHeaders = append(requestHeaders, "Host: "+fmt.Sprintf(hostnamePattern, i))
+	}
+	jobNN, err := b.createBenchmarkClientJob(ctx, jobName, gatewayHostPort, requestHeaders)
 	if err != nil {
 		return nil, err
 	}
@@ -214,7 +219,7 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, name, 
 			}
 		}
 
-		t.Logf("Job %s still not complete", name)
+		t.Logf("Job %s still not complete", jobName)
 
 		return false, nil
 	}); err != nil {
@@ -223,9 +228,9 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, name, 
 		return nil, err
 	}
 
-	t.Logf("Running benchmark test: %s successfully", name)
+	t.Logf("Running benchmark test: %s successfully", resultTitle)
 
-	report, err := NewBenchmarkReport(name, path.Join(b.ReportSaveDir, "profiles"), b.kubeClient, b.promClient)
+	report, err := NewBenchmarkReport(resultTitle, path.Join(b.ReportSaveDir, "profiles"), b.kubeClient, b.promClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create benchmark report: %w", err)
 	}
@@ -238,14 +243,14 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, name, 
 	return report, nil
 }
 
-func (b *BenchmarkTestSuite) createBenchmarkClientJob(ctx context.Context, name, gatewayHostPort string, requestHeaders ...string) (*types.NamespacedName, error) {
+func (b *BenchmarkTestSuite) createBenchmarkClientJob(ctx context.Context, name, gatewayHostPort string, requestHeaders []string) (*types.NamespacedName, error) {
 	job := b.BenchmarkClientJob.DeepCopy()
 	job.SetName(name)
 	job.SetLabels(map[string]string{
 		BenchmarkTestClientKey: "true",
 	})
 
-	runtimeArgs := prepareBenchmarkClientRuntimeArgs(gatewayHostPort, requestHeaders...)
+	runtimeArgs := prepareBenchmarkClientRuntimeArgs(gatewayHostPort, requestHeaders)
 	container := &job.Spec.Template.Spec.Containers[0]
 	container.Args = append(container.Args, runtimeArgs...)
 
@@ -266,7 +271,7 @@ func prepareBenchmarkClientStaticArgs(options BenchmarkOptions) []string {
 	return staticArgs
 }
 
-func prepareBenchmarkClientRuntimeArgs(gatewayHostPort string, requestHeaders ...string) []string {
+func prepareBenchmarkClientRuntimeArgs(gatewayHostPort string, requestHeaders []string) []string {
 	args := make([]string, 0, len(requestHeaders)*2+1)
 
 	for _, reqHeader := range requestHeaders {
