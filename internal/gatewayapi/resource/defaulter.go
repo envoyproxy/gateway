@@ -25,6 +25,7 @@ import (
 	"k8s.io/client-go/openapi"
 	"k8s.io/kube-openapi/pkg/spec3"
 	kubespec "k8s.io/kube-openapi/pkg/validation/spec"
+	"sigs.k8s.io/kubectl-validate/pkg/openapiclient"
 	"sigs.k8s.io/kubectl-validate/pkg/utils"
 	"sigs.k8s.io/kubectl-validate/pkg/validator"
 )
@@ -43,6 +44,8 @@ import (
 // meets our needs.
 // TODO: remove this file once can directly get schema from the Validator in kubectl-validate.
 
+var gatewaySchemaDefaulter, _ = newDefaulter(openapiclient.NewLocalCRDFiles(gatewayCRDsFS))
+
 // Defaulter can set default values for crd object according to their schema.
 type Defaulter struct {
 	gvs         map[string]openapi.GroupVersion
@@ -51,7 +54,6 @@ type Defaulter struct {
 
 func newDefaulter(client openapi.Client) (*Defaulter, error) {
 	gvs, err := client.Paths()
-	fmt.Println(gvs)
 	if err != nil {
 		return nil, err
 	}
@@ -62,15 +64,15 @@ func newDefaulter(client openapi.Client) (*Defaulter, error) {
 	}, nil
 }
 
-// ApplyDefault applys default values for input object, and return the object with default values.
+// ApplyDefault applies default values for input object, and return the object with default values.
 func (d *Defaulter) ApplyDefault(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 	if obj == nil || obj.Object == nil {
 		return nil, fmt.Errorf("passed object cannot be nil")
 	}
 
-	// shallow copy input object, this method can modify apiVersion, kind, or metadata
+	// shallow copy input object, this method can modify apiVersion, kind, or metadata.
 	obj = &unstructured.Unstructured{Object: maps.Clone(obj.UnstructuredContent())}
-	// deep copy metadata object
+	// deep copy metadata object.
 	obj.Object["metadata"] = runtime.DeepCopyJSONValue(obj.Object["metadata"])
 	gvk := obj.GroupVersionKind()
 	schema, err := d.parseSchema(gvk)
@@ -92,7 +94,7 @@ func (d *Defaulter) ApplyDefault(obj *unstructured.Unstructured) (*unstructured.
 	v := validate.NewSchemaValidator(&goSchema, nil, "", strfmt.Default)
 	rs := v.Validate(obj.Object)
 	post.ApplyDefaults(rs)
-	// convert output object into unstructured form.
+	// convert output object into unstructured one.
 	output, ok := rs.Data().(map[string]interface{})
 	if !ok {
 		return nil, fmt.Errorf("failed to convert output object")
@@ -130,10 +132,10 @@ func (d *Defaulter) parseSchema(gvk schema.GroupVersionKind) (*kubespec.Schema, 
 	}
 
 	// Apply our transformations to workaround known k8s schema deficiencies
-	for nam, def := range openapiSpec.Components.Schemas {
+	for name, def := range openapiSpec.Components.Schemas {
 		//!TODO: would be useful to know which version of k8s each schema is believed
 		// to come from.
-		openapiSpec.Components.Schemas[nam] = validator.ApplySchemaPatches(0, gvk.GroupVersion(), nam, def)
+		openapiSpec.Components.Schemas[name] = validator.ApplySchemaPatches(0, gvk.GroupVersion(), name, def)
 	}
 
 	// Remove all references/indirection.
@@ -149,11 +151,11 @@ func (d *Defaulter) parseSchema(gvk schema.GroupVersionKind) (*kubespec.Schema, 
 	//	able to validate against the spec.Schema directly rather than
 	//	StructuralSchema, so this will be able to be removed
 	var referenceErrors []error
-	for nam, def := range openapiSpec.Components.Schemas {
+	for name, def := range openapiSpec.Components.Schemas {
 		// This hack only works because top level schemas never have references
-		// so we can reliably copy them knowing they wont change and pointer-share
+		// so we can reliably copy them knowing they won't change and pointer-share
 		// their subfields. The only schemas being modified here should be sub-fields.
-		openapiSpec.Components.Schemas[nam] = utils.VisitSchema(nam, def, utils.PreorderVisitor(func(ctx utils.VisitingContext, sch *kubespec.Schema) (*kubespec.Schema, bool) {
+		openapiSpec.Components.Schemas[name] = utils.VisitSchema(name, def, utils.PreorderVisitor(func(ctx utils.VisitingContext, sch *kubespec.Schema) (*kubespec.Schema, bool) {
 			defName := sch.Ref.String()
 
 			if len(sch.AllOf) == 1 && len(sch.AllOf[0].Ref.String()) > 0 {
@@ -187,7 +189,7 @@ func (d *Defaulter) parseSchema(gvk schema.GroupVersionKind) (*kubespec.Schema, 
 					}
 				}
 				sort.Stable(sort.Reverse(sort.StringSlice(path)))
-				referenceErrors = append(referenceErrors, fmt.Errorf("cannot resolve reference %v in %v.%v", defName, nam, strings.Join(path, ".")))
+				referenceErrors = append(referenceErrors, fmt.Errorf("cannot resolve reference %v in %v.%v", defName, name, strings.Join(path, ".")))
 				return sch, true
 			}
 
@@ -253,10 +255,8 @@ func (d *Defaulter) parseSchema(gvk schema.GroupVersionKind) (*kubespec.Schema, 
 			continue
 		}
 
-		val := def
-
 		for _, specGVK := range gvks {
-			d.schemaCache[specGVK] = val
+			d.schemaCache[specGVK] = def
 		}
 	}
 

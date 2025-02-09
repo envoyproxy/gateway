@@ -7,7 +7,10 @@ gateways:
   spec:
     gatewayClassName: eg
     listeners:
-    - name: http
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http
       port: 80
       protocol: HTTP
   status:
@@ -45,7 +48,9 @@ httpRoutes:
     hostnames:
     - www.example.com
     parentRefs:
-    - name: eg
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
     rules:
     - backendRefs:
       - group: ""
@@ -72,6 +77,8 @@ httpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
         name: eg
 infraIR:
   envoy-gateway-system/eg:
