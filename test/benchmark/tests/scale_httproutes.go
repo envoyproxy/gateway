@@ -78,7 +78,8 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 						bSuite.ControllerName, kubernetes.NewGatewayRef(gatewayNN), routeNNs...)
 
 					// Run benchmark test at different scale.
-					report, err := bSuite.Benchmark(t, ctx, testName, gatewayAddr, requestHeaders...)
+					jobName := fmt.Sprintf("scale-up-httproutes-%d", scale)
+					report, err := bSuite.Benchmark(t, ctx, jobName, gatewayAddr, requestHeaders...)
 					require.NoError(t, err)
 
 					reports = append(reports, report)
@@ -101,7 +102,7 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 						// Making sure we are deleting the right one route.
 						require.Equal(t, types.NamespacedName{Name: route.Name, Namespace: route.Namespace}, routeNN)
 
-						t.Logf("Delete HTTPRoute: %s with hostname %s", routeNN.String(), route.Spec.Hostnames[0])
+						t.Logf("Delete HTTPRoute: %s", routeNN.String())
 					})
 					require.NoError(t, err)
 					start = scale
@@ -110,7 +111,8 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 						bSuite.ControllerName, kubernetes.NewGatewayRef(gatewayNN), routeNNs...)
 
 					// Run benchmark test at different scale.
-					report, err := bSuite.Benchmark(t, ctx, testName, gatewayAddr, requestHeaders...)
+					jobName := fmt.Sprintf("scale-down-httproutes-%d", scale)
+					report, err := bSuite.Benchmark(t, ctx, jobName, gatewayAddr, requestHeaders...)
 					require.NoError(t, err)
 
 					reports = append(reports, report)
