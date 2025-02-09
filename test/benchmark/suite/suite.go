@@ -160,7 +160,7 @@ func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 		// Generate a human-readable benchmark report for each test.
 		t.Logf("Got %d reports for test: %s", len(reports), test.ShortName)
 
-		if err := RenderReport(writer, "Test: "+test.ShortName, test.Description, 2, reports); err != nil {
+		if err := RenderReport(writer, test.ShortName, test.Description, 2, reports); err != nil {
 			t.Errorf("Error generating report for %s: %v", test.ShortName, err)
 		}
 	}
@@ -284,7 +284,7 @@ func prepareBenchmarkClientRuntimeArgs(gatewayHostPort string, requestHeaders ..
 // has been created successfully.
 //
 // All created scaled resources will be labeled with BenchmarkTestScaledKey.
-func (b *BenchmarkTestSuite) ScaleUpHTTPRoutes(ctx context.Context, scaleRange [2]uint16, routeNameFormat, refGateway string, afterCreation func(*gwapiv1.HTTPRoute)) error {
+func (b *BenchmarkTestSuite) ScaleUpHTTPRoutes(ctx context.Context, scaleRange [2]uint16, routeNameFormat, routeHostnameFormat, refGateway string, batchNumPerHost uint16, afterCreation func(*gwapiv1.HTTPRoute)) error {
 	var i, begin, end uint16
 	begin, end = scaleRange[0], scaleRange[1]
 
@@ -292,12 +292,16 @@ func (b *BenchmarkTestSuite) ScaleUpHTTPRoutes(ctx context.Context, scaleRange [
 		return fmt.Errorf("got wrong scale range, %d is not greater than %d", end, begin)
 	}
 
+	var counterPerBatch, currentBatch uint16 = 0, 1
 	for i = begin + 1; i <= end; i++ {
 		routeName := fmt.Sprintf(routeNameFormat, i)
+		routeHostname := fmt.Sprintf(routeHostnameFormat, currentBatch)
+
 		newRoute := b.HTTPRouteTemplate.DeepCopy()
 		newRoute.SetName(routeName)
 		newRoute.SetLabels(b.scaledLabels)
 		newRoute.Spec.ParentRefs[0].Name = gwapiv1.ObjectName(refGateway)
+		newRoute.Spec.Hostnames[0] = gwapiv1.Hostname(routeHostname)
 
 		if err := b.CreateResource(ctx, newRoute); err != nil {
 			return err
@@ -305,6 +309,12 @@ func (b *BenchmarkTestSuite) ScaleUpHTTPRoutes(ctx context.Context, scaleRange [
 
 		if afterCreation != nil {
 			afterCreation(newRoute)
+		}
+
+		counterPerBatch++
+		if counterPerBatch == batchNumPerHost {
+			counterPerBatch = 0
+			currentBatch++
 		}
 	}
 
