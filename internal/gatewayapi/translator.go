@@ -242,6 +242,9 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 		}
 	}
 
+	// Fix status of BTLS Policies after translating all resources
+	t.ProcessBackendTLSPolicies(resources)
+
 	// Add both accepted and failed gateways to the result because we need to update the status of all gateways.
 	allGateways := make([]*GatewayContext, 0, len(acceptedGateways)+len(failedGateways))
 	allGateways = append(allGateways, acceptedGateways...)
