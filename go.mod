@@ -40,7 +40,7 @@ require (
 	github.com/prometheus/common v0.62.0
 	github.com/replicatedhq/troubleshoot v0.107.5
 	github.com/spf13/cobra v1.8.1
-	github.com/spf13/pflag v1.0.5
+	github.com/spf13/pflag v1.0.6
 	github.com/stretchr/testify v1.10.0
 	github.com/telepresenceio/watchable v0.0.0-20220726211108-9bb86f92afa7
 	github.com/tetratelabs/func-e v1.1.5-0.20240822223546-c85a098d5bf0
