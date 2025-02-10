@@ -6,6 +6,7 @@
 package status
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
@@ -89,4 +90,32 @@ func SetConditionForPolicyAncestor(policyStatus *gwapiv1a2.PolicyStatus, ancesto
 		ControllerName: gwapiv1a2.GatewayController(controllerName),
 		Conditions:     []metav1.Condition{cond},
 	})
+}
+
+func TruncatePolicyAncestors(policyStatus *gwapiv1a2.PolicyStatus, ancestorRef gwapiv1a2.ParentReference, controllerName string, generation int64) {
+	aggregatedPolicyConditions := map[metav1.Condition]int{}
+	for _, ancestor := range policyStatus.Ancestors {
+		for _, condition := range ancestor.Conditions {
+			apc := metav1.Condition{
+				Type:   condition.Type,
+				Status: condition.Status,
+				Reason: condition.Reason,
+			}
+			aggregatedPolicyConditions[apc]++
+		}
+	}
+
+	policyStatus.Ancestors = nil
+
+	for apc, count := range aggregatedPolicyConditions {
+		SetConditionForPolicyAncestor(policyStatus,
+			ancestorRef,
+			controllerName,
+			gwapiv1a2.PolicyConditionType(apc.Type),
+			apc.Status,
+			gwapiv1a2.PolicyConditionReason(apc.Reason),
+			fmt.Sprintf("This policy has %d ancestors with %s condition in %s status due to %s reason", count, apc.Type, apc.Status, apc.Reason),
+			generation,
+		)
+	}
 }

@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -216,6 +217,24 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 					)
 				}
 			}
+		}
+	}
+
+	for _, policy := range res {
+		// Truncate Ancestor list of longer than 16
+		if len(policy.Status.Ancestors) > 16 {
+			// Policy Status currently only supports AncestorRefs, so we must use them to set
+			// aggregated conditions.
+			// We use the Policy as its own Ancestor to designate that this is an aggregated
+			// condition as opposed to an Ancestor-scoped one.
+			ancestorRef := gwapiv1a2.ParentReference{
+				Group:     GroupPtr(policy.GroupVersionKind().Group),
+				Kind:      KindPtr(policy.Kind),
+				Namespace: NamespacePtr(policy.Namespace),
+				Name:      gwapiv1.ObjectName(policy.Name),
+			}
+
+			status.TruncatePolicyAncestors(&policy.Status, ancestorRef, t.GatewayControllerName, policy.Generation)
 		}
 	}
 
