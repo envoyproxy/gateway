@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/envoyproxy/gateway/test/resilience/suite"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -20,6 +19,8 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
+
+	"github.com/envoyproxy/gateway/test/resilience/suite"
 )
 
 const (
@@ -48,7 +49,7 @@ var EGResilience = suite.ResilienceTest{
 		}
 		ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/base.yaml", true)
 
-		//this test will fail until https://github.com/envoyproxy/gateway/pull/4767/files is merged
+		// this test will fail until https://github.com/envoyproxy/gateway/pull/4767/files is merged
 		t.Run("Secondary EnvoyGateway instances can serve an up to date xDS", func(t *testing.T) {
 			ctx := context.Background()
 			t.Log("Scaling down the deployment to 0 replicas")
