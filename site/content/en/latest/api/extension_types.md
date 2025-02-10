@@ -971,6 +971,24 @@ _Appears in:_
 | `respectDnsTtl` | _boolean_ |  true  |  | RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.<br />If the value is set to true, the DNS refresh rate will be set to the resource record’s TTL.<br />Defaults to true. |
 
 
+#### DNSLookupFamily
+
+_Underlying type:_ _string_
+
+DNSLookupFamily defines the behavior of Envoy when resolving DNS for hostnames
+
+_Appears in:_
+- [DNS](#dns)
+
+| Value | Description |
+| ----- | ----------- |
+| `IPv4Only` | IPv4Only means the DNS resolver will first perform a lookup for addresses in the IPv4 family.<br /> | 
+| `IPv6Only` | IPv6Only means the DNS resolver will first perform a lookup for addresses in the IPv6 family.<br /> | 
+| `IPv4Preferred` | IPv4Preferred means the DNS resolver will first perform a lookup for addresses in the IPv4 family and fallback<br />to a lookup for addresses in the IPv6 family.<br /> | 
+| `IPv6Preferred` | IPv6Preferred means the DNS resolver will first perform a lookup for addresses in the IPv6 family and fallback<br />to a lookup for addresses in the IPv4 family.<br /> | 
+| `IPv4AndIPv6` | IPv4AndIPv6 mean the DNS resolver will perform a lookup for both IPv4 and IPv6 families, and return all resolved<br />addresses. When this is used, Happy Eyeballs will be enabled for upstream connections.<br /> | 
+
+
 #### EnvironmentCustomTag
 
 
