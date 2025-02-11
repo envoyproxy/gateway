@@ -4486,7 +4486,6 @@ spec:
                       description: MatchLabels are the set of label selectors for
                         identifying the targeted resource
                       type: object
-                      x-kubernetes-map-type: atomic
                   required:
                   - kind
                   type: object

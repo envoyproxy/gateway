@@ -39,7 +39,6 @@ type TargetSelector struct {
 
 	// MatchLabels are the set of label selectors for identifying the targeted resource
 	// +optional
-	// +mapType=atomic
 	MatchLabels map[string]string `json:"matchLabels,omitempty"`
 
 	// MatchExpressions is a list of label selector requirements. The requirements are ANDed.
