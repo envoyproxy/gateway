@@ -3254,7 +3254,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `type` | _[BootstrapType](#bootstraptype)_ |  false  | Replace | Type is the type of the bootstrap configuration, it should be either Replace,  Merge, or JSONPatch.<br />If unspecified, it defaults to Replace. |
+| `type` | _[BootstrapType](#bootstraptype)_ |  false  | Replace | Type is the type of the bootstrap configuration, it should be either **Replace**,  **Merge**, or **JSONPatch**.<br />If unspecified, it defaults to Replace. |
 | `value` | _string_ |  false  |  | Value is a YAML string of the bootstrap. |
 | `jsonPatches` | _[JSONPatchOperation](#jsonpatchoperation) array_ |  true  |  | JSONPatches is an array of JSONPatches to be applied to the default bootstrap. Patches are<br />applied in the order in which they are defined. |
 
