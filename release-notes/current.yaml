@@ -9,6 +9,7 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  Added support for configuring maxUnavailable in KubernetesPodDisruptionBudgetSpec
   Added support for percentage-based request mirroring
 
 bug fixes: |

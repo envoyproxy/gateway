@@ -138,6 +138,7 @@ spec:
 
 {{% /tab %}}
 {{< /tabpane >}}
+
 Then create an `HTTPRoute` that uses a `HTTPRequestMirrorFilter` to send requests to the original
 service from the quickstart, and mirror request to the service that was just deployed.
 
@@ -146,6 +147,7 @@ service from the quickstart, and mirror request to the service that was just dep
 
 ```shell
 cat <<EOF | kubectl apply -f -
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -350,7 +352,7 @@ spec:
 
 ## Multiple HTTPRequestMirrorFilters
 
-Multiple `HTTPRequestMirrorFilters` are not supported on the same `HTTPRoute` `rule`. When attempting to do so, the admission webhook will reject the configuration.
+Multiple `HTTPRequestMirrorFilters` can be configured on the same `HTTPRoute` rule. Traffic splitting will work as expected, with mirrored requests being directed to `backendRefs` with `HTTPRequestMirrorFilter` filter and the actual requests to main `backendRefs`.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -435,9 +437,6 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-```console
-Error from server: error when creating "STDIN": admission webhook "validate.gateway.networking.k8s.io" denied the request: spec.rules[0].filters: Invalid value: "RequestMirror": cannot be used multiple times in the same rule
-```
 
 [Traffic Splitting]: ../http-traffic-splitting/
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
