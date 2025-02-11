@@ -28,7 +28,7 @@ type ClientStreamBufferSettings struct {
 //
 // +notImplementedHide
 type FileSystemBuffers struct {
-	// Manger provides the AsyncFileManager configuration
+	// Manager provides the AsyncFileManager configuration
 	//
 	// +notImplementedHide
 	Manager FileManagerConfig `json:"manager,omitempty"`
