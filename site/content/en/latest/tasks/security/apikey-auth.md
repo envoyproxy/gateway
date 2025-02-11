@@ -33,7 +33,6 @@ kind: Secret
 type: Opaque
 metadata:
   name: apikey-secret
-  namespace: envoy-gateway-system
 stringData:
   client1: supersecret
 EOF
@@ -50,7 +49,6 @@ kind: Secret
 type: Opaque
 metadata:
   name: apikey-secret
-  namespace: envoy-gateway-system
 stringData:
   client1: supersecret
 ```
@@ -82,7 +80,6 @@ spec:
     - group: ""
       kind: Secret
       name: apikey-secret
-      namespace: envoy-gateway-system
     extractFrom:
     - headers:
       - x-api-key
@@ -109,7 +106,6 @@ spec:
     - group: ""
       kind: Secret
       name: apikey-secret
-      namespace: envoy-gateway-system
     extractFrom:
     - headers:
       - x-api-key
