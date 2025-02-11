@@ -548,35 +548,31 @@ _Appears in:_
 
 _Underlying type:_ _string_
 
-BufferStreamBehavior configures the behavior of the filter for a stream
+BufferStreamBehavior defines buffering behavior for an HTTP stream.
 
 _Appears in:_
 - [BufferStreamConfig](#bufferstreamconfig)
 
 | Value | Description |
 | ----- | ----------- |
-| `StreamWhenPossible` | BufferStreamBehaviorStreamWhenPossible StreamWhenPossible will not inject content-length header. Output immediately, buffer only if output is slower than input.<br />+notImplementedHide<br /> | 
-| `Bypass` | BufferStreamBehaviorBypass Bypass will never buffer, effectively do nothing.<br />+notImplementedHide<br /> | 
-| `InjectContentLengthIfNecessary` | BufferStreamBehaviorInjectContLenIfNecessary If content-length is not present, buffer the entire input,<br />inject content-length header, then output. If content-length is already present, act like stream_when_possible.<br />+notImplementedHide<br /> | 
-| `FullyBufferAndAlwaysInject` | BufferStreamBehaviorFullyBufferAndAlwaysInject Always buffer the entire input, and inject content-length, overwriting any provided content-length header.<br />+notImplementedHide<br /> | 
-| `FullyBuffer` | BufferStreamBehaviorFullyBuffer Always buffer the entire input, do not modify content-length.<br />+notImplementedHide<br /> | 
+| `StreamWhenPossible` | BufferStreamBehaviorStreamWhenPossible buffers only when output is slower than input.<br />Does not modify the Content-Length header.<br />+notImplementedHide<br /> | 
+| `Bypass` | BufferStreamBehaviorBypass disables buffering, effectively making this filter a no-op.<br />+notImplementedHide<br /> | 
+| `InjectContentLengthIfNecessary` | BufferStreamBehaviorInjectContLenIfNecessary buffers the entire input only if the Content-Length<br />header is missing. If present, behaves like StreamWhenPossible.<br />+notImplementedHide<br /> | 
+| `FullyBufferAndAlwaysInject` | BufferStreamBehaviorFullyBufferAndAlwaysInject buffers the entire input and overwrites any existing<br />Content-Length header with the correct value.<br />+notImplementedHide<br /> | 
+| `FullyBuffer` | BufferStreamBehaviorFullyBuffer buffers the entire input but does not modify the Content-Length header.<br />+notImplementedHide<br /> | 
 
 
 #### BufferStreamConfig
 
 
 
-BufferStreamConfig is the stream configuration for one direction of the filter behavior
+BufferStreamConfig defines buffering behavior for a single HTTP stream direction (request or response).
 
 _Appears in:_
 - [FileSystemBuffers](#filesystembuffers)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `behavior` | _[BufferStreamBehavior](#bufferstreambehavior)_ |  true  |  |  |
-| `memoryBufferLimit` | _integer_ |  true  |  |  |
-| `storageBufferLimit` | _integer_ |  true  |  |  |
-| `storageBufferQueueHighWatermark` | _integer_ |  true  |  |  |
 
 
 #### CIDR
@@ -679,14 +675,13 @@ _Appears in:_
 
 
 
-ClientStreamBufferSettings allows users to configure request and response buffering
+ClientStreamBufferSettings configures request and response buffering.
 
 _Appears in:_
 - [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `fileSystem` | _[FileSystemBuffers](#filesystembuffers)_ |  true  |  |  |
 
 
 #### ClientTLSSettings
@@ -1875,36 +1870,33 @@ _Appears in:_
 
 
 
-FileManagerConfig allows a user to configure an AsyncFileManager
+FileManagerConfig configures the asynchronous file manager responsible for buffered I/O.
 
 _Appears in:_
 - [FileSystemBuffers](#filesystembuffers)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `id` | _string_ |  true  |  |  |
-| `threadPool` | _[FileManagerThreadPool](#filemanagerthreadpool)_ |  true  |  |  |
 
 
 #### FileManagerThreadPool
 
 
 
-FileManagerThreadPool is the user configuration for a thread-pool based async file manager.
+FileManagerThreadPool configures the thread pool used by the asynchronous file manager.
 
 _Appears in:_
 - [FileManagerConfig](#filemanagerconfig)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `threadCount` | _integer_ |  true  |  |  |
 
 
 #### FileSystemBuffers
 
 
 
-FileSystemBuffers allows users to configure a file system buffer http filter
+FileSystemBuffers configures filesystem-based buffering for HTTP streams.
 
 _Appears in:_
 - [ClientStreamBufferSettings](#clientstreambuffersettings)

@@ -9,94 +9,165 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-// ClientStreamBufferSettings allows users to configure request and response buffering
+// ClientStreamBufferSettings configures request and response buffering.
 //
 // +notImplementedHide
 type ClientStreamBufferSettings struct {
+	// MaxRequestBytes specifies the maximum allowed size for each incoming request.
+	// If exceeded, the request will be rejected.
+	//
+	// Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki").
+	//
 	// +kubebuilder:validation:XIntOrString
 	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+	// +optional
+	// +notImplementedHide
+	MaxRequestBytes *resource.Quantity `json:"maxRequestBytes,omitempty"`
+
+	// FileSystem configures filesystem-based buffering for request and response streams.
 	//
 	// +optional
 	// +notImplementedHide
-	// MaxRequestBytes provides configuration for the maximum request size for each incoming request.
-	MaxRequestBytes *resource.Quantity `json:"maxRequestBytes,omitempty"`
-
-	FileSystem FileSystemBuffers `json:"fileSystem,omitempty"`
+	FileSystem *FileSystemBuffers `json:"fileSystem,omitempty"`
 }
 
-// FileSystemBuffers allows users to configure a file system buffer http filter
+// FileSystemBuffers configures filesystem-based buffering for HTTP streams.
 //
 // +notImplementedHide
 type FileSystemBuffers struct {
-	// Manager provides the AsyncFileManager configuration
+	// Manager defines the configuration for the Envoy AsyncFileManager.
+	// If unset and the behavior is not bypass in both directions, an Internal Server Error response will be sent.
 	//
+	// +optional
 	// +notImplementedHide
-	Manager FileManagerConfig `json:"manager,omitempty"`
-	// StoragePath is an optional path to which the unlinked files should be written - this may determine which physical storage device will be used.
-	// If unset in route, vhost and listener, will use the environment variable TMPDIR, or, if that’s also unset, will use /tmp.
+	Manager *FileManagerConfig `json:"manager,omitempty"`
+
+	// StoragePath specifies an optional directory for storing unlinked temporary files.
+	// This determines the physical storage device used for buffering.
 	//
-	// +notImplementedHide
-	StoragePath string `json:"storagePath,omitempty"`
-	// Request provides the request stream configuration
+	// If unset, the default is the TMPDIR environment variable. If TMPDIR is unset, it defaults to "/tmp".
 	//
+	// +optional
 	// +notImplementedHide
-	Request BufferStreamConfig `json:"request,omitempty"`
-	// Request provides the request stream configuration
+	StoragePath *string `json:"storagePath,omitempty"`
+
+	// Request defines buffering behavior for incoming request streams.
 	//
+	// +optional
 	// +notImplementedHide
-	Response BufferStreamConfig `json:"response,omitempty"`
+	Request *BufferStreamConfig `json:"request,omitempty"`
+
+	// Response defines buffering behavior for outgoing response streams.
+	//
+	// +optional
+	// +notImplementedHide
+	Response *BufferStreamConfig `json:"response,omitempty"`
 }
 
-// FileManagerConfig allows a user to configure an AsyncFileManager
+// FileManagerConfig configures the asynchronous file manager responsible for buffered I/O.
 //
 // +notImplementedHide
 type FileManagerConfig struct {
-	ID         string                `json:"id,omitempty"`
+	// ID  provides an optional unique identifier the file manager instance.
+	//
+	// +optional
+	// +notImplementedHide
+	ID *string `json:"id,omitempty"`
+
+	// ThreadPool defines the thread pool configuration for the file manager.
+	//
+	// +notImplementedHide
 	ThreadPool FileManagerThreadPool `json:"threadPool,omitempty"`
 }
 
-// FileManagerThreadPool is the user configuration for a thread-pool based async file manager.
+// FileManagerThreadPool configures the thread pool used by the asynchronous file manager.
 //
 // +notImplementedHide
 type FileManagerThreadPool struct {
-	ThreadCount int `json:"threadCount,omitempty"`
+	// ThreadCount specifies the number of worker threads dedicated to file operations.
+	//
+	// If unset or zero, will default to the number of concurrent threads the hardware supports
+	//
+	// +optional
+	// +notImplementedHide
+	ThreadCount *int `json:"threadCount,omitempty"`
 }
 
-// BufferStreamConfig is the stream configuration for one direction of the filter behavior
+// BufferStreamConfig defines buffering behavior for a single HTTP stream direction (request or response).
 //
 // +notImplementedHide
 type BufferStreamConfig struct {
-	Behavior                        BufferStreamBehavior `json:"behavior,omitempty"`
-	MemoryBufferLimit               int64                `json:"memoryBufferLimit,omitempty"`
-	StorageBufferLimit              int64                `json:"storageBufferLimit,omitempty"`
-	StorageBufferQueueHighWatermark int64                `json:"storageBufferQueueHighWatermark,omitempty"`
+	// Behavior specifies how the stream should be buffered and when data should be written.
+	// Controls whether to bypass / stream / fully buffer / etc. If unset in route the default is stream_when_possible.
+	//
+	// +optional
+	// +notImplementedHide
+	Behavior *BufferStreamBehavior `json:"behavior,omitempty"`
+
+	// MemoryBufferLimit defines the maximum amount of data stored in memory before buffering to disk.
+	//
+	// Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki") and defaults to 1Mi.
+	//
+	// +kubebuilder:validation:XIntOrString
+	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+	// +optional
+	// +notImplementedHide
+	MemoryBufferLimit *resource.Quantity `json:"memoryBufferLimit,omitempty"`
+
+	// StorageBufferLimit sets the maximum amount of data (excluding memory) that can be written
+	// to the filesystem buffer before further writes are blocked.
+	//
+	// Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki") and defaults to 32MiB.
+	//
+	// +kubebuilder:validation:XIntOrString
+	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+	// +optional
+	// +notImplementedHide
+	StorageBufferLimit *resource.Quantity `json:"storageBufferLimit,omitempty"`
+
+	// StorageBufferQueueHighWatermark specifies the maximum amount that can be queued
+	// for writing to storage, above which the source is requested to pause.
+	//
+	// Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki") and defaults to the same value as memoryBufferLimit.
+	//
+	// +kubebuilder:validation:XIntOrString
+	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+	// +optional
+	// +notImplementedHide
+	StorageBufferQueueHighWatermark *resource.Quantity `json:"storageBufferQueueHighWatermark,omitempty"`
 }
 
-// BufferStreamBehavior configures the behavior of the filter for a stream
+// BufferStreamBehavior defines buffering behavior for an HTTP stream.
 //
 // +kubebuilder:validation:Enum=StreamWhenPossible;Bypass;InjectContentLengthIfNecessary;FullyBufferAndAlwaysInject;FullyBuffer
 // +notImplementedHide
 type BufferStreamBehavior string
 
 const (
-	// BufferStreamBehaviorStreamWhenPossible StreamWhenPossible will not inject content-length header. Output immediately, buffer only if output is slower than input.
+	// BufferStreamBehaviorStreamWhenPossible buffers only when output is slower than input.
+	// Does not modify the Content-Length header.
 	//
 	// +notImplementedHide
 	BufferStreamBehaviorStreamWhenPossible BufferStreamBehavior = "StreamWhenPossible"
-	// BufferStreamBehaviorBypass Bypass will never buffer, effectively do nothing.
+
+	// BufferStreamBehaviorBypass disables buffering, effectively making this filter a no-op.
 	//
 	// +notImplementedHide
 	BufferStreamBehaviorBypass BufferStreamBehavior = "Bypass"
-	// BufferStreamBehaviorInjectContLenIfNecessary If content-length is not present, buffer the entire input,
-	// inject content-length header, then output. If content-length is already present, act like stream_when_possible.
+
+	// BufferStreamBehaviorInjectContLenIfNecessary buffers the entire input only if the Content-Length
+	// header is missing. If present, behaves like StreamWhenPossible.
 	//
 	// +notImplementedHide
 	BufferStreamBehaviorInjectContLenIfNecessary BufferStreamBehavior = "InjectContentLengthIfNecessary"
-	// BufferStreamBehaviorFullyBufferAndAlwaysInject Always buffer the entire input, and inject content-length, overwriting any provided content-length header.
+
+	// BufferStreamBehaviorFullyBufferAndAlwaysInject buffers the entire input and overwrites any existing
+	// Content-Length header with the correct value.
 	//
 	// +notImplementedHide
 	BufferStreamBehaviorFullyBufferAndAlwaysInject BufferStreamBehavior = "FullyBufferAndAlwaysInject"
-	// BufferStreamBehaviorFullyBuffer Always buffer the entire input, do not modify content-length.
+
+	// BufferStreamBehaviorFullyBuffer buffers the entire input but does not modify the Content-Length header.
 	//
 	// +notImplementedHide
 	BufferStreamBehaviorFullyBuffer BufferStreamBehavior = "FullyBuffer"

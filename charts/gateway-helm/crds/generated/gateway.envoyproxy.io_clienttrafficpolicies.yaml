@@ -506,28 +506,38 @@ spec:
                   for requests and responses.
                 properties:
                   fileSystem:
-                    description: FileSystemBuffers allows users to configure a file
-                      system buffer http filter
+                    description: FileSystem configures filesystem-based buffering
+                      for request and response streams.
                     properties:
                       manager:
-                        description: Manager provides the AsyncFileManager configuration
+                        description: |-
+                          Manager defines the configuration for the Envoy AsyncFileManager.
+                          If unset and the behavior is not bypass in both directions, an Internal Server Error response will be sent.
                         properties:
                           id:
+                            description: ID  provides an optional unique identifier
+                              the file manager instance.
                             type: string
                           threadPool:
-                            description: FileManagerThreadPool is the user configuration
-                              for a thread-pool based async file manager.
+                            description: ThreadPool defines the thread pool configuration
+                              for the file manager.
                             properties:
                               threadCount:
+                                description: |-
+                                  ThreadCount specifies the number of worker threads dedicated to file operations.
+
+                                  If unset or zero, will default to the number of concurrent threads the hardware supports
                                 type: integer
                             type: object
                         type: object
                       request:
-                        description: Request provides the request stream configuration
+                        description: Request defines buffering behavior for incoming
+                          request streams.
                         properties:
                           behavior:
-                            description: BufferStreamBehavior configures the behavior
-                              of the filter for a stream
+                            description: |-
+                              Behavior specifies how the stream should be buffered and when data should be written.
+                              Controls whether to bypass / stream / fully buffer / etc. If unset in route the default is stream_when_possible.
                             enum:
                             - StreamWhenPossible
                             - Bypass
@@ -536,21 +546,52 @@ spec:
                             - FullyBuffer
                             type: string
                           memoryBufferLimit:
-                            format: int64
-                            type: integer
+                            allOf:
+                            - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: |-
+                              MemoryBufferLimit defines the maximum amount of data stored in memory before buffering to disk.
+
+                              Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki") and defaults to 1Mi.
+                            x-kubernetes-int-or-string: true
                           storageBufferLimit:
-                            format: int64
-                            type: integer
+                            allOf:
+                            - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: |-
+                              StorageBufferLimit sets the maximum amount of data (excluding memory) that can be written
+                              to the filesystem buffer before further writes are blocked.
+
+                              Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki") and defaults to 32MiB.
+                            x-kubernetes-int-or-string: true
                           storageBufferQueueHighWatermark:
-                            format: int64
-                            type: integer
+                            allOf:
+                            - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: |-
+                              StorageBufferQueueHighWatermark specifies the maximum amount that can be queued
+                              for writing to storage, above which the source is requested to pause.
+
+                              Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki") and defaults to the same value as memoryBufferLimit.
+                            x-kubernetes-int-or-string: true
                         type: object
                       response:
-                        description: Request provides the request stream configuration
+                        description: Response defines buffering behavior for outgoing
+                          response streams.
                         properties:
                           behavior:
-                            description: BufferStreamBehavior configures the behavior
-                              of the filter for a stream
+                            description: |-
+                              Behavior specifies how the stream should be buffered and when data should be written.
+                              Controls whether to bypass / stream / fully buffer / etc. If unset in route the default is stream_when_possible.
                             enum:
                             - StreamWhenPossible
                             - Bypass
@@ -559,19 +600,50 @@ spec:
                             - FullyBuffer
                             type: string
                           memoryBufferLimit:
-                            format: int64
-                            type: integer
+                            allOf:
+                            - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: |-
+                              MemoryBufferLimit defines the maximum amount of data stored in memory before buffering to disk.
+
+                              Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki") and defaults to 1Mi.
+                            x-kubernetes-int-or-string: true
                           storageBufferLimit:
-                            format: int64
-                            type: integer
+                            allOf:
+                            - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: |-
+                              StorageBufferLimit sets the maximum amount of data (excluding memory) that can be written
+                              to the filesystem buffer before further writes are blocked.
+
+                              Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki") and defaults to 32MiB.
+                            x-kubernetes-int-or-string: true
                           storageBufferQueueHighWatermark:
-                            format: int64
-                            type: integer
+                            allOf:
+                            - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: |-
+                              StorageBufferQueueHighWatermark specifies the maximum amount that can be queued
+                              for writing to storage, above which the source is requested to pause.
+
+                              Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki") and defaults to the same value as memoryBufferLimit.
+                            x-kubernetes-int-or-string: true
                         type: object
                       storagePath:
                         description: |-
-                          StoragePath is an optional path to which the unlinked files should be written - this may determine which physical storage device will be used.
-                          If unset in route, vhost and listener, will use the environment variable TMPDIR, or, if that’s also unset, will use /tmp.
+                          StoragePath specifies an optional directory for storing unlinked temporary files.
+                          This determines the physical storage device used for buffering.
+
+                          If unset, the default is the TMPDIR environment variable. If TMPDIR is unset, it defaults to "/tmp".
                         type: string
                     type: object
                   maxRequestBytes:
@@ -581,8 +653,11 @@ spec:
                     anyOf:
                     - type: integer
                     - type: string
-                    description: MaxRequestBytes provides configuration for the maximum
-                      request size for each incoming request.
+                    description: |-
+                      MaxRequestBytes specifies the maximum allowed size for each incoming request.
+                      If exceeded, the request will be rejected.
+
+                      Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki").
                     x-kubernetes-int-or-string: true
                 type: object
               targetRef:
