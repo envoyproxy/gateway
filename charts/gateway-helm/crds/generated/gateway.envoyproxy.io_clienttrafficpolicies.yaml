@@ -501,6 +501,90 @@ spec:
                     - UnescapeAndRedirect
                     type: string
                 type: object
+              streamBuffers:
+                description: StreamBufferSettings includes client buffer settings
+                  for requests and responses.
+                properties:
+                  fileSystem:
+                    description: FileSystemBuffers allows users to configure a file
+                      system buffer http filter
+                    properties:
+                      manager:
+                        description: Manger provides the AsyncFileManager configuration
+                        properties:
+                          id:
+                            type: string
+                          threadPool:
+                            description: FileManagerThreadPool is the user configuration
+                              for a thread-pool based async file manager.
+                            properties:
+                              threadCount:
+                                type: integer
+                            type: object
+                        type: object
+                      request:
+                        description: Request provides the request stream configuration
+                        properties:
+                          behavior:
+                            description: BufferStreamBehavior configures the behavior
+                              of the filter for a stream
+                            enum:
+                            - StreamWhenPossible
+                            - Bypass
+                            - InjectContentLengthIfNecessary
+                            - FullyBufferAndAlwaysInject
+                            - FullyBuffer
+                            type: string
+                          memoryBufferLimit:
+                            format: int64
+                            type: integer
+                          storageBufferLimit:
+                            format: int64
+                            type: integer
+                          storageBufferQueueHighWatermark:
+                            format: int64
+                            type: integer
+                        type: object
+                      response:
+                        description: Request provides the request stream configuration
+                        properties:
+                          behavior:
+                            description: BufferStreamBehavior configures the behavior
+                              of the filter for a stream
+                            enum:
+                            - StreamWhenPossible
+                            - Bypass
+                            - InjectContentLengthIfNecessary
+                            - FullyBufferAndAlwaysInject
+                            - FullyBuffer
+                            type: string
+                          memoryBufferLimit:
+                            format: int64
+                            type: integer
+                          storageBufferLimit:
+                            format: int64
+                            type: integer
+                          storageBufferQueueHighWatermark:
+                            format: int64
+                            type: integer
+                        type: object
+                      storagePath:
+                        description: |-
+                          StoragePath is an optional path to which the unlinked files should be written - this may determine which physical storage device will be used.
+                          If unset in route, vhost and listener, will use the environment variable TMPDIR, or, if that’s also unset, will use /tmp.
+                        type: string
+                    type: object
+                  maxRequestBytes:
+                    allOf:
+                    - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: MaxRequestBytes provides configuration for the maximum
+                      request size for each incoming request.
+                    x-kubernetes-int-or-string: true
+                type: object
               targetRef:
                 description: |-
                   TargetRef is the name of the resource this policy is being attached to.

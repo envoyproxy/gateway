@@ -544,6 +544,41 @@ _Appears in:_
 
 
 
+#### BufferStreamBehavior
+
+_Underlying type:_ _string_
+
+BufferStreamBehavior configures the behavior of the filter for a stream
+
+_Appears in:_
+- [BufferStreamConfig](#bufferstreamconfig)
+
+| Value | Description |
+| ----- | ----------- |
+| `StreamWhenPossible` | BufferStreamBehaviorStreamWhenPossible StreamWhenPossible will not inject content-length header. Output immediately, buffer only if output is slower than input.<br />+notImplementedHide<br /> | 
+| `Bypass` | BufferStreamBehaviorBypass Bypass will never buffer, effectively do nothing.<br />+notImplementedHide<br /> | 
+| `InjectContentLengthIfNecessary` | BufferStreamBehaviorInjectContLenIfNecessary If content-length is not present, buffer the entire input,<br />inject content-length header, then output. If content-length is already present, act like stream_when_possible.<br />+notImplementedHide<br /> | 
+| `FullyBufferAndAlwaysInject` | BufferStreamBehaviorFullyBufferAndAlwaysInject Always buffer the entire input, and inject content-length, overwriting any provided content-length header.<br />+notImplementedHide<br /> | 
+| `FullyBuffer` | BufferStreamBehaviorFullyBuffer Always buffer the entire input, do not modify content-length.<br />+notImplementedHide<br /> | 
+
+
+#### BufferStreamConfig
+
+
+
+BufferStreamConfig is the stream configuration for one direction of the filter behavior
+
+_Appears in:_
+- [FileSystemBuffers](#filesystembuffers)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `behavior` | _[BufferStreamBehavior](#bufferstreambehavior)_ |  true  |  |  |
+| `memoryBufferLimit` | _integer_ |  true  |  |  |
+| `storageBufferLimit` | _integer_ |  true  |  |  |
+| `storageBufferQueueHighWatermark` | _integer_ |  true  |  |  |
+
+
 #### CIDR
 
 _Underlying type:_ _string_
@@ -638,6 +673,20 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `xForwardedFor` | _[XForwardedForSettings](#xforwardedforsettings)_ |  false  |  | XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address. |
 | `customHeader` | _[CustomHeaderExtensionSettings](#customheaderextensionsettings)_ |  false  |  | CustomHeader provides configuration for determining the client IP address for a request based on<br />a trusted custom HTTP header. This uses the custom_header original IP detection extension.<br />Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto<br />for more details. |
+
+
+#### ClientStreamBufferSettings
+
+
+
+ClientStreamBufferSettings allows users to configure request and response buffering
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `fileSystem` | _[FileSystemBuffers](#filesystembuffers)_ |  true  |  |  |
 
 
 #### ClientTLSSettings
@@ -1820,6 +1869,48 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `path` | _string_ |  true  |  | Path defines the file path used to expose envoy access log(e.g. /dev/stdout). |
+
+
+#### FileManagerConfig
+
+
+
+FileManagerConfig allows a user to configure an AsyncFileManager
+
+_Appears in:_
+- [FileSystemBuffers](#filesystembuffers)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `id` | _string_ |  true  |  |  |
+| `threadPool` | _[FileManagerThreadPool](#filemanagerthreadpool)_ |  true  |  |  |
+
+
+#### FileManagerThreadPool
+
+
+
+FileManagerThreadPool is the user configuration for a thread-pool based async file manager.
+
+_Appears in:_
+- [FileManagerConfig](#filemanagerconfig)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `threadCount` | _integer_ |  true  |  |  |
+
+
+#### FileSystemBuffers
+
+
+
+FileSystemBuffers allows users to configure a file system buffer http filter
+
+_Appears in:_
+- [ClientStreamBufferSettings](#clientstreambuffersettings)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
 
 
 #### FilterPosition
