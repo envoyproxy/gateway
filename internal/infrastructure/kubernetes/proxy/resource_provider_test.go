@@ -1321,14 +1321,14 @@ func TestPDB(t *testing.T) {
 			caseName: "default",
 			infra:    newTestInfra(),
 			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
-				MinAvailable: ptr.To(intstr.IntOrString{Type: 0, IntVal: 1}),
+				MinAvailable: ptr.To(intstr.IntOrString{Type: intstr.Int, IntVal: 1}),
 			},
 		},
 		{
 			caseName: "patch-json-pdb",
 			infra:    newTestInfra(),
 			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
-				MinAvailable: ptr.To(intstr.IntOrString{Type: 0, IntVal: 1}),
+				MinAvailable: ptr.To(intstr.IntOrString{Type: intstr.Int, IntVal: 1}),
 				Patch: &egv1a1.KubernetesPatchSpec{
 					Type: ptr.To(egv1a1.JSONMerge),
 					Value: apiextensionsv1.JSON{
@@ -1341,7 +1341,7 @@ func TestPDB(t *testing.T) {
 			caseName: "patch-strategic-pdb",
 			infra:    newTestInfra(),
 			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
-				MinAvailable: ptr.To(intstr.IntOrString{Type: 0, IntVal: 1}),
+				MinAvailable: ptr.To(intstr.IntOrString{Type: intstr.Int, IntVal: 1}),
 				Patch: &egv1a1.KubernetesPatchSpec{
 					Type: ptr.To(egv1a1.StrategicMerge),
 					Value: apiextensionsv1.JSON{
@@ -1354,21 +1354,21 @@ func TestPDB(t *testing.T) {
 			caseName: "max-unavailable",
 			infra:    newTestInfra(),
 			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
-				MaxUnavailable: ptr.To(intstr.IntOrString{Type: 0, IntVal: 1}),
+				MaxUnavailable: ptr.To(intstr.IntOrString{Type: intstr.Int, IntVal: 1}),
 			},
 		},
 		{
 			caseName: "max-unavailable-percent",
 			infra:    newTestInfra(),
 			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
-				MaxUnavailable: ptr.To(intstr.IntOrString{Type: 1, StrVal: "20%"}),
+				MaxUnavailable: ptr.To(intstr.IntOrString{Type: intstr.String, StrVal: "20%"}),
 			},
 		},
 		{
 			caseName: "min-available-percent",
 			infra:    newTestInfra(),
 			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
-				MinAvailable: ptr.To(intstr.IntOrString{Type: 1, StrVal: "20%"}),
+				MinAvailable: ptr.To(intstr.IntOrString{Type: intstr.String, StrVal: "20%"}),
 			},
 		},
 		{

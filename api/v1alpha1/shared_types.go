@@ -401,6 +401,8 @@ const (
 )
 
 // KubernetesPodDisruptionBudgetSpec defines Kubernetes PodDisruptionBudget settings of Envoy Proxy Deployment.
+//
+// +kubebuilder:validation:XValidation:rule="(has(self.minAvailable) && !has(self.maxUnavailable)) || (!has(self.minAvailable) && has(self.maxUnavailable))",message="only one of minAvailable or maxUnavailable can be specified"
 type KubernetesPodDisruptionBudgetSpec struct {
 	// MinAvailable specifies the minimum amount of pods (can be expressed as integers or as a percentage) that must be available at all times during voluntary disruptions,
 	// such as node drains or updates. This setting ensures that your envoy proxy maintains a certain level of availability
@@ -408,7 +410,7 @@ type KubernetesPodDisruptionBudgetSpec struct {
 	// +optional
 	MinAvailable *intstr.IntOrString `json:"minAvailable,omitempty"`
 
-	// MaxUnAvailable specifies the maximum amount of pods (can be expressed as integers or as a percentage) that can be unavailable at all times during voluntary disruptions,
+	// MaxUnavailable specifies the maximum amount of pods (can be expressed as integers or as a percentage) that can be unavailable at all times during voluntary disruptions,
 	// such as node drains or updates. This setting ensures that your envoy proxy maintains a certain level of availability
 	// and resilience during maintenance operations. Cannot be combined with minAvailable.
 	// +optional
