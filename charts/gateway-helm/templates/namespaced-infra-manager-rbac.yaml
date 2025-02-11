@@ -36,7 +36,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: 'envoy-gateway'
-  namespace: '{{ .Release.Namespace }}'
+  namespace: '{{ $.Release.Namespace }}'
 ---
 {{- end }}
 {{- end }}
