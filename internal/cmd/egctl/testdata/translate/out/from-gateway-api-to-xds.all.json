@@ -649,7 +649,7 @@
                                   "routes": [
                                     {
                                       "directResponse": {
-                                        "status": 200
+                                        "status": 500
                                       },
                                       "match": {
                                         "prefix": "/"
