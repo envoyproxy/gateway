@@ -84,7 +84,7 @@ func enablePrometheus(infra *ir.ProxyInfra) bool {
 func expectedProxyContainers(infra *ir.ProxyInfra,
 	containerSpec *egv1a1.KubernetesContainerSpec,
 	shutdownConfig *egv1a1.ShutdownConfig, shutdownManager *egv1a1.ShutdownManager,
-	namespace, dnsDomain string,
+	namespace string, dnsDomain string, gatewayNamespaceMode bool,
 ) ([]corev1.Container, error) {
 	ports := make([]corev1.ContainerPort, 0, 2)
 	if enablePrometheus(infra) {
@@ -136,7 +136,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			Resources:                *containerSpec.Resources,
 			SecurityContext:          expectedEnvoySecurityContext(containerSpec),
 			Ports:                    ports,
-			VolumeMounts:             expectedContainerVolumeMounts(containerSpec),
+			VolumeMounts:             expectedContainerVolumeMounts(gatewayNamespaceMode, containerSpec),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
 			StartupProbe: &corev1.Probe{
@@ -285,26 +285,31 @@ func expectedShutdownPreStopCommand(cfg *egv1a1.ShutdownConfig) []string {
 }
 
 // expectedContainerVolumeMounts returns expected proxy container volume mounts.
-func expectedContainerVolumeMounts(containerSpec *egv1a1.KubernetesContainerSpec) []corev1.VolumeMount {
-	volumeMounts := []corev1.VolumeMount{
-		{
+func expectedContainerVolumeMounts(gatewayNamespacedMode bool, containerSpec *egv1a1.KubernetesContainerSpec) []corev1.VolumeMount {
+	var volumeMounts []corev1.VolumeMount
+	if !gatewayNamespacedMode {
+		certsMount := corev1.VolumeMount{
 			Name:      "certs",
 			MountPath: "/certs",
 			ReadOnly:  true,
-		},
-		{
-			Name:      "sds",
-			MountPath: "/sds",
-		},
+		}
+		volumeMounts = append(volumeMounts, certsMount)
 	}
+	sdsMount := corev1.VolumeMount{
+		Name:      "sds",
+		MountPath: "/sds",
+	}
+	volumeMounts = append(volumeMounts, sdsMount)
 
 	return resource.ExpectedContainerVolumeMounts(containerSpec, volumeMounts)
 }
 
 // expectedVolumes returns expected proxy deployment volumes.
-func expectedVolumes(name string, pod *egv1a1.KubernetesPodSpec) []corev1.Volume {
-	volumes := []corev1.Volume{
-		{
+func expectedVolumes(name string, gatewayNamespacedMode bool, pod *egv1a1.KubernetesPodSpec) []corev1.Volume {
+	var volumes []corev1.Volume
+
+	if !gatewayNamespacedMode {
+		certsVolume := corev1.Volume{
 			Name: "certs",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
@@ -312,31 +317,33 @@ func expectedVolumes(name string, pod *egv1a1.KubernetesPodSpec) []corev1.Volume
 					DefaultMode: ptr.To[int32](420),
 				},
 			},
-		},
-		{
-			Name: "sds",
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: ExpectedResourceHashedName(name),
-					},
-					Items: []corev1.KeyToPath{
-						{
-							Key:  common.SdsCAFilename,
-							Path: common.SdsCAFilename,
-						},
-						{
-							Key:  common.SdsCertFilename,
-							Path: common.SdsCertFilename,
-						},
-					},
-					DefaultMode: ptr.To[int32](420),
-					Optional:    ptr.To(false),
+		}
+		volumes = append(volumes, certsVolume)
+	}
+
+	sdsVolume := corev1.Volume{
+		Name: "sds",
+		VolumeSource: corev1.VolumeSource{
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: ExpectedResourceHashedName(name),
 				},
+				Items: []corev1.KeyToPath{
+					{
+						Key:  common.SdsCAFilename,
+						Path: common.SdsCAFilename,
+					},
+					{
+						Key:  common.SdsCertFilename,
+						Path: common.SdsCertFilename,
+					},
+				},
+				DefaultMode: ptr.To[int32](420),
+				Optional:    ptr.To(false),
 			},
 		},
 	}
-
+	volumes = append(volumes, sdsVolume)
 	return resource.ExpectedVolumes(pod, volumes)
 }
 
