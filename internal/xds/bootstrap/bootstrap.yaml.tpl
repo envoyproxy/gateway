@@ -61,6 +61,7 @@ stats_sinks:
 {{- end }}
 {{- end }}
 static_resources:
+  {{- if .EnablePrometheus }}
   listeners:
   - name: envoy-gateway-proxy-stats-{{ .StatsServer.Address }}-{{ .StatsServer.Port }}
     address:
@@ -80,7 +81,6 @@ static_resources:
           normalize_path: true
           route_config:
             name: local_route
-            {{- if .EnablePrometheus }}
             virtual_hosts:
             - name: prometheus_stats
               domains:
@@ -116,11 +116,11 @@ static_resources:
                         "@type": type.googleapis.com/envoy.extensions.compression.zstd.compressor.v3.Zstd
                     {{- end }}
                 {{- end }}
-            {{- end }}
           http_filters:
           - name: envoy.filters.http.router
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+  {{- end }}
   clusters:
   {{- if .EnablePrometheus }}
   - name: prometheus_stats
