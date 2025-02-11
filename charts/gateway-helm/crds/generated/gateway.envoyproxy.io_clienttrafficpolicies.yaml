@@ -510,7 +510,7 @@ spec:
                       system buffer http filter
                     properties:
                       manager:
-                        description: Manger provides the AsyncFileManager configuration
+                        description: Manager provides the AsyncFileManager configuration
                         properties:
                           id:
                             type: string
