@@ -255,7 +255,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "Invalid-PDB-spec",
+			desc: "PDB-with-invalid-spec",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
@@ -270,6 +270,22 @@ func TestEnvoyProxyProvider(t *testing.T) {
 				}
 			},
 			wantErrors: []string{"only one of minAvailable or maxUnavailable can be specified"},
+		},
+		{
+			desc: "PDB-with-passing-spec",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyPDB: &egv1a1.KubernetesPodDisruptionBudgetSpec{
+								MaxUnavailable: &intstr.IntOrString{Type: intstr.Int, IntVal: 1},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
 		},
 		{
 			desc: "ServiceTypeClusterIP-with-LoadBalancerIP",
