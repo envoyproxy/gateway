@@ -57,7 +57,7 @@ func buildReadyListener(ready *ir.ReadyListener) (*listenerv3.Listener, error) {
 								},
 								Action: &routev3.Route_DirectResponse{
 									DirectResponse: &routev3.DirectResponseAction{
-										Status: 200,
+										Status: 500, // you should not trigger this, healthcheck filter take care of it
 									},
 								},
 							},
