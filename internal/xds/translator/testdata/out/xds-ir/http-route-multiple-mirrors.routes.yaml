@@ -12,6 +12,12 @@
         cluster: route-dest
         requestMirrorPolicies:
         - cluster: mirror-route-dest
+          runtimeFraction:
+            defaultValue:
+              numerator: 100
         - cluster: mirror-route-dest1
+          runtimeFraction:
+            defaultValue:
+              numerator: 100
         upgradeConfigs:
         - upgradeType: websocket

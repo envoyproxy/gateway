@@ -571,15 +571,17 @@ func (t *Translator) addRouteToRouteConfig(
 		}
 
 		if httpRoute.Mirrors != nil {
-			for _, mirrorDest := range httpRoute.Mirrors {
-				if err = addXdsCluster(tCtx, &xdsClusterArgs{
-					name:         mirrorDest.Name,
-					settings:     mirrorDest.Settings,
-					tSocket:      nil,
-					endpointType: EndpointTypeStatic,
-					metrics:      metrics,
-				}); err != nil {
-					errs = errors.Join(errs, err)
+			for _, mrr := range httpRoute.Mirrors {
+				if mrr.Destination != nil {
+					if err = addXdsCluster(tCtx, &xdsClusterArgs{
+						name:         mrr.Destination.Name,
+						settings:     mrr.Destination.Settings,
+						tSocket:      nil,
+						endpointType: EndpointTypeStatic,
+						metrics:      metrics,
+					}); err != nil {
+						errs = errors.Join(errs, err)
+					}
 				}
 			}
 		}

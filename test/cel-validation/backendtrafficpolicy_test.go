@@ -1633,6 +1633,50 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{`response cost is not supported for Local Rate Limits`},
 		},
+		{
+			desc: "panicThreshold is set",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						HealthCheck: &egv1a1.HealthCheck{
+							PanicThreshold: ptr.To[uint32](80),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "panicThreshold fails validation",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						HealthCheck: &egv1a1.HealthCheck{
+							PanicThreshold: ptr.To[uint32](200),
+						},
+					},
+				}
+			},
+			wantErrors: []string{`Invalid value: 200: spec.healthCheck.panicThreshold in body should be less than or equal to 100`},
+		},
 	}
 
 	for _, tc := range cases {

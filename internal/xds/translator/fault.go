@@ -13,7 +13,6 @@ import (
 	xdsfault "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/common/fault/v3"
 	xdshttpfaultv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/fault/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
-	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -173,13 +172,4 @@ func (*fault) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	route.TypedPerFilterConfig[wellknown.Fault] = routeCfgAny
 
 	return nil
-}
-
-// translatePercentToFractionalPercent translates a v1alpha3 Percent instance
-// to an envoy.type.FractionalPercent instance.
-func translatePercentToFractionalPercent(p *float32) *xdstype.FractionalPercent {
-	return &xdstype.FractionalPercent{
-		Numerator:   uint32(*p * 10000),
-		Denominator: xdstype.FractionalPercent_MILLION,
-	}
 }
