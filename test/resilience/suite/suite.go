@@ -9,16 +9,17 @@ package suite
 
 import (
 	"context"
-	"github.com/envoyproxy/gateway/test/utils/kubernetes"
 	"io/fs"
-	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
 	"testing"
 	"time"
 
-	opt "github.com/envoyproxy/gateway/internal/cmd/options"
-	kube "github.com/envoyproxy/gateway/internal/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/conformance/utils/config"
+	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
+
+	opt "github.com/envoyproxy/gateway/internal/cmd/options"
+	kube "github.com/envoyproxy/gateway/internal/kubernetes"
+	"github.com/envoyproxy/gateway/test/utils/kubernetes"
 )
 
 const (
@@ -50,9 +51,7 @@ type ResilienceTestSuite struct {
 }
 
 func NewResilienceTestSuite(client client.Client, reportDir string, manifestFS []fs.FS, gcn string) (*ResilienceTestSuite, error) {
-	var (
-		timeoutConfig = config.TimeoutConfig{}
-	)
+	timeoutConfig := config.TimeoutConfig{}
 
 	// Reset some timeout config for the benchmark test.
 	config.SetupTimeoutConfig(&timeoutConfig)
@@ -84,8 +83,7 @@ func (rts *ResilienceTestSuite) WithResCleanUp(ctx context.Context, t *testing.T
 	res, err := f()
 	t.Cleanup(func() {
 		t.Logf("Start to cleanup resilsence test resources")
-		if deleteErr := rts.Client.Delete(ctx, res); deleteErr != nil {
-		}
+		_ = rts.Client.Delete(ctx, res)
 
 		t.Logf("Clean up complete!")
 	})
@@ -107,8 +105,7 @@ func (rts *ResilienceTestSuite) Run(t *testing.T, tests []ResilienceTest) {
 func (rts *ResilienceTestSuite) RegisterCleanup(t *testing.T, ctx context.Context, object client.Object) {
 	t.Cleanup(func() {
 		t.Logf("Start to cleanup resilsence test resources")
-		if deleteErr := rts.Client.Delete(ctx, object); deleteErr != nil {
-		}
+		_ = rts.Client.Delete(ctx, object)
 
 		t.Logf("Clean up complete!")
 	})

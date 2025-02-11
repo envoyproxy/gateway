@@ -9,14 +9,16 @@ package tests
 
 import (
 	"context"
-	"github.com/envoyproxy/gateway/test/resilience/suite"
+	"testing"
+	"time"
+
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
-	"testing"
-	"time"
+
+	"github.com/envoyproxy/gateway/test/resilience/suite"
 )
 
 func init() {

@@ -145,22 +145,24 @@ xdsIR:
           name: httproute-1
           namespace: default
         mirrors:
-        - name: httproute/default/httproute-1/rule/0-mirror-0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            protocol: HTTP
-            weight: 1
-        - name: httproute/default/httproute-1/rule/0-mirror-1
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            protocol: HTTP
-            weight: 1
+        - destination:
+            name: httproute/default/httproute-1/rule/0-mirror-0
+            settings:
+            - addressType: IP
+              endpoints:
+              - host: 7.7.7.7
+                port: 8080
+              protocol: HTTP
+              weight: 1
+        - destination:
+            name: httproute/default/httproute-1/rule/0-mirror-1
+            settings:
+            - addressType: IP
+              endpoints:
+              - host: 7.7.7.7
+                port: 8080
+              protocol: HTTP
+              weight: 1
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false

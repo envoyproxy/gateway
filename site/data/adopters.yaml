@@ -27,3 +27,7 @@ adopters:
     logo: "/logos/titan.svg"
     url: "https://www.titan.email"
     description: "Titan uses Envoy Gateway to enhance observability and centralize security for its Kubernetes services, managing critical policies like rate limiting, IP blocking, and access controls—freeing developers from the burden of handling service security."
+  - name: "CoactiveAI"
+    logo: "/logos/coactive.svg"
+    url: "https://www.coactive.ai/"
+    description: "CoactiveAI is advancing multimodal content search and analytics at scale, and relies on envoy gateway to simplify self-service routing, consistent API authentication, request modification, safe rollouts with traffic splitting, and request mirroring for data consistency over split deployments."

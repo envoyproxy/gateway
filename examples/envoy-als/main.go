@@ -18,20 +18,17 @@ import (
 	"google.golang.org/grpc"
 )
 
-var (
-	LogCount = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Name: "log_count",
-		Help: "The total number of logs received.",
-	}, []string{"api_version"})
-)
+var LogCount = prometheus.NewCounterVec(prometheus.CounterOpts{
+	Name: "log_count",
+	Help: "The total number of logs received.",
+}, []string{"api_version"})
 
 func init() {
 	// Register the summary and the histogram with Prometheus's default registry.
 	prometheus.MustRegister(LogCount)
 }
 
-type ALSServer struct {
-}
+type ALSServer struct{}
 
 func (a *ALSServer) StreamAccessLogs(logStream alsv2.AccessLogService_StreamAccessLogsServer) error {
 	log.Println("Streaming als v2 logs")
@@ -50,8 +47,7 @@ func (a *ALSServer) StreamAccessLogs(logStream alsv2.AccessLogService_StreamAcce
 	}
 }
 
-type ALSServerV3 struct {
-}
+type ALSServerV3 struct{}
 
 func (a *ALSServerV3) StreamAccessLogs(logStream alsv3.AccessLogService_StreamAccessLogsServer) error {
 	log.Println("Streaming als v3 logs")
