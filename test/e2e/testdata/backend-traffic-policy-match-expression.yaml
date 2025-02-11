@@ -9,7 +9,7 @@ spec:
   - name: same-namespace
   hostnames: ["normal.example.com"]
   rules:
-    backendRefs:
+  - backendRefs:
     - name: infra-backend-v1
       port: 8080
 ---
@@ -25,7 +25,7 @@ spec:
   - name: same-namespace
   hostnames: ["injected.example.com"]
   rules:
-    backendRefs:
+  - backendRefs:
     - name: infra-backend-v1
       port: 8080
 ---
