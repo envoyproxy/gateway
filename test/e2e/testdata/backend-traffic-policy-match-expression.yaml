@@ -6,12 +6,12 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-    - name: same-namespace
+  - name: same-namespace
   hostnames: ["normal.example.com"]
   rules:
-      backendRefs:
-        - name: infra-backend-v1
-          port: 8080
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -22,12 +22,12 @@ metadata:
     inject: me
 spec:
   parentRefs:
-    - name: same-namespace
+  - name: same-namespace
   hostnames: ["injected.example.com"]
   rules:
-      backendRefs:
-        - name: infra-backend-v1
-          port: 8080
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
@@ -36,8 +36,8 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   targetSelectors:
-    - kind: HTTPRoute
-      matchExpressions: [{key: inject, operator: Exists}]
+  - kind: HTTPRoute
+    matchExpressions: [{key: inject, operator: Exists}]
   faultInjection:
     abort:
       httpStatus: 418
