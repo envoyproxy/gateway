@@ -263,23 +263,6 @@ securityPolicies:
 services:
 - metadata:
     creationTimestamp: null
-    name: backend
-    namespace: default
-  spec:
-    clusterIP: 1.2.3.4
-    ports:
-    - name: TCP-3000
-      port: 3000
-      protocol: TCP
-      targetPort: 0
-    - name: UDP-3000
-      port: 3000
-      protocol: UDP
-      targetPort: 0
-  status:
-    loadBalancer: {}
-- metadata:
-    creationTimestamp: null
     name: providedBackend
     namespace: default
   spec:
@@ -292,6 +275,23 @@ services:
     - name: TCP-9000
       port: 9000
       protocol: TCP
+      targetPort: 0
+  status:
+    loadBalancer: {}
+- metadata:
+    creationTimestamp: null
+    name: backend
+    namespace: default
+  spec:
+    clusterIP: 1.2.3.4
+    ports:
+    - name: TCP-3000
+      port: 3000
+      protocol: TCP
+      targetPort: 0
+    - name: UDP-3000
+      port: 3000
+      protocol: UDP
       targetPort: 0
   status:
     loadBalancer: {}
