@@ -59,6 +59,7 @@ type GlobalRateLimit struct {
 	// Default: false.
 	//
 	// +optional
+	// +notImplementedHide
 	// +kubebuilder:default=false
 	Shared *bool `json:"shared,omitempty"`	
 }
