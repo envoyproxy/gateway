@@ -8,5 +8,5 @@ runs:
       run: sudo apt-get install libbtrfs-dev -y
     - uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34  # v5.0.1
       with:
-        go-version: 1.23.x
+        go-version-file: go.mod
         cache: true
