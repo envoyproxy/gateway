@@ -24,7 +24,7 @@ type RateLimitSpec struct {
 	Local *LocalRateLimit `json:"local,omitempty"`
 
 	// Shared determines whether this rate limit rule applies globally across the gateway.
-	// If set to true, the rule is treated as a common bucket and is shared across all routes under the gateway.
+	// If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).
 	// Must have targetRef set to Gateway
 	// Default: false.
 	//
