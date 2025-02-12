@@ -369,9 +369,11 @@ func TestValidateEnvoyGateway(t *testing.T) {
 									Kind: &TLSSecretKind,
 									Name: gwapiv1.ObjectName("client-certificate"),
 								},
-								CACertificateRef: &gwapiv1.SecretObjectReference{
-									Kind: &TLSSecretKind,
-									Name: gwapiv1.ObjectName("ca-certificate"),
+								CACertificateRefs: []gwapiv1.ObjectReference{
+									{
+										Kind: TLSSecretKind,
+										Name: gwapiv1.ObjectName("ca-certificate"),
+									},
 								},
 							},
 						},
@@ -406,9 +408,11 @@ func TestValidateEnvoyGateway(t *testing.T) {
 									Kind: &TLSSecretKind,
 									Name: gwapiv1.ObjectName("client-certificate"),
 								},
-								CACertificateRef: &gwapiv1.SecretObjectReference{
-									Kind: &TLSSecretKind,
-									Name: gwapiv1.ObjectName("ca-certificate"),
+								CACertificateRefs: []gwapiv1.ObjectReference{
+									{
+										Kind: TLSSecretKind,
+										Name: gwapiv1.ObjectName("ca-certificate"),
+									},
 								},
 							},
 						},
@@ -450,9 +454,11 @@ func TestValidateEnvoyGateway(t *testing.T) {
 									Kind: &TLSUnrecognizedKind,
 									Name: gwapiv1.ObjectName("client-certificate"),
 								},
-								CACertificateRef: &gwapiv1.SecretObjectReference{
-									Kind: &TLSSecretKind,
-									Name: gwapiv1.ObjectName("ca-certificate"),
+								CACertificateRefs: []gwapiv1.ObjectReference{
+									{
+										Kind: TLSSecretKind,
+										Name: gwapiv1.ObjectName("ca-certificate"),
+									},
 								},
 							},
 						},

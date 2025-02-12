@@ -40,3 +40,30 @@ func ValidateSecretObjectReference(ctx context.Context, client k8sclient.Client,
 
 	return nil, "", errors.New("unsupported certificateRef group/kind")
 }
+
+// ValidateObjectReference validates an ObjectReference, ensuring it points to a Secret.
+func ValidateObjectReference(ctx context.Context, client k8sclient.Client, objRef *gwapiv1.ObjectReference, namespace string) (*corev1.Secret, string, error) {
+	if objRef == nil {
+		return nil, "", errors.New("object reference is nil")
+	}
+
+	if objRef.Kind != resource.KindSecret {
+		return nil, "", fmt.Errorf("unsupported object reference kind: %v, only 'Secret' is supported", objRef.Kind)
+	}
+
+	secretNamespace := namespace
+	if objRef.Namespace != nil && string(*objRef.Namespace) != "" {
+		secretNamespace = string(*objRef.Namespace)
+	}
+
+	secret := &corev1.Secret{}
+	key := k8smachinery.NamespacedName{
+		Namespace: secretNamespace,
+		Name:      string(objRef.Name),
+	}
+	if err := client.Get(ctx, key, secret); err != nil {
+		return nil, secretNamespace, fmt.Errorf("cannot find Secret %s in namespace %s", string(objRef.Name), secretNamespace)
+	}
+
+	return secret, secretNamespace, nil
+}

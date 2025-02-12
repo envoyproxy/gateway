@@ -283,19 +283,24 @@ func setupGRPCOpts(ctx context.Context, client k8scli.Client, ext *egv1a1.Extens
 
 	var opts []grpc.DialOption
 	var creds credentials.TransportCredentials
+
 	if ext.Service.TLS != nil {
-		cacertRef := ext.Service.TLS.CACertificateRef
-		casecret, secretNamespace, err := kubernetes.ValidateSecretObjectReference(ctx, client, cacertRef, namespace)
-		if err != nil {
-			return nil, err
-		}
+		tlsConfig := &tls.Config{}
 
-		cp, err := parseCA(casecret)
-		if err != nil {
-			return nil, fmt.Errorf("error parsing cert in Secret %s in namespace %s", cacertRef.Name, secretNamespace)
-		}
+		if len(ext.Service.TLS.CACertificateRefs) > 0 {
+			caCertRef := ext.Service.TLS.CACertificateRefs[0]
+			caSecret, secretNamespace, err := kubernetes.ValidateObjectReference(ctx, client, &caCertRef, namespace)
+			if err != nil {
+				return nil, fmt.Errorf("error fetching CA certificate secret: %v", err)
+			}
 
-		tlsConfig := &tls.Config{RootCAs: cp}
+			cp, err := parseCA(caSecret)
+			if err != nil {
+				return nil, fmt.Errorf("error parsing CA certificate from secret %s in namespace %s: %v",
+					caCertRef.Name, secretNamespace, err)
+			}
+			tlsConfig.RootCAs = cp
+		}
 
 		// Load Client Certificate if provided
 		if ext.Service.TLS.ClientCertificateRef != nil {

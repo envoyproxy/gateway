@@ -571,7 +571,7 @@ type ExtensionTLS struct {
 	// If not set, system CA certificates will be used.
 	//
 	// +optional
-	CACertificateRef *gwapiv1.SecretObjectReference `json:"caCertificateRef,omitempty"`
+	CACertificateRefs []gwapiv1.ObjectReference `json:"caCertificateRefs,omitempty"`
 
 	// ClientCertificateRef is a reference to a Kubernetes Secret that contains
 	// a client certificate in a key named `tls.crt` and an associated private
