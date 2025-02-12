@@ -59,6 +59,7 @@ var BackendTrafficPolicyMatchExpressionTest = suite.ConformanceTest{
 			)
 
 			normalResponse := http.ExpectedResponse{
+				Namespace: ns,
 				Request: http.Request{
 					Host: "normal.example.com",
 					Path: "/",
@@ -76,6 +77,7 @@ var BackendTrafficPolicyMatchExpressionTest = suite.ConformanceTest{
 			)
 
 			injectedResponse := http.ExpectedResponse{
+				Namespace: ns,
 				Request: http.Request{
 					Host: "injected.example.com",
 					Path: "/",
