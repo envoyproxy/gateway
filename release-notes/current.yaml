@@ -11,6 +11,7 @@ security updates: |
 new features: |
   Added support for configuring maxUnavailable in KubernetesPodDisruptionBudgetSpec
   Added support for percentage-based request mirroring
+  Add an option to OIDC authentication to bypass it and defer to JWT when the request contains an "Authorization: Bearer ..." header.
 
 bug fixes: |
 
