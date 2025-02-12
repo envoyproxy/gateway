@@ -11,6 +11,7 @@ security updates: |
 new features: |
   Added support for configuring maxUnavailable in KubernetesPodDisruptionBudgetSpec
   Added support for percentage-based request mirroring
+  Allow matchExpressions in TargetSelector
   Add defaulter for gateway-api resources loading from file to be able to set default values.
 
 bug fixes: |
