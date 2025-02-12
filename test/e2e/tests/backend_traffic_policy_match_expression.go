@@ -61,6 +61,7 @@ var BackendTrafficPolicyMatchExpressionTest = suite.ConformanceTest{
 			normalResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Host: "normal.example.com",
+					Path: "/",
 				},
 				Response: http.Response{
 					StatusCode: 200,
@@ -77,6 +78,7 @@ var BackendTrafficPolicyMatchExpressionTest = suite.ConformanceTest{
 			injectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Host: "injected.example.com",
+					Path: "/",
 				},
 				Response: http.Response{
 					StatusCode: 418,
