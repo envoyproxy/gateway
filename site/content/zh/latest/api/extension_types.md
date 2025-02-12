@@ -1860,6 +1860,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `rules` | _[RateLimitRule](#ratelimitrule) array_ |  true  |  | Rules are a list of RateLimit selectors and limits. Each rule and its<br />associated limit is applied in a mutually exclusive way. If a request<br />matches multiple rules, each of their associated limits get applied, so a<br />single request might increase the rate limit counters for multiple rules<br />if selected. The rate limit service will return a logical OR of the individual<br />rate limit decisions of all matching rules. For example, if a request<br />matches two rules, one rate limited and one not, the final decision will be<br />to rate limit the request. |
+| `shared` | _boolean_ |  false  | false | Shared determines whether the rate limit rules apply across all the policy targets.<br />If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).<br />Must have targetRef set to Gateway<br />Default: false. |
 
 
 #### GroupVersionKind
@@ -3633,7 +3634,6 @@ _Appears in:_
 | `type` | _[RateLimitType](#ratelimittype)_ |  true  |  | Type decides the scope for the RateLimits.<br />Valid RateLimitType values are "Global" or "Local". |
 | `global` | _[GlobalRateLimit](#globalratelimit)_ |  false  |  | Global defines global rate limit configuration. |
 | `local` | _[LocalRateLimit](#localratelimit)_ |  false  |  | Local defines local rate limit configuration. |
-| `shared` | _boolean_ |  false  | false | Shared determines whether this rate limit rule applies globally across the gateway.<br />If set to true, the rule is treated as a common bucket and is shared across all routes under the gateway.<br />Must have targetRef set to Gateway<br />Default: false. |
 
 
 #### RateLimitTelemetry
