@@ -12,7 +12,7 @@ spec:
   {{- if .Values.hpa.minReplicas }}
   minReplicas: {{ .Values.hpa.minReplicas }}
   {{- end }}
-  maxReplicas: {{ .Values.hpa.maxReplicas }}
+  maxReplicas: {{ required ".Values.hps.maxReplicas is required when hpa is enabled" .Values.hpa.maxReplicas }}
   {{- if .Values.hpa.behavior }}
   behavior:
 {{ toYaml .Values.hpa.behavior | indent 4 }}
