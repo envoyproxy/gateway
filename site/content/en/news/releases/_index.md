@@ -37,7 +37,7 @@ communications with the Envoy Gateway community, and the mechanics of the releas
 | 2024 Q1 |    Xunzhuo Liu ([Xunzhuo](https://github.com/Xunzhuo))         |
 | 2024 Q3 |    Guy Daich ([guydc](https://github.com/guydc))               |
 | 2024 Q4 |    Huabing Zhao ([zhaohuabing](https://github.com/zhaohuabing))|
-| 2024 Q1 |    Guy Daich ([guydc](https://github.com/guydc))               |
+| 2025 Q1 |    Guy Daich ([guydc](https://github.com/guydc))               |
 
 ## Release Schedule
 
