@@ -6,11 +6,21 @@
 package resource
 
 import (
+	"flag"
+	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/yaml"
+
+	"github.com/envoyproxy/gateway/internal/utils/file"
 )
+
+var overrideTestData = flag.Bool("override-testdata", true, "if override the test output data.")
 
 func TestIterYAMLBytes(t *testing.T) {
 	inputs := `test: foo1
@@ -36,4 +46,37 @@ test: foo3
 	})
 	require.NoError(t, err)
 	require.ElementsMatch(t, names, []string{"foo1", "foo2", "foo3"})
+}
+
+func TestLoadAllSupportedResourcesFromYAMLBytes(t *testing.T) {
+	inFile := requireTestDataFile(t, "all-resources", "in")
+	got, err := loadKubernetesYAMLToResources(inFile, true)
+	require.NoError(t, err)
+
+	if *overrideTestData {
+		out, err := yaml.Marshal(got)
+		require.NoError(t, err)
+		require.NoError(t, file.Write(string(out), filepath.Join("testdata", "all-resources.out.yaml")))
+	}
+
+	want := &Resources{}
+	outFile := requireTestDataFile(t, "all-resources", "out")
+	mustUnmarshal(t, outFile, want)
+
+	opts := []cmp.Option{
+		cmpopts.IgnoreFields(Resources{}, "serviceMap"),
+		cmpopts.EquateEmpty(),
+	}
+	require.Empty(t, cmp.Diff(want, got, opts...))
+}
+
+func requireTestDataFile(t *testing.T, name, ioType string) []byte {
+	t.Helper()
+	content, err := os.ReadFile(filepath.Join("testdata", fmt.Sprintf("%s.%s.yaml", name, ioType)))
+	require.NoError(t, err)
+	return content
+}
+
+func mustUnmarshal(t *testing.T, val []byte, out interface{}) {
+	require.NoError(t, yaml.UnmarshalStrict(val, out, yaml.DisallowUnknownFields))
 }

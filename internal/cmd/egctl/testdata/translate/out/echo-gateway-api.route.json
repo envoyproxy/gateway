@@ -35,7 +35,12 @@
           {
             "name": "http",
             "port": 80,
-            "protocol": "HTTP"
+            "protocol": "HTTP",
+            "allowedRoutes": {
+              "namespaces": {
+                "from": "Same"
+              }
+            }
           }
         ]
       },
@@ -93,6 +98,8 @@
       "spec": {
         "parentRefs": [
           {
+            "group": "gateway.networking.k8s.io",
+            "kind": "Gateway",
             "name": "eg"
           }
         ],
@@ -125,6 +132,8 @@
         "parents": [
           {
             "parentRef": {
+              "group": "gateway.networking.k8s.io",
+              "kind": "Gateway",
               "name": "eg"
             },
             "controllerName": "gateway.envoyproxy.io/gatewayclass-controller",
