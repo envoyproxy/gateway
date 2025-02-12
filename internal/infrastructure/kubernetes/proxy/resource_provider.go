@@ -576,7 +576,7 @@ func (r *ResourceRender) getPodAnnotations(resourceAnnotation map[string]string,
 	if enablePrometheus(r.infra) {
 		podAnnotations["prometheus.io/path"] = "/stats/prometheus" // TODO: make this configurable
 		podAnnotations["prometheus.io/scrape"] = "true"
-		podAnnotations["prometheus.io/port"] = strconv.Itoa(bootstrap.EnvoyReadinessPort)
+		podAnnotations["prometheus.io/port"] = strconv.Itoa(bootstrap.EnvoyStatsPort)
 	}
 
 	if len(podAnnotations) == 0 {
