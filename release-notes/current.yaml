@@ -2,12 +2,14 @@ date: Pending
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
+  Use a dedicated listener port(19003) for envoy proxy readiness
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  Added support for configuring maxUnavailable in KubernetesPodDisruptionBudgetSpec
   Added support for percentage-based request mirroring
   Add defaulter for gateway-api resources loading from file to be able to set default values.
 
