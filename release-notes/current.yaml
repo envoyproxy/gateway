@@ -8,6 +8,7 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  Add defaulter for gateway-api resources loading from file to be able to set default values.
 
 bug fixes: |
 

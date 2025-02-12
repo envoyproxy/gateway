@@ -5,12 +5,16 @@ envoyProxyForGatewayClass:
     name: example
     namespace: default
   spec:
-    logging: {}
+    logging:
+      level:
+        default: warn
     provider:
       kubernetes:
         envoyService:
           annotations:
             custom1: svc-annotation1
+          externalTrafficPolicy: Local
+          type: LoadBalancer
       type: Kubernetes
   status: {}
 gatewayClass:
@@ -42,13 +46,22 @@ gateways:
   spec:
     gatewayClassName: eg
     listeners:
-    - name: tcp
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: tcp
       port: 1234
       protocol: TCP
-    - name: udp
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: udp
       port: 1234
       protocol: UDP
-    - hostname: foo.com
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      hostname: foo.com
       name: tls-passthrough
       port: 8443
       protocol: TLS
@@ -58,6 +71,8 @@ gateways:
         kinds:
         - group: gateway.networking.k8s.io
           kind: HTTPRoute
+        namespaces:
+          from: Same
       name: http
       port: 80
       protocol: HTTP
@@ -65,6 +80,8 @@ gateways:
         kinds:
         - group: gateway.networking.k8s.io
           kind: GRPCRoute
+        namespaces:
+          from: Same
       name: grpc
       port: 8080
       protocol: HTTP
@@ -185,7 +202,9 @@ grpcRoutes:
     hostnames:
     - www.grpc-example.com
     parentRefs:
-    - name: eg
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
       sectionName: grpc
     rules:
     - backendRefs:
@@ -198,6 +217,7 @@ grpcRoutes:
       - method:
           method: DoThing
           service: com.example.Things
+          type: Exact
   status:
     parents:
     - conditions:
@@ -213,6 +233,8 @@ grpcRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
         name: eg
         sectionName: grpc
 httpRoutes:
@@ -225,7 +247,9 @@ httpRoutes:
     hostnames:
     - www.example.com
     parentRefs:
-    - name: eg
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
     rules:
     - backendRefs:
       - group: ""
@@ -252,6 +276,8 @@ httpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
         name: eg
 tcpRoutes:
 - kind: TCPRoute
@@ -261,7 +287,9 @@ tcpRoutes:
     namespace: default
   spec:
     parentRefs:
-    - name: eg
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
       sectionName: tcp
     rules:
     - backendRefs:
@@ -285,6 +313,8 @@ tcpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
         name: eg
         sectionName: tcp
 tlsRoutes:
@@ -295,7 +325,9 @@ tlsRoutes:
     namespace: default
   spec:
     parentRefs:
-    - name: eg
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
       sectionName: tls-passthrough
     rules:
     - backendRefs:
@@ -319,6 +351,8 @@ tlsRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
         name: eg
         sectionName: tls-passthrough
 udpRoutes:
@@ -329,7 +363,9 @@ udpRoutes:
     namespace: default
   spec:
     parentRefs:
-    - name: eg
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
       sectionName: udp
     rules:
     - backendRefs:
@@ -353,5 +389,7 @@ udpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
         name: eg
         sectionName: udp
