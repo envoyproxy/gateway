@@ -560,7 +560,7 @@ type ExtensionService struct {
 	TLS *ExtensionTLS `json:"tls,omitempty"`
 }
 
-// ExtensionTLS defines the TLS configuration when connecting to an extension service
+// ExtensionTLS defines the TLS configuration when connecting to an extension service.
 type ExtensionTLS struct {
 	// CACertificateRef is a reference to a Kubernetes Secret that contains
 	// a CA certificate in a key named `ca.crt`.
@@ -568,17 +568,18 @@ type ExtensionTLS struct {
 	// The CA certificate is used by Envoy Gateway to verify the server
 	// certificate presented by the extension server.
 	//
-	// +kubebuilder:validation:Required
-	CACertificateRef gwapiv1.SecretObjectReference `json:"caCertificateRef"`
+	// If not set, system CA certificates will be used.
+	//
+	// +optional
+	CACertificateRef *gwapiv1.SecretObjectReference `json:"caCertificateRef,omitempty"`
 
 	// ClientCertificateRef is a reference to a Kubernetes Secret that contains
 	// a client certificate in a key named `tls.crt` and an associated private
 	// key in `tls.key`.
 	//
-	// This certificate will be used by Envoy Gateway to authenticate itself
-	// towards the extension server.
+	// If set, Envoy Gateway will authenticate itself to the extension server using mTLS.
 	//
-	// This field is optional. If not set, client authentication is not performed.
+	// If not set, only server authentication (one-way TLS) will be performed.
 	//
 	// +optional
 	ClientCertificateRef *gwapiv1.SecretObjectReference `json:"clientCertificateRef,omitempty"`
