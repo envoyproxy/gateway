@@ -120,7 +120,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		XdsServerHost:    ptr.To(fmt.Sprintf("%s.%s.svc.%s", config.EnvoyGatewayServiceName, namespace, dnsDomain)),
 	}
 
-	args, err := common.BuildProxyArgs(infra, shutdownConfig, bootstrapConfigOptions, fmt.Sprintf("$(%s)", envoyPodEnvVar))
+	args, err := common.BuildProxyArgs(infra, shutdownConfig, bootstrapConfigOptions, fmt.Sprintf("$(%s)", envoyPodEnvVar), gatewayNamespaceMode)
 	if err != nil {
 		return nil, err
 	}

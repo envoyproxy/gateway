@@ -309,7 +309,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					Containers:                    containers,
 					InitContainers:                deploymentConfig.InitContainers,
 					ServiceAccountName:            r.Name(),
-					AutomountServiceAccountToken:  ptr.To(false),
+					AutomountServiceAccountToken:  expectedAutoMountServiceAccountToken(r.GatewayNamespaceMode),
 					TerminationGracePeriodSeconds: expectedTerminationGracePeriodSeconds(proxyConfig.Spec.Shutdown),
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					RestartPolicy:                 corev1.RestartPolicyAlways,
@@ -524,6 +524,10 @@ func expectedTerminationGracePeriodSeconds(cfg *egv1a1.ShutdownConfig) *int64 {
 	return ptr.To(int64(s))
 }
 
+func expectedAutoMountServiceAccountToken(gatewayNamespacedMode bool) *bool {
+	return ptr.To(gatewayNamespacedMode)
+}
+
 func (r *ResourceRender) getPodSpec(
 	containers, initContainers []corev1.Container,
 	pod *egv1a1.KubernetesPodSpec,
@@ -533,7 +537,7 @@ func (r *ResourceRender) getPodSpec(
 		Containers:                    containers,
 		InitContainers:                initContainers,
 		ServiceAccountName:            ExpectedResourceHashedName(r.infra.Name),
-		AutomountServiceAccountToken:  ptr.To(false),
+		AutomountServiceAccountToken:  expectedAutoMountServiceAccountToken(r.GatewayNamespaceMode),
 		TerminationGracePeriodSeconds: expectedTerminationGracePeriodSeconds(proxyConfig.Spec.Shutdown),
 		DNSPolicy:                     corev1.DNSClusterFirst,
 		RestartPolicy:                 corev1.RestartPolicyAlways,
