@@ -158,6 +158,11 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
     tracing:
       authority: otel-collector.monitoring.svc.cluster.local
       destination:
