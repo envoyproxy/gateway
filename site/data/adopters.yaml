@@ -1,7 +1,11 @@
 adopters:
+  - name: "Canva"
+    logo: "/logos/canva.svg"
+    url: "https://canva.com/"
   - name: "AllFactors"
     logo: "/logos/allfactors.svg"
     url: "https://allfactors.com/"
+    description: "Routing all customer traffic to our various backends. Every time a new customer signs up we dynamically add a route to a new hostname so Envoy Gateway is deeply integrated with our product."
     description: "Routing all customer traffic to our various backends. Every time a new customer signs up we dynamically add a route to a new hostname so Envoy Gateway is deeply integrated with our product."
   - name: "Tetrate"
     logo: "/logos/tetrate.svg"
