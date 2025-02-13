@@ -27,8 +27,13 @@ import (
 )
 
 var (
-	port     int
-	certPath string
+	port      int
+	certPath  string
+	testUsers = map[string]string{
+		"token1": "user1",
+		"token2": "user2",
+		"token3": "user3",
+	}
 )
 
 func main() {
@@ -41,7 +46,7 @@ func main() {
 		log.Fatalf("failed to listen to %d: %v", port, err)
 	}
 
-	users := TestUsers()
+	users := testUsers
 
 	// Load TLS credentials
 	creds, err := loadTLSCredentials(certPath)
@@ -62,6 +67,8 @@ func main() {
 	}()
 
 	http.HandleFunc("/healthz", healthCheckHandler)
+	http.HandleFunc("/", authCheckerHandler)
+	http.HandleFunc("/auth", authCheckerHandler)
 	err = http.ListenAndServe(":8080", nil)
 	if err != nil {
 		log.Fatalf("failed to serve: %v", err)
@@ -86,7 +93,7 @@ func (s *authServer) Check(
 	req *envoy_service_auth_v3.CheckRequest,
 ) (*envoy_service_auth_v3.CheckResponse, error) {
 	authorization := req.Attributes.Request.Http.Headers["authorization"]
-	log.Println(authorization)
+	log.Println("GRPC check auth: ", authorization)
 
 	extracted := strings.Fields(authorization)
 	if len(extracted) == 2 && extracted[0] == "Bearer" {
@@ -134,12 +141,23 @@ func (u Users) Check(key string) (bool, string) {
 	return ok, value
 }
 
-func TestUsers() Users {
-	return map[string]string{
-		"token1": "user1",
-		"token2": "user2",
-		"token3": "user3",
+func authCheckerHandler(w http.ResponseWriter, req *http.Request) {
+	authorization := req.Header.Get("authorization")
+	log.Println("HTTP check auth: ", authorization)
+	if len(authorization) == 0 {
+		w.WriteHeader(http.StatusForbidden)
+		return
 	}
+	extracted := strings.Split(authorization, " ")
+	if len(extracted) == 2 && extracted[0] == "Bearer" {
+		if user, ok := testUsers[extracted[1]]; ok {
+			w.Header().Add("x-current-user", user) // this should be set before call WriteHeader
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+	}
+
+	w.WriteHeader(http.StatusForbidden)
 }
 
 func healthCheckHandler(w http.ResponseWriter, r *http.Request) {

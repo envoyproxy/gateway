@@ -48,24 +48,24 @@ spec:
   extAuth:
     grpc:
       backendRefs:
-      - name: grpc-ext-auth
+      - name: envoy-ext-auth
         namespace: gateway-conformance-infra
         port: 9002
 ---
 apiVersion: gateway.networking.k8s.io/v1alpha3
 kind: BackendTLSPolicy
 metadata:
-  name: grpc-ext-auth-btls
+  name: envoy-ext-auth-btls
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
   - group: ''
     kind: Service
-    name: grpc-ext-auth
+    name: envoy-ext-auth
     sectionName: grpc
   validation:
     caCertificateRefs:
-    - name: grpc-ext-auth-ca
+    - name: envoy-ext-auth-ca
       group: ''
       kind: ConfigMap
-    hostname: grpc-ext-auth
+    hostname: envoy-ext-auth
