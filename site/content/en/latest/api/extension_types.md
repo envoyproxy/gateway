@@ -1019,6 +1019,7 @@ _Appears in:_
 | `targetSelectors` | _[TargetSelector](#targetselector) array_ |  true  |  | TargetSelectors allow targeting resources for this policy based on labels |
 | `wasm` | _[Wasm](#wasm) array_ |  false  |  | Wasm is a list of Wasm extensions to be loaded by the Gateway.<br />Order matters, as the extensions will be loaded in the order they are<br />defined in this list. |
 | `extProc` | _[ExtProc](#extproc) array_ |  false  |  | ExtProc is an ordered list of external processing filters<br />that should be added to the envoy filter chain |
+| `lua` | _[Lua](#lua) array_ |  false  |  | Lua is an ordered list of Lua filters<br />that should be added to the envoy filter chain |
 
 
 #### EnvoyFilter

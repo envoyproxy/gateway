@@ -49,7 +49,8 @@ func (l *LuaValidator) Validate() error {
 	return nil
 }
 
-// runLua interprets and runs the provided Lua code in runtime
+// runLua interprets and runs the provided Lua code in runtime using gopher-lua
+// Refer: https://github.com/yuin/gopher-lua?tab=readme-ov-file#differences-between-lua-and-gopherlua
 func (l *LuaValidator) runLua(code string) error {
 	L := lua.NewState()
 	defer L.Close()
