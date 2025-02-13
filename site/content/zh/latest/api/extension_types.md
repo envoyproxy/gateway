@@ -1518,6 +1518,7 @@ _Appears in:_
 | `type.googleapis.com/envoy.config.route.v3.RouteConfiguration` | RouteConfigurationEnvoyResourceType defines the Type URL of the RouteConfiguration resource<br /> | 
 | `type.googleapis.com/envoy.config.cluster.v3.Cluster` | ClusterEnvoyResourceType defines the Type URL of the Cluster resource<br /> | 
 | `type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment` | ClusterLoadAssignmentEnvoyResourceType defines the Type URL of the ClusterLoadAssignment resource<br /> | 
+| `type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret` | SecretEnvoyResourceType defines the Type URL of the Secret resource<br /> | 
 
 
 #### ExtAuth
