@@ -13,6 +13,7 @@ new features: |
   Added support for percentage-based request mirroring
   Allow matchExpressions in TargetSelector
   Add defaulter for gateway-api resources loading from file to be able to set default values.
+  Added support for defining Lua EnvoyExtensionPolicies
 
 bug fixes: |
 
