@@ -143,7 +143,7 @@ func (u Users) Check(key string) (bool, string) {
 
 func authCheckerHandler(w http.ResponseWriter, req *http.Request) {
 	authorization := req.Header.Get("authorization")
-	log.Println("HTTP check auth: ", authorization)
+	log.Println("HTTP check auth")
 	if len(authorization) == 0 {
 		w.WriteHeader(http.StatusForbidden)
 		return
