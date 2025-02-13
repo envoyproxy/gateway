@@ -91,10 +91,11 @@ spec:
               - key: tls.key
                 path: server.key
 ---
+# keep the service name, so that we won't need to change certficates
 apiVersion: v1
 kind: Service
 metadata:
-  name: envoy-ext-auth
+  name: grpc-ext-auth
   namespace: gateway-conformance-infra
 spec:
   selector:
@@ -104,6 +105,16 @@ spec:
       port: 9002
       targetPort: 9002
       name: grpc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: envoy-ext-auth
+  namespace: gateway-conformance-infra
+spec:
+  selector:
+    app: envoy-ext-auth
+  ports:
     - protocol: TCP
       port: 8080
       targetPort: 8080

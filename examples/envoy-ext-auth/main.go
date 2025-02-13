@@ -176,7 +176,7 @@ func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 		grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)),
 	}
 
-	conn, err := grpc.Dial("localhost:9002", opts...)
+	conn, err := grpc.NewClient("localhost:9002", opts...)
 	if err != nil {
 		log.Fatalf("Could not connect: %v", err)
 	}
