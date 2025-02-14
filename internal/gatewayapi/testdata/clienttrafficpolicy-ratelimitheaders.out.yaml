@@ -7,6 +7,7 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     headers:
+      disableGenerateRequestID: null
       disableRateLimitHeaders: true
       enableEnvoyHeaders: true
     targetRef:

@@ -7,6 +7,7 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     headers:
+      disableGenerateRequestID: null
       xForwardedClientCert:
         mode: Sanitize
     targetRef:
@@ -42,6 +43,7 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     headers:
+      disableGenerateRequestID: null
       xForwardedClientCert:
         certDetailsToAdd:
         - URI
@@ -80,6 +82,7 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     headers:
+      disableGenerateRequestID: null
       xForwardedClientCert:
         mode: AppendForward
     targetRef:
@@ -115,6 +118,7 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     headers:
+      disableGenerateRequestID: null
       xForwardedClientCert:
         mode: SanitizeSet
     targetRef:
@@ -150,6 +154,7 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     headers:
+      disableGenerateRequestID: null
       xForwardedClientCert:
         mode: AlwaysForwardOnly
     targetRef:
