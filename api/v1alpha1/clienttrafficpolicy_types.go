@@ -136,6 +136,13 @@ type HeaderSettings struct {
 	// +optional
 	PreserveXRequestID *bool `json:"preserveXRequestID,omitempty"`
 
+	// DisableGenerateRequestID configures envoy to not generate the x-request-id header if it does not exist.
+	// Generating a random UUID4 is expensive so in high throughput scenarios where this feature is not desired it can be disabled.
+	// It defaults to false
+	// +notImplementedHide
+	// +optional
+	DisableGenerateRequestID *bool `json:"disableGenerateRequestID"`
+
 	// EarlyRequestHeaders defines settings for early request header modification, before envoy performs
 	// routing, tracing and built-in header manipulation.
 	//

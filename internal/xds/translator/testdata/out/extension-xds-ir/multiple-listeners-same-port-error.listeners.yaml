@@ -12,6 +12,7 @@
         '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
         commonHttpProtocolOptions:
           headersWithUnderscoresAction: REJECT_REQUEST
+        generateRequestId: false
         http2ProtocolOptions:
           initialConnectionWindowSize: 1048576
           initialStreamWindowSize: 65536
@@ -64,6 +65,7 @@
         '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
         commonHttpProtocolOptions:
           headersWithUnderscoresAction: REJECT_REQUEST
+        generateRequestId: false
         http2ProtocolOptions:
           initialConnectionWindowSize: 1048576
           initialStreamWindowSize: 65536

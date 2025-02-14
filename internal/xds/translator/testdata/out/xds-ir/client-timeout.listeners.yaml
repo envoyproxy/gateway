@@ -10,6 +10,7 @@
         commonHttpProtocolOptions:
           headersWithUnderscoresAction: REJECT_REQUEST
           idleTimeout: 10s
+        generateRequestId: false
         http2ProtocolOptions:
           initialConnectionWindowSize: 1048576
           initialStreamWindowSize: 65536

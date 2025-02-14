@@ -7,6 +7,7 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     headers:
+      disableGenerateRequestID: null
       xForwardedClientCert:
         certDetailsToAdd:
         - Cert
@@ -44,6 +45,7 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     headers:
+      disableGenerateRequestID: null
       xForwardedClientCert:
         certDetailsToAdd:
         - Cert
@@ -81,6 +83,7 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     headers:
+      disableGenerateRequestID: null
       xForwardedClientCert:
         certDetailsToAdd:
         - Cert
@@ -118,6 +121,7 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     headers:
+      disableGenerateRequestID: null
       xForwardedClientCert:
         certDetailsToAdd:
         - Cert
@@ -157,6 +161,7 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     headers:
+      disableGenerateRequestID: null
       xForwardedClientCert:
         certDetailsToAdd:
         - Cert

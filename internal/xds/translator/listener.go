@@ -338,6 +338,7 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 		Tracing:                       hcmTracing,
 		ForwardClientCertDetails:      buildForwardClientCertDetailsAction(irListener.Headers),
 		PreserveExternalRequestId:     ptr.Deref(irListener.Headers, ir.HeaderSettings{}).PreserveXRequestID,
+		GenerateRequestId:             &wrapperspb.BoolValue{Value: ptr.Deref(irListener.Headers, ir.HeaderSettings{}).DisableGenerateRequestID},
 		EarlyHeaderMutationExtensions: buildEarlyHeaderMutation(irListener.Headers),
 	}
 

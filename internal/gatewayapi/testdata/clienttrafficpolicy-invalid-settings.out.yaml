@@ -7,6 +7,7 @@ clientTrafficPolicies:
     namespace: default
   spec:
     headers:
+      disableGenerateRequestID: null
       xForwardedClientCert:
         certDetailsToAdd:
         - Cert
