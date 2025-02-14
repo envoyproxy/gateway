@@ -1,0 +1,26 @@
+{{- if .Values.serviceMonitor.enabled }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: envoy-gateway
+  namespace: '{{ .Release.Namespace }}'
+  labels:
+    {{- include "eg.labels" . | nindent 4 }}
+    {{- with .Values.serviceMonitor.additionalLabels }}
+    {{ toYaml . }}
+    {{- end }}
+spec:
+  jobLabel: {{ template "eg.fullname" . }}
+  endpoints:
+    - port: http
+      interval: {{ .Values.serviceMonitor.interval }}
+      scrapeTimeout: {{ .Values.serviceMonitor.scrapeTimeout }}
+      {{- if .Values.serviceMonitor.honorLabels }}
+      honorLabels: true
+      {{- end }}
+  selector:
+    matchLabels:
+      control-plane: envoy-gateway
+      {{- include "eg.selectorLabels" . | nindent 6 }}
+{{- end -}}
