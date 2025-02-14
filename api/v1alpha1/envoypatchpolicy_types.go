@@ -16,6 +16,7 @@ const (
 	KindEnvoyPatchPolicy = "EnvoyPatchPolicy"
 )
 
+// +genclient
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:categories=envoy-gateway,shortName=epp
 // +kubebuilder:subresource:status
@@ -171,8 +172,4 @@ type EnvoyPatchPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []EnvoyPatchPolicy `json:"items"`
-}
-
-func init() {
-	SchemeBuilder.Register(&EnvoyPatchPolicy{}, &EnvoyPatchPolicyList{})
 }

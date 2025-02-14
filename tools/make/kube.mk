@@ -74,8 +74,11 @@ generate-gwapi-manifests: ## Generate GWAPI manifests and make it consistent wit
 	mv $(OUTPUT_DIR)/gatewayapi-crds.yaml charts/gateway-helm/crds/gatewayapi-crds.yaml
 
 .PHONY: kube-generate
-kube-generate: $(tools/controller-gen) ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+kube-generate: kube-generate-informers
+
 # Note that the paths can't just be "./..." with the header file, or the tool will panic on run. Sorry.
+.PHONY: kube-generate-deep-copy
+kube-generate-deep-copy: $(tools/controller-gen) ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	@$(LOG_TARGET)
 	$(tools/controller-gen) $(CONTROLLERGEN_OBJECT_FLAGS) paths="{$(ROOT_DIR)/api/...,$(ROOT_DIR)/internal/ir/...,$(ROOT_DIR)/internal/gatewayapi/...}"
 
@@ -83,6 +86,46 @@ kube-generate: $(tools/controller-gen) ## Generate code containing DeepCopy, Dee
 kube-test: manifests generate $(tools/setup-envtest) ## Run Kubernetes provider tests.
 	@$(LOG_TARGET)
 	KUBEBUILDER_ASSETS="$(shell $(tools/setup-envtest) use $(ENVTEST_K8S_VERSION) -p path)" go test --tags=integration,celvalidation ./... -coverprofile cover.out
+
+.PHONY: kube-generate-register-gen
+kube-generate-register-gen: $(tools/register-gen) kube-generate-deep-copy ## Generate register code for the API group.
+	@$(LOG_TARGET)
+	$(tools/register-gen) \
+	  --output-file zz_generated.register.go \
+	  --go-header-file ${ROOT_DIR}/tools/boilerplate/boilerplate.go.txt \
+	  ${ROOT_PACKAGE}/api/v1alpha1
+
+.PHONY: kube-generate-client
+kube-generate-client: $(tools/client-gen) kube-generate-register-gen ## Generate client code for the API group.
+	@$(LOG_TARGET)
+	$(tools/client-gen) \
+	  --clientset-name versioned \
+	  --input-base ${ROOT_PACKAGE} \
+	  --input "api/v1alpha1" \
+	  --output-dir $(ROOT_DIR)/pkg/client/clientset \
+	  --output-pkg ${ROOT_PACKAGE}/pkg/client/clientset \
+	  --go-header-file ${ROOT_DIR}/tools/boilerplate/boilerplate.go.txt
+
+
+.PHONY: kube-generate-listers
+kube-generate-listers: $(tools/lister-gen) kube-generate-client ## Generate lister code for the API group.
+	@$(LOG_TARGET)
+	$(tools/lister-gen) \
+	  --output-dir $(ROOT_DIR)/pkg/client/listers \
+	  --output-pkg ${ROOT_PACKAGE}/pkg/client/listers \
+	  --go-header-file ${ROOT_DIR}/tools/boilerplate/boilerplate.go.txt \
+	  ${ROOT_PACKAGE}/api/v1alpha1
+
+.PHONY: kube-generate-informers
+kube-generate-informers: $(tools/informer-gen) kube-generate-listers ## Generate informer code for the API group.
+	@$(LOG_TARGET)
+	$(tools/informer-gen) \
+	  --versioned-clientset-package ${ROOT_PACKAGE}/pkg/client/clientset/versioned \
+	  --listers-package ${ROOT_PACKAGE}/pkg/client/listers \
+	  --output-dir $(ROOT_DIR)/pkg/client/informers \
+	  --output-pkg ${ROOT_PACKAGE}/pkg/client/informers \
+	  --go-header-file ${ROOT_DIR}/tools/boilerplate/boilerplate.go.txt \
+	  ${ROOT_PACKAGE}/api/v1alpha1
 
 ##@ Kubernetes Deployment
 
