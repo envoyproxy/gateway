@@ -30,7 +30,7 @@ import (
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
-	"google.golang.org/protobuf/proto"
+	protobuf "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -38,7 +38,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/protocov"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 	xdsfilters "github.com/envoyproxy/gateway/internal/xds/filters"
 )
 
@@ -68,7 +68,7 @@ func http1ProtocolOptions(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
 		EnableTrailers: opts.EnableTrailers,
 	}
 	if opts.PreserveHeaderCase {
-		preservecaseAny, _ := protocov.ToAnyWithValidation(&preservecasev3.PreserveCaseFormatterConfig{})
+		preservecaseAny, _ := proto.ToAnyWithValidation(&preservecasev3.PreserveCaseFormatterConfig{})
 		r.HeaderKeyFormat = &corev3.Http1ProtocolOptions_HeaderKeyFormat{
 			HeaderFormat: &corev3.Http1ProtocolOptions_HeaderKeyFormat_StatefulFormatter{
 				StatefulFormatter: &corev3.TypedExtensionConfig{
@@ -137,7 +137,7 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 			rejectWithStatus = &typev3.HttpStatus{Code: typev3.StatusCode_Forbidden}
 		}
 
-		customHeaderConfigAny, _ := protocov.ToAnyWithValidation(&customheaderv3.CustomHeaderConfig{
+		customHeaderConfigAny, _ := proto.ToAnyWithValidation(&customheaderv3.CustomHeaderConfig{
 			HeaderName:       clientIPDetection.CustomHeader.Name,
 			RejectWithStatus: rejectWithStatus,
 
@@ -160,14 +160,14 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 					PrefixLen:     wrapperspb.UInt32(uint32(prefixLen)),
 				})
 			}
-			xffHeaderConfigAny, _ = protocov.ToAnyWithValidation(&xffv3.XffConfig{
+			xffHeaderConfigAny, _ = proto.ToAnyWithValidation(&xffv3.XffConfig{
 				XffTrustedCidrs: &xffv3.XffTrustedCidrs{
 					Cidrs: trustedCidrs,
 				},
 				SkipXffAppend: wrapperspb.Bool(false),
 			})
 		} else if clientIPDetection.XForwardedFor.NumTrustedHops != nil {
-			xffHeaderConfigAny, _ = protocov.ToAnyWithValidation(&xffv3.XffConfig{
+			xffHeaderConfigAny, _ = proto.ToAnyWithValidation(&xffv3.XffConfig{
 				XffNumTrustedHops: xffNumTrustedHops(clientIPDetection),
 				SkipXffAppend:     wrapperspb.Bool(false),
 			})
@@ -482,7 +482,7 @@ func buildEarlyHeaderMutation(headers *ir.HeaderSettings) []*corev3.TypedExtensi
 		mutationRules = append(mutationRules, mr)
 	}
 
-	earlyHeaderMutationAny, _ := protocov.ToAnyWithValidation(&early_header_mutationv3.HeaderMutation{
+	earlyHeaderMutationAny, _ := proto.ToAnyWithValidation(&early_header_mutationv3.HeaderMutation{
 		Mutations: mutationRules,
 	})
 
@@ -643,7 +643,7 @@ func addXdsTLSInspectorFilter(xdsListener *listenerv3.Listener) error {
 	}
 
 	tlsInspector := &tls_inspectorv3.TlsInspector{}
-	tlsInspectorAny, err := protocov.ToAnyWithValidation(tlsInspector)
+	tlsInspectorAny, err := proto.ToAnyWithValidation(tlsInspector)
 	if err != nil {
 		return err
 	}
@@ -691,7 +691,7 @@ func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSConfig) (*corev3.Transp
 
 	setDownstreamTLSSessionSettings(tlsConfig, tlsCtx.DownstreamTlsContext)
 
-	tlsCtxAny, err := protocov.ToAnyWithValidation(tlsCtx)
+	tlsCtxAny, err := proto.ToAnyWithValidation(tlsCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -733,7 +733,7 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 
 	setDownstreamTLSSessionSettings(tlsConfig, tlsCtx)
 
-	tlsCtxAny, err := protocov.ToAnyWithValidation(tlsCtx)
+	tlsCtxAny, err := proto.ToAnyWithValidation(tlsCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -848,7 +848,7 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener, access
 	route := &udpv3.Route{
 		Cluster: clusterName,
 	}
-	routeAny, err := protocov.ToAnyWithValidation(route)
+	routeAny, err := proto.ToAnyWithValidation(route)
 	if err != nil {
 		return nil, err
 	}
@@ -873,7 +873,7 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener, access
 			},
 		},
 	}
-	udpProxyAny, err := protocov.ToAnyWithValidation(udpProxy)
+	udpProxyAny, err := proto.ToAnyWithValidation(udpProxy)
 	if err != nil {
 		return nil, err
 	}
@@ -934,8 +934,8 @@ func translateEscapePath(in ir.PathEscapedSlashAction) hcmv3.HttpConnectionManag
 	return hcmv3.HttpConnectionManager_IMPLEMENTATION_SPECIFIC_DEFAULT
 }
 
-func toNetworkFilter(filterName string, filterProto proto.Message) (*listenerv3.Filter, error) {
-	filterAny, err := protocov.ToAnyWithValidation(filterProto)
+func toNetworkFilter(filterName string, filterProto protobuf.Message) (*listenerv3.Filter, error) {
+	filterAny, err := proto.ToAnyWithValidation(filterProto)
 	if err != nil {
 		return nil, err
 	}

@@ -19,7 +19,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/protocov"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -66,12 +66,7 @@ func (*fault) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPList
 // buildHCMFaultFilter returns a basic_auth HTTP filter from the provided IR HTTPRoute.
 func buildHCMFaultFilter() (*hcmv3.HttpFilter, error) {
 	faultProto := &xdshttpfaultv3.HTTPFault{}
-
-	if err := faultProto.ValidateAll(); err != nil {
-		return nil, err
-	}
-
-	faultAny, err := protocov.ToAnyWithValidation(faultProto)
+	faultAny, err := proto.ToAnyWithValidation(faultProto)
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +160,7 @@ func (*fault) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 		return nil
 	}
 
-	routeCfgAny, err := protocov.ToAnyWithValidation(routeCfgProto)
+	routeCfgAny, err := proto.ToAnyWithValidation(routeCfgProto)
 	if err != nil {
 		return err
 	}

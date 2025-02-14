@@ -17,7 +17,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/protocov"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -82,10 +82,8 @@ func buildHCMBasicAuthFilter(basicAuth *ir.BasicAuth) (*hcmv3.HttpFilter, error)
 			},
 		},
 	}
-	if err = basicAuthProto.ValidateAll(); err != nil {
-		return nil, err
-	}
-	if basicAuthAny, err = protocov.ToAnyWithValidation(basicAuthProto); err != nil {
+
+	if basicAuthAny, err = proto.ToAnyWithValidation(basicAuthProto); err != nil {
 		return nil, err
 	}
 
@@ -131,11 +129,7 @@ func (*basicAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error 
 
 	// Overwrite the HCM level filter config with the per route filter config.
 	basicAuthProto := basicAuthPerRouteConfig(irRoute.Security.BasicAuth)
-	if err = basicAuthProto.ValidateAll(); err != nil {
-		return err
-	}
-
-	if basicAuthAny, err = protocov.ToAnyWithValidation(basicAuthProto); err != nil {
+	if basicAuthAny, err = proto.ToAnyWithValidation(basicAuthProto); err != nil {
 		return err
 	}
 

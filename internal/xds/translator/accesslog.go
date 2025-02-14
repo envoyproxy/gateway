@@ -25,7 +25,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/protocov"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -80,7 +80,7 @@ var (
 )
 
 func init() {
-	any, err := protocov.ToAnyWithValidation(&reqwithoutqueryformatter.ReqWithoutQuery{})
+	any, err := proto.ToAnyWithValidation(&reqwithoutqueryformatter.ReqWithoutQuery{})
 	if err != nil {
 		panic(err)
 	}
@@ -89,7 +89,7 @@ func init() {
 		TypedConfig: any,
 	}
 
-	any, err = protocov.ToAnyWithValidation(&metadataformatter.Metadata{})
+	any, err = proto.ToAnyWithValidation(&metadataformatter.Metadata{})
 	if err != nil {
 		panic(err)
 	}
@@ -98,7 +98,7 @@ func init() {
 		TypedConfig: any,
 	}
 
-	any, err = protocov.ToAnyWithValidation(&celformatter.Cel{})
+	any, err = proto.ToAnyWithValidation(&celformatter.Cel{})
 	if err != nil {
 		panic(err)
 	}
@@ -151,7 +151,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 			filelog.GetLogFormat().Formatters = formatters
 		}
 
-		accesslogAny, err := protocov.ToAnyWithValidation(filelog)
+		accesslogAny, err := proto.ToAnyWithValidation(filelog)
 		if err != nil {
 			return nil, err
 		}
@@ -209,7 +209,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 			filelog.GetLogFormat().Formatters = formatters
 		}
 
-		accesslogAny, err := protocov.ToAnyWithValidation(filelog)
+		accesslogAny, err := proto.ToAnyWithValidation(filelog)
 		if err != nil {
 			return nil, err
 		}
@@ -259,7 +259,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 				alCfg.AdditionalResponseTrailersToLog = als.HTTP.ResponseTrailers
 			}
 
-			accesslogAny, err := protocov.ToAnyWithValidation(alCfg)
+			accesslogAny, err := proto.ToAnyWithValidation(alCfg)
 			if err != nil {
 				return nil, err
 			}
@@ -279,7 +279,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 				CommonConfig: cc,
 			}
 
-			accesslogAny, err := protocov.ToAnyWithValidation(alCfg)
+			accesslogAny, err := proto.ToAnyWithValidation(alCfg)
 			if err != nil {
 				return nil, err
 			}
@@ -342,7 +342,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 			al.Formatters = formatters
 		}
 
-		accesslogAny, err := protocov.ToAnyWithValidation(al)
+		accesslogAny, err := proto.ToAnyWithValidation(al)
 		if err != nil {
 			return nil, err
 		}
@@ -366,7 +366,7 @@ func celAccessLogFilter(expr string) (*accesslog.AccessLogFilter, error) {
 	fl := &cel.ExpressionFilter{
 		Expression: expr,
 	}
-	any, err := protocov.ToAnyWithValidation(fl)
+	any, err := proto.ToAnyWithValidation(fl)
 	if err != nil {
 		return nil, err
 	}
