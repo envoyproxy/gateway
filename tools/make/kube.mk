@@ -187,6 +187,9 @@ else
 		--run-test $(E2E_RUN_TEST)
 endif
 
+run-e2e-upgrade:
+	go test $(E2E_TEST_ARGS) ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
+
 .PHONY: run-resilience
 run-resilience: ## Run resilience tests
 	@$(LOG_TARGET)

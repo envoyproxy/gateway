@@ -89,6 +89,10 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 	// to collect all errors and reflect them in the status of the CRDs.
 	var errs error
 
+	if err := t.processHTTPReadyListenerXdsTranslation(tCtx, xdsIR.ReadyListener); err != nil {
+		errs = errors.Join(errs, err)
+	}
+
 	if err := t.processHTTPListenerXdsTranslation(
 		tCtx, xdsIR.HTTP, xdsIR.AccessLog, xdsIR.Tracing, xdsIR.Metrics); err != nil {
 		errs = errors.Join(errs, err)
@@ -257,6 +261,23 @@ func clearAllRoutes(hcm *hcmv3.HttpConnectionManager) {
 			},
 		},
 	}
+}
+
+func (t *Translator) processHTTPReadyListenerXdsTranslation(tCtx *types.ResourceVersionTable, ready *ir.ReadyListener) error {
+	// If there is no ready listener, return early.
+	// TODO: update all testcases to use the new ReadyListener field
+	if ready == nil {
+		return nil
+	}
+	l, err := buildReadyListener(ready)
+	if err != nil {
+		return err
+	}
+	err = tCtx.AddXdsResource(resourcev3.ListenerType, l)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (t *Translator) processHTTPListenerXdsTranslation(
@@ -565,15 +586,17 @@ func (t *Translator) addRouteToRouteConfig(
 		}
 
 		if httpRoute.Mirrors != nil {
-			for _, mirrorDest := range httpRoute.Mirrors {
-				if err = addXdsCluster(tCtx, &xdsClusterArgs{
-					name:         mirrorDest.Name,
-					settings:     mirrorDest.Settings,
-					tSocket:      nil,
-					endpointType: EndpointTypeStatic,
-					metrics:      metrics,
-				}); err != nil {
-					errs = errors.Join(errs, err)
+			for _, mrr := range httpRoute.Mirrors {
+				if mrr.Destination != nil {
+					if err = addXdsCluster(tCtx, &xdsClusterArgs{
+						name:         mrr.Destination.Name,
+						settings:     mrr.Destination.Settings,
+						tSocket:      nil,
+						endpointType: EndpointTypeStatic,
+						metrics:      metrics,
+					}); err != nil {
+						errs = errors.Join(errs, err)
+					}
 				}
 			}
 		}

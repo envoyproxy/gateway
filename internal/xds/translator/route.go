@@ -462,16 +462,38 @@ func buildXdsDirectResponseAction(res *ir.CustomResponse) *routev3.DirectRespons
 	return routeAction
 }
 
-func buildXdsRequestMirrorPolicies(mirrorDestinations []*ir.RouteDestination) []*routev3.RouteAction_RequestMirrorPolicy {
-	var mirrorPolicies []*routev3.RouteAction_RequestMirrorPolicy
+func buildXdsRequestMirrorPolicies(mirrorPolicies []*ir.MirrorPolicy) []*routev3.RouteAction_RequestMirrorPolicy {
+	var xdsMirrorPolicies []*routev3.RouteAction_RequestMirrorPolicy
 
-	for _, mirrorDest := range mirrorDestinations {
-		mirrorPolicies = append(mirrorPolicies, &routev3.RouteAction_RequestMirrorPolicy{
-			Cluster: mirrorDest.Name,
-		})
+	for _, policy := range mirrorPolicies {
+		if mp := mirrorPercentByPolicy(policy); mp != nil && policy.Destination != nil {
+			xdsMirrorPolicies = append(xdsMirrorPolicies, &routev3.RouteAction_RequestMirrorPolicy{
+				Cluster:         policy.Destination.Name,
+				RuntimeFraction: mp,
+			})
+		}
 	}
 
-	return mirrorPolicies
+	return xdsMirrorPolicies
+}
+
+// mirrorPercentByPolicy computes the mirror percent to be used based on ir.MirrorPolicy.
+func mirrorPercentByPolicy(mirror *ir.MirrorPolicy) *corev3.RuntimeFractionalPercent {
+	switch {
+	case mirror.Percentage != nil:
+		if *mirror.Percentage > 0 {
+			return &corev3.RuntimeFractionalPercent{
+				DefaultValue: translatePercentToFractionalPercent(mirror.Percentage),
+			}
+		}
+		// If zero percent is provided explicitly, we should not mirror.
+		return nil
+	default:
+		// Default to 100 percent if percent is not given.
+		return &corev3.RuntimeFractionalPercent{
+			DefaultValue: translateIntegerToFractionalPercent(100),
+		}
+	}
 }
 
 func buildXdsAddedHeaders(headersToAdd []ir.AddHeader) []*corev3.HeaderValueOption {

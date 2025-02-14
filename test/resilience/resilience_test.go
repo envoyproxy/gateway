@@ -11,10 +11,11 @@ import (
 	"flag"
 	"io/fs"
 	"os"
+	"testing"
+
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
-	"testing"
 
 	"github.com/envoyproxy/gateway/test/resilience/suite"
 	"github.com/envoyproxy/gateway/test/resilience/tests"

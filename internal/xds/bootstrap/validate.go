@@ -15,7 +15,6 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
-	_ "github.com/envoyproxy/gateway/internal/xds/extensions" // DON'T REMOVE: import of all extensions
 )
 
 func fetchAndPatchBootstrap(boostrapConfig *egv1a1.ProxyBootstrap) (*bootstrapv3.Bootstrap, *bootstrapv3.Bootstrap, error) {

@@ -1,0 +1,8 @@
+name: envoy.filters.http.health_check
+typed_config:
+  "@type": type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck
+  pass_through_mode: false
+  headers:
+    - name: ":path"
+      string_match:
+        exact: test_path

@@ -419,6 +419,11 @@ xdsIR:
                     "error": "Internal Server Error"
                   }
                 contentType: application/json
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
   default/gateway-2:
     accessLog:
       text:
@@ -513,3 +518,8 @@ xdsIR:
               name: backendtrafficpolicy/default/policy-for-route-2/responseoverride/rule/0
               response:
                 statusCode: 401
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

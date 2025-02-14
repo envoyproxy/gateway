@@ -15,6 +15,7 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -246,6 +247,39 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type: ptr.To(egv1a1.ServiceTypeClusterIP),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "PDB-with-invalid-spec",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyPDB: &egv1a1.KubernetesPodDisruptionBudgetSpec{
+								MinAvailable:   &intstr.IntOrString{Type: intstr.Int, IntVal: 1},
+								MaxUnavailable: &intstr.IntOrString{Type: intstr.Int, IntVal: 1},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"only one of minAvailable or maxUnavailable can be specified"},
+		},
+		{
+			desc: "PDB-with-passing-spec",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyPDB: &egv1a1.KubernetesPodDisruptionBudgetSpec{
+								MaxUnavailable: &intstr.IntOrString{Type: intstr.Int, IntVal: 1},
 							},
 						},
 					},
