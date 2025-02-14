@@ -679,6 +679,51 @@ spec:
 ```
 
 {{% /tab %}}
+{{% tab header="Merge: apply from stdin" %}}
+Save and apply the following resource to your cluster:
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: default
+spec:
+  bootstrap:
+    type: Merge
+    value: |
+      layered_runtime:
+        layers:
+        - name: "static-runtime"
+          static_layer:
+            re2.max_program_size.error_level: 1000
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Merge: apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: default
+spec:
+  bootstrap:
+    type: Merge
+    value: |
+      layered_runtime:
+        layers:
+        - name: "static-runtime"
+          static_layer:
+            re2.max_program_size.error_level: 1000
+```
+
+{{% /tab %}}
 {{% tab header="JSONPatch: apply from stdin" %}}
 Save and apply the following resource to your cluster:
 

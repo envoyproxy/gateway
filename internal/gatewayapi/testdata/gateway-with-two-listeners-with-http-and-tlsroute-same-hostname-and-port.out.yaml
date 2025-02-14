@@ -150,3 +150,8 @@ xdsIR:
     accessLog:
       text:
       - path: /dev/stdout
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

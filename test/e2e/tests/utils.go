@@ -330,11 +330,11 @@ func EnvoyExtensionPolicyMustBeAccepted(t *testing.T, client client.Client, poli
 		}
 
 		if policyAcceptedByAncestor(policy.Status.Ancestors, controllerName, ancestorRef) {
-			tlog.Logf(t, "EnvoyExtensionPolicy has been accepted: %v", policy)
+			tlog.Logf(t, "EnvoyExtensionPolicy has been accepted: %+v", policy)
 			return true, nil
 		}
 
-		tlog.Logf(t, "EnvoyExtensionPolicy not yet accepted: %v", policy)
+		tlog.Logf(t, "EnvoyExtensionPolicy not yet accepted: %+v", policy)
 		return false, nil
 	})
 

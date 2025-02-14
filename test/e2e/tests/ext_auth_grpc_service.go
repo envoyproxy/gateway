@@ -32,27 +32,23 @@ func init() {
 var GRPCExtAuthTest = suite.ConformanceTest{
 	ShortName:   "GRPCExtAuth",
 	Description: "Test ExtAuth authentication with GRPC auth service",
-	Manifests:   []string{"testdata/ext-auth-grpc-service.yaml", "testdata/ext-auth-grpc-securitypolicy.yaml"},
+	Manifests:   []string{"testdata/ext-auth-service.yaml", "testdata/ext-auth-grpc-securitypolicy.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "http-with-ext-auth", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+		ancestorRef := gwapiv1a2.ParentReference{
+			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+			Kind:      gatewayapi.KindPtr(resource.KindGateway),
+			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+			Name:      gwapiv1.ObjectName(gwNN.Name),
+		}
+		SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns}, suite.ControllerName, ancestorRef)
+		// Wait for the grpc ext auth service pod to be ready
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "envoy-ext-auth"}, corev1.PodRunning, PodReady)
+
 		t.Run("http route with ext auth authentication", func(t *testing.T) {
-			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "http-with-ext-auth", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-
-			ancestorRef := gwapiv1a2.ParentReference{
-				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-				Kind:      gatewayapi.KindPtr(resource.KindGateway),
-				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
-				Name:      gwapiv1.ObjectName(gwNN.Name),
-			}
-			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns}, suite.ControllerName, ancestorRef)
-
-			podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
-
-			// Wait for the grpc ext auth service pod to be ready
-			WaitForPods(t, suite.Client, ns, map[string]string{"app": "grpc-ext-auth"}, corev1.PodRunning, podReady)
-
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Host: "www.example.com",
@@ -79,24 +75,6 @@ var GRPCExtAuthTest = suite.ConformanceTest{
 		})
 
 		t.Run("without Authorization header", func(t *testing.T) {
-			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "http-with-ext-auth", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-
-			ancestorRef := gwapiv1a2.ParentReference{
-				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-				Kind:      gatewayapi.KindPtr(resource.KindGateway),
-				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
-				Name:      gwapiv1.ObjectName(gwNN.Name),
-			}
-			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns}, suite.ControllerName, ancestorRef)
-
-			podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
-
-			// Wait for the grpc ext auth service pod to be ready
-			WaitForPods(t, suite.Client, ns, map[string]string{"app": "grpc-ext-auth"}, corev1.PodRunning, podReady)
-
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Host: "www.example.com",
@@ -120,22 +98,6 @@ var GRPCExtAuthTest = suite.ConformanceTest{
 		})
 
 		t.Run("invalid credential", func(t *testing.T) {
-			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "http-with-ext-auth", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-
-			ancestorRef := gwapiv1a2.ParentReference{
-				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-				Kind:      gatewayapi.KindPtr(resource.KindGateway),
-				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
-				Name:      gwapiv1.ObjectName(gwNN.Name),
-			}
-			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns}, suite.ControllerName, ancestorRef)
-
-			// Wait for the grpc ext auth service pod to be ready
-			WaitForPods(t, suite.Client, ns, map[string]string{"app": "grpc-ext-auth"}, corev1.PodRunning, PodReady)
-
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Host: "www.example.com",
@@ -162,24 +124,6 @@ var GRPCExtAuthTest = suite.ConformanceTest{
 		})
 
 		t.Run("http route without ext auth authentication", func(t *testing.T) {
-			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "http-with-ext-auth", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-
-			ancestorRef := gwapiv1a2.ParentReference{
-				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-				Kind:      gatewayapi.KindPtr(resource.KindGateway),
-				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
-				Name:      gwapiv1.ObjectName(gwNN.Name),
-			}
-			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns}, suite.ControllerName, ancestorRef)
-
-			podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
-
-			// Wait for the grpc ext auth service pod to be ready
-			WaitForPods(t, suite.Client, ns, map[string]string{"app": "grpc-ext-auth"}, corev1.PodRunning, podReady)
-
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Host: "www.example.com",
