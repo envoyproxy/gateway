@@ -1406,6 +1406,9 @@ func (r *RouteDestination) Validate() error {
 		errs = errors.Join(errs, ErrDestinationNameEmpty)
 	}
 	for _, s := range r.Settings {
+		if s.Weight != nil && *s.Weight == 0 {
+			continue
+		}
 		if err := s.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
@@ -1460,6 +1463,12 @@ type DestinationSetting struct {
 // Validate the fields within the DestinationSetting structure
 func (d *DestinationSetting) Validate() error {
 	var errs error
+
+	// Allow weight to be 0
+	if d.Weight != nil && *d.Weight == 0 {
+		return nil
+	}
+
 	for _, ep := range d.Endpoints {
 		if err := ep.Validate(); err != nil {
 			errs = errors.Join(errs, err)
