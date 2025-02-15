@@ -7,6 +7,8 @@ package translator
 
 import (
 	"errors"
+	"google.golang.org/protobuf/types/known/wrapperspb"
+	"k8s.io/utils/ptr"
 	"reflect"
 	"testing"
 
@@ -97,6 +99,38 @@ func Test_buildTCPProxyHashPolicy(t *testing.T) {
 			got := buildTCPProxyHashPolicy(tt.lb)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("buildTCPProxyHashPolicy() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_buildGenerateRequestID(t *testing.T) {
+	tests := []struct {
+		name           string
+		headerSettings *ir.HeaderSettings
+		want           *wrapperspb.BoolValue
+	}{
+		{
+			name:           "HeaderSettings with empty generateRequestID",
+			headerSettings: &ir.HeaderSettings{},
+			want:           nil,
+		},
+		{
+			name:           "HeaderSettings with generateRequestID set to true",
+			headerSettings: &ir.HeaderSettings{GenerateRequestID: ptr.To(true)},
+			want:           &wrapperspb.BoolValue{Value: true},
+		},
+		{
+			name:           "HeaderSettings with generateRequestID set to false",
+			headerSettings: &ir.HeaderSettings{GenerateRequestID: ptr.To(false)},
+			want:           &wrapperspb.BoolValue{Value: false},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := buildGenerateRequestID(tt.headerSettings)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("buildGenerateRequestID() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
