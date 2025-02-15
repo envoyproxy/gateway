@@ -637,10 +637,7 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 		DisableRateLimitHeaders: ptr.Deref(headerSettings.DisableRateLimitHeaders, false),
 		WithUnderscoresAction:   ir.WithUnderscoresAction(ptr.Deref(headerSettings.WithUnderscoresAction, egv1a1.WithUnderscoresActionRejectRequest)),
 		PreserveXRequestID:      ptr.Deref(headerSettings.PreserveXRequestID, false),
-	}
-
-	if headerSettings.GenerateRequestID != nil {
-		httpIR.Headers.GenerateRequestID = headerSettings.GenerateRequestID
+		GenerateRequestID:       headerSettings.GenerateRequestID,
 	}
 
 	if headerSettings.XForwardedClientCert != nil {
