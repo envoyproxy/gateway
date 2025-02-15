@@ -325,6 +325,11 @@ func (in *BackendConnection) DeepCopyInto(out *BackendConnection) {
 		x := (*in).DeepCopy()
 		*out = &x
 	}
+	if in.MaxRequestBytes != nil {
+		in, out := &in.MaxRequestBytes, &out.MaxRequestBytes
+		x := (*in).DeepCopy()
+		*out = &x
+	}
 	if in.SocketBufferLimit != nil {
 		in, out := &in.SocketBufferLimit, &out.SocketBufferLimit
 		x := (*in).DeepCopy()
@@ -769,6 +774,11 @@ func (in *ClientConnection) DeepCopyInto(out *ClientConnection) {
 	}
 	if in.BufferLimit != nil {
 		in, out := &in.BufferLimit, &out.BufferLimit
+		x := (*in).DeepCopy()
+		*out = &x
+	}
+	if in.MaxRequestBytes != nil {
+		in, out := &in.MaxRequestBytes, &out.MaxRequestBytes
 		x := (*in).DeepCopy()
 		*out = &x
 	}
