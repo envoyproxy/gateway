@@ -346,10 +346,6 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 		mgr.SetCurrentClientCertDetails = buildSetCurrentClientCertDetails(irListener.Headers)
 	}
 
-	if irListener.Headers != nil && irListener.Headers.GenerateRequestID != nil {
-		mgr.GenerateRequestId = wrapperspb.Bool(*irListener.Headers.GenerateRequestID)
-	}
-
 	if irListener.Timeout != nil && irListener.Timeout.HTTP != nil {
 		if irListener.Timeout.HTTP.RequestReceivedTimeout != nil {
 			mgr.RequestTimeout = durationpb.New(irListener.Timeout.HTTP.RequestReceivedTimeout.Duration)
