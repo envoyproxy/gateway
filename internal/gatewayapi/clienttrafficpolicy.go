@@ -631,7 +631,6 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 	if headerSettings == nil {
 		return nil
 	}
-
 	httpIR.Headers = &ir.HeaderSettings{
 		EnableEnvoyHeaders:      ptr.Deref(headerSettings.EnableEnvoyHeaders, false),
 		DisableRateLimitHeaders: ptr.Deref(headerSettings.DisableRateLimitHeaders, false),
