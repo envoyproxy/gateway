@@ -1,0 +1,43 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: backend-traffic-match-expression-normal
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  hostnames: ["normal.example.com"]
+  rules:
+  - backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: backend-traffic-match-expression-injected
+  namespace: gateway-conformance-infra
+  labels:
+    inject: me
+spec:
+  parentRefs:
+  - name: same-namespace
+  hostnames: ["injected.example.com"]
+  rules:
+  - backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: backend-traffic-match-expression
+  namespace: gateway-conformance-infra
+spec:
+  targetSelectors:
+  - kind: HTTPRoute
+    matchExpressions: [{key: inject, operator: Exists}]
+  faultInjection:
+    abort:
+      httpStatus: 418

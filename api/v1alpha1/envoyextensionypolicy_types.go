@@ -64,7 +64,6 @@ type EnvoyExtensionPolicySpec struct {
 	//
 	// +kubebuilder:validation:MaxItems=16
 	// +optional
-	// +notImplementedHide
 	Lua []Lua `json:"lua,omitempty"`
 }
 

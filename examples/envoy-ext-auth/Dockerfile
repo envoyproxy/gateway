@@ -12,12 +12,12 @@ RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/g
     CGO_ENABLED=0  \
     GOOS=${TARGETOS} \
     GOARCH=${TARGETARCH} \
-    go build -o /bin/grpc-ext-auth -ldflags "${GO_LDFLAGS}" .
+    go build -o /bin/envoy-ext-auth -ldflags "${GO_LDFLAGS}" .
 
 # Make our production image
 FROM gcr.io/distroless/static-debian11:nonroot
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=builder /bin/grpc-ext-auth /
+COPY --from=builder /bin/envoy-ext-auth /
 
 USER nonroot:nonroot
-ENTRYPOINT ["/grpc-ext-auth"]
+ENTRYPOINT ["/envoy-ext-auth"]

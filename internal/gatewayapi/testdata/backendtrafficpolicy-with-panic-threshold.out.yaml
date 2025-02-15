@@ -353,6 +353,11 @@ xdsIR:
         traffic:
           healthCheck:
             panicThreshold: 80
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
   envoy-gateway/gateway-2:
     accessLog:
       text:
@@ -419,3 +424,8 @@ xdsIR:
         traffic:
           healthCheck:
             panicThreshold: 66
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

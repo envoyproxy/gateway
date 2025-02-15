@@ -20,9 +20,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/luavalidator"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -293,11 +295,17 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 ) error {
 	var (
 		wasms     []ir.Wasm
+		luas      []ir.Lua
 		err, errs error
 	)
 
 	if wasms, err = t.buildWasms(policy, resources); err != nil {
 		err = perr.WithMessage(err, "Wasm")
+		errs = errors.Join(errs, err)
+	}
+
+	if luas, err = t.buildLuas(policy, resources); err != nil {
+		err = perr.WithMessage(err, "Lua")
 		errs = errors.Join(errs, err)
 	}
 
@@ -332,6 +340,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 						r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
 							ExtProcs: extProcs,
 							Wasms:    wasms,
+							Luas:     luas,
 						}
 					}
 				}
@@ -352,6 +361,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 	var (
 		extProcs  []ir.ExtProc
 		wasms     []ir.Wasm
+		luas      []ir.Lua
 		err, errs error
 	)
 
@@ -361,6 +371,10 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 	}
 	if wasms, err = t.buildWasms(policy, resources); err != nil {
 		err = perr.WithMessage(err, "Wasm")
+		errs = errors.Join(errs, err)
+	}
+	if luas, err = t.buildLuas(policy, resources); err != nil {
+		err = perr.WithMessage(err, "Lua")
 		errs = errors.Join(errs, err)
 	}
 
@@ -395,11 +409,78 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 			r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
 				ExtProcs: extProcs,
 				Wasms:    wasms,
+				Luas:     luas,
 			}
 		}
 	}
 
 	return errs
+}
+
+func (t *Translator) buildLuas(policy *egv1a1.EnvoyExtensionPolicy, resources *resource.Resources) ([]ir.Lua, error) {
+	var luaIRList []ir.Lua
+
+	if policy == nil {
+		return nil, nil
+	}
+
+	for idx, ep := range policy.Spec.Lua {
+		name := irConfigNameForLua(policy, idx)
+		luaIR, err := t.buildLua(name, policy, ep, resources)
+		if err != nil {
+			return nil, err
+		}
+		luaIRList = append(luaIRList, *luaIR)
+	}
+	return luaIRList, nil
+}
+
+func (t *Translator) buildLua(
+	name string,
+	policy *egv1a1.EnvoyExtensionPolicy,
+	lua egv1a1.Lua,
+	resources *resource.Resources,
+) (*ir.Lua, error) {
+	var luaCode *string
+	var err error
+	if lua.Type == egv1a1.LuaValueTypeValueRef {
+		luaCode, err = getLuaBodyFromLocalObjectReference(lua.ValueRef, resources, policy.Namespace)
+	} else {
+		luaCode = lua.Inline
+	}
+	if err != nil {
+		return nil, err
+	}
+	if err = luavalidator.NewLuaValidator(*luaCode).Validate(); err != nil {
+		return nil, fmt.Errorf("validation failed for lua body in policy with name %v: %w", name, err)
+	}
+	return &ir.Lua{
+		Name: name,
+		Code: luaCode,
+	}, nil
+}
+
+// getLuaBodyFromLocalObjectReference assumes the local object reference points to a Kubernetes ConfigMap
+func getLuaBodyFromLocalObjectReference(valueRef *gwapiv1.LocalObjectReference, resources *resource.Resources, policyNs string) (*string, error) {
+	cm := resources.GetConfigMap(policyNs, string(valueRef.Name))
+	if cm != nil {
+		b, dataOk := cm.Data["lua"]
+		switch {
+		case dataOk:
+			return &b, nil
+		case len(cm.Data) > 0: // Fallback to the first key if lua is not found
+			for _, value := range cm.Data {
+				b = value
+				break
+			}
+			return &b, nil
+		default:
+			return nil, fmt.Errorf("can't find the key lua in the referenced configmap %s", valueRef.Name)
+		}
+
+	} else {
+		return nil, fmt.Errorf("can't find the referenced configmap %s in namespace %s", valueRef.Name, policyNs)
+	}
 }
 
 func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) ([]ir.ExtProc, error) {
@@ -518,6 +599,13 @@ func (t *Translator) buildExtProc(
 func irConfigNameForExtProc(policy *egv1a1.EnvoyExtensionPolicy, index int) string {
 	return fmt.Sprintf(
 		"%s/extproc/%s",
+		irConfigName(policy),
+		strconv.Itoa(index))
+}
+
+func irConfigNameForLua(policy *egv1a1.EnvoyExtensionPolicy, index int) string {
+	return fmt.Sprintf(
+		"%s/lua/%s",
 		irConfigName(policy),
 		strconv.Itoa(index))
 }

@@ -131,6 +131,8 @@ func (p *PrivateBytes) UnmarshalJSON(data []byte) error {
 // used by the xDS Translator to convert it into xDS resources.
 // +k8s:deepcopy-gen=true
 type Xds struct {
+	// ReadyListener is the listener that is ready to accept traffic.
+	ReadyListener *ReadyListener `json:"readyListener,omitempty" yaml:"readyListener,omitempty"`
 	// AccessLog configuration for the gateway.
 	AccessLog *AccessLog `json:"accessLog,omitempty" yaml:"accessLog,omitempty"`
 	// Tracing configuration for the gateway.
@@ -860,6 +862,8 @@ type EnvoyExtensionFeatures struct {
 	ExtProcs []ExtProc `json:"extProcs,omitempty" yaml:"extProcs,omitempty"`
 	// Wasm extensions
 	Wasms []Wasm `json:"wasms,omitempty" yaml:"wasms,omitempty"`
+	// Lua extensions
+	Luas []Lua `json:"luas,omitempty" yaml:"luas,omitempty"`
 }
 
 // UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension
@@ -2029,6 +2033,15 @@ const (
 	ProxyAccessLogTypeListener = ProxyAccessLogType(egv1a1.ProxyAccessLogTypeListener)
 )
 
+// ReadyListener holds the configuration for ready listener.
+// +k8s:deepcopy-gen=true
+type ReadyListener struct {
+	IPFamily egv1a1.IPFamily `json:"ipFamily" yaml:"ipFamily"`
+	Address  string          `json:"address" yaml:"address"`
+	Port     uint32          `json:"port" yaml:"port"`
+	Path     string          `json:"path" yaml:"path"`
+}
+
 // AccessLog holds the access logging configuration.
 // +k8s:deepcopy-gen=true
 type AccessLog struct {
@@ -2809,6 +2822,16 @@ type ExtProc struct {
 
 	// AllowModeOverride allows the external processor to modify the processing mode.
 	AllowModeOverride bool `json:"allowModeOverride,omitempty" yaml:"allowModeOverride,omitempty"`
+}
+
+// Lua holds the information associated with Lua extensions
+// +k8s:deepcopy-gen=true
+type Lua struct {
+	// Name is a unique name for the LUa configuration.
+	// The xds translator only generates one Lua filter for each unique name
+	Name string
+	// Code is the Lua source code
+	Code *string
 }
 
 // Wasm holds the information associated with the Wasm extensions.

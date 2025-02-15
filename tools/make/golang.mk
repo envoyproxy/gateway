@@ -53,6 +53,7 @@ go.testdata.complete: ## Override test ouputdata
 	go test -timeout 30s github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy --override-testdata=true
 	go test -timeout 30s github.com/envoyproxy/gateway/internal/xds/bootstrap --override-testdata=true
 	go test -timeout 60s github.com/envoyproxy/gateway/internal/gatewayapi --override-testdata=true
+	go test -timeout 60s github.com/envoyproxy/gateway/internal/gatewayapi/resource --override-testdata=true
 
 .PHONY: go.test.coverage
 go.test.coverage: go.test.cel ## Run go unit and integration tests in GitHub Actions

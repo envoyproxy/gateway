@@ -26,10 +26,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
-const (
-	EmptyPath = ""
-)
-
 type typedName struct {
 	Type string
 	Name string
