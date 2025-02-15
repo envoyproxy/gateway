@@ -3180,6 +3180,11 @@ func (in *HeaderSettings) DeepCopyInto(out *HeaderSettings) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.GenerateRequestID != nil {
+		in, out := &in.GenerateRequestID, &out.GenerateRequestID
+		*out = new(bool)
+		**out = **in
+	}
 	if in.EarlyRequestHeaders != nil {
 		in, out := &in.EarlyRequestHeaders, &out.EarlyRequestHeaders
 		*out = new(v1.HTTPHeaderFilter)
