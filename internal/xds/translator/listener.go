@@ -338,6 +338,7 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 		Tracing:                       hcmTracing,
 		ForwardClientCertDetails:      buildForwardClientCertDetailsAction(irListener.Headers),
 		PreserveExternalRequestId:     ptr.Deref(irListener.Headers, ir.HeaderSettings{}).PreserveXRequestID,
+		GenerateRequestId:             buildGenerateRequestID(irListener.Headers),
 		EarlyHeaderMutationExtensions: buildEarlyHeaderMutation(irListener.Headers),
 	}
 
@@ -428,6 +429,13 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 		xdsListener.DefaultFilterChain = filterChain
 	}
 
+	return nil
+}
+
+func buildGenerateRequestID(headerSettings *ir.HeaderSettings) *wrapperspb.BoolValue {
+	if headerSettings != nil && headerSettings.GenerateRequestID != nil {
+		return wrapperspb.Bool(*headerSettings.GenerateRequestID)
+	}
 	return nil
 }
 
