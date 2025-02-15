@@ -82,11 +82,6 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	Connection *ClientConnection `json:"connection,omitempty"`
-	// StreamBufferSettings includes client buffer settings for requests and responses.
-	//
-	// +optional
-	// +notImplementedHide
-	StreamBufferSettings *ClientStreamBufferSettings `json:"streamBuffers,omitempty"`
 	// HTTP1 provides HTTP/1 configuration on the listener.
 	//
 	// +optional

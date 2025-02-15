@@ -286,6 +286,19 @@ spec:
                                 For example, 20Mi, 1Gi, 256Ki etc.
                                 Note: that when the suffix is not provided, the value is interpreted as bytes.
                               x-kubernetes-int-or-string: true
+                            maxRequestBytes:
+                              allOf:
+                              - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              description: |-
+                                MaxRequestBytes specifies the maximum allowed size in bytes for each incoming request.
+                                If exceeded, the request will be rejected.
+
+                                Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki").
+                              x-kubernetes-int-or-string: true
                             socketBufferLimit:
                               allOf:
                               - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$

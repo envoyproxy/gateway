@@ -529,37 +529,6 @@ _Appears in:_
 
 
 
-#### BufferStreamBehavior
-
-_Underlying type:_ _string_
-
-BufferStreamBehavior defines buffering behavior for an HTTP stream.
-
-_Appears in:_
-- [BufferStreamConfig](#bufferstreamconfig)
-
-| Value | Description |
-| ----- | ----------- |
-| `StreamWhenPossible` | BufferStreamBehaviorStreamWhenPossible buffers only when output is slower than input.<br />Does not modify the Content-Length header.<br />+notImplementedHide<br /> | 
-| `Bypass` | BufferStreamBehaviorBypass disables buffering, effectively making this filter a no-op.<br />+notImplementedHide<br /> | 
-| `InjectContentLengthIfNecessary` | BufferStreamBehaviorInjectContLenIfNecessary buffers the entire input only if the Content-Length<br />header is missing. If present, behaves like StreamWhenPossible.<br />+notImplementedHide<br /> | 
-| `FullyBufferAndAlwaysInject` | BufferStreamBehaviorFullyBufferAndAlwaysInject buffers the entire input and overwrites any existing<br />Content-Length header with the correct value.<br />+notImplementedHide<br /> | 
-| `FullyBuffer` | BufferStreamBehaviorFullyBuffer buffers the entire input but does not modify the Content-Length header.<br />+notImplementedHide<br /> | 
-
-
-#### BufferStreamConfig
-
-
-
-BufferStreamConfig defines buffering behavior for a single HTTP stream direction (request or response).
-
-_Appears in:_
-- [FileSystemBuffers](#filesystembuffers)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-
-
 #### CIDR
 
 _Underlying type:_ _string_
@@ -654,19 +623,6 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `xForwardedFor` | _[XForwardedForSettings](#xforwardedforsettings)_ |  false  |  | XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address. |
 | `customHeader` | _[CustomHeaderExtensionSettings](#customheaderextensionsettings)_ |  false  |  | CustomHeader provides configuration for determining the client IP address for a request based on<br />a trusted custom HTTP header. This uses the custom_header original IP detection extension.<br />Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto<br />for more details. |
-
-
-#### ClientStreamBufferSettings
-
-
-
-ClientStreamBufferSettings configures request and response buffering.
-
-_Appears in:_
-- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
 
 
 #### ClientTLSSettings
@@ -1827,45 +1783,6 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `path` | _string_ |  true  |  | Path defines the file path used to expose envoy access log(e.g. /dev/stdout). |
-
-
-#### FileManagerConfig
-
-
-
-FileManagerConfig configures the asynchronous file manager responsible for buffered I/O.
-
-_Appears in:_
-- [FileSystemBuffers](#filesystembuffers)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-
-
-#### FileManagerThreadPool
-
-
-
-FileManagerThreadPool configures the thread pool used by the asynchronous file manager.
-
-_Appears in:_
-- [FileManagerConfig](#filemanagerconfig)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-
-
-#### FileSystemBuffers
-
-
-
-FileSystemBuffers configures filesystem-based buffering for HTTP streams.
-
-_Appears in:_
-- [ClientStreamBufferSettings](#clientstreambuffersettings)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
 
 
 #### FilterPosition
