@@ -26,6 +26,16 @@ type ClientConnection struct {
 	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
 	// +optional
 	BufferLimit *resource.Quantity `json:"bufferLimit,omitempty"`
+	// MaxRequestBytes specifies the maximum allowed size in bytes for each incoming request.
+	// If exceeded, the request will be rejected.
+	//
+	// Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki").
+	//
+	// +kubebuilder:validation:XIntOrString
+	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+	// +optional
+	// +notImplementedHide
+	MaxRequestBytes *resource.Quantity `json:"maxRequestBytes,omitempty"`
 	// SocketBufferLimit provides configuration for the maximum buffer size in bytes for each incoming socket.
 	// SocketBufferLimit applies to socket streaming channel between TCP/IP stacks, it's in kernel space.
 	// For example, 20Mi, 1Gi, 256Ki etc.
@@ -50,6 +60,16 @@ type BackendConnection struct {
 	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
 	// +optional
 	BufferLimit *resource.Quantity `json:"bufferLimit,omitempty"`
+	// MaxRequestBytes specifies the maximum allowed size in bytes for each incoming request.
+	// If exceeded, the request will be rejected.
+	//
+	// Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki").
+	//
+	// +kubebuilder:validation:XIntOrString
+	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+	// +optional
+	// +notImplementedHide
+	MaxRequestBytes *resource.Quantity `json:"maxRequestBytes,omitempty"`
 	// SocketBufferLimit provides configuration for the maximum buffer size in bytes for each socket
 	// to backend.
 	// SocketBufferLimit applies to socket streaming channel between TCP/IP stacks, it's in kernel space.
