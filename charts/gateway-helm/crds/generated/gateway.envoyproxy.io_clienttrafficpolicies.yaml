@@ -176,12 +176,6 @@ spec:
               headers:
                 description: HeaderSettings provides configuration for header management.
                 properties:
-                  disableGenerateRequestID:
-                    description: |-
-                      DisableGenerateRequestID configures envoy to not generate the x-request-id header if it does not exist.
-                      Generating a random UUID4 is expensive so in high throughput scenarios where this feature is not desired it can be disabled.
-                      It defaults to false
-                    type: boolean
                   disableRateLimitHeaders:
                     description: |-
                       DisableRateLimitHeaders configures Envoy Proxy to omit the "X-RateLimit-" response headers
@@ -322,6 +316,12 @@ spec:
                     description: |-
                       EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests
                       and responses.
+                    type: boolean
+                  generateRequestID:
+                    description: |-
+                      GenerateRequestID configures whether envoy will generate the x-request-id header if it does not exist.
+                      Generating a random UUID4 is expensive so in high throughput scenarios where this feature is not desired it can be disabled.
+                      It defaults to true
                     type: boolean
                   preserveXRequestID:
                     description: |-

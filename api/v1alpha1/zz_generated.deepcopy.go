@@ -3185,8 +3185,8 @@ func (in *HeaderSettings) DeepCopyInto(out *HeaderSettings) {
 		*out = new(bool)
 		**out = **in
 	}
-	if in.DisableGenerateRequestID != nil {
-		in, out := &in.DisableGenerateRequestID, &out.DisableGenerateRequestID
+	if in.GenerateRequestID != nil {
+		in, out := &in.GenerateRequestID, &out.GenerateRequestID
 		*out = new(bool)
 		**out = **in
 	}
