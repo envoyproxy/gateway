@@ -7,7 +7,6 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     headers:
-      disableGenerateRequestID: null
       earlyRequestHeaders:
         add:
         - name: ""
@@ -111,6 +110,7 @@ xdsIR:
     - address: 0.0.0.0
       headers:
         enableEnvoyHeaders: true
+        generateRequestID: null
         preserveXRequestID: true
         withUnderscoresAction: Allow
       hostnames:

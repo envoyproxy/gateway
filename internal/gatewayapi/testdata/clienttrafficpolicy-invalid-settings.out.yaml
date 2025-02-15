@@ -7,7 +7,6 @@ clientTrafficPolicies:
     namespace: default
   spec:
     headers:
-      disableGenerateRequestID: null
       xForwardedClientCert:
         certDetailsToAdd:
         - Cert
@@ -389,6 +388,7 @@ xdsIR:
     http:
     - address: 0.0.0.0
       headers:
+        generateRequestID: null
         withUnderscoresAction: RejectRequest
         xForwardedClientCert:
           mode: Sanitize
@@ -452,6 +452,7 @@ xdsIR:
         minVersion: "1.2"
     - address: 0.0.0.0
       headers:
+        generateRequestID: null
         withUnderscoresAction: RejectRequest
         xForwardedClientCert:
           mode: Sanitize

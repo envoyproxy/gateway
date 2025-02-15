@@ -7,7 +7,6 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     headers:
-      disableGenerateRequestID: null
       disableRateLimitHeaders: true
       enableEnvoyHeaders: true
     targetRef:
@@ -131,6 +130,7 @@ xdsIR:
       headers:
         disableRateLimitHeaders: true
         enableEnvoyHeaders: true
+        generateRequestID: null
         withUnderscoresAction: RejectRequest
       hostnames:
       - '*'
@@ -149,6 +149,7 @@ xdsIR:
       headers:
         disableRateLimitHeaders: true
         enableEnvoyHeaders: true
+        generateRequestID: null
         withUnderscoresAction: RejectRequest
       hostnames:
       - '*'

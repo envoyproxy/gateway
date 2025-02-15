@@ -7,7 +7,6 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     headers:
-      disableGenerateRequestID: null
       xForwardedClientCert:
         certDetailsToAdd:
         - Cert
@@ -45,7 +44,6 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     headers:
-      disableGenerateRequestID: null
       xForwardedClientCert:
         certDetailsToAdd:
         - Cert
@@ -83,7 +81,6 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     headers:
-      disableGenerateRequestID: null
       xForwardedClientCert:
         certDetailsToAdd:
         - Cert
@@ -121,7 +118,6 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     headers:
-      disableGenerateRequestID: null
       xForwardedClientCert:
         certDetailsToAdd:
         - Cert
@@ -161,7 +157,6 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     headers:
-      disableGenerateRequestID: null
       xForwardedClientCert:
         certDetailsToAdd:
         - Cert
@@ -551,6 +546,7 @@ xdsIR:
     http:
     - address: 0.0.0.0
       headers:
+        generateRequestID: null
         withUnderscoresAction: RejectRequest
         xForwardedClientCert:
           mode: Sanitize
@@ -581,6 +577,7 @@ xdsIR:
         requireClientCertificate: true
     - address: 0.0.0.0
       headers:
+        generateRequestID: null
         withUnderscoresAction: RejectRequest
         xForwardedClientCert:
           mode: Sanitize
@@ -609,6 +606,7 @@ xdsIR:
     http:
     - address: 0.0.0.0
       headers:
+        generateRequestID: null
         withUnderscoresAction: RejectRequest
         xForwardedClientCert:
           mode: ForwardOnly
@@ -649,6 +647,7 @@ xdsIR:
     http:
     - address: 0.0.0.0
       headers:
+        generateRequestID: null
         withUnderscoresAction: RejectRequest
         xForwardedClientCert:
           certDetailsToAdd:
@@ -691,6 +690,7 @@ xdsIR:
     http:
     - address: 0.0.0.0
       headers:
+        generateRequestID: null
         withUnderscoresAction: RejectRequest
         xForwardedClientCert:
           certDetailsToAdd:
@@ -735,6 +735,7 @@ xdsIR:
     http:
     - address: 0.0.0.0
       headers:
+        generateRequestID: null
         withUnderscoresAction: RejectRequest
         xForwardedClientCert:
           certDetailsToAdd:
