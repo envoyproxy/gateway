@@ -1,89 +1,60 @@
 ---
-title: Envoy Gateway
+title: Gateway
+no_list: true
 ---
 
-{{< blocks/cover title="Welcome to Envoy Gateway!" image_anchor="top" height="full" >}}
-<a class="btn btn-lg btn-primary me-3 mb-4" href="/docs">
-  GET STARTED <i class="fas fa-arrow-alt-circle-right ms-2"></i>
-</a>
-<a class="btn btn-lg btn-secondary me-3 mb-4" href="/contributions">
-  CONTRIBUTING <i class="fa fa-heartbeat ms-2 "></i>
-</a>
-<p class="lead mt-5">Manages Envoy Proxy as a Standalone or Kubernetes-based API Gateway</p>
-{{< blocks/link-down color="white" >}}
-{{< /blocks/cover >}}
+<div class="home-header">
+  <div class="container">
+    <img src="/images/logo-white.svg" alt="Gateway Logo" class="mb-5" style="height: 120px;">
+    <h1>Gateway</h1>
+    <p class="lead">
+      An open source project for handling request traffic from application clients to services.
+    </p>
+  </div>
+</div>
 
-{{% blocks/lead color="black" %}}
-Manage **Envoy Proxy** as a **Standalone** or **Kubernetes-based** API Gateway.
-
-**Gateway API** are used to **dynamically** provision and configure the managed Envoy Proxies.
-{{% /blocks/lead %}}
-
-{{% blocks/section type="row" color="dark" %}}
-
-{{% blocks/feature icon="fa fa-commenting" title="Expressive API" %}}
-Based on Gateway API, with reasonable default settings to simplify the Envoy user experience, without knowing details of Envoy proxy.
-{{% /blocks/feature %}}
-
-{{% blocks/feature icon="fa fa-battery-full" title="Batteries included" %}}
-Automatically Envoy infrastructure provisioning and management.
-{{% /blocks/feature %}}
-
-{{% blocks/feature icon="fa fa-tree" title="All environments" %}}
-Support for heterogeneous environments. Initially, Kubernetes will receive the most focus.
-{{% /blocks/feature %}}
-
-{{% blocks/feature icon="fa fa-cubes" title="Extensibility" %}}
-Vendors will have the ability to provide value-added products built on the Envoy Gateway foundation.
-{{% /blocks/feature %}}
-
-{{% blocks/feature icon="fa fa-lock" title="Security"%}}
-Supports a variety of Security features, such as TLS, TLS pass-through, secure gRPC, authentication. rate-limiting, etc.
-{{% /blocks/feature %}}
-
-{{% blocks/feature icon="fa fa-bolt" title="High Performance"%}}
-Built on top of the high-performance Envoy proxy, which can handle millions of requests per second.
-{{% /blocks/feature %}}
-
-{{% /blocks/section %}}
-
-{{% blocks/lead color="black" %}}
-Lower barriers to adoption through **Expressive, Extensible, Role-oriented APIs**
-
-Support a multitude of **ingress** and **L7/L4** traffic routing
-
-Common foundation for vendors to build **value-added** products
-
-Without having to **re-engineer**
-fundamental interactions.
-
-{{% /blocks/lead %}}
-
-{{% blocks/section type="row" color="dark" %}}
-
-{{% blocks/feature icon="fab fa-app-store-ios" title="Download **from Github**" url="https://github.com/envoyproxy/gateway/releases" %}}
-Try Envoy Gateway in GitHub Releases
-{{% /blocks/feature %}}
-
-{{% blocks/feature icon="fab fa-github" title="Contributions Welcome!"
-    url="/contributions/" %}}
-We do a [Pull Request](https://github.com/envoyproxy/gateway/pulls)
-contributions workflow on **GitHub**.
-{{% /blocks/feature %}}
-
-{{% blocks/feature icon="fab fa-slack" title="Contact us on Slack!"
-    url="https://envoyproxy.slack.com/archives/C03E6NHLESV" %}}
-For announcement of latest features etc.
-{{% /blocks/feature %}}
-
-{{% /blocks/section %}}
-
-{{< adopters >}}
-
-{{% blocks/lead type="row" color="white" %}}
-
-<img src="/img/cncf.svg" alt="CNCF" width="40%">
-
----
-Member of the [Envoy Proxy](https://www.envoyproxy.io/) family aimed at significantly **decreasing the barrier** to entry when using Envoy for **API Gateway**.
-{{% /blocks/lead %}}
+<section class="feature-section">
+  <div class="container">
+    <div class="row justify-content-center">
+      <article class="col-md-4">
+        <div class="feature-box">
+          <span class="feature-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 4L4 8l8 4 8-4-8-4zM4 12l8 4 8-4M4 16l8 4 8-4"/>
+            </svg>
+          </span>
+          <h3>Built together. Built in the open.</h3>
+          <p>
+            Gateway is the result of the community coming together to address traffic handling needs using modern architecture.
+          </p>
+        </div>
+      </article>
+      <article class="col-md-4">
+        <div class="feature-box">
+          <span class="feature-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"/>
+            </svg>
+          </span>
+          <h3>Get involved in the community</h3>
+          <p>
+            Join our community on Slack, join the conversation on GitHub, and attend our Thursday community meetings. See links in footer.
+          </p>
+        </div>
+      </article>
+      <article class="col-md-4">
+        <div class="feature-box">
+          <span class="feature-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+            </svg>
+          </span>
+          <h3>Coming February 2025</h3>
+          <p>
+            The v0.1 Release of Gateway coming in February 2025. Including features such as Unified LLM API and LLM token usage limiting.
+          </p>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>

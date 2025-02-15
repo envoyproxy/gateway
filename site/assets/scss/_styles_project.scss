@@ -1,0 +1,635 @@
+// Custom theme colors and variables
+$primary: #0969da;
+$dark: #24292f;
+$gray-100: #f6f8fa;
+$gray-200: #e5e7eb;
+$white: #ffffff;
+
+// Override Docsy variables
+$enable-gradients: false;
+$enable-shadows: false;
+$td-sidebar-bg-color: $gray-100;
+$td-sidebar-border-color: $gray-200;
+
+// Typography improvements
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+  color: $dark;
+  line-height: 1.6;
+  font-size: 16px;
+}
+
+// Navbar customization
+.td-navbar {
+  background-color: rgba($white, 0.95);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid $gray-200;
+  // padding: 0.75rem 1.5rem;
+  min-height: 4rem;
+
+  .navbar-brand {
+    font-weight: 600;
+    font-size: 1.25rem;
+    color: $dark;
+
+    &:hover {
+      color: $primary;
+    }
+  }
+
+  .nav-link {
+    color: $dark;
+    font-weight: 500;
+    padding: 0.5rem 0.75rem;
+    margin: 0 0.25rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+
+    &:hover {
+      color: $primary;
+      background-color: $gray-100;
+    }
+
+    &.active {
+      color: $primary;
+      background-color: $gray-100;
+    }
+  }
+}
+
+// Grid improvements
+.row {
+  padding: 0 1.5rem;
+}
+
+// Sidebar improvements
+
+// Foldable sidebar menu
+nav.foldable-nav {
+  &#td-section-nav {
+    position: relative;
+  }
+
+  &#td-section-nav label {
+    margin-bottom: 0;
+    width: 100%;
+  }
+
+  .td-sidebar-nav__section,
+  .with-child ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .ul-1 > li {
+    padding-left: 1em;
+  }
+
+  ul.foldable {
+    display: none;
+  }
+
+  input:checked ~ ul.foldable {
+    display: block;
+  }
+
+  input[type="checkbox"] {
+    display: none;
+  }
+
+  .with-child,
+  .without-child {
+    position: relative;
+    padding-left: 1em;
+  }
+
+  .ul-1 .with-child > label:before {
+    top: 0.1em;
+    font-size: 1em;
+    color: var(--bs-secondary-color);
+  }
+
+  .ul-1 .with-child > input:checked ~ label:before {
+    color: var(--bs-secondary-color);
+    transform: rotate(90deg);
+    transition: transform 0.5s;
+  }
+
+}
+
+
+
+
+.td-sidebar {
+  background-color: transparent;
+  border-right: none;
+  padding: 1.5rem 0;
+
+  .td-sidebar__inner {
+    padding-top: 0;
+  }
+
+  .td-sidebar-nav {
+    padding-right: 1rem;
+
+    // Checkbox styling
+    input[type="checkbox"] {
+      display: none;
+    }
+
+    label {
+      width: 100%;
+      margin: 0;
+      cursor: pointer;
+    }
+
+    .td-sidebar-link {
+      color: #666;
+      padding: 0.5rem 0.3rem !important;
+      margin: 0 0.3rem;
+      border-radius: 4px;
+      font-size: 0.9375rem;
+      transition: all 0.15s ease;
+      font-weight: 400;
+      display: block;
+      text-decoration: none;
+      line-height: 1;
+
+      &:hover {
+        color: $dark;
+        background-color: rgba($gray-100, 0.5);
+      }
+
+      &.active {
+        color: $primary;
+        background-color: rgba($primary, 0.06);
+        font-weight: 500;
+      }
+
+      &.tree-root {
+        border: none;
+      }
+    }
+
+    // Parent section headers
+    .td-sidebar-nav__section-title {
+      margin: 0;
+
+      .td-sidebar-link {
+        font-weight: 500;
+        color: $dark;
+        font-size: 0.9375rem;
+
+        &.tree-root {
+          font-weight: 600;
+          font-size: 1rem;
+          margin-bottom: 0.5rem;
+        }
+
+        &:hover {
+          background-color: transparent;
+        }
+      }
+
+      &.active-path > label > .td-sidebar-link {
+        color: $primary;
+        font-weight: 500;
+      }
+    }
+
+    // Nested lists
+    ul {
+      padding-left: 0;
+      list-style: none;
+      margin: 0;
+
+      &.foldable {
+        display: none;
+      }
+
+      li {
+        margin: 0;
+      }
+    }
+
+    // Show nested items when checkbox is checked
+    input:checked ~ ul.foldable {
+      display: block;
+    }
+
+    // Indentation levels
+    .ul-1 {
+      padding-left: 0;
+    }
+
+    .ul-2 {
+      padding-left: 1rem;
+    }
+
+    .ul-3 {
+      padding-left: 1.5rem;
+    }
+  }
+
+  // Search box styling
+  .td-sidebar__search {
+    margin-bottom: 1.5rem;
+
+    .td-search__input {
+      border: 1px solid $gray-200;
+      border-radius: 6px;
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+      width: 100%;
+
+      &:focus {
+        outline: none;
+        border-color: $primary;
+        box-shadow: 0 0 0 2px rgba($primary, 0.1);
+      }
+    }
+  }
+}
+
+// Container
+
+.container, .container-fluid, .container-xxl, .container-xl, .container-lg, .container-md, .container-sm {
+  --bs-gutter-x: 1.5rem;
+  --bs-gutter-y: 0;
+  padding-right: 0;
+  padding-left: 0;
+}
+
+// Main content area
+
+.td-main {
+
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    color: $dark;
+    scroll-margin-top: 5rem;
+  }
+
+  h1 {
+    font-size: 2.25rem;
+    margin-bottom: 2rem;
+  }
+
+  a {
+    color: $primary;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  p {
+    margin-bottom: 1.25rem;
+  }
+}
+
+// Code blocks
+.highlight {
+  background-color: $gray-100;
+  border-radius: 8px;
+  margin: 1.5rem 0;
+
+  pre {
+    padding: 1.25rem;
+    margin: 0;
+    background-color: transparent;
+    border: none;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 0.875rem;
+  }
+}
+
+// Table of contents
+.td-toc {
+  border-left: 1px solid $gray-200;
+  padding-left: 1.5rem;
+
+  #TableOfContents {
+    font-size: 0.875rem;
+
+    a {
+      color: $dark;
+      display: block;
+      padding: 0.25rem 0;
+      text-decoration: none;
+      opacity: 0.8;
+      transition: all 0.2s ease;
+
+      &:hover {
+        color: $primary;
+        opacity: 1;
+      }
+    }
+
+    ul {
+      padding-left: 1rem;
+      list-style: none;
+
+      li {
+        margin: 0.25rem 0;
+      }
+    }
+  }
+}
+
+// Search box
+.td-search {
+  .td-search__input {
+    border: 1px solid $gray-200;
+    border-radius: 6px;
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+
+    &:focus {
+      border-color: $primary;
+      box-shadow: 0 0 0 3px rgba($primary, 0.1);
+      outline: none;
+    }
+  }
+}
+
+// Mobile responsiveness improvements
+@include media-breakpoint-down(md) {
+  .td-sidebar {
+    padding: 1rem;
+    background-color: $white;
+    border-bottom: 1px solid $gray-200;
+
+    .td-sidebar-nav {
+      padding-right: 0;
+    }
+  }
+
+  .td-main {
+    padding: 2rem 1rem;
+  }
+
+  .td-toc {
+    padding-left: 1rem;
+  }
+}
+
+// Buttons
+.btn {
+  border-radius: 6px;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  transition: all 0.2s ease;
+
+  &-primary {
+    background-color: $primary;
+    border: none;
+
+    &:hover {
+      background-color: darken($primary, 5%);
+    }
+  }
+
+  &-outline-primary {
+    border-color: $primary;
+    color: $primary;
+
+    &:hover {
+      background-color: $primary;
+      color: $white;
+    }
+  }
+}
+
+// Alert boxes
+.alert {
+  border-radius: 8px;
+  border: 1px solid $gray-200;
+  padding: 1rem;
+  margin: 1.5rem 0;
+
+  &-primary {
+    background-color: rgba($primary, 0.05);
+    border-color: rgba($primary, 0.2);
+  }
+}
+
+// Tables
+.table {
+  width: 100%;
+  margin-bottom: 1.5rem;
+
+  th {
+    font-weight: 600;
+    border-bottom: 2px solid $gray-200;
+  }
+
+  td {
+    border-bottom: 1px solid $gray-200;
+    padding: 0.75rem;
+  }
+}
+
+// Custom CSS for homepage
+.td-home {
+  .td-navbar {
+    background: transparent;
+    border: none;
+    padding: 1rem 2rem;
+
+    .nav-link {
+      color: $white;
+      &:hover {
+        background-color: rgba($white, 0.1);
+      }
+    }
+
+    .navbar-brand {
+      color: $white;
+    }
+  }
+}
+
+.home-header {
+  background: linear-gradient(135deg, $home-gradient-start 0%, $home-gradient-end 100%);
+  min-height: 90vh;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  text-align: center;
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -5rem;
+    left: 0;
+    right: 0;
+    height: 10rem;
+    background: $white;
+    transform: skewY(-3deg);
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    // padding: 4rem 1rem;
+    color: $white;
+  }
+
+  h1 {
+    font-size: 3.5rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    color: $white;
+  }
+
+  .lead {
+    font-size: 1.5rem;
+    max-width: 800px;
+    margin: 0 auto 2rem;
+    opacity: 0.9;
+  }
+
+  .btn-primary {
+    background-color: $white;
+    color: $primary;
+    border: none;
+    padding: 0.75rem 2rem;
+    font-weight: 500;
+    font-size: 1.125rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+  }
+}
+
+.feature-section {
+  padding: 6rem 0;
+  background: $white;
+  position: relative;
+  z-index: 1;
+
+  .feature-box {
+    text-align: center;
+    padding: 2rem;
+
+    .feature-icon {
+      width: 80px;
+      height: 80px;
+      background-color: rgba($secondary, 0.1);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.5rem;
+      transform: rotate(45deg);
+
+      svg {
+        width: 40px;
+        height: 40px;
+        color: $secondary;
+        transform: rotate(-45deg);
+      }
+    }
+
+    h3 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: $dark;
+    }
+
+    p {
+      color: #4A5568;
+      line-height: 1.6;
+      font-size: 1rem;
+    }
+  }
+}
+
+// Footer styling
+.footer-section {
+  background: #1A202C;
+
+  a {
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+
+    &:hover {
+      opacity: 1;
+      text-decoration: none;
+    }
+  }
+
+  .fab {
+    font-size: 1.5rem;
+  }
+}
+
+// Mobile responsiveness
+@media (max-width: 768px) {
+  .home-header {
+    min-height: 80vh;
+
+    h1 {
+      font-size: 2.5rem;
+    }
+
+    .lead {
+      font-size: 1.25rem;
+    }
+  }
+
+  .feature-section {
+    padding: 4rem 0;
+
+    .feature-box {
+      margin-bottom: 2rem;
+    }
+  }
+}
+
+// Page meta links
+.td-page-meta {
+  font-size: 0.8125rem;
+  background-color: rgba($gray-100, 0.5);
+  border-radius: 8px;
+  padding: 0.5rem;
+
+  a {
+    color: #666;
+    text-decoration: none;
+    font-weight: 400;
+    display: block;
+    padding: 0.375rem 0.5rem;
+    margin: 0.125rem 0;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+
+    i {
+      color: #8b949e;
+      width: 1rem;
+      text-align: center;
+      margin-right: 0.25rem;
+    }
+
+    &:hover {
+      color: $primary;
+      text-decoration: none;
+      background-color: rgba($gray-100, 0.8);
+
+      i {
+        color: $primary;
+      }
+    }
+  }
+}
