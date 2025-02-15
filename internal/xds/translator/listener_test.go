@@ -7,8 +7,6 @@ package translator
 
 import (
 	"errors"
-	"google.golang.org/protobuf/types/known/wrapperspb"
-	"k8s.io/utils/ptr"
 	"reflect"
 	"testing"
 
@@ -17,6 +15,8 @@ import (
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/wrapperspb"
+	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 )
