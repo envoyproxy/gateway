@@ -48,5 +48,8 @@
   "prettier": {
     "proseWrap": "always",
     "singleQuote": true
+  },
+  "dependencies": {
+    "bootstrap": "^5.3.0"
   }
 }
