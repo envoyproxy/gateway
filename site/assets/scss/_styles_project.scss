@@ -6,6 +6,7 @@ $gray-100: #F5F3FF;
 $gray-200: #E9E8FF;
 $white: #ffffff;
 
+
 // Gradient colors
 $gradient-start: #9333EA;  // Purple
 $gradient-end: #4F46E5;    // Indigo
@@ -70,13 +71,26 @@ $td-sidebar-border-color: $gray-200;
 
 // Typography improvements
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
   color: $dark;
   line-height: 1.6;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 // Navbar customization
+@media (max-width: 991.98px) {
+  .td-navbar {
+    .navbar-nav {
+      padding-bottom: 0;
+      padding-top: 0;
+      overflow-x: auto;
+    }
+
+    .td-navbar-nav-scroll {
+      max-width: 100%;
+      font-size: 0.9rem;
+  }
+  }
+}
 .td-navbar {
   background-color: rgba($white, 0.95);
   backdrop-filter: blur(8px);
@@ -484,7 +498,7 @@ nav.foldable-nav {
   }
 
   .td-main {
-    padding: 2rem 1rem;
+    padding: 2rem 0rem;
   }
 
   .td-toc {
@@ -577,7 +591,7 @@ nav.foldable-nav {
     color: $white;
     max-width: 1200px;
     margin: 0 auto;
-    padding: 2rem;
+    padding: 2rem 0 6rem 0;
   }
 
   h1 {
@@ -742,7 +756,8 @@ footer {
 // Mobile responsiveness
 @media (max-width: 768px) {
   .home-header {
-    min-height: 80vh;
+    min-height: 50vh;
+    height: fit-content;
 
     h1 {
       font-size: 2.5rem;
@@ -1039,11 +1054,9 @@ footer {
       font-size: 1.1rem;
       line-height: 1.8;
       color: #374151;
-      margin-bottom: 0.75rem;
       position: relative;
       padding-left: 1.5rem;
-
-
+      margin-bottom: 0;
     }
   }
 

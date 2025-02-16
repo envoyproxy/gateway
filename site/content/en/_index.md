@@ -79,35 +79,39 @@ no_list: true
     <h2 class="text-center mb-5">Capabilities</h2>
     <div class="row justify-content-center">
       <article class="col-md-6 mb-4">
-        <div class="capability-box">
+        <div class="feature-card">
+          <div class="icon-container">
+            <i class="fas fa-sitemap"></i>
+          </div>
           <h3>Use Envoy Proxy as an API Gateway</h3>
-          <p>
-            Makes it easy to leverage Envoy Proxy as a Kubernetes Gateway. Envoy Gateway implements the Kubernetes Gateway API, and extends it to make it easy to leverage advanced Envoy features, without knowing details of Envoy proxy.
-          </p>
+          <p>Makes it easy to leverage Envoy Proxy as a Kubernetes Gateway. Envoy Gateway implements the Kubernetes Gateway API, and extends it to make it easy to leverage advanced Envoy features, without knowing details of Envoy proxy.</p>
         </div>
       </article>
       <article class="col-md-6 mb-4">
-        <div class="capability-box">
+        <div class="feature-card">
+          <div class="icon-container">
+            <i class="fas fa-shield-alt"></i>
+          </div>
           <h3>Security controls made easy</h3>
-          <p>
-            Leverage the Envoy Gateway Security Policy to enforce security controls including mTLS, JWT based access control, OIDC integration, API Key based authorization, and more.
-          </p>
+          <p>Leverage the Envoy Gateway Security Policy to enforce security controls including mTLS, JWT based access control, OIDC integration, API Key based authorization, and more.</p>
         </div>
       </article>
       <article class="col-md-6 mb-4">
-        <div class="capability-box">
+        <div class="feature-card">
+          <div class="icon-container">
+            <i class="fas fa-network-wired"></i>
+          </div>
           <h3>Manage traffic</h3>
-          <p>
-            Envoy Gateway supports advanced traffic management and control features including rate limiting, retry policies, circuit breaking, timeouts, failover, and more.
-          </p>
+          <p>Envoy Gateway supports advanced traffic management and control features including rate limiting, retry policies, circuit breaking, timeouts, failover, and more</p>
         </div>
       </article>
       <article class="col-md-6 mb-4">
-        <div class="capability-box">
+        <div class="feature-card">
+          <div class="icon-container">
+            <i class="fas fa-chart-line"></i>
+          </div>
           <h3>Observability</h3>
-          <p>
-            Envoy Gateway provides a rich set of observability features including metrics, access logging, distributed tracing, and more.
-          </p>
+          <p>Envoy Gateway provides a rich set of observability features including metrics, access logging, distributed tracing, and more.</p>
         </div>
       </article>
     </div>
