@@ -79,7 +79,7 @@ traffic should be straightforward, allowing teams to focus on building great app
       <i class="fas fa-book"></i>
     </div>
     <h3>Start Building</h3>
-    <p>Dive into our <a href="/latest/">comprehensive documentation</a> and start building with enterprise-grade traffic management capabilities.</p>
+    <p>Dive into our <a href="/docs/">comprehensive documentation</a> and start building with enterprise-grade traffic management capabilities.</p>
   </div>
 
   <div class="feature-card">
@@ -87,7 +87,7 @@ traffic should be straightforward, allowing teams to focus on building great app
       <i class="fas fa-users"></i>
     </div>
     <h3>Connect & Contribute</h3>
-    <p>Join our thriving <a href="/community/">community</a> of developers and contribute to shaping the future of cloud native networking.</p>
+    <p>Join our thriving community of developers and contribute to shaping the future of cloud native networking.</p>
   </div>
 
   <div class="feature-card">
