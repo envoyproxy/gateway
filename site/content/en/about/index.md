@@ -12,7 +12,7 @@ menu:
 Envoy Gateway democratizes the power of <a href="https://www.envoyproxy.io/">Envoy Proxy</a>, bringing you it's battle-tested traffic management via a Kubernetes Gateway API implementation. Envoy is trusted by tech giants worldwide, we're making enterprise capabilities accessible to everyone.
 </p>
 <div class="mt-5">
-<a class="btn btn-lg btn-glass me-3" href="/latest/getting-started/">
+<a class="btn btn-lg btn-glass me-3" href="/docs/tasks/quickstart/">
 <i class="fas fa-rocket me-2"></i>Get Started
 </a>
 <a class="btn btn-lg btn-glass" href="https://github.com/envoyproxy/gateway">

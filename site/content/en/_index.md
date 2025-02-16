@@ -15,7 +15,7 @@ no_list: true
       Deploy as a Standalone or Kubernetes-based API Gateway, implementing and extending the Kubernetes Gateway API.
     </p>
     <div class="mt-5">
-      <a class="btn btn-lg btn-glass me-3" href="/latest/getting-started/">
+      <a class="btn btn-lg btn-glass me-3" href="/docs/tasks/quickstart/">
         <i class="fas fa-rocket me-2"></i>Get Started
       </a>
       <a class="btn btn-lg btn-glass" href="https://github.com/envoyproxy/gateway">
