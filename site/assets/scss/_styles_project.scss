@@ -1006,7 +1006,7 @@ footer {
     font-weight: 800;
     margin-bottom: 2.5rem;
     @include gradient-text;
-    line-height: 1.1;
+    line-height: 1.4;
     letter-spacing: -0.02em;
   }
 
@@ -1240,7 +1240,7 @@ footer {
     font-weight: 600;
     margin-bottom: 2rem;
     color: $white !important;
-    line-height: 1.1;
+    line-height: 1.4;
     letter-spacing: -0.02em;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
