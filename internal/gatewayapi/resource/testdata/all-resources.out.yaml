@@ -237,12 +237,12 @@ namespaces:
   status: {}
 - metadata:
     creationTimestamp: null
-    name: gateway-conformance-infra
+    name: default
   spec: {}
   status: {}
 - metadata:
     creationTimestamp: null
-    name: default
+    name: gateway-conformance-infra
   spec: {}
   status: {}
 secrets:
