@@ -982,11 +982,11 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `IPv4Only` | IPv4Only means the DNS resolver will first perform a lookup for addresses in the IPv4 family.<br /> | 
-| `IPv6Only` | IPv6Only means the DNS resolver will first perform a lookup for addresses in the IPv6 family.<br /> | 
-| `IPv4Preferred` | IPv4Preferred means the DNS resolver will first perform a lookup for addresses in the IPv4 family and fallback<br />to a lookup for addresses in the IPv6 family.<br /> | 
-| `IPv6Preferred` | IPv6Preferred means the DNS resolver will first perform a lookup for addresses in the IPv6 family and fallback<br />to a lookup for addresses in the IPv4 family.<br /> | 
-| `IPv4AndIPv6` | IPv4AndIPv6 mean the DNS resolver will perform a lookup for both IPv4 and IPv6 families, and return all resolved<br />addresses. When this is used, Happy Eyeballs will be enabled for upstream connections.<br /> | 
+| `IPv4` | IPv4DNSLookupFamily means the DNS resolver will first perform a lookup for addresses in the IPv4 family.<br /> | 
+| `IPv6` | IPv6DNSLookupFamily means the DNS resolver will first perform a lookup for addresses in the IPv6 family.<br /> | 
+| `IPv4Preferred` | IPv4PreferredDNSLookupFamily means the DNS resolver will first perform a lookup for addresses in the IPv4 family and fallback<br />to a lookup for addresses in the IPv6 family.<br /> | 
+| `IPv6Preferred` | IPv6PreferredDNSLookupFamily means the DNS resolver will first perform a lookup for addresses in the IPv6 family and fallback<br />to a lookup for addresses in the IPv4 family.<br /> | 
+| `IPv4AndIPv6` | IPv4AndIPv6DNSLookupFamily mean the DNS resolver will perform a lookup for both IPv4 and IPv6 families, and return all resolved<br />addresses. When this is used, Happy Eyeballs will be enabled for upstream connections.<br /> | 
 
 
 #### EnvironmentCustomTag

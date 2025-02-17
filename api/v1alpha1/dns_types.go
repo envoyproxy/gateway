@@ -13,19 +13,19 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 type DNSLookupFamily string
 
 const (
-	// IPv4Only means the DNS resolver will first perform a lookup for addresses in the IPv4 family.
-	IPv4Only DNSLookupFamily = "IPv4Only"
-	// IPv6Only means the DNS resolver will first perform a lookup for addresses in the IPv6 family.
-	IPv6Only DNSLookupFamily = "IPv6Only"
-	// IPv4Preferred means the DNS resolver will first perform a lookup for addresses in the IPv4 family and fallback
+	// IPv4DNSLookupFamily means the DNS resolver will first perform a lookup for addresses in the IPv4 family.
+	IPv4DNSLookupFamily DNSLookupFamily = "IPv4"
+	// IPv6DNSLookupFamily means the DNS resolver will first perform a lookup for addresses in the IPv6 family.
+	IPv6DNSLookupFamily DNSLookupFamily = "IPv6"
+	// IPv4PreferredDNSLookupFamily means the DNS resolver will first perform a lookup for addresses in the IPv4 family and fallback
 	// to a lookup for addresses in the IPv6 family.
-	IPv4Preferred DNSLookupFamily = "IPv4Preferred"
-	// IPv6Preferred means the DNS resolver will first perform a lookup for addresses in the IPv6 family and fallback
+	IPv4PreferredDNSLookupFamily DNSLookupFamily = "IPv4Preferred"
+	// IPv6PreferredDNSLookupFamily means the DNS resolver will first perform a lookup for addresses in the IPv6 family and fallback
 	// to a lookup for addresses in the IPv4 family.
-	IPv6Preferred DNSLookupFamily = "IPv6Preferred"
-	// IPv4AndIPv6 mean the DNS resolver will perform a lookup for both IPv4 and IPv6 families, and return all resolved
+	IPv6PreferredDNSLookupFamily DNSLookupFamily = "IPv6Preferred"
+	// IPv4AndIPv6DNSLookupFamily mean the DNS resolver will perform a lookup for both IPv4 and IPv6 families, and return all resolved
 	// addresses. When this is used, Happy Eyeballs will be enabled for upstream connections.
-	IPv4AndIPv6 DNSLookupFamily = "IPv4AndIPv6"
+	IPv4AndIPv6DNSLookupFamily DNSLookupFamily = "IPv4AndIPv6"
 )
 
 type DNS struct {
