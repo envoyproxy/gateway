@@ -1,8 +1,6 @@
 module github.com/envoyproxy/gateway
 
-go 1.23.6
-
-replace github.com/imdario/mergo => github.com/imdario/mergo v0.3.16
+go 1.24.0
 
 require (
 	fortio.org/fortio v1.68.0
