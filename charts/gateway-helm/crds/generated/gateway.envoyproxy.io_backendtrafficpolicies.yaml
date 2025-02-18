@@ -1632,6 +1632,23 @@ spec:
                         type: string
                     type: object
                 type: object
+              upgradeConfigs:
+                description: |-
+                  UpgradeConfigs defines the configuration for protocol upgrades.
+                  If not specified, the default upgrade configuration(websocket) will be used.
+                items:
+                  properties:
+                    disabled:
+                      description: Disabled indicates whether the upgrade is disabled.
+                      type: boolean
+                    upgradeType:
+                      description: UpgradeType is the case-insensitive name of protocol
+                        upgrade.
+                      type: string
+                  required:
+                  - upgradeType
+                  type: object
+                type: array
               useClientProtocol:
                 description: |-
                   UseClientProtocol configures Envoy to prefer sending requests to backends using
