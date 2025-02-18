@@ -1875,6 +1875,19 @@ func TestDestinationSetting_Validate(t *testing.T) {
 			},
 			wantErr: ErrDestEndpointHostInvalid,
 		},
+		{
+			name: "nil weight",
+			ds: &DestinationSetting{
+				Weight: nil,
+				Endpoints: []*DestinationEndpoint{
+					{
+						Host: "example.com",
+						Port: 80,
+					},
+				},
+			},
+			wantErr: nil,
+		},
 	}
 
 	for i := range tests {
