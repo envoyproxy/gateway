@@ -3399,6 +3399,21 @@ _Appears in:_
 | `V2` | ProxyProtocolVersionV2 is the PROXY protocol version 2 (binary format).<br /> | 
 
 
+#### ProxyServerConfig
+
+
+
+
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `port` | _integer_ |  true  |  | Port defines the port on which the server listens. |
+| `path` | _string_ |  true  |  | Path defines the path of the server endpoint. |
+
+
 #### ProxyTelemetry
 
 
