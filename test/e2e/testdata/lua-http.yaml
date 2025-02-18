@@ -1,0 +1,100 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: example-route-1-with-lua
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  hostnames: ["www.example.com"]
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /route1
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: example-route-2-with-lua
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  hostnames: ["www.example.com"]
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /route2
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: example-route-3-without-lua
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  hostnames: ["www.example.com"]
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /route3
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm-example-lua
+  namespace: gateway-conformance-infra
+data:
+  lua: |
+    function envoy_on_response(response_handle)
+      response_handle:headers():add("X-Custom-Lua-Header", "lua_value_1")
+    end
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: example-lua-1
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: example-route-1-with-lua
+  lua:
+    - type: ValueRef
+      valueRef:
+        name: cm-example-lua
+        kind: ConfigMap
+        group: v1
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: example-lua-2
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: example-route-2-with-lua
+  lua:
+    - type: Inline
+      inline: |
+        function envoy_on_response(response_handle)
+          response_handle:headers():add("X-Custom-Lua-Header", "lua_value_2")
+          response_handle:headers():add("X-Custom-Lua-Another-Header", "lua_another_value")
+        end
