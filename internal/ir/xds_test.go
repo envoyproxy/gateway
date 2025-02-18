@@ -7,6 +7,7 @@ package ir
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -1820,7 +1821,7 @@ func TestDestinationSetting_Validate(t *testing.T) {
 		wantErr error
 	}{
 		{
-			name: "valid weight 0",
+			name: "valid weight 0 with endpoints",
 			ds: &DestinationSetting{
 				Weight: ptr.To[uint32](0),
 				Endpoints: []*DestinationEndpoint{
@@ -1833,9 +1834,18 @@ func TestDestinationSetting_Validate(t *testing.T) {
 			wantErr: nil,
 		},
 		{
+			name: "valid weight 0 with empty endpoints",
+			ds: &DestinationSetting{
+				Weight:    ptr.To[uint32](0),
+				Endpoints: []*DestinationEndpoint{},
+			},
+			wantErr: nil,
+		},
+		{
 			name: "valid non-zero weight with empty endpoints",
 			ds: &DestinationSetting{
-				Weight: ptr.To[uint32](1),
+				Weight:    ptr.To[uint32](1),
+				Endpoints: []*DestinationEndpoint{},
 			},
 			wantErr: nil,
 		},
@@ -1870,6 +1880,7 @@ func TestDestinationSetting_Validate(t *testing.T) {
 	for i := range tests {
 		test := tests[i]
 		t.Run(test.name, func(t *testing.T) {
+			fmt.Printf("Running test: %s\n", test.name)
 			err := test.ds.Validate()
 			if test.wantErr == nil {
 				require.NoError(t, err)
