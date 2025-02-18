@@ -338,8 +338,11 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 		Tracing:                       hcmTracing,
 		ForwardClientCertDetails:      buildForwardClientCertDetailsAction(irListener.Headers),
 		PreserveExternalRequestId:     ptr.Deref(irListener.Headers, ir.HeaderSettings{}).PreserveXRequestID,
-		GenerateRequestId:             buildGenerateRequestID(irListener.Headers),
 		EarlyHeaderMutationExtensions: buildEarlyHeaderMutation(irListener.Headers),
+	}
+
+	if generateRequestID := buildGenerateRequestID(irListener.Headers); generateRequestID != nil {
+		mgr.GenerateRequestId = generateRequestID
 	}
 
 	if mgr.ForwardClientCertDetails == hcmv3.HttpConnectionManager_APPEND_FORWARD || mgr.ForwardClientCertDetails == hcmv3.HttpConnectionManager_SANITIZE_SET {

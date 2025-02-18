@@ -155,7 +155,6 @@ xdsIR:
         earlyRemoveRequestHeaders:
         - my-removed-header
         enableEnvoyHeaders: true
-        generateRequestID: null
         preserveXRequestID: true
         withUnderscoresAction: Allow
       hostnames:
@@ -185,7 +184,6 @@ xdsIR:
         earlyRemoveRequestHeaders:
         - my-removed-header
         enableEnvoyHeaders: true
-        generateRequestID: null
         preserveXRequestID: true
         withUnderscoresAction: Allow
       hostnames:

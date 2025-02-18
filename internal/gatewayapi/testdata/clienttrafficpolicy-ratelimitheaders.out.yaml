@@ -130,7 +130,6 @@ xdsIR:
       headers:
         disableRateLimitHeaders: true
         enableEnvoyHeaders: true
-        generateRequestID: null
         withUnderscoresAction: RejectRequest
       hostnames:
       - '*'
@@ -149,7 +148,6 @@ xdsIR:
       headers:
         disableRateLimitHeaders: true
         enableEnvoyHeaders: true
-        generateRequestID: null
         withUnderscoresAction: RejectRequest
       hostnames:
       - '*'
