@@ -9,7 +9,7 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 // DNSLookupFamily defines the behavior of Envoy when resolving DNS for hostnames
 // +enum
-// +kubebuilder:validation:Enum=IPv4Only;IPv6Only;IPv4Preferred;IPv6Preferred;IPv4AndIPv6
+// +kubebuilder:validation:Enum=IPv4;IPv6;IPv4Preferred;IPv6Preferred;IPv4AndIPv6
 type DNSLookupFamily string
 
 const (

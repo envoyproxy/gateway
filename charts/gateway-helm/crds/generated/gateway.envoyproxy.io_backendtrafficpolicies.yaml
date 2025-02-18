@@ -168,8 +168,8 @@ spec:
                       LookupFamily determines how Envoy would resolve DNS for. If set, this configuration overrides other default
                       value that Envoy Gateway configures based on attributes of the backends, such Service resource IPFamilies.
                     enum:
-                    - IPv4Only
-                    - IPv6Only
+                    - IPv4
+                    - IPv6
                     - IPv4Preferred
                     - IPv6Preferred
                     - IPv4AndIPv6
