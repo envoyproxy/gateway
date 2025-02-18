@@ -1814,75 +1814,65 @@ func TestJSONPatchOperationValidation(t *testing.T) {
 	}
 }
 
-func TestDestinationSetting_Validate(t *testing.T) {
+func TestRouteDestination_Validate(t *testing.T) {
 	tests := []struct {
 		name    string
-		ds      *DestinationSetting
+		rd      *RouteDestination
 		wantErr error
 	}{
 		{
-			name: "valid weight 0 with endpoints",
-			ds: &DestinationSetting{
-				Weight: ptr.To[uint32](0),
-				Endpoints: []*DestinationEndpoint{
+			name: "valid settings",
+			rd: &RouteDestination{
+				Name: "valid-destination",
+				Settings: []*DestinationSetting{
 					{
-						Host: "example.com",
-						Port: 80,
+						Weight: ptr.To[uint32](1),
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "example.com",
+								Port: 80,
+							},
+						},
 					},
 				},
 			},
 			wantErr: nil,
 		},
 		{
-			name: "valid weight 0 with empty endpoints",
-			ds: &DestinationSetting{
-				Weight:    ptr.To[uint32](0),
-				Endpoints: []*DestinationEndpoint{},
-			},
-			wantErr: nil,
-		},
-		{
-			name: "valid non-zero weight with empty endpoints",
-			ds: &DestinationSetting{
-				Weight:    ptr.To[uint32](1),
-				Endpoints: []*DestinationEndpoint{},
-			},
-			wantErr: nil,
-		},
-		{
-			name: "valid non-zero weight with valid endpoints",
-			ds: &DestinationSetting{
-				Weight: ptr.To[uint32](1),
-				Endpoints: []*DestinationEndpoint{
-					{
-						Host: "example.com",
-						Port: 80,
-					},
+			name: "nil setting",
+			rd: &RouteDestination{
+				Name: "nil-setting",
+				Settings: []*DestinationSetting{
+					nil,
 				},
 			},
 			wantErr: nil,
 		},
 		{
-			name: "invalid endpoint",
-			ds: &DestinationSetting{
-				Weight: ptr.To[uint32](1),
-				Endpoints: []*DestinationEndpoint{
+			name: "empty name",
+			rd: &RouteDestination{
+				Name: "",
+				Settings: []*DestinationSetting{
 					{
-						Host: "invalid_host",
-						Port: 80,
+						Weight: ptr.To[uint32](1),
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "example.com",
+								Port: 80,
+							},
+						},
 					},
 				},
 			},
-			wantErr: ErrDestEndpointHostInvalid,
+			wantErr: ErrDestinationNameEmpty,
 		},
 		{
-			name: "nil weight",
-			ds: &DestinationSetting{
-				Weight: nil,
-				Endpoints: []*DestinationEndpoint{
+			name: "weight 0 setting",
+			rd: &RouteDestination{
+				Name: "weight-0-setting",
+				Settings: []*DestinationSetting{
 					{
-						Host: "example.com",
-						Port: 80,
+						Weight: ptr.To[uint32](0),
 					},
 				},
 			},
@@ -1894,7 +1884,7 @@ func TestDestinationSetting_Validate(t *testing.T) {
 		test := tests[i]
 		t.Run(test.name, func(t *testing.T) {
 			fmt.Printf("Running test: %s\n", test.name)
-			err := test.ds.Validate()
+			err := test.rd.Validate()
 			if test.wantErr == nil {
 				require.NoError(t, err)
 			} else {
