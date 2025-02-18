@@ -1823,6 +1823,12 @@ func TestDestinationSetting_Validate(t *testing.T) {
 			name: "valid weight 0",
 			ds: &DestinationSetting{
 				Weight: ptr.To[uint32](0),
+				Endpoints: []*DestinationEndpoint{
+					{
+						Host: "example.com",
+						Port: 80,
+					},
+				},
 			},
 			wantErr: nil,
 		},
@@ -1864,10 +1870,11 @@ func TestDestinationSetting_Validate(t *testing.T) {
 	for i := range tests {
 		test := tests[i]
 		t.Run(test.name, func(t *testing.T) {
+			err := test.ds.Validate()
 			if test.wantErr == nil {
-				require.NoError(t, test.ds.Validate())
+				require.NoError(t, err)
 			} else {
-				require.EqualError(t, test.ds.Validate(), test.wantErr.Error())
+				require.EqualError(t, err, test.wantErr.Error())
 			}
 		})
 	}
