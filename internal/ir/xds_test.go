@@ -1812,3 +1812,63 @@ func TestJSONPatchOperationValidation(t *testing.T) {
 		})
 	}
 }
+
+func TestDestinationSetting_Validate(t *testing.T) {
+	tests := []struct {
+		name    string
+		ds      *DestinationSetting
+		wantErr error
+	}{
+		{
+			name: "valid weight 0",
+			ds: &DestinationSetting{
+				Weight: ptr.To[uint32](0),
+			},
+			wantErr: nil,
+		},
+		{
+			name: "valid non-zero weight with empty endpoints",
+			ds: &DestinationSetting{
+				Weight: ptr.To[uint32](1),
+			},
+			wantErr: nil,
+		},
+		{
+			name: "valid non-zero weight with valid endpoints",
+			ds: &DestinationSetting{
+				Weight: ptr.To[uint32](1),
+				Endpoints: []*DestinationEndpoint{
+					{
+						Host: "example.com",
+						Port: 80,
+					},
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "invalid endpoint",
+			ds: &DestinationSetting{
+				Weight: ptr.To[uint32](1),
+				Endpoints: []*DestinationEndpoint{
+					{
+						Host: "invalid_host",
+						Port: 80,
+					},
+				},
+			},
+			wantErr: ErrDestEndpointHostInvalid,
+		},
+	}
+
+	for i := range tests {
+		test := tests[i]
+		t.Run(test.name, func(t *testing.T) {
+			if test.wantErr == nil {
+				require.NoError(t, test.ds.Validate())
+			} else {
+				require.EqualError(t, test.ds.Validate(), test.wantErr.Error())
+			}
+		})
+	}
+}
