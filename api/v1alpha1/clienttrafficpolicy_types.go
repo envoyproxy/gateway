@@ -174,9 +174,9 @@ const (
 type RequestIDAction string
 
 const (
-	// Preserve `X-Request-ID` if already presenet or generate if empty
+	// Preserve `X-Request-ID` if already present or generate if empty
 	RequestIDActionPreserveOrGenerate RequestIDAction = "PreserveOrGenerate"
-	// Preserve `X-Request-ID` if already presenet, do not generate when empty
+	// Preserve `X-Request-ID` if already present, do not generate when empty
 	RequestIDActionPreserve RequestIDAction = "Preserve"
 	// Always generate `X-Request-ID` header, do not preserve `X-Request-ID`
 	// header if it exists. This is the default behavior.
