@@ -81,12 +81,14 @@ type Principal struct {
 	// If multiple headers are specified, all headers must match for the rule to match.
 	// +optional
 	// +kubebuilder:validation:MinItems=1
+	// +notImplementedHide
 	Headers []HeaderMatch `json:"headers,omitempty"`
 
 	// Methods authorize the request based on the HTTP methods.
 	// If multiple methods are specified, one of the methods must match for the rule to match.
 	// +optional
 	// +kubebuilder:validation:MinItems=1
+	// +notImplementedHide
 	Methods []gwapiv1.HTTPMethod `json:"methods,omitempty"`
 }
 
