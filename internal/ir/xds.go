@@ -1406,9 +1406,6 @@ func (r *RouteDestination) Validate() error {
 		errs = errors.Join(errs, ErrDestinationNameEmpty)
 	}
 	for _, s := range r.Settings {
-		if s == nil {
-			continue
-		}
 		if err := s.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
@@ -1423,6 +1420,10 @@ func (r *RouteDestination) ToBackendWeights() *BackendWeights {
 	}
 
 	for _, s := range r.Settings {
+		if s.Weight == nil {
+			continue
+		}
+
 		if len(s.Endpoints) > 0 {
 			w.Valid += *s.Weight
 		} else {
@@ -1459,7 +1460,6 @@ type DestinationSetting struct {
 // Validate the fields within the DestinationSetting structure
 func (d *DestinationSetting) Validate() error {
 	var errs error
-
 	for _, ep := range d.Endpoints {
 		if err := ep.Validate(); err != nil {
 			errs = errors.Join(errs, err)

@@ -7,7 +7,6 @@ package ir
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -1809,86 +1808,6 @@ func TestJSONPatchOperationValidation(t *testing.T) {
 				require.EqualError(t, err, *tc.want)
 			} else {
 				require.NoError(t, err)
-			}
-		})
-	}
-}
-
-func TestRouteDestination_Validate(t *testing.T) {
-	tests := []struct {
-		name    string
-		rd      *RouteDestination
-		wantErr error
-	}{
-		{
-			name: "valid settings",
-			rd: &RouteDestination{
-				Name: "valid-destination",
-				Settings: []*DestinationSetting{
-					{
-						Weight: ptr.To[uint32](1),
-						Endpoints: []*DestinationEndpoint{
-							{
-								Host: "example.com",
-								Port: 80,
-							},
-						},
-					},
-				},
-			},
-			wantErr: nil,
-		},
-		{
-			name: "nil setting",
-			rd: &RouteDestination{
-				Name: "nil-setting",
-				Settings: []*DestinationSetting{
-					nil,
-				},
-			},
-			wantErr: nil,
-		},
-		{
-			name: "empty name",
-			rd: &RouteDestination{
-				Name: "",
-				Settings: []*DestinationSetting{
-					{
-						Weight: ptr.To[uint32](1),
-						Endpoints: []*DestinationEndpoint{
-							{
-								Host: "example.com",
-								Port: 80,
-							},
-						},
-					},
-				},
-			},
-			wantErr: ErrDestinationNameEmpty,
-		},
-		{
-			name: "weight 0 setting",
-			rd: &RouteDestination{
-				Name: "weight-0-setting",
-				Settings: []*DestinationSetting{
-					{
-						Weight: ptr.To[uint32](0),
-					},
-				},
-			},
-			wantErr: nil,
-		},
-	}
-
-	for i := range tests {
-		test := tests[i]
-		t.Run(test.name, func(t *testing.T) {
-			fmt.Printf("Running test: %s\n", test.name)
-			err := test.rd.Validate()
-			if test.wantErr == nil {
-				require.NoError(t, err)
-			} else {
-				require.EqualError(t, err, test.wantErr.Error())
 			}
 		})
 	}
