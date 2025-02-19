@@ -77,6 +77,7 @@ type BackendTrafficPolicySpec struct {
 	// If not specified, the default upgrade configuration(websocket) will be used.
 	//
 	// +optional
+	// +notImplementedHide
 	HTTPUpgrade []*ProtocolUpgradeConfig `json:"httpUpgrade,omitempty"`
 }
 
