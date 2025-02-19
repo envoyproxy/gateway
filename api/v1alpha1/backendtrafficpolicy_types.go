@@ -83,6 +83,7 @@ type BackendTrafficPolicySpec struct {
 
 type ProtocolUpgradeConfig struct {
 	// Protocol is the case-insensitive name of protocol upgrade.
+	// e.g. `websocket`, `CONNECT`, `spdy/3.1` etc.
 	//
 	// +kubebuilder:validation:Required
 	Protocol string `json:"protocol"`
