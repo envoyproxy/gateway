@@ -14,7 +14,7 @@ new features: |
   Allow matchExpressions in TargetSelector
   Add defaulter for gateway-api resources loading from file to be able to set default values.
   Added support for defining Lua EnvoyExtensionPolicies
-  Added support for disabling generate_request_id
+  Added RequestID field in ClientTrafficPolicy.HeaderSettings to configure Envoy X-Request-ID behavior. This deprecates the PreserveXRequestID field.
 
 bug fixes: |
 

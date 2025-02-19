@@ -137,9 +137,9 @@ type HeaderSettings struct {
 	// +optional
 	PreserveXRequestID *bool `json:"preserveXRequestID,omitempty"`
 
-	// RequestID configures whether envoy will generate the x-request-id header if it does not exist.
-	// Generating a random UUID4 is expensive so in high throughput scenarios where this feature is not desired it can be disabled.
-	// This feature is enabled by default when empty
+	// RequestID configures Envoy's behavior for handling the `X-Request-ID` header.
+	// Defaults to `Generate` and builds the `X-Request-ID` for every request and ignores pre-existing values from the edge.
+	// (An "edge request" refers to a request from an external client to the Envoy entrypoint.)
 	//
 	// +optional
 	RequestID *RequestIDAction `json:"requestID,omitempty"`
@@ -168,8 +168,7 @@ const (
 	WithUnderscoresActionDropHeader WithUnderscoresAction = "DropHeader"
 )
 
-// RequestIDAction configures the action to take for populating or preserving the
-// `X-Request-ID` header for a request.
+// RequestIDAction configures Envoy's behavior for handling the `X-Request-ID` header.
 //
 // +kubebuilder:validation:Enum=PreserveOrGenerate;Preserve;Generate;Disabled
 type RequestIDAction string
