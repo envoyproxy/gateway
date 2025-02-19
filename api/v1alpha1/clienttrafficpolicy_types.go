@@ -170,7 +170,7 @@ const (
 
 // RequestIDAction configures Envoy's behavior for handling the `X-Request-ID` header.
 //
-// +kubebuilder:validation:Enum=PreserveOrGenerate;Preserve;Generate;Disabled
+// +kubebuilder:validation:Enum=PreserveOrGenerate;Preserve;Generate;Disable
 type RequestIDAction string
 
 const (
@@ -182,7 +182,7 @@ const (
 	// header if it exists. This is the default behavior.
 	RequestIDActionGenerate RequestIDAction = "Generate"
 	// Do not preserve or generate `X-Request-ID` header
-	RequestIDActionDisabled RequestIDAction = "Disabled"
+	RequestIDActionDisable RequestIDAction = "Disable"
 )
 
 // XForwardedClientCert configures how Envoy Proxy handle the x-forwarded-client-cert (XFCC) HTTP header.

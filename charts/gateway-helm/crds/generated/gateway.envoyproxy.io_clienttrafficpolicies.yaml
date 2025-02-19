@@ -333,7 +333,7 @@ spec:
                     - PreserveOrGenerate
                     - Preserve
                     - Generate
-                    - Disabled
+                    - Disable
                     type: string
                   withUnderscoresAction:
                     description: |-

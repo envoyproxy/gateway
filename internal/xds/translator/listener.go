@@ -349,7 +349,7 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 		case ir.RequestIDActionPreserve:
 			mgr.GenerateRequestId = wrapperspb.Bool(false)
 			mgr.PreserveExternalRequestId = true
-		case ir.RequestIDActionDisabled:
+		case ir.RequestIDActionDisable:
 			mgr.GenerateRequestId = wrapperspb.Bool(false)
 			mgr.PreserveExternalRequestId = false
 		case ir.RequestIDActionGenerate:

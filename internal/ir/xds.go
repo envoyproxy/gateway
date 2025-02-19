@@ -496,7 +496,7 @@ const (
 	RequestIDActionPreserveOrGenerate = RequestIDAction(egv1a1.RequestIDActionPreserveOrGenerate)
 	RequestIDActionPreserve           = RequestIDAction(egv1a1.RequestIDActionPreserve)
 	RequestIDActionGenerate           = RequestIDAction(egv1a1.RequestIDActionGenerate)
-	RequestIDActionDisabled           = RequestIDAction(egv1a1.RequestIDActionDisabled)
+	RequestIDActionDisable            = RequestIDAction(egv1a1.RequestIDActionDisable)
 )
 
 // Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.
