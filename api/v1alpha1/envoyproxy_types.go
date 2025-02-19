@@ -114,6 +114,8 @@ type EnvoyProxySpec struct {
 	//
 	// - envoy.filters.http.stateful_session
 	//
+	// - envoy.filters.http.lua
+	//
 	// - envoy.filters.http.ext_proc
 	//
 	// - envoy.filters.http.wasm
@@ -195,7 +197,7 @@ type FilterPosition struct {
 }
 
 // EnvoyFilter defines the type of Envoy HTTP filter.
-// +kubebuilder:validation:Enum=envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.ext_authz;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.custom_response
+// +kubebuilder:validation:Enum=envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.ext_authz;envoy.filters.http.api_key_auth;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.lua;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.custom_response;envoy.filters.http.compressor
 type EnvoyFilter string
 
 const (
@@ -232,6 +234,9 @@ const (
 
 	// EnvoyFilterWasm defines the Envoy HTTP WebAssembly filter.
 	EnvoyFilterWasm EnvoyFilter = "envoy.filters.http.wasm"
+
+	// EnvoyFilterLua defines the Envoy HTTP Lua filter.
+	EnvoyFilterLua EnvoyFilter = "envoy.filters.http.lua"
 
 	// EnvoyFilterRBAC defines the Envoy RBAC filter.
 	EnvoyFilterRBAC EnvoyFilter = "envoy.filters.http.rbac"
@@ -392,7 +397,7 @@ const (
 // +union
 // +kubebuilder:validation:XValidation:rule="self.type == 'JSONPatch' ? self.jsonPatches.size() > 0 : has(self.value)", message="provided bootstrap patch doesn't match the configured patch type"
 type ProxyBootstrap struct {
-	// Type is the type of the bootstrap configuration, it should be either Replace,  Merge, or JSONPatch.
+	// Type is the type of the bootstrap configuration, it should be either **Replace**,  **Merge**, or **JSONPatch**.
 	// If unspecified, it defaults to Replace.
 	// +optional
 	// +kubebuilder:default=Replace

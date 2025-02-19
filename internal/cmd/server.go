@@ -128,6 +128,10 @@ func getConfigByPath(cfgPath string) (*config.Server, error) {
 // setupRunners starts all the runners required for the Envoy Gateway to
 // fulfill its tasks.
 func setupRunners(ctx context.Context, cfg *config.Server) (err error) {
+	// The Elected channel is used to block the tasks that are waiting for the leader to be elected.
+	// It will be closed once the leader is elected in the controller manager.
+	cfg.Elected = make(chan struct{})
+
 	// Setup the Extension Manager
 	var extMgr types.Manager
 	if cfg.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes {

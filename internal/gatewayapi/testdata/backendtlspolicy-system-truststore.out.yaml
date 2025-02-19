@@ -154,6 +154,8 @@ xdsIR:
             protocol: HTTP
             tls:
               alpnProtocols: null
+              caCertificate:
+                name: policy-btls/default-ca
               sni: example.com
               useSystemTrustStore: true
             weight: 1
@@ -168,3 +170,8 @@ xdsIR:
           distinct: false
           exact: /exact
           name: ""
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

@@ -150,7 +150,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 				XdsServerPort:   ptr.To(int32(12345)),
 				WasmServerPort:  ptr.To(int32(1111)),
 				AdminServerPort: ptr.To(int32(2222)),
-				ReadyServerPort: ptr.To(int32(3333)),
+				StatsServerPort: ptr.To(int32(3333)),
 				SdsConfig:       sds,
 			},
 		},

@@ -46,7 +46,7 @@ jobs:
       run: cd test/benchmark && zip -r benchmark_report.zip benchmark_report
 
     - name: Upload Benchmark Report
-      uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882  # v4.4.3
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08  # v4.6.0
       with:
         name: benchmark_report
         path: test/benchmark/benchmark_report.zip
@@ -81,6 +81,8 @@ jobs:
         tar -zcvf egctl_latest_linux_arm64.tar.gz bin/linux/arm64/egctl
         tar -zcvf egctl_latest_darwin_amd64.tar.gz bin/darwin/amd64/egctl
         tar -zcvf egctl_latest_darwin_arm64.tar.gz bin/darwin/arm64/egctl
+        zip -r egctl_latest_windows_amd64.zip bin/windows/amd64/egctl
+        zip -r egctl_latest_windows_arm64.zip bin/windows/arm64/egctl
 
     # Ignore the error when we delete the latest release, it might not exist.
 
@@ -107,7 +109,7 @@ jobs:
         GITHUB_REPOSITORY: ${{ github.repository_owner }}/${{ github.event.repository.name }}
 
     - name: Recreate the Latest Release and Tag
-      uses: softprops/action-gh-release@01570a1f39cb168c169c802c3bceb9e93fb10974  # v2.1.0
+      uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda  # v2.2.1
       with:
         draft: false
         prerelease: true
@@ -124,6 +126,8 @@ jobs:
           egctl_latest_linux_arm64.tar.gz
           egctl_latest_darwin_amd64.tar.gz
           egctl_latest_darwin_arm64.tar.gz
+          egctl_latest_windows_amd64.zip
+          egctl_latest_windows_arm64.zip
         body: |
           This is the "latest" release of **Envoy Gateway**, which contains the most recent commits from the main branch.
 

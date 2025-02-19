@@ -201,6 +201,7 @@ xdsIR:
             endpoints:
             - host: 10.244.0.28
               port: 3000
+            protocol: HTTP
             weight: 2
         hostname: '*'
         isHTTP2: false
@@ -220,6 +221,7 @@ xdsIR:
             endpoints:
             - host: primary.foo.com
               port: 3000
+            protocol: HTTP
             weight: 1
         hostname: '*'
         isHTTP2: false
@@ -232,3 +234,8 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

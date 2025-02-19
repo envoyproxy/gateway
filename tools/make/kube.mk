@@ -47,12 +47,18 @@ endif
 
 ##@ Kubernetes Development
 
+GNU_SED := $(shell sed --version >/dev/null 2>&1 && echo "yes" || echo "no")
+
 YEAR := $(shell date +%Y)
 CONTROLLERGEN_OBJECT_FLAGS :=  object:headerFile="$(ROOT_DIR)/tools/boilerplate/boilerplate.generatego.txt",year=$(YEAR)
 
 .PHONY: prepare-ip-family
 prepare-ip-family:
-	@find ./test -type f -name "*.yaml" | xargs sed -i -e 's/ipFamily: IPv4/ipFamily: $(ENVOY_PROXY_IP_FAMILY)/g'
+ifeq ($(GNU_SED),yes)
+	@find ./test -type f -name "*.yaml" | xargs sed -i'' 's/ipFamily: IPv4/ipFamily: $(ENVOY_PROXY_IP_FAMILY)/g'
+else
+	@find ./test -type f -name "*.yaml" | xargs sed -i '' 's/ipFamily: IPv4/ipFamily: $(ENVOY_PROXY_IP_FAMILY)/g'
+endif
 
 .PHONY: manifests
 manifests: $(tools/controller-gen) generate-gwapi-manifests ## Generate WebhookConfiguration and CustomResourceDefinition objects.
@@ -180,6 +186,9 @@ else
 	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
 		--run-test $(E2E_RUN_TEST)
 endif
+
+run-e2e-upgrade:
+	go test $(E2E_TEST_ARGS) ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
 
 .PHONY: run-resilience
 run-resilience: ## Run resilience tests

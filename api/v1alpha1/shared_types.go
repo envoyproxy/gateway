@@ -11,6 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
@@ -400,12 +401,20 @@ const (
 )
 
 // KubernetesPodDisruptionBudgetSpec defines Kubernetes PodDisruptionBudget settings of Envoy Proxy Deployment.
+//
+// +kubebuilder:validation:XValidation:rule="(has(self.minAvailable) && !has(self.maxUnavailable)) || (!has(self.minAvailable) && has(self.maxUnavailable))",message="only one of minAvailable or maxUnavailable can be specified"
 type KubernetesPodDisruptionBudgetSpec struct {
-	// MinAvailable specifies the minimum number of pods that must be available at all times during voluntary disruptions,
+	// MinAvailable specifies the minimum amount of pods (can be expressed as integers or as a percentage) that must be available at all times during voluntary disruptions,
 	// such as node drains or updates. This setting ensures that your envoy proxy maintains a certain level of availability
-	// and resilience during maintenance operations.
+	// and resilience during maintenance operations. Cannot be combined with maxUnavailable.
 	// +optional
-	MinAvailable *int32 `json:"minAvailable,omitempty"`
+	MinAvailable *intstr.IntOrString `json:"minAvailable,omitempty"`
+
+	// MaxUnavailable specifies the maximum amount of pods (can be expressed as integers or as a percentage) that can be unavailable at all times during voluntary disruptions,
+	// such as node drains or updates. This setting ensures that your envoy proxy maintains a certain level of availability
+	// and resilience during maintenance operations. Cannot be combined with minAvailable.
+	// +optional
+	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
 
 	// Patch defines how to perform the patch operation to the PodDisruptionBudget
 	//
@@ -694,7 +703,15 @@ type CustomResponse struct {
 	ContentType *string `json:"contentType,omitempty"`
 
 	// Body of the Custom Response
-	Body CustomResponseBody `json:"body"`
+	//
+	// +optional
+	Body *CustomResponseBody `json:"body,omitempty"`
+
+	// Status Code of the Custom Response
+	// If unset, does not override the status of response.
+	//
+	// +optional
+	StatusCode *int `json:"statusCode,omitempty"`
 }
 
 // ResponseValueType defines the types of values for the response body supported by Envoy Gateway.

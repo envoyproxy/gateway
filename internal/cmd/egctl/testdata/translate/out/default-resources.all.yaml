@@ -40,7 +40,7 @@ envoyProxyForGatewayClass:
             resource_api_version: V3
         static_resources:
           listeners:
-          - name: envoy-gateway-proxy-ready-0.0.0.0-19001
+          - name: envoy-gateway-proxy-stats-0.0.0.0-19001
             address:
               socket_address:
                 address: '0.0.0.0'
@@ -51,7 +51,8 @@ envoyProxyForGatewayClass:
               - name: envoy.filters.network.http_connection_manager
                 typed_config:
                   "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-                  stat_prefix: eg-ready-http
+                  stat_prefix: eg-stats-http
+                  normalize_path: true
                   route_config:
                     name: local_route
                     virtual_hosts:
@@ -60,18 +61,13 @@ envoyProxyForGatewayClass:
                       - "*"
                       routes:
                       - match:
-                          prefix: /stats/prometheus
+                          path: /stats/prometheus
+                          headers:
+                          - name: ":method"
+                            exact_match: GET
                         route:
                           cluster: prometheus_stats
                   http_filters:
-                  - name: envoy.filters.http.health_check
-                    typed_config:
-                      "@type": type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck
-                      pass_through_mode: false
-                      headers:
-                      - name: ":path"
-                        string_match:
-                          exact: /ready
                   - name: envoy.filters.http.router
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -206,13 +202,22 @@ gateways:
   spec:
     gatewayClassName: eg
     listeners:
-    - name: tcp
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: tcp
       port: 1234
       protocol: TCP
-    - name: udp
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: udp
       port: 1234
       protocol: UDP
-    - hostname: foo.com
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      hostname: foo.com
       name: tls-passthrough
       port: 8443
       protocol: TLS
@@ -222,6 +227,8 @@ gateways:
         kinds:
         - group: gateway.networking.k8s.io
           kind: HTTPRoute
+        namespaces:
+          from: Same
       name: http
       port: 80
       protocol: HTTP
@@ -229,6 +236,8 @@ gateways:
         kinds:
         - group: gateway.networking.k8s.io
           kind: GRPCRoute
+        namespaces:
+          from: Same
       name: grpc
       port: 8080
       protocol: HTTP
@@ -349,7 +358,9 @@ grpcRoutes:
     hostnames:
     - www.grpc-example.com
     parentRefs:
-    - name: eg
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
       sectionName: grpc
     rules:
     - backendRefs:
@@ -362,6 +373,7 @@ grpcRoutes:
       - method:
           method: DoThing
           service: com.example.Things
+          type: Exact
   status:
     parents:
     - conditions:
@@ -377,6 +389,8 @@ grpcRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
         name: eg
         sectionName: grpc
 httpRoutes:
@@ -389,7 +403,9 @@ httpRoutes:
     hostnames:
     - www.example.com
     parentRefs:
-    - name: eg
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
     rules:
     - backendRefs:
       - group: ""
@@ -416,6 +432,8 @@ httpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
         name: eg
 tcpRoutes:
 - kind: TCPRoute
@@ -425,7 +443,9 @@ tcpRoutes:
     namespace: default
   spec:
     parentRefs:
-    - name: eg
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
       sectionName: tcp
     rules:
     - backendRefs:
@@ -449,6 +469,8 @@ tcpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
         name: eg
         sectionName: tcp
 tlsRoutes:
@@ -459,7 +481,9 @@ tlsRoutes:
     namespace: default
   spec:
     parentRefs:
-    - name: eg
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
       sectionName: tls-passthrough
     rules:
     - backendRefs:
@@ -483,6 +507,8 @@ tlsRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
         name: eg
         sectionName: tls-passthrough
 udpRoutes:
@@ -493,7 +519,9 @@ udpRoutes:
     namespace: default
   spec:
     parentRefs:
-    - name: eg
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
       sectionName: udp
     rules:
     - backendRefs:
@@ -517,6 +545,8 @@ udpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
         name: eg
         sectionName: udp
 xds:
@@ -666,17 +696,10 @@ xds:
                 typedConfig:
                   '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
                   httpFilters:
-                  - name: envoy.filters.http.health_check
-                    typedConfig:
-                      '@type': type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck
-                      headers:
-                      - name: :path
-                        stringMatch:
-                          exact: /ready
-                      passThroughMode: false
                   - name: envoy.filters.http.router
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                  normalizePath: true
                   routeConfig:
                     name: local_route
                     virtualHosts:
@@ -685,11 +708,14 @@ xds:
                       name: prometheus_stats
                       routes:
                       - match:
-                          prefix: /stats/prometheus
+                          headers:
+                          - exactMatch: GET
+                            name: :method
+                          path: /stats/prometheus
                         route:
                           cluster: prometheus_stats
-                  statPrefix: eg-ready-http
-            name: envoy-gateway-proxy-ready-0.0.0.0-19001
+                  statPrefix: eg-stats-http
+            name: envoy-gateway-proxy-stats-0.0.0.0-19001
     - '@type': type.googleapis.com/envoy.admin.v3.EndpointsConfigDump
       dynamicEndpointConfigs:
       - endpointConfig:
@@ -868,6 +894,44 @@ xds:
           type: EDS
     - '@type': type.googleapis.com/envoy.admin.v3.ListenersConfigDump
       dynamicListeners:
+      - activeState:
+          listener:
+            '@type': type.googleapis.com/envoy.config.listener.v3.Listener
+            address:
+              socketAddress:
+                address: 0.0.0.0
+                portValue: 19003
+            filterChains:
+            - filters:
+              - name: envoy.filters.network.http_connection_manager
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                  httpFilters:
+                  - name: envoy.filters.http.health_check
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck
+                      headers:
+                      - name: :path
+                        stringMatch:
+                          exact: /ready
+                      passThroughMode: false
+                  - name: envoy.filters.http.router
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                      suppressEnvoyHeaders: true
+                  routeConfig:
+                    name: ready_route
+                    virtualHosts:
+                    - domains:
+                      - '*'
+                      name: ready_route
+                      routes:
+                      - directResponse:
+                          status: 500
+                        match:
+                          prefix: /
+                  statPrefix: eg-ready-http
+            name: envoy-gateway-proxy-ready-0.0.0.0-19003
       - activeState:
           listener:
             '@type': type.googleapis.com/envoy.config.listener.v3.Listener

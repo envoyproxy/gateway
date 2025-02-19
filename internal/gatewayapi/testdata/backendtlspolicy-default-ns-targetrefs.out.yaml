@@ -300,6 +300,7 @@ xdsIR:
             endpoints:
             - host: 2.2.2.2
               port: 3443
+            protocol: HTTP
             tls:
               alpnProtocols: null
               caCertificate:
@@ -318,6 +319,11 @@ xdsIR:
           distinct: false
           exact: /exact
           name: ""
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
   envoy-gateway/gateway-btls2:
     accessLog:
       text:
@@ -357,6 +363,7 @@ xdsIR:
             endpoints:
             - host: 2.2.2.2
               port: 3443
+            protocol: HTTP
             tls:
               alpnProtocols: null
               caCertificate:
@@ -375,3 +382,8 @@ xdsIR:
           distinct: false
           exact: /exact
           name: ""
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

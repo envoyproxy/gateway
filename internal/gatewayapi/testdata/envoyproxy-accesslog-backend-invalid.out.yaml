@@ -17,11 +17,11 @@ gateways:
   status:
     conditions:
     - lastTransitionTime: null
-      message: 'Invalid access log backendRefs: Service monitoring/service-not-found
-        not found'
-      reason: Invalid
+      message: 'Invalid access log backendRefs in the referenced EnvoyProxy: Service
+        monitoring/service-not-found not found'
+      reason: InvalidParameters
       status: "False"
-      type: ListenersNotValid
+      type: Accepted
     listeners:
     - attachedRoutes: 0
       conditions:
@@ -156,3 +156,8 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

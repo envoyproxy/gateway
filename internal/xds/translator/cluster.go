@@ -95,6 +95,7 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 			dnsLookupFamily = clusterv3.Cluster_ALL
 		}
 	}
+
 	cluster := &clusterv3.Cluster{
 		Name:            args.name,
 		DnsLookupFamily: dnsLookupFamily,
@@ -104,6 +105,13 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 			},
 		},
 		PerConnectionBufferLimitBytes: buildBackandConnectionBufferLimitBytes(args.backendConnection),
+	}
+
+	// 50% is the Envoy default value for panic threshold. No need to explicitly set it in this case.
+	if args.healthCheck != nil && args.healthCheck.PanicThreshold != nil && *args.healthCheck.PanicThreshold != 50 {
+		cluster.CommonLbConfig.HealthyPanicThreshold = &xdstype.Percent{
+			Value: float64(*args.healthCheck.PanicThreshold),
+		}
 	}
 
 	cluster.ConnectTimeout = buildConnectTimeout(args.timeout)
@@ -435,6 +443,10 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 		}
 
 		for _, irEp := range ds.Endpoints {
+			healthStatus := corev3.HealthStatus_UNKNOWN
+			if irEp.Draining {
+				healthStatus = corev3.HealthStatus_DRAINING
+			}
 			lbEndpoint := &endpointv3.LbEndpoint{
 				Metadata: metadata,
 				HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
@@ -442,6 +454,7 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 						Address: buildAddress(irEp),
 					},
 				},
+				HealthStatus: healthStatus,
 			}
 			// Set default weight of 1 for all endpoints.
 			lbEndpoint.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: 1}

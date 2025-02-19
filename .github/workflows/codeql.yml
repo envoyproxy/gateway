@@ -36,14 +36,14 @@ jobs:
     - uses: ./tools/github-actions/setup-deps
 
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@df409f7d9260372bd5f19e5b04e83cb3c43714ae  # v3.27.9
+      uses: github/codeql-action/init@9e8d0789d4a0fa9ceb6b1738f7e269594bdd67f0  # v3.28.9
       with:
         languages: ${{ matrix.language }}
 
     - name: Autobuild
-      uses: github/codeql-action/autobuild@df409f7d9260372bd5f19e5b04e83cb3c43714ae  # v3.27.9
+      uses: github/codeql-action/autobuild@9e8d0789d4a0fa9ceb6b1738f7e269594bdd67f0  # v3.28.9
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@df409f7d9260372bd5f19e5b04e83cb3c43714ae  # v3.27.9
+      uses: github/codeql-action/analyze@9e8d0789d4a0fa9ceb6b1738f7e269594bdd67f0  # v3.28.9
       with:
         category: "/language:${{matrix.language}}"

@@ -5,8 +5,10 @@ metadata:
   namespace: gateway-conformance-infra
   name: api-key-auth-users-secret-1
 data:
-  client1: "a2V5MQ==" # key1
-  client2: "a2V5Mg==" # key2
+  # key1
+  client1: "a2V5MQ=="
+  # key2
+  client2: "a2V5Mg=="
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -15,15 +17,15 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-  - name: same-namespace
+    - name: same-namespace
   rules:
-  - matches:
-    - path:
-        type: Exact
-        value: /api-key-auth-header
-    backendRefs:
-    - name: infra-backend-v1
-      port: 8080
+    - matches:
+        - path:
+            type: Exact
+            value: /api-key-auth-header
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -32,15 +34,15 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-  - name: same-namespace
+    - name: same-namespace
   rules:
-  - matches:
-    - path:
-        type: Exact
-        value: /api-key-auth-cookie
-    backendRefs:
-    - name: infra-backend-v1
-      port: 8080
+    - matches:
+        - path:
+            type: Exact
+            value: /api-key-auth-cookie
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -49,15 +51,15 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-  - name: same-namespace
+    - name: same-namespace
   rules:
-  - matches:
-    - path:
-        type: Exact
-        value: /api-key-auth-query
-    backendRefs:
-    - name: infra-backend-v1
-      port: 8080
+    - matches:
+        - path:
+            type: Exact
+            value: /api-key-auth-query
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
@@ -66,14 +68,14 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
-  - group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: http-with-api-key-auth-header
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-with-api-key-auth-header
   apiKeyAuth:
     extractFrom:
-    - headers: ["X-API-KEY"]
+      - headers: ["X-API-KEY"]
     credentialRefs:
-    - name: "api-key-auth-users-secret-1"
+      - name: "api-key-auth-users-secret-1"
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
@@ -82,14 +84,14 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
-  - group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: http-with-api-key-auth-cookie
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-with-api-key-auth-cookie
   apiKeyAuth:
     extractFrom:
-    - cookies: ["X-API-KEY"]
+      - cookies: ["X-API-KEY"]
     credentialRefs:
-    - name: "api-key-auth-users-secret-1"
+      - name: "api-key-auth-users-secret-1"
 
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -99,11 +101,11 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
-  - group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: http-with-api-key-auth-query
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-with-api-key-auth-query
   apiKeyAuth:
     extractFrom:
-    - params: ["X-API-KEY"]
+      - params: ["X-API-KEY"]
     credentialRefs:
-    - name: "api-key-auth-users-secret-1"
+      - name: "api-key-auth-users-secret-1"

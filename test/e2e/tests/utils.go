@@ -330,11 +330,11 @@ func EnvoyExtensionPolicyMustBeAccepted(t *testing.T, client client.Client, poli
 		}
 
 		if policyAcceptedByAncestor(policy.Status.Ancestors, controllerName, ancestorRef) {
-			tlog.Logf(t, "EnvoyExtensionPolicy has been accepted: %v", policy)
+			tlog.Logf(t, "EnvoyExtensionPolicy has been accepted: %+v", policy)
 			return true, nil
 		}
 
-		tlog.Logf(t, "EnvoyExtensionPolicy not yet accepted: %v", policy)
+		tlog.Logf(t, "EnvoyExtensionPolicy not yet accepted: %+v", policy)
 		return false, nil
 	})
 
@@ -365,6 +365,8 @@ func BackendMustBeAccepted(t *testing.T, client client.Client, backendName types
 	require.NoErrorf(t, waitErr, "error waiting for Backend to be accepted")
 }
 
+// ScrapeMetrics
+// TODO: use QueryPrometheus from test/e2e/tests/promql.go instead
 func ScrapeMetrics(t *testing.T, c client.Client, nn types.NamespacedName, port int32, path string) error {
 	url, err := RetrieveURL(c, nn, port, path)
 	if err != nil {

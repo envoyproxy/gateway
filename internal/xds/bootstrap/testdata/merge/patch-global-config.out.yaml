@@ -143,17 +143,10 @@ static_resources:
         typed_config:
           '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
           http_filters:
-          - name: envoy.filters.http.health_check
-            typed_config:
-              '@type': type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck
-              headers:
-              - name: :path
-                string_match:
-                  exact: /ready
-              pass_through_mode: false
           - name: envoy.filters.http.router
             typed_config:
               '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+          normalize_path: true
           route_config:
             name: local_route
             virtual_hosts:
@@ -162,8 +155,11 @@ static_resources:
               name: prometheus_stats
               routes:
               - match:
-                  prefix: /stats/prometheus
+                  headers:
+                  - exact_match: GET
+                    name: :method
+                  path: /stats/prometheus
                 route:
                   cluster: prometheus_stats
-          stat_prefix: eg-ready-http
-    name: envoy-gateway-proxy-ready-0.0.0.0-19001
+          stat_prefix: eg-stats-http
+    name: envoy-gateway-proxy-stats-0.0.0.0-19001

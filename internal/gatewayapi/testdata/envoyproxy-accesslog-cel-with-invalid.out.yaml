@@ -17,10 +17,11 @@ gateways:
   status:
     conditions:
     - lastTransitionTime: null
-      message: 'Invalid access log backendRefs: invalid CEL expression: )++++'
-      reason: Invalid
+      message: 'Invalid access log backendRefs in the referenced EnvoyProxy: invalid
+        CEL expression: )++++'
+      reason: InvalidParameters
       status: "False"
-      type: ListenersNotValid
+      type: Accepted
     listeners:
     - attachedRoutes: 0
       conditions:
@@ -156,3 +157,8 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

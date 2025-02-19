@@ -2,45 +2,27 @@ date: Pending
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
-  The Container `ports` field of the gateway instance has been removed, which will cause the gateway Pod to be rebuilt when upgrading the version.
-  ClientTrafficPolicy previously treated an empty TLS ALPNProtocols list as being undefined and applied Envoy Gateway defaults.
-  An empty TLS ALPNProtocols list is now treated as user-defined disablement of the TLS ALPN extension.
-  Outlier detection (passive health check) is now disabled by default.
-  refer to https://gateway.envoyproxy.io/docs/api/extension_types/#backendtrafficpolicy for working with passive health checks.
-  Envoy Gateway treats errors in calls to an extension service as fail-closed by default. Any error returned from the extension server will replace the affected resource with an "Internal Server Error" immediate response. The previous behavior can be enabled by setting the `failOpen` field to `true` in the extension service configuration.
-  Envoy Gateway now return a 500 response when a ClientTrafficPolicy translation fails for HTTP/GRPC routes, and forwards
-  client traffic to an empty cluster when a ClientTrafficPolicy translation fails for TCP routes.
+  Use a dedicated listener port(19003) for envoy proxy readiness
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
-  Add a security update here
 
 # New features or capabilities added in this release.
 new features: |
-  Added support for trusted CIDRs in the ClientIPDetectionSettings API
-  Added support for sending attributes to external processor in EnvoyExtensionPolicy API
-  Added support for patching EnvoyProxy.spec.provider.kubernetes.envoyHpa and EnvoyProxy.spec.provider.kubernetes.envoyPDB
-  Added support for defining rateLimitHpa in EnvoyGateway API
-  Added support for preserving the user defined HTTPRoute match order in EnvoyProxy API
-  Added support for response compression in the BackendTrafficPolicy API
-  Added support for cost specifier in the rate limit API.
-  Added support for specifying dynamic metadata namespaces that External Processing services can access read from and write to in EnvoyExtensionPolicy API
-  Added support for API Key Authentication in the SecurityPolicy API
-  Added support for GEP-1731 (HTTPRoute Retries)
+  Added support for configuring maxUnavailable in KubernetesPodDisruptionBudgetSpec
+  Added support for percentage-based request mirroring
+  Allow matchExpressions in TargetSelector
+  Add defaulter for gateway-api resources loading from file to be able to set default values.
+  Added support for defining Lua EnvoyExtensionPolicies
 
 bug fixes: |
 
-
 # Enhancements that improve performance.
 performance improvements: |
-  Add a performance improvement here
 
 # Deprecated features or APIs.
 deprecations: |
-  Add a deprecation here
 
 # Other notable changes not covered by the above sections.
 Other changes: |
-  Modified the base container image to gcr.io/distroless/base-nossl:nonroot
-  [SecurityPolicy] Modify the JWT Provider Issuer validation constraint
-  Add support for Kubernetes 1.32.x in the test matrix, and remove support for Kubernetes 1.28.x.
+

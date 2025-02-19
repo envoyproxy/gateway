@@ -160,12 +160,14 @@ xdsIR:
             endpoints:
             - host: 1.1.1.1
               port: 3001
+            protocol: HTTP
             weight: 1
           - addressType: IP
             endpoints:
             - host: 2.2.2.2
               port: 3001
             priority: 1
+            protocol: HTTP
             weight: 1
         hostname: '*'
         isHTTP2: false
@@ -178,3 +180,8 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

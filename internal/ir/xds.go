@@ -27,7 +27,6 @@ import (
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	egv1a1validation "github.com/envoyproxy/gateway/api/v1alpha1/validation"
 )
 
 const (
@@ -78,6 +77,7 @@ var (
 	ErrOutlierDetectionIntervalInvalid          = errors.New("field OutlierDetection.Interval must be specified")
 	ErrBothXForwardedForAndCustomHeaderInvalid  = errors.New("only one of ClientIPDetection.XForwardedFor and ClientIPDetection.CustomHeader must be set")
 	ErrBothNumTrustedHopsAndTrustedCIDRsInvalid = errors.New("only one of ClientIPDetection.XForwardedFor.NumTrustedHops and ClientIPDetection.XForwardedFor.TrustedCIDRs must be set")
+	ErrPanicThresholdInvalid                    = errors.New("PanicThreshold value is outside of 0-100 range")
 
 	redacted = []byte("[redacted]")
 )
@@ -131,6 +131,8 @@ func (p *PrivateBytes) UnmarshalJSON(data []byte) error {
 // used by the xDS Translator to convert it into xDS resources.
 // +k8s:deepcopy-gen=true
 type Xds struct {
+	// ReadyListener is the listener that is ready to accept traffic.
+	ReadyListener *ReadyListener `json:"readyListener,omitempty" yaml:"readyListener,omitempty"`
 	// AccessLog configuration for the gateway.
 	AccessLog *AccessLog `json:"accessLog,omitempty" yaml:"accessLog,omitempty"`
 	// Tracing configuration for the gateway.
@@ -255,11 +257,8 @@ type CoreListenerDetails struct {
 	// Metadata is used to enrich envoy resource metadata with user and provider-specific information
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 	// IPFamily specifies the IP address family used by the Gateway for its listening ports.
-	IPFamily *IPFamily `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
+	IPFamily *egv1a1.IPFamily `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
 }
-
-// IPFamily specifies the IP address family used by the Gateway for its listening ports.
-type IPFamily = egv1a1.IPFamily
 
 func (l CoreListenerDetails) GetName() string {
 	return l.Name
@@ -704,7 +703,7 @@ type HTTPRoute struct {
 	// Redirections to be returned for this route. Takes precedence over Destinations.
 	Redirect *Redirect `json:"redirect,omitempty" yaml:"redirect,omitempty"`
 	// Destination that requests to this HTTPRoute will be mirrored to
-	Mirrors []*RouteDestination `json:"mirrors,omitempty" yaml:"mirrors,omitempty"`
+	Mirrors []*MirrorPolicy `json:"mirrors,omitempty" yaml:"mirrors,omitempty"`
 	// Destination associated with this matched route.
 	Destination *RouteDestination `json:"destination,omitempty" yaml:"destination,omitempty"`
 	// Rewrite to be changed for this route.
@@ -856,18 +855,6 @@ type SecurityFeatures struct {
 	Authorization *Authorization `json:"authorization,omitempty" yaml:"authorization,omitempty"`
 }
 
-func (s *SecurityFeatures) Validate() error {
-	var errs error
-
-	if s.JWT != nil {
-		if err := s.JWT.Validate(); err != nil {
-			errs = errors.Join(errs, err)
-		}
-	}
-
-	return errs
-}
-
 // EnvoyExtensionFeatures holds the information associated with the Envoy Extension Policy.
 // +k8s:deepcopy-gen=true
 type EnvoyExtensionFeatures struct {
@@ -875,6 +862,8 @@ type EnvoyExtensionFeatures struct {
 	ExtProcs []ExtProc `json:"extProcs,omitempty" yaml:"extProcs,omitempty"`
 	// Wasm extensions
 	Wasms []Wasm `json:"wasms,omitempty" yaml:"wasms,omitempty"`
+	// Lua extensions
+	Luas []Lua `json:"luas,omitempty" yaml:"luas,omitempty"`
 }
 
 // UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension
@@ -922,11 +911,62 @@ type CORS struct {
 // +k8s:deepcopy-gen=true
 type JWT struct {
 	// AllowMissing determines whether a missing JWT is acceptable.
-	//
 	AllowMissing bool `json:"allowMissing,omitempty" yaml:"allowMissing,omitempty"`
 
 	// Providers defines a list of JSON Web Token (JWT) authentication providers.
-	Providers []egv1a1.JWTProvider `json:"providers,omitempty" yaml:"providers,omitempty"`
+	Providers []JWTProvider `json:"providers,omitempty" yaml:"providers,omitempty"`
+}
+
+// JWTProvider defines the schema for the JWT Provider.
+//
+// +k8s:deepcopy-gen=true
+type JWTProvider struct {
+	// Name defines a unique name for the JWT provider. A name can have a variety of forms,
+	// including RFC1123 subdomains, RFC 1123 labels, or RFC 1035 labels.
+	Name string `json:"name"`
+
+	// Issuer is the principal that issued the JWT and takes the form of a URL or email address.
+	Issuer string `json:"issuer,omitempty"`
+
+	// Audiences is a list of JWT audiences allowed access. For additional details, see
+	// https://tools.ietf.org/html/rfc7519#section-4.1.3. If not provided, JWT audiences
+	// are not checked.
+	Audiences []string `json:"audiences,omitempty"`
+
+	// RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote
+	// HTTP/HTTPS endpoint.
+	RemoteJWKS RemoteJWKS `json:"remoteJWKS"`
+
+	// ClaimToHeaders is a list of JWT claims that must be extracted into HTTP request headers
+	// For examples, following config:
+	// The claim must be of type; string, int, double, bool. Array type claims are not supported
+	ClaimToHeaders []egv1a1.ClaimToHeader `json:"claimToHeaders,omitempty"`
+
+	// RecomputeRoute clears the route cache and recalculates the routing decision.
+	// This field must be enabled if the headers generated from the claim are used for
+	// route matching decisions. If the recomputation selects a new route, features targeting
+	// the new matched route will be applied.
+	RecomputeRoute *bool `json:"recomputeRoute,omitempty"`
+
+	// ExtractFrom defines different ways to extract the JWT token from HTTP request.
+	// If empty, it defaults to extract JWT token from the Authorization HTTP request header using Bearer schema
+	// or access_token from query parameters.
+	ExtractFrom *egv1a1.JWTExtractor `json:"extractFrom,omitempty"`
+}
+
+// RemoteJWKSBackend holds the configuration for a remote JWKS backend.
+//
+// +k8s:deepcopy-gen=true
+type RemoteJWKS struct {
+	// Destination defines the destination for the OIDC Provider.
+	Destination *RouteDestination `json:"destination,omitempty"`
+
+	// Traffic contains configuration for traffic features for the OIDC Provider
+	Traffic *TrafficFeatures `json:"traffic,omitempty"`
+
+	// URI is the HTTPS URI to fetch the JWKS. Envoy's system trust bundle is used to validate the server certificate.
+	// If a custom trust bundle is needed, it can be specified in a BackendTLSConfig resource and target the BackendRefs.
+	URI string `json:"uri"`
 }
 
 // OIDC defines the schema for authenticating HTTP requests using
@@ -1230,6 +1270,19 @@ type FaultInjectionAbort struct {
 	Percentage *float32 `json:"percentage,omitempty" yaml:"percentage,omitempty"`
 }
 
+// MirrorPolicy specifies a destination to mirror traffic in addition
+// to the original destination
+//
+// +kubebuilder:object:generate=true
+type MirrorPolicy struct {
+	// Destination defines the target where the request will be mirrored.
+	Destination *RouteDestination `json:"destination" yaml:"destination"`
+	// Percentage of the traffic to be mirrored by the `destination` field.
+	// When absent, all the traffic (100%) will be mirrored.
+	// Values are in the range of [0.0, 100.0].
+	Percentage *float32 `json:"percentage,omitempty" yaml:"percentage,omitempty"`
+}
+
 // Validate the fields within the HTTPRoute structure
 func (h *HTTPRoute) Validate() error {
 	var errs error
@@ -1276,7 +1329,7 @@ func (h *HTTPRoute) Validate() error {
 	}
 	if h.Mirrors != nil {
 		for _, mirror := range h.Mirrors {
-			if err := mirror.Validate(); err != nil {
+			if err := mirror.Destination.Validate(); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
@@ -1331,21 +1384,6 @@ func (h *HTTPRoute) Validate() error {
 		if err := h.Traffic.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
-	}
-	if h.Security != nil {
-		if err := h.Security.Validate(); err != nil {
-			errs = errors.Join(errs, err)
-		}
-	}
-
-	return errs
-}
-
-func (j *JWT) Validate() error {
-	var errs error
-
-	if err := egv1a1validation.ValidateJWTProvider(j.Providers); err != nil {
-		errs = errors.Join(errs, err)
 	}
 
 	return errs
@@ -1414,12 +1452,12 @@ type DestinationSetting struct {
 	AddressType *DestinationAddressType `json:"addressType,omitempty" yaml:"addressType,omitempty"`
 	// IPFamily specifies the IP family (IPv4 or IPv6) to use for this destination's endpoints.
 	// This is derived from the backend service and endpoint slice information.
-	IPFamily *IPFamily           `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
+	IPFamily *egv1a1.IPFamily    `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
 	TLS      *TLSUpstreamConfig  `json:"tls,omitempty" yaml:"tls,omitempty"`
 	Filters  *DestinationFilters `json:"filters,omitempty" yaml:"filters,omitempty"`
 }
 
-// Validate the fields within the RouteDestination structure
+// Validate the fields within the DestinationSetting structure
 func (d *DestinationSetting) Validate() error {
 	var errs error
 	for _, ep := range d.Endpoints {
@@ -1449,6 +1487,8 @@ type DestinationEndpoint struct {
 	Port uint32 `json:"port" yaml:"port"`
 	// Path refers to the Unix Domain Socket
 	Path *string `json:"path,omitempty" yaml:"path,omitempty"`
+	// Draining is true if this endpoint should be drained
+	Draining bool `json:"draining,omitempty" yaml:"draining,omitempty"`
 }
 
 // Validate the fields within the DestinationEndpoint structure
@@ -1480,10 +1520,11 @@ func (d DestinationEndpoint) Validate() error {
 }
 
 // NewDestEndpoint creates a new DestinationEndpoint.
-func NewDestEndpoint(host string, port uint32) *DestinationEndpoint {
+func NewDestEndpoint(host string, port uint32, draining bool) *DestinationEndpoint {
 	return &DestinationEndpoint{
-		Host: host,
-		Port: port,
+		Host:     host,
+		Port:     port,
+		Draining: draining,
 	}
 }
 
@@ -1992,6 +2033,15 @@ const (
 	ProxyAccessLogTypeListener = ProxyAccessLogType(egv1a1.ProxyAccessLogTypeListener)
 )
 
+// ReadyListener holds the configuration for ready listener.
+// +k8s:deepcopy-gen=true
+type ReadyListener struct {
+	IPFamily egv1a1.IPFamily `json:"ipFamily" yaml:"ipFamily"`
+	Address  string          `json:"address" yaml:"address"`
+	Port     uint32          `json:"port" yaml:"port"`
+	Path     string          `json:"path" yaml:"path"`
+}
+
 // AccessLog holds the access logging configuration.
 // +k8s:deepcopy-gen=true
 type AccessLog struct {
@@ -2331,6 +2381,8 @@ type HealthCheck struct {
 	Active *ActiveHealthCheck `json:"active,omitempty" yaml:"active,omitempty"`
 
 	Passive *OutlierDetection `json:"passive,omitempty" yaml:"passive,omitempty"`
+
+	PanicThreshold *uint32 `json:"panicThreshold,omitempty" yaml:"panicThreshold,omitempty"`
 }
 
 // OutlierDetection defines passive health check settings
@@ -2427,6 +2479,12 @@ func (h *HealthCheck) Validate() error {
 
 		if h.Passive.Interval != nil && h.Passive.Interval.Duration == 0 {
 			errs = errors.Join(errs, ErrOutlierDetectionIntervalInvalid)
+		}
+	}
+
+	if h.PanicThreshold != nil {
+		if *h.PanicThreshold > 100 {
+			errs = errors.Join(errs, ErrPanicThresholdInvalid)
 		}
 	}
 
@@ -2761,6 +2819,19 @@ type ExtProc struct {
 
 	// ReceivingMetadataNamespaces are metadata namespaces updatable by external processor
 	ReceivingMetadataNamespaces []string `json:"receivingMetadataNamespaces,omitempty" yaml:"receivingMetadataNamespaces,omitempty"`
+
+	// AllowModeOverride allows the external processor to modify the processing mode.
+	AllowModeOverride bool `json:"allowModeOverride,omitempty" yaml:"allowModeOverride,omitempty"`
+}
+
+// Lua holds the information associated with Lua extensions
+// +k8s:deepcopy-gen=true
+type Lua struct {
+	// Name is a unique name for the LUa configuration.
+	// The xds translator only generates one Lua filter for each unique name
+	Name string
+	// Code is the Lua source code
+	Code *string
 }
 
 // Wasm holds the information associated with the Wasm extensions.
