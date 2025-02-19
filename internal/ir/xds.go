@@ -647,11 +647,12 @@ type HeaderSettings struct {
 	// PreserveXRequestID configures whether Envoy will keep the x-request-id header if passed for a request that is edge
 	// (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
 	// It defaults to false.
+	// Deprecated: use RequestID instead
 	PreserveXRequestID bool `json:"preserveXRequestID,omitempty" yaml:"preserveXRequestID,omitempty"`
 
-	// RequestID configures whether envoy will generate the x-request-id header if it does not exist.
-	// Generating a random UUID4 is expensive so in high throughput scenarios where this feature is not desired it can be disabled.
-	// This feature is enabled by default when empty
+	// RequestID configures Envoy's behavior for handling the `X-Request-ID` header.
+	// Defaults to `Generate` and builds the `X-Request-ID` for every request and ignores pre-existing values from the edge.
+	// (An "edge request" refers to a request from an external client to the Envoy entrypoint.)
 	RequestID *RequestIDAction `json:"requestID,omitempty" yaml:"requestID,omitempty"`
 
 	// EarlyAddRequestHeaders defines headers that would be added before envoy request processing.
