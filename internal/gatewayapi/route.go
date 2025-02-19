@@ -220,9 +220,6 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 					continue
 				}
 
-				if ds == nil {
-					continue
-				}
 				// If the route already has a direct response or redirect configured, then it was from a filter so skip
 				// processing any destinations for this route.
 				if route.DirectResponse != nil || route.Redirect != nil {
@@ -234,7 +231,9 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 						Name: irRouteDestinationName(httpRoute, ruleIdx),
 					}
 				}
-				route.Destination.Settings = append(route.Destination.Settings, ds)
+				if ds != nil {
+					route.Destination.Settings = append(route.Destination.Settings, ds)
+				}
 			}
 		}
 
