@@ -341,8 +341,21 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 		EarlyHeaderMutationExtensions: buildEarlyHeaderMutation(irListener.Headers),
 	}
 
-	if generateRequestID := buildGenerateRequestID(irListener.Headers); generateRequestID != nil {
-		mgr.GenerateRequestId = generateRequestID
+	if requestID := ptr.Deref(irListener.Headers, ir.HeaderSettings{}).RequestID; requestID != nil {
+		switch *requestID {
+		case ir.RequestIDActionPreserveOrGenerate:
+			mgr.GenerateRequestId = wrapperspb.Bool(true)
+			mgr.PreserveExternalRequestId = true
+		case ir.RequestIDActionPreserve:
+			mgr.GenerateRequestId = wrapperspb.Bool(false)
+			mgr.PreserveExternalRequestId = true
+		case ir.RequestIDActionDisabled:
+			mgr.GenerateRequestId = wrapperspb.Bool(false)
+			mgr.PreserveExternalRequestId = false
+		case ir.RequestIDActionGenerate:
+			mgr.GenerateRequestId = wrapperspb.Bool(true)
+			mgr.PreserveExternalRequestId = false
+		}
 	}
 
 	if mgr.ForwardClientCertDetails == hcmv3.HttpConnectionManager_APPEND_FORWARD || mgr.ForwardClientCertDetails == hcmv3.HttpConnectionManager_SANITIZE_SET {
@@ -428,13 +441,6 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 		xdsListener.DefaultFilterChain = filterChain
 	}
 
-	return nil
-}
-
-func buildGenerateRequestID(headerSettings *ir.HeaderSettings) *wrapperspb.BoolValue {
-	if headerSettings != nil && headerSettings.GenerateRequestID != nil {
-		return wrapperspb.Bool(*headerSettings.GenerateRequestID)
-	}
 	return nil
 }
 

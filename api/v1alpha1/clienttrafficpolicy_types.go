@@ -132,15 +132,17 @@ type HeaderSettings struct {
 	// PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge
 	// (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
 	// It defaults to false.
+	// Deprecated: use the `RequestID` field instead
 	//
 	// +optional
 	PreserveXRequestID *bool `json:"preserveXRequestID,omitempty"`
 
-	// GenerateRequestID configures whether envoy will generate the x-request-id header if it does not exist.
+	// RequestID configures whether envoy will generate the x-request-id header if it does not exist.
 	// Generating a random UUID4 is expensive so in high throughput scenarios where this feature is not desired it can be disabled.
 	// This feature is enabled by default when empty
+	//
 	// +optional
-	GenerateRequestID *bool `json:"generateRequestID,omitempty"`
+	RequestID *RequestIDAction `json:"requestID,omitempty"`
 
 	// EarlyRequestHeaders defines settings for early request header modification, before envoy performs
 	// routing, tracing and built-in header manipulation.
@@ -164,6 +166,24 @@ const (
 	// is dropped before the filter chain is invoked and as such filters will not see
 	// dropped headers.
 	WithUnderscoresActionDropHeader WithUnderscoresAction = "DropHeader"
+)
+
+// RequestIDAction configures the action to take for populating or preserving the
+// `X-Request-ID` header for a request.
+//
+// +kubebuilder:validation:Enum=PreserveOrGenerate;Preserve;Generate;Disabled
+type RequestIDAction string
+
+const (
+	// Preserve `X-Request-ID` if already presenet or generate if empty
+	RequestIDActionPreserveOrGenerate RequestIDAction = "PreserveOrGenerate"
+	// Preserve `X-Request-ID` if already presenet, do not generate when empty
+	RequestIDActionPreserve RequestIDAction = "Preserve"
+	// Always generate `X-Request-ID` header, do not preserve `X-Request-ID`
+	// header if it exists. This is the default behavior.
+	RequestIDActionGenerate RequestIDAction = "Generate"
+	// Do not preserve or generate `X-Request-ID` header
+	RequestIDActionDisabled RequestIDAction = "Disabled"
 )
 
 // XForwardedClientCert configures how Envoy Proxy handle the x-forwarded-client-cert (XFCC) HTTP header.

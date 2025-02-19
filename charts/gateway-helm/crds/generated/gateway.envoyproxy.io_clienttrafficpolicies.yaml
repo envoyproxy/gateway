@@ -317,18 +317,24 @@ spec:
                       EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests
                       and responses.
                     type: boolean
-                  generateRequestID:
-                    description: |-
-                      GenerateRequestID configures whether envoy will generate the x-request-id header if it does not exist.
-                      Generating a random UUID4 is expensive so in high throughput scenarios where this feature is not desired it can be disabled.
-                      This feature is enabled by default when empty
-                    type: boolean
                   preserveXRequestID:
                     description: |-
                       PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge
                       (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
                       It defaults to false.
+                      Deprecated: use the `RequestID` field instead
                     type: boolean
+                  requestID:
+                    description: |-
+                      RequestID configures whether envoy will generate the x-request-id header if it does not exist.
+                      Generating a random UUID4 is expensive so in high throughput scenarios where this feature is not desired it can be disabled.
+                      This feature is enabled by default when empty
+                    enum:
+                    - PreserveOrGenerate
+                    - Preserve
+                    - Generate
+                    - Disabled
+                    type: string
                   withUnderscoresAction:
                     description: |-
                       WithUnderscoresAction configures the action to take when an HTTP header with underscores

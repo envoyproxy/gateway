@@ -490,6 +490,15 @@ const (
 	WithUnderscoresActionDropHeader    = WithUnderscoresAction(egv1a1.WithUnderscoresActionDropHeader)
 )
 
+type RequestIDAction egv1a1.RequestIDAction
+
+const (
+	RequestIDActionPreserveOrGenerate = RequestIDAction(egv1a1.RequestIDActionPreserveOrGenerate)
+	RequestIDActionPreserve           = RequestIDAction(egv1a1.RequestIDActionPreserve)
+	RequestIDActionGenerate           = RequestIDAction(egv1a1.RequestIDActionGenerate)
+	RequestIDActionDisabled           = RequestIDAction(egv1a1.RequestIDActionDisabled)
+)
+
 // Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.
 // +k8s:deepcopy-gen=true
 type XForwardedClientCert struct {
@@ -640,10 +649,10 @@ type HeaderSettings struct {
 	// It defaults to false.
 	PreserveXRequestID bool `json:"preserveXRequestID,omitempty" yaml:"preserveXRequestID,omitempty"`
 
-	// GenerateRequestID configures whether envoy will generate the x-request-id header if it does not exist.
+	// RequestID configures whether envoy will generate the x-request-id header if it does not exist.
 	// Generating a random UUID4 is expensive so in high throughput scenarios where this feature is not desired it can be disabled.
 	// This feature is enabled by default when empty
-	GenerateRequestID *bool `json:"generateRequestID,omitempty" yaml:"generateRequestID,omitempty"`
+	RequestID *RequestIDAction `json:"requestID,omitempty" yaml:"requestID,omitempty"`
 
 	// EarlyAddRequestHeaders defines headers that would be added before envoy request processing.
 	EarlyAddRequestHeaders []AddHeader `json:"earlyAddRequestHeaders,omitempty" yaml:"earlyAddRequestHeaders,omitempty"`

@@ -2252,8 +2252,8 @@ _Appears in:_
 | `disableRateLimitHeaders` | _boolean_ |  false  |  | DisableRateLimitHeaders configures Envoy Proxy to omit the "X-RateLimit-" response headers<br />when rate limiting is enabled. |
 | `xForwardedClientCert` | _[XForwardedClientCert](#xforwardedclientcert)_ |  false  |  | XForwardedClientCert configures how Envoy Proxy handle the x-forwarded-client-cert (XFCC) HTTP header.<br /><br />x-forwarded-client-cert (XFCC) is an HTTP header used to forward the certificate<br />information of part or all of the clients or proxies that a request has flowed through,<br />on its way from the client to the server.<br /><br />Envoy proxy may choose to sanitize/append/forward the XFCC header before proxying the request.<br /><br />If not set, the default behavior is sanitizing the XFCC header. |
 | `withUnderscoresAction` | _[WithUnderscoresAction](#withunderscoresaction)_ |  false  |  | WithUnderscoresAction configures the action to take when an HTTP header with underscores<br />is encountered. The default action is to reject the request. |
-| `preserveXRequestID` | _boolean_ |  false  |  | PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge<br />(Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.<br />It defaults to false. |
-| `generateRequestID` | _boolean_ |  false  |  | GenerateRequestID configures whether envoy will generate the x-request-id header if it does not exist.<br />Generating a random UUID4 is expensive so in high throughput scenarios where this feature is not desired it can be disabled.<br />This feature is enabled by default when empty |
+| `preserveXRequestID` | _boolean_ |  false  |  | PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge<br />(Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.<br />It defaults to false.<br />Deprecated: use the `RequestID` field instead |
+| `requestID` | _[RequestIDAction](#requestidaction)_ |  false  |  | RequestID configures whether envoy will generate the x-request-id header if it does not exist.<br />Generating a random UUID4 is expensive so in high throughput scenarios where this feature is not desired it can be disabled.<br />This feature is enabled by default when empty |
 | `earlyRequestHeaders` | _[HTTPHeaderFilter](#httpheaderfilter)_ |  false  |  | EarlyRequestHeaders defines settings for early request header modification, before envoy performs<br />routing, tracing and built-in header manipulation. |
 
 
@@ -3820,6 +3820,24 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `name` | _string_ |  true  |  | Name defines the name of the request header which to extract the value from. |
 | `defaultValue` | _string_ |  false  |  | DefaultValue defines the default value to use if the request header is not set. |
+
+
+#### RequestIDAction
+
+_Underlying type:_ _string_
+
+RequestIDAction configures the action to take for populating or preserving the
+`X-Request-ID` header for a request.
+
+_Appears in:_
+- [HeaderSettings](#headersettings)
+
+| Value | Description |
+| ----- | ----------- |
+| `PreserveOrGenerate` | Preserve `X-Request-ID` if already presenet or generate if empty<br /> | 
+| `Preserve` | Preserve `X-Request-ID` if already presenet, do not generate when empty<br /> | 
+| `Generate` | Always generate `X-Request-ID` header, do not preserve `X-Request-ID`<br />header if it exists. This is the default behavior.<br /> | 
+| `Disabled` | Do not preserve or generate `X-Request-ID` header<br /> | 
 
 
 #### ResourceProviderType
