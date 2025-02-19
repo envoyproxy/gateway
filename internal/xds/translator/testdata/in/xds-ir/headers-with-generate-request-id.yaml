@@ -14,7 +14,7 @@ http:
                 - host: "1.1.1.1"
                   port: 8081
     headers:
-      generateRequestID: true
+      requestID: Generate
   - name: "second-listener"
     address: "::"
     port: 8082
