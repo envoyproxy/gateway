@@ -1176,6 +1176,10 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 				)
 				continue
 			}
+			// Skip nil destination settings
+			if ds == nil {
+				continue
+			}
 			destSettings = append(destSettings, ds)
 		}
 
@@ -1229,9 +1233,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 						}
 					}
 				}
-
 				irListener.Routes = append(irListener.Routes, irRoute)
-
 			}
 
 		}
@@ -1260,7 +1262,6 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 				"Multiple routes on the same TCP listener",
 			)
 		}
-
 	}
 }
 

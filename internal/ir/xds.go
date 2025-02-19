@@ -1423,10 +1423,6 @@ func (r *RouteDestination) ToBackendWeights() *BackendWeights {
 	}
 
 	for _, s := range r.Settings {
-		if s.Weight == nil {
-			continue
-		}
-
 		if len(s.Endpoints) > 0 {
 			w.Valid += *s.Weight
 		} else {
