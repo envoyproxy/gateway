@@ -73,18 +73,18 @@ type BackendTrafficPolicySpec struct {
 	//
 	// +optional
 	ResponseOverride []*ResponseOverride `json:"responseOverride,omitempty"`
-	// UpgradeConfigs defines the configuration for protocol upgrades.
+	// HTTPUpgrade defines the configuration for HTTP protocol upgrades.
 	// If not specified, the default upgrade configuration(websocket) will be used.
 	//
 	// +optional
-	UpgradeConfigs []*BackendUpgradeConfig `json:"upgradeConfigs,omitempty"`
+	HTTPUpgrade []*ProtocolUpgradeConfig `json:"httpUpgrade,omitempty"`
 }
 
-type BackendUpgradeConfig struct {
-	// UpgradeType is the case-insensitive name of protocol upgrade.
+type ProtocolUpgradeConfig struct {
+	// Protocol is the case-insensitive name of protocol upgrade.
 	//
 	// +kubebuilder:validation:Required
-	UpgradeType string `json:"upgradeType"`
+	Protocol string `json:"protocol"`
 	// Disabled indicates whether the upgrade is disabled.
 	// +optional
 	Disabled *bool `json:"disabled"`
