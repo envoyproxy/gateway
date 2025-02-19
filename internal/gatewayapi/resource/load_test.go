@@ -20,7 +20,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils/file"
 )
 
-var overrideTestData = flag.Bool("override-testdata", true, "if override the test output data.")
+var overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
 
 func TestIterYAMLBytes(t *testing.T) {
 	inputs := `test: foo1
@@ -50,7 +50,7 @@ test: foo3
 
 func TestLoadAllSupportedResourcesFromYAMLBytes(t *testing.T) {
 	inFile := requireTestDataFile(t, "all-resources", "in")
-	got, err := loadKubernetesYAMLToResources(inFile, true)
+	got, err := LoadResourcesFromYAMLBytes(inFile, true)
 	require.NoError(t, err)
 
 	if *overrideTestData {
