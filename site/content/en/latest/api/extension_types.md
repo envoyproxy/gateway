@@ -2192,6 +2192,7 @@ _Appears in:_
 HeaderMatch defines the match attributes within the HTTP Headers of the request.
 
 _Appears in:_
+- [Principal](#principal)
 - [RateLimitSelectCondition](#ratelimitselectcondition)
 
 | Field | Type | Required | Default | Description |
@@ -3092,6 +3093,11 @@ _Appears in:_
 
 
 
+Principal specifies the client identity of a request.
+A client identity can be a client IP, a JWT claim, username from the Authorization header,
+or any other identity that can be extracted from a custom header.
+
+
 If there are multiple principal types, all principals must match for the rule to match.
 
 _Appears in:_
@@ -3101,6 +3107,8 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `clientCIDRs` | _[CIDR](#cidr) array_ |  false  |  | ClientCIDRs are the IP CIDR ranges of the client.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64"<br /><br />If multiple CIDR ranges are specified, one of the CIDR ranges must match<br />the client IP for the rule to match.<br /><br />The client IP is inferred from the X-Forwarded-For header, a custom header,<br />or the proxy protocol.<br />You can use the `ClientIPDetection` or the `EnableProxyProtocol` field in<br />the `ClientTrafficPolicy` to configure how the client IP is detected. |
 | `jwt` | _[JWTPrincipal](#jwtprincipal)_ |  false  |  | JWT authorize the request based on the JWT claims and scopes.<br />Note: in order to use JWT claims for authorization, you must configure the<br />JWT authentication in the same `SecurityPolicy`. |
+| `headers` | _[HeaderMatch](#headermatch) array_ |  false  |  | Headers authorize the request based on the headers in the request.<br />If multiple headers are specified, all headers must match for the rule to match. |
+| `methods` | _HTTPMethod array_ |  false  |  | Methods authorize the request based on the HTTP methods.<br />If multiple methods are specified, one of the methods must match for the rule to match. |
 
 
 #### ProcessingModeOptions

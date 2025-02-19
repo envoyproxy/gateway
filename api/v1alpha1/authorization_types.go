@@ -5,6 +5,10 @@
 
 package v1alpha1
 
+import (
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+)
+
 // Authorization defines the authorization configuration.
 //
 // Note: if neither `Rules` nor `DefaultAction` is specified, the default action is to deny all requests.
@@ -48,7 +52,7 @@ type AuthorizationRule struct {
 // Principal specifies the client identity of a request.
 // A client identity can be a client IP, a JWT claim, username from the Authorization header,
 // or any other identity that can be extracted from a custom header.
-
+//
 // If there are multiple principal types, all principals must match for the rule to match.
 //
 // +kubebuilder:validation:XValidation:rule="(has(self.clientCIDRs) || has(self.jwt))",message="at least one of clientCIDRs or jwt must be specified"
@@ -72,6 +76,18 @@ type Principal struct {
 	// JWT authentication in the same `SecurityPolicy`.
 	// +optional
 	JWT *JWTPrincipal `json:"jwt,omitempty"`
+
+	// Headers authorize the request based on the headers in the request.
+	// If multiple headers are specified, all headers must match for the rule to match.
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	Headers []HeaderMatch `json:"headers,omitempty"`
+
+	// Methods authorize the request based on the HTTP methods.
+	// If multiple methods are specified, one of the methods must match for the rule to match.
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	Methods []gwapiv1.HTTPMethod `json:"methods,omitempty"`
 }
 
 // JWTPrincipal specifies the client identity of a request based on the JWT claims and scopes.

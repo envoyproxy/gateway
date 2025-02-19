@@ -220,7 +220,7 @@ type SourceMatch struct {
 }
 
 // HeaderMatch defines the match attributes within the HTTP Headers of the request.
-type HeaderMatch struct { // TODO: zhaohuabing this type could be replaced with a general purpose StringMatch type.
+type HeaderMatch struct {
 	// Type specifies how to match against the value of the header.
 	//
 	// +optional
