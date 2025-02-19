@@ -220,6 +220,9 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 					continue
 				}
 
+				if ds == nil {
+					continue
+				}
 				// If the route already has a direct response or redirect configured, then it was from a filter so skip
 				// processing any destinations for this route.
 				if route.DirectResponse != nil || route.Redirect != nil {
@@ -231,9 +234,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 						Name: irRouteDestinationName(httpRoute, ruleIdx),
 					}
 				}
-				if ds != nil {
-					route.Destination.Settings = append(route.Destination.Settings, ds)
-				}
+				route.Destination.Settings = append(route.Destination.Settings, ds)
 			}
 		}
 
@@ -1033,7 +1034,11 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 				)
 				continue
 			}
-			destSettings = append(destSettings, ds)
+
+			// Skip nil destination settings
+			if ds != nil {
+				destSettings = append(destSettings, ds)
+			}
 		}
 
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
@@ -1176,10 +1181,9 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 				continue
 			}
 			// Skip nil destination settings
-			if ds == nil {
-				continue
+			if ds != nil {
+				destSettings = append(destSettings, ds)
 			}
-			destSettings = append(destSettings, ds)
 		}
 
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
