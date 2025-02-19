@@ -1233,7 +1233,9 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 						}
 					}
 				}
+
 				irListener.Routes = append(irListener.Routes, irRoute)
+
 			}
 
 		}
@@ -1262,6 +1264,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 				"Multiple routes on the same TCP listener",
 			)
 		}
+
 	}
 }
 
