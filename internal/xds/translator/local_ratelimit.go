@@ -27,6 +27,7 @@ import (
 const (
 	localRateLimitFilterStatPrefix = "http_local_rate_limiter"
 	descriptorMaskedRemoteAddress  = "masked_remote_address"
+	descriptorRemoteAddress        = "remote_address"
 )
 
 func init() {
@@ -129,10 +130,7 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) e
 
 	local := irRoute.Traffic.RateLimit.Local
 
-	rateLimits, descriptors, err := buildRouteLocalRateLimits(local)
-	if err != nil {
-		return err
-	}
+	rateLimits, descriptors := buildRouteLocalRateLimits(local)
 	routeAction.RateLimits = rateLimits
 
 	filterCfg := route.GetTypedPerFilterConfig()
@@ -189,7 +187,7 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) e
 }
 
 func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
-	[]*routev3.RateLimit, []*rlv3.LocalRateLimitDescriptor, error,
+	[]*routev3.RateLimit, []*rlv3.LocalRateLimitDescriptor,
 ) {
 	var rateLimits []*routev3.RateLimit
 	var descriptors []*rlv3.LocalRateLimitDescriptor
@@ -201,42 +199,53 @@ func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
 
 		// HeaderMatches
 		for mIdx, match := range rule.HeaderMatches {
-			if match.Distinct {
-				// This is a sanity check. This should never happen because Gateway
-				// API translator should have already validated this.
-				if rule.CIDRMatch.Distinct {
-					return nil, nil, errors.New("local rateLimit does not support distinct HeaderMatch")
-				}
-			}
+			var action *routev3.RateLimit_Action
+			var entry *rlv3.RateLimitDescriptor_Entry
 
-			// Setup HeaderValueMatch actions
-			descriptorKey := getRouteRuleDescriptor(rIdx, mIdx)
-			descriptorVal := getRouteRuleDescriptor(rIdx, mIdx)
-			headerMatcher := &routev3.HeaderMatcher{
-				Name: match.Name,
-				HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
-					StringMatch: buildXdsStringMatcher(match),
-				},
-			}
-			expectMatch := true
-			if match.Invert != nil && *match.Invert {
-				expectMatch = false
-			}
-			action := &routev3.RateLimit_Action{
-				ActionSpecifier: &routev3.RateLimit_Action_HeaderValueMatch_{
-					HeaderValueMatch: &routev3.RateLimit_Action_HeaderValueMatch{
-						DescriptorKey:   descriptorKey,
-						DescriptorValue: descriptorVal,
-						ExpectMatch: &wrapperspb.BoolValue{
-							Value: expectMatch,
+			if match.Distinct {
+				// Setup RequestHeader actions
+				descriptorKey := getRouteRuleDescriptor(rIdx, mIdx)
+				action = &routev3.RateLimit_Action{
+					ActionSpecifier: &routev3.RateLimit_Action_RequestHeaders_{
+						RequestHeaders: &routev3.RateLimit_Action_RequestHeaders{
+							HeaderName:    match.Name,
+							DescriptorKey: descriptorKey,
 						},
-						Headers: []*routev3.HeaderMatcher{headerMatcher},
 					},
-				},
-			}
-			entry := &rlv3.RateLimitDescriptor_Entry{
-				Key:   descriptorKey,
-				Value: descriptorVal,
+				}
+				entry = &rlv3.RateLimitDescriptor_Entry{
+					Key: descriptorKey,
+				}
+			} else {
+				// Setup HeaderValueMatch actions
+				descriptorKey := getRouteRuleDescriptor(rIdx, mIdx)
+				descriptorVal := getRouteRuleDescriptor(rIdx, mIdx)
+				headerMatcher := &routev3.HeaderMatcher{
+					Name: match.Name,
+					HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
+						StringMatch: buildXdsStringMatcher(match),
+					},
+				}
+				expectMatch := true
+				if match.Invert != nil && *match.Invert {
+					expectMatch = false
+				}
+				action = &routev3.RateLimit_Action{
+					ActionSpecifier: &routev3.RateLimit_Action_HeaderValueMatch_{
+						HeaderValueMatch: &routev3.RateLimit_Action_HeaderValueMatch{
+							DescriptorKey:   descriptorKey,
+							DescriptorValue: descriptorVal,
+							ExpectMatch: &wrapperspb.BoolValue{
+								Value: expectMatch,
+							},
+							Headers: []*routev3.HeaderMatcher{headerMatcher},
+						},
+					},
+				}
+				entry = &rlv3.RateLimitDescriptor_Entry{
+					Key:   descriptorKey,
+					Value: descriptorVal,
+				}
 			}
 			rlActions = append(rlActions, action)
 			descriptorEntries = append(descriptorEntries, entry)
@@ -244,12 +253,6 @@ func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
 
 		// Source IP CIDRMatch
 		if rule.CIDRMatch != nil {
-			// This is a sanity check. This should never happen because Gateway
-			// API translator should have already validated this.
-			if rule.CIDRMatch.Distinct {
-				return nil, nil, errors.New("local rateLimit does not support distinct CIDRMatch")
-			}
-
 			// Setup MaskedRemoteAddress action
 			mra := &routev3.RateLimit_Action_MaskedRemoteAddress{}
 			maskLen := &wrapperspb.UInt32Value{Value: rule.CIDRMatch.MaskLen}
@@ -269,6 +272,21 @@ func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
 			}
 			descriptorEntries = append(descriptorEntries, entry)
 			rlActions = append(rlActions, action)
+
+			// Setup RemoteAddress action if distinct match is set
+			if rule.CIDRMatch.Distinct {
+				// Setup RemoteAddress action
+				action = &routev3.RateLimit_Action{
+					ActionSpecifier: &routev3.RateLimit_Action_RemoteAddress_{
+						RemoteAddress: &routev3.RateLimit_Action_RemoteAddress{},
+					},
+				}
+				entry = &rlv3.RateLimitDescriptor_Entry{
+					Key: descriptorRemoteAddress,
+				}
+				descriptorEntries = append(descriptorEntries, entry)
+				rlActions = append(rlActions, action)
+			}
 		}
 
 		rateLimit := &routev3.RateLimit{Actions: rlActions}
@@ -287,5 +305,5 @@ func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
 		descriptors = append(descriptors, descriptor)
 	}
 
-	return rateLimits, descriptors, nil
+	return rateLimits, descriptors
 }

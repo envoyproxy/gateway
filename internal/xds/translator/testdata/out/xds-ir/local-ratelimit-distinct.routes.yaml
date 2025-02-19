@@ -1,0 +1,123 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        path: foo/bar
+      name: first-route-ratelimit-distinct-ip
+      route:
+        cluster: first-route-dest
+        rateLimits:
+        - actions:
+          - requestHeaders:
+              descriptorKey: rule-0-match-0
+              headerName: x-user-id
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.local_ratelimit:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+          alwaysConsumeDefaultTokenBucket: false
+          descriptors:
+          - entries:
+            - key: rule-0-match-0
+            tokenBucket:
+              fillInterval: 0s
+              maxTokens: 5
+              tokensPerFill: 5
+          filterEnabled:
+            defaultValue:
+              numerator: 100
+          filterEnforced:
+            defaultValue:
+              numerator: 100
+          statPrefix: http_local_rate_limiter
+          tokenBucket:
+            fillInterval: 60s
+            maxTokens: 10
+            tokensPerFill: 10
+    - match:
+        path: example
+      name: second-route-ratelimit-multiple-rules
+      route:
+        cluster: second-route-dest
+        rateLimits:
+        - actions:
+          - headerValueMatch:
+              descriptorKey: rule-0-match-0
+              descriptorValue: rule-0-match-0
+              expectMatch: true
+              headers:
+              - name: x-user-id
+                stringMatch:
+                  exact: one
+          - headerValueMatch:
+              descriptorKey: rule-0-match-1
+              descriptorValue: rule-0-match-1
+              expectMatch: true
+              headers:
+              - name: x-org-id
+                stringMatch:
+                  exact: foo
+        - actions:
+          - headerValueMatch:
+              descriptorKey: rule-1-match-0
+              descriptorValue: rule-1-match-0
+              expectMatch: true
+              headers:
+              - name: x-user-id
+                stringMatch:
+                  exact: two
+          - headerValueMatch:
+              descriptorKey: rule-1-match-1
+              descriptorValue: rule-1-match-1
+              expectMatch: true
+              headers:
+              - name: x-org-id
+                stringMatch:
+                  exact: bar
+          - maskedRemoteAddress:
+              v4PrefixMaskLen: 16
+          - remoteAddress: {}
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.local_ratelimit:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+          alwaysConsumeDefaultTokenBucket: false
+          descriptors:
+          - entries:
+            - key: rule-0-match-0
+              value: rule-0-match-0
+            - key: rule-0-match-1
+              value: rule-0-match-1
+            tokenBucket:
+              fillInterval: 3600s
+              maxTokens: 10
+              tokensPerFill: 10
+          - entries:
+            - key: rule-1-match-0
+              value: rule-1-match-0
+            - key: rule-1-match-1
+              value: rule-1-match-1
+            - key: masked_remote_address
+              value: 192.168.0.0/16
+            - key: remote_address
+            tokenBucket:
+              fillInterval: 60s
+              maxTokens: 10
+              tokensPerFill: 10
+          filterEnabled:
+            defaultValue:
+              numerator: 100
+          filterEnforced:
+            defaultValue:
+              numerator: 100
+          statPrefix: http_local_rate_limiter
+          tokenBucket:
+            fillInterval: 60s
+            maxTokens: 10
+            tokensPerFill: 10
