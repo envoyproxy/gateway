@@ -3833,8 +3833,8 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `PreserveOrGenerate` | Preserve `X-Request-ID` if already presenet or generate if empty<br /> | 
-| `Preserve` | Preserve `X-Request-ID` if already presenet, do not generate when empty<br /> | 
+| `PreserveOrGenerate` | Preserve `X-Request-ID` if already present or generate if empty<br /> | 
+| `Preserve` | Preserve `X-Request-ID` if already present, do not generate when empty<br /> | 
 | `Generate` | Always generate `X-Request-ID` header, do not preserve `X-Request-ID`<br />header if it exists. This is the default behavior.<br /> | 
 | `Disabled` | Do not preserve or generate `X-Request-ID` header<br /> | 
 
