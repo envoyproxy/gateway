@@ -16,6 +16,7 @@ const (
 	KindClientTrafficPolicy = "ClientTrafficPolicy"
 )
 
+// +genclient
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:categories=envoy-gateway,shortName=ctp
 // +kubebuilder:subresource:status
@@ -339,8 +340,4 @@ type ClientTrafficPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []ClientTrafficPolicy `json:"items"`
-}
-
-func init() {
-	SchemeBuilder.Register(&ClientTrafficPolicy{}, &ClientTrafficPolicyList{})
 }

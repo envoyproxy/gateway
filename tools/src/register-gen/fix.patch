@@ -1,0 +1,69 @@
+From 3d2b310987524f6ac4982720ef9a09be0c3fa199 Mon Sep 17 00:00:00 2001
+From: Lionel Jouin <lionel.jouin@est.tech>
+Date: Thu, 19 Dec 2024 19:02:34 +0100
+Subject: [PATCH 1/3] Add missing imports in register-gen
+
+Due to a recent change in k8s.io/gengo/v2, the register-gen is
+missing 2 imports.The imports were previously auto inserted during
+the code generation by k8s.io/gengo/v2.
+Now, instead, they are directly imported by the register-gen.
+
+An output_tests has been added to register-gen. This generates an
+example, which would have been invalid with these changes.
+
+Signed-off-by: Lionel Jouin <lionel.jouin@est.tech>
+
+diff --git a/vendor/k8s.io/code-generator/cmd/register-gen/generators/register_external.go b/vendor/k8s.io/code-generator/cmd/register-gen/generators/register_external.go
+index 7eb7793e40879..623d100758e46 100644
+--- a/vendor/k8s.io/code-generator/cmd/register-gen/generators/register_external.go
++++ b/vendor/k8s.io/code-generator/cmd/register-gen/generators/register_external.go
+@@ -61,11 +61,15 @@ func (g *registerExternalGenerator) Finalize(context *generator.Context, w io.Wr
+ 
+ 	sw := generator.NewSnippetWriter(w, context, "$", "$")
+ 	m := map[string]interface{}{
+-		"groupName":         g.gv.Group,
+-		"version":           g.gv.Version,
+-		"types":             typesToGenerateOnlyNames,
+-		"addToGroupVersion": context.Universe.Function(types.Name{Package: "k8s.io/apimachinery/pkg/apis/meta/v1", Name: "AddToGroupVersion"}),
+-		"groupVersion":      context.Universe.Type(types.Name{Package: "k8s.io/apimachinery/pkg/apis/meta/v1", Name: "GroupVersion"}),
++		"groupName":           g.gv.Group,
++		"version":             g.gv.Version,
++		"types":               typesToGenerateOnlyNames,
++		"addToGroupVersion":   context.Universe.Function(types.Name{Package: "k8s.io/apimachinery/pkg/apis/meta/v1", Name: "AddToGroupVersion"}),
++		"groupVersion":        context.Universe.Type(types.Name{Package: "k8s.io/apimachinery/pkg/apis/meta/v1", Name: "GroupVersion"}),
++		"schemaGroupVersion":  context.Universe.Type(types.Name{Package: "k8s.io/apimachinery/pkg/runtime/schema", Name: "GroupVersion"}),
++		"schemaGroupResource": context.Universe.Type(types.Name{Package: "k8s.io/apimachinery/pkg/runtime/schema", Name: "GroupResource"}),
++		"scheme":              context.Universe.Type(types.Name{Package: "k8s.io/apimachinery/pkg/runtime", Name: "Scheme"}),
++		"schemeBuilder":       context.Universe.Type(types.Name{Package: "k8s.io/apimachinery/pkg/runtime", Name: "SchemeBuilder"}),
+ 	}
+ 	sw.Do(registerExternalTypesTemplate, m)
+ 	return sw.Error()
+@@ -80,16 +84,16 @@ var GroupVersion = $.groupVersion|raw${Group: GroupName, Version: "$.version$"}
+ 
+ // SchemeGroupVersion is group version used to register these objects
+ // Deprecated: use GroupVersion instead.
+-var SchemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: "$.version$"}
++var SchemeGroupVersion = $.schemaGroupVersion|raw${Group: GroupName, Version: "$.version$"}
+ 
+ // Resource takes an unqualified resource and returns a Group qualified GroupResource
+-func Resource(resource string) schema.GroupResource {
++func Resource(resource string) $.schemaGroupResource|raw$ {
+ 	return SchemeGroupVersion.WithResource(resource).GroupResource()
+ }
+ 
+ var (
+ 	// localSchemeBuilder and AddToScheme will stay in k8s.io/kubernetes.
+-	SchemeBuilder      runtime.SchemeBuilder
++	SchemeBuilder      $.schemeBuilder|raw$
+ 	localSchemeBuilder = &SchemeBuilder
+     // Deprecated: use Install instead
+ 	AddToScheme        = localSchemeBuilder.AddToScheme
+@@ -104,7 +108,7 @@ func init() {
+ }
+ 
+ // Adds the list of known types to Scheme.
+-func addKnownTypes(scheme *runtime.Scheme) error {
++func addKnownTypes(scheme *$.scheme|raw$) error {
+ 	scheme.AddKnownTypes(SchemeGroupVersion,
+     $range .types -$
+         &$.${},

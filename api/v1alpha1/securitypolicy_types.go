@@ -15,6 +15,7 @@ const (
 	KindSecurityPolicy = "SecurityPolicy"
 )
 
+// +genclient
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:categories=envoy-gateway,shortName=sp
 // +kubebuilder:subresource:status
@@ -90,8 +91,4 @@ type SecurityPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []SecurityPolicy `json:"items"`
-}
-
-func init() {
-	SchemeBuilder.Register(&SecurityPolicy{}, &SecurityPolicyList{})
 }
