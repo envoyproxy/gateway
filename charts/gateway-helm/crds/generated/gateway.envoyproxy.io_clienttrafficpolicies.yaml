@@ -152,18 +152,44 @@ spec:
                     required:
                     - value
                     type: object
-                  maxRequestBytes:
-                    allOf:
-                    - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                    - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
-                    anyOf:
-                    - type: integer
-                    - type: string
+                  requestSizeLimit:
                     description: |-
-                      MaxRequestBytes specifies the maximum allowed size in bytes for each incoming request.
-                      If exceeded, the request will be rejected.
+                      RequestSizeLimit allows for configuring the maximum allowed size for each incoming request and filter to use
+                      for implementation. Once exceeded, the request will be rejected with a 413 response.
+
+                      Note: This is handled via HTTP Buffer filters, and by enabling Envoy will buffer every request before forwarding
+                      upstream which could result in performance degradation or the need to increase allocated memory for Envoy.
+                      Additionally, users should consider adjusting the connection buffer limit to account for extra space.
 
                       Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki").
+                    pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                    properties:
+                      size:
+                        allOf:
+                        - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        description: |-
+                          Size specifies the maximum allowed size in bytes for each incoming request.
+                          If exceeded, the request will be rejected.
+
+                          Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki").
+                        x-kubernetes-int-or-string: true
+                      type:
+                        default: Buffer
+                        description: |-
+                          Type refers to how Envoy should implement the desired request size limit. Currently only Buffer
+                          is supported which utilizes the Envoy Buffer HTTP Filter.
+
+                          Note: By enabling, Envoy will buffer every request before sending to the backend which could
+                          result in performance degradation or a need to increase allocated memory for Envoy. Users should
+                          also consider adjusting the connection buffer limit to account for the buffer space.
+                        enum:
+                        - Buffer
+                        type: string
+                    type: object
                     x-kubernetes-int-or-string: true
                   socketBufferLimit:
                     allOf:
