@@ -21,23 +21,23 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
-  - group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: http-ratelimit-distinct-cidr
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-ratelimit-distinct-cidr
   rateLimit:
     type: Local
     local:
       rules:
-      - limit:
-          requests: 10
-          unit: Hour
-      - clientSelectors:
-        - sourceCIDR:
-            value: 0.0.0.0/0
-            type: Distinct
-        limit:
-          requests: 3
-          unit: Hour
+        - limit:
+            requests: 10
+            unit: Hour
+        - clientSelectors:
+            - sourceCIDR:
+                value: 0.0.0.0/0
+                type: Distinct
+          limit:
+            requests: 3
+            unit: Hour
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
@@ -46,26 +46,26 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
-  - group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: http-ratelimit-distinct-cidr-and-exact-header
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-ratelimit-distinct-cidr-and-exact-header
   rateLimit:
     type: Local
     local:
       rules:
-      - limit:
-          requests: 10
-          unit: Hour
-      - clientSelectors:
-        - sourceCIDR:
-            value: 0.0.0.0/0
-            type: Distinct
-        - headers:
-          - name: x-org-id
-            value: foo
-        limit:
-          requests: 3
-          unit: Hour
+        - limit:
+            requests: 10
+            unit: Hour
+        - clientSelectors:
+            - sourceCIDR:
+                value: 0.0.0.0/0
+                type: Distinct
+            - headers:
+                - name: x-org-id
+                  value: foo
+          limit:
+            requests: 3
+            unit: Hour
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -74,15 +74,15 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-  - name: same-namespace
+    - name: same-namespace
   rules:
-  - backendRefs:
-    - name: infra-backend-v1
-      port: 8080
-    matches:
-    - path:
-        type: Exact
-        value: /ratelimit-distinct-cidr
+    - backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+      matches:
+        - path:
+            type: Exact
+            value: /ratelimit-distinct-cidr
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -91,12 +91,12 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-  - name: same-namespace
+    - name: same-namespace
   rules:
-  - backendRefs:
-    - name: infra-backend-v1
-      port: 8080
-    matches:
-    - path:
-        type: Exact
-        value: /ratelimit-distinct-cidr-and-exact-header
+    - backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+      matches:
+        - path:
+            type: Exact
+            value: /ratelimit-distinct-cidr-and-exact-header
