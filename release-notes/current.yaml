@@ -16,6 +16,7 @@ new features: |
   Added support for defining Lua EnvoyExtensionPolicies
 
 bug fixes: |
+  Bypass overload manager for stats and ready listeners
 
 # Enhancements that improve performance.
 performance improvements: |
