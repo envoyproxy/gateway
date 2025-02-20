@@ -22,7 +22,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/protocov"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -77,7 +77,7 @@ func buildHCMJWTFilter(irListener *ir.HTTPListener) (*hcmv3.HttpFilter, error) {
 		return nil, err
 	}
 
-	jwtAuthnAny, err := protocov.ToAnyWithValidation(jwtAuthnProto)
+	jwtAuthnAny, err := proto.ToAnyWithValidation(jwtAuthnProto)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +210,7 @@ func buildXdsUpstreamTLSSocket(sni string) (*corev3.TransportSocket, error) {
 		},
 	}
 
-	tlsCtxAny, err := protocov.ToAnyWithValidation(tlsCtxProto)
+	tlsCtxAny, err := proto.ToAnyWithValidation(tlsCtxProto)
 	if err != nil {
 		return nil, err
 	}
@@ -243,7 +243,7 @@ func (*jwt) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 			RequirementSpecifier: &jwtauthnv3.PerRouteConfig_RequirementName{RequirementName: irRoute.Name},
 		}
 
-		routeCfgAny, err := protocov.ToAnyWithValidation(routeCfgProto)
+		routeCfgAny, err := proto.ToAnyWithValidation(routeCfgProto)
 		if err != nil {
 			return err
 		}
