@@ -3885,6 +3885,32 @@ _Appears in:_
 | `Generate` | Always generate `X-Request-ID` header, do not preserve `X-Request-ID`<br />header if it exists. This is the default behavior.<br /> | 
 | `Disable` | Do not preserve or generate `X-Request-ID` header<br /> | 
 
+#### RequestSizeLimit
+
+
+
+
+
+_Appears in:_
+- [ClientConnection](#clientconnection)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+
+
+#### RequestSizeLimitType
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [RequestSizeLimit](#requestsizelimit)
+
+| Value | Description |
+| ----- | ----------- |
+| `Buffer` | RequestSizeLimitTypeBuffer Sets the request size limiting implementation to use an Envoy buffer filter.<br />Envoy will wait for a fully buffered complete request before forwarding to the backend.<br /> | 
+
 
 #### ResourceProviderType
 

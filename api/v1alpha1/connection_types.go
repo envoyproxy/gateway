@@ -26,8 +26,12 @@ type ClientConnection struct {
 	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
 	// +optional
 	BufferLimit *resource.Quantity `json:"bufferLimit,omitempty"`
-	// MaxRequestBytes specifies the maximum allowed size in bytes for each incoming request.
-	// If exceeded, the request will be rejected.
+	// RequestSizeLimit allows for configuring the maximum allowed size for each incoming request and filter to use
+	// for implementation. Once exceeded, the request will be rejected with a 413 response.
+	//
+	// Note: This is handled via HTTP Buffer filters, and by enabling Envoy will buffer every request before forwarding
+	// upstream which could result in performance degradation or the need to increase allocated memory for Envoy.
+	// Additionally, users should consider adjusting the connection buffer limit to account for extra space.
 	//
 	// Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki").
 	//
@@ -35,7 +39,7 @@ type ClientConnection struct {
 	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
 	// +optional
 	// +notImplementedHide
-	MaxRequestBytes *resource.Quantity `json:"maxRequestBytes,omitempty"`
+	RequestSizeLimit *RequestSizeLimit `json:"requestSizeLimit,omitempty"`
 	// SocketBufferLimit provides configuration for the maximum buffer size in bytes for each incoming socket.
 	// SocketBufferLimit applies to socket streaming channel between TCP/IP stacks, it's in kernel space.
 	// For example, 20Mi, 1Gi, 256Ki etc.
@@ -60,16 +64,6 @@ type BackendConnection struct {
 	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
 	// +optional
 	BufferLimit *resource.Quantity `json:"bufferLimit,omitempty"`
-	// MaxRequestBytes specifies the maximum allowed size in bytes for each incoming request.
-	// If exceeded, the request will be rejected.
-	//
-	// Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki").
-	//
-	// +kubebuilder:validation:XIntOrString
-	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
-	// +optional
-	// +notImplementedHide
-	MaxRequestBytes *resource.Quantity `json:"maxRequestBytes,omitempty"`
 	// SocketBufferLimit provides configuration for the maximum buffer size in bytes for each socket
 	// to backend.
 	// SocketBufferLimit applies to socket streaming channel between TCP/IP stacks, it's in kernel space.
@@ -97,3 +91,39 @@ type ConnectionLimit struct {
 	// +optional
 	CloseDelay *gwapiv1.Duration `json:"closeDelay,omitempty"`
 }
+
+// +notImplementedHide
+type RequestSizeLimit struct {
+	// Type refers to how Envoy should implement the desired request size limit. Currently only Buffer
+	// is supported which utilizes the Envoy Buffer HTTP Filter.
+	//
+	// Note: By enabling, Envoy will buffer every request before sending to the backend which could
+	// result in performance degradation or a need to increase allocated memory for Envoy. Users should
+	// also consider adjusting the connection buffer limit to account for the buffer space.
+	//
+	// +kubebuilder:validation:Enum=Buffer
+	// +kubebuilder:default:=Buffer
+	// +optional
+	// +notImplementedHide
+	Type RequestSizeLimitType `json:"type,omitempty"`
+
+	// Size specifies the maximum allowed size in bytes for each incoming request.
+	// If exceeded, the request will be rejected.
+	//
+	// Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki").
+	//
+	// +kubebuilder:validation:XIntOrString
+	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+	// +optional
+	// +notImplementedHide
+	Size *resource.Quantity `json:"size,omitempty"`
+}
+
+// +notImplementedHide
+type RequestSizeLimitType string
+
+const (
+	// RequestSizeLimitTypeBuffer Sets the request size limiting implementation to use an Envoy buffer filter.
+	// Envoy will wait for a fully buffered complete request before forwarding to the backend.
+	RequestSizeLimitTypeBuffer RequestSizeLimitType = "Buffer"
+)
