@@ -101,7 +101,6 @@ func (t *ResourceVersionTable) ValidateAll() error {
 		for _, resource := range xdsResource {
 			if err := proto.Validate(resource); err != nil {
 				errs = errors.Join(errs, err)
-				errs = errors.Join(errs, err)
 			}
 		}
 	}
