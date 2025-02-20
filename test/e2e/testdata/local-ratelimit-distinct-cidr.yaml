@@ -1,0 +1,102 @@
+# This is a client traffic policy that enables client IP detection using the XFF header.
+# So, the client IP can be detected from the XFF header and used for rate limiting.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: enable-client-ip-detection-trusted-cidr
+  namespace: gateway-conformance-infra
+spec:
+  clientIPDetection:
+    xForwardedFor:
+      numTrustedHops: 1
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: same-namespace
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: ratelimit-distinct-cidr
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-ratelimit-distinct-cidr
+  rateLimit:
+    type: Local
+    local:
+      rules:
+      - limit:
+          requests: 10
+          unit: Hour
+      - clientSelectors:
+        - sourceCIDR:
+            value: 0.0.0.0/0
+            type: Distinct
+        limit:
+          requests: 3
+          unit: Hour
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: ratelimit-distinct-cidr-and-exact-header
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-ratelimit-distinct-cidr-and-exact-header
+  rateLimit:
+    type: Local
+    local:
+      rules:
+      - limit:
+          requests: 10
+          unit: Hour
+      - clientSelectors:
+        - sourceCIDR:
+            value: 0.0.0.0/0
+            type: Distinct
+        - headers:
+          - name: x-org-id
+            value: foo
+        limit:
+          requests: 3
+          unit: Hour
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-ratelimit-distinct-cidr
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  rules:
+  - backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+    matches:
+    - path:
+        type: Exact
+        value: /ratelimit-distinct-cidr
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-ratelimit-distinct-cidr-and-exact-header
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  rules:
+  - backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+    matches:
+    - path:
+        type: Exact
+        value: /ratelimit-distinct-cidr-and-exact-header
