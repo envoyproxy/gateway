@@ -13,13 +13,13 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
-	"github.com/envoyproxy/gateway/internal/utils/protocov"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 )
 
 var GRPCWeb, GRPCStats *hcm.HttpFilter
 
 func init() {
-	any, err := protocov.ToAnyWithValidation(&grpcweb.GrpcWeb{})
+	any, err := proto.ToAnyWithValidation(&grpcweb.GrpcWeb{})
 	if err != nil {
 		panic(err)
 	}
@@ -30,7 +30,7 @@ func init() {
 		},
 	}
 
-	any, err = protocov.ToAnyWithValidation(&grpcstats.FilterConfig{
+	any, err = proto.ToAnyWithValidation(&grpcstats.FilterConfig{
 		EmitFilterState: true,
 		PerMethodStatSpecifier: &grpcstats.FilterConfig_StatsForAllMethods{
 			StatsForAllMethods: &wrapperspb.BoolValue{Value: true},
@@ -48,7 +48,7 @@ func init() {
 }
 
 func GenerateRouterFilter(enableEnvoyHeaders bool) (*hcm.HttpFilter, error) {
-	any, err := protocov.ToAnyWithValidation(&httprouter.Router{
+	anyCfg, err := proto.ToAnyWithValidation(&httprouter.Router{
 		SuppressEnvoyHeaders: !enableEnvoyHeaders,
 	})
 	if err != nil {
@@ -57,7 +57,7 @@ func GenerateRouterFilter(enableEnvoyHeaders bool) (*hcm.HttpFilter, error) {
 	return &hcm.HttpFilter{
 		Name: wellknown.Router,
 		ConfigType: &hcm.HttpFilter_TypedConfig{
-			TypedConfig: any,
+			TypedConfig: anyCfg,
 		},
 	}, nil
 }
