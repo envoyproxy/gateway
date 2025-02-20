@@ -220,6 +220,11 @@ func (in *AuthorizationRule) DeepCopyInto(out *AuthorizationRule) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.Methods != nil {
+		in, out := &in.Methods, &out.Methods
+		*out = make([]v1.HTTPMethod, len(*in))
+		copy(*out, *in)
+	}
 	in.Principal.DeepCopyInto(&out.Principal)
 }
 
@@ -4320,11 +4325,6 @@ func (in *Principal) DeepCopyInto(out *Principal) {
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
-	}
-	if in.Methods != nil {
-		in, out := &in.Methods, &out.Methods
-		*out = make([]v1.HTTPMethod, len(*in))
-		copy(*out, *in)
 	}
 }
 

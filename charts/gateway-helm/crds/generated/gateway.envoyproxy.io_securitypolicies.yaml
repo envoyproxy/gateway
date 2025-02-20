@@ -179,6 +179,38 @@ spec:
                           - Allow
                           - Deny
                           type: string
+                        methods:
+                          description: |-
+                            Methods defines the HTTP methods that are allowed or denied by the rule.
+                            If not specified, all methods are allowed or denied, based on the action of the rule.
+                            If multiple methods are specified, all specified methods are allowed or denied, based on the action of the rule.
+                          items:
+                            description: |-
+                              HTTPMethod describes how to select a HTTP route by matching the HTTP
+                              method as defined by
+                              [RFC 7231](https://datatracker.ietf.org/doc/html/rfc7231#section-4) and
+                              [RFC 5789](https://datatracker.ietf.org/doc/html/rfc5789#section-2).
+                              The value is expected in upper case.
+
+                              Note that values may be added to this enum, implementations
+                              must ensure that unknown values will not cause a crash.
+
+                              Unknown values here must result in the implementation setting the
+                              Accepted Condition for the Route to `status: False`, with a
+                              Reason of `UnsupportedValue`.
+                            enum:
+                            - GET
+                            - HEAD
+                            - POST
+                            - PUT
+                            - DELETE
+                            - CONNECT
+                            - OPTIONS
+                            - TRACE
+                            - PATCH
+                            type: string
+                          minItems: 1
+                          type: array
                         name:
                           description: |-
                             Name is a user-friendly name for the rule.
@@ -339,37 +371,6 @@ spec:
                               - message: at least one of claims or scopes must be
                                   specified
                                 rule: (has(self.claims) || has(self.scopes))
-                            methods:
-                              description: |-
-                                Methods authorize the request based on the HTTP methods.
-                                If multiple methods are specified, one of the methods must match for the rule to match.
-                              items:
-                                description: |-
-                                  HTTPMethod describes how to select a HTTP route by matching the HTTP
-                                  method as defined by
-                                  [RFC 7231](https://datatracker.ietf.org/doc/html/rfc7231#section-4) and
-                                  [RFC 5789](https://datatracker.ietf.org/doc/html/rfc5789#section-2).
-                                  The value is expected in upper case.
-
-                                  Note that values may be added to this enum, implementations
-                                  must ensure that unknown values will not cause a crash.
-
-                                  Unknown values here must result in the implementation setting the
-                                  Accepted Condition for the Route to `status: False`, with a
-                                  Reason of `UnsupportedValue`.
-                                enum:
-                                - GET
-                                - HEAD
-                                - POST
-                                - PUT
-                                - DELETE
-                                - CONNECT
-                                - OPTIONS
-                                - TRACE
-                                - PATCH
-                                type: string
-                              minItems: 1
-                              type: array
                           type: object
                           x-kubernetes-validations:
                           - message: at least one of clientCIDRs or jwt must be specified

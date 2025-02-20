@@ -42,6 +42,14 @@ type AuthorizationRule struct {
 	// Action defines the action to be taken if the rule matches.
 	Action AuthorizationAction `json:"action"`
 
+	// Methods defines the HTTP methods that are allowed or denied by the rule.
+	// If not specified, all methods are allowed or denied, based on the action of the rule.
+	// If multiple methods are specified, all specified methods are allowed or denied, based on the action of the rule.
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +notImplementedHide
+	Methods []gwapiv1.HTTPMethod `json:"methods,omitempty"`
+
 	// Principal specifies the client identity of a request.
 	// If there are multiple principal types, all principals must match for the rule to match.
 	// For example, if there are two principals: one for client IP and one for JWT claim,
@@ -83,13 +91,6 @@ type Principal struct {
 	// +kubebuilder:validation:MinItems=1
 	// +notImplementedHide
 	Headers []HeaderMatch `json:"headers,omitempty"`
-
-	// Methods authorize the request based on the HTTP methods.
-	// If multiple methods are specified, one of the methods must match for the rule to match.
-	// +optional
-	// +kubebuilder:validation:MinItems=1
-	// +notImplementedHide
-	Methods []gwapiv1.HTTPMethod `json:"methods,omitempty"`
 }
 
 // JWTPrincipal specifies the client identity of a request based on the JWT claims and scopes.
