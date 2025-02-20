@@ -20,7 +20,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/protocov"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -49,7 +49,7 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 				ServiceName:      tracing.ServiceName,
 				CollectorCluster: tracing.Destination.Name,
 			}
-			return protocov.ToAnyWithValidation(config)
+			return proto.ToAnyWithValidation(config)
 		}
 	case egv1a1.TracingProviderTypeOpenTelemetry:
 		providerName = envoyOpenTelemetry
@@ -67,7 +67,7 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 				ServiceName: tracing.ServiceName,
 			}
 
-			return protocov.ToAnyWithValidation(config)
+			return proto.ToAnyWithValidation(config)
 		}
 	case egv1a1.TracingProviderTypeZipkin:
 		providerName = envoyZipkin
@@ -81,7 +81,7 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 				CollectorEndpointVersion: tracecfg.ZipkinConfig_HTTP_JSON,
 			}
 
-			return protocov.ToAnyWithValidation(config)
+			return proto.ToAnyWithValidation(config)
 		}
 	default:
 		return nil, fmt.Errorf("unknown tracing provider type: %s", tracing.Provider.Type)
