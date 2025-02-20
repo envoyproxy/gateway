@@ -862,6 +862,8 @@ type EnvoyExtensionFeatures struct {
 	ExtProcs []ExtProc `json:"extProcs,omitempty" yaml:"extProcs,omitempty"`
 	// Wasm extensions
 	Wasms []Wasm `json:"wasms,omitempty" yaml:"wasms,omitempty"`
+	// Lua extensions
+	Luas []Lua `json:"luas,omitempty" yaml:"luas,omitempty"`
 }
 
 // UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension
@@ -2820,6 +2822,16 @@ type ExtProc struct {
 
 	// AllowModeOverride allows the external processor to modify the processing mode.
 	AllowModeOverride bool `json:"allowModeOverride,omitempty" yaml:"allowModeOverride,omitempty"`
+}
+
+// Lua holds the information associated with Lua extensions
+// +k8s:deepcopy-gen=true
+type Lua struct {
+	// Name is a unique name for the LUa configuration.
+	// The xds translator only generates one Lua filter for each unique name
+	Name string
+	// Code is the Lua source code
+	Code *string
 }
 
 // Wasm holds the information associated with the Wasm extensions.

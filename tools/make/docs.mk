@@ -4,7 +4,7 @@ RELEASE_VERSIONS ?= $(foreach v,$(wildcard ${ROOT_DIR}/docs/*),$(notdir ${v}))
 #       find a way to remove github.com from ignore list
 # TODO: example.com is not a valid domain, we should remove it from ignore list
 # TODO: https://www.gnu.org/software/make became unstable, we should remove it from ignore list later
-LINKINATOR_IGNORE := "github.com jwt.io githubusercontent.com example.com github.io gnu.org _print"
+LINKINATOR_IGNORE := "github.com jwt.io githubusercontent.com example.com github.io gnu.org _print canva.com sched.co"
 CLEAN_NODE_MODULES ?= true
 
 ##@ Docs
@@ -78,9 +78,6 @@ helm-readme-gen.%: $(tools/helm-docs)
 	mv charts/${CHART_NAME}/api.md site/content/en/latest/install/${CHART_NAME}-api.md
 	rm tools/helm-docs/api.${CHART_NAME}.gotmpl
 
-	# below line copy command for sync English api doc into Chinese
-	cp site/content/en/latest/install/${CHART_NAME}-api.md site/content/zh/latest/install/${CHART_NAME}-api.md
-
 .PHONY: docs-api-gen
 docs-api-gen: $(tools/crd-ref-docs)
 	@$(LOG_TARGET)
@@ -91,8 +88,6 @@ docs-api-gen: $(tools/crd-ref-docs)
 	--output-path=site/content/en/latest/api/extension_types.md \
 	--max-depth 100 \
 	--renderer=markdown
-	# below line copy command for sync English api doc into Chinese
-	cp site/content/en/latest/api/extension_types.md site/content/zh/latest/api/extension_types.md
 
 .PHONY: docs-release-prepare
 docs-release-prepare:

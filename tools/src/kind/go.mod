@@ -1,12 +1,12 @@
 module github.com/envoyproxy/gateway/tools/src/kind
 
-go 1.23.6
+go 1.24.0
 
-require sigs.k8s.io/kind v0.26.0
+require sigs.k8s.io/kind v0.27.0
 
 require (
+	al.essio.dev/pkg/shellescape v1.5.1 // indirect
 	github.com/BurntSushi/toml v1.4.0 // indirect
-	github.com/alessio/shellescape v1.4.2 // indirect
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/google/safetext v0.0.0-20220905092116-b49f7bc46da2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect

@@ -1,4 +1,8 @@
 adopters:
+  - name: "Canva"
+    logo: "/logos/canva.svg"
+    url: "https://canva.com/"
+    description: "Canva is using Envoy Gateway to route traffic for user uploads, using consistent hash load balancing, and as the gateway for internal systems."
   - name: "AllFactors"
     logo: "/logos/allfactors.svg"
     url: "https://allfactors.com/"
