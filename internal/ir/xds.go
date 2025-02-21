@@ -1472,7 +1472,7 @@ type DestinationSetting struct {
 	IPFamily *egv1a1.IPFamily `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
 	// DNSLookupFamily specifies a preferred resolution strategy for ip.
 	// This is derived from the backend service and endpoint slice information.
-	DNSLookupFamily *egv1a1.DNSLookupFamily `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
+	DNSLookupFamily *egv1a1.DNSLookupFamily `json:"DNSLookupFamily,omitempty" yaml:"ipFamily,omitempty"`
 	TLS             *TLSUpstreamConfig      `json:"tls,omitempty" yaml:"tls,omitempty"`
 	Filters         *DestinationFilters     `json:"filters,omitempty" yaml:"filters,omitempty"`
 }
