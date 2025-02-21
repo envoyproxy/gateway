@@ -3125,8 +3125,6 @@ _Appears in:_
 Principal specifies the client identity of a request.
 A client identity can be a client IP, a JWT claim, username from the Authorization header,
 or any other identity that can be extracted from a custom header.
-
-
 If there are multiple principal types, all principals must match for the rule to match.
 
 _Appears in:_

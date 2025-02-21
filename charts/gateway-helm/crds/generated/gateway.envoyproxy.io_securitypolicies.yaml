@@ -372,9 +372,8 @@ spec:
                                 rule: (has(self.claims) || has(self.scopes))
                           type: object
                           x-kubernetes-validations:
-                          - message: at least one of clientCIDRs, jwt, or headers
-                              must be specified
-                            rule: (has(self.clientCIDRs) || has(self.jwt)) || has(self.headers))
+                          - message: at least one of clientCIDRs or jwt must be specified
+                            rule: (has(self.clientCIDRs) || has(self.jwt))
                       required:
                       - action
                       - principal
