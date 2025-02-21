@@ -233,6 +233,21 @@ _Appears in:_
 | `Deny` | AuthorizationActionDeny is the action to deny the request.<br /> | 
 
 
+#### AuthorizationHeaderMatch
+
+
+
+AuthorizationHeaderMatch specifies how to match against the value of an HTTP header within a authorization rule.
+
+_Appears in:_
+- [Principal](#principal)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _string_ |  true  |  | Name of the HTTP header.<br />The header name is case-insensitive unless PreserveHeaderCase is set to true.<br />For example, "Foo" and "foo" are considered the same header. |
+| `values` | _string array_ |  true  |  | Values are the values that the header must match.<br />If multiple values are specified, the rule will match if any of the values match. |
+
+
 #### AuthorizationRule
 
 
@@ -246,6 +261,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `name` | _string_ |  false  |  | Name is a user-friendly name for the rule.<br />If not specified, Envoy Gateway will generate a unique name for the rule. |
 | `action` | _[AuthorizationAction](#authorizationaction)_ |  true  |  | Action defines the action to be taken if the rule matches. |
+| `operation ` | _[Operation](#operation)_ |  false  |  | Operation specifies the operation of a request.<br />If not specified, all operations are allowed or denied, based on the action of the rule. |
 | `principal` | _[Principal](#principal)_ |  true  |  | Principal specifies the client identity of a request.<br />If there are multiple principal types, all principals must match for the rule to match.<br />For example, if there are two principals: one for client IP and one for JWT claim,<br />the rule will match only if both the client IP and the JWT claim match. |
 
 
@@ -2192,14 +2208,13 @@ _Appears in:_
 HeaderMatch defines the match attributes within the HTTP Headers of the request.
 
 _Appears in:_
-- [Principal](#principal)
 - [RateLimitSelectCondition](#ratelimitselectcondition)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `type` | _[HeaderMatchType](#headermatchtype)_ |  false  | Exact | Type specifies how to match against the value of the header. |
-| `name` | _string_ |  true  |  | Name of the HTTP header. |
-| `value` | _string_ |  false  |  | Value within the HTTP header. Due to the<br />case-insensitivity of header names, "foo" and "Foo" are considered equivalent.<br />Do not set this field when Type="Distinct", implying matching on any/all unique<br />values within the header. |
+| `name` | _string_ |  true  |  | Name of the HTTP header.<br />The header name is case-insensitive unless PreserveHeaderCase is set to true.<br />For example, "Foo" and "foo" are considered the same header. |
+| `value` | _string_ |  false  |  | Value within the HTTP header.<br />Do not set this field when Type="Distinct", implying matching on any/all unique<br />values within the header. |
 | `invert` | _boolean_ |  false  | false | Invert specifies whether the value match result will be inverted.<br />Do not set this field when Type="Distinct", implying matching on any/all unique<br />values within the header. |
 
 
@@ -2975,6 +2990,20 @@ _Appears in:_
 | `host` | _string_ |  false  |  | Host define the extension service hostname.<br />Deprecated: Use BackendRefs instead. |
 | `port` | _integer_ |  false  | 4317 | Port defines the port the extension service is exposed on.<br />Deprecated: Use BackendRefs instead. |
 | `resources` | _object (keys:string, values:string)_ |  false  |  | Resources is a set of labels that describe the source of a log entry, including envoy node info.<br />It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/). |
+
+
+#### Operation
+
+
+
+Operation specifies the operation of a request.
+
+_Appears in:_
+- [AuthorizationRule](#authorizationrule)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `methods` | _HTTPMethod array_ |  true  |  | Methods defines the HTTP methods that are allowed or denied by the rule.<br />If multiple methods are specified, all specified methods are allowed or denied, based on the action of the rule. |
 
 
 #### Origin

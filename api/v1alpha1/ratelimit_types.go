@@ -228,12 +228,14 @@ type HeaderMatch struct {
 	Type *HeaderMatchType `json:"type,omitempty"`
 
 	// Name of the HTTP header.
+	// The header name is case-insensitive unless PreserveHeaderCase is set to true.
+	// For example, "Foo" and "foo" are considered the same header.
+	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
 	Name string `json:"name"`
 
-	// Value within the HTTP header. Due to the
-	// case-insensitivity of header names, "foo" and "Foo" are considered equivalent.
+	// Value within the HTTP header.
 	// Do not set this field when Type="Distinct", implying matching on any/all unique
 	// values within the header.
 	//

@@ -179,38 +179,6 @@ spec:
                           - Allow
                           - Deny
                           type: string
-                        methods:
-                          description: |-
-                            Methods defines the HTTP methods that are allowed or denied by the rule.
-                            If not specified, all methods are allowed or denied, based on the action of the rule.
-                            If multiple methods are specified, all specified methods are allowed or denied, based on the action of the rule.
-                          items:
-                            description: |-
-                              HTTPMethod describes how to select a HTTP route by matching the HTTP
-                              method as defined by
-                              [RFC 7231](https://datatracker.ietf.org/doc/html/rfc7231#section-4) and
-                              [RFC 5789](https://datatracker.ietf.org/doc/html/rfc5789#section-2).
-                              The value is expected in upper case.
-
-                              Note that values may be added to this enum, implementations
-                              must ensure that unknown values will not cause a crash.
-
-                              Unknown values here must result in the implementation setting the
-                              Accepted Condition for the Route to `status: False`, with a
-                              Reason of `UnsupportedValue`.
-                            enum:
-                            - GET
-                            - HEAD
-                            - POST
-                            - PUT
-                            - DELETE
-                            - CONNECT
-                            - OPTIONS
-                            - TRACE
-                            - PATCH
-                            type: string
-                          minItems: 1
-                          type: array
                         name:
                           description: |-
                             Name is a user-friendly name for the rule.
@@ -218,6 +186,44 @@ spec:
                           maxLength: 253
                           minLength: 1
                           type: string
+                        'operation ':
+                          description: |-
+                            Operation specifies the operation of a request.
+                            If not specified, all operations are allowed or denied, based on the action of the rule.
+                          properties:
+                            methods:
+                              description: |-
+                                Methods defines the HTTP methods that are allowed or denied by the rule.
+                                If multiple methods are specified, all specified methods are allowed or denied, based on the action of the rule.
+                              items:
+                                description: |-
+                                  HTTPMethod describes how to select a HTTP route by matching the HTTP
+                                  method as defined by
+                                  [RFC 7231](https://datatracker.ietf.org/doc/html/rfc7231#section-4) and
+                                  [RFC 5789](https://datatracker.ietf.org/doc/html/rfc5789#section-2).
+                                  The value is expected in upper case.
+
+                                  Note that values may be added to this enum, implementations
+                                  must ensure that unknown values will not cause a crash.
+
+                                  Unknown values here must result in the implementation setting the
+                                  Accepted Condition for the Route to `status: False`, with a
+                                  Reason of `UnsupportedValue`.
+                                enum:
+                                - GET
+                                - HEAD
+                                - POST
+                                - PUT
+                                - DELETE
+                                - CONNECT
+                                - OPTIONS
+                                - TRACE
+                                - PATCH
+                                type: string
+                              maxItems: 16
+                              minItems: 1
+                              type: array
+                          type: object
                         principal:
                           description: |-
                             Principal specifies the client identity of a request.
@@ -247,44 +253,35 @@ spec:
                               type: array
                             headers:
                               description: |-
-                                Headers authorize the request based on the headers in the request.
+                                Headers authorize the request based on user identity extracted from custom headers.
                                 If multiple headers are specified, all headers must match for the rule to match.
                               items:
-                                description: HeaderMatch defines the match attributes
-                                  within the HTTP Headers of the request.
+                                description: AuthorizationHeaderMatch specifies how
+                                  to match against the value of an HTTP header within
+                                  a authorization rule.
                                 properties:
-                                  invert:
-                                    default: false
-                                    description: |-
-                                      Invert specifies whether the value match result will be inverted.
-                                      Do not set this field when Type="Distinct", implying matching on any/all unique
-                                      values within the header.
-                                    type: boolean
                                   name:
-                                    description: Name of the HTTP header.
+                                    description: |-
+                                      Name of the HTTP header.
+                                      The header name is case-insensitive unless PreserveHeaderCase is set to true.
+                                      For example, "Foo" and "foo" are considered the same header.
                                     maxLength: 256
                                     minLength: 1
                                     type: string
-                                  type:
-                                    default: Exact
-                                    description: Type specifies how to match against
-                                      the value of the header.
-                                    enum:
-                                    - Exact
-                                    - RegularExpression
-                                    - Distinct
-                                    type: string
-                                  value:
+                                  values:
                                     description: |-
-                                      Value within the HTTP header. Due to the
-                                      case-insensitivity of header names, "foo" and "Foo" are considered equivalent.
-                                      Do not set this field when Type="Distinct", implying matching on any/all unique
-                                      values within the header.
-                                    maxLength: 1024
-                                    type: string
+                                      Values are the values that the header must match.
+                                      If multiple values are specified, the rule will match if any of the values match.
+                                    items:
+                                      type: string
+                                    maxItems: 256
+                                    minItems: 1
+                                    type: array
                                 required:
                                 - name
+                                - values
                                 type: object
+                              maxItems: 256
                               minItems: 1
                               type: array
                             jwt:
