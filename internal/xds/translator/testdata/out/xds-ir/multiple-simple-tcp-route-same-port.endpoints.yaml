@@ -14,8 +14,7 @@
             portValue: 50001
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: tcp-route-simple-dest/backend/0
+    locality: {}
 - clusterName: tcp-route-simple-1-dest
   endpoints:
   - lbEndpoints:
@@ -32,8 +31,7 @@
             portValue: 50001
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: tcp-route-simple-1-dest/backend/0
+    locality: {}
 - clusterName: tcp-route-simple-2-dest
   endpoints:
   - lbEndpoints:
@@ -50,8 +48,7 @@
             portValue: 50001
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: tcp-route-simple-2-dest/backend/0
+    locality: {}
 - clusterName: tcp-route-simple-3-dest
   endpoints:
   - lbEndpoints:
@@ -68,8 +65,7 @@
             portValue: 50001
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: tcp-route-simple-3-dest/backend/0
+    locality: {}
 - clusterName: tcp-route-simple-4-dest
   endpoints:
   - lbEndpoints:
@@ -86,5 +82,4 @@
             portValue: 0
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: tcp-route-simple-4-dest/backend/0
+    locality: {}

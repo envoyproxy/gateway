@@ -998,13 +998,15 @@ func (t *Translator) processRequestMirrorFilter(
 		return err
 	}
 
-	ds, err := t.processDestination(mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources)
+	destName := fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx)
+	settingName := irDestinationSettingName(destName, -1 /*unused*/)
+	ds, err := t.processDestination(settingName, mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources)
 	if err != nil {
 		return err
 	}
 
 	routeDst := &ir.RouteDestination{
-		Name:     fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx),
+		Name:     destName,
 		Settings: []*ir.DestinationSetting{ds},
 	}
 

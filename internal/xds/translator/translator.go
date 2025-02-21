@@ -589,6 +589,7 @@ func (t *Translator) addRouteToRouteConfig(
 				err = processXdsCluster(
 					tCtx,
 					httpRoute.Destination.Name,
+					httpRoute.Destination.Settings,
 					&HTTPRouteTranslator{httpRoute},
 					ea,
 				)
@@ -599,9 +600,11 @@ func (t *Translator) addRouteToRouteConfig(
 				// If a filter does exist, we create a weighted cluster thats
 				// attached to the route, and create a xds Cluster per setting
 				for _, setting := range httpRoute.Destination.Settings {
+					tSettings := []*ir.DestinationSetting{setting}
 					err = processXdsCluster(
 						tCtx,
 						setting.Name,
+						tSettings,
 						&HTTPRouteTranslator{httpRoute},
 						ea)
 					if err != nil {
@@ -761,6 +764,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 		for _, route := range tcpListener.Routes {
 			if err := processXdsCluster(tCtx,
 				route.Destination.Name,
+				route.Destination.Settings,
 				&TCPRouteTranslator{route},
 				&ExtraArgs{metrics: metrics}); err != nil {
 				errs = errors.Join(errs, err)
@@ -851,6 +855,7 @@ func processUDPListenerXdsTranslation(
 			// 1:1 between IR UDPRoute and xDS Cluster
 			if err := processXdsCluster(tCtx,
 				route.Destination.Name,
+				route.Destination.Settings,
 				&UDPRouteTranslator{route},
 				&ExtraArgs{metrics: metrics}); err != nil {
 				errs = errors.Join(errs, err)
@@ -945,8 +950,12 @@ func findXdsEndpoint(tCtx *types.ResourceVersionTable, name string) *endpointv3.
 }
 
 // processXdsCluster processes xds cluster with args per route.
-func processXdsCluster(tCtx *types.ResourceVersionTable, name string, route clusterArgs, extras *ExtraArgs) error {
-	return addXdsCluster(tCtx, route.asClusterArgs(name, extras))
+func processXdsCluster(tCtx *types.ResourceVersionTable,
+	name string,
+	settings []*ir.DestinationSetting,
+	route clusterArgs,
+	extras *ExtraArgs) error {
+	return addXdsCluster(tCtx, route.asClusterArgs(name, settings, extras))
 }
 
 // findXdsSecret finds a xds secret with the same name, and returns nil if there is no match.

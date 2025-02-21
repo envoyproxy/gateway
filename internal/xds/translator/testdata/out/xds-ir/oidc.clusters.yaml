@@ -52,8 +52,7 @@
               portValue: 443
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality:
-        region: oauth_foo_com_443/backend/0
+      locality: {}
   name: oauth_foo_com_443
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
@@ -87,8 +86,7 @@
               portValue: 443
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality:
-        region: oauth_bar_com_443/backend/0
+      locality: {}
   name: oauth_bar_com_443
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true

@@ -711,17 +711,19 @@ type ExtraArgs struct {
 }
 
 type clusterArgs interface {
-	asClusterArgs(name string, extras *ExtraArgs) *xdsClusterArgs
+	asClusterArgs(name string, settings []*ir.DestinationSetting, extras *ExtraArgs) *xdsClusterArgs
 }
 
 type UDPRouteTranslator struct {
 	*ir.UDPRoute
 }
 
-func (route *UDPRouteTranslator) asClusterArgs(name string, extra *ExtraArgs) *xdsClusterArgs {
+func (route *UDPRouteTranslator) asClusterArgs(name string,
+	settings []*ir.DestinationSetting,
+	extra *ExtraArgs) *xdsClusterArgs {
 	return &xdsClusterArgs{
 		name:         name,
-		settings:     route.Destination.Settings,
+		settings:     settings,
 		loadBalancer: route.LoadBalancer,
 		endpointType: buildEndpointType(route.Destination.Settings),
 		metrics:      extra.metrics,
@@ -734,10 +736,12 @@ type TCPRouteTranslator struct {
 	*ir.TCPRoute
 }
 
-func (route *TCPRouteTranslator) asClusterArgs(name string, extra *ExtraArgs) *xdsClusterArgs {
+func (route *TCPRouteTranslator) asClusterArgs(name string,
+	settings []*ir.DestinationSetting,
+	extra *ExtraArgs) *xdsClusterArgs {
 	return &xdsClusterArgs{
 		name:              name,
-		settings:          route.Destination.Settings,
+		settings:          settings,
 		loadBalancer:      route.LoadBalancer,
 		proxyProtocol:     route.ProxyProtocol,
 		circuitBreaker:    route.CircuitBreaker,
@@ -756,10 +760,12 @@ type HTTPRouteTranslator struct {
 	*ir.HTTPRoute
 }
 
-func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string, extra *ExtraArgs) *xdsClusterArgs {
+func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
+	settings []*ir.DestinationSetting,
+	extra *ExtraArgs) *xdsClusterArgs {
 	clusterArgs := &xdsClusterArgs{
 		name:              name,
-		settings:          httpRoute.Destination.Settings,
+		settings:          settings,
 		tSocket:           nil,
 		endpointType:      buildEndpointType(httpRoute.Destination.Settings),
 		metrics:           extra.metrics,

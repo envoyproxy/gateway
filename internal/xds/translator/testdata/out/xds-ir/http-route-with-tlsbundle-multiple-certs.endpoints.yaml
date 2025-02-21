@@ -12,8 +12,7 @@
           envoy.transport_socket_match:
             name: httproute/envoy-gateway/httproute-btls/rule/0/tls/0
     loadBalancingWeight: 1
-    locality:
-      region: httproute/envoy-gateway/httproute-btls/rule/0/backend/0
+    locality: {}
   - lbEndpoints:
     - endpoint:
         address:
@@ -26,8 +25,7 @@
           envoy.transport_socket_match:
             name: httproute/envoy-gateway/httproute-btls/rule/0/tls/1
     loadBalancingWeight: 1
-    locality:
-      region: httproute/envoy-gateway/httproute-btls/rule/0/backend/1
+    locality: {}
 - clusterName: httproute/envoy-gateway/httproute-btls-2/rule/0
   endpoints:
   - lbEndpoints:
@@ -38,8 +36,7 @@
             portValue: 8080
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: httproute/envoy-gateway/httproute-btls-2/rule/0/backend/0
+    locality: {}
   - lbEndpoints:
     - endpoint:
         address:
@@ -52,5 +49,4 @@
           envoy.transport_socket_match:
             name: httproute/envoy-gateway/httproute-btls-2/rule/0/tls/1
     loadBalancingWeight: 1
-    locality:
-      region: httproute/envoy-gateway/httproute-btls-2/rule/0/backend/1
+    locality: {}

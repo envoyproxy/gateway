@@ -8,8 +8,6 @@
             portValue: 50000
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: first-route-dest/backend/0
+    locality: {}
   - loadBalancingWeight: 1
-    locality:
-      region: first-route-dest/backend/1
+    locality: {}

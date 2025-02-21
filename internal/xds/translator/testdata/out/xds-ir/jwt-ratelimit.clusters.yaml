@@ -95,8 +95,7 @@
               portValue: 8081
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality:
-        region: ratelimit_cluster/backend/0
+      locality: {}
   name: ratelimit_cluster
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true

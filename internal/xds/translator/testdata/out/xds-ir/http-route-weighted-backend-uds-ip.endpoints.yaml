@@ -8,8 +8,7 @@
             portValue: 50001
       loadBalancingWeight: 1
     loadBalancingWeight: 20
-    locality:
-      region: first-route-dest/backend/0
+    locality: {}
   - lbEndpoints:
     - endpoint:
         address:
@@ -18,8 +17,7 @@
             portValue: 50002
       loadBalancingWeight: 1
     loadBalancingWeight: 40
-    locality:
-      region: first-route-dest/backend/1
+    locality: {}
   - lbEndpoints:
     - endpoint:
         address:
@@ -27,8 +25,7 @@
             path: /etc/sock1
       loadBalancingWeight: 1
     loadBalancingWeight: 20
-    locality:
-      region: first-route-dest/backend/2
+    locality: {}
   - lbEndpoints:
     - endpoint:
         address:
@@ -36,5 +33,4 @@
             path: /etc/sock2
       loadBalancingWeight: 1
     loadBalancingWeight: 20
-    locality:
-      region: first-route-dest/backend/3
+    locality: {}
