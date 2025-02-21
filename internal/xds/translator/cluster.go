@@ -85,9 +85,9 @@ func buildEndpointType(settings []*ir.DestinationSetting) EndpointType {
 
 func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 	dnsLookupFamily := clusterv3.Cluster_V4_PREFERRED
-	customDNSPTrafficPolicy := args.dns != nil && args.dns.LookupFamily != nil
+	customDNSPolicy := args.dns != nil && args.dns.LookupFamily != nil
 	// apply DNS lookup family if custom DNS traffic policy is set
-	if customDNSPTrafficPolicy {
+	if customDNSPolicy {
 		switch *args.dns.LookupFamily {
 		case egv1a1.IPv4DNSLookupFamily:
 			dnsLookupFamily = clusterv3.Cluster_V4_ONLY
@@ -108,7 +108,8 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		case egv1a1.IPv6:
 			dnsLookupFamily = clusterv3.Cluster_V6_ONLY
 		case egv1a1.DualStack:
-			if !customDNSPTrafficPolicy {
+			// if a custom DNS policy is set, prefer the custom policy as its more specific.
+			if !customDNSPolicy {
 				dnsLookupFamily = clusterv3.Cluster_ALL
 			}
 		}
