@@ -89,13 +89,13 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 	// apply DNS lookup family if custom DNS traffic policy is set
 	if customDNSPTrafficPolicy {
 		switch *args.dns.LookupFamily {
-		case egv1a1.IPv4Only:
+		case egv1a1.IPv4DNSLookupFamily:
 			dnsLookupFamily = clusterv3.Cluster_V4_ONLY
-		case egv1a1.IPv6Only:
+		case egv1a1.IPv6DNSLookupFamily:
 			dnsLookupFamily = clusterv3.Cluster_V6_ONLY
-		case egv1a1.IPv6Preferred:
+		case egv1a1.IPv6PreferredDNSLookupFamily:
 			dnsLookupFamily = clusterv3.Cluster_AUTO
-		case egv1a1.IPv4AndIPv6:
+		case egv1a1.IPv4AndIPv6DNSLookupFamily:
 			dnsLookupFamily = clusterv3.Cluster_ALL
 		}
 	}
