@@ -186,7 +186,7 @@ spec:
                           maxLength: 253
                           minLength: 1
                           type: string
-                        'operation ':
+                        operation:
                           description: |-
                             Operation specifies the operation of a request, such as HTTP methods.
                             If not specified, all operations are allowed or denied, based on the action of the rule.
@@ -223,6 +223,8 @@ spec:
                               maxItems: 16
                               minItems: 1
                               type: array
+                          required:
+                          - methods
                           type: object
                         principal:
                           description: |-
@@ -370,8 +372,9 @@ spec:
                                 rule: (has(self.claims) || has(self.scopes))
                           type: object
                           x-kubernetes-validations:
-                          - message: at least one of clientCIDRs or jwt must be specified
-                            rule: (has(self.clientCIDRs) || has(self.jwt))
+                          - message: at least one of clientCIDRs, jwt, or headers
+                              must be specified
+                            rule: (has(self.clientCIDRs) || has(self.jwt)) || has(self.headers))
                       required:
                       - action
                       - principal

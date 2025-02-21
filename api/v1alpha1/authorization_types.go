@@ -46,7 +46,7 @@ type AuthorizationRule struct {
 	// If not specified, all operations are allowed or denied, based on the action of the rule.
 	//
 	// +optional
-	Operation *Operation `json:"operation ,omitempty"`
+	Operation *Operation `json:"operation,omitempty"`
 
 	// Principal specifies the client identity of a request.
 	// If there are multiple principal types, all principals must match for the rule to match.
@@ -63,7 +63,7 @@ type Operation struct {
 	//
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=16
-	Methods []gwapiv1.HTTPMethod `json:"methods,omitempty"`
+	Methods []gwapiv1.HTTPMethod `json:"methods"`
 
 	// Other fields may be supported in the future, such as path or host.
 }
@@ -74,7 +74,7 @@ type Operation struct {
 //
 // If there are multiple principal types, all principals must match for the rule to match.
 //
-// +kubebuilder:validation:XValidation:rule="(has(self.clientCIDRs) || has(self.jwt))",message="at least one of clientCIDRs or jwt must be specified"
+// +kubebuilder:validation:XValidation:rule="(has(self.clientCIDRs) || has(self.jwt)) || has(self.headers))",message="at least one of clientCIDRs, jwt, or headers must be specified"
 type Principal struct {
 	// ClientCIDRs are the IP CIDR ranges of the client.
 	// Valid examples are "192.168.1.0/24" or "2001:db8::/64"
