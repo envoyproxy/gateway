@@ -42,7 +42,7 @@ type AuthorizationRule struct {
 	// Action defines the action to be taken if the rule matches.
 	Action AuthorizationAction `json:"action"`
 
-	// Operation specifies the operation of a request.
+	// Operation specifies the operation of a request, such as HTTP methods.
 	// If not specified, all operations are allowed or denied, based on the action of the rule.
 	//
 	// +optional
@@ -58,7 +58,7 @@ type AuthorizationRule struct {
 // Operation specifies the operation of a request.
 // +notImplementedHide
 type Operation struct {
-	// Methods defines the HTTP methods that are allowed or denied by the rule.
+	// Methods are the HTTP methods of the request.
 	// If multiple methods are specified, all specified methods are allowed or denied, based on the action of the rule.
 	//
 	// +kubebuilder:validation:MinItems=1
@@ -124,7 +124,7 @@ type AuthorizationHeaderMatch struct {
 	// +kubebuilder:validation:MaxItems=256
 	Values []string `json:"values"`
 
-	// Only exact matches are supported for now. It should be enough for authorization use cases. If use cases for other
+	// Only exact matches are supported for now. It should be good enough for authorization use cases. If use cases for other
 	// matching types arise, we can add a MatchingType field here.
 }
 

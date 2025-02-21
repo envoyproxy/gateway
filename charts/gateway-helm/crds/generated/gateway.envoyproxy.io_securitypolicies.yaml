@@ -188,12 +188,12 @@ spec:
                           type: string
                         'operation ':
                           description: |-
-                            Operation specifies the operation of a request.
+                            Operation specifies the operation of a request, such as HTTP methods.
                             If not specified, all operations are allowed or denied, based on the action of the rule.
                           properties:
                             methods:
                               description: |-
-                                Methods defines the HTTP methods that are allowed or denied by the rule.
+                                Methods are the HTTP methods of the request.
                                 If multiple methods are specified, all specified methods are allowed or denied, based on the action of the rule.
                               items:
                                 description: |-
