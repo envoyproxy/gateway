@@ -324,7 +324,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 					Name:      name,
 					Namespace: namespace,
 				},
-				Data: typedData.(map[string][]byte),
+				Data:       typedData.(map[string][]byte),
 				StringData: typedStringData.(map[string]string),
 			}
 			resources.Secrets = append(resources.Secrets, secret)

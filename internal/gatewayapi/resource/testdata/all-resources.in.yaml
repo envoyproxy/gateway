@@ -250,4 +250,3 @@ data:
   game.properties: |
     enemy.types=aliens,monsters
     player.maximum-lives=5
-    
