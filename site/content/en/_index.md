@@ -10,7 +10,7 @@ no_list: true
     <p class="lead">
       Manage your Application and API traffic with Envoy Gateway.
     </p>
-    <p>
+    <p style="font-size: 16px;">
       Aimed at making it easy to adopt, use, and manage Envoy Proxy.
       Deploy as a Standalone or Kubernetes-based API Gateway, implementing and extending the Kubernetes Gateway API.
     </p>
