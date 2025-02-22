@@ -311,6 +311,11 @@ spec:
                 description: BasicAuth defines the configuration for the HTTP Basic
                   Authentication.
                 properties:
+                  forwardUsernameHeader:
+                    description: |-
+                      Header used to forward the username of a successfully authenticated user to the backend. 
+                      If it is not specified, the username will not be forwarded.
+                    type: string
                   users:
                     description: |-
                       The Kubernetes secret which contains the username-password pairs in
