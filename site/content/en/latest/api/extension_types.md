@@ -261,7 +261,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `name` | _string_ |  false  |  | Name is a user-friendly name for the rule.<br />If not specified, Envoy Gateway will generate a unique name for the rule. |
 | `action` | _[AuthorizationAction](#authorizationaction)_ |  true  |  | Action defines the action to be taken if the rule matches. |
-| `operation` | _[Operation](#operation)_ |  false  |  | Operation specifies the operation of a request, such as HTTP methods.<br />If not specified, all operations are allowed or denied, based on the action of the rule. |
+| `operation` | _[Operation](#operation)_ |  false  |  | Operation specifies the operation of a request, such as HTTP methods.<br />If not specified, all operations are matched on. |
 | `principal` | _[Principal](#principal)_ |  true  |  | Principal specifies the client identity of a request.<br />If there are multiple principal types, all principals must match for the rule to match.<br />For example, if there are two principals: one for client IP and one for JWT claim,<br />the rule will match only if both the client IP and the JWT claim match. |
 
 
