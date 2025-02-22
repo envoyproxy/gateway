@@ -29,42 +29,6 @@ type basicAuth struct{}
 
 var _ httpFilter = &basicAuth{}
 
-// patchHCM builds and appends the basic_auth Filter to the HTTP Connection Manager
-// if applicable, and it does not already exist.
-
-// buildHCMBasicAuthFilter returns a basic_auth HTTP filter from the provided IR HTTPRoute.
-func buildHCMBasicAuthFilter(basicAuth *ir.BasicAuth) (*hcmv3.HttpFilter, error) {
-	var (
-		basicAuthProto *basicauthv3.BasicAuth
-		basicAuthAny   *anypb.Any
-		err            error
-	)
-
-	basicAuthProto = &basicauthv3.BasicAuth{
-		Users: &corev3.DataSource{
-			Specifier: &corev3.DataSource_InlineBytes{
-				InlineBytes: basicAuth.Users,
-			},
-		},
-	}
-	// Set the ForwardUsernameHeader field if it is specified.
-	if basicAuth.ForwardUsernameHeader != "" {
-		basicAuthProto.ForwardUsernameHeader = basicAuth.ForwardUsernameHeader
-	}
-
-	if basicAuthAny, err = proto.ToAnyWithValidation(basicAuthProto); err != nil {
-		return nil, err
-	}
-
-	return &hcmv3.HttpFilter{
-		Name: basicAuthFilterName(basicAuth),
-		ConfigType: &hcmv3.HttpFilter_TypedConfig{
-			TypedConfig: basicAuthAny,
-		},
-		Disabled: true,
-	}, nil
-}
-
 // patchHCM updates the HTTPConnectionManager with a Basic Auth HTTP filter for routes requiring authentication.
 // It scans through all routes in the provided HTTPListener, and if a route has a BasicAuth configuration,
 // it checks for the presence of a corresponding filter in the manager. If the filter is not already present,
@@ -111,6 +75,42 @@ func (*basicAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTP
 	}
 
 	return errs
+}
+
+// patchHCM builds and appends the basic_auth Filter to the HTTP Connection Manager
+// if applicable, and it does not already exist.
+
+// buildHCMBasicAuthFilter returns a basic_auth HTTP filter from the provided IR HTTPRoute.
+func buildHCMBasicAuthFilter(basicAuth *ir.BasicAuth) (*hcmv3.HttpFilter, error) {
+	var (
+		basicAuthProto *basicauthv3.BasicAuth
+		basicAuthAny   *anypb.Any
+		err            error
+	)
+
+	basicAuthProto = &basicauthv3.BasicAuth{
+		Users: &corev3.DataSource{
+			Specifier: &corev3.DataSource_InlineBytes{
+				InlineBytes: basicAuth.Users,
+			},
+		},
+	}
+	// Set the ForwardUsernameHeader field if it is specified.
+	if basicAuth.ForwardUsernameHeader != "" {
+		basicAuthProto.ForwardUsernameHeader = basicAuth.ForwardUsernameHeader
+	}
+
+	if basicAuthAny, err = proto.ToAnyWithValidation(basicAuthProto); err != nil {
+		return nil, err
+	}
+
+	return &hcmv3.HttpFilter{
+		Name: basicAuthFilterName(basicAuth),
+		ConfigType: &hcmv3.HttpFilter_TypedConfig{
+			TypedConfig: basicAuthAny,
+		},
+		Disabled: true,
+	}, nil
 }
 
 func basicAuthFilterName(basicAuth *ir.BasicAuth) string {
