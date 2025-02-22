@@ -18,7 +18,7 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
         - disabled: true
-          name: envoy.filters.http.basic_auth
+          name: envoy.filters.http.basic_auth/securitypolicy/envoy-gateway/policy-for-gateway
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.basic_auth.v3.BasicAuth
             users:
