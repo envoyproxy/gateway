@@ -32,17 +32,9 @@ var _ httpFilter = &basicAuth{}
 // patchHCM updates the HTTPConnectionManager with a Basic Auth HTTP filter for routes requiring authentication.
 // It scans through all routes in the provided HTTPListener, and if a route has a BasicAuth configuration,
 // it checks for the presence of a corresponding filter in the manager. If the filter is not already present,
-// it generates and appends a new Basic Auth filter. This method ensures that each unique BasicAuth configuration
-// only results in one corresponding filter in the HTTPConnectionManager to prevent duplicate filters.
+// it generates and appends a new Basic Auth filter.
 // The function returns an error if either the HTTPConnectionManager or HTTPListener is nil, or if an error occurs
 // during the filter creation process.
-//
-// Parameters:
-//   - mgr: A pointer to the HttpConnectionManager where the HTTP filters are managed.
-//   - irListener: A pointer to the HTTPListener which holds the routing configuration.
-//
-// Returns:
-//   - error: An error object indicating the success or failure of the operation. Nil if no error occurred.
 func (*basicAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
 	if mgr == nil {
 		return errors.New("hcm is nil")
