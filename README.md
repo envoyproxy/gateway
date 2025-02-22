@@ -33,7 +33,7 @@ Kubernetes-based application gateway.
 
 ## Security Reporting
 
-If youve found a security vulnerability or a process crash, please follow the instructions in [SECURITY.md](./SECURITY.md) to submit a report.
+If you've found a security vulnerability or a process crash, please follow the instructions in [SECURITY.md](./SECURITY.md) to submit a report.
 
 ## Community Meeting
 
