@@ -854,11 +854,6 @@ func (in *DestinationSetting) DeepCopyInto(out *DestinationSetting) {
 		*out = new(v1alpha1.IPFamily)
 		**out = **in
 	}
-	if in.DNSLookupFamily != nil {
-		in, out := &in.DNSLookupFamily, &out.DNSLookupFamily
-		*out = new(v1alpha1.DNSLookupFamily)
-		**out = **in
-	}
 	if in.TLS != nil {
 		in, out := &in.TLS, &out.TLS
 		*out = new(TLSUpstreamConfig)
