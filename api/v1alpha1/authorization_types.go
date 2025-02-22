@@ -43,7 +43,7 @@ type AuthorizationRule struct {
 	Action AuthorizationAction `json:"action"`
 
 	// Operation specifies the operation of a request, such as HTTP methods.
-	// If not specified, all operations are allowed or denied, based on the action of the rule.
+	// If not specified, all operations are matched on.
 	//
 	// +optional
 	Operation *Operation `json:"operation,omitempty"`
