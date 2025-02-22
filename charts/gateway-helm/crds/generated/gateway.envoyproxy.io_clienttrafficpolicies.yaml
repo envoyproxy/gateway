@@ -322,7 +322,19 @@ spec:
                       PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge
                       (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
                       It defaults to false.
+                      Deprecated: use RequestID instead
                     type: boolean
+                  requestID:
+                    description: |-
+                      RequestID configures Envoy's behavior for handling the `X-Request-ID` header.
+                      Defaults to `Generate` and builds the `X-Request-ID` for every request and ignores pre-existing values from the edge.
+                      (An "edge request" refers to a request from an external client to the Envoy entrypoint.)
+                    enum:
+                    - PreserveOrGenerate
+                    - Preserve
+                    - Generate
+                    - Disable
+                    type: string
                   withUnderscoresAction:
                     description: |-
                       WithUnderscoresAction configures the action to take when an HTTP header with underscores

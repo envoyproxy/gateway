@@ -69,10 +69,6 @@ func (*extProc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPLi
 // buildHCMExtProcFilter returns an ext_proc HTTP filter from the provided IR HTTPRoute.
 func buildHCMExtProcFilter(extProc ir.ExtProc) (*hcmv3.HttpFilter, error) {
 	extAuthProto := extProcConfig(extProc)
-	if err := extAuthProto.ValidateAll(); err != nil {
-		return nil, err
-	}
-
 	extAuthAny, err := anypb.New(extAuthProto)
 	if err != nil {
 		return nil, err

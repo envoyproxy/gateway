@@ -14,6 +14,8 @@ new features: |
   Allow matchExpressions in TargetSelector
   Add defaulter for gateway-api resources loading from file to be able to set default values.
   Added support for defining Lua EnvoyExtensionPolicies
+  Added RequestID field in ClientTrafficPolicy.HeaderSettings to configure Envoy X-Request-ID behavior.
+  Added support for HorizontalPodAutoscaler to helm chart
 
 bug fixes: |
   Added support for Secret and ConfigMap parsing in Standalone mode.  
@@ -23,6 +25,7 @@ performance improvements: |
 
 # Deprecated features or APIs.
 deprecations: |
+  Deprecated the PreserveXRequestID field.
 
 # Other notable changes not covered by the above sections.
 Other changes: |

@@ -30,7 +30,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/protocov"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 )
 
 const (
@@ -532,7 +532,7 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) map[string]*anypb.
 	if args.http1Settings != nil {
 		http1opts.EnableTrailers = args.http1Settings.EnableTrailers
 		if args.http1Settings.PreserveHeaderCase {
-			preservecaseAny, _ := protocov.ToAnyWithValidation(&preservecasev3.PreserveCaseFormatterConfig{})
+			preservecaseAny, _ := proto.ToAnyWithValidation(&preservecasev3.PreserveCaseFormatterConfig{})
 			http1opts.HeaderKeyFormat = &corev3.Http1ProtocolOptions_HeaderKeyFormat{
 				HeaderFormat: &corev3.Http1ProtocolOptions_HeaderKeyFormat_StatefulFormatter{
 					StatefulFormatter: &corev3.TypedExtensionConfig{
@@ -585,7 +585,7 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) map[string]*anypb.
 		}
 	}
 
-	anyProtocolOptions, _ := protocov.ToAnyWithValidation(&protocolOptions)
+	anyProtocolOptions, _ := proto.ToAnyWithValidation(&protocolOptions)
 
 	extensionOptions := map[string]*anypb.Any{
 		extensionOptionsKey: anyProtocolOptions,
@@ -616,7 +616,7 @@ func buildProxyProtocolSocket(proxyProtocol *ir.ProxyProtocol, tSocket *corev3.T
 	// If existing transport socket does not exist wrap around raw buffer
 	if tSocket == nil {
 		rawCtx := &rawbufferv3.RawBuffer{}
-		rawCtxAny, err := protocov.ToAnyWithValidation(rawCtx)
+		rawCtxAny, err := proto.ToAnyWithValidation(rawCtx)
 		if err != nil {
 			return nil
 		}
@@ -631,7 +631,7 @@ func buildProxyProtocolSocket(proxyProtocol *ir.ProxyProtocol, tSocket *corev3.T
 		ppCtx.TransportSocket = tSocket
 	}
 
-	ppCtxAny, err := protocov.ToAnyWithValidation(ppCtx)
+	ppCtxAny, err := proto.ToAnyWithValidation(ppCtx)
 	if err != nil {
 		return nil
 	}
