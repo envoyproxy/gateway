@@ -794,6 +794,17 @@ spec:
                                   DNSRefreshRate specifies the rate at which DNS records should be refreshed.
                                   Defaults to 30 seconds.
                                 type: string
+                              lookupFamily:
+                                description: |-
+                                  LookupFamily determines how Envoy would resolve DNS for. If set, this configuration overrides other default
+                                  value that Envoy Gateway configures based on attributes of the backends, such Service resource IPFamilies.
+                                enum:
+                                - IPv4
+                                - IPv6
+                                - IPv4Preferred
+                                - IPv6Preferred
+                                - IPv4AndIPv6
+                                type: string
                               respectDnsTtl:
                                 description: |-
                                   RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.
@@ -1684,6 +1695,17 @@ spec:
                                 description: |-
                                   DNSRefreshRate specifies the rate at which DNS records should be refreshed.
                                   Defaults to 30 seconds.
+                                type: string
+                              lookupFamily:
+                                description: |-
+                                  LookupFamily determines how Envoy would resolve DNS for. If set, this configuration overrides other default
+                                  value that Envoy Gateway configures based on attributes of the backends, such Service resource IPFamilies.
+                                enum:
+                                - IPv4
+                                - IPv6
+                                - IPv4Preferred
+                                - IPv6Preferred
+                                - IPv4AndIPv6
                                 type: string
                               respectDnsTtl:
                                 description: |-
@@ -2704,6 +2726,17 @@ spec:
                                       description: |-
                                         DNSRefreshRate specifies the rate at which DNS records should be refreshed.
                                         Defaults to 30 seconds.
+                                      type: string
+                                    lookupFamily:
+                                      description: |-
+                                        LookupFamily determines how Envoy would resolve DNS for. If set, this configuration overrides other default
+                                        value that Envoy Gateway configures based on attributes of the backends, such Service resource IPFamilies.
+                                      enum:
+                                      - IPv4
+                                      - IPv6
+                                      - IPv4Preferred
+                                      - IPv6Preferred
+                                      - IPv4AndIPv6
                                       type: string
                                     respectDnsTtl:
                                       description: |-
@@ -3735,6 +3768,17 @@ spec:
                                 description: |-
                                   DNSRefreshRate specifies the rate at which DNS records should be refreshed.
                                   Defaults to 30 seconds.
+                                type: string
+                              lookupFamily:
+                                description: |-
+                                  LookupFamily determines how Envoy would resolve DNS for. If set, this configuration overrides other default
+                                  value that Envoy Gateway configures based on attributes of the backends, such Service resource IPFamilies.
+                                enum:
+                                - IPv4
+                                - IPv6
+                                - IPv4Preferred
+                                - IPv6Preferred
+                                - IPv4AndIPv6
                                 type: string
                               respectDnsTtl:
                                 description: |-

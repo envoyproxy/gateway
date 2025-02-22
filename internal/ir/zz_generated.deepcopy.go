@@ -1763,6 +1763,11 @@ func (in *HeaderSettings) DeepCopyInto(out *HeaderSettings) {
 		*out = new(XForwardedClientCert)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.RequestID != nil {
+		in, out := &in.RequestID, &out.RequestID
+		*out = new(RequestIDAction)
+		**out = **in
+	}
 	if in.EarlyAddRequestHeaders != nil {
 		in, out := &in.EarlyAddRequestHeaders, &out.EarlyAddRequestHeaders
 		*out = make([]AddHeader, len(*in))
