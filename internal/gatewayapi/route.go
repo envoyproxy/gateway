@@ -949,11 +949,10 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 
 		for _, backendRef := range udpRoute.Spec.Rules[0].BackendRefs {
 			ds := t.processDestination(backendRef, parentRef, udpRoute, resources)
-			if ds == nil {
-				continue
+			// Skip nil destination settings
+			if ds != nil {
+				destSettings = append(destSettings, ds)
 			}
-
-			destSettings = append(destSettings, ds)
 		}
 
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
@@ -1082,11 +1081,10 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 
 		for _, backendRef := range tcpRoute.Spec.Rules[0].BackendRefs {
 			ds := t.processDestination(backendRef, parentRef, tcpRoute, resources)
-			if ds == nil {
-				continue
+			// Skip nil destination settings
+			if ds != nil {
+				destSettings = append(destSettings, ds)
 			}
-
-			destSettings = append(destSettings, ds)
 		}
 
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"

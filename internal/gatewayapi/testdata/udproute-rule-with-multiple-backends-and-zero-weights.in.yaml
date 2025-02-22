@@ -1,0 +1,39 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: udp
+          protocol: UDP
+          port: 90
+          allowedRoutes:
+            namespaces:
+              from: All
+udpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: UDPRoute
+    metadata:
+      namespace: default
+      name: udproute-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - backendRefs:
+            - name: service-1
+              port: 8162
+              weight: 1
+            - name: service-2
+              port: 8162
+              weight: 2
+            - name: service-3
+              port: 8162
+              weight: 3
+            - name: service-4
+              port: 8162
+              weight: 0
