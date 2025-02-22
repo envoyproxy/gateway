@@ -233,6 +233,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: ""
             protocol: HTTP
             weight: 1
         hostname: www.example.com
@@ -266,6 +267,7 @@ xdsIR:
                   endpoints:
                   - host: oauth.foo.com
                     port: 443
+                  name: ""
                   protocol: HTTPS
                   tls:
                     alpnProtocols: null

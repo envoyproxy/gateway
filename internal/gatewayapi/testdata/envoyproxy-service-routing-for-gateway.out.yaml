@@ -133,6 +133,7 @@ xdsIR:
           - endpoints:
             - host: 1.1.1.1
               port: 8080
+            name: ""
             protocol: HTTP
             weight: 1
         hostname: '*'

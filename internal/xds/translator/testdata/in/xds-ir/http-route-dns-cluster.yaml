@@ -24,3 +24,4 @@ http:
         - host: "bar.foo"
           port: 50001
         addressType: FQDN
+        name: "first-route-dest/backend/0"

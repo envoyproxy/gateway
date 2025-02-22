@@ -85,6 +85,10 @@ func clusterName(host string, port uint32) string {
 	return fmt.Sprintf("%s_%d", strings.ReplaceAll(host, ".", "_"), port)
 }
 
+func destinationSettingName(destName string) string {
+	return fmt.Sprintf("%s/backend/-1", destName)
+}
+
 // enableFilterOnRoute enables a filterType on the provided route.
 func enableFilterOnRoute(route *routev3.Route, filterName string) error {
 	if route == nil {
@@ -181,6 +185,7 @@ func addClusterFromURL(url string, tCtx *types.ResourceVersionTable) error {
 	ds = &ir.DestinationSetting{
 		Weight:    ptr.To[uint32](1),
 		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(uc.hostname, uc.port, false)},
+		Name:      destinationSettingName(uc.name),
 	}
 
 	clusterArgs := &xdsClusterArgs{

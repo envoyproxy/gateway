@@ -8,7 +8,8 @@
             portValue: 10001
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality: {}
+    locality:
+      region: first-route-dest/backend/0
 - clusterName: second-route-dest
   endpoints:
   - lbEndpoints:
@@ -19,7 +20,8 @@
             portValue: 10002
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality: {}
+    locality:
+      region: second-route-dest/backend/0
 - clusterName: third-route-dest
   endpoints:
   - lbEndpoints:
@@ -30,7 +32,8 @@
             portValue: 10003
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality: {}
+    locality:
+      region: third-route-dest/backend/0
 - clusterName: fourth-route-dest
   endpoints:
   - lbEndpoints:
@@ -41,7 +44,8 @@
             portValue: 10004
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality: {}
+    locality:
+      region: fourth-route-dest/backend/0
 - clusterName: fifth-route-dest
   endpoints:
   - lbEndpoints:
@@ -52,4 +56,5 @@
             portValue: 10005
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality: {}
+    locality:
+      region: fifth-route-dest/backend/0

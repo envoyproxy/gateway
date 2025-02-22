@@ -25,6 +25,7 @@ tracing:
       - host: "zipkin.default.svc.cluster.local"
         port: 9411
       protocol: "TCP"
+      name: "tracing-0/backend/0"
   provider:
     host: zipkin.default.svc.cluster.local
     port: 9411
@@ -50,3 +51,4 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "direct-route-dest/backend/0"

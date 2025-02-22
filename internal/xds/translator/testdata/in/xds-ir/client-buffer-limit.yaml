@@ -16,6 +16,7 @@ http:
             - endpoints:
                 - host: "1.2.3.4"
                   port: 50000
+              name: "first-route-dest/backend/0"
     connection:
       bufferLimit: 1500
 tcp:
@@ -32,3 +33,4 @@ tcp:
             - endpoints:
                 - host: "1.2.3.4"
                   port: 50000
+              name: "tcp-route-dest/backend/0"

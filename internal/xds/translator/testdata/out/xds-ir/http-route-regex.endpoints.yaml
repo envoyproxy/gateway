@@ -8,4 +8,5 @@
             portValue: 50000
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality: {}
+    locality:
+      region: regex-route-dest/backend/0

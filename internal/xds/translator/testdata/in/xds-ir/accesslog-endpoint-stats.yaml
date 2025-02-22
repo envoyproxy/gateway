@@ -29,6 +29,7 @@ accesslog:
         - host: "otel-collector.default.svc.cluster.local"
           port: 4317
         protocol: "GRPC"
+        name: "accesslog-0/backend/0"
 http:
 - name: "first-listener"
   address: "::"
@@ -47,3 +48,4 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "direct-route-dest/backend/0"

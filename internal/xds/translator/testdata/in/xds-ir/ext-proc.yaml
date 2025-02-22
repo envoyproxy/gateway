@@ -18,6 +18,7 @@ http:
                   port: 8080
               protocol: HTTP
               weight: 1
+              name: httproute/default/httproute-1/rule/0/backend/0
         envoyExtensions:
           extProcs:
             - name: envoyextensionpolicy/default/policy-for-route-2/extproc/0
@@ -42,6 +43,7 @@ http:
                 settings:
                   - protocol: GRPC
                     weight: 1
+                    name: envoyextensionpolicy/default/policy-for-route-2/0/grpc-backend-4/backend/0
             - name: envoyextensionpolicy/default/policy-for-route-1/extproc/0
               failOpen: true
               messageTimeout: 5s
@@ -53,6 +55,7 @@ http:
                 settings:
                   - protocol: GRPC
                     weight: 1
+                    name: envoyextensionpolicy/default/policy-for-route-1/0/grpc-backend-2/backend/0
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
@@ -69,6 +72,7 @@ http:
                   port: 8080
               protocol: HTTP
               weight: 1
+              name: httproute/default/httproute-2/rule/0/backend/0
         envoyExtensions:
           extProcs:
             - name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-2/extproc/0
@@ -78,6 +82,7 @@ http:
                 settings:
                   - protocol: GRPC
                     weight: 1
+                    name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-2/0/grpc-backend-3/backend/0
             - name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/extproc/0
               failOpen: false
               messageTimeout: 15s
@@ -96,6 +101,7 @@ http:
                 settings:
                   - protocol: GRPC
                     weight: 1
+                    name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/0/grpc-backend/backend/0
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io

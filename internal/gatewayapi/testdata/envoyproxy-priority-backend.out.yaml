@@ -305,6 +305,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: ""
             protocol: HTTP
             weight: 1
         envoyExtensions:
@@ -314,6 +315,7 @@ xdsIR:
               name: envoyextensionpolicy/default/policy-for-http-route/extproc/0
               settings:
               - addressType: IP
+                name: ""
                 protocol: GRPC
                 tls:
                   alpnProtocols: null
@@ -326,6 +328,7 @@ xdsIR:
                 endpoints:
                 - host: 8.8.8.8
                   port: 9000
+                name: ""
                 priority: 1
                 protocol: GRPC
                 weight: 1
@@ -333,6 +336,7 @@ xdsIR:
                 endpoints:
                 - host: 1.1.1.1
                   port: 3001
+                name: ""
                 priority: 1
                 protocol: GRPC
                 weight: 1
@@ -340,6 +344,7 @@ xdsIR:
                 endpoints:
                 - host: 2.2.2.2
                   port: 3443
+                name: ""
                 priority: 1
                 protocol: GRPC
                 tls:
@@ -368,6 +373,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: ""
             protocol: HTTP
             weight: 1
         hostname: www.bar.com

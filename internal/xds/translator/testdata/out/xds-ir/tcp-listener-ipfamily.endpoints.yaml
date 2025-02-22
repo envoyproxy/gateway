@@ -14,4 +14,5 @@
             portValue: 0
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality: {}
+    locality:
+      region: tcp-route-dual-dest/backend/0

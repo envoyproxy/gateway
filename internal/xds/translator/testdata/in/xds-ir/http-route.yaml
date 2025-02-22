@@ -29,3 +29,4 @@ http:
         - host: "1.2.3.5"
           port: 50000
           draining: true
+        name: "first-route-dest/backend/0"

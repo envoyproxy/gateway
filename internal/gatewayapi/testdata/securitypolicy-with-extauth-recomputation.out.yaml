@@ -227,6 +227,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: ""
             protocol: HTTP
             weight: 1
         hostname: www.foo.com
@@ -252,12 +253,14 @@ xdsIR:
                   endpoints:
                   - host: 7.7.7.7
                     port: 8080
+                  name: ""
                   protocol: GRPC
                   weight: 1
                 - addressType: FQDN
                   endpoints:
                   - host: primary.foo.com
                     port: 3000
+                  name: ""
                   protocol: GRPC
                   weight: 1
             headersToExtAuth:
@@ -272,6 +275,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: ""
             protocol: HTTP
             weight: 1
         hostname: www.foo.com
@@ -297,12 +301,14 @@ xdsIR:
                   endpoints:
                   - host: 7.7.7.7
                     port: 8080
+                  name: ""
                   protocol: GRPC
                   weight: 1
                 - addressType: FQDN
                   endpoints:
                   - host: primary.foo.com
                     port: 3000
+                  name: ""
                   protocol: GRPC
                   weight: 1
             headersToExtAuth:
@@ -317,6 +323,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: ""
             protocol: HTTP
             weight: 1
         hostname: www.bar.com

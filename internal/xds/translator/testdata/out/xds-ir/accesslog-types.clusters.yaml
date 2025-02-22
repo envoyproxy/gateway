@@ -179,7 +179,8 @@
               portValue: 4317
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality: {}
+      locality:
+        region: accesslog_otel_0_3/backend/0
   name: accesslog_otel_0_3
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
@@ -211,7 +212,8 @@
               portValue: 4317
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality: {}
+      locality:
+        region: accesslog_otel_1_3/backend/0
   name: accesslog_otel_1_3
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
@@ -243,7 +245,8 @@
               portValue: 4317
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality: {}
+      locality:
+        region: accesslog_otel_2_3/backend/0
   name: accesslog_otel_2_3
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true

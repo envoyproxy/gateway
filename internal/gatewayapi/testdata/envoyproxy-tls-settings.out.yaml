@@ -247,6 +247,7 @@ xdsIR:
             endpoints:
             - host: 10.244.0.11
               port: 443
+            name: ""
             protocol: HTTP
             tls:
               alpnProtocols:
@@ -302,6 +303,7 @@ xdsIR:
             endpoints:
             - host: 10.244.0.11
               port: 443
+            name: ""
             protocol: TCP
             tls:
               alpnProtocols:

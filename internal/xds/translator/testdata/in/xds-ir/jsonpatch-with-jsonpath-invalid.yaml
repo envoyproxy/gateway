@@ -50,6 +50,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "first-route-dest/backend/0"
   - name: "second-route"
     hostname: "*"
     headerMatches:
@@ -65,4 +66,5 @@ http:
       - endpoints:
         - host: "4.5.6.7"
           port: 60000
+        name: "second-route-dest/backend/0"
 

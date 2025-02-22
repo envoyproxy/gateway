@@ -303,6 +303,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: ""
             protocol: HTTP
             weight: 1
         hostname: www.foo.com
@@ -328,6 +329,7 @@ xdsIR:
                   endpoints:
                   - host: 8.8.8.8
                     port: 9000
+                  name: ""
                   protocol: GRPC
                   tls:
                     alpnProtocols: null
@@ -347,6 +349,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: ""
             protocol: HTTP
             weight: 1
         hostname: www.bar.com
@@ -372,6 +375,7 @@ xdsIR:
                   endpoints:
                   - host: 7.7.7.7
                     port: 80
+                  name: ""
                   protocol: HTTP
                   tls:
                     alpnProtocols: null

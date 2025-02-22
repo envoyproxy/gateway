@@ -111,6 +111,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: ""
             protocol: HTTPS
             weight: 1
         name: tlsroute/default/tlsroute-1

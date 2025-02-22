@@ -8,7 +8,8 @@
             portValue: 50000
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality: {}
+    locality:
+      region: first-route-www.test.com-dest/backend/0
 - clusterName: second-route-www.test.com-dest
   endpoints:
   - lbEndpoints:
@@ -19,7 +20,8 @@
             portValue: 50000
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality: {}
+    locality:
+      region: second-route-www.test.com-dest/backend/0
 - clusterName: "192_168_1_250_8080"
   endpoints:
   - lbEndpoints:
@@ -30,4 +32,5 @@
             portValue: 8080
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality: {}
+    locality:
+      region: 192_168_1_250_8080/backend/-1

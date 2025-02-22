@@ -23,6 +23,7 @@ accesslog:
           port: 9000
         protocol: GRPC
         weight: 1
+        name: accesslog/monitoring/envoy-als/port/9000/backend/0
     text: |
       [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
     attributes:
@@ -51,6 +52,7 @@ accesslog:
         - host: "otel-collector.default.svc.cluster.local"
           port: 4317
         protocol: "GRPC"
+        name: "accesslog-0/backend/0"
 http:
 - name: "first-listener"
   address: "::"
@@ -69,3 +71,4 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "direct-route-dest/backend/0"

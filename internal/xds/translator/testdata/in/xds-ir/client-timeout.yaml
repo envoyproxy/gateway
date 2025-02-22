@@ -16,6 +16,7 @@ http:
             - endpoints:
                 - host: "1.2.3.4"
                   port: 50000
+              name: "first-route-dest/backend/0"
     timeout:
       http:
         requestReceivedTimeout: "5s"
@@ -32,6 +33,7 @@ tcp:
             - endpoints:
                 - host: "1.2.3.4"
                   port: 50000
+              name: "second-route-dest/backend/0"
     timeout:
       tcp:
         idleTimeout: "1200s"

@@ -52,7 +52,8 @@
               portValue: 80
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality: {}
+      locality:
+        region: localhost_80/backend/-1
   name: localhost_80
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true

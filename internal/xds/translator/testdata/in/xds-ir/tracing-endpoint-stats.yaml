@@ -27,6 +27,7 @@ tracing:
           - host: "otel-collector.default.svc.cluster.local"
             port: 4317
         protocol: "GRPC"
+        name: "tracing-0/backend/0"
   provider:
     host: otel-collector.monitoring.svc.cluster.local
     port: 4317
@@ -49,3 +50,4 @@ http:
             - endpoints:
                 - host: "1.2.3.4"
                   port: 50000
+              name: "direct-route-dest/backend/0"

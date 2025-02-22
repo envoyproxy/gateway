@@ -228,6 +228,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: ""
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
@@ -259,6 +260,7 @@ xdsIR:
                     endpoints:
                     - host: foo.bar.com
                       port: 443
+                    name: ""
                     protocol: HTTPS
                     tls:
                       alpnProtocols: null

@@ -8,7 +8,8 @@
             portValue: 50000
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality: {}
+    locality:
+      region: http-route-dest/backend/0
 - clusterName: tcp-route-dest
   endpoints:
   - lbEndpoints:
@@ -19,7 +20,8 @@
             portValue: 50000
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality: {}
+    locality:
+      region: tcp-route-dest/backend/0
 - clusterName: udp-route-dest
   endpoints:
   - lbEndpoints:
@@ -30,4 +32,5 @@
             portValue: 50000
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality: {}
+    locality:
+      region: udp-route-dest/backend/0

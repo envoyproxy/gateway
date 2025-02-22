@@ -17,6 +17,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "request-header-route-dest/backend/0"
     addRequestHeaders:
     - name: "some-header-multi-value"
       value:

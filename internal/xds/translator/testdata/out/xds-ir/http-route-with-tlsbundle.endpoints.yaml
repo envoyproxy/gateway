@@ -12,4 +12,5 @@
           envoy.transport_socket_match:
             name: httproute/envoy-gateway/httproute-btls/rule/0/tls/0
     loadBalancingWeight: 1
-    locality: {}
+    locality:
+      region: httproute/envoy-gateway/httproute-btls/rule/0/backend/0

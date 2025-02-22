@@ -17,4 +17,6 @@ http:
         - host: "1.2.3.4"
           port: 50000
         weight: 1
+        name: "first-route-dest/backend/0"
       - weight: 1
+        name: "first-route-dest/backend/1"

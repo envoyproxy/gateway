@@ -19,6 +19,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "first-route-dest/backend/0"
   - name: "second-route"
     hostname: "*"
     traffic:
@@ -30,6 +31,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "second-route-dest/backend/0"
   - name: "third-route"
     hostname: "*"
     traffic:
@@ -41,6 +43,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "third-route-dest/backend/0"
   - name: "fourth-route"
     hostname: "*"
     traffic:
@@ -53,6 +56,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "fourth-route-dest/backend/0"
   - name: "fifth-route"
     hostname: "*"
     traffic:
@@ -66,6 +70,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "fifth-route-dest/backend/0"
   - name: "sixth-route"
     hostname: "*"
     traffic:
@@ -79,6 +84,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "sixth-route-dest/backend/0"
   - name: "seventh-route"
     hostname: "*"
     traffic:
@@ -92,6 +98,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "seventh-route-dest/backend/0"
   - name: "eighth-route"
     hostname: "*"
     traffic:
@@ -104,6 +111,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "eighth-route-dest/backend/0"
   - name: "ninth-route"
     hostname: "*"
     traffic:
@@ -117,6 +125,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "ninth-route-dest/backend/0"
   - name: "tenth-route"
     hostname: "*"
     traffic:
@@ -132,3 +141,4 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "tenth-route-dest/backend/0"

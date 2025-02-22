@@ -140,6 +140,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: ""
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
@@ -156,6 +157,7 @@ xdsIR:
               endpoints:
               - host: 7.7.7.7
                 port: 8080
+              name: ""
               protocol: HTTP
               weight: 1
           percentage: 20
@@ -166,6 +168,7 @@ xdsIR:
               endpoints:
               - host: 7.6.5.4
                 port: 8080
+              name: ""
               protocol: HTTP
               weight: 1
           percentage: 50

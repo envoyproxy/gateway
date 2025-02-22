@@ -35,7 +35,8 @@
               portValue: 50000
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality: {}
+      locality:
+        region: tls-passthrough-bar-dest/backend/0
   name: tls-passthrough-bar-dest
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true

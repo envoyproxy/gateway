@@ -149,6 +149,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: ""
             protocol: GRPC
             weight: 1
         directResponse:

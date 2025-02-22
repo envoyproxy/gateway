@@ -15,4 +15,5 @@
       healthStatus: DRAINING
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality: {}
+    locality:
+      region: first-route-dest/backend/0

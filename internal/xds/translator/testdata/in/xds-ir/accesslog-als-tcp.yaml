@@ -17,6 +17,7 @@ accesslog:
           port: 9000
         protocol: GRPC
         weight: 1
+        name: accesslog/monitoring/envoy-als/port/9000/backend/0
     traffic:
       backendConnection:
         bufferLimit: 20971520

@@ -350,6 +350,7 @@ func createOAuth2TokenEndpointCluster(tCtx *types.ResourceVersionTable,
 		Endpoints: []*ir.DestinationEndpoint{
 			ir.NewDestEndpoint(cluster.hostname, cluster.port, false),
 		},
+		Name: destinationSettingName(cluster.name),
 	}
 
 	clusterArgs := &xdsClusterArgs{

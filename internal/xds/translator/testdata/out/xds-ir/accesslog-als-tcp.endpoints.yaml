@@ -8,4 +8,5 @@
             portValue: 9000
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality: {}
+    locality:
+      region: accesslog/monitoring/envoy-als/port/9000/backend/0

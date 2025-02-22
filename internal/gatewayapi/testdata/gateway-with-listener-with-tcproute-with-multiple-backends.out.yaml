@@ -111,12 +111,14 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: ""
             protocol: TCP
             weight: 50
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: ""
             protocol: TCP
             weight: 50
         name: tcproute/default/tcproute-1
