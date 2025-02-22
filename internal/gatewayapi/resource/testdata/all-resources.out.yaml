@@ -71,6 +71,17 @@ clientTrafficPolicies:
         requestReceivedTimeout: 50ms
   status:
     ancestors: null
+configMaps:
+- data:
+    game.properties: |
+      enemy.types=aliens,monsters
+      player.maximum-lives=5
+    player_initial_lives: "3"
+  kind: ConfigMap
+  metadata:
+    creationTimestamp: null
+    name: configmap
+    namespace: default
 envoyPatchPolicies:
 - kind: EnvoyPatchPolicy
   metadata:
@@ -234,6 +245,16 @@ namespaces:
     name: gateway-conformance-infra
   spec: {}
   status: {}
+secrets:
+- data:
+    .secret-file: dmFsdWUtMg0KDQo=
+  kind: Secret
+  metadata:
+    creationTimestamp: null
+    name: secret
+    namespace: default
+  stringData:
+    secret: literal value
 securityPolicies:
 - kind: SecurityPolicy
   metadata:
@@ -358,24 +379,3 @@ udpRoutes:
         weight: 1
   status:
     parents: null
-secrets:
-- kind: Secret
-  metadata:
-    creationTimestamp: null
-    name: secret
-    namespace: default
-  data:
-    .secret-file: dmFsdWUtMg0KDQo=
-  stringData:
-    secret: "literal value"
-configMaps:
-- kind: ConfigMap
-  metadata:
-    creationTimestamp: null
-    name: configmap
-    namespace: default
-  data:
-    player_initial_lives: "3"
-    game.properties: |
-      enemy.types=aliens,monsters
-      player.maximum-lives=5
