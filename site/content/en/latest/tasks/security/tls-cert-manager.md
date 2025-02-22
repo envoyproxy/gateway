@@ -30,6 +30,7 @@ Installing cert-manager is straight-forward and you can follow the below approac
 $ helm repo add jetstack https://charts.jetstack.io
 $ helm upgrade \
   --install cert-manager jetstack/cert-manager  \
+  --version v1.17.0 \
   --create-namespace --namespace cert-manager \
   --set config.apiVersion="controller.config.cert-manager.io/v1alpha1" \
   --set config.kind="ControllerConfiguration" \
