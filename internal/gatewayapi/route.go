@@ -1034,7 +1034,11 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 				)
 				continue
 			}
-			destSettings = append(destSettings, ds)
+
+			// Skip nil destination settings
+			if ds != nil {
+				destSettings = append(destSettings, ds)
+			}
 		}
 
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
@@ -1176,7 +1180,10 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 				)
 				continue
 			}
-			destSettings = append(destSettings, ds)
+			// Skip nil destination settings
+			if ds != nil {
+				destSettings = append(destSettings, ds)
+			}
 		}
 
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
