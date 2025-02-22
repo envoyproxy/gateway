@@ -341,6 +341,23 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 		EarlyHeaderMutationExtensions: buildEarlyHeaderMutation(irListener.Headers),
 	}
 
+	if requestID := ptr.Deref(irListener.Headers, ir.HeaderSettings{}).RequestID; requestID != nil {
+		switch *requestID {
+		case ir.RequestIDActionPreserveOrGenerate:
+			mgr.GenerateRequestId = wrapperspb.Bool(true)
+			mgr.PreserveExternalRequestId = true
+		case ir.RequestIDActionPreserve:
+			mgr.GenerateRequestId = wrapperspb.Bool(false)
+			mgr.PreserveExternalRequestId = true
+		case ir.RequestIDActionDisable:
+			mgr.GenerateRequestId = wrapperspb.Bool(false)
+			mgr.PreserveExternalRequestId = false
+		case ir.RequestIDActionGenerate:
+			mgr.GenerateRequestId = wrapperspb.Bool(true)
+			mgr.PreserveExternalRequestId = false
+		}
+	}
+
 	if mgr.ForwardClientCertDetails == hcmv3.HttpConnectionManager_APPEND_FORWARD || mgr.ForwardClientCertDetails == hcmv3.HttpConnectionManager_SANITIZE_SET {
 		mgr.SetCurrentClientCertDetails = buildSetCurrentClientCertDetails(irListener.Headers)
 	}
