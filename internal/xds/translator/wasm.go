@@ -80,9 +80,6 @@ func buildHCMWasmFilter(wasm ir.Wasm) (*hcmv3.HttpFilter, error) {
 	if wasmProto, err = wasmConfig(wasm); err != nil {
 		return nil, err
 	}
-	if err = wasmProto.ValidateAll(); err != nil {
-		return nil, err
-	}
 	if wasmAny, err = anypb.New(wasmProto); err != nil {
 		return nil, err
 	}

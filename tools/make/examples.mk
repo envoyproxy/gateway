@@ -2,11 +2,7 @@ EXAMPLE_APPS := extension-server envoy-ext-auth envoy-als grpc-ext-proc preserve
 EXAMPLE_IMAGE_PREFIX ?= envoyproxy/gateway-
 EXAMPLE_TAG ?= latest
 
-sync-examples-tools:
-	@$(LOG_TARGET)
-	@cp -r tools/src/controller-gen examples/extension-server/tools/src
-
-kube-generate-examples: sync-examples-tools
+kube-generate-examples:
 	@$(LOG_TARGET)
 	@pushd $(ROOT_DIR)/examples/extension-server; \
 		make generate; \

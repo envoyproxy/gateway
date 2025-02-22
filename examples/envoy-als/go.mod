@@ -1,6 +1,6 @@
 module github.com/envoyproxy/gateway-envoy-als
 
-go 1.23.6
+go 1.24.0
 
 require (
 	github.com/envoyproxy/go-control-plane v0.13.1
