@@ -23,6 +23,7 @@ clientTrafficPolicies:
           value: my-set-header-value
       enableEnvoyHeaders: true
       preserveXRequestID: true
+      requestID: PreserveOrGenerate
       withUnderscoresAction: Allow
     targetRef:
       group: gateway.networking.k8s.io
@@ -156,6 +157,7 @@ xdsIR:
         - my-removed-header
         enableEnvoyHeaders: true
         preserveXRequestID: true
+        requestID: PreserveOrGenerate
         withUnderscoresAction: Allow
       hostnames:
       - '*'
@@ -185,6 +187,7 @@ xdsIR:
         - my-removed-header
         enableEnvoyHeaders: true
         preserveXRequestID: true
+        requestID: PreserveOrGenerate
         withUnderscoresAction: Allow
       hostnames:
       - '*'
@@ -199,3 +202,8 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 8080
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

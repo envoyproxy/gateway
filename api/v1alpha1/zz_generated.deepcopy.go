@@ -16,6 +16,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
@@ -1336,6 +1337,11 @@ func (in *DNS) DeepCopyInto(out *DNS) {
 	if in.RespectDNSTTL != nil {
 		in, out := &in.RespectDNSTTL, &out.RespectDNSTTL
 		*out = new(bool)
+		**out = **in
+	}
+	if in.LookupFamily != nil {
+		in, out := &in.LookupFamily, &out.LookupFamily
+		*out = new(DNSLookupFamily)
 		**out = **in
 	}
 }
@@ -3184,6 +3190,11 @@ func (in *HeaderSettings) DeepCopyInto(out *HeaderSettings) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.RequestID != nil {
+		in, out := &in.RequestID, &out.RequestID
+		*out = new(RequestIDAction)
+		**out = **in
+	}
 	if in.EarlyRequestHeaders != nil {
 		in, out := &in.EarlyRequestHeaders, &out.EarlyRequestHeaders
 		*out = new(v1.HTTPHeaderFilter)
@@ -3712,7 +3723,12 @@ func (in *KubernetesPodDisruptionBudgetSpec) DeepCopyInto(out *KubernetesPodDisr
 	*out = *in
 	if in.MinAvailable != nil {
 		in, out := &in.MinAvailable, &out.MinAvailable
-		*out = new(int32)
+		*out = new(intstr.IntOrString)
+		**out = **in
+	}
+	if in.MaxUnavailable != nil {
+		in, out := &in.MaxUnavailable, &out.MaxUnavailable
+		*out = new(intstr.IntOrString)
 		**out = **in
 	}
 	if in.Patch != nil {
@@ -5690,6 +5706,13 @@ func (in *TargetSelector) DeepCopyInto(out *TargetSelector) {
 		*out = make(map[string]string, len(*in))
 		for key, val := range *in {
 			(*out)[key] = val
+		}
+	}
+	if in.MatchExpressions != nil {
+		in, out := &in.MatchExpressions, &out.MatchExpressions
+		*out = make([]metav1.LabelSelectorRequirement, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
 }

@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"sort"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,11 +46,9 @@ func LoadResourcesFromYAMLBytes(yamlBytes []byte, addMissingResources bool) (*Re
 // loadKubernetesYAMLToResources converts a Kubernetes YAML string into GatewayAPI Resources.
 // TODO: add support for kind:
 //   - EnvoyExtensionPolicy (gateway.envoyproxy.io/v1alpha1)
-//   - HTTPRouteFilter (gateway.envoyproxy.io/v1alpha1)
 //   - BackendLPPolicy (gateway.networking.k8s.io/v1alpha2)
 //   - BackendTLSPolicy (gateway.networking.k8s.io/v1alpha3)
 //   - ReferenceGrant (gateway.networking.k8s.io/v1alpha2)
-//   - TLSRoute (gateway.networking.k8s.io/v1alpha2)
 func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Resources, error) {
 	resources := NewResources()
 	var useDefaultNamespace bool
@@ -64,7 +63,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 			return err
 		}
 
-		un := unstructured.Unstructured{Object: obj}
+		un := &unstructured.Unstructured{Object: obj}
 		gvk := un.GroupVersionKind()
 		name, namespace := un.GetName(), un.GetNamespace()
 		if len(namespace) == 0 {
@@ -72,10 +71,15 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 			namespace = config.DefaultNamespace
 		}
 
-		// Perform local validation for gateway-api related resources only.
+		// Perform local validation and apply default values for gateway-api related resources only.
 		if gvk.Group == egv1a1.GroupName || gvk.Group == gwapiv1.GroupName {
 			if err = defaultValidator.Validate(yamlByte); err != nil {
 				return fmt.Errorf("local validation error: %w", err)
+			}
+
+			un, err = gatewaySchemaDefaulter.ApplyDefault(un)
+			if err != nil {
+				return fmt.Errorf("failed to apply default values for %s/%s: %w", un.GetKind(), un.GetName(), err)
 			}
 		}
 
@@ -84,7 +88,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 		if err != nil {
 			return err
 		}
-		err = combinedScheme.Convert(&un, kobj, nil)
+		err = combinedScheme.Convert(un, kobj, nil)
 		if err != nil {
 			return err
 		}
@@ -327,7 +331,10 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 	}
 
 	if addMissingResources {
-		for ns := range requiredNamespaceMap {
+		// Sort the required namespace in order to keep the consistency for test.
+		sortedRequiredNamespace := requiredNamespaceMap.UnsortedList()
+		sort.Strings(sortedRequiredNamespace)
+		for _, ns := range sortedRequiredNamespace {
 			if !providedNamespaceMap.Has(ns) {
 				namespace := &corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
@@ -354,13 +361,20 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 		for _, route := range resources.GRPCRoutes {
 			addMissingServices(requiredServiceMap, route)
 		}
+		// Sort the required service in order to keep the consistency for test.
+		sortedRequiredService := make([]string, 0, len(requiredServiceMap))
+		for key := range requiredServiceMap {
+			sortedRequiredService = append(sortedRequiredService, key)
+		}
+		sort.Strings(sortedRequiredService)
 
 		providedServiceMap := map[string]*corev1.Service{}
 		for _, service := range resources.Services {
 			providedServiceMap[service.Namespace+"/"+service.Name] = service
 		}
 
-		for key, service := range requiredServiceMap {
+		for _, key := range sortedRequiredService {
+			service := requiredServiceMap[key]
 			if provided, found := providedServiceMap[key]; !found {
 				resources.Services = append(resources.Services, service)
 			} else {
