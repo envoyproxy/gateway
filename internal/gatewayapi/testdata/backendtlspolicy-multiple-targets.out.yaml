@@ -192,7 +192,7 @@ xdsIR:
       - destination:
           name: httproute/envoy-gateway/httproute-btls-1/rule/0
           settings:
-          - name: ""
+          - name: httproute/envoy-gateway/httproute-btls-1/rule/0/backend/0
             protocol: HTTP
             tls:
               alpnProtocols: null
@@ -217,7 +217,7 @@ xdsIR:
       - destination:
           name: httproute/envoy-gateway/httproute-btls-2/rule/0
           settings:
-          - name: ""
+          - name: httproute/envoy-gateway/httproute-btls-2/rule/0/backend/0
             protocol: HTTP
             tls:
               alpnProtocols: null

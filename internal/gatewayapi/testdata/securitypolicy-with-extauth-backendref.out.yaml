@@ -244,7 +244,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
-            name: ""
+            name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: www.foo.com
@@ -270,7 +270,7 @@ xdsIR:
                   endpoints:
                   - host: 8.8.8.8
                     port: 9000
-                  name: ""
+                  name: securitypolicy/default/policy-for-http-route-1/extauth/0/backend/0
                   protocol: GRPC
                   weight: 1
             headersToExtAuth:
@@ -284,7 +284,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
-            name: ""
+            name: httproute/default/httproute-1/rule/1/backend/0
             protocol: HTTP
             weight: 1
         hostname: www.foo.com
@@ -310,7 +310,7 @@ xdsIR:
                   endpoints:
                   - host: 8.8.8.8
                     port: 9000
-                  name: ""
+                  name: securitypolicy/default/policy-for-http-route-1/extauth/0/backend/0
                   protocol: GRPC
                   weight: 1
             headersToExtAuth:
@@ -324,7 +324,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
-            name: ""
+            name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: www.bar.com
@@ -350,7 +350,7 @@ xdsIR:
                   endpoints:
                   - host: 7.7.7.7
                     port: 80
-                  name: ""
+                  name: securitypolicy/default/policy-for-gateway-1/extauth/0/backend/0
                   protocol: HTTP
                   weight: 1
               headersToBackend:

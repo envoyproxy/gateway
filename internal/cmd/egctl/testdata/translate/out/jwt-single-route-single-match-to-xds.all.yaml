@@ -179,7 +179,8 @@ xds:
                     portValue: 3000
               loadBalancingWeight: 1
             loadBalancingWeight: 1
-            locality: {}
+            locality:
+              region: httproute/envoy-gateway-system/backend/rule/0/backend/0
     - '@type': type.googleapis.com/envoy.admin.v3.ClustersConfigDump
       dynamicActiveClusters:
       - cluster:

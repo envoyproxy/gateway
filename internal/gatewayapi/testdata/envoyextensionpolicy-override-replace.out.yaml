@@ -290,7 +290,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
-            name: ""
+            name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
         envoyExtensions:
@@ -299,7 +299,7 @@ xdsIR:
             destination:
               name: envoyextensionpolicy/default/policy-for-route-1/extproc/0
               settings:
-              - name: ""
+              - name: envoyextensionpolicy/default/policy-for-route-1/extproc/0/backend/0
                 protocol: GRPC
                 weight: 1
             name: envoyextensionpolicy/default/policy-for-route-1/extproc/0
@@ -321,7 +321,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
-            name: ""
+            name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
         envoyExtensions:
@@ -330,7 +330,7 @@ xdsIR:
             destination:
               name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/extproc/0
               settings:
-              - name: ""
+              - name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/extproc/0/backend/0
                 protocol: GRPC
                 weight: 1
             name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/extproc/0
@@ -352,7 +352,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
-            name: ""
+            name: httproute/default/httproute-3/rule/0/backend/0
             protocol: HTTP
             weight: 1
         envoyExtensions: {}

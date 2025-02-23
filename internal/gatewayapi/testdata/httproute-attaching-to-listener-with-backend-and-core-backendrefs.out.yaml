@@ -224,14 +224,14 @@ xdsIR:
             endpoints:
             - host: 1.1.1.1
               port: 3001
-            name: ""
+            name: httproute/default/httproute-static/rule/0/backend/0
             protocol: HTTP
             weight: 1
           - addressType: IP
             endpoints:
             - host: 4.3.2.1
               port: 8080
-            name: ""
+            name: httproute/default/httproute-static/rule/0/backend/1
             protocol: HTTP
             weight: 1
           - addressType: IP
@@ -259,14 +259,14 @@ xdsIR:
             endpoints:
             - host: primary.foo.com
               port: 3000
-            name: ""
+            name: httproute/default/httproute-fqdn/rule/0/backend/0
             protocol: HTTP
             weight: 1
           - addressType: FQDN
             endpoints:
             - host: bar.foo
               port: 8080
-            name: ""
+            name: httproute/default/httproute-fqdn/rule/0/backend/1
             protocol: HTTP
             weight: 1
           - addressType: FQDN

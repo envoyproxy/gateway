@@ -182,7 +182,7 @@ xdsIR:
           endpoints:
           - host: 8.7.6.5
             port: 4317
-          name: ""
+          name: tracing/backend/-1
           protocol: GRPC
       provider:
         backendRefs:

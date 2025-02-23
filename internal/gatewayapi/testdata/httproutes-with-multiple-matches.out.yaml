@@ -305,7 +305,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
-            name: ""
+            name: httproute/envoy-gateway/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: example.com
@@ -330,7 +330,7 @@ xdsIR:
             endpoints:
             - host: 8.8.8.8
               port: 8080
-            name: ""
+            name: httproute/envoy-gateway/httproute-3/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: example.com
@@ -351,7 +351,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
-            name: ""
+            name: httproute/envoy-gateway/httproute-4/rule/0/backend/0
             protocol: HTTP
             weight: 1
         headerMatches:
@@ -376,7 +376,7 @@ xdsIR:
             endpoints:
             - host: 8.8.8.8
               port: 8080
-            name: ""
+            name: httproute/envoy-gateway/httproute-5/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: example.net
@@ -397,7 +397,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
-            name: ""
+            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: '*.com'
@@ -418,7 +418,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
-            name: ""
+            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: '*.net'
@@ -439,7 +439,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
-            name: ""
+            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: '*'

@@ -277,7 +277,7 @@ xdsIR:
             endpoints:
             - host: 10.240.0.10
               port: 9090
-            name: ""
+            name: accesslog_als_2_1/backend/-1
             protocol: GRPC
         http:
           requestHeaders:
@@ -298,7 +298,7 @@ xdsIR:
             endpoints:
             - host: 10.240.0.10
               port: 9090
-            name: ""
+            name: accesslog_als_2_2/backend/-1
             protocol: GRPC
         logType: Route
         name: envoy-gateway-system/test
@@ -312,7 +312,7 @@ xdsIR:
             endpoints:
             - host: 10.240.0.10
               port: 9090
-            name: ""
+            name: accesslog_als_3_1/backend/-1
             protocol: GRPC
         http:
           requestHeaders:
@@ -333,7 +333,7 @@ xdsIR:
             endpoints:
             - host: 10.240.0.10
               port: 9090
-            name: ""
+            name: accesslog_als_3_2/backend/-1
             protocol: GRPC
         logType: Listener
         name: envoy-gateway-system/test
@@ -347,7 +347,7 @@ xdsIR:
             endpoints:
             - host: 10.240.0.10
               port: 9090
-            name: ""
+            name: accesslog_als_4_1/backend/-1
             protocol: GRPC
         http:
           requestHeaders:
@@ -367,7 +367,7 @@ xdsIR:
             endpoints:
             - host: 10.240.0.10
               port: 9090
-            name: ""
+            name: accesslog_als_4_2/backend/-1
             protocol: GRPC
         name: envoy-gateway-system/test
         text: |
@@ -381,7 +381,7 @@ xdsIR:
           - endpoints:
             - host: otel-collector.monitoring.svc.cluster.local
               port: 4317
-            name: ""
+            name: accesslog_otel_2_3/backend/-1
             protocol: GRPC
             weight: 1
         logType: Route
@@ -396,7 +396,7 @@ xdsIR:
           - endpoints:
             - host: otel-collector.monitoring.svc.cluster.local
               port: 4317
-            name: ""
+            name: accesslog_otel_3_3/backend/-1
             protocol: GRPC
             weight: 1
         logType: Listener
@@ -411,7 +411,7 @@ xdsIR:
           - endpoints:
             - host: otel-collector.monitoring.svc.cluster.local
               port: 4317
-            name: ""
+            name: accesslog_otel_4_3/backend/-1
             protocol: GRPC
             weight: 1
         resources:

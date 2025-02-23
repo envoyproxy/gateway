@@ -386,7 +386,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
-            name: ""
+            name: grpcroute/default/grpcroute-1/rule/0/backend/0
             protocol: GRPC
             weight: 1
         hostname: '*'
@@ -452,7 +452,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
-            name: ""
+            name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: foo.envoyproxy.io
@@ -497,7 +497,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
-            name: ""
+            name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: bar.envoyproxy.io

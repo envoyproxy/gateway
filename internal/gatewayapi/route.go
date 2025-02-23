@@ -1350,7 +1350,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		}
 
 	case resource.KindService:
-		ds = t.processServiceDestinationSetting(backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
+		ds = t.processServiceDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
 		ds.TLS, err = t.applyBackendTLSSetting(
 			backendRef.BackendObjectReference,
 			backendNamespace,
@@ -1374,7 +1374,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		}
 		ds.IPFamily = getServiceIPFamily(resources.GetService(backendNamespace, string(backendRef.Name)))
 	case egv1a1.KindBackend:
-		ds = t.processBackendDestinationSetting(backendRef.BackendObjectReference, backendNamespace, protocol, resources)
+		ds = t.processBackendDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources)
 		ds.TLS, err = t.applyBackendTLSSetting(
 			backendRef.BackendObjectReference,
 			backendNamespace,
@@ -1431,6 +1431,7 @@ func validateDestinationSettings(destinationSettings *ir.DestinationSetting, end
 }
 
 func (t *Translator) processServiceDestinationSetting(
+	name string,
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
 	protocol ir.AppProtocol,
@@ -1472,6 +1473,7 @@ func (t *Translator) processServiceDestinationSetting(
 	}
 
 	return &ir.DestinationSetting{
+		Name:        name,
 		Protocol:    protocol,
 		Endpoints:   endpoints,
 		AddressType: addrType,
@@ -1748,7 +1750,7 @@ func getTargetBackendReference(backendRef gwapiv1a2.BackendObjectReference, back
 	return ref
 }
 
-func (t *Translator) processBackendDestinationSetting(backendRef gwapiv1.BackendObjectReference, backendNamespace string, protocol ir.AppProtocol, resources *resource.Resources) *ir.DestinationSetting {
+func (t *Translator) processBackendDestinationSetting(name string, backendRef gwapiv1.BackendObjectReference, backendNamespace string, protocol ir.AppProtocol, resources *resource.Resources) *ir.DestinationSetting {
 	var (
 		dstEndpoints []*ir.DestinationEndpoint
 		dstAddrType  *ir.DestinationAddressType
@@ -1806,6 +1808,7 @@ func (t *Translator) processBackendDestinationSetting(backendRef gwapiv1.Backend
 	}
 
 	ds := &ir.DestinationSetting{
+		Name:        name,
 		Protocol:    protocol,
 		Endpoints:   dstEndpoints,
 		AddressType: dstAddrType,
