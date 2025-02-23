@@ -18,6 +18,7 @@ new features: |
   Added support for HorizontalPodAutoscaler to helm chart
 
 bug fixes: |
+  Fix traffic splitting when filters are attached to the backendRef.
 
 # Enhancements that improve performance.
 performance improvements: |
