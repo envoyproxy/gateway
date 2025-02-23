@@ -101,6 +101,8 @@ type ClientTrafficPolicySpec struct {
 }
 
 // HeaderSettings provides configuration options for headers on the listener.
+//
+// +kubebuilder:validation:XValidation:rule="(has(self.preserveXRequestID) && !has(self.requestID)) || (!has(self.preserveXRequestID) && has(self.requestID))",message="preserveXRequestID is deprecated and must not be set alongside RequestID."
 type HeaderSettings struct {
 	// EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests
 	// and responses.
@@ -135,7 +137,6 @@ type HeaderSettings struct {
 	// Deprecated: use RequestID=Preserve instead
 	//
 	// +optional
-	// +kubebuilder:validation:XValidation:rule="!(has(self) && has(parent.RequestID))",message="preserveXRequestID is deprecated and must not be set when RequestID is specified"
 	PreserveXRequestID *bool `json:"preserveXRequestID,omitempty"`
 
 	// RequestID configures Envoy's behavior for handling the `X-Request-ID` header.
