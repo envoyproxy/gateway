@@ -726,7 +726,10 @@ spec:
                                             values within the header.
                                           type: boolean
                                         name:
-                                          description: Name of the HTTP header.
+                                          description: |-
+                                            Name of the HTTP header.
+                                            The header name is case-insensitive unless PreserveHeaderCase is set to true.
+                                            For example, "Foo" and "foo" are considered the same header.
                                           maxLength: 256
                                           minLength: 1
                                           type: string
@@ -741,8 +744,7 @@ spec:
                                           type: string
                                         value:
                                           description: |-
-                                            Value within the HTTP header. Due to the
-                                            case-insensitivity of header names, "foo" and "Foo" are considered equivalent.
+                                            Value within the HTTP header.
                                             Do not set this field when Type="Distinct", implying matching on any/all unique
                                             values within the header.
                                           maxLength: 1024
@@ -967,7 +969,10 @@ spec:
                                             values within the header.
                                           type: boolean
                                         name:
-                                          description: Name of the HTTP header.
+                                          description: |-
+                                            Name of the HTTP header.
+                                            The header name is case-insensitive unless PreserveHeaderCase is set to true.
+                                            For example, "Foo" and "foo" are considered the same header.
                                           maxLength: 256
                                           minLength: 1
                                           type: string
@@ -982,8 +987,7 @@ spec:
                                           type: string
                                         value:
                                           description: |-
-                                            Value within the HTTP header. Due to the
-                                            case-insensitivity of header names, "foo" and "Foo" are considered equivalent.
+                                            Value within the HTTP header.
                                             Do not set this field when Type="Distinct", implying matching on any/all unique
                                             values within the header.
                                           maxLength: 1024
