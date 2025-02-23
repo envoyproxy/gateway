@@ -131,7 +131,7 @@ type HeaderSettings struct {
 
 	// PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge
 	// (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
-	// Defalts to false and will be ignored if RequestID is also set.
+	// Defaults to false and will be ignored if RequestID is also set.
 	// Deprecated: use RequestID=Preserve instead
 	//
 	// +optional
