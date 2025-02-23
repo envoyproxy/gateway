@@ -147,6 +147,7 @@ securityPolicies:
     namespace: default
   spec:
     basicAuth:
+      forwardUsernameHeader: ""
       users:
         group: null
         kind: null
@@ -178,6 +179,7 @@ securityPolicies:
     namespace: default
   spec:
     basicAuth:
+      forwardUsernameHeader: ""
       users:
         group: null
         kind: null
@@ -249,6 +251,7 @@ xdsIR:
           prefix: /foo1
         security:
           basicAuth:
+            forwardUsernameHeader: ""
             name: securitypolicy/default/policy-for-http-route-1
             users: '[redacted]'
       - destination:
@@ -273,6 +276,7 @@ xdsIR:
           prefix: /foo2
         security:
           basicAuth:
+            forwardUsernameHeader: ""
             name: securitypolicy/default/policy-for-http-route-1
             users: '[redacted]'
       - destination:
@@ -297,6 +301,7 @@ xdsIR:
           prefix: /bar
         security:
           basicAuth:
+            forwardUsernameHeader: ""
             name: securitypolicy/default/policy-for-gateway-1
             users: '[redacted]'
     readyListener:

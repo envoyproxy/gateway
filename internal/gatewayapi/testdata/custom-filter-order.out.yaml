@@ -165,6 +165,7 @@ securityPolicies:
     namespace: envoy-gateway
   spec:
     basicAuth:
+      forwardUsernameHeader: ""
       users:
         group: null
         kind: null
@@ -279,6 +280,7 @@ xdsIR:
           prefix: /foo
         security:
           basicAuth:
+            forwardUsernameHeader: ""
             name: securitypolicy/envoy-gateway/policy-for-gateway
             users: '[redacted]'
           cors:
