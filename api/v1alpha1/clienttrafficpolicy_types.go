@@ -131,10 +131,11 @@ type HeaderSettings struct {
 
 	// PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge
 	// (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
-	// Defaults to false and will be ignored if RequestID is also set.
+	// Defaults to false and cannot be combined with RequestID.
 	// Deprecated: use RequestID=Preserve instead
 	//
 	// +optional
+	// +kubebuilder:validation:XValidation:rule="!(has(self) && has(parent.RequestID))",message="preserveXRequestID is deprecated and must not be set when RequestID is specified"
 	PreserveXRequestID *bool `json:"preserveXRequestID,omitempty"`
 
 	// RequestID configures Envoy's behavior for handling the `X-Request-ID` header.
