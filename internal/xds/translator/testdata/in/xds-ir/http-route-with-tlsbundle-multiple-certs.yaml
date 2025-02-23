@@ -38,7 +38,7 @@ http:
                   name: policy-btls/policies-ca
                 sni: example.com
               weight: 1
-              name: httproute/envoy-gateway/httproute-btls-2/rule/0/backend/1
+              name: httproute/envoy-gateway/httproute-btls/rule/0/backend/1
         hostname: '*'
         name: httproute/envoy-gateway/httproute-btls/rule/0/match/0/*
         pathMatch:
