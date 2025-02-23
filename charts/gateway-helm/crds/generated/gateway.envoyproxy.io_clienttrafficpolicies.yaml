@@ -324,10 +324,6 @@ spec:
                       Defaults to false and cannot be combined with RequestID.
                       Deprecated: use RequestID=Preserve instead
                     type: boolean
-                    x-kubernetes-validations:
-                    - message: preserveXRequestID is deprecated and must not be set
-                        when RequestID is specified
-                      rule: '!(has(self) && has(parent.RequestID))'
                   requestID:
                     description: |-
                       RequestID configures Envoy's behavior for handling the `X-Request-ID` header.
@@ -400,6 +396,11 @@ spec:
                         > 0) ? (self.mode == ''AppendForward'' || self.mode == ''SanitizeSet'')
                         : true'
                 type: object
+                x-kubernetes-validations:
+                - message: preserveXRequestID is deprecated and must not be set alongside
+                    RequestID.
+                  rule: (has(self.preserveXRequestID) && !has(self.requestID)) ||
+                    (!has(self.preserveXRequestID) && has(self.requestID))
               healthCheck:
                 description: HealthCheck provides configuration for determining whether
                   the HTTP/HTTPS listener is healthy.
