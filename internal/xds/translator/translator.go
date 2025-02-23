@@ -597,7 +597,7 @@ func (t *Translator) addRouteToRouteConfig(
 					errs = errors.Join(errs, err)
 				}
 			} else {
-				// If a filter does exist, we create a weighted cluster thats
+				// If a filter does exist, we create a weighted cluster that's
 				// attached to the route, and create a xds Cluster per setting
 				for _, setting := range httpRoute.Destination.Settings {
 					tSettings := []*ir.DestinationSetting{setting}
