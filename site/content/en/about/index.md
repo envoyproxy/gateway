@@ -26,7 +26,7 @@ Envoy Gateway democratizes the power of <a href="https://www.envoyproxy.io/">Env
 <div class="row justify-content-center">
 <div class="col-md-10">
 <h2 class="text-center mb-5">Our Vision</h2>
-<p class="lead text-center mb-5">
+<p class="text-center mb-5 lead">
 Envoy Gateway was created with a clear mission: to make Envoy Proxy's powerful features accessible to all users while providing a robust implementation of the Kubernetes Gateway API. We believe that managing application
 traffic should be straightforward, allowing teams to focus on building great applications rather than wrestling with complex proxy configurations.
 </p
