@@ -5,6 +5,10 @@
 
 package v1alpha1
 
+import (
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+)
+
 // Authorization defines the authorization configuration.
 //
 // Note: if neither `Rules` nor `DefaultAction` is specified, the default action is to deny all requests.
@@ -38,6 +42,12 @@ type AuthorizationRule struct {
 	// Action defines the action to be taken if the rule matches.
 	Action AuthorizationAction `json:"action"`
 
+	// Operation specifies the operation of a request, such as HTTP methods.
+	// If not specified, all operations are matched on.
+	//
+	// +optional
+	Operation *Operation `json:"operation,omitempty"`
+
 	// Principal specifies the client identity of a request.
 	// If there are multiple principal types, all principals must match for the rule to match.
 	// For example, if there are two principals: one for client IP and one for JWT claim,
@@ -45,10 +55,22 @@ type AuthorizationRule struct {
 	Principal Principal `json:"principal"`
 }
 
+// Operation specifies the operation of a request.
+// +notImplementedHide
+type Operation struct {
+	// Methods are the HTTP methods of the request.
+	// If multiple methods are specified, all specified methods are allowed or denied, based on the action of the rule.
+	//
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=16
+	Methods []gwapiv1.HTTPMethod `json:"methods"`
+
+	// Other fields may be supported in the future, such as path or host.
+}
+
 // Principal specifies the client identity of a request.
 // A client identity can be a client IP, a JWT claim, username from the Authorization header,
 // or any other identity that can be extracted from a custom header.
-
 // If there are multiple principal types, all principals must match for the rule to match.
 //
 // +kubebuilder:validation:XValidation:rule="(has(self.clientCIDRs) || has(self.jwt))",message="at least one of clientCIDRs or jwt must be specified"
@@ -63,6 +85,7 @@ type Principal struct {
 	// or the proxy protocol.
 	// You can use the `ClientIPDetection` or the `EnableProxyProtocol` field in
 	// the `ClientTrafficPolicy` to configure how the client IP is detected.
+	//
 	// +optional
 	// +kubebuilder:validation:MinItems=1
 	ClientCIDRs []CIDR `json:"clientCIDRs,omitempty"`
@@ -72,6 +95,36 @@ type Principal struct {
 	// JWT authentication in the same `SecurityPolicy`.
 	// +optional
 	JWT *JWTPrincipal `json:"jwt,omitempty"`
+
+	// Headers authorize the request based on user identity extracted from custom headers.
+	// If multiple headers are specified, all headers must match for the rule to match.
+	//
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=256
+	// +notImplementedHide
+	Headers []AuthorizationHeaderMatch `json:"headers,omitempty"`
+}
+
+// AuthorizationHeaderMatch specifies how to match against the value of an HTTP header within a authorization rule.
+type AuthorizationHeaderMatch struct {
+	// Name of the HTTP header.
+	// The header name is case-insensitive unless PreserveHeaderCase is set to true.
+	// For example, "Foo" and "foo" are considered the same header.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	Name string `json:"name"`
+
+	// Values are the values that the header must match.
+	// If multiple values are specified, the rule will match if any of the values match.
+	//
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=256
+	Values []string `json:"values"`
+
+	// Only exact matches are supported for now. It should be good enough for authorization use cases. If use cases for other
+	// matching types arise, we can add a MatchingType field here.
 }
 
 // JWTPrincipal specifies the client identity of a request based on the JWT claims and scopes.
