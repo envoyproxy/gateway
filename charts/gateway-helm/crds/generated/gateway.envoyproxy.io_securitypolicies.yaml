@@ -386,7 +386,9 @@ spec:
                 properties:
                   forwardUsernameHeader:
                     description: |-
-                      Header used to forward the username of a successfully authenticated user to the backend. 
+                      This field specifies the header name to forward a successfully authenticated user to
+                      the backend. The header will be added to the request with the username as the value.
+
                       If it is not specified, the username will not be forwarded.
                     type: string
                   users:

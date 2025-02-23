@@ -147,7 +147,6 @@ securityPolicies:
     namespace: default
   spec:
     basicAuth:
-      forwardUsernameHeader: ""
       users:
         group: null
         kind: null
@@ -179,7 +178,6 @@ securityPolicies:
     namespace: default
   spec:
     basicAuth:
-      forwardUsernameHeader: ""
       users:
         group: null
         kind: null

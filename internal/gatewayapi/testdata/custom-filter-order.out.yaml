@@ -165,7 +165,6 @@ securityPolicies:
     namespace: envoy-gateway
   spec:
     basicAuth:
-      forwardUsernameHeader: ""
       users:
         group: null
         kind: null

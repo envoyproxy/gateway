@@ -31,5 +31,5 @@ type BasicAuth struct {
 	// the backend. The header will be added to the request with the username as the value.
 	//
 	// If it is not specified, the username will not be forwarded.
-	ForwardUsernameHeader string `json:"forwardUsernameHeader"`
+	ForwardUsernameHeader string `json:"forwardUsernameHeader,omitempty"`
 }
