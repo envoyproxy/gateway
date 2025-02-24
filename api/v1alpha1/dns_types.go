@@ -36,9 +36,8 @@ type DNS struct {
 	// If the value is set to true, the DNS refresh rate will be set to the resource record’s TTL.
 	// Defaults to true.
 	RespectDNSTTL *bool `json:"respectDnsTtl,omitempty"`
-	// LookupFamily determines how Envoy would resolve DNS for. If set, this configuration overrides other default
-	// value that Envoy Gateway configures based on attributes of the backends, such Service resource IPFamilies.
+	// LookupFamily determines how Envoy would resolve DNS for Routes where the backend is specified as a fully qualified domain name (FQDN).
+	// If set, this configuration overrides other defaults.
 	// +optional
-	// +notImplementedHide
 	LookupFamily *DNSLookupFamily `json:"lookupFamily,omitempty"`
 }
