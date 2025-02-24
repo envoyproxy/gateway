@@ -397,10 +397,8 @@ spec:
                         : true'
                 type: object
                 x-kubernetes-validations:
-                - message: preserveXRequestID is deprecated and must not be set alongside
-                    RequestID.
-                  rule: (has(self.preserveXRequestID) && !has(self.requestID)) ||
-                    (!has(self.preserveXRequestID) && has(self.requestID))
+                - message: preserveXRequestID and requestID cannot both be set.
+                  rule: '!(has(self.preserveXRequestID) && has(self.requestID))'
               healthCheck:
                 description: HealthCheck provides configuration for determining whether
                   the HTTP/HTTPS listener is healthy.
