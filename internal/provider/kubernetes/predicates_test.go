@@ -412,7 +412,19 @@ func TestValidateSecretForReconcile(t *testing.T) {
 // TestValidateEndpointSliceForReconcile tests the validateEndpointSliceForReconcile
 // predicate function.
 func TestValidateEndpointSliceForReconcile(t *testing.T) {
-	sampleGateway := test.GetGateway(types.NamespacedName{Namespace: "default", Name: "scheduled-status-test"}, "test-gc", 8080)
+	sampleGateway := test.GetGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc", 8080)
+
+	ep := test.GetEnvoyProxy(types.NamespacedName{Name: "test-ep"}, false)
+	epWithServiceRouting := ep.DeepCopy()
+	routing := egv1a1.ServiceRoutingType
+	epWithServiceRouting.Spec.RoutingType = &routing
+
+	epRef := &test.GroupKindNamespacedName{
+		Group:     gwapiv1.Group(ep.GroupVersionKind().Group),
+		Kind:      gwapiv1.Kind(ep.GroupVersionKind().Kind),
+		Namespace: gwapiv1.Namespace(ep.Namespace),
+		Name:      gwapiv1.ObjectName(ep.Name),
+	}
 
 	testCases := []struct {
 		name          string
@@ -423,7 +435,8 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 		{
 			name: "route service but no routes exist",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, epRef),
+				ep,
 				sampleGateway,
 			},
 			endpointSlice: test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "service"),
@@ -432,7 +445,8 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 		{
 			name: "http route service routes exist, but endpointslice is associated with another service",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, epRef),
+				ep,
 				sampleGateway,
 				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", types.NamespacedName{Name: "service"}, 80, ""),
 			},
@@ -440,14 +454,26 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 			expect:        false,
 		},
 		{
-			name: "http route service routes exist",
+			name: "http route service routes exist with endpoint routing",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, epRef),
+				ep,
 				sampleGateway,
 				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", types.NamespacedName{Name: "service"}, 80, ""),
 			},
 			endpointSlice: test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "service"),
 			expect:        true,
+		},
+		{
+			name: "http route service routes exist with service routing",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, epRef),
+				epWithServiceRouting,
+				sampleGateway,
+				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", types.NamespacedName{Name: "service"}, 80, ""),
+			},
+			endpointSlice: test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "service"),
+			expect:        false,
 		},
 	}
 
