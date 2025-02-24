@@ -22,7 +22,6 @@ clientTrafficPolicies:
         - name: my-set-header
           value: my-set-header-value
       enableEnvoyHeaders: true
-      preserveXRequestID: true
       requestID: PreserveOrGenerate
       withUnderscoresAction: Allow
     targetRef:
