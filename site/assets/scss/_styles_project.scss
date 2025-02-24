@@ -590,9 +590,10 @@ nav.foldable-nav {
     position: relative;
     z-index: 1;
     color: $white;
-    max-width: 1200px;
+    max-width: 1000px;
     margin: 0 auto;
     padding: 2rem 0 6rem 0;
+    font-size: 1rem;
   }
 
   h1 {
@@ -606,10 +607,10 @@ nav.foldable-nav {
   }
 
   .lead {
-    font-size: clamp(1.125rem, 2.5vw, 1.5rem);
+    font-size: 1.2rem;
     max-width: 800px;
     margin: 0 auto 2rem;
-    line-height: 1.5;
+    line-height: 1.6;
     color: rgba($white, 0.95);
     font-weight: 400;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
@@ -765,7 +766,7 @@ footer {
     }
 
     .lead {
-      font-size: 1.25rem;
+      font-size: 1.2rem;
     }
   }
 
@@ -1246,7 +1247,7 @@ footer {
   }
 
   .lead {
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     line-height: 1.6;
     color: rgba($white, 0.9);
     max-width: 800px;
@@ -1616,9 +1617,9 @@ footer {
 
 // Lead Text Enhancement
 .lead {
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   font-weight: 400;
-  line-height: 1.8;
+  line-height: 1.6;
   color: rgba($dark, 0.9);
 
   &.text-center {
