@@ -13,6 +13,7 @@ http:
             - endpoints:
                 - host: "1.1.1.1"
                   port: 8081
+              name: "first-route-dest/backend/0"
     headers:
       requestID: Generate
   - name: "second-listener"
@@ -29,4 +30,5 @@ http:
             - endpoints:
                 - host: "2.2.2.2"
                   port: 8082
+              name: "second-route-dest/backend/0"
 
