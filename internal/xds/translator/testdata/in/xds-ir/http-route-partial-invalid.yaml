@@ -26,7 +26,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
-        name: "valid-route-dest/backend/0" 
+        name: "valid-route-dest/backend/0"
   - name: "invalid-route"
     hostname: "*"
     headerMatches:

@@ -86,6 +86,8 @@ func clusterName(host string, port uint32) string {
 }
 
 func destinationSettingName(destName string) string {
+	// -1 is used here since this function is used to generate a name
+	// for a backend that is defined using a scalar field that has no index.
 	return fmt.Sprintf("%s/backend/-1", destName)
 }
 

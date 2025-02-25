@@ -720,7 +720,8 @@ type UDPRouteTranslator struct {
 
 func (route *UDPRouteTranslator) asClusterArgs(name string,
 	settings []*ir.DestinationSetting,
-	extra *ExtraArgs) *xdsClusterArgs {
+	extra *ExtraArgs,
+) *xdsClusterArgs {
 	return &xdsClusterArgs{
 		name:         name,
 		settings:     settings,
@@ -738,7 +739,8 @@ type TCPRouteTranslator struct {
 
 func (route *TCPRouteTranslator) asClusterArgs(name string,
 	settings []*ir.DestinationSetting,
-	extra *ExtraArgs) *xdsClusterArgs {
+	extra *ExtraArgs,
+) *xdsClusterArgs {
 	return &xdsClusterArgs{
 		name:              name,
 		settings:          settings,
@@ -762,7 +764,8 @@ type HTTPRouteTranslator struct {
 
 func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 	settings []*ir.DestinationSetting,
-	extra *ExtraArgs) *xdsClusterArgs {
+	extra *ExtraArgs,
+) *xdsClusterArgs {
 	clusterArgs := &xdsClusterArgs{
 		name:              name,
 		settings:          settings,

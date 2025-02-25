@@ -954,7 +954,8 @@ func processXdsCluster(tCtx *types.ResourceVersionTable,
 	name string,
 	settings []*ir.DestinationSetting,
 	route clusterArgs,
-	extras *ExtraArgs) error {
+	extras *ExtraArgs,
+) error {
 	return addXdsCluster(tCtx, route.asClusterArgs(name, settings, extras))
 }
 
