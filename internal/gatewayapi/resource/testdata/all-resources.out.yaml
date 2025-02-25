@@ -251,7 +251,21 @@ secrets:
   kind: Secret
   metadata:
     creationTimestamp: null
-    name: secret
+    name: secret-with-data-and-string-data
+    namespace: default
+  stringData:
+    secret: literal value
+- data:
+    .secret-file: dmFsdWUtMg0KDQo=
+  kind: Secret
+  metadata:
+    creationTimestamp: null
+    name: secret-with-data
+    namespace: default
+- kind: Secret
+  metadata:
+    creationTimestamp: null
+    name: secret-with-string-data
     namespace: default
   stringData:
     secret: literal value

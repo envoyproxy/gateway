@@ -233,10 +233,26 @@ spec:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: secret
+  name: secret-with-data-and-string-data
   namespace: default
 data:
   .secret-file: dmFsdWUtMg0KDQo=
+stringData:
+  secret: "literal value"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secret-with-data
+  namespace: default
+data:
+  .secret-file: dmFsdWUtMg0KDQo=
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secret-with-string-data
+  namespace: default
 stringData:
   secret: "literal value"
 ---
