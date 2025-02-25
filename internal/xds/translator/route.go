@@ -248,7 +248,7 @@ func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*
 	for _, destinationSetting := range settings {
 		if len(destinationSetting.Endpoints) > 0 {
 			validCluster := &routev3.WeightedCluster_ClusterWeight{
-				Name:   backendWeights.Name,
+				Name:   destinationSetting.Name,
 				Weight: &wrapperspb.UInt32Value{Value: *destinationSetting.Weight},
 			}
 

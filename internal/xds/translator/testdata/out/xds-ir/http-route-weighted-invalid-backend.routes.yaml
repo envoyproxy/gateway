@@ -16,5 +16,5 @@
           clusters:
           - name: invalid-backend-cluster
             weight: 1
-          - name: first-route-dest
+          - name: first-route-dest/backend/0
             weight: 1
