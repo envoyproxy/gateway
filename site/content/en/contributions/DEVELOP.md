@@ -67,7 +67,7 @@ __Note:__  Replace `IMAGE` with your registry's image name.
 
 ### Raising a PR
 
-* Run `make generate` and push the generated files along with your commit, if your PR contains any API changes (`/api`) or you've added some unit tests or you've updated the modules used in the project. 
+* Run `make generate` and push the generated files along with your commit, if your PR contains any **API** changes (changes in `/api` folder), you've added some unit tests or you've updated the modules used in the project. 
 
 ### Deploying Envoy Gateway for Test/Dev
 
