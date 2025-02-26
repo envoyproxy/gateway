@@ -111,12 +111,14 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8162
+            name: udproute/default/udproute-1/rule/-1/backend/0
             protocol: UDP
             weight: 50
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8162
+            name: udproute/default/udproute-1/rule/-1/backend/1
             protocol: UDP
             weight: 50
         name: udproute/default/udproute-1

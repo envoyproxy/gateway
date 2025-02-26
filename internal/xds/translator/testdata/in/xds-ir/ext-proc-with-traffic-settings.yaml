@@ -23,6 +23,7 @@ http:
           port: 8080
         protocol: HTTP
         weight: 1
+        name: httproute/default/httproute-1/rule/0/backend/0
     envoyExtensions:
       extProcs:
       - authority: grpc-backend.envoy-gateway:8000
@@ -37,18 +38,21 @@ http:
                 name: policy-btls-grpc/envoy-gateway-ca
               sni: grpc-backend
             weight: 1
+            name: envoyextensionpolicy/default/policy-for-http-route/0/backend/0
           - addressType: IP
             endpoints:
             - host: 8.8.8.8
               port: 9000
             protocol: GRPC
             weight: 1
+            name: envoyextensionpolicy/default/policy-for-http-route/0/backend/1
           - addressType: IP
             endpoints:
             - host: 1.1.1.1
               port: 3001
             protocol: GRPC
             weight: 1
+            name: envoyextensionpolicy/default/policy-for-http-route/0/backend/2
           - addressType: IP
             endpoints:
             - host: 2.2.2.2
@@ -60,6 +64,7 @@ http:
                 name: policy-btls-backend-ip/envoy-gateway-ca
               sni: ip-backend
             weight: 1
+            name: envoyextensionpolicy/default/policy-for-http-route/0/backend/3
         name: envoyextensionpolicy/default/policy-for-http-route/extproc/0
         traffic:
           backendConnection:
@@ -111,6 +116,7 @@ http:
           port: 8080
         protocol: HTTP
         weight: 1
+        name: httproute/default/httproute-2/rule/0/backend/0
     hostname: www.bar.com
     isHTTP2: false
     metadata:

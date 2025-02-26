@@ -35,6 +35,7 @@ http:
       - endpoints:
         - host: "10.0.0.1"
           port: 10001
+        name: "first-route-dest/backend/0"
 - name: "second-listener"
   address: "::"
   port: 10002
@@ -72,6 +73,7 @@ http:
       - endpoints:
         - host: "10.0.0.1"
           port: 10002
+        name: "second-route-dest/backend/0"
 - name: "third-listener"
   address: "::"
   port: 10003
@@ -110,6 +112,7 @@ http:
       - endpoints:
         - host: "10.0.0.1"
           port: 10003
+        name: "third-route-dest/backend/0"
 - name: "fourth-listener"
   address: "::"
   port: 10004
@@ -150,6 +153,7 @@ http:
       - endpoints:
         - host: "10.0.0.1"
           port: 10004
+        name: "fourth-route-dest/backend/0"
 - name: "fifth-listener"
   address: "::"
   port: 10005
@@ -192,3 +196,4 @@ http:
       - endpoints:
         - host: "10.0.0.1"
           port: 10005
+        name: "fifth-route-dest/backend/0"
