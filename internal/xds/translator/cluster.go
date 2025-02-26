@@ -464,19 +464,6 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 			zonalEndpoints[zone+strconv.Itoa(i)] = append(zonalEndpoints[zone+strconv.Itoa(i)], lbEndpoint)
 		}
 
-		// Create locality even if there's no endpoints. This is probably a bug
-		// but keeping this behavior to avoid breaking anything
-		if len(zonalEndpoints) == 0 {
-			locality := &endpointv3.LocalityLbEndpoints{
-				Locality: &corev3.Locality{
-					Region: ds.Name,
-				},
-				LoadBalancingWeight: wrapperspb.UInt32(ptr.Deref(ds.Weight, 1)),
-				Priority:            ptr.Deref(ds.Priority, 0),
-			}
-			localities = append(localities, locality)
-		}
-
 		for zone, endPts := range zonalEndpoints {
 			locality := &endpointv3.LocalityLbEndpoints{
 				Locality: &corev3.Locality{
