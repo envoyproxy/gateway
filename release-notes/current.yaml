@@ -11,6 +11,7 @@ new features: |
   Add defaulter for gateway-api resources loading from file to be able to set default values.
 
 bug fixes: |
+  Added support for Secret and ConfigMap parsing in Standalone mode.
 
 # Enhancements that improve performance.
 performance improvements: |
