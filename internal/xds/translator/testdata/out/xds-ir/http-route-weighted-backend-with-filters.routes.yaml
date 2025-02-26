@@ -14,7 +14,7 @@
         - upgradeType: websocket
         weightedClusters:
           clusters:
-          - name: first-route-dest
+          - name: first-route-dest/backend/0
             requestHeadersToAdd:
             - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
               header:
@@ -30,7 +30,7 @@
         - upgradeType: websocket
         weightedClusters:
           clusters:
-          - name: second-route-dest
+          - name: second-route-dest/backend/0
             requestHeadersToAdd:
             - header:
                 key: add-header-1
@@ -39,5 +39,5 @@
                 key: add-header-2
                 value: some-value
             weight: 8
-          - name: second-route-dest
+          - name: second-route-dest/backend/1
             weight: 2

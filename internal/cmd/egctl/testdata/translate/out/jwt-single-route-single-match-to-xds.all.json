@@ -394,7 +394,7 @@
                       ],
                       "loadBalancingWeight": 1,
                       "locality": {
-                        "region": "raw_githubusercontent_com_443/backend/0"
+                        "region": "raw_githubusercontent_com_443/backend/-1"
                       }
                     }
                   ]

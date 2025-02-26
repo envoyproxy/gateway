@@ -19,6 +19,7 @@ http:
               endpoints:
                 - host: 10.244.0.12
                   port: 8080
+              name: httproute/envoy-gateway/httproute-btls/rule/0/backend/0
               protocol: HTTPS
               tls:
                 caCertificate:
@@ -37,6 +38,7 @@ http:
                   name: policy-btls/policies-ca
                 sni: example.com
               weight: 1
+              name: httproute/envoy-gateway/httproute-btls/rule/0/backend/1
         hostname: '*'
         name: httproute/envoy-gateway/httproute-btls/rule/0/match/0/*
         pathMatch:
@@ -68,6 +70,7 @@ http:
                   port: 8080
               protocol: HTTP
               weight: 1
+              name: httproute/envoy-gateway/httproute-btls-2/rule/0/backend/0
             - addressType: IP
               endpoints:
                 - host: 10.244.0.11
@@ -79,6 +82,7 @@ http:
                   name: policy-btls-2/policies-ca
                 sni: example.com
               weight: 1
+              name: httproute/envoy-gateway/httproute-btls-2/rule/0/backend/1
         hostname: '*'
         name: httproute/envoy-gateway/httproute-btls-2/rule/0/match/0/*
         pathMatch:

@@ -480,12 +480,9 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 			endpoints = append(endpoints, lbEndpoint)
 		}
 
-		// Envoy requires a distinct region to be set for each LocalityLbEndpoints.
-		// If we don't do this, Envoy will merge all LocalityLbEndpoints into one.
-		// We use the name of the backendRef as a pseudo region name.
 		locality := &endpointv3.LocalityLbEndpoints{
 			Locality: &corev3.Locality{
-				Region: fmt.Sprintf("%s/backend/%d", clusterName, i),
+				Region: ds.Name,
 			},
 			LbEndpoints: endpoints,
 			Priority:    0,
@@ -733,17 +730,20 @@ type ExtraArgs struct {
 }
 
 type clusterArgs interface {
-	asClusterArgs(extras *ExtraArgs) *xdsClusterArgs
+	asClusterArgs(name string, settings []*ir.DestinationSetting, extras *ExtraArgs) *xdsClusterArgs
 }
 
 type UDPRouteTranslator struct {
 	*ir.UDPRoute
 }
 
-func (route *UDPRouteTranslator) asClusterArgs(extra *ExtraArgs) *xdsClusterArgs {
+func (route *UDPRouteTranslator) asClusterArgs(name string,
+	settings []*ir.DestinationSetting,
+	extra *ExtraArgs,
+) *xdsClusterArgs {
 	return &xdsClusterArgs{
-		name:         route.Destination.Name,
-		settings:     route.Destination.Settings,
+		name:         name,
+		settings:     settings,
 		loadBalancer: route.LoadBalancer,
 		endpointType: buildEndpointType(route.Destination.Settings),
 		metrics:      extra.metrics,
@@ -756,10 +756,13 @@ type TCPRouteTranslator struct {
 	*ir.TCPRoute
 }
 
-func (route *TCPRouteTranslator) asClusterArgs(extra *ExtraArgs) *xdsClusterArgs {
+func (route *TCPRouteTranslator) asClusterArgs(name string,
+	settings []*ir.DestinationSetting,
+	extra *ExtraArgs,
+) *xdsClusterArgs {
 	return &xdsClusterArgs{
-		name:              route.Destination.Name,
-		settings:          route.Destination.Settings,
+		name:              name,
+		settings:          settings,
 		loadBalancer:      route.LoadBalancer,
 		proxyProtocol:     route.ProxyProtocol,
 		circuitBreaker:    route.CircuitBreaker,
@@ -778,10 +781,13 @@ type HTTPRouteTranslator struct {
 	*ir.HTTPRoute
 }
 
-func (httpRoute *HTTPRouteTranslator) asClusterArgs(extra *ExtraArgs) *xdsClusterArgs {
+func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
+	settings []*ir.DestinationSetting,
+	extra *ExtraArgs,
+) *xdsClusterArgs {
 	clusterArgs := &xdsClusterArgs{
-		name:              httpRoute.Destination.Name,
-		settings:          httpRoute.Destination.Settings,
+		name:              name,
+		settings:          settings,
 		tSocket:           nil,
 		endpointType:      buildEndpointType(httpRoute.Destination.Settings),
 		metrics:           extra.metrics,

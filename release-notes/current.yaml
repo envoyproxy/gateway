@@ -18,6 +18,9 @@ new features: |
   Added support for HorizontalPodAutoscaler to helm chart
 
 bug fixes: |
+
+  Fix traffic splitting when filters are attached to the backendRef.
+  Added support for Secret and ConfigMap parsing in Standalone mode.
   Bypass overload manager for stats and ready listeners
 
 # Enhancements that improve performance.

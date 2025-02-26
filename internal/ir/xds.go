@@ -1454,6 +1454,8 @@ func (r *RouteDestination) ToBackendWeights() *BackendWeights {
 // DestinationSetting holds the settings associated with the destination
 // +kubebuilder:object:generate=true
 type DestinationSetting struct {
+	// Name of the setting
+	Name string `json:"name" yaml:"name"`
 	// Weight associated with this destination,
 	// invalid endpoints are represents with a
 	// non-zero weight with an empty endpoints list

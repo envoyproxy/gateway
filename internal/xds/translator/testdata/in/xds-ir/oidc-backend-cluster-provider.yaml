@@ -18,6 +18,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "third-route-dest/backend/0"
     security:
       oidc:
         name: securitypolicy/envoy-gateway/policy-for-gateway
@@ -40,6 +41,7 @@ http:
                 port: 443
               protocol: HTTPS
               weight: 1
+              name: securitypolicy/envoy-gateway/policy-for-gateway/0/backend/0
               tls:
                 alpnProtocols: null
                 caCertificate:
