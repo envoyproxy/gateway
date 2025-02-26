@@ -72,6 +72,7 @@ static_resources:
         {{- if eq .IPFamily "DualStack" "IPv6" }}
         ipv4_compat: true
         {{- end }}
+    bypass_overload_manager: true
     filter_chains:
     - filters:
       - name: envoy.filters.network.http_connection_manager

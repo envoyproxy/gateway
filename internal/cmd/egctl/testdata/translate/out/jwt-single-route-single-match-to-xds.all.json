@@ -238,6 +238,7 @@
                       "portValue": 19001
                     }
                   },
+                  "bypassOverloadManager": true,
                   "filterChains": [
                     {
                       "filters": [
@@ -433,6 +434,7 @@
                       "portValue": 19003
                     }
                   },
+                  "bypassOverloadManager": true,
                   "filterChains": [
                     {
                       "filters": [

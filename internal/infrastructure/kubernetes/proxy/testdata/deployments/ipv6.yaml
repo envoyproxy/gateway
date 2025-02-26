@@ -82,6 +82,7 @@ spec:
                   port_value: 19001
                   protocol: TCP
                   ipv4_compat: true
+              bypass_overload_manager: true
               filter_chains:
               - filters:
                 - name: envoy.filters.network.http_connection_manager

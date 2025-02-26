@@ -140,6 +140,7 @@ staticResources:
       socketAddress:
         address: 0.0.0.0
         portValue: 19001
+    bypassOverloadManager: true
     filterChains:
     - filters:
       - name: envoy.filters.network.http_connection_manager
