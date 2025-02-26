@@ -1,4 +1,10 @@
-User-agent: Googlebot
+# ref https://developers.google.com/search/docs/crawling-indexing/robots/create-robots-txt
+# In EG, we manually update the robots.txt file to disallow certain paths from being crawled by search engines
+# This is to prevent search engines from indexing pages that are EOL or not meant to be indexed
+
+# EOL docs
+User-agent: *
+User-agent: AdsBot-Google
 Disallow: /v0.2/
 Disallow: /v0.3/
 Disallow: /v0.4/
