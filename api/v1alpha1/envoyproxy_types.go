@@ -93,6 +93,11 @@ type EnvoyProxySpec struct {
 	// +optional
 	Shutdown *ShutdownConfig `json:"shutdown,omitempty"`
 
+	// Init defines configuration for the envoy initialization process.
+	//
+	// +optional
+	Init *InitConfig `json:"init,omitempty"`
+
 	// FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.
 	// The FilterPosition in the list will be applied in the order they are defined.
 	// If unspecified, the default filter order is applied.
@@ -301,6 +306,36 @@ type ShutdownConfig struct {
 	//
 	// +optional
 	MinDrainDuration *metav1.Duration `json:"minDrainDuration,omitempty"`
+}
+
+// InitConfig defines configuration for envoy init process.
+type InitConfig struct {
+
+	// ConfigPath defines the file path to write the discovered zone information.
+	// Default: /envoyconfigs/config.json
+	//
+	// +optional
+	ConfigPath *string `json:"configPath,omitempty"`
+	// RegionDiscoveryDisabled defines whether to enable service region discovery via
+	// topology.kubernetes.io/region label on the underlying node
+	// Default: false
+	//
+	// +optional
+	RegionDiscoveryDisabled *bool `json:"regionDiscoveryDisabled,omitempty"`
+	// RegionOverride allows for manual configuration of service region
+	//
+	// +optional
+	RegionOverride *string `json:"regionOverride,omitempty"`
+	// ZoneDiscoveryDisabled defines whether to enable service zone discovery via
+	// topology.kubernetes.io/zone label on the underlying node
+	// Default: false
+	//
+	// +optional
+	ZoneDiscoveryDisabled *bool `json:"zoneDiscoveryDisabled,omitempty"`
+	// ZoneOverride allows for manual configuration of  service zone
+	//
+	// +optional
+	ZoneOverride *string `json:"zoneOverride,omitempty"`
 }
 
 // +kubebuilder:validation:XValidation:rule="((has(self.envoyDeployment) && !has(self.envoyDaemonSet)) || (!has(self.envoyDeployment) && has(self.envoyDaemonSet))) || (!has(self.envoyDeployment) && !has(self.envoyDaemonSet))",message="only one of envoyDeployment or envoyDaemonSet can be specified"
