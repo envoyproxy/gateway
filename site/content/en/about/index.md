@@ -1,6 +1,5 @@
 ---
 title: About Envoy Gateway
-linkTitle: About
 menu:
   main:
     weight: 10

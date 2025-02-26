@@ -1,0 +1,8 @@
+User-agent: Googlebot
+Disallow: /v0.2/
+Disallow: /v0.3/
+Disallow: /v0.4/
+Disallow: /v0.5/
+Disallow: /v0.6/
+Disallow: /v1.0/
+Disallow: /v1.1/
