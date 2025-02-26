@@ -49,6 +49,8 @@ type ResourceRender struct {
 	DNSDomain string
 
 	ShutdownManager *egv1a1.ShutdownManager
+
+	InitManager *egv1a1.InitManager
 }
 
 func NewResourceRender(ns string, dnsDomain string, infra *ir.ProxyInfra, gateway *egv1a1.EnvoyGateway) *ResourceRender {
@@ -280,6 +282,13 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	/*initContainers, err := expectedProxyInitContainers(r.infra, deploymentConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	*/
 
 	dpAnnotations := r.infra.GetProxyMetadata().Annotations
 	podAnnotations := r.getPodAnnotations(dpAnnotations, deploymentConfig.Pod)
