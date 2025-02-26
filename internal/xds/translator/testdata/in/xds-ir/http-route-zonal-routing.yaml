@@ -31,4 +31,5 @@ http:
       - endpoints:
         - host: "4.4.4.4"
           port: 50004
+          zone: us-west-2c
         weight: 20

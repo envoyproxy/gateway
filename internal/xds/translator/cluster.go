@@ -102,9 +102,17 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		Name:            args.name,
 		DnsLookupFamily: dnsLookupFamily,
 		CommonLbConfig: &clusterv3.Cluster_CommonLbConfig{
-			LocalityConfigSpecifier: &clusterv3.Cluster_CommonLbConfig_ZoneAwareLbConfig_{},
+			LocalityConfigSpecifier: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig_{},
 		},
 		PerConnectionBufferLimitBytes: buildBackandConnectionBufferLimitBytes(args.backendConnection),
+	}
+
+	// Update CommonLbConfig if at least one DestinationSetting enables Zone Aware Routing
+	for _, setting := range args.settings {
+		if ptr.Deref(setting, ir.DestinationSetting{}).ZoneAwareRoutingEnabled {
+			cluster.CommonLbConfig.LocalityConfigSpecifier = &clusterv3.Cluster_CommonLbConfig_ZoneAwareLbConfig_{}
+			break
+		}
 	}
 
 	// 50% is the Envoy default value for panic threshold. No need to explicitly set it in this case.
@@ -464,17 +472,20 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 			zonalEndpoints[zone+strconv.Itoa(i)] = append(zonalEndpoints[zone+strconv.Itoa(i)], lbEndpoint)
 		}
 
-		// Create locality even if there's no endpoints. This is needed for Gateway API Conformance.
-		if len(zonalEndpoints) == 0 {
-			locality := &endpointv3.LocalityLbEndpoints{
-				Locality: &corev3.Locality{
-					Region: ds.Name,
-				},
-				LoadBalancingWeight: wrapperspb.UInt32(ptr.Deref(ds.Weight, 1)),
-				Priority:            ptr.Deref(ds.Priority, 0),
+		/*
+			// Create locality even if there's no endpoints. This is needed for Gateway API Conformance.
+			if len(zonalEndpoints) == 0 {
+				locality := &endpointv3.LocalityLbEndpoints{
+					Locality: &corev3.Locality{
+						Region: ds.Name,
+					},
+					LoadBalancingWeight: wrapperspb.UInt32(ptr.Deref(ds.Weight, 1)),
+					Priority:            ptr.Deref(ds.Priority, 0),
+				}
+				localities = append(localities, locality)
 			}
-			localities = append(localities, locality)
-		}
+
+		*/
 
 		for zone, endPts := range zonalEndpoints {
 			locality := &endpointv3.LocalityLbEndpoints{

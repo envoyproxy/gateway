@@ -24,9 +24,6 @@
       region: httproute/default/httproute-2/rule/0/backend/0
 - clusterName: envoyextensionpolicy/default/policy-for-http-route/0
   endpoints:
-  - loadBalancingWeight: 1
-    locality:
-      region: envoyextensionpolicy/default/policy-for-http-route/0/backend/0
   - lbEndpoints:
     - endpoint:
         address:

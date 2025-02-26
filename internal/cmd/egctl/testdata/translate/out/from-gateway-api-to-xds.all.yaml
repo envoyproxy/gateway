@@ -246,7 +246,7 @@ xds:
             thresholds:
             - maxRetries: 1024
           commonLbConfig:
-            zoneAwareLbConfig: {}
+            localityWeightedLbConfig: {}
           connectTimeout: 10s
           dnsLookupFamily: V4_PREFERRED
           edsClusterConfig:
@@ -265,7 +265,7 @@ xds:
             thresholds:
             - maxRetries: 1024
           commonLbConfig:
-            zoneAwareLbConfig: {}
+            localityWeightedLbConfig: {}
           connectTimeout: 10s
           dnsLookupFamily: V4_PREFERRED
           edsClusterConfig:
@@ -291,7 +291,7 @@ xds:
             thresholds:
             - maxRetries: 1024
           commonLbConfig:
-            zoneAwareLbConfig: {}
+            localityWeightedLbConfig: {}
           connectTimeout: 10s
           dnsLookupFamily: V4_PREFERRED
           edsClusterConfig:
@@ -310,7 +310,7 @@ xds:
             thresholds:
             - maxRetries: 1024
           commonLbConfig:
-            zoneAwareLbConfig: {}
+            localityWeightedLbConfig: {}
           connectTimeout: 10s
           dnsLookupFamily: V4_PREFERRED
           edsClusterConfig:
@@ -329,7 +329,7 @@ xds:
             thresholds:
             - maxRetries: 1024
           commonLbConfig:
-            zoneAwareLbConfig: {}
+            localityWeightedLbConfig: {}
           connectTimeout: 10s
           dnsLookupFamily: V4_PREFERRED
           edsClusterConfig:

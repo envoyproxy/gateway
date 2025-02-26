@@ -448,7 +448,7 @@
                   ]
                 },
                 "commonLbConfig": {
-                  "zoneAwareLbConfig": {}
+                  "localityWeightedLbConfig": {}
                 },
                 "connectTimeout": "10s",
                 "dnsLookupFamily": "V4_PREFERRED",
@@ -477,7 +477,7 @@
                   ]
                 },
                 "commonLbConfig": {
-                  "zoneAwareLbConfig": {}
+                  "localityWeightedLbConfig": {}
                 },
                 "connectTimeout": "10s",
                 "dnsLookupFamily": "V4_PREFERRED",
@@ -517,7 +517,7 @@
                   ]
                 },
                 "commonLbConfig": {
-                  "zoneAwareLbConfig": {}
+                  "localityWeightedLbConfig": {}
                 },
                 "connectTimeout": "10s",
                 "dnsLookupFamily": "V4_PREFERRED",
@@ -546,7 +546,7 @@
                   ]
                 },
                 "commonLbConfig": {
-                  "zoneAwareLbConfig": {}
+                  "localityWeightedLbConfig": {}
                 },
                 "connectTimeout": "10s",
                 "dnsLookupFamily": "V4_PREFERRED",
@@ -575,7 +575,7 @@
                   ]
                 },
                 "commonLbConfig": {
-                  "zoneAwareLbConfig": {}
+                  "localityWeightedLbConfig": {}
                 },
                 "connectTimeout": "10s",
                 "dnsLookupFamily": "V4_PREFERRED",
