@@ -44,6 +44,8 @@ const (
 	ociURLPrefix = "oci://"
 	// sha256 scheme prefix
 	sha256SchemePrefix = "sha256:"
+	// permissionCacheTTL is the TTL for permission cache.
+	permissionCacheTTL = 10 * time.Minute
 )
 
 // Cache models a Wasm module cache.
@@ -67,15 +69,67 @@ type localFileCache struct {
 	// option sets for configuring the cache.
 	CacheOptions
 
+	// permissionCheckCache is a cache for permission check for private OCI images.
+	permissionCheckCache *permissionCache
+
 	// logger
 	logger logging.Logger
+}
+
+// permissionCache is a cache for permission check for private OCI images.
+type permissionCache struct {
+	cache map[string]*time.Time // key: sha256(imageURL + pullSecret), value: last time the permission is checked
+	ttl   time.Duration
+}
+
+// newPermissionCache creates a new permission cache with a given TTL.
+func newPermissionCache(ttl time.Duration) *permissionCache {
+	return &permissionCache{
+		cache: make(map[string]*time.Time),
+		ttl:   ttl,
+	}
+}
+
+// expired returns true if the permission for a given image is expired.
+func (p *permissionCache) expired(image *url.URL, pullSecret []byte) bool {
+	key := p.permissionCacheKey(image, pullSecret)
+
+	if t, ok := p.cache[key]; ok {
+		if time.Now().After(t.Add(p.ttl)) {
+			delete(p.cache, key)
+			return true
+		} else {
+			return false
+		}
+	}
+	// If the permission is not found, treat it as expired.
+	return true
+}
+
+// update updates the permission cache for a given image.
+func (p *permissionCache) update(image *url.URL, pullSecret []byte) {
+	key := p.permissionCacheKey(image, pullSecret)
+	t := time.Now()
+	p.cache[key] = &t
+}
+
+// permissionCacheKey generates a key for the permission cache.
+// The key is a sha256 hash of the image URL and the pull secret.
+func (p *permissionCache) permissionCacheKey(image *url.URL, pullSecret []byte) string {
+	b := make([]byte, len(image.String())+len(pullSecret))
+	copy(b, image.String())
+	copy(b[len(image.String()):], pullSecret)
+	hash := sha256.Sum256(b)
+	return hex.EncodeToString(hash[:])
 }
 
 func (c *localFileCache) Start(ctx context.Context) {
 	go c.purge(ctx)
 }
 
-var _ Cache = &localFileCache{}
+var _ Cache = &localFileCache{
+	permissionCheckCache: newPermissionCache(permissionCacheTTL),
+}
 
 type checksumEntry struct {
 	checksum string
@@ -288,9 +342,13 @@ func (c *localFileCache) getOrFetch(key cacheKey, opts GetOptions) (*cacheEntry,
 }
 
 func (c *localFileCache) checkPermission(ctx context.Context, u *url.URL, insecure bool, opts GetOptions) error {
-	// Try to get the image metadata to check if the pull secret is correct.
-	if _, _, err := c.prepareFetch(ctx, u, insecure, opts); err != nil {
-		return fmt.Errorf("failed to login to private registry: %w", err)
+	if c.permissionCheckCache.expired(u, opts.PullSecret) {
+		// Try to get the image metadata to check if the pull secret is correct.
+		if _, _, err := c.prepareFetch(ctx, u, insecure, opts); err != nil {
+			return fmt.Errorf("failed to login to private registry: %w", err)
+		}
+		// Update the permission cache after a successful prepare fetch.
+		c.permissionCheckCache.update(u, opts.PullSecret)
 	}
 	return nil
 }
