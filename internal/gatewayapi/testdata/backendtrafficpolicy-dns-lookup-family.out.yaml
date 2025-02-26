@@ -351,7 +351,8 @@ xdsIR:
       - destination:
           name: accesslog_otel_0_1
           settings:
-          - protocol: TCP
+          - name: accesslog_otel_0_1/backend/-1
+            protocol: TCP
         resources:
           k8s.cluster.name: cluster-1
         text: |
@@ -387,6 +388,7 @@ xdsIR:
             endpoints:
             - host: grpc-infra-backend.gateway-conformance-infra.svc.cluster.local
               port: 8080
+            name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
         envoyExtensions:
@@ -399,6 +401,7 @@ xdsIR:
                 endpoints:
                 - host: backend-v2.gateway-conformance-infra.svc.cluster.local
                   port: 9090
+                name: envoyextensionpolicy/default/policy-for-httproute/extproc/0/backend/0
                 protocol: GRPC
                 weight: 1
             name: envoyextensionpolicy/default/policy-for-httproute/extproc/0
@@ -431,6 +434,7 @@ xdsIR:
                   endpoints:
                   - host: backend-v3.gateway-conformance-infra.svc.cluster.local
                     port: 8080
+                  name: securitypolicy/envoy-gateway/policy-for-gateway-1/extauth/0/backend/0
                   protocol: HTTP
                   weight: 1
               path: ""
@@ -447,6 +451,7 @@ xdsIR:
             endpoints:
             - host: grpc-infra-backend.gateway-conformance-infra.svc.cluster.local
               port: 8080
+            name: grpcroute/default/grpcroute-1/rule/0/backend/0
             protocol: GRPC
             weight: 1
         hostname: '*'
@@ -470,6 +475,7 @@ xdsIR:
                   endpoints:
                   - host: backend-v3.gateway-conformance-infra.svc.cluster.local
                     port: 8080
+                  name: securitypolicy/envoy-gateway/policy-for-gateway-1/extauth/0/backend/0
                   protocol: HTTP
                   weight: 1
               path: ""

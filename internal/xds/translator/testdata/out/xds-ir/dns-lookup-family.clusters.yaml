@@ -18,8 +18,7 @@
               portValue: 8080
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality:
-        region: httproute/default/httproute-1/rule/0/backend/0
+      locality: {}
   name: httproute/default/httproute-1/rule/0
   perConnectionBufferLimitBytes: 32768
   type: STRICT_DNS
@@ -43,8 +42,7 @@
               portValue: 8080
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality:
-        region: grpcroute/default/grpcroute-1/rule/0/backend/0
+      locality: {}
   name: grpcroute/default/grpcroute-1/rule/0
   perConnectionBufferLimitBytes: 32768
   type: STRICT_DNS
@@ -75,8 +73,7 @@
               portValue: 8080
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality:
-        region: securitypolicy/envoy-gateway/policy-for-gateway-1/extauth/0/backend/0
+      locality: {}
   name: securitypolicy/envoy-gateway/policy-for-gateway-1/extauth/0
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
@@ -101,8 +98,7 @@
               portValue: 9090
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality:
-        region: envoyextensionpolicy/default/policy-for-httproute/extproc/0/backend/0
+      locality: {}
   name: envoyextensionpolicy/default/policy-for-httproute/extproc/0
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
@@ -127,8 +123,7 @@
     clusterName: accesslog_otel_0_1
     endpoints:
     - loadBalancingWeight: 1
-      locality:
-        region: accesslog_otel_0_1/backend/0
+      locality: {}
   name: accesslog_otel_0_1
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
