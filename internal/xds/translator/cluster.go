@@ -9,6 +9,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
@@ -100,11 +102,17 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		Name:            args.name,
 		DnsLookupFamily: dnsLookupFamily,
 		CommonLbConfig: &clusterv3.Cluster_CommonLbConfig{
-			LocalityConfigSpecifier: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig_{
-				LocalityWeightedLbConfig: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig{},
-			},
+			LocalityConfigSpecifier: &clusterv3.Cluster_CommonLbConfig_ZoneAwareLbConfig_{},
 		},
 		PerConnectionBufferLimitBytes: buildBackandConnectionBufferLimitBytes(args.backendConnection),
+	}
+
+	// Temp hack until cluster per-destsetting lands
+	for _, setting := range args.settings {
+		if !ptr.Deref(setting, ir.DestinationSetting{}).ZoneAwareRoutingEnabled {
+			cluster.CommonLbConfig.LocalityConfigSpecifier = &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig_{}
+			break
+		}
 	}
 
 	// 50% is the Envoy default value for panic threshold. No need to explicitly set it in this case.
@@ -425,10 +433,8 @@ func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3
 
 func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.DestinationSetting) *endpointv3.ClusterLoadAssignment {
 	localities := make([]*endpointv3.LocalityLbEndpoints, 0, len(destSettings))
+
 	for i, ds := range destSettings {
-
-		endpoints := make([]*endpointv3.LbEndpoint, 0, len(ds.Endpoints))
-
 		var metadata *corev3.Metadata
 		if ds.TLS != nil {
 			metadata = &corev3.Metadata{
@@ -442,6 +448,7 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 			}
 		}
 
+		zonalEndpoints := make(map[string][]*endpointv3.LbEndpoint)
 		for _, irEp := range ds.Endpoints {
 			healthStatus := corev3.HealthStatus_UNKNOWN
 			if irEp.Draining {
@@ -457,28 +464,42 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 				HealthStatus: healthStatus,
 			}
 			// Set default weight of 1 for all endpoints.
-			lbEndpoint.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: 1}
-			endpoints = append(endpoints, lbEndpoint)
+			lbEndpoint.LoadBalancingWeight = wrapperspb.UInt32(1)
+			zone := ""
+			if ds.ZoneAwareRoutingEnabled {
+				zone = ptr.Deref(irEp.Zone, "")
+			}
+			zonalEndpoints[zone+strconv.Itoa(i)] = append(zonalEndpoints[zone+strconv.Itoa(i)], lbEndpoint)
 		}
 
-		locality := &endpointv3.LocalityLbEndpoints{
-			Locality: &corev3.Locality{
-				Region: ds.Name,
-			},
-			LbEndpoints: endpoints,
-			Priority:    0,
+		// Create locality even if there's no endpoints. This is probably a bug
+		// but keeping this behavior to avoid breaking anything
+		if len(zonalEndpoints) == 0 {
+			locality := &endpointv3.LocalityLbEndpoints{
+				Locality: &corev3.Locality{
+					Region: ds.Name,
+				},
+				LoadBalancingWeight: wrapperspb.UInt32(ptr.Deref(ds.Weight, 1)),
+				Priority:            ptr.Deref(ds.Priority, 0),
+			}
+			localities = append(localities, locality)
 		}
 
-		// Set locality weight
-		var weight uint32
-		if ds.Weight != nil {
-			weight = *ds.Weight
-		} else {
-			weight = 1
+		for zone, endPts := range zonalEndpoints {
+			// Envoy requires a distinct region to be set for each LocalityLbEndpoints.
+			// If we don't do this, Envoy will merge all LocalityLbEndpoints into one.
+			// We use the name of the backendRef as a pseudo region name.
+			locality := &endpointv3.LocalityLbEndpoints{
+				Locality: &corev3.Locality{
+					Region: ds.Name,
+					Zone:   strings.TrimSuffix(zone, strconv.Itoa(i)),
+				},
+				LbEndpoints:         endPts,
+				LoadBalancingWeight: wrapperspb.UInt32(ptr.Deref(ds.Weight, 1)),
+				Priority:            ptr.Deref(ds.Priority, 0),
+			}
+			localities = append(localities, locality)
 		}
-		locality.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: weight}
-		locality.Priority = ptr.Deref(ds.Priority, 0)
-		localities = append(localities, locality)
 	}
 	return &endpointv3.ClusterLoadAssignment{ClusterName: clusterName, Endpoints: localities}
 }

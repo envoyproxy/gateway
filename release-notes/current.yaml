@@ -16,6 +16,7 @@ new features: |
   Added support for defining Lua EnvoyExtensionPolicies
   Added RequestID field in ClientTrafficPolicy.HeaderSettings to configure Envoy X-Request-ID behavior.
   Added support for HorizontalPodAutoscaler to helm chart
+  Added support for zone aware routing
 
 bug fixes: |
 

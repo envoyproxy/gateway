@@ -348,7 +348,7 @@ func createOAuth2TokenEndpointCluster(tCtx *types.ResourceVersionTable,
 	ds = &ir.DestinationSetting{
 		Weight: ptr.To[uint32](1),
 		Endpoints: []*ir.DestinationEndpoint{
-			ir.NewDestEndpoint(cluster.hostname, cluster.port, false),
+			ir.NewDestEndpoint(cluster.hostname, cluster.port, false, nil),
 		},
 		Name: destinationSettingName(cluster.name),
 	}
