@@ -95,6 +95,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 		}
 		kobjVal := reflect.ValueOf(kobj).Elem()
 		spec := kobjVal.FieldByName("Spec")
+		data := kobjVal.FieldByName("Data")
+		stringData := kobjVal.FieldByName("StringData")
 
 		switch gvk.Kind {
 		case KindEnvoyProxy:
@@ -307,6 +309,34 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 				Spec: typedSpec.(egv1a1.BackendSpec),
 			}
 			resources.Backends = append(resources.Backends, backend)
+		case KindSecret:
+			typedData := data.Interface()
+			typedStringData := stringData.Interface()
+			secret := &corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					Kind: KindSecret,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+				Data:       typedData.(map[string][]byte),
+				StringData: typedStringData.(map[string]string),
+			}
+			resources.Secrets = append(resources.Secrets, secret)
+		case KindConfigMap:
+			typedData := data.Interface()
+			configMap := &corev1.ConfigMap{
+				TypeMeta: metav1.TypeMeta{
+					Kind: KindConfigMap,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+				Data: typedData.(map[string]string),
+			}
+			resources.ConfigMaps = append(resources.ConfigMaps, configMap)
 		}
 
 		return nil

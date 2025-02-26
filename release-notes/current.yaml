@@ -13,6 +13,8 @@ new features: |
 
 bug fixes: |
   Fixed a panic that occurred following update to the envoy-gateway-config ConfigMap
+  Added support for Secret and ConfigMap parsing in Standalone mode.
+  Bypass overload manager for stats and ready listeners
 
 # Enhancements that improve performance.
 performance improvements: |
