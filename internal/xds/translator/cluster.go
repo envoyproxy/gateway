@@ -107,14 +107,6 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		PerConnectionBufferLimitBytes: buildBackandConnectionBufferLimitBytes(args.backendConnection),
 	}
 
-	// Temp hack until cluster per-destsetting lands
-	for _, setting := range args.settings {
-		if !ptr.Deref(setting, ir.DestinationSetting{}).ZoneAwareRoutingEnabled {
-			cluster.CommonLbConfig.LocalityConfigSpecifier = &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig_{}
-			break
-		}
-	}
-
 	// 50% is the Envoy default value for panic threshold. No need to explicitly set it in this case.
 	if args.healthCheck != nil && args.healthCheck.PanicThreshold != nil && *args.healthCheck.PanicThreshold != 50 {
 		cluster.CommonLbConfig.HealthyPanicThreshold = &xdstype.Percent{
@@ -486,9 +478,6 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 		}
 
 		for zone, endPts := range zonalEndpoints {
-			// Envoy requires a distinct region to be set for each LocalityLbEndpoints.
-			// If we don't do this, Envoy will merge all LocalityLbEndpoints into one.
-			// We use the name of the backendRef as a pseudo region name.
 			locality := &endpointv3.LocalityLbEndpoints{
 				Locality: &corev3.Locality{
 					Region: ds.Name,

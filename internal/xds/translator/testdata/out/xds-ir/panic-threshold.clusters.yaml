@@ -4,7 +4,7 @@
   commonLbConfig:
     healthyPanicThreshold:
       value: 66
-    localityWeightedLbConfig: {}
+    zoneAwareLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
@@ -23,7 +23,7 @@
   commonLbConfig:
     healthyPanicThreshold:
       value: 80
-    localityWeightedLbConfig: {}
+    zoneAwareLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
@@ -42,7 +42,7 @@
   commonLbConfig:
     healthyPanicThreshold:
       value: 20
-    localityWeightedLbConfig: {}
+    zoneAwareLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
@@ -59,7 +59,7 @@
     thresholds:
     - maxRetries: 1024
   commonLbConfig:
-    localityWeightedLbConfig: {}
+    zoneAwareLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
@@ -78,7 +78,7 @@
   commonLbConfig:
     healthyPanicThreshold:
       value: 80
-    localityWeightedLbConfig: {}
+    zoneAwareLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:

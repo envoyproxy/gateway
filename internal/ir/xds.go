@@ -1469,10 +1469,12 @@ type DestinationSetting struct {
 	AddressType *DestinationAddressType `json:"addressType,omitempty" yaml:"addressType,omitempty"`
 	// IPFamily specifies the IP family (IPv4 or IPv6) to use for this destination's endpoints.
 	// This is derived from the backend service and endpoint slice information.
-	IPFamily                *egv1a1.IPFamily    `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
-	TLS                     *TLSUpstreamConfig  `json:"tls,omitempty" yaml:"tls,omitempty"`
-	Filters                 *DestinationFilters `json:"filters,omitempty" yaml:"filters,omitempty"`
-	ZoneAwareRoutingEnabled bool                `json:"zoneAwareRoutingEnabled,omitempty" yaml:"zoneAwareRoutingEnabled,omitempty"`
+	IPFamily *egv1a1.IPFamily    `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
+	TLS      *TLSUpstreamConfig  `json:"tls,omitempty" yaml:"tls,omitempty"`
+	Filters  *DestinationFilters `json:"filters,omitempty" yaml:"filters,omitempty"`
+	// ZoneAwareRoutingEnabled specifies whether to enable Zone Aware Routing for this destination's endpoints.
+	// This is derived from the backend service and depends on having Kubernetes Topology Aware Routing or Traffic Distribution enabled.
+	ZoneAwareRoutingEnabled bool `json:"zoneAwareRoutingEnabled,omitempty" yaml:"zoneAwareRoutingEnabled,omitempty"`
 }
 
 // Validate the fields within the DestinationSetting structure
