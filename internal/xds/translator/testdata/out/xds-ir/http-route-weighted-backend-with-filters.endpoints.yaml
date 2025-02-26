@@ -18,7 +18,7 @@
           socketAddress:
             address: 2.2.2.2
             portValue: 8080
-      loadBalancingWeight: 1
+      loadBalancingWeight: 8
     loadBalancingWeight: 8
     locality:
       region: second-route-dest/backend/0
@@ -30,7 +30,7 @@
           socketAddress:
             address: 3.3.3.3
             portValue: 8080
-      loadBalancingWeight: 1
+      loadBalancingWeight: 2
     loadBalancingWeight: 2
     locality:
       region: second-route-dest/backend/1
