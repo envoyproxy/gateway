@@ -10769,8 +10769,8 @@ spec:
                                                 type: string
                                               lookupFamily:
                                                 description: |-
-                                                  LookupFamily determines how Envoy would resolve DNS for. If set, this configuration overrides other default
-                                                  value that Envoy Gateway configures based on attributes of the backends, such Service resource IPFamilies.
+                                                  LookupFamily determines how Envoy would resolve DNS for Routes where the backend is specified as a fully qualified domain name (FQDN).
+                                                  If set, this configuration overrides other defaults.
                                                 enum:
                                                 - IPv4
                                                 - IPv6
@@ -11767,8 +11767,8 @@ spec:
                                                 type: string
                                               lookupFamily:
                                                 description: |-
-                                                  LookupFamily determines how Envoy would resolve DNS for. If set, this configuration overrides other default
-                                                  value that Envoy Gateway configures based on attributes of the backends, such Service resource IPFamilies.
+                                                  LookupFamily determines how Envoy would resolve DNS for Routes where the backend is specified as a fully qualified domain name (FQDN).
+                                                  If set, this configuration overrides other defaults.
                                                 enum:
                                                 - IPv4
                                                 - IPv6
@@ -12858,8 +12858,8 @@ spec:
                                           type: string
                                         lookupFamily:
                                           description: |-
-                                            LookupFamily determines how Envoy would resolve DNS for. If set, this configuration overrides other default
-                                            value that Envoy Gateway configures based on attributes of the backends, such Service resource IPFamilies.
+                                            LookupFamily determines how Envoy would resolve DNS for Routes where the backend is specified as a fully qualified domain name (FQDN).
+                                            If set, this configuration overrides other defaults.
                                           enum:
                                           - IPv4
                                           - IPv6
@@ -13864,8 +13864,8 @@ spec:
                                     type: string
                                   lookupFamily:
                                     description: |-
-                                      LookupFamily determines how Envoy would resolve DNS for. If set, this configuration overrides other default
-                                      value that Envoy Gateway configures based on attributes of the backends, such Service resource IPFamilies.
+                                      LookupFamily determines how Envoy would resolve DNS for Routes where the backend is specified as a fully qualified domain name (FQDN).
+                                      If set, this configuration overrides other defaults.
                                     enum:
                                     - IPv4
                                     - IPv6
