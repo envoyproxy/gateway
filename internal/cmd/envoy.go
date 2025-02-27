@@ -22,6 +22,7 @@ func getEnvoyCommand() *cobra.Command {
 
 	cmd.AddCommand(getShutdownCommand())
 	cmd.AddCommand(getShutdownManagerCommand())
+	cmd.AddCommand(getEnvoyInitCommand())
 
 	return cmd
 }
@@ -66,6 +67,33 @@ func getShutdownManagerCommand() *cobra.Command {
 
 	cmd.PersistentFlags().DurationVar(&readyTimeout, "ready-timeout", 610*time.Second,
 		"Shutdown ready timeout. This should be greater than shutdown's drain-timeout and less than the pod's terminationGracePeriodSeconds.")
+
+	return cmd
+}
+
+// getEnvoyInitCommand returns the envoy init cobra command to be executed.
+func getEnvoyInitCommand() *cobra.Command {
+	var discoverRegion bool
+	var discoverZone bool
+	var overrideRegion string
+	var overrideZone string
+
+	cmd := &cobra.Command{
+		Use:   "init",
+		Short: "Provides HTTP endpoint used in preStop hook to block until ready for pod shutdown.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return envoy.EnvoyInit(discoverRegion, overrideRegion, discoverZone, overrideZone)
+		},
+	}
+
+	cmd.PersistentFlags().BoolVar(&discoverRegion, "disable-region-discovery", false,
+		"Whether to enable service region discovery via topology.kubernetes.io/region label on the underlying node.")
+	cmd.PersistentFlags().StringVar(&overrideRegion, "override-region", "",
+		"Override discovered region with custom string")
+	cmd.PersistentFlags().BoolVar(&discoverZone, "disable-zone-discovery", false,
+		"Whether to enable service zone discovery via topology.kubernetes.io/zone label on the underlying node.")
+	cmd.PersistentFlags().StringVar(&overrideZone, "override-zone", "",
+		"Override discovered region with custom string")
 
 	return cmd
 }

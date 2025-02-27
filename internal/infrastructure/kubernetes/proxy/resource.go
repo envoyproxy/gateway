@@ -8,6 +8,7 @@ package proxy
 import (
 	"fmt"
 	"path/filepath"
+	v1 "sigs.k8s.io/gateway-api/conformance/apis/v1"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -76,6 +77,80 @@ func enablePrometheus(infra *ir.ProxyInfra) bool {
 	}
 
 	return true
+}
+
+// expectedProxyInitContainers returns expected proxy init containers.
+func expectedProxyInitContainers(containerSpec *egv1a1.KubernetesContainerSpec,
+	initConfig *egv1a1.InitConfig,
+	initManager *egv1a1.InitManager,
+	extraContainers []corev1.Container,
+) ([]corev1.Container, error) {
+	containers := append([]corev1.Container{
+		{
+			Name:            "init",
+			Image:           expectedInitManagerImage(initManager),
+			ImagePullPolicy: initManager.ImagePullPolicy,
+			Command:         []string{"envoy-gateway"},
+			Args:            expectedInitManagerArgs(initConfig),
+			Env: []corev1.EnvVar{{
+				Name: "NODE_NAME",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						APIVersion: v1.Version,
+						FieldPath:  "spec.nodeName",
+					},
+				},
+			}},
+			Resources:       egv1a1.DefaultInitManagerContainerResourceRequirements(),
+			SecurityContext: expectedInitManagerSecurityContext(containerSpec),
+		},
+	}, extraContainers...)
+	return containers, nil
+}
+
+func expectedInitManagerImage(initManager *egv1a1.InitManager) string {
+	if initManager != nil && initManager.Image != nil {
+		return *initManager.Image
+	}
+	return egv1a1.DefaultShutdownManagerImage
+}
+
+func expectedInitManagerArgs(cfg *egv1a1.InitConfig) []string {
+	args := []string{"envoy", "init"}
+	if cfg == nil {
+		return args
+	}
+
+	if cfg.RegionDiscoveryDisabled != nil {
+		args = append(args, fmt.Sprintf("--disable-region-discovery=%t", *cfg.RegionDiscoveryDisabled))
+	}
+	if cfg.RegionOverride != nil {
+		args = append(args, fmt.Sprintf("--override-region=%s", *cfg.RegionOverride))
+	}
+	if cfg.ZoneDiscoveryDisabled != nil {
+		args = append(args, fmt.Sprintf("--disable-zone-discovery=%t", *cfg.ZoneDiscoveryDisabled))
+	}
+	if cfg.ZoneOverride != nil {
+		args = append(args, fmt.Sprintf("--override-zone=%s", *cfg.ZoneOverride))
+	}
+
+	return args
+}
+
+func expectedInitManagerSecurityContext(containerSpec *egv1a1.KubernetesContainerSpec) *corev1.SecurityContext {
+	if containerSpec != nil && containerSpec.SecurityContext != nil {
+		return containerSpec.SecurityContext
+	}
+
+	sc := resource.DefaultSecurityContext()
+
+	// run as non-root user
+	sc.RunAsGroup = ptr.To(int64(65532))
+	sc.RunAsUser = ptr.To(int64(65532))
+
+	// InitManager creates a file to initialize Envoy locality so it needs file write permission.
+	sc.ReadOnlyRootFilesystem = nil
+	return sc
 }
 
 // expectedProxyContainers returns expected proxy containers.
