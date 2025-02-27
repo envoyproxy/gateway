@@ -29,7 +29,7 @@ require (
 	github.com/go-openapi/strfmt v0.23.0
 	github.com/go-openapi/validate v0.24.0
 	github.com/golang/protobuf v1.5.4
-	github.com/google/cel-go v0.22.1
+	github.com/google/cel-go v0.24.0
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.20.3
 	github.com/hashicorp/go-multierror v1.1.1
