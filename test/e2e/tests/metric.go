@@ -21,7 +21,7 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, MetricTest)
+	ConformanceTests = append(ConformanceTests, MetricTest, MetricCompressorTest)
 }
 
 var MetricTest = suite.ConformanceTest{
@@ -92,4 +92,37 @@ var MetricTest = suite.ConformanceTest{
 			}
 		})
 	},
+}
+
+var MetricCompressorTest = suite.ConformanceTest{
+	ShortName:   "MetricCompressor",
+	Description: "Make sure metric is working with compressor",
+	Manifests:   []string{"testdata/metric-compressor.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		t.Run("gzip", func(t *testing.T) {
+			runMetricCompressorTest(t, suite, ns, "gzip-route", "gzip-gtw", "/gzip")
+		})
+		t.Run("brotli", func(t *testing.T) {
+			runMetricCompressorTest(t, suite, ns, "brotli-route", "brotli-gtw", "/brotli")
+		})
+	},
+}
+
+func runMetricCompressorTest(t *testing.T, suite *suite.ConformanceTestSuite, ns string, routeName, gtwName string, checkPath string) {
+	routeNN := types.NamespacedName{Name: routeName, Namespace: ns}
+	gwNN := types.NamespacedName{Name: gtwName, Namespace: ns}
+	gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+	expectedResponse := httputils.ExpectedResponse{
+		Request: httputils.Request{
+			Path: checkPath,
+		},
+		Response: httputils.Response{
+			StatusCode: 200,
+		},
+		Namespace: ns,
+	}
+	// make sure listener is ready
+	httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 }
