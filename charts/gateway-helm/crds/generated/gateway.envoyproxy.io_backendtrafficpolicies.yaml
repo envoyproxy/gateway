@@ -541,13 +541,13 @@ spec:
                     disabled:
                       description: Disabled indicates whether the upgrade is disabled.
                       type: boolean
-                    protocol:
+                    type:
                       description: |-
-                        Protocol is the case-insensitive name of protocol upgrade.
+                        Type is the case-insensitive type of protocol upgrade.
                         e.g. `websocket`, `CONNECT`, `spdy/3.1` etc.
                       type: string
                   required:
-                  - protocol
+                  - type
                   type: object
                 type: array
               loadBalancer:

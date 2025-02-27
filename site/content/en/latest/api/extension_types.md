@@ -3180,7 +3180,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `protocol` | _string_ |  true  |  | Protocol is the case-insensitive name of protocol upgrade.<br />e.g. `websocket`, `CONNECT`, `spdy/3.1` etc. |
+| `type` | _string_ |  true  |  | Type is the case-insensitive type of protocol upgrade.<br />e.g. `websocket`, `CONNECT`, `spdy/3.1` etc. |
 | `disabled` | _boolean_ |  false  |  | Disabled indicates whether the upgrade is disabled. |
 
 
