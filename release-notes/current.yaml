@@ -23,6 +23,7 @@ bug fixes: |
   Added support for Secret and ConfigMap parsing in Standalone mode.
   Bypass overload manager for stats and ready listeners
   Fix translating backendSettings for extAuth
+  Fix an issue that stats compressor was not working.
 
 # Enhancements that improve performance.
 performance improvements: |
