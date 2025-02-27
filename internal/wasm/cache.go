@@ -127,9 +127,7 @@ func (c *localFileCache) Start(ctx context.Context) {
 	go c.purge(ctx)
 }
 
-var _ Cache = &localFileCache{
-	permissionCheckCache: newPermissionCache(permissionCacheTTL),
-}
+var _ Cache = &localFileCache{}
 
 type checksumEntry struct {
 	checksum string
@@ -185,11 +183,12 @@ type cacheEntry struct {
 func newLocalFileCache(options CacheOptions, logger logging.Logger) *localFileCache {
 	options = options.sanitize()
 	cache := &localFileCache{
-		httpFetcher:  NewHTTPFetcher(options.HTTPRequestTimeout, options.HTTPRequestMaxRetries, logger),
-		modules:      make(map[moduleKey]*cacheEntry),
-		checksums:    make(map[string]*checksumEntry),
-		CacheOptions: options,
-		logger:       logger,
+		httpFetcher:          NewHTTPFetcher(options.HTTPRequestTimeout, options.HTTPRequestMaxRetries, logger),
+		modules:              make(map[moduleKey]*cacheEntry),
+		checksums:            make(map[string]*checksumEntry),
+		permissionCheckCache: newPermissionCache(permissionCacheTTL),
+		CacheOptions:         options,
+		logger:               logger,
 	}
 
 	return cache
