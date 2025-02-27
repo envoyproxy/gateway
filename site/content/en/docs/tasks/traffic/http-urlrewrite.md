@@ -695,5 +695,5 @@ You can see that the host is rewritten from `host.header.rewrite.example`, to th
 
 
 [HTTPURLRewriteFilter]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPURLRewriteFilter
-[HTTPRouteFilter]: ../../../api/extension_types#httproutefilter
+[HTTPRouteFilter]: ../../../api/envoygateway/extension_types#httproutefilter
 [RE2]: https://github.com/google/re2/wiki/Syntax

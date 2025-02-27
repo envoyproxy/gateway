@@ -1,5 +1,5 @@
 ---
 title: "API"
-description: This section includes APIs of Envoy Gateway.
+description: This section includes API References.
 weight: 80
 ---

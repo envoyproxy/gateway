@@ -180,4 +180,4 @@ curl -v -HHost:www.example.com --resolve "www.example.com:8443:127.0.0.1" \
 {{% /tab %}}
 {{< /tabpane >}}
 
-[ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy
+[ClientTrafficPolicy]: ../../../api/envoygateway/extension_types#clienttrafficpolicy

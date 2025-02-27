@@ -309,8 +309,8 @@ Checkout the [Developer Guide](../../../contributions/develop) to get involved i
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
 [GRPCRoute]: https://gateway-api.sigs.k8s.io/api-types/grpcroute
-[Backend]: ../../../api/extension_types#backend
+[Backend]: ../../../api/envoygateway/extension_types#backend
 [BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/
 [backend-routing]: ../traffic/backend
 [backend-tls]: ../backend-tls
-[BackendSettings]: ../../../api/extension_types/#clustersettings
+[BackendSettings]: ../../../api/envoygateway/extension_types/#clustersettings

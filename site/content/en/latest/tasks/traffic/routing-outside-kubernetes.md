@@ -162,7 +162,7 @@ curl -I -HHost:httpbin.org --resolve "httpbin.org:443:${GATEWAY_HOST}" https://h
 ```
 
 [EndpointSlice]: https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/
-[Backend]: ../../api/extension_types#backend
+[Backend]: ../../api/envoygateway/extension_types#backend
 [Backend Task]: ./backend.md
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
 [TLSRoute]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.TLSRoute

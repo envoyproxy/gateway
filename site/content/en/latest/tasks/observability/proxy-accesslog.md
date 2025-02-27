@@ -54,7 +54,7 @@ If custom format string is not specified, Envoy Gateway uses the following defau
 }
 ```
 
-> Note: Envoy Gateway disable envoy headers by default, you can enable it by setting `EnableEnvoyHeaders` to `true` in the [ClientTrafficPolicy](../../api/extension_types#backendtrafficpolicy) CRD.
+> Note: Envoy Gateway disable envoy headers by default, you can enable it by setting `EnableEnvoyHeaders` to `true` in the [ClientTrafficPolicy](../../api/envoygateway/extension_types#backendtrafficpolicy) CRD.
 
 
 Verify logs from loki:

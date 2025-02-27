@@ -4,7 +4,7 @@ date: January 30, 2025
 breaking changes: |
   The Container `ports` field of the gateway instance has been removed, which will cause the gateway Pod to be rebuilt when upgrading the version.
   ClientTrafficPolicy previously treated an empty TLS ALPNProtocols list as being undefined and applied Envoy Gateway defaults. An empty TLS ALPNProtocols list is now treated as user-defined disablement of the TLS ALPN extension.
-  Outlier detection (passive health check) is now disabled by default. refer to https://gateway.envoyproxy.io/docs/api/extension_types/#backendtrafficpolicy for working with passive health checks.
+  Outlier detection (passive health check) is now disabled by default. refer to https://gateway.envoyproxy.io/docs/api/envoygateway/extension_types/#backendtrafficpolicy for working with passive health checks.
   Envoy Gateway treats errors in calls to an extension service as fail-closed by default. Any error returned from the extension server will replace the affected resource with an "Internal Server Error" immediate response. The previous behavior can be enabled by setting the `failOpen` field to `true` in the extension service configuration.
   Envoy Gateway now return a 500 response when a ClientTrafficPolicy translation fails for HTTP/GRPC routes, and forwards client traffic to an empty cluster when a ClientTrafficPolicy translation fails for TCP routes.
   Any issues with `EnvoyProxy` reference in a `Gateway` will prevent the Envoy fleet from being created or result in the deletion of an existing Envoy fleet.

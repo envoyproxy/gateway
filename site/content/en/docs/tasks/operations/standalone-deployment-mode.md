@@ -255,4 +255,4 @@ curl --verbose --header "Host: www.example.com" http://0.0.0.0:8888/
 * Connection #0 to host 0.0.0.0 left intact
 ```
 
-[Backend]: ../../../api/extension_types#backend
+[Backend]: ../../../api/envoygateway/extension_types#backend

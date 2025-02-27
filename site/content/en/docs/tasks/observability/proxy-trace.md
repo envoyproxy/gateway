@@ -19,7 +19,7 @@ TEMPO_IP=$(kubectl get svc tempo -n monitoring -o jsonpath='{.status.loadBalance
 
 By default, Envoy Gateway doesn't send traces to any sink.
 You can enable traces by setting the `telemetry.tracing` in the [EnvoyProxy][envoy-proxy-crd] CRD.
-Currently, Envoy Gateway support OpenTelemetry, [Zipkin](../../api/extension_types#zipkintracingprovider) and Datadog tracer.
+Currently, Envoy Gateway support OpenTelemetry, [Zipkin](../../api/envoygateway/extension_types#zipkintracingprovider) and Datadog tracer.
 
 ### Tracing Provider
 
@@ -348,4 +348,4 @@ EOF
 ```
 
 
-[envoy-proxy-crd]: ../../api/extension_types#envoyproxy
+[envoy-proxy-crd]: ../../api/envoygateway/extension_types#envoyproxy

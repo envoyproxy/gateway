@@ -1091,5 +1091,5 @@ After applying the config, the EnvoyProxy deployment will be configured to use t
 **Note**: Your cluster must support the selected IP family configuration. For DualStack support, ensure your Kubernetes cluster is properly configured for dual-stack networking.
 
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
-[EnvoyProxy]: ../../../api/extension_types#envoyproxy
+[EnvoyProxy]: ../../../api/envoygateway/extension_types#envoyproxy
 [egctl x translate]: ../operations/egctl#egctl-experimental-translate

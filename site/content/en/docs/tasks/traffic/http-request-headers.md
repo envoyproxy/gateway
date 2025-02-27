@@ -617,4 +617,4 @@ $ curl -vvv --header "Host: headers.example" "http://${GATEWAY_HOST}/get" --head
 [HTTPRoute filters]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteFilter
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
 [req_filter]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPHeaderFilter
-[ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy
+[ClientTrafficPolicy]: ../../../api/envoygateway/extension_types#clienttrafficpolicy

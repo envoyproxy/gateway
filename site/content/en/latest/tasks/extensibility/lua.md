@@ -198,6 +198,6 @@ kubectl delete configmap/cm-lua-valueref
 
 Checkout the [Developer Guide](../../../contributions/develop) to get involved in the project.
 
-[EnvoyExtensionPolicy]: ../../../api/extension_types#envoyextensionpolicy
+[EnvoyExtensionPolicy]: ../../../api/envoygateway/extension_types#envoyextensionpolicy
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
