@@ -6,7 +6,7 @@
           socketAddress:
             address: 10.244.0.12
             portValue: 8080
-      loadBalancingWeight: 1
+      loadBalancingWeight: 2
       metadata:
         filterMetadata:
           envoy.transport_socket_match:
@@ -20,7 +20,7 @@
           socketAddress:
             address: 10.244.0.11
             portValue: 8080
-      loadBalancingWeight: 1
+      loadBalancingWeight: 2
       metadata:
         filterMetadata:
           envoy.transport_socket_match:
@@ -36,7 +36,7 @@
           socketAddress:
             address: 10.244.0.12
             portValue: 8080
-      loadBalancingWeight: 1
+      loadBalancingWeight: 2
     loadBalancingWeight: 1
     locality:
       region: httproute/envoy-gateway/httproute-btls-2/rule/0/backend/0
@@ -46,7 +46,7 @@
           socketAddress:
             address: 10.244.0.11
             portValue: 8080
-      loadBalancingWeight: 1
+      loadBalancingWeight: 2
       metadata:
         filterMetadata:
           envoy.transport_socket_match:

@@ -2,7 +2,7 @@
     thresholds:
     - maxRetries: 1024
   commonLbConfig:
-    localityWeightedLbConfig: {}
+    zoneAwareLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:

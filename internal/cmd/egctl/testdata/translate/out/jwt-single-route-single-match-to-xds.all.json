@@ -340,7 +340,7 @@
                   ]
                 },
                 "commonLbConfig": {
-                  "localityWeightedLbConfig": {}
+                  "zoneAwareLbConfig": {}
                 },
                 "connectTimeout": "10s",
                 "dnsLookupFamily": "V4_PREFERRED",
@@ -369,7 +369,7 @@
                   ]
                 },
                 "commonLbConfig": {
-                  "localityWeightedLbConfig": {}
+                  "zoneAwareLbConfig": {}
                 },
                 "connectTimeout": "10s",
                 "dnsLookupFamily": "V4_PREFERRED",
