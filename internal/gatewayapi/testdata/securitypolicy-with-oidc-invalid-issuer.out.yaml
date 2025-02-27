@@ -85,8 +85,8 @@ securityPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: 'OIDC: error fetching endpoints from issuer: Get "https://httpbin.org//.well-known/openid-configuration":
-          net/http: TLS handshake timeout.'
+        message: 'OIDC: error fetching endpoints from issuer: invalid character ''<''
+          looking for beginning of value.'
         reason: Invalid
         status: "False"
         type: Accepted

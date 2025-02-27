@@ -218,10 +218,9 @@ securityPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: 'OIDC: error fetching endpoints from issuer: Get "https://accounts.google.com/.well-known/openid-configuration":
-          net/http: TLS handshake timeout.'
-        reason: Invalid
-        status: "False"
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
         type: Accepted
       - lastTransitionTime: null
         message: 'This policy is being overridden by other securityPolicies for these
@@ -306,8 +305,6 @@ xdsIR:
             name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
-        directResponse:
-          statusCode: 500
         hostname: www.example.com
         isHTTP2: false
         metadata:
@@ -319,7 +316,25 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /bar
-        security: {}
+        security:
+          oidc:
+            clientID: client1.apps.googleusercontent.com
+            clientSecret: '[redacted]'
+            cookieSuffix: b0a1b740
+            defaultRefreshTokenTTL: 24h0m0s
+            defaultTokenTTL: 30m0s
+            forwardAccessToken: true
+            hmacSecret: '[redacted]'
+            logoutPath: /bar/logout
+            name: securitypolicy/envoy-gateway/policy-for-gateway
+            provider:
+              authorizationEndpoint: https://accounts.google.com/o/oauth2/v2/auth
+              tokenEndpoint: https://oauth2.googleapis.com/token
+            redirectPath: /bar/oauth2/callback
+            redirectURL: https://www.example.com/bar/oauth2/callback
+            refreshToken: true
+            scopes:
+            - openid
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
