@@ -1,0 +1,54 @@
+name: first-listener
+domain: first-listener
+descriptors:
+  - key: global-limit
+    value: global-limit
+    rate_limit: null
+    descriptors:
+      - key: rule-0-match-0
+        value: rule-0-match-0
+        rate_limit:
+          requests_per_unit: 5
+          unit: SECOND
+          unlimited: false
+          name: ""
+          replaces: []
+        descriptors: []
+        shadow_mode: false
+        detailed_metric: false
+    shadow_mode: false
+    detailed_metric: false
+  - key: first-route
+    value: first-route
+    rate_limit: null
+    descriptors:
+      - key: rule-0-match-0
+        value: rule-0-match-0
+        rate_limit:
+          requests_per_unit: 5
+          unit: SECOND
+          unlimited: false
+          name: ""
+          replaces: []
+        descriptors: []
+        shadow_mode: false
+        detailed_metric: false
+    shadow_mode: false
+    detailed_metric: false
+  - key: second-route
+    value: second-route
+    rate_limit: null
+    descriptors:
+      - key: rule-0-match-0
+        value: rule-0-match-0
+        rate_limit:
+          requests_per_unit: 10
+          unit: SECOND
+          unlimited: false
+          name: ""
+          replaces: []
+        descriptors: []
+        shadow_mode: false
+        detailed_metric: false
+    shadow_mode: false
+    detailed_metric: false

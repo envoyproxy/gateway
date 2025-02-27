@@ -8,7 +8,6 @@ package translator
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"net/url"
 	"strconv"
 	"strings"
@@ -404,7 +403,6 @@ func GetRateLimitServiceConfigStr(pbCfg *rlsconfv3.RateLimitConfig) (string, err
 // BuildRateLimitServiceConfig builds the rate limit service configuration based on
 // https://github.com/envoyproxy/ratelimit#the-configuration-format
 func BuildRateLimitServiceConfig(irListener *ir.HTTPListener) *rlsconfv3.RateLimitConfig {
-	log.Printf("DEBUG: Starting BuildRateLimitServiceConfig for listener: %s", irListener.Name)
 
 	var routeDescriptors []*rlsconfv3.RateLimitDescriptor
 	var globalServiceDescriptors []*rlsconfv3.RateLimitDescriptor // For shared/global rate limits
@@ -412,7 +410,6 @@ func BuildRateLimitServiceConfig(irListener *ir.HTTPListener) *rlsconfv3.RateLim
 	// Process each route to build descriptors.
 	for _, route := range irListener.Routes {
 		if !routeContainsGlobalRateLimit(route) {
-			log.Printf("DEBUG: Route %s does not contain a global rate limit, skipping.", route.Name)
 			continue
 		}
 
@@ -445,7 +442,6 @@ func BuildRateLimitServiceConfig(irListener *ir.HTTPListener) *rlsconfv3.RateLim
 					globalServiceDescriptors = append(globalServiceDescriptors, sd)
 				}
 			}
-			log.Printf("DEBUG: Added shared rate limit from route: %s", route.Name)
 		} else {
 			// For non-shared (per-route) limits, create a descriptor keyed to the route.
 			routeDescriptor := &rlsconfv3.RateLimitDescriptor{
@@ -454,19 +450,16 @@ func BuildRateLimitServiceConfig(irListener *ir.HTTPListener) *rlsconfv3.RateLim
 				Descriptors: serviceDescriptors,
 			}
 			routeDescriptors = append(routeDescriptors, routeDescriptor)
-			log.Printf("DEBUG: Added route-level descriptor for route: %s", route.Name)
 		}
 	}
 
 	// If no descriptors were built, return nil.
 	if len(routeDescriptors) == 0 && len(globalServiceDescriptors) == 0 {
-		log.Printf("DEBUG: No descriptors built, returning nil RateLimitConfig for listener: %s", irListener.Name)
 		return nil
 	}
 
 	// Determine the domain—this may factor in whether a global limit was set.
 	domain := getRateLimitDomain(irListener, len(globalServiceDescriptors) > 0)
-	log.Printf("DEBUG: Final domain set to: %s", domain)
 
 	// Build the final list of descriptors.
 	var finalDescriptors []*rlsconfv3.RateLimitDescriptor
@@ -478,12 +471,10 @@ func BuildRateLimitServiceConfig(irListener *ir.HTTPListener) *rlsconfv3.RateLim
 			Descriptors: globalServiceDescriptors,
 		}
 		finalDescriptors = append(finalDescriptors, globalDescriptor)
-		log.Printf("DEBUG: Using global-limit descriptor with %d sub-descriptors.", len(globalServiceDescriptors))
 	}
 
 	// Append all route-specific descriptors.
 	finalDescriptors = append(finalDescriptors, routeDescriptors...)
-	log.Printf("DEBUG: Final RateLimitServiceConfig will use domain: %s with %d descriptors.", domain, len(finalDescriptors))
 
 	return &rlsconfv3.RateLimitConfig{
 		Name:        domain,
@@ -594,10 +585,8 @@ func buildRateLimitServiceDescriptors(global *ir.GlobalRateLimit) []*rlsconfv3.R
 			if global.Shared != nil && *global.Shared && !usedGlobalLimit {
 				pbDesc.Key = sharedDescriptorKey // Use the constant
 				usedGlobalLimit = true
-				log.Printf("DEBUG: Using global-limit key for rule index %d", rIdx)
 			} else {
 				pbDesc.Key = getRouteRuleDescriptor(rIdx, -1)
-				log.Printf("DEBUG: Using unique key for rule index %d: %s", rIdx, pbDesc.Key)
 			}
 			pbDesc.Value = pbDesc.Key
 			head = pbDesc
