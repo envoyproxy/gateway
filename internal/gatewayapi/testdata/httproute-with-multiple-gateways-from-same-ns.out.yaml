@@ -155,6 +155,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-name: gateway-a
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway/gateway-a
+      namespace: envoy-gateway-system
   envoy-gateway/gateway-b:
     proxy:
       listeners:
@@ -170,6 +171,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-name: gateway-b
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway/gateway-b
+      namespace: envoy-gateway-system
 xdsIR:
   envoy-gateway/gateway-a:
     accessLog:
