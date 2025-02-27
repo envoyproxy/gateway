@@ -753,6 +753,18 @@ spec:
                                 maximum: 4294967295
                                 minimum: 0
                                 type: integer
+                              perHostThresholds:
+                                description: Defines per-host Circuit Breaker thresholds
+                                properties:
+                                  maxConnections:
+                                    description: The maximum number of connections
+                                      that Envoy will establish per-host to the referenced
+                                      backend defined within a xRoute rule.
+                                    format: int64
+                                    maximum: 4294967295
+                                    minimum: 0
+                                    type: integer
+                                type: object
                             type: object
                           connection:
                             description: Connection includes backend connection settings.
@@ -1655,6 +1667,18 @@ spec:
                                 maximum: 4294967295
                                 minimum: 0
                                 type: integer
+                              perHostThresholds:
+                                description: Defines per-host Circuit Breaker thresholds
+                                properties:
+                                  maxConnections:
+                                    description: The maximum number of connections
+                                      that Envoy will establish per-host to the referenced
+                                      backend defined within a xRoute rule.
+                                    format: int64
+                                    maximum: 4294967295
+                                    minimum: 0
+                                    type: integer
+                                type: object
                             type: object
                           connection:
                             description: Connection includes backend connection settings.
@@ -2685,6 +2709,20 @@ spec:
                                       maximum: 4294967295
                                       minimum: 0
                                       type: integer
+                                    perHostThresholds:
+                                      description: Defines per-host Circuit Breaker
+                                        thresholds
+                                      properties:
+                                        maxConnections:
+                                          description: The maximum number of connections
+                                            that Envoy will establish per-host to
+                                            the referenced backend defined within
+                                            a xRoute rule.
+                                          format: int64
+                                          maximum: 4294967295
+                                          minimum: 0
+                                          type: integer
+                                      type: object
                                   type: object
                                 connection:
                                   description: Connection includes backend connection
@@ -3728,6 +3766,18 @@ spec:
                                 maximum: 4294967295
                                 minimum: 0
                                 type: integer
+                              perHostThresholds:
+                                description: Defines per-host Circuit Breaker thresholds
+                                properties:
+                                  maxConnections:
+                                    description: The maximum number of connections
+                                      that Envoy will establish per-host to the referenced
+                                      backend defined within a xRoute rule.
+                                    format: int64
+                                    maximum: 4294967295
+                                    minimum: 0
+                                    type: integer
+                                type: object
                             type: object
                           connection:
                             description: Connection includes backend connection settings.
