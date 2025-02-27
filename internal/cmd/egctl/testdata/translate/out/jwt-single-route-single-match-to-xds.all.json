@@ -268,8 +268,10 @@
                                       "match": {
                                         "headers": [
                                           {
-                                            "exactMatch": "GET",
-                                            "name": ":method"
+                                            "name": ":method",
+                                            "stringMatch": {
+                                              "exact": "GET"
+                                            }
                                           }
                                         ],
                                         "path": "/stats/prometheus"
