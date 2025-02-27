@@ -30,7 +30,7 @@
           socketAddress:
             address: 8.8.8.8
             portValue: 9000
-      loadBalancingWeight: 1
+      loadBalancingWeight: 3
     loadBalancingWeight: 1
     locality:
       region: envoyextensionpolicy/default/policy-for-http-route/0/backend/1
@@ -40,7 +40,7 @@
           socketAddress:
             address: 1.1.1.1
             portValue: 3001
-      loadBalancingWeight: 1
+      loadBalancingWeight: 3
     loadBalancingWeight: 1
     locality:
       region: envoyextensionpolicy/default/policy-for-http-route/0/backend/2
@@ -50,7 +50,7 @@
           socketAddress:
             address: 2.2.2.2
             portValue: 3443
-      loadBalancingWeight: 1
+      loadBalancingWeight: 3
       metadata:
         filterMetadata:
           envoy.transport_socket_match:

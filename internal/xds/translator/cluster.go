@@ -434,8 +434,12 @@ func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3
 }
 
 func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.DestinationSetting) *endpointv3.ClusterLoadAssignment {
-	localities := make([]*endpointv3.LocalityLbEndpoints, 0, len(destSettings))
+	var totalNumOfEndpoints int
+	for _, ds := range destSettings {
+		totalNumOfEndpoints += len(ds.Endpoints)
+	}
 
+	localities := make([]*endpointv3.LocalityLbEndpoints, 0, len(destSettings))
 	for i, ds := range destSettings {
 		var metadata *corev3.Metadata
 		if ds.TLS != nil {
@@ -451,6 +455,15 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 		}
 
 		zonalEndpoints := make(map[string][]*endpointv3.LbEndpoint)
+		numOfEndpoints := len(ds.Endpoints)
+
+		var wpe int
+		weight := int(ptr.Deref(ds.Weight, 1)) * totalNumOfEndpoints
+
+		if numOfEndpoints > 0 {
+			wpe = weight / numOfEndpoints
+		}
+
 		for _, irEp := range ds.Endpoints {
 			healthStatus := corev3.HealthStatus_UNKNOWN
 			if irEp.Draining {
@@ -465,8 +478,8 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 				},
 				HealthStatus: healthStatus,
 			}
-			// Set default weight of 1 for all endpoints.
-			lbEndpoint.LoadBalancingWeight = wrapperspb.UInt32(ptr.Deref(ds.Weight, 1))
+			lbEndpoint.LoadBalancingWeight = wrapperspb.UInt32(uint32(wpe))
+
 			zone := ""
 			if ds.ZoneAwareRoutingEnabled {
 				zone = ptr.Deref(irEp.Zone, "")

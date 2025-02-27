@@ -42,7 +42,7 @@
           socketAddress:
             address: 8.8.4.4
             portValue: 9001
-      loadBalancingWeight: 1
+      loadBalancingWeight: 2
     loadBalancingWeight: 1
     locality:
       region: securitypolicy/default/policy-for-http-route-1/default/grpc-backend/backend/0
@@ -52,7 +52,7 @@
           socketAddress:
             address: 8.8.8.8
             portValue: 9000
-      loadBalancingWeight: 1
+      loadBalancingWeight: 2
     loadBalancingWeight: 1
     locality:
       region: securitypolicy/default/policy-for-http-route-1/default/grpc-backend/backend/1
