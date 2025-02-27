@@ -1,9 +1,7 @@
----
-title: About Envoy Gateway
-menu:
-  main:
-    weight: 10
----
++++
+title = "About Envoy Gateway"
+linktitle = "About"
++++
 
 {{% blocks/cover title="Advanced Traffic Management for Everyone" height="auto" color="primary" %}}
 <div class="container">
