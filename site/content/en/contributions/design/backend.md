@@ -155,8 +155,8 @@ spec:
 [BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/geps/gep-1897/
 [BackendLBPolicy]: https://gateway-api.sigs.k8s.io/geps/gep-1619/
 [Backend Protocol Selection]: https://gateway-api.sigs.k8s.io/geps/gep-1911/
-[EnvoyProxy]:../../latest/api/extension_types#envoyproxy
-[EnvoyGateway]: ../../latest/api/extension_types#envoygateway
+[EnvoyProxy]:../../latest/api/envoygateway/extension_types#envoyproxy
+[EnvoyGateway]: ../../latest/api/envoygateway/extension_types#envoygateway
 [Gateway API]: https://gateway-api.sigs.k8s.io/
-[Envoy Patch Policy]: ../../latest/api/extension_types#envoypatchpolicy
+[Envoy Patch Policy]: ../../latest/api/envoygateway/extension_types#envoypatchpolicy
 [Envoy Extension Manager]: ./extending-envoy-gateway

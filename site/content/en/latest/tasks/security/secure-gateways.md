@@ -596,4 +596,4 @@ curl -v -HHost:www.sample.com --resolve "www.sample.com:8443:127.0.0.1" \
 Checkout the [Developer Guide](../../../contributions/develop) to get involved in the project.
 
 [ReferenceGrant]: https://gateway-api.sigs.k8s.io/api-types/referencegrant/
-[ClientTrafficPolicy]: ../../api/extension_types#clienttrafficpolicy
+[ClientTrafficPolicy]: ../../api/envoygateway/extension_types#clienttrafficpolicy

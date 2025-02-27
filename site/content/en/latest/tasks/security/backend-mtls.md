@@ -197,4 +197,4 @@ The response now contains a "peerCertificates" attribute that reflects the clien
 
 [Backend TLS]: ./backend-tls
 [BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/
-[EnvoyProxy]: ../../api/extension_types#envoyproxy
+[EnvoyProxy]: ../../api/envoygateway/extension_types#envoyproxy

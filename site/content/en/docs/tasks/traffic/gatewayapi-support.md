@@ -113,7 +113,7 @@ these types of cross-namespace references. Envoy Gateway supports the following 
 [SecretObjectReference]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.SecretObjectReference
 [rate limiting]: ../../../contributions/design/rate-limit
 [request authentication]: ../security/jwt-authentication
-[EnvoyProxy]: ../../../api/extension_types#envoyproxy
+[EnvoyProxy]: ../../../api/envoygateway/extension_types#envoyproxy
 [resolving conflicts]: https://gateway-api.sigs.k8s.io/concepts/guidelines/?h=conflict#conflicts
 [ExtensionRefs]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteFilterType
 [grpc-filter]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.GRPCRouteFilter

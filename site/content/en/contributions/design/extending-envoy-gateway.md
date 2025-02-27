@@ -338,7 +338,7 @@ Extending Envoy Gateway by using an external extension server which makes use of
 [authentication]: ../../latest/tasks/security/jwt-authentication
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRoute
 [GRPCRoute]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.GRPCRoute
-[EnvoyGateway config]: ../../latest/api/extension_types#envoygateway
+[EnvoyGateway config]: ../../latest/api/envoygateway/extension_types#envoygateway
 [controller-runtime]: https://github.com/kubernetes-sigs/controller-runtime
 [Unstructured]: https://pkg.go.dev/k8s.io/apimachinery/pkg/apis/meta/v1/unstructured
 [Listener]: https://www.envoyproxy.io/docs/envoy/v1.23.0/api-v3/config/listener/v3/listener.proto#config-listener-v3-listener

@@ -165,4 +165,4 @@ kubectl port-forward pod/$OTEL_POD_NAME -n monitoring 19001:19001
 curl localhost:19001/metrics
 ```
 
-[EnvoyGateway]: ../../api/extension_types#envoygateway
+[EnvoyGateway]: ../../api/envoygateway/extension_types#envoygateway

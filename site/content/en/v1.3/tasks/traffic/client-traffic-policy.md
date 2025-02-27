@@ -676,5 +676,5 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-[ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy
-[BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy
+[ClientTrafficPolicy]: ../../../api/envoygateway/extension_types#clienttrafficpolicy
+[BackendTrafficPolicy]: ../../../api/envoygateway/extension_types#backendtrafficpolicy

@@ -68,4 +68,4 @@ af82a227630327c24026d7c6d3057c3d5478b14426b74c547df011ca5f23d271
 $ buildah commit mywasm docker://my-remote-registry/mywasm:0.1.0
 ```
 
-[EnvoyExtensionPolicy]: ../../../api/extension_types#envoyextensionpolicy
+[EnvoyExtensionPolicy]: ../../../api/envoygateway/extension_types#envoyextensionpolicy

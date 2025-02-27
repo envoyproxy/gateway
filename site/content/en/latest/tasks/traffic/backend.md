@@ -195,7 +195,7 @@ Send a request and view the response:
 curl -I -HHost:www.example.com http://${GATEWAY_HOST}/headers
 ```
 
-[Backend]: ../../../api/extension_types#backend
+[Backend]: ../../../api/envoygateway/extension_types#backend
 [routing to cluster-external backends]: ./../../tasks/traffic/routing-outside-kubernetes.md
 [BackendObjectReference]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.BackendObjectReference
 [extension resource]: https://gateway-api.sigs.k8s.io/guides/migrating-from-ingress/#approach-to-extensibility
@@ -203,8 +203,8 @@ curl -I -HHost:www.example.com http://${GATEWAY_HOST}/headers
 [upstream recommendations]: https://github.com/kubernetes/kubernetes/issues/103675
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
 [TLSRoute]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.TLSRoute
-[Envoy Extension Policy]: ../../../api/extension_types#envoyextensionpolicy
-[Security Policy]: ../../../api/extension_types#oidcprovider
+[Envoy Extension Policy]: ../../../api/envoygateway/extension_types#envoyextensionpolicy
+[Security Policy]: ../../../api/envoygateway/extension_types#oidcprovider
 [Backend TLS Policy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/
-[EnvoyProxy]: ../../../api/extension_types#envoyproxy
-[EnvoyGateway]: ../../../api/extension_types#envoygateway
+[EnvoyProxy]: ../../../api/envoygateway/extension_types#envoyproxy
+[EnvoyGateway]: ../../../api/envoygateway/extension_types#envoygateway

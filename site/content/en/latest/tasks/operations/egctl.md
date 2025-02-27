@@ -840,7 +840,7 @@ product     backend   gateway/eg   ResolvedRefs   True      ResolvedRefs
 ```
 
 [Multi-tenancy]: ../deployment-mode#multi-tenancy
-[EnvoyProxy]: ../../../api/extension_types#envoyproxy
+[EnvoyProxy]: ../../../api/envoygateway/extension_types#envoyproxy
 
 
 ## egctl experimental dashboard

@@ -408,5 +408,5 @@ The TLS version is now TLS1.3, as configured in the EnvoyProxy resource. The TLS
 ```
 
 [BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/
-[EnvoyProxy]: ../../api/extension_types#envoyproxy
-[Backend]: ../../api/extension_types#backend
+[EnvoyProxy]: ../../api/envoygateway/extension_types#envoyproxy
+[Backend]: ../../api/envoygateway/extension_types#backend

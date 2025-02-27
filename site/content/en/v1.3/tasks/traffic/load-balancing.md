@@ -915,7 +915,7 @@ curl -v --header "Host: www.example.com" http://${GATEWAY_HOST}/cookie
 
 
 [Envoy load balancing]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/overview
-[BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy
+[BackendTrafficPolicy]: ../../../api/envoygateway/extension_types#backendtrafficpolicy
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
 [GRPCRoute]: https://gateway-api.sigs.k8s.io/api-types/grpcroute/

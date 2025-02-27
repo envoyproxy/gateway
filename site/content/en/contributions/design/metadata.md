@@ -95,4 +95,4 @@ Users can consume metadata in various ways:
 [cluster]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto
 [svc]: https://kubernetes.io/docs/concepts/services-networking/service/
 [svci]: https://multicluster.sigs.k8s.io/concepts/multicluster-services-api/#serviceimport-and-endpointslices
-[Backend]: ../../latest/api/extension_types#backend
+[Backend]: ../../latest/api/envoygateway/extension_types#backend
