@@ -134,6 +134,8 @@ var OCIWasmTest = suite.ConformanceTest{
 			}
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+
+			time.Sleep(5 * time.Minute)
 		})
 
 		// HTTPRoute without wasm should not modify the response
@@ -234,6 +236,8 @@ var OCIWasmTest = suite.ConformanceTest{
 				suite.ControllerName,
 				ancestorRef, "failed to login to private registry")
 		})
+
+		time.Sleep(5 * time.Minute)
 	},
 }
 

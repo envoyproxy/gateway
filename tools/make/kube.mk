@@ -156,9 +156,9 @@ benchmark: create-cluster kube-install-image kube-deploy-for-benchmark-test run-
 resilience: create-cluster kube-install-image kube-deploy run-resilience delete-cluster ## Create a kind cluster, deploy EG into it, run Envoy Gateway resilience test, and clean up.
 
 .PHONY: e2e
-e2e: create-cluster kube-install-image kube-deploy \
+e2e: kube-install-image kube-deploy \
 	install-ratelimit install-eg-addons kube-install-examples-image \
-	run-e2e delete-cluster
+	run-e2e 
 
 .PHONY: install-ratelimit
 install-ratelimit:
@@ -177,15 +177,7 @@ e2e-prepare: prepare-ip-family ## Prepare the environment for running e2e tests
 .PHONY: run-e2e
 run-e2e: e2e-prepare ## Run e2e tests
 	@$(LOG_TARGET)
-ifeq ($(E2E_RUN_TEST),)
 	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=false
-	go test $(E2E_TEST_ARGS) ./test/e2e/merge_gateways --gateway-class=merge-gateways --debug=true --cleanup-base-resources=false
-	go test $(E2E_TEST_ARGS) ./test/e2e/multiple_gc --debug=true --cleanup-base-resources=true
-	LAST_VERSION_TAG=$(shell cat VERSION) go test $(E2E_TEST_ARGS) ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
-else
-	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
-		--run-test $(E2E_RUN_TEST)
-endif
 
 run-e2e-upgrade:
 	go test $(E2E_TEST_ARGS) ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)

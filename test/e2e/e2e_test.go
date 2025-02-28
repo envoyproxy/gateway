@@ -58,7 +58,7 @@ func TestE2E(t *testing.T) {
 		Debug:                *flags.ShowDebug,
 		CleanupBaseResources: *flags.CleanupBaseResources,
 		ManifestFS:           []fs.FS{Manifests},
-		RunTest:              *flags.RunTest,
+		RunTest:              tests.OCIWasmTest.ShortName,
 		// SupportedFeatures cannot be empty, so we set it to SupportGateway
 		// All e2e tests should leave Features empty.
 		SupportedFeatures: sets.New[features.FeatureName](features.SupportGateway),

@@ -78,6 +78,7 @@ type localFileCache struct {
 
 // permissionCache is a cache for permission check for private OCI images.
 type permissionCache struct {
+	sync.Mutex
 	cache map[string]*time.Time // key: sha256(imageURL + pullSecret), value: last time the permission is checked
 	ttl   time.Duration
 }
@@ -88,6 +89,27 @@ func newPermissionCache(ttl time.Duration) *permissionCache {
 		cache: make(map[string]*time.Time),
 		ttl:   ttl,
 	}
+}
+
+func (p *permissionCache) start(ctx context.Context) {
+	go func() {
+		ticker := time.NewTicker(p.ttl)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				p.Lock()
+				for k, t := range p.cache {
+					if time.Now().After(t.Add(p.ttl)) {
+						delete(p.cache, k)
+					}
+				}
+				p.Unlock()
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 }
 
 // expired returns true if the permission for a given image is expired.
