@@ -168,7 +168,7 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 	var (
 		enablePrometheus             = true
 		enablePrometheusCompression  = false
-		PrometheusCompressionLibrary = "gzip"
+		prometheusCompressionLibrary = "Gzip"
 		metricSinks                  []metricSink
 		StatsMatcher                 StatsMatcherParameters
 	)
@@ -181,7 +181,7 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 
 			if proxyMetrics.Prometheus.Compression != nil {
 				enablePrometheusCompression = true
-				PrometheusCompressionLibrary = string(proxyMetrics.Prometheus.Compression.Type)
+				prometheusCompressionLibrary = string(proxyMetrics.Prometheus.Compression.Type)
 			}
 		}
 
@@ -260,7 +260,7 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 			SdsTrustedCAPath:             defaultSdsTrustedCAPath,
 			EnablePrometheus:             enablePrometheus,
 			EnablePrometheusCompression:  enablePrometheusCompression,
-			PrometheusCompressionLibrary: PrometheusCompressionLibrary,
+			PrometheusCompressionLibrary: prometheusCompressionLibrary,
 			OtelMetricSinks:              metricSinks,
 		},
 	}
