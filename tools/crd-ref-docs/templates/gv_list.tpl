@@ -2,7 +2,8 @@
 {{- $groupVersions := . -}}
 
 +++
-title = "API Reference"
+title = "Envoy Gateway API"
+weight = 1
 +++
 
 
