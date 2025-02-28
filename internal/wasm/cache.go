@@ -44,8 +44,6 @@ const (
 	ociURLPrefix = "oci://"
 	// sha256 scheme prefix
 	sha256SchemePrefix = "sha256:"
-	// permissionCacheRefreshInterval is the interval to recheck the permission for the cached permission entries.
-	permissionCacheRefreshInterval = 10 * time.Minute
 )
 
 // Cache models a Wasm module cache.
@@ -69,7 +67,8 @@ type localFileCache struct {
 	// option sets for configuring the cache.
 	CacheOptions
 
-	// permissionCheckCache is a cache for permission check for private OCI images.
+	// permissionCheckCache is the cache for permission check for private OCI images.
+	// The permission check is run periodically by a background goroutine and the result is cached.
 	permissionCheckCache *permissionCache
 
 	// logger
@@ -137,12 +136,14 @@ type cacheEntry struct {
 func newLocalFileCache(options CacheOptions, logger logging.Logger) *localFileCache {
 	options = options.sanitize()
 	cache := &localFileCache{
-		httpFetcher:          NewHTTPFetcher(options.HTTPRequestTimeout, options.HTTPRequestMaxRetries, logger),
-		modules:              make(map[moduleKey]*cacheEntry),
-		checksums:            make(map[string]*checksumEntry),
-		permissionCheckCache: newPermissionCache(permissionCacheRefreshInterval, logger),
-		CacheOptions:         options,
-		logger:               logger,
+		httpFetcher: NewHTTPFetcher(options.HTTPRequestTimeout, options.HTTPRequestMaxRetries, logger),
+		modules:     make(map[moduleKey]*cacheEntry),
+		checksums:   make(map[string]*checksumEntry),
+		permissionCheckCache: newPermissionCache(
+			permissionCacheOptions{},
+			logger),
+		CacheOptions: options,
+		logger:       logger,
 	}
 
 	return cache
@@ -206,12 +207,14 @@ func (c *localFileCache) getOrFetch(key cacheKey, opts GetOptions) (*cacheEntry,
 	var (
 		u         *url.URL
 		isPrivate bool
+		insecure  bool
 		err       error
 	)
 
 	if u, err = url.Parse(key.downloadURL); err != nil {
 		return nil, fmt.Errorf("fail to parse Wasm module fetch url: %s, error: %w", key.downloadURL, err)
 	}
+	insecure = c.allowInsecure(u.Host)
 
 	requestTimout := DefaultPullTimeout
 	if opts.RequestTimeout != 0 {
@@ -225,10 +228,7 @@ func (c *localFileCache) getOrFetch(key cacheKey, opts GetOptions) (*cacheEntry,
 	if ce != nil {
 		// We still need to check if the pull secret is correct if it is a private OCI image.
 		if u.Scheme == "oci" && ce.isPrivate {
-			allow, err := c.permissionCheckCache.Allow(u, opts.PullSecret)
-			if err != nil {
-				return nil, err
-			}
+			allow := c.permissionCheckCache.IsAllowed(ctx, u, insecure, opts.PullSecret)
 			if !allow {
 				return nil, fmt.Errorf("permission denied for image %s", u.String())
 			}
@@ -241,7 +241,6 @@ func (c *localFileCache) getOrFetch(key cacheKey, opts GetOptions) (*cacheEntry,
 		b                  []byte // Byte array of Wasm binary.
 		dChecksum          string // Hex-Encoded sha256 checksum of binary.
 		imageBinaryFetcher func() ([]byte, error)
-		insecure           = c.allowInsecure(u.Host)
 	)
 
 	switch u.Scheme {
@@ -328,7 +327,6 @@ func (c *localFileCache) prepareFetch(
 	if binaryFetcher, actualDigest, err = fetcher.PrepareFetch(url.Host + url.Path); err != nil {
 		return nil, "", err
 	}
-	c.logger.Info("XXXXsuccessfully prepared to fetch Wasm binary", "url", url.String())
 	return binaryFetcher, actualDigest, nil
 }
 
