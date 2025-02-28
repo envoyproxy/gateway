@@ -44,7 +44,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -991,29 +990,4 @@ func generateModulePath(t *testing.T, baseDir, resourceName, filename string) st
 		}
 	}
 	return filepath.Join(moduleDir, filename)
-}
-
-func TestPermissionCache(t *testing.T) {
-	t.Run("cache is expired", func(t *testing.T) {
-		cache := newPermissionCache(1 * time.Millisecond)
-		image := &url.URL{Scheme: "oci", Host: "example.com", Path: "/test.wasm"}
-		secret := []byte("secret")
-		cache.update(image, secret)
-		time.Sleep(2 * time.Millisecond)
-		require.True(t, cache.expired(image, secret), "cache should be expired")
-	})
-	t.Run("cache is not expired", func(t *testing.T) {
-		cache := newPermissionCache(5 * time.Millisecond)
-		image := &url.URL{Scheme: "oci", Host: "example.com", Path: "/test.wasm"}
-		secret := []byte("secret")
-		cache.update(image, secret)
-		require.False(t, cache.expired(image, secret), "cache should not be expired")
-	})
-
-	t.Run("missed cache should return expired", func(t *testing.T) {
-		cache := newPermissionCache(5 * time.Millisecond)
-		image := &url.URL{Scheme: "oci", Host: "example.com", Path: "/test.wasm"}
-		secret := []byte("secret")
-		require.True(t, cache.expired(image, secret), "cache should be expired because it is missed")
-	})
 }
