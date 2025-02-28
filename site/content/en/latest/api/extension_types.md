@@ -3170,6 +3170,21 @@ _Appears in:_
 | `attributes` | _string array_ |  false  |  | Defines which attributes are sent to the external processor. Envoy Gateway currently<br />supports only the following attribute prefixes: connection, source, destination,<br />request, response, upstream and xds.route.<br />https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/advanced/attributes |
 
 
+#### ProtocolUpgradeConfig
+
+
+
+
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _string_ |  true  |  | Type is the case-insensitive type of protocol upgrade.<br />e.g. `websocket`, `CONNECT`, `spdy/3.1` etc. |
+| `disabled` | _boolean_ |  false  |  | Disabled indicates whether the upgrade is disabled. |
+
+
 #### ProviderType
 
 _Underlying type:_ _string_
