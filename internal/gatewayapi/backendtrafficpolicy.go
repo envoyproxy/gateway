@@ -292,21 +292,22 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 	resources *resource.Resources,
 ) error {
 	var (
-		rl        *ir.RateLimit
-		lb        *ir.LoadBalancer
-		pp        *ir.ProxyProtocol
-		hc        *ir.HealthCheck
-		cb        *ir.CircuitBreaker
-		fi        *ir.FaultInjection
-		to        *ir.Timeout
-		ka        *ir.TCPKeepalive
-		rt        *ir.Retry
-		bc        *ir.BackendConnection
-		ds        *ir.DNS
-		h2        *ir.HTTP2Settings
-		ro        *ir.ResponseOverride
-		cp        []*ir.Compression
-		err, errs error
+		rl              *ir.RateLimit
+		lb              *ir.LoadBalancer
+		pp              *ir.ProxyProtocol
+		hc              *ir.HealthCheck
+		cb              *ir.CircuitBreaker
+		fi              *ir.FaultInjection
+		to              *ir.Timeout
+		ka              *ir.TCPKeepalive
+		rt              *ir.Retry
+		bc              *ir.BackendConnection
+		ds              *ir.DNS
+		h2              *ir.HTTP2Settings
+		ro              *ir.ResponseOverride
+		cp              []*ir.Compression
+		protocolUpgrade map[string]bool
+		err, errs       error
 	)
 
 	// Build IR
@@ -359,6 +360,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 		errs = errors.Join(errs, err)
 	}
 	cp = buildCompression(policy.Spec.Compression)
+	protocolUpgrade = buildHTTPProtocolUpgradeConfig(policy.Spec.HTTPUpgrade)
 
 	ds = translateDNS(policy.Spec.ClusterSettings)
 
@@ -409,20 +411,21 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 					}
 
 					r.Traffic = &ir.TrafficFeatures{
-						RateLimit:         rl,
-						LoadBalancer:      lb,
-						ProxyProtocol:     pp,
-						HealthCheck:       hc,
-						CircuitBreaker:    cb,
-						FaultInjection:    fi,
-						TCPKeepalive:      ka,
-						Retry:             rt,
-						BackendConnection: bc,
-						HTTP2:             h2,
-						DNS:               ds,
-						Timeout:           to,
-						ResponseOverride:  ro,
-						Compression:       cp,
+						RateLimit:                 rl,
+						LoadBalancer:              lb,
+						ProxyProtocol:             pp,
+						HealthCheck:               hc,
+						CircuitBreaker:            cb,
+						FaultInjection:            fi,
+						TCPKeepalive:              ka,
+						Retry:                     rt,
+						BackendConnection:         bc,
+						HTTP2:                     h2,
+						DNS:                       ds,
+						Timeout:                   to,
+						ResponseOverride:          ro,
+						Compression:               cp,
+						HTTPProtocolUpgradeConfig: protocolUpgrade,
 					}
 
 					// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
@@ -440,27 +443,25 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 }
 
 func (t *Translator) translateBackendTrafficPolicyForGateway(
-	policy *egv1a1.BackendTrafficPolicy,
-	target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
-	gateway *GatewayContext,
-	xdsIR resource.XdsIRMap,
-	resources *resource.Resources,
+	policy *egv1a1.BackendTrafficPolicy, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
+	gateway *GatewayContext, xdsIR resource.XdsIRMap, resources *resource.Resources,
 ) error {
 	var (
-		rl        *ir.RateLimit
-		lb        *ir.LoadBalancer
-		pp        *ir.ProxyProtocol
-		hc        *ir.HealthCheck
-		cb        *ir.CircuitBreaker
-		fi        *ir.FaultInjection
-		ct        *ir.Timeout
-		ka        *ir.TCPKeepalive
-		rt        *ir.Retry
-		ds        *ir.DNS
-		h2        *ir.HTTP2Settings
-		ro        *ir.ResponseOverride
-		cp        []*ir.Compression
-		err, errs error
+		rl              *ir.RateLimit
+		lb              *ir.LoadBalancer
+		pp              *ir.ProxyProtocol
+		hc              *ir.HealthCheck
+		cb              *ir.CircuitBreaker
+		fi              *ir.FaultInjection
+		ct              *ir.Timeout
+		ka              *ir.TCPKeepalive
+		rt              *ir.Retry
+		ds              *ir.DNS
+		h2              *ir.HTTP2Settings
+		ro              *ir.ResponseOverride
+		cp              []*ir.Compression
+		protocolUpgrade map[string]bool
+		err, errs       error
 	)
 
 	// Build IR
@@ -506,6 +507,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 		errs = errors.Join(errs, err)
 	}
 	cp = buildCompression(policy.Spec.Compression)
+	protocolUpgrade = buildHTTPProtocolUpgradeConfig(policy.Spec.HTTPUpgrade)
 
 	ds = translateDNS(policy.Spec.ClusterSettings)
 
@@ -579,18 +581,19 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 			}
 
 			r.Traffic = &ir.TrafficFeatures{
-				RateLimit:        rl,
-				LoadBalancer:     lb,
-				ProxyProtocol:    pp,
-				HealthCheck:      hc,
-				CircuitBreaker:   cb,
-				FaultInjection:   fi,
-				TCPKeepalive:     ka,
-				Retry:            rt,
-				HTTP2:            h2,
-				DNS:              ds,
-				ResponseOverride: ro,
-				Compression:      cp,
+				RateLimit:                 rl,
+				LoadBalancer:              lb,
+				ProxyProtocol:             pp,
+				HealthCheck:               hc,
+				CircuitBreaker:            cb,
+				FaultInjection:            fi,
+				TCPKeepalive:              ka,
+				Retry:                     rt,
+				HTTP2:                     h2,
+				DNS:                       ds,
+				ResponseOverride:          ro,
+				Compression:               cp,
+				HTTPProtocolUpgradeConfig: protocolUpgrade,
 			}
 
 			// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
@@ -970,4 +973,23 @@ func buildCompression(compression []*egv1a1.Compression) []*ir.Compression {
 	}
 
 	return irCompression
+}
+
+func buildHTTPProtocolUpgradeConfig(cfgs []*egv1a1.ProtocolUpgradeConfig) map[string]bool {
+	if len(cfgs) == 0 {
+		return nil
+	}
+
+	opts := make(map[string]bool)
+	for _, cfg := range cfgs {
+		if cfg.Disabled != nil && *cfg.Disabled {
+			// mark as disabled
+			opts[cfg.Type] = false
+			continue
+		}
+
+		opts[cfg.Type] = true
+	}
+
+	return opts
 }
