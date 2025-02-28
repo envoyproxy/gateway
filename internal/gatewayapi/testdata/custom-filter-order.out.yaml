@@ -279,6 +279,7 @@ xdsIR:
           prefix: /foo
         security:
           basicAuth:
+            forwardUsernameHeader: ""
             name: securitypolicy/envoy-gateway/policy-for-gateway
             users: '[redacted]'
           cors:
