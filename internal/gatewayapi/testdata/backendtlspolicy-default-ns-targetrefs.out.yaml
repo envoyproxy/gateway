@@ -245,6 +245,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-name: gateway-btls
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway/gateway-btls
+      namespace: envoy-gateway-system
   envoy-gateway/gateway-btls2:
     proxy:
       listeners:
@@ -260,6 +261,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-name: gateway-btls2
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway/gateway-btls2
+      namespace: envoy-gateway-system
 xdsIR:
   envoy-gateway/gateway-btls:
     accessLog:
