@@ -984,6 +984,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `dnsRefreshRate` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  true  |  | DNSRefreshRate specifies the rate at which DNS records should be refreshed.<br />Defaults to 30 seconds. |
 | `respectDnsTtl` | _boolean_ |  true  |  | RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.<br />If the value is set to true, the DNS refresh rate will be set to the resource record’s TTL.<br />Defaults to true. |
+| `lookupFamily` | _[DNSLookupFamily](#dnslookupfamily)_ |  false  |  | LookupFamily determines how Envoy would resolve DNS for Routes where the backend is specified as a fully qualified domain name (FQDN).<br />If set, this configuration overrides other defaults. |
 
 
 #### DNSLookupFamily

@@ -763,6 +763,8 @@ type DNS struct {
 	DNSRefreshRate *metav1.Duration `json:"dnsRefreshRate,omitempty"`
 	// RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.
 	RespectDNSTTL *bool `json:"respectDnsTtl,omitempty"`
+	// LookupFamily allows to configure the dns lookup policy
+	LookupFamily *egv1a1.DNSLookupFamily `json:"lookupFamily,omitempty"`
 }
 
 // SessionPersistence defines the desired state of SessionPersistence.
