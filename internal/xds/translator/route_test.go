@@ -15,7 +15,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func Test_buildHashPolicy(t *testing.T) {
+func TestBuildHashPolicy(t *testing.T) {
 	tests := []struct {
 		name      string
 		httpRoute *ir.HTTPRoute
@@ -98,6 +98,70 @@ func Test_buildHashPolicy(t *testing.T) {
 			got := buildHashPolicy(tt.httpRoute)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("buildHashPolicy() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestBuildUpgradeConfig(t *testing.T) {
+	cases := []struct {
+		name           string
+		trafficFeature *ir.TrafficFeatures
+		expected       []*routev3.RouteAction_UpgradeConfig
+	}{
+		{
+			name:           "default",
+			trafficFeature: nil,
+			expected:       defaultUpgradeConfig,
+		},
+		{
+			name: "empty",
+			trafficFeature: &ir.TrafficFeatures{
+				HTTPProtocolUpgradeConfig: map[string]bool{},
+			},
+			expected: defaultUpgradeConfig,
+		},
+		{
+			name: "disable-websocket",
+			trafficFeature: &ir.TrafficFeatures{
+				HTTPProtocolUpgradeConfig: map[string]bool{
+					"websocket": false,
+				},
+			},
+			expected: nil,
+		},
+		{
+			name: "enable-websocket",
+			trafficFeature: &ir.TrafficFeatures{
+				HTTPProtocolUpgradeConfig: map[string]bool{
+					"websocket": true,
+				},
+			},
+			expected: defaultUpgradeConfig,
+		},
+		{
+			name: "enable-spdy",
+			trafficFeature: &ir.TrafficFeatures{
+				HTTPProtocolUpgradeConfig: map[string]bool{
+					"spdy/3.1": true,
+				},
+			},
+			expected: []*routev3.RouteAction_UpgradeConfig{
+				{
+					UpgradeType: "spdy/3.1",
+				},
+				{
+					UpgradeType: "websocket",
+				},
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := buildUpgradeConfig(tc.trafficFeature)
+			if !reflect.DeepEqual(got, tc.expected) {
+				t.Errorf("buildUpgradeConfig() got = %v, want %v", got, tc.expected)
 			}
 		})
 	}
