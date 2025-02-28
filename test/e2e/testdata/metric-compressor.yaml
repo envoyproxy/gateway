@@ -31,6 +31,25 @@ spec:
         compression:
           type: Gzip
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gzip-gtw-metrics
+  namespace: envoy-gateway-system
+spec:
+  selector:
+    app.kubernetes.io/component: proxy
+    app.kubernetes.io/managed-by: envoy-gateway
+    app.kubernetes.io/name: envoy
+    gateway.envoyproxy.io/owning-gateway-name: gzip-gtw
+    gateway.envoyproxy.io/owning-gateway-namespace: gateway-conformance-infra
+  ports:
+    - name: metrics
+      protocol: TCP
+      port: 19001
+      targetPort: 19001
+  type: LoadBalancer
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -80,6 +99,25 @@ spec:
       prometheus:
         compression:
           type: Brotli
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: brotli-gtw-metrics
+  namespace: envoy-gateway-system
+spec:
+  selector:
+    app.kubernetes.io/component: proxy
+    app.kubernetes.io/managed-by: envoy-gateway
+    app.kubernetes.io/name: envoy
+    gateway.envoyproxy.io/owning-gateway-name: brotli-gtw
+    gateway.envoyproxy.io/owning-gateway-namespace: gateway-conformance-infra
+  ports:
+    - name: metrics
+      protocol: TCP
+      port: 19001
+      targetPort: 19001
+  type: LoadBalancer
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
