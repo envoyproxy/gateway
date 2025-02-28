@@ -16,6 +16,8 @@ provider:
           value: env_b_value
         image: envoyproxy/ratelimit:latest
         resources:
+          limits:
+            memory: 512Mi
           requests:
             cpu: 100m
             memory: 512Mi
