@@ -445,9 +445,14 @@ func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3
 }
 
 func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.DestinationSetting) *endpointv3.ClusterLoadAssignment {
-	var totalNumOfEndpoints int
-	for _, ds := range destSettings {
-		totalNumOfEndpoints += len(ds.Endpoints)
+	scale := uint32(1)
+	for _, s := range destSettings {
+		if ptr.Deref(s.Weight, 1) > 0 && uint32(len(s.Endpoints)) > ptr.Deref(s.Weight, 1) {
+			needed := (uint32(len(s.Endpoints)) + ptr.Deref(s.Weight, 1) - 1) / ptr.Deref(s.Weight, 1)
+			if needed > scale {
+				scale = needed
+			}
+		}
 	}
 
 	localities := make([]*endpointv3.LocalityLbEndpoints, 0, len(destSettings))
@@ -466,7 +471,7 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 		}
 
 		zonalEndpoints := make(map[string][]*endpointv3.LbEndpoint)
-		weight, remainder := calculateEndPtWeight(ptr.Deref(ds.Weight, 1), uint32(len(ds.Endpoints)))
+		weight, remainder := calculateEndPtWeight(scale, ptr.Deref(ds.Weight, 1), uint32(len(ds.Endpoints)))
 
 		for _, irEp := range ds.Endpoints {
 			healthStatus := corev3.HealthStatus_UNKNOWN
@@ -512,12 +517,12 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 	return &endpointv3.ClusterLoadAssignment{ClusterName: clusterName, Endpoints: localities}
 }
 
-func calculateEndPtWeight(localityWeight uint32, numEps uint32) (uint32, uint32) {
-	if numEps == 0 || localityWeight < numEps {
-		return 1, 0
+func calculateEndPtWeight(scale uint32, localityWeight uint32, numEps uint32) (uint32, uint32) {
+	if numEps == 0 {
+		return 0, 0
 	}
-	perEndpoint := localityWeight / numEps
-	remainder := localityWeight % numEps
+	perEndpoint := localityWeight * scale / numEps
+	remainder := localityWeight * scale % numEps
 	return perEndpoint, remainder
 }
 
