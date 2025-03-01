@@ -12,6 +12,7 @@ new features: |
 
 bug fixes: |
   Added support for Secret and ConfigMap parsing in Standalone mode.
+  Fix translating backendSettings for extAuth
 
 # Enhancements that improve performance.
 performance improvements: |

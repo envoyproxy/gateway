@@ -98,13 +98,8 @@ tcpRoutes:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
-    readyListener:
-      address: 0.0.0.0
-      ipFamily: IPv4
-      path: /ready
-      port: 19003
     tcp:
     - address: 0.0.0.0
       name: envoy-gateway/gateway-1/tcp
