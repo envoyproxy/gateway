@@ -13,6 +13,5 @@
             address: 2001:db8::2
             portValue: 0
       loadBalancingWeight: 1
-    loadBalancingWeight: 1
     locality:
       region: tcp-route-dual-dest/backend/0

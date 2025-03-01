@@ -75,7 +75,7 @@ envoyPatchPolicies:
     name: "first-route-dest"
     operation:
       op: "replace"
-      jsonPath: "..endpoints[*].load_balancing_weight"
+      jsonPath: "..endpoints[*].lb_endpoints[*].load_balancing_weight"
       value: "50"
   - type: "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
     name: "secret-1"
@@ -111,14 +111,14 @@ envoyPatchPolicies:
     name: "first-route-dest"
     operation:
       op: "move"
-      from: "/endpoints/0/load_balancing_weight"
-      path: "/endpoints/1/load_balancing_weight"
+      from: "/endpoints/0/lb_endpoints/0/load_balancing_weight"
+      path: "/endpoints/1/lb_endpoints/0/load_balancing_weight"
   - type: "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
     name: "first-route-dest"
     operation:
       op: copy
-      from: "/endpoints/1/load_balancing_weight"
-      path: "/endpoints/0/load_balancing_weight"
+      from: "/endpoints/1/lb_endpoints/0/load_balancing_weight"
+      path: "/endpoints/0/lb_endpoints/0/load_balancing_weight"
 http:
 - name: "first-listener"
   address: "::"

@@ -7,7 +7,6 @@
             address: 7.7.7.7
             portValue: 8080
       loadBalancingWeight: 1
-    loadBalancingWeight: 1
     locality:
       region: first-route-dest/backend/0
 - clusterName: second-route-dest
@@ -19,7 +18,6 @@
             address: 8.8.8.8
             portValue: 8080
       loadBalancingWeight: 1
-    loadBalancingWeight: 1
     locality:
       region: second-route-dest/backend/0
 - clusterName: third-route-dest
@@ -31,7 +29,6 @@
             address: 7.7.7.7
             portValue: 8080
       loadBalancingWeight: 1
-    loadBalancingWeight: 1
     locality:
       region: third-route-dest/backend/0
 - clusterName: fourth-route-dest
@@ -43,7 +40,6 @@
             address: 8.8.8.8
             portValue: 8080
       loadBalancingWeight: 1
-    loadBalancingWeight: 1
     locality:
       region: fourth-route-dest/backend/0
 - clusterName: fifth-route-dest
@@ -55,7 +51,6 @@
             address: 7.7.7.7
             portValue: 8080
       loadBalancingWeight: 1
-    loadBalancingWeight: 1
     locality:
       region: fifth-route-dest/backend/0
 - clusterName: sixth-route-dest
@@ -67,7 +62,6 @@
             address: 7.7.7.7
             portValue: 8080
       loadBalancingWeight: 1
-    loadBalancingWeight: 1
     locality:
       region: sixth-route-dest/backend/0
 - clusterName: seventh-route-dest
@@ -79,6 +73,5 @@
             address: 7.7.7.7
             portValue: 8080
       loadBalancingWeight: 1
-    loadBalancingWeight: 1
     locality:
       region: seventh-route-dest/backend/0

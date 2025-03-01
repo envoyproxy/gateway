@@ -318,7 +318,6 @@
                         "loadBalancingWeight": 1
                       }
                     ],
-                    "loadBalancingWeight": 1,
                     "locality": {
                       "region": "httproute/envoy-gateway-system/backend/rule/0/backend/0"
                     }
@@ -342,7 +341,7 @@
                   ]
                 },
                 "commonLbConfig": {
-                  "localityWeightedLbConfig": {}
+                  "zoneAwareLbConfig": {}
                 },
                 "connectTimeout": "10s",
                 "dnsLookupFamily": "V4_PREFERRED",
@@ -371,7 +370,7 @@
                   ]
                 },
                 "commonLbConfig": {
-                  "localityWeightedLbConfig": {}
+                  "zoneAwareLbConfig": {}
                 },
                 "connectTimeout": "10s",
                 "dnsLookupFamily": "V4_PREFERRED",
@@ -394,7 +393,6 @@
                           "loadBalancingWeight": 1
                         }
                       ],
-                      "loadBalancingWeight": 1,
                       "locality": {
                         "region": "raw_githubusercontent_com_443/backend/-1"
                       }

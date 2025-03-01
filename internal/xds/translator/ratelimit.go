@@ -526,8 +526,8 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 	ds := &ir.DestinationSetting{
 		Weight:    ptr.To[uint32](1),
 		Protocol:  ir.GRPC,
-		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(host, port, false)},
 		Name:      destinationSettingName(clusterName),
+		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(host, port, false, nil)},
 	}
 
 	tSocket, err := buildRateLimitTLSocket()

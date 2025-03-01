@@ -180,7 +180,6 @@ xds:
                     address: 1.1.1.1
                     portValue: 3000
               loadBalancingWeight: 1
-            loadBalancingWeight: 1
             locality:
               region: httproute/default/backend/rule/0/backend/0
       - endpointConfig:
@@ -194,7 +193,6 @@ xds:
                     address: 1.1.1.1
                     portValue: 9000
               loadBalancingWeight: 1
-            loadBalancingWeight: 1
             locality:
               region: grpcroute/default/backend/rule/0/backend/0
       - endpointConfig:
@@ -208,7 +206,6 @@ xds:
                     address: 1.1.1.1
                     portValue: 3000
               loadBalancingWeight: 1
-            loadBalancingWeight: 1
             locality:
               region: tcproute/default/backend/rule/-1/backend/0
       - endpointConfig:
@@ -222,7 +219,6 @@ xds:
                     address: 1.1.1.1
                     portValue: 3000
               loadBalancingWeight: 1
-            loadBalancingWeight: 1
             locality:
               region: tlsroute/default/backend/rule/-1/backend/0
       - endpointConfig:
@@ -236,7 +232,6 @@ xds:
                     address: 1.1.1.1
                     portValue: 3000
               loadBalancingWeight: 1
-            loadBalancingWeight: 1
             locality:
               region: udproute/default/backend/rule/-1/backend/0
     - '@type': type.googleapis.com/envoy.admin.v3.ClustersConfigDump
@@ -247,7 +242,7 @@ xds:
             thresholds:
             - maxRetries: 1024
           commonLbConfig:
-            localityWeightedLbConfig: {}
+            zoneAwareLbConfig: {}
           connectTimeout: 10s
           dnsLookupFamily: V4_PREFERRED
           edsClusterConfig:
@@ -266,7 +261,7 @@ xds:
             thresholds:
             - maxRetries: 1024
           commonLbConfig:
-            localityWeightedLbConfig: {}
+            zoneAwareLbConfig: {}
           connectTimeout: 10s
           dnsLookupFamily: V4_PREFERRED
           edsClusterConfig:
@@ -292,7 +287,7 @@ xds:
             thresholds:
             - maxRetries: 1024
           commonLbConfig:
-            localityWeightedLbConfig: {}
+            zoneAwareLbConfig: {}
           connectTimeout: 10s
           dnsLookupFamily: V4_PREFERRED
           edsClusterConfig:
@@ -311,7 +306,7 @@ xds:
             thresholds:
             - maxRetries: 1024
           commonLbConfig:
-            localityWeightedLbConfig: {}
+            zoneAwareLbConfig: {}
           connectTimeout: 10s
           dnsLookupFamily: V4_PREFERRED
           edsClusterConfig:
@@ -330,7 +325,7 @@ xds:
             thresholds:
             - maxRetries: 1024
           commonLbConfig:
-            localityWeightedLbConfig: {}
+            zoneAwareLbConfig: {}
           connectTimeout: 10s
           dnsLookupFamily: V4_PREFERRED
           edsClusterConfig:

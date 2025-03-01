@@ -9,6 +9,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
@@ -119,8 +121,8 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		Name:            args.name,
 		DnsLookupFamily: dnsLookupFamily,
 		CommonLbConfig: &clusterv3.Cluster_CommonLbConfig{
-			LocalityConfigSpecifier: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig_{
-				LocalityWeightedLbConfig: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig{},
+			LocalityConfigSpecifier: &clusterv3.Cluster_CommonLbConfig_ZoneAwareLbConfig_{
+				ZoneAwareLbConfig: &clusterv3.Cluster_CommonLbConfig_ZoneAwareLbConfig{},
 			},
 		},
 		PerConnectionBufferLimitBytes: buildBackandConnectionBufferLimitBytes(args.backendConnection),
@@ -443,11 +445,18 @@ func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3
 }
 
 func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.DestinationSetting) *endpointv3.ClusterLoadAssignment {
+	scale := uint32(1)
+	for _, s := range destSettings {
+		if ptr.Deref(s.Weight, 1) > 0 && uint32(len(s.Endpoints)) > ptr.Deref(s.Weight, 1) {
+			needed := (uint32(len(s.Endpoints)) + ptr.Deref(s.Weight, 1) - 1) / ptr.Deref(s.Weight, 1)
+			if needed > scale {
+				scale = needed
+			}
+		}
+	}
+
 	localities := make([]*endpointv3.LocalityLbEndpoints, 0, len(destSettings))
 	for i, ds := range destSettings {
-
-		endpoints := make([]*endpointv3.LbEndpoint, 0, len(ds.Endpoints))
-
 		var metadata *corev3.Metadata
 		if ds.TLS != nil {
 			metadata = &corev3.Metadata{
@@ -460,6 +469,9 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 				},
 			}
 		}
+
+		zonalEndpoints := make(map[string][]*endpointv3.LbEndpoint)
+		weight, remainder := calculateEndPtWeight(scale, ptr.Deref(ds.Weight, 1), uint32(len(ds.Endpoints)))
 
 		for _, irEp := range ds.Endpoints {
 			healthStatus := corev3.HealthStatus_UNKNOWN
@@ -475,31 +487,43 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 				},
 				HealthStatus: healthStatus,
 			}
-			// Set default weight of 1 for all endpoints.
-			lbEndpoint.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: 1}
-			endpoints = append(endpoints, lbEndpoint)
+			w := weight
+			if remainder > 0 {
+				w++
+				remainder--
+			}
+			lbEndpoint.LoadBalancingWeight = wrapperspb.UInt32(w)
+
+			zone := ""
+			if ds.ZoneAwareRoutingEnabled {
+				zone = ptr.Deref(irEp.Zone, "")
+			}
+			zonalEndpoints[zone+strconv.Itoa(i)] = append(zonalEndpoints[zone+strconv.Itoa(i)], lbEndpoint)
 		}
 
-		locality := &endpointv3.LocalityLbEndpoints{
-			Locality: &corev3.Locality{
-				Region: ds.Name,
-			},
-			LbEndpoints: endpoints,
-			Priority:    0,
+		for zone, endPts := range zonalEndpoints {
+			locality := &endpointv3.LocalityLbEndpoints{
+				Locality: &corev3.Locality{
+					Region: ds.Name,
+					Zone:   strings.TrimSuffix(zone, strconv.Itoa(i)),
+				},
+				LbEndpoints: endPts,
+				Priority:    ptr.Deref(ds.Priority, 0),
+			}
+			localities = append(localities, locality)
 		}
-
-		// Set locality weight
-		var weight uint32
-		if ds.Weight != nil {
-			weight = *ds.Weight
-		} else {
-			weight = 1
-		}
-		locality.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: weight}
-		locality.Priority = ptr.Deref(ds.Priority, 0)
-		localities = append(localities, locality)
 	}
+
 	return &endpointv3.ClusterLoadAssignment{ClusterName: clusterName, Endpoints: localities}
+}
+
+func calculateEndPtWeight(scale uint32, localityWeight uint32, numEps uint32) (uint32, uint32) {
+	if numEps == 0 {
+		return 0, 0
+	}
+	perEndpoint := localityWeight * scale / numEps
+	remainder := localityWeight * scale % numEps
+	return perEndpoint, remainder
 }
 
 func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) map[string]*anypb.Any {
