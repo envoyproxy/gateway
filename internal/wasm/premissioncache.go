@@ -21,7 +21,6 @@ package wasm
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -50,8 +49,8 @@ type permissionCacheOptions struct {
 	cacheExpiry time.Duration
 }
 
-// validate validates the permission cache options.
-func (o *permissionCacheOptions) validate() {
+// sanitize validates and sets the default values for the permission cache options.
+func (o *permissionCacheOptions) sanitize() {
 	if o.checkInterval == 0 {
 		o.checkInterval = 5 * time.Minute
 	}
@@ -70,7 +69,7 @@ type permissionCache struct {
 	sync.Mutex
 	permissionCacheOptions
 
-	cache  map[string]*permissionCacheEntry // key: sha256(imageURL + pullSecret), value: permissionCacheEntry
+	cache  map[string]*permissionCacheEntry
 	logger logging.Logger
 }
 
@@ -92,8 +91,6 @@ type permissionCacheEntry struct {
 	lastAccess time.Time
 }
 
-// key generates a key for a permission cache entry.
-// The key is a sha256 hash of the image URL and the pull secret.
 func (e *permissionCacheEntry) key() string {
 	return permissionCacheKey(e.image, e.fetcherOption.PullSecret)
 }
@@ -112,17 +109,18 @@ func (e *permissionCacheEntry) isCacheExpired(expiry time.Duration) bool {
 	return time.Now().After(e.lastAccess.Add(expiry))
 }
 
+// permissionCacheKey generates a key for a permission cache entry.
+// The key is the hex encoded of concatenation of the image URL and the pull secret.
 func permissionCacheKey(image *url.URL, pullSecret []byte) string {
 	b := make([]byte, len(image.String())+len(pullSecret))
 	copy(b, image.String())
 	copy(b[len(image.String()):], pullSecret)
-	hash := sha256.Sum256(b)
-	return hex.EncodeToString(hash[:])
+	return hex.EncodeToString(b)
 }
 
 // newPermissionCache creates a new permission cache with a given TTL.
 func newPermissionCache(options permissionCacheOptions, logger logging.Logger) *permissionCache {
-	options.validate()
+	options.sanitize()
 	return &permissionCache{
 		cache:                  make(map[string]*permissionCacheEntry),
 		permissionCacheOptions: options,
@@ -223,7 +221,7 @@ func (p *permissionCache) Put(e *permissionCacheEntry) {
 //
 // If any error occurs, the permission is considered not allowed.
 // The error can be a permission error or other errors like network error, non-exist image, etc.
-func (p *permissionCache) IsAllowed(ctx context.Context, image *url.URL, insecure bool, pullSecret []byte) (bool, error) {
+func (p *permissionCache) IsAllowed(ctx context.Context, image *url.URL, pullSecret []byte, insecure bool) (bool, error) {
 	p.Lock()
 	defer p.Unlock()
 	key := permissionCacheKey(image, pullSecret)

@@ -59,7 +59,9 @@ func TestPermissionCache(t *testing.T) {
 	}
 	_, _ = setupOCIRegistry(t, ou.Host)
 	ociURLWithTag := fmt.Sprintf("oci://%s/test/valid/docker:v0.1.0", ou.Host)
+	ociURLWithLatestTag := fmt.Sprintf("oci://%s/test/valid/docker:latest", ou.Host)
 	image, _ := url.Parse(ociURLWithTag)
+	latestImage, _ := url.Parse(ociURLWithLatestTag)
 	secret := []byte("")
 
 	t.Run("Cached permission should be updated", func(t *testing.T) {
@@ -75,6 +77,7 @@ func TestPermissionCache(t *testing.T) {
 				permissionExpiry: 10 * time.Nanosecond,
 			},
 			image,
+			latestImage,
 			secret)
 		cache.Start(ctx)
 
@@ -82,7 +85,7 @@ func TestPermissionCache(t *testing.T) {
 		lastCheckTime := entry.lastCheck
 
 		time.Sleep(1 * time.Millisecond)
-		allowed, err := cache.IsAllowed(context.Background(), image, true, secret)
+		allowed, err := cache.IsAllowed(context.Background(), image, secret, true)
 		require.True(
 			t,
 			allowed,
@@ -111,6 +114,7 @@ func TestPermissionCache(t *testing.T) {
 				permissionExpiry: 10 * time.Nanosecond,
 			},
 			image,
+			latestImage,
 			secret)
 		cache.Start(ctx)
 
@@ -118,7 +122,8 @@ func TestPermissionCache(t *testing.T) {
 		lastCheckTime := entry.lastCheck
 
 		time.Sleep(1 * time.Millisecond)
-		allowed, err := cache.IsAllowed(context.Background(), image, true, secret)
+		allowed, err := cache.IsAllowed(context.Background(), image, secret, true)
+		require.False(t, isRetriableError(err), "permission check error should not be retriable")
 		require.False(
 			t,
 			allowed,
@@ -147,6 +152,7 @@ func TestPermissionCache(t *testing.T) {
 				cacheExpiry:   10 * time.Nanosecond,
 			},
 			image,
+			latestImage,
 			secret)
 		cache.Start(ctx)
 
@@ -157,7 +163,7 @@ func TestPermissionCache(t *testing.T) {
 		key := entry.key()
 		entry, ok := cache.getForTest(key)
 		require.False(t, ok, "cache entry should be removed after expiry")
-		allowed, err := cache.IsAllowed(context.Background(), image, true, secret)
+		allowed, err := cache.IsAllowed(context.Background(), image, secret, true)
 		require.True(t,
 			allowed,
 			"permission should be rechecked and allowed after cache removed")
@@ -182,6 +188,7 @@ func TestPermissionCache(t *testing.T) {
 				checkInterval: 10 * time.Nanosecond,
 			},
 			image,
+			latestImage,
 			secret)
 		key := entry.key()
 		// remove the cache entry
@@ -192,7 +199,7 @@ func TestPermissionCache(t *testing.T) {
 		require.False(t, ok, "cache entry should not exist before access")
 
 		now := time.Now()
-		allowed, err := cache.IsAllowed(context.Background(), image, true, secret)
+		allowed, err := cache.IsAllowed(context.Background(), image, secret, true)
 		require.True(t,
 			allowed,
 			"non-exist permission should be checked and allowed at first access")
@@ -218,6 +225,7 @@ func TestPermissionCache(t *testing.T) {
 				checkInterval: 10 * time.Nanosecond,
 			},
 			image,
+			latestImage,
 			secret)
 		key := entry.key()
 		// remove the cache entry
@@ -228,7 +236,7 @@ func TestPermissionCache(t *testing.T) {
 		require.False(t, ok, "cache entry should not exist before access")
 
 		now := time.Now()
-		allowed, err := cache.IsAllowed(context.Background(), image, true, secret)
+		allowed, err := cache.IsAllowed(context.Background(), image, secret, true)
 		require.False(t,
 			allowed,
 			"non-exist permission should be checked and denied at first access if secret is invalid")
@@ -244,21 +252,31 @@ func TestPermissionCache(t *testing.T) {
 }
 
 // setupTestPermissionCache sets up a permission cache for testing.
-func setupTestPermissionCache(options permissionCacheOptions, image *url.URL, secret []byte) (*permissionCache, permissionCacheEntry) {
+func setupTestPermissionCache(options permissionCacheOptions, image, latestImage *url.URL, secret []byte) (*permissionCache, permissionCacheEntry) {
 	// Setup the permission cache.
 	cache := newPermissionCache(
 		options,
 		logging.DefaultLogger(egv1a1.LogLevelInfo))
 
-	now := time.Now()
 	entry := &permissionCacheEntry{
 		image: image,
 		fetcherOption: &ImageFetcherOption{
 			PullSecret: secret,
 			Insecure:   true,
 		},
-		lastCheck: now,
+		lastCheck: time.Now(),
 	}
 	cache.Put(entry)
+
+	// Add one more entry for the latest image to test the cache can handle multiple entries correctly.
+	cache.Put(&permissionCacheEntry{
+		image: latestImage,
+		fetcherOption: &ImageFetcherOption{
+			PullSecret: secret,
+			Insecure:   true,
+		},
+		lastCheck: time.Now(),
+	})
+
 	return cache, *entry
 }

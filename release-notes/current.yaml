@@ -25,11 +25,11 @@ bug fixes: |
 
 # Enhancements that improve performance.
 performance improvements: |
-
+  Added a cache for the Wasm OCI image permission checks and check the pullSecrets against the OCI image registry in
+  a background goroutine.
 # Deprecated features or APIs.
 deprecations: |
   Deprecated the PreserveXRequestID field.
 
 # Other notable changes not covered by the above sections.
 Other changes: |
-
