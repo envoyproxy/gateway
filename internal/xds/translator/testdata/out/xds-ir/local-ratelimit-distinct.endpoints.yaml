@@ -8,8 +8,7 @@
             portValue: 50000
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: first-route-dest/backend/0
+    locality: {}
 - clusterName: second-route-dest
   endpoints:
   - lbEndpoints:
@@ -20,5 +19,4 @@
             portValue: 50000
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: second-route-dest/backend/0
+    locality: {}

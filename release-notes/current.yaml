@@ -16,6 +16,7 @@ new features: |
   Added support for defining Lua EnvoyExtensionPolicies
   Added RequestID field in ClientTrafficPolicy.HeaderSettings to configure Envoy X-Request-ID behavior.
   Added support for HorizontalPodAutoscaler to helm chart
+  Added support for distinct header and distinct source CIDR based local rate limiting
 
 bug fixes: |
 
@@ -32,4 +33,3 @@ deprecations: |
 
 # Other notable changes not covered by the above sections.
 Other changes: |
-
