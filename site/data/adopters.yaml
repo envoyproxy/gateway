@@ -39,3 +39,7 @@ adopters:
     logo: "/logos/sap.svg"
     url: "https://www.sap.com/index.html"
     description: ""
+  - name: "Tigera"
+    logo: "/logos/tigera.svg"
+    url: "https://www.tigera.io/"
+    description: ""
