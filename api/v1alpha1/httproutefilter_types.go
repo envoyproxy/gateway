@@ -7,6 +7,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 const (
@@ -35,6 +36,8 @@ type HTTPRouteFilterSpec struct {
 	URLRewrite *HTTPURLRewriteFilter `json:"urlRewrite,omitempty"`
 	// +optional
 	DirectResponse *HTTPDirectResponseFilter `json:"directResponse,omitempty"`
+	// +optional
+	CredentialInjection *HTTPCredentialInjectionFilter `json:"credentialInjection,omitempty"`
 }
 
 // HTTPURLRewriteFilter define rewrites of HTTP URL components such as path and host
@@ -138,6 +141,40 @@ type HTTPHostnameModifier struct {
 	// Header is the name of the header whose value would be used to rewrite the Host header
 	// +optional
 	Header *string `json:"header,omitempty"`
+}
+
+// HTTPCredentialInjectionFilter defines the configuration to inject credentials into the request.
+// This is useful when the backend service requires credentials in the request, and the original
+// request does not contain them. The filter can inject credentials into the request before forwarding
+// it to the backend service.
+// +notImplementedHide
+type HTTPCredentialInjectionFilter struct {
+	// Header is the name of the header where the credentials are injected.
+	// If not specified, the credentials are injected into the Authorization header.
+	// +optional
+	Header *string `json:"header,omitempty"`
+
+	// Whether to overwrite the value or not if the injected headers already exist.
+	// If not specified, the default value is false.
+	// +optional
+	Overwrite *bool `json:"overwrite"`
+
+	// Credential is the credential to be injected.
+	Credential InjectedCredential `json:"credential"`
+}
+
+// InjectedCredential defines the credential to be injected.
+// +notImplementedHide
+type InjectedCredential struct {
+	// ValueRef is a reference to the secret containing the credentials to be injected.
+	// This is an Opaque secret. The credential should be stored in the key
+	// "credential", and the value should be the credential to be injected.
+	// For example, for basic authentication, the value should be "Basic <base64 encoded username:password>".
+	// for bearer token, the value should be "Bearer <token>".
+	// Note: The secret must be in the same namespace as the HTTPRouteFilter.
+	ValueRef gwapiv1.SecretObjectReference `json:"valueRef"`
+
+	// EG may support more credential types in the future, for example, OAuth2 access token retrieved by Client Credentials Grant flow.
 }
 
 //+kubebuilder:object:root=true
