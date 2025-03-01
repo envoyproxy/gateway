@@ -2,7 +2,7 @@
     thresholds:
     - maxRetries: 1024
   commonLbConfig:
-    localityWeightedLbConfig: {}
+    zoneAwareLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V6_ONLY
   dnsRefreshRate: 5s
@@ -17,7 +17,6 @@
               address: grpc-infra-backend.gateway-conformance-infra.svc.cluster.local
               portValue: 8080
         loadBalancingWeight: 1
-      loadBalancingWeight: 1
       locality: {}
   name: httproute/default/httproute-1/rule/0
   perConnectionBufferLimitBytes: 32768
@@ -26,7 +25,7 @@
     thresholds:
     - maxRetries: 1024
   commonLbConfig:
-    localityWeightedLbConfig: {}
+    zoneAwareLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V6_ONLY
   dnsRefreshRate: 5s
@@ -41,7 +40,6 @@
               address: grpc-infra-backend.gateway-conformance-infra.svc.cluster.local
               portValue: 8080
         loadBalancingWeight: 1
-      loadBalancingWeight: 1
       locality: {}
   name: grpcroute/default/grpcroute-1/rule/0
   perConnectionBufferLimitBytes: 32768
@@ -57,7 +55,7 @@
     thresholds:
     - maxRetries: 1024
   commonLbConfig:
-    localityWeightedLbConfig: {}
+    zoneAwareLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   dnsRefreshRate: 30s
@@ -72,7 +70,6 @@
               address: backend-v3.gateway-conformance-infra.svc.cluster.local
               portValue: 8080
         loadBalancingWeight: 1
-      loadBalancingWeight: 1
       locality: {}
   name: securitypolicy/envoy-gateway/policy-for-gateway-1/extauth/0
   perConnectionBufferLimitBytes: 32768
@@ -82,7 +79,7 @@
     thresholds:
     - maxRetries: 1024
   commonLbConfig:
-    localityWeightedLbConfig: {}
+    zoneAwareLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: ALL
   dnsRefreshRate: 5s
@@ -97,7 +94,6 @@
               address: backend-v2.gateway-conformance-infra.svc.cluster.local
               portValue: 9090
         loadBalancingWeight: 1
-      loadBalancingWeight: 1
       locality: {}
   name: envoyextensionpolicy/default/policy-for-httproute/extproc/0
   perConnectionBufferLimitBytes: 32768
@@ -114,16 +110,13 @@
     thresholds:
     - maxRetries: 1024
   commonLbConfig:
-    localityWeightedLbConfig: {}
+    zoneAwareLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: accesslog_otel_0_1
-    endpoints:
-    - loadBalancingWeight: 1
-      locality: {}
   name: accesslog_otel_0_1
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
