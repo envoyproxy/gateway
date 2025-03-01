@@ -206,8 +206,8 @@ func (c *localFileCache) Get(downloadURL string, opts GetOptions) (localFile str
 func (c *localFileCache) getOrFetch(key cacheKey, opts GetOptions) (*cacheEntry, error) {
 	var (
 		u         *url.URL
-		isPrivate bool
 		insecure  bool
+		isPrivate bool
 		err       error
 	)
 
@@ -228,9 +228,8 @@ func (c *localFileCache) getOrFetch(key cacheKey, opts GetOptions) (*cacheEntry,
 	if ce != nil {
 		// We still need to check if the pull secret is correct if it is a private OCI image.
 		if u.Scheme == "oci" && ce.isPrivate {
-			allow := c.permissionCheckCache.IsAllowed(ctx, u, insecure, opts.PullSecret)
-			if !allow {
-				return nil, fmt.Errorf("permission denied for image %s", u.String())
+			if err := c.permissionCheckCache.IsAllowed(ctx, u, insecure, opts.PullSecret); err != nil {
+				return nil, err
 			}
 		}
 		return ce, nil
@@ -269,8 +268,9 @@ func (c *localFileCache) getOrFetch(key cacheKey, opts GetOptions) (*cacheEntry,
 					Insecure:   insecure,
 					PullSecret: opts.PullSecret,
 				},
-				lastCheck: time.Now(),
-				allowed:   err == nil, // TODO: check if the error is due to permission issue.
+				lastCheck:  time.Now(),
+				lastAccess: time.Now(),
+				checkError: err,
 			}
 			c.permissionCheckCache.Put(e)
 		}

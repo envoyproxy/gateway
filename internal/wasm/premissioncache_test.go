@@ -82,12 +82,12 @@ func TestPermissionCache(t *testing.T) {
 		lastCheckTime := entry.lastCheck
 
 		time.Sleep(1 * time.Millisecond)
-		require.True(
+		require.NoError(
 			t,
 			cache.IsAllowed(context.Background(), image, true, secret),
 			"permission should be rechecked and allowed after permission expired")
 
-		entry,ok := cache.get_test(entry.key())
+		entry, ok := cache.getForTest(entry.key())
 		require.True(t, ok, "cache entry should exist")
 		require.True(t, entry.lastAccess.After(lastAccessTime), "last access time should be updated")
 		require.True(t, entry.lastCheck.After(lastCheckTime), "last check time should be updated")
@@ -113,12 +113,12 @@ func TestPermissionCache(t *testing.T) {
 		lastCheckTime := entry.lastCheck
 
 		time.Sleep(1 * time.Millisecond)
-		require.False(
+		require.Error(
 			t,
 			cache.IsAllowed(context.Background(), image, true, secret),
 			"permission should be rechecked and denied after permission expired and secret is invalid")
 
-		entry,ok := cache.get_test(entry.key())
+		entry, ok := cache.getForTest(entry.key())
 		require.True(t, ok, "cache entry should exist")
 		require.True(t, entry.lastAccess.After(lastAccessTime), "last access time should be updated")
 		require.True(t, entry.lastCheck.After(lastCheckTime), "last check time should be updated")
@@ -145,12 +145,12 @@ func TestPermissionCache(t *testing.T) {
 
 		time.Sleep(1 * time.Millisecond)
 		key := entry.key()
-		entry,ok := cache.get_test(key)
+		entry, ok := cache.getForTest(key)
 		require.False(t, ok, "cache entry should be removed after expiry")
-		require.True(t,
+		require.NoError(t,
 			cache.IsAllowed(context.Background(), image, true, secret),
 			"permission should be rechecked and allowed after cache removed")
-		entry,ok= cache.get_test(key)
+		entry, ok = cache.getForTest(key)
 		require.True(t, ok, "expired entry should be added after recheck")
 		require.True(t, entry.lastAccess.After(lastAccessTime), "last access time should be updated")
 		require.True(t, entry.lastCheck.After(lastCheckTime), "last check time should be updated")
@@ -166,24 +166,23 @@ func TestPermissionCache(t *testing.T) {
 		cache, entry := setupTestPermissionCache(
 			permissionCacheOptions{
 				checkInterval: 10 * time.Nanosecond,
-				cacheExpiry:   10 * time.Nanosecond,
 			},
 			image,
 			secret)
 		key := entry.key()
 		// remove the cache entry
-		cache.delete_test(key)
+		cache.deleteForTest(key)
 		cache.Start(ctx)
 
-		_,ok := cache.get_test(key)
+		_, ok := cache.getForTest(key)
 		require.False(t, ok, "cache entry should not exist before access")
 
 		now := time.Now()
-		require.True(t,
+		require.NoError(t,
 			cache.IsAllowed(context.Background(), image, true, secret),
 			"non-exist permission should be checked and allowed at first access")
 
-		entry,ok =cache.get_test(key)
+		entry, ok = cache.getForTest(key)
 		require.True(t, ok, "non-exist permission should be added to the cache after first access ")
 		require.True(t, entry.lastAccess.After(now), "last access time should be updated after first access")
 		require.True(t, entry.lastCheck.After(now), "last check time should be updated after first access")
@@ -204,7 +203,6 @@ func setupTestPermissionCache(options permissionCacheOptions, image *url.URL, se
 			PullSecret: secret,
 			Insecure:   true,
 		},
-		allowed:   true,
 		lastCheck: now,
 	}
 	cache.Put(entry)
