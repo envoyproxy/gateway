@@ -2,7 +2,7 @@
     thresholds:
     - maxRetries: 1024
   commonLbConfig:
-    localityWeightedLbConfig: {}
+    zoneAwareLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   dnsRefreshRate: 30s
@@ -23,7 +23,6 @@
               address: bar.foo
               portValue: 50001
         loadBalancingWeight: 1
-      loadBalancingWeight: 1
       locality:
         region: first-route-dest/backend/0
   name: first-route-dest

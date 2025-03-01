@@ -2,7 +2,7 @@
     thresholds:
     - maxRetries: 1024
   commonLbConfig:
-    localityWeightedLbConfig: {}
+    zoneAwareLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   dnsRefreshRate: 30s
@@ -17,7 +17,6 @@
               address: one.example.com
               portValue: 443
         loadBalancingWeight: 1
-      loadBalancingWeight: 1
       locality:
         region: one_example_com_443/backend/-1
   name: one_example_com_443
@@ -37,7 +36,7 @@
     thresholds:
     - maxRetries: 1024
   commonLbConfig:
-    localityWeightedLbConfig: {}
+    zoneAwareLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   dnsRefreshRate: 30s
@@ -52,7 +51,6 @@
               address: two.example.com
               portValue: 80
         loadBalancingWeight: 1
-      loadBalancingWeight: 1
       locality:
         region: two_example_com_80/backend/-1
   name: two_example_com_80
