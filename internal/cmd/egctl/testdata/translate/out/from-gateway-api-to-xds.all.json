@@ -316,7 +316,6 @@
                         "loadBalancingWeight": 1
                       }
                     ],
-                    "loadBalancingWeight": 1,
                     "locality": {
                       "region": "httproute/default/backend/rule/0/backend/0"
                     }
@@ -343,7 +342,6 @@
                         "loadBalancingWeight": 1
                       }
                     ],
-                    "loadBalancingWeight": 1,
                     "locality": {
                       "region": "grpcroute/default/backend/rule/0/backend/0"
                     }
@@ -370,7 +368,6 @@
                         "loadBalancingWeight": 1
                       }
                     ],
-                    "loadBalancingWeight": 1,
                     "locality": {
                       "region": "tcproute/default/backend/rule/-1/backend/0"
                     }
@@ -397,7 +394,6 @@
                         "loadBalancingWeight": 1
                       }
                     ],
-                    "loadBalancingWeight": 1,
                     "locality": {
                       "region": "tlsroute/default/backend/rule/-1/backend/0"
                     }
@@ -424,7 +420,6 @@
                         "loadBalancingWeight": 1
                       }
                     ],
-                    "loadBalancingWeight": 1,
                     "locality": {
                       "region": "udproute/default/backend/rule/-1/backend/0"
                     }

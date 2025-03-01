@@ -38,7 +38,6 @@
           filterMetadata:
             envoy.transport_socket_match:
               name: securitypolicy/envoy-gateway/policy-for-gateway/0/tls/0
-      loadBalancingWeight: 1
       locality:
         region: securitypolicy/envoy-gateway/policy-for-gateway/0/backend/0
   name: securitypolicy/envoy-gateway/policy-for-gateway/0

@@ -13,7 +13,6 @@
             address: 5.6.7.8
             portValue: 50001
       loadBalancingWeight: 1
-    loadBalancingWeight: 1
     locality:
       region: tls-terminate-dest/backend/0
 - clusterName: tls-terminate-hostname-dest
@@ -31,6 +30,5 @@
             address: 6.7.8.9
             portValue: 50001
       loadBalancingWeight: 1
-    loadBalancingWeight: 1
     locality:
       region: tls-terminate-hostname-dest/backend/0

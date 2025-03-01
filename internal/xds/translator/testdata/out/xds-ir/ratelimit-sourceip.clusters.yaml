@@ -85,7 +85,6 @@
               address: envoy-ratelimit.envoy-gateway-system.svc.cluster.local
               portValue: 8081
         loadBalancingWeight: 1
-      loadBalancingWeight: 1
       locality:
         region: ratelimit_cluster/backend/-1
   name: ratelimit_cluster

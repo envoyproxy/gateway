@@ -179,7 +179,6 @@ xds:
                     address: 7.7.7.7
                     portValue: 3000
               loadBalancingWeight: 1
-            loadBalancingWeight: 1
             locality:
               region: httproute/envoy-gateway-system/backend/rule/0/backend/0
     - '@type': type.googleapis.com/envoy.admin.v3.ClustersConfigDump
@@ -224,7 +223,6 @@ xds:
                       address: raw.githubusercontent.com
                       portValue: 443
                 loadBalancingWeight: 1
-              loadBalancingWeight: 1
               locality:
                 region: raw_githubusercontent_com_443/backend/-1
           name: raw_githubusercontent_com_443

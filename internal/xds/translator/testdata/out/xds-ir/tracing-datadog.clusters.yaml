@@ -34,7 +34,6 @@
               address: datadog-agent.default.svc.cluster.local
               portValue: 8126
         loadBalancingWeight: 1
-      loadBalancingWeight: 1
       locality:
         region: tracing-0/backend/0
   name: tracing-0

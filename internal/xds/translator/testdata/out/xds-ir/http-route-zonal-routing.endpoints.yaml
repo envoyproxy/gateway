@@ -6,8 +6,7 @@
           socketAddress:
             address: 1.1.1.1
             portValue: 50001
-      loadBalancingWeight: 160
-    loadBalancingWeight: 20
+      loadBalancingWeight: 20
     locality:
       zone: us-west-2a
   - lbEndpoints:
@@ -16,32 +15,31 @@
           socketAddress:
             address: 2.2.2.2
             portValue: 50002
-      loadBalancingWeight: 65
+      loadBalancingWeight: 9
     - endpoint:
         address:
           socketAddress:
             address: 2.2.2.3
             portValue: 50002
-      loadBalancingWeight: 65
+      loadBalancingWeight: 8
     - endpoint:
         address:
           socketAddress:
             address: 2.2.2.4
             portValue: 50002
-      loadBalancingWeight: 65
+      loadBalancingWeight: 8
     - endpoint:
         address:
           socketAddress:
             address: 2.2.2.5
             portValue: 50002
-      loadBalancingWeight: 65
+      loadBalancingWeight: 8
     - endpoint:
         address:
           socketAddress:
             address: 2.2.2.6
             portValue: 50002
-      loadBalancingWeight: 65
-    loadBalancingWeight: 41
+      loadBalancingWeight: 8
     locality: {}
   - lbEndpoints:
     - endpoint:
@@ -49,8 +47,7 @@
           socketAddress:
             address: 3.3.3.3
             portValue: 50003
-      loadBalancingWeight: 160
-    loadBalancingWeight: 20
+      loadBalancingWeight: 20
     locality: {}
   - lbEndpoints:
     - endpoint:
@@ -58,6 +55,5 @@
           socketAddress:
             address: 4.4.4.4
             portValue: 50004
-      loadBalancingWeight: 160
-    loadBalancingWeight: 20
+      loadBalancingWeight: 20
     locality: {}
