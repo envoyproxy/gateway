@@ -188,6 +188,12 @@ securityPolicies:
         - name: http-backend
           namespace: envoy-gateway
           port: 80
+        backendSettings:
+          circuitBreaker:
+            maxConnections: 30001
+            maxParallelRequests: 1022
+            maxParallelRetries: 1023
+            maxPendingRequests: 1024
         headersToBackend:
         - header1
         - header2
@@ -358,6 +364,12 @@ xdsIR:
               - header2
               path: /auth
             name: securitypolicy/default/policy-for-gateway-1
+            traffic:
+              circuitBreaker:
+                maxConnections: 30001
+                maxParallelRequests: 1022
+                maxParallelRetries: 1023
+                maxPendingRequests: 1024
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

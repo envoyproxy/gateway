@@ -111,6 +111,12 @@ http:
           extAuth:
             name: securitypolicy/default/policy-for-gateway-1
             failOpen: true
+            traffic:
+              circuitBreaker:
+                maxConnections: 30001
+                maxParallelRequests: 1022
+                maxParallelRetries: 1023
+                maxPendingRequests: 1024
             http:
               authority: primary.foo.com
               destination:
