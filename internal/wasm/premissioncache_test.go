@@ -82,9 +82,14 @@ func TestPermissionCache(t *testing.T) {
 		lastCheckTime := entry.lastCheck
 
 		time.Sleep(1 * time.Millisecond)
+		allowed, err := cache.IsAllowed(context.Background(), image, true, secret)
+		require.True(
+			t,
+			allowed,
+			"permission should be rechecked and allowed after permission expired")
 		require.NoError(
 			t,
-			cache.IsAllowed(context.Background(), image, true, secret),
+			err,
 			"permission should be rechecked and allowed after permission expired")
 
 		entry, ok := cache.getForTest(entry.key())
@@ -113,9 +118,14 @@ func TestPermissionCache(t *testing.T) {
 		lastCheckTime := entry.lastCheck
 
 		time.Sleep(1 * time.Millisecond)
+		allowed, err := cache.IsAllowed(context.Background(), image, true, secret)
+		require.False(
+			t,
+			allowed,
+			"permission should be rechecked and denied after permission expired and secret is invalid")
 		require.Error(
 			t,
-			cache.IsAllowed(context.Background(), image, true, secret),
+			err,
 			"permission should be rechecked and denied after permission expired and secret is invalid")
 
 		entry, ok := cache.getForTest(entry.key())
@@ -147,8 +157,12 @@ func TestPermissionCache(t *testing.T) {
 		key := entry.key()
 		entry, ok := cache.getForTest(key)
 		require.False(t, ok, "cache entry should be removed after expiry")
+		allowed, err := cache.IsAllowed(context.Background(), image, true, secret)
+		require.True(t,
+			allowed,
+			"permission should be rechecked and allowed after cache removed")
 		require.NoError(t,
-			cache.IsAllowed(context.Background(), image, true, secret),
+			err,
 			"permission should be rechecked and allowed after cache removed")
 		entry, ok = cache.getForTest(key)
 		require.True(t, ok, "expired entry should be added after recheck")
@@ -156,7 +170,7 @@ func TestPermissionCache(t *testing.T) {
 		require.True(t, entry.lastCheck.After(lastCheckTime), "last check time should be updated")
 	})
 
-	t.Run("Non-exist permission should be checked and cached after first access", func(t *testing.T) {
+	t.Run("Non-exist permission should be checked and cached after first access for allowed permission", func(t *testing.T) {
 		lock.Lock()
 		failPermissionCheck = false
 		lock.Unlock()
@@ -178,9 +192,49 @@ func TestPermissionCache(t *testing.T) {
 		require.False(t, ok, "cache entry should not exist before access")
 
 		now := time.Now()
-		require.NoError(t,
-			cache.IsAllowed(context.Background(), image, true, secret),
+		allowed, err := cache.IsAllowed(context.Background(), image, true, secret)
+		require.True(t,
+			allowed,
 			"non-exist permission should be checked and allowed at first access")
+		require.NoError(t,
+			err,
+			"non-exist permission should be checked and allowed at first access")
+
+		entry, ok = cache.getForTest(key)
+		require.True(t, ok, "non-exist permission should be added to the cache after first access ")
+		require.True(t, entry.lastAccess.After(now), "last access time should be updated after first access")
+		require.True(t, entry.lastCheck.After(now), "last check time should be updated after first access")
+	})
+
+	t.Run("Non-exist permission should be checked and cached after first access for denied permission", func(t *testing.T) {
+		lock.Lock()
+		failPermissionCheck = true
+		lock.Unlock()
+
+		ctx := context.Background()
+		defer ctx.Done()
+		cache, entry := setupTestPermissionCache(
+			permissionCacheOptions{
+				checkInterval: 10 * time.Nanosecond,
+			},
+			image,
+			secret)
+		key := entry.key()
+		// remove the cache entry
+		cache.deleteForTest(key)
+		cache.Start(ctx)
+
+		_, ok := cache.getForTest(key)
+		require.False(t, ok, "cache entry should not exist before access")
+
+		now := time.Now()
+		allowed, err := cache.IsAllowed(context.Background(), image, true, secret)
+		require.False(t,
+			allowed,
+			"non-exist permission should be checked and denied at first access if secret is invalid")
+		require.Error(t,
+			err,
+			"non-exist permission should be checked and denied at first access if secret is invalid")
 
 		entry, ok = cache.getForTest(key)
 		require.True(t, ok, "non-exist permission should be added to the cache after first access ")

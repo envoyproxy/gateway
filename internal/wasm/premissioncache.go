@@ -23,12 +23,15 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"sync"
 	"time"
 
 	"github.com/avast/retry-go"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 
 	"github.com/envoyproxy/gateway/internal/logging"
 )
@@ -81,7 +84,9 @@ type permissionCacheEntry struct {
 	lastCheck time.Time
 	// The error returned by the OCI registry when checking the permission.
 	// If error is not nil, the permission is not allowed.
-	// It's not necessarily a permission error, it could be other errors like network error, non-exist image, etc.
+	// If it's a permission error, it's represented by a transport.Error with 401 or 403 HTTP status code.
+	// But it's not necessarily a permission error, it could be other errors like network error, non-exist image, etc.
+	// In this case, the permission is also not allowed.
 	checkError error
 	// The last time the cache entry is accessed.
 	lastAccess time.Time
@@ -157,12 +162,16 @@ func (p *permissionCache) Start(ctx context.Context) {
 							p.logger.Info("rechecking permission for image", "image", e.image.String())
 							err := retry.Do(
 								func() error {
-									// TODO: distinguish between permission error and retryable errors.
 									err := p.checkAndUpdatePermission(ctx, e)
-									if err != nil {
-										p.logger.Error(err, "failed to check permission for image", "image", e.image.String())
+									if err != nil && isRetriableError(err) {
+										p.logger.Error(
+											err,
+											"failed to check permission for image, will retry again",
+											"image",
+											e.image.String())
+										return err
 									}
-									return err
+									return nil
 								},
 								retry.Attempts(retryAttempts),
 								retry.DelayType(retry.BackOffDelay),
@@ -186,6 +195,18 @@ func (p *permissionCache) Start(ctx context.Context) {
 	}()
 }
 
+// isRetriableError checks if the error is retriable.
+// If the error is a permission error, it's not retriable. For example, 401 and 403 HTTP status code.
+func isRetriableError(err error) bool {
+	var terr *transport.Error
+	if errors.As(err, &terr) {
+		if terr.StatusCode == http.StatusUnauthorized || terr.StatusCode == http.StatusForbidden {
+			return false
+		}
+	}
+	return true
+}
+
 // put puts a new permission cache entry into the cache.
 func (p *permissionCache) Put(e *permissionCacheEntry) {
 	p.Lock()
@@ -197,15 +218,18 @@ func (p *permissionCache) Put(e *permissionCacheEntry) {
 
 // IsAllowed checks if the given image is allowed to be accessed with the provided pull secret.
 // If the permission is not found in the cache, this method will block until the permission is checked and cached.
-// Note: we can't distinguish between permission error and other errors like network error, non-exist image, etc.
+// This blocking won't be too long as it's only for the first time permission check and won't retry. Subsequent
+// permission checks will be done in a background goroutine by the permission cache.
+//
 // If any error occurs, the permission is considered not allowed.
-func (p *permissionCache) IsAllowed(ctx context.Context, image *url.URL, insecure bool, pullSecret []byte) error {
+// The error can be a permission error or other errors like network error, non-exist image, etc.
+func (p *permissionCache) IsAllowed(ctx context.Context, image *url.URL, insecure bool, pullSecret []byte) (bool, error) {
 	p.Lock()
 	defer p.Unlock()
 	key := permissionCacheKey(image, pullSecret)
 	if e, ok := p.cache[key]; ok {
 		e.lastAccess = time.Now()
-		return e.checkError
+		return e.checkError == nil, e.checkError
 	}
 
 	e := &permissionCacheEntry{
@@ -216,12 +240,13 @@ func (p *permissionCache) IsAllowed(ctx context.Context, image *url.URL, insecur
 		},
 	}
 	// Do not retry if the permission check fails because we don't want to block the translator for too long.
+	// The permission check will be retried in the background goroutine by the permission cache.
 	if err := p.checkAndUpdatePermission(ctx, e); err != nil {
 		p.logger.Error(err, "failed to check permission for image", "image", e.image.String())
 	}
 	e.lastAccess = time.Now()
 	p.cache[key] = e
-	return e.checkError
+	return e.checkError == nil, e.checkError
 }
 
 // getForTest is a test helper to get a permission cache entry from the cache.
