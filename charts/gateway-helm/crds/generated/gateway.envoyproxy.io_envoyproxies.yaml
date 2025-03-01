@@ -10724,16 +10724,16 @@ spec:
                                                 maximum: 4294967295
                                                 minimum: 0
                                                 type: integer
-                                              perHostThresholds:
-                                                description: Defines per-host Circuit
-                                                  Breaker thresholds
+                                              perHost:
+                                                description: PerHost defines per-host
+                                                  Circuit Breakers
                                                 properties:
                                                   maxConnections:
-                                                    description: The maximum number
-                                                      of connections that Envoy will
-                                                      establish per-host to the referenced
-                                                      backend defined within a xRoute
-                                                      rule.
+                                                    description: MaxConnections configures
+                                                      the maximum number of connections
+                                                      that Envoy will establish per-host
+                                                      to the referenced backend defined
+                                                      within a xRoute rule.
                                                     format: int64
                                                     maximum: 4294967295
                                                     minimum: 0
@@ -11737,16 +11737,16 @@ spec:
                                                 maximum: 4294967295
                                                 minimum: 0
                                                 type: integer
-                                              perHostThresholds:
-                                                description: Defines per-host Circuit
-                                                  Breaker thresholds
+                                              perHost:
+                                                description: PerHost defines per-host
+                                                  Circuit Breakers
                                                 properties:
                                                   maxConnections:
-                                                    description: The maximum number
-                                                      of connections that Envoy will
-                                                      establish per-host to the referenced
-                                                      backend defined within a xRoute
-                                                      rule.
+                                                    description: MaxConnections configures
+                                                      the maximum number of connections
+                                                      that Envoy will establish per-host
+                                                      to the referenced backend defined
+                                                      within a xRoute rule.
                                                     format: int64
                                                     maximum: 4294967295
                                                     minimum: 0
@@ -12844,12 +12844,13 @@ spec:
                                           maximum: 4294967295
                                           minimum: 0
                                           type: integer
-                                        perHostThresholds:
-                                          description: Defines per-host Circuit Breaker
-                                            thresholds
+                                        perHost:
+                                          description: PerHost defines per-host Circuit
+                                            Breakers
                                           properties:
                                             maxConnections:
-                                              description: The maximum number of connections
+                                              description: MaxConnections configures
+                                                the maximum number of connections
                                                 that Envoy will establish per-host
                                                 to the referenced backend defined
                                                 within a xRoute rule.
@@ -13864,15 +13865,15 @@ spec:
                                     maximum: 4294967295
                                     minimum: 0
                                     type: integer
-                                  perHostThresholds:
-                                    description: Defines per-host Circuit Breaker
-                                      thresholds
+                                  perHost:
+                                    description: PerHost defines per-host Circuit
+                                      Breakers
                                     properties:
                                       maxConnections:
-                                        description: The maximum number of connections
-                                          that Envoy will establish per-host to the
-                                          referenced backend defined within a xRoute
-                                          rule.
+                                        description: MaxConnections configures the
+                                          maximum number of connections that Envoy
+                                          will establish per-host to the referenced
+                                          backend defined within a xRoute rule.
                                         format: int64
                                         maximum: 4294967295
                                         minimum: 0

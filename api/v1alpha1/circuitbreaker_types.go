@@ -47,15 +47,15 @@ type CircuitBreaker struct {
 	// +optional
 	MaxRequestsPerConnection *int64 `json:"maxRequestsPerConnection,omitempty"`
 
-	// Defines per-host Circuit Breaker thresholds
+	// PerHost defines per-host Circuit Breakers
 	// +optional
 	// +notImplementedHide
-	PerHostThresholds *PerHostCircuitBreakers `json:"perHostThresholds,omitempty"`
+	PerHost *PerHostCircuitBreakers `json:"perHost,omitempty"`
 }
 
 // PerHostCircuitBreakers defines the per-host Circuit Breaker configuration.
 type PerHostCircuitBreakers struct {
-	// The maximum number of connections that Envoy will establish per-host to the referenced backend defined within a xRoute rule.
+	// MaxConnections configures the maximum number of connections that Envoy will establish per-host to the referenced backend defined within a xRoute rule.
 	//
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=4294967295

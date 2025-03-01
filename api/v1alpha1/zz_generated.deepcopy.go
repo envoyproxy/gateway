@@ -732,8 +732,8 @@ func (in *CircuitBreaker) DeepCopyInto(out *CircuitBreaker) {
 		*out = new(int64)
 		**out = **in
 	}
-	if in.PerHostThresholds != nil {
-		in, out := &in.PerHostThresholds, &out.PerHostThresholds
+	if in.PerHost != nil {
+		in, out := &in.PerHost, &out.PerHost
 		*out = new(PerHostCircuitBreakers)
 		(*in).DeepCopyInto(*out)
 	}
