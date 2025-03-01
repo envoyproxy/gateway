@@ -238,6 +238,7 @@
                       "portValue": 19001
                     }
                   },
+                  "bypassOverloadManager": true,
                   "filterChains": [
                     {
                       "filters": [
@@ -267,8 +268,10 @@
                                       "match": {
                                         "headers": [
                                           {
-                                            "exactMatch": "GET",
-                                            "name": ":method"
+                                            "name": ":method",
+                                            "stringMatch": {
+                                              "exact": "GET"
+                                            }
                                           }
                                         ],
                                         "path": "/stats/prometheus"
@@ -393,7 +396,7 @@
                       ],
                       "loadBalancingWeight": 1,
                       "locality": {
-                        "region": "raw_githubusercontent_com_443/backend/0"
+                        "region": "raw_githubusercontent_com_443/backend/-1"
                       }
                     }
                   ]
@@ -433,6 +436,7 @@
                       "portValue": 19003
                     }
                   },
+                  "bypassOverloadManager": true,
                   "filterChains": [
                     {
                       "filters": [

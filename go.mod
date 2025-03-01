@@ -18,7 +18,7 @@ require (
 	github.com/envoyproxy/go-control-plane/envoy v1.32.4
 	github.com/envoyproxy/go-control-plane/ratelimit v0.1.0
 	github.com/envoyproxy/ratelimit v1.4.1-0.20230427142404-e2a87f41d3a7
-	github.com/evanphx/json-patch v5.9.0+incompatible
+	github.com/evanphx/json-patch v5.9.11+incompatible
 	github.com/evanphx/json-patch/v5 v5.9.11
 	github.com/fatih/color v1.18.0
 	github.com/fsnotify/fsnotify v1.8.0
@@ -30,7 +30,7 @@ require (
 	github.com/go-openapi/validate v0.24.0
 	github.com/golang/protobuf v1.5.4
 	github.com/google/cel-go v0.22.1
-	github.com/google/go-cmp v0.6.0
+	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.20.3
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/miekg/dns v1.1.63
@@ -40,7 +40,7 @@ require (
 	github.com/prometheus/client_model v0.6.1
 	github.com/prometheus/common v0.62.0
 	github.com/replicatedhq/troubleshoot v0.107.5
-	github.com/spf13/cobra v1.8.1
+	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6
 	github.com/stretchr/testify v1.10.0
 	github.com/telepresenceio/watchable v0.0.0-20220726211108-9bb86f92afa7
@@ -66,7 +66,7 @@ require (
 	helm.sh/helm/v3 v3.17.1
 	k8s.io/api v0.32.2
 	k8s.io/apiextensions-apiserver v0.32.2
-	k8s.io/apimachinery v0.33.0-alpha.1
+	k8s.io/apimachinery v0.33.0-alpha.2
 	k8s.io/cli-runtime v0.32.2
 	k8s.io/client-go v0.32.2
 	k8s.io/klog/v2 v2.130.1
@@ -461,11 +461,11 @@ require (
 	go.uber.org/mock v0.5.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap/exp v0.3.0 // indirect
-	golang.org/x/crypto v0.33.0 // indirect
+	golang.org/x/crypto v0.35.0 // indirect
 	golang.org/x/crypto/x509roots/fallback v0.0.0-20240904212608-c9da6b9a4008 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20250210185358-939b2ce775ac // indirect
 	golang.org/x/mod v0.23.0 // indirect
-	golang.org/x/oauth2 v0.25.0 // indirect
+	golang.org/x/oauth2 v0.27.0 // indirect
 	golang.org/x/sync v0.11.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/term v0.29.0 // indirect

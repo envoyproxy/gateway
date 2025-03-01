@@ -8,6 +8,7 @@ accessLog:
               - host: 10.240.0.10
                 port: 9090
             protocol: GRPC
+            name: accesslog_als_0_1/backend/0
       http:
         requestHeaders:
           - x-client-ip-address
@@ -28,6 +29,7 @@ accessLog:
               - host: 10.240.0.10
                 port: 9090
             protocol: GRPC
+            name: accesslog_als_0_2/backend/0
       logType: Route
       name: envoy-gateway-system/test
       text: |
@@ -41,6 +43,7 @@ accessLog:
               - host: 10.240.0.10
                 port: 9090
             protocol: GRPC
+            name: accesslog_als_1_1/backend/0
       http:
         requestHeaders:
           - x-client-ip-address
@@ -61,6 +64,7 @@ accessLog:
               - host: 10.240.0.10
                 port: 9090
             protocol: GRPC
+            name: accesslog_als_1_2/backend/0
       logType: Listener
       name: envoy-gateway-system/test
       text: |
@@ -74,6 +78,7 @@ accessLog:
               - host: 10.240.0.10
                 port: 9090
             protocol: GRPC
+            name: accesslog_als_2_1/backend/0
       http:
         requestHeaders:
           - x-client-ip-address
@@ -93,6 +98,7 @@ accessLog:
               - host: 10.240.0.10
                 port: 9090
             protocol: GRPC
+            name: accesslog_als_2_2/backend/0
       name: envoy-gateway-system/test
       text: |
         this is a Global log
@@ -107,6 +113,7 @@ accessLog:
                 port: 4317
             protocol: GRPC
             weight: 1
+            name: accesslog_otel_0_3/backend/0
       logType: Route
       resources:
         k8s.cluster.name: cluster-1
@@ -121,6 +128,7 @@ accessLog:
                 port: 4317
             protocol: GRPC
             weight: 1
+            name: accesslog_otel_1_3/backend/0
       logType: Listener
       resources:
         k8s.cluster.name: cluster-1
@@ -135,6 +143,7 @@ accessLog:
                 port: 4317
             protocol: GRPC
             weight: 1
+            name: accesslog_otel_2_3/backend/0
       resources:
         k8s.cluster.name: cluster-1
       text: |
@@ -179,3 +188,4 @@ http:
             - endpoints:
                 - host: "1.2.3.4"
                   port: 50000
+              name: "direct-route-dest/backend/0"

@@ -247,6 +247,7 @@ xdsIR:
             endpoints:
             - host: 10.244.0.11
               port: 443
+            name: httproute/envoy-gateway/httproute-tls/rule/0/backend/0
             protocol: HTTP
             tls:
               alpnProtocols:
@@ -302,6 +303,7 @@ xdsIR:
             endpoints:
             - host: 10.244.0.11
               port: 443
+            name: tcproute/envoy-gateway/envoy-gateway/rule/-1/backend/0
             protocol: TCP
             tls:
               alpnProtocols:

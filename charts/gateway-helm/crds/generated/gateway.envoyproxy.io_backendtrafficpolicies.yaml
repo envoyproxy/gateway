@@ -177,8 +177,8 @@ spec:
                     type: string
                   lookupFamily:
                     description: |-
-                      LookupFamily determines how Envoy would resolve DNS for. If set, this configuration overrides other default
-                      value that Envoy Gateway configures based on attributes of the backends, such Service resource IPFamilies.
+                      LookupFamily determines how Envoy would resolve DNS for Routes where the backend is specified as a fully qualified domain name (FQDN).
+                      If set, this configuration overrides other defaults.
                     enum:
                     - IPv4
                     - IPv6
@@ -544,6 +544,24 @@ spec:
                       Default: TerminateConnection
                     type: string
                 type: object
+              httpUpgrade:
+                description: |-
+                  HTTPUpgrade defines the configuration for HTTP protocol upgrades.
+                  If not specified, the default upgrade configuration(websocket) will be used.
+                items:
+                  properties:
+                    disabled:
+                      description: Disabled indicates whether the upgrade is disabled.
+                      type: boolean
+                    type:
+                      description: |-
+                        Type is the case-insensitive type of protocol upgrade.
+                        e.g. `websocket`, `CONNECT`, `spdy/3.1` etc.
+                      type: string
+                  required:
+                  - type
+                  type: object
+                type: array
               loadBalancer:
                 description: |-
                   LoadBalancer policy to apply when routing traffic from the gateway to
@@ -738,7 +756,10 @@ spec:
                                             values within the header.
                                           type: boolean
                                         name:
-                                          description: Name of the HTTP header.
+                                          description: |-
+                                            Name of the HTTP header.
+                                            The header name is case-insensitive unless PreserveHeaderCase is set to true.
+                                            For example, "Foo" and "foo" are considered the same header.
                                           maxLength: 256
                                           minLength: 1
                                           type: string
@@ -753,8 +774,7 @@ spec:
                                           type: string
                                         value:
                                           description: |-
-                                            Value within the HTTP header. Due to the
-                                            case-insensitivity of header names, "foo" and "Foo" are considered equivalent.
+                                            Value within the HTTP header.
                                             Do not set this field when Type="Distinct", implying matching on any/all unique
                                             values within the header.
                                           maxLength: 1024
@@ -979,7 +999,10 @@ spec:
                                             values within the header.
                                           type: boolean
                                         name:
-                                          description: Name of the HTTP header.
+                                          description: |-
+                                            Name of the HTTP header.
+                                            The header name is case-insensitive unless PreserveHeaderCase is set to true.
+                                            For example, "Foo" and "foo" are considered the same header.
                                           maxLength: 256
                                           minLength: 1
                                           type: string
@@ -994,8 +1017,7 @@ spec:
                                           type: string
                                         value:
                                           description: |-
-                                            Value within the HTTP header. Due to the
-                                            case-insensitivity of header names, "foo" and "Foo" are considered equivalent.
+                                            Value within the HTTP header.
                                             Do not set this field when Type="Distinct", implying matching on any/all unique
                                             values within the header.
                                           maxLength: 1024

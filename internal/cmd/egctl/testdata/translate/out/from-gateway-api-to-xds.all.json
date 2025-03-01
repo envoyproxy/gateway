@@ -238,6 +238,7 @@
                       "portValue": 19001
                     }
                   },
+                  "bypassOverloadManager": true,
                   "filterChains": [
                     {
                       "filters": [
@@ -267,8 +268,10 @@
                                       "match": {
                                         "headers": [
                                           {
-                                            "exactMatch": "GET",
-                                            "name": ":method"
+                                            "name": ":method",
+                                            "stringMatch": {
+                                              "exact": "GET"
+                                            }
                                           }
                                         ],
                                         "path": "/stats/prometheus"
@@ -607,6 +610,7 @@
                       "portValue": 19003
                     }
                   },
+                  "bypassOverloadManager": true,
                   "filterChains": [
                     {
                       "filters": [

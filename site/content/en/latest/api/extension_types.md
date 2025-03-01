@@ -232,6 +232,21 @@ _Appears in:_
 | `Deny` | AuthorizationActionDeny is the action to deny the request.<br /> | 
 
 
+#### AuthorizationHeaderMatch
+
+
+
+AuthorizationHeaderMatch specifies how to match against the value of an HTTP header within a authorization rule.
+
+_Appears in:_
+- [Principal](#principal)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _string_ |  true  |  | Name of the HTTP header.<br />The header name is case-insensitive unless PreserveHeaderCase is set to true.<br />For example, "Foo" and "foo" are considered the same header. |
+| `values` | _string array_ |  true  |  | Values are the values that the header must match.<br />If multiple values are specified, the rule will match if any of the values match. |
+
+
 #### AuthorizationRule
 
 
@@ -245,6 +260,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `name` | _string_ |  false  |  | Name is a user-friendly name for the rule.<br />If not specified, Envoy Gateway will generate a unique name for the rule. |
 | `action` | _[AuthorizationAction](#authorizationaction)_ |  true  |  | Action defines the action to be taken if the rule matches. |
+| `operation` | _[Operation](#operation)_ |  false  |  | Operation specifies the operation of a request, such as HTTP methods.<br />If not specified, all operations are matched on. |
 | `principal` | _[Principal](#principal)_ |  true  |  | Principal specifies the client identity of a request.<br />If there are multiple principal types, all principals must match for the rule to match.<br />For example, if there are two principals: one for client IP and one for JWT claim,<br />the rule will match only if both the client IP and the JWT claim match. |
 
 
@@ -968,6 +984,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `dnsRefreshRate` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  true  |  | DNSRefreshRate specifies the rate at which DNS records should be refreshed.<br />Defaults to 30 seconds. |
 | `respectDnsTtl` | _boolean_ |  true  |  | RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.<br />If the value is set to true, the DNS refresh rate will be set to the resource record’s TTL.<br />Defaults to true. |
+| `lookupFamily` | _[DNSLookupFamily](#dnslookupfamily)_ |  false  |  | LookupFamily determines how Envoy would resolve DNS for Routes where the backend is specified as a fully qualified domain name (FQDN).<br />If set, this configuration overrides other defaults. |
 
 
 #### DNSLookupFamily
@@ -2214,8 +2231,8 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `type` | _[HeaderMatchType](#headermatchtype)_ |  false  | Exact | Type specifies how to match against the value of the header. |
-| `name` | _string_ |  true  |  | Name of the HTTP header. |
-| `value` | _string_ |  false  |  | Value within the HTTP header. Due to the<br />case-insensitivity of header names, "foo" and "Foo" are considered equivalent.<br />Do not set this field when Type="Distinct", implying matching on any/all unique<br />values within the header. |
+| `name` | _string_ |  true  |  | Name of the HTTP header.<br />The header name is case-insensitive unless PreserveHeaderCase is set to true.<br />For example, "Foo" and "foo" are considered the same header. |
+| `value` | _string_ |  false  |  | Value within the HTTP header.<br />Do not set this field when Type="Distinct", implying matching on any/all unique<br />values within the header. |
 | `invert` | _boolean_ |  false  | false | Invert specifies whether the value match result will be inverted.<br />Do not set this field when Type="Distinct", implying matching on any/all unique<br />values within the header. |
 
 
@@ -2994,6 +3011,20 @@ _Appears in:_
 | `resources` | _object (keys:string, values:string)_ |  false  |  | Resources is a set of labels that describe the source of a log entry, including envoy node info.<br />It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/). |
 
 
+#### Operation
+
+
+
+Operation specifies the operation of a request.
+
+_Appears in:_
+- [AuthorizationRule](#authorizationrule)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `methods` | _HTTPMethod array_ |  true  |  | Methods are the HTTP methods of the request.<br />If multiple methods are specified, all specified methods are allowed or denied, based on the action of the rule. |
+
+
 #### Origin
 
 _Underlying type:_ _string_
@@ -3122,6 +3153,9 @@ _Appears in:_
 
 
 
+Principal specifies the client identity of a request.
+A client identity can be a client IP, a JWT claim, username from the Authorization header,
+or any other identity that can be extracted from a custom header.
 If there are multiple principal types, all principals must match for the rule to match.
 
 _Appears in:_
@@ -3147,6 +3181,21 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `body` | _[ExtProcBodyProcessingMode](#extprocbodyprocessingmode)_ |  false  |  | Defines body processing mode |
 | `attributes` | _string array_ |  false  |  | Defines which attributes are sent to the external processor. Envoy Gateway currently<br />supports only the following attribute prefixes: connection, source, destination,<br />request, response, upstream and xds.route.<br />https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/advanced/attributes |
+
+
+#### ProtocolUpgradeConfig
+
+
+
+
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _string_ |  true  |  | Type is the case-insensitive type of protocol upgrade.<br />e.g. `websocket`, `CONNECT`, `spdy/3.1` etc. |
+| `disabled` | _boolean_ |  false  |  | Disabled indicates whether the upgrade is disabled. |
 
 
 #### ProviderType

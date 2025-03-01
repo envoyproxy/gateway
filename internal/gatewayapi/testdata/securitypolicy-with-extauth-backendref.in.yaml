@@ -169,3 +169,9 @@ securityPolicies:
           headersToBackend:
             - header1
             - header2
+          backendSettings:
+            circuitBreaker:
+              maxConnections: 30001
+              maxParallelRequests: 1022
+              maxParallelRetries: 1023
+              maxPendingRequests: 1024

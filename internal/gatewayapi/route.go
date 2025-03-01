@@ -204,9 +204,10 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		}
 
 		dstAddrTypeMap := make(map[ir.DestinationAddressType]int)
-
-		for _, backendRef := range rule.BackendRefs {
-			ds, err := t.processDestination(backendRef, parentRef, httpRoute, resources)
+		destName := irRouteDestinationName(httpRoute, ruleIdx)
+		for i, backendRef := range rule.BackendRefs {
+			settingName := irDestinationSettingName(destName, i)
+			ds, err := t.processDestination(settingName, backendRef, parentRef, httpRoute, resources)
 			if !t.IsEnvoyServiceRouting(envoyProxy) && ds != nil && len(ds.Endpoints) > 0 && ds.AddressType != nil {
 				dstAddrTypeMap[*ds.AddressType]++
 			}
@@ -231,7 +232,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 
 				if route.Destination == nil {
 					route.Destination = &ir.RouteDestination{
-						Name: irRouteDestinationName(httpRoute, ruleIdx),
+						Name: destName,
 					}
 				}
 				route.Destination.Settings = append(route.Destination.Settings, ds)
@@ -591,8 +592,10 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			return nil, err
 		}
 
-		for _, backendRef := range rule.BackendRefs {
-			ds, err := t.processDestination(backendRef, parentRef, grpcRoute, resources)
+		destName := irRouteDestinationName(grpcRoute, ruleIdx)
+		for i, backendRef := range rule.BackendRefs {
+			settingName := irDestinationSettingName(destName, i)
+			ds, err := t.processDestination(settingName, backendRef, parentRef, grpcRoute, resources)
 			if ds == nil {
 				continue
 			}
@@ -613,7 +616,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 
 				if route.Destination == nil {
 					route.Destination = &ir.RouteDestination{
-						Name: irRouteDestinationName(grpcRoute, ruleIdx),
+						Name: destName,
 					}
 				}
 				route.Destination.Settings = append(route.Destination.Settings, ds)
@@ -876,11 +879,13 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 		// not on the Route as a whole.
 		var destSettings []*ir.DestinationSetting
 
+		destName := irRouteDestinationName(tlsRoute, -1 /*rule index*/)
 		// compute backends
 		for _, rule := range tlsRoute.Spec.Rules {
-			for _, backendRef := range rule.BackendRefs {
+			for i, backendRef := range rule.BackendRefs {
+				settingName := irDestinationSettingName(destName, i)
 				// not yet handled, requires to align with the conformance test - TLSRouteInvalidReferenceGrant.
-				ds, _ := t.processDestination(backendRef, parentRef, tlsRoute, resources)
+				ds, _ := t.processDestination(settingName, backendRef, parentRef, tlsRoute, resources)
 				if ds != nil {
 					destSettings = append(destSettings, ds)
 				}
@@ -931,7 +936,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 						SNIs: hosts,
 					}},
 					Destination: &ir.RouteDestination{
-						Name:     irRouteDestinationName(tlsRoute, -1 /*rule index*/),
+						Name:     destName,
 						Settings: destSettings,
 					},
 				}
@@ -1019,8 +1024,10 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			continue
 		}
 
-		for _, backendRef := range udpRoute.Spec.Rules[0].BackendRefs {
-			ds, err := t.processDestination(backendRef, parentRef, udpRoute, resources)
+		destName := irRouteDestinationName(udpRoute, -1 /*rule index*/)
+		for i, backendRef := range udpRoute.Spec.Rules[0].BackendRefs {
+			settingName := irDestinationSettingName(destName, i)
+			ds, err := t.processDestination(settingName, backendRef, parentRef, udpRoute, resources)
 			// skip adding the route and provide the reason via route status.
 			if err != nil {
 				routeStatus := GetRouteStatus(udpRoute)
@@ -1078,7 +1085,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 				irRoute := &ir.UDPRoute{
 					Name: irUDPRouteName(udpRoute),
 					Destination: &ir.RouteDestination{
-						Name:     irRouteDestinationName(udpRoute, -1 /*rule index*/),
+						Name:     destName,
 						Settings: destSettings,
 					},
 				}
@@ -1165,8 +1172,10 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			continue
 		}
 
-		for _, backendRef := range tcpRoute.Spec.Rules[0].BackendRefs {
-			ds, err := t.processDestination(backendRef, parentRef, tcpRoute, resources)
+		destName := irRouteDestinationName(tcpRoute, -1 /*rule index*/)
+		for i, backendRef := range tcpRoute.Spec.Rules[0].BackendRefs {
+			settingName := irDestinationSettingName(destName, i)
+			ds, err := t.processDestination(settingName, backendRef, parentRef, tcpRoute, resources)
 			// skip adding the route and provide the reason via route status.
 			if err != nil {
 				routeStatus := GetRouteStatus(tcpRoute)
@@ -1222,7 +1231,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 				irRoute := &ir.TCPRoute{
 					Name: irTCPRouteName(tcpRoute),
 					Destination: &ir.RouteDestination{
-						Name:     irRouteDestinationName(tcpRoute, -1 /*rule index*/),
+						Name:     destName,
 						Settings: destSettings,
 					},
 				}
@@ -1274,7 +1283,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 // processDestination translates a backendRef into a destination settings.
 // If an error occurs during this conversion, an error is returned, and the associated routes are expected to become inactive.
 // This will result in a direct 500 response for HTTP-based requests.
-func (t *Translator) processDestination(backendRefContext BackendRefContext,
+func (t *Translator) processDestination(name string, backendRefContext BackendRefContext,
 	parentRef *RouteParentContext, route RouteContext, resources *resource.Resources,
 ) (ds *ir.DestinationSetting, err error) {
 	routeType := GetRouteType(route)
@@ -1333,6 +1342,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 		}
 
 		ds = &ir.DestinationSetting{
+			Name:        name,
 			Weight:      &weight,
 			Protocol:    protocol,
 			Endpoints:   endpoints,
@@ -1340,7 +1350,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 		}
 
 	case resource.KindService:
-		ds = t.processServiceDestinationSetting(backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
+		ds = t.processServiceDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
 		ds.TLS, err = t.applyBackendTLSSetting(
 			backendRef.BackendObjectReference,
 			backendNamespace,
@@ -1364,7 +1374,7 @@ func (t *Translator) processDestination(backendRefContext BackendRefContext,
 		}
 		ds.IPFamily = getServiceIPFamily(resources.GetService(backendNamespace, string(backendRef.Name)))
 	case egv1a1.KindBackend:
-		ds = t.processBackendDestinationSetting(backendRef.BackendObjectReference, backendNamespace, protocol, resources)
+		ds = t.processBackendDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources)
 		ds.TLS, err = t.applyBackendTLSSetting(
 			backendRef.BackendObjectReference,
 			backendNamespace,
@@ -1421,6 +1431,7 @@ func validateDestinationSettings(destinationSettings *ir.DestinationSetting, end
 }
 
 func (t *Translator) processServiceDestinationSetting(
+	name string,
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
 	protocol ir.AppProtocol,
@@ -1462,6 +1473,7 @@ func (t *Translator) processServiceDestinationSetting(
 	}
 
 	return &ir.DestinationSetting{
+		Name:        name,
 		Protocol:    protocol,
 		Endpoints:   endpoints,
 		AddressType: addrType,
@@ -1738,7 +1750,7 @@ func getTargetBackendReference(backendRef gwapiv1a2.BackendObjectReference, back
 	return ref
 }
 
-func (t *Translator) processBackendDestinationSetting(backendRef gwapiv1.BackendObjectReference, backendNamespace string, protocol ir.AppProtocol, resources *resource.Resources) *ir.DestinationSetting {
+func (t *Translator) processBackendDestinationSetting(name string, backendRef gwapiv1.BackendObjectReference, backendNamespace string, protocol ir.AppProtocol, resources *resource.Resources) *ir.DestinationSetting {
 	var (
 		dstEndpoints []*ir.DestinationEndpoint
 		dstAddrType  *ir.DestinationAddressType
@@ -1796,6 +1808,7 @@ func (t *Translator) processBackendDestinationSetting(backendRef gwapiv1.Backend
 	}
 
 	ds := &ir.DestinationSetting{
+		Name:        name,
 		Protocol:    protocol,
 		Endpoints:   dstEndpoints,
 		AddressType: dstAddrType,
