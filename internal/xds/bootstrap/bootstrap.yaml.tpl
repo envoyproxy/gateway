@@ -91,7 +91,8 @@ static_resources:
                   path: /stats/prometheus
                   headers:
                   - name: ":method"
-                    exact_match: GET
+                    string_match:
+                      exact: GET
                 route:
                   cluster: prometheus_stats
                 {{- if .EnablePrometheusCompression }}

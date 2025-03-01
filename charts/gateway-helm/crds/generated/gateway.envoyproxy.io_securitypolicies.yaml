@@ -384,6 +384,13 @@ spec:
                 description: BasicAuth defines the configuration for the HTTP Basic
                   Authentication.
                 properties:
+                  forwardUsernameHeader:
+                    description: |-
+                      This field specifies the header name to forward a successfully authenticated user to
+                      the backend. The header will be added to the request with the username as the value.
+
+                      If it is not specified, the username will not be forwarded.
+                    type: string
                   users:
                     description: |-
                       The Kubernetes secret which contains the username-password pairs in
@@ -796,8 +803,8 @@ spec:
                                 type: string
                               lookupFamily:
                                 description: |-
-                                  LookupFamily determines how Envoy would resolve DNS for. If set, this configuration overrides other default
-                                  value that Envoy Gateway configures based on attributes of the backends, such Service resource IPFamilies.
+                                  LookupFamily determines how Envoy would resolve DNS for Routes where the backend is specified as a fully qualified domain name (FQDN).
+                                  If set, this configuration overrides other defaults.
                                 enum:
                                 - IPv4
                                 - IPv6
@@ -1698,8 +1705,8 @@ spec:
                                 type: string
                               lookupFamily:
                                 description: |-
-                                  LookupFamily determines how Envoy would resolve DNS for. If set, this configuration overrides other default
-                                  value that Envoy Gateway configures based on attributes of the backends, such Service resource IPFamilies.
+                                  LookupFamily determines how Envoy would resolve DNS for Routes where the backend is specified as a fully qualified domain name (FQDN).
+                                  If set, this configuration overrides other defaults.
                                 enum:
                                 - IPv4
                                 - IPv6
@@ -2729,8 +2736,8 @@ spec:
                                       type: string
                                     lookupFamily:
                                       description: |-
-                                        LookupFamily determines how Envoy would resolve DNS for. If set, this configuration overrides other default
-                                        value that Envoy Gateway configures based on attributes of the backends, such Service resource IPFamilies.
+                                        LookupFamily determines how Envoy would resolve DNS for Routes where the backend is specified as a fully qualified domain name (FQDN).
+                                        If set, this configuration overrides other defaults.
                                       enum:
                                       - IPv4
                                       - IPv6
@@ -3771,8 +3778,8 @@ spec:
                                 type: string
                               lookupFamily:
                                 description: |-
-                                  LookupFamily determines how Envoy would resolve DNS for. If set, this configuration overrides other default
-                                  value that Envoy Gateway configures based on attributes of the backends, such Service resource IPFamilies.
+                                  LookupFamily determines how Envoy would resolve DNS for Routes where the backend is specified as a fully qualified domain name (FQDN).
+                                  If set, this configuration overrides other defaults.
                                 enum:
                                 - IPv4
                                 - IPv6

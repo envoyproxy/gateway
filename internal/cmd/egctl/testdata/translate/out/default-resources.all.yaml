@@ -65,7 +65,8 @@ envoyProxyForGatewayClass:
                           path: /stats/prometheus
                           headers:
                           - name: ":method"
-                            exact_match: GET
+                            string_match:
+                              exact: GET
                         route:
                           cluster: prometheus_stats
                   http_filters:
@@ -711,8 +712,9 @@ xds:
                       routes:
                       - match:
                           headers:
-                          - exactMatch: GET
-                            name: :method
+                          - name: :method
+                            stringMatch:
+                              exact: GET
                           path: /stats/prometheus
                         route:
                           cluster: prometheus_stats

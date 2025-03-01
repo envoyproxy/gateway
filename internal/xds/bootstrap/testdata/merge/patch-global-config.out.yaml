@@ -157,8 +157,9 @@ static_resources:
               routes:
               - match:
                   headers:
-                  - exact_match: GET
-                    name: :method
+                  - name: :method
+                    string_match:
+                      exact: GET
                   path: /stats/prometheus
                 route:
                   cluster: prometheus_stats
