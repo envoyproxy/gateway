@@ -303,6 +303,30 @@ type ShutdownConfig struct {
 	MinDrainDuration *metav1.Duration `json:"minDrainDuration,omitempty"`
 }
 
+// InitConfig defines configuration for envoy init process.
+type InitConfig struct {
+	// RegionDiscoveryDisabled defines whether to enable service region discovery via
+	// topology.kubernetes.io/region label on the underlying node
+	// Default: false
+	//
+	// +optional
+	RegionDiscoveryDisabled *bool `json:"regionDiscoveryDisabled,omitempty"`
+	// RegionOverride allows for manual configuration of service region
+	//
+	// +optional
+	RegionOverride *string `json:"regionOverride,omitempty"`
+	// ZoneDiscoveryDisabled defines whether to enable service zone discovery via
+	// topology.kubernetes.io/zone label on the underlying node
+	// Default: false
+	//
+	// +optional
+	ZoneDiscoveryDisabled *bool `json:"zoneDiscoveryDisabled,omitempty"`
+	// ZoneOverride allows for manual configuration of  service zone
+	//
+	// +optional
+	ZoneOverride *string `json:"zoneOverride,omitempty"`
+}
+
 // +kubebuilder:validation:XValidation:rule="((has(self.envoyDeployment) && !has(self.envoyDaemonSet)) || (!has(self.envoyDeployment) && has(self.envoyDaemonSet))) || (!has(self.envoyDeployment) && !has(self.envoyDaemonSet))",message="only one of envoyDeployment or envoyDaemonSet can be specified"
 // +kubebuilder:validation:XValidation:rule="((has(self.envoyHpa) && !has(self.envoyDaemonSet)) || (!has(self.envoyHpa) && has(self.envoyDaemonSet))) || (!has(self.envoyHpa) && !has(self.envoyDaemonSet))",message="cannot use envoyHpa if envoyDaemonSet is used"
 //
