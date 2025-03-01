@@ -110,7 +110,7 @@ xdsIR:
     - address: 0.0.0.0
       headers:
         enableEnvoyHeaders: true
-        preserveXRequestID: true
+        requestID: Preserve
         withUnderscoresAction: Allow
       hostnames:
       - '*'
