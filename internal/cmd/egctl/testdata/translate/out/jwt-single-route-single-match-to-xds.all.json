@@ -318,10 +318,7 @@
                         "loadBalancingWeight": 1
                       }
                     ],
-                    "loadBalancingWeight": 1,
-                    "locality": {
-                      "region": "httproute/envoy-gateway-system/backend/rule/0/backend/0"
-                    }
+                    "loadBalancingWeight": 1
                   }
                 ]
               }
@@ -394,10 +391,7 @@
                           "loadBalancingWeight": 1
                         }
                       ],
-                      "loadBalancingWeight": 1,
-                      "locality": {
-                        "region": "raw_githubusercontent_com_443/backend/-1"
-                      }
+                      "loadBalancingWeight": 1
                     }
                   ]
                 },

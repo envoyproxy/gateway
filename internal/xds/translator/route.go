@@ -222,6 +222,7 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcherv3.StringMatcher {
 	return stringMatcher
 }
 
+// why use endpoint weight for weighted load balancing? (huabing)
 func buildXdsRouteAction(backendWeights *ir.BackendWeights, settings []*ir.DestinationSetting) *routev3.RouteAction {
 	// only use weighted cluster when there are invalid weights
 	if hasFiltersInSettings(settings) || backendWeights.Invalid != 0 {
