@@ -1119,8 +1119,9 @@ func (t *Translator) buildBasicAuth(
 	}
 
 	return &ir.BasicAuth{
-		Name:  irConfigName(policy),
-		Users: usersSecretBytes,
+		Name:                  irConfigName(policy),
+		Users:                 usersSecretBytes,
+		ForwardUsernameHeader: basicAuth.ForwardUsernameHeader,
 	}, nil
 }
 

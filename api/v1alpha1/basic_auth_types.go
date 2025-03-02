@@ -33,6 +33,5 @@ type BasicAuth struct {
 	// If it is not specified, the username will not be forwarded.
 	//
 	// +optional
-	// +notImplementedHide
 	ForwardUsernameHeader *string `json:"forwardUsernameHeader,omitempty"`
 }
