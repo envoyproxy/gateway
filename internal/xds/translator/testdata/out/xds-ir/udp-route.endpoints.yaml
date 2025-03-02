@@ -14,5 +14,3 @@
             portValue: 50001
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: udp-route-dest/backend/0

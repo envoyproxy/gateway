@@ -481,11 +481,11 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 		}
 
 		locality := &endpointv3.LocalityLbEndpoints{
-			Locality: &corev3.Locality{
+			/*Locality: &corev3.Locality{
 				Region: ds.Name,
-			},
+			},*/
 			LbEndpoints: endpoints,
-			Priority:    0,
+			// Priority:    0,
 		}
 
 		// Set locality weight
