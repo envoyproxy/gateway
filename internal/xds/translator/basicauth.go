@@ -88,8 +88,8 @@ func buildHCMBasicAuthFilter(basicAuth *ir.BasicAuth) (*hcmv3.HttpFilter, error)
 		},
 	}
 	// Set the ForwardUsernameHeader field if it is specified.
-	if basicAuth.ForwardUsernameHeader != "" {
-		basicAuthProto.ForwardUsernameHeader = basicAuth.ForwardUsernameHeader
+	if basicAuth.ForwardUsernameHeader != nil && *basicAuth.ForwardUsernameHeader != "" {
+		basicAuthProto.ForwardUsernameHeader = *basicAuth.ForwardUsernameHeader
 	}
 
 	if basicAuthAny, err = proto.ToAnyWithValidation(basicAuthProto); err != nil {
