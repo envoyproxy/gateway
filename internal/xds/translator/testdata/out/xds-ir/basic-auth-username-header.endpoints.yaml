@@ -8,8 +8,7 @@
             portValue: 8080
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: httproute/default/httproute-1/rule/0/backend/0
+    locality: {}
 - clusterName: httproute/default/httproute-1/rule/1
   endpoints:
   - lbEndpoints:
@@ -20,8 +19,7 @@
             portValue: 8080
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: httproute/default/httproute-1/rule/1/backend/0
+    locality: {}
 - clusterName: httproute/default/httproute-2/rule/0
   endpoints:
   - lbEndpoints:
@@ -32,5 +30,4 @@
             portValue: 8080
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: httproute/default/httproute-2/rule/0/backend/0
+    locality: {}
