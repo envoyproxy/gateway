@@ -1365,7 +1365,7 @@ func TestRedaction(t *testing.T) {
 				`"name":"","hostname":"","isHTTP2":false,"security":{` +
 				`"oidc":{"name":"","provider":{},"clientID":"","clientSecret":"[redacted]","hmacSecret":"[redacted]"},` +
 				`"apiKeyAuth":{"credentials":{"client-id":"[redacted]"},"extractFrom":null},` +
-				`"basicAuth":{"name":"","users":"[redacted]","forwardUsernameHeader":""}` +
+				`"basicAuth":{"name":"","users":"[redacted]"}` +
 				`}}],` +
 				`"isHTTP2":false,"path":{"mergeSlashes":false,"escapedSlashesAction":""}}]}`,
 		},
