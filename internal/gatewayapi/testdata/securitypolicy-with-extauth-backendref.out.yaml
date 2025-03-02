@@ -188,6 +188,12 @@ securityPolicies:
         - name: http-backend
           namespace: envoy-gateway
           port: 80
+        backendSettings:
+          circuitBreaker:
+            maxConnections: 30001
+            maxParallelRequests: 1022
+            maxParallelRetries: 1023
+            maxPendingRequests: 1024
         headersToBackend:
         - header1
         - header2
@@ -244,6 +250,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: www.foo.com
@@ -269,6 +276,7 @@ xdsIR:
                   endpoints:
                   - host: 8.8.8.8
                     port: 9000
+                  name: securitypolicy/default/policy-for-http-route-1/extauth/0/backend/0
                   protocol: GRPC
                   weight: 1
             headersToExtAuth:
@@ -282,6 +290,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: httproute/default/httproute-1/rule/1/backend/0
             protocol: HTTP
             weight: 1
         hostname: www.foo.com
@@ -307,6 +316,7 @@ xdsIR:
                   endpoints:
                   - host: 8.8.8.8
                     port: 9000
+                  name: securitypolicy/default/policy-for-http-route-1/extauth/0/backend/0
                   protocol: GRPC
                   weight: 1
             headersToExtAuth:
@@ -320,6 +330,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: www.bar.com
@@ -345,6 +356,7 @@ xdsIR:
                   endpoints:
                   - host: 7.7.7.7
                     port: 80
+                  name: securitypolicy/default/policy-for-gateway-1/extauth/0/backend/0
                   protocol: HTTP
                   weight: 1
               headersToBackend:
@@ -352,6 +364,12 @@ xdsIR:
               - header2
               path: /auth
             name: securitypolicy/default/policy-for-gateway-1
+            traffic:
+              circuitBreaker:
+                maxConnections: 30001
+                maxParallelRequests: 1022
+                maxParallelRetries: 1023
+                maxPendingRequests: 1024
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

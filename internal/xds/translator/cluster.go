@@ -85,6 +85,22 @@ func buildEndpointType(settings []*ir.DestinationSetting) EndpointType {
 
 func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 	dnsLookupFamily := clusterv3.Cluster_V4_PREFERRED
+	customDNSPolicy := args.dns != nil && args.dns.LookupFamily != nil
+	// apply DNS lookup family if custom DNS traffic policy is set
+	if customDNSPolicy {
+		switch *args.dns.LookupFamily {
+		case egv1a1.IPv4DNSLookupFamily:
+			dnsLookupFamily = clusterv3.Cluster_V4_ONLY
+		case egv1a1.IPv6DNSLookupFamily:
+			dnsLookupFamily = clusterv3.Cluster_V6_ONLY
+		case egv1a1.IPv6PreferredDNSLookupFamily:
+			dnsLookupFamily = clusterv3.Cluster_AUTO
+		case egv1a1.IPv4AndIPv6DNSLookupFamily:
+			dnsLookupFamily = clusterv3.Cluster_ALL
+		}
+	}
+
+	// Ensure to override if a specific IP family is set.
 	if args.ipFamily != nil {
 		switch *args.ipFamily {
 		case egv1a1.IPv4:
@@ -92,7 +108,10 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		case egv1a1.IPv6:
 			dnsLookupFamily = clusterv3.Cluster_V6_ONLY
 		case egv1a1.DualStack:
-			dnsLookupFamily = clusterv3.Cluster_ALL
+			// if a custom DNS policy is set, prefer the custom policy as its more specific.
+			if !customDNSPolicy {
+				dnsLookupFamily = clusterv3.Cluster_ALL
+			}
 		}
 	}
 
@@ -461,12 +480,9 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 			endpoints = append(endpoints, lbEndpoint)
 		}
 
-		// Envoy requires a distinct region to be set for each LocalityLbEndpoints.
-		// If we don't do this, Envoy will merge all LocalityLbEndpoints into one.
-		// We use the name of the backendRef as a pseudo region name.
 		locality := &endpointv3.LocalityLbEndpoints{
 			Locality: &corev3.Locality{
-				Region: fmt.Sprintf("%s/backend/%d", clusterName, i),
+				Region: ds.Name,
 			},
 			LbEndpoints: endpoints,
 			Priority:    0,
@@ -714,17 +730,20 @@ type ExtraArgs struct {
 }
 
 type clusterArgs interface {
-	asClusterArgs(extras *ExtraArgs) *xdsClusterArgs
+	asClusterArgs(name string, settings []*ir.DestinationSetting, extras *ExtraArgs) *xdsClusterArgs
 }
 
 type UDPRouteTranslator struct {
 	*ir.UDPRoute
 }
 
-func (route *UDPRouteTranslator) asClusterArgs(extra *ExtraArgs) *xdsClusterArgs {
+func (route *UDPRouteTranslator) asClusterArgs(name string,
+	settings []*ir.DestinationSetting,
+	extra *ExtraArgs,
+) *xdsClusterArgs {
 	return &xdsClusterArgs{
-		name:         route.Destination.Name,
-		settings:     route.Destination.Settings,
+		name:         name,
+		settings:     settings,
 		loadBalancer: route.LoadBalancer,
 		endpointType: buildEndpointType(route.Destination.Settings),
 		metrics:      extra.metrics,
@@ -737,10 +756,13 @@ type TCPRouteTranslator struct {
 	*ir.TCPRoute
 }
 
-func (route *TCPRouteTranslator) asClusterArgs(extra *ExtraArgs) *xdsClusterArgs {
+func (route *TCPRouteTranslator) asClusterArgs(name string,
+	settings []*ir.DestinationSetting,
+	extra *ExtraArgs,
+) *xdsClusterArgs {
 	return &xdsClusterArgs{
-		name:              route.Destination.Name,
-		settings:          route.Destination.Settings,
+		name:              name,
+		settings:          settings,
 		loadBalancer:      route.LoadBalancer,
 		proxyProtocol:     route.ProxyProtocol,
 		circuitBreaker:    route.CircuitBreaker,
@@ -759,10 +781,13 @@ type HTTPRouteTranslator struct {
 	*ir.HTTPRoute
 }
 
-func (httpRoute *HTTPRouteTranslator) asClusterArgs(extra *ExtraArgs) *xdsClusterArgs {
+func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
+	settings []*ir.DestinationSetting,
+	extra *ExtraArgs,
+) *xdsClusterArgs {
 	clusterArgs := &xdsClusterArgs{
-		name:              httpRoute.Destination.Name,
-		settings:          httpRoute.Destination.Settings,
+		name:              name,
+		settings:          settings,
 		tSocket:           nil,
 		endpointType:      buildEndpointType(httpRoute.Destination.Settings),
 		metrics:           extra.metrics,

@@ -154,6 +154,7 @@ xdsIR:
             endpoints:
             - host: 10.244.0.11
               port: 8080
+            name: httproute/envoy-gateway/httproute-btls/rule/0/backend/0
             protocol: HTTP
             tls:
               alpnProtocols: null

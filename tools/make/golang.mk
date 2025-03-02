@@ -80,8 +80,6 @@ go.clean: ## Clean the building output files
 go.mod.tidy: ## Update and check dependences with go mod tidy.
 	@$(LOG_TARGET)
 	go mod tidy -compat=$(GO_VERSION)
-	# run go mod tidy in examples/extension-server directory
-	cd examples/extension-server && go mod tidy -compat=$(GO_VERSION)
 
 .PHONY: go.mod.lint
 lint: go.mod.lint

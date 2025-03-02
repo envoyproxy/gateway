@@ -20,8 +20,7 @@
             portValue: 0
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: mirror-route-dest/backend/0
+    locality: {}
 - clusterName: mirror-route-dest1
   endpoints:
   - lbEndpoints:

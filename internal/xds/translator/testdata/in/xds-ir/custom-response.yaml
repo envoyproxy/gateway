@@ -23,6 +23,7 @@ http:
                   port: 8080
               protocol: HTTP
               weight: 1
+              name: httproute/default/httproute-1/rule/0/backend/0
         hostname: "*"
         isHTTP2: false
         metadata:
@@ -63,6 +64,7 @@ http:
                   port: 8080
               protocol: HTTP
               weight: 1
+              name: httproute/default/httproute-2/rule/0/backend/0
         hostname: "*"
         isHTTP2: false
         metadata:

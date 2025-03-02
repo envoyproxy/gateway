@@ -403,6 +403,10 @@ func irRouteDestinationName(route RouteContext, ruleIdx int) string {
 	return fmt.Sprintf("%srule/%d", irRoutePrefix(route), ruleIdx)
 }
 
+func irDestinationSettingName(destName string, backendIdx int) string {
+	return fmt.Sprintf("%s/backend/%d", destName, backendIdx)
+}
+
 // irTLSConfigs produces a defaulted IR TLSConfig
 func irTLSConfigs(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
 	if len(tlsSecrets) == 0 {

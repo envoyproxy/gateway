@@ -139,6 +139,7 @@ xds:
               socketAddress:
                 address: 0.0.0.0
                 portValue: 19001
+            bypassOverloadManager: true
             filterChains:
             - filters:
               - name: envoy.filters.network.http_connection_manager
@@ -158,8 +159,9 @@ xds:
                       routes:
                       - match:
                           headers:
-                          - exactMatch: GET
-                            name: :method
+                          - name: :method
+                            stringMatch:
+                              exact: GET
                           path: /stats/prometheus
                         route:
                           cluster: prometheus_stats
@@ -225,7 +227,7 @@ xds:
                 loadBalancingWeight: 1
               loadBalancingWeight: 1
               locality:
-                region: raw_githubusercontent_com_443/backend/0
+                region: raw_githubusercontent_com_443/backend/-1
           name: raw_githubusercontent_com_443
           perConnectionBufferLimitBytes: 32768
           respectDnsTtl: true
@@ -248,6 +250,7 @@ xds:
               socketAddress:
                 address: 0.0.0.0
                 portValue: 19003
+            bypassOverloadManager: true
             filterChains:
             - filters:
               - name: envoy.filters.network.http_connection_manager

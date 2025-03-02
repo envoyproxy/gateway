@@ -195,12 +195,14 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
           - addressType: IP
             endpoints:
             - host: 10.244.0.28
               port: 3000
+            name: httproute/default/httproute-1/rule/0/backend/1
             protocol: HTTP
             weight: 2
         hostname: '*'
@@ -221,6 +223,7 @@ xdsIR:
             endpoints:
             - host: primary.foo.com
               port: 3000
+            name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: '*'
