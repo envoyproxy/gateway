@@ -43,4 +43,7 @@ adopters:
     logo: "/logos/tigera.svg"
     url: "https://www.tigera.io/"
     description: ""
-
+  - name: "Kubermatic"
+    logo: "/logos/kubermatic.svg"
+    url: "https://www.kubermatic.io/"
+    description: "Kubermatic is using Envoy Gateway in KubeLB to provide L7 Load Balancing for multiple Kubernetes clusters using GatewayAPI."
