@@ -213,7 +213,7 @@ var BasicAuthTest = suite.ConformanceTest{
 		// This test verifies that when a user successfully authenticates using BasicAuth,
 		// their username is forwarded to the backend as a request header.
 		// The SecurityPolicy "basic-auth-3" is configured with the field "forwardUsernameHeader" set to "X-Authenticated-User".
-		// The request uses valid credentials (user1:test1), and the test ensures that the response contains
+		// The request uses valid credentials, and the test ensures that the response contains
 		// the expected status code (200) and includes the "X-Authenticated-User" header with the correct username.
 		t.Run("username forwarded as header", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
