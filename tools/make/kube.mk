@@ -73,21 +73,23 @@ generate-gwapi-manifests: ## Generate GWAPI manifests and make it consistent wit
 	curl -sLo $(OUTPUT_DIR)/gatewayapi-crds.yaml ${GATEWAY_RELEASE_URL}
 	mv $(OUTPUT_DIR)/gatewayapi-crds.yaml charts/gateway-helm/crds/gatewayapi-crds.yaml
 
+OPENAPI_GEN_PKGS = github.com/envoyproxy/gateway/api/v1alpha1 \
+    sigs.k8s.io/gateway-api/apis/v1 \
+	sigs.k8s.io/gateway-api/apis/v1alpha2 \
+	k8s.io/apimachinery/pkg/apis/meta/v1 \
+	k8s.io/apimachinery/pkg/runtime \
+	k8s.io/apimachinery/pkg/version
+
 .PHONY: kube-generate
 kube-generate: ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 # Note that the paths can't just be "./..." with the header file, or the tool will panic on run. Sorry.
 	@$(LOG_TARGET)
 	@go tool controller-gen $(CONTROLLERGEN_OBJECT_FLAGS) paths="{$(ROOT_DIR)/api/...,$(ROOT_DIR)/internal/ir/...,$(ROOT_DIR)/internal/gatewayapi/...}"
-	@go tool openapi-gen --output-file zz_generated.openapi.go \
-	   --output-dir "$(ROOT_DIR)/api/openapi" \
-	   --output-pkg "$(ROOT_DIR)/api/openapi" \
-	   --go-header-file "$(ROOT_DIR)/tools/boilerplate/boilerplate.generatego.txt" \
-	   github.com/envoyproxy/gateway/api/v1alpha1 \
-	   sigs.k8s.io/gateway-api/apis/v1 \
-	   sigs.k8s.io/gateway-api/apis/v1alpha2 \
-	   k8s.io/apimachinery/pkg/apis/meta/v1 \
-	   k8s.io/apimachinery/pkg/runtime \
-	   k8s.io/apimachinery/pkg/version
+	@go tool openapi-gen --go-header-file "$(ROOT_DIR)/tools/boilerplate/boilerplate.generatego.txt" \
+	   --output-pkg "github.com/envoyproxy/gateway/api/openapi" \
+	   --output-dir "api/openapi" \
+	   --output-file zz_generated.openapi.go \
+	   $(OPENAPI_GEN_PKGS)
 
 .PHONY: kube-test
 kube-test: manifests generate ## Run Kubernetes provider tests.
