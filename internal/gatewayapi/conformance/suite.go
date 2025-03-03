@@ -18,6 +18,12 @@ var SkipTests = []suite.ConformanceTest{
 	tests.GatewayInfrastructure,
 }
 
+// SkipFeatures is a list of features that are skipped in the conformance report.
+var SkipFeatures = sets.New[features.FeatureName](
+	features.GatewayStaticAddressesFeature.Name,
+	features.GatewayInfrastructurePropagationFeature.Name,
+)
+
 func skipTestsShortNames(skipTests []suite.ConformanceTest) []string {
 	shortNames := make([]string, len(skipTests))
 	for i, test := range skipTests {
@@ -36,7 +42,10 @@ var EnvoyGatewaySuite = suite.ConformanceOptions{
 func allFeatures() sets.Set[features.FeatureName] {
 	allFeatures := sets.New[features.FeatureName]()
 	for _, feature := range features.AllFeatures.UnsortedList() {
-		allFeatures.Insert(feature.Name)
+		// Dont add skipped features in the conformance report.
+		if !SkipFeatures.Has(feature.Name) {
+			allFeatures.Insert(feature.Name)
+		}
 	}
 	return allFeatures
 }
