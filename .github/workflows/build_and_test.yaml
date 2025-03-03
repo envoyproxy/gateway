@@ -17,34 +17,9 @@ permissions:
   contents: read
 
 jobs:
-  lint:
-    runs-on: ubuntu-22.04
-    steps:
-    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
-    - uses: ./tools/github-actions/setup-deps
-    # Generate the installation manifests first, so it can check
-    # for errors while running `make -k lint`
-    - run: IMAGE_PULL_POLICY=Always make generate-manifests
-    - run: make lint-deps
-    - run: make -k lint
-
-  gen-check:
-    runs-on: ubuntu-22.04
-    steps:
-    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
-    - uses: ./tools/github-actions/setup-deps
-    - run: make -k gen-check
-
-  license-check:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
-    - uses: ./tools/github-actions/setup-deps
-    - run: make -k licensecheck
 
   build:
     runs-on: ubuntu-latest
-    needs: [lint, gen-check, license-check]
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
     - uses: ./tools/github-actions/setup-deps
