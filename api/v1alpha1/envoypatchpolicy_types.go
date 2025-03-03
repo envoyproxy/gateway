@@ -36,7 +36,6 @@ type EnvoyPatchPolicy struct {
 }
 
 // EnvoyPatchPolicySpec defines the desired state of EnvoyPatchPolicy.
-// +union
 type EnvoyPatchPolicySpec struct {
 	// Type decides the type of patch.
 	// Valid EnvoyPatchType values are "JSONPatch".
