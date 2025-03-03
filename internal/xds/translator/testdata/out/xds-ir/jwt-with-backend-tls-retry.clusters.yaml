@@ -39,8 +39,6 @@
             envoy.transport_socket_match:
               name: securitypolicy/default/policy-for-route/jwt/0/backend/0/tls
       loadBalancingWeight: 1
-      locality:
-        region: securitypolicy/default/policy-for-route/jwt/0/backend/0
   name: securitypolicy/default/policy-for-route/jwt/0/backend/0
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true

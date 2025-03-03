@@ -69,8 +69,6 @@
               portValue: 9000
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality:
-        region: securitypolicy/default/policy-for-http-route-1/default/grpc-backend/backend/0
   name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend/backend/0
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
@@ -129,8 +127,6 @@
               portValue: 80
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality:
-        region: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend/backend/0
   name: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend/backend/0
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true

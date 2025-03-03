@@ -8,8 +8,6 @@
             portValue: 8080
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: httproute/default/httproute-1/rule/0/backend/0
 - clusterName: httproute/default/httproute-1/rule/1/backend/0
   endpoints:
   - lbEndpoints:
@@ -20,8 +18,6 @@
             portValue: 8080
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: httproute/default/httproute-1/rule/1/backend/0
 - clusterName: httproute/default/httproute-2/rule/0/backend/0
   endpoints:
   - lbEndpoints:
@@ -32,8 +28,6 @@
             portValue: 8080
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: httproute/default/httproute-2/rule/0/backend/0
 - clusterName: securitypolicy/default/policy-for-http-route-1/default/grpc-backend/backend/0
   endpoints:
   - lbEndpoints:
@@ -44,8 +38,6 @@
             portValue: 9001
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: securitypolicy/default/policy-for-http-route-1/default/grpc-backend/backend/0
 - clusterName: securitypolicy/default/policy-for-http-route-1/default/grpc-backend/backend/1
   endpoints:
   - lbEndpoints:
@@ -56,8 +48,6 @@
             portValue: 9000
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: securitypolicy/default/policy-for-http-route-1/default/grpc-backend/backend/1
 - clusterName: securitypolicy/default/policy-for-http-route-1/default/grpc-backend/backend/0
   endpoints:
   - lbEndpoints:
@@ -68,8 +58,6 @@
             portValue: 9000
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: securitypolicy/default/policy-for-http-route-1/default/grpc-backend/backend/0
 - clusterName: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend/backend/0
   endpoints:
   - lbEndpoints:
@@ -80,5 +68,3 @@
             portValue: 80
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend/backend/0

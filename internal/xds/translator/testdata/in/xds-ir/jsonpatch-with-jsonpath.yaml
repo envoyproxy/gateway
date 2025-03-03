@@ -72,7 +72,7 @@ envoyPatchPolicies:
                     address: ratelimit.svc.cluster.local
                     port_value: 8081
   - type: "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
-    name: "first-route-dest"
+    name: "first-route-dest/backend/0"
     operation:
       op: "replace"
       jsonPath: "..endpoints[*].load_balancing_weight"
@@ -94,7 +94,7 @@ envoyPatchPolicies:
           certificate_chain:
             inline_bytes: Y2VydC1kYXRh
   - type: "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
-    name: "first-route-dest"
+    name: "first-route-dest/backend/0"
     operation:
       op: add
       jsonPath: "endpoints"
@@ -108,13 +108,13 @@ envoyPatchPolicies:
                 portValue: 50000
           loadBalancingWeight: 1
   - type: "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
-    name: "first-route-dest"
+    name: "first-route-dest/backend/0"
     operation:
       op: "move"
       from: "/endpoints/0/load_balancing_weight"
       path: "/endpoints/1/load_balancing_weight"
   - type: "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
-    name: "first-route-dest"
+    name: "first-route-dest/backend/0"
     operation:
       op: copy
       from: "/endpoints/1/load_balancing_weight"

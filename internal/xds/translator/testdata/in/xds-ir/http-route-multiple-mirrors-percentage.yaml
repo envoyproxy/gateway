@@ -24,6 +24,7 @@ http:
         settings:
         - endpoints:
           - host: "2.3.4.5"
+          name: "mirror-route-dest/backend/0"
       percentage: 25
       name: "mirror-route-dest/backend/0"
     - destination:

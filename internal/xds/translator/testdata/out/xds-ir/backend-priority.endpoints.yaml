@@ -8,8 +8,6 @@
             portValue: 8080
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: httproute/default/httproute-1/rule/0/backend/0
 - clusterName: httproute/default/httproute-2/rule/0/backend/0
   endpoints:
   - lbEndpoints:
@@ -20,13 +18,9 @@
             portValue: 8080
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: httproute/default/httproute-2/rule/0/backend/0
 - clusterName: envoyextensionpolicy/default/policy-for-http-route/0/backend/0
   endpoints:
   - loadBalancingWeight: 1
-    locality:
-      region: envoyextensionpolicy/default/policy-for-http-route/0/backend/0
 - clusterName: envoyextensionpolicy/default/policy-for-http-route/0/backend/1
   endpoints:
   - lbEndpoints:
@@ -37,8 +31,6 @@
             portValue: 9000
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: envoyextensionpolicy/default/policy-for-http-route/0/backend/1
     priority: 1
 - clusterName: envoyextensionpolicy/default/policy-for-http-route/0/backend/2
   endpoints:
@@ -50,8 +42,6 @@
             portValue: 3001
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: envoyextensionpolicy/default/policy-for-http-route/0/backend/2
     priority: 1
 - clusterName: envoyextensionpolicy/default/policy-for-http-route/0/backend/3
   endpoints:
@@ -67,6 +57,4 @@
           envoy.transport_socket_match:
             name: envoyextensionpolicy/default/policy-for-http-route/0/backend/3/tls
     loadBalancingWeight: 1
-    locality:
-      region: envoyextensionpolicy/default/policy-for-http-route/0/backend/3
     priority: 1

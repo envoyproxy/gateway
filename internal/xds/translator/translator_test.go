@@ -220,7 +220,7 @@ func TestTranslateXdsWithExtension(t *testing.T) {
 			errMsg: "rpc error: code = Unknown desc = extension post xds listener hook error",
 		},
 		"http-route-extension-translate-error": {
-			errMsg: "rpc error: code = Unknown desc = cluster hook resource error: fail-close-error",
+			errMsg: "rpc error: code = Unknown desc = cluster hook resource error: fail-close-error/backend/0",
 		},
 		"multiple-listeners-same-port-error": {
 			errMsg: "rpc error: code = Unknown desc = simulate error when there is no default filter chain in the original resources",

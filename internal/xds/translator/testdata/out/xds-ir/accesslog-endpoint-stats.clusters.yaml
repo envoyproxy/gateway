@@ -37,8 +37,6 @@
               portValue: 4317
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality:
-        region: accesslog-0/backend/0
   name: accesslog-0/backend/0
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true

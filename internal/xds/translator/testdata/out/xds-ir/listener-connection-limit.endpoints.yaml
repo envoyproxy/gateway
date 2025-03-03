@@ -8,8 +8,6 @@
             portValue: 50000
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: first-route-dest/backend/0
 - clusterName: second-route-dest/backend/0
   endpoints:
   - lbEndpoints:
@@ -20,8 +18,6 @@
             portValue: 50000
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: second-route-dest/backend/0
 - clusterName: tls-route-dest/backend/0
   endpoints:
   - lbEndpoints:
@@ -32,8 +28,6 @@
             portValue: 50000
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: tls-route-dest/backend/0
 - clusterName: tcp-route-dest/backend/0
   endpoints:
   - lbEndpoints:
@@ -44,5 +38,3 @@
             portValue: 50000
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: tcp-route-dest/backend/0

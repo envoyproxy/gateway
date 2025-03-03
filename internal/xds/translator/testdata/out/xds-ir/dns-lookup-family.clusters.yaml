@@ -8,7 +8,7 @@
   dnsRefreshRate: 5s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
-    clusterName: httproute/default/httproute-1/rule/0
+    clusterName: httproute/default/httproute-1/rule/0/backend/0
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -18,8 +18,7 @@
               portValue: 8080
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality: {}
-  name: httproute/default/httproute-1/rule/0
+  name: httproute/default/httproute-1/rule/0/backend/0
   perConnectionBufferLimitBytes: 32768
   type: STRICT_DNS
 - circuitBreakers:
@@ -32,7 +31,7 @@
   dnsRefreshRate: 5s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
-    clusterName: grpcroute/default/grpcroute-1/rule/0
+    clusterName: grpcroute/default/grpcroute-1/rule/0/backend/0
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -42,8 +41,7 @@
               portValue: 8080
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality: {}
-  name: grpcroute/default/grpcroute-1/rule/0
+  name: grpcroute/default/grpcroute-1/rule/0/backend/0
   perConnectionBufferLimitBytes: 32768
   type: STRICT_DNS
   typedExtensionProtocolOptions:
@@ -63,7 +61,7 @@
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
-    clusterName: securitypolicy/envoy-gateway/policy-for-gateway-1/extauth/0
+    clusterName: securitypolicy/envoy-gateway/policy-for-gateway-1/extauth/0/backend/0
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -73,8 +71,31 @@
               portValue: 8080
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality: {}
-  name: securitypolicy/envoy-gateway/policy-for-gateway-1/extauth/0
+  name: securitypolicy/envoy-gateway/policy-for-gateway-1/extauth/0/backend/0
+  perConnectionBufferLimitBytes: 32768
+  respectDnsTtl: true
+  type: STRICT_DNS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  dnsRefreshRate: 30s
+  lbPolicy: LEAST_REQUEST
+  loadAssignment:
+    clusterName: securitypolicy/envoy-gateway/policy-for-gateway-1/extauth/0/backend/0
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: backend-v3.gateway-conformance-infra.svc.cluster.local
+              portValue: 8080
+        loadBalancingWeight: 1
+      loadBalancingWeight: 1
+  name: securitypolicy/envoy-gateway/policy-for-gateway-1/extauth/0/backend/0
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   type: STRICT_DNS
@@ -88,7 +109,7 @@
   dnsRefreshRate: 5s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
-    clusterName: envoyextensionpolicy/default/policy-for-httproute/extproc/0
+    clusterName: envoyextensionpolicy/default/policy-for-httproute/extproc/0/backend/0
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -98,8 +119,7 @@
               portValue: 9090
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality: {}
-  name: envoyextensionpolicy/default/policy-for-httproute/extproc/0
+  name: envoyextensionpolicy/default/policy-for-httproute/extproc/0/backend/0
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   type: STRICT_DNS
@@ -120,11 +140,10 @@
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
-    clusterName: accesslog_otel_0_1
+    clusterName: accesslog_otel_0_1/backend/0
     endpoints:
     - loadBalancingWeight: 1
-      locality: {}
-  name: accesslog_otel_0_1
+  name: accesslog_otel_0_1/backend/0
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   type: STRICT_DNS

@@ -8,8 +8,6 @@
             portValue: 50000
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: regex-route-dest/backend/0
 - clusterName: regex-route-dest/backend/0
   endpoints:
   - lbEndpoints:
@@ -20,8 +18,6 @@
             portValue: 50000
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: regex-route-dest/backend/0
 - clusterName: regex-route-dest/backend/0
   endpoints:
   - lbEndpoints:
@@ -32,8 +28,6 @@
             portValue: 50000
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: regex-route-dest/backend/0
 - clusterName: regex-route-dest/backend/0
   endpoints:
   - lbEndpoints:
@@ -44,5 +38,3 @@
             portValue: 50000
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: regex-route-dest/backend/0

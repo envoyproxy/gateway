@@ -459,8 +459,6 @@ func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3
 }
 
 func buildXdsClusterLoadAssignment(destSetting *ir.DestinationSetting) *endpointv3.ClusterLoadAssignment {
-	localities := []*endpointv3.LocalityLbEndpoints{}
-
 	endpoints := make([]*endpointv3.LbEndpoint, 0, len(destSetting.Endpoints))
 
 	var metadata *corev3.Metadata
@@ -489,24 +487,19 @@ func buildXdsClusterLoadAssignment(destSetting *ir.DestinationSetting) *endpoint
 				},
 			},
 			HealthStatus: healthStatus,
+			// Set default weight of 1 for all endpoints.
+			LoadBalancingWeight: &wrapperspb.UInt32Value{Value: 1},
 		}
-		// Set default weight of 1 for all endpoints.
-		lbEndpoint.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: 1}
 		endpoints = append(endpoints, lbEndpoint)
 	}
 
-	locality := &endpointv3.LocalityLbEndpoints{
-		Locality: &corev3.Locality{
-			Region: destSetting.Name,
-		},
+	localityEndpoints := []*endpointv3.LocalityLbEndpoints{{
 		LbEndpoints:         endpoints,
 		LoadBalancingWeight: wrapperspb.UInt32(1),
 		Priority:            ptr.Deref(destSetting.Priority, 0),
-	}
+	}}
 
-	localities = append(localities, locality)
-
-	return &endpointv3.ClusterLoadAssignment{ClusterName: destSetting.Name, Endpoints: localities}
+	return &endpointv3.ClusterLoadAssignment{ClusterName: destSetting.Name, Endpoints: localityEndpoints}
 }
 
 func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) map[string]*anypb.Any {

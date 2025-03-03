@@ -1,4 +1,4 @@
-- clusterName: fail-close-error
+- clusterName: fail-close-error/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -8,5 +8,3 @@
             portValue: 50000
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: fail-close-error/backend/0

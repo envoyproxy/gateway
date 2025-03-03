@@ -10,7 +10,7 @@ envoyPatchPolicies:
   namespace: "default"
   jsonPatches:
   - type: "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
-    name: "first-route-dest"
+    name: "first-route-dest/backend/0"
     operation:
       op: "replace"
       jsonPath: "..doesNotExists"

@@ -8,5 +8,3 @@
             portValue: 50000
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: extension-post-xdsroute-hook-error-dest/backend/0

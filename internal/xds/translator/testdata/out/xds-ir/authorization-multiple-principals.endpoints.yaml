@@ -8,5 +8,3 @@
             portValue: 8080
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: httproute/default/httproute-1/rule/0/backend/0

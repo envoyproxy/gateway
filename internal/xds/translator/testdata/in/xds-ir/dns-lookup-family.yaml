@@ -4,6 +4,7 @@ accessLog:
         name: accesslog_otel_0_1
         settings:
           - protocol: TCP
+            name: accesslog_otel_0_1/backend/0
       resources:
         k8s.cluster.name: cluster-1
       text: |
@@ -41,6 +42,7 @@ http:
                   port: 8080
               protocol: HTTP
               weight: 1
+              name: httproute/default/httproute-1/rule/0/backend/0
         envoyExtensions:
           extProcs:
             - authority: backend-fqdn2.default:9090
@@ -53,6 +55,7 @@ http:
                         port: 9090
                     protocol: GRPC
                     weight: 1
+                    name: envoyextensionpolicy/default/policy-for-httproute/extproc/0/backend/0
               name: envoyextensionpolicy/default/policy-for-httproute/extproc/0
               traffic:
                 dns:
@@ -85,6 +88,7 @@ http:
                         port: 8080
                     protocol: HTTP
                     weight: 1
+                    name: securitypolicy/envoy-gateway/policy-for-gateway-1/extauth/0/backend/0
               path: ""
             name: securitypolicy/envoy-gateway/policy-for-gateway-1
         traffic:
@@ -101,6 +105,7 @@ http:
                   port: 8080
               protocol: GRPC
               weight: 1
+              name: grpcroute/default/grpcroute-1/rule/0/backend/0
         hostname: '*'
         isHTTP2: true
         metadata:
@@ -124,6 +129,7 @@ http:
                         port: 8080
                     protocol: HTTP
                     weight: 1
+                    name: securitypolicy/envoy-gateway/policy-for-gateway-1/extauth/0/backend/0
               path: ""
             name: securitypolicy/envoy-gateway/policy-for-gateway-1
         traffic:

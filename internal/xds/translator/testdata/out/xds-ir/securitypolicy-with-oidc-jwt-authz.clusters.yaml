@@ -35,8 +35,6 @@
               portValue: 443
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality:
-        region: oidc_example_com_443/backend/-1
   name: oidc_example_com_443/backend/-1
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
@@ -70,8 +68,6 @@
               portValue: 443
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality:
-        region: oidc_example_com_443/backend/-1
   name: oidc_example_com_443/backend/-1
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true

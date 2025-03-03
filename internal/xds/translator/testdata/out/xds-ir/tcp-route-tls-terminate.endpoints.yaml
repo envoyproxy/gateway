@@ -14,8 +14,6 @@
             portValue: 50001
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: tls-terminate-dest/backend/0
 - clusterName: tls-terminate-hostname-dest/backend/0
   endpoints:
   - lbEndpoints:
@@ -32,5 +30,3 @@
             portValue: 50001
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: tls-terminate-hostname-dest/backend/0

@@ -36,8 +36,6 @@
               portValue: 4317
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality:
-        region: tracing-0/backend/0
   name: tracing-0/backend/0
   outlierDetection:
     baseEjectionTime: 30s
