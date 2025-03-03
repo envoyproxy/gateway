@@ -239,7 +239,7 @@ var BasicAuthTest = suite.ConformanceTest{
 				Response: http.Response{
 					StatusCode: 200,
 					Headers: map[string]string{
-						"Authorization":        "Basic dXNlcjE6dGVzdDE=",
+						"Authorization":        "Basic dXNlcjQ6dGVzdDQ=",
 						"X-Authenticated-User": "user4",
 					},
 				},
