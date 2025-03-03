@@ -9,7 +9,7 @@
         path: foo/bar
       name: first-route-ratelimit-single-rule
       route:
-        cluster: first-route-dest
+        cluster: first-route-dest/backend/0
         rateLimits:
         - actions:
           - headerValueMatch:
@@ -59,7 +59,7 @@
         path: example
       name: second-route-ratelimit-multiple-rules
       route:
-        cluster: second-route-dest
+        cluster: second-route-dest/backend/0
         rateLimits:
         - actions:
           - headerValueMatch:
@@ -139,7 +139,7 @@
         path: test
       name: third-route-ratelimit-no-rule
       route:
-        cluster: third-route-dest
+        cluster: third-route-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:

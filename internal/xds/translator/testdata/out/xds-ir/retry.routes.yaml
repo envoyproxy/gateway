@@ -9,7 +9,7 @@
         prefix: /
       name: first-route
       route:
-        cluster: first-route-dest
+        cluster: first-route-dest/backend/0
         retryPolicy:
           hostSelectionRetryMaxAttempts: "5"
           numRetries: 3
@@ -32,7 +32,7 @@
         prefix: /
       name: second-route-defaults
       route:
-        cluster: first-route-dest
+        cluster: first-route-dest/backend/0
         retryPolicy:
           hostSelectionRetryMaxAttempts: "5"
           numRetries: 2

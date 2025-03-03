@@ -230,7 +230,7 @@ func buildXdsRouteAction(backendWeights *ir.BackendWeights, settings []*ir.Desti
 
 	return &routev3.RouteAction{
 		ClusterSpecifier: &routev3.RouteAction_Cluster{
-			Cluster: backendWeights.Name,
+			Cluster: settings[0].Name,
 		},
 	}
 }

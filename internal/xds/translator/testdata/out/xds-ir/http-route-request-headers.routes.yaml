@@ -37,6 +37,6 @@
       - some-header5
       - some-header6
       route:
-        cluster: request-header-route-dest
+        cluster: request-header-route-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket

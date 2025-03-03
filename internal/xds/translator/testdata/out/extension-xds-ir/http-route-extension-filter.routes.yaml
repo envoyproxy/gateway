@@ -28,6 +28,6 @@
           key: mock-extension-was-here-extensionRef-apiversion
           value: foo.example.io/v1alpha1
       route:
-        cluster: first-route-dest
+        cluster: first-route-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket

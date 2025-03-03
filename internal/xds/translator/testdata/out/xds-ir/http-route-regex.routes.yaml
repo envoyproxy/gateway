@@ -20,6 +20,6 @@
           regex: /v1/.*
       name: regex-route
       route:
-        cluster: regex-route-dest
+        cluster: regex-route-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket

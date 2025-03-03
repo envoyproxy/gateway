@@ -9,6 +9,6 @@
         prefix: /
       name: first-route
       route:
-        cluster: fail-close-error
+        cluster: fail-close-error/backend/0
         upgradeConfigs:
         - upgradeType: websocket

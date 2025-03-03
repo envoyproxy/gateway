@@ -332,6 +332,6 @@ xds:
                       namespace: envoy-gateway-system
               name: httproute/envoy-gateway-system/routes/rule/0/match/0/*
               route:
-                cluster: httproute/envoy-gateway-system/routes/rule/0
+                cluster: httproute/envoy-gateway-system/routes/rule/0/backend/0
                 upgradeConfigs:
                 - upgradeType: websocket

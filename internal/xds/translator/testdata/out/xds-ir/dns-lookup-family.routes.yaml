@@ -24,7 +24,7 @@
               namespace: default
       name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
       route:
-        cluster: httproute/default/httproute-1/rule/0
+        cluster: httproute/default/httproute-1/rule/0/backend/0
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
@@ -57,7 +57,7 @@
               namespace: default
       name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
       route:
-        cluster: grpcroute/default/grpcroute-1/rule/0
+        cluster: grpcroute/default/grpcroute-1/rule/0/backend/0
       typedPerFilterConfig:
         envoy.filters.http.ext_authz/securitypolicy/envoy-gateway/policy-for-gateway-1:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig

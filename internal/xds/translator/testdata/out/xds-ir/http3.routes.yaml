@@ -14,6 +14,6 @@
           key: alt-svc
           value: h3=":443"; ma=86400
       route:
-        cluster: httproute/default/httproute-1/rule/0
+        cluster: httproute/default/httproute-1/rule/0/backend/0
         upgradeConfigs:
         - upgradeType: websocket

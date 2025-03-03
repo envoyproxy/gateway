@@ -17,27 +17,27 @@
             exact: "yes"
       name: first-route
       route:
-        cluster: first-route-dest
+        cluster: first-route-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket
     - match:
         path: bar/foo
       name: second-route
       route:
-        cluster: second-route-dest
+        cluster: second-route-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket
     - match:
         path: bar/bar
       name: third-route-use-client
       route:
-        cluster: third-route-dest
+        cluster: third-route-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket
     - match:
         path: foo/foo
       name: fourth-route-not-http2
       route:
-        cluster: fourth-route-dest
+        cluster: fourth-route-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket

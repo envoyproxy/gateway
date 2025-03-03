@@ -9,7 +9,7 @@
         path: foo/bar
       name: first-route-www.test.com
       route:
-        cluster: first-route-www.test.com-dest
+        cluster: first-route-www.test.com-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
@@ -20,7 +20,7 @@
         path: foo/baz
       name: second-route-www.test.com
       route:
-        cluster: second-route-www.test.com-dest
+        cluster: second-route-www.test.com-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:

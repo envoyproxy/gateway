@@ -13,14 +13,14 @@
             exact: "yes"
       name: envoy-gateway/httproute-2/rule/0/match/0/example.com
       route:
-        cluster: first-route-dest
+        cluster: first-route-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket
     - match:
         pathSeparatedPrefix: /v1/example
       name: envoy-gateway/httproute-3/rule/0/match/0/example.com
       route:
-        cluster: second-route-dest
+        cluster: second-route-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket
   - domains:
@@ -35,14 +35,14 @@
         pathSeparatedPrefix: /v1/status
       name: envoy-gateway/httproute-4/rule/0/match/0/example.net
       route:
-        cluster: third-route-dest
+        cluster: third-route-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket
     - match:
         pathSeparatedPrefix: /v1/status
       name: envoy-gateway/httproute-5/rule/0/match/0/example.net
       route:
-        cluster: fourth-route-dest
+        cluster: fourth-route-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket
   - domains:
@@ -53,7 +53,7 @@
         pathSeparatedPrefix: /foo
       name: envoy-gateway/httproute-1/rule/0/match/0/*.com
       route:
-        cluster: fifth-route-dest
+        cluster: fifth-route-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket
   - domains:
@@ -64,7 +64,7 @@
         pathSeparatedPrefix: /foo
       name: envoy-gateway/httproute-1/rule/0/match/0/*.net
       route:
-        cluster: sixth-route-dest
+        cluster: sixth-route-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket
   - domains:
@@ -75,6 +75,6 @@
         prefix: /
       name: envoy-gateway/httproute-1/rule/0/match/0/*
       route:
-        cluster: seventh-route-dest
+        cluster: seventh-route-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket

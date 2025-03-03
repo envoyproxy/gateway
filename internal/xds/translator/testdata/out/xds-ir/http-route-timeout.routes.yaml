@@ -13,7 +13,7 @@
         prefix: /
       name: first-route
       route:
-        cluster: first-route-dest
+        cluster: first-route-dest/backend/0
         idleTimeout: 3600s
         timeout: 5s
         upgradeConfigs:
@@ -22,7 +22,7 @@
         prefix: /
       name: second-route
       route:
-        cluster: second-route-dest
+        cluster: second-route-dest/backend/0
         idleTimeout: 4000s
         timeout: 4000s
         upgradeConfigs:
@@ -31,7 +31,7 @@
         prefix: /
       name: third-route
       route:
-        cluster: third-route-dest
+        cluster: third-route-dest/backend/0
         idleTimeout: 0s
         timeout: 0s
         upgradeConfigs:
@@ -40,7 +40,7 @@
         prefix: /
       name: forth-route
       route:
-        cluster: fourth-route-dest
+        cluster: fourth-route-dest/backend/0
         idleTimeout: 3600s
         timeout: 10s
         upgradeConfigs:
@@ -49,7 +49,7 @@
         prefix: /
       name: fifth-route
       route:
-        cluster: fifth-route-dest
+        cluster: fifth-route-dest/backend/0
         idleTimeout: 3600s
         timeout: 10s
         upgradeConfigs:
@@ -58,7 +58,7 @@
         prefix: /
       name: sixth-route
       route:
-        cluster: sixth-route-dest
+        cluster: sixth-route-dest/backend/0
         idleTimeout: 0s
         timeout: 0s
         upgradeConfigs:
@@ -67,7 +67,7 @@
         prefix: /
       name: seventh-route
       route:
-        cluster: seventh-route-dest
+        cluster: seventh-route-dest/backend/0
         idleTimeout: 0s
         timeout: 0s
         upgradeConfigs:

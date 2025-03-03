@@ -16,6 +16,6 @@
         prefix: /
       name: first-route
       route:
-        cluster: first-route-dest
+        cluster: first-route-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket

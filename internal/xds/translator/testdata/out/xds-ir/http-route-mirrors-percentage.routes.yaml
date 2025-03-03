@@ -9,7 +9,7 @@
         prefix: /
       name: mirror-route
       route:
-        cluster: route-dest
+        cluster: route-dest/backend/0
         requestMirrorPolicies:
         - cluster: mirror-route-dest
           runtimeFraction:

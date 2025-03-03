@@ -9,7 +9,7 @@
         pathSeparatedPrefix: /foo1
       name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
       route:
-        cluster: httproute/default/httproute-1/rule/0
+        cluster: httproute/default/httproute-1/rule/0/backend/0
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
@@ -25,7 +25,7 @@
         pathSeparatedPrefix: /foo2
       name: httproute/default/httproute-1/rule/1/match/0/www_foo_com
       route:
-        cluster: httproute/default/httproute-1/rule/1
+        cluster: httproute/default/httproute-1/rule/1/backend/0
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
@@ -45,7 +45,7 @@
         pathSeparatedPrefix: /bar
       name: httproute/default/httproute-2/rule/0/match/0/www_bar_com
       route:
-        cluster: httproute/default/httproute-2/rule/0
+        cluster: httproute/default/httproute-2/rule/0/backend/0
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
@@ -61,7 +61,7 @@
         pathSeparatedPrefix: /bar2
       name: httproute/default/httproute-2/rule/0/match/0/www_bar_com
       route:
-        cluster: httproute/default/httproute-2/rule/0
+        cluster: httproute/default/httproute-2/rule/0/backend/0
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:

@@ -14,7 +14,7 @@
           key: alt-svc
           value: h3=":443"; ma=86400
       route:
-        cluster: httproute/default/httproute-1/rule/0
+        cluster: httproute/default/httproute-1/rule/0/backend/0
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
@@ -31,7 +31,7 @@
           key: alt-svc
           value: h3=":443"; ma=86400
       route:
-        cluster: httproute/default/httproute-2/rule/0
+        cluster: httproute/default/httproute-2/rule/0/backend/0
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
@@ -46,7 +46,7 @@
         pathSeparatedPrefix: /bar
       name: httproute/default/httproute-3/rule/0/match/0/www_bar_com
       route:
-        cluster: httproute/default/httproute-3/rule/0
+        cluster: httproute/default/httproute-3/rule/0/backend/0
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:

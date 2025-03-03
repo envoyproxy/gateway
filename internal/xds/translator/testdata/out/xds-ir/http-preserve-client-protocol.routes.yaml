@@ -9,6 +9,6 @@
         prefix: /
       name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
       route:
-        cluster: httproute/default/httproute-1/rule/0
+        cluster: httproute/default/httproute-1/rule/0/backend/0
         upgradeConfigs:
         - upgradeType: websocket

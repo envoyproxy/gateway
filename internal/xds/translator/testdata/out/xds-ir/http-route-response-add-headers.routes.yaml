@@ -28,6 +28,6 @@
           key: empty-header
         keepEmptyValue: true
       route:
-        cluster: response-header-route-dest
+        cluster: response-header-route-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket

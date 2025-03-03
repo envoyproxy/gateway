@@ -9,7 +9,7 @@
         path: baz
       name: first-route
       route:
-        cluster: third-route-dest
+        cluster: third-route-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:

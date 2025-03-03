@@ -10,7 +10,7 @@
           regex: /v1/.*
       name: header-based-session-persistence-route
       route:
-        cluster: regex-route-dest
+        cluster: regex-route-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
@@ -22,7 +22,7 @@
           regex: /v1/.*/hoge
       name: cookie-based-session-persistence-route-regex
       route:
-        cluster: regex-route-dest
+        cluster: regex-route-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
@@ -33,7 +33,7 @@
         pathSeparatedPrefix: /v2
       name: cookie-based-session-persistence-route-prefix
       route:
-        cluster: regex-route-dest
+        cluster: regex-route-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
@@ -44,7 +44,7 @@
         path: /v3/user
       name: cookie-based-session-persistence-route-exact
       route:
-        cluster: regex-route-dest
+        cluster: regex-route-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:

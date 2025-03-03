@@ -9,28 +9,28 @@
         prefix: /
       name: first-route
       route:
-        cluster: first-route-dest
+        cluster: first-route-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket
     - match:
         prefix: /
       name: second-route
       route:
-        cluster: second-route-dest
+        cluster: second-route-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket
     - match:
         prefix: /
       name: third-route
       route:
-        cluster: third-route-dest
+        cluster: third-route-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket
     - match:
         prefix: /
       name: fourth-route
       route:
-        cluster: fourth-route-dest
+        cluster: fourth-route-dest/backend/0
         hashPolicy:
         - connectionProperties:
             sourceIp: true
@@ -40,21 +40,21 @@
         prefix: /
       name: fifth-route
       route:
-        cluster: fifth-route-dest
+        cluster: fifth-route-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket
     - match:
         prefix: /
       name: sixth-route
       route:
-        cluster: sixth-route-dest
+        cluster: sixth-route-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket
     - match:
         prefix: /
       name: seventh-route
       route:
-        cluster: seventh-route-dest
+        cluster: seventh-route-dest/backend/0
         hashPolicy:
         - header:
             headerName: name
@@ -64,14 +64,14 @@
         prefix: /
       name: eighth-route
       route:
-        cluster: eighth-route-dest
+        cluster: eighth-route-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket
     - match:
         prefix: /
       name: ninth-route
       route:
-        cluster: ninth-route-dest
+        cluster: ninth-route-dest/backend/0
         hashPolicy:
         - cookie:
             name: test
@@ -81,7 +81,7 @@
         prefix: /
       name: tenth-route
       route:
-        cluster: tenth-route-dest
+        cluster: tenth-route-dest/backend/0
         hashPolicy:
         - cookie:
             attributes:

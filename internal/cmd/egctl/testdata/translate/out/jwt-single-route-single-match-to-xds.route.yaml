@@ -30,7 +30,7 @@ xds:
                     namespace: envoy-gateway-system
             name: httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com
             route:
-              cluster: httproute/envoy-gateway-system/backend/rule/0
+              cluster: httproute/envoy-gateway-system/backend/rule/0/backend/0
               upgradeConfigs:
               - upgradeType: websocket
             typedPerFilterConfig:

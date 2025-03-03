@@ -9,6 +9,6 @@
         prefix: /
       name: http-route
       route:
-        cluster: http-route-dest
+        cluster: http-route-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket

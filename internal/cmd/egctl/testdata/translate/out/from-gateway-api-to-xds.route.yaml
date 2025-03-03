@@ -30,7 +30,7 @@ xds:
                     namespace: default
             name: httproute/default/backend/rule/0/match/0/www_example_com
             route:
-              cluster: httproute/default/backend/rule/0
+              cluster: httproute/default/backend/rule/0/backend/0
               upgradeConfigs:
               - upgradeType: websocket
     - routeConfig:
@@ -61,4 +61,4 @@ xds:
                     namespace: default
             name: grpcroute/default/backend/rule/0/match/0/www_grpc-example_com
             route:
-              cluster: grpcroute/default/backend/rule/0
+              cluster: grpcroute/default/backend/rule/0/backend/0

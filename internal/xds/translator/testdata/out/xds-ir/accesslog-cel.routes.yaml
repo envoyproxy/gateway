@@ -9,6 +9,6 @@
         prefix: /
       name: direct-route
       route:
-        cluster: direct-route-dest
+        cluster: direct-route-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket

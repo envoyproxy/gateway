@@ -20,7 +20,7 @@
             exact: "yes"
       name: valid-route
       route:
-        cluster: valid-route-dest
+        cluster: valid-route-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket
     - match:
@@ -38,6 +38,6 @@
             exact: "yes"
       name: invalid-route
       route:
-        cluster: invalid-route-dest
+        cluster: invalid-route-dest/backend/0
         upgradeConfigs:
         - upgradeType: websocket
