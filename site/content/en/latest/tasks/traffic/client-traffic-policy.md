@@ -32,7 +32,7 @@ metadata:
   name: enable-tcp-keepalive-policy
   namespace: default
 spec:
-  targetRef:
+  targetRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
       name: eg
@@ -349,7 +349,7 @@ metadata:
   name: http-client-ip-detection
   namespace: default
 spec:
-  targetRef:
+  targetRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
       name: eg
