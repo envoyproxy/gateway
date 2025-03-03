@@ -9,9 +9,12 @@
         path: foo/bar
       name: first-route
       route:
-        cluster: first-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: first-route-dest/backend/0
       typedPerFilterConfig:
         envoy.filters.http.ratelimit:
           '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimitPerRoute
@@ -32,9 +35,12 @@
         path: example
       name: second-route
       route:
-        cluster: second-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: second-route-dest/backend/0
       typedPerFilterConfig:
         envoy.filters.http.ratelimit:
           '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimitPerRoute
@@ -50,9 +56,12 @@
         path: test
       name: third-route
       route:
-        cluster: third-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: third-route-dest/backend/0
       typedPerFilterConfig:
         envoy.filters.http.ratelimit:
           '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimitPerRoute
@@ -68,9 +77,12 @@
         path: foo/bar/login
       name: fourth-route
       route:
-        cluster: fourth-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: fourth-route-dest/backend/0
       typedPerFilterConfig:
         envoy.filters.http.ratelimit:
           '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimitPerRoute
@@ -91,9 +103,12 @@
         path: foo/bar
       name: req-and-resp-cost
       route:
-        cluster: first-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: first-route-dest/backend/0
       typedPerFilterConfig:
         envoy.filters.http.ratelimit:
           '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimitPerRoute
@@ -131,9 +146,12 @@
         path: test
       name: req-cost
       route:
-        cluster: third-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: third-route-dest/backend/0
       typedPerFilterConfig:
         envoy.filters.http.ratelimit:
           '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimitPerRoute
@@ -151,9 +169,12 @@
         path: foo/bar/login
       name: res-cost
       route:
-        cluster: fourth-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: fourth-route-dest/backend/0
       typedPerFilterConfig:
         envoy.filters.http.ratelimit:
           '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimitPerRoute

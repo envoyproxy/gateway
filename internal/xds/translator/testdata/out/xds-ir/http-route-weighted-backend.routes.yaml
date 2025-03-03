@@ -9,6 +9,16 @@
         prefix: /
       name: first-route
       route:
-        cluster: first-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: first-route-dest/backend/0
+            weight: 20
+          - name: first-route-dest/backend/1
+            weight: 40
+          - name: first-route-dest/backend/2
+            weight: 20
+          - name: first-route-dest/backend/3
+            weight: 20

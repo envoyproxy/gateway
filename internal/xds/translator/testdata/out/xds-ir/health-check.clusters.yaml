@@ -9,7 +9,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: first-route-dest
+    serviceName: first-route-dest/backend/0
   healthChecks:
   - healthyThreshold: 1
     httpHealthCheck:
@@ -27,7 +27,7 @@
     unhealthyThreshold: 3
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: first-route-dest
+  name: first-route-dest/backend/0
   outlierDetection:
     baseEjectionTime: 180s
     consecutive5xx: 5
@@ -48,7 +48,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: second-route-dest
+    serviceName: second-route-dest/backend/0
   healthChecks:
   - healthyThreshold: 3
     httpHealthCheck:
@@ -64,7 +64,7 @@
     unhealthyThreshold: 3
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: second-route-dest
+  name: second-route-dest/backend/0
   outlierDetection:
     baseEjectionTime: 180s
     consecutive5xx: 5
@@ -85,7 +85,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: third-route-dest
+    serviceName: third-route-dest/backend/0
   healthChecks:
   - healthyThreshold: 3
     interval: 5s
@@ -98,7 +98,7 @@
     unhealthyThreshold: 3
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: third-route-dest
+  name: third-route-dest/backend/0
   outlierDetection:
     baseEjectionTime: 160s
     consecutive5xx: 5
@@ -119,7 +119,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: fourth-route-dest
+    serviceName: fourth-route-dest/backend/0
   healthChecks:
   - healthyThreshold: 3
     interval: 5s
@@ -132,7 +132,7 @@
     unhealthyThreshold: 3
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: fourth-route-dest
+  name: fourth-route-dest/backend/0
   outlierDetection:
     baseEjectionTime: 180s
     consecutive5xx: 5
@@ -154,7 +154,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: fifth-route-dest
+    serviceName: fifth-route-dest/backend/0
   healthChecks:
   - grpcHealthCheck:
       serviceName: my-service
@@ -164,6 +164,6 @@
     unhealthyThreshold: 3
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: fifth-route-dest
+  name: fifth-route-dest/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS

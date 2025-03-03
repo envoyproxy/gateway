@@ -9,9 +9,12 @@
         path: foo
       name: first-route
       route:
-        cluster: first-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: first-route-dest/backend/0
       typedPerFilterConfig:
         envoy.filters.http.oauth2/securitypolicy/default/policy-for-first-route:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
@@ -20,9 +23,12 @@
         path: bar
       name: second-route
       route:
-        cluster: second-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: second-route-dest/backend/0
       typedPerFilterConfig:
         envoy.filters.http.oauth2/securitypolicy/default/policy-for-second-route:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig

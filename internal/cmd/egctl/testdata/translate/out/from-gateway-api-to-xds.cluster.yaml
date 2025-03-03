@@ -15,10 +15,10 @@ xds:
           edsConfig:
             ads: {}
             resourceApiVersion: V3
-          serviceName: httproute/default/backend/rule/0
+          serviceName: httproute/default/backend/rule/0/backend/0
         ignoreHealthOnHostRemoval: true
         lbPolicy: LEAST_REQUEST
-        name: httproute/default/backend/rule/0
+        name: httproute/default/backend/rule/0/backend/0
         perConnectionBufferLimitBytes: 32768
         type: EDS
     - cluster:
@@ -34,10 +34,10 @@ xds:
           edsConfig:
             ads: {}
             resourceApiVersion: V3
-          serviceName: grpcroute/default/backend/rule/0
+          serviceName: grpcroute/default/backend/rule/0/backend/0
         ignoreHealthOnHostRemoval: true
         lbPolicy: LEAST_REQUEST
-        name: grpcroute/default/backend/rule/0
+        name: grpcroute/default/backend/rule/0/backend/0
         perConnectionBufferLimitBytes: 32768
         type: EDS
         typedExtensionProtocolOptions:

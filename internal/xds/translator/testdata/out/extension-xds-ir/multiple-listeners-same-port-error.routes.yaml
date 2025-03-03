@@ -9,9 +9,12 @@
         prefix: /
       name: first-route
       route:
-        cluster: first-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: first-route-dest/backend/0
 - ignorePortInHostMatching: true
   name: second-listener
   virtualHosts:
@@ -23,6 +26,9 @@
         prefix: /
       name: second-route
       route:
-        cluster: second-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: second-route-dest/backend/0

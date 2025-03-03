@@ -13,62 +13,83 @@
         prefix: /
       name: first-route
       route:
-        cluster: first-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         idleTimeout: 3600s
         timeout: 5s
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: first-route-dest/backend/0
     - match:
         prefix: /
       name: second-route
       route:
-        cluster: second-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         idleTimeout: 4000s
         timeout: 4000s
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: second-route-dest/backend/0
     - match:
         prefix: /
       name: third-route
       route:
-        cluster: third-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         idleTimeout: 0s
         timeout: 0s
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: third-route-dest/backend/0
     - match:
         prefix: /
       name: forth-route
       route:
-        cluster: fourth-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         idleTimeout: 3600s
         timeout: 10s
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: fourth-route-dest/backend/0
     - match:
         prefix: /
       name: fifth-route
       route:
-        cluster: fifth-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         idleTimeout: 3600s
         timeout: 10s
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: fifth-route-dest/backend/0
     - match:
         prefix: /
       name: sixth-route
       route:
-        cluster: sixth-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         idleTimeout: 0s
         timeout: 0s
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: sixth-route-dest/backend/0
     - match:
         prefix: /
       name: seventh-route
       route:
-        cluster: seventh-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         idleTimeout: 0s
         timeout: 0s
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: seventh-route-dest/backend/0

@@ -9,9 +9,9 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: response-header-route-dest
+    serviceName: response-header-route-dest/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: response-header-route-dest
+  name: response-header-route-dest/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS

@@ -28,6 +28,9 @@
           key: mock-extension-was-here-extensionRef-apiversion
           value: foo.example.io/v1alpha1
       route:
-        cluster: first-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: first-route-dest/backend/0

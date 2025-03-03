@@ -37,6 +37,9 @@
       - some-header5
       - some-header6
       route:
-        cluster: request-header-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: request-header-route-dest/backend/0

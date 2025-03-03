@@ -439,6 +439,10 @@ xdsIR:
                   weight: 1
               path: ""
             name: securitypolicy/envoy-gateway/policy-for-gateway-1
+            traffic:
+              dns:
+                dnsRefreshRate: 30s
+                lookupFamily: IPv4Preferred
         traffic:
           dns:
             dnsRefreshRate: 5s
@@ -480,6 +484,10 @@ xdsIR:
                   weight: 1
               path: ""
             name: securitypolicy/envoy-gateway/policy-for-gateway-1
+            traffic:
+              dns:
+                dnsRefreshRate: 30s
+                lookupFamily: IPv4Preferred
         traffic:
           dns:
             dnsRefreshRate: 5s

@@ -9,6 +9,10 @@
         prefix: /
       name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
       route:
-        cluster: httproute/default/httproute-1/rule/0
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: httproute/default/httproute-1/rule/0/backend/0
+            weight: 1

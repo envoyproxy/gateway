@@ -20,6 +20,9 @@
           regex: /v1/.*
       name: regex-route
       route:
-        cluster: regex-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: regex-route-dest/backend/0

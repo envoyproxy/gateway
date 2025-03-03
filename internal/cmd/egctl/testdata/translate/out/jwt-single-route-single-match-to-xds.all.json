@@ -302,7 +302,7 @@
             {
               "endpointConfig": {
                 "@type": "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment",
-                "clusterName": "httproute/envoy-gateway-system/backend/rule/0",
+                "clusterName": "httproute/envoy-gateway-system/backend/rule/0/backend/0",
                 "endpoints": [
                   {
                     "lbEndpoints": [
@@ -318,10 +318,7 @@
                         "loadBalancingWeight": 1
                       }
                     ],
-                    "loadBalancingWeight": 1,
-                    "locality": {
-                      "region": "httproute/envoy-gateway-system/backend/rule/0/backend/0"
-                    }
+                    "loadBalancingWeight": 1
                   }
                 ]
               }
@@ -351,11 +348,11 @@
                     "ads": {},
                     "resourceApiVersion": "V3"
                   },
-                  "serviceName": "httproute/envoy-gateway-system/backend/rule/0"
+                  "serviceName": "httproute/envoy-gateway-system/backend/rule/0/backend/0"
                 },
                 "ignoreHealthOnHostRemoval": true,
                 "lbPolicy": "LEAST_REQUEST",
-                "name": "httproute/envoy-gateway-system/backend/rule/0",
+                "name": "httproute/envoy-gateway-system/backend/rule/0/backend/0",
                 "perConnectionBufferLimitBytes": 32768,
                 "type": "EDS"
               }
@@ -394,10 +391,7 @@
                           "loadBalancingWeight": 1
                         }
                       ],
-                      "loadBalancingWeight": 1,
-                      "locality": {
-                        "region": "raw_githubusercontent_com_443/backend/-1"
-                      }
+                      "loadBalancingWeight": 1
                     }
                   ]
                 },
@@ -671,12 +665,20 @@
                         },
                         "name": "httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com",
                         "route": {
-                          "cluster": "httproute/envoy-gateway-system/backend/rule/0",
+                          "clusterNotFoundResponseCode": "INTERNAL_SERVER_ERROR",
                           "upgradeConfigs": [
                             {
                               "upgradeType": "websocket"
                             }
-                          ]
+                          ],
+                          "weightedClusters": {
+                            "clusters": [
+                              {
+                                "name": "httproute/envoy-gateway-system/backend/rule/0/backend/0",
+                                "weight": 1
+                              }
+                            ]
+                          }
                         },
                         "typedPerFilterConfig": {
                           "envoy.filters.http.jwt_authn": {

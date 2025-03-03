@@ -10,9 +10,12 @@
           regex: /v1/.*
       name: header-based-session-persistence-route
       route:
-        cluster: regex-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: regex-route-dest/backend/0
       typedPerFilterConfig:
         envoy.filters.http.stateful_session/header-based-session-persistence-route:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
@@ -22,9 +25,12 @@
           regex: /v1/.*/hoge
       name: cookie-based-session-persistence-route-regex
       route:
-        cluster: regex-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: regex-route-dest/backend/0
       typedPerFilterConfig:
         envoy.filters.http.stateful_session/cookie-based-session-persistence-route-regex:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
@@ -33,9 +39,12 @@
         pathSeparatedPrefix: /v2
       name: cookie-based-session-persistence-route-prefix
       route:
-        cluster: regex-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: regex-route-dest/backend/0
       typedPerFilterConfig:
         envoy.filters.http.stateful_session/cookie-based-session-persistence-route-prefix:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
@@ -44,9 +53,12 @@
         path: /v3/user
       name: cookie-based-session-persistence-route-exact
       route:
-        cluster: regex-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: regex-route-dest/backend/0
       typedPerFilterConfig:
         envoy.filters.http.stateful_session/cookie-based-session-persistence-route-exact:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig

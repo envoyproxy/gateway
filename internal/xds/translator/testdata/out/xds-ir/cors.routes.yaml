@@ -9,9 +9,12 @@
         path: foo/bar
       name: first-route
       route:
-        cluster: first-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: first-route-dest/backend/0
       typedPerFilterConfig:
         envoy.filters.http.cors:
           '@type': type.googleapis.com/envoy.extensions.filters.http.cors.v3.CorsPolicy

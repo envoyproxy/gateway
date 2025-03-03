@@ -52,6 +52,15 @@ var BasicAuthTest = suite.ConformanceTest{
 						"Authorization": "Basic dXNlcjE6dGVzdDE=", // user1:test1
 					},
 				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Path: "/basic-auth-1",
+						Headers: map[string]string{
+							"Authorization": "Basic dXNlcjE6dGVzdDE=", // user1:test1
+							"forwardUsernameHeader": "x-username",
+						},
+					},
+				},
 				Response: http.Response{
 					StatusCode: 200,
 				},

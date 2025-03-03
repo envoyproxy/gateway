@@ -17,6 +17,9 @@
         prefix: /
       name: direct-route
       route:
-        cluster: direct-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: direct-route-dest/backend/0

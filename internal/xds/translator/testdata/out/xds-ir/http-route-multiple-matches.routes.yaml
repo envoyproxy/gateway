@@ -13,16 +13,22 @@
             exact: "yes"
       name: envoy-gateway/httproute-2/rule/0/match/0/example.com
       route:
-        cluster: first-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: first-route-dest/backend/0
     - match:
         pathSeparatedPrefix: /v1/example
       name: envoy-gateway/httproute-3/rule/0/match/0/example.com
       route:
-        cluster: second-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: second-route-dest/backend/0
   - domains:
     - example.net
     name: first-listener/example_net
@@ -35,16 +41,22 @@
         pathSeparatedPrefix: /v1/status
       name: envoy-gateway/httproute-4/rule/0/match/0/example.net
       route:
-        cluster: third-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: third-route-dest/backend/0
     - match:
         pathSeparatedPrefix: /v1/status
       name: envoy-gateway/httproute-5/rule/0/match/0/example.net
       route:
-        cluster: fourth-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: fourth-route-dest/backend/0
   - domains:
     - '*.com'
     name: first-listener/*_com
@@ -53,9 +65,12 @@
         pathSeparatedPrefix: /foo
       name: envoy-gateway/httproute-1/rule/0/match/0/*.com
       route:
-        cluster: fifth-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: fifth-route-dest/backend/0
   - domains:
     - '*.net'
     name: first-listener/*_net
@@ -64,9 +79,12 @@
         pathSeparatedPrefix: /foo
       name: envoy-gateway/httproute-1/rule/0/match/0/*.net
       route:
-        cluster: sixth-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: sixth-route-dest/backend/0
   - domains:
     - '*'
     name: first-listener/*
@@ -75,6 +93,9 @@
         prefix: /
       name: envoy-gateway/httproute-1/rule/0/match/0/*
       route:
-        cluster: seventh-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: seventh-route-dest/backend/0

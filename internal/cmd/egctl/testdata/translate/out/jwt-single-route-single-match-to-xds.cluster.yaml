@@ -15,10 +15,10 @@ xds:
           edsConfig:
             ads: {}
             resourceApiVersion: V3
-          serviceName: httproute/envoy-gateway-system/backend/rule/0
+          serviceName: httproute/envoy-gateway-system/backend/rule/0/backend/0
         ignoreHealthOnHostRemoval: true
         lbPolicy: LEAST_REQUEST
-        name: httproute/envoy-gateway-system/backend/rule/0
+        name: httproute/envoy-gateway-system/backend/rule/0/backend/0
         perConnectionBufferLimitBytes: 32768
         type: EDS
     - cluster:
@@ -43,8 +43,6 @@ xds:
                     portValue: 443
               loadBalancingWeight: 1
             loadBalancingWeight: 1
-            locality:
-              region: raw_githubusercontent_com_443/backend/-1
         name: raw_githubusercontent_com_443
         perConnectionBufferLimitBytes: 32768
         respectDnsTtl: true

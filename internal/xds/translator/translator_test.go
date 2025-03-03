@@ -8,6 +8,7 @@ package translator
 import (
 	"embed"
 	"flag"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -138,6 +139,7 @@ func TestTranslateXds(t *testing.T) {
 				FilterOrder: x.FilterOrder,
 			}
 			tCtx, err := tr.Translate(x)
+			fmt.Println("xxxxxxxxx ", inputFile)
 			if !strings.HasSuffix(inputFileName, "partial-invalid") && len(cfg.errMsg) == 0 {
 				t.Log(inputFileName)
 				require.NoError(t, err)

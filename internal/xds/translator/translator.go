@@ -585,7 +585,7 @@ func (t *Translator) addRouteToRouteConfig(
 			var err error
 			// If there are no filters in the destination settings we create
 			// a regular xds Cluster
-			if !hasFiltersInSettings(httpRoute.Destination.Settings) {
+			/* if !hasFiltersInSettings(httpRoute.Destination.Settings) {
 				err = processXdsCluster(
 					tCtx,
 					httpRoute.Destination.Name,
@@ -596,7 +596,7 @@ func (t *Translator) addRouteToRouteConfig(
 				if err != nil {
 					errs = errors.Join(errs, err)
 				}
-			} else {
+			} else { */
 				// If a filter does exist, we create a weighted cluster that's
 				// attached to the route, and create a xds Cluster per setting
 				for _, setting := range httpRoute.Destination.Settings {
@@ -611,7 +611,7 @@ func (t *Translator) addRouteToRouteConfig(
 						errs = errors.Join(errs, err)
 					}
 				}
-			}
+			// }
 
 			if err != nil {
 				errs = errors.Join(errs, err)
@@ -956,6 +956,10 @@ func processXdsCluster(tCtx *types.ResourceVersionTable,
 	route clusterArgs,
 	extras *ExtraArgs,
 ) error {
+	if name == "" {
+		name = "default"
+		fmt.Printf("XXXXXXXXno name for cluster, using default")
+	}
 	return addXdsCluster(tCtx, route.asClusterArgs(name, settings, extras))
 }
 

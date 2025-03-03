@@ -18,8 +18,6 @@
               portValue: 443
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality:
-        region: one_example_com_443/backend/-1
   name: one_example_com_443
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
@@ -53,8 +51,6 @@
               portValue: 80
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality:
-        region: two_example_com_80/backend/-1
   name: two_example_com_80
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true

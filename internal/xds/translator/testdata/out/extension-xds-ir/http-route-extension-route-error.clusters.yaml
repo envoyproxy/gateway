@@ -9,10 +9,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: extension-post-xdsroute-hook-error-dest
+    serviceName: extension-post-xdsroute-hook-error-dest/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: extension-post-xdsroute-hook-error-dest
+  name: extension-post-xdsroute-hook-error-dest/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - loadAssignment:

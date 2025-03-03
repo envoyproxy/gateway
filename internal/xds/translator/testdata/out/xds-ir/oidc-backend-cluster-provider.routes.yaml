@@ -9,9 +9,12 @@
         path: baz
       name: first-route
       route:
-        cluster: third-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: third-route-dest/backend/0
       typedPerFilterConfig:
         envoy.filters.http.oauth2/securitypolicy/envoy-gateway/policy-for-gateway:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig

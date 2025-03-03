@@ -724,7 +724,7 @@ xds:
       dynamicEndpointConfigs:
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-          clusterName: httproute/default/backend/rule/0
+          clusterName: httproute/default/backend/rule/0/backend/0
           endpoints:
           - lbEndpoints:
             - endpoint:
@@ -734,11 +734,9 @@ xds:
                     portValue: 8000
               loadBalancingWeight: 1
             loadBalancingWeight: 1
-            locality:
-              region: httproute/default/backend/rule/0/backend/0
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-          clusterName: grpcroute/default/backend/rule/0
+          clusterName: grpcroute/default/backend/rule/0/backend/0
           endpoints:
           - lbEndpoints:
             - endpoint:
@@ -748,8 +746,6 @@ xds:
                     portValue: 9000
               loadBalancingWeight: 1
             loadBalancingWeight: 1
-            locality:
-              region: grpcroute/default/backend/rule/0/backend/0
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
           clusterName: tcproute/default/backend/rule/-1
@@ -762,8 +758,6 @@ xds:
                     portValue: 3000
               loadBalancingWeight: 1
             loadBalancingWeight: 1
-            locality:
-              region: tcproute/default/backend/rule/-1/backend/0
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
           clusterName: tlsroute/default/backend/rule/-1
@@ -776,8 +770,6 @@ xds:
                     portValue: 3000
               loadBalancingWeight: 1
             loadBalancingWeight: 1
-            locality:
-              region: tlsroute/default/backend/rule/-1/backend/0
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
           clusterName: udproute/default/backend/rule/-1
@@ -790,8 +782,6 @@ xds:
                     portValue: 3000
               loadBalancingWeight: 1
             loadBalancingWeight: 1
-            locality:
-              region: udproute/default/backend/rule/-1/backend/0
     - '@type': type.googleapis.com/envoy.admin.v3.ClustersConfigDump
       dynamicActiveClusters:
       - cluster:
@@ -807,10 +797,10 @@ xds:
             edsConfig:
               ads: {}
               resourceApiVersion: V3
-            serviceName: httproute/default/backend/rule/0
+            serviceName: httproute/default/backend/rule/0/backend/0
           ignoreHealthOnHostRemoval: true
           lbPolicy: LEAST_REQUEST
-          name: httproute/default/backend/rule/0
+          name: httproute/default/backend/rule/0/backend/0
           perConnectionBufferLimitBytes: 32768
           type: EDS
       - cluster:
@@ -826,10 +816,10 @@ xds:
             edsConfig:
               ads: {}
               resourceApiVersion: V3
-            serviceName: grpcroute/default/backend/rule/0
+            serviceName: grpcroute/default/backend/rule/0/backend/0
           ignoreHealthOnHostRemoval: true
           lbPolicy: LEAST_REQUEST
-          name: grpcroute/default/backend/rule/0
+          name: grpcroute/default/backend/rule/0/backend/0
           perConnectionBufferLimitBytes: 32768
           type: EDS
           typedExtensionProtocolOptions:
@@ -1221,9 +1211,13 @@ xds:
                       namespace: default
               name: httproute/default/backend/rule/0/match/0/www_example_com
               route:
-                cluster: httproute/default/backend/rule/0
+                clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
                 upgradeConfigs:
                 - upgradeType: websocket
+                weightedClusters:
+                  clusters:
+                  - name: httproute/default/backend/rule/0/backend/0
+                    weight: 1
       - routeConfig:
           '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
           ignorePortInHostMatching: true
@@ -1252,4 +1246,8 @@ xds:
                       namespace: default
               name: grpcroute/default/backend/rule/0/match/0/www_grpc-example_com
               route:
-                cluster: grpcroute/default/backend/rule/0
+                clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
+                weightedClusters:
+                  clusters:
+                  - name: grpcroute/default/backend/rule/0/backend/0
+                    weight: 1

@@ -9,10 +9,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: httproute/default/httproute-1/rule/0
+    serviceName: httproute/default/httproute-1/rule/0/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: httproute/default/httproute-1/rule/0
+  name: httproute/default/httproute-1/rule/0/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -26,10 +26,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: httproute/default/httproute-2/rule/0
+    serviceName: httproute/default/httproute-2/rule/0/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: httproute/default/httproute-2/rule/0
+  name: httproute/default/httproute-2/rule/0/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -52,8 +52,6 @@
               portValue: 443
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality:
-        region: two_example_com_443/backend/-1
   name: two_example_com_443
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
@@ -87,8 +85,6 @@
               portValue: 443
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality:
-        region: one_example_com_443/backend/-1
   name: one_example_com_443
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true

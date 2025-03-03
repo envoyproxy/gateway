@@ -14,6 +14,10 @@
           key: alt-svc
           value: h3=":443"; ma=86400
       route:
-        cluster: httproute/default/httproute-1/rule/0
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: httproute/default/httproute-1/rule/0/backend/0
+            weight: 1

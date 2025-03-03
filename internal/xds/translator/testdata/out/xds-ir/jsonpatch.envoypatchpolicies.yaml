@@ -9,8 +9,8 @@
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: Patches have been successfully applied.
-        reason: Programmed
-        status: "True"
+        message: 'Unable to find xds resources: type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment/first-route-dest,type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment/first-route-dest,type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment/first-route-dest,type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment/first-route-dest'
+        reason: ResourceNotFound
+        status: "False"
         type: Programmed
       controllerName: ""

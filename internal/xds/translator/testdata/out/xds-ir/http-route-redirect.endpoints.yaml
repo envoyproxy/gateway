@@ -1,4 +1,4 @@
-- clusterName: redirect-route-dest
+- clusterName: redirect-route-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -8,5 +8,3 @@
             portValue: 50000
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: redirect-route-dest/backend/0

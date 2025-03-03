@@ -20,9 +20,12 @@
             exact: "yes"
       name: valid-route
       route:
-        cluster: valid-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: valid-route-dest/backend/0
     - match:
         headers:
         - name: user
@@ -38,6 +41,9 @@
             exact: "yes"
       name: invalid-route
       route:
-        cluster: invalid-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: invalid-route-dest/backend/0

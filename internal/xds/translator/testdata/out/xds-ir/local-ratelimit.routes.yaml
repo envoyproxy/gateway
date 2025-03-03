@@ -9,7 +9,7 @@
         path: foo/bar
       name: first-route-ratelimit-single-rule
       route:
-        cluster: first-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         rateLimits:
         - actions:
           - headerValueMatch:
@@ -30,6 +30,9 @@
                   exact: foo
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: first-route-dest/backend/0
       typedPerFilterConfig:
         envoy.filters.http.local_ratelimit:
           '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
@@ -59,7 +62,7 @@
         path: example
       name: second-route-ratelimit-multiple-rules
       route:
-        cluster: second-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         rateLimits:
         - actions:
           - headerValueMatch:
@@ -99,6 +102,9 @@
               v4PrefixMaskLen: 16
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: second-route-dest/backend/0
       typedPerFilterConfig:
         envoy.filters.http.local_ratelimit:
           '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
@@ -139,9 +145,12 @@
         path: test
       name: third-route-ratelimit-no-rule
       route:
-        cluster: third-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: third-route-dest/backend/0
       typedPerFilterConfig:
         envoy.filters.http.local_ratelimit:
           '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit

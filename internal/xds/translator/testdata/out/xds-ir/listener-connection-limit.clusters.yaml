@@ -9,10 +9,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: first-route-dest
+    serviceName: first-route-dest/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: first-route-dest
+  name: first-route-dest/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -26,10 +26,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: second-route-dest
+    serviceName: second-route-dest/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: second-route-dest
+  name: second-route-dest/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:

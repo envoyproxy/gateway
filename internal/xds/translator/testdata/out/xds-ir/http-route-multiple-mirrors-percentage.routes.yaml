@@ -9,7 +9,7 @@
         prefix: /
       name: mirror-route
       route:
-        cluster: route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         requestMirrorPolicies:
         - cluster: mirror-route-dest
           runtimeFraction:
@@ -23,3 +23,6 @@
               numerator: 440000
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: route-dest/backend/0

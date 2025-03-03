@@ -481,11 +481,11 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 		}
 
 		locality := &endpointv3.LocalityLbEndpoints{
-			Locality: &corev3.Locality{
+			/*Locality: &corev3.Locality{
 				Region: ds.Name,
-			},
+			},*/
 			LbEndpoints: endpoints,
-			Priority:    0,
+			// Priority:    0,
 		}
 
 		// Set locality weight
@@ -498,6 +498,10 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 		locality.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: weight}
 		locality.Priority = ptr.Deref(ds.Priority, 0)
 		localities = append(localities, locality)
+	}
+	if len(clusterName) == 0 {
+		fmt.Println("xxxxxxxx Cluster name is empty")
+		clusterName = "default"
 	}
 	return &endpointv3.ClusterLoadAssignment{ClusterName: clusterName, Endpoints: localities}
 }

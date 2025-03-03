@@ -9,9 +9,13 @@
         pathSeparatedPrefix: /foo
       name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
       route:
-        cluster: httproute/default/httproute-1/rule/0
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: httproute/default/httproute-1/rule/0/backend/0
+            weight: 1
       typedPerFilterConfig:
         envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-route-1/extproc/0:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
@@ -23,9 +27,13 @@
         pathSeparatedPrefix: /bar
       name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
       route:
-        cluster: httproute/default/httproute-2/rule/0
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: httproute/default/httproute-2/rule/0/backend/0
+            weight: 1
       typedPerFilterConfig:
         envoy.filters.http.ext_proc/envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/extproc/0:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig

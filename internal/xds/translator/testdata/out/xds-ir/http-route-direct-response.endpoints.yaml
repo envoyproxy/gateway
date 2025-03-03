@@ -1,4 +1,4 @@
-- clusterName: direct-route-dest
+- clusterName: direct-route-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -8,5 +8,3 @@
             portValue: 50000
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: direct-route-dest/backend/0

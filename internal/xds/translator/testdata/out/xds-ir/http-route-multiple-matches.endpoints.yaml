@@ -1,4 +1,4 @@
-- clusterName: first-route-dest
+- clusterName: first-route-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -8,9 +8,7 @@
             portValue: 8080
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: first-route-dest/backend/0
-- clusterName: second-route-dest
+- clusterName: second-route-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -20,9 +18,7 @@
             portValue: 8080
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: second-route-dest/backend/0
-- clusterName: third-route-dest
+- clusterName: third-route-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -32,9 +28,7 @@
             portValue: 8080
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: third-route-dest/backend/0
-- clusterName: fourth-route-dest
+- clusterName: fourth-route-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -44,9 +38,7 @@
             portValue: 8080
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: fourth-route-dest/backend/0
-- clusterName: fifth-route-dest
+- clusterName: fifth-route-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -56,9 +48,7 @@
             portValue: 8080
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: fifth-route-dest/backend/0
-- clusterName: sixth-route-dest
+- clusterName: sixth-route-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -68,9 +58,7 @@
             portValue: 8080
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: sixth-route-dest/backend/0
-- clusterName: seventh-route-dest
+- clusterName: seventh-route-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -80,5 +68,3 @@
             portValue: 8080
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: seventh-route-dest/backend/0

@@ -9,6 +9,9 @@
         prefix: /
       name: http-route
       route:
-        cluster: http-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: http-route-dest/backend/0

@@ -9,79 +9,106 @@
         prefix: /
       name: first-route
       route:
-        cluster: first-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: first-route-dest/backend/0
     - match:
         prefix: /
       name: second-route
       route:
-        cluster: second-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: second-route-dest/backend/0
     - match:
         prefix: /
       name: third-route
       route:
-        cluster: third-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: third-route-dest/backend/0
     - match:
         prefix: /
       name: fourth-route
       route:
-        cluster: fourth-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         hashPolicy:
         - connectionProperties:
             sourceIp: true
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: fourth-route-dest/backend/0
     - match:
         prefix: /
       name: fifth-route
       route:
-        cluster: fifth-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: fifth-route-dest/backend/0
     - match:
         prefix: /
       name: sixth-route
       route:
-        cluster: sixth-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: sixth-route-dest/backend/0
     - match:
         prefix: /
       name: seventh-route
       route:
-        cluster: seventh-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         hashPolicy:
         - header:
             headerName: name
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: seventh-route-dest/backend/0
     - match:
         prefix: /
       name: eighth-route
       route:
-        cluster: eighth-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: eighth-route-dest/backend/0
     - match:
         prefix: /
       name: ninth-route
       route:
-        cluster: ninth-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         hashPolicy:
         - cookie:
             name: test
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: ninth-route-dest/backend/0
     - match:
         prefix: /
       name: tenth-route
       route:
-        cluster: tenth-route-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         hashPolicy:
         - cookie:
             attributes:
@@ -90,3 +117,6 @@
             name: test
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: tenth-route-dest/backend/0

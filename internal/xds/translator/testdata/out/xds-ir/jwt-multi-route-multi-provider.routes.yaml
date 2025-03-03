@@ -9,9 +9,12 @@
         path: foo/bar
       name: first-route-www.test.com
       route:
-        cluster: first-route-www.test.com-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: first-route-www.test.com-dest/backend/0
       typedPerFilterConfig:
         envoy.filters.http.jwt_authn:
           '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
@@ -20,9 +23,12 @@
         path: foo/baz
       name: second-route-www.test.com
       route:
-        cluster: second-route-www.test.com-dest
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: second-route-www.test.com-dest/backend/0
       typedPerFilterConfig:
         envoy.filters.http.jwt_authn:
           '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig

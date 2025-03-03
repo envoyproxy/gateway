@@ -9,10 +9,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: httproute/default/httproute-1/rule/0
+    serviceName: httproute/default/httproute-1/rule/0/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: httproute/default/httproute-1/rule/0
+  name: httproute/default/httproute-1/rule/0/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -26,10 +26,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: httproute/default/httproute-1/rule/1
+    serviceName: httproute/default/httproute-1/rule/1/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: httproute/default/httproute-1/rule/1
+  name: httproute/default/httproute-1/rule/1/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -43,10 +43,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: httproute/default/httproute-2/rule/0
+    serviceName: httproute/default/httproute-2/rule/0/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: httproute/default/httproute-2/rule/0
+  name: httproute/default/httproute-2/rule/0/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -69,8 +69,6 @@
               portValue: 9000
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality:
-        region: securitypolicy/default/policy-for-http-route-1/default/grpc-backend/backend/0
   name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
@@ -102,8 +100,6 @@
               portValue: 80
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality:
-        region: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend/backend/0
   name: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
