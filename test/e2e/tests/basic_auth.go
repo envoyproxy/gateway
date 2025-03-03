@@ -236,7 +236,7 @@ var BasicAuthTest = suite.ConformanceTest{
 						"Authorization": "Basic dXNlcjQ6dGVzdDQ=", // user4:test4
 					},
 				},
-		        // Verify that the http header X-Authenticated-User added before sending it to the backend
+				// Verify that the http header X-Authenticated-User added before sending it to the backend
 				ExpectedRequest: &http.ExpectedRequest{
 					Request: http.Request{
 						Path: "/basic-auth-3",
@@ -246,7 +246,7 @@ var BasicAuthTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200
+					StatusCode: 200,
 				},
 				Namespace: ns,
 			}
