@@ -30,7 +30,8 @@ updates:
     schedule:
       interval: weekly
     ignore:
-      - dependency-name: "github.com/google/cel-go" # skip to update cel-go, because it related to k8s.io/apiserver
+      # skip to update cel-go, because it related to k8s.io/apiserver
+      - dependency-name: "github.com/google/cel-go"
     groups:
       github.com:
         patterns:
