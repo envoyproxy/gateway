@@ -45,5 +45,5 @@ adopters:
     description: ""
   - name: "Kubermatic"
     logo: "/logos/kubermatic.svg"
-    url: "https://www.kubermatic.io/"
+    url: "https://www.kubermatic.com/"
     description: "Kubermatic is using Envoy Gateway in KubeLB to provide L7 Load Balancing for multiple Kubernetes clusters using GatewayAPI."
