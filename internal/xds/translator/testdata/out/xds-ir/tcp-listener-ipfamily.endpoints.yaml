@@ -1,4 +1,4 @@
-- clusterName: tcp-route-dual-dest
+- clusterName: tcp-route-dual-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:

@@ -1,4 +1,4 @@
-- clusterName: route-dest
+- clusterName: route-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -10,7 +10,7 @@
     loadBalancingWeight: 1
     locality:
       region: route-dest/backend/0
-- clusterName: mirror-route-dest
+- clusterName: mirror-route-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:

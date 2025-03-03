@@ -9,10 +9,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: httproute/default/httproute-1/rule/0
+    serviceName: httproute/default/httproute-1/rule/0/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: httproute/default/httproute-1/rule/0
+  name: httproute/default/httproute-1/rule/0/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -26,10 +26,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: httproute/default/httproute-1/rule/1
+    serviceName: httproute/default/httproute-1/rule/1/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: httproute/default/httproute-1/rule/1
+  name: httproute/default/httproute-1/rule/1/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -43,10 +43,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: httproute/default/httproute-2/rule/0
+    serviceName: httproute/default/httproute-2/rule/0/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: httproute/default/httproute-2/rule/0
+  name: httproute/default/httproute-2/rule/0/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -59,7 +59,7 @@
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
-    clusterName: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
+    clusterName: securitypolicy/default/policy-for-http-route-1/default/grpc-backend/backend/0
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -71,10 +71,34 @@
       loadBalancingWeight: 1
       locality:
         region: securitypolicy/default/policy-for-http-route-1/default/grpc-backend/backend/0
-  name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
+  name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend/backend/0
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   type: STRICT_DNS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      explicitHttpConfig:
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: securitypolicy/default/policy-for-http-route-1/default/grpc-backend/backend/0
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend/backend/0
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
   typedExtensionProtocolOptions:
     envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
       '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
@@ -95,7 +119,7 @@
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
-    clusterName: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
+    clusterName: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend/backend/0
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -107,7 +131,7 @@
       loadBalancingWeight: 1
       locality:
         region: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend/backend/0
-  name: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
+  name: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend/backend/0
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   type: STRICT_DNS

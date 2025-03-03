@@ -9,15 +9,15 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: httproute/envoy-gateway/httproute-btls/rule/0
+    serviceName: httproute/envoy-gateway/httproute-btls/rule/0/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: httproute/envoy-gateway/httproute-btls/rule/0
+  name: httproute/envoy-gateway/httproute-btls/rule/0/backend/0
   perConnectionBufferLimitBytes: 32768
   transportSocketMatches:
   - match:
-      name: httproute/envoy-gateway/httproute-btls/rule/0/tls/0
-    name: httproute/envoy-gateway/httproute-btls/rule/0/tls/0
+      name: httproute/envoy-gateway/httproute-btls/rule/0/backend/0/tls
+    name: httproute/envoy-gateway/httproute-btls/rule/0/backend/0/tls
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:

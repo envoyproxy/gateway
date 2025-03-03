@@ -9,10 +9,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: first-route-dest
+    serviceName: first-route-dest/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: first-route-dest
+  name: first-route-dest/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -26,10 +26,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: second-route-dest
+    serviceName: second-route-dest/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: second-route-dest
+  name: second-route-dest/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -42,7 +42,7 @@
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
-    clusterName: oauth_foo_com_443
+    clusterName: oauth_foo_com_443/backend/-1
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -54,7 +54,7 @@
       loadBalancingWeight: 1
       locality:
         region: oauth_foo_com_443/backend/-1
-  name: oauth_foo_com_443
+  name: oauth_foo_com_443/backend/-1
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   transportSocket:
@@ -77,7 +77,7 @@
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
-    clusterName: oauth_bar_com_443
+    clusterName: oauth_bar_com_443/backend/-1
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -89,7 +89,7 @@
       loadBalancingWeight: 1
       locality:
         region: oauth_bar_com_443/backend/-1
-  name: oauth_bar_com_443
+  name: oauth_bar_com_443/backend/-1
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   transportSocket:

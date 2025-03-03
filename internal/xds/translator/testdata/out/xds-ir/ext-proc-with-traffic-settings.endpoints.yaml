@@ -1,4 +1,4 @@
-- clusterName: httproute/default/httproute-1/rule/0
+- clusterName: httproute/default/httproute-1/rule/0/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -10,7 +10,7 @@
     loadBalancingWeight: 1
     locality:
       region: httproute/default/httproute-1/rule/0/backend/0
-- clusterName: httproute/default/httproute-2/rule/0
+- clusterName: httproute/default/httproute-2/rule/0/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -22,11 +22,13 @@
     loadBalancingWeight: 1
     locality:
       region: httproute/default/httproute-2/rule/0/backend/0
-- clusterName: envoyextensionpolicy/default/policy-for-http-route/0
+- clusterName: envoyextensionpolicy/default/policy-for-http-route/0/backend/0
   endpoints:
   - loadBalancingWeight: 1
     locality:
       region: envoyextensionpolicy/default/policy-for-http-route/0/backend/0
+- clusterName: envoyextensionpolicy/default/policy-for-http-route/0/backend/1
+  endpoints:
   - lbEndpoints:
     - endpoint:
         address:
@@ -37,6 +39,8 @@
     loadBalancingWeight: 1
     locality:
       region: envoyextensionpolicy/default/policy-for-http-route/0/backend/1
+- clusterName: envoyextensionpolicy/default/policy-for-http-route/0/backend/2
+  endpoints:
   - lbEndpoints:
     - endpoint:
         address:
@@ -47,6 +51,8 @@
     loadBalancingWeight: 1
     locality:
       region: envoyextensionpolicy/default/policy-for-http-route/0/backend/2
+- clusterName: envoyextensionpolicy/default/policy-for-http-route/0/backend/3
+  endpoints:
   - lbEndpoints:
     - endpoint:
         address:
@@ -57,7 +63,7 @@
       metadata:
         filterMetadata:
           envoy.transport_socket_match:
-            name: envoyextensionpolicy/default/policy-for-http-route/0/tls/3
+            name: envoyextensionpolicy/default/policy-for-http-route/0/backend/3/tls
     loadBalancingWeight: 1
     locality:
       region: envoyextensionpolicy/default/policy-for-http-route/0/backend/3

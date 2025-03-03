@@ -1,4 +1,4 @@
-- clusterName: tls-passthrough-foo-dest
+- clusterName: tls-passthrough-foo-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:

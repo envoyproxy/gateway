@@ -1,4 +1,4 @@
-- clusterName: rewrite-route-dest
+- clusterName: rewrite-route-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:

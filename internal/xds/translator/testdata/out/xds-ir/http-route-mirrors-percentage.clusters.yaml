@@ -9,10 +9,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: route-dest
+    serviceName: route-dest/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: route-dest
+  name: route-dest/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -26,9 +26,9 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: mirror-route-dest
+    serviceName: mirror-route-dest/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: mirror-route-dest
+  name: mirror-route-dest/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS

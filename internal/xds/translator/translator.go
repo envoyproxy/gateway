@@ -1000,8 +1000,26 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 		return nil
 	}
 
-	xdsCluster := buildXdsCluster(args)
-	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings)
+	xdsClusters := buildXdsClusters(args)
+	for i, xdsCluster := range xdsClusters {
+		xdsEndpoints := &endpointv3.ClusterLoadAssignment{ClusterName: xdsCluster.Name, Endpoints: []*endpointv3.LocalityLbEndpoints{{Priority: 0}}}
+		if len(args.settings) > i {
+			xdsEndpoints = buildXdsClusterLoadAssignment(args.settings[i])
+		}
+
+		// Use EDS for static endpoints
+		if args.endpointType == EndpointTypeStatic {
+			if err := tCtx.AddXdsResource(resourcev3.EndpointType, xdsEndpoints); err != nil {
+				return err
+			}
+		} else {
+			xdsCluster.LoadAssignment = xdsEndpoints
+		}
+		if err := tCtx.AddXdsResource(resourcev3.ClusterType, xdsCluster); err != nil {
+			return err
+		}
+	}
+
 	for _, ds := range args.settings {
 		if ds.TLS != nil {
 			// Create an SDS secret for the CA certificate - either with inline bytes or with a filesystem ref
@@ -1010,17 +1028,6 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 				return err
 			}
 		}
-	}
-	// Use EDS for static endpoints
-	if args.endpointType == EndpointTypeStatic {
-		if err := tCtx.AddXdsResource(resourcev3.EndpointType, xdsEndpoints); err != nil {
-			return err
-		}
-	} else {
-		xdsCluster.LoadAssignment = xdsEndpoints
-	}
-	if err := tCtx.AddXdsResource(resourcev3.ClusterType, xdsCluster); err != nil {
-		return err
 	}
 	return nil
 }

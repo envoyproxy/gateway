@@ -9,10 +9,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: httproute/default/httproute-1/rule/0
+    serviceName: httproute/default/httproute-1/rule/0/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: httproute/default/httproute-1/rule/0
+  name: httproute/default/httproute-1/rule/0/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -26,10 +26,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: httproute/default/httproute-2/rule/0
+    serviceName: httproute/default/httproute-2/rule/0/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: httproute/default/httproute-2/rule/0
+  name: httproute/default/httproute-2/rule/0/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -43,15 +43,15 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: envoyextensionpolicy/default/policy-for-http-route/0
+    serviceName: envoyextensionpolicy/default/policy-for-http-route/0/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: envoyextensionpolicy/default/policy-for-http-route/0
+  name: envoyextensionpolicy/default/policy-for-http-route/0/backend/0
   perConnectionBufferLimitBytes: 32768
   transportSocketMatches:
   - match:
-      name: envoyextensionpolicy/default/policy-for-http-route/0/tls/0
-    name: envoyextensionpolicy/default/policy-for-http-route/0/tls/0
+      name: envoyextensionpolicy/default/policy-for-http-route/0/backend/0/tls
+    name: envoyextensionpolicy/default/policy-for-http-route/0/backend/0/tls
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:
@@ -69,9 +69,82 @@
                 ads: {}
                 resourceApiVersion: V3
         sni: grpc-backend
+  type: EDS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      explicitHttpConfig:
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: envoyextensionpolicy/default/policy-for-http-route/0/backend/1
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  name: envoyextensionpolicy/default/policy-for-http-route/0/backend/1
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      explicitHttpConfig:
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: envoyextensionpolicy/default/policy-for-http-route/0/backend/2
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  name: envoyextensionpolicy/default/policy-for-http-route/0/backend/2
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      explicitHttpConfig:
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: envoyextensionpolicy/default/policy-for-http-route/0/backend/3
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  name: envoyextensionpolicy/default/policy-for-http-route/0/backend/3
+  perConnectionBufferLimitBytes: 32768
+  transportSocketMatches:
   - match:
-      name: envoyextensionpolicy/default/policy-for-http-route/0/tls/3
-    name: envoyextensionpolicy/default/policy-for-http-route/0/tls/3
+      name: envoyextensionpolicy/default/policy-for-http-route/0/backend/3/tls
+    name: envoyextensionpolicy/default/policy-for-http-route/0/backend/3/tls
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:

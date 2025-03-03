@@ -9,10 +9,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: tcp-route-simple-dest
+    serviceName: tcp-route-simple-dest/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: tcp-route-simple-dest
+  name: tcp-route-simple-dest/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -26,10 +26,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: tcp-route-simple-1-dest
+    serviceName: tcp-route-simple-1-dest/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: tcp-route-simple-1-dest
+  name: tcp-route-simple-1-dest/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -43,10 +43,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: tcp-route-simple-2-dest
+    serviceName: tcp-route-simple-2-dest/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: tcp-route-simple-2-dest
+  name: tcp-route-simple-2-dest/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -60,10 +60,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: tcp-route-simple-3-dest
+    serviceName: tcp-route-simple-3-dest/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: tcp-route-simple-3-dest
+  name: tcp-route-simple-3-dest/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -77,9 +77,9 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: tcp-route-simple-4-dest
+    serviceName: tcp-route-simple-4-dest/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: tcp-route-simple-4-dest
+  name: tcp-route-simple-4-dest/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS

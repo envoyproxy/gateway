@@ -223,8 +223,8 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcherv3.StringMatcher {
 }
 
 func buildXdsRouteAction(backendWeights *ir.BackendWeights, settings []*ir.DestinationSetting) *routev3.RouteAction {
-	// only use weighted cluster when there are invalid weights
-	if hasFiltersInSettings(settings) || backendWeights.Invalid != 0 {
+	// use weighted cluster when there are multiple backendRefs or invalid weights
+	if hasFiltersInSettings(settings) || backendWeights.Invalid != 0 || len(settings) > 1 {
 		return buildXdsWeightedRouteAction(backendWeights, settings)
 	}
 

@@ -1,4 +1,4 @@
-- clusterName: http-route-dest
+- clusterName: http-route-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -10,7 +10,7 @@
     loadBalancingWeight: 1
     locality:
       region: http-route-dest/backend/0
-- clusterName: tcp-route-dest
+- clusterName: tcp-route-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -22,7 +22,7 @@
     loadBalancingWeight: 1
     locality:
       region: tcp-route-dest/backend/0
-- clusterName: udp-route-dest
+- clusterName: udp-route-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:

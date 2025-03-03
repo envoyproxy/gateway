@@ -1,4 +1,4 @@
-- clusterName: extension-post-xdsroute-hook-error-dest
+- clusterName: extension-post-xdsroute-hook-error-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:

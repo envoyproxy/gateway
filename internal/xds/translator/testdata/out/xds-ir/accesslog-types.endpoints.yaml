@@ -1,4 +1,4 @@
-- clusterName: direct-route-dest
+- clusterName: direct-route-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -10,7 +10,7 @@
     loadBalancingWeight: 1
     locality:
       region: direct-route-dest/backend/0
-- clusterName: accesslog_als_0_1
+- clusterName: accesslog_als_0_1/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -22,7 +22,7 @@
     loadBalancingWeight: 1
     locality:
       region: accesslog_als_0_1/backend/0
-- clusterName: accesslog_als_0_2
+- clusterName: accesslog_als_0_2/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -34,7 +34,7 @@
     loadBalancingWeight: 1
     locality:
       region: accesslog_als_0_2/backend/0
-- clusterName: accesslog_als_1_1
+- clusterName: accesslog_als_1_1/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -46,7 +46,7 @@
     loadBalancingWeight: 1
     locality:
       region: accesslog_als_1_1/backend/0
-- clusterName: accesslog_als_1_2
+- clusterName: accesslog_als_1_2/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -58,7 +58,7 @@
     loadBalancingWeight: 1
     locality:
       region: accesslog_als_1_2/backend/0
-- clusterName: accesslog_als_2_1
+- clusterName: accesslog_als_2_1/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -70,7 +70,7 @@
     loadBalancingWeight: 1
     locality:
       region: accesslog_als_2_1/backend/0
-- clusterName: accesslog_als_2_2
+- clusterName: accesslog_als_2_2/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:

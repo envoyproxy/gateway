@@ -9,10 +9,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: first-route-www.test.com-dest
+    serviceName: first-route-www.test.com-dest/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: first-route-www.test.com-dest
+  name: first-route-www.test.com-dest/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -26,10 +26,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: second-route-www.test.com-dest
+    serviceName: second-route-www.test.com-dest/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: second-route-www.test.com-dest
+  name: second-route-www.test.com-dest/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -42,7 +42,7 @@
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
-    clusterName: localhost_80
+    clusterName: localhost_80/backend/-1
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -54,7 +54,7 @@
       loadBalancingWeight: 1
       locality:
         region: localhost_80/backend/-1
-  name: localhost_80
+  name: localhost_80/backend/-1
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   type: STRICT_DNS
@@ -69,10 +69,62 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: "192_168_1_250_8080"
+    serviceName: 192_168_1_250_8080/backend/-1
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: "192_168_1_250_8080"
+  name: 192_168_1_250_8080/backend/-1
+  perConnectionBufferLimitBytes: 32768
+  transportSocket:
+    name: envoy.transport_sockets.tls
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+      commonTlsContext:
+        validationContext:
+          trustedCa:
+            filename: /etc/ssl/certs/ca-certificates.crt
+      sni: 192.168.1.250
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  dnsRefreshRate: 30s
+  lbPolicy: LEAST_REQUEST
+  loadAssignment:
+    clusterName: localhost_80/backend/-1
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: localhost
+              portValue: 80
+        loadBalancingWeight: 1
+      loadBalancingWeight: 1
+      locality:
+        region: localhost_80/backend/-1
+  name: localhost_80/backend/-1
+  perConnectionBufferLimitBytes: 32768
+  respectDnsTtl: true
+  type: STRICT_DNS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: 192_168_1_250_8080/backend/-1
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  name: 192_168_1_250_8080/backend/-1
   perConnectionBufferLimitBytes: 32768
   transportSocket:
     name: envoy.transport_sockets.tls

@@ -1,4 +1,4 @@
-- clusterName: first-route-dest
+- clusterName: first-route-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -10,7 +10,7 @@
     loadBalancingWeight: 1
     locality:
       region: first-route-dest/backend/0
-- clusterName: second-route-dest
+- clusterName: second-route-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -22,7 +22,7 @@
     loadBalancingWeight: 1
     locality:
       region: second-route-dest/backend/0
-- clusterName: third-route-dest
+- clusterName: third-route-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:

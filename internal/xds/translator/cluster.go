@@ -83,7 +83,46 @@ func buildEndpointType(settings []*ir.DestinationSetting) EndpointType {
 	return EndpointTypeStatic
 }
 
-func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
+func buildXdsClusters(args *xdsClusterArgs) []*clusterv3.Cluster {
+	// If no settings, build a single cluster using args.name
+	// This is necessary for bootstrap static clusters
+	if len(args.settings) == 0 {
+		return []*clusterv3.Cluster{
+			buildXdsCluster(args.name, args),
+		}
+	}
+
+	// Otherwise build a cluster for each DestinationSetting
+	clusters := make([]*clusterv3.Cluster, len(args.settings))
+	for i, ds := range args.settings {
+		cluster := buildXdsCluster(ds.Name, args)
+		if ds.TLS != nil {
+			socket, err := buildXdsUpstreamTLSSocketWthCert(ds.TLS)
+			if err != nil {
+				// TODO: Log something here
+				return nil
+			}
+			if args.proxyProtocol != nil {
+				socket = buildProxyProtocolSocket(args.proxyProtocol, socket)
+			}
+			matchName := fmt.Sprintf("%s/tls", ds.Name)
+			cluster.TransportSocketMatches = append(cluster.TransportSocketMatches, &clusterv3.Cluster_TransportSocketMatch{
+				Name: matchName,
+				Match: &structpb.Struct{
+					Fields: map[string]*structpb.Value{
+						"name": structpb.NewStringValue(matchName),
+					},
+				},
+				TransportSocket: socket,
+			})
+		}
+		clusters[i] = cluster
+	}
+
+	return clusters
+}
+
+func buildXdsCluster(clusterName string, args *xdsClusterArgs) *clusterv3.Cluster {
 	dnsLookupFamily := clusterv3.Cluster_V4_PREFERRED
 	customDNSPolicy := args.dns != nil && args.dns.LookupFamily != nil
 	// apply DNS lookup family if custom DNS traffic policy is set
@@ -116,7 +155,7 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 	}
 
 	cluster := &clusterv3.Cluster{
-		Name:            args.name,
+		Name:            clusterName,
 		DnsLookupFamily: dnsLookupFamily,
 		CommonLbConfig: &clusterv3.Cluster_CommonLbConfig{
 			LocalityConfigSpecifier: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig_{
@@ -157,33 +196,10 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		cluster.TransportSocket = args.tSocket
 	}
 
-	for i, ds := range args.settings {
-		if ds.TLS != nil {
-			socket, err := buildXdsUpstreamTLSSocketWthCert(ds.TLS)
-			if err != nil {
-				// TODO: Log something here
-				return nil
-			}
-			if args.proxyProtocol != nil {
-				socket = buildProxyProtocolSocket(args.proxyProtocol, socket)
-			}
-			matchName := fmt.Sprintf("%s/tls/%d", args.name, i)
-			cluster.TransportSocketMatches = append(cluster.TransportSocketMatches, &clusterv3.Cluster_TransportSocketMatch{
-				Name: matchName,
-				Match: &structpb.Struct{
-					Fields: map[string]*structpb.Value{
-						"name": structpb.NewStringValue(matchName),
-					},
-				},
-				TransportSocket: socket,
-			})
-		}
-	}
-
 	if args.endpointType == EndpointTypeStatic {
 		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_EDS}
 		cluster.EdsClusterConfig = &clusterv3.Cluster_EdsClusterConfig{
-			ServiceName: args.name,
+			ServiceName: clusterName,
 			EdsConfig: &corev3.ConfigSource{
 				ResourceApiVersion: resource.DefaultAPIVersion,
 				ConfigSourceSpecifier: &corev3.ConfigSource_Ads{
@@ -442,64 +458,55 @@ func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3
 	return ecb
 }
 
-func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.DestinationSetting) *endpointv3.ClusterLoadAssignment {
-	localities := make([]*endpointv3.LocalityLbEndpoints, 0, len(destSettings))
-	for i, ds := range destSettings {
+func buildXdsClusterLoadAssignment(destSetting *ir.DestinationSetting) *endpointv3.ClusterLoadAssignment {
+	localities := []*endpointv3.LocalityLbEndpoints{}
 
-		endpoints := make([]*endpointv3.LbEndpoint, 0, len(ds.Endpoints))
+	endpoints := make([]*endpointv3.LbEndpoint, 0, len(destSetting.Endpoints))
 
-		var metadata *corev3.Metadata
-		if ds.TLS != nil {
-			metadata = &corev3.Metadata{
-				FilterMetadata: map[string]*structpb.Struct{
-					"envoy.transport_socket_match": {
-						Fields: map[string]*structpb.Value{
-							"name": structpb.NewStringValue(fmt.Sprintf("%s/tls/%d", clusterName, i)),
-						},
+	var metadata *corev3.Metadata
+	if destSetting.TLS != nil {
+		metadata = &corev3.Metadata{
+			FilterMetadata: map[string]*structpb.Struct{
+				"envoy.transport_socket_match": {
+					Fields: map[string]*structpb.Value{
+						"name": structpb.NewStringValue(fmt.Sprintf("%s/tls", destSetting.Name)),
 					},
 				},
-			}
-		}
-
-		for _, irEp := range ds.Endpoints {
-			healthStatus := corev3.HealthStatus_UNKNOWN
-			if irEp.Draining {
-				healthStatus = corev3.HealthStatus_DRAINING
-			}
-			lbEndpoint := &endpointv3.LbEndpoint{
-				Metadata: metadata,
-				HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
-					Endpoint: &endpointv3.Endpoint{
-						Address: buildAddress(irEp),
-					},
-				},
-				HealthStatus: healthStatus,
-			}
-			// Set default weight of 1 for all endpoints.
-			lbEndpoint.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: 1}
-			endpoints = append(endpoints, lbEndpoint)
-		}
-
-		locality := &endpointv3.LocalityLbEndpoints{
-			Locality: &corev3.Locality{
-				Region: ds.Name,
 			},
-			LbEndpoints: endpoints,
-			Priority:    0,
 		}
-
-		// Set locality weight
-		var weight uint32
-		if ds.Weight != nil {
-			weight = *ds.Weight
-		} else {
-			weight = 1
-		}
-		locality.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: weight}
-		locality.Priority = ptr.Deref(ds.Priority, 0)
-		localities = append(localities, locality)
 	}
-	return &endpointv3.ClusterLoadAssignment{ClusterName: clusterName, Endpoints: localities}
+
+	for _, irEp := range destSetting.Endpoints {
+		healthStatus := corev3.HealthStatus_UNKNOWN
+		if irEp.Draining {
+			healthStatus = corev3.HealthStatus_DRAINING
+		}
+		lbEndpoint := &endpointv3.LbEndpoint{
+			Metadata: metadata,
+			HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
+				Endpoint: &endpointv3.Endpoint{
+					Address: buildAddress(irEp),
+				},
+			},
+			HealthStatus: healthStatus,
+		}
+		// Set default weight of 1 for all endpoints.
+		lbEndpoint.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: 1}
+		endpoints = append(endpoints, lbEndpoint)
+	}
+
+	locality := &endpointv3.LocalityLbEndpoints{
+		Locality: &corev3.Locality{
+			Region: destSetting.Name,
+		},
+		LbEndpoints:         endpoints,
+		LoadBalancingWeight: wrapperspb.UInt32(1),
+		Priority:            ptr.Deref(destSetting.Priority, 0),
+	}
+
+	localities = append(localities, locality)
+
+	return &endpointv3.ClusterLoadAssignment{ClusterName: destSetting.Name, Endpoints: localities}
 }
 
 func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) map[string]*anypb.Any {

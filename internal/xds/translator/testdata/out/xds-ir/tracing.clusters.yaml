@@ -9,10 +9,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: direct-route-dest
+    serviceName: direct-route-dest/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: direct-route-dest
+  name: direct-route-dest/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -26,7 +26,7 @@
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
-    clusterName: tracing-0
+    clusterName: tracing-0/backend/0
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -38,7 +38,7 @@
       loadBalancingWeight: 1
       locality:
         region: tracing-0/backend/0
-  name: tracing-0
+  name: tracing-0/backend/0
   outlierDetection:
     baseEjectionTime: 30s
     consecutive5xx: 5

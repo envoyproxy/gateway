@@ -9,9 +9,15 @@
         path: /exact
       name: httproute/envoy-gateway/httproute-btls/rule/0/match/0/*
       route:
-        cluster: httproute/envoy-gateway/httproute-btls/rule/0
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: httproute/envoy-gateway/httproute-btls/rule/0/backend/0
+            weight: 1
+          - name: httproute/envoy-gateway/httproute-btls/rule/0/backend/1
+            weight: 1
 - ignorePortInHostMatching: true
   name: envoy-gateway/gateway-btls-2/http
   virtualHosts:
@@ -23,6 +29,12 @@
         path: /exact
       name: httproute/envoy-gateway/httproute-btls-2/rule/0/match/0/*
       route:
-        cluster: httproute/envoy-gateway/httproute-btls-2/rule/0
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: httproute/envoy-gateway/httproute-btls-2/rule/0/backend/0
+            weight: 1
+          - name: httproute/envoy-gateway/httproute-btls-2/rule/0/backend/1
+            weight: 1

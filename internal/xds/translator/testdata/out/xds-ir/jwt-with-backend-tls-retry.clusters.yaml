@@ -9,10 +9,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: httproute/default/httproute-1/rule/0
+    serviceName: httproute/default/httproute-1/rule/0/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: httproute/default/httproute-1/rule/0
+  name: httproute/default/httproute-1/rule/0/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -25,7 +25,7 @@
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
-    clusterName: securitypolicy/default/policy-for-route/jwt/0
+    clusterName: securitypolicy/default/policy-for-route/jwt/0/backend/0
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -37,17 +37,17 @@
         metadata:
           filterMetadata:
             envoy.transport_socket_match:
-              name: securitypolicy/default/policy-for-route/jwt/0/tls/0
+              name: securitypolicy/default/policy-for-route/jwt/0/backend/0/tls
       loadBalancingWeight: 1
       locality:
         region: securitypolicy/default/policy-for-route/jwt/0/backend/0
-  name: securitypolicy/default/policy-for-route/jwt/0
+  name: securitypolicy/default/policy-for-route/jwt/0/backend/0
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   transportSocketMatches:
   - match:
-      name: securitypolicy/default/policy-for-route/jwt/0/tls/0
-    name: securitypolicy/default/policy-for-route/jwt/0/tls/0
+      name: securitypolicy/default/policy-for-route/jwt/0/backend/0/tls
+    name: securitypolicy/default/policy-for-route/jwt/0/backend/0/tls
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:

@@ -37,22 +37,23 @@ func TestBuildXdsCluster(t *testing.T) {
 			PanicThreshold: ptr.To[uint32](66),
 		},
 	}
-	dynamicXdsCluster := buildXdsCluster(args)
+	dynamicXdsClusters := buildXdsClusters(args)
+	require.Len(t, dynamicXdsClusters, 1)
 
-	require.Equal(t, bootstrapXdsCluster.Name, dynamicXdsCluster.Name)
-	require.Equal(t, bootstrapXdsCluster.ClusterDiscoveryType, dynamicXdsCluster.ClusterDiscoveryType)
-	require.Equal(t, bootstrapXdsCluster.TransportSocket, dynamicXdsCluster.TransportSocket)
-	assert.True(t, proto.Equal(bootstrapXdsCluster.TransportSocket, dynamicXdsCluster.TransportSocket))
-	assert.True(t, proto.Equal(bootstrapXdsCluster.ConnectTimeout, dynamicXdsCluster.ConnectTimeout))
+	require.Equal(t, bootstrapXdsCluster.Name, dynamicXdsClusters[0].Name)
+	require.Equal(t, bootstrapXdsCluster.ClusterDiscoveryType, dynamicXdsClusters[0].ClusterDiscoveryType)
+	require.Equal(t, bootstrapXdsCluster.TransportSocket, dynamicXdsClusters[0].TransportSocket)
+	assert.True(t, proto.Equal(bootstrapXdsCluster.TransportSocket, dynamicXdsClusters[0].TransportSocket))
+	assert.True(t, proto.Equal(bootstrapXdsCluster.ConnectTimeout, dynamicXdsClusters[0].ConnectTimeout))
 }
 
 func TestBuildXdsClusterLoadAssignment(t *testing.T) {
 	bootstrapXdsCluster := getXdsClusterObjFromBootstrap(t)
 	ds := &ir.DestinationSetting{
+		Name:      bootstrapXdsCluster.Name,
 		Endpoints: []*ir.DestinationEndpoint{{Host: envoyGatewayXdsServerHost, Port: bootstrap.DefaultXdsServerPort}},
 	}
-	settings := []*ir.DestinationSetting{ds}
-	dynamicXdsClusterLoadAssignment := buildXdsClusterLoadAssignment(bootstrapXdsCluster.Name, settings)
+	dynamicXdsClusterLoadAssignment := buildXdsClusterLoadAssignment(ds)
 
 	assert.True(t, proto.Equal(bootstrapXdsCluster.LoadAssignment.Endpoints[0].LbEndpoints[0], dynamicXdsClusterLoadAssignment.Endpoints[0].LbEndpoints[0]))
 }

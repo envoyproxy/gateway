@@ -1,4 +1,4 @@
-- clusterName: accesslog/monitoring/envoy-als/port/9000
+- clusterName: accesslog/monitoring/envoy-als/port/9000/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:

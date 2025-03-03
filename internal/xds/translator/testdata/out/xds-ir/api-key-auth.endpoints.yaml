@@ -1,4 +1,4 @@
-- clusterName: httproute/default/httproute-1/rule/0
+- clusterName: httproute/default/httproute-1/rule/0/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -10,7 +10,7 @@
     loadBalancingWeight: 1
     locality:
       region: httproute/default/httproute-1/rule/0/backend/0
-- clusterName: httproute/default/httproute-1/rule/1
+- clusterName: httproute/default/httproute-1/rule/1/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -22,7 +22,19 @@
     loadBalancingWeight: 1
     locality:
       region: httproute/default/httproute-1/rule/1/backend/0
-- clusterName: httproute/default/httproute-2/rule/0
+- clusterName: httproute/default/httproute-2/rule/0/backend/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 7.7.7.7
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: httproute/default/httproute-2/rule/0/backend/0
+- clusterName: httproute/default/httproute-2/rule/0/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:

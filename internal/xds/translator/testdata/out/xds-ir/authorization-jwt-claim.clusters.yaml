@@ -9,10 +9,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: httproute/default/httproute-1/rule/0
+    serviceName: httproute/default/httproute-1/rule/0/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: httproute/default/httproute-1/rule/0
+  name: httproute/default/httproute-1/rule/0/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -26,10 +26,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: httproute/default/httproute-2/rule/0
+    serviceName: httproute/default/httproute-2/rule/0/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: httproute/default/httproute-2/rule/0
+  name: httproute/default/httproute-2/rule/0/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -42,7 +42,7 @@
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
-    clusterName: two_example_com_443
+    clusterName: two_example_com_443/backend/-1
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -54,7 +54,7 @@
       loadBalancingWeight: 1
       locality:
         region: two_example_com_443/backend/-1
-  name: two_example_com_443
+  name: two_example_com_443/backend/-1
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   transportSocket:
@@ -77,7 +77,7 @@
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
-    clusterName: one_example_com_443
+    clusterName: one_example_com_443/backend/-1
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -89,7 +89,7 @@
       loadBalancingWeight: 1
       locality:
         region: one_example_com_443/backend/-1
-  name: one_example_com_443
+  name: one_example_com_443/backend/-1
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   transportSocket:

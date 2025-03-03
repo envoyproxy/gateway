@@ -9,9 +9,9 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: udp-route-dest
+    serviceName: udp-route-dest/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: udp-route-dest
+  name: udp-route-dest/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS

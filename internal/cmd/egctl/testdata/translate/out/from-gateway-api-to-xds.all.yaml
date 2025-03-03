@@ -171,7 +171,7 @@ xds:
       dynamicEndpointConfigs:
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-          clusterName: httproute/default/backend/rule/0
+          clusterName: httproute/default/backend/rule/0/backend/0
           endpoints:
           - lbEndpoints:
             - endpoint:
@@ -185,7 +185,7 @@ xds:
               region: httproute/default/backend/rule/0/backend/0
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-          clusterName: grpcroute/default/backend/rule/0
+          clusterName: grpcroute/default/backend/rule/0/backend/0
           endpoints:
           - lbEndpoints:
             - endpoint:
@@ -199,7 +199,7 @@ xds:
               region: grpcroute/default/backend/rule/0/backend/0
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-          clusterName: tcproute/default/backend/rule/-1
+          clusterName: tcproute/default/backend/rule/-1/backend/0
           endpoints:
           - lbEndpoints:
             - endpoint:
@@ -213,7 +213,7 @@ xds:
               region: tcproute/default/backend/rule/-1/backend/0
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-          clusterName: tlsroute/default/backend/rule/-1
+          clusterName: tlsroute/default/backend/rule/-1/backend/0
           endpoints:
           - lbEndpoints:
             - endpoint:
@@ -227,7 +227,7 @@ xds:
               region: tlsroute/default/backend/rule/-1/backend/0
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-          clusterName: udproute/default/backend/rule/-1
+          clusterName: udproute/default/backend/rule/-1/backend/0
           endpoints:
           - lbEndpoints:
             - endpoint:
@@ -254,10 +254,10 @@ xds:
             edsConfig:
               ads: {}
               resourceApiVersion: V3
-            serviceName: httproute/default/backend/rule/0
+            serviceName: httproute/default/backend/rule/0/backend/0
           ignoreHealthOnHostRemoval: true
           lbPolicy: LEAST_REQUEST
-          name: httproute/default/backend/rule/0
+          name: httproute/default/backend/rule/0/backend/0
           perConnectionBufferLimitBytes: 32768
           type: EDS
       - cluster:
@@ -273,10 +273,10 @@ xds:
             edsConfig:
               ads: {}
               resourceApiVersion: V3
-            serviceName: grpcroute/default/backend/rule/0
+            serviceName: grpcroute/default/backend/rule/0/backend/0
           ignoreHealthOnHostRemoval: true
           lbPolicy: LEAST_REQUEST
-          name: grpcroute/default/backend/rule/0
+          name: grpcroute/default/backend/rule/0/backend/0
           perConnectionBufferLimitBytes: 32768
           type: EDS
           typedExtensionProtocolOptions:
@@ -299,10 +299,10 @@ xds:
             edsConfig:
               ads: {}
               resourceApiVersion: V3
-            serviceName: tcproute/default/backend/rule/-1
+            serviceName: tcproute/default/backend/rule/-1/backend/0
           ignoreHealthOnHostRemoval: true
           lbPolicy: LEAST_REQUEST
-          name: tcproute/default/backend/rule/-1
+          name: tcproute/default/backend/rule/-1/backend/0
           perConnectionBufferLimitBytes: 32768
           type: EDS
       - cluster:
@@ -318,10 +318,10 @@ xds:
             edsConfig:
               ads: {}
               resourceApiVersion: V3
-            serviceName: tlsroute/default/backend/rule/-1
+            serviceName: tlsroute/default/backend/rule/-1/backend/0
           ignoreHealthOnHostRemoval: true
           lbPolicy: LEAST_REQUEST
-          name: tlsroute/default/backend/rule/-1
+          name: tlsroute/default/backend/rule/-1/backend/0
           perConnectionBufferLimitBytes: 32768
           type: EDS
       - cluster:
@@ -337,10 +337,10 @@ xds:
             edsConfig:
               ads: {}
               resourceApiVersion: V3
-            serviceName: udproute/default/backend/rule/-1
+            serviceName: udproute/default/backend/rule/-1/backend/0
           ignoreHealthOnHostRemoval: true
           lbPolicy: LEAST_REQUEST
-          name: udproute/default/backend/rule/-1
+          name: udproute/default/backend/rule/-1/backend/0
           perConnectionBufferLimitBytes: 32768
           type: EDS
     - '@type': type.googleapis.com/envoy.admin.v3.ListenersConfigDump

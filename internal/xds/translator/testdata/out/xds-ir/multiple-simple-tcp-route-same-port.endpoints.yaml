@@ -1,4 +1,4 @@
-- clusterName: tcp-route-simple-dest
+- clusterName: tcp-route-simple-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -16,7 +16,7 @@
     loadBalancingWeight: 1
     locality:
       region: tcp-route-simple-dest/backend/0
-- clusterName: tcp-route-simple-1-dest
+- clusterName: tcp-route-simple-1-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -34,7 +34,7 @@
     loadBalancingWeight: 1
     locality:
       region: tcp-route-simple-1-dest/backend/0
-- clusterName: tcp-route-simple-2-dest
+- clusterName: tcp-route-simple-2-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -52,7 +52,7 @@
     loadBalancingWeight: 1
     locality:
       region: tcp-route-simple-2-dest/backend/0
-- clusterName: tcp-route-simple-3-dest
+- clusterName: tcp-route-simple-3-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -70,7 +70,7 @@
     loadBalancingWeight: 1
     locality:
       region: tcp-route-simple-3-dest/backend/0
-- clusterName: tcp-route-simple-4-dest
+- clusterName: tcp-route-simple-4-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:

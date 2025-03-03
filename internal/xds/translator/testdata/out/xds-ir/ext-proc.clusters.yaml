@@ -9,10 +9,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: httproute/default/httproute-1/rule/0
+    serviceName: httproute/default/httproute-1/rule/0/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: httproute/default/httproute-1/rule/0
+  name: httproute/default/httproute-1/rule/0/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -26,10 +26,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: httproute/default/httproute-2/rule/0
+    serviceName: httproute/default/httproute-2/rule/0/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: httproute/default/httproute-2/rule/0
+  name: httproute/default/httproute-2/rule/0/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -43,34 +43,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: envoyextensionpolicy/default/policy-for-route-2/0/grpc-backend-4
+    serviceName: envoyextensionpolicy/default/policy-for-route-2/0/grpc-backend-4/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: envoyextensionpolicy/default/policy-for-route-2/0/grpc-backend-4
-  perConnectionBufferLimitBytes: 32768
-  type: EDS
-  typedExtensionProtocolOptions:
-    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
-      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
-      explicitHttpConfig:
-        http2ProtocolOptions:
-          initialConnectionWindowSize: 1048576
-          initialStreamWindowSize: 65536
-- circuitBreakers:
-    thresholds:
-    - maxRetries: 1024
-  commonLbConfig:
-    localityWeightedLbConfig: {}
-  connectTimeout: 10s
-  dnsLookupFamily: V4_PREFERRED
-  edsClusterConfig:
-    edsConfig:
-      ads: {}
-      resourceApiVersion: V3
-    serviceName: envoyextensionpolicy/default/policy-for-route-1/0/grpc-backend-2
-  ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
-  name: envoyextensionpolicy/default/policy-for-route-1/0/grpc-backend-2
+  name: envoyextensionpolicy/default/policy-for-route-2/0/grpc-backend-4/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
   typedExtensionProtocolOptions:
@@ -91,10 +67,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: envoyextensionpolicy/envoy-gateway/policy-for-gateway-2/0/grpc-backend-3
+    serviceName: envoyextensionpolicy/default/policy-for-route-1/0/grpc-backend-2/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-2/0/grpc-backend-3
+  name: envoyextensionpolicy/default/policy-for-route-1/0/grpc-backend-2/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
   typedExtensionProtocolOptions:
@@ -115,10 +91,34 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/0/grpc-backend
+    serviceName: envoyextensionpolicy/envoy-gateway/policy-for-gateway-2/0/grpc-backend-3/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/0/grpc-backend
+  name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-2/0/grpc-backend-3/backend/0
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      explicitHttpConfig:
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/0/grpc-backend/backend/0
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  name: envoyextensionpolicy/envoy-gateway/policy-for-gateway-1/0/grpc-backend/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
   typedExtensionProtocolOptions:

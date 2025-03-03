@@ -1,4 +1,4 @@
-- clusterName: httproute/envoy-gateway/httproute-btls/rule/0
+- clusterName: httproute/envoy-gateway/httproute-btls/rule/0/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -10,7 +10,7 @@
       metadata:
         filterMetadata:
           envoy.transport_socket_match:
-            name: httproute/envoy-gateway/httproute-btls/rule/0/tls/0
+            name: httproute/envoy-gateway/httproute-btls/rule/0/backend/0/tls
     loadBalancingWeight: 1
     locality:
       region: httproute/envoy-gateway/httproute-btls/rule/0/backend/0

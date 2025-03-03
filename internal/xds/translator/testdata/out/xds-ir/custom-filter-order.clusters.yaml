@@ -8,7 +8,7 @@
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
-    clusterName: one_example_com_443
+    clusterName: one_example_com_443/backend/-1
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -20,7 +20,7 @@
       loadBalancingWeight: 1
       locality:
         region: one_example_com_443/backend/-1
-  name: one_example_com_443
+  name: one_example_com_443/backend/-1
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   transportSocket:
@@ -43,7 +43,7 @@
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
-    clusterName: two_example_com_80
+    clusterName: two_example_com_80/backend/-1
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -55,7 +55,7 @@
       loadBalancingWeight: 1
       locality:
         region: two_example_com_80/backend/-1
-  name: two_example_com_80
+  name: two_example_com_80/backend/-1
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   type: STRICT_DNS

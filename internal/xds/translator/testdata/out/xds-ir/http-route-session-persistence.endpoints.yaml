@@ -1,4 +1,40 @@
-- clusterName: regex-route-dest
+- clusterName: regex-route-dest/backend/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: regex-route-dest/backend/0
+- clusterName: regex-route-dest/backend/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: regex-route-dest/backend/0
+- clusterName: regex-route-dest/backend/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: regex-route-dest/backend/0
+- clusterName: regex-route-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:

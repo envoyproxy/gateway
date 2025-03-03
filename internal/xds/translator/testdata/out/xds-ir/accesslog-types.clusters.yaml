@@ -9,10 +9,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: direct-route-dest
+    serviceName: direct-route-dest/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: direct-route-dest
+  name: direct-route-dest/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -26,34 +26,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: accesslog_als_0_1
+    serviceName: accesslog_als_0_1/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: accesslog_als_0_1
-  perConnectionBufferLimitBytes: 32768
-  type: EDS
-  typedExtensionProtocolOptions:
-    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
-      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
-      explicitHttpConfig:
-        http2ProtocolOptions:
-          initialConnectionWindowSize: 1048576
-          initialStreamWindowSize: 65536
-- circuitBreakers:
-    thresholds:
-    - maxRetries: 1024
-  commonLbConfig:
-    localityWeightedLbConfig: {}
-  connectTimeout: 10s
-  dnsLookupFamily: V4_PREFERRED
-  edsClusterConfig:
-    edsConfig:
-      ads: {}
-      resourceApiVersion: V3
-    serviceName: accesslog_als_0_2
-  ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
-  name: accesslog_als_0_2
+  name: accesslog_als_0_1/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
   typedExtensionProtocolOptions:
@@ -74,10 +50,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: accesslog_als_1_1
+    serviceName: accesslog_als_0_2/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: accesslog_als_1_1
+  name: accesslog_als_0_2/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
   typedExtensionProtocolOptions:
@@ -98,10 +74,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: accesslog_als_1_2
+    serviceName: accesslog_als_1_1/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: accesslog_als_1_2
+  name: accesslog_als_1_1/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
   typedExtensionProtocolOptions:
@@ -122,10 +98,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: accesslog_als_2_1
+    serviceName: accesslog_als_1_2/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: accesslog_als_2_1
+  name: accesslog_als_1_2/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
   typedExtensionProtocolOptions:
@@ -146,10 +122,34 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: accesslog_als_2_2
+    serviceName: accesslog_als_2_1/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: accesslog_als_2_2
+  name: accesslog_als_2_1/backend/0
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      explicitHttpConfig:
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: accesslog_als_2_2/backend/0
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  name: accesslog_als_2_2/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
   typedExtensionProtocolOptions:
@@ -169,7 +169,7 @@
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
-    clusterName: accesslog_otel_0_3
+    clusterName: accesslog_otel_0_3/backend/0
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -181,7 +181,7 @@
       loadBalancingWeight: 1
       locality:
         region: accesslog_otel_0_3/backend/0
-  name: accesslog_otel_0_3
+  name: accesslog_otel_0_3/backend/0
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   type: STRICT_DNS
@@ -202,7 +202,7 @@
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
-    clusterName: accesslog_otel_1_3
+    clusterName: accesslog_otel_1_3/backend/0
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -214,7 +214,7 @@
       loadBalancingWeight: 1
       locality:
         region: accesslog_otel_1_3/backend/0
-  name: accesslog_otel_1_3
+  name: accesslog_otel_1_3/backend/0
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   type: STRICT_DNS
@@ -235,7 +235,7 @@
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
-    clusterName: accesslog_otel_2_3
+    clusterName: accesslog_otel_2_3/backend/0
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -247,7 +247,7 @@
       loadBalancingWeight: 1
       locality:
         region: accesslog_otel_2_3/backend/0
-  name: accesslog_otel_2_3
+  name: accesslog_otel_2_3/backend/0
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   type: STRICT_DNS

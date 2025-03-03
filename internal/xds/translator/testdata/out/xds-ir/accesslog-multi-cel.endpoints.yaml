@@ -1,4 +1,4 @@
-- clusterName: direct-route-dest
+- clusterName: direct-route-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:

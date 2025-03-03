@@ -1,4 +1,4 @@
-- clusterName: tls-terminate-dest
+- clusterName: tls-terminate-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -16,7 +16,7 @@
     loadBalancingWeight: 1
     locality:
       region: tls-terminate-dest/backend/0
-- clusterName: tls-terminate-hostname-dest
+- clusterName: tls-terminate-hostname-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:

@@ -1,4 +1,4 @@
-- clusterName: third-route-dest
+- clusterName: third-route-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:

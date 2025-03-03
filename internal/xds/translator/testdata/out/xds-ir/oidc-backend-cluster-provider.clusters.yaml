@@ -9,10 +9,10 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: third-route-dest
+    serviceName: third-route-dest/backend/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  name: third-route-dest
+  name: third-route-dest/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -25,7 +25,7 @@
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
-    clusterName: securitypolicy/envoy-gateway/policy-for-gateway/0
+    clusterName: securitypolicy/envoy-gateway/policy-for-gateway/0/backend/0
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -37,17 +37,17 @@
         metadata:
           filterMetadata:
             envoy.transport_socket_match:
-              name: securitypolicy/envoy-gateway/policy-for-gateway/0/tls/0
+              name: securitypolicy/envoy-gateway/policy-for-gateway/0/backend/0/tls
       loadBalancingWeight: 1
       locality:
         region: securitypolicy/envoy-gateway/policy-for-gateway/0/backend/0
-  name: securitypolicy/envoy-gateway/policy-for-gateway/0
+  name: securitypolicy/envoy-gateway/policy-for-gateway/0/backend/0
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   transportSocketMatches:
   - match:
-      name: securitypolicy/envoy-gateway/policy-for-gateway/0/tls/0
-    name: securitypolicy/envoy-gateway/policy-for-gateway/0/tls/0
+      name: securitypolicy/envoy-gateway/policy-for-gateway/0/backend/0/tls
+    name: securitypolicy/envoy-gateway/policy-for-gateway/0/backend/0/tls
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:
