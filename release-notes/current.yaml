@@ -16,6 +16,7 @@ new features: |
   Added support for defining Lua EnvoyExtensionPolicies
   Added RequestID field in ClientTrafficPolicy.HeaderSettings to configure Envoy X-Request-ID behavior.
   Added support for HorizontalPodAutoscaler to helm chart
+  Added support for forwarding the authenticated username to the backend via a configurable header in BasicAuth.
 
 bug fixes: |
   Fix traffic splitting when filters are attached to the backendRef.
