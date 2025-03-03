@@ -1241,6 +1241,9 @@ type AuthorizationRule struct {
 	// Action defines the action to be taken if the rule matches.
 	Action egv1a1.AuthorizationAction `json:"action"`
 
+	// Operation specifies the operation of a request, such as HTTP methods.
+	Operation *egv1a1.Operation `json:"operation,omitempty"`
+
 	// Principal defines the principal to be matched.
 	Principal Principal `json:"principal"`
 }
@@ -1253,6 +1256,8 @@ type Principal struct {
 	ClientCIDRs []*CIDRMatch `json:"clientCIDRs,omitempty"`
 	// JWT defines the JWT principal to be matched.
 	JWT *egv1a1.JWTPrincipal `json:"jwt,omitempty"`
+	// Headers defines the headers to be matched.
+	Headers []egv1a1.AuthorizationHeaderMatch `json:"headers,omitempty"`
 }
 
 // FaultInjection defines the schema for injecting faults into requests.

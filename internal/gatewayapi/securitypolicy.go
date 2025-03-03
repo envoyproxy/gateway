@@ -1277,7 +1277,7 @@ func (t *Translator) buildAuthorization(policy *egv1a1.SecurityPolicy) (*ir.Auth
 	irAuth.DefaultAction = defaultAction
 
 	for i, rule := range authorization.Rules {
-		principal := ir.Principal{}
+		irPrincipal := ir.Principal{}
 
 		for _, cidr := range rule.Principal.ClientCIDRs {
 			cidrMatch, err := parseCIDR(string(cidr))
@@ -1285,10 +1285,11 @@ func (t *Translator) buildAuthorization(policy *egv1a1.SecurityPolicy) (*ir.Auth
 				return nil, fmt.Errorf("unable to translate authorization rule: %w", err)
 			}
 
-			principal.ClientCIDRs = append(principal.ClientCIDRs, cidrMatch)
+			irPrincipal.ClientCIDRs = append(irPrincipal.ClientCIDRs, cidrMatch)
 		}
 
-		principal.JWT = rule.Principal.JWT
+		irPrincipal.JWT = rule.Principal.JWT
+		irPrincipal.Headers = rule.Principal.Headers
 
 		var name string
 		if rule.Name != nil && *rule.Name != "" {
@@ -1299,7 +1300,8 @@ func (t *Translator) buildAuthorization(policy *egv1a1.SecurityPolicy) (*ir.Auth
 		irAuth.Rules = append(irAuth.Rules, &ir.AuthorizationRule{
 			Name:      name,
 			Action:    rule.Action,
-			Principal: principal,
+			Operation: rule.Operation,
+			Principal: irPrincipal,
 		})
 	}
 

@@ -23,6 +23,7 @@ import (
 	envoymatcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -179,9 +180,20 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 	// If no matcher matches, the default action will be used.
 	for _, rule := range authorization.Rules {
 		var (
-			ipPredicate  *matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_
+			// Predicates for HTTP methods.
+			methodPredicate *matcherv3.Matcher_MatcherList_Predicate
+
+			// Predicates for HTTP headers.
+			headerPredicate []*matcherv3.Matcher_MatcherList_Predicate
+
+			// Predicates for IP ranges.
+			ipPredicate *matcherv3.Matcher_MatcherList_Predicate
+
+			// Predicates for JWT claims and scopes.
 			jwtPredicate []*matcherv3.Matcher_MatcherList_Predicate
-			predicate    *matcherv3.Matcher_MatcherList_Predicate
+
+			// The final predicate that will be used for the current rule.
+			finalPredicate *matcherv3.Matcher_MatcherList_Predicate
 		)
 
 		// Determine the action for the current rule.
@@ -202,47 +214,64 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 			}
 		}
 
-		// Build the predicate for the current rule.
+		var methodPredicates []*matcherv3.Matcher_MatcherList_Predicate
+		if rule.Operation != nil && len(rule.Operation.Methods) > 0 {
+			if methodPredicates, err = buildMethodsPredicate(rule.Operation.Methods); err != nil {
+				return nil, err
+			}
+		}
+
+		// If there are multiple methods, OR them together.
+		// Methods are matched if any of them match.
 		switch {
-		// If both IP and JWT predicates are present, AND them together.
-		case ipPredicate != nil && jwtPredicate != nil:
-			predicates := []*matcherv3.Matcher_MatcherList_Predicate{
-				{
-					MatchType: ipPredicate,
+		case len(methodPredicates) > 1:
+			methodPredicate = &matcherv3.Matcher_MatcherList_Predicate{
+				MatchType: &matcherv3.Matcher_MatcherList_Predicate_OrMatcher{
+					OrMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
+						Predicate: methodPredicates,
+					},
 				},
 			}
-			predicates = append(predicates, jwtPredicate...)
+		case len(methodPredicates) == 1:
+			methodPredicate = &matcherv3.Matcher_MatcherList_Predicate{
+				MatchType: methodPredicates[0].MatchType.(*matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_),
+			}
+		}
 
-			predicate = &matcherv3.Matcher_MatcherList_Predicate{
+		if len(rule.Principal.Headers) > 0 {
+			if headerPredicate, err = buildHeadersPredicate(rule.Principal.Headers); err != nil {
+				return nil, err
+			}
+		}
+
+		// AND all the predicates together.
+		var allPredicates []*matcherv3.Matcher_MatcherList_Predicate
+		if methodPredicate != nil {
+			allPredicates = append(allPredicates, methodPredicate)
+		}
+		if ipPredicate != nil {
+			allPredicates = append(allPredicates, ipPredicate)
+		}
+		allPredicates = append(allPredicates, jwtPredicate...)
+		allPredicates = append(allPredicates, headerPredicate...)
+
+		switch {
+		case len(allPredicates) > 1:
+			finalPredicate = &matcherv3.Matcher_MatcherList_Predicate{
 				MatchType: &matcherv3.Matcher_MatcherList_Predicate_AndMatcher{
 					AndMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
-						Predicate: predicates,
+						Predicate: allPredicates,
 					},
 				},
 			}
-		case ipPredicate != nil:
-			predicate = &matcherv3.Matcher_MatcherList_Predicate{
-				MatchType: ipPredicate,
-			}
-		case jwtPredicate != nil:
-			// If there are multiple JWT predicates, AND them together.
-			if len(jwtPredicate) > 1 {
-				predicate = &matcherv3.Matcher_MatcherList_Predicate{
-					MatchType: &matcherv3.Matcher_MatcherList_Predicate_AndMatcher{
-						AndMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
-							Predicate: jwtPredicate,
-						},
-					},
-				}
-			} else if len(jwtPredicate) == 1 {
-				predicate = jwtPredicate[0]
-			}
+		case len(allPredicates) == 1:
+			finalPredicate = allPredicates[0]
 		}
 
 		// Add the matcher generated with the current rule to the matcher list.
 		// The first matcher that matches will be used to determine the action.
 		matcherList = append(matcherList, &matcherv3.Matcher_MatcherList_FieldMatcher{
-			Predicate: predicate,
+			Predicate: finalPredicate,
 			OnMatch: &matcherv3.Matcher_OnMatch{
 				OnMatch: &matcherv3.Matcher_OnMatch_Action{
 					Action: &cncfv3.TypedExtensionConfig{
@@ -291,7 +320,7 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 	return rbac, nil
 }
 
-func buildIPPredicate(clientCIDRs []*ir.CIDRMatch) (*matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_, error) {
+func buildIPPredicate(clientCIDRs []*ir.CIDRMatch) (*matcherv3.Matcher_MatcherList_Predicate, error) {
 	var (
 		sourceIPInput *anypb.Any
 		ipMatcher     *anypb.Any
@@ -320,16 +349,18 @@ func buildIPPredicate(clientCIDRs []*ir.CIDRMatch) (*matcherv3.Matcher_MatcherLi
 		return nil, err
 	}
 
-	return &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_{
-		SinglePredicate: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate{
-			Input: &cncfv3.TypedExtensionConfig{
-				Name:        "client_ip",
-				TypedConfig: sourceIPInput,
-			},
-			Matcher: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_CustomMatch{
-				CustomMatch: &cncfv3.TypedExtensionConfig{
-					Name:        "ip_matcher",
-					TypedConfig: ipMatcher,
+	return &matcherv3.Matcher_MatcherList_Predicate{
+		MatchType: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_{
+			SinglePredicate: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate{
+				Input: &cncfv3.TypedExtensionConfig{
+					Name:        "client_ip",
+					TypedConfig: sourceIPInput,
+				},
+				Matcher: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_CustomMatch{
+					CustomMatch: &cncfv3.TypedExtensionConfig{
+						Name:        "ip_matcher",
+						TypedConfig: ipMatcher,
+					},
 				},
 			},
 		},
@@ -538,4 +569,82 @@ func buildJWTPredicate(jwt egv1a1.JWTPrincipal) ([]*matcherv3.Matcher_MatcherLis
 
 func (c *rbac) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) error {
 	return nil
+}
+
+func buildMethodsPredicate(methods []gwapiv1.HTTPMethod) ([]*matcherv3.Matcher_MatcherList_Predicate, error) {
+	methodStrings := make([]string, len(methods))
+	for i, method := range methods {
+		methodStrings[i] = string(method)
+	}
+
+	// Match the HTTP method as a pesudo-header.
+	return buildHeaderPredicate(":method", methodStrings, true)
+}
+
+func buildHeadersPredicate(headers []egv1a1.AuthorizationHeaderMatch) ([]*matcherv3.Matcher_MatcherList_Predicate, error) {
+	var (
+		headersPredicates []*matcherv3.Matcher_MatcherList_Predicate // Predicates for all headers.
+		headerPredicates  []*matcherv3.Matcher_MatcherList_Predicate // Predicates for a single header.
+		err               error
+	)
+
+	for _, header := range headers {
+		if headerPredicates, err = buildHeaderPredicate(header.Name, header.Values, false); err != nil {
+			return nil, err
+		}
+
+		// For a header to match, one of the values must match.
+		// If there are multiple values for a header, OR them together.
+		if len(headerPredicates) > 1 {
+			headersPredicates = append(headersPredicates, &matcherv3.Matcher_MatcherList_Predicate{
+				MatchType: &matcherv3.Matcher_MatcherList_Predicate_OrMatcher{
+					OrMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
+						Predicate: headerPredicates,
+					},
+				},
+			})
+		} else if len(headerPredicates) == 1 {
+			headersPredicates = append(headersPredicates, &matcherv3.Matcher_MatcherList_Predicate{
+				MatchType: headerPredicates[0].MatchType.(*matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_),
+			})
+		}
+	}
+
+	return headersPredicates, nil
+}
+
+func buildHeaderPredicate(name string, values []string, ignoreCase bool) ([]*matcherv3.Matcher_MatcherList_Predicate, error) {
+	var (
+		headerMatchInput *anypb.Any
+		err              error
+	)
+
+	if headerMatchInput, err = proto.ToAnyWithValidation(&envoymatcherv3.HttpRequestHeaderMatchInput{
+		HeaderName: name,
+	}); err != nil {
+		return nil, err
+	}
+
+	var predicates []*matcherv3.Matcher_MatcherList_Predicate
+	for _, value := range values {
+		predicates = append(predicates, &matcherv3.Matcher_MatcherList_Predicate{
+			MatchType: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_{
+				SinglePredicate: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate{
+					Input: &cncfv3.TypedExtensionConfig{
+						Name:        "http_header",
+						TypedConfig: headerMatchInput,
+					},
+					Matcher: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_ValueMatch{
+						ValueMatch: &matcherv3.StringMatcher{
+							MatchPattern: &matcherv3.StringMatcher_Exact{
+								Exact: value,
+							},
+							IgnoreCase: ignoreCase,
+						},
+					},
+				},
+			},
+		})
+	}
+	return predicates, nil
 }

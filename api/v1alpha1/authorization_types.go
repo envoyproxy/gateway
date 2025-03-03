@@ -73,7 +73,7 @@ type Operation struct {
 // or any other identity that can be extracted from a custom header.
 // If there are multiple principal types, all principals must match for the rule to match.
 //
-// +kubebuilder:validation:XValidation:rule="(has(self.clientCIDRs) || has(self.jwt))",message="at least one of clientCIDRs or jwt must be specified"
+// +kubebuilder:validation:XValidation:rule="(has(self.clientCIDRs) || has(self.jwt) || has(self.headers))",message="at least one of clientCIDRs, jwt, or headers must be specified"
 type Principal struct {
 	// ClientCIDRs are the IP CIDR ranges of the client.
 	// Valid examples are "192.168.1.0/24" or "2001:db8::/64"
