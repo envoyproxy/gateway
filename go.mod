@@ -36,7 +36,7 @@ require (
 	github.com/miekg/dns v1.1.63
 	github.com/ohler55/ojg v1.26.1
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.20.5
+	github.com/prometheus/client_golang v1.21.0
 	github.com/prometheus/client_model v0.6.1
 	github.com/prometheus/common v0.62.0
 	github.com/replicatedhq/troubleshoot v0.107.5
