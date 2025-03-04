@@ -34,7 +34,7 @@ individuals and will be valid for 1 year from the start date.
 - Tetrate [Member: Varun Talwar; End Date: 12/30/2025]
 - SAP [Member: Guy Daich; End Date: 12/30/2025]
 - Ambassador Labs [Member: Kai Tillman; End Date: 12/30/2025]
-- Tencent Holdings Limited [Member: Xunzhuo Liu; End Date: 5/16/2023]
+- Tencent Holdings Limited [Member: Xunzhuo Liu; End Date: 12/30/2025]
 
 Steering seats will be evaluated once per year and new people/organizations can be nominated
 for being added to the steering committee based on contribution to the project or being a
