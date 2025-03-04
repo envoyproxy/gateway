@@ -12,6 +12,6 @@ import (
 )
 
 func TestGetEnvoyCommand(t *testing.T) {
-	got := getEnvoyCommand()
+	got := GetEnvoyCommand()
 	assert.Equal(t, "envoy", got.Use)
 }
