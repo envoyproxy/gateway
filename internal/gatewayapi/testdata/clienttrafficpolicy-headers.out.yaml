@@ -22,7 +22,6 @@ clientTrafficPolicies:
         - name: my-set-header
           value: my-set-header-value
       enableEnvoyHeaders: true
-      preserveXRequestID: true
       requestID: PreserveOrGenerate
       withUnderscoresAction: Allow
     targetRef:
@@ -156,7 +155,6 @@ xdsIR:
         earlyRemoveRequestHeaders:
         - my-removed-header
         enableEnvoyHeaders: true
-        preserveXRequestID: true
         requestID: PreserveOrGenerate
         withUnderscoresAction: Allow
       hostnames:
@@ -186,7 +184,6 @@ xdsIR:
         earlyRemoveRequestHeaders:
         - my-removed-header
         enableEnvoyHeaders: true
-        preserveXRequestID: true
         requestID: PreserveOrGenerate
         withUnderscoresAction: Allow
       hostnames:
