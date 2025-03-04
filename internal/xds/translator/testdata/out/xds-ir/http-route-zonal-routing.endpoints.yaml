@@ -78,7 +78,7 @@
             address: 2.2.2.6
             portValue: 50002
       loadBalancingWeight: 1
-    loadBalancingWeight: 3
+    loadBalancingWeight: 10
     locality:
       region: first-route-dest/backend/1
 - clusterName: first-route-dest/backend/2
@@ -108,7 +108,7 @@
             address: 3.3.3.6
             portValue: 50003
       loadBalancingWeight: 1
-    loadBalancingWeight: 20
+    loadBalancingWeight: 40
     locality:
       region: first-route-dest/backend/2
 - clusterName: first-route-dest/backend/3

@@ -15,10 +15,10 @@
         weightedClusters:
           clusters:
           - name: first-route-dest/backend/0
-            weight: 20
+            weight: 30
           - name: first-route-dest/backend/1
-            weight: 3
+            weight: 10
           - name: first-route-dest/backend/2
-            weight: 20
+            weight: 40
           - name: first-route-dest/backend/3
             weight: 20

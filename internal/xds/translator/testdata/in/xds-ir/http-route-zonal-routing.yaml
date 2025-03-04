@@ -33,7 +33,7 @@ http:
         - host: "1.1.1.6"
           port: 50001
           zone: us-west-2c
-        weight: 20
+        weight: 30
         name: "first-route-dest/backend/0"
       - endpoints:
         - host: "2.2.2.2"
@@ -51,7 +51,7 @@ http:
         - host: "2.2.2.6"
           port: 50002
           zone: us-west-2b
-        weight: 3
+        weight: 10
         name: "first-route-dest/backend/1"
       - endpoints:
         - host: "3.3.3.3"
@@ -62,7 +62,7 @@ http:
           port: 50003
         - host: "3.3.3.6"
           port: 50003
-        weight: 20
+        weight: 40
         name: "first-route-dest/backend/2"
       - endpoints:
         - host: "4.4.4.4"
