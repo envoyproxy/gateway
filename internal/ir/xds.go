@@ -1077,6 +1077,12 @@ type BasicAuth struct {
 
 	// The username-password pairs in htpasswd format.
 	Users PrivateBytes `json:"users,omitempty" yaml:"users,omitempty"`
+
+	// This field specifies the header name to forward a successfully authenticated user to
+	// the backend. The header will be added to the request with the username as the value.
+	//
+	// If it is not specified, the username will not be forwarded.
+	ForwardUsernameHeader *string `json:"forwardUsernameHeader,omitempty" yaml:"forwardUsernameHeader,omitempty"`
 }
 
 // APIKeyAuth defines the schema for the API Key Authentication.
