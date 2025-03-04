@@ -51,6 +51,10 @@ static_resources:
             - name: prometheus_stats
               domains:
               - "*"
+              typed_per_filter_config:
+                envoy.filters.http.compression:
+                  "@type": type.googleapis.com/envoy.extensions.filters.http.compressor.v3.CompressorPerRoute
+                  disabled: true
               routes:
               - match:
                   path: /stats/prometheus
@@ -60,6 +64,11 @@ static_resources:
                       exact: GET
                 route:
                   cluster: prometheus_stats
+                typed_per_filter_config:
+                  envoy.filters.http.compression:
+                    "@type": type.googleapis.com/envoy.extensions.filters.http.compressor.v3.CompressorPerRoute
+                    overrides:
+                      response_direction_config:
           http_filters:
           - name: envoy.filters.http.compressor
             typed_config:

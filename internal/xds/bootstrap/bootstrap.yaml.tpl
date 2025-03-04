@@ -86,6 +86,12 @@ static_resources:
             - name: prometheus_stats
               domains:
               - "*"
+              {{- if .EnablePrometheusCompression }}
+              typed_per_filter_config:
+                envoy.filters.http.compression:
+                  "@type": type.googleapis.com/envoy.extensions.filters.http.compressor.v3.CompressorPerRoute
+                  disabled: true
+              {{- end }}
               routes:
               - match:
                   path: /stats/prometheus
@@ -95,6 +101,13 @@ static_resources:
                       exact: GET
                 route:
                   cluster: prometheus_stats
+                {{- if .EnablePrometheusCompression }}
+                typed_per_filter_config:
+                  envoy.filters.http.compression:
+                    "@type": type.googleapis.com/envoy.extensions.filters.http.compressor.v3.CompressorPerRoute
+                    overrides:
+                      response_direction_config:
+                {{- end }}
           http_filters:
           {{- if .EnablePrometheusCompression }}
           - name: envoy.filters.http.compressor

@@ -158,7 +158,7 @@ resilience: create-cluster kube-install-image kube-deploy run-resilience delete-
 .PHONY: e2e
 e2e: create-cluster kube-install-image kube-deploy \
 	install-ratelimit install-eg-addons kube-install-examples-image \
-	run-e2e delete-cluster
+	e2e-prepare run-e2e delete-cluster
 
 .PHONY: install-ratelimit
 install-ratelimit:
@@ -175,7 +175,7 @@ e2e-prepare: prepare-ip-family ## Prepare the environment for running e2e tests
 	kubectl apply -f test/config/gatewayclass.yaml
 
 .PHONY: run-e2e
-run-e2e: e2e-prepare ## Run e2e tests
+run-e2e: ## Run e2e tests
 	@$(LOG_TARGET)
 ifeq ($(E2E_RUN_TEST),)
 	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=false
