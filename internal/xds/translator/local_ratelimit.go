@@ -60,6 +60,11 @@ func (*localRateLimit) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir
 
 	localRl := &localrlv3.LocalRateLimit{
 		StatPrefix: localRateLimitFilterStatPrefix,
+		MaxDynamicDescriptors: &wrapperspb.UInt32Value{
+			Value: 10000,
+			// Default to 10k, assuming a listener has 10k unique active users to be rate limited.
+			// We can make this configurable in the API if needed.
+		},
 	}
 
 	localRlAny, err := anypb.New(localRl)
