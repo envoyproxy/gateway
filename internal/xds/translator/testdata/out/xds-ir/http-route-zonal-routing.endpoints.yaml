@@ -4,6 +4,21 @@
     - endpoint:
         address:
           socketAddress:
+            address: 1.1.1.3
+            portValue: 50001
+      loadBalancingWeight: 1
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.1.1.6
+            portValue: 50001
+      loadBalancingWeight: 1
+    locality:
+      zone: us-west-2c
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
             address: 1.1.1.1
             portValue: 50001
       loadBalancingWeight: 1
@@ -30,21 +45,6 @@
       loadBalancingWeight: 1
     locality:
       zone: us-west-2b
-  - lbEndpoints:
-    - endpoint:
-        address:
-          socketAddress:
-            address: 1.1.1.3
-            portValue: 50001
-      loadBalancingWeight: 1
-    - endpoint:
-        address:
-          socketAddress:
-            address: 1.1.1.6
-            portValue: 50001
-      loadBalancingWeight: 1
-    locality:
-      zone: us-west-2c
 - clusterName: first-route-dest/backend/1
   endpoints:
   - lbEndpoints:
@@ -57,19 +57,16 @@
     - endpoint:
         address:
           socketAddress:
-            address: 2.2.2.3
-            portValue: 50002
-      loadBalancingWeight: 1
-    - endpoint:
-        address:
-          socketAddress:
-            address: 2.2.2.4
-            portValue: 50002
-      loadBalancingWeight: 1
-    - endpoint:
-        address:
-          socketAddress:
             address: 2.2.2.5
+            portValue: 50002
+      loadBalancingWeight: 1
+    locality:
+      zone: us-west-2a
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 2.2.2.3
             portValue: 50002
       loadBalancingWeight: 1
     - endpoint:
@@ -78,48 +75,14 @@
             address: 2.2.2.6
             portValue: 50002
       loadBalancingWeight: 1
-    loadBalancingWeight: 10
     locality:
-      region: first-route-dest/backend/1
-- clusterName: first-route-dest/backend/2
-  endpoints:
+      zone: us-west-2b
   - lbEndpoints:
     - endpoint:
         address:
           socketAddress:
-            address: 3.3.3.3
-            portValue: 50003
+            address: 2.2.2.4
+            portValue: 50002
       loadBalancingWeight: 1
-    - endpoint:
-        address:
-          socketAddress:
-            address: 3.3.3.4
-            portValue: 50003
-      loadBalancingWeight: 1
-    - endpoint:
-        address:
-          socketAddress:
-            address: 3.3.3.5
-            portValue: 50003
-      loadBalancingWeight: 1
-    - endpoint:
-        address:
-          socketAddress:
-            address: 3.3.3.6
-            portValue: 50003
-      loadBalancingWeight: 1
-    loadBalancingWeight: 40
     locality:
-      region: first-route-dest/backend/2
-- clusterName: first-route-dest/backend/3
-  endpoints:
-  - lbEndpoints:
-    - endpoint:
-        address:
-          socketAddress:
-            address: 4.4.4.4
-            portValue: 50004
-      loadBalancingWeight: 1
-    loadBalancingWeight: 20
-    locality:
-      region: first-route-dest/backend/3
+      zone: us-west-2c

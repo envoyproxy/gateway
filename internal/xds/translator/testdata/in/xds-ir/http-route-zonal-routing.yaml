@@ -35,7 +35,8 @@ http:
           zone: us-west-2c
         weight: 30
         name: "first-route-dest/backend/0"
-      - endpoints:
+      - zoneAwareRoutingEnabled: true
+        endpoints:
         - host: "2.2.2.2"
           port: 50002
           zone: us-west-2a
@@ -53,20 +54,4 @@ http:
           zone: us-west-2b
         weight: 10
         name: "first-route-dest/backend/1"
-      - endpoints:
-        - host: "3.3.3.3"
-          port: 50003
-        - host: "3.3.3.4"
-          port: 50003
-        - host: "3.3.3.5"
-          port: 50003
-        - host: "3.3.3.6"
-          port: 50003
-        weight: 40
-        name: "first-route-dest/backend/2"
-      - endpoints:
-        - host: "4.4.4.4"
-          port: 50004
-          zone: us-west-2c
-        weight: 20
-        name: "first-route-dest/backend/3"
+

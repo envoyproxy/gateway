@@ -18,7 +18,3 @@
             weight: 30
           - name: first-route-dest/backend/1
             weight: 10
-          - name: first-route-dest/backend/2
-            weight: 40
-          - name: first-route-dest/backend/3
-            weight: 20
