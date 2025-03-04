@@ -336,7 +336,7 @@ securityPolicies:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -391,7 +391,7 @@ xdsIR:
             maxAge: 16m40s
   envoy-gateway/gateway-2:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -428,7 +428,7 @@ xdsIR:
           prefix: /
   envoy-gateway/gateway-3:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0

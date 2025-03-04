@@ -367,6 +367,11 @@ xdsIR:
         text: |
           this is a Global log
         type: TCP
+      json:
+      - logType: Route
+        path: /dev/stdout
+      - logType: Listener
+        path: /dev/stdout
       openTelemetry:
       - authority: otel-collector.monitoring.svc.cluster.local
         destination:
@@ -410,10 +415,6 @@ xdsIR:
         text: |
           this is a Global log
       text:
-      - logType: Route
-        path: /dev/stdout
-      - logType: Listener
-        path: /dev/stdout
       - format: |
           this is a route log
         logType: Route

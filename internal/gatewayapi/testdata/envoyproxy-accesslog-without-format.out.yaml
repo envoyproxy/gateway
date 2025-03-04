@@ -191,8 +191,6 @@ xdsIR:
             weight: 1
         resources:
           k8s.cluster.name: cluster-1
-      text:
-      - path: /dev/stdout
     http:
     - address: 0.0.0.0
       hostnames:

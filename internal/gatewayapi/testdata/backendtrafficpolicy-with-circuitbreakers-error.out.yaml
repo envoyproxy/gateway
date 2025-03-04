@@ -308,7 +308,7 @@ infraIR:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -346,7 +346,7 @@ xdsIR:
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
   envoy-gateway/gateway-2:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0

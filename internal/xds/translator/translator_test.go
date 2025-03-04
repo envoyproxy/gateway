@@ -102,6 +102,9 @@ func TestTranslateXds(t *testing.T) {
 		"accesslog-invalid": {
 			errMsg: "validation failed for xds resource",
 		},
+		"accesslog-without-format": {
+			errMsg: "text.Format is nil",
+		},
 		"tracing-invalid": {
 			errMsg: "validation failed for xds resource",
 		},

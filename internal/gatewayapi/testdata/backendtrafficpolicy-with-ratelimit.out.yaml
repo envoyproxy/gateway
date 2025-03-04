@@ -265,7 +265,7 @@ infraIR:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -318,7 +318,7 @@ xdsIR:
                   unit: Hour
   envoy-gateway/gateway-2:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
