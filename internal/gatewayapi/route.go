@@ -1336,7 +1336,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		} else {
 			backendIps := resources.GetServiceImport(backendNamespace, string(backendRef.Name)).Spec.IPs
 			for _, ip := range backendIps {
-				ep := ir.NewDestEndpoint(ip, uint32(*backendRef.Port), false)
+				ep := ir.NewDestEndpoint(ip, uint32(*backendRef.Port), false, nil)
 				endpoints = append(endpoints, ep)
 			}
 		}
@@ -1372,7 +1372,10 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		if err != nil {
 			return nil, err
 		}
-		ds.IPFamily = getServiceIPFamily(resources.GetService(backendNamespace, string(backendRef.Name)))
+		svc := resources.GetService(backendNamespace, string(backendRef.Name))
+		ds.IPFamily = getServiceIPFamily(svc)
+		ds.ZoneAwareRoutingEnabled = isZoneAwareRoutingEnabled(svc)
+
 	case egv1a1.KindBackend:
 		ds = t.processBackendDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources)
 		ds.TLS, err = t.applyBackendTLSSetting(
@@ -1468,15 +1471,16 @@ func (t *Translator) processServiceDestinationSetting(
 		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
 	} else {
 		// Fall back to Service ClusterIP routing
-		ep := ir.NewDestEndpoint(service.Spec.ClusterIP, uint32(*backendRef.Port), false)
+		ep := ir.NewDestEndpoint(service.Spec.ClusterIP, uint32(*backendRef.Port), false, nil)
 		endpoints = append(endpoints, ep)
 	}
 
 	return &ir.DestinationSetting{
-		Name:        name,
-		Protocol:    protocol,
-		Endpoints:   endpoints,
-		AddressType: addrType,
+		Name:                    name,
+		Protocol:                protocol,
+		Endpoints:               endpoints,
+		AddressType:             addrType,
+		ZoneAwareRoutingEnabled: isZoneAwareRoutingEnabled(service),
 	}
 }
 
@@ -1494,6 +1498,18 @@ func getBackendFilters(routeType gwapiv1.Kind, backendRefContext BackendRefConte
 	}
 
 	return nil
+}
+
+func isZoneAwareRoutingEnabled(svc *corev1.Service) bool {
+	if trafficDist := svc.Spec.TrafficDistribution; trafficDist != nil {
+		return *trafficDist == corev1.ServiceTrafficDistributionPreferClose
+	}
+
+	if val, ok := svc.Annotations[corev1.AnnotationTopologyMode]; ok {
+		return val == "Auto" || val == "auto"
+	}
+
+	return false
 }
 
 func (t *Translator) processDestinationFilters(routeType gwapiv1.Kind, backendRefContext BackendRefContext, parentRef *RouteParentContext, route RouteContext, resources *resource.Resources) (*ir.DestinationFilters, error) {
@@ -1693,12 +1709,12 @@ func getIREndpointsFromEndpointSlice(endpointSlice *discoveryv1.EndpointSlice, p
 				// Drain the endpoint if it is being terminated
 				draining := *conditions.Terminating
 				for _, address := range endpoint.Addresses {
-					ep := ir.NewDestEndpoint(address, uint32(*endpointPort.Port), draining)
+					ep := ir.NewDestEndpoint(address, uint32(*endpointPort.Port), draining, endpoint.Zone)
 					endpoints = append(endpoints, ep)
 				}
 			} else if conditions.Ready == nil || *conditions.Ready {
 				for _, address := range endpoint.Addresses {
-					ep := ir.NewDestEndpoint(address, uint32(*endpointPort.Port), false)
+					ep := ir.NewDestEndpoint(address, uint32(*endpointPort.Port), false, endpoint.Zone)
 					endpoints = append(endpoints, ep)
 				}
 			}

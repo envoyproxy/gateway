@@ -1,0 +1,72 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - zoneAwareRoutingEnabled: true
+        endpoints:
+        - host: "1.1.1.1"
+          port: 50001
+          zone: us-west-2a
+        - host: "1.1.1.2"
+          port: 50001
+          zone: us-west-2b
+        - host: "1.1.1.3"
+          port: 50001
+          zone: us-west-2c
+        - host: "1.1.1.4"
+          port: 50001
+          zone: us-west-2a
+        - host: "1.1.1.5"
+          port: 50001
+          zone: us-west-2b
+        - host: "1.1.1.6"
+          port: 50001
+          zone: us-west-2c
+        weight: 20
+        name: "first-route-dest/backend/0"
+      - endpoints:
+        - host: "2.2.2.2"
+          port: 50002
+          zone: us-west-2a
+        - host: "2.2.2.3"
+          port: 50002
+          zone: us-west-2b
+        - host: "2.2.2.4"
+          port: 50002
+          zone: us-west-2c
+        - host: "2.2.2.5"
+          port: 50002
+          zone: us-west-2a
+        - host: "2.2.2.6"
+          port: 50002
+          zone: us-west-2b
+        weight: 3
+        name: "first-route-dest/backend/1"
+      - endpoints:
+        - host: "3.3.3.3"
+          port: 50003
+        - host: "3.3.3.4"
+          port: 50003
+        - host: "3.3.3.5"
+          port: 50003
+        - host: "3.3.3.6"
+          port: 50003
+        weight: 20
+        name: "first-route-dest/backend/2"
+      - endpoints:
+        - host: "4.4.4.4"
+          port: 50004
+          zone: us-west-2c
+        weight: 20
+        name: "first-route-dest/backend/3"

@@ -224,7 +224,7 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcherv3.StringMatcher {
 
 func buildXdsRouteAction(backendWeights *ir.BackendWeights, settings []*ir.DestinationSetting) *routev3.RouteAction {
 	// only use weighted cluster when there are invalid weights
-	if hasFiltersInSettings(settings) || backendWeights.Invalid != 0 {
+	if hasFiltersInSettings(settings) || backendWeights.Invalid != 0 || hasMultiBackendsAndZoneAwareRouting(settings) {
 		return buildXdsWeightedRouteAction(backendWeights, settings)
 	}
 
@@ -712,6 +712,15 @@ func hasFiltersInSettings(settings []*ir.DestinationSetting) bool {
 	for _, setting := range settings {
 		filters := setting.Filters
 		if filters != nil {
+			return true
+		}
+	}
+	return false
+}
+
+func hasMultiBackendsAndZoneAwareRouting(settings []*ir.DestinationSetting) bool {
+	for _, setting := range settings {
+		if setting.ZoneAwareRoutingEnabled {
 			return true
 		}
 	}

@@ -1,0 +1,24 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: first-route
+      route:
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
+        upgradeConfigs:
+        - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: first-route-dest/backend/0
+            weight: 20
+          - name: first-route-dest/backend/1
+            weight: 3
+          - name: first-route-dest/backend/2
+            weight: 20
+          - name: first-route-dest/backend/3
+            weight: 20
