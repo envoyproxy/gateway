@@ -1,6 +1,8 @@
 accesslog:
   text:
-  - path: "/dev/stdout"
+  - format: |
+      this is a log
+    path: /dev/stdout
 http:
 - name: "first-listener"
   address: "::"
