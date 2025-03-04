@@ -6,9 +6,9 @@
 package root
 
 import (
-	"github.com/envoyproxy/gateway/internal/cmd"
-
 	"github.com/spf13/cobra"
+
+	"github.com/envoyproxy/gateway/internal/cmd"
 )
 
 // GetRootCommand returns the root cobra command to be executed
