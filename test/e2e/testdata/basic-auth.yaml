@@ -93,3 +93,43 @@ spec:
   basicAuth:
     users:
       name: "basic-auth-users-secret-2"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  namespace: gateway-conformance-infra
+  name: basic-auth-users-secret-3
+data:
+  .htpasswd: "dXNlcjM6e1NIQX1QcitqQWR4WkdXOFlXVHhGNVJrb2VpTXBkWWs9CnVzZXI0OntTSEF9SC9LemNFcnQ0RTdzdFI1UXltbU8vVkNoTjVzPQ=="
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-basic-auth-3
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  rules:
+  - matches:
+    - path:
+        type: Exact
+        value: /basic-auth-3
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: basic-auth-3
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-with-basic-auth-3
+  basicAuth:
+    users:
+      name: "basic-auth-users-secret-3"
+    forwardUsernameHeader: "X-Authenticated-User"
