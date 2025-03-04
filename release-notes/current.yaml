@@ -3,9 +3,11 @@ date: Pending
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
   Use a dedicated listener port(19003) for envoy proxy readiness
+  Uses the envoy JSON formatter for the default access log instead of text formatter.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
+  Fixed CVE-2025-25294
 
 # New features or capabilities added in this release.
 new features: |

@@ -225,7 +225,7 @@ tcpRoutes:
 xdsIR:
   envoy-gateway/gateway-tls:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0

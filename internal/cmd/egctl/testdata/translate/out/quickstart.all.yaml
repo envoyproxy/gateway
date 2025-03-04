@@ -99,7 +99,7 @@ infraIR:
 xdsIR:
   envoy-gateway-system/eg:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0

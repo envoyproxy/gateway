@@ -8,8 +8,7 @@
             portValue: 50000
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: direct-route-dest/backend/0
+    locality: {}
 - clusterName: accesslog/monitoring/envoy-als/port/9000
   endpoints:
   - lbEndpoints:
@@ -20,5 +19,4 @@
             portValue: 9000
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: accesslog/monitoring/envoy-als/port/9000/backend/0
+    locality: {}
