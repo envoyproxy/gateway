@@ -76,7 +76,7 @@ static_resources:
               compressor_library:
                 name: text_optimized
                 typed_config:
-                  "@type": type.googleapis.com/envoy.extensions.compression.gzip.compressor.v3.Gzip
+                  "@type": type.googleapis.com/envoy.extensions.compression.brotli.compressor.v3.Brotli
           - name: envoy.filters.http.router
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
