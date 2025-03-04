@@ -21,7 +21,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/protocov"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -79,11 +79,7 @@ func buildHCMOAuth2Filter(oidc *ir.OIDC) (*hcmv3.HttpFilter, error) {
 		return nil, err
 	}
 
-	if err := oauth2Proto.ValidateAll(); err != nil {
-		return nil, err
-	}
-
-	OAuth2Any, err := protocov.ToAnyWithValidation(oauth2Proto)
+	OAuth2Any, err := proto.ToAnyWithValidation(oauth2Proto)
 	if err != nil {
 		return nil, err
 	}

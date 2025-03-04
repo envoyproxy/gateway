@@ -45,11 +45,9 @@ func LoadResourcesFromYAMLBytes(yamlBytes []byte, addMissingResources bool) (*Re
 // loadKubernetesYAMLToResources converts a Kubernetes YAML string into GatewayAPI Resources.
 // TODO: add support for kind:
 //   - EnvoyExtensionPolicy (gateway.envoyproxy.io/v1alpha1)
-//   - HTTPRouteFilter (gateway.envoyproxy.io/v1alpha1)
 //   - BackendLPPolicy (gateway.networking.k8s.io/v1alpha2)
 //   - BackendTLSPolicy (gateway.networking.k8s.io/v1alpha3)
 //   - ReferenceGrant (gateway.networking.k8s.io/v1alpha2)
-//   - TLSRoute (gateway.networking.k8s.io/v1alpha2)
 func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Resources, error) {
 	resources := NewResources()
 	var useDefaultNamespace bool
@@ -64,7 +62,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 			return err
 		}
 
-		un := unstructured.Unstructured{Object: obj}
+		un := &unstructured.Unstructured{Object: obj}
 		gvk := un.GroupVersionKind()
 		name, namespace := un.GetName(), un.GetNamespace()
 		if len(namespace) == 0 {
@@ -72,10 +70,15 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 			namespace = config.DefaultNamespace
 		}
 
-		// Perform local validation for gateway-api related resources only.
+		// Perform local validation and apply default values for gateway-api related resources only.
 		if gvk.Group == egv1a1.GroupName || gvk.Group == gwapiv1.GroupName {
 			if err = defaultValidator.Validate(yamlByte); err != nil {
 				return fmt.Errorf("local validation error: %w", err)
+			}
+
+			un, err = gatewaySchemaDefaulter.ApplyDefault(un)
+			if err != nil {
+				return fmt.Errorf("failed to apply default values for %s/%s: %w", un.GetKind(), un.GetName(), err)
 			}
 		}
 
@@ -84,7 +87,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 		if err != nil {
 			return err
 		}
-		err = combinedScheme.Convert(&un, kobj, nil)
+		err = combinedScheme.Convert(un, kobj, nil)
 		if err != nil {
 			return err
 		}
@@ -95,6 +98,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 		}
 		kobjVal := reflect.ValueOf(kobj).Elem()
 		spec := kobjVal.FieldByName("Spec")
+		data := kobjVal.FieldByName("Data")
+		stringData := kobjVal.FieldByName("StringData")
 
 		switch gvk.Kind {
 		case KindEnvoyProxy:
@@ -307,6 +312,34 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 				Spec: typedSpec.(egv1a1.BackendSpec),
 			}
 			resources.Backends = append(resources.Backends, backend)
+		case KindSecret:
+			typedData := data.Interface()
+			typedStringData := stringData.Interface()
+			secret := &corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					Kind: KindSecret,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+				Data:       typedData.(map[string][]byte),
+				StringData: typedStringData.(map[string]string),
+			}
+			resources.Secrets = append(resources.Secrets, secret)
+		case KindConfigMap:
+			typedData := data.Interface()
+			configMap := &corev1.ConfigMap{
+				TypeMeta: metav1.TypeMeta{
+					Kind: KindConfigMap,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+				Data: typedData.(map[string]string),
+			}
+			resources.ConfigMaps = append(resources.ConfigMaps, configMap)
 		}
 
 		return nil
