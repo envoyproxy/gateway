@@ -69,9 +69,9 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 	}
 
 	// Create a new context for up-running proxy.
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	i.proxyContextMap[proxyName] = &proxyContext{ctx: ctx, cancel: stop}
-	return funcE.Run(ctx, args, funcE.HomeDir(i.HomeDir))
+	pCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	i.proxyContextMap[proxyName] = &proxyContext{ctx: pCtx, cancel: stop}
+	return funcE.Run(pCtx, args, funcE.HomeDir(i.HomeDir))
 }
 
 // DeleteProxyInfra removes the managed host process, if it doesn't exist.
