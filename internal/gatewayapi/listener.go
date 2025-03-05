@@ -269,7 +269,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 		(!envoyproxy.Spec.Telemetry.AccessLog.Disable && len(envoyproxy.Spec.Telemetry.AccessLog.Settings) == 0) {
 		// use the default access log
 		return &ir.AccessLog{
-			Text: []*ir.TextAccessLog{
+			JSON: []*ir.JSONAccessLog{
 				{
 					Path: "/dev/stdout",
 				},
@@ -298,8 +298,8 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 			format = *accessLog.Format
 		} else {
 			format = egv1a1.ProxyAccessLogFormat{
-				Type: egv1a1.ProxyAccessLogFormatTypeText,
-				// Empty text format means default format
+				Type: egv1a1.ProxyAccessLogFormatTypeJSON,
+				// Empty means default format
 			}
 		}
 
@@ -319,13 +319,13 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 		}
 
 		if len(accessLog.Sinks) == 0 {
-			al := &ir.TextAccessLog{
-				Format:     format.Text,
+			al := &ir.JSONAccessLog{
+				JSON:       format.JSON,
 				CELMatches: validExprs,
 				LogType:    accessLogType,
 				Path:       "/dev/stdout",
 			}
-			irAccessLog.Text = append(irAccessLog.Text, al)
+			irAccessLog.JSON = append(irAccessLog.JSON, al)
 		}
 
 		for j, sink := range accessLog.Sinks {
@@ -586,7 +586,7 @@ func destinationSettingFromHostAndPort(name, host string, port uint32) []*ir.Des
 			Name:      name,
 			Weight:    ptr.To[uint32](1),
 			Protocol:  ir.GRPC,
-			Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(host, port, false)},
+			Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(host, port, false, nil)},
 		},
 	}
 }

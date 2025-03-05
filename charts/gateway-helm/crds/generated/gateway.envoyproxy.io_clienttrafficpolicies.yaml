@@ -360,8 +360,8 @@ spec:
                     description: |-
                       PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge
                       (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
-                      It defaults to false.
-                      Deprecated: use RequestID instead
+                      Defaults to false and cannot be combined with RequestID.
+                      Deprecated: use RequestID=Preserve instead
                     type: boolean
                   requestID:
                     description: |-
@@ -435,6 +435,9 @@ spec:
                         > 0) ? (self.mode == ''AppendForward'' || self.mode == ''SanitizeSet'')
                         : true'
                 type: object
+                x-kubernetes-validations:
+                - message: preserveXRequestID and requestID cannot both be set.
+                  rule: '!(has(self.preserveXRequestID) && has(self.requestID))'
               healthCheck:
                 description: HealthCheck provides configuration for determining whether
                   the HTTP/HTTPS listener is healthy.

@@ -4,21 +4,19 @@
     - endpoint:
         address:
           socketAddress:
-            address: 1.1.1.1
-            portValue: 8081
+            address: 1.2.3.4
+            portValue: 50000
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: first-route-dest/backend/0
+    locality: {}
 - clusterName: second-route-dest
   endpoints:
   - lbEndpoints:
     - endpoint:
         address:
           socketAddress:
-            address: 2.2.2.2
-            portValue: 8082
+            address: 1.2.3.4
+            portValue: 50000
       loadBalancingWeight: 1
     loadBalancingWeight: 1
-    locality:
-      region: second-route-dest/backend/0
+    locality: {}

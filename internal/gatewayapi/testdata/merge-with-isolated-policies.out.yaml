@@ -290,7 +290,7 @@ securityPolicies:
 xdsIR:
   envoy-gateway-class:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
