@@ -6,7 +6,7 @@ breaking changes: |
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
-  Fixed CVE-2025-25294.
+  Fixed CVE-2025-25294: log injection vulnerability in Envoy Gateway when using default access log.
 
 # New features or capabilities added in this release.
 new features: |
@@ -15,8 +15,9 @@ new features: |
 bug fixes: |
   Added support for Secret and ConfigMap parsing in Standalone mode.
   Fix translating backendSettings for extAuth.
-  Fix allowing weights to be zero on endpoints.
+  Fix allowing weights to be zero on endpoints for backendRefs in TCPRoute and UDPRoute.
   Fix validation of all xDS resources.
+  Fix support for empty values in fields with default values in Standalone.
 
 # Other notable changes not covered by the above sections.
 Other changes: |
