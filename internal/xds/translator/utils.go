@@ -186,7 +186,7 @@ func addClusterFromURL(url string, tCtx *types.ResourceVersionTable) error {
 
 	ds = &ir.DestinationSetting{
 		Weight:    ptr.To[uint32](1),
-		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(uc.hostname, uc.port, false)},
+		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(uc.hostname, uc.port, false, nil)},
 		Name:      destinationSettingName(uc.name),
 	}
 
