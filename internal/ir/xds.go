@@ -1474,6 +1474,9 @@ type DestinationSetting struct {
 	IPFamily *egv1a1.IPFamily    `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
 	TLS      *TLSUpstreamConfig  `json:"tls,omitempty" yaml:"tls,omitempty"`
 	Filters  *DestinationFilters `json:"filters,omitempty" yaml:"filters,omitempty"`
+	// ZoneAwareRoutingEnabled specifies whether to enable Zone Aware Routing for this destination's endpoints.
+	// This is derived from the backend service and depends on having Kubernetes Topology Aware Routing or Traffic Distribution enabled.
+	ZoneAwareRoutingEnabled bool `json:"zoneAwareRoutingEnabled,omitempty" yaml:"zoneAwareRoutingEnabled,omitempty"`
 }
 
 // Validate the fields within the DestinationSetting structure
@@ -1508,6 +1511,8 @@ type DestinationEndpoint struct {
 	Path *string `json:"path,omitempty" yaml:"path,omitempty"`
 	// Draining is true if this endpoint should be drained
 	Draining bool `json:"draining,omitempty" yaml:"draining,omitempty"`
+	// Zone refers to the topology zone the Endpoint resides in
+	Zone *string `json:"zone,omitempty" yaml:"zone,omitempty"`
 }
 
 // Validate the fields within the DestinationEndpoint structure
@@ -1539,11 +1544,12 @@ func (d DestinationEndpoint) Validate() error {
 }
 
 // NewDestEndpoint creates a new DestinationEndpoint.
-func NewDestEndpoint(host string, port uint32, draining bool) *DestinationEndpoint {
+func NewDestEndpoint(host string, port uint32, draining bool, zone *string) *DestinationEndpoint {
 	return &DestinationEndpoint{
 		Host:     host,
 		Port:     port,
 		Draining: draining,
+		Zone:     zone,
 	}
 }
 

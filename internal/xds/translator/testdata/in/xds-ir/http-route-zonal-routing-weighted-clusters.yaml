@@ -1,0 +1,32 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 8080
+          zone: us-east-1a
+        - host: "2.3.4.5"
+          port: 8080
+          zone: us-east-1b
+        name: "first-route-dest/backend/0"
+        weight: 30
+        zoneAwareRoutingEnabled: true
+      - endpoints:
+        - host: "3.4.5.6"
+          port: 9090
+          zone: us-east-1c
+        - host: "4.5.6.7"
+          port: 9090
+          zone: us-east-1d
+        name: "first-route-dest/backend/1"
+        weight: 70
+        zoneAwareRoutingEnabled: false
