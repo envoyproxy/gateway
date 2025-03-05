@@ -69,8 +69,8 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 	}
 
 	// Create a new context for up-running proxy.
-	pCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	i.proxyContextMap[proxyName] = &proxyContext{ctx: pCtx, cancel: stop}
+	pCtx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	i.proxyContextMap[proxyName] = &proxyContext{ctx: pCtx, cancel: cancel}
 	return funcE.Run(pCtx, args, funcE.HomeDir(i.HomeDir))
 }
 
