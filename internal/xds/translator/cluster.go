@@ -466,9 +466,10 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 		}
 
 		// If zone aware routing is enabled for a backendRefs we include endpoint zone info in localities.
-		// Note: The locality.LoadBalancingWeight field applies only when using locality-weighted LB config so in order
-		// to support traffic splitting we rely on weighted clusters defined at the route level. This pushes part of the
-		// routing logic higher up the stack which can limit host selection controls during retries and session affinity.
+		// Note: The locality.LoadBalancingWeight field applies only when using locality-weighted LB config
+		// so in order to support traffic splitting we rely on weighted clusters defined at the route level
+		// if multiple backendRefs exist. This pushes part of the routing logic higher up the stack which can
+		// limit host selection controls during retries and session affinity.
 		// For more details see https://github.com/envoyproxy/gateway/issues/5307#issuecomment-2688767482
 		if ds.ZoneAwareRoutingEnabled {
 			localities = append(localities, buildZonalLocalities(metadata, ds)...)
