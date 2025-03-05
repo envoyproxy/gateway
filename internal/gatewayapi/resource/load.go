@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"sort"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -360,7 +361,10 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 	}
 
 	if addMissingResources {
-		for ns := range requiredNamespaceMap {
+		// Sort the required namespace in order to keep the consistency for test.
+		sortedRequiredNamespace := requiredNamespaceMap.UnsortedList()
+		sort.Strings(sortedRequiredNamespace)
+		for _, ns := range sortedRequiredNamespace {
 			if !providedNamespaceMap.Has(ns) {
 				namespace := &corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
@@ -387,13 +391,20 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 		for _, route := range resources.GRPCRoutes {
 			addMissingServices(requiredServiceMap, route)
 		}
+		// Sort the required service in order to keep the consistency for test.
+		sortedRequiredService := make([]string, 0, len(requiredServiceMap))
+		for key := range requiredServiceMap {
+			sortedRequiredService = append(sortedRequiredService, key)
+		}
+		sort.Strings(sortedRequiredService)
 
 		providedServiceMap := map[string]*corev1.Service{}
 		for _, service := range resources.Services {
 			providedServiceMap[service.Namespace+"/"+service.Name] = service
 		}
 
-		for key, service := range requiredServiceMap {
+		for _, key := range sortedRequiredService {
+			service := requiredServiceMap[key]
 			if provided, found := providedServiceMap[key]; !found {
 				resources.Services = append(resources.Services, service)
 			} else {
