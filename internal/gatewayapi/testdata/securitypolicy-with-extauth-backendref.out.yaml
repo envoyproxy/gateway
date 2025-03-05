@@ -358,17 +358,9 @@ xdsIR:
               - header2
               path: /auth
             name: securitypolicy/default/policy-for-gateway-1
-<<<<<<< HEAD
-=======
             traffic:
               circuitBreaker:
                 maxConnections: 30001
                 maxParallelRequests: 1022
                 maxParallelRetries: 1023
                 maxPendingRequests: 1024
-    readyListener:
-      address: 0.0.0.0
-      ipFamily: IPv4
-      path: /ready
-      port: 19003
->>>>>>> 1c0eca650 (fix: backendSettings for extAuth (#5372))
