@@ -31,8 +31,8 @@ import (
 // cfgPath is the path to the EnvoyGateway configuration file.
 var cfgPath string
 
-// getServerCommand returns the server cobra command to be executed.
-func getServerCommand() *cobra.Command {
+// GetServerCommand returns the server cobra command to be executed.
+func GetServerCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "server",
 		Aliases: []string{"serve"},

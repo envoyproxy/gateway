@@ -149,10 +149,6 @@ accessLog:
       text: |
         this is a Global log
   text:
-    - logType: Route
-      path: /dev/stdout
-    - logType: Listener
-      path: /dev/stdout
     - format: |
         this is a route log
       logType: Route
@@ -164,6 +160,8 @@ accessLog:
     - format: |
         this is a Global log
       path: /dev/stdout
+  json:
+    - path: "/dev/stdout"
 http:
   - address: 0.0.0.0
     hostnames:

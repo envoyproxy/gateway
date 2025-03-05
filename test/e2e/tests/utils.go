@@ -390,6 +390,14 @@ func ScrapeMetrics(t *testing.T, c client.Client, nn types.NamespacedName, port 
 }
 
 func RetrieveURL(c client.Client, nn types.NamespacedName, port int32, path string) (string, error) {
+	host, err := ServiceHost(c, nn, port)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("http://%s%s", host, path), nil
+}
+
+func ServiceHost(c client.Client, nn types.NamespacedName, port int32) (string, error) {
 	svc := corev1.Service{}
 	if err := c.Get(context.Background(), nn, &svc); err != nil {
 		return "", err
@@ -406,7 +414,8 @@ func RetrieveURL(c client.Client, nn types.NamespacedName, port int32, path stri
 	default:
 		host = fmt.Sprintf("%s.%s.svc", nn.Name, nn.Namespace)
 	}
-	return fmt.Sprintf("http://%s%s", net.JoinHostPort(host, strconv.Itoa(int(port))), path), nil
+
+	return net.JoinHostPort(host, strconv.Itoa(int(port))), nil
 }
 
 var metricParser = &expfmt.TextParser{}
@@ -733,4 +742,16 @@ func DeleteBackend(c client.Client, nn types.NamespacedName) error {
 		return err
 	}
 	return c.Delete(context.Background(), backend)
+}
+
+func ContentEncoding(compressorType egv1a1.CompressorType) string {
+	var encoding string
+	switch compressorType {
+	case egv1a1.BrotliCompressorType:
+		encoding = "br"
+	case egv1a1.GzipCompressorType:
+		encoding = "gzip"
+	}
+
+	return encoding
 }
