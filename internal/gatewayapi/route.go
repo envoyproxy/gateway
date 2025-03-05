@@ -1505,6 +1505,10 @@ func isZoneAwareRoutingEnabled(svc *corev1.Service) bool {
 		return *trafficDist == corev1.ServiceTrafficDistributionPreferClose
 	}
 
+	// Allows annotation values that align with Kubernetes defaults.
+	// Ref:
+	// https://kubernetes.io/docs/concepts/services-networking/topology-aware-routing/#enabling-topology-aware-routing
+	// https://github.com/kubernetes/kubernetes/blob/9d9e1afdf78bce0a517cc22557457f942040ca19/staging/src/k8s.io/endpointslice/utils.go#L355-L368
 	if val, ok := svc.Annotations[corev1.AnnotationTopologyMode]; ok {
 		return val == "Auto" || val == "auto"
 	}
