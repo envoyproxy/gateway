@@ -5,7 +5,7 @@
         address:
           socketAddress:
             address: 1.2.3.4
-            portValue: 50000
+            portValue: 8080
       loadBalancingWeight: 1
     locality:
       zone: us-east-1a
@@ -13,8 +13,8 @@
     - endpoint:
         address:
           socketAddress:
-            address: 1.2.3.5
-            portValue: 50000
+            address: 2.3.4.5
+            portValue: 8080
       loadBalancingWeight: 1
     locality:
       zone: us-east-1b

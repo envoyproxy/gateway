@@ -18,9 +18,7 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
             suppressEnvoyHeaders: true
-        mergeSlashes: true
         normalizePath: true
-        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
         rds:
           configSource:
             ads: {}
