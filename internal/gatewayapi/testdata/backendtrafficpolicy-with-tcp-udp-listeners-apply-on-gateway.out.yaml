@@ -230,7 +230,7 @@ udpRoutes:
 xdsIR:
   default/tcp-gateway:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     readyListener:
       address: 0.0.0.0

@@ -29,8 +29,8 @@ var overwriteControlPlaneCerts bool
 // TODO: make this path configurable or use server config directly.
 const defaultLocalCertPath = "/tmp/envoy-gateway/certs"
 
-// getCertGenCommand returns the certGen cobra command to be executed.
-func getCertGenCommand() *cobra.Command {
+// GetCertGenCommand returns the certGen cobra command to be executed.
+func GetCertGenCommand() *cobra.Command {
 	var local bool
 
 	cmd := &cobra.Command{

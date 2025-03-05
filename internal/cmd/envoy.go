@@ -13,8 +13,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/cmd/envoy"
 )
 
-// getEnvoyCommand returns the envoy cobra command to be executed.
-func getEnvoyCommand() *cobra.Command {
+// GetEnvoyCommand returns the envoy cobra command to be executed.
+func GetEnvoyCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "envoy",
 		Short: "Envoy proxy management",

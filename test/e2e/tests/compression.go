@@ -98,14 +98,7 @@ func testCompression(t *testing.T, suite *suite.ConformanceTestSuite, compressio
 	}
 	BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "compression", Namespace: ns}, suite.ControllerName, ancestorRef)
 
-	var encoding string
-	switch compressionType {
-	case egv1a1.BrotliCompressorType:
-		encoding = "br"
-	case egv1a1.GzipCompressorType:
-		encoding = "gzip"
-	}
-
+	encoding := ContentEncoding(compressionType)
 	expectedResponse := http.ExpectedResponse{
 		Request: http.Request{
 			Path: "/compression",

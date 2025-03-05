@@ -9,15 +9,6 @@ $(tools.bindir)/%: $(tools.srcdir)/%.sh
 	mkdir -p $(@D)
 	install $< $@
 
-# `go get`-able things
-# ====================
-#
-tools/protoc-gen-go      = $(tools.bindir)/protoc-gen-go
-tools/protoc-gen-go-grpc = $(tools.bindir)/protoc-gen-go-grpc
-$(tools.bindir)/%: $(tools.srcdir)/%/pin.go $(tools.srcdir)/%/go.mod
-	cd $(<D) && GOOS= GOARCH= go build -o $(abspath $@) $$(sed -En 's,^import _ "(.*)".*,\1,p' pin.go)
-
-
 # `pip install`-able things
 # =========================
 #
