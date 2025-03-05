@@ -8,7 +8,9 @@ package host
 import (
 	"context"
 	"errors"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 
 	funcE "github.com/tetratelabs/func-e/api"
 	"k8s.io/utils/ptr"
@@ -67,9 +69,9 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 	}
 
 	// Create a new context for up-running proxy.
-	pCtx, cancel := context.WithCancel(context.Background())
-	i.proxyContextMap[proxyName] = &proxyContext{ctx: pCtx, cancel: cancel}
-	return funcE.Run(pCtx, args, funcE.HomeDir(i.HomeDir))
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	i.proxyContextMap[proxyName] = &proxyContext{ctx: ctx, cancel: stop}
+	return funcE.Run(ctx, args, funcE.HomeDir(i.HomeDir))
 }
 
 // DeleteProxyInfra removes the managed host process, if it doesn't exist.
