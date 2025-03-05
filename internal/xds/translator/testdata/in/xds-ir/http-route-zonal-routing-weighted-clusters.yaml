@@ -21,4 +21,15 @@ http:
           port: 50000
           zone: us-east-1b
         name: "first-route-dest/backend/0"
+        weight: 30
+        zoneAwareRoutingEnabled: true
+      - endpoints:
+        - host: "1.2.3.6"
+          port: 50000
+          zone: us-east-1c
+        - host: "1.2.3.7"
+          port: 50000
+          zone: us-east-1d
+        name: "first-route-dest/backend/1"
+        weight: 70
         zoneAwareRoutingEnabled: true

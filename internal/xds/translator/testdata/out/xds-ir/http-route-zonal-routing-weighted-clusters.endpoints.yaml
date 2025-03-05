@@ -1,0 +1,40 @@
+- clusterName: first-route-dest/backend/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+    locality:
+      zone: us-east-1a
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.5
+            portValue: 50000
+      loadBalancingWeight: 1
+    locality:
+      zone: us-east-1b
+- clusterName: first-route-dest/backend/1
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.6
+            portValue: 50000
+      loadBalancingWeight: 1
+    locality:
+      zone: us-east-1c
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.7
+            portValue: 50000
+      loadBalancingWeight: 1
+    locality:
+      zone: us-east-1d

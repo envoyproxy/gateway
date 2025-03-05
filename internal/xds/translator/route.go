@@ -726,6 +726,10 @@ func hasFiltersInSettings(settings []*ir.DestinationSetting) bool {
 }
 
 func hasZoneAwareRouting(settings []*ir.DestinationSetting) bool {
+	// Only use weighted clusters if more than one setting
+	if len(settings) < 2 {
+		return false
+	}
 	for _, setting := range settings {
 		if setting.ZoneAwareRoutingEnabled {
 			return true
