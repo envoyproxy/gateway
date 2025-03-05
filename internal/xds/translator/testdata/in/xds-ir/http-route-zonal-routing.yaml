@@ -54,4 +54,3 @@ http:
           zone: us-west-2b
         weight: 10
         name: "first-route-dest/backend/1"
-
