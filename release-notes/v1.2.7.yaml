@@ -1,0 +1,26 @@
+date: March 06, 2025
+
+# Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
+breaking changes: |
+
+# Updates addressing vulnerabilities, security flaws, or compliance requirements.
+security updates: |
+
+# New features or capabilities added in this release.
+new features: |
+
+bug fixes: |
+  Fix translating of backendSettings for extAuth.
+  Fix allowing weights to be zero on endpoints for backendRefs in TCPRoute and UDPRoute.
+  Fix validation of all xDS resources before sending them to the Envoy fleet.
+  Added support for Secret and ConfigMap parsing in Standalone mode.
+
+# Enhancements that improve performance.
+performance improvements: |
+
+# Deprecated features or APIs.
+deprecations: |
+
+# Other notable changes not covered by the above sections.
+Other changes: |
+  Bumped the version of the ratelimit image to ae4cee11.
