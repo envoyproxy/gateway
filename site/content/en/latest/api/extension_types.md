@@ -1608,7 +1608,7 @@ _Appears in:_
 | ----- | ----------- |
 | `Streamed` | StreamedExtProcBodyProcessingMode will stream the body to the server in pieces as they arrive at the proxy.<br /> | 
 | `Buffered` | BufferedExtProcBodyProcessingMode will buffer the message body in memory and send the entire body at once. If the body exceeds the configured buffer limit, then the downstream system will receive an error.<br /> | 
-| `FullDuplexStreamed` | FullDuplexStreamedExtBodyProcessingMode will send the body in pieces, to be read in a stream. Full details here: https://github.com/envoyproxy/envoy/blob/60aed1c0ae520ed4e1d828c998ae961b4314542c/api/envoy/extensions/filters/http/ext_proc/v3/processing_mode.proto#L82-L111<br /> | 
+| `FullDuplexStreamed` | FullDuplexStreamedExtBodyProcessingMode will send the body in pieces, to be read in a stream. Full details here: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_proc/v3/processing_mode.proto.html#enum-extensions-filters-http-ext-proc-v3-processingmode-bodysendmode<br /> | 
 | `BufferedPartial` | BufferedPartialExtBodyHeaderProcessingMode will buffer the message body in memory and send the entire body in one chunk. If the body exceeds the configured buffer limit, then the body contents up to the buffer limit will be sent.<br /> | 
 
 
