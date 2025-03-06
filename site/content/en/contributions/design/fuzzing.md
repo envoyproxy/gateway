@@ -13,6 +13,10 @@ provides a continuous fuzzing infrastructure for popular open-source projects. B
 we can leverage OSS-Fuzz to continuously fuzz Envoy Gateway against a wide range of inputs, 
 improving its resilience and reliability.
 
+**Note:** This work is sponsored by the 
+[Linux Foundation Mentorship](https://mentorship.lfx.linuxfoundation.org/project/44020e81-1218-49aa-95e0-ee3e03998eb3) 
+program.
+
 ## Goals
 
 * Identify fuzz targets considering the tradeoff between realism, efficiency, and maintenance effort.
