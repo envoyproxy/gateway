@@ -443,11 +443,13 @@ func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3
 
 		if circuitBreaker.PerHost != nil {
 			if circuitBreaker.PerHost.MaxConnections != nil {
-				cbtPerHost = append(cbtPerHost, &clusterv3.CircuitBreakers_Thresholds{
-					MaxConnections: &wrapperspb.UInt32Value{
-						Value: *circuitBreaker.PerHost.MaxConnections,
+				cbtPerHost = []*clusterv3.CircuitBreakers_Thresholds{
+					{
+						MaxConnections: &wrapperspb.UInt32Value{
+							Value: *circuitBreaker.PerHost.MaxConnections,
+						},
 					},
-				})
+				}
 			}
 		}
 	}
