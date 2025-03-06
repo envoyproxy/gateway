@@ -9,11 +9,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/envoyproxy/gateway/internal/cmd"
+	"github.com/envoyproxy/gateway/cmd/envoy-gateway/root"
 )
 
 func main() {
-	if err := cmd.GetRootCommand().Execute(); err != nil {
+	if err := root.GetRootCommand().Execute(); err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

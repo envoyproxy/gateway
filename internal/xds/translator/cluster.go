@@ -158,6 +158,12 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 	}
 
 	for i, ds := range args.settings {
+
+		// If zone aware routing is enabled we update the cluster lb config
+		if ds.ZoneAwareRoutingEnabled {
+			cluster.CommonLbConfig.LocalityConfigSpecifier = &clusterv3.Cluster_CommonLbConfig_ZoneAwareLbConfig_{ZoneAwareLbConfig: &clusterv3.Cluster_CommonLbConfig_ZoneAwareLbConfig{}}
+		}
+
 		if ds.TLS != nil {
 			socket, err := buildXdsUpstreamTLSSocketWthCert(ds.TLS)
 			if err != nil {
@@ -446,8 +452,6 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 	localities := make([]*endpointv3.LocalityLbEndpoints, 0, len(destSettings))
 	for i, ds := range destSettings {
 
-		endpoints := make([]*endpointv3.LbEndpoint, 0, len(ds.Endpoints))
-
 		var metadata *corev3.Metadata
 		if ds.TLS != nil {
 			metadata = &corev3.Metadata{
@@ -461,45 +465,101 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 			}
 		}
 
-		for _, irEp := range ds.Endpoints {
-			healthStatus := corev3.HealthStatus_UNKNOWN
-			if irEp.Draining {
-				healthStatus = corev3.HealthStatus_DRAINING
-			}
-			lbEndpoint := &endpointv3.LbEndpoint{
-				Metadata: metadata,
-				HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
-					Endpoint: &endpointv3.Endpoint{
-						Address: buildAddress(irEp),
-					},
-				},
-				HealthStatus: healthStatus,
-			}
-			// Set default weight of 1 for all endpoints.
-			lbEndpoint.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: 1}
-			endpoints = append(endpoints, lbEndpoint)
-		}
-
-		locality := &endpointv3.LocalityLbEndpoints{
-			Locality: &corev3.Locality{
-				Region: ds.Name,
-			},
-			LbEndpoints: endpoints,
-			Priority:    0,
-		}
-
-		// Set locality weight
-		var weight uint32
-		if ds.Weight != nil {
-			weight = *ds.Weight
+		// If zone aware routing is enabled for a backendRefs we include endpoint zone info in localities.
+		// Note: The locality.LoadBalancingWeight field applies only when using locality-weighted LB config
+		// so in order to support traffic splitting we rely on weighted clusters defined at the route level
+		// if multiple backendRefs exist. This pushes part of the routing logic higher up the stack which can
+		// limit host selection controls during retries and session affinity.
+		// For more details see https://github.com/envoyproxy/gateway/issues/5307#issuecomment-2688767482
+		if ds.ZoneAwareRoutingEnabled {
+			localities = append(localities, buildZonalLocalities(metadata, ds)...)
 		} else {
-			weight = 1
+			localities = append(localities, buildWeightedLocalities(metadata, ds))
 		}
-		locality.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: weight}
-		locality.Priority = ptr.Deref(ds.Priority, 0)
-		localities = append(localities, locality)
 	}
 	return &endpointv3.ClusterLoadAssignment{ClusterName: clusterName, Endpoints: localities}
+}
+
+func buildZonalLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting) []*endpointv3.LocalityLbEndpoints {
+	var localities []*endpointv3.LocalityLbEndpoints
+	zonalEndpoints := make(map[string][]*endpointv3.LbEndpoint)
+	for _, irEp := range ds.Endpoints {
+		healthStatus := corev3.HealthStatus_UNKNOWN
+		if irEp.Draining {
+			healthStatus = corev3.HealthStatus_DRAINING
+		}
+		lbEndpoint := &endpointv3.LbEndpoint{
+			Metadata: metadata,
+			HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
+				Endpoint: &endpointv3.Endpoint{
+					Address: buildAddress(irEp),
+				},
+			},
+			LoadBalancingWeight: wrapperspb.UInt32(1),
+			HealthStatus:        healthStatus,
+		}
+
+		zone := ptr.Deref(irEp.Zone, "")
+		zonalEndpoints[zone] = append(zonalEndpoints[zone], lbEndpoint)
+	}
+
+	for zone, endPts := range zonalEndpoints {
+		locality := &endpointv3.LocalityLbEndpoints{
+			Locality: &corev3.Locality{
+				Zone: zone,
+			},
+			LbEndpoints: endPts,
+			Priority:    ptr.Deref(ds.Priority, 0),
+		}
+		localities = append(localities, locality)
+	}
+	// Sort localities by zone, so that the order is deterministic.
+	sort.Slice(localities, func(i, j int) bool {
+		return localities[i].Locality.Zone < localities[j].Locality.Zone
+	})
+
+	return localities
+}
+
+func buildWeightedLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting) *endpointv3.LocalityLbEndpoints {
+	endpoints := make([]*endpointv3.LbEndpoint, 0, len(ds.Endpoints))
+
+	for _, irEp := range ds.Endpoints {
+		healthStatus := corev3.HealthStatus_UNKNOWN
+		if irEp.Draining {
+			healthStatus = corev3.HealthStatus_DRAINING
+		}
+		lbEndpoint := &endpointv3.LbEndpoint{
+			Metadata: metadata,
+			HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
+				Endpoint: &endpointv3.Endpoint{
+					Address: buildAddress(irEp),
+				},
+			},
+			HealthStatus: healthStatus,
+		}
+		// Set default weight of 1 for all endpoints.
+		lbEndpoint.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: 1}
+		endpoints = append(endpoints, lbEndpoint)
+	}
+	locality := &endpointv3.LocalityLbEndpoints{
+		Locality: &corev3.Locality{
+			Region: ds.Name,
+		},
+		LbEndpoints: endpoints,
+		Priority:    0,
+	}
+
+	// Set locality weight
+	var weight uint32
+	if ds.Weight != nil {
+		weight = *ds.Weight
+	} else {
+		weight = 1
+	}
+	locality.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: weight}
+	locality.Priority = ptr.Deref(ds.Priority, 0)
+	return locality
 }
 
 func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) map[string]*anypb.Any {

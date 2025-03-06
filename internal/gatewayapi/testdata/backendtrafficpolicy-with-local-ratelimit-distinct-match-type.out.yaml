@@ -43,9 +43,9 @@ backendTrafficPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: 'RateLimit: local rateLimit does not support distinct HeaderMatch.'
-        reason: Invalid
-        status: "False"
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
@@ -147,7 +147,7 @@ infraIR:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -175,8 +175,6 @@ xdsIR:
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
-        directResponse:
-          statusCode: 500
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
@@ -188,6 +186,38 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
+        traffic:
+          rateLimit:
+            local:
+              default:
+                requests: 4294967295
+                unit: Second
+              rules:
+              - headerMatches:
+                - distinct: false
+                  exact: one
+                  name: x-user-id
+                - distinct: true
+                  name: x-org-id
+                limit:
+                  requests: 10
+                  unit: Hour
+              - cidrMatch:
+                  cidr: 192.168.0.0/16
+                  distinct: false
+                  ip: 192.168.0.0
+                  isIPv6: false
+                  maskLen: 16
+                headerMatches:
+                - distinct: false
+                  exact: two
+                  name: x-user-id
+                - distinct: false
+                  exact: bar
+                  name: x-org-id
+                limit:
+                  requests: 10
+                  unit: Minute
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

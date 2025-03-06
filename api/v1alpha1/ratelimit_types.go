@@ -202,7 +202,6 @@ const (
 	SourceMatchExact SourceMatchType = "Exact"
 	// SourceMatchDistinct Each IP Address within the specified Source IP CIDR is treated as a distinct client selector
 	// and uses a separate rate limit bucket/counter.
-	// Note: This is only supported for Global Rate Limits.
 	SourceMatchDistinct SourceMatchType = "Distinct"
 )
 
@@ -270,7 +269,6 @@ const (
 	// HeaderMatchDistinct matches any and all possible unique values encountered in the
 	// specified HTTP Header. Note that each unique value will receive its own rate limit
 	// bucket.
-	// Note: This is only supported for Global Rate Limits.
 	HeaderMatchDistinct HeaderMatchType = "Distinct"
 )
 
