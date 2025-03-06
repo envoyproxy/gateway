@@ -525,6 +525,11 @@ func buildZonalLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting) 
 		}
 		localities = append(localities, locality)
 	}
+	// Sort localities by zone, so that the order is deterministic.
+	sort.Slice(localities, func(i, j int) bool {
+		return localities[i].Locality.Zone < localities[j].Locality.Zone
+	})
+
 	return localities
 }
 

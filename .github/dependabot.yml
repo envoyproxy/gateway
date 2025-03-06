@@ -22,13 +22,16 @@ updates:
       - dependency-name: "envoyproxy/toolshed/gh-actions/retest"
     groups:
       github-actions:
-        - "actions*"
+        patterns:
+          - "actions*"
   - package-ecosystem: gomod
     directories:
       - "/"
-      - "examples/extension-server"
     schedule:
       interval: weekly
+    ignore:
+      # Ignore cel-go, since it should be updated alongside k8s.io/apiserver
+      - dependency-name: "github.com/google/cel-go"
     groups:
       github.com:
         patterns:
