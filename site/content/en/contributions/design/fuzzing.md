@@ -68,7 +68,7 @@ func FuzzGatewayAPIToIRWithGatewayClass(f *testing.F) {
 
 ## Design Decisions
 * Fuzzing library: [go-fuzz](https://go.dev/blog/fuzz-beta).
-* Fuzzers directory: **TODO:**
+* Fuzzers directory: Fuzzers will be stored in the `test/fuzz` directory.
 
 ## Conclusion
 
