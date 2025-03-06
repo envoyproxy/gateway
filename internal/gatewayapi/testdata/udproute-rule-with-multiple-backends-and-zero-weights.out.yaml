@@ -1,0 +1,129 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-1
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: udp
+      port: 90
+      protocol: UDP
+  status:
+    listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: udp
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: UDPRoute
+infraIR:
+  envoy-gateway/gateway-1:
+    proxy:
+      listeners:
+      - address: null
+        name: envoy-gateway/gateway-1/udp
+        ports:
+        - containerPort: 10090
+          name: udp-90
+          protocol: UDP
+          servicePort: 90
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+      name: envoy-gateway/gateway-1
+udpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: UDPRoute
+  metadata:
+    creationTimestamp: null
+    name: udproute-1
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8162
+        weight: 1
+      - name: service-2
+        port: 8162
+        weight: 2
+      - name: service-3
+        port: 8162
+        weight: 3
+      - name: service-4
+        port: 8162
+        weight: 0
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+xdsIR:
+  envoy-gateway/gateway-1:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    udp:
+    - address: 0.0.0.0
+      name: envoy-gateway/gateway-1/udp
+      port: 10090
+      route:
+        destination:
+          name: udproute/default/udproute-1/rule/-1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8162
+            protocol: UDP
+            weight: 1
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8162
+            protocol: UDP
+            weight: 2
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8162
+            protocol: UDP
+            weight: 3
+        name: udproute/default/udproute-1

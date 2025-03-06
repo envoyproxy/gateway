@@ -26,7 +26,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/protocov"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -78,25 +78,45 @@ var listenerAccessLogFilter = &accesslog.AccessLogFilter{
 
 var (
 	// reqWithoutQueryFormatter configures additional formatters needed for some of the format strings like "REQ_WITHOUT_QUERY"
-	reqWithoutQueryFormatter = &cfgcore.TypedExtensionConfig{
-		Name:        "envoy.formatter.req_without_query",
-		TypedConfig: protocov.ToAny(&reqwithoutqueryformatter.ReqWithoutQuery{}),
-	}
+	reqWithoutQueryFormatter *cfgcore.TypedExtensionConfig
 
 	// metadataFormatter configures additional formatters needed for some of the format strings like "METADATA"
 	// for more information, see https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/formatter/metadata/v3/metadata.proto
-	metadataFormatter = &cfgcore.TypedExtensionConfig{
-		Name:        "envoy.formatter.metadata",
-		TypedConfig: protocov.ToAny(&metadataformatter.Metadata{}),
-	}
+	metadataFormatter *cfgcore.TypedExtensionConfig
 
 	// celFormatter configures additional formatters needed for some of the format strings like "CEL"
 	// for more information, see https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/formatter/cel/v3/cel.proto
+	celFormatter *cfgcore.TypedExtensionConfig
+)
+
+func init() {
+	any, err := proto.ToAnyWithValidation(&reqwithoutqueryformatter.ReqWithoutQuery{})
+	if err != nil {
+		panic(err)
+	}
+	reqWithoutQueryFormatter = &cfgcore.TypedExtensionConfig{
+		Name:        "envoy.formatter.req_without_query",
+		TypedConfig: any,
+	}
+
+	any, err = proto.ToAnyWithValidation(&metadataformatter.Metadata{})
+	if err != nil {
+		panic(err)
+	}
+	metadataFormatter = &cfgcore.TypedExtensionConfig{
+		Name:        "envoy.formatter.metadata",
+		TypedConfig: any,
+	}
+
+	any, err = proto.ToAnyWithValidation(&celformatter.Cel{})
+	if err != nil {
+		panic(err)
+	}
 	celFormatter = &cfgcore.TypedExtensionConfig{
 		Name:        "envoy.formatter.cel",
-		TypedConfig: protocov.ToAny(&celformatter.Cel{}),
+		TypedConfig: any,
 	}
-)
+}
 
 func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([]*accesslog.AccessLog, error) {
 	if al == nil {
@@ -143,7 +163,11 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 			filelog.GetLogFormat().Formatters = formatters
 		}
 
-		accesslogAny, err := protocov.ToAnyWithValidation(filelog)
+		accesslogAny, err := proto.ToAnyWithValidation(filelog)
+		if err != nil {
+			return nil, err
+		}
+		filter, err := buildAccessLogFilter(text.CELMatches, defaultLogTypeForListener)
 		if err != nil {
 			return nil, err
 		}
@@ -152,7 +176,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 			ConfigType: &accesslog.AccessLog_TypedConfig{
 				TypedConfig: accesslogAny,
 			},
-			Filter: buildAccessLogFilter(text.CELMatches, defaultLogTypeForListener),
+			Filter: filter,
 		})
 	}
 	// handle json file access logs
@@ -199,7 +223,11 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 			filelog.GetLogFormat().Formatters = formatters
 		}
 
-		accesslogAny, err := protocov.ToAnyWithValidation(filelog)
+		accesslogAny, err := proto.ToAnyWithValidation(filelog)
+		if err != nil {
+			return nil, err
+		}
+		filter, err := buildAccessLogFilter(json.CELMatches, defaultLogTypeForListener)
 		if err != nil {
 			return nil, err
 		}
@@ -208,7 +236,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 			ConfigType: &accesslog.AccessLog_TypedConfig{
 				TypedConfig: accesslogAny,
 			},
-			Filter: buildAccessLogFilter(json.CELMatches, defaultLogTypeForListener),
+			Filter: filter,
 		})
 	}
 	// handle ALS access logs
@@ -245,7 +273,11 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 				alCfg.AdditionalResponseTrailersToLog = als.HTTP.ResponseTrailers
 			}
 
-			accesslogAny, err := protocov.ToAnyWithValidation(alCfg)
+			accesslogAny, err := proto.ToAnyWithValidation(alCfg)
+			if err != nil {
+				return nil, err
+			}
+			filter, err := buildAccessLogFilter(als.CELMatches, defaultLogTypeForListener)
 			if err != nil {
 				return nil, err
 			}
@@ -254,14 +286,18 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 				ConfigType: &accesslog.AccessLog_TypedConfig{
 					TypedConfig: accesslogAny,
 				},
-				Filter: buildAccessLogFilter(als.CELMatches, defaultLogTypeForListener),
+				Filter: filter,
 			})
 		case egv1a1.ALSEnvoyProxyAccessLogTypeTCP:
 			alCfg := &grpcaccesslog.TcpGrpcAccessLogConfig{
 				CommonConfig: cc,
 			}
 
-			accesslogAny, err := protocov.ToAnyWithValidation(alCfg)
+			accesslogAny, err := proto.ToAnyWithValidation(alCfg)
+			if err != nil {
+				return nil, err
+			}
+			filter, err := buildAccessLogFilter(als.CELMatches, defaultLogTypeForListener)
 			if err != nil {
 				return nil, err
 			}
@@ -270,7 +306,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 				ConfigType: &accesslog.AccessLog_TypedConfig{
 					TypedConfig: accesslogAny,
 				},
-				Filter: buildAccessLogFilter(als.CELMatches, defaultLogTypeForListener),
+				Filter: filter,
 			})
 		}
 	}
@@ -320,7 +356,11 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 			al.Formatters = formatters
 		}
 
-		accesslogAny, err := protocov.ToAnyWithValidation(al)
+		accesslogAny, err := proto.ToAnyWithValidation(al)
+		if err != nil {
+			return nil, err
+		}
+		filter, err := buildAccessLogFilter(otel.CELMatches, defaultLogTypeForListener)
 		if err != nil {
 			return nil, err
 		}
@@ -329,44 +369,52 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 			ConfigType: &accesslog.AccessLog_TypedConfig{
 				TypedConfig: accesslogAny,
 			},
-			Filter: buildAccessLogFilter(otel.CELMatches, defaultLogTypeForListener),
+			Filter: filter,
 		})
 	}
 
 	return accessLogs, nil
 }
 
-func celAccessLogFilter(expr string) *accesslog.AccessLogFilter {
+func celAccessLogFilter(expr string) (*accesslog.AccessLogFilter, error) {
 	fl := &cel.ExpressionFilter{
 		Expression: expr,
+	}
+	any, err := proto.ToAnyWithValidation(fl)
+	if err != nil {
+		return nil, err
 	}
 
 	return &accesslog.AccessLogFilter{
 		FilterSpecifier: &accesslog.AccessLogFilter_ExtensionFilter{
 			ExtensionFilter: &accesslog.ExtensionFilter{
 				Name:       celFilter,
-				ConfigType: &accesslog.ExtensionFilter_TypedConfig{TypedConfig: protocov.ToAny(fl)},
+				ConfigType: &accesslog.ExtensionFilter_TypedConfig{TypedConfig: any},
 			},
 		},
-	}
+	}, nil
 }
 
-func buildAccessLogFilter(exprs []string, withNoRouteMatchFilter bool) *accesslog.AccessLogFilter {
+func buildAccessLogFilter(exprs []string, withNoRouteMatchFilter bool) (*accesslog.AccessLogFilter, error) {
 	// add filter for access logs
 	var filters []*accesslog.AccessLogFilter
 	for _, expr := range exprs {
-		filters = append(filters, celAccessLogFilter(expr))
+		fl, err := celAccessLogFilter(expr)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, fl)
 	}
 	if withNoRouteMatchFilter {
 		filters = append(filters, listenerAccessLogFilter)
 	}
 
 	if len(filters) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	if len(filters) == 1 {
-		return filters[0]
+		return filters[0], nil
 	}
 
 	return &accesslog.AccessLogFilter{
@@ -375,7 +423,7 @@ func buildAccessLogFilter(exprs []string, withNoRouteMatchFilter bool) *accesslo
 				Filters: filters,
 			},
 		},
-	}
+	}, nil
 }
 
 func accessLogTextFormatters(text string) []*cfgcore.TypedExtensionConfig {

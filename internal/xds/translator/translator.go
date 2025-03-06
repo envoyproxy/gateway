@@ -21,7 +21,7 @@ import (
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
-	"google.golang.org/protobuf/proto"
+	protobuf "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -30,7 +30,7 @@ import (
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
-	"github.com/envoyproxy/gateway/internal/utils/protocov"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -119,6 +119,12 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 	// Check if an extension want to inject any clusters/secrets
 	// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op
 	if err := processExtensionPostTranslationHook(tCtx, t.ExtensionManager); err != nil {
+		errs = errors.Join(errs, err)
+	}
+
+	// Validate all the xds resources in the table before returning
+	// This is necessary to catch any misconfigurations that might have been missed during translation
+	if err := tCtx.ValidateAll(); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
@@ -524,7 +530,7 @@ func (t *Translator) addHTTPFiltersToHCM(filterChain *listenerv3.FilterChain, ht
 	for i, filter := range filterChain.Filters {
 		if filter.Name == wellknown.HTTPConnectionManager {
 			var mgrAny *anypb.Any
-			if mgrAny, err = protocov.ToAnyWithValidation(hcm); err != nil {
+			if mgrAny, err = proto.ToAnyWithValidation(hcm); err != nil {
 				return err
 			}
 
@@ -543,7 +549,7 @@ func findHCMinFilterChain(filterChain *listenerv3.FilterChain) (*hcmv3.HttpConne
 	for _, filter := range filterChain.Filters {
 		if filter.Name == wellknown.HTTPConnectionManager {
 			hcm := &hcmv3.HttpConnectionManager{}
-			if err := anypb.UnmarshalTo(filter.GetTypedConfig(), hcm, proto.UnmarshalOptions{}); err != nil {
+			if err := anypb.UnmarshalTo(filter.GetTypedConfig(), hcm, protobuf.UnmarshalOptions{}); err != nil {
 				return nil, err
 			}
 			return hcm, nil
@@ -957,7 +963,7 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.
 		}
 	}
 
-	tlsCtxAny, err := protocov.ToAnyWithValidation(tlsCtx)
+	tlsCtxAny, err := proto.ToAnyWithValidation(tlsCtx)
 	if err != nil {
 		return nil, err
 	}

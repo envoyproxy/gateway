@@ -272,7 +272,11 @@ func (t *Translator) patchHCMWithFilters(
 	}
 	if !hasRouter {
 		headerSettings := ptr.Deref(irListener.Headers, ir.HeaderSettings{})
-		mgr.HttpFilters = append(mgr.HttpFilters, filters.GenerateRouterFilter(headerSettings.EnableEnvoyHeaders))
+		routerFilter, err := filters.GenerateRouterFilter(headerSettings.EnableEnvoyHeaders)
+		if err != nil {
+			return err
+		}
+		mgr.HttpFilters = append(mgr.HttpFilters, routerFilter)
 	}
 
 	// Sort the filters in the correct order.

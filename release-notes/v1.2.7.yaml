@@ -1,24 +1,25 @@
-date: Pending
+date: January 23, 2025
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
-  Add a breaking change here
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  Added support for Secret and ConfigMap parsing in Standalone mode.
 
 bug fixes: |
+  Fix translating of backendSettings for extAuth.
+  Fix allowing weights to be zero on endpoints for backendRefs in TCPRoute and UDPRoute.
+  Fix validation of all xDS resources before sending them to the Envoy fleet.
 
 # Enhancements that improve performance.
 performance improvements: |
-  Add a performance improvement here
 
 # Deprecated features or APIs.
 deprecations: |
-  Add a deprecation here
 
 # Other notable changes not covered by the above sections.
 Other changes: |
