@@ -5,6 +5,7 @@ breaking changes: |
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
+  Fixed CVE-2025-25294: log injection vulnerability in Envoy Gateway when using default access log.
 
 # New features or capabilities added in this release.
 new features: |
