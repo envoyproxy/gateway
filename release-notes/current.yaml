@@ -21,7 +21,7 @@ new features: |
   Added support for distinct header and distinct source CIDR based local rate limiting
   Added support for forwarding the authenticated username to the backend via a configurable header in BasicAuth
   Added support for zone aware routing
-
+  Added support for per-host circuit breaker thresholds
 
 bug fixes: |
   Fix traffic splitting when filters are attached to the backendRef.

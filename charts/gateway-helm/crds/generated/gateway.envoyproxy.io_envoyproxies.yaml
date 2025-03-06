@@ -10729,6 +10729,7 @@ spec:
                                                   Circuit Breakers
                                                 properties:
                                                   maxConnections:
+                                                    default: 1024
                                                     description: MaxConnections configures
                                                       the maximum number of connections
                                                       that Envoy will establish per-host
@@ -11742,6 +11743,7 @@ spec:
                                                   Circuit Breakers
                                                 properties:
                                                   maxConnections:
+                                                    default: 1024
                                                     description: MaxConnections configures
                                                       the maximum number of connections
                                                       that Envoy will establish per-host
@@ -12849,6 +12851,7 @@ spec:
                                             Breakers
                                           properties:
                                             maxConnections:
+                                              default: 1024
                                               description: MaxConnections configures
                                                 the maximum number of connections
                                                 that Envoy will establish per-host
@@ -13870,6 +13873,7 @@ spec:
                                       Breakers
                                     properties:
                                       maxConnections:
+                                        default: 1024
                                         description: MaxConnections configures the
                                           maximum number of connections that Envoy
                                           will establish per-host to the referenced

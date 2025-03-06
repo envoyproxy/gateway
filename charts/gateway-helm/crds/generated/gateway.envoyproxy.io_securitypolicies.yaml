@@ -764,6 +764,7 @@ spec:
                                 description: PerHost defines per-host Circuit Breakers
                                 properties:
                                   maxConnections:
+                                    default: 1024
                                     description: MaxConnections configures the maximum
                                       number of connections that Envoy will establish
                                       per-host to the referenced backend defined within
@@ -1679,6 +1680,7 @@ spec:
                                 description: PerHost defines per-host Circuit Breakers
                                 properties:
                                   maxConnections:
+                                    default: 1024
                                     description: MaxConnections configures the maximum
                                       number of connections that Envoy will establish
                                       per-host to the referenced backend defined within
@@ -2723,6 +2725,7 @@ spec:
                                         Breakers
                                       properties:
                                         maxConnections:
+                                          default: 1024
                                           description: MaxConnections configures the
                                             maximum number of connections that Envoy
                                             will establish per-host to the referenced
@@ -3779,6 +3782,7 @@ spec:
                                 description: PerHost defines per-host Circuit Breakers
                                 properties:
                                   maxConnections:
+                                    default: 1024
                                     description: MaxConnections configures the maximum
                                       number of connections that Envoy will establish
                                       per-host to the referenced backend defined within

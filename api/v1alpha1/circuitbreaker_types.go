@@ -48,8 +48,8 @@ type CircuitBreaker struct {
 	MaxRequestsPerConnection *int64 `json:"maxRequestsPerConnection,omitempty"`
 
 	// PerHost defines per-host Circuit Breakers
+	//
 	// +optional
-	// +notImplementedHide
 	PerHost *PerHostCircuitBreakers `json:"perHost,omitempty"`
 }
 
@@ -59,7 +59,7 @@ type PerHostCircuitBreakers struct {
 	//
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=4294967295
+	// +kubebuilder:default=1024
 	// +optional
-	// +notImplementedHide
 	MaxConnections *int64 `json:"maxConnections,omitempty"`
 }

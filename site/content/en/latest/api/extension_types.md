@@ -594,6 +594,7 @@ _Appears in:_
 | `maxParallelRequests` | _integer_ |  false  | 1024 | The maximum number of parallel requests that Envoy will make to the referenced backend defined within a xRoute rule. |
 | `maxParallelRetries` | _integer_ |  false  | 1024 | The maximum number of parallel retries that Envoy will make to the referenced backend defined within a xRoute rule. |
 | `maxRequestsPerConnection` | _integer_ |  false  |  | The maximum number of requests that Envoy will make over a single connection to the referenced backend defined within a xRoute rule.<br />Default: unlimited. |
+| `perHost` | _[PerHostCircuitBreakers](#perhostcircuitbreakers)_ |  false  |  | PerHost defines per-host Circuit Breakers |
 
 
 #### ClaimToHeader
@@ -3114,6 +3115,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
+| `maxConnections` | _integer_ |  false  | 1024 | MaxConnections configures the maximum number of connections that Envoy will establish per-host to the referenced backend defined within a xRoute rule. |
 
 
 #### PerRetryPolicy
