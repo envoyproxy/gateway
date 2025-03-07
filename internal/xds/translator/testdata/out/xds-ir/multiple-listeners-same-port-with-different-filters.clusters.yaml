@@ -87,7 +87,7 @@
         loadBalancingWeight: 1
       loadBalancingWeight: 1
       locality:
-        region: oauth_foo_com_443/backend/0
+        region: oauth_foo_com_443/backend/-1
   name: oauth_foo_com_443
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true

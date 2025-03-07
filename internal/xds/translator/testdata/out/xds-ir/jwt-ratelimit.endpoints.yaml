@@ -45,4 +45,4 @@
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: 192_168_1_250_443/backend/0
+      region: 192_168_1_250_443/backend/-1

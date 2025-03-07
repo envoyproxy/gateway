@@ -17,6 +17,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "route-dest/backend/0"
     mirrors:
     - destination:
         name: "mirror-route-dest"
@@ -24,9 +25,11 @@ http:
         - endpoints:
           - host: "2.3.4.5"
       percentage: 25
+      name: "mirror-route-dest/backend/0"
     - destination:
         name: "mirror-route-dest1"
         settings:
         - endpoints:
           - host: "3.4.5.6"
+          name: "mirror-route-dest1/backend/0"
       percentage: 44

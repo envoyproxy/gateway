@@ -24,6 +24,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "first-route-dest/backend/0"
   - name: "second-route"
     hostname: "*"
     traffic:
@@ -36,6 +37,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50001
+        name: "second-route-dest/backend/0"
   - name: "third-route"
     hostname: "*"
     traffic:
@@ -48,6 +50,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50002
+        name: "third-route-dest/backend/0"
   - name: "forth-route"
     hostname: "*"
     timeout: 10s
@@ -61,6 +64,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50002
+        name: "fourth-route-dest/backend/0"
   - name: "fifth-route"
     hostname: "*"
     timeout: 10s
@@ -70,6 +74,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50002
+        name: "fifth-route-dest/backend/0"
   - name: "sixth-route"
     hostname: "*"
     timeout: 0s
@@ -79,6 +84,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50002
+        name: "sixth-route-dest/backend/0"
   - name: "seventh-route"
     hostname: "*"
     timeout: 0s
@@ -92,3 +98,4 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50002
+        name: "seventh-route-dest/backend/0"

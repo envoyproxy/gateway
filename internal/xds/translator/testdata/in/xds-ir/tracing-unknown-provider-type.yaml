@@ -24,6 +24,7 @@ tracing:
       - endpoints:
           - host: "awesome-agent.default.svc.cluster.local"
             port: 1357
+        name: "tracing-0/backend/0"
   provider:
     host: awesome-agent.monitoring.svc.cluster.local
     port: 1357
@@ -46,6 +47,7 @@ http:
             - endpoints:
                 - host: "1.2.3.4"
                   port: 50000
+              name: "direct-route-dest/backend/0"
         directResponse:
           body: "Unknown custom filter type: UnsupportedType"
           statusCode: 500

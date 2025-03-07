@@ -157,6 +157,7 @@ staticResources:
       socketAddress:
         address: 0.0.0.0
         portValue: 19001
+    bypassOverloadManager: true
     filterChains:
     - filters:
       - name: envoy.filters.network.http_connection_manager
@@ -176,8 +177,9 @@ staticResources:
               routes:
               - match:
                   headers:
-                  - exactMatch: GET
-                    name: :method
+                  - name: :method
+                    stringMatch:
+                      exact: GET
                   path: /stats/prometheus
                 route:
                   cluster: prometheus_stats

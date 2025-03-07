@@ -1,0 +1,137 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: gzip-gtw
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: All
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: gzip-compression
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: gzip-compression
+  namespace: gateway-conformance-infra
+spec:
+  ipFamily: IPv4
+  telemetry:
+    metrics:
+      prometheus:
+        compression:
+          type: Gzip
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gzip-gtw-metrics
+  namespace: envoy-gateway-system
+spec:
+  selector:
+    app.kubernetes.io/component: proxy
+    app.kubernetes.io/managed-by: envoy-gateway
+    app.kubernetes.io/name: envoy
+    gateway.envoyproxy.io/owning-gateway-name: gzip-gtw
+    gateway.envoyproxy.io/owning-gateway-namespace: gateway-conformance-infra
+  ports:
+    - name: metrics
+      protocol: TCP
+      port: 19001
+      targetPort: 19001
+  type: LoadBalancer
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: gzip-route
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: gzip-gtw
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /gzip
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: brotli-gtw
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: All
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: brotli-compression
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: brotli-compression
+  namespace: gateway-conformance-infra
+spec:
+  ipFamily: IPv4
+  telemetry:
+    metrics:
+      prometheus:
+        compression:
+          type: Brotli
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: brotli-gtw-metrics
+  namespace: envoy-gateway-system
+spec:
+  selector:
+    app.kubernetes.io/component: proxy
+    app.kubernetes.io/managed-by: envoy-gateway
+    app.kubernetes.io/name: envoy
+    gateway.envoyproxy.io/owning-gateway-name: brotli-gtw
+    gateway.envoyproxy.io/owning-gateway-namespace: gateway-conformance-infra
+  ports:
+    - name: metrics
+      protocol: TCP
+      port: 19001
+      targetPort: 19001
+  type: LoadBalancer
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: brotli-route
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: brotli-gtw
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /brotli
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080

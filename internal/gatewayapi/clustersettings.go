@@ -475,6 +475,7 @@ func translateDNS(policy egv1a1.ClusterSettings) *ir.DNS {
 		return nil
 	}
 	return &ir.DNS{
+		LookupFamily:   policy.DNS.LookupFamily,
 		RespectDNSTTL:  policy.DNS.RespectDNSTTL,
 		DNSRefreshRate: policy.DNS.DNSRefreshRate,
 	}

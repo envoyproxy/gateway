@@ -10,7 +10,7 @@ Envoy Gateway is built using a [make][]-based build system. Our CI is based on [
 
 ### go
 
-* Version: 1.22
+* Version: 1.24
 * Installation Guide: https://go.dev/doc/install
 
 ### make
@@ -34,7 +34,7 @@ Envoy Gateway is built using a [make][]-based build system. Our CI is based on [
 
 ## Quickstart
 
-* Run `make help` to see all the available targets to build, test and run Envoy Gateway.
+Run `make help` to see all the available targets to build, test and run Envoy Gateway. Below are the other make directives
 
 ### Building
 
@@ -48,11 +48,14 @@ __Note:__ The binaries get generated in the `bin/$OS/$ARCH` directory, for examp
 
 * Run `make test` to run the golang tests.
 
+* Run `make e2e` to perform end-to-end testing.
+
 * Run `make testdata` to generate the golden YAML testdata files.
 
 ### Running Linters
 
 * Run `make lint` to make sure your code passes all the linter checks.
+
 __Note:__ The `golangci-lint` configuration resides [here](https://github.com/envoyproxy/gateway/blob/main/tools/linter/golangci-lint/.golangci.yml).
 
 ### Building and Pushing the Image
@@ -61,6 +64,10 @@ __Note:__ The `golangci-lint` configuration resides [here](https://github.com/en
 * Run `IMAGE=docker.io/you/gateway-dev make push-multiarch` to build and push the multi-arch docker image.
 
 __Note:__  Replace `IMAGE` with your registry's image name.
+
+### Raising a PR
+
+* Run `make generate` and push the generated files along with your commit, if your PR contains any **API** changes (changes in `/api` folder), you've added some unit tests or you've updated the modules used in the project. 
 
 ### Deploying Envoy Gateway for Test/Dev
 

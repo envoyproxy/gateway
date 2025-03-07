@@ -95,3 +95,8 @@ latest-release-check: ## Check if latest release and tag are created properly.
 .PHONY: lint.markdown
 lint.markdown:
 	markdownlint -c .github/markdown_lint_config.json site/content/*
+
+.PHONY: lint.dependabot
+lint: lint.dependabot
+lint.dependabot: ## Check if dependabot configuration is valid
+	@npx @bugron/validate-dependabot-yaml .github/dependabot.yml

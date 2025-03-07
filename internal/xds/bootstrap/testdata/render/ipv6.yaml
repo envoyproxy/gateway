@@ -38,6 +38,7 @@ static_resources:
         port_value: 19001
         protocol: TCP
         ipv4_compat: true
+    bypass_overload_manager: true
     filter_chains:
     - filters:
       - name: envoy.filters.network.http_connection_manager
@@ -56,7 +57,8 @@ static_resources:
                   path: /stats/prometheus
                   headers:
                   - name: ":method"
-                    exact_match: GET
+                    string_match:
+                      exact: GET
                 route:
                   cluster: prometheus_stats
           http_filters:

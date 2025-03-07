@@ -4,28 +4,35 @@ deps:
   - remote: buf.build
     owner: cncf
     repository: xds
-    commit: ed1d3f62ca8047d7acf9f1dbaeee323a
+    commit: 96f1d5218fab4222b47a0102fe6e105a
+    digest: shake256:c83787e6d56d23e4c22c16361a2cfa861ea37d141eb0643d176e1e5aefce53e8e2833350b0c8dfd66cfaffb966f6b8d4b45cb8506d8368ea477f28dd0edbc613
   - remote: buf.build
     owner: envoyproxy
     repository: envoy
-    commit: f2506a477f30468a8e60291ed0cba40a
+    commit: 54cefa734c3447c99147eed079dcc63c
+    digest: shake256:f04a44126942ffa9a84456bf6b97745cb0a9bbc5bd10203e83eb9bdd6a77df66bcd42a48832c6fc2544d71a1479a33ccc8cea57931ca71ac08f55eb2ad8359bd
   - remote: buf.build
     owner: envoyproxy
     repository: protoc-gen-validate
-    commit: 6607b10f00ed4a3d98f906807131c44a
+    commit: daf171c6cdb54629b5f51e345a79e4dd
+    digest: shake256:4ae167d7eed10da5f83a3f5df8c670d249170f11b1f2fd19afda06be2cff4d47dcc95e9e4a15151ecc8ce2d3d3614caf9a04d3ad82fb768a3870dedfa9455f36
+  - remote: buf.build
+    owner: google
+    repository: cel-spec
+    commit: 162ae912c68d415fb43393c9403f641b
+    digest: shake256:45a51f62940fec1873e6f02ca803f8c14ca52ee9dc511f559effd02788e5d4dfb141150a4675563f36eac52f60a248833043356c6e7cfdd0cf43eef3a6200759
   - remote: buf.build
     owner: googleapis
     repository: googleapis
-    commit: 5ae7f88519b04fe1965da0f8a375a088
-  - remote: buf.build
-    owner: opencensus
-    repository: opencensus
-    commit: bc2645b085534e4f8ebae3ef20088165
+    commit: e93e34f48be043dab55be31b4b47f458
+    digest: shake256:93dbe51c27606999eef918360df509485a4d272e79aaed6d0016940379a9b06d316fc5228b7b50cca94bb310f34c5fc5955ce7474f655f0d0a224c4121dda3c1
   - remote: buf.build
     owner: opentelemetry
     repository: opentelemetry
-    commit: e47f1a1dbc0b4105ad048239f0d7aa52
+    commit: 6454adb4e03c40409ad9f760ef7b5b66
+    digest: shake256:a93a9e81950d8c08067fcadbb436c06907dd04caeca6c78604a8f1d239be95339067c7204daa25efb3036347d7321f64f6d4beb676ba3979871ca640a02adcae
   - remote: buf.build
     owner: prometheus
     repository: client-model
-    commit: 55bcfe88c9e54edc9048a91656832525
+    commit: e171c0b235c546d5a9a597c2961bd357
+    digest: shake256:7db3f73ac0f1dce71e70f304f318e9741e857fd78b7b42f0df7a3da353fbb2f387899da7b0a77ac9ee9565194510e39a913cdb9a8ab3c2ff4b8713428c795213

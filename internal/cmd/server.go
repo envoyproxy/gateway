@@ -9,7 +9,6 @@ import (
 	"context"
 
 	"github.com/spf13/cobra"
-	ctrl "sigs.k8s.io/controller-runtime"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/admin"
@@ -31,14 +30,14 @@ import (
 // cfgPath is the path to the EnvoyGateway configuration file.
 var cfgPath string
 
-// getServerCommand returns the server cobra command to be executed.
-func getServerCommand() *cobra.Command {
+// GetServerCommand returns the server cobra command to be executed.
+func GetServerCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "server",
 		Aliases: []string{"serve"},
 		Short:   "Serve Envoy Gateway",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return server()
+			return server(cmd.Context())
 		},
 	}
 	cmd.PersistentFlags().StringVarP(&cfgPath, "config-path", "c", "",
@@ -48,13 +47,12 @@ func getServerCommand() *cobra.Command {
 }
 
 // server serves Envoy Gateway.
-func server() error {
+func server(ctx context.Context) error {
 	cfg, err := getConfig()
 	if err != nil {
 		return err
 	}
 
-	ctx := ctrl.SetupSignalHandler()
 	hook := func(c context.Context, cfg *config.Server) error {
 		cfg.Logger.Info("Setup runners")
 		if err := setupRunners(c, cfg); err != nil {

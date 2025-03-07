@@ -111,7 +111,7 @@ tlsRoutes:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     readyListener:
       address: 0.0.0.0
@@ -130,6 +130,7 @@ xdsIR:
             endpoints:
             - host: 1.1.1.1
               port: 3001
+            name: tlsroute/default/tlsroute-1/rule/-1/backend/0
             protocol: HTTPS
             weight: 1
         name: tlsroute/default/tlsroute-1

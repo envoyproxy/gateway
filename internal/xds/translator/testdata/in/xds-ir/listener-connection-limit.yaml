@@ -17,6 +17,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "first-route-dest/backend/0"
 - name: "second-listener"
   address: "::"
   port: 10081
@@ -37,6 +38,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "second-route-dest/backend/0"
 tcp:
 - name: "third-listener"
   address: "::"
@@ -55,6 +57,7 @@ tcp:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "tls-route-dest/backend/0"
 - name: "fourth-listener"
   address: "::"
   connection:
@@ -69,3 +72,4 @@ tcp:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "tcp-route-dest/backend/0"

@@ -3,7 +3,7 @@ breaking:
   use:
     - FILE
 deps:
-  - buf.build/envoyproxy/envoy
+  - buf.build/envoyproxy/envoy:v1.33.0
 lint:
   use:
     - DEFAULT

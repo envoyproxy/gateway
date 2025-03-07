@@ -84,7 +84,10 @@
           initialStreamWindowSize: 65536
 - circuitBreakers:
     thresholds:
-    - maxRetries: 1024
+    - maxConnections: 30001
+      maxPendingRequests: 1024
+      maxRequests: 1022
+      maxRetries: 1023
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s

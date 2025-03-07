@@ -9,11 +9,13 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/envoyproxy/gateway/internal/cmd"
+	ctrl "sigs.k8s.io/controller-runtime"
+
+	"github.com/envoyproxy/gateway/cmd/envoy-gateway/root"
 )
 
 func main() {
-	if err := cmd.GetRootCommand().Execute(); err != nil {
+	if err := root.GetRootCommand().ExecuteContext(ctrl.SetupSignalHandler()); err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

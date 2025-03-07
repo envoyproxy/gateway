@@ -94,7 +94,7 @@ tlsRoutes:
 xdsIR:
   gateway-conformance-infra/gateway-tlsroute-referencegrant:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     readyListener:
       address: 0.0.0.0

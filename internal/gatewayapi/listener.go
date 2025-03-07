@@ -269,7 +269,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 		(!envoyproxy.Spec.Telemetry.AccessLog.Disable && len(envoyproxy.Spec.Telemetry.AccessLog.Settings) == 0) {
 		// use the default access log
 		return &ir.AccessLog{
-			Text: []*ir.TextAccessLog{
+			JSON: []*ir.JSONAccessLog{
 				{
 					Path: "/dev/stdout",
 				},
@@ -298,8 +298,8 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 			format = *accessLog.Format
 		} else {
 			format = egv1a1.ProxyAccessLogFormat{
-				Type: egv1a1.ProxyAccessLogFormatTypeText,
-				// Empty text format means default format
+				Type: egv1a1.ProxyAccessLogFormatTypeJSON,
+				// Empty means default format
 			}
 		}
 
@@ -319,13 +319,13 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 		}
 
 		if len(accessLog.Sinks) == 0 {
-			al := &ir.TextAccessLog{
-				Format:     format.Text,
+			al := &ir.JSONAccessLog{
+				JSON:       format.JSON,
 				CELMatches: validExprs,
 				LogType:    accessLogType,
 				Path:       "/dev/stdout",
 			}
-			irAccessLog.Text = append(irAccessLog.Text, al)
+			irAccessLog.JSON = append(irAccessLog.JSON, al)
 		}
 
 		for j, sink := range accessLog.Sinks {
@@ -370,8 +370,11 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					logName = fmt.Sprintf("%s/%s", envoyproxy.Namespace, envoyproxy.Name)
 				}
 
+				// TODO: rename this, so that we can share backend with tracing?
+				destName := fmt.Sprintf("accesslog_als_%d_%d", i, j)
+				settingName := irDestinationSettingName(destName, -1)
 				// TODO: how to get authority from the backendRefs?
-				ds, traffic, err := t.processBackendRefs(sink.ALS.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
+				ds, traffic, err := t.processBackendRefs(settingName, sink.ALS.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
 				if err != nil {
 					return nil, err
 				}
@@ -379,8 +382,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 				al := &ir.ALSAccessLog{
 					LogName: logName,
 					Destination: ir.RouteDestination{
-						// TODO: rename this, so that we can share backend with tracing?
-						Name:     fmt.Sprintf("accesslog_als_%d_%d", i, j),
+						Name:     destName,
 						Settings: ds,
 					},
 					Traffic:    traffic,
@@ -410,8 +412,11 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					continue
 				}
 
+				// TODO: rename this, so that we can share backend with tracing?
+				destName := fmt.Sprintf("accesslog_otel_%d_%d", i, j)
+				settingName := irDestinationSettingName(destName, -1)
 				// TODO: how to get authority from the backendRefs?
-				ds, traffic, err := t.processBackendRefs(sink.OpenTelemetry.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
+				ds, traffic, err := t.processBackendRefs(settingName, sink.OpenTelemetry.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
 				if err != nil {
 					return nil, err
 				}
@@ -420,8 +425,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					CELMatches: validExprs,
 					Resources:  sink.OpenTelemetry.Resources,
 					Destination: ir.RouteDestination{
-						// TODO: rename this, so that we can share backend with tracing?
-						Name:     fmt.Sprintf("accesslog_otel_%d_%d", i, j),
+						Name:     destName,
 						Settings: ds,
 					},
 					Traffic: traffic,
@@ -435,7 +439,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					if sink.OpenTelemetry.Host != nil {
 						host, port = *sink.OpenTelemetry.Host, uint32(sink.OpenTelemetry.Port)
 					}
-					al.Destination.Settings = destinationSettingFromHostAndPort(host, port)
+					al.Destination.Settings = destinationSettingFromHostAndPort(settingName, host, port)
 					al.Authority = host
 				}
 
@@ -463,8 +467,11 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 	}
 	tracing := envoyproxy.Spec.Telemetry.Tracing
 
+	// TODO: rename this, so that we can share backend with accesslog?
+	destName := "tracing"
+	settingName := irDestinationSettingName(destName, -1)
 	// TODO: how to get authority from the backendRefs?
-	ds, traffic, err := t.processBackendRefs(tracing.Provider.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
+	ds, traffic, err := t.processBackendRefs(settingName, tracing.Provider.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
 	if err != nil {
 		return nil, err
 	}
@@ -479,7 +486,7 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 		if tracing.Provider.Host != nil {
 			host, port = *tracing.Provider.Host, uint32(tracing.Provider.Port)
 		}
-		ds = destinationSettingFromHostAndPort(host, port)
+		ds = destinationSettingFromHostAndPort(settingName, host, port)
 		authority = host
 	}
 
@@ -494,8 +501,7 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 		SamplingRate: proxySamplingRate(tracing),
 		CustomTags:   tracing.CustomTags,
 		Destination: ir.RouteDestination{
-			// TODO: rename this, so that we can share backend with accesslog?
-			Name:     "tracing",
+			Name:     destName,
 			Settings: ds,
 		},
 		Provider: tracing.Provider,
@@ -534,7 +540,7 @@ func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy, resources *re
 			continue
 		}
 
-		_, _, err := t.processBackendRefs(sink.OpenTelemetry.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
+		_, _, err := t.processBackendRefs("", sink.OpenTelemetry.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
 		if err != nil {
 			return nil, err
 		}
@@ -547,7 +553,7 @@ func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy, resources *re
 	}, nil
 }
 
-func (t *Translator) processBackendRefs(backendCluster egv1a1.BackendCluster, namespace string,
+func (t *Translator) processBackendRefs(name string, backendCluster egv1a1.BackendCluster, namespace string,
 	resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy,
 ) ([]*ir.DestinationSetting, *ir.TrafficFeatures, error) {
 	traffic, err := translateTrafficFeatures(backendCluster.BackendSettings)
@@ -565,7 +571,7 @@ func (t *Translator) processBackendRefs(backendCluster egv1a1.BackendCluster, na
 			return nil, nil, err
 		}
 
-		ds := t.processServiceDestinationSetting(ref.BackendObjectReference, ns, ir.TCP, resources, envoyProxy)
+		ds := t.processServiceDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP, resources, envoyProxy)
 		result = append(result, ds)
 	}
 	if len(result) == 0 {
@@ -574,12 +580,13 @@ func (t *Translator) processBackendRefs(backendCluster egv1a1.BackendCluster, na
 	return result, traffic, nil
 }
 
-func destinationSettingFromHostAndPort(host string, port uint32) []*ir.DestinationSetting {
+func destinationSettingFromHostAndPort(name, host string, port uint32) []*ir.DestinationSetting {
 	return []*ir.DestinationSetting{
 		{
+			Name:      name,
 			Weight:    ptr.To[uint32](1),
 			Protocol:  ir.GRPC,
-			Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(host, port, false)},
+			Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(host, port, false, nil)},
 		},
 	}
 }

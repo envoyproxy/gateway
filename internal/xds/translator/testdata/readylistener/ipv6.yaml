@@ -3,6 +3,7 @@ address:
     address: '::'
     ipv4Compat: true
     portValue: 19001
+bypassOverloadManager: true
 filterChains:
 - filters:
   - name: envoy.filters.network.http_connection_manager

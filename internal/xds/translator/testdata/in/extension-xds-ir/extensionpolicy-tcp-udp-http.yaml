@@ -44,6 +44,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "http-route-dest/backend/0"
 tcp:
 - address: 0.0.0.0
   extensionRefs:
@@ -82,6 +83,7 @@ tcp:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "tcp-route-dest/backend/0"
 udp:
 - address: 0.0.0.0
   route:
@@ -92,6 +94,7 @@ udp:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "udp-route-dest/backend/0"
   extensionRefs:
   - object:
       apiVersion: foo.example.io/v1alpha1

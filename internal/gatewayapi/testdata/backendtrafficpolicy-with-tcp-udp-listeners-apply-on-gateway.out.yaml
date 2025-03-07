@@ -230,7 +230,7 @@ udpRoutes:
 xdsIR:
   default/tcp-gateway:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     readyListener:
       address: 0.0.0.0
@@ -255,6 +255,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8163
+            name: tcproute/default/tls-app-1/rule/-1/backend/0
             protocol: TCP
             weight: 1
         healthCheck:
@@ -308,6 +309,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8162
+            name: udproute/default/udp-app-1/rule/-1/backend/0
             protocol: UDP
             weight: 1
         loadBalancer:

@@ -158,6 +158,7 @@ xdsIR:
             endpoints:
             - host: 10.240.0.10
               port: 9090
+            name: accesslog_als_0_0/backend/-1
             protocol: GRPC
         http:
           requestHeaders:
@@ -178,6 +179,7 @@ xdsIR:
             endpoints:
             - host: 10.240.0.10
               port: 9090
+            name: accesslog_als_0_1/backend/-1
             protocol: GRPC
         name: envoy-gateway-system/test
         type: TCP

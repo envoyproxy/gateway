@@ -28,6 +28,7 @@ http:
                   port: 8080
               protocol: HTTP
               weight: 1
+              name: httproute/default/httproute-1/rule/0/backend/0
         security:
           extAuth:
             name: securitypolicy/default/policy-for-http-route-1
@@ -43,12 +44,14 @@ http:
                         port: 9001
                     protocol: GRPC
                     weight: 1
+                    name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend/backend/0
                   - addressType: IP
                     endpoints:
                       - host: 8.8.8.8
                         port: 9000
                     protocol: GRPC
                     weight: 1
+                    name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend/backend/1
             headersToExtAuth:
               - header1
               - header2
@@ -71,6 +74,7 @@ http:
                   port: 8080
               protocol: HTTP
               weight: 1
+              name: httproute/default/httproute-1/rule/1/backend/0
         security:
           extAuth:
             name: securitypolicy/default/policy-for-http-route-1
@@ -86,6 +90,7 @@ http:
                         port: 9000
                     protocol: GRPC
                     weight: 1
+                    name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend/backend/0
             headersToExtAuth:
               - header1
               - header2
@@ -108,6 +113,7 @@ http:
                   port: 8080
               protocol: HTTP
               weight: 1
+              name: httproute/default/httproute-2/rule/0/backend/0
         security:
           extAuth:
             name: securitypolicy/default/policy-for-gateway-1
@@ -123,6 +129,7 @@ http:
                         port: 80
                     protocol: HTTP
                     weight: 1
+                    name: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend/backend/0
               headersToBackend:
                 - header1
                 - header2

@@ -90,6 +90,7 @@ spec:
                   address: '0.0.0.0'
                   port_value: 19001
                   protocol: TCP
+              bypass_overload_manager: true
               filter_chains:
               - filters:
                 - name: envoy.filters.network.http_connection_manager
@@ -108,7 +109,8 @@ spec:
                             path: /stats/prometheus
                             headers:
                             - name: ":method"
-                              exact_match: GET
+                              string_match:
+                                exact: GET
                           route:
                             cluster: prometheus_stats
                     http_filters:

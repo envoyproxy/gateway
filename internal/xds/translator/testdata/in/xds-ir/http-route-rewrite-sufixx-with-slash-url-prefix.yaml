@@ -22,6 +22,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "rewrite-route-dest/backend/0"
     urlRewrite:
       path:
         prefixMatchReplace: /rewrite/

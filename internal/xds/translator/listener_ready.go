@@ -100,5 +100,6 @@ func buildReadyListener(ready *ir.ReadyListener) (*listenerv3.Listener, error) {
 				},
 			},
 		},
+		BypassOverloadManager: true,
 	}, nil
 }

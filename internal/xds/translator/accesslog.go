@@ -6,6 +6,7 @@
 package translator
 
 import (
+	"errors"
 	"sort"
 	"strings"
 
@@ -30,24 +31,6 @@ import (
 )
 
 const (
-	// EnvoyTextLogFormat is the default log format for Envoy.
-	// See https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#default-format-string
-	EnvoyTextLogFormat = "{\"start_time\":\"%START_TIME%\",\"method\":\"%REQ(:METHOD)%\"," +
-		"\"x-envoy-origin-path\":\"%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%\",\"protocol\":\"%PROTOCOL%\"," +
-		"\"response_code\":\"%RESPONSE_CODE%\",\"response_flags\":\"%RESPONSE_FLAGS%\"," +
-		"\"response_code_details\":\"%RESPONSE_CODE_DETAILS%\"," +
-		"\"connection_termination_details\":\"%CONNECTION_TERMINATION_DETAILS%\"," +
-		"\"upstream_transport_failure_reason\":\"%UPSTREAM_TRANSPORT_FAILURE_REASON%\"," +
-		"\"bytes_received\":\"%BYTES_RECEIVED%\",\"bytes_sent\":\"%BYTES_SENT%\"," +
-		"\"duration\":\"%DURATION%\",\"x-envoy-upstream-service-time\":\"%RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)%\"," +
-		"\"x-forwarded-for\":\"%REQ(X-FORWARDED-FOR)%\",\"user-agent\":\"%REQ(USER-AGENT)%\"," +
-		"\"x-request-id\":\"%REQ(X-REQUEST-ID)%\",\":authority\":\"%REQ(:AUTHORITY)%\"," +
-		"\"upstream_host\":\"%UPSTREAM_HOST%\",\"upstream_cluster\":\"%UPSTREAM_CLUSTER%\"," +
-		"\"upstream_local_address\":\"%UPSTREAM_LOCAL_ADDRESS%\"," +
-		"\"downstream_local_address\":\"%DOWNSTREAM_LOCAL_ADDRESS%\"," +
-		"\"downstream_remote_address\":\"%DOWNSTREAM_REMOTE_ADDRESS%\"," +
-		"\"requested_server_name\":\"%REQUESTED_SERVER_NAME%\",\"route_name\":\"%ROUTE_NAME%\"}\n"
-
 	otelLogName   = "otel_envoy_accesslog"
 	otelAccessLog = "envoy.access_loggers.open_telemetry"
 
@@ -58,6 +41,33 @@ const (
 	tcpGRPCAccessLog = "envoy.access_loggers.tcp_grpc"
 	celFilter        = "envoy.access_loggers.extension_filters.cel"
 )
+
+var EnvoyJSONLogFields = map[string]string{
+	"start_time":                        "%START_TIME%",
+	"method":                            "%REQ(:METHOD)%",
+	"x-envoy-origin-path":               "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%",
+	"protocol":                          "%PROTOCOL%",
+	"response_code":                     "%RESPONSE_CODE%",
+	"response_flags":                    "%RESPONSE_FLAGS%",
+	"response_code_details":             "%RESPONSE_CODE_DETAILS%",
+	"connection_termination_details":    "%CONNECTION_TERMINATION_DETAILS%",
+	"upstream_transport_failure_reason": "%UPSTREAM_TRANSPORT_FAILURE_REASON%",
+	"bytes_received":                    "%BYTES_RECEIVED%",
+	"bytes_sent":                        "%BYTES_SENT%",
+	"duration":                          "%DURATION%",
+	"x-envoy-upstream-service-time":     "%RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)%",
+	"x-forwarded-for":                   "%REQ(X-FORWARDED-FOR)%",
+	"user-agent":                        "%REQ(USER-AGENT)%",
+	"x-request-id":                      "%REQ(X-REQUEST-ID)%",
+	":authority":                        "%REQ(:AUTHORITY)%",
+	"upstream_host":                     "%UPSTREAM_HOST%",
+	"upstream_cluster":                  "%UPSTREAM_CLUSTER%",
+	"upstream_local_address":            "%UPSTREAM_LOCAL_ADDRESS%",
+	"downstream_local_address":          "%DOWNSTREAM_LOCAL_ADDRESS%",
+	"downstream_remote_address":         "%DOWNSTREAM_REMOTE_ADDRESS%",
+	"requested_server_name":             "%REQUESTED_SERVER_NAME%",
+	"route_name":                        "%ROUTE_NAME%",
+}
 
 // for the case when a route does not exist to upstream, hcm logs will not be present
 var listenerAccessLogFilter = &accesslog.AccessLogFilter{
@@ -129,10 +139,12 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 		filelog := &fileaccesslog.FileAccessLog{
 			Path: text.Path,
 		}
-		format := EnvoyTextLogFormat
-		if text.Format != nil {
-			format = *text.Format
+
+		if text.Format == nil {
+			return nil, errors.New("text.Format is nil")
 		}
+
+		format := *text.Format
 
 		filelog.AccessLogFormat = &fileaccesslog.FileAccessLog_LogFormat{
 			LogFormat: &cfgcore.SubstitutionFormatString{
@@ -177,18 +189,20 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 		// NR is only added to listener logs originating from a global log configuration
 		defaultLogTypeForListener := accessLogType == ir.ProxyAccessLogTypeListener && json.LogType == nil
 
-		jsonFormat := &structpb.Struct{
-			Fields: make(map[string]*structpb.Value, len(json.JSON)),
+		jsonLogFields := EnvoyJSONLogFields
+		if json.JSON != nil {
+			jsonLogFields = json.JSON
 		}
 
-		// sort keys to ensure consistent ordering
-		keys := maps.Keys(json.JSON)
-		sort.Strings(keys)
+		keys := maps.Keys(jsonLogFields)
+		jsonFormat := &structpb.Struct{
+			Fields: make(map[string]*structpb.Value, len(keys)),
+		}
 
 		for _, key := range keys {
 			jsonFormat.Fields[key] = &structpb.Value{
 				Kind: &structpb.Value_StringValue{
-					StringValue: json.JSON[key],
+					StringValue: jsonLogFields[key],
 				},
 			}
 		}
@@ -204,7 +218,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 			},
 		}
 
-		formatters := accessLogJSONFormatters(json.JSON)
+		formatters := accessLogJSONFormatters(jsonLogFields)
 		if len(formatters) != 0 {
 			filelog.GetLogFormat().Formatters = formatters
 		}
@@ -322,10 +336,10 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 			ResourceAttributes: convertToKeyValueList(otel.Resources, false),
 		}
 
-		format := EnvoyTextLogFormat
-		if otel.Text != nil {
-			format = *otel.Text
+		if otel.Text == nil {
+			return nil, errors.New("otel.Text is nil")
 		}
+		format := *otel.Text
 
 		if format != "" {
 			al.Body = &otlpcommonv1.AnyValue{

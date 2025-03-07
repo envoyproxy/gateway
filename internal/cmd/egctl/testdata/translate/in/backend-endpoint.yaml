@@ -44,3 +44,16 @@ spec:
     - ip:
         address: 0.0.0.0
         port: 3000
+---
+apiVersion: gateway.networking.k8s.io/v1alpha3
+kind: BackendTLSPolicy
+metadata:
+  name: example-com-tls-policy
+spec:
+  targetRefs:
+    - group: 'gateway.envoyproxy.io'
+      kind: Backend
+      name: backend
+  validation:
+    wellKnownCACertificates: "System"
+    hostname: www.example.com

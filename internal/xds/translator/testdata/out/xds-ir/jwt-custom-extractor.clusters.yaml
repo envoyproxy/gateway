@@ -36,7 +36,7 @@
         loadBalancingWeight: 1
       loadBalancingWeight: 1
       locality:
-        region: localhost_443/backend/0
+        region: localhost_443/backend/-1
   name: localhost_443
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
