@@ -9,6 +9,7 @@ require (
 	fortio.org/log v1.17.1
 	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/andybalholm/brotli v1.1.1
+	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/cncf/xds/go v0.0.0-20240905190251-b4127c9b8d78
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
