@@ -69,10 +69,6 @@ func (*extProc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPLi
 // buildHCMExtProcFilter returns an ext_proc HTTP filter from the provided IR HTTPRoute.
 func buildHCMExtProcFilter(extProc ir.ExtProc) (*hcmv3.HttpFilter, error) {
 	extAuthProto := extProcConfig(extProc)
-	if err := extAuthProto.ValidateAll(); err != nil {
-		return nil, err
-	}
-
 	extAuthAny, err := anypb.New(extAuthProto)
 	if err != nil {
 		return nil, err
@@ -238,9 +234,10 @@ func (*extProc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 
 func buildExtProcBodyProcessingMode(mode *ir.ExtProcBodyProcessingMode) extprocv3.ProcessingMode_BodySendMode {
 	lookup := map[ir.ExtProcBodyProcessingMode]extprocv3.ProcessingMode_BodySendMode{
-		ir.ExtProcBodyBuffered:        extprocv3.ProcessingMode_BUFFERED,
-		ir.ExtProcBodyBufferedPartial: extprocv3.ProcessingMode_BUFFERED_PARTIAL,
-		ir.ExtProcBodyStreamed:        extprocv3.ProcessingMode_STREAMED,
+		ir.ExtProcBodyBuffered:           extprocv3.ProcessingMode_BUFFERED,
+		ir.ExtProcBodyBufferedPartial:    extprocv3.ProcessingMode_BUFFERED_PARTIAL,
+		ir.ExtProcBodyStreamed:           extprocv3.ProcessingMode_STREAMED,
+		ir.ExtProcBodyFullDuplexStreamed: extprocv3.ProcessingMode_FULL_DUPLEX_STREAMED,
 	}
 	if r, found := lookup[*mode]; found {
 		return r

@@ -22,7 +22,7 @@ import (
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
-	"google.golang.org/protobuf/proto"
+	protobuf "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -32,7 +32,7 @@ import (
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
-	"github.com/envoyproxy/gateway/internal/utils/protocov"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -89,6 +89,10 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 	// to collect all errors and reflect them in the status of the CRDs.
 	var errs error
 
+	if err := t.processHTTPReadyListenerXdsTranslation(tCtx, xdsIR.ReadyListener); err != nil {
+		errs = errors.Join(errs, err)
+	}
+
 	if err := t.processHTTPListenerXdsTranslation(
 		tCtx, xdsIR.HTTP, xdsIR.AccessLog, xdsIR.Tracing, xdsIR.Metrics); err != nil {
 		errs = errors.Join(errs, err)
@@ -129,6 +133,12 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 				errs = errors.Join(errs, clearListenerRoutes(listener.(*listenerv3.Listener)))
 			}
 		}
+	}
+
+	// Validate all the xds resources in the table before returning
+	// This is necessary to catch any misconfigurations that might have been missed during translation
+	if err := tCtx.ValidateAll(); err != nil {
+		errs = errors.Join(errs, err)
 	}
 
 	return tCtx, errs
@@ -257,6 +267,23 @@ func clearAllRoutes(hcm *hcmv3.HttpConnectionManager) {
 			},
 		},
 	}
+}
+
+func (t *Translator) processHTTPReadyListenerXdsTranslation(tCtx *types.ResourceVersionTable, ready *ir.ReadyListener) error {
+	// If there is no ready listener, return early.
+	// TODO: update all testcases to use the new ReadyListener field
+	if ready == nil {
+		return nil
+	}
+	l, err := buildReadyListener(ready)
+	if err != nil {
+		return err
+	}
+	err = tCtx.AddXdsResource(resourcev3.ListenerType, l)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (t *Translator) processHTTPListenerXdsTranslation(
@@ -555,11 +582,38 @@ func (t *Translator) addRouteToRouteConfig(
 				ea.http2Settings = httpRoute.Traffic.HTTP2
 			}
 
-			if err = processXdsCluster(
-				tCtx,
-				&HTTPRouteTranslator{httpRoute},
-				ea,
-			); err != nil {
+			var err error
+			// If there are no filters in the destination settings we create
+			// a regular xds Cluster
+			if !needsClusterPerSetting(httpRoute.Destination.Settings) {
+				err = processXdsCluster(
+					tCtx,
+					httpRoute.Destination.Name,
+					httpRoute.Destination.Settings,
+					&HTTPRouteTranslator{httpRoute},
+					ea,
+				)
+				if err != nil {
+					errs = errors.Join(errs, err)
+				}
+			} else {
+				// If a filter does exist, we create a weighted cluster that's
+				// attached to the route, and create a xds Cluster per setting
+				for _, setting := range httpRoute.Destination.Settings {
+					tSettings := []*ir.DestinationSetting{setting}
+					err = processXdsCluster(
+						tCtx,
+						setting.Name,
+						tSettings,
+						&HTTPRouteTranslator{httpRoute},
+						ea)
+					if err != nil {
+						errs = errors.Join(errs, err)
+					}
+				}
+			}
+
+			if err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
@@ -634,7 +688,7 @@ func replaceHCMInFilterChain(hcm *hcmv3.HttpConnectionManager, filterChain *list
 	for i, filter := range filterChain.Filters {
 		if filter.Name == wellknown.HTTPConnectionManager {
 			var mgrAny *anypb.Any
-			if mgrAny, err = protocov.ToAnyWithValidation(hcm); err != nil {
+			if mgrAny, err = proto.ToAnyWithValidation(hcm); err != nil {
 				return err
 			}
 
@@ -653,7 +707,7 @@ func findHCMinFilterChain(filterChain *listenerv3.FilterChain) (*hcmv3.HttpConne
 	for _, filter := range filterChain.Filters {
 		if filter.Name == wellknown.HTTPConnectionManager {
 			hcm := &hcmv3.HttpConnectionManager{}
-			if err := anypb.UnmarshalTo(filter.GetTypedConfig(), hcm, proto.UnmarshalOptions{}); err != nil {
+			if err := anypb.UnmarshalTo(filter.GetTypedConfig(), hcm, protobuf.UnmarshalOptions{}); err != nil {
 				return nil, err
 			}
 			return hcm, nil
@@ -708,7 +762,11 @@ func (t *Translator) processTCPListenerXdsTranslation(
 		patchProxyProtocolFilter(xdsListener, tcpListener.EnableProxyProtocol)
 
 		for _, route := range tcpListener.Routes {
-			if err := processXdsCluster(tCtx, &TCPRouteTranslator{route}, &ExtraArgs{metrics: metrics}); err != nil {
+			if err := processXdsCluster(tCtx,
+				route.Destination.Name,
+				route.Destination.Settings,
+				&TCPRouteTranslator{route},
+				&ExtraArgs{metrics: metrics}); err != nil {
 				errs = errors.Join(errs, err)
 			}
 			if route.TLS != nil && route.TLS.Terminate != nil {
@@ -795,7 +853,11 @@ func processUDPListenerXdsTranslation(
 			}
 
 			// 1:1 between IR UDPRoute and xDS Cluster
-			if err := processXdsCluster(tCtx, &UDPRouteTranslator{route}, &ExtraArgs{metrics: metrics}); err != nil {
+			if err := processXdsCluster(tCtx,
+				route.Destination.Name,
+				route.Destination.Settings,
+				&UDPRouteTranslator{route},
+				&ExtraArgs{metrics: metrics}); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
@@ -888,8 +950,13 @@ func findXdsEndpoint(tCtx *types.ResourceVersionTable, name string) *endpointv3.
 }
 
 // processXdsCluster processes xds cluster with args per route.
-func processXdsCluster(tCtx *types.ResourceVersionTable, route clusterArgs, extras *ExtraArgs) error {
-	return addXdsCluster(tCtx, route.asClusterArgs(extras))
+func processXdsCluster(tCtx *types.ResourceVersionTable,
+	name string,
+	settings []*ir.DestinationSetting,
+	route clusterArgs,
+	extras *ExtraArgs,
+) error {
+	return addXdsCluster(tCtx, route.asClusterArgs(name, settings, extras))
 }
 
 // findXdsSecret finds a xds secret with the same name, and returns nil if there is no match.
@@ -1046,7 +1113,7 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.
 		}
 	}
 
-	tlsCtxAny, err := protocov.ToAnyWithValidation(tlsCtx)
+	tlsCtxAny, err := proto.ToAnyWithValidation(tlsCtx)
 	if err != nil {
 		return nil, err
 	}

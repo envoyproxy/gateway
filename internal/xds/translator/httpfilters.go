@@ -116,22 +116,24 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 7
 	case isFilterType(filter, egv1a1.EnvoyFilterSessionPersistence):
 		order = 8
-	case isFilterType(filter, egv1a1.EnvoyFilterExtProc):
+	case isFilterType(filter, egv1a1.EnvoyFilterLua):
 		order = 9 + mustGetFilterIndex(filter.Name)
-	case isFilterType(filter, egv1a1.EnvoyFilterWasm):
+	case isFilterType(filter, egv1a1.EnvoyFilterExtProc):
 		order = 100 + mustGetFilterIndex(filter.Name)
+	case isFilterType(filter, egv1a1.EnvoyFilterWasm):
+		order = 200 + mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterRBAC):
-		order = 201
+		order = 301
 	case isFilterType(filter, egv1a1.EnvoyFilterLocalRateLimit):
-		order = 202
+		order = 302
 	case isFilterType(filter, egv1a1.EnvoyFilterRateLimit):
-		order = 203
+		order = 303
 	case isFilterType(filter, egv1a1.EnvoyFilterCustomResponse):
-		order = 204
+		order = 304
 	case isFilterType(filter, egv1a1.EnvoyFilterCompressor):
-		order = 205
+		order = 305
 	case isFilterType(filter, egv1a1.EnvoyFilterRouter):
-		order = 206
+		order = 306
 	}
 
 	return &OrderedHTTPFilter{

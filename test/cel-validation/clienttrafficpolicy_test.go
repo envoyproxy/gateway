@@ -592,6 +592,30 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{},
 		},
+		{
+			desc: "invalid x-request-id header setting",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Name = "ctp-headers"
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
+						},
+					},
+					Headers: &egv1a1.HeaderSettings{
+						PreserveXRequestID: ptr.To(true),
+						RequestID:          ptr.To(egv1a1.RequestIDActionGenerate),
+					},
+				}
+			},
+			wantErrors: []string{
+				"ClientTrafficPolicy.gateway.envoyproxy.io \"ctp-headers\" is invalid: spec.headers: Invalid value: \"object\": preserveXRequestID and requestID cannot both be set.",
+			},
+		},
 	}
 
 	for _, tc := range cases {

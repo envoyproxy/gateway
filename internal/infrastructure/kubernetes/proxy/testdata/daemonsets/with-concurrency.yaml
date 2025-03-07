@@ -69,11 +69,14 @@ spec:
         - containerPort: 19001
           name: metrics
           protocol: TCP
+        - containerPort: 19003
+          name: readiness
+          protocol: TCP
         readinessProbe:
           failureThreshold: 1
           httpGet:
             path: /ready
-            port: 19001
+            port: 19003
             scheme: HTTP
           periodSeconds: 5
           successThreshold: 1
@@ -97,7 +100,7 @@ spec:
           failureThreshold: 30
           httpGet:
             path: /ready
-            port: 19001
+            port: 19003
             scheme: HTTP
           periodSeconds: 10
           successThreshold: 1

@@ -22,7 +22,10 @@ gateways:
   spec:
     gatewayClassName: eg
     listeners:
-    - name: tls
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: tls
       port: 8443
       protocol: TLS
   status:
@@ -53,7 +56,9 @@ httpRoutes:
     namespace: envoy-gateway-system
   spec:
     parentRefs:
-    - name: eg
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
     rules:
     - backendRefs:
       - group: ""
@@ -80,4 +85,6 @@ httpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
         name: eg

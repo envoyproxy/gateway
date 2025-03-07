@@ -203,7 +203,7 @@ securityPolicies:
 xdsIR:
   default/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -228,6 +228,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
@@ -259,6 +260,7 @@ xdsIR:
                     endpoints:
                     - host: foo.bar.com
                       port: 443
+                    name: securitypolicy/default/policy-for-route/jwt/0/backend/0
                     protocol: HTTPS
                     tls:
                       alpnProtocols: null
@@ -280,3 +282,8 @@ xdsIR:
                       - gateway-error
                       - reset
                 uri: https://foo.bar.com/jwt/public-key/jwks.json
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

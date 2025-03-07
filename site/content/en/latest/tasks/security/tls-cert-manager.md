@@ -24,11 +24,17 @@ Changing to the Let's Encrypt production environment is straight-forward after t
 
 *This is a summary of [cert-manager Installation with Helm](https://cert-manager.io/docs/installation/helm/).*
 
-Installing cert-manager is straight-forward, but currently (v1.12) requires setting a feature gate to enable the Gateway API support.
+Installing cert-manager is straight-forward and you can follow the below approach to install cert-manager in your cluster. Gateway API CRDs should either be installed before cert-manager starts or the cert-manager Deployment should be restarted after installing the Gateway API CRDs. Remember to enable the Gateway API support. You can refer this [page](https://cert-manager.io/docs/usage/gateway/) for more details. 
 
 ```console
 $ helm repo add jetstack https://charts.jetstack.io
-$ helm upgrade --install --create-namespace --namespace cert-manager --set installCRDs=true --set featureGates=ExperimentalGatewayAPISupport=true cert-manager jetstack/cert-manager
+$ helm install \
+  cert-manager jetstack/cert-manager \
+  --version v1.17.0 \
+  --create-namespace --namespace cert-manager \
+  --set config.apiVersion="controller.config.cert-manager.io/v1alpha1" \
+  --set config.kind="ControllerConfiguration" \
+  --set config.enableGatewayAPI=true
 ```
 
 You should now have `cert-manager` running with nothing to do:

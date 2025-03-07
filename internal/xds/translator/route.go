@@ -19,7 +19,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/protocov"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 )
 
 const (
@@ -224,7 +224,7 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcherv3.StringMatcher {
 
 func buildXdsRouteAction(backendWeights *ir.BackendWeights, settings []*ir.DestinationSetting) *routev3.RouteAction {
 	// only use weighted cluster when there are invalid weights
-	if hasFiltersInSettings(settings) || backendWeights.Invalid != 0 {
+	if needsClusterPerSetting(settings) || backendWeights.Invalid != 0 {
 		return buildXdsWeightedRouteAction(backendWeights, settings)
 	}
 
@@ -248,7 +248,7 @@ func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*
 	for _, destinationSetting := range settings {
 		if len(destinationSetting.Endpoints) > 0 {
 			validCluster := &routev3.WeightedCluster_ClusterWeight{
-				Name:   backendWeights.Name,
+				Name:   destinationSetting.Name,
 				Weight: &wrapperspb.UInt32Value{Value: *destinationSetting.Weight},
 			}
 
@@ -595,7 +595,7 @@ func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy 
 
 func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
 	rr := route.GetRetry()
-	anyCfg, err := protocov.ToAnyWithValidation(&previoushost.PreviousHostsPredicate{})
+	anyCfg, err := proto.ToAnyWithValidation(&previoushost.PreviousHostsPredicate{})
 	if err != nil {
 		return nil, err
 	}
@@ -708,10 +708,30 @@ func buildRetryOn(triggers []ir.TriggerEnum) (string, error) {
 	return b.String(), nil
 }
 
+func needsClusterPerSetting(settings []*ir.DestinationSetting) bool {
+	if hasFiltersInSettings(settings) || hasZoneAwareRouting(settings) {
+		return true
+	}
+	return false
+}
+
 func hasFiltersInSettings(settings []*ir.DestinationSetting) bool {
 	for _, setting := range settings {
 		filters := setting.Filters
 		if filters != nil {
+			return true
+		}
+	}
+	return false
+}
+
+func hasZoneAwareRouting(settings []*ir.DestinationSetting) bool {
+	// Only use weighted clusters if more than one setting
+	if len(settings) < 2 {
+		return false
+	}
+	for _, setting := range settings {
+		if setting.ZoneAwareRoutingEnabled {
 			return true
 		}
 	}

@@ -202,7 +202,6 @@ const (
 	SourceMatchExact SourceMatchType = "Exact"
 	// SourceMatchDistinct Each IP Address within the specified Source IP CIDR is treated as a distinct client selector
 	// and uses a separate rate limit bucket/counter.
-	// Note: This is only supported for Global Rate Limits.
 	SourceMatchDistinct SourceMatchType = "Distinct"
 )
 
@@ -220,7 +219,7 @@ type SourceMatch struct {
 }
 
 // HeaderMatch defines the match attributes within the HTTP Headers of the request.
-type HeaderMatch struct { // TODO: zhaohuabing this type could be replaced with a general purpose StringMatch type.
+type HeaderMatch struct {
 	// Type specifies how to match against the value of the header.
 	//
 	// +optional
@@ -228,12 +227,14 @@ type HeaderMatch struct { // TODO: zhaohuabing this type could be replaced with 
 	Type *HeaderMatchType `json:"type,omitempty"`
 
 	// Name of the HTTP header.
+	// The header name is case-insensitive unless PreserveHeaderCase is set to true.
+	// For example, "Foo" and "foo" are considered the same header.
+	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
 	Name string `json:"name"`
 
-	// Value within the HTTP header. Due to the
-	// case-insensitivity of header names, "foo" and "Foo" are considered equivalent.
+	// Value within the HTTP header.
 	// Do not set this field when Type="Distinct", implying matching on any/all unique
 	// values within the header.
 	//
@@ -268,7 +269,6 @@ const (
 	// HeaderMatchDistinct matches any and all possible unique values encountered in the
 	// specified HTTP Header. Note that each unique value will receive its own rate limit
 	// bucket.
-	// Note: This is only supported for Global Rate Limits.
 	HeaderMatchDistinct HeaderMatchType = "Distinct"
 )
 

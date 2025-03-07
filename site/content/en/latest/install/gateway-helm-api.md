@@ -67,6 +67,11 @@ The Helm chart for Envoy Gateway
 | global.images.ratelimit.image | string | `"docker.io/envoyproxy/ratelimit:master"` |  |
 | global.images.ratelimit.pullPolicy | string | `"IfNotPresent"` |  |
 | global.images.ratelimit.pullSecrets | list | `[]` |  |
+| hpa.behavior | object | `{}` |  |
+| hpa.enabled | bool | `false` |  |
+| hpa.maxReplicas | int | `1` |  |
+| hpa.metrics | list | `[]` |  |
+| hpa.minReplicas | int | `1` |  |
 | kubernetesClusterDomain | string | `"cluster.local"` |  |
 | podDisruptionBudget.minAvailable | int | `0` |  |
 | service.annotations | object | `{}` |  |

@@ -92,8 +92,13 @@ udpRoutes:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
     udp:
     - address: 0.0.0.0
       name: envoy-gateway/gateway-1/udp
@@ -106,12 +111,14 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8162
+            name: udproute/default/udproute-1/rule/-1/backend/0
             protocol: UDP
             weight: 50
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8162
+            name: udproute/default/udproute-1/rule/-1/backend/1
             protocol: UDP
             weight: 50
         name: udproute/default/udproute-1

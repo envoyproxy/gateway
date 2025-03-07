@@ -1,0 +1,38 @@
+{{ $cover := .HasShortcode "blocks/cover" }}
+<nav class="js-navbar-scroll navbar navbar-expand navbar-dark flex-column flex-md-row td-navbar">
+  <a class="navbar-brand" href="{{ .Site.Home.RelPermalink }}">
+    {{ $logoRegular := resources.Get "icons/logo.svg" }}
+    {{ $logoWhite := resources.Get "icons/logo-white.svg" }}
+    <img class="td-navbar-logo-regular" height="32" src="{{ $logoRegular.RelPermalink }}" alt="{{ .Site.Title }}">
+    <img class="td-navbar-logo-white" height="32" src="{{ $logoWhite.RelPermalink }}" alt="{{ .Site.Title }}">
+    <span class="td-navbar-logo-text">Envoy Gateway</span>
+  </a>
+  <div class="td-navbar-nav-scroll ms-md-auto" id="main_navbar">
+    <ul class="navbar-nav mt-2 mt-lg-0">
+      {{ $p := . }}
+      {{ range .Site.Menus.main }}
+      <li class="nav-item">
+        {{ $active := or ($p.IsMenuCurrent "main" .) ($p.HasMenuCurrent "main" .) }}
+        {{ with .Page }}
+        {{ $active = or $active ( $.IsDescendant .)  }}
+        {{ end }}
+        {{ $pre := .Pre }}
+        {{ $post := .Post }}
+        {{ $url := urls.Parse .URL }}
+        {{ $baseurl := urls.Parse $.Site.Params.Baseurl }}
+        <a class="nav-link{{if $active }} active{{end}}" href="{{ with .Page }}{{ .RelPermalink }}{{ else }}{{ .URL | relLangURL }}{{ end }}"{{ if ne $url.Host $baseurl.Host }} target="_blank" rel="noopener"{{ end }}>{{ with .Pre}}{{ $pre }}{{ end }}<span{{if $active }} class="active"{{end}}>{{ .Name }}</span>{{ with .Post}}{{ $post }}{{ end }}</a>
+      </li>
+      {{ end }}
+      {{ if .Site.Params.versions }}
+      <li class="nav-item dropdown d-none d-lg-block">
+        {{ partial "navbar-version-selector.html" . }}
+      </li>
+      {{ end }}
+      {{ if (gt (len .Site.Home.Translations) 0) }}
+      <li class="nav-item dropdown d-none d-lg-block">
+        {{ partial "navbar-lang-selector.html" . }}
+      </li>
+      {{ end }}
+    </ul>
+  </div>
+</nav>

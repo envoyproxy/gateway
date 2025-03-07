@@ -18,10 +18,9 @@ lint-deps: ## Everything necessary to lint
 GOLANGCI_LINT_FLAGS ?= $(if $(GITHUB_ACTION),--out-format=colored-line-number)
 .PHONY: lint.golint
 lint: lint.golint
-lint-deps: $(tools/golangci-lint)
-lint.golint: $(tools/golangci-lint)
+lint.golint:
 	@$(LOG_TARGET)
-	$(tools/golangci-lint) run $(GOLANGCI_LINT_FLAGS) --build-tags=$(LINT_BUILD_TAGS) --config=tools/linter/golangci-lint/.golangci.yml
+	@go tool golangci-lint run $(GOLANGCI_LINT_FLAGS) --build-tags=$(LINT_BUILD_TAGS) --config=tools/linter/golangci-lint/.golangci.yml
 
 .PHONY: lint.yamllint
 lint: lint.yamllint
@@ -70,11 +69,10 @@ lint.shellcheck: $(tools/shellcheck)
 	$(tools/shellcheck) tools/hack/*.sh
 
 .PHONY: lint.fix-golint
-lint-deps: $(tools/gci)
 lint.fix-golint: ## Run all linter of code sources and fix the issues.
 	@$(LOG_TARGET)
 	$(MAKE) lint.golint GOLANGCI_LINT_FLAGS="--fix"
-	find . -name "*.go" | xargs $(tools/gci) write --skip-generated -s Standard -s Default -s "Prefix(github.com/envoyproxy/gateway)" 
+	find . -name "*.go" | xargs go tool gci write --skip-generated -s Standard -s Default -s "Prefix(github.com/envoyproxy/gateway)"
 
 .PHONY: gen-check
 gen-check: format generate manifests protos go.testdata.complete
@@ -97,3 +95,8 @@ latest-release-check: ## Check if latest release and tag are created properly.
 .PHONY: lint.markdown
 lint.markdown:
 	markdownlint -c .github/markdown_lint_config.json site/content/*
+
+.PHONY: lint.dependabot
+lint: lint.dependabot
+lint.dependabot: ## Check if dependabot configuration is valid
+	@npx @bugron/validate-dependabot-yaml .github/dependabot.yml

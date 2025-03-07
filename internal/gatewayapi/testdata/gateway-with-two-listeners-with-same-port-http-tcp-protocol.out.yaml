@@ -160,7 +160,7 @@ tcpRoutes:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -185,6 +185,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: '*'
@@ -198,6 +199,11 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
     tcp:
     - address: 0.0.0.0
       name: envoy-gateway/gateway-1/tcp
@@ -210,6 +216,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8163
+            name: tcproute/default/tcproute-1/rule/-1/backend/0
             protocol: TCP
             weight: 1
         name: tcproute/default/tcproute-1

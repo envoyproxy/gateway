@@ -1,0 +1,70 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route-ratelimit-distinct-ip"
+    hostname: "*"
+    traffic:
+      rateLimit:
+        local:
+          default:
+            requests: 10
+            unit: Minute
+          rules:
+          - headerMatches:
+            - name: "x-user-id"
+              distinct: true
+            limit:
+              requests: 5
+              unit: second
+    pathMatch:
+      exact: "foo/bar"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+  - name: "second-route-ratelimit-multiple-rules"
+    hostname: "*"
+    traffic:
+      rateLimit:
+        local:
+          default:
+            requests: 10
+            unit: Minute
+          rules:
+          - headerMatches:
+            - name: x-user-id
+              exact: one
+            - name: x-org-id
+              exact: foo
+            limit:
+              requests: 10
+              unit: Hour
+          - cidrMatch:
+              cidr: 192.168.0.0/16
+              maskLen: 16
+              distinct: true
+            headerMatches:
+            - name: x-user-id
+              exact: two
+            - name: x-org-id
+              exact: bar
+            limit:
+              requests: 10
+              unit: Minute
+    pathMatch:
+      exact: "example"
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000

@@ -247,7 +247,7 @@ spec:
                   type:
                     default: Replace
                     description: |-
-                      Type is the type of the bootstrap configuration, it should be either Replace,  Merge, or JSONPatch.
+                      Type is the type of the bootstrap configuration, it should be either **Replace**,  **Merge**, or **JSONPatch**.
                       If unspecified, it defaults to Replace.
                     enum:
                     - Merge
@@ -300,6 +300,8 @@ spec:
 
                   - envoy.filters.http.stateful_session
 
+                  - envoy.filters.http.lua
+
                   - envoy.filters.http.ext_proc
 
                   - envoy.filters.http.wasm
@@ -333,6 +335,7 @@ spec:
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
                       - envoy.filters.http.stateful_session
+                      - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
                       - envoy.filters.http.rbac
@@ -355,6 +358,7 @@ spec:
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
                       - envoy.filters.http.stateful_session
+                      - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
                       - envoy.filters.http.rbac
@@ -375,6 +379,7 @@ spec:
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
                       - envoy.filters.http.stateful_session
+                      - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
                       - envoy.filters.http.rbac
@@ -10762,6 +10767,17 @@ spec:
                                                   DNSRefreshRate specifies the rate at which DNS records should be refreshed.
                                                   Defaults to 30 seconds.
                                                 type: string
+                                              lookupFamily:
+                                                description: |-
+                                                  LookupFamily determines how Envoy would resolve DNS for Routes where the backend is specified as a fully qualified domain name (FQDN).
+                                                  If set, this configuration overrides other defaults.
+                                                enum:
+                                                - IPv4
+                                                - IPv6
+                                                - IPv4Preferred
+                                                - IPv6Preferred
+                                                - IPv4AndIPv6
+                                                type: string
                                               respectDnsTtl:
                                                 description: |-
                                                   RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.
@@ -11748,6 +11764,17 @@ spec:
                                                 description: |-
                                                   DNSRefreshRate specifies the rate at which DNS records should be refreshed.
                                                   Defaults to 30 seconds.
+                                                type: string
+                                              lookupFamily:
+                                                description: |-
+                                                  LookupFamily determines how Envoy would resolve DNS for Routes where the backend is specified as a fully qualified domain name (FQDN).
+                                                  If set, this configuration overrides other defaults.
+                                                enum:
+                                                - IPv4
+                                                - IPv6
+                                                - IPv4Preferred
+                                                - IPv6Preferred
+                                                - IPv4AndIPv6
                                                 type: string
                                               respectDnsTtl:
                                                 description: |-
@@ -12829,6 +12856,17 @@ spec:
                                             DNSRefreshRate specifies the rate at which DNS records should be refreshed.
                                             Defaults to 30 seconds.
                                           type: string
+                                        lookupFamily:
+                                          description: |-
+                                            LookupFamily determines how Envoy would resolve DNS for Routes where the backend is specified as a fully qualified domain name (FQDN).
+                                            If set, this configuration overrides other defaults.
+                                          enum:
+                                          - IPv4
+                                          - IPv6
+                                          - IPv4Preferred
+                                          - IPv6Preferred
+                                          - IPv4AndIPv6
+                                          type: string
                                         respectDnsTtl:
                                           description: |-
                                             RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.
@@ -13823,6 +13861,17 @@ spec:
                                     description: |-
                                       DNSRefreshRate specifies the rate at which DNS records should be refreshed.
                                       Defaults to 30 seconds.
+                                    type: string
+                                  lookupFamily:
+                                    description: |-
+                                      LookupFamily determines how Envoy would resolve DNS for Routes where the backend is specified as a fully qualified domain name (FQDN).
+                                      If set, this configuration overrides other defaults.
+                                    enum:
+                                    - IPv4
+                                    - IPv6
+                                    - IPv4Preferred
+                                    - IPv6Preferred
+                                    - IPv4AndIPv6
                                     type: string
                                   respectDnsTtl:
                                     description: |-

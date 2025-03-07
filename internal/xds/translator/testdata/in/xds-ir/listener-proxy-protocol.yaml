@@ -30,6 +30,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "first-route-dest/backend/0"
 tcp:
 - name: "second-listener"
   address: "::"
@@ -43,3 +44,4 @@ tcp:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "tls-route-dest/backend/0"

@@ -4,7 +4,7 @@ RELEASE_VERSIONS ?= $(foreach v,$(wildcard ${ROOT_DIR}/docs/*),$(notdir ${v}))
 #       find a way to remove github.com from ignore list
 # TODO: example.com is not a valid domain, we should remove it from ignore list
 # TODO: https://www.gnu.org/software/make became unstable, we should remove it from ignore list later
-LINKINATOR_IGNORE := "github.com jwt.io githubusercontent.com example.com github.io gnu.org _print"
+LINKINATOR_IGNORE := "github.com jwt.io githubusercontent.com example.com github.io gnu.org _print canva.com sched.co sap.com"
 CLEAN_NODE_MODULES ?= true
 
 ##@ Docs
@@ -59,7 +59,7 @@ helm-readme-gen:
 	done
 
 .PHONY: helm-readme-gen.%
-helm-readme-gen.%: $(tools/helm-docs)
+helm-readme-gen.%:
 	$(eval COMMAND := $(word 1,$(subst ., ,$*)))
 	$(eval CHART_NAME := $(COMMAND))
 	# use production ENV to generate helm api doc
@@ -69,30 +69,25 @@ helm-readme-gen.%: $(tools/helm-docs)
 	fi
 
 	# generate helm readme doc
-	$(tools/helm-docs) --template-files=tools/helm-docs/readme.${CHART_NAME}.gotmpl -g charts/${CHART_NAME} -f values.yaml -o README.md
+	@go tool helm-docs --template-files=tools/helm-docs/readme.${CHART_NAME}.gotmpl -g charts/${CHART_NAME} -f values.yaml -o README.md
 
 	# change the placeholder to title before api helm docs generated: split by '-' and capitalize the first letters
 	$(eval CHART_TITLE := $(shell echo "$(CHART_NAME)" | sed -E 's/\<./\U&/g; s/-/ /g' | awk '{for(i=1;i<=NF;i++){ $$i=toupper(substr($$i,1,1)) substr($$i,2) }}1'))
 	sed 's/{CHART-NAME}/$(CHART_TITLE)/g' tools/helm-docs/api.gotmpl > tools/helm-docs/api.${CHART_NAME}.gotmpl
-	$(tools/helm-docs) --template-files=tools/helm-docs/api.${CHART_NAME}.gotmpl -g charts/${CHART_NAME} -f values.yaml -o api.md
+	@go tool helm-docs --template-files=tools/helm-docs/api.${CHART_NAME}.gotmpl -g charts/${CHART_NAME} -f values.yaml -o api.md
 	mv charts/${CHART_NAME}/api.md site/content/en/latest/install/${CHART_NAME}-api.md
 	rm tools/helm-docs/api.${CHART_NAME}.gotmpl
 
-	# below line copy command for sync English api doc into Chinese
-	cp site/content/en/latest/install/${CHART_NAME}-api.md site/content/zh/latest/install/${CHART_NAME}-api.md
-
 .PHONY: docs-api-gen
-docs-api-gen: $(tools/crd-ref-docs)
+docs-api-gen:
 	@$(LOG_TARGET)
-	$(tools/crd-ref-docs) \
+	go tool crd-ref-docs \
 	--source-path=api/v1alpha1 \
 	--config=tools/crd-ref-docs/config.yaml \
 	--templates-dir=tools/crd-ref-docs/templates \
 	--output-path=site/content/en/latest/api/extension_types.md \
 	--max-depth 100 \
 	--renderer=markdown
-	# below line copy command for sync English api doc into Chinese
-	cp site/content/en/latest/api/extension_types.md site/content/zh/latest/api/extension_types.md
 
 .PHONY: docs-release-prepare
 docs-release-prepare:

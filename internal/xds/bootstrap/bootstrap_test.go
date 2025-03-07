@@ -55,7 +55,20 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 				ProxyMetrics: &egv1a1.ProxyMetrics{
 					Prometheus: &egv1a1.ProxyPrometheusProvider{
 						Compression: &egv1a1.Compression{
-							Type: "gzip",
+							Type: egv1a1.GzipCompressorType,
+						},
+					},
+				},
+				SdsConfig: sds,
+			},
+		},
+		{
+			name: "enable-prometheus-brotli-compression",
+			opts: &RenderBootstrapConfigOptions{
+				ProxyMetrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Compression: &egv1a1.Compression{
+							Type: egv1a1.BrotliCompressorType,
 						},
 					},
 				},
@@ -150,7 +163,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 				XdsServerPort:   ptr.To(int32(12345)),
 				WasmServerPort:  ptr.To(int32(1111)),
 				AdminServerPort: ptr.To(int32(2222)),
-				ReadyServerPort: ptr.To(int32(3333)),
+				StatsServerPort: ptr.To(int32(3333)),
 				SdsConfig:       sds,
 			},
 		},
