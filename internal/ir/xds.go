@@ -2799,6 +2799,8 @@ const (
 	ExtProcBodyBuffered = ExtProcBodyProcessingMode(egv1a1.BufferedExtProcBodyProcessingMode)
 	// ExtProcBodyBufferedPartial sets the partial buffered body processing mode
 	ExtProcBodyBufferedPartial = ExtProcBodyProcessingMode(egv1a1.BufferedPartialExtBodyHeaderProcessingMode)
+	// ExtProcBodyFullDuplexStreamed sets the full duplex streamed processing mode
+	ExtProcBodyFullDuplexStreamed = ExtProcBodyProcessingMode(egv1a1.FullDuplexStreamedExtBodyProcessingMode)
 )
 
 // ExtProc holds the information associated with the ExtProc extensions.

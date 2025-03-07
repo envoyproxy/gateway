@@ -234,9 +234,10 @@ func (*extProc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 
 func buildExtProcBodyProcessingMode(mode *ir.ExtProcBodyProcessingMode) extprocv3.ProcessingMode_BodySendMode {
 	lookup := map[ir.ExtProcBodyProcessingMode]extprocv3.ProcessingMode_BodySendMode{
-		ir.ExtProcBodyBuffered:        extprocv3.ProcessingMode_BUFFERED,
-		ir.ExtProcBodyBufferedPartial: extprocv3.ProcessingMode_BUFFERED_PARTIAL,
-		ir.ExtProcBodyStreamed:        extprocv3.ProcessingMode_STREAMED,
+		ir.ExtProcBodyBuffered:           extprocv3.ProcessingMode_BUFFERED,
+		ir.ExtProcBodyBufferedPartial:    extprocv3.ProcessingMode_BUFFERED_PARTIAL,
+		ir.ExtProcBodyStreamed:           extprocv3.ProcessingMode_STREAMED,
+		ir.ExtProcBodyFullDuplexStreamed: extprocv3.ProcessingMode_FULL_DUPLEX_STREAMED,
 	}
 	if r, found := lookup[*mode]; found {
 		return r
