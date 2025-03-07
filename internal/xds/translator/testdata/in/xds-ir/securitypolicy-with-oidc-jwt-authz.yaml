@@ -69,6 +69,14 @@ http:
         cookieSuffix: 5f93c2e4
         hmacSecret: '[redacted]'
         logoutPath: /logout
+        denyRedirectMatcher:
+          - name: :path
+            stringMatch:
+              prefix: /api
+          - name: X-No-Redirect
+            stringMatch:
+              exact: 'true'
+              ignoreCase: true
         name: securitypolicy/default/policy-for-http-route
         provider:
           authorizationEndpoint: https://oidc.example.com/authorize

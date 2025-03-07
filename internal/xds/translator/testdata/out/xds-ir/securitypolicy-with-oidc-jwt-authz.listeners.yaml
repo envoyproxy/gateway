@@ -44,6 +44,14 @@
                   sdsConfig:
                     ads: {}
                     resourceApiVersion: V3
+              denyRedirectMatcher:
+              - name: :path
+                stringMatch:
+                  prefix: /api
+              - name: X-No-Redirect
+                stringMatch:
+                  exact: "true"
+                  ignoreCase: true
               preserveAuthorizationHeader: true
               redirectPathMatcher:
                 path:

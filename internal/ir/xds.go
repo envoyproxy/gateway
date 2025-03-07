@@ -1034,6 +1034,11 @@ type OIDC struct {
 	// id token and access token when they expire.
 	RefreshToken bool `json:"refreshToken,omitempty"`
 
+	// Any request that matches any of the provided matchers won’t be redirected to OAuth server when tokens are not valid.
+	// Automatic access token refresh will be performed for these requests, if enabled.
+	// This behavior can be useful for AJAX requests.
+	DenyRedirectMatcher []egv1a1.OIDCDenyRedirectMatcher `json:"denyRedirectMatcher,omitempty"`
+
 	// DefaultRefreshTokenTTL is the default lifetime of the refresh token.
 	DefaultRefreshTokenTTL *metav1.Duration `json:"defaultRefreshTokenTTL,omitempty"`
 

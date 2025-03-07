@@ -862,6 +862,7 @@ func (t *Translator) buildOIDC(
 		Resources:              oidc.Resources,
 		RedirectURL:            redirectURL,
 		RedirectPath:           redirectPath,
+		DenyRedirectMatcher:    oidc.DenyRedirectMatcher,
 		LogoutPath:             logoutPath,
 		ForwardAccessToken:     forwardAccessToken,
 		DefaultTokenTTL:        oidc.DefaultTokenTTL,

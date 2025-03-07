@@ -202,6 +202,59 @@ func oauth2Config(oidc *ir.OIDC) (*oauth2v3.OAuth2, error) {
 		}
 	}
 
+	if oidc.DenyRedirectMatcher != nil {
+		denyRedirectPathMatchers := make([]*routev3.HeaderMatcher, 0, len(oidc.DenyRedirectMatcher))
+		for _, m := range oidc.DenyRedirectMatcher {
+			ignoreCase := false
+			if m.StringMatch.IgnoreCase != nil {
+				ignoreCase = *m.StringMatch.IgnoreCase
+			}
+
+			var stringMatcher *matcherv3.StringMatcher
+
+			switch {
+			case m.StringMatch.Exact != nil:
+				stringMatcher = &matcherv3.StringMatcher{
+					MatchPattern: &matcherv3.StringMatcher_Exact{Exact: *m.StringMatch.Exact},
+					IgnoreCase:   ignoreCase,
+				}
+			case m.StringMatch.Prefix != nil:
+				stringMatcher = &matcherv3.StringMatcher{
+					MatchPattern: &matcherv3.StringMatcher_Prefix{Prefix: *m.StringMatch.Prefix},
+					IgnoreCase:   ignoreCase,
+				}
+			case m.StringMatch.Suffix != nil:
+				stringMatcher = &matcherv3.StringMatcher{
+					MatchPattern: &matcherv3.StringMatcher_Suffix{Suffix: *m.StringMatch.Suffix},
+					IgnoreCase:   ignoreCase,
+				}
+			case m.StringMatch.SafeRegex != nil:
+				stringMatcher = &matcherv3.StringMatcher{
+					MatchPattern: &matcherv3.StringMatcher_SafeRegex{
+						SafeRegex: &matcherv3.RegexMatcher{Regex: *m.StringMatch.SafeRegex},
+					},
+				}
+			case m.StringMatch.Contains != nil:
+				stringMatcher = &matcherv3.StringMatcher{
+					MatchPattern: &matcherv3.StringMatcher_Contains{Contains: *m.StringMatch.Contains},
+				}
+			}
+
+			if stringMatcher != nil {
+				denyRedirectPathMatchers = append(denyRedirectPathMatchers, &routev3.HeaderMatcher{
+					Name: m.Name,
+					HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
+						StringMatch: stringMatcher,
+					},
+				})
+			}
+		}
+
+		if len(denyRedirectPathMatchers) > 0 {
+			oauth2.Config.DenyRedirectMatcher = denyRedirectPathMatchers
+		}
+	}
+
 	if oidc.CookieNameOverrides != nil &&
 		oidc.CookieNameOverrides.AccessToken != nil {
 		oauth2.Config.Credentials.CookieNames.BearerToken = *oidc.CookieNameOverrides.AccessToken

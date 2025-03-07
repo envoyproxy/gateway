@@ -62,6 +62,11 @@ type OIDC struct {
 	// If not specified, uses the default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback"
 	RedirectURL *string `json:"redirectURL,omitempty"`
 
+	// Any request that matches any of the provided matchers won’t be redirected to OAuth server when tokens are not valid.
+	// Automatic access token refresh will be performed for these requests, if enabled.
+	// This behavior can be useful for AJAX requests.
+	DenyRedirectMatcher []OIDCDenyRedirectMatcher `json:"denyRedirectMatcher,omitempty"`
+
 	// The path to log a user out, clearing their credential cookies.
 	//
 	// If not specified, uses a default logout path "/logout"
@@ -141,6 +146,46 @@ type OIDCProvider struct {
 	//
 	// +optional
 	TokenEndpoint *string `json:"tokenEndpoint,omitempty"`
+}
+
+// OIDCDenyRedirectMatcher defines the matcher to deny redirect to the OIDC Provider.
+type OIDCDenyRedirectMatcher struct {
+	//  Specifies the name of the header in the request.
+	// The pseudo-headers ``:path`` and ``:method`` can be used to match the request path and method, respectively
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+	// If specified, header match will be performed based on the string match of the header value.
+	// Specifies how the header match will be performed to route the request.
+	// +optional
+	StringMatch StringMatcher `json:"stringMatch,omitempty"`
+}
+
+// StringMather defines the string matcher used in envoy. Exactly one of the following fields (Exact, Prefix, Suffix, SafeRegex, Contains) must be set.
+type StringMatcher struct {
+	// The input string must match exactly the string specified here.
+	// +optional
+	Exact *string `json:"exact,omitempty"`
+
+	// The input *string must have the prefix specified here. Note: empty prefix is not allowed, please use regex instead.
+	// +optional
+	Prefix *string `json:"prefix,omitempty"`
+
+	// The input string must have the suffix specified here. Note: empty suffix is not allowed, please use regex instead.
+	// +optional
+	Suffix *string `json:"suffix,omitempty"`
+
+	// The input string must match the regular expression specified here.
+	// +optional
+	SafeRegex *string `json:"safeRegex,omitempty"`
+
+	// The input string must contain the string specified here.
+	// +optional
+	Contains *string `json:"contains,omitempty"`
+
+	// If true, indicates the exact/prefix/suffix/contains matching should be case insensitive.
+	// This has no effect for the safe_regex match. For example, the matcher data will match both input string Data and data if set to true. (default is false)
+	// +optional
+	IgnoreCase *bool `json:"ignoreCase,omitempty"`
 }
 
 // OIDCCookieNames defines the names of cookies to use in the Envoy OIDC filter.
