@@ -132,3 +132,78 @@ func Test_translateRateLimitCost(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildHTTPProtocolUpgradeConfig(t *testing.T) {
+	cases := []struct {
+		name     string
+		cfgs     []*egv1a1.ProtocolUpgradeConfig
+		expected []*ir.ProtocolUpgradeConfig
+	}{
+		{
+			name:     "empty",
+			cfgs:     nil,
+			expected: nil,
+		},
+		{
+			name: "disable-websockets",
+			cfgs: []*egv1a1.ProtocolUpgradeConfig{
+				{
+					Type:     "websocket",
+					Disabled: ptr.To(true),
+				},
+			},
+			expected: []*ir.ProtocolUpgradeConfig{
+				{
+					Type:    "websocket",
+					Enabled: false,
+				},
+			},
+		},
+		{
+			name: "enable-websockets",
+			cfgs: []*egv1a1.ProtocolUpgradeConfig{
+				{
+					Type: "websocket",
+				},
+			},
+			expected: []*ir.ProtocolUpgradeConfig{
+				{
+					Type:    "websocket",
+					Enabled: true,
+				},
+			},
+		},
+		{
+			name: "enable-and-disable",
+			cfgs: []*egv1a1.ProtocolUpgradeConfig{
+				{
+					Type: "websocket",
+				},
+				{
+					Type:     "websocket",
+					Disabled: ptr.To(true),
+				},
+				{
+					Type: "spdy/3.1",
+				},
+			},
+			expected: []*ir.ProtocolUpgradeConfig{
+				{
+					Type:    "websocket",
+					Enabled: false,
+				},
+				{
+					Type:    "spdy/3.1",
+					Enabled: true,
+				},
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := buildHTTPProtocolUpgradeConfig(tc.cfgs)
+			require.Equal(t, tc.expected, got)
+		})
+	}
+}

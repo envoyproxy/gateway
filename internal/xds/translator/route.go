@@ -7,10 +7,11 @@ package translator
 
 import (
 	"errors"
-	"sort"
 	"strings"
 	"time"
 
+	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	previoushost "github.com/envoyproxy/go-control-plane/envoy/extensions/retry/host/previous_hosts/v3"
@@ -18,10 +19,6 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
-
-	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/proto"
 )
 
 const (
@@ -123,30 +120,21 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 }
 
 func buildUpgradeConfig(trafficFeatures *ir.TrafficFeatures) []*routev3.RouteAction_UpgradeConfig {
-	if trafficFeatures == nil || len(trafficFeatures.HTTPProtocolUpgradeConfig) == 0 {
+	if trafficFeatures == nil || len(trafficFeatures.HTTPUpgrade) == 0 {
 		return defaultUpgradeConfig
 	}
 
-	upgradedProtocols := sets.New(websocketUpgradeType)
-	for protocol, enabled := range trafficFeatures.HTTPProtocolUpgradeConfig {
-		if enabled {
-			upgradedProtocols.Insert(protocol)
-		} else {
-			upgradedProtocols.Delete(protocol)
+	upgradeConfigs := make([]*routev3.RouteAction_UpgradeConfig, 0, len(trafficFeatures.HTTPUpgrade))
+	for _, protocol := range trafficFeatures.HTTPUpgrade {
+		if !protocol.Enabled {
+			continue
 		}
-	}
-
-	if len(upgradedProtocols) == 0 {
-		return nil
-	}
-
-	upgradeConfigs := make([]*routev3.RouteAction_UpgradeConfig, 0, len(upgradedProtocols))
-	protocols := upgradedProtocols.UnsortedList()
-	sort.Strings(protocols) // sort by UpgradeType to make the result stable
-	for _, protocol := range protocols {
 		upgradeConfigs = append(upgradeConfigs, &routev3.RouteAction_UpgradeConfig{
-			UpgradeType: protocol,
+			UpgradeType: protocol.Type,
 		})
+	}
+	if len(upgradeConfigs) == 0 {
+		return nil
 	}
 
 	return upgradeConfigs

@@ -117,15 +117,18 @@ func TestBuildUpgradeConfig(t *testing.T) {
 		{
 			name: "empty",
 			trafficFeature: &ir.TrafficFeatures{
-				HTTPProtocolUpgradeConfig: map[string]bool{},
+				HTTPUpgrade: nil,
 			},
 			expected: defaultUpgradeConfig,
 		},
 		{
 			name: "disable-websocket",
 			trafficFeature: &ir.TrafficFeatures{
-				HTTPProtocolUpgradeConfig: map[string]bool{
-					"websocket": false,
+				HTTPUpgrade: []*ir.ProtocolUpgradeConfig{
+					{
+						Type:    "websocket",
+						Enabled: false,
+					},
 				},
 			},
 			expected: nil,
@@ -133,8 +136,11 @@ func TestBuildUpgradeConfig(t *testing.T) {
 		{
 			name: "enable-websocket",
 			trafficFeature: &ir.TrafficFeatures{
-				HTTPProtocolUpgradeConfig: map[string]bool{
-					"websocket": true,
+				HTTPUpgrade: []*ir.ProtocolUpgradeConfig{
+					{
+						Type:    "websocket",
+						Enabled: true,
+					},
 				},
 			},
 			expected: defaultUpgradeConfig,
@@ -142,16 +148,16 @@ func TestBuildUpgradeConfig(t *testing.T) {
 		{
 			name: "enable-spdy",
 			trafficFeature: &ir.TrafficFeatures{
-				HTTPProtocolUpgradeConfig: map[string]bool{
-					"spdy/3.1": true,
+				HTTPUpgrade: []*ir.ProtocolUpgradeConfig{
+					{
+						Type:    "spdy/3.1",
+						Enabled: true,
+					},
 				},
 			},
 			expected: []*routev3.RouteAction_UpgradeConfig{
 				{
 					UpgradeType: "spdy/3.1",
-				},
-				{
-					UpgradeType: "websocket",
 				},
 			},
 		},
