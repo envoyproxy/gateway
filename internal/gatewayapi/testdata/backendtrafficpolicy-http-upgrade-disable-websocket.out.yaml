@@ -167,8 +167,9 @@ xdsIR:
           name: ""
           prefix: /
         traffic:
-          httpProtocolUpgradeConfig:
-            websocket: false
+          httpUpgrade:
+          - enabled: false
+            type: websocket
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

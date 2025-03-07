@@ -27,4 +27,3 @@
         cluster: httproute/default/httproute-1/rule/0
         upgradeConfigs:
         - upgradeType: spdy/3.1
-        - upgradeType: websocket
