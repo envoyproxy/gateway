@@ -14,8 +14,8 @@ bug fixes: |
 
 # Enhancements that improve performance.
 performance improvements: |
-  Add a performance improvement here
-
+  Added a cache for the Wasm OCI image permission checks and check the pullSecrets against the OCI image registry in
+  a background goroutine.
 # Deprecated features or APIs.
 deprecations: |
   Add a deprecation here
