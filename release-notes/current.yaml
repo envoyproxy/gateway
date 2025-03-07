@@ -10,6 +10,7 @@ security updates: |
 new features: |
 
 bug fixes: |
+  Added support for BackendTLSPolicy parsing in Standalone mode.
 
 # Enhancements that improve performance.
 performance improvements: |
@@ -19,4 +20,3 @@ deprecations: |
 
 # Other notable changes not covered by the above sections.
 Other changes: |
-
