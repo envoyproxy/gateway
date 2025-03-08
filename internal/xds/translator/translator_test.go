@@ -366,10 +366,6 @@ func requireRateLimitConfigsToYAMLString(t *testing.T, configs []*ratelimitv3.Ra
 	return result
 }
 
-func requireYamlRootToYAMLString(t *testing.T, pbRoot *ratelimitv3.RateLimitConfig) string {
-	return requireRateLimitConfigsToYAMLString(t, []*ratelimitv3.RateLimitConfig{pbRoot})
-}
-
 func requireResourcesToYAMLString(t *testing.T, resources []types.Resource) string {
 	jsonBytes, err := utils.MarshalResourcesToJSON(resources)
 	require.NoError(t, err)
