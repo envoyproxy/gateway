@@ -125,10 +125,26 @@ type OIDCProvider struct {
 	// Issuer MUST be a URI RFC 3986 [RFC3986] with a scheme component that MUST
 	// be https, a host component, and optionally, port and path components and
 	// no query or fragment components.
+	//
+	// Note: RemoteJWKS field must be set to enable ID token validation
 	// +kubebuilder:validation:MinLength=1
 	Issuer string `json:"issuer"`
 
-	// TODO zhaohuabing validate the issuer
+	// Audiences is a list of JWT audiences allowed access. For additional details, see
+	// https://tools.ietf.org/html/rfc7519#section-4.1.3. If not provided, JWT audiences
+	// are not checked.
+	//
+	// Note: RemoteJWKS field must be set to enable ID token validation
+	// +kubebuilder:validation:MaxItems=8
+	// +optional
+	Audiences []string `json:"audiences,omitempty"`
+
+	// RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote
+	// HTTP/HTTPS endpoint.
+	//
+	// If set, the ID token will be validated using the RemoteJWKS, Issuer, and Audiences fields
+	// +optional
+	RemoteJWKS RemoteJWKS `json:"remoteJWKS"`
 
 	// The OIDC Provider's [authorization endpoint](https://openid.net/specs/openid-connect-core-1_0.html#AuthorizationEndpoint).
 	// If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse).
