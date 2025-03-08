@@ -377,52 +377,53 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 	// Find Listener IR
 	irListenerName := irListenerName(l)
 
-	var httpIR *ir.HTTPListener
+	var (
+		httpIR                  *ir.HTTPListener
+		tcpIR                   *ir.TCPListener
+		udpIR                   *ir.UDPListener
+		tcpBasedListenerDetails ir.TCPBasedListenerDetails
+		err, errs               error
+	)
+
 	for _, http := range gwXdsIR.HTTP {
 		if http.Name == irListenerName {
 			httpIR = http
 			break
 		}
 	}
-
-	var tcpIR *ir.TCPListener
 	for _, tcp := range gwXdsIR.TCP {
 		if tcp.Name == irListenerName {
 			tcpIR = tcp
 			break
 		}
 	}
-
-	// HTTP and TCP listeners can both be configured by common fields below.
-	var (
-		keepalive           *ir.TCPKeepalive
-		connection          *ir.ClientConnection
-		tlsConfig           *ir.TLSConfig
-		enableProxyProtocol bool
-		timeout             *ir.ClientTimeout
-		err, errs           error
-	)
+	for _, udp := range gwXdsIR.UDP {
+		if udp.Name == irListenerName {
+			udpIR = udp
+			break
+		}
+	}
 
 	// Build common IR shared by HTTP and TCP listeners, return early if some field is invalid.
 	// Translate TCPKeepalive
-	keepalive, err = buildKeepAlive(policy.Spec.TCPKeepalive)
+	tcpBasedListenerDetails.TCPKeepalive, err = buildKeepAlive(policy.Spec.TCPKeepalive)
 	if err != nil {
 		err = perr.WithMessage(err, "TCP KeepAlive")
 		errs = errors.Join(errs, err)
 	}
 
 	// Translate Connection
-	connection, err = buildConnection(policy.Spec.Connection)
+	tcpBasedListenerDetails.Connection, err = buildConnection(policy.Spec.Connection)
 	if err != nil {
 		err = perr.WithMessage(err, "Connection")
 		errs = errors.Join(errs, err)
 	}
 
 	// Translate Proxy Protocol
-	enableProxyProtocol = ptr.Deref(policy.Spec.EnableProxyProtocol, false)
+	tcpBasedListenerDetails.EnableProxyProtocol = ptr.Deref(policy.Spec.EnableProxyProtocol, false)
 
 	// Translate Client Timeout Settings
-	timeout, err = buildClientTimeout(policy.Spec.Timeout)
+	tcpBasedListenerDetails.Timeout, err = buildClientTimeout(policy.Spec.Timeout)
 	if err != nil {
 		err = perr.WithMessage(err, "Timeout")
 		errs = errors.Join(errs, err)
@@ -476,7 +477,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 		translateHealthCheckSettings(policy.Spec.HealthCheck, httpIR)
 
 		// Translate TLS parameters
-		tlsConfig, err = t.buildListenerTLSParameters(policy, httpIR.TLS, resources)
+		tcpBasedListenerDetails.TLS, err = t.buildListenerTLSParameters(policy, httpIR.TLS, resources)
 		if err != nil {
 			err = perr.WithMessage(err, "TLS")
 			errs = errors.Join(errs, err)
@@ -493,16 +494,17 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 			return errs
 		}
 
-		httpIR.TCPKeepalive = keepalive
-		httpIR.Connection = connection
-		httpIR.EnableProxyProtocol = enableProxyProtocol
-		httpIR.Timeout = timeout
-		httpIR.TLS = tlsConfig
+		// Apply BypassOverloadManager policy
+		httpIR.BypassOverloadManager = ptr.Deref(policy.Spec.BypassOverloadManager, false)
+
+		// Retain CoreListenerDetails config when applying TCPBasedListenerDetails
+		tcpBasedListenerDetails.CoreListenerDetails = httpIR.CoreListenerDetails
+		httpIR.TCPBasedListenerDetails = tcpBasedListenerDetails
 	}
 
 	if tcpIR != nil {
 		// Translate TLS parameters
-		tlsConfig, err = t.buildListenerTLSParameters(policy, tcpIR.TLS, resources)
+		tcpBasedListenerDetails.TLS, err = t.buildListenerTLSParameters(policy, tcpIR.TLS, resources)
 		if err != nil {
 			err = perr.WithMessage(err, "TLS")
 			errs = errors.Join(errs, err)
@@ -516,11 +518,17 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 			return errs
 		}
 
-		tcpIR.TCPKeepalive = keepalive
-		tcpIR.Connection = connection
-		tcpIR.EnableProxyProtocol = enableProxyProtocol
-		tcpIR.TLS = tlsConfig
-		tcpIR.Timeout = timeout
+		// Apply BypassOverloadManager policy
+		tcpIR.BypassOverloadManager = ptr.Deref(policy.Spec.BypassOverloadManager, false)
+
+		// Retain CoreListenerDetails config when applying TCPBasedListenerDetails
+		tcpBasedListenerDetails.CoreListenerDetails = tcpIR.CoreListenerDetails
+		tcpIR.TCPBasedListenerDetails = tcpBasedListenerDetails
+	}
+
+	if udpIR != nil {
+		// Apply BypassOverloadManager policy
+		udpIR.BypassOverloadManager = ptr.Deref(policy.Spec.BypassOverloadManager, false)
 	}
 
 	return nil
