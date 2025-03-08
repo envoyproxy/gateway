@@ -1,4 +1,4 @@
-EXAMPLE_APPS := extension-server envoy-ext-auth envoy-als grpc-ext-proc preserve-case-backend static-file-server
+EXAMPLE_APPS := extension-server envoy-ext-auth grpc-ext-proc preserve-case-backend static-file-server
 EXAMPLE_IMAGE_PREFIX ?= envoyproxy/gateway-
 EXAMPLE_TAG ?= latest
 

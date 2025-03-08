@@ -26,7 +26,7 @@ An Add-ons Helm chart for Envoy Gateway
 | https://grafana.github.io/helm-charts | grafana | 8.0.0 |
 | https://grafana.github.io/helm-charts | loki | 4.8.0 |
 | https://grafana.github.io/helm-charts | tempo | 1.3.1 |
-| https://open-telemetry.github.io/opentelemetry-helm-charts | opentelemetry-collector | 0.108.0 |
+| https://open-telemetry.github.io/opentelemetry-helm-charts | opentelemetry-collector | 0.117.3 |
 | https://prometheus-community.github.io/helm-charts | prometheus | 25.21.0 |
 
 ## Usage
@@ -118,6 +118,7 @@ To uninstall the chart:
 | opentelemetry-collector.config.processors.attributes.actions[0].key | string | `"loki.attribute.labels"` |  |
 | opentelemetry-collector.config.processors.attributes.actions[0].value | string | `"k8s.pod.name, k8s.namespace.name"` |  |
 | opentelemetry-collector.config.receivers.datadog.endpoint | string | `"[${env:MY_POD_IP}]:8126"` |  |
+| opentelemetry-collector.config.receivers.envoyals.endpoint | string | `"[${env:MY_POD_IP}]:9000"` |  |
 | opentelemetry-collector.config.receivers.jaeger.protocols.grpc.endpoint | string | `"[${env:MY_POD_IP}]:14250"` |  |
 | opentelemetry-collector.config.receivers.jaeger.protocols.thrift_compact.endpoint | string | `"[${env:MY_POD_IP}]:6831"` |  |
 | opentelemetry-collector.config.receivers.jaeger.protocols.thrift_http.endpoint | string | `"[${env:MY_POD_IP}]:14268"` |  |
@@ -131,6 +132,7 @@ To uninstall the chart:
 | opentelemetry-collector.config.service.pipelines.logs.exporters[0] | string | `"loki"` |  |
 | opentelemetry-collector.config.service.pipelines.logs.processors[0] | string | `"attributes"` |  |
 | opentelemetry-collector.config.service.pipelines.logs.receivers[0] | string | `"otlp"` |  |
+| opentelemetry-collector.config.service.pipelines.logs.receivers[1] | string | `"envoyals"` |  |
 | opentelemetry-collector.config.service.pipelines.metrics.exporters[0] | string | `"prometheus"` |  |
 | opentelemetry-collector.config.service.pipelines.metrics.receivers[0] | string | `"datadog"` |  |
 | opentelemetry-collector.config.service.pipelines.metrics.receivers[1] | string | `"otlp"` |  |
@@ -138,11 +140,21 @@ To uninstall the chart:
 | opentelemetry-collector.config.service.pipelines.traces.receivers[0] | string | `"datadog"` |  |
 | opentelemetry-collector.config.service.pipelines.traces.receivers[1] | string | `"otlp"` |  |
 | opentelemetry-collector.config.service.pipelines.traces.receivers[2] | string | `"zipkin"` |  |
-| opentelemetry-collector.config.service.telemetry.metrics.address | string | `"[${env:MY_POD_IP}]:8888"` |  |
+| opentelemetry-collector.config.service.telemetry.metrics.address | string | `nil` |  |
+| opentelemetry-collector.config.service.telemetry.metrics.level | string | `"none"` |  |
+| opentelemetry-collector.config.service.telemetry.metrics.readers[0].pull.exporter.prometheus.host | string | `"localhost"` |  |
+| opentelemetry-collector.config.service.telemetry.metrics.readers[0].pull.exporter.prometheus.port | int | `8888` |  |
 | opentelemetry-collector.enabled | bool | `false` |  |
 | opentelemetry-collector.fullnameOverride | string | `"otel-collector"` |  |
 | opentelemetry-collector.image.repository | string | `"otel/opentelemetry-collector-contrib"` |  |
+| opentelemetry-collector.image.tag | string | `"0.121.0"` |  |
 | opentelemetry-collector.mode | string | `"deployment"` |  |
+| opentelemetry-collector.ports.envoy-als.appProtocol | string | `"grpc"` |  |
+| opentelemetry-collector.ports.envoy-als.containerPort | int | `9000` |  |
+| opentelemetry-collector.ports.envoy-als.enabled | bool | `true` |  |
+| opentelemetry-collector.ports.envoy-als.hostPort | int | `9000` |  |
+| opentelemetry-collector.ports.envoy-als.protocol | string | `"TCP"` |  |
+| opentelemetry-collector.ports.envoy-als.servicePort | int | `9000` |  |
 | prometheus.alertmanager.enabled | bool | `false` |  |
 | prometheus.enabled | bool | `true` |  |
 | prometheus.kube-state-metrics.enabled | bool | `false` |  |

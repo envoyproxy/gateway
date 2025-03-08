@@ -174,26 +174,16 @@ var ALSTest = suite.ConformanceTest{
 	Description: "Make sure ALS access log is working",
 	Manifests:   []string{"testdata/accesslog-als.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		labels := map[string]string{
+			"exporter": "OTLP",
+		}
+		match := "common_properties"
+
 		t.Run("HTTP", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "accesslog-als", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "accesslog-gtw", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-
-			preCount := 0
-			// make sure ALS server metric endpoint is ready
-			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
-				func(ctx context.Context) (bool, error) {
-					curCount, err := ALSLogCount(suite)
-					if err != nil {
-						tlog.Logf(t, "failed to get log count from envoy als: %v", err)
-						return false, nil
-					}
-					preCount = curCount
-					return true, nil
-				}); err != nil {
-				t.Errorf("failed to get log count from envoy als: %v", err)
-			}
 
 			expectedResponse := httputils.ExpectedResponse{
 				Request: httputils.Request{
@@ -210,17 +200,7 @@ var ALSTest = suite.ConformanceTest{
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
-				func(ctx context.Context) (bool, error) {
-					curCount, err := ALSLogCount(suite)
-					if err != nil {
-						tlog.Logf(t, "failed to get log count from envoy als: %v", err)
-						return false, nil
-					}
-					return preCount < curCount, nil
-				}); err != nil {
-				t.Errorf("failed to get log count from envoy als: %v", err)
-			}
+			runLogTest(t, suite, gwAddr, expectedResponse, labels, match, 0)
 		})
 	},
 }

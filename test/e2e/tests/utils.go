@@ -470,35 +470,6 @@ func WaitForLoadBalancerAddress(t *testing.T, client client.Client, timeout time
 	return ipAddr, nil
 }
 
-func ALSLogCount(suite *suite.ConformanceTestSuite) (int, error) {
-	metricPath, err := RetrieveURL(suite.Client, types.NamespacedName{
-		Namespace: "monitoring",
-		Name:      "envoy-als",
-	}, 19001, "/metrics")
-	if err != nil {
-		return -1, err
-	}
-
-	countMetric, err := RetrieveMetric(metricPath, "log_count", time.Second)
-	if err != nil {
-		return -1, err
-	}
-
-	// metric not found or empty
-	if countMetric == nil {
-		return 0, nil
-	}
-
-	total := 0
-	for _, m := range countMetric.Metric {
-		if m.Counter != nil && m.Counter.Value != nil {
-			total += int(*m.Counter.Value)
-		}
-	}
-
-	return total, nil
-}
-
 func OverLimitCount(suite *suite.ConformanceTestSuite) (int, error) {
 	cli, err := kubernetes.NewForRestConfig(suite.RestConfig)
 	if err != nil {
