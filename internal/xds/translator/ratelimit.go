@@ -149,7 +149,6 @@ func (t *Translator) buildRateLimitFilter(irListener *ir.HTTPListener) []*hcmv3.
 		rateLimitFilterAny, err := anypb.New(rateLimitFilterProto)
 		if err != nil {
 			// Skip this filter if there is an error in conversion.
-			log.Printf("DEBUG: error converting rate limit filter to Any: %v", err)
 			continue
 		}
 

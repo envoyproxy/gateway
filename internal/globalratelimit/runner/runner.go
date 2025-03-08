@@ -169,13 +169,8 @@ func (r *Runner) translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, error) {
 		// Build the rate limit service config for this listener
 		configs := translator.BuildRateLimitServiceConfig(listener)
 
-		// Log the listener being processed (optional but often helpful)
-		log.Printf("DEBUG:Processing listener: %+v", listener)
-
 		// Iterate through each config
-		for i, cfg := range configs {
-			// Log the config, including its index for clarity
-			log.Printf("DEBUG: Config #%d: %+v", i, cfg)
+		for _, cfg := range configs {
 
 			// If the config is not nil, add it to the xDS Config resources
 			if cfg != nil {
