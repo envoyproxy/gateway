@@ -8,7 +8,6 @@ package translator
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"net/url"
 	"strconv"
 	"strings"
@@ -582,10 +581,35 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 				cur.Descriptors = []*rlsconfv3.RateLimitDescriptor{pbDesc}
 			}
 			cur = pbDesc
+
+			// Do not add the RateLimitPolicy to the last header match descriptor yet,
+			// as it is also possible that CIDR match descriptor also exist.
 		}
 
+		// EG supports two kinds of rate limit descriptors for the source IP: exact and distinct.
+		// * exact means that all IP Addresses within the specified Source IP CIDR share the same rate limit bucket.
+		// * distinct means that each IP Address within the specified Source IP CIDR has its own rate limit bucket.
+		//
+		// To be able to rate limit each individual IP, we need to use a nested descriptors structure in the configuration
+		// of the rate limit server:
+		// * the outer layer is a masked_remote_address descriptor that catches all the source IPs inside a specified CIDR.
+		// * the inner layer is a remote_address descriptor that sets the limit for individual IP.
+		//
+		// An example of rate limit server configuration looks like this:
+		//
+		//	descriptors:
+		//	  - key: masked_remote_address //catch all the source IPs inside a CIDR
+		//	    value: 192.168.0.0/16
+		//	    descriptors:
+		//	      - key: remote_address //set limit for individual IP
+		//	        rate_limit:
+		//	          unit: second
+		//	          requests_per_unit: 100
+		//
+		// Please refer to [Rate Limit Service Descriptor list definition](https://github.com/envoyproxy/ratelimit#descriptor-list-definition) for details.
 		// 2) CIDR Match
 		if rule.CIDRMatch != nil {
+			// MaskedRemoteAddress case
 			pbDesc := new(rlsconfv3.RateLimitDescriptor)
 			pbDesc.Key = "masked_remote_address"
 			pbDesc.Value = rule.CIDRMatch.CIDR
@@ -605,6 +629,8 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 			}
 		}
 
+		// Case when both header and cidr match are not set and the ratelimit
+		// will be applied to all traffic.
 		// 3) No Match (apply to all traffic)
 		if !rule.IsMatchSet() {
 			pbDesc := new(rlsconfv3.RateLimitDescriptor)
@@ -718,7 +744,6 @@ func getRateLimitDomainFilters(irListener *ir.HTTPListener, isShared bool, usedD
 	// Iterate over the routes to find a domain that hasn't been used yet
 	for _, route := range irListener.Routes {
 		if route.Traffic != nil && route.Traffic.BackendTrafficPolicy != nil {
-			// Use BTP name instead of combined name-namespace as domain
 			domain := route.Traffic.BackendTrafficPolicy.Name + "-" + route.Traffic.BackendTrafficPolicy.Namespace
 			if isShared && !usedDomains[domain] {
 				return domain
