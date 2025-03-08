@@ -159,6 +159,71 @@ And also you can dynamically change the value.
 kubectl get deployment -l gateway.envoyproxy.io/owning-gateway-name=eg -n envoy-gateway-system
 ```
 
+## Customize EnvoyProxy deployment type
+
+By default, Envoy Gateway creates a EnvoyProxy Deployment, but it can also be configured to create a DaemonSet instead.
+
+To configure Envoy Gateway to deploy the EnvoyProxy as a DaemonSet, you need to specify a spec.provider.kubernetes.envoyDaemonset instead of a envoyDeployment.
+
+Below is a common example configuration with a nodeSelector specified for the EnvoyProxy pod template, which makes the DaemonSet deploy the pod only on the specified nodes.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: default
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDaemonSet:
+        patch:
+          value:
+            spec:
+              template:
+                spec:
+                  nodeSelector:
+                    node-role.kubernetes.io/worker: "worker"
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: default
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDaemonSet:
+        patch:
+          value:
+            spec:
+              template:
+                spec:
+                  nodeSelector:
+                    node-role.kubernetes.io/worker: "worker"
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+After applying the config, you can get deployments and daemonsets using `kubectl get daemonsets,deployments` and see that the EnvoyProxy is now deployed as a DaemonSet.
+
+**Note:** When deploying as a DaemonSet, you may also be interested in [configuring the Service](#patching-service-for-envoyproxy) for [Topology Aware routing](https://kubernetes.io/docs/concepts/services-networking/topology-aware-routing/#enabling-topology-aware-routing) or [modifying the internal traffic policy](https://kubernetes.io/docs/concepts/services-networking/service-traffic-policy/).
+
 ## Customize EnvoyProxy Image
 
 You can customize the EnvoyProxy Image via EnvoyProxy Config like:
@@ -513,7 +578,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: default 
+  namespace: default
 spec:
   bootstrap:
     type: Replace
@@ -688,7 +753,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: default 
+  namespace: default
 spec:
   bootstrap:
     type: JSONPatch
@@ -742,7 +807,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: default 
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -770,7 +835,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: default 
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -806,10 +871,10 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: default 
+  namespace: default
 spec:
   extraArgs:
-    - --disable-extensions envoy.access_loggers/envoy.access_loggers.wasm 
+    - --disable-extensions envoy.access_loggers/envoy.access_loggers.wasm
 EOF
 ```
 
@@ -823,10 +888,10 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: default 
+  namespace: default
 spec:
   extraArgs:
-    - --disable-extensions envoy.access_loggers/envoy.access_loggers.wasm 
+    - --disable-extensions envoy.access_loggers/envoy.access_loggers.wasm
 ```
 
 {{% /tab %}}
@@ -849,7 +914,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: eg
-  namespace: default 
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -991,7 +1056,7 @@ By default, Envoy Gateway applies the following filters in the order shown:
 * envoy.filters.http.ratelimit
 * envoy.filters.http.router
 
-The default order in which these filters are applied is opinionated and may not suit all use cases. 
+The default order in which these filters are applied is opinionated and may not suit all use cases.
 To address this, Envoy Gateway allows you to adjust the execution order of these filters with the `filterOrder` field in the [EnvoyProxy][] resource.
 
 `filterOrder` is a list of customized filter order configurations. Each configuration can specify a filter
