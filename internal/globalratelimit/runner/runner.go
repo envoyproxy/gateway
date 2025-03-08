@@ -9,7 +9,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"log"
 	"math"
 	"net"
 	"strconv"
