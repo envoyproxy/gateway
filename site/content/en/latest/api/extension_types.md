@@ -2023,6 +2023,25 @@ _Appears in:_
 | `idleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  |  | IdleTimeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.<br />Default: 1 hour. |
 
 
+#### HTTPCredentialInjectionFilter
+
+
+
+HTTPCredentialInjectionFilter defines the configuration to inject credentials into the request.
+This is useful when the backend service requires credentials in the request, and the original
+request does not contain them. The filter can inject credentials into the request before forwarding
+it to the backend service.
+
+_Appears in:_
+- [HTTPRouteFilterSpec](#httproutefilterspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `header` | _string_ |  false  |  | Header is the name of the header where the credentials are injected.<br />If not specified, the credentials are injected into the Authorization header. |
+| `overwrite` | _boolean_ |  false  |  | Whether to overwrite the value or not if the injected headers already exist.<br />If not specified, the default value is false. |
+| `credential` | _[InjectedCredential](#injectedcredential)_ |  true  |  | Credential is the credential to be injected. |
+
+
 #### HTTPDirectResponseFilter
 
 
@@ -2146,6 +2165,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `urlRewrite` | _[HTTPURLRewriteFilter](#httpurlrewritefilter)_ |  false  |  |  |
 | `directResponse` | _[HTTPDirectResponseFilter](#httpdirectresponsefilter)_ |  false  |  |  |
+| `credentialInjection` | _[HTTPCredentialInjectionFilter](#httpcredentialinjectionfilter)_ |  false  |  |  |
 
 
 #### HTTPStatus
@@ -2383,6 +2403,20 @@ _Appears in:_
 | Value | Description |
 | ----- | ----------- |
 | `Host` | InfrastructureProviderTypeHost defines the "Host" provider.<br /> | 
+
+
+#### InjectedCredential
+
+
+
+InjectedCredential defines the credential to be injected.
+
+_Appears in:_
+- [HTTPCredentialInjectionFilter](#httpcredentialinjectionfilter)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `valueRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ |  true  |  | ValueRef is a reference to the secret containing the credentials to be injected.<br />This is an Opaque secret. The credential should be stored in the key<br />"credential", and the value should be the credential to be injected.<br />For example, for basic authentication, the value should be "Basic <base64 encoded username:password>".<br />for bearer token, the value should be "Bearer <token>".<br />Note: The secret must be in the same namespace as the HTTPRouteFilter. |
 
 
 #### InvalidMessageAction
