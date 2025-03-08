@@ -224,4 +224,5 @@ and find the following entries
 "response_code": "500",
 "response_code_details": "direct_response"
 ```
+
 this likely indicates a configuration issue. Review the relevant [resource status](#checking-resource-status) for resolution steps.
