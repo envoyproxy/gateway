@@ -594,6 +594,7 @@ _Appears in:_
 | `maxParallelRequests` | _integer_ |  false  | 1024 | The maximum number of parallel requests that Envoy will make to the referenced backend defined within a xRoute rule. |
 | `maxParallelRetries` | _integer_ |  false  | 1024 | The maximum number of parallel retries that Envoy will make to the referenced backend defined within a xRoute rule. |
 | `maxRequestsPerConnection` | _integer_ |  false  |  | The maximum number of requests that Envoy will make over a single connection to the referenced backend defined within a xRoute rule.<br />Default: unlimited. |
+| `perHost` | _[PerHostCircuitBreakers](#perhostcircuitbreakers)_ |  false  |  | PerHost defines per-host Circuit Breakers |
 
 
 #### ClaimToHeader
@@ -3136,6 +3137,20 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `escapedSlashesAction` | _[PathEscapedSlashAction](#pathescapedslashaction)_ |  false  |  | EscapedSlashesAction determines how %2f, %2F, %5c, or %5C sequences in the path URI<br />should be handled.<br />The default is UnescapeAndRedirect. |
 | `disableMergeSlashes` | _boolean_ |  false  |  | DisableMergeSlashes allows disabling the default configuration of merging adjacent<br />slashes in the path.<br />Note that slash merging is not part of the HTTP spec and is provided for convenience. |
+
+
+#### PerHostCircuitBreakers
+
+
+
+PerHostCircuitBreakers defines the per-host Circuit Breaker configuration.
+
+_Appears in:_
+- [CircuitBreaker](#circuitbreaker)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `maxConnections` | _integer_ |  false  | 1024 | MaxConnections configures the maximum number of connections that Envoy will establish per-host to the referenced backend defined within a xRoute rule. |
 
 
 #### PerRetryPolicy
