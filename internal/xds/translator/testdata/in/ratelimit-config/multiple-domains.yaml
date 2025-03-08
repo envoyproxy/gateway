@@ -9,10 +9,12 @@ path:
 routes:
 - name: "first-route"
   traffic:
+    backendTrafficPolicy:
+      name: "test-policy-1"
+      namespace: "test-namespace"
     rateLimit:
       global:
         shared: true
-        gatewayName: "test-gateway"
         rules:
         - headerMatches:
           - name: "x-user-id"
@@ -20,35 +22,18 @@ routes:
           limit:
             requests: 5
             unit: second
-- name: "first-route"
-  traffic:
-    rateLimit:
-      global:
-        rules:
-        - headerMatches:
-          - name: "x-user-id"
-            exact: "one"
-          limit:
-            requests: 5
-            unit: second
-  pathMatch:
-    exact: "foo/baz"
 - name: "second-route"
   traffic:
+    backendTrafficPolicy:
+      name: "test-policy-2"
+      namespace: "test-namespace"
     rateLimit:
       global:
+        shared: false
         rules:
         - headerMatches:
           - name: "x-user-id"
-            exact: "two"
+            exact: "one"
           limit:
-            requests: 10
+            requests: 5
             unit: second
-  pathMatch:
-    exact: "foo/bar"
-  destination:
-    name: "first-route-dest"
-    settings:
-    - endpoints:
-      - host: "1.2.3.4"
-        port: 50000

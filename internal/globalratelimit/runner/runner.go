@@ -9,6 +9,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"log"
 	"math"
 	"net"
 	"strconv"
@@ -163,12 +164,24 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 func (r *Runner) translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, error) {
 	resourceVT := new(types.ResourceVersionTable)
 
+	// Iterate over each HTTP listener
 	for _, listener := range xdsIR.HTTP {
-		cfg := translator.BuildRateLimitServiceConfig(listener)
-		if cfg != nil {
-			// Add to xDS Config resources.
-			if err := resourceVT.AddXdsResource(resourcev3.RateLimitConfigType, cfg); err != nil {
-				return nil, err
+		// Build the rate limit service config for this listener
+		configs := translator.BuildRateLimitServiceConfig(listener)
+
+		// Log the listener being processed (optional but often helpful)
+		log.Printf("DEBUG:Processing listener: %+v", listener)
+
+		// Iterate through each config
+		for i, cfg := range configs {
+			// Log the config, including its index for clarity
+			log.Printf("DEBUG: Config #%d: %+v", i, cfg)
+
+			// If the config is not nil, add it to the xDS Config resources
+			if cfg != nil {
+				if err := resourceVT.AddXdsResource(resourcev3.RateLimitConfigType, cfg); err != nil {
+					return nil, err
+				}
 			}
 		}
 	}

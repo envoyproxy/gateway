@@ -9,8 +9,12 @@ path:
 routes:
 - name: "first-route"
   traffic:
+    backendTrafficPolicy:
+      name: "test-policy-1"
+      namespace: "test-namespace"
     rateLimit:
       global:
+        shared: false
         rules:
         - cidrMatch:
             cidr: "192.168.0.10/32"
@@ -29,8 +33,12 @@ routes:
         port: 50000
 - name: "second-route"
   traffic:
+    backendTrafficPolicy:
+      name: "test-policy-2"
+      namespace: "test-namespace"
     rateLimit:
       global:
+        shared: false
         rules:
         - cidrMatch:
             cidr: "192.168.0.10/32"

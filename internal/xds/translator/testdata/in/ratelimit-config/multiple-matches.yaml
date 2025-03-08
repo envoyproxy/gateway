@@ -9,8 +9,12 @@ path:
 routes:
 - name: "first-route"
   traffic:
+    backendTrafficPolicy:
+      name: "test-policy-1"
+      namespace: "test-namespace"
     rateLimit:
       global:
+        shared: false
         rules:
         - headerMatches:
           - name: "x-user-id"

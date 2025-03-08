@@ -280,9 +280,6 @@ func (l CoreListenerDetails) GetExtensionRefs() []*UnstructuredRef {
 // +k8s:deepcopy-gen=true
 type HTTPListener struct {
 	CoreListenerDetails `json:",inline" yaml:",inline"`
-	// GatewayName is the name of the parent Gateway that owns this listener.
-	// This field is automatically populated during IR generation.
-	GatewayName string `json:"gatewayName" yaml:"gatewayName"`
 	// Hostnames (Host/Authority header value) with which the service can be expected to be accessed by clients.
 	// This field is required. Wildcard hosts are supported in the suffix or prefix form.
 	Hostnames []string `json:"hostnames" yaml:"hostnames"`
@@ -818,6 +815,8 @@ type TrafficFeatures struct {
 	ResponseOverride *ResponseOverride `json:"responseOverride,omitempty" yaml:"responseOverride,omitempty"`
 	// Compression settings for HTTP Response
 	Compression []*Compression `json:"compression,omitempty" yaml:"compression,omitempty"`
+	// BackendTrafficPolicy holds the associated BackendTrafficPolicy object.
+	BackendTrafficPolicy *BackendTrafficPolicy `json:"backendTrafficPolicy,omitempty" yaml:"backendTrafficPolicy,omitempty"`
 }
 
 func (b *TrafficFeatures) Validate() error {
@@ -2907,4 +2906,12 @@ type ResourceMetadata struct {
 	Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	// SectionName is the name of a section of a resource
 	SectionName string `json:"sectionName,omitempty" yaml:"sectionName,omitempty"`
+}
+
+// BackendTrafficPolicy represents the policy associated with backend traffic.
+type BackendTrafficPolicy struct {
+	// Name is the name of the associated BackendTrafficPolicy.
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+	// Namespace is the namespace of the associated BackendTrafficPolicy.
+	Namespace string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 }
