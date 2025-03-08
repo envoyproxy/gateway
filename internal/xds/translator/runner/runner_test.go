@@ -50,10 +50,12 @@ func TestRunner(t *testing.T) {
 	res := ir.Xds{
 		HTTP: []*ir.HTTPListener{
 			{
-				CoreListenerDetails: ir.CoreListenerDetails{
-					Name:    "test",
-					Address: "0.0.0.0",
-					Port:    80,
+				TCPBasedListenerDetails: ir.TCPBasedListenerDetails{
+					CoreListenerDetails: ir.CoreListenerDetails{
+						Name:    "test",
+						Address: "0.0.0.0",
+						Port:    80,
+					},
 				},
 				Hostnames: []string{"example.com"},
 				Routes: []*ir.HTTPRoute{
@@ -131,10 +133,12 @@ func TestRunner_withExtensionManager(t *testing.T) {
 	res := ir.Xds{
 		HTTP: []*ir.HTTPListener{
 			{
-				CoreListenerDetails: ir.CoreListenerDetails{
-					Name:    "test",
-					Address: "0.0.0.0",
-					Port:    80,
+				TCPBasedListenerDetails: ir.TCPBasedListenerDetails{
+					CoreListenerDetails: ir.CoreListenerDetails{
+						Name:    "test",
+						Address: "0.0.0.0",
+						Port:    80,
+					},
 				},
 				Hostnames: []string{"example.com"},
 				Routes: []*ir.HTTPRoute{

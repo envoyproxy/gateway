@@ -2,6 +2,7 @@
     socketAddress:
       address: 0.0.0.0
       portValue: 10443
+  bypassOverloadManager: true
   filterChains:
   - filters:
     - name: envoy.filters.network.connection_limit

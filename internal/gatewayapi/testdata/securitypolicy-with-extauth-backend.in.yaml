@@ -171,10 +171,11 @@ securityPolicies:
           - header3
           - header4
         grpc:
-          backendRef:
-            name: service-2
-            kind: Service
-            port: 8080
+          backendRefs:
+            - name: backend-fqdn
+              kind: Backend
+              group: gateway.envoyproxy.io
+              port: 3000
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: SecurityPolicy
     metadata:

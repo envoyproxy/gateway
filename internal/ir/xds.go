@@ -258,6 +258,8 @@ type CoreListenerDetails struct {
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 	// IPFamily specifies the IP address family used by the Gateway for its listening ports.
 	IPFamily *egv1a1.IPFamily `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
+	// BypassOverloadManager allows the listener to bypass configured overload manager actions.
+	BypassOverloadManager bool `json:"bypassOverloadManager,omitempty" yaml:"bypassOverloadManager,omitempty"`
 }
 
 func (l CoreListenerDetails) GetName() string {
@@ -279,25 +281,19 @@ func (l CoreListenerDetails) GetExtensionRefs() []*UnstructuredRef {
 // HTTPListener holds the listener configuration.
 // +k8s:deepcopy-gen=true
 type HTTPListener struct {
-	CoreListenerDetails `json:",inline" yaml:",inline"`
+	TCPBasedListenerDetails `json:",inline" yaml:",inline"`
 	// Hostnames (Host/Authority header value) with which the service can be expected to be accessed by clients.
 	// This field is required. Wildcard hosts are supported in the suffix or prefix form.
 	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-virtualhost
 	// for more info.
 	Hostnames []string `json:"hostnames" yaml:"hostnames"`
-	// Tls configuration. If omitted, the gateway will expose a plain text HTTP server.
-	TLS *TLSConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
 	// Routes associated with HTTP traffic to the service.
 	Routes []*HTTPRoute `json:"routes,omitempty" yaml:"routes,omitempty"`
 	// IsHTTP2 is set if the listener is configured to serve HTTP2 traffic,
 	// grpc-web and grpc-stats are also enabled if this is set.
 	IsHTTP2 bool `json:"isHTTP2" yaml:"isHTTP2"`
-	// TCPKeepalive configuration for the listener
-	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
 	// Headers configures special header management for the listener
 	Headers *HeaderSettings `json:"headers,omitempty" yaml:"headers,omitempty"`
-	// EnableProxyProtocol enables the listener to interpret proxy protocol header
-	EnableProxyProtocol bool `json:"enableProxyProtocol,omitempty" yaml:"enableProxyProtocol,omitempty"`
 	// ClientIPDetection controls how the original client IP address is determined for requests.
 	ClientIPDetection *ClientIPDetectionSettings `json:"clientIPDetection,omitempty" yaml:"clientIPDetection,omitempty"`
 	// Path contains settings for path URI manipulations
@@ -313,10 +309,6 @@ type HTTPListener struct {
 	HTTP3 *HTTP3Settings `json:"http3,omitempty"`
 	// HealthCheck provides configuration for determining whether the HTTP/HTTPS listener is healthy.
 	HealthCheck *HealthCheckSettings `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
-	// ClientTimeout sets the timeout configuration for downstream connections
-	Timeout *ClientTimeout `json:"timeout,omitempty" yaml:"clientTimeout,omitempty"`
-	// Connection settings
-	Connection *ClientConnection `json:"connection,omitempty" yaml:"connection,omitempty"`
 	// PreserveRouteOrder determines if routes should be sorted according to GW-API specs
 	PreserveRouteOrder bool `json:"preserveRouteOrder,omitempty" yaml:"preserveRouteOrder,omitempty"`
 }
@@ -1788,20 +1780,28 @@ func (s StringMatch) Validate() error {
 	return errs
 }
 
-// TCPListener holds the TCP listener configuration.
+// TCPBasedListenerDetails holds listener configuration for listeners based on the TCP protocol.
+// Eg: TCPListener and HTTPListener
+//
 // +k8s:deepcopy-gen=true
-type TCPListener struct {
+type TCPBasedListenerDetails struct {
 	CoreListenerDetails `json:",inline" yaml:",inline"`
 	// TLS holds information for configuring TLS on a listener.
 	TLS *TLSConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
-	// TCPKeepalive configuration for the listener
+	// TCPKeepalive configuration for the listener.
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
-	// EnableProxyProtocol enables the listener to interpret proxy protocol header
+	// EnableProxyProtocol enables the listener to interpret proxy protocol header.
 	EnableProxyProtocol bool `json:"enableProxyProtocol,omitempty" yaml:"enableProxyProtocol,omitempty"`
 	// ClientTimeout sets the timeout configuration for downstream connections.
 	Timeout *ClientTimeout `json:"timeout,omitempty" yaml:"clientTimeout,omitempty"`
-	// Connection settings for clients
+	// Connection settings for clients.
 	Connection *ClientConnection `json:"connection,omitempty" yaml:"connection,omitempty"`
+}
+
+// TCPListener holds the TCP listener configuration.
+// +k8s:deepcopy-gen=true
+type TCPListener struct {
+	TCPBasedListenerDetails `json:",inline" yaml:",inline"`
 	// Routes associated with TCP traffic to the listener.
 	Routes []*TCPRoute `json:"routes,omitempty" yaml:"routes,omitempty"`
 }

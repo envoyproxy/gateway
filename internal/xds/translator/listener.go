@@ -182,23 +182,18 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 }
 
 // buildXdsTCPListener creates a xds Listener resource
-// TODO: Improve function parameters
 func buildXdsTCPListener(
-	name, address string,
-	port uint32,
-	ipFamily *egv1a1.IPFamily,
-	keepalive *ir.TCPKeepalive,
-	connection *ir.ClientConnection,
+	tcpListenerDetails *ir.TCPBasedListenerDetails,
 	accesslog *ir.AccessLog,
 ) (*listenerv3.Listener, error) {
-	socketOptions := buildTCPSocketOptions(keepalive)
+	socketOptions := buildTCPSocketOptions(tcpListenerDetails.TCPKeepalive)
 	al, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeListener)
 	if err != nil {
 		return nil, err
 	}
-	bufferLimitBytes := buildPerConnectionBufferLimitBytes(connection)
+	bufferLimitBytes := buildPerConnectionBufferLimitBytes(tcpListenerDetails.Connection)
 	listener := &listenerv3.Listener{
-		Name:                          name,
+		Name:                          tcpListenerDetails.Name,
 		AccessLog:                     al,
 		SocketOptions:                 socketOptions,
 		PerConnectionBufferLimitBytes: bufferLimitBytes,
@@ -206,16 +201,17 @@ func buildXdsTCPListener(
 			Address: &corev3.Address_SocketAddress{
 				SocketAddress: &corev3.SocketAddress{
 					Protocol: corev3.SocketAddress_TCP,
-					Address:  address,
+					Address:  tcpListenerDetails.Address,
 					PortSpecifier: &corev3.SocketAddress_PortValue{
-						PortValue: port,
+						PortValue: tcpListenerDetails.Port,
 					},
 				},
 			},
 		},
+		BypassOverloadManager: tcpListenerDetails.BypassOverloadManager,
 	}
 
-	if ipFamily != nil && *ipFamily == egv1a1.DualStack {
+	if tcpListenerDetails.IPFamily != nil && *tcpListenerDetails.IPFamily == egv1a1.DualStack {
 		socketAddress := listener.Address.GetSocketAddress()
 		socketAddress.Ipv4Compat = true
 	}
@@ -231,21 +227,21 @@ func buildPerConnectionBufferLimitBytes(connection *ir.ClientConnection) *wrappe
 }
 
 // buildXdsQuicListener creates a xds Listener resource for quic
-func buildXdsQuicListener(name, address string, port uint32, ipFamily *egv1a1.IPFamily, accesslog *ir.AccessLog) (*listenerv3.Listener, error) {
+func buildXdsQuicListener(tcpListenerDetails *ir.TCPBasedListenerDetails, accesslog *ir.AccessLog) (*listenerv3.Listener, error) {
 	log, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeListener)
 	if err != nil {
 		return nil, err
 	}
 	xdsListener := &listenerv3.Listener{
-		Name:      name + "-quic",
+		Name:      tcpListenerDetails.Name + "-quic",
 		AccessLog: log,
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{
 				SocketAddress: &corev3.SocketAddress{
 					Protocol: corev3.SocketAddress_UDP,
-					Address:  address,
+					Address:  tcpListenerDetails.Address,
 					PortSpecifier: &corev3.SocketAddress_PortValue{
-						PortValue: port,
+						PortValue: tcpListenerDetails.Port,
 					},
 				},
 			},
@@ -256,10 +252,11 @@ func buildXdsQuicListener(name, address string, port uint32, ipFamily *egv1a1.IP
 		},
 		// Remove /healthcheck/fail from endpoints that trigger a drain of listeners for better control
 		// over the drain process while still allowing the healthcheck to be failed during pod shutdown.
-		DrainType: listenerv3.Listener_MODIFY_ONLY,
+		DrainType:             listenerv3.Listener_MODIFY_ONLY,
+		BypassOverloadManager: tcpListenerDetails.BypassOverloadManager,
 	}
 
-	if ipFamily != nil && *ipFamily == egv1a1.DualStack {
+	if tcpListenerDetails.IPFamily != nil && *tcpListenerDetails.IPFamily == egv1a1.DualStack {
 		socketAddress := xdsListener.Address.GetSocketAddress()
 		socketAddress.Ipv4Compat = true
 	}
@@ -917,6 +914,7 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener, access
 				TypedConfig: udpProxyAny,
 			},
 		}},
+		BypassOverloadManager: udpListener.BypassOverloadManager,
 	}
 
 	if udpListener.IPFamily != nil && *udpListener.IPFamily == egv1a1.DualStack {

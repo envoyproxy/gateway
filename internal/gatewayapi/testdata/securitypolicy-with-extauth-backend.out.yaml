@@ -301,10 +301,11 @@ securityPolicies:
     extAuth:
       failOpen: true
       grpc:
-        backendRef:
-          kind: Service
-          name: service-2
-          port: 8080
+        backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-fqdn
+          port: 3000
       headersToExtAuth:
       - header3
       - header4
@@ -520,14 +521,14 @@ xdsIR:
           extAuth:
             failOpen: true
             grpc:
-              authority: service-2.default:8080
+              authority: primary.foo.com:3000
               destination:
                 name: securitypolicy/default/policy-for-http-route-3--grpc-backendref/extauth/0
                 settings:
-                - addressType: IP
+                - addressType: FQDN
                   endpoints:
-                  - host: 7.7.7.7
-                    port: 8080
+                  - host: primary.foo.com
+                    port: 3000
                   name: securitypolicy/default/policy-for-http-route-3--grpc-backendref/extauth/0/backend/0
                   protocol: GRPC
                   weight: 1

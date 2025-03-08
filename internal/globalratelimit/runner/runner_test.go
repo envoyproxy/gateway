@@ -34,8 +34,10 @@ func Test_subscribeAndTranslate(t *testing.T) {
 		return &ir.Xds{
 			HTTP: []*ir.HTTPListener{
 				{
-					CoreListenerDetails: ir.CoreListenerDetails{
-						Name: fmt.Sprintf("default/%s/listener-0", gwName),
+					TCPBasedListenerDetails: ir.TCPBasedListenerDetails{
+						CoreListenerDetails: ir.CoreListenerDetails{
+							Name: fmt.Sprintf("default/%s/listener-0", gwName),
+						},
 					},
 					Routes: []*ir.HTTPRoute{
 						{

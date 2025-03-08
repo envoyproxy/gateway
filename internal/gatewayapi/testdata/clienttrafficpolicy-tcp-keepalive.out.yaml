@@ -6,6 +6,7 @@ clientTrafficPolicies:
     name: target-gateway-1-section-http-1
     namespace: envoy-gateway
   spec:
+    bypassOverloadManager: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -162,6 +163,7 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
+      bypassOverloadManager: true
       hostnames:
       - '*'
       isHTTP2: false

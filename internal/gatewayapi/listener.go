@@ -116,14 +116,16 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			switch listener.Protocol {
 			case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
 				irListener := &ir.HTTPListener{
-					CoreListenerDetails: ir.CoreListenerDetails{
-						Name:     irListenerName(listener),
-						Address:  address,
-						Port:     uint32(containerPort),
-						Metadata: buildListenerMetadata(listener, gateway),
-						IPFamily: ipFamily,
+					TCPBasedListenerDetails: ir.TCPBasedListenerDetails{
+						CoreListenerDetails: ir.CoreListenerDetails{
+							Name:     irListenerName(listener),
+							Address:  address,
+							Port:     uint32(containerPort),
+							Metadata: buildListenerMetadata(listener, gateway),
+							IPFamily: ipFamily,
+						},
+						TLS: irTLSConfigs(listener.tlsSecrets...),
 					},
-					TLS: irTLSConfigs(listener.tlsSecrets...),
 					Path: ir.PathSettings{
 						MergeSlashes:         true,
 						EscapedSlashesAction: ir.UnescapeAndRedirect,
@@ -141,18 +143,20 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 				xdsIR[irKey].HTTP = append(xdsIR[irKey].HTTP, irListener)
 			case gwapiv1.TCPProtocolType, gwapiv1.TLSProtocolType:
 				irListener := &ir.TCPListener{
-					CoreListenerDetails: ir.CoreListenerDetails{
-						Name:     irListenerName(listener),
-						Address:  address,
-						Port:     uint32(containerPort),
-						IPFamily: ipFamily,
-					},
+					TCPBasedListenerDetails: ir.TCPBasedListenerDetails{
+						CoreListenerDetails: ir.CoreListenerDetails{
+							Name:     irListenerName(listener),
+							Address:  address,
+							Port:     uint32(containerPort),
+							IPFamily: ipFamily,
+						},
 
-					// Gateway is processed firstly, then ClientTrafficPolicy, then xRoute.
-					// TLS field should be added to TCPListener as ClientTrafficPolicy will affect
-					// Listener TLS. Then TCPRoute whose TLS should be configured as Terminate just
-					// refers to the Listener TLS.
-					TLS: irTLSConfigsForTCPListener(listener.tlsSecrets...),
+						// Gateway is processed firstly, then ClientTrafficPolicy, then xRoute.
+						// TLS field should be added to TCPListener as ClientTrafficPolicy will affect
+						// Listener TLS. Then TCPRoute whose TLS should be configured as Terminate just
+						// refers to the Listener TLS.
+						TLS: irTLSConfigsForTCPListener(listener.tlsSecrets...),
+					},
 				}
 				xdsIR[irKey].TCP = append(xdsIR[irKey].TCP, irListener)
 			case gwapiv1.UDPProtocolType:

@@ -98,6 +98,10 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	HealthCheck *HealthCheckSettings `json:"healthCheck,omitempty"`
+	// BypassOverloadManager allows the listener to bypass configured overload manager actions.
+	//
+	// +optional
+	BypassOverloadManager *bool `json:"bypassOverloadManager,omitempty"`
 }
 
 // HeaderSettings provides configuration options for headers on the listener.
