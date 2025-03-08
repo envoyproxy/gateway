@@ -2917,6 +2917,7 @@ _Appears in:_
 | `scopes` | _string array_ |  false  |  | The OIDC scopes to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />The "openid" scope is always added to the list of scopes if not already<br />specified. |
 | `resources` | _string array_ |  false  |  | The OIDC resources to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). |
 | `redirectURL` | _string_ |  true  |  | The redirect URL to be used in the OIDC<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, uses the default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback" |
+| `denyRedirectMatcher` | _[DenyRedirectMatcher](#denyredirectMatcher)_ |  false  |  | Any request that matches any of the provided matchers won’t be redirected to OAuth server when tokens are not valid. Automatic access token refresh will be performed for these requests, if enabled.  |
 | `logoutPath` | _string_ |  true  |  | The path to log a user out, clearing their credential cookies.<br /><br />If not specified, uses a default logout path "/logout" |
 | `forwardAccessToken` | _boolean_ |  false  |  | ForwardAccessToken indicates whether the Envoy should forward the access token<br />via the Authorization header Bearer scheme to the upstream.<br />If not specified, defaults to false. |
 | `defaultTokenTTL` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  |  | DefaultTokenTTL is the default lifetime of the id token and access token.<br />Please note that Envoy will always use the expiry time from the response<br />of the authorization server if it is provided. This field is only used when<br />the expiry time is not provided by the authorization.<br /><br />If not specified, defaults to 0. In this case, the "expires_in" field in<br />the authorization response must be set by the authorization server, or the<br />OAuth flow will fail. |
@@ -2956,6 +2957,36 @@ _Appears in:_
 | `issuer` | _string_ |  true  |  | The OIDC Provider's [issuer identifier](https://openid.net/specs/openid-connect-discovery-1_0.html#IssuerDiscovery).<br />Issuer MUST be a URI RFC 3986 [RFC3986] with a scheme component that MUST<br />be https, a host component, and optionally, port and path components and<br />no query or fragment components. |
 | `authorizationEndpoint` | _string_ |  false  |  | The OIDC Provider's [authorization endpoint](https://openid.net/specs/openid-connect-core-1_0.html#AuthorizationEndpoint).<br />If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse). |
 | `tokenEndpoint` | _string_ |  false  |  | The OIDC Provider's [token endpoint](https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint).<br />If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse). |
+
+
+#### DenyRedirectMatcher
+
+Any request that matches any of the provided matchers (list) won’t be redirected to OAuth server when tokens are not valid.
+
+_Appears in:_
+- [OIDC](#oidc)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _string_ |  true  |  | Specifies the name of the header in the request. (can use :method, :path to match path or methods) |
+| `stringMatch` | _[StringMatch](#stringmatch)_ |  true  |  | Specifies how the header match will be performed to route the request. |
+
+
+#### StringMatch
+
+Specifies the way to match a string. Precisely one of exact, prefix, suffix, safe_regex, contains, custom must be set.
+
+_Appears in:_
+- [DenyRedirectMatcher](#denyredirectMatcher)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `exact` | _string_ |  false  |  | The input string must match exactly the string specified here. |
+| `prefix` | _string_ |  false  |  | The input string must have the prefix specified here. Note: empty prefix is not allowed, please use regex instead. |
+| `suffix` | _string_ |  false  |  | The input string must have the suffix specified here. Note: empty prefix is not allowed, please use regex instead. |
+| `safeRegex` | _string_ |  true  |  | The input string must match the regular expression specified here. |
+| `contains` | _string_ |  false  |  | The input string must have the substring specified here. Note: empty contains match is not allowed, please use regex instead. |
+| `ignoreCase` | _string_ |  false  |  | If true, indicates the exact/prefix/suffix/contains matching should be case insensitive. This has no effect for the safe_regex match. For example, the matcher data will match both input string Data and data if set to true. |
 
 
 #### OpenTelemetryEnvoyProxyAccessLog
