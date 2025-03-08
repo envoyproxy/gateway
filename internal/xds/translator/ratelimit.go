@@ -102,10 +102,8 @@ func (t *Translator) buildRateLimitFilter(irListener *ir.HTTPListener) []*hcmv3.
 			continue
 		}
 
-		global := route.Traffic.RateLimit.Global
-
 		// Determine the domain for the rate limit filter. If the rate limit is shared, use a shared domain.
-		domain := getRateLimitDomainFilters(irListener, global.Shared != nil && *global.Shared, domainMap)
+		domain := getRateLimitDomainFilters(irListener, isSharedRateLimit(route), domainMap)
 
 		// Check if a filter for this domain already exists to avoid duplicates.
 		if _, exists := domainMap[domain]; exists {
@@ -203,7 +201,7 @@ func patchRouteWithRateLimitOnTypedFilterConfig(route *routev3.Route, rateLimits
 
 // getSharedDescriptorKey returns the descriptor key used for shared rate limits based on BTP.
 func getSharedDescriptorKey(route *ir.HTTPRoute) string {
-	if route == nil || route.Traffic == nil || route.Traffic.BackendTrafficPolicy == nil {
+	if !hasValidBackendTrafficPolicy(route) {
 		return ""
 	}
 	return route.Traffic.BackendTrafficPolicy.Name
@@ -211,7 +209,7 @@ func getSharedDescriptorKey(route *ir.HTTPRoute) string {
 
 // getSharedDescriptorValue returns the descriptor value used for shared rate limits based on BTP.
 func getSharedDescriptorValue(route *ir.HTTPRoute) string {
-	if route == nil || route.Traffic == nil || route.Traffic.BackendTrafficPolicy == nil {
+	if !hasValidBackendTrafficPolicy(route) {
 		return ""
 	}
 	return route.Traffic.BackendTrafficPolicy.Namespace
@@ -227,7 +225,7 @@ func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit)
 
 	// Determine if the rate limit is shared across multiple routes.
 	global := route.Traffic.RateLimit.Global
-	isShared := global.Shared != nil && *global.Shared
+	isShared := isSharedRateLimit(route)
 
 	// Set the descriptor key based on whether the rate limit is shared.
 	var descriptorKey, descriptorValue string
@@ -347,13 +345,15 @@ func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit)
 			}
 		}
 
-		// If no matches are set, apply rate limiting to all traffic.
+		// Case when both header and cidr match are not set and the ratelimit
+		// will be applied to all traffic.
+		// 3) No Match (apply to all traffic)
 		if !rule.IsMatchSet() {
 			action := &routev3.RateLimit_Action{
 				ActionSpecifier: &routev3.RateLimit_Action_GenericKey_{
 					GenericKey: &routev3.RateLimit_Action_GenericKey{
-						DescriptorKey:   descriptorKey,
-						DescriptorValue: descriptorValue,
+						DescriptorKey:   getRouteRuleDescriptor(rIdx, -1),
+						DescriptorValue: getRouteRuleDescriptor(rIdx, -1),
 					},
 				},
 			}
@@ -456,11 +456,11 @@ func addSharedRateLimitDescriptor(
 	domainDescriptors map[string][]*rlsconfv3.RateLimitDescriptor) {
 
 	// Get BTP details for the shared descriptor
-	btp := route.Traffic.BackendTrafficPolicy
-	if btp == nil || btp.Name == "" {
+	if !hasValidBackendTrafficPolicy(route) {
 		return
 	}
 
+	btp := route.Traffic.BackendTrafficPolicy
 	sharedKey := btp.Name
 	sharedValue := btp.Namespace
 
@@ -649,22 +649,20 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 		// 3) No Match (apply to all traffic)
 		if !rule.IsMatchSet() {
 			pbDesc := new(rlsconfv3.RateLimitDescriptor)
-			// GenericKey case
-			if global.Shared != nil && *global.Shared && !usedSharedKey && route != nil {
+
+			// Determine if we should use the shared rate limit key (BTP-based) or a generic route key
+			if isSharedRateLimit(route) && !usedSharedKey && hasValidBackendTrafficPolicy(route) {
 				// For shared rate limits, use BTP name and namespace
-				if route.Traffic != nil && route.Traffic.BackendTrafficPolicy != nil {
-					btp := route.Traffic.BackendTrafficPolicy
-					pbDesc.Key = btp.Name
-					pbDesc.Value = btp.Namespace
-					usedSharedKey = true
-				} else {
-					pbDesc.Key = getRouteRuleDescriptor(rIdx, -1)
-					pbDesc.Value = pbDesc.Key
-				}
+				btp := route.Traffic.BackendTrafficPolicy
+				pbDesc.Key = btp.Name
+				pbDesc.Value = btp.Namespace
+				usedSharedKey = true
 			} else {
+				// Use generic key for non-shared rate limits
 				pbDesc.Key = getRouteRuleDescriptor(rIdx, -1)
 				pbDesc.Value = pbDesc.Key
 			}
+
 			head = pbDesc
 			cur = head
 		}
@@ -759,7 +757,7 @@ func getRateLimitServiceClusterName() string {
 func getRateLimitDomainFilters(irListener *ir.HTTPListener, isShared bool, usedDomains map[string]bool) string {
 	// Iterate over the routes to find a domain that hasn't been used yet
 	for _, route := range irListener.Routes {
-		if route.Traffic != nil && route.Traffic.BackendTrafficPolicy != nil {
+		if hasValidBackendTrafficPolicy(route) {
 			domain := route.Traffic.BackendTrafficPolicy.Name + "-" + route.Traffic.BackendTrafficPolicy.Namespace
 			if isShared && !usedDomains[domain] {
 				return domain
@@ -780,4 +778,13 @@ func (t *Translator) getRateLimitServiceGrpcHostPort() (string, uint32) {
 		panic(err)
 	}
 	return u.Hostname(), uint32(p)
+}
+
+// hasValidBackendTrafficPolicy checks if a route has a non-nil BackendTrafficPolicy with name and namespace.
+func hasValidBackendTrafficPolicy(route *ir.HTTPRoute) bool {
+	return route != nil &&
+		route.Traffic != nil &&
+		route.Traffic.BackendTrafficPolicy != nil &&
+		route.Traffic.BackendTrafficPolicy.Name != "" &&
+		route.Traffic.BackendTrafficPolicy.Namespace != ""
 }

@@ -9,6 +9,7 @@ import (
 	"embed"
 	"flag"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -355,6 +356,11 @@ func requireRateLimitConfigsToYAMLString(t *testing.T, configs []*ratelimitv3.Ra
 	if len(configs) == 0 {
 		return ""
 	}
+
+	// Sort configs by domain to ensure consistent output regardless of map iteration order
+	sort.Slice(configs, func(i, j int) bool {
+		return configs[i].Domain < configs[j].Domain
+	})
 
 	var result string
 	for i, config := range configs {
