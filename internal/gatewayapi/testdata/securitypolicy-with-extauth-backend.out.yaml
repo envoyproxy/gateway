@@ -286,9 +286,10 @@ securityPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
+        message: 'ExtAuth: mixed endpoints address type for the same route destination
+          is not supported.'
+        reason: Invalid
+        status: "False"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -390,6 +391,8 @@ xdsIR:
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
+        directResponse:
+          statusCode: 500
         hostname: www.foo.com
         isHTTP2: false
         metadata:
@@ -401,32 +404,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /foo1
-        security:
-          extAuth:
-            failOpen: true
-            grpc:
-              authority: service-2.default:8080
-              destination:
-                name: securitypolicy/default/policy-for-http-route-1/extauth/0
-                settings:
-                - addressType: IP
-                  endpoints:
-                  - host: 7.7.7.7
-                    port: 8080
-                  name: securitypolicy/default/policy-for-http-route-1/extauth/0/backend/0
-                  protocol: GRPC
-                  weight: 1
-                - addressType: FQDN
-                  endpoints:
-                  - host: primary.foo.com
-                    port: 3000
-                  name: securitypolicy/default/policy-for-http-route-1/extauth/0/backend/1
-                  protocol: GRPC
-                  weight: 1
-            headersToExtAuth:
-            - header1
-            - header2
-            name: securitypolicy/default/policy-for-http-route-1
+        security: {}
       - destination:
           name: httproute/default/httproute-1/rule/1
           settings:
@@ -437,6 +415,8 @@ xdsIR:
             name: httproute/default/httproute-1/rule/1/backend/0
             protocol: HTTP
             weight: 1
+        directResponse:
+          statusCode: 500
         hostname: www.foo.com
         isHTTP2: false
         metadata:
@@ -448,32 +428,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /foo2
-        security:
-          extAuth:
-            failOpen: true
-            grpc:
-              authority: service-2.default:8080
-              destination:
-                name: securitypolicy/default/policy-for-http-route-1/extauth/0
-                settings:
-                - addressType: IP
-                  endpoints:
-                  - host: 7.7.7.7
-                    port: 8080
-                  name: securitypolicy/default/policy-for-http-route-1/extauth/0/backend/0
-                  protocol: GRPC
-                  weight: 1
-                - addressType: FQDN
-                  endpoints:
-                  - host: primary.foo.com
-                    port: 3000
-                  name: securitypolicy/default/policy-for-http-route-1/extauth/0/backend/1
-                  protocol: GRPC
-                  weight: 1
-            headersToExtAuth:
-            - header1
-            - header2
-            name: securitypolicy/default/policy-for-http-route-1
+        security: {}
       - destination:
           name: httproute/default/httproute-2/rule/0
           settings:
