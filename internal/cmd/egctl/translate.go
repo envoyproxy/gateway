@@ -246,7 +246,7 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 				result.Xds = res
 			}
 			if outType == irType {
-				res, err := translateGatewayAPIToIR(resources)
+				res, err := TranslateGatewayAPIToIR(resources)
 				if err != nil {
 					return err
 				}
@@ -265,7 +265,7 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 	return fmt.Errorf("unable to find translate from input type %s to output type %s", inType, outTypes)
 }
 
-func translateGatewayAPIToIR(resources *resource.Resources) (*gatewayapi.TranslateResult, error) {
+func TranslateGatewayAPIToIR(resources *resource.Resources) (*gatewayapi.TranslateResult, error) {
 	if resources.GatewayClass == nil {
 		return nil, fmt.Errorf("the GatewayClass resource is required")
 	}
