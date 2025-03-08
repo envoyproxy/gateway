@@ -445,78 +445,114 @@ func BuildRateLimitServiceConfig(irListener *ir.HTTPListener) []*rlsconfv3.RateL
 
 		// Get route rule descriptors within each route
 		serviceDescriptors := buildRateLimitServiceDescriptors(route)
-
-		// Determine the domain for this route
-		var domain string
-		if isSharedRateLimit(route) && route.Traffic.BackendTrafficPolicy != nil &&
-			route.Traffic.BackendTrafficPolicy.Name != "" {
-			// For shared rate limits, use the BackendTrafficPolicy name + namespace
-			domain = route.Traffic.BackendTrafficPolicy.Name + "-" + route.Traffic.BackendTrafficPolicy.Namespace
-		} else {
-			// Use listener name if not shared or if no BTP is available
-			domain = irListener.Name
+		if len(serviceDescriptors) == 0 {
+			continue
 		}
 
+		// Determine the domain for this route
+		domain := irListener.Name // Default domain
+		if isSharedRateLimit(route) && route.Traffic.BackendTrafficPolicy != nil &&
+			route.Traffic.BackendTrafficPolicy.Name != "" {
+			domain = route.Traffic.BackendTrafficPolicy.Name
+		}
+
+		// Handle shared and non-shared rate limits differently
 		if isSharedRateLimit(route) {
-			// For shared limits, collect descriptors under the shared descriptor key
-			sharedFound := false
-
-			// Get the descriptor key for shared rate limits (without route name)
-			var sharedKey, sharedValue string
-			if route.Traffic != nil && route.Traffic.BackendTrafficPolicy != nil {
-				btp := route.Traffic.BackendTrafficPolicy
-				sharedKey = btp.Name
-				sharedValue = btp.Namespace
-			}
-
-			if sharedKey != "" {
-				// Look for existing shared descriptor for this domain
-				for i, desc := range domainDescriptors[domain] {
-					if desc.Key == sharedKey && desc.Value == sharedValue {
-						// Found existing shared descriptor, merge new descriptors into it
-						for _, sd := range serviceDescriptors {
-							// Check for duplicates before adding
-							duplicate := false
-							for _, existing := range desc.Descriptors {
-								if existing.Key == sd.Key && existing.Value == sd.Value {
-									duplicate = true
-									break
-								}
-							}
-							if !duplicate {
-								domainDescriptors[domain][i].Descriptors = append(
-									domainDescriptors[domain][i].Descriptors, sd)
-							}
-						}
-						sharedFound = true
-						break
-					}
-				}
-
-				// If no shared descriptor exists for this domain yet, create one
-				if !sharedFound && len(serviceDescriptors) > 0 {
-					globalDescriptor := &rlsconfv3.RateLimitDescriptor{
-						Key:         sharedKey,
-						Value:       sharedValue,
-						Descriptors: serviceDescriptors,
-					}
-					domainDescriptors[domain] = append(domainDescriptors[domain], globalDescriptor)
-				}
-			}
+			addSharedRateLimitDescriptor(route, serviceDescriptors, domain, domainDescriptors)
 		} else {
-			// For non-shared limits, create a route-specific descriptor
-			if len(serviceDescriptors) > 0 {
-				routeDescriptor := &rlsconfv3.RateLimitDescriptor{
-					Key:         getRouteDescriptor(route.Name),
-					Value:       getRouteDescriptor(route.Name),
-					Descriptors: serviceDescriptors,
-				}
-				domainDescriptors[domain] = append(domainDescriptors[domain], routeDescriptor)
-			}
+			addRouteSpecificDescriptor(route, serviceDescriptors, domain, domainDescriptors)
 		}
 	}
 
 	// Convert map to list of RateLimitConfig objects
+	return createRateLimitConfigs(domainDescriptors)
+}
+
+// addSharedRateLimitDescriptor adds shared rate limit descriptors to the domain descriptor map
+func addSharedRateLimitDescriptor(
+	route *ir.HTTPRoute,
+	serviceDescriptors []*rlsconfv3.RateLimitDescriptor,
+	domain string,
+	domainDescriptors map[string][]*rlsconfv3.RateLimitDescriptor) {
+
+	// Get BTP details for the shared descriptor
+	btp := route.Traffic.BackendTrafficPolicy
+	if btp == nil || btp.Name == "" {
+		return
+	}
+
+	sharedKey := btp.Name
+	sharedValue := btp.Namespace
+
+	// Check if we already have a descriptor for this key/value pair
+	for i, desc := range domainDescriptors[domain] {
+		if desc.Key == sharedKey && desc.Value == sharedValue {
+			// Found existing shared descriptor, merge new descriptors into it
+			domainDescriptors[domain][i].Descriptors = mergeUniqueDescriptors(
+				desc.Descriptors, serviceDescriptors)
+			return
+		}
+	}
+
+	// No existing descriptor found, create a new one
+	globalDescriptor := &rlsconfv3.RateLimitDescriptor{
+		Key:         sharedKey,
+		Value:       sharedValue,
+		Descriptors: serviceDescriptors,
+	}
+	domainDescriptors[domain] = append(domainDescriptors[domain], globalDescriptor)
+}
+
+// addRouteSpecificDescriptor adds a route-specific descriptor to the domain descriptor map
+func addRouteSpecificDescriptor(
+	route *ir.HTTPRoute,
+	serviceDescriptors []*rlsconfv3.RateLimitDescriptor,
+	domain string,
+	domainDescriptors map[string][]*rlsconfv3.RateLimitDescriptor) {
+
+	routeDescriptor := &rlsconfv3.RateLimitDescriptor{
+		Key:         getRouteDescriptor(route.Name),
+		Value:       getRouteDescriptor(route.Name),
+		Descriptors: serviceDescriptors,
+	}
+	domainDescriptors[domain] = append(domainDescriptors[domain], routeDescriptor)
+}
+
+// mergeUniqueDescriptors merges two descriptor lists, avoiding duplicates
+func mergeUniqueDescriptors(
+	existing []*rlsconfv3.RateLimitDescriptor,
+	new []*rlsconfv3.RateLimitDescriptor) []*rlsconfv3.RateLimitDescriptor {
+
+	if len(new) == 0 {
+		return existing
+	}
+
+	result := make([]*rlsconfv3.RateLimitDescriptor, len(existing))
+	copy(result, existing)
+
+	// Track descriptors by key/value for faster duplicate checking
+	existingMap := make(map[string]bool)
+	for _, desc := range existing {
+		key := desc.Key + ":" + desc.Value
+		existingMap[key] = true
+	}
+
+	// Add only non-duplicate descriptors
+	for _, desc := range new {
+		key := desc.Key + ":" + desc.Value
+		if !existingMap[key] {
+			result = append(result, desc)
+			existingMap[key] = true
+		}
+	}
+
+	return result
+}
+
+// createRateLimitConfigs creates rate limit configs from the domain descriptor map
+func createRateLimitConfigs(
+	domainDescriptors map[string][]*rlsconfv3.RateLimitDescriptor) []*rlsconfv3.RateLimitConfig {
+
 	var configs []*rlsconfv3.RateLimitConfig
 	for domain, descriptors := range domainDescriptors {
 		if len(descriptors) > 0 {
@@ -527,7 +563,6 @@ func BuildRateLimitServiceConfig(irListener *ir.HTTPListener) []*rlsconfv3.RateL
 			})
 		}
 	}
-
 	return configs
 }
 
