@@ -102,14 +102,14 @@ func TestXdsIRUpdates(t *testing.T) {
 			xx: []*ir.Xds{
 				{
 					HTTP: []*ir.HTTPListener{
-						{CoreListenerDetails: ir.CoreListenerDetails{Name: "listener-1"}},
-						{CoreListenerDetails: ir.CoreListenerDetails{Name: "listener-2"}},
+						{TCPBasedListenerDetails: ir.TCPBasedListenerDetails{CoreListenerDetails: ir.CoreListenerDetails{Name: "listener-1"}}},
+						{TCPBasedListenerDetails: ir.TCPBasedListenerDetails{CoreListenerDetails: ir.CoreListenerDetails{Name: "listener-2"}}},
 					},
 				},
 				{
 					HTTP: []*ir.HTTPListener{
-						{CoreListenerDetails: ir.CoreListenerDetails{Name: "listener-2"}},
-						{CoreListenerDetails: ir.CoreListenerDetails{Name: "listener-1"}},
+						{TCPBasedListenerDetails: ir.TCPBasedListenerDetails{CoreListenerDetails: ir.CoreListenerDetails{Name: "listener-2"}}},
+						{TCPBasedListenerDetails: ir.TCPBasedListenerDetails{CoreListenerDetails: ir.CoreListenerDetails{Name: "listener-1"}}},
 					},
 				},
 			},
@@ -120,13 +120,13 @@ func TestXdsIRUpdates(t *testing.T) {
 			xx: []*ir.Xds{
 				{
 					HTTP: []*ir.HTTPListener{
-						{CoreListenerDetails: ir.CoreListenerDetails{Name: "listener-1"}},
+						{TCPBasedListenerDetails: ir.TCPBasedListenerDetails{CoreListenerDetails: ir.CoreListenerDetails{Name: "listener-1"}}},
 					},
 				},
 				{
 					HTTP: []*ir.HTTPListener{
-						{CoreListenerDetails: ir.CoreListenerDetails{Name: "listener-1"}},
-						{CoreListenerDetails: ir.CoreListenerDetails{Name: "listener-2"}},
+						{TCPBasedListenerDetails: ir.TCPBasedListenerDetails{CoreListenerDetails: ir.CoreListenerDetails{Name: "listener-1"}}},
+						{TCPBasedListenerDetails: ir.TCPBasedListenerDetails{CoreListenerDetails: ir.CoreListenerDetails{Name: "listener-2"}}},
 					},
 				},
 			},

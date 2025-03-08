@@ -20,6 +20,7 @@ clientTrafficPolicies:
       probes: 3
       idleTime: 20m
       interval: 60s
+    bypassOverloadManager: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
