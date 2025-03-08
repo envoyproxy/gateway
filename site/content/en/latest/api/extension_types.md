@@ -1,6 +1,7 @@
 +++
-title = "Envoy Gateway API"
+title = "Gateway API Extensions"
 weight = 1
+description = "Envoy Gateway provides these extensions to support additional features not available in the Gateway API today"
 +++
 
 

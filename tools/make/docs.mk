@@ -58,7 +58,7 @@ IMAGE_SRC_BASE_URL=https://raw.githubusercontent.com/kubernetes-sigs/gateway-api
 
 # Define destination directories for images and documentation within the envoy gateway repository.
 IMAGE_DEST_DIR=$(ROOT_DIR)/site/static/img
-DOC_DEST_DIR=$(ROOT_DIR)/site/content/en/latest/api/gwapi
+DOC_DEST_DIR=$(ROOT_DIR)/site/content/en/latest/api/gateway_api
 
 # List of documentation files to synchronize.
 SYNC_FILES := gateway.md gatewayclass.md httproute.md grpcroute.md backendtlspolicy.md referencegrant.md
