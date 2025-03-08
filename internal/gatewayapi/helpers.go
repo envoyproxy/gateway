@@ -403,6 +403,10 @@ func irRouteDestinationName(route RouteContext, ruleIdx int) string {
 	return fmt.Sprintf("%srule/%d", irRoutePrefix(route), ruleIdx)
 }
 
+func irDestinationSettingName(destName string, backendIdx int) string {
+	return fmt.Sprintf("%s/backend/%d", destName, backendIdx)
+}
+
 // irTLSConfigs produces a defaulted IR TLSConfig
 func irTLSConfigs(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
 	if len(tlsSecrets) == 0 {
@@ -533,10 +537,22 @@ type targetRefWithTimestamp struct {
 	CreationTimestamp metav1.Time
 }
 
+func selectorFromTargetSelector(selector egv1a1.TargetSelector) labels.Selector {
+	l, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+		MatchLabels:      selector.MatchLabels,
+		MatchExpressions: selector.MatchExpressions,
+	})
+	if err != nil {
+		// TODO - how do we we bubble this up
+		return labels.Nothing()
+	}
+	return l
+}
+
 func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, potentialTargets []T) []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {
 	dedup := sets.New[targetRefWithTimestamp]()
 	for _, currSelector := range policy.TargetSelectors {
-		labelSelector := labels.SelectorFromSet(currSelector.MatchLabels)
+		labelSelector := selectorFromTargetSelector(currSelector)
 		for _, obj := range potentialTargets {
 			gvk := obj.GetObjectKind().GroupVersionKind()
 			if gvk.Kind != string(currSelector.Kind) ||

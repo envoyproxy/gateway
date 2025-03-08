@@ -16,7 +16,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/protocov"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 	"github.com/envoyproxy/gateway/internal/xds/filters"
 )
@@ -69,7 +69,7 @@ func buildReadyListener(ready *ir.ReadyListener) (*listenerv3.Listener, error) {
 		HttpFilters: hcmFilters,
 	}
 
-	hcmAny, err := protocov.ToAnyWithValidation(hcm)
+	hcmAny, err := proto.ToAnyWithValidation(hcm)
 	if err != nil {
 		return nil, err
 	}
@@ -100,5 +100,6 @@ func buildReadyListener(ready *ir.ReadyListener) (*listenerv3.Listener, error) {
 				},
 			},
 		},
+		BypassOverloadManager: true,
 	}, nil
 }

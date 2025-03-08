@@ -58,16 +58,16 @@ go.testdata.complete: ## Override test ouputdata
 .PHONY: go.test.coverage
 go.test.coverage: go.test.cel ## Run go unit and integration tests in GitHub Actions
 	@$(LOG_TARGET)
-	KUBEBUILDER_ASSETS="$(shell $(tools/setup-envtest) use $(ENVTEST_K8S_VERSION) -p path)" \
+	KUBEBUILDER_ASSETS="$(shell go tool setup-envtest use $(ENVTEST_K8S_VERSION) -p path)" \
 		go test ./... --tags=integration -race -coverprofile=coverage.xml -covermode=atomic
 
 .PHONY: go.test.cel
-go.test.cel: manifests $(tools/setup-envtest) # Run the CEL validation tests
+go.test.cel: manifests # Run the CEL validation tests
 	@$(LOG_TARGET)
 	@for ver in $(ENVTEST_K8S_VERSIONS); do \
   		echo "Run CEL Validation on k8s $$ver"; \
         go clean -testcache; \
-        KUBEBUILDER_ASSETS="$$($(tools/setup-envtest) use $$ver -p path)" \
+        KUBEBUILDER_ASSETS="$$(go tool setup-envtest use $$ver -p path)" \
          go test ./test/cel-validation --tags celvalidation -race; \
     done
 
@@ -80,8 +80,6 @@ go.clean: ## Clean the building output files
 go.mod.tidy: ## Update and check dependences with go mod tidy.
 	@$(LOG_TARGET)
 	go mod tidy -compat=$(GO_VERSION)
-	# run go mod tidy in examples/extension-server directory
-	cd examples/extension-server && go mod tidy -compat=$(GO_VERSION)
 
 .PHONY: go.mod.lint
 lint: go.mod.lint

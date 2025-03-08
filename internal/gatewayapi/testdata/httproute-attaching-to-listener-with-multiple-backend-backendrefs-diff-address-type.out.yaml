@@ -278,7 +278,7 @@ infraIR:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -329,12 +329,14 @@ xdsIR:
             endpoints:
             - host: 1.1.1.1
               port: 3001
+            name: httproute/default/httproute-3/rule/0/backend/0
             protocol: HTTP
             weight: 1
           - addressType: FQDN
             endpoints:
             - host: primary.foo.com
               port: 3000
+            name: httproute/default/httproute-3/rule/0/backend/1
             protocol: HTTP
             weight: 1
         hostname: '*'

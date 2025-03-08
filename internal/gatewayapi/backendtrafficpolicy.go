@@ -691,16 +691,6 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 		if err != nil {
 			return nil, err
 		}
-
-		if irRule.CIDRMatch != nil && irRule.CIDRMatch.Distinct {
-			return nil, fmt.Errorf("local rateLimit does not support distinct CIDRMatch")
-		}
-
-		for _, match := range irRule.HeaderMatches {
-			if match.Distinct {
-				return nil, fmt.Errorf("local rateLimit does not support distinct HeaderMatch")
-			}
-		}
 		irRules = append(irRules, irRule)
 	}
 

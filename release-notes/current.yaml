@@ -3,24 +3,41 @@ date: Pending
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
   Use a dedicated listener port(19003) for envoy proxy readiness
+  Uses the envoy JSON formatter for the default access log instead of text formatter.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
+  Fixed CVE-2025-25294
 
 # New features or capabilities added in this release.
 new features: |
   Added support for configuring maxUnavailable in KubernetesPodDisruptionBudgetSpec
   Added support for percentage-based request mirroring
+  Allow matchExpressions in TargetSelector
   Add defaulter for gateway-api resources loading from file to be able to set default values.
+  Added support for defining Lua EnvoyExtensionPolicies
+  Added RequestID field in ClientTrafficPolicy.HeaderSettings to configure Envoy X-Request-ID behavior.
+  Added support for HorizontalPodAutoscaler to helm chart
+  Added support for distinct header and distinct source CIDR based local rate limiting
+  Added support for forwarding the authenticated username to the backend via a configurable header in BasicAuth
+  Added support for HTTP Methods and Headers based authorization in SecurityPolicy
+  Added support for zone aware routing
 
 bug fixes: |
+  Fix traffic splitting when filters are attached to the backendRef.
+  Added support for Secret and ConfigMap parsing in Standalone mode.
+  Bypass overload manager for stats and ready listeners
+  Fix translating backendSettings for extAuth
+  Fix an issue that stats compressor was not working.
+  Added support for BackendTLSPolicy parsing in Standalone mode.
 
 # Enhancements that improve performance.
 performance improvements: |
-
+  Added a cache for the Wasm OCI image permission checks and check the pullSecrets against the OCI image registry in
+  a background goroutine.
 # Deprecated features or APIs.
 deprecations: |
+  Deprecated the PreserveXRequestID field.
 
 # Other notable changes not covered by the above sections.
 Other changes: |
-

@@ -152,7 +152,7 @@ infraIR:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -182,6 +182,7 @@ xdsIR:
           endpoints:
           - host: 8.7.6.5
             port: 4317
+          name: tracing/backend/-1
           protocol: GRPC
       provider:
         backendRefs:

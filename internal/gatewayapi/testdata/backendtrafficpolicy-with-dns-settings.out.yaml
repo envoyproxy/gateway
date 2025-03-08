@@ -315,7 +315,7 @@ infraIR:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -340,6 +340,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: httproute/default/httproute-3/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
@@ -364,7 +365,7 @@ xdsIR:
       port: 19003
   envoy-gateway/gateway-2:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -389,6 +390,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
@@ -413,6 +415,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io

@@ -1,84 +1,14 @@
 {{ $adopters := .Site.Data.adopters.adopters }}
-<section id="adopters-section">
-  <h2 id="adopters" class="adopter-head">Our Adopters</h2>
+<section class="adopters-section">
+  <h2 class="text-center mb-5">Our Adopters</h2>
   <div class="adopters-list">
     {{ range $adopters }}
-    <a class="adopter" href="{{ .url }}" target="_blank">
-        <img src="{{ .logo | relURL }}" alt="{{ .name }} logo">
-        <div class="adopter-info">
-            <p>{{ .description }}</p>
-        </div>
+    <a class="adopter" href="{{ .url }}" target="_blank" rel="noopener noreferrer">
+      <img src="{{ .logo | relURL }}" alt="{{ .name }} logo" loading="lazy">
+      <div class="adopter-info">
+        <p>{{ .description }}</p>
+      </div>
     </a>
     {{ end }}
   </div>
 </section>
-
-<style>
-#adopters-section {
-  text-align: center;
-  padding: 0px;
-}
-
-.adopter-head {
-  padding: 50px;
-}
-
-.adopters-list {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-start; /* Center items horizontally */
-  gap: 20px;
-  max-width: 1200px; /* Adjust to fit the container width */
-  margin: 0 auto; /* Center the container */
-}
-
-.adopter {
-  position: relative;
-  flex: 0 1 calc(25% - 20px); /* Adjust width to fit 4 items per row */
-  max-width: calc(25% - 20px);
-  box-sizing: border-box;
-  padding: 20px;
-  background-color: #f9f9f9;
-  border-radius: 8px;
-  text-align: center;
-  transition: transform 0.3s ease;
-  display: grid;
-  place-items: center;
-  width: 100%;
-}
-
-.adopter img {
-  max-width: 100%;
-  height: auto;
-}
-
-.adopter-info {
-  display: none;
-  position: absolute;
-  bottom: 100%; /* Position above the logo */
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 10px 10px 0px 15px;
-  border-radius: 5px;
-  width: 500px; /* Adjust the width as needed */
-  z-index: 10;
-  text-align: left;
-}
-
-.adopter:hover .adopter-info {
-  display: block;
-}
-
-/* Responsive design for mobile devices */
-@media (max-width: 768px) {
-  .adopters-list {
-    justify-content: center; /* Ensure center alignment on mobile */
-  }
-  .adopter {
-    flex: 0 1 100%; /* Each item takes full width */
-    max-width: 100%;
-  }
-}
-</style>

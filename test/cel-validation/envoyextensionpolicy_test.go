@@ -445,8 +445,9 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 						{
 							Type: egv1a1.LuaValueTypeValueRef,
 							ValueRef: &gwapiv1a2.LocalObjectReference{
-								Kind: gwapiv1a2.Kind("ConfigMap"),
-								Name: gwapiv1a2.ObjectName("eg"),
+								Kind:  gwapiv1a2.Kind("ConfigMap"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+								Group: gwapiv1a2.Group("v1"),
 							},
 						},
 					},
@@ -471,8 +472,9 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 						{
 							Type: egv1a1.LuaValueTypeInline,
 							ValueRef: &gwapiv1a2.LocalObjectReference{
-								Kind: gwapiv1a2.Kind("ConfigMap"),
-								Name: gwapiv1a2.ObjectName("eg"),
+								Kind:  gwapiv1a2.Kind("ConfigMap"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+								Group: gwapiv1a2.Group("v1"),
 							},
 						},
 					},
@@ -524,8 +526,9 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 						{
 							Type: egv1a1.LuaValueTypeValueRef,
 							ValueRef: &gwapiv1a2.LocalObjectReference{
-								Kind: gwapiv1a2.Kind("NotConfigMap"),
-								Name: gwapiv1a2.ObjectName("eg"),
+								Kind:  gwapiv1a2.Kind("NotConfigMap"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+								Group: gwapiv1a2.Group("v1"),
 							},
 						},
 					},
@@ -541,7 +544,36 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.lua[0].valueRef: Invalid value: \"object\": Only a reference to an object of kind ConfigMap belonging to default core API group is supported.",
+				"spec.lua[0].valueRef: Invalid value: \"object\": Only a reference to an object of kind ConfigMap belonging to default v1 API group is supported.",
+			},
+		},
+		{
+			desc: "Invalid Lua filter (source object group not default)",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					Lua: []egv1a1.Lua{
+						{
+							Type: egv1a1.LuaValueTypeValueRef,
+							ValueRef: &gwapiv1a2.LocalObjectReference{
+								Kind:  gwapiv1a2.Kind("ConfigMap"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+								Group: gwapiv1a2.Group(gwapiv1a2.GroupName),
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.lua[0].valueRef: Invalid value: \"object\": Only a reference to an object of kind ConfigMap belonging to default v1 API group is supported.",
 			},
 		},
 		{
@@ -553,8 +585,9 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 							Type:   egv1a1.LuaValueTypeInline,
 							Inline: ptr.To("function envoy_on_response(response_handle) -- Do something -- end"),
 							ValueRef: &gwapiv1a2.LocalObjectReference{
-								Kind: gwapiv1a2.Kind("ConfigMap"),
-								Name: gwapiv1a2.ObjectName("eg"),
+								Kind:  gwapiv1a2.Kind("ConfigMap"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+								Group: gwapiv1a2.Group("v1"),
 							},
 						},
 					},

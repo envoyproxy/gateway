@@ -17,6 +17,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "response-header-route-dest/backend/0"
     removeResponseHeaders:
     - "some-header5"
     - "some-header6"

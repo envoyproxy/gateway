@@ -2,7 +2,6 @@ tools.dir = tools
 tools.bindir = tools/bin
 tools.srcdir = tools/src
 
-tools/controller-gen     = $(tools.bindir)/controller-gen
 $(tools.bindir)/%: $(tools.srcdir)/%/pin.go $(tools.srcdir)/%/go.mod
 	cd $(<D) && GOOS= GOARCH= go build -o $(abspath $@) $$(sed -En 's,^import _ "(.*)".*,\1,p' pin.go)
 
@@ -21,11 +20,11 @@ build: generate manifests
 image: build
 	docker build -t extension-server:latest -f tools/docker/extension-server/Dockerfile .
 
-manifests: $(tools/controller-gen)
-	$(tools/controller-gen) crd:allowDangerousTypes=true paths="./..." output:crd:artifacts:config=charts/extension-server/crds/generated
+manifests:
+	@go tool controller-gen crd:allowDangerousTypes=true paths="./..." output:crd:artifacts:config=charts/extension-server/crds/generated
 
-generate: $(tools/controller-gen)
-	$(tools/controller-gen) object:headerFile="$(tools.dir)/boilerplate.generatego.txt",year=2024 paths="{./api/...}"
+generate:
+	@go tool controller-gen object:headerFile="$(tools.dir)/boilerplate.generatego.txt",year=2024 paths="{./api/...}"
 
 tools.clean: # Remove all tools
 	@$(LOG_TARGET)

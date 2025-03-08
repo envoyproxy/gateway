@@ -16,7 +16,7 @@ import (
 )
 
 func TestGetCertgenCommand(t *testing.T) {
-	got := getCertGenCommand()
+	got := GetCertGenCommand()
 	assert.Equal(t, "certgen", got.Use)
 }
 

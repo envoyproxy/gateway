@@ -169,7 +169,7 @@ tlsRoutes:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -194,6 +194,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: foo.bar.com
@@ -230,6 +231,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: tlsroute/default/tlsroute-1/rule/-1/backend/0
             protocol: HTTPS
             weight: 1
         name: tlsroute/default/tlsroute-1

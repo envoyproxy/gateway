@@ -46,7 +46,7 @@ jobs:
       run: cd test/benchmark && zip -r benchmark_report.zip benchmark_report
 
     - name: Upload Benchmark Report
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08  # v4.6.0
+      uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1  # v4.6.1
       with:
         name: benchmark_report
         path: test/benchmark/benchmark_report.zip
@@ -58,7 +58,6 @@ jobs:
       contents: write
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
-    - uses: ./tools/github-actions/setup-deps
 
     - name: Generate Release Manifests
       # Use `Always` image pull policy for latest version.
@@ -81,6 +80,8 @@ jobs:
         tar -zcvf egctl_latest_linux_arm64.tar.gz bin/linux/arm64/egctl
         tar -zcvf egctl_latest_darwin_amd64.tar.gz bin/darwin/amd64/egctl
         tar -zcvf egctl_latest_darwin_arm64.tar.gz bin/darwin/arm64/egctl
+        zip -r egctl_latest_windows_amd64.zip bin/windows/amd64/egctl
+        zip -r egctl_latest_windows_arm64.zip bin/windows/arm64/egctl
 
     # Ignore the error when we delete the latest release, it might not exist.
 
@@ -124,6 +125,8 @@ jobs:
           egctl_latest_linux_arm64.tar.gz
           egctl_latest_darwin_amd64.tar.gz
           egctl_latest_darwin_arm64.tar.gz
+          egctl_latest_windows_amd64.zip
+          egctl_latest_windows_arm64.zip
         body: |
           This is the "latest" release of **Envoy Gateway**, which contains the most recent commits from the main branch.
 

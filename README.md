@@ -22,6 +22,7 @@ Kubernetes-based application gateway.
 
 ## Contact
 
+* [envoy-gateway-announce](https://groups.google.com/g/envoy-gateway-announce): Join our mailing list to receive important announcements.
 * Slack: Join the [Envoy Slack workspace][] if you're not already a member. Otherwise, use the
   [Envoy Gateway channel][] to start collaborating with the community.
 
@@ -33,7 +34,7 @@ Kubernetes-based application gateway.
 
 ## Security Reporting
 
-If youve found a security vulnerability or a process crash, please follow the instructions in [SECURITY.md](./SECURITY.md) to submit a report.
+If you've found a security vulnerability or a process crash, please follow the instructions in [SECURITY.md](./SECURITY.md) to submit a report.
 
 ## Community Meeting
 

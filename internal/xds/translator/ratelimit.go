@@ -174,27 +174,9 @@ func patchRouteWithRateLimit(route *routev3.Route, irRoute *ir.HTTPRoute) error 
 	if !routeContainsGlobalRateLimit(irRoute) || xdsRouteAction == nil {
 		return nil
 	}
-	rateLimits, costSpecified := buildRouteRateLimits(irRoute.Name, irRoute)
-	if costSpecified {
-		// PerRoute global rate limit configuration via typed_per_filter_config can have its own rate routev3.RateLimit that overrides the route level rate limits.
-		// Per-descriptor level hits_addend can only be configured there: https://github.com/envoyproxy/envoy/pull/37972
-		// vs the "legacy" core route-embedded rate limits doesn't support the feature due to the "technical debt".
-		//
-		// This branch is only reached when the response cost is specified which allows us to assume that
-		// users are using Envoy >= v1.33.0 which also supports the typed_per_filter_config.
-		//
-		// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ratelimit/v3/rate_limit.proto#extensions-filters-http-ratelimit-v3-ratelimitperroute
-		//
-		// Though this is not explicitly documented, the rate limit functionality is the same as the core route-embedded rate limits.
-		// Only code path different is in the following code which is identical for both core and typed_per_filter_config
-		// as we are not using virtual_host level rate limits except that when typed_per_filter_config is used, per-descriptor
-		// level hits_addend is correctly resolved.
-		//
-		// https://github.com/envoyproxy/envoy/blob/47f99c5aacdb582606a48c85c6c54904fd439179/source/extensions/filters/http/ratelimit/ratelimit.cc#L93-L114
-		return patchRouteWithRateLimitOnTypedFilterConfig(route, rateLimits)
-	}
-	xdsRouteAction.RateLimits = rateLimits
-	return nil
+	global := irRoute.Traffic.RateLimit.Global
+	rateLimits := buildRouteRateLimits(irRoute.Name, global)
+	return patchRouteWithRateLimitOnTypedFilterConfig(route, rateLimits)
 }
 
 // patchRouteWithRateLimitOnTypedFilterConfig builds rate limit actions and appends to the route via
@@ -383,7 +365,6 @@ func buildRouteRateLimits(descriptorPrefix string, route *ir.HTTPRoute) (rateLim
 		if c := rule.RequestCost; c != nil {
 			// Set the hits addend for the request cost if specified.
 			rateLimit.HitsAddend = rateLimitCostToHitsAddend(c)
-			costSpecified = true
 		}
 		// Add the rate limit to the list of rate limits.
 		rateLimits = append(rateLimits, rateLimit)
@@ -393,7 +374,6 @@ func buildRouteRateLimits(descriptorPrefix string, route *ir.HTTPRoute) (rateLim
 			responseRule := &routev3.RateLimit{Actions: rlActions, ApplyOnStreamDone: true}
 			responseRule.HitsAddend = rateLimitCostToHitsAddend(c)
 			rateLimits = append(rateLimits, responseRule)
-			costSpecified = true
 		}
 	}
 	return
@@ -746,7 +726,8 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 	ds := &ir.DestinationSetting{
 		Weight:    ptr.To[uint32](1),
 		Protocol:  ir.GRPC,
-		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(host, port, false)},
+		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(host, port, false, nil)},
+		Name:      destinationSettingName(clusterName),
 	}
 
 	tSocket, err := buildRateLimitTLSocket()

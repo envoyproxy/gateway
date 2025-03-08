@@ -15,13 +15,13 @@ const (
 	KindBackendTrafficPolicy = "BackendTrafficPolicy"
 )
 
+// BackendTrafficPolicy allows the user to configure the behavior of the connection
+// between the Envoy Proxy listener and the backend service.
+//
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:categories=envoy-gateway,shortName=btp
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
-
-// BackendTrafficPolicy allows the user to configure the behavior of the connection
-// between the Envoy Proxy listener and the backend service.
 type BackendTrafficPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -33,16 +33,15 @@ type BackendTrafficPolicy struct {
 	Status gwapiv1a2.PolicyStatus `json:"status,omitempty"`
 }
 
-// +kubebuilder:validation:XValidation:rule="(has(self.targetRef) && !has(self.targetRefs)) || (!has(self.targetRef) && has(self.targetRefs)) || (has(self.targetSelectors) && self.targetSelectors.size() > 0) ", message="either targetRef or targetRefs must be used"
+// BackendTrafficPolicySpec defines the desired state of BackendTrafficPolicy.
 //
+// +kubebuilder:validation:XValidation:rule="(has(self.targetRef) && !has(self.targetRefs)) || (!has(self.targetRef) && has(self.targetRefs)) || (has(self.targetSelectors) && self.targetSelectors.size() > 0) ", message="either targetRef or targetRefs must be used"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? self.targetRef.group == 'gateway.networking.k8s.io' : true ", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? self.targetRef.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute', 'UDPRoute', 'TCPRoute', 'TLSRoute'] : true", message="this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? !has(self.targetRef.sectionName) : true",message="this policy does not yet support the sectionName field"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, ref.group == 'gateway.networking.k8s.io') : true ", message="this policy can only have a targetRefs[*].group of gateway.networking.k8s.io"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute', 'UDPRoute', 'TCPRoute', 'TLSRoute']) : true ", message="this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, !has(ref.sectionName)) : true",message="this policy does not yet support the sectionName field"
-//
-// BackendTrafficPolicySpec defines the desired state of BackendTrafficPolicy.
 type BackendTrafficPolicySpec struct {
 	PolicyTargetReferences `json:",inline"`
 	ClusterSettings        `json:",inline"`
@@ -74,11 +73,28 @@ type BackendTrafficPolicySpec struct {
 	//
 	// +optional
 	ResponseOverride []*ResponseOverride `json:"responseOverride,omitempty"`
+	// HTTPUpgrade defines the configuration for HTTP protocol upgrades.
+	// If not specified, the default upgrade configuration(websocket) will be used.
+	//
+	// +optional
+	// +notImplementedHide
+	HTTPUpgrade []*ProtocolUpgradeConfig `json:"httpUpgrade,omitempty"`
 }
 
-// +kubebuilder:object:root=true
+type ProtocolUpgradeConfig struct {
+	// Type is the case-insensitive type of protocol upgrade.
+	// e.g. `websocket`, `CONNECT`, `spdy/3.1` etc.
+	//
+	// +kubebuilder:validation:Required
+	Type string `json:"type"`
+	// Disabled indicates whether the upgrade is disabled.
+	// +optional
+	Disabled *bool `json:"disabled"`
+}
 
 // BackendTrafficPolicyList contains a list of BackendTrafficPolicy resources.
+//
+// +kubebuilder:object:root=true
 type BackendTrafficPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

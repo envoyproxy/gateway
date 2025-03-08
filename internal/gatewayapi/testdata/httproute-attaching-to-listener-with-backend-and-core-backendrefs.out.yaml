@@ -199,7 +199,7 @@ infraIR:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -224,18 +224,21 @@ xdsIR:
             endpoints:
             - host: 1.1.1.1
               port: 3001
+            name: httproute/default/httproute-static/rule/0/backend/0
             protocol: HTTP
             weight: 1
           - addressType: IP
             endpoints:
             - host: 4.3.2.1
               port: 8080
+            name: httproute/default/httproute-static/rule/0/backend/1
             protocol: HTTP
             weight: 1
           - addressType: IP
             endpoints:
             - host: 1.2.3.4
               port: 8081
+            name: httproute/default/httproute-static/rule/0/backend/2
             protocol: HTTP
             weight: 1
         hostname: '*'
@@ -256,18 +259,21 @@ xdsIR:
             endpoints:
             - host: primary.foo.com
               port: 3000
+            name: httproute/default/httproute-fqdn/rule/0/backend/0
             protocol: HTTP
             weight: 1
           - addressType: FQDN
             endpoints:
             - host: bar.foo
               port: 8080
+            name: httproute/default/httproute-fqdn/rule/0/backend/1
             protocol: HTTP
             weight: 1
           - addressType: FQDN
             endpoints:
             - host: foo.bar
               port: 8080
+            name: httproute/default/httproute-fqdn/rule/0/backend/2
             protocol: HTTP
             weight: 1
         hostname: '*'

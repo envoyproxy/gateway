@@ -34,7 +34,7 @@ func TestResilience(t *testing.T) {
 		*flags.GatewayClassName,
 	)
 	if err != nil {
-		t.Fatalf("Failed to create the resillience test suit: %v", err)
+		t.Fatalf("Failed to create the resilience test suite: %v", err)
 	}
 	t.Logf("Running %d resilience tests", len(tests.ResilienceTests))
 	bSuite.Run(t, tests.ResilienceTests)

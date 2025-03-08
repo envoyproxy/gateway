@@ -2102,6 +2102,7 @@ func (r *gatewayAPIReconciler) processExtensionServerPolicies(
 // to the resourceTree
 // - BackendRefs for ExtProcs
 // - SecretRefs for Wasms
+// - ValueRefs for Luas
 func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) {
@@ -2170,6 +2171,31 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
 					r.log.Error(err,
 						"failed to process Wasm Image PullSecretRef for EnvoyExtensionPolicy",
 						"policy", policy, "secretRef", wasm.Code.Image.PullSecretRef)
+				}
+			}
+		}
+
+		// Add referenced ConfigMaps in Lua EnvoyExtensionPolicies to the resource tree
+		for _, lua := range policy.Spec.Lua {
+			if lua.Type == egv1a1.LuaValueTypeValueRef {
+				if lua.ValueRef != nil && string(lua.ValueRef.Kind) == resource.KindConfigMap {
+					configMap := new(corev1.ConfigMap)
+					err := r.client.Get(ctx,
+						types.NamespacedName{Namespace: policy.Namespace, Name: string(lua.ValueRef.Name)},
+						configMap,
+					)
+					if err != nil {
+						r.log.Error(err,
+							"failed to process Lua ValueRef for EnvoyExtensionPolicy",
+							"policy", policy, "ValueRef", lua.ValueRef.Name)
+					}
+
+					resourceMap.allAssociatedNamespaces.Insert(policy.Namespace)
+					if !resourceMap.allAssociatedConfigMaps.Has(utils.NamespacedName(configMap).String()) {
+						resourceMap.allAssociatedConfigMaps.Insert(utils.NamespacedName(configMap).String())
+						resourceTree.ConfigMaps = append(resourceTree.ConfigMaps, configMap)
+						r.log.Info("processing ConfigMap", "namespace", policy.Namespace, "name", string(lua.ValueRef.Name))
+					}
 				}
 			}
 		}

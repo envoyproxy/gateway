@@ -309,6 +309,17 @@ spec:
                                 DNSRefreshRate specifies the rate at which DNS records should be refreshed.
                                 Defaults to 30 seconds.
                               type: string
+                            lookupFamily:
+                              description: |-
+                                LookupFamily determines how Envoy would resolve DNS for Routes where the backend is specified as a fully qualified domain name (FQDN).
+                                If set, this configuration overrides other defaults.
+                              enum:
+                              - IPv4
+                              - IPv6
+                              - IPv4Preferred
+                              - IPv6Preferred
+                              - IPv4AndIPv6
+                              type: string
                             respectDnsTtl:
                               description: |-
                                 RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.
@@ -1069,8 +1080,8 @@ spec:
                       type: object
                       x-kubernetes-validations:
                       - message: Only a reference to an object of kind ConfigMap belonging
-                          to default core API group is supported.
-                        rule: self.kind == 'ConfigMap' && (!has(self.group) || self.group
+                          to default v1 API group is supported.
+                        rule: self.kind == 'ConfigMap' && (self.group == 'v1' || self.group
                           == '')
                   required:
                   - type
@@ -1201,6 +1212,39 @@ spec:
                       minLength: 1
                       pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
                       type: string
+                    matchExpressions:
+                      description: MatchExpressions is a list of label selector requirements.
+                        The requirements are ANDed.
+                      items:
+                        description: |-
+                          A label selector requirement is a selector that contains values, a key, and an operator that
+                          relates the key and values.
+                        properties:
+                          key:
+                            description: key is the label key that the selector applies
+                              to.
+                            type: string
+                          operator:
+                            description: |-
+                              operator represents a key's relationship to a set of values.
+                              Valid operators are In, NotIn, Exists and DoesNotExist.
+                            type: string
+                          values:
+                            description: |-
+                              values is an array of string values. If the operator is In or NotIn,
+                              the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                              the values array must be empty. This array is replaced during a strategic
+                              merge patch.
+                            items:
+                              type: string
+                            type: array
+                            x-kubernetes-list-type: atomic
+                        required:
+                        - key
+                        - operator
+                        type: object
+                      type: array
+                      x-kubernetes-list-type: atomic
                     matchLabels:
                       additionalProperties:
                         type: string
@@ -1209,7 +1253,6 @@ spec:
                       type: object
                   required:
                   - kind
-                  - matchLabels
                   type: object
                   x-kubernetes-validations:
                   - message: group must be gateway.networking.k8s.io

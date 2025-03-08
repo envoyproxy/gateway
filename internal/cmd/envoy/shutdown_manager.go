@@ -16,8 +16,6 @@ import (
 	"syscall"
 	"time"
 
-	"golang.org/x/sys/unix"
-
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
@@ -62,7 +60,7 @@ func ShutdownManager(readyTimeout time.Duration) error {
 		signal.Notify(s, os.Interrupt, syscall.SIGTERM)
 
 		r := <-s
-		logger.Info(fmt.Sprintf("received %s", unix.SignalName(r.(syscall.Signal))))
+		logger.Info(fmt.Sprintf("received %s", (r.(syscall.Signal)).String()))
 
 		// Shutdown HTTP server without interrupting active connections
 		if err := srv.Shutdown(context.Background()); err != nil {

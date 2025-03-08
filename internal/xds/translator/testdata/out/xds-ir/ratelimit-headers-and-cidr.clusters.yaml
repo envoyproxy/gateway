@@ -70,7 +70,7 @@
         loadBalancingWeight: 1
       loadBalancingWeight: 1
       locality:
-        region: ratelimit_cluster/backend/0
+        region: ratelimit_cluster/backend/-1
   name: ratelimit_cluster
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true

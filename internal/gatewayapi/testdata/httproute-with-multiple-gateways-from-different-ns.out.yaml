@@ -175,7 +175,7 @@ infraIR:
 xdsIR:
   default/gateway-a:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -217,7 +217,7 @@ xdsIR:
       port: 19003
   envoy-gateway/gateway-b:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0

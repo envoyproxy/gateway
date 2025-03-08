@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"sort"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,6 +21,7 @@ import (
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -98,6 +100,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 		}
 		kobjVal := reflect.ValueOf(kobj).Elem()
 		spec := kobjVal.FieldByName("Spec")
+		data := kobjVal.FieldByName("Data")
+		stringData := kobjVal.FieldByName("StringData")
 
 		switch gvk.Kind {
 		case KindEnvoyProxy:
@@ -310,6 +314,47 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 				Spec: typedSpec.(egv1a1.BackendSpec),
 			}
 			resources.Backends = append(resources.Backends, backend)
+		case KindSecret:
+			typedData := data.Interface()
+			typedStringData := stringData.Interface()
+			secret := &corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					Kind: KindSecret,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+				Data:       typedData.(map[string][]byte),
+				StringData: typedStringData.(map[string]string),
+			}
+			resources.Secrets = append(resources.Secrets, secret)
+		case KindConfigMap:
+			typedData := data.Interface()
+			configMap := &corev1.ConfigMap{
+				TypeMeta: metav1.TypeMeta{
+					Kind: KindConfigMap,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+				Data: typedData.(map[string]string),
+			}
+			resources.ConfigMaps = append(resources.ConfigMaps, configMap)
+		case KindBackendTLSPolicy:
+			typedSpec := spec.Interface()
+			backendTLSPolicy := &gwapiv1a3.BackendTLSPolicy{
+				TypeMeta: metav1.TypeMeta{
+					Kind: KindBackendTLSPolicy,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+				Spec: typedSpec.(gwapiv1a3.BackendTLSPolicySpec),
+			}
+			resources.BackendTLSPolicies = append(resources.BackendTLSPolicies, backendTLSPolicy)
 		}
 
 		return nil
@@ -330,7 +375,10 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 	}
 
 	if addMissingResources {
-		for ns := range requiredNamespaceMap {
+		// Sort the required namespace in order to keep the consistency for test.
+		sortedRequiredNamespace := requiredNamespaceMap.UnsortedList()
+		sort.Strings(sortedRequiredNamespace)
+		for _, ns := range sortedRequiredNamespace {
 			if !providedNamespaceMap.Has(ns) {
 				namespace := &corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
@@ -357,13 +405,20 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 		for _, route := range resources.GRPCRoutes {
 			addMissingServices(requiredServiceMap, route)
 		}
+		// Sort the required service in order to keep the consistency for test.
+		sortedRequiredService := make([]string, 0, len(requiredServiceMap))
+		for key := range requiredServiceMap {
+			sortedRequiredService = append(sortedRequiredService, key)
+		}
+		sort.Strings(sortedRequiredService)
 
 		providedServiceMap := map[string]*corev1.Service{}
 		for _, service := range resources.Services {
 			providedServiceMap[service.Namespace+"/"+service.Name] = service
 		}
 
-		for key, service := range requiredServiceMap {
+		for _, key := range sortedRequiredService {
+			service := requiredServiceMap[key]
 			if provided, found := providedServiceMap[key]; !found {
 				resources.Services = append(resources.Services, service)
 			} else {
