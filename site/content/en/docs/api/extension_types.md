@@ -1,5 +1,6 @@
 +++
-title = "API Reference"
+title = "Gateway API Extensions"
+description = "Envoy Gateway provides these extensions to support additional features not available in the Gateway API today"
 +++
 
 
