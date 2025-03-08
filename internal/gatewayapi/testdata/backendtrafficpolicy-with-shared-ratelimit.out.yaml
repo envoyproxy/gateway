@@ -3,12 +3,28 @@ backendTrafficPolicies:
   kind: BackendTrafficPolicy
   metadata:
     creationTimestamp: null
-    name: policy-for-route-1
+    name: policy-for-route
     namespace: default
   spec:
-    dns:
-      dnsRefreshRate: 1s
-      respectDnsTtl: true
+    rateLimit:
+      global:
+        rules:
+        - clientSelectors:
+          - sourceCIDR:
+              type: Distinct
+              value: 0.0.0.0/0
+          limit:
+            requests: 20
+            unit: Hour
+        - clientSelectors:
+          - sourceCIDR:
+              type: Distinct
+              value: ::/64
+          limit:
+            requests: 20
+            unit: Hour
+        shared: true
+      type: Global
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -32,41 +48,26 @@ backendTrafficPolicies:
   kind: BackendTrafficPolicy
   metadata:
     creationTimestamp: null
-    name: policy-for-route-2
-    namespace: default
-  spec:
-    dns:
-      dnsRefreshRate: 5s
-      respectDnsTtl: false
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: httproute-2
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-2
-        namespace: envoy-gateway
-        sectionName: http
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
-  metadata:
-    creationTimestamp: null
-    name: policy-for-all-routes-in-gateway-1
+    name: policy-for-gateway
     namespace: envoy-gateway
   spec:
-    dns:
-      dnsRefreshRate: 10s
-      respectDnsTtl: true
+    rateLimit:
+      global:
+        rules:
+        - clientSelectors:
+          - headers:
+            - name: x-user-id
+              value: one
+            - name: x-org-id
+              type: Distinct
+            - invert: true
+              name: x-org-id
+              value: admin
+          limit:
+            requests: 10
+            unit: Hour
+        shared: true
+      type: Global
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -143,7 +144,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 2
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -166,6 +167,40 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
+grpcRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: GRPCRoute
+  metadata:
+    creationTimestamp: null
+    name: grpcroute-1
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
 httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
@@ -203,82 +238,6 @@ httpRoutes:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-2
-        namespace: envoy-gateway
-        sectionName: http
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
-  metadata:
-    creationTimestamp: null
-    name: httproute-2
-    namespace: default
-  spec:
-    hostnames:
-    - gateway.envoyproxy.io
-    parentRefs:
-    - name: gateway-2
-      namespace: envoy-gateway
-      sectionName: http
-    rules:
-    - backendRefs:
-      - name: service-2
-        port: 8080
-      matches:
-      - path:
-          value: /v2
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        name: gateway-2
-        namespace: envoy-gateway
-        sectionName: http
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
-  metadata:
-    creationTimestamp: null
-    name: httproute-3
-    namespace: default
-  spec:
-    hostnames:
-    - gateway.envoyproxy.io
-    parentRefs:
-    - name: gateway-1
-      namespace: envoy-gateway
-      sectionName: http
-    rules:
-    - backendRefs:
-      - name: service-3
-        port: 8080
-      matches:
-      - path:
-          value: /v3
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        name: gateway-1
         namespace: envoy-gateway
         sectionName: http
 infraIR:
@@ -321,7 +280,7 @@ xdsIR:
     - address: 0.0.0.0
       hostnames:
       - '*'
-      isHTTP2: false
+      isHTTP2: true
       metadata:
         kind: Gateway
         name: gateway-1
@@ -334,33 +293,43 @@ xdsIR:
       port: 10080
       routes:
       - destination:
-          name: httproute/default/httproute-3/rule/0
+          name: grpcroute/default/grpcroute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
-            name: httproute/default/httproute-3/rule/0/backend/0
-            protocol: HTTP
+            name: grpcroute/default/grpcroute-1/rule/0/backend/0
+            protocol: GRPC
             weight: 1
-        hostname: gateway.envoyproxy.io
-        isHTTP2: false
+        hostname: '*'
+        isHTTP2: true
         metadata:
-          kind: HTTPRoute
-          name: httproute-3
+          kind: GRPCRoute
+          name: grpcroute-1
           namespace: default
-        name: httproute/default/httproute-3/rule/0/match/0/gateway_envoyproxy_io
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /v3
+        name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         traffic:
           backendTrafficPolicy:
-            name: policy-for-all-routes-in-gateway-1
+            name: policy-for-gateway
             namespace: envoy-gateway
-          dns:
-            dnsRefreshRate: 10s
-            respectDnsTtl: true
+          rateLimit:
+            global:
+              rules:
+              - headerMatches:
+                - distinct: false
+                  exact: one
+                  name: x-user-id
+                - distinct: true
+                  name: x-org-id
+                - distinct: false
+                  exact: admin
+                  invert: true
+                  name: x-org-id
+                limit:
+                  requests: 10
+                  unit: Hour
+              shared: true
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -387,34 +356,6 @@ xdsIR:
       port: 10080
       routes:
       - destination:
-          name: httproute/default/httproute-2/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            name: httproute/default/httproute-2/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
-        hostname: gateway.envoyproxy.io
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-2
-          namespace: default
-        name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /v2
-        traffic:
-          backendTrafficPolicy:
-            name: policy-for-route-2
-            namespace: default
-          dns:
-            dnsRefreshRate: 5s
-            respectDnsTtl: false
-      - destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -437,11 +378,32 @@ xdsIR:
           prefix: /
         traffic:
           backendTrafficPolicy:
-            name: policy-for-route-1
+            name: policy-for-route
             namespace: default
-          dns:
-            dnsRefreshRate: 1s
-            respectDnsTtl: true
+          rateLimit:
+            global:
+              rules:
+              - cidrMatch:
+                  cidr: 0.0.0.0/0
+                  distinct: true
+                  ip: 0.0.0.0
+                  isIPv6: false
+                  maskLen: 0
+                headerMatches: []
+                limit:
+                  requests: 20
+                  unit: Hour
+              - cidrMatch:
+                  cidr: ::/64
+                  distinct: true
+                  ip: '::'
+                  isIPv6: true
+                  maskLen: 64
+                headerMatches: []
+                limit:
+                  requests: 20
+                  unit: Hour
+              shared: true
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

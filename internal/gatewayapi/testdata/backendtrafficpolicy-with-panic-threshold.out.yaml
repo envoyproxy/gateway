@@ -352,6 +352,9 @@ xdsIR:
           name: ""
           prefix: /v3
         traffic:
+          backendTrafficPolicy:
+            name: policy-for-all-routes-in-gateway-1
+            namespace: envoy-gateway
           healthCheck:
             panicThreshold: 80
     readyListener:
@@ -401,6 +404,9 @@ xdsIR:
           name: ""
           prefix: /v2
         traffic:
+          backendTrafficPolicy:
+            name: policy-for-route-2
+            namespace: default
           healthCheck:
             panicThreshold: 10
       - destination:
@@ -425,6 +431,9 @@ xdsIR:
           name: ""
           prefix: /
         traffic:
+          backendTrafficPolicy:
+            name: policy-for-route-1
+            namespace: default
           healthCheck:
             panicThreshold: 66
     readyListener:

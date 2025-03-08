@@ -278,6 +278,9 @@ xdsIR:
           namespace: default
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         traffic:
+          backendTrafficPolicy:
+            name: policy-for-gateway
+            namespace: envoy-gateway
           proxyProtocol:
             version: V1
     readyListener:
@@ -327,6 +330,9 @@ xdsIR:
           name: ""
           prefix: /
         traffic:
+          backendTrafficPolicy:
+            name: policy-for-route
+            namespace: default
           proxyProtocol:
             version: V2
     readyListener:

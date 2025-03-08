@@ -284,6 +284,9 @@ xdsIR:
           namespace: default
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         traffic:
+          backendTrafficPolicy:
+            name: policy-for-gateway
+            namespace: envoy-gateway
           http2:
             initialConnectionWindowSize: 2097152
             initialStreamWindowSize: 1073741824
@@ -336,6 +339,9 @@ xdsIR:
           name: ""
           prefix: /
         traffic:
+          backendTrafficPolicy:
+            name: policy-for-route
+            namespace: default
           http2:
             initialConnectionWindowSize: 1048576
             initialStreamWindowSize: 524288000

@@ -14,7 +14,7 @@ routes:
       namespace: "test-namespace"
     rateLimit:
       global:
-        shared: false
+        shared: true
         rules:
         - headerMatches:
           - name: "x-user-id"
@@ -22,6 +22,32 @@ routes:
           limit:
             requests: 5
             unit: second
+- name: "second-route"
+  traffic:
+    backendTrafficPolicy:
+      name: "test-policy-2"
+      namespace: "test-namespace"
+    rateLimit:
+      global:
+        shared: true
+        rules:
+        - headerMatches:
+          - name: "x-user-id"
+            exact: "one"
+          limit:
+            requests: 5
+            unit: second
+  pathMatch:
+    exact: "foo/baz"
+- name: "third-route"
+  traffic:
+    backendTrafficPolicy:
+      name: "test-policy-3"
+      namespace: "test-namespace"
+    rateLimit:
+      global:
+        shared: true
+        rules:
         - headerMatches:
           - name: "x-user-id"
             exact: "two"
