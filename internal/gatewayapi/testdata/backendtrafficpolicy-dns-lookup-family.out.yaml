@@ -444,6 +444,9 @@ xdsIR:
                 dnsRefreshRate: 30s
                 lookupFamily: IPv4Preferred
         traffic:
+          backendTrafficPolicy:
+            name: backend-traffic-policy
+            namespace: default
           dns:
             dnsRefreshRate: 5s
             lookupFamily: IPv6
@@ -489,6 +492,9 @@ xdsIR:
                 dnsRefreshRate: 30s
                 lookupFamily: IPv4Preferred
         traffic:
+          backendTrafficPolicy:
+            name: backend-traffic-policy
+            namespace: default
           dns:
             dnsRefreshRate: 5s
             lookupFamily: IPv6

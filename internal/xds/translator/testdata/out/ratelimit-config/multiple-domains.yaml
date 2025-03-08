@@ -1,8 +1,8 @@
-name: test-policy-1-test-namespace
-domain: test-policy-1-test-namespace
+name: first-listener
+domain: first-listener
 descriptors:
-  - key: test-policy-1
-    value: test-namespace
+  - key: second-route
+    value: second-route
     rate_limit: null
     descriptors:
       - key: rule-0-match-0
@@ -19,11 +19,11 @@ descriptors:
     shadow_mode: false
     detailed_metric: false
 ---
-name: first-listener
-domain: first-listener
+name: test-policy-1-test-namespace
+domain: test-policy-1-test-namespace
 descriptors:
-  - key: second-route
-    value: second-route
+  - key: test-policy-1
+    value: test-namespace
     rate_limit: null
     descriptors:
       - key: rule-0-match-0

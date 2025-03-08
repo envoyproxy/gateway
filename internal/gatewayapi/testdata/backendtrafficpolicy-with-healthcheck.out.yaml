@@ -711,6 +711,9 @@ xdsIR:
           namespace: default
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         traffic:
+          backendTrafficPolicy:
+            name: policy-for-gateway
+            namespace: envoy-gateway
           healthCheck:
             active:
               healthyThreshold: 1
@@ -752,6 +755,9 @@ xdsIR:
           namespace: default
         name: grpcroute/default/grpcroute-3/rule/0/match/-1/*
         traffic:
+          backendTrafficPolicy:
+            name: policy-for-grpc-route-3
+            namespace: default
           healthCheck:
             active:
               grpc:
@@ -778,6 +784,9 @@ xdsIR:
           namespace: default
         name: grpcroute/default/grpcroute-2/rule/0/match/-1/*
         traffic:
+          backendTrafficPolicy:
+            name: policy-for-grpc-route
+            namespace: default
           healthCheck:
             active:
               grpc: {}
@@ -832,6 +841,9 @@ xdsIR:
           name: ""
           prefix: /v2
         traffic:
+          backendTrafficPolicy:
+            name: policy-for-route-2
+            namespace: default
           healthCheck:
             active:
               healthyThreshold: 3
@@ -873,6 +885,9 @@ xdsIR:
           name: ""
           prefix: /v3
         traffic:
+          backendTrafficPolicy:
+            name: policy-for-route-3
+            namespace: default
           healthCheck:
             active:
               healthyThreshold: 1
@@ -914,6 +929,9 @@ xdsIR:
           name: ""
           prefix: /v2
         traffic:
+          backendTrafficPolicy:
+            name: policy-for-route-4
+            namespace: default
           healthCheck:
             active:
               healthyThreshold: 3
@@ -950,6 +968,9 @@ xdsIR:
           name: ""
           prefix: /
         traffic:
+          backendTrafficPolicy:
+            name: policy-for-route-1
+            namespace: default
           healthCheck:
             active:
               healthyThreshold: 3

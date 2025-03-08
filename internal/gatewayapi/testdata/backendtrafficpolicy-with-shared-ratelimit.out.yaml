@@ -39,10 +39,9 @@ backendTrafficPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: 'RateLimit.Global.Shared=true is only allowed for Gateway targetRefs,
-          not HTTPRoute: policy=default/policy-for-route.'
-        reason: Invalid
-        status: "False"
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -275,11 +274,10 @@ infraIR:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      gatewayName: gateway-1
       hostnames:
       - '*'
       isHTTP2: true
@@ -301,6 +299,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: grpcroute/default/grpcroute-1/rule/0/backend/0
             protocol: GRPC
             weight: 1
         hostname: '*'
@@ -311,6 +310,9 @@ xdsIR:
           namespace: default
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         traffic:
+          backendTrafficPolicy:
+            name: policy-for-gateway
+            namespace: envoy-gateway
           rateLimit:
             global:
               rules:
@@ -335,11 +337,10 @@ xdsIR:
       port: 19003
   envoy-gateway/gateway-2:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      gatewayName: gateway-2
       hostnames:
       - '*'
       isHTTP2: false
@@ -361,6 +362,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
@@ -374,6 +376,34 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
+        traffic:
+          backendTrafficPolicy:
+            name: policy-for-route
+            namespace: default
+          rateLimit:
+            global:
+              rules:
+              - cidrMatch:
+                  cidr: 0.0.0.0/0
+                  distinct: true
+                  ip: 0.0.0.0
+                  isIPv6: false
+                  maskLen: 0
+                headerMatches: []
+                limit:
+                  requests: 20
+                  unit: Hour
+              - cidrMatch:
+                  cidr: ::/64
+                  distinct: true
+                  ip: '::'
+                  isIPv6: true
+                  maskLen: 64
+                headerMatches: []
+                limit:
+                  requests: 20
+                  unit: Hour
+              shared: true
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

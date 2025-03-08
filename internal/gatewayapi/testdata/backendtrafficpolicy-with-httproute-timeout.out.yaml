@@ -245,7 +245,10 @@ xdsIR:
           name: ""
           prefix: /
         timeout: 2m10s
-        traffic: {}
+        traffic:
+          backendTrafficPolicy:
+            name: policy-for-http-route-1
+            namespace: default
         useClientProtocol: true
       - destination:
           name: httproute/default/httproute-2/rule/0
@@ -270,6 +273,9 @@ xdsIR:
           prefix: /
         timeout: 2m10s
         traffic:
+          backendTrafficPolicy:
+            name: policy-for-gateway
+            namespace: envoy-gateway
           loadBalancer:
             consistentHash:
               cookie:

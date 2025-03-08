@@ -362,6 +362,9 @@ xdsIR:
           namespace: default
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         traffic:
+          backendTrafficPolicy:
+            name: policy-for-grpcroute
+            namespace: default
           faultInjection:
             abort:
               grpcStatus: 14
@@ -416,6 +419,9 @@ xdsIR:
           name: ""
           prefix: /route2
         traffic:
+          backendTrafficPolicy:
+            name: policy-for-gateway
+            namespace: envoy-gateway
           faultInjection:
             abort:
               httpStatus: 14
@@ -442,6 +448,9 @@ xdsIR:
           name: ""
           prefix: /
         traffic:
+          backendTrafficPolicy:
+            name: policy-for-route
+            namespace: default
           faultInjection:
             abort:
               httpStatus: 500

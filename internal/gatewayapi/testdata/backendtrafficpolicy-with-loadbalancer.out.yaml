@@ -454,6 +454,9 @@ xdsIR:
           namespace: default
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         traffic:
+          backendTrafficPolicy:
+            name: policy-for-gateway
+            namespace: envoy-gateway
           loadBalancer:
             random: {}
     readyListener:
@@ -503,6 +506,9 @@ xdsIR:
           name: ""
           prefix: /test2
         traffic:
+          backendTrafficPolicy:
+            name: policy-for-route2
+            namespace: default
           loadBalancer:
             leastRequest:
               slowStart:
@@ -529,6 +535,9 @@ xdsIR:
           name: ""
           prefix: /test3
         traffic:
+          backendTrafficPolicy:
+            name: policy-for-route3
+            namespace: default
           loadBalancer:
             consistentHash:
               cookie:
@@ -555,6 +564,9 @@ xdsIR:
           name: ""
           prefix: /
         traffic:
+          backendTrafficPolicy:
+            name: policy-for-route
+            namespace: default
           loadBalancer:
             consistentHash:
               sourceIP: true
