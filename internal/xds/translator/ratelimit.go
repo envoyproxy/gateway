@@ -174,8 +174,7 @@ func patchRouteWithRateLimit(route *routev3.Route, irRoute *ir.HTTPRoute) error 
 	if !routeContainsGlobalRateLimit(irRoute) || xdsRouteAction == nil {
 		return nil
 	}
-	global := irRoute.Traffic.RateLimit.Global
-	rateLimits := buildRouteRateLimits(irRoute.Name, global)
+	rateLimits := buildRouteRateLimits(irRoute)
 	return patchRouteWithRateLimitOnTypedFilterConfig(route, rateLimits)
 }
 
@@ -219,10 +218,11 @@ func getSharedDescriptorValue(route *ir.HTTPRoute) string {
 }
 
 // buildRouteRateLimits constructs rate limit actions for a given route based on the global rate limit configuration.
-func buildRouteRateLimits(descriptorPrefix string, route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit, costSpecified bool) {
+func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit) {
+	descriptorPrefix := route.Name
 	// Ensure route has rate limit config
 	if !routeContainsGlobalRateLimit(route) {
-		return nil, false
+		return nil
 	}
 
 	// Determine if the rate limit is shared across multiple routes.
@@ -432,8 +432,8 @@ func BuildRateLimitServiceConfig(irListener *ir.HTTPListener) []*rlsconfv3.RateL
 		// Determine the domain for this route
 		domain := irListener.Name // Default domain
 		if isSharedRateLimit(route) && route.Traffic.BackendTrafficPolicy != nil &&
-			route.Traffic.BackendTrafficPolicy.Name != "" {
-			domain = route.Traffic.BackendTrafficPolicy.Name
+			route.Traffic.BackendTrafficPolicy.Name != "" && route.Traffic.BackendTrafficPolicy.Namespace != "" {
+			domain = route.Traffic.BackendTrafficPolicy.Name + "-" + route.Traffic.BackendTrafficPolicy.Namespace
 		}
 
 		// Handle shared and non-shared rate limits differently
