@@ -170,7 +170,6 @@ func (r *Runner) translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, error) {
 
 		// Iterate through each config
 		for _, cfg := range configs {
-
 			// If the config is not nil, add it to the xDS Config resources
 			if cfg != nil {
 				if err := resourceVT.AddXdsResource(resourcev3.RateLimitConfigType, cfg); err != nil {

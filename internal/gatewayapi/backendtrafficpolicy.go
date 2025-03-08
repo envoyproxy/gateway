@@ -703,6 +703,7 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 
 	return rateLimit, nil
 }
+
 func (t *Translator) buildGlobalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*ir.RateLimit, error) {
 	if policy.Spec.RateLimit.Global == nil {
 		return nil, fmt.Errorf("global configuration empty for rateLimit")

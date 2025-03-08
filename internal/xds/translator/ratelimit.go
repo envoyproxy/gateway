@@ -453,8 +453,8 @@ func addSharedRateLimitDescriptor(
 	route *ir.HTTPRoute,
 	serviceDescriptors []*rlsconfv3.RateLimitDescriptor,
 	domain string,
-	domainDescriptors map[string][]*rlsconfv3.RateLimitDescriptor) {
-
+	domainDescriptors map[string][]*rlsconfv3.RateLimitDescriptor,
+) {
 	// Get BTP details for the shared descriptor
 	if !hasValidBackendTrafficPolicy(route) {
 		return
@@ -488,8 +488,8 @@ func addRouteSpecificDescriptor(
 	route *ir.HTTPRoute,
 	serviceDescriptors []*rlsconfv3.RateLimitDescriptor,
 	domain string,
-	domainDescriptors map[string][]*rlsconfv3.RateLimitDescriptor) {
-
+	domainDescriptors map[string][]*rlsconfv3.RateLimitDescriptor,
+) {
 	routeDescriptor := &rlsconfv3.RateLimitDescriptor{
 		Key:         getRouteDescriptor(route.Name),
 		Value:       getRouteDescriptor(route.Name),
@@ -501,8 +501,8 @@ func addRouteSpecificDescriptor(
 // mergeUniqueDescriptors merges two descriptor lists, avoiding duplicates
 func mergeUniqueDescriptors(
 	existing []*rlsconfv3.RateLimitDescriptor,
-	new []*rlsconfv3.RateLimitDescriptor) []*rlsconfv3.RateLimitDescriptor {
-
+	new []*rlsconfv3.RateLimitDescriptor,
+) []*rlsconfv3.RateLimitDescriptor {
 	if len(new) == 0 {
 		return existing
 	}
@@ -531,8 +531,8 @@ func mergeUniqueDescriptors(
 
 // createRateLimitConfigs creates rate limit configs from the domain descriptor map
 func createRateLimitConfigs(
-	domainDescriptors map[string][]*rlsconfv3.RateLimitDescriptor) []*rlsconfv3.RateLimitConfig {
-
+	domainDescriptors map[string][]*rlsconfv3.RateLimitDescriptor,
+) []*rlsconfv3.RateLimitConfig {
 	var configs []*rlsconfv3.RateLimitConfig
 	for domain, descriptors := range domainDescriptors {
 		if len(descriptors) > 0 {
