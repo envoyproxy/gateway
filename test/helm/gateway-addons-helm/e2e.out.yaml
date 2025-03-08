@@ -35,11 +35,12 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.108.0
+    helm.sh/chart: opentelemetry-collector-0.117.3
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.111.0"
+    app.kubernetes.io/version: "0.120.0"
     app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: standalone-collector
 ---
 # Source: gateway-addons-helm/charts/prometheus/templates/serviceaccount.yaml
 apiVersion: v1
@@ -266,12 +267,12 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.108.0
+    helm.sh/chart: opentelemetry-collector-0.117.3
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.111.0"
+    app.kubernetes.io/version: "0.120.0"
     app.kubernetes.io/managed-by: Helm
-    
+    app.kubernetes.io/component: standalone-collector
 data:
   relay: |
     exporters:
@@ -302,6 +303,8 @@ data:
     receivers:
       datadog:
         endpoint: '[${env:MY_POD_IP}]:8126'
+      envoyals:
+        endpoint: '[${env:MY_POD_IP}]:9000'
       jaeger:
         protocols:
           grpc:
@@ -337,6 +340,7 @@ data:
           - attributes
           receivers:
           - otlp
+          - envoyals
         metrics:
           exporters:
           - prometheus
@@ -9726,17 +9730,22 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.108.0
+    helm.sh/chart: opentelemetry-collector-0.117.3
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.111.0"
+    app.kubernetes.io/version: "0.120.0"
     app.kubernetes.io/managed-by: Helm
-    
+    app.kubernetes.io/component: standalone-collector
     component: standalone-collector
 spec:
   type: ClusterIP
   ports:
     
+    - name: envoy-als
+      port: 9000
+      targetPort: 9000
+      protocol: TCP
+      appProtocol: grpc
     - name: jaeger-compact
       port: 6831
       targetPort: 6831
@@ -9941,12 +9950,12 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.108.0
+    helm.sh/chart: opentelemetry-collector-0.117.3
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.111.0"
+    app.kubernetes.io/version: "0.120.0"
     app.kubernetes.io/managed-by: Helm
-    
+    app.kubernetes.io/component: standalone-collector
 spec:
   replicas: 1
   revisionHistoryLimit: 10
@@ -9960,7 +9969,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: 77c11cf41a890ec6a75a644880450d53887eca3e37511c3139cf0b3e8ebbe1ee
+        checksum/config: a9276313bdf453c98afdb35f387caf437a5763f8b6f45ff1b870f15ebd4a56fe
         
       labels:
         app.kubernetes.io/name: opentelemetry-collector
@@ -9978,10 +9987,13 @@ spec:
             - --config=/conf/relay.yaml
           securityContext:
             {}
-          image: "otel/opentelemetry-collector-contrib:0.111.0"
+          image: "otel/opentelemetry-collector-contrib:0.121.0"
           imagePullPolicy: IfNotPresent
           ports:
             
+            - name: envoy-als
+              containerPort: 9000
+              protocol: TCP
             - name: jaeger-compact
               containerPort: 6831
               protocol: UDP
