@@ -1,0 +1,88 @@
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http
+  virtualHosts:
+  - domains:
+    - www.example.com
+    name: envoy-gateway/gateway-1/http/www_example_com
+    routes:
+    - match:
+        pathSeparatedPrefix: /foo
+      name: httproute/default/httproute-1/rule/0/match/0/www_example_com
+      route:
+        cluster: httproute/default/httproute-1/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.rbac:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute
+          rbac:
+            matcher:
+              matcherList:
+                matchers:
+                - onMatch:
+                    action:
+                      name: allow-specific-headers
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                        name: ALLOW
+                  predicate:
+                    orMatcher:
+                      predicate:
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: x-user-id
+                          valueMatch:
+                            exact: john
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: x-user-id
+                          valueMatch:
+                            exact: alice
+                - onMatch:
+                    action:
+                      name: allow-multiple-headers
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                        name: ALLOW
+                  predicate:
+                    andMatcher:
+                      predicate:
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: x-location-id
+                          valueMatch:
+                            exact: chengdu
+                      - orMatcher:
+                          predicate:
+                          - singlePredicate:
+                              input:
+                                name: http_header
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                                  headerName: x-org-id
+                              valueMatch:
+                                exact: "123"
+                          - singlePredicate:
+                              input:
+                                name: http_header
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                                  headerName: x-org-id
+                              valueMatch:
+                                exact: "456"
+              onNoMatch:
+                action:
+                  name: default
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                    action: DENY
+                    name: DENY
