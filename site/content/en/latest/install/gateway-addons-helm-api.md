@@ -119,7 +119,10 @@ An Add-ons Helm chart for Envoy Gateway
 | opentelemetry-collector.config.service.pipelines.traces.receivers[0] | string | `"datadog"` |  |
 | opentelemetry-collector.config.service.pipelines.traces.receivers[1] | string | `"otlp"` |  |
 | opentelemetry-collector.config.service.pipelines.traces.receivers[2] | string | `"zipkin"` |  |
-| opentelemetry-collector.config.service.telemetry.metrics.address | string | `"[${env:MY_POD_IP}]:8888"` |  |
+| opentelemetry-collector.config.service.telemetry.metrics.address | string | `nil` |  |
+| opentelemetry-collector.config.service.telemetry.metrics.level | string | `"none"` |  |
+| opentelemetry-collector.config.service.telemetry.metrics.readers[0].pull.exporter.prometheus.host | string | `"localhost"` |  |
+| opentelemetry-collector.config.service.telemetry.metrics.readers[0].pull.exporter.prometheus.port | int | `8888` |  |
 | opentelemetry-collector.enabled | bool | `false` |  |
 | opentelemetry-collector.fullnameOverride | string | `"otel-collector"` |  |
 | opentelemetry-collector.image.repository | string | `"otel/opentelemetry-collector-contrib"` |  |

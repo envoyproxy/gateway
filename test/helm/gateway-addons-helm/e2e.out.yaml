@@ -362,7 +362,13 @@ data:
           - zipkin
       telemetry:
         metrics:
-          address: '[${env:MY_POD_IP}]:8888'
+          level: none
+          readers:
+          - pull:
+              exporter:
+                prometheus:
+                  host: localhost
+                  port: 8888
 ---
 # Source: gateway-addons-helm/charts/prometheus/templates/cm.yaml
 apiVersion: v1
@@ -9969,7 +9975,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: a9276313bdf453c98afdb35f387caf437a5763f8b6f45ff1b870f15ebd4a56fe
+        checksum/config: 53f3948607b26e83438039b1f256f0aece7134365837af7b12fc6e34b0844dc1
         
       labels:
         app.kubernetes.io/name: opentelemetry-collector

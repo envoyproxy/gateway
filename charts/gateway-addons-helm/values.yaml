@@ -349,7 +349,14 @@ opentelemetry-collector:
     service:
       telemetry:
         metrics:
-          address: "[${env:MY_POD_IP}]:8888"
+          level: none
+          address: null # Disable the deprecated setting
+          readers:
+            - pull:
+                exporter:
+                  prometheus:
+                    host: "localhost"
+                    port: 8888
       extensions:
         - health_check
       pipelines:
