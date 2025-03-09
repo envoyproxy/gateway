@@ -144,7 +144,7 @@ type OIDCProvider struct {
 	//
 	// If set, the ID token will be validated using the RemoteJWKS, Issuer, and Audiences fields
 	// +optional
-	RemoteJWKS RemoteJWKS `json:"remoteJWKS"`
+	RemoteJWKS *RemoteJWKS `json:"remoteJWKS,omitempty"`
 
 	// The OIDC Provider's [authorization endpoint](https://openid.net/specs/openid-connect-core-1_0.html#AuthorizationEndpoint).
 	// If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse).

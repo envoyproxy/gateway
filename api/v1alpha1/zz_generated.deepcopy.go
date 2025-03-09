@@ -4220,7 +4220,11 @@ func (in *OIDCProvider) DeepCopyInto(out *OIDCProvider) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
-	in.RemoteJWKS.DeepCopyInto(&out.RemoteJWKS)
+	if in.RemoteJWKS != nil {
+		in, out := &in.RemoteJWKS, &out.RemoteJWKS
+		*out = new(RemoteJWKS)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.AuthorizationEndpoint != nil {
 		in, out := &in.AuthorizationEndpoint, &out.AuthorizationEndpoint
 		*out = new(string)
