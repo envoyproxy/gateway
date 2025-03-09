@@ -32,6 +32,15 @@ http:
         rules:
         - action: Allow
           name: allow-rule-1
+          operation:
+            methods:
+            - GET
+        - action: Allow
+          name: allow-rule-2
+          operation:
+            methods:
+            - DELETE
+            - POST
           principal:
             clientCIDRs:
             - cidr: 192.168.1.0/24
@@ -55,7 +64,7 @@ http:
               - name: department
                 values: ["engineering"]
         - action: Allow
-          name: allow-rule-2
+          name: allow-rule-3
           principal:
             clientCIDRs:
             - cidr: 10.0.1.0/24
