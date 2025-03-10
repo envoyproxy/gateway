@@ -17,13 +17,13 @@ import (
 
 func FuzzGatewayAPIToIR(f *testing.F) {
 	f.Fuzz(func(t *testing.T, data []byte) {
-		fuzzConsumer := fuzz.NewConsumer(data)
+		fc := fuzz.NewConsumer(data)
 		resources := &resource.Resources{}
-		if err := fuzzConsumer.GenerateStruct(resources); err != nil {
+		if err := fc.GenerateStruct(resources); err != nil {
 			return
 		}
-
-		if resources.GatewayClass == nil {
+		addMissingResources, err := fc.GetBool()
+		if err != nil {
 			return
 		}
 
@@ -32,7 +32,7 @@ func FuzzGatewayAPIToIR(f *testing.F) {
 		if err != nil {
 			return
 		}
-		rs, err := resource.LoadResourcesFromYAMLBytes(yamlBytes, true)
+		rs, err := resource.LoadResourcesFromYAMLBytes(yamlBytes, addMissingResources)
 		if err != nil {
 			return
 		}
