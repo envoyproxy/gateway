@@ -4220,6 +4220,16 @@ func (in *OIDCCookieNames) DeepCopy() *OIDCCookieNames {
 func (in *OIDCProvider) DeepCopyInto(out *OIDCProvider) {
 	*out = *in
 	in.BackendCluster.DeepCopyInto(&out.BackendCluster)
+	if in.Audiences != nil {
+		in, out := &in.Audiences, &out.Audiences
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
+	if in.RemoteJWKS != nil {
+		in, out := &in.RemoteJWKS, &out.RemoteJWKS
+		*out = new(RemoteJWKS)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.AuthorizationEndpoint != nil {
 		in, out := &in.AuthorizationEndpoint, &out.AuthorizationEndpoint
 		*out = new(string)
