@@ -22,6 +22,8 @@ apiVersion: kind.x-k8s.io/v1alpha4
 networking:
   ${CNI_CONFIG}
   ipFamily: ${IP_FAMILY}
+  # uncomment following line when use IPv6 on macos or windows
+  # apiServerAddress: 127.0.0.1
   # it's to prevent inherit search domains from the host which slows down DNS resolution
   # and cause problems to IPv6 only clusters running on IPv4 host.
   dnsSearch: []

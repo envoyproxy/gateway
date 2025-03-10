@@ -32,9 +32,9 @@ spec:
             - type: ALS
               als:
                 backendRefs:
-                  - name: envoy-als
+                  - name: otel-collector
                     namespace: monitoring
-                    port: 8080
+                    port: 9000
                 type: HTTP
   shutdown:
     drainTimeout: 5s
@@ -56,52 +56,3 @@ spec:
       backendRefs:
         - name: infra-backend-v1
           port: 8080
----
-# This is a trick to pass EnvoyProxy BackendRef check.
-# In the future, plan to make OTel-collector support envoy ALS receiver,
-# then we can remove this.
-apiVersion: v1
-kind: Service
-metadata:
-  name: envoy-als
-  namespace: monitoring
-spec:
-  selector:
-    app: envoy-als
-  type: LoadBalancer
-  ports:
-    - name: grpc-als
-      protocol: TCP
-      appProtocol: grpc
-      port: 8080
-      targetPort: 8080
-    - name: http-monitoring
-      protocol: TCP
-      port: 19001
-      targetPort: 19001
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: envoy-als
-  namespace: monitoring
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: envoy-als
-  template:
-    metadata:
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/port: "19001"
-      labels:
-        app: envoy-als
-    spec:
-      containers:
-        - name: envoy-als
-          image: envoyproxy/gateway-envoy-als
-          imagePullPolicy: IfNotPresent
-          ports:
-            - containerPort: 8080
-            - containerPort: 19001
