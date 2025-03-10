@@ -29,7 +29,7 @@ bug fixes: |
   Bypass overload manager for stats and ready listeners
   Fix translating backendSettings for extAuth
   Fix an issue that stats compressor was not working.
-  Added support for BackendTLSPolicy parsing in Standalone mode.
+  Added support for BackendTLSPolicy and EnvoyExtensionPolicy parsing in Standalone mode.
 
 # Enhancements that improve performance.
 performance improvements: |
