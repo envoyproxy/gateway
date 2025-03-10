@@ -3,13 +3,13 @@ backends:
   kind: Backend
   metadata:
     creationTimestamp: null
-    name: backend-fqdn
+    name: backend-ip
     namespace: default
   spec:
     endpoints:
-    - fqdn:
-        hostname: primary.foo.com
-        port: 3000
+    - ip:
+        address: 1.1.1.1
+        port: 3001
   status:
     conditions:
     - lastTransitionTime: null
@@ -17,6 +17,61 @@ backends:
       reason: Accepted
       status: "True"
       type: Accepted
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    creationTimestamp: null
+    name: backend-fqdn
+    namespace: envoy-gateway
+  spec:
+    endpoints:
+    - fqdn:
+        hostname: example.com
+        port: 3001
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: The Backend was accepted
+      reason: Accepted
+      status: "True"
+      type: Accepted
+envoyExtensionPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    creationTimestamp: null
+    name: policy-for-http-route
+    namespace: default
+  spec:
+    extProc:
+    - backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-ip
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-fqdn
+        namespace: envoy-gateway
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: 'ExtProc: mixed endpoints address type for the same route destination
+          is not supported.'
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -35,7 +90,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 2
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -78,51 +133,7 @@ httpRoutes:
         port: 8080
       matches:
       - path:
-          value: /foo1
-    - backendRefs:
-      - name: service-2
-        port: 8080
-      matches:
-      - path:
-          value: /foo2
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        name: gateway-1
-        namespace: default
-        sectionName: http
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
-  metadata:
-    creationTimestamp: null
-    name: httproute-2
-    namespace: default
-  spec:
-    hostnames:
-    - www.bar.com
-    parentRefs:
-    - name: gateway-1
-      namespace: default
-      sectionName: http
-    rules:
-    - backendRefs:
-      - name: service-3
-        port: 8080
-      matches:
-      - path:
-          value: /bar
+          value: /foo
   status:
     parents:
     - conditions:
@@ -157,49 +168,6 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: default
       name: default/gateway-1
-securityPolicies:
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: SecurityPolicy
-  metadata:
-    creationTimestamp: null
-    name: policy-for-http-route-1
-    namespace: default
-  spec:
-    extAuth:
-      failOpen: true
-      grpc:
-        backendRefs:
-        - kind: Service
-          name: service-2
-          port: 8080
-        - group: gateway.envoyproxy.io
-          kind: Backend
-          name: backend-fqdn
-          port: 3000
-      headersToExtAuth:
-      - header1
-      - header2
-      recomputeRoute: true
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: httproute-1
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-        namespace: default
-        sectionName: http
-      conditions:
-      - lastTransitionTime: null
-        message: 'ExtAuth: mixed endpoints address type for the same route destination
-          is not supported.'
-        reason: Invalid
-        status: "False"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   default/gateway-1:
     accessLog:
@@ -243,53 +211,7 @@ xdsIR:
         pathMatch:
           distinct: false
           name: ""
-          prefix: /foo1
-        security: {}
-      - destination:
-          name: httproute/default/httproute-1/rule/1
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            name: httproute/default/httproute-1/rule/1/backend/0
-            protocol: HTTP
-            weight: 1
-        directResponse:
-          statusCode: 500
-        hostname: www.foo.com
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-1
-          namespace: default
-        name: httproute/default/httproute-1/rule/1/match/0/www_foo_com
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /foo2
-        security: {}
-      - destination:
-          name: httproute/default/httproute-2/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            name: httproute/default/httproute-2/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
-        hostname: www.bar.com
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-2
-          namespace: default
-        name: httproute/default/httproute-2/rule/0/match/0/www_bar_com
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /bar
+          prefix: /foo
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
