@@ -43,6 +43,29 @@ backends:
       reason: Accepted
       status: "True"
       type: Accepted
+envoyExtensionPolicies:
+- kind: EnvoyExtensionPolicy
+  metadata:
+    creationTimestamp: null
+    name: ext-proc-example
+    namespace: envoy-gateway-system
+  spec:
+    extProc:
+    - backendRefs:
+      - group: ""
+        kind: Service
+        name: grpc-ext-proc
+        port: 9002
+      processingMode:
+        request: {}
+        response:
+          body: Streamed
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: myapp
+  status:
+    ancestors: null
 gatewayClass:
   kind: GatewayClass
   metadata:
@@ -139,23 +162,3 @@ httpRoutes:
         group: gateway.networking.k8s.io
         kind: Gateway
         name: eg
-envoyExtensionPolicies:
-- kind: EnvoyExtensionPolicy
-  metadata:
-    namespace: envoy-gateway-system
-    name: ext-proc-example
-  spec:
-    targetRefs:
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: myapp
-    extProc:
-    - backendRefs:
-      - name: grpc-ext-proc
-        group: ""
-        kind: Service
-        port: 9002
-      processingMode:
-        request: {}
-        response:
-          body: Streamed
