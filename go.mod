@@ -12,7 +12,7 @@ require (
 	github.com/cncf/xds/go v0.0.0-20241223141626-cff3c89139a3
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/docker/cli v28.0.1+incompatible
-	github.com/docker/docker v27.5.1+incompatible
+	github.com/docker/docker v28.0.1+incompatible
 	github.com/dominikbraun/graph v0.23.0
 	github.com/envoyproxy/go-control-plane v0.13.5-0.20250303232259-0c5cb90447bb
 	github.com/envoyproxy/go-control-plane/contrib v1.32.5-0.20250303232259-0c5cb90447bb
@@ -35,7 +35,7 @@ require (
 	github.com/google/go-containerregistry v0.20.3
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/miekg/dns v1.1.63
-	github.com/ohler55/ojg v1.26.1
+	github.com/ohler55/ojg v1.26.2
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.21.1
 	github.com/prometheus/client_model v0.6.1
@@ -162,13 +162,11 @@ require (
 	github.com/ckaznocha/intrange v0.3.0 // indirect
 	github.com/containerd/cgroups/v3 v3.0.5 // indirect
 	github.com/containerd/containerd v1.7.25 // indirect
-	github.com/containerd/continuity v0.4.5 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/platforms v0.2.1 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.16.3 // indirect
-	github.com/containerd/ttrpc v1.2.7 // indirect
 	github.com/containerd/typeurl/v2 v2.2.3 // indirect
 	github.com/containers/image/v5 v5.34.0 // indirect
 	github.com/containers/libtrust v0.0.0-20230121012942-c1716e8a8d01 // indirect
