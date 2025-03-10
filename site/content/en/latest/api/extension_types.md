@@ -2991,7 +2991,6 @@ _Appears in:_
 | `scopes` | _string array_ |  false  |  | The OIDC scopes to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />The "openid" scope is always added to the list of scopes if not already<br />specified. |
 | `resources` | _string array_ |  false  |  | The OIDC resources to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). |
 | `redirectURL` | _string_ |  true  |  | The redirect URL to be used in the OIDC<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, uses the default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback" |
-| `denyRedirectMatcher` | _[OIDCDenyRedirectMatcher](#oidcdenyredirectmatcher) array_ |  true  |  | Any request that matches any of the provided matchers won’t be redirected to OAuth server when tokens are not valid.<br />Automatic access token refresh will be performed for these requests, if enabled.<br />This behavior can be useful for AJAX requests. |
 | `logoutPath` | _string_ |  true  |  | The path to log a user out, clearing their credential cookies.<br />If not specified, uses a default logout path "/logout" |
 | `forwardAccessToken` | _boolean_ |  false  |  | ForwardAccessToken indicates whether the Envoy should forward the access token<br />via the Authorization header Bearer scheme to the upstream.<br />If not specified, defaults to false. |
 | `defaultTokenTTL` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  |  | DefaultTokenTTL is the default lifetime of the id token and access token.<br />Please note that Envoy will always use the expiry time from the response<br />of the authorization server if it is provided. This field is only used when<br />the expiry time is not provided by the authorization.<br />If not specified, defaults to 0. In this case, the "expires_in" field in<br />the authorization response must be set by the authorization server, or the<br />OAuth flow will fail. |
@@ -3025,7 +3024,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `name` | _string_ |  true  |  |  Specifies the name of the header in the request.<br />The pseudo-headers ``:path`` and ``:method`` can be used to match the request path and method, respectively |
+| `name` | _string_ |  true  |  | Specifies the name of the header in the request.<br />The pseudo-headers ``:path`` and ``:method`` can be used to match the request path and method, respectively |
 | `stringMatch` | _[StringMatch](#stringmatch)_ |  false  |  | If specified, header match will be performed based on the string match of the header value.<br />Specifies how the header match will be performed to route the request. |
 
 
