@@ -39,6 +39,15 @@ go.build: $(addprefix go.build., $(addprefix $(PLATFORM)., $(BINS)))
 .PHONY: go.build.multiarch
 go.build.multiarch: $(foreach p,$(PLATFORMS),$(addprefix go.build., $(addprefix $(p)., $(BINS))))
 
+.PHONY: go.test.fuzz
+go.test.fuzz: ## Run all fuzzers in the test/fuzz folder one by one
+	@$(LOG_TARGET)
+	@for dir in $$(go list -f '{{.Dir}}' ./test/fuzz/...); do \
+		for test in $$(go test -list=Fuzz.* $$dir | grep ^Fuzz); do \
+			echo "go test -fuzz=$$test -fuzztime=$(FUZZ_TIME)"; \
+			(cd $$dir && go test -fuzz=$$test -fuzztime=$(FUZZ_TIME)) || exit 1; \
+		done; \
+	done
 
 .PHONY: go.test.unit
 go.test.unit: ## Run go unit tests
