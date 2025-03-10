@@ -490,6 +490,18 @@ func addRouteSpecificDescriptor(
 	domain string,
 	domainDescriptors map[string][]*rlsconfv3.RateLimitDescriptor,
 ) {
+	// Get route rule descriptors within each route.
+	//
+	// An example of route descriptor looks like this:
+	//
+	// descriptors:
+	//   - key:   ${RouteDescriptor}
+	//     value: ${RouteDescriptor}
+	//     descriptors:
+	//       - key:   ${RouteRuleDescriptor}
+	//         value: ${RouteRuleDescriptor}
+	//       - ...
+
 	routeDescriptor := &rlsconfv3.RateLimitDescriptor{
 		Key:         getRouteDescriptor(route.Name),
 		Value:       getRouteDescriptor(route.Name),
@@ -584,8 +596,10 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 			pbDesc := new(rlsconfv3.RateLimitDescriptor)
 			// Distinct vs HeaderValueMatch
 			if match.Distinct {
+				// RequestHeader case
 				pbDesc.Key = getRouteRuleDescriptor(rIdx, mIdx)
 			} else {
+				// HeaderValueMatch case
 				pbDesc.Key = getRouteRuleDescriptor(rIdx, mIdx)
 				pbDesc.Value = getRouteRuleDescriptor(rIdx, mIdx)
 			}
@@ -630,6 +644,8 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 			pbDesc.Value = rule.CIDRMatch.CIDR
 
 			if cur != nil {
+				// The header match descriptor chain exist, add current
+				// descriptor to the chain.
 				cur.Descriptors = []*rlsconfv3.RateLimitDescriptor{pbDesc}
 			} else {
 				head = pbDesc
