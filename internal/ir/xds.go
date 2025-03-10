@@ -828,6 +828,8 @@ type TrafficFeatures struct {
 	ResponseOverride *ResponseOverride `json:"responseOverride,omitempty" yaml:"responseOverride,omitempty"`
 	// Compression settings for HTTP Response
 	Compression []*Compression `json:"compression,omitempty" yaml:"compression,omitempty"`
+	// BackendTrafficPolicy holds the associated BackendTrafficPolicy object.
+	BackendTrafficPolicy *BackendTrafficPolicy `json:"backendTrafficPolicy,omitempty" yaml:"backendTrafficPolicy,omitempty"`
 }
 
 func (b *TrafficFeatures) Validate() error {
@@ -1995,6 +1997,15 @@ type GlobalRateLimit struct {
 
 	// Rules for rate limiting.
 	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty"`
+
+	// Shared determines whether this rate limit rule applies globally across the gateway.
+	// If set to true, the rule is treated as a common bucket and is shared across all routes under the gateway.
+	// Must have targetRef set to Gateway
+	// Default: false.
+	//
+	// +optional
+	// +kubebuilder:default=false
+	Shared *bool `json:"shared,omitempty" yaml:"shared,omitempty"`
 }
 
 // LocalRateLimit holds the local rate limiting configuration.
@@ -2943,4 +2954,12 @@ type ResourceMetadata struct {
 	Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	// SectionName is the name of a section of a resource
 	SectionName string `json:"sectionName,omitempty" yaml:"sectionName,omitempty"`
+}
+
+// BackendTrafficPolicy represents the policy associated with backend traffic.
+type BackendTrafficPolicy struct {
+	// Name is the name of the associated BackendTrafficPolicy.
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+	// Namespace is the namespace of the associated BackendTrafficPolicy.
+	Namespace string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 }

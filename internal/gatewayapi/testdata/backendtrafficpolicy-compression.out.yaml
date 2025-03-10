@@ -167,6 +167,9 @@ xdsIR:
           name: ""
           prefix: /
         traffic:
+          backendTrafficPolicy:
+            name: policy-for-route
+            namespace: default
           compression:
           - type: Brotli
           - type: Gzip

@@ -14,13 +14,11 @@ routes:
       namespace: "test-namespace"
     rateLimit:
       global:
-        shared: false
+        shared: true
         rules:
         - headerMatches:
           - name: "x-user-id"
-            exact: "one"
-          - name: "x-user-id"
-            exact: "two"
+            distinct: true
           limit:
             requests: 5
             unit: second

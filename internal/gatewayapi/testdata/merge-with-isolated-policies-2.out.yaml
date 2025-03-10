@@ -554,6 +554,9 @@ xdsIR:
             - x-header-8
             maxAge: 33m20s
         traffic:
+          backendTrafficPolicy:
+            name: policy-for-gateway
+            namespace: default
           tcpKeepalive:
             idleTime: 1200
             interval: 60
@@ -614,6 +617,9 @@ xdsIR:
             - x-header-8
             maxAge: 33m20s
         traffic:
+          backendTrafficPolicy:
+            name: policy-for-gateway
+            namespace: default
           tcpKeepalive:
             idleTime: 1200
             interval: 60

@@ -306,6 +306,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 		h2        *ir.HTTP2Settings
 		ro        *ir.ResponseOverride
 		cp        []*ir.Compression
+		btp       *ir.BackendTrafficPolicy
 		err, errs error
 	)
 
@@ -362,6 +363,12 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 
 	ds = translateDNS(policy.Spec.ClusterSettings)
 
+	// Create BackendTrafficPolicy instance
+	btp = &ir.BackendTrafficPolicy{
+		Name:      policy.Name,
+		Namespace: policy.Namespace,
+	}
+
 	// Apply IR to all relevant routes
 	prefix := irRoutePrefix(route)
 
@@ -409,23 +416,23 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 					}
 
 					r.Traffic = &ir.TrafficFeatures{
-						RateLimit:         rl,
-						LoadBalancer:      lb,
-						ProxyProtocol:     pp,
-						HealthCheck:       hc,
-						CircuitBreaker:    cb,
-						FaultInjection:    fi,
-						TCPKeepalive:      ka,
-						Retry:             rt,
-						BackendConnection: bc,
-						HTTP2:             h2,
-						DNS:               ds,
-						Timeout:           to,
-						ResponseOverride:  ro,
-						Compression:       cp,
+						RateLimit:            rl,
+						LoadBalancer:         lb,
+						ProxyProtocol:        pp,
+						HealthCheck:          hc,
+						CircuitBreaker:       cb,
+						FaultInjection:       fi,
+						TCPKeepalive:         ka,
+						Retry:                rt,
+						BackendConnection:    bc,
+						HTTP2:                h2,
+						DNS:                  ds,
+						Timeout:              to,
+						ResponseOverride:     ro,
+						Compression:          cp,
+						BackendTrafficPolicy: btp,
 					}
 
-					// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
 					r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 
 					if policy.Spec.UseClientProtocol != nil {
@@ -460,6 +467,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 		h2        *ir.HTTP2Settings
 		ro        *ir.ResponseOverride
 		cp        []*ir.Compression
+		btp       *ir.BackendTrafficPolicy
 		err, errs error
 	)
 
@@ -508,6 +516,12 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 	cp = buildCompression(policy.Spec.Compression)
 
 	ds = translateDNS(policy.Spec.ClusterSettings)
+
+	// Create BackendTrafficPolicy instance
+	btp = &ir.BackendTrafficPolicy{
+		Name:      policy.Name,
+		Namespace: policy.Namespace,
+	}
 
 	// Apply IR to all the routes within the specific Gateway
 	// If the feature is already set, then skip it, since it must be have
@@ -579,18 +593,19 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 			}
 
 			r.Traffic = &ir.TrafficFeatures{
-				RateLimit:        rl,
-				LoadBalancer:     lb,
-				ProxyProtocol:    pp,
-				HealthCheck:      hc,
-				CircuitBreaker:   cb,
-				FaultInjection:   fi,
-				TCPKeepalive:     ka,
-				Retry:            rt,
-				HTTP2:            h2,
-				DNS:              ds,
-				ResponseOverride: ro,
-				Compression:      cp,
+				RateLimit:            rl,
+				LoadBalancer:         lb,
+				ProxyProtocol:        pp,
+				HealthCheck:          hc,
+				CircuitBreaker:       cb,
+				FaultInjection:       fi,
+				TCPKeepalive:         ka,
+				Retry:                rt,
+				HTTP2:                h2,
+				DNS:                  ds,
+				ResponseOverride:     ro,
+				Compression:          cp,
+				BackendTrafficPolicy: btp,
 			}
 
 			// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
@@ -693,7 +708,6 @@ func (t *Translator) buildGlobalRateLimit(policy *egv1a1.BackendTrafficPolicy) (
 	if policy.Spec.RateLimit.Global == nil {
 		return nil, fmt.Errorf("global configuration empty for rateLimit")
 	}
-
 	if !t.GlobalRateLimitEnabled {
 		return nil, fmt.Errorf("enable Ratelimit in the EnvoyGateway config to configure global rateLimit")
 	}
@@ -701,7 +715,8 @@ func (t *Translator) buildGlobalRateLimit(policy *egv1a1.BackendTrafficPolicy) (
 	global := policy.Spec.RateLimit.Global
 	rateLimit := &ir.RateLimit{
 		Global: &ir.GlobalRateLimit{
-			Rules: make([]*ir.RateLimitRule, len(global.Rules)),
+			Rules:  make([]*ir.RateLimitRule, len(global.Rules)),
+			Shared: global.Shared,
 		},
 	}
 

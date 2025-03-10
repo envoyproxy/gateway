@@ -309,6 +309,9 @@ xdsIR:
           name: ""
           prefix: /foo
         traffic:
+          backendTrafficPolicy:
+            name: policy-for-route-1
+            namespace: default
           loadBalancer:
             consistentHash:
               sourceIP: true
@@ -334,6 +337,9 @@ xdsIR:
           name: ""
           prefix: /bar
         traffic:
+          backendTrafficPolicy:
+            name: policy-for-gateway-1
+            namespace: envoy-gateway
           loadBalancer:
             random: {}
           timeout:
@@ -363,7 +369,10 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /baz
-        traffic: {}
+        traffic:
+          backendTrafficPolicy:
+            name: policy-for-route-3
+            namespace: default
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

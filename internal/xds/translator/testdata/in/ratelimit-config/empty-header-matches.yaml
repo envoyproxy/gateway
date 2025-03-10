@@ -9,6 +9,9 @@ path:
 routes:
 - name: "first-route"
   traffic:
+    backendTrafficPolicy:
+      name: "test-policy-1"
+      namespace: "test-namespace"
     rateLimit:
       global:
         rules:

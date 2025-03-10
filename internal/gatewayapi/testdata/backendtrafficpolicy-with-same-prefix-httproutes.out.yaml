@@ -206,6 +206,9 @@ xdsIR:
           name: ""
           prefix: /
         traffic:
+          backendTrafficPolicy:
+            name: policy-for-httproute-1
+            namespace: default
           circuitBreaker:
             maxConnections: 2048
             maxParallelRequests: 4294967295
