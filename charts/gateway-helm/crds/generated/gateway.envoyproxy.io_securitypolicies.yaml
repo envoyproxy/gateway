@@ -3548,6 +3548,48 @@ spec:
                       the authorization response must be set by the authorization server, or the
                       OAuth flow will fail.
                     type: string
+                  denyRedirectMatcher:
+                    description: |-
+                      Any request that matches any of the provided matchers won’t be redirected to OAuth server when tokens are not valid.
+                      Automatic access token refresh will be performed for these requests, if enabled.
+                      This behavior can be useful for AJAX requests.
+                    items:
+                      description: OIDCDenyRedirectMatcher defines the matcher to
+                        deny redirect to the OIDC Provider.
+                      properties:
+                        name:
+                          description: |-
+                            Specifies the name of the header in the request.
+                            The pseudo-headers ``:path`` and ``:method`` can be used to match the request path and method, respectively
+                          minLength: 1
+                          type: string
+                        stringMatch:
+                          description: |-
+                            If specified, header match will be performed based on the string match of the header value.
+                            Specifies how the header match will be performed to route the request.
+                          properties:
+                            type:
+                              default: Exact
+                              description: Type specifies how to match against a string.
+                              enum:
+                              - Exact
+                              - Prefix
+                              - Suffix
+                              - RegularExpression
+                              type: string
+                            value:
+                              description: Value specifies the string value that the
+                                match must have.
+                              maxLength: 1024
+                              minLength: 1
+                              type: string
+                          required:
+                          - value
+                          type: object
+                      required:
+                      - name
+                      type: object
+                    type: array
                   forwardAccessToken:
                     description: |-
                       ForwardAccessToken indicates whether the Envoy should forward the access token

@@ -62,6 +62,13 @@ type OIDC struct {
 	// If not specified, uses the default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback"
 	RedirectURL *string `json:"redirectURL,omitempty"`
 
+	// Any request that matches any of the provided matchers won’t be redirected to OAuth server when tokens are not valid.
+	// Automatic access token refresh will be performed for these requests, if enabled.
+	// This behavior can be useful for AJAX requests.
+	// +optional
+	// +notImplementedHide
+	DenyRedirectMatcher []OIDCDenyRedirectMatcher `json:"denyRedirectMatcher,omitempty"`
+
 	// The path to log a user out, clearing their credential cookies.
 	//
 	// If not specified, uses a default logout path "/logout"
@@ -141,6 +148,19 @@ type OIDCProvider struct {
 	//
 	// +optional
 	TokenEndpoint *string `json:"tokenEndpoint,omitempty"`
+}
+
+// OIDCDenyRedirectMatcher defines the matcher to deny redirect to the OIDC Provider.
+// +notImplementedHide
+type OIDCDenyRedirectMatcher struct {
+	// Specifies the name of the header in the request.
+	// The pseudo-headers ``:path`` and ``:method`` can be used to match the request path and method, respectively
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+	// If specified, header match will be performed based on the string match of the header value.
+	// Specifies how the header match will be performed to route the request.
+	// +optional
+	StringMatch StringMatch `json:"stringMatch,omitempty"`
 }
 
 // OIDCCookieNames defines the names of cookies to use in the Envoy OIDC filter.
