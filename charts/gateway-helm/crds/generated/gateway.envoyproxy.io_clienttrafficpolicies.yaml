@@ -49,6 +49,10 @@ spec:
           spec:
             description: Spec defines the desired state of ClientTrafficPolicy.
             properties:
+              bypassOverloadManager:
+                description: BypassOverloadManager allows the listener to bypass configured
+                  overload manager actions.
+                type: boolean
               clientIPDetection:
                 description: ClientIPDetectionSettings provides configuration for
                   determining the original client IP address for requests.
