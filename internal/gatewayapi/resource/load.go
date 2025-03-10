@@ -355,6 +355,19 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 				Spec: typedSpec.(gwapiv1a3.BackendTLSPolicySpec),
 			}
 			resources.BackendTLSPolicies = append(resources.BackendTLSPolicies, backendTLSPolicy)
+		case KindEnvoyExtensionPolicy:
+			typedSpec := spec.Interface()
+			envoyExtensionPolicy := &egv1a1.EnvoyExtensionPolicy{
+				TypeMeta: metav1.TypeMeta{
+					Kind: KindEnvoyExtensionPolicy,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+				Spec: typedSpec.(egv1a1.EnvoyExtensionPolicySpec),
+			}
+			resources.EnvoyExtensionPolicies = append(resources.EnvoyExtensionPolicies, envoyExtensionPolicy)
 		}
 
 		return nil
