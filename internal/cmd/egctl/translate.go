@@ -239,7 +239,7 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 				}
 			}
 			if outType == xdsType {
-				res, err := translateGatewayAPIToXds(namespace, dnsDomain, resourceType, resources)
+				res, err := TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType, resources)
 				if err != nil {
 					return err
 				}
@@ -331,7 +331,7 @@ func translateGatewayAPIToGatewayAPI(resources *resource.Resources) (resource.Re
 	return gRes.Resources, nil
 }
 
-func translateGatewayAPIToXds(namespace, dnsDomain string, resourceType string, resources *resource.Resources) (map[string]any, error) {
+func TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType string, resources *resource.Resources) (map[string]any, error) {
 	if resources.GatewayClass == nil {
 		return nil, fmt.Errorf("the GatewayClass resource is required")
 	}
