@@ -62,9 +62,8 @@ type OIDC struct {
 	// If not specified, uses the default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback"
 	RedirectURL *string `json:"redirectURL,omitempty"`
 
-	// Any request that matches any of the provided matchers won’t be redirected to OAuth server when tokens are not valid.
-	// Automatic access token refresh will be performed for these requests, if enabled.
-	// This behavior can be useful for AJAX requests.
+	// Any request that matches any of the provided matchers (with either tokens that are expired or missing tokens) will not be redirected to the OIDC Provider.
+	// This behavior can be useful for AJAX or machine requests.
 	// +optional
 	// +notImplementedHide
 	DenyRedirectMatcher []OIDCDenyRedirectMatcher `json:"denyRedirectMatcher,omitempty"`
@@ -159,7 +158,6 @@ type OIDCDenyRedirectMatcher struct {
 	Name string `json:"name"`
 	// If specified, header match will be performed based on the string match of the header value.
 	// Specifies how the header match will be performed to route the request.
-	// +optional
 	StringMatch StringMatch `json:"stringMatch,omitempty"`
 }
 

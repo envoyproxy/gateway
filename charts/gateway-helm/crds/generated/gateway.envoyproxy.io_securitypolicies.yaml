@@ -3550,9 +3550,8 @@ spec:
                     type: string
                   denyRedirectMatcher:
                     description: |-
-                      Any request that matches any of the provided matchers won’t be redirected to OAuth server when tokens are not valid.
-                      Automatic access token refresh will be performed for these requests, if enabled.
-                      This behavior can be useful for AJAX requests.
+                      Any request that matches any of the provided matchers (with either tokens that are expired or missing tokens) will not be redirected to the OIDC Provider.
+                      This behavior can be useful for AJAX or machine requests.
                     items:
                       description: OIDCDenyRedirectMatcher defines the matcher to
                         deny redirect to the OIDC Provider.

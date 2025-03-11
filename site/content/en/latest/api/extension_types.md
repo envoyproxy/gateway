@@ -3025,7 +3025,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `name` | _string_ |  true  |  | Specifies the name of the header in the request.<br />The pseudo-headers ``:path`` and ``:method`` can be used to match the request path and method, respectively |
-| `stringMatch` | _[StringMatch](#stringmatch)_ |  false  |  | If specified, header match will be performed based on the string match of the header value.<br />Specifies how the header match will be performed to route the request. |
+| `stringMatch` | _[StringMatch](#stringmatch)_ |  true  |  | If specified, header match will be performed based on the string match of the header value.<br />Specifies how the header match will be performed to route the request. |
 
 
 #### OIDCProvider
