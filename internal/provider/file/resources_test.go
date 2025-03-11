@@ -7,10 +7,11 @@ package file
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func Test_loadFromFilesAndDirs(t *testing.T) {
@@ -20,7 +21,7 @@ func Test_loadFromFilesAndDirs(t *testing.T) {
 	})
 	t.Run("invalid content in a file", func(t *testing.T) {
 		tmpfile := t.TempDir() + "/invalid.yaml"
-		err := os.WriteFile(tmpfile, []byte("invalid"), 0644)
+		err := os.WriteFile(tmpfile, []byte("invalid"), 0o600)
 		require.NoError(t, err)
 		_, err = loadFromFilesAndDirs([]string{tmpfile}, nil)
 		require.ErrorContains(t, err,
@@ -32,7 +33,7 @@ func Test_loadFromFilesAndDirs(t *testing.T) {
 	})
 	t.Run("invalid content in a file in a directory", func(t *testing.T) {
 		tmpdir := t.TempDir()
-		err := os.WriteFile(filepath.Join(tmpdir, "invalid.yaml"), []byte("invalid"), 0644)
+		err := os.WriteFile(filepath.Join(tmpdir, "invalid.yaml"), []byte("invalid"), 0o600)
 		require.NoError(t, err)
 		_, err = loadFromFilesAndDirs(nil, []string{tmpdir})
 		require.ErrorContains(t, err,
@@ -47,7 +48,7 @@ metadata:
   name: aigw-run
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
-`), 0644)
+`), 0o644)
 		require.NoError(t, err)
 		rs, err := loadFromFilesAndDirs([]string{tmpfile}, nil)
 		require.NoError(t, err)
@@ -62,7 +63,7 @@ func Test_loadFromDir(t *testing.T) {
 	})
 	t.Run("invalid content in a file", func(t *testing.T) {
 		tmpdir := t.TempDir()
-		err := os.WriteFile(filepath.Join(tmpdir, "invalid.yaml"), []byte("invalid"), 0644)
+		err := os.WriteFile(filepath.Join(tmpdir, "invalid.yaml"), []byte("invalid"), 0o600)
 		require.NoError(t, err)
 		_, err = loadFromDir(tmpdir)
 		require.ErrorContains(t, err,
@@ -77,7 +78,7 @@ metadata:
   name: aigw-run
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
-`), 0644)
+`), 0o600)
 		require.NoError(t, err)
 		rs, err := loadFromDir(tmpdir)
 		require.NoError(t, err)
