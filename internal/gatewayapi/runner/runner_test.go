@@ -8,6 +8,7 @@ package runner
 import (
 	"context"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -303,4 +304,10 @@ func TestDeleteAllStatusKeys(t *testing.T) {
 	require.Equal(t, 0, r.ProviderResources.TCPRouteStatuses.Len())
 	require.Equal(t, 0, r.ProviderResources.UDPRouteStatuses.Len())
 	require.Equal(t, 0, r.ProviderResources.BackendStatuses.Len())
+}
+
+func Test_getWasmCacheDir(t *testing.T) {
+	res, err := getWasmCacheDir()
+	require.NoError(t, err)
+	require.True(t, strings.HasSuffix(res, ".eg/wasm"))
 }

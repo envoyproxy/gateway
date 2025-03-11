@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"reflect"
 
 	"github.com/docker/docker/pkg/fileutils"
@@ -36,8 +37,6 @@ import (
 )
 
 const (
-	wasmCacheDir = "/var/lib/eg/wasm"
-
 	// Default certificates path for envoy-gateway with Kubernetes provider.
 	serveTLSCertFilepath = "/certs/tls.crt"
 	serveTLSKeyFilepath  = "/certs/tls.key"
@@ -96,10 +95,9 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 		r.Logger.Error(err, "failed to start wasm cache")
 		return
 	}
-
-	// Create the file directory if it does not exist.
-	if err = fileutils.CreateIfNotExists(wasmCacheDir, true); err != nil {
-		r.Logger.Error(err, "Failed to create Wasm cache directory")
+	wasmDir, err := getWasmCacheDir()
+	if err != nil {
+		r.Logger.Error(err, "failed to start wasm cache")
 		return
 	}
 	r.wasmCache = wasm.NewHTTPServerWithFileCache(
@@ -110,9 +108,22 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 		},
 		// Wasm cache options
 		wasm.CacheOptions{
-			CacheDir: wasmCacheDir,
+			CacheDir: wasmDir,
 		}, r.Logger)
 	r.wasmCache.Start(ctx)
+}
+
+func getWasmCacheDir() (string, error) {
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	wasmDir := path.Join(homedir, ".eg", "wasm")
+	// Create the file directory if it does not exist.
+	if err = fileutils.CreateIfNotExists(wasmDir, true); err != nil {
+		return "", err
+	}
+	return wasmDir, nil
 }
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
