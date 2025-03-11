@@ -9,11 +9,29 @@ KIND_NODE_TAG=${KIND_NODE_TAG:-"v1.32.0"}
 NUM_WORKERS=${NUM_WORKERS:-""}
 IP_FAMILY=${IP_FAMILY:-"ipv4"}
 CUSTOM_CNI=${CUSTOM_CNI:-"false"}
+API_SERVER_ADDRESS=${API_SERVER_ADDRESS:-""}
 
 if [ "$CUSTOM_CNI" = "true" ]; then
   CNI_CONFIG="disableDefaultCNI: true"
 else
   CNI_CONFIG="disableDefaultCNI: false"
+fi
+
+# Determine the operating system
+OS=$(uname -s)
+case $OS in
+    Darwin)
+        if [ -z "${API_SERVER_ADDRESS}" ]; then
+            # If you are using Docker on Windows or Mac,
+            # you will need to use an IPv4 port forward for the API Server
+            # from the host because IPv6 port forwards don’t work on these platforms.
+            API_SERVER_ADDRESS="127.0.0.1"
+        fi
+        ;;
+esac
+
+if [ -n "${API_SERVER_ADDRESS}" ]; then
+    echo "Using API server address: ${API_SERVER_ADDRESS}"
 fi
 
 KIND_CFG=$(cat <<-EOM
@@ -22,8 +40,7 @@ apiVersion: kind.x-k8s.io/v1alpha4
 networking:
   ${CNI_CONFIG}
   ipFamily: ${IP_FAMILY}
-  # uncomment following line when use IPv6 on macos or windows
-  # apiServerAddress: 127.0.0.1
+  apiServerAddress: ${API_SERVER_ADDRESS}
   # it's to prevent inherit search domains from the host which slows down DNS resolution
   # and cause problems to IPv6 only clusters running on IPv4 host.
   dnsSearch: []
@@ -56,8 +73,6 @@ fi
 fi
 if [ "$CUSTOM_CNI" = "true" ]; then
 ## Install Calico
-# Determine the operating system
-OS=$(uname -s)
 case $OS in
     Darwin)
         CILIUM_CLI_VERSION=$(curl -s https://raw.githubusercontent.com/cilium/cilium-cli/main/stable.txt)
