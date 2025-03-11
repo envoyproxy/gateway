@@ -48,7 +48,7 @@ metadata:
   name: aigw-run
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
-`), 0o644)
+`), 0o600)
 		require.NoError(t, err)
 		rs, err := loadFromFilesAndDirs([]string{tmpfile}, nil)
 		require.NoError(t, err)
