@@ -7,7 +7,6 @@ package runner
 
 import (
 	"context"
-	"path"
 	"reflect"
 	"testing"
 	"time"
@@ -304,12 +303,4 @@ func TestDeleteAllStatusKeys(t *testing.T) {
 	require.Equal(t, 0, r.ProviderResources.TCPRouteStatuses.Len())
 	require.Equal(t, 0, r.ProviderResources.UDPRouteStatuses.Len())
 	require.Equal(t, 0, r.ProviderResources.BackendStatuses.Len())
-}
-
-func Test_getWasmCacheDir(t *testing.T) {
-	tmpDir := t.TempDir()
-	t.Setenv("HOME", tmpDir)
-	res, err := getWasmCacheDir()
-	require.NoError(t, err)
-	require.Equal(t, path.Join(tmpDir, ".eg", "wasm"), res)
 }

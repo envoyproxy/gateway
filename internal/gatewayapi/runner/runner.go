@@ -13,6 +13,7 @@ import (
 	"os"
 	"path"
 	"reflect"
+	"runtime"
 
 	"github.com/docker/docker/pkg/fileutils"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -95,9 +96,18 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 		r.Logger.Error(err, "failed to start wasm cache")
 		return
 	}
-	wasmDir, err := getWasmCacheDir()
-	if err != nil {
-		r.Logger.Error(err, "failed to start wasm cache")
+	cacheOption := wasm.CacheOptions{}
+	switch runtime.GOOS {
+	case "darwin":
+		// On darwin, /var/lib/eg/wasm is not writable by non-root users.
+		h, _ := os.UserHomeDir() // Assume we always get the home directory.
+		cacheOption.CacheDir = path.Join(h, ".eg", "wasm")
+	default:
+		cacheOption.CacheDir = "/var/lib/eg/wasm"
+	}
+	// Create the file directory if it does not exist.
+	if err = fileutils.CreateIfNotExists(cacheOption.CacheDir, true); err != nil {
+		r.Logger.Error(err, "Failed to create Wasm cache directory")
 		return
 	}
 	r.wasmCache = wasm.NewHTTPServerWithFileCache(
@@ -106,24 +116,8 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 			Salt:      salt,
 			TLSConfig: tlsConfig,
 		},
-		// Wasm cache options
-		wasm.CacheOptions{
-			CacheDir: wasmDir,
-		}, r.Logger)
+		cacheOption, r.Logger)
 	r.wasmCache.Start(ctx)
-}
-
-func getWasmCacheDir() (string, error) {
-	homedir, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	wasmDir := path.Join(homedir, ".eg", "wasm")
-	// Create the file directory if it does not exist.
-	if err = fileutils.CreateIfNotExists(wasmDir, true); err != nil {
-		return "", err
-	}
-	return wasmDir, nil
 }
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
