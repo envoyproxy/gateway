@@ -46,9 +46,7 @@ func LoadResourcesFromYAMLBytes(yamlBytes []byte, addMissingResources bool) (*Re
 
 // loadKubernetesYAMLToResources converts a Kubernetes YAML string into GatewayAPI Resources.
 // TODO: add support for kind:
-//   - EnvoyExtensionPolicy (gateway.envoyproxy.io/v1alpha1)
 //   - BackendLPPolicy (gateway.networking.k8s.io/v1alpha2)
-//   - BackendTLSPolicy (gateway.networking.k8s.io/v1alpha3)
 //   - ReferenceGrant (gateway.networking.k8s.io/v1alpha2)
 func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Resources, error) {
 	resources := NewResources()

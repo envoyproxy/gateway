@@ -63,9 +63,20 @@ envoyExtensionPolicies:
     targetRefs:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
-      name: myapp
+      name: backend
   status:
-    ancestors: null
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        namespace: "envoy-gateway-system"
+        name: eg
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      conditions:
+      - message: "Wasm: wasm cache is not initialized\nExtProc: service envoy-gateway-system/grpc-ext-proc not found."
+        reason: Invalid
+        status: "False"
+        type: Accepted
 gatewayClass:
   kind: GatewayClass
   metadata:

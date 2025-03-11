@@ -66,7 +66,7 @@ spec:
   targetRefs:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
-      name: myapp
+      name: backend
   extProc:
     - backendRefs:
         - name: grpc-ext-proc
