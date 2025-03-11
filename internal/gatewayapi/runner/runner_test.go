@@ -7,8 +7,8 @@ package runner
 
 import (
 	"context"
+	"path"
 	"reflect"
-	"strings"
 	"testing"
 	"time"
 
@@ -307,7 +307,9 @@ func TestDeleteAllStatusKeys(t *testing.T) {
 }
 
 func Test_getWasmCacheDir(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("HOME", tmpDir)
 	res, err := getWasmCacheDir()
 	require.NoError(t, err)
-	require.True(t, strings.HasSuffix(res, ".eg/wasm"))
+	require.Equal(t, path.Join(tmpDir, ".eg", "wasm"), res)
 }
