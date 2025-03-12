@@ -1406,8 +1406,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 		}
 	}
 
-	// TODO(tnareddy): Should these protocols be supported for ServiceImport?
-	// Follow-up in separate issue and PR.
+	// TODO(#5485): Should these protocols be supported for ServiceImport?
 	//
 	// if servicePort.AppProtocol != nil {
 	// 	protocol = serviceAppProtocolToIRAppProtocol(*servicePort.AppProtocol)
@@ -1771,7 +1770,6 @@ func getTargetBackendReference(backendRef gwapiv1a2.BackendObjectReference, back
 			}
 		}
 
-	case *backendRef.Kind == egv1a1.KindBackend:
 	default:
 		// Set the section name to the port number if the backend is a EG Backend
 		ref.SectionName = SectionNamePtr(strconv.Itoa(int(*backendRef.Port)))
