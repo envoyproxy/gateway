@@ -7,6 +7,7 @@ package loader
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -71,7 +72,7 @@ func (r *Loader) Start(ctx context.Context) error {
 				r.cfg.EnvoyGateway = eg
 				// update cfg logger
 				eg.Logging.SetEnvoyGatewayLoggingDefaults()
-				r.cfg.Logger = logging.NewLogger(eg.Logging)
+				r.cfg.Logger = logging.NewLogger(os.Stdout, eg.Logging)
 
 				// cancel last
 				if r.cancel != nil {

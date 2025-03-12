@@ -11,7 +11,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"reflect"
+	"runtime"
 
 	"github.com/docker/docker/pkg/fileutils"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -36,8 +38,6 @@ import (
 )
 
 const (
-	wasmCacheDir = "/var/lib/eg/wasm"
-
 	// Default certificates path for envoy-gateway with Kubernetes provider.
 	serveTLSCertFilepath = "/certs/tls.crt"
 	serveTLSKeyFilepath  = "/certs/tls.key"
@@ -96,9 +96,17 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 		r.Logger.Error(err, "failed to start wasm cache")
 		return
 	}
-
+	cacheOption := wasm.CacheOptions{}
+	switch runtime.GOOS {
+	case "darwin":
+		// On darwin, /var/lib/eg/wasm is not writable by non-root users.
+		h, _ := os.UserHomeDir() // Assume we always get the home directory.
+		cacheOption.CacheDir = path.Join(h, ".eg", "wasm")
+	default:
+		cacheOption.CacheDir = "/var/lib/eg/wasm"
+	}
 	// Create the file directory if it does not exist.
-	if err = fileutils.CreateIfNotExists(wasmCacheDir, true); err != nil {
+	if err = fileutils.CreateIfNotExists(cacheOption.CacheDir, true); err != nil {
 		r.Logger.Error(err, "Failed to create Wasm cache directory")
 		return
 	}
@@ -108,10 +116,7 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 			Salt:      salt,
 			TLSConfig: tlsConfig,
 		},
-		// Wasm cache options
-		wasm.CacheOptions{
-			CacheDir: wasmCacheDir,
-		}, r.Logger)
+		cacheOption, r.Logger)
 	r.wasmCache.Start(ctx)
 }
 
