@@ -152,7 +152,6 @@ kubectl get envoyextensionpolicy/http-wasm-source-test -o yaml
 {{< tabpane text=true >}}
 {{% tab header="With External LoadBalancer Support" %}}
 
-
 Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../../quickstart) is set. If not, follow the
 Quickstart instructions to set the variable.
 
@@ -173,7 +172,7 @@ Ensure you have completed the [Quickstart](../../quickstart).
 Send a request to the backend service:
 
 ```shell
-curl -i -H "Host: www.example.com" "http://${GATEWAY_HOST}"
+curl -i -H "Host: www.example.com" "http://localhost:8888"
 ```
 
 {{% /tab %}}
