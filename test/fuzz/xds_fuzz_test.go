@@ -15,14 +15,22 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
 
-func FuzzGatewayAPIToIR(f *testing.F) {
+func FuzzGatewayAPIToXDS(f *testing.F) {
 	f.Fuzz(func(t *testing.T, data []byte) {
 		fc := fuzz.NewConsumer(data)
 		resources := &resource.Resources{}
 		if err := fc.GenerateStruct(resources); err != nil {
 			return
 		}
-		addMissingResources, err := fc.GetBool()
+		namespace, err := fc.GetString()
+		if err != nil {
+			return
+		}
+		dnsDomain, err := fc.GetString()
+		if err != nil {
+			return
+		}
+		resourceType, err := fc.GetString()
 		if err != nil {
 			return
 		}
@@ -32,11 +40,15 @@ func FuzzGatewayAPIToIR(f *testing.F) {
 		if err != nil {
 			return
 		}
+		addMissingResources, err := fc.GetBool()
+		if err != nil {
+			return
+		}
 		rs, err := resource.LoadResourcesFromYAMLBytes(yamlBytes, addMissingResources)
 		if err != nil {
 			return
 		}
 
-		_, _ = egctl.TranslateGatewayAPIToIR(rs)
+		_, _ = egctl.TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType, rs)
 	})
 }
