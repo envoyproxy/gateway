@@ -9,7 +9,7 @@ spec:
     spec:
       containers:
         - name: nighthawk-client
-          image: envoyproxy/nighthawk-dev:latest
+          image: envoyproxy/nighthawk-dev:2256da19d138866ca82adff2de7c5a5071cb430e
           imagePullPolicy: IfNotPresent
           args: ["nighthawk_client"]  # Fill-up args at runtime
       restartPolicy: Never

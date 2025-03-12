@@ -17,7 +17,7 @@ spec:
       serviceAccountName: default
       containers:
         - name: nighthawk-server
-          image: envoyproxy/nighthawk-dev:latest
+          image: envoyproxy/nighthawk-dev:2256da19d138866ca82adff2de7c5a5071cb430e
           imagePullPolicy: IfNotPresent
           args: ["nighthawk_test_server", "-c", "/etc/test-server-config/nighthawk-test-server-config.yaml"]
           ports:
