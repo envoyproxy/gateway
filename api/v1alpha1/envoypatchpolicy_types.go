@@ -98,6 +98,8 @@ const (
 	ClusterEnvoyResourceType EnvoyResourceType = "type.googleapis.com/envoy.config.cluster.v3.Cluster"
 	// ClusterLoadAssignmentEnvoyResourceType defines the Type URL of the ClusterLoadAssignment resource
 	ClusterLoadAssignmentEnvoyResourceType EnvoyResourceType = "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
+	// SecretEnvoyResourceType defines the Type URL of the Secret resource
+	SecretEnvoyResourceType EnvoyResourceType = "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
 )
 
 // JSONPatchOperationType specifies the JSON Patch operations that can be performed.

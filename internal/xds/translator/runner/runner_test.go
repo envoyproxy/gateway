@@ -174,12 +174,16 @@ type extManagerMock struct {
 	types.Manager
 }
 
-func (m *extManagerMock) GetPostXDSHookClient(xdsHookType egv1a1.XDSTranslatorHook) types.XDSHookClient {
+func (m *extManagerMock) GetPostXDSHookClient(xdsHookType egv1a1.XDSTranslatorHook) (types.XDSHookClient, error) {
 	if xdsHookType == egv1a1.XDSHTTPListener {
-		return &xdsHookClientMock{}
+		return &xdsHookClientMock{}, nil
 	}
 
-	return nil
+	return nil, nil
+}
+
+func (m *extManagerMock) FailOpen() bool {
+	return false
 }
 
 type xdsHookClientMock struct {

@@ -1,9 +1,10 @@
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 # To know the available versions check:
 # - https://github.com/kubernetes-sigs/controller-tools/blob/main/envtest-releases.yaml
-ENVTEST_K8S_VERSION ?= 1.28.3
+ENVTEST_K8S_VERSION ?= 1.29.4
 # Need run cel validation across multiple versions of k8s
-ENVTEST_K8S_VERSIONS ?= 1.28.3 1.29.5 1.30.3 1.31.0
+ENVTEST_K8S_VERSIONS ?= 1.29.4 1.30.3 1.31.0 1.32.0
+
 # GATEWAY_API_VERSION refers to the version of Gateway API CRDs.
 # For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api
 GATEWAY_API_VERSION ?= $(shell go list -m -f '{{.Version}}' sigs.k8s.io/gateway-api)
@@ -12,6 +13,7 @@ GATEWAY_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/d
 
 WAIT_TIMEOUT ?= 15m
 
+IP_FAMILY ?= ipv4
 BENCHMARK_TIMEOUT ?= 60m
 BENCHMARK_CPU_LIMITS ?= 1000m
 BENCHMARK_MEMORY_LIMITS ?= 1024Mi
@@ -22,7 +24,8 @@ BENCHMARK_REPORT_DIR ?= benchmark_report
 
 E2E_RUN_TEST ?=
 E2E_CLEANUP ?= true
-E2E_TEST_ARGS ?= -v -tags e2e -timeout 15m
+E2E_TIMEOUT ?= 20m
+E2E_TEST_ARGS ?= -v -tags e2e -timeout $(E2E_TIMEOUT)
 
 # Set Kubernetes Resources Directory Path
 ifeq ($(origin KUBE_PROVIDER_DIR),undefined)
@@ -34,15 +37,33 @@ ifeq ($(origin KUBE_INFRA_DIR),undefined)
 KUBE_INFRA_DIR := $(ROOT_DIR)/internal/infrastructure/kubernetes/config
 endif
 
+ifeq ($(IP_FAMILY),ipv4)
+ENVOY_PROXY_IP_FAMILY := IPv4
+else ifeq ($(IP_FAMILY),ipv6)
+ENVOY_PROXY_IP_FAMILY := IPv6
+else ifeq ($(IP_FAMILY),dual)
+ENVOY_PROXY_IP_FAMILY := DualStack
+endif
+
 ##@ Kubernetes Development
+
+GNU_SED := $(shell sed --version >/dev/null 2>&1 && echo "yes" || echo "no")
 
 YEAR := $(shell date +%Y)
 CONTROLLERGEN_OBJECT_FLAGS :=  object:headerFile="$(ROOT_DIR)/tools/boilerplate/boilerplate.generatego.txt",year=$(YEAR)
 
+.PHONY: prepare-ip-family
+prepare-ip-family:
+ifeq ($(GNU_SED),yes)
+	@find ./test -type f -name "*.yaml" | xargs sed -i'' 's/ipFamily: IPv4/ipFamily: $(ENVOY_PROXY_IP_FAMILY)/g'
+else
+	@find ./test -type f -name "*.yaml" | xargs sed -i '' 's/ipFamily: IPv4/ipFamily: $(ENVOY_PROXY_IP_FAMILY)/g'
+endif
+
 .PHONY: manifests
-manifests: $(tools/controller-gen) generate-gwapi-manifests ## Generate WebhookConfiguration and CustomResourceDefinition objects.
+manifests: generate-gwapi-manifests ## Generate WebhookConfiguration and CustomResourceDefinition objects.
 	@$(LOG_TARGET)
-	$(tools/controller-gen) crd:allowDangerousTypes=true paths="./api/..." output:crd:artifacts:config=charts/gateway-helm/crds/generated
+	@go tool controller-gen crd:allowDangerousTypes=true paths="./api/..." output:crd:artifacts:config=charts/gateway-helm/crds/generated
 
 .PHONY: generate-gwapi-manifests
 generate-gwapi-manifests:
@@ -53,15 +74,15 @@ generate-gwapi-manifests: ## Generate GWAPI manifests and make it consistent wit
 	mv $(OUTPUT_DIR)/gatewayapi-crds.yaml charts/gateway-helm/crds/gatewayapi-crds.yaml
 
 .PHONY: kube-generate
-kube-generate: $(tools/controller-gen) ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+kube-generate: ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 # Note that the paths can't just be "./..." with the header file, or the tool will panic on run. Sorry.
 	@$(LOG_TARGET)
-	$(tools/controller-gen) $(CONTROLLERGEN_OBJECT_FLAGS) paths="{$(ROOT_DIR)/api/...,$(ROOT_DIR)/internal/ir/...,$(ROOT_DIR)/internal/gatewayapi/...}"
+	@go tool controller-gen $(CONTROLLERGEN_OBJECT_FLAGS) paths="{$(ROOT_DIR)/api/...,$(ROOT_DIR)/internal/ir/...,$(ROOT_DIR)/internal/gatewayapi/...}"
 
 .PHONY: kube-test
-kube-test: manifests generate $(tools/setup-envtest) ## Run Kubernetes provider tests.
+kube-test: manifests generate ## Run Kubernetes provider tests.
 	@$(LOG_TARGET)
-	KUBEBUILDER_ASSETS="$(shell $(tools/setup-envtest) use $(ENVTEST_K8S_VERSION) -p path)" go test --tags=integration,celvalidation ./... -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell go tool setup-envtest use $(ENVTEST_K8S_VERSION) -p path)" go test --tags=integration,celvalidation ./... -coverprofile cover.out
 
 ##@ Kubernetes Deployment
 
@@ -131,41 +152,51 @@ experimental-conformance: create-cluster kube-install-image kube-deploy run-expe
 .PHONY: benchmark
 benchmark: create-cluster kube-install-image kube-deploy-for-benchmark-test run-benchmark delete-cluster ## Create a kind cluster, deploy EG into it, run Envoy Gateway benchmark test, and clean up.
 
+.PHONY: resilience
+resilience: create-cluster kube-install-image kube-deploy run-resilience delete-cluster ## Create a kind cluster, deploy EG into it, run Envoy Gateway resilience test, and clean up.
+
 .PHONY: e2e
-e2e: create-cluster kube-install-image kube-deploy install-ratelimit install-e2e-telemetry run-e2e delete-cluster
+e2e: create-cluster kube-install-image kube-deploy \
+	install-ratelimit install-eg-addons kube-install-examples-image \
+	e2e-prepare run-e2e delete-cluster
 
 .PHONY: install-ratelimit
 install-ratelimit:
 	@$(LOG_TARGET)
 	kubectl apply -f examples/redis/redis.yaml
-	kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
-	kubectl rollout status --watch --timeout=5m -n envoy-gateway-system deployment/envoy-gateway
-	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	tools/hack/deployment-exists.sh "app.kubernetes.io/name=envoy-ratelimit" "envoy-gateway-system"
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 
 .PHONY: e2e-prepare
-e2e-prepare: ## Prepare the environment for running e2e tests
+e2e-prepare: prepare-ip-family ## Prepare the environment for running e2e tests
 	@$(LOG_TARGET)
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml
 
 .PHONY: run-e2e
-run-e2e: e2e-prepare ## Run e2e tests
+run-e2e: ## Run e2e tests
 	@$(LOG_TARGET)
 ifeq ($(E2E_RUN_TEST),)
 	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=false
 	go test $(E2E_TEST_ARGS) ./test/e2e/merge_gateways --gateway-class=merge-gateways --debug=true --cleanup-base-resources=false
 	go test $(E2E_TEST_ARGS) ./test/e2e/multiple_gc --debug=true --cleanup-base-resources=true
-	go test $(E2E_TEST_ARGS) ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
+	LAST_VERSION_TAG=$(shell cat VERSION) go test $(E2E_TEST_ARGS) ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
 else
 	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
 		--run-test $(E2E_RUN_TEST)
 endif
 
+run-e2e-upgrade:
+	go test $(E2E_TEST_ARGS) ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
+
+.PHONY: run-resilience
+run-resilience: ## Run resilience tests
+	@$(LOG_TARGET)
+	go test -v -tags resilience ./test/resilience --gateway-class=envoy-gateway
+
 .PHONY: run-benchmark
-run-benchmark: install-benchmark-server ## Run benchmark tests
+run-benchmark: install-benchmark-server prepare-ip-family ## Run benchmark tests
 	@$(LOG_TARGET)
 	mkdir -p $(OUTPUT_DIR)/benchmark
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n benchmark-test deployment/nighthawk-test-server --for=condition=Available
@@ -191,10 +222,10 @@ uninstall-benchmark-server: ## Uninstall nighthawk server for benchmark test
 	kubectl delete configmap test-server-config -n benchmark-test
 	kubectl delete namespace benchmark-test
 
-.PHONY: install-e2e-telemetry
-install-e2e-telemetry: helm-generate.gateway-addons-helm
+.PHONY: install-eg-addons
+install-eg-addons: helm-generate.gateway-addons-helm
 	@$(LOG_TARGET)
-	helm upgrade -i eg-addons charts/gateway-addons-helm --set grafana.enabled=false,opentelemetry-collector.enabled=true -n monitoring --create-namespace --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
+	helm upgrade -i eg-addons charts/gateway-addons-helm -f test/helm/gateway-addons-helm/e2e.in.yaml -n monitoring --create-namespace --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
 	# Change loki service type from ClusterIP to LoadBalancer
 	kubectl patch service loki -n monitoring -p '{"spec": {"type": "LoadBalancer"}}'
 	# Wait service Ready
@@ -205,23 +236,23 @@ install-e2e-telemetry: helm-generate.gateway-addons-helm
 	kubectl rollout restart -n monitoring deployment/otel-collector
 	kubectl rollout status --watch --timeout=5m -n monitoring deployment/otel-collector
 
-.PHONY: uninstall-e2e-telemetry
-uninstall-e2e-telemetry:
+.PHONY: uninstall-eg-addons
+uninstall-eg-addons:
 	@$(LOG_TARGET)
 	helm delete $(shell helm list -n monitoring -q) -n monitoring
 
 .PHONY: create-cluster
-create-cluster: $(tools/kind) ## Create a kind cluster suitable for running Gateway API conformance.
+create-cluster: ## Create a kind cluster suitable for running Gateway API conformance.
 	@$(LOG_TARGET)
 	tools/hack/create-cluster.sh
 
 .PHONY: kube-install-image
-kube-install-image: image.build $(tools/kind) ## Install the EG image to a kind cluster using the provided $IMAGE and $TAG.
+kube-install-image: image.build ## Install the EG image to a kind cluster using the provided $IMAGE and $TAG.
 	@$(LOG_TARGET)
 	tools/hack/kind-load-image.sh $(IMAGE) $(TAG)
 
 .PHONY: run-conformance
-run-conformance: ## Run Gateway API conformance.
+run-conformance: prepare-ip-family ## Run Gateway API conformance.
 	@$(LOG_TARGET)
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml
@@ -230,16 +261,16 @@ run-conformance: ## Run Gateway API conformance.
 CONFORMANCE_REPORT_PATH ?=
 
 .PHONY: run-experimental-conformance
-run-experimental-conformance: ## Run Experimental Gateway API conformance.
+run-experimental-conformance: prepare-ip-family ## Run Experimental Gateway API conformance.
 	@$(LOG_TARGET)
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml
 	go test -v -tags experimental ./test/conformance -run TestExperimentalConformance --gateway-class=envoy-gateway --debug=true --organization=envoyproxy --project=envoy-gateway --url=https://github.com/envoyproxy/gateway --version=latest --report-output="$(CONFORMANCE_REPORT_PATH)" --contact=https://github.com/envoyproxy/gateway/blob/main/GOVERNANCE.md
 
 .PHONY: delete-cluster
-delete-cluster: $(tools/kind) ## Delete kind cluster.
+delete-cluster: ## Delete kind cluster.
 	@$(LOG_TARGET)
-	$(tools/kind) delete cluster --name envoy-gateway
+	@go tool kind delete cluster --name envoy-gateway
 
 .PHONY: generate-manifests
 generate-manifests: helm-generate.gateway-helm ## Generate Kubernetes release manifests.
@@ -252,16 +283,7 @@ generate-manifests: helm-generate.gateway-helm ## Generate Kubernetes release ma
 	@$(call log, "Added: $(OUTPUT_DIR)/quickstart.yaml")
 
 .PHONY: generate-artifacts
-generate-artifacts: generate-manifests generate-egctl-releases ## Generate release artifacts.
+generate-artifacts: generate-manifests ## Generate release artifacts.
 	@$(LOG_TARGET)
 	cp -r $(ROOT_DIR)/release-notes/$(TAG).yaml $(OUTPUT_DIR)/release-notes.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/release-notes.yaml")
-
-.PHONY: generate-egctl-releases
-generate-egctl-releases: ## Generate egctl releases
-	@$(LOG_TARGET)
-	mkdir -p $(OUTPUT_DIR)/
-	curl -sSL https://github.com/envoyproxy/gateway/releases/download/latest/egctl_latest_darwin_amd64.tar.gz -o $(OUTPUT_DIR)/egctl_$(TAG)_darwin_amd64.tar.gz
-	curl -sSL https://github.com/envoyproxy/gateway/releases/download/latest/egctl_latest_darwin_arm64.tar.gz -o $(OUTPUT_DIR)/egctl_$(TAG)_darwin_arm64.tar.gz
-	curl -sSL https://github.com/envoyproxy/gateway/releases/download/latest/egctl_latest_linux_amd64.tar.gz -o $(OUTPUT_DIR)/egctl_$(TAG)_linux_amd64.tar.gz
-	curl -sSL https://github.com/envoyproxy/gateway/releases/download/latest/egctl_latest_linux_arm64.tar.gz -o $(OUTPUT_DIR)/egctl_$(TAG)_linux_arm64.tar.gz

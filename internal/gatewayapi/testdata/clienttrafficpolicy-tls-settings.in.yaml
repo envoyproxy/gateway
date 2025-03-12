@@ -22,6 +22,33 @@ clientTrafficPolicies:
       signatureAlgorithms:
       - sig1
       - sig2
+      session:
+        resumption:
+          stateless: {}
+          stateful: {}
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-gateway-2
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-2
+    tls:
+      alpnProtocols: []
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-gateway-3
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-3
+    tls:
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -48,6 +75,44 @@ gateways:
       allowedRoutes:
         namespaces:
           from: Same
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-2
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http-1
+      protocol: HTTPS
+      port: 443
+      allowedRoutes:
+        namespaces:
+          from: Same
+      tls:
+        mode: Terminate
+        certificateRefs:
+        - name: tls-secret-1
+          namespace: envoy-gateway
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-3
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http-1
+      protocol: HTTPS
+      port: 443
+      allowedRoutes:
+        namespaces:
+          from: Same
+      tls:
+        mode: Terminate
+        certificateRefs:
+        - name: tls-secret-1
+          namespace: envoy-gateway
 secrets:
 - apiVersion: v1
   kind: Secret

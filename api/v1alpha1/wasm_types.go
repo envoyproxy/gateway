@@ -7,8 +7,16 @@ package v1alpha1
 
 import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
+
+// WasmEnv defines the environment variables for the VM of a Wasm extension
+type WasmEnv struct {
+	// HostKeys is a list of keys for environment variables from the host envoy process
+	// that should be passed into the Wasm VM. This is useful for passing secrets to to Wasm extensions.
+	// +optional
+	HostKeys []string `json:"hostKeys,omitempty"`
+}
 
 // Wasm defines a Wasm extension.
 //
@@ -52,6 +60,10 @@ type Wasm struct {
 	// Priority defines the location of the Wasm extension in the HTTP filter chain.
 	// If not specified, the Wasm extension will be inserted before the router filter.
 	// Priority *uint32 `json:"priority,omitempty"`
+
+	// Env configures the environment for the Wasm extension
+	// +optional
+	Env *WasmEnv `json:"env,omitempty"`
 }
 
 // WasmCodeSource defines the source of the Wasm code.
@@ -136,7 +148,7 @@ type ImageWasmCodeSource struct {
 	// Only support Kubernetes Secret resource from the same namespace.
 	// +kubebuilder:validation:XValidation:message="only support Secret kind.",rule="self.kind == 'Secret'"
 	// +optional
-	PullSecretRef *gwapiv1b1.SecretObjectReference `json:"pullSecretRef,omitempty"`
+	PullSecretRef *gwapiv1.SecretObjectReference `json:"pullSecretRef,omitempty"`
 }
 
 // ImagePullPolicy defines the policy to use when pulling an OIC image.

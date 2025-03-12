@@ -100,10 +100,9 @@ tlsRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Resource default/backend-ip of type Backend is not supported for
-          TLSRoute routes
-        reason: UnsupportedValue
-        status: "False"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -112,8 +111,13 @@ tlsRoutes:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
     tcp:
     - address: 0.0.0.0
       name: envoy-gateway/gateway-1/tls
@@ -122,7 +126,13 @@ xdsIR:
       - destination:
           name: tlsroute/default/tlsroute-1/rule/-1
           settings:
-          - weight: 1
+          - addressType: IP
+            endpoints:
+            - host: 1.1.1.1
+              port: 3001
+            name: tlsroute/default/tlsroute-1/rule/-1/backend/0
+            protocol: HTTPS
+            weight: 1
         name: tlsroute/default/tlsroute-1
         tls:
           inspector:

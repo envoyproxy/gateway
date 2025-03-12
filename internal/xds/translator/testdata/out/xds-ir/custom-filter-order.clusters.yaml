@@ -4,7 +4,7 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
+  dnsLookupFamily: V4_PREFERRED
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
@@ -19,9 +19,8 @@
         loadBalancingWeight: 1
       loadBalancingWeight: 1
       locality:
-        region: one_example_com_443/backend/0
+        region: one_example_com_443/backend/-1
   name: one_example_com_443
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   transportSocket:
@@ -40,7 +39,7 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
+  dnsLookupFamily: V4_PREFERRED
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
@@ -55,9 +54,8 @@
         loadBalancingWeight: 1
       loadBalancingWeight: 1
       locality:
-        region: two_example_com_80/backend/0
+        region: two_example_com_80/backend/-1
   name: two_example_com_80
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   type: STRICT_DNS

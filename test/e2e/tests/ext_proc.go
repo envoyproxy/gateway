@@ -4,7 +4,6 @@
 // the root of the repo.
 
 //go:build e2e
-// +build e2e
 
 package tests
 
@@ -64,16 +63,30 @@ var ExtProcTest = suite.ConformanceTest{
 					Request: http.Request{
 						Path: "/processor",
 						Headers: map[string]string{
-							"x-request-ext-processed":          "true",     // header added by ext-processor to backend-bound request
-							"x-request-client-header-received": "original", // this is the original client header preserved by ext-proc in a new header
-							"x-request-client-header":          "mutated",  // this is the mutated value expected to reach upstream
+							// header added by ext-processor to backend-bound request
+							"x-request-ext-processed": "true",
+							// this is the original client header preserved by ext-proc in a new header
+							"x-request-client-header-received": "original",
+							// this is the mutated value expected to reach upstream
+							"x-request-client-header": "mutated",
+							// header added by ext-processor to request based on the xds.route_name attribute
+							"x-request-xds-route-name": "httproute/gateway-conformance-infra/http-with-ext-proc/rule/0/match/0/www_example_com",
+							// header added by router based on metadata emitted by the external processor to
+							// the io.envoyproxy.gateway.e2e namespace with key ext-proc-emitted-metadata
+							"x-request-from-ext-proc-metadata": "received",
 						},
 					},
 				},
 				Response: http.Response{
 					StatusCode: 200,
 					Headers: map[string]string{
-						"x-response-ext-processed": "true", // header added by ext-processor to client-bound response
+						// header added by ext-processor to client-bound response
+						"x-response-ext-processed": "true",
+						// header added by ext-processor to response based on the xds.cluster_name attribute
+						"x-response-xds-route-name": "httproute/gateway-conformance-infra/http-with-ext-proc/rule/0/match/0/www_example_com",
+						// header added by ext-processor to response based on envoy.filters.http.rbac.enforced_engine_result
+						// dynamic metadata emitted by RBAC filter
+						"x-response-rbac-result-metadata": "allowed",
 					},
 				},
 				Namespace: ns,

@@ -9,11 +9,13 @@ import (
 	_ "embed"
 	"strconv"
 
+	"golang.org/x/exp/maps"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
@@ -40,6 +42,7 @@ type ResourceRender struct {
 
 	rateLimit           *egv1a1.RateLimit
 	rateLimitDeployment *egv1a1.KubernetesDeploymentSpec
+	rateLimitHpa        *egv1a1.KubernetesHorizontalPodAutoscalerSpec
 
 	// ownerReferenceUID store the uid of its owner reference.
 	ownerReferenceUID map[string]types.UID
@@ -51,12 +54,17 @@ func NewResourceRender(ns string, gateway *egv1a1.EnvoyGateway, ownerReferenceUI
 		Namespace:           ns,
 		rateLimit:           gateway.RateLimit,
 		rateLimitDeployment: gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment,
+		rateLimitHpa:        gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitHpa,
 		ownerReferenceUID:   ownerReferenceUID,
 	}
 }
 
 func (r *ResourceRender) Name() string {
 	return InfraName
+}
+
+func (r *ResourceRender) LabelSelector() labels.Selector {
+	return labels.SelectorFromSet(rateLimitLabels())
 }
 
 func enablePrometheus(rl *egv1a1.RateLimit) bool {
@@ -183,22 +191,43 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 	return sa, nil
 }
 
+// DeploymentSpec returns the `Deployment` sets spec.
+func (r *ResourceRender) DeploymentSpec() (*egv1a1.KubernetesDeploymentSpec, error) {
+	return r.rateLimitDeployment, nil
+}
+
 // Deployment returns the expected rate limit Deployment based on the provided infra.
 func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
-	containers := expectedRateLimitContainers(r.rateLimit, r.rateLimitDeployment, r.Namespace)
-	labels := rateLimitLabels()
-	selector := resource.GetSelector(labels)
+	// If deployment config is nil,ignore Deployment.
+	if deploymentConfig, er := r.DeploymentSpec(); deploymentConfig == nil {
+		return nil, er
+	}
 
-	var annotations map[string]string
+	containers := expectedRateLimitContainers(r.rateLimit, r.rateLimitDeployment, r.Namespace)
+	selector := resource.GetSelector(rateLimitLabels())
+
+	podLabels := rateLimitLabels()
+	if r.rateLimitDeployment.Pod.Labels != nil {
+		maps.Copy(podLabels, r.rateLimitDeployment.Pod.Labels)
+		// Copy overwrites values in the dest map if they exist in the src map https://pkg.go.dev/maps#Copy
+		// It's applied again with the rateLimitLabels that are used as deployment selector to ensure those are not overwritten by user input
+		maps.Copy(podLabels, rateLimitLabels())
+	}
+
+	var podAnnotations map[string]string
 	if enablePrometheus(r.rateLimit) {
-		annotations = map[string]string{
+		podAnnotations = map[string]string{
 			"prometheus.io/path":   "/metrics",
 			"prometheus.io/port":   strconv.Itoa(PrometheusPort),
 			"prometheus.io/scrape": "true",
 		}
 	}
 	if r.rateLimitDeployment.Pod.Annotations != nil {
-		annotations = r.rateLimitDeployment.Pod.Annotations
+		if podAnnotations != nil {
+			maps.Copy(podAnnotations, r.rateLimitDeployment.Pod.Annotations)
+		} else {
+			podAnnotations = r.rateLimitDeployment.Pod.Annotations
+		}
 	}
 
 	deployment := &appsv1.Deployment{
@@ -208,7 +237,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.Namespace,
-			Labels:    labels,
+			Labels:    rateLimitLabels(),
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: r.rateLimitDeployment.Replicas,
@@ -216,8 +245,8 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 			Selector: selector,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels:      selector.MatchLabels,
-					Annotations: annotations,
+					Labels:      podLabels,
+					Annotations: podAnnotations,
 				},
 				Spec: corev1.PodSpec{
 					Containers:                    containers,
@@ -270,12 +299,66 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	return deployment, nil
 }
 
+// DaemonSetSpec returns the `DaemonSet` sets spec.
+func (r *ResourceRender) DaemonSetSpec() (*egv1a1.KubernetesDaemonSetSpec, error) {
+	return nil, nil
+}
+
 // TODO: implement this method
 func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 	return nil, nil
 }
 
+// HorizontalPodAutoscalerSpec returns the `HorizontalPodAutoscaler` sets spec.
+func (r *ResourceRender) HorizontalPodAutoscalerSpec() (*egv1a1.KubernetesHorizontalPodAutoscalerSpec, error) {
+	return r.rateLimitHpa, nil
+}
+
 func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPodAutoscaler, error) {
+	hpaConfig, err := r.HorizontalPodAutoscalerSpec()
+	if hpaConfig == nil {
+		return nil, err
+	}
+
+	hpa := &autoscalingv2.HorizontalPodAutoscaler{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "autoscaling/v2",
+			Kind:       "HorizontalPodAutoscaler",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: r.Namespace,
+			Name:      r.Name(),
+			Labels:    rateLimitLabels(),
+		},
+		Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
+			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
+				APIVersion: "apps/v1",
+				Kind:       "Deployment",
+			},
+			MinReplicas: hpaConfig.MinReplicas,
+			MaxReplicas: ptr.Deref(hpaConfig.MaxReplicas, 1),
+			Metrics:     hpaConfig.Metrics,
+			Behavior:    hpaConfig.Behavior,
+		},
+	}
+
+	// set deployment target ref name
+	deploymentConfig := r.rateLimitDeployment
+	if deploymentConfig.Name != nil {
+		hpa.Spec.ScaleTargetRef.Name = *deploymentConfig.Name
+	} else {
+		hpa.Spec.ScaleTargetRef.Name = r.Name()
+	}
+
+	if hpa, err = hpaConfig.ApplyMergePatch(hpa); err != nil {
+		return nil, err
+	}
+
+	return hpa, nil
+}
+
+// PodDisruptionBudgetSpec returns the `PodDisruptionBudget` sets spec.
+func (r *ResourceRender) PodDisruptionBudgetSpec() (*egv1a1.KubernetesPodDisruptionBudgetSpec, error) {
 	return nil, nil
 }
 

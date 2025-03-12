@@ -13,6 +13,15 @@ backendTrafficPolicies:
           - sourceCIDR:
               type: Distinct
               value: 192.168.0.0/16
+          cost:
+            request:
+              from: Number
+              number: 1
+            response:
+              from: Metadata
+              metadata:
+                key: some_cost_set_by_foo
+                namespace: something.com
           limit:
             requests: 20
             unit: Hour
@@ -52,6 +61,9 @@ backendTrafficPolicies:
               value: one
             - name: x-org-id
               type: Distinct
+            - invert: true
+              name: x-org-id
+              value: admin
           limit:
             requests: 10
             unit: Hour
@@ -262,7 +274,7 @@ infraIR:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -287,6 +299,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: grpcroute/default/grpcroute-1/rule/0/backend/0
             protocol: GRPC
             weight: 1
         hostname: '*'
@@ -306,12 +319,21 @@ xdsIR:
                   name: x-user-id
                 - distinct: true
                   name: x-org-id
+                - distinct: false
+                  exact: admin
+                  invert: true
+                  name: x-org-id
                 limit:
                   requests: 10
                   unit: Hour
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
   envoy-gateway/gateway-2:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -336,6 +358,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
@@ -363,3 +386,12 @@ xdsIR:
                 limit:
                   requests: 20
                   unit: Hour
+                requestCost:
+                  number: 1
+                responseCost:
+                  format: '%DYNAMIC_METADATA(something.com:some_cost_set_by_foo)%'
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

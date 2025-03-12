@@ -72,10 +72,6 @@ func (*extAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPLi
 // buildHCMExtAuthFilter returns an ext_authz HTTP filter from the provided IR HTTPRoute.
 func buildHCMExtAuthFilter(extAuth *ir.ExtAuth) (*hcmv3.HttpFilter, error) {
 	extAuthProto := extAuthConfig(extAuth)
-	if err := extAuthProto.ValidateAll(); err != nil {
-		return nil, err
-	}
-
 	extAuthAny, err := anypb.New(extAuthProto)
 	if err != nil {
 		return nil, err
@@ -115,6 +111,12 @@ func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
 			},
 			IgnoreCase: true,
 		})
+	}
+
+	if extAuth.BodyToExtAuth != nil {
+		config.WithRequestBody = &extauthv3.BufferSettings{
+			MaxRequestBytes: extAuth.BodyToExtAuth.MaxRequestBytes,
+		}
 	}
 
 	if len(headersToExtAuth) > 0 {
@@ -226,14 +228,12 @@ func (*extAuth) patchResources(tCtx *types.ResourceVersionTable,
 		}
 		if route.Security.ExtAuth.HTTP != nil {
 			if err := createExtServiceXDSCluster(
-				&route.Security.ExtAuth.HTTP.Destination, route.Security.ExtAuth.Traffic, tCtx); err != nil && !errors.Is(
-				err, ErrXdsClusterExists) {
+				&route.Security.ExtAuth.HTTP.Destination, route.Security.ExtAuth.Traffic, tCtx); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		} else {
 			if err := createExtServiceXDSCluster(
-				&route.Security.ExtAuth.GRPC.Destination, route.Security.ExtAuth.Traffic, tCtx); err != nil && !errors.Is(
-				err, ErrXdsClusterExists) {
+				&route.Security.ExtAuth.GRPC.Destination, route.Security.ExtAuth.Traffic, tCtx); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}

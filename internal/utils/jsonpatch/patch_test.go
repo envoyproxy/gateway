@@ -241,7 +241,7 @@ func TestApplyJSONPatches(t *testing.T) {
 						t.Error(err)
 					}
 
-					require.Equal(t, expectedJSON, resultJSON)
+					require.JSONEq(t, expectedJSON, resultJSON)
 				}
 				require.NoError(t, err)
 			}

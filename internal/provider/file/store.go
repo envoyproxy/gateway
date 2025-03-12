@@ -6,7 +6,6 @@
 package file
 
 import (
-	"github.com/fsnotify/fsnotify"
 	"github.com/go-logr/logr"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -28,19 +27,15 @@ func newResourcesStore(name string, resources *message.ProviderResources, logger
 	}
 }
 
-func (r *resourcesStore) HandleEvent(event fsnotify.Event, files, dirs []string) {
-	r.logger.Info("receive an event", "name", event.Name, "op", event.Op.String())
+// HandleEvent simply removes all the resources and triggers a resources reload from files
+// and directories despite of the event type.
+// TODO: Enhance this method by respecting the event type, and add support for multiple GatewayClass.
+func (r *resourcesStore) HandleEvent(files, dirs []string) {
+	r.logger.Info("reload all resources")
 
-	// TODO(sh2): Support multiple GatewayClass.
-	switch event.Op {
-	case fsnotify.Write:
-		if err := r.LoadAndStore(files, dirs); err != nil {
-			r.logger.Error(err, "failed to load and store resources")
-		}
-	case fsnotify.Remove:
-		// Under our current assumption, one file only contains one GatewayClass and
-		// all its other related resources, so we can remove them safely.
-		r.resources.GatewayAPIResources.Delete(r.name)
+	r.resources.GatewayAPIResources.Delete(r.name)
+	if err := r.LoadAndStore(files, dirs); err != nil {
+		r.logger.Error(err, "failed to load and store resources")
 	}
 }
 

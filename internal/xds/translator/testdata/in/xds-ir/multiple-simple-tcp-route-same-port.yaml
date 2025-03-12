@@ -1,6 +1,6 @@
 tcp:
 - name: "tcp-listener-simple"
-  address: "0.0.0.0"
+  address: "::"
   port: 10080
   routes:
   - name: "tcp-route-simple"
@@ -12,8 +12,9 @@ tcp:
           port: 50000
         - host: "5.6.7.8"
           port: 50001
+        name: "tcp-route-simple-dest/backend/0"
 - name: "tcp-listener-simple-1"
-  address: "0.0.0.0"
+  address: "::"
   port: 10080
   routes:
   - name: "tcp-route-simple-1"
@@ -25,8 +26,9 @@ tcp:
           port: 50000
         - host: "5.6.7.8"
           port: 50001
+        name: "tcp-route-simple-1-dest/backend/0"
 - name: "tcp-listener-simple-2"
-  address: "0.0.0.0"
+  address: "::"
   port: 10080
   routes:
   - name: "tcp-route-simple-2"
@@ -38,8 +40,9 @@ tcp:
           port: 50000
         - host: "5.6.7.8"
           port: 50001
+        name: "tcp-route-simple-2-dest/backend/0"
 - name: "tcp-listener-simple-3"
-  address: "0.0.0.0"
+  address: "::"
   port: 10080
   routes:
   - name: "tcp-route-simple-3"
@@ -51,8 +54,9 @@ tcp:
           port: 50000
         - host: "5.6.7.8"
           port: 50001
+        name: "tcp-route-simple-3-dest/backend/0"
 - name: "tcp-listener-simple-4"
-  address: "0.0.0.0"
+  address: "::"
   port: 10080
   routes:
   - name: "tcp-route-simple-4"
@@ -63,4 +67,5 @@ tcp:
         - host: "1.2.3.4"
           port: 50000
         - host: "5.6.7.8"
-        port: 50001
+          port: 50001
+        name: "tcp-route-simple-4-dest/backend/0"

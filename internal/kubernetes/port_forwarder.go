@@ -8,8 +8,10 @@ package kubernetes
 import (
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
+	"strconv"
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
@@ -134,5 +136,5 @@ func (f *localForwarder) WaitForStop() {
 }
 
 func (f *localForwarder) Address() string {
-	return fmt.Sprintf("%s:%d", netutil.DefaultLocalAddress, f.localPort)
+	return net.JoinHostPort(netutil.DefaultLocalAddress, strconv.Itoa(f.localPort))
 }

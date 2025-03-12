@@ -59,19 +59,23 @@ To uninstall the chart:
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| certgen | object | `{"job":{"affinity":{},"annotations":{},"nodeSelector":{},"resources":{},"tolerations":[],"ttlSecondsAfterFinished":30},"rbac":{"annotations":{},"labels":{}}}` | Certgen is used to generate the certificates required by EnvoyGateway. If you want to construct a custom certificate, you can generate a custom certificate through Cert-Manager before installing EnvoyGateway. Certgen will not overwrite the custom certificate. Please do not manually modify `values.yaml` to disable certgen, it may cause EnvoyGateway OIDC,OAuth2,etc. to not work as expected. |
-| config.envoyGateway.gateway.controllerName | string | `"gateway.envoyproxy.io/gatewayclass-controller"` |  |
-| config.envoyGateway.logging.level.default | string | `"info"` |  |
-| config.envoyGateway.provider.type | string | `"Kubernetes"` |  |
+| certgen | object | `{"job":{"affinity":{},"annotations":{},"args":[],"nodeSelector":{},"resources":{},"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"privileged":false,"readOnlyRootFilesystem":true,"runAsGroup":65534,"runAsNonRoot":true,"runAsUser":65534,"seccompProfile":{"type":"RuntimeDefault"}},"tolerations":[],"ttlSecondsAfterFinished":30},"rbac":{"annotations":{},"labels":{}}}` | Certgen is used to generate the certificates required by EnvoyGateway. If you want to construct a custom certificate, you can generate a custom certificate through Cert-Manager before installing EnvoyGateway. Certgen will not overwrite the custom certificate. Please do not manually modify `values.yaml` to disable certgen, it may cause EnvoyGateway OIDC,OAuth2,etc. to not work as expected. |
+| config.envoyGateway | object | `{"gateway":{"controllerName":"gateway.envoyproxy.io/gatewayclass-controller"},"logging":{"level":{"default":"info"}},"provider":{"type":"Kubernetes"}}` | EnvoyGateway configuration. Visit https://gateway.envoyproxy.io/docs/api/extension_types/#envoygateway to view all options. |
 | createNamespace | bool | `false` |  |
 | deployment.envoyGateway.image.repository | string | `""` |  |
 | deployment.envoyGateway.image.tag | string | `""` |  |
 | deployment.envoyGateway.imagePullPolicy | string | `""` |  |
 | deployment.envoyGateway.imagePullSecrets | list | `[]` |  |
-| deployment.envoyGateway.resources.limits.cpu | string | `"500m"` |  |
 | deployment.envoyGateway.resources.limits.memory | string | `"1024Mi"` |  |
 | deployment.envoyGateway.resources.requests.cpu | string | `"100m"` |  |
 | deployment.envoyGateway.resources.requests.memory | string | `"256Mi"` |  |
+| deployment.envoyGateway.securityContext.allowPrivilegeEscalation | bool | `false` |  |
+| deployment.envoyGateway.securityContext.capabilities.drop[0] | string | `"ALL"` |  |
+| deployment.envoyGateway.securityContext.privileged | bool | `false` |  |
+| deployment.envoyGateway.securityContext.runAsGroup | int | `65532` |  |
+| deployment.envoyGateway.securityContext.runAsNonRoot | bool | `true` |  |
+| deployment.envoyGateway.securityContext.runAsUser | int | `65532` |  |
+| deployment.envoyGateway.securityContext.seccompProfile.type | string | `"RuntimeDefault"` |  |
 | deployment.pod.affinity | object | `{}` |  |
 | deployment.pod.annotations."prometheus.io/port" | string | `"19001"` |  |
 | deployment.pod.annotations."prometheus.io/scrape" | string | `"true"` |  |
@@ -99,6 +103,11 @@ To uninstall the chart:
 | global.images.ratelimit.image | string | `"docker.io/envoyproxy/ratelimit:master"` |  |
 | global.images.ratelimit.pullPolicy | string | `"IfNotPresent"` |  |
 | global.images.ratelimit.pullSecrets | list | `[]` |  |
+| hpa.behavior | object | `{}` |  |
+| hpa.enabled | bool | `false` |  |
+| hpa.maxReplicas | int | `1` |  |
+| hpa.metrics | list | `[]` |  |
+| hpa.minReplicas | int | `1` |  |
 | kubernetesClusterDomain | string | `"cluster.local"` |  |
 | podDisruptionBudget.minAvailable | int | `0` |  |
 | service.annotations | object | `{}` |  |

@@ -56,7 +56,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.name
-        image: envoyproxy/envoy:distroless-dev
+        image: docker.io/envoyproxy/envoy:distroless-dev
         imagePullPolicy: IfNotPresent
         lifecycle:
           preStop:
@@ -66,20 +66,17 @@ spec:
               scheme: HTTP
         name: envoy
         ports:
-        - containerPort: 8080
-          name: EnvoyHTTPPort
-          protocol: TCP
-        - containerPort: 8443
-          name: EnvoyHTTPSPort
-          protocol: TCP
         - containerPort: 19001
           name: metrics
+          protocol: TCP
+        - containerPort: 19003
+          name: readiness
           protocol: TCP
         readinessProbe:
           failureThreshold: 1
           httpGet:
             path: /ready
-            port: 19001
+            port: 19003
             scheme: HTTP
           periodSeconds: 5
           successThreshold: 1
@@ -103,7 +100,7 @@ spec:
           failureThreshold: 30
           httpGet:
             path: /ready
-            port: 19001
+            port: 19003
             scheme: HTTP
           periodSeconds: 10
           successThreshold: 1
@@ -132,7 +129,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.name
-        image: envoyproxy/gateway-dev:latest
+        image: docker.io/envoyproxy/gateway-dev:latest
         imagePullPolicy: IfNotPresent
         lifecycle:
           preStop:

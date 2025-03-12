@@ -1,6 +1,6 @@
 http:
 - name: "first-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 10080
   hostnames:
   - "foo.com"
@@ -26,8 +26,9 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "first-route-dest/backend/0"
 - name: "second-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 10080
   hostnames:
   - "foo.net"
@@ -53,8 +54,9 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "second-route-dest/backend/0"
 - name: "third-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 10080
   hostnames:
   - "example.com"
@@ -70,8 +72,9 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "third-route-dest/backend/0"
 - name: "fourth-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 10080
   hostnames:
   - "example.net"
@@ -87,9 +90,10 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "fourth-route-dest/backend/0"
 tcp:
 - name: "fifth-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 10080
   routes:
   - name: "fifth-route"
@@ -103,8 +107,9 @@ tcp:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "tcp-route-dest/backend/0"
 - name: "sixth-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 10080
   routes:
   - name: "sixth-route"
@@ -118,3 +123,4 @@ tcp:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "tls-route-dest/backend/0"

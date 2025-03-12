@@ -349,7 +349,6 @@ spec:
   - group: ''
     kind: Service
     name: grpc-ext-auth
-    sectionName: "9002"
   validation:
     caCertificateRefs:
     - name: grpc-ext-auth-ca
@@ -374,7 +373,6 @@ spec:
   - group: ''
     kind: Service
     name: grpc-ext-auth
-    sectionName: "9002"
   validation:
     caCertificateRefs:
     - name: grpc-ext-auth-ca

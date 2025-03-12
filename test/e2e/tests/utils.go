@@ -14,6 +14,8 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -42,6 +44,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/kubernetes"
 	tb "github.com/envoyproxy/gateway/internal/troubleshoot"
 )
+
+var IPFamily = os.Getenv("IP_FAMILY")
 
 const defaultServiceStartupTimeout = 5 * time.Minute
 
@@ -326,11 +330,11 @@ func EnvoyExtensionPolicyMustBeAccepted(t *testing.T, client client.Client, poli
 		}
 
 		if policyAcceptedByAncestor(policy.Status.Ancestors, controllerName, ancestorRef) {
-			tlog.Logf(t, "EnvoyExtensionPolicy has been accepted: %v", policy)
+			tlog.Logf(t, "EnvoyExtensionPolicy has been accepted: %+v", policy)
 			return true, nil
 		}
 
-		tlog.Logf(t, "EnvoyExtensionPolicy not yet accepted: %v", policy)
+		tlog.Logf(t, "EnvoyExtensionPolicy not yet accepted: %+v", policy)
 		return false, nil
 	})
 
@@ -361,6 +365,8 @@ func BackendMustBeAccepted(t *testing.T, client client.Client, backendName types
 	require.NoErrorf(t, waitErr, "error waiting for Backend to be accepted")
 }
 
+// ScrapeMetrics
+// TODO: use QueryPrometheus from test/e2e/tests/promql.go instead
 func ScrapeMetrics(t *testing.T, c client.Client, nn types.NamespacedName, port int32, path string) error {
 	url, err := RetrieveURL(c, nn, port, path)
 	if err != nil {
@@ -384,6 +390,14 @@ func ScrapeMetrics(t *testing.T, c client.Client, nn types.NamespacedName, port 
 }
 
 func RetrieveURL(c client.Client, nn types.NamespacedName, port int32, path string) (string, error) {
+	host, err := ServiceHost(c, nn, port)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("http://%s%s", host, path), nil
+}
+
+func ServiceHost(c client.Client, nn types.NamespacedName, port int32) (string, error) {
 	svc := corev1.Service{}
 	if err := c.Get(context.Background(), nn, &svc); err != nil {
 		return "", err
@@ -400,7 +414,8 @@ func RetrieveURL(c client.Client, nn types.NamespacedName, port int32, path stri
 	default:
 		host = fmt.Sprintf("%s.%s.svc", nn.Name, nn.Namespace)
 	}
-	return fmt.Sprintf("http://%s:%d%s", host, port, path), nil
+
+	return net.JoinHostPort(host, strconv.Itoa(int(port))), nil
 }
 
 var metricParser = &expfmt.TextParser{}
@@ -453,35 +468,6 @@ func WaitForLoadBalancerAddress(t *testing.T, client client.Client, timeout time
 	})
 	require.NoErrorf(t, waitErr, "error waiting for Service to have at least one load balancer IP address in status")
 	return ipAddr, nil
-}
-
-func ALSLogCount(suite *suite.ConformanceTestSuite) (int, error) {
-	metricPath, err := RetrieveURL(suite.Client, types.NamespacedName{
-		Namespace: "monitoring",
-		Name:      "envoy-als",
-	}, 19001, "/metrics")
-	if err != nil {
-		return -1, err
-	}
-
-	countMetric, err := RetrieveMetric(metricPath, "log_count", time.Second)
-	if err != nil {
-		return -1, err
-	}
-
-	// metric not found or empty
-	if countMetric == nil {
-		return 0, nil
-	}
-
-	total := 0
-	for _, m := range countMetric.Metric {
-		if m.Counter != nil && m.Counter.Value != nil {
-			total += int(*m.Counter.Value)
-		}
-	}
-
-	return total, nil
 }
 
 func OverLimitCount(suite *suite.ConformanceTestSuite) (int, error) {
@@ -560,7 +546,7 @@ func QueryLogCountFromLoki(t *testing.T, c client.Client, keyValues map[string]s
 	params := url.Values{}
 	params.Add("query", q)
 	params.Add("start", fmt.Sprintf("%d", time.Now().Add(-10*time.Minute).Unix())) // query logs from last 10 minutes
-	lokiQueryURL := fmt.Sprintf("http://%s:3100/loki/api/v1/query_range?%s", lokiHost, params.Encode())
+	lokiQueryURL := fmt.Sprintf("http://%s/loki/api/v1/query_range?%s", net.JoinHostPort(lokiHost, "3100"), params.Encode())
 	res, err := http.DefaultClient.Get(lokiQueryURL)
 	if err != nil {
 		return -1, err
@@ -686,9 +672,57 @@ func createTagsQueryParam(tags map[string]string) (string, error) {
 // CollectAndDump collects and dumps the cluster data for troubleshooting and log.
 // This function should be call within t.Cleanup.
 func CollectAndDump(t *testing.T, rest *rest.Config) {
-	result := tb.CollectResult(context.TODO(), rest, "", "envoy-gateway")
+	result := tb.CollectResult(context.TODO(), rest, "", "envoy-gateway-system")
 	for r, data := range result {
-		tlog.Logf(t, "filename: %s", r)
-		tlog.Logf(t, "data: \n%s", data)
+		tlog.Logf(t, "\nfilename: %s", r)
+		tlog.Logf(t, "\ndata: \n%s", data)
 	}
+}
+
+func GetService(c client.Client, nn types.NamespacedName) (*corev1.Service, error) {
+	svc := &corev1.Service{}
+	if err := c.Get(context.Background(), nn, svc); err != nil {
+		return nil, err
+	}
+	return svc, nil
+}
+
+func CreateBackend(c client.Client, nn types.NamespacedName, clusterIP string, port int32) error {
+	backend := &egv1a1.Backend{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: nn.Namespace,
+			Name:      nn.Name,
+		},
+		Spec: egv1a1.BackendSpec{
+			Endpoints: []egv1a1.BackendEndpoint{
+				{
+					IP: &egv1a1.IPEndpoint{
+						Address: clusterIP,
+						Port:    port,
+					},
+				},
+			},
+		},
+	}
+	return c.Create(context.TODO(), backend)
+}
+
+func DeleteBackend(c client.Client, nn types.NamespacedName) error {
+	backend := &egv1a1.Backend{}
+	if err := c.Get(context.Background(), nn, backend); err != nil {
+		return err
+	}
+	return c.Delete(context.Background(), backend)
+}
+
+func ContentEncoding(compressorType egv1a1.CompressorType) string {
+	var encoding string
+	switch compressorType {
+	case egv1a1.BrotliCompressorType:
+		encoding = "br"
+	case egv1a1.GzipCompressorType:
+		encoding = "gzip"
+	}
+
+	return encoding
 }

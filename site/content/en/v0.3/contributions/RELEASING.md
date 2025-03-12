@@ -97,10 +97,10 @@ Configuration looks like following:
             cherrypick/release-v0.4
           # put release manager here
           reviewers: |
-            AliceProxy
+            Alice-Lilith
 ```
 
-Replace `v0.4` with real branch name, and `AliceProxy` with the real name of RM.
+Replace `v0.4` with real branch name, and `Alice-Lilith` with the real name of RM.
 
 ## Minor Release
 

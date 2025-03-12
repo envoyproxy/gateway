@@ -15,6 +15,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -474,6 +476,106 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 			},
 			results: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{},
 		},
+		{
+			name: "match expression",
+			policy: egv1a1.PolicyTargetReferences{
+				TargetSelectors: []egv1a1.TargetSelector{
+					{
+						Kind: "Gateway",
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      "environment",
+								Operator: "In",
+								Values:   []string{"prod", "staging"},
+							},
+						},
+					},
+				},
+			},
+			targets: []*unstructured.Unstructured{
+				{
+					Object: map[string]any{
+						"apiVersion": "gateway.networking.k8s.io/v1",
+						"kind":       "Gateway",
+						"metadata": map[string]any{
+							"name":      "first",
+							"namespace": "default",
+							"labels": map[string]any{
+								"environment": "prod",
+							},
+						},
+					},
+				},
+				{
+					Object: map[string]any{
+						"apiVersion": "gateway.networking.k8s.io/v1",
+						"kind":       "Gateway",
+						"metadata": map[string]any{
+							"name":      "second",
+							"namespace": "default",
+							"labels": map[string]any{
+								"environment": "dev",
+							},
+						},
+					},
+				},
+			},
+			results: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+				{
+					LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+						Group: "gateway.networking.k8s.io",
+						Kind:  "Gateway",
+						Name:  "first",
+					},
+				},
+			},
+		},
+		{
+			name: "match expression - bad expression matches nothing",
+			policy: egv1a1.PolicyTargetReferences{
+				TargetSelectors: []egv1a1.TargetSelector{
+					{
+						Kind: "Gateway",
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      "environment",
+								Operator: "Foo",
+								Values:   []string{"prod", "staging"},
+							},
+						},
+					},
+				},
+			},
+			targets: []*unstructured.Unstructured{
+				{
+					Object: map[string]any{
+						"apiVersion": "gateway.networking.k8s.io/v1",
+						"kind":       "Gateway",
+						"metadata": map[string]any{
+							"name":      "first",
+							"namespace": "default",
+							"labels": map[string]any{
+								"environment": "prod",
+							},
+						},
+					},
+				},
+				{
+					Object: map[string]any{
+						"apiVersion": "gateway.networking.k8s.io/v1",
+						"kind":       "Gateway",
+						"metadata": map[string]any{
+							"name":      "second",
+							"namespace": "default",
+							"labels": map[string]any{
+								"environment": "dev",
+							},
+						},
+					},
+				},
+			},
+			results: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -548,6 +650,70 @@ func TestIsRefToGateway(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			got := IsRefToGateway(tc.routeNamespace, tc.parentRef, tc.gatewayNN)
 			require.Equal(t, tc.expected, got)
+		})
+	}
+}
+
+func TestGetServiceIPFamily(t *testing.T) {
+	testCases := []struct {
+		name     string
+		service  *corev1.Service
+		expected *egv1a1.IPFamily
+	}{
+		{
+			name:     "nil service",
+			service:  nil,
+			expected: nil,
+		},
+		{
+			name: "require dual stack",
+			service: &corev1.Service{
+				Spec: corev1.ServiceSpec{
+					IPFamilyPolicy: ptr.To(corev1.IPFamilyPolicyRequireDualStack),
+				},
+			},
+			expected: ptr.To(egv1a1.DualStack),
+		},
+		{
+			name: "multiple ip families",
+			service: &corev1.Service{
+				Spec: corev1.ServiceSpec{
+					IPFamilies: []corev1.IPFamily{corev1.IPv4Protocol, corev1.IPv6Protocol},
+				},
+			},
+			expected: ptr.To(egv1a1.DualStack),
+		},
+		{
+			name: "ipv4 only",
+			service: &corev1.Service{
+				Spec: corev1.ServiceSpec{
+					IPFamilies: []corev1.IPFamily{corev1.IPv4Protocol},
+				},
+			},
+			expected: ptr.To(egv1a1.IPv4),
+		},
+		{
+			name: "ipv6 only",
+			service: &corev1.Service{
+				Spec: corev1.ServiceSpec{
+					IPFamilies: []corev1.IPFamily{corev1.IPv6Protocol},
+				},
+			},
+			expected: ptr.To(egv1a1.IPv6),
+		},
+		{
+			name: "no ip family specified",
+			service: &corev1.Service{
+				Spec: corev1.ServiceSpec{},
+			},
+			expected: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := getServiceIPFamily(tc.service)
+			require.Equal(t, tc.expected, result)
 		})
 	}
 }

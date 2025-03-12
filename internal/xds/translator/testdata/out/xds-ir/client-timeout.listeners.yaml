@@ -1,6 +1,6 @@
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       portValue: 10080
   defaultFilterChain:
     filters:
@@ -36,7 +36,7 @@
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       portValue: 10081
   filterChains:
   - filters:

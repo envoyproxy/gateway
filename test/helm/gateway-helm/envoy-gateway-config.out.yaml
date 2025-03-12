@@ -107,6 +107,7 @@ rules:
   - apps
   resources:
   - deployments
+  - daemonsets
   verbs:
   - get
   - list
@@ -205,10 +206,12 @@ rules:
   resources:
   - serviceaccounts
   - services
+  - configmaps
   verbs:
   - create
   - get
   - delete
+  - deletecollection
   - patch
 - apiGroups:
   - apps
@@ -219,6 +222,7 @@ rules:
   - create
   - get
   - delete
+  - deletecollection
   - patch
 - apiGroups:
   - autoscaling
@@ -230,6 +234,7 @@ rules:
   - create
   - get
   - delete
+  - deletecollection
   - patch
 ---
 # Source: gateway-helm/templates/leader-election-rbac.yaml
@@ -419,7 +424,6 @@ spec:
           periodSeconds: 10
         resources:
           limits:
-            cpu: 500m
             memory: 1024Mi
           requests:
             cpu: 100m
@@ -430,8 +434,8 @@ spec:
             drop:
             - ALL
           privileged: false
-          runAsNonRoot: true
           runAsGroup: 65532
+          runAsNonRoot: true
           runAsUser: 65532
           seccompProfile:
             type: RuntimeDefault
@@ -561,8 +565,8 @@ spec:
             - ALL
           privileged: false
           readOnlyRootFilesystem: true
-          runAsNonRoot: true
           runAsGroup: 65534
+          runAsNonRoot: true
           runAsUser: 65534
           seccompProfile:
             type: RuntimeDefault

@@ -1,0 +1,66 @@
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.jwt_authn
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
+            providers:
+              httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io/foobar:
+                audiences:
+                - foo.bar.com
+                claimToHeaders:
+                - claimName: claim
+                  headerName: claim-header
+                forward: true
+                issuer: https://foo.bar.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scope
+                payloadInMetadata: foobar
+                remoteJwks:
+                  asyncFetch: {}
+                  cacheDuration: 300s
+                  httpUri:
+                    cluster: securitypolicy/default/policy-for-route/jwt/0
+                    timeout: 10s
+                    uri: https://foo.bar.com/jwt/public-key/jwks.json
+                  retryPolicy:
+                    numRetries: 3
+                    retryBackOff:
+                      baseInterval: 1s
+                      maxInterval: 5s
+                    retryOn: 5xx,gateway-error,reset
+            requirementMap:
+              httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io:
+                providerName: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io/foobar
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: default/gateway-1/http
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10080
+        useRemoteAddress: true
+    name: default/gateway-1/http
+  name: default/gateway-1/http
+  perConnectionBufferLimitBytes: 32768

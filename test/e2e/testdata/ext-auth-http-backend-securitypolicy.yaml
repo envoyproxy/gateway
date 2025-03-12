@@ -78,5 +78,5 @@ spec:
           kind: Backend
           group: gateway.envoyproxy.io
           namespace: gateway-conformance-infra
-          port: 9002
+          port: 8080
       headersToBackend: ["x-current-user"]

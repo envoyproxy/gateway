@@ -125,7 +125,7 @@ infraIR:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -146,3 +146,8 @@ xdsIR:
       enablePerEndpointStats: false
       enableRequestResponseSizesStats: false
       enableVirtualHostStats: false
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

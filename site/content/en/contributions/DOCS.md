@@ -1,10 +1,10 @@
 ---
 title: "Working on Envoy Gateway Docs"
-description: "This section tells the development of 
+description: "This section tells the development of
  Envoy Gateway Documents."
 ---
 
-The documentation for the Envoy Gateway lives in the `site/content/en` directory (the Chinese content in the `site/content/zh` directory).
+The documentation for the Envoy Gateway lives in the `site/content/en` directory.
 Any individual document can be written using [Markdown].
 
 ## Documentation Structure

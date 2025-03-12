@@ -109,7 +109,7 @@ envoyPatchPolicies:
       path: "/endpoints/0/load_balancing_weight"
 http:
 - name: "first-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 10080
   hostnames:
   - "*"
@@ -142,3 +142,4 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "first-route-dest/backend/0"

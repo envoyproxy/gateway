@@ -16,6 +16,7 @@ metadata:
   name: proxy-config
   namespace: envoy-gateway-system
 spec:
+  ipFamily: IPv4
   provider:
     type: Kubernetes
     kubernetes:
@@ -31,15 +32,6 @@ spec:
                 path: /var/run/ext-proc
                 type: ""
   telemetry:
-    metrics:
-      prometheus: {}
-      sinks:
-        - type: OpenTelemetry
-          openTelemetry:
-            backendRefs:
-              - name: otel-collector
-                namespace: monitoring
-                port: 4317
     accessLog:
       settings:
         - format:
@@ -52,47 +44,15 @@ spec:
             - type: File
               file:
                 path: /dev/stdout
-            - type: OpenTelemetry
-              openTelemetry:
-                backendRefs:
-                  - name: otel-collector
-                    namespace: monitoring
-                    port: 4317
-                resources:
-                  k8s.cluster.name: "envoy-gateway"
-        - sinks:
-            - type: ALS
-              als:
-                backendRefs:
-                  - name: envoy-als
-                    namespace: monitoring
-                    port: 8080
-                type: HTTP
-    tracing:
-      provider:
-        backendRefs:
-          - name: otel-collector
-            namespace: monitoring
-            port: 4317
-      customTags:
-        "provider":
-          type: Literal
-          literal:
-            value: "otel"
-        "k8s.cluster.name":
-          type: Literal
-          literal:
-            value: "envoy-gateway"
-        "k8s.pod.name":
-          type: Environment
-          environment:
-            name: ENVOY_POD_NAME
-            defaultValue: "-"
-        "k8s.namespace.name":
-          type: Environment
-          environment:
-            name: ENVOY_GATEWAY_NAMESPACE
-            defaultValue: "envoy-gateway-system"
+        - type: Listener
+          format:
+            type: Text
+            text: |
+              LISTENER ACCESS LOG %UPSTREAM_PROTOCOL% %RESPONSE_CODE%
+          sinks:
+            - type: File
+              file:
+                path: /dev/stdout
   shutdown:
     drainTimeout: 5s
     minDrainDuration: 1s
@@ -115,6 +75,7 @@ metadata:
   name: upgrade-config
   namespace: envoy-gateway-system
 spec:
+  ipFamily: IPv4
   provider:
     type: Kubernetes
     kubernetes:
@@ -149,6 +110,7 @@ metadata:
   name: merge-gateways-config
   namespace: envoy-gateway-system
 spec:
+  ipFamily: IPv4
   mergeGateways: true
 ---
 kind: GatewayClass
@@ -157,6 +119,11 @@ metadata:
   name: internet
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: proxy-config
+    namespace: envoy-gateway-system
 ---
 kind: GatewayClass
 apiVersion: gateway.networking.k8s.io/v1
@@ -164,5 +131,10 @@ metadata:
   name: private
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: proxy-config
+    namespace: envoy-gateway-system
 ---
 

@@ -1,6 +1,6 @@
 http:
   - name: "first-listener"
-    address: "0.0.0.0"
+    address: "::"
     port: 10080
     hostnames:
       - "*"
@@ -16,12 +16,13 @@ http:
             - endpoints:
                 - host: "1.2.3.4"
                   port: 50000
+              name: "first-route-dest/backend/0"
         traffic:
           backendConnection:
             bufferLimit: 100000000
 tcp:
   - name: "second-listener"
-    address: "0.0.0.0"
+    address: "::"
     connection:
       bufferLimit: 1500
     port: 10081
@@ -33,11 +34,12 @@ tcp:
             - endpoints:
                 - host: "1.2.3.4"
                   port: 50000
+              name: "tcp-route-dest/backend/0"
         backendConnection:
           bufferLimit: 100000000
 udp:
   - name: "udp-route"
-    address: "0.0.0.0"
+    address: "::"
     port: 10080
     route:
       name: "udp-route"
@@ -49,5 +51,6 @@ udp:
                 port: 50000
               - host: "5.6.7.8"
                 port: 50001
+            name: "udp-route-dest/backend/0"
       backendConnection:
         bufferLimit: 100000000

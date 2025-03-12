@@ -82,9 +82,6 @@ func buildHealthCheckFilter(healthCheck *ir.HealthCheckSettings) (*hcmv3.HttpFil
 		}},
 	}
 
-	if err = healthCheckProto.ValidateAll(); err != nil {
-		return nil, err
-	}
 	if healthCheckAny, err = anypb.New(healthCheckProto); err != nil {
 		return nil, err
 	}

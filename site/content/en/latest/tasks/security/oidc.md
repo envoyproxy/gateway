@@ -85,7 +85,7 @@ kubectl get httproute/myapp -o yaml
 
 ## OIDC Authentication for a HTTPRoute
 
-OIDC can be configured at the Gateway level to authenticate all the HTTPRoutes that are associated with the Gateway with 
+OIDC can be configured at the Gateway level to authenticate all the HTTPRoutes that are associated with the Gateway with
 the same OIDC configuration, or at the HTTPRoute level to authenticate each HTTPRoute with different OIDC configurations.
 
 This section demonstrates how to configure OIDC authentication for a specific HTTPRoute.
@@ -117,9 +117,9 @@ kubectl create secret generic my-app-client-secret --from-literal=client-secret=
 ### Create a SecurityPolicy
 
 **Please notice that the `redirectURL` and `logoutPath` must match the target HTTPRoute.** In this example, the target
-HTTPRoute is configured to match the host `www.example.com` and the path `/myapp`, so the `redirectURL` must be prefixed 
-with `https://www.example.com:8443/myapp`, and `logoutPath` must be prefixed with`/myapp`, otherwise the OIDC authentication 
-will fail because the redirect and logout requests will not match the target HTTPRoute and therefore can't be processed 
+HTTPRoute is configured to match the host `www.example.com` and the path `/myapp`, so the `redirectURL` must be prefixed
+with `https://www.example.com:8443/myapp`, and `logoutPath` must be prefixed with`/myapp`, otherwise the OIDC authentication
+will fail because the redirect and logout requests will not match the target HTTPRoute and therefore can't be processed
 by the OAuth2 filter on that HTTPRoute.
 
 Note: please replace the ${CLIENT_ID} in the below yaml snippet with the actual Client ID that you got from the OIDC provider.
@@ -200,8 +200,8 @@ Put www.example.com in the /etc/hosts file in your test machine, so we can use t
 127.0.0.1 www.example.com
 ```
 
-Open a browser and navigate to the `https://www.example.com:8443/myapp` address. You should be redirected to the Google 
-login page. After you successfully login, you should see the response from the backend service. 
+Open a browser and navigate to the `https://www.example.com:8443/myapp` address. You should be redirected to the Google
+login page. After you successfully login, you should see the response from the backend service.
 
 Clean the cookies in the browser and try to access `https://www.example.com:8443/foo` address. You should be able to see
 this page since the path `/foo` is not protected by the OIDC policy.
@@ -284,15 +284,17 @@ kubectl get httproute/foo -o yaml
 
 ### Create a SecurityPolicy
 
-Create or update the SecurityPolicy to target the Gateway instead of the HTTPRoute. **Please notice that the `redirectURL` 
-and `logoutPath` must match one of the HTTPRoutes associated with the Gateway.** In this example, the target Gateway has 
-three HTTPRoutes associated with it, one with the host `www.example.com` and the path `/myapp`, one with the host 
-`www.example.com` and the path `/`, and one with the host `foo.example.com` and the path `/`. Any of these HTTPRoutes 
+Create or update the SecurityPolicy to target the Gateway instead of the HTTPRoute. **Please notice that the `redirectURL`
+and `logoutPath` must match one of the HTTPRoutes associated with the Gateway.** In this example, the target Gateway has
+three HTTPRoutes associated with it, one with the host `www.example.com` and the path `/myapp`, one with the host
+`www.example.com` and the path `/`, and one with the host `foo.example.com` and the path `/`. Any of these HTTPRoutes
 can be used to match the `redirectURL` and `logoutPath`.
 
 By default, the access token and ID token cookies are set to the host of the request, excluding subdomains. To allow the
-token cookies to be shared across subdomains and prevent users from having to log in again when switching between subdomains, 
+token cookies to be shared across subdomains and prevent users from having to log in again when switching between subdomains,
 the `cookieDomain` field needs to be set to the root domain. In this example, the root domain is `example.com`.
+
+Note: if a `cookieDomain` is added to an existing SecurityPolicy, the cookies in the browser must be cleared before sending a new request to the Gateway, otherwise the cookies with the old subdomain will take precedence and be sent to the Gateway, causing the OIDC authentication to fail.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -390,6 +392,155 @@ You can also try to access `https://foo.example.com:8443` and `https://www.examp
 be able to see the response from the backend service since these HTTPRoutes are also protected by the same OIDC config,
 and the cookies are shared across subdomains.
 
+## Connect to an OIDC Provider with Self-Signed Certificate
+
+In some scenarios, the OIDC provider may use a self-signed certificate. To connect to an OIDC provider with a self-signed certificate, you need to configure it using the [Backend] resource within the [SecurityPolicy]. Additionally, use the [BackendTLSPolicy] to specify the CA certificate required to authenticate the OIDC provider.
+
+The following example demonstrates how to configure the OIDC provider with a self-signed certificate.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: oidc-example
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: myapp
+  oidc:
+    provider:
+      backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-keycloak
+        port: 443
+      backendSettings:
+        retry:
+          numRetries: 3
+          perRetry:
+            backOff:
+              baseInterval: 1s
+              maxInterval: 5s
+          retryOn:
+            triggers: ["5xx", "gateway-error", "reset"]
+      issuer: "https://my.keycloak.com/realms/master"
+      authorizationEndpoint: "https://my.keycloak.com/realms/master/protocol/openid-connect/auth"
+      tokenEndpoint: "https://my.keycloak.com/realms/master/protocol/openid-connect/token"
+    clientID: "${CLIENT_ID}"
+    clientSecret:
+      name: "my-app-client-secret"
+    redirectURL: "http://www.example.com/myapp/oauth2/callback"
+    logoutPath: "/myapp/logout"
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-keycloak
+spec:
+  endpoints:
+  - fqdn:
+      hostname: 'my.keycloak.com'
+      port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1alpha3
+kind: BackendTLSPolicy
+metadata:
+  name: policy-btls
+spec:
+  targetRefs:
+  - group: gateway.envoyproxy.io
+    kind: Backend
+    name: backend-keycloak
+  validation:
+    caCertificateRefs:
+    - name: backend-tls-certificate
+      group: ""
+      kind: ConfigMap
+    hostname: my.keycloak.com
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: oidc-example
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: myapp
+  oidc:
+    provider:
+      backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-keycloak
+        port: 443
+      backendSettings:
+        retry:
+          numRetries: 3
+          perRetry:
+            backOff:
+              baseInterval: 1s
+              maxInterval: 5s
+          retryOn:
+            triggers: ["5xx", "gateway-error", "reset"]
+      issuer: "https://my.keycloak.com/realms/master"
+      authorizationEndpoint: "https://my.keycloak.com/realms/master/protocol/openid-connect/auth"
+      tokenEndpoint: "https://my.keycloak.com/realms/master/protocol/openid-connect/token"
+    clientID: "${CLIENT_ID}"
+    clientSecret:
+      name: "my-app-client-secret"
+    redirectURL: "http://www.example.com/myapp/oauth2/callback"
+    logoutPath: "/myapp/logout"
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-keycloak
+spec:
+  endpoints:
+  - fqdn:
+      hostname: 'my.keycloak.com'
+      port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1alpha3
+kind: BackendTLSPolicy
+metadata:
+  name: policy-btls
+spec:
+  targetRefs:
+  - group: gateway.envoyproxy.io
+    kind: Backend
+    name: backend-keycloak
+  validation:
+    caCertificateRefs:
+    - name: backend-tls-certificate
+      group: ""
+      kind: ConfigMap
+    hostname: my.keycloak.com
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+As shown in the example above, the [SecurityPolicy] resource is configured with an OIDC provider in its OIDC settings. The `backendRefs` field references the [Backend] resource that defines the OIDC provider. The [BackendTLSPolicy] resource specifies the CA certificate required to authenticate the OIDC provider.
+
+Additional connection settings for the OIDC provider can be configured in the [backendSettings]. Currently, only the retry policy is supported.
+
+For more information about [Backend] and [BackendTLSPolicy], refer to the [Backend Routing][backend-routing] and [Backend TLS: Gateway to Backend][backend-tls] tasks.
+
 ## Clean-Up
 
 Follow the steps from the [Quickstart](../../quickstart) to uninstall Envoy Gateway and the example manifest.
@@ -409,6 +560,11 @@ Checkout the [Developer Guide](../../../../contributions/develop) to get involve
 
 [oidc]: https://openid.net/connect/
 [google-oidc]: https://developers.google.com/identity/protocols/oauth2/openid-connect
-[SecurityPolicy]: ../../../../contributions/design/security-policy
+[SecurityPolicy]: ../../../api/extension_types#securitypolicy
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
+[Backend]: ../../../api/extension_types#backend
+[BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/
+[backend-routing]: ../traffic/backend
+[backend-tls]: ../backend-tls
+[BackendSettings]: ../../../api/extension_types/#clustersettings

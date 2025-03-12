@@ -4,7 +4,6 @@
 // the root of the repo.
 
 //go:build celvalidation
-// +build celvalidation
 
 package celvalidation
 
@@ -416,6 +415,198 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			},
 		},
 		{
+			desc: "Valid Lua filter (inline)",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					Lua: []egv1a1.Lua{
+						{
+							Type:   egv1a1.LuaValueTypeInline,
+							Inline: ptr.To("function envoy_on_response(response_handle) -- Do something -- end"),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: nil,
+		},
+		{
+			desc: "Valid Lua filter (source configmap)",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					Lua: []egv1a1.Lua{
+						{
+							Type: egv1a1.LuaValueTypeValueRef,
+							ValueRef: &gwapiv1a2.LocalObjectReference{
+								Kind:  gwapiv1a2.Kind("ConfigMap"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+								Group: gwapiv1a2.Group("v1"),
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: nil,
+		},
+		{
+			desc: "Invalid Lua filter (type inline but source configmap)",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					Lua: []egv1a1.Lua{
+						{
+							Type: egv1a1.LuaValueTypeInline,
+							ValueRef: &gwapiv1a2.LocalObjectReference{
+								Kind:  gwapiv1a2.Kind("ConfigMap"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+								Group: gwapiv1a2.Group("v1"),
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.lua[0]: Invalid value: \"object\": Exactly one of inline or valueRef must be set with correct type.",
+			},
+		},
+		{
+			desc: "Invalid Lua filter (type configmap but source inline)",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					Lua: []egv1a1.Lua{
+						{
+							Type:   egv1a1.LuaValueTypeValueRef,
+							Inline: ptr.To("function envoy_on_response(response_handle) -- Do something -- end"),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.lua[0]: Invalid value: \"object\": Exactly one of inline or valueRef must be set with correct type.",
+			},
+		},
+		{
+			desc: "Invalid Lua filter (source object kind not configmap)",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					Lua: []egv1a1.Lua{
+						{
+							Type: egv1a1.LuaValueTypeValueRef,
+							ValueRef: &gwapiv1a2.LocalObjectReference{
+								Kind:  gwapiv1a2.Kind("NotConfigMap"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+								Group: gwapiv1a2.Group("v1"),
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.lua[0].valueRef: Invalid value: \"object\": Only a reference to an object of kind ConfigMap belonging to default v1 API group is supported.",
+			},
+		},
+		{
+			desc: "Invalid Lua filter (source object group not default)",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					Lua: []egv1a1.Lua{
+						{
+							Type: egv1a1.LuaValueTypeValueRef,
+							ValueRef: &gwapiv1a2.LocalObjectReference{
+								Kind:  gwapiv1a2.Kind("ConfigMap"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+								Group: gwapiv1a2.Group(gwapiv1a2.GroupName),
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.lua[0].valueRef: Invalid value: \"object\": Only a reference to an object of kind ConfigMap belonging to default v1 API group is supported.",
+			},
+		},
+		{
+			desc: "Invalid Lua filter (source both inline and configmap)",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					Lua: []egv1a1.Lua{
+						{
+							Type:   egv1a1.LuaValueTypeInline,
+							Inline: ptr.To("function envoy_on_response(response_handle) -- Do something -- end"),
+							ValueRef: &gwapiv1a2.LocalObjectReference{
+								Kind:  gwapiv1a2.Kind("ConfigMap"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+								Group: gwapiv1a2.Group("v1"),
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.lua[0]: Invalid value: \"object\": Exactly one of inline or valueRef must be set with correct type.",
+			},
+		},
+		{
 			desc: "target selectors without targetRefs or targetRef",
 			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
 				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
@@ -427,6 +618,232 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 								MatchLabels: map[string]string{
 									"eg/namespace": "reference-apps",
 								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "ExtProc with valid attributes",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					ExtProc: []egv1a1.ExtProc{
+						{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-proc-service",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
+										},
+									},
+								},
+							},
+							ProcessingMode: &egv1a1.ExtProcProcessingMode{
+								Request: &egv1a1.ProcessingModeOptions{
+									Attributes: []string{
+										"request.path",
+										"request.url_path",
+										"request.host",
+										"request.scheme",
+										"request.method",
+										"request.headers",
+										"request.referer",
+										"request.useragent",
+										"request.time",
+										"request.id",
+										"request.protocol",
+										"request.query",
+										"request.duration",
+										"request.size",
+										"request.total_size",
+										"response.code",
+										"response.code_details",
+										"response.flags",
+										"response.grpc_status",
+										"response.headers",
+										"response.trailers",
+										"response.size",
+										"response.total_size",
+										"response.backend_latency",
+										"source.address",
+										"source.port",
+										"destination.address",
+										"destination.port",
+									},
+								},
+								Response: &egv1a1.ProcessingModeOptions{
+									Attributes: []string{
+										"connection.id",
+										"connection.mtls",
+										"connection.requested_server_name",
+										"connection.tls_version",
+										"connection.subject_local_certificate",
+										"connection.subject_peer_certificate",
+										"connection.dns_san_local_certificate",
+										"connection.dns_san_peer_certificate",
+										"connection.uri_san_local_certificate",
+										"connection.uri_san_peer_certificate",
+										"connection.sha256_peer_certificate_digest",
+										"connection.transport_failure_reason",
+										"connection.termination_details",
+										"upstream.address",
+										"upstream.port",
+										"upstream.tls_version",
+										"upstream.subject_local_certificate",
+										"upstream.subject_peer_certificate",
+										"upstream.dns_san_local_certificate",
+										"upstream.dns_san_peer_certificate",
+										"upstream.uri_san_local_certificate",
+										"upstream.uri_san_peer_certificate",
+										"upstream.sha256_peer_certificate_digest",
+										"upstream.local_address",
+										"upstream.transport_failure_reason",
+										"upstream.request_attempt_count",
+									},
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "ExtProc with invalid attributes",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					ExtProc: []egv1a1.ExtProc{
+						{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-proc-service",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
+										},
+									},
+								},
+							},
+							ProcessingMode: &egv1a1.ExtProcProcessingMode{
+								Request: &egv1a1.ProcessingModeOptions{
+									Attributes: []string{
+										"xds.node",
+										"metadata",
+										"filter_state",
+										"upstream_filter_state",
+									},
+								},
+								Response: &egv1a1.ProcessingModeOptions{
+									Attributes: []string{
+										"xds.node",
+										"xds.cluster",
+										"plugin_name",
+									},
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.extProc[0].processingMode.request.attributes[0]: Invalid value: \"xds.node\": spec.extProc[0].processingMode.request.attributes[0] in body should match '^(connection\\.|source\\.|destination\\.|request\\.|response\\.|upstream\\.|xds\\.route_)[a-z_1-9]*$'",
+				"spec.extProc[0].processingMode.request.attributes[1]: Invalid value: \"metadata\": spec.extProc[0].processingMode.request.attributes[1] in body should match '^(connection\\.|source\\.|destination\\.|request\\.|response\\.|upstream\\.|xds\\.route_)[a-z_1-9]*$'",
+				"spec.extProc[0].processingMode.request.attributes[2]: Invalid value: \"filter_state\": spec.extProc[0].processingMode.request.attributes[2] in body should match '^(connection\\.|source\\.|destination\\.|request\\.|response\\.|upstream\\.|xds\\.route_)[a-z_1-9]*$'",
+				"spec.extProc[0].processingMode.request.attributes[3]: Invalid value: \"upstream_filter_state\": spec.extProc[0].processingMode.request.attributes[3] in body should match '^(connection\\.|source\\.|destination\\.|request\\.|response\\.|upstream\\.|xds\\.route_)[a-z_1-9]*$'",
+				"spec.extProc[0].processingMode.response.attributes[0]: Invalid value: \"xds.node\": spec.extProc[0].processingMode.response.attributes[0] in body should match '^(connection\\.|source\\.|destination\\.|request\\.|response\\.|upstream\\.|xds\\.route_)[a-z_1-9]*$'",
+				"spec.extProc[0].processingMode.response.attributes[1]: Invalid value: \"xds.cluster\": spec.extProc[0].processingMode.response.attributes[1] in body should match '^(connection\\.|source\\.|destination\\.|request\\.|response\\.|upstream\\.|xds\\.route_)[a-z_1-9]*$'",
+				"spec.extProc[0].processingMode.response.attributes[2]: Invalid value: \"plugin_name\": spec.extProc[0].processingMode.response.attributes[2] in body should match '^(connection\\.|source\\.|destination\\.|request\\.|response\\.|upstream\\.|xds\\.route_)[a-z_1-9]*$'",
+			},
+		},
+		{
+			desc: "ExtProc with invalid writableNamespaces",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					ExtProc: []egv1a1.ExtProc{
+						{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-proc-service",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
+										},
+									},
+								},
+							},
+							Metadata: &egv1a1.ExtProcMetadata{
+								WritableNamespaces: []string{
+									"envoy.filters.http.rbac",
+									"com.foocorp.custom",
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.extProc[0].metadata.writableNamespaces: Invalid value: \"array\": writableNamespaces cannot contain well-known Envoy HTTP filter namespaces",
+			},
+		},
+		{
+			desc: "ExtProc with valid writableNamespaces",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					ExtProc: []egv1a1.ExtProc{
+						{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-proc-service",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
+										},
+									},
+								},
+							},
+							Metadata: &egv1a1.ExtProcMetadata{
+								WritableNamespaces: []string{
+									"envoy.foocrop.rbac",
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
 							},
 						},
 					},

@@ -5,8 +5,10 @@
     - '*'
     name: first-listener/*
     routes:
-    - directResponse:
-        status: 500
-      match:
+    - match:
         prefix: /
       name: direct-route
+      route:
+        cluster: direct-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

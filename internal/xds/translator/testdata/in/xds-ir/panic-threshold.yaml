@@ -1,0 +1,71 @@
+http:
+- name: "first-listener"
+  address: "::"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  port: 10080
+  hostnames:
+  - "*"
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    traffic:
+      healthCheck:
+        panicThreshold: 66
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"
+  - name: "second-route"
+    hostname: "*"
+    traffic:
+      healthCheck:
+        panicThreshold: 80
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "second-route-dest/backend/0"
+  - name: "third-route"
+    hostname: "*"
+    traffic:
+      healthCheck:
+        panicThreshold: 20
+    destination:
+      name: "third-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "third-route-dest/backend/0"
+  - name: "fourth-route"
+    hostname: "*"
+    traffic:
+      healthCheck:
+        panicThreshold: 50
+    destination:
+      name: "fourth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "fourth-route-dest/backend/0"
+  - name: "fifth-route"
+    hostname: "*"
+    traffic:
+      healthCheck:
+        panicThreshold: 80
+    destination:
+      name: "fifth-route-dest"
+      protocol: GRPC
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "fifth-route-dest/backend/0"

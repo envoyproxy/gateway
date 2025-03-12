@@ -33,6 +33,10 @@ type ExtAuth struct {
 	// +optional
 	HeadersToExtAuth []string `json:"headersToExtAuth,omitempty"`
 
+	// BodyToExtAuth defines the Body to Ext Auth configuration.
+	// +optional
+	BodyToExtAuth *BodyToExtAuth `json:"bodyToExtAuth,omitempty"`
+
 	// FailOpen is a switch used to control the behavior when a response from the External Authorization service cannot be obtained.
 	// If FailOpen is set to true, the system allows the traffic to pass through.
 	// Otherwise, if it is set to false or not set (defaulting to false),
@@ -56,7 +60,6 @@ type ExtAuth struct {
 // The authorization request message is defined in
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/auth/v3/external_auth.proto
 // +kubebuilder:validation:XValidation:message="backendRef or backendRefs needs to be set",rule="has(self.backendRef) || self.backendRefs.size() > 0"
-// +kubebuilder:validation:XValidation:message="BackendRefs must be used, backendRef is not supported.",rule="!has(self.backendRef)"
 // +kubebuilder:validation:XValidation:message="BackendRefs only supports Service and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'Backend') : true"
 // +kubebuilder:validation:XValidation:message="BackendRefs only supports Core and gateway.envoyproxy.io group.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'gateway.envoyproxy.io')) : true"
 type GRPCExtAuthService struct {
@@ -67,7 +70,6 @@ type GRPCExtAuthService struct {
 // HTTPExtAuthService defines the HTTP External Authorization service
 //
 // +kubebuilder:validation:XValidation:message="backendRef or backendRefs needs to be set",rule="has(self.backendRef) || self.backendRefs.size() > 0"
-// +kubebuilder:validation:XValidation:message="BackendRefs must be used, backendRef is not supported.",rule="!has(self.backendRef)"
 // +kubebuilder:validation:XValidation:message="BackendRefs only supports Service and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'Backend') : true"
 // +kubebuilder:validation:XValidation:message="BackendRefs only supports Core and gateway.envoyproxy.io group.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'gateway.envoyproxy.io')) : true"
 type HTTPExtAuthService struct {
@@ -86,4 +88,15 @@ type HTTPExtAuthService struct {
 	// original client request.
 	// +optional
 	HeadersToBackend []string `json:"headersToBackend,omitempty"`
+}
+
+// BodyToExtAuth defines the Body to Ext Auth configuration
+type BodyToExtAuth struct {
+	// MaxRequestBytes is the maximum size of a message body that the filter will hold in memory.
+	// Envoy will return HTTP 413 and will not initiate the authorization process when buffer
+	// reaches the number set in this field.
+	// Note that this setting will have precedence over failOpen mode.
+	//
+	// +kubebuilder:validation:Minimum=1
+	MaxRequestBytes uint32 `json:"maxRequestBytes"`
 }

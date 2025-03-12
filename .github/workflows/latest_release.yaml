@@ -22,7 +22,7 @@ jobs:
   benchmark-test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
     - uses: ./tools/github-actions/setup-deps
 
     - name: Setup Graphviz
@@ -31,7 +31,7 @@ jobs:
     # Benchmark
     - name: Run Benchmark tests
       env:
-        KIND_NODE_TAG: v1.28.13
+        KIND_NODE_TAG: v1.29.10
         IMAGE_PULL_POLICY: IfNotPresent
         # Args for benchmark test
         BENCHMARK_RPS: 10000
@@ -46,7 +46,7 @@ jobs:
       run: cd test/benchmark && zip -r benchmark_report.zip benchmark_report
 
     - name: Upload Benchmark Report
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874  # v4.4.0
+      uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1  # v4.6.1
       with:
         name: benchmark_report
         path: test/benchmark/benchmark_report.zip
@@ -57,26 +57,31 @@ jobs:
     permissions:
       contents: write
     steps:
-    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
-    - uses: ./tools/github-actions/setup-deps
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
     - name: Generate Release Manifests
       # Use `Always` image pull policy for latest version.
       run: IMAGE_PULL_POLICY=Always make generate-manifests IMAGE=envoyproxy/gateway-dev TAG=latest OUTPUT_DIR=release-artifacts
 
     - name: Download Benchmark Report
-      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16  # v4.1.8
+      uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806  # v4.1.9
       with:
         name: benchmark_report
         path: release-artifacts
 
     - name: Build egctl latest multiarch binaries
       run: |
-        make build-multiarch BINS="egctl"
-        tar -zcvf egctl_latest_linux_amd64.tar.gz bin/linux/amd64/
-        tar -zcvf egctl_latest_linux_arm64.tar.gz bin/linux/arm64/
-        tar -zcvf egctl_latest_darwin_amd64.tar.gz bin/darwin/amd64/
-        tar -zcvf egctl_latest_darwin_arm64.tar.gz bin/darwin/arm64/
+        make build-multiarch
+        tar -zcvf envoy-gateway_latest_linux_amd64.tar.gz bin/linux/amd64/envoy-gateway
+        tar -zcvf envoy-gateway_latest_linux_arm64.tar.gz bin/linux/arm64/envoy-gateway
+        tar -zcvf envoy-gateway_latest_darwin_amd64.tar.gz bin/darwin/amd64/envoy-gateway
+        tar -zcvf envoy-gateway_latest_darwin_arm64.tar.gz bin/darwin/arm64/envoy-gateway
+        tar -zcvf egctl_latest_linux_amd64.tar.gz bin/linux/amd64/egctl
+        tar -zcvf egctl_latest_linux_arm64.tar.gz bin/linux/arm64/egctl
+        tar -zcvf egctl_latest_darwin_amd64.tar.gz bin/darwin/amd64/egctl
+        tar -zcvf egctl_latest_darwin_arm64.tar.gz bin/darwin/arm64/egctl
+        zip -r egctl_latest_windows_amd64.zip bin/windows/amd64/egctl
+        zip -r egctl_latest_windows_arm64.zip bin/windows/arm64/egctl
 
     # Ignore the error when we delete the latest release, it might not exist.
 
@@ -103,7 +108,7 @@ jobs:
         GITHUB_REPOSITORY: ${{ github.repository_owner }}/${{ github.event.repository.name }}
 
     - name: Recreate the Latest Release and Tag
-      uses: softprops/action-gh-release@c062e08bd532815e2082a85e87e3ef29c3e6d191  # v0.1.15
+      uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda  # v2.2.1
       with:
         draft: false
         prerelease: true
@@ -112,10 +117,16 @@ jobs:
           release-artifacts/install.yaml
           release-artifacts/quickstart.yaml
           release-artifacts/benchmark_report.zip
+          envoy-gateway_latest_linux_amd64.tar.gz
+          envoy-gateway_latest_linux_arm64.tar.gz
+          envoy-gateway_latest_darwin_amd64.tar.gz
+          envoy-gateway_latest_darwin_arm64.tar.gz
           egctl_latest_linux_amd64.tar.gz
           egctl_latest_linux_arm64.tar.gz
           egctl_latest_darwin_amd64.tar.gz
           egctl_latest_darwin_arm64.tar.gz
+          egctl_latest_windows_amd64.zip
+          egctl_latest_windows_arm64.zip
         body: |
           This is the "latest" release of **Envoy Gateway**, which contains the most recent commits from the main branch.
 

@@ -1,8 +1,9 @@
 ---
 ---
 
-Follow the steps from the [Quickstart](../tasks/quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
+{{< readfile "./prerequisites.md" >}}
+
+---
 
 Envoy Gateway provides an add-ons Helm Chart, which includes all the needing components for observability.
 By default, the [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) is disabled.

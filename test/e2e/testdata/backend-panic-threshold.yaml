@@ -1,0 +1,39 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: panic-threshold-pass-btp
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-with-panic-threshold-pass
+  healthCheck:
+    panicThreshold: 40
+    active:
+      timeout: 3s
+      interval: 5s
+      unhealthyThreshold: 2
+      healthyThreshold: 1
+      type: HTTP
+      http:
+        path: "/status/418"
+        expectedStatuses:
+          - 200
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-panic-threshold-pass
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /ping
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080

@@ -40,11 +40,11 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 	if r.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeCustom &&
 		r.EnvoyGateway.Provider.Custom.Infrastructure == nil {
-		r.Logger.Info("provider is not specified, no provider is available")
+		r.Logger.Info("provider is not specified, no infrastructure is available")
 		return nil
 	}
 
-	r.mgr, err = infrastructure.NewManager(&r.Config.Server)
+	r.mgr, err = infrastructure.NewManager(ctx, &r.Config.Server, r.Logger)
 	if err != nil {
 		r.Logger.Error(err, "failed to create new manager")
 		return err
@@ -56,6 +56,13 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		// Enable global ratelimit if it has been configured.
 		if r.EnvoyGateway.RateLimit != nil {
 			go r.enableRateLimitInfra(ctx)
+		} else {
+			// Delete the ratelimit infra if it exists.
+			go func() {
+				if err := r.mgr.DeleteRateLimitInfra(ctx); err != nil {
+					r.Logger.Error(err, "failed to delete ratelimit infra")
+				}
+			}()
 		}
 		r.Logger.Info("started")
 	}

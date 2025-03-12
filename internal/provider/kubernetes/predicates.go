@@ -13,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -143,23 +144,53 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(obj client.Object) boo
 		return true
 	}
 
-	if r.isSecurityPolicyReferencingSecret(&nsName) {
-		return true
+	if r.spCRDExists {
+		if r.isSecurityPolicyReferencingSecret(&nsName) {
+			return true
+		}
 	}
 
-	if r.isCtpReferencingSecret(&nsName) {
-		return true
+	if r.ctpCRDExists {
+		if r.isCtpReferencingSecret(&nsName) {
+			return true
+		}
 	}
 
 	if r.isOIDCHMACSecret(&nsName) {
 		return true
 	}
 
-	if r.isEnvoyProxyReferencingSecret(&nsName) {
-		return true
+	if r.epCRDExists {
+		if r.isEnvoyProxyReferencingSecret(&nsName) {
+			return true
+		}
 	}
 
-	if r.isExtensionPolicyReferencingSecret(&nsName) {
+	if r.eepCRDExists {
+		if r.isExtensionPolicyReferencingSecret(&nsName) {
+			return true
+		}
+	}
+
+	if r.bTLSPolicyCRDExists {
+		if r.isBackendTLSPolicyReferencingSecret(&nsName) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (r *gatewayAPIReconciler) isBackendTLSPolicyReferencingSecret(nsName *types.NamespacedName) bool {
+	btlsList := &gwapiv1a3.BackendTLSPolicyList{}
+	if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(secretBtlsIndex, nsName.String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated BackendTLSPolicy")
+		return false
+	}
+
+	if len(btlsList.Items) > 0 {
 		return true
 	}
 
@@ -263,7 +294,7 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 	// Check if the Service belongs to a Gateway, if so, update the Gateway status.
 	gtw := r.findOwningGateway(ctx, labels)
 	if gtw != nil {
-		r.updateStatusForGateway(ctx, gtw)
+		r.updateGatewayStatus(gtw)
 		return false
 	}
 
@@ -282,15 +313,25 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 		return true
 	}
 
-	if r.isSecurityPolicyReferencingBackend(&nsName) {
-		return true
+	if r.spCRDExists {
+		if r.isSecurityPolicyReferencingBackend(&nsName) {
+			return true
+		}
 	}
 
-	if r.isEnvoyProxyReferencingBackend(&nsName) {
-		return true
+	if r.epCRDExists {
+		if r.isEnvoyProxyReferencingBackend(&nsName) {
+			return true
+		}
 	}
 
-	return r.isEnvoyExtensionPolicyReferencingBackend(&nsName)
+	if r.eepCRDExists {
+		if r.isEnvoyExtensionPolicyReferencingBackend(&nsName) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // validateBackendForReconcile tries finding the owning Gateway of the Backend
@@ -308,15 +349,25 @@ func (r *gatewayAPIReconciler) validateBackendForReconcile(obj client.Object) bo
 		return true
 	}
 
-	if r.isSecurityPolicyReferencingBackend(&nsName) {
-		return true
+	if r.spCRDExists {
+		if r.isSecurityPolicyReferencingBackend(&nsName) {
+			return true
+		}
 	}
 
-	if r.isEnvoyProxyReferencingBackend(&nsName) {
-		return true
+	if r.epCRDExists {
+		if r.isEnvoyProxyReferencingBackend(&nsName) {
+			return true
+		}
 	}
 
-	return r.isEnvoyExtensionPolicyReferencingBackend(&nsName)
+	if r.eepCRDExists {
+		if r.isEnvoyExtensionPolicyReferencingBackend(&nsName) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (r *gatewayAPIReconciler) isSecurityPolicyReferencingBackend(nsName *types.NamespacedName) bool {
@@ -352,51 +403,67 @@ func (r *gatewayAPIReconciler) isRouteReferencingBackend(nsName *types.Namespace
 	httpRouteList := &gwapiv1.HTTPRouteList{}
 	if err := r.client.List(ctx, httpRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(backendHTTPRouteIndex, nsName.String()),
-	}); err != nil {
-		r.log.Error(err, "unable to find associated HTTPRoutes")
+	}); err != nil && !kerrors.IsNotFound(err) {
+		r.log.Error(err, "failed to find associated HTTPRoutes")
 		return false
 	}
-
-	grpcRouteList := &gwapiv1.GRPCRouteList{}
-	if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(backendGRPCRouteIndex, nsName.String()),
-	}); err != nil {
-		r.log.Error(err, "unable to find associated GRPCRoutes")
-		return false
+	if len(httpRouteList.Items) > 0 {
+		return true
 	}
 
-	tlsRouteList := &gwapiv1a2.TLSRouteList{}
-	if err := r.client.List(ctx, tlsRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(backendTLSRouteIndex, nsName.String()),
-	}); err != nil {
-		r.log.Error(err, "unable to find associated TLSRoutes")
-		return false
+	if r.grpcRouteCRDExists {
+		grpcRouteList := &gwapiv1.GRPCRouteList{}
+		if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(backendGRPCRouteIndex, nsName.String()),
+		}); err != nil && !kerrors.IsNotFound(err) {
+			r.log.Error(err, "failed to find associated GRPCRoutes")
+			return false
+		}
+		if len(grpcRouteList.Items) > 0 {
+			return true
+		}
 	}
 
-	tcpRouteList := &gwapiv1a2.TCPRouteList{}
-	if err := r.client.List(ctx, tcpRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(backendTCPRouteIndex, nsName.String()),
-	}); err != nil {
-		r.log.Error(err, "unable to find associated TCPRoutes")
-		return false
+	if r.tlsRouteCRDExists {
+		tlsRouteList := &gwapiv1a2.TLSRouteList{}
+		if err := r.client.List(ctx, tlsRouteList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(backendTLSRouteIndex, nsName.String()),
+		}); err != nil && !kerrors.IsNotFound(err) {
+			r.log.Error(err, "failed to find associated TLSRoutes")
+			return false
+		}
+		if len(tlsRouteList.Items) > 0 {
+			return true
+		}
 	}
 
-	udpRouteList := &gwapiv1a2.UDPRouteList{}
-	if err := r.client.List(ctx, udpRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(backendUDPRouteIndex, nsName.String()),
-	}); err != nil {
-		r.log.Error(err, "unable to find associated UDPRoutes")
-		return false
+	if r.tcpRouteCRDExists {
+		tcpRouteList := &gwapiv1a2.TCPRouteList{}
+		if err := r.client.List(ctx, tcpRouteList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(backendTCPRouteIndex, nsName.String()),
+		}); err != nil && !kerrors.IsNotFound(err) {
+			r.log.Error(err, "failed to find associated TCPRoutes")
+			return false
+		}
+		if len(tcpRouteList.Items) > 0 {
+			return true
+		}
 	}
 
-	// Check how many Route objects refer this Backend
-	allAssociatedRoutes := len(httpRouteList.Items) +
-		len(grpcRouteList.Items) +
-		len(tlsRouteList.Items) +
-		len(tcpRouteList.Items) +
-		len(udpRouteList.Items)
+	if r.udpRouteCRDExists {
+		udpRouteList := &gwapiv1a2.UDPRouteList{}
+		if err := r.client.List(ctx, udpRouteList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(backendUDPRouteIndex, nsName.String()),
+		}); err != nil && !kerrors.IsNotFound(err) {
+			r.log.Error(err, "failed to find associated UDPRoutes")
+			return false
+		}
+		if len(udpRouteList.Items) > 0 {
+			return true
+		}
+	}
 
-	return allAssociatedRoutes != 0
+	return false
 }
 
 // validateEndpointSliceForReconcile returns true if the endpointSlice references
@@ -428,35 +495,40 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 		return true
 	}
 
-	if r.isSecurityPolicyReferencingBackend(&nsName) {
-		return true
+	if r.spCRDExists {
+		if r.isSecurityPolicyReferencingBackend(&nsName) {
+			return true
+		}
 	}
 
-	if r.isEnvoyProxyReferencingBackend(&nsName) {
-		return true
+	if r.epCRDExists {
+		if r.isEnvoyProxyReferencingBackend(&nsName) {
+			return true
+		}
 	}
 
-	return r.isEnvoyExtensionPolicyReferencingBackend(&nsName)
+	if r.eepCRDExists {
+		if r.isEnvoyExtensionPolicyReferencingBackend(&nsName) {
+			return true
+		}
+	}
+
+	return false
 }
 
-// validateDeploymentForReconcile tries finding the owning Gateway of the Deployment
+// validateObjectForReconcile tries finding the owning Gateway of the Deployment or DaemonSet
 // if it exists, finds the Gateway's Service, and further updates the Gateway
-// status Ready condition. No Deployments are pushed for reconciliation.
-func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object) bool {
+// status Ready condition. No Deployments or DaemonSets are pushed for reconciliation.
+func (r *gatewayAPIReconciler) validateObjectForReconcile(obj client.Object) bool {
 	ctx := context.Background()
-	deployment, ok := obj.(*appsv1.Deployment)
-	if !ok {
-		r.log.Info("unexpected object type, bypassing reconciliation", "object", obj)
-		return false
-	}
-	labels := deployment.GetLabels()
+	labels := obj.GetLabels()
 
-	// Only deployments in the configured namespace should be reconciled.
-	if deployment.Namespace == r.namespace {
-		// Check if the deployment belongs to a Gateway, if so, update the Gateway status.
+	// Only objects in the configured namespace should be reconciled.
+	if obj.GetNamespace() == r.namespace {
+		// Check if the obj belongs to a Gateway, if so, update the Gateway status.
 		gtw := r.findOwningGateway(ctx, labels)
 		if gtw != nil {
-			r.updateStatusForGateway(ctx, gtw)
+			r.updateGatewayStatus(gtw)
 			return false
 		}
 	}
@@ -471,27 +543,42 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 		return false
 	}
 
-	// There is no need to reconcile the Deployment any further.
+	// There is no need to reconcile the object any further.
 	return false
 }
 
-// envoyDeploymentForGateway returns the Envoy Deployment, returning nil if the Deployment doesn't exist.
-func (r *gatewayAPIReconciler) envoyDeploymentForGateway(ctx context.Context, gateway *gwapiv1.Gateway) (*appsv1.Deployment, error) {
-	var deployments appsv1.DeploymentList
-	labelSelector := labels.SelectorFromSet(labels.Set(gatewayapi.OwnerLabels(gateway, r.mergeGateways.Has(string(gateway.Spec.GatewayClassName)))))
-	if err := r.client.List(ctx, &deployments, &client.ListOptions{
-		LabelSelector: labelSelector,
-		Namespace:     r.namespace,
-	}); err != nil {
-		if kerrors.IsNotFound(err) {
+// envoyObjectForGateway returns the Envoy Deployment or DaemonSet, returning nil if neither exists.
+func (r *gatewayAPIReconciler) envoyObjectForGateway(ctx context.Context, gateway *gwapiv1.Gateway) (client.Object, error) {
+	// Helper func to list and return the first object from results
+	listResource := func(list client.ObjectList) (client.Object, error) {
+		if err := r.client.List(ctx, list, &client.ListOptions{
+			LabelSelector: labels.SelectorFromSet(gatewayapi.OwnerLabels(gateway, r.mergeGateways.Has(string(gateway.Spec.GatewayClassName)))),
+			Namespace:     r.namespace,
+		}); err != nil {
+			if !kerrors.IsNotFound(err) {
+				return nil, err
+			}
+		}
+		items, err := meta.ExtractList(list)
+		if err != nil || len(items) == 0 {
 			return nil, nil
 		}
-		return nil, err
+		return items[0].(client.Object), nil
 	}
-	if len(deployments.Items) == 0 {
-		return nil, nil
+
+	// Check for Deployment
+	deployments := &appsv1.DeploymentList{}
+	if obj, err := listResource(deployments); obj != nil || err != nil {
+		return obj, err
 	}
-	return &deployments.Items[0], nil
+
+	// Check for DaemonSet
+	daemonsets := &appsv1.DaemonSetList{}
+	if obj, err := listResource(daemonsets); obj != nil || err != nil {
+		return obj, err
+	}
+
+	return nil, nil
 }
 
 // envoyServiceForGateway returns the Envoy service, returning nil if the service doesn't exist.
@@ -549,10 +636,30 @@ func (r *gatewayAPIReconciler) updateStatusForGatewaysUnderGatewayClass(ctx cont
 	}
 
 	for _, gateway := range gateways.Items {
-		r.updateStatusForGateway(ctx, &gateway)
+		r.updateGatewayStatus(&gateway)
 	}
 
 	return nil
+}
+
+// updateGatewayStatus triggers a status update for the Gateway.
+func (r *gatewayAPIReconciler) updateGatewayStatus(gateway *gwapiv1.Gateway) {
+	gwName := utils.NamespacedName(gateway)
+	status := &gateway.Status
+	// Use the existing status if it exists to avoid losing the status calculated by the Gateway API translator.
+	if existing, ok := r.resources.GatewayStatuses.Load(gwName); ok {
+		status = existing
+	}
+
+	// Since the status does not reflect the actual changed status, we need to delete it first
+	// to prevent it from being considered unchanged. This ensures that subscribers receive the update event.
+	r.resources.GatewayStatuses.Delete(gwName)
+	// The status that is stored in the GatewayStatuses GatewayStatuses is solely used to trigger the status updater
+	// and does not reflect the real changed status.
+	//
+	// The status updater will check the Envoy Proxy service to get the addresses of the Gateway,
+	// and check the Envoy Proxy Deployment/DaemonSet to get the status of the Gateway workload.
+	r.resources.GatewayStatuses.Store(gwName, status)
 }
 
 func (r *gatewayAPIReconciler) handleNode(obj client.Object) bool {
@@ -577,7 +684,7 @@ func (r *gatewayAPIReconciler) handleNode(obj client.Object) bool {
 	return true
 }
 
-// validateConfigMapForReconcile checks whether the ConfigMap belongs to a valid ClientTrafficPolicy.
+// validateConfigMapForReconcile checks whether the ConfigMap belongs to a valid EG resource.
 func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) bool {
 	configMap, ok := obj.(*corev1.ConfigMap)
 	if !ok {
@@ -585,31 +692,63 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 		return false
 	}
 
-	ctpList := &egv1a1.ClientTrafficPolicyList{}
-	if err := r.client.List(context.Background(), ctpList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(configMapCtpIndex, utils.NamespacedName(configMap).String()),
-	}); err != nil {
-		r.log.Error(err, "unable to find associated ClientTrafficPolicy")
-		return false
+	if r.ctpCRDExists {
+		ctpList := &egv1a1.ClientTrafficPolicyList{}
+		if err := r.client.List(context.Background(), ctpList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(configMapCtpIndex, utils.NamespacedName(configMap).String()),
+		}); err != nil {
+			r.log.Error(err, "unable to find associated ClientTrafficPolicy")
+			return false
+		}
+
+		if len(ctpList.Items) > 0 {
+			return true
+		}
 	}
 
-	if len(ctpList.Items) == 0 {
-		return false
+	if r.bTLSPolicyCRDExists {
+		btlsList := &gwapiv1a3.BackendTLSPolicyList{}
+		if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(configMapBtlsIndex, utils.NamespacedName(configMap).String()),
+		}); err != nil {
+			r.log.Error(err, "unable to find associated BackendTLSPolicy")
+			return false
+		}
+
+		if len(btlsList.Items) > 0 {
+			return true
+		}
 	}
 
-	btlsList := &gwapiv1a3.BackendTLSPolicyList{}
-	if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(configMapBtlsIndex, utils.NamespacedName(configMap).String()),
-	}); err != nil {
-		r.log.Error(err, "unable to find associated BackendTLSPolicy")
-		return false
+	if r.btpCRDExists {
+		btpList := &egv1a1.BackendTrafficPolicyList{}
+		if err := r.client.List(context.Background(), btpList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(configMapBtpIndex, utils.NamespacedName(configMap).String()),
+		}); err != nil {
+			r.log.Error(err, "unable to find associated BackendTrafficPolicy")
+			return false
+		}
+
+		if len(btpList.Items) > 0 {
+			return true
+		}
 	}
 
-	if len(btlsList.Items) == 0 {
-		return false
+	if r.hrfCRDExists {
+		routeFilterList := &egv1a1.HTTPRouteFilterList{}
+		if err := r.client.List(context.Background(), routeFilterList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(configMapHTTPRouteFilterIndex, utils.NamespacedName(configMap).String()),
+		}); err != nil {
+			r.log.Error(err, "unable to find associated HTTPRouteFilter")
+			return false
+		}
+
+		if len(routeFilterList.Items) > 0 {
+			return true
+		}
 	}
 
-	return true
+	return false
 }
 
 func (r *gatewayAPIReconciler) isEnvoyExtensionPolicyReferencingBackend(nsName *types.NamespacedName) bool {

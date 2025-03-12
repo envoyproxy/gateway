@@ -339,7 +339,7 @@ infraIR:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -357,11 +357,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - destination:
-          name: httproute/default/httproute-1/rule/0
-          settings:
-          - weight: 1
-        directResponse:
+      - directResponse:
           statusCode: 500
         hostname: '*'
         isHTTP2: false
@@ -381,6 +377,8 @@ xdsIR:
             endpoints:
             - host: primary.foo.com
               port: 3000
+            name: httproute/default/httproute-3/rule/0/backend/0
+            protocol: HTTP
             weight: 1
         hostname: '*'
         isHTTP2: false
@@ -400,6 +398,8 @@ xdsIR:
             endpoints:
             - host: 1.1.1.1
               port: 3001
+            name: httproute/default/httproute-2/rule/0/backend/0
+            protocol: HTTP
             weight: 1
         hostname: '*'
         isHTTP2: false
@@ -412,11 +412,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /2
-      - destination:
-          name: httproute/default/httproute-4/rule/0
-          settings:
-          - weight: 1
-        directResponse:
+      - directResponse:
           statusCode: 500
         hostname: '*'
         isHTTP2: false
@@ -429,11 +425,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /4
-      - destination:
-          name: httproute/default/httproute-5/rule/0
-          settings:
-          - weight: 1
-        directResponse:
+      - directResponse:
           statusCode: 500
         hostname: '*'
         isHTTP2: false
@@ -446,3 +438,8 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /5
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

@@ -15,7 +15,7 @@
         {{- $pattern := printf "%s*" $name -}}
         {{- $resource := $bundle.Resources.GetMatch $pattern -}}
         {{- with $resource -}}
-            {{- .Content | markdownify -}}
+            {{- .Content -}}
         {{- else -}}
             {{- errorf "Could not find boilerplate '%s' (%s)" $name $position -}}
         {{- end -}}

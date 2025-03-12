@@ -6,6 +6,8 @@
 package v1alpha1
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
@@ -30,13 +32,20 @@ type TargetSelector struct {
 	// Group is the group that this selector targets. Defaults to gateway.networking.k8s.io
 	//
 	// +kubebuilder:default:="gateway.networking.k8s.io"
-	Group *gwapiv1a2.Group `json:"group,omitempty"`
+	Group *gwapiv1.Group `json:"group,omitempty"`
 
 	// Kind is the resource kind that this selector targets.
-	Kind gwapiv1a2.Kind `json:"kind"`
+	Kind gwapiv1.Kind `json:"kind"`
 
 	// MatchLabels are the set of label selectors for identifying the targeted resource
-	MatchLabels map[string]string `json:"matchLabels"`
+	// +optional
+	MatchLabels map[string]string `json:"matchLabels,omitempty"`
+
+	// MatchExpressions is a list of label selector requirements. The requirements are ANDed.
+	//
+	// +optional
+	// +listType=atomic
+	MatchExpressions []metav1.LabelSelectorRequirement `json:"matchExpressions,omitempty"`
 }
 
 func (p PolicyTargetReferences) GetTargetRefs() []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {

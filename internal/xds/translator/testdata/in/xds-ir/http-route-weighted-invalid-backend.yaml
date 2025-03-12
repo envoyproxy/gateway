@@ -1,6 +1,6 @@
 http:
 - name: "first-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 10080
   hostnames:
   - "*"
@@ -17,4 +17,6 @@ http:
         - host: "1.2.3.4"
           port: 50000
         weight: 1
+        name: "first-route-dest/backend/0"
       - weight: 1
+        name: "first-route-dest/backend/1"

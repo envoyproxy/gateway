@@ -4,7 +4,6 @@
 // the root of the repo.
 
 //go:build e2e
-// +build e2e
 
 package tests
 
@@ -18,6 +17,7 @@ import (
 	"regexp"
 	"testing"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
@@ -32,8 +32,8 @@ func init() {
 // Copied from the conformance suite because it's needed in casePreservingRoundTrip
 var startLineRegex = regexp.MustCompile(`(?m)^`)
 
-func formatDump(data []byte, prefix string) string {
-	data = startLineRegex.ReplaceAllLiteral(data, []byte(prefix))
+func formatDump(data []byte) string {
+	data = startLineRegex.ReplaceAllLiteral(data, []byte("< "))
 	return string(data)
 }
 
@@ -67,7 +67,7 @@ func casePreservingRoundTrip(request roundtripper.Request, transport nethttp.Rou
 			return nil, err
 		}
 
-		fmt.Printf("Sending Request:\n%s\n\n", formatDump(dump, "< "))
+		fmt.Printf("Sending Request:\n%s\n\n", formatDump(dump))
 	}
 
 	resp, err := client.Do(req)
@@ -83,7 +83,7 @@ func casePreservingRoundTrip(request roundtripper.Request, transport nethttp.Rou
 			return nil, err
 		}
 
-		fmt.Printf("Received Response:\n%s\n\n", formatDump(dump, "< "))
+		fmt.Printf("Received Response:\n%s\n\n", formatDump(dump))
 	}
 
 	cReq := map[string]any{}
@@ -102,7 +102,7 @@ func casePreservingRoundTrip(request roundtripper.Request, transport nethttp.Rou
 }
 
 var PreserveCaseTest = suite.ConformanceTest{
-	ShortName:   "Preserve Case",
+	ShortName:   "PreserveCase",
 	Description: "Preserve header cases",
 	Manifests:   []string{"testdata/preserve-case.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
@@ -112,6 +112,7 @@ var PreserveCaseTest = suite.ConformanceTest{
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
+			WaitForPods(t, suite.Client, "gateway-preserve-case-backend", map[string]string{"app": "preserve-case"}, corev1.PodRunning, PodReady)
 			// Can't use the standard method for checking the response, since the remote side isn't the
 			// conformance echo server and it returns a differently formatted response.
 			expectedResponse := http.ExpectedResponse{

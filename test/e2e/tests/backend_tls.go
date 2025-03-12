@@ -4,7 +4,6 @@
 // the root of the repo.
 
 //go:build e2e
-// +build e2e
 
 package tests
 
@@ -40,6 +39,34 @@ var BackendTLSTest = suite.ConformanceTest{
 					StatusCode: 200,
 				},
 				Namespace: ns,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+
+		t.Run("with a backend TLS Policy using Truststore", func(t *testing.T) {
+			// the upstream used is the eg site which doesn't support IPv6 at this time
+			if IPFamily == "ipv6" {
+				t.Skip("Skipping test as IP_FAMILY is IPv6")
+			}
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "http-with-backend-tls-system-trust-store", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/",
+					Host: "gateway.envoyproxy.io",
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Host: "",
+					},
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
 			}
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)

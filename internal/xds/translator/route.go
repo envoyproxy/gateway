@@ -16,9 +16,10 @@ import (
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/protocov"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 )
 
 const (
@@ -96,18 +97,16 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 	}
 
 	// Timeouts
-	if router.GetRoute() != nil &&
-		httpRoute.Traffic != nil &&
-		httpRoute.Traffic.Timeout != nil &&
-		httpRoute.Traffic.Timeout.HTTP != nil &&
-		httpRoute.Traffic.Timeout.HTTP.RequestTimeout != nil {
-		router.GetRoute().Timeout = durationpb.New(httpRoute.Traffic.Timeout.HTTP.RequestTimeout.Duration)
+	if router.GetRoute() != nil {
+		rt := getEffectiveRequestTimeout(httpRoute)
+		if rt != nil {
+			router.GetRoute().Timeout = durationpb.New(rt.Duration)
+		}
 	}
 
 	// Retries
 	if router.GetRoute() != nil &&
-		httpRoute.Traffic != nil &&
-		httpRoute.Traffic.Retry != nil {
+		httpRoute.GetRetry() != nil {
 		if rp, err := buildRetryPolicy(httpRoute); err == nil {
 			router.GetRoute().RetryPolicy = rp
 		} else {
@@ -225,7 +224,7 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcherv3.StringMatcher {
 
 func buildXdsRouteAction(backendWeights *ir.BackendWeights, settings []*ir.DestinationSetting) *routev3.RouteAction {
 	// only use weighted cluster when there are invalid weights
-	if hasFiltersInSettings(settings) || backendWeights.Invalid != 0 {
+	if needsClusterPerSetting(settings) || backendWeights.Invalid != 0 {
 		return buildXdsWeightedRouteAction(backendWeights, settings)
 	}
 
@@ -244,39 +243,33 @@ func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*
 			Weight: &wrapperspb.UInt32Value{Value: backendWeights.Invalid},
 		}
 		weightedClusters = append(weightedClusters, invalidCluster)
-		return &routev3.RouteAction{
-			// Intentionally route to a non-existent cluster and return a 500 error when it is not found
-			ClusterNotFoundResponseCode: routev3.RouteAction_INTERNAL_SERVER_ERROR,
-			ClusterSpecifier: &routev3.RouteAction_WeightedClusters{
-				WeightedClusters: &routev3.WeightedCluster{
-					Clusters: weightedClusters,
-				},
-			},
-		}
 	}
 
 	for _, destinationSetting := range settings {
-		if destinationSetting.Filters != nil {
+		if len(destinationSetting.Endpoints) > 0 {
 			validCluster := &routev3.WeightedCluster_ClusterWeight{
-				Name:   backendWeights.Name,
+				Name:   destinationSetting.Name,
 				Weight: &wrapperspb.UInt32Value{Value: *destinationSetting.Weight},
 			}
 
-			if len(destinationSetting.Filters.AddRequestHeaders) > 0 {
-				validCluster.RequestHeadersToAdd = append(validCluster.RequestHeadersToAdd, buildXdsAddedHeaders(destinationSetting.Filters.AddRequestHeaders)...)
+			if destinationSetting.Filters != nil {
+				if len(destinationSetting.Filters.AddRequestHeaders) > 0 {
+					validCluster.RequestHeadersToAdd = append(validCluster.RequestHeadersToAdd, buildXdsAddedHeaders(destinationSetting.Filters.AddRequestHeaders)...)
+				}
+
+				if len(destinationSetting.Filters.RemoveRequestHeaders) > 0 {
+					validCluster.RequestHeadersToRemove = append(validCluster.RequestHeadersToRemove, destinationSetting.Filters.RemoveRequestHeaders...)
+				}
+
+				if len(destinationSetting.Filters.AddResponseHeaders) > 0 {
+					validCluster.ResponseHeadersToAdd = append(validCluster.ResponseHeadersToAdd, buildXdsAddedHeaders(destinationSetting.Filters.AddResponseHeaders)...)
+				}
+
+				if len(destinationSetting.Filters.RemoveResponseHeaders) > 0 {
+					validCluster.ResponseHeadersToRemove = append(validCluster.ResponseHeadersToRemove, destinationSetting.Filters.RemoveResponseHeaders...)
+				}
 			}
 
-			if len(destinationSetting.Filters.RemoveRequestHeaders) > 0 {
-				validCluster.RequestHeadersToRemove = append(validCluster.RequestHeadersToRemove, destinationSetting.Filters.RemoveRequestHeaders...)
-			}
-
-			if len(destinationSetting.Filters.AddResponseHeaders) > 0 {
-				validCluster.ResponseHeadersToAdd = append(validCluster.ResponseHeadersToAdd, buildXdsAddedHeaders(destinationSetting.Filters.AddResponseHeaders)...)
-			}
-
-			if len(destinationSetting.Filters.RemoveResponseHeaders) > 0 {
-				validCluster.ResponseHeadersToRemove = append(validCluster.ResponseHeadersToRemove, destinationSetting.Filters.RemoveResponseHeaders...)
-			}
 			weightedClusters = append(weightedClusters, validCluster)
 		}
 	}
@@ -292,14 +285,26 @@ func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*
 	}
 }
 
-func idleTimeout(httpRoute *ir.HTTPRoute) *durationpb.Duration {
+func getEffectiveRequestTimeout(httpRoute *ir.HTTPRoute) *metav1.Duration {
+	// gateway-api timeout takes precedence
+	if httpRoute.Timeout != nil {
+		return httpRoute.Timeout
+	}
+
 	if httpRoute.Traffic != nil &&
 		httpRoute.Traffic.Timeout != nil &&
 		httpRoute.Traffic.Timeout.HTTP != nil &&
 		httpRoute.Traffic.Timeout.HTTP.RequestTimeout != nil {
-		rt := httpRoute.Traffic.Timeout.HTTP.RequestTimeout
-		timeout := time.Hour // Default to 1 hour
+		return httpRoute.Traffic.Timeout.HTTP.RequestTimeout
+	}
 
+	return nil
+}
+
+func idleTimeout(httpRoute *ir.HTTPRoute) *durationpb.Duration {
+	rt := getEffectiveRequestTimeout(httpRoute)
+	timeout := time.Hour // Default to 1 hour
+	if rt != nil {
 		// Ensure is not less than the request timeout
 		if timeout < rt.Duration {
 			timeout = rt.Duration
@@ -417,9 +422,21 @@ func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite, pathMa
 		}
 	}
 
-	if urlRewrite.Hostname != nil {
-		routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewriteLiteral{
-			HostRewriteLiteral: *urlRewrite.Hostname,
+	if urlRewrite.Host != nil {
+
+		switch {
+		case urlRewrite.Host.Name != nil:
+			routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewriteLiteral{
+				HostRewriteLiteral: *urlRewrite.Host.Name,
+			}
+		case urlRewrite.Host.Header != nil:
+			routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewriteHeader{
+				HostRewriteHeader: *urlRewrite.Host.Header,
+			}
+		case urlRewrite.Host.Backend != nil:
+			routeAction.HostRewriteSpecifier = &routev3.RouteAction_AutoHostRewrite{
+				AutoHostRewrite: wrapperspb.Bool(true),
+			}
 		}
 
 		routeAction.AppendXForwardedHost = true
@@ -428,21 +445,55 @@ func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite, pathMa
 	return routeAction
 }
 
-func buildXdsDirectResponseAction(res *ir.DirectResponse) *routev3.DirectResponseAction {
-	routeAction := &routev3.DirectResponseAction{Status: res.StatusCode}
+func buildXdsDirectResponseAction(res *ir.CustomResponse) *routev3.DirectResponseAction {
+	routeAction := &routev3.DirectResponseAction{}
+	if res.StatusCode != nil {
+		routeAction.Status = *res.StatusCode
+	}
+
+	if res.Body != nil && *res.Body != "" {
+		routeAction.Body = &corev3.DataSource{
+			Specifier: &corev3.DataSource_InlineString{
+				InlineString: *res.Body,
+			},
+		}
+	}
+
 	return routeAction
 }
 
-func buildXdsRequestMirrorPolicies(mirrorDestinations []*ir.RouteDestination) []*routev3.RouteAction_RequestMirrorPolicy {
-	var mirrorPolicies []*routev3.RouteAction_RequestMirrorPolicy
+func buildXdsRequestMirrorPolicies(mirrorPolicies []*ir.MirrorPolicy) []*routev3.RouteAction_RequestMirrorPolicy {
+	var xdsMirrorPolicies []*routev3.RouteAction_RequestMirrorPolicy
 
-	for _, mirrorDest := range mirrorDestinations {
-		mirrorPolicies = append(mirrorPolicies, &routev3.RouteAction_RequestMirrorPolicy{
-			Cluster: mirrorDest.Name,
-		})
+	for _, policy := range mirrorPolicies {
+		if mp := mirrorPercentByPolicy(policy); mp != nil && policy.Destination != nil {
+			xdsMirrorPolicies = append(xdsMirrorPolicies, &routev3.RouteAction_RequestMirrorPolicy{
+				Cluster:         policy.Destination.Name,
+				RuntimeFraction: mp,
+			})
+		}
 	}
 
-	return mirrorPolicies
+	return xdsMirrorPolicies
+}
+
+// mirrorPercentByPolicy computes the mirror percent to be used based on ir.MirrorPolicy.
+func mirrorPercentByPolicy(mirror *ir.MirrorPolicy) *corev3.RuntimeFractionalPercent {
+	switch {
+	case mirror.Percentage != nil:
+		if *mirror.Percentage > 0 {
+			return &corev3.RuntimeFractionalPercent{
+				DefaultValue: translatePercentToFractionalPercent(mirror.Percentage),
+			}
+		}
+		// If zero percent is provided explicitly, we should not mirror.
+		return nil
+	default:
+		// Default to 100 percent if percent is not given.
+		return &corev3.RuntimeFractionalPercent{
+			DefaultValue: translateIntegerToFractionalPercent(100),
+		}
+	}
 }
 
 func buildXdsAddedHeaders(headersToAdd []ir.AddHeader) []*corev3.HeaderValueOption {
@@ -543,7 +594,11 @@ func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy 
 }
 
 func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
-	rr := route.Traffic.Retry
+	rr := route.GetRetry()
+	anyCfg, err := proto.ToAnyWithValidation(&previoushost.PreviousHostsPredicate{})
+	if err != nil {
+		return nil, err
+	}
 	rp := &routev3.RetryPolicy{
 		RetryOn:              retryDefaultRetryOn,
 		RetriableStatusCodes: []uint32{retryDefaultRetriableStatusCode},
@@ -552,7 +607,7 @@ func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
 			{
 				Name: "envoy.retry_host_predicates.previous_hosts",
 				ConfigType: &routev3.RetryPolicy_RetryHostPredicate_TypedConfig{
-					TypedConfig: protocov.ToAny(&previoushost.PreviousHostsPredicate{}),
+					TypedConfig: anyCfg,
 				},
 			},
 		},
@@ -653,10 +708,30 @@ func buildRetryOn(triggers []ir.TriggerEnum) (string, error) {
 	return b.String(), nil
 }
 
+func needsClusterPerSetting(settings []*ir.DestinationSetting) bool {
+	if hasFiltersInSettings(settings) || hasZoneAwareRouting(settings) {
+		return true
+	}
+	return false
+}
+
 func hasFiltersInSettings(settings []*ir.DestinationSetting) bool {
 	for _, setting := range settings {
 		filters := setting.Filters
 		if filters != nil {
+			return true
+		}
+	}
+	return false
+}
+
+func hasZoneAwareRouting(settings []*ir.DestinationSetting) bool {
+	// Only use weighted clusters if more than one setting
+	if len(settings) < 2 {
+		return false
+	}
+	for _, setting := range settings {
+		if setting.ZoneAwareRoutingEnabled {
 			return true
 		}
 	}

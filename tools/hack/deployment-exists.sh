@@ -3,9 +3,8 @@
 DEPLOYMENT_LABEL_SELECTOR=$1
 DEPLOYMENT_NAMESPACE=$2
 
-
 # Timeout for deployment to exist (in seconds)
-exist_timeout=25
+exist_timeout=300
 end=$((SECONDS+exist_timeout))
 
 while true; do

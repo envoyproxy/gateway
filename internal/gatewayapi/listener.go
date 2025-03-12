@@ -8,6 +8,7 @@ package gatewayapi
 import (
 	"errors"
 	"fmt"
+	"math"
 
 	"github.com/google/cel-go/cel"
 	corev1 "k8s.io/api/core/v1"
@@ -22,6 +23,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/naming"
+	"github.com/envoyproxy/gateway/internal/utils/net"
+	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
 var _ ListenersTranslator = (*Translator)(nil)
@@ -49,6 +52,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 		if gateway.envoyProxy != nil {
 			infraIR[irKey].Proxy.Config = gateway.envoyProxy
 		}
+		t.processProxyReadyListener(xdsIR[irKey], gateway.envoyProxy)
 		t.processProxyObservability(gateway, xdsIR[irKey], infraIR[irKey].Proxy.Config, resources)
 
 		for _, listener := range gateway.listeners {
@@ -99,17 +103,25 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			if !isReady {
 				continue
 			}
+
+			address := net.IPv4ListenerAddress
+			ipFamily := getEnvoyIPFamily(gateway.envoyProxy)
+			if ipFamily != nil && (*ipFamily == egv1a1.IPv6 || *ipFamily == egv1a1.DualStack) {
+				address = net.IPv6ListenerAddress
+			}
+
 			// Add the listener to the Xds IR
 			servicePort := &protocolPort{protocol: listener.Protocol, port: int32(listener.Port)}
-			containerPort := servicePortToContainerPort(int32(listener.Port), gateway.envoyProxy)
+			containerPort := t.servicePortToContainerPort(int32(listener.Port), gateway.envoyProxy)
 			switch listener.Protocol {
 			case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
 				irListener := &ir.HTTPListener{
 					CoreListenerDetails: ir.CoreListenerDetails{
 						Name:     irListenerName(listener),
-						Address:  "0.0.0.0",
+						Address:  address,
 						Port:     uint32(containerPort),
 						Metadata: buildListenerMetadata(listener, gateway),
+						IPFamily: ipFamily,
 					},
 					TLS: irTLSConfigs(listener.tlsSecrets...),
 					Path: ir.PathSettings{
@@ -125,27 +137,29 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 					// see more https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/gwapiv1.Listener.
 					irListener.Hostnames = append(irListener.Hostnames, "*")
 				}
+				irListener.PreserveRouteOrder = getPreserveRouteOrder(gateway.envoyProxy)
 				xdsIR[irKey].HTTP = append(xdsIR[irKey].HTTP, irListener)
 			case gwapiv1.TCPProtocolType, gwapiv1.TLSProtocolType:
 				irListener := &ir.TCPListener{
 					CoreListenerDetails: ir.CoreListenerDetails{
-						Name:    irListenerName(listener),
-						Address: "0.0.0.0",
-						Port:    uint32(containerPort),
+						Name:     irListenerName(listener),
+						Address:  address,
+						Port:     uint32(containerPort),
+						IPFamily: ipFamily,
 					},
 
 					// Gateway is processed firstly, then ClientTrafficPolicy, then xRoute.
 					// TLS field should be added to TCPListener as ClientTrafficPolicy will affect
 					// Listener TLS. Then TCPRoute whose TLS should be configured as Terminate just
 					// refers to the Listener TLS.
-					TLS: irTLSConfigs(listener.tlsSecrets...),
+					TLS: irTLSConfigsForTCPListener(listener.tlsSecrets...),
 				}
 				xdsIR[irKey].TCP = append(xdsIR[irKey].TCP, irListener)
 			case gwapiv1.UDPProtocolType:
 				irListener := &ir.UDPListener{
 					CoreListenerDetails: ir.CoreListenerDetails{
 						Name:    irListenerName(listener),
-						Address: "0.0.0.0",
+						Address: address,
 						Port:    uint32(containerPort),
 					},
 				}
@@ -172,27 +186,48 @@ func buildListenerMetadata(listener *ListenerContext, gateway *GatewayContext) *
 	}
 }
 
+func (t *Translator) processProxyReadyListener(xdsIR *ir.Xds, envoyProxy *egv1a1.EnvoyProxy) {
+	var (
+		ipFamily = egv1a1.IPv4
+		address  = net.IPv4ListenerAddress
+	)
+
+	if envoyProxy != nil && envoyProxy.Spec.IPFamily != nil {
+		ipFamily = *envoyProxy.Spec.IPFamily
+	}
+	if ipFamily == egv1a1.IPv6 || ipFamily == egv1a1.DualStack {
+		address = net.IPv6ListenerAddress
+	}
+
+	xdsIR.ReadyListener = &ir.ReadyListener{
+		Address:  address,
+		Port:     uint32(bootstrap.EnvoyReadinessPort),
+		Path:     bootstrap.EnvoyReadinessPath,
+		IPFamily: ipFamily,
+	}
+}
+
 func (t *Translator) processProxyObservability(gwCtx *GatewayContext, xdsIR *ir.Xds, envoyProxy *egv1a1.EnvoyProxy, resources *resource.Resources) {
 	var err error
 
 	xdsIR.AccessLog, err = t.processAccessLog(envoyProxy, resources)
 	if err != nil {
-		status.UpdateGatewayListenersNotValidCondition(gwCtx.Gateway, gwapiv1.GatewayReasonInvalid, metav1.ConditionFalse,
-			fmt.Sprintf("Invalid access log backendRefs: %v", err))
+		status.UpdateGatewayStatusNotAccepted(gwCtx.Gateway, gwapiv1.GatewayReasonInvalidParameters,
+			fmt.Sprintf("Invalid access log backendRefs in the referenced EnvoyProxy: %v", err))
 		return
 	}
 
 	xdsIR.Tracing, err = t.processTracing(gwCtx.Gateway, envoyProxy, t.MergeGateways, resources)
 	if err != nil {
-		status.UpdateGatewayListenersNotValidCondition(gwCtx.Gateway, gwapiv1.GatewayReasonInvalid, metav1.ConditionFalse,
-			fmt.Sprintf("Invalid tracing backendRefs: %v", err))
+		status.UpdateGatewayStatusNotAccepted(gwCtx.Gateway, gwapiv1.GatewayReasonInvalidParameters,
+			fmt.Sprintf("Invalid tracing backendRefs in the referenced EnvoyProxy: %v", err))
 		return
 	}
 
 	xdsIR.Metrics, err = t.processMetrics(envoyProxy, resources)
 	if err != nil {
-		status.UpdateGatewayListenersNotValidCondition(gwCtx.Gateway, gwapiv1.GatewayReasonInvalid, metav1.ConditionFalse,
-			fmt.Sprintf("Invalid metrics backendRefs: %v", err))
+		status.UpdateGatewayStatusNotAccepted(gwCtx.Gateway, gwapiv1.GatewayReasonInvalidParameters,
+			fmt.Sprintf("Invalid metrics backendRefs in the referenced EnvoyProxy: %v", err))
 		return
 	}
 }
@@ -234,14 +269,13 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 		(!envoyproxy.Spec.Telemetry.AccessLog.Disable && len(envoyproxy.Spec.Telemetry.AccessLog.Settings) == 0) {
 		// use the default access log
 		return &ir.AccessLog{
-			Text: []*ir.TextAccessLog{
+			JSON: []*ir.JSONAccessLog{
 				{
 					Path: "/dev/stdout",
 				},
 			},
 		}, nil
 	}
-
 	if envoyproxy.Spec.Telemetry.AccessLog.Disable {
 		return nil, nil
 	}
@@ -249,13 +283,23 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 	irAccessLog := &ir.AccessLog{}
 	// translate the access log configuration to the IR
 	for i, accessLog := range envoyproxy.Spec.Telemetry.AccessLog.Settings {
+		var accessLogType *ir.ProxyAccessLogType
+		if accessLog.Type != nil {
+			switch *accessLog.Type {
+			case egv1a1.ProxyAccessLogTypeRoute:
+				accessLogType = ptr.To(ir.ProxyAccessLogTypeRoute)
+			case egv1a1.ProxyAccessLogTypeListener:
+				accessLogType = ptr.To(ir.ProxyAccessLogTypeListener)
+			}
+		}
+
 		var format egv1a1.ProxyAccessLogFormat
 		if accessLog.Format != nil {
 			format = *accessLog.Format
 		} else {
 			format = egv1a1.ProxyAccessLogFormat{
-				Type: egv1a1.ProxyAccessLogFormatTypeText,
-				// Empty text format means default format
+				Type: egv1a1.ProxyAccessLogFormatTypeJSON,
+				// Empty means default format
 			}
 		}
 
@@ -274,6 +318,16 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 			return nil, utilerrors.NewAggregate(errs)
 		}
 
+		if len(accessLog.Sinks) == 0 {
+			al := &ir.JSONAccessLog{
+				JSON:       format.JSON,
+				CELMatches: validExprs,
+				LogType:    accessLogType,
+				Path:       "/dev/stdout",
+			}
+			irAccessLog.JSON = append(irAccessLog.JSON, al)
+		}
+
 		for j, sink := range accessLog.Sinks {
 			switch sink.Type {
 			case egv1a1.ProxyAccessLogSinkTypeFile:
@@ -287,6 +341,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 						Format:     format.Text,
 						Path:       sink.File.Path,
 						CELMatches: validExprs,
+						LogType:    accessLogType,
 					}
 					irAccessLog.Text = append(irAccessLog.Text, al)
 				case egv1a1.ProxyAccessLogFormatTypeJSON:
@@ -299,6 +354,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 						JSON:       format.JSON,
 						Path:       sink.File.Path,
 						CELMatches: validExprs,
+						LogType:    accessLogType,
 					}
 					irAccessLog.JSON = append(irAccessLog.JSON, al)
 				}
@@ -314,8 +370,11 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					logName = fmt.Sprintf("%s/%s", envoyproxy.Namespace, envoyproxy.Name)
 				}
 
+				// TODO: rename this, so that we can share backend with tracing?
+				destName := fmt.Sprintf("accesslog_als_%d_%d", i, j)
+				settingName := irDestinationSettingName(destName, -1)
 				// TODO: how to get authority from the backendRefs?
-				ds, traffic, err := t.processBackendRefs(sink.ALS.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
+				ds, traffic, err := t.processBackendRefs(settingName, sink.ALS.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
 				if err != nil {
 					return nil, err
 				}
@@ -323,12 +382,13 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 				al := &ir.ALSAccessLog{
 					LogName: logName,
 					Destination: ir.RouteDestination{
-						Name:     fmt.Sprintf("accesslog_als_%d_%d", i, j), // TODO: rename this, so that we can share backend with tracing?
+						Name:     destName,
 						Settings: ds,
 					},
 					Traffic:    traffic,
 					Type:       sink.ALS.Type,
 					CELMatches: validExprs,
+					LogType:    accessLogType,
 				}
 
 				if al.Type == egv1a1.ALSEnvoyProxyAccessLogTypeHTTP && sink.ALS.HTTP != nil {
@@ -339,7 +399,6 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					}
 					al.HTTP = http
 				}
-
 				switch format.Type {
 				case egv1a1.ProxyAccessLogFormatTypeJSON:
 					al.Attributes = format.JSON
@@ -353,8 +412,11 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					continue
 				}
 
+				// TODO: rename this, so that we can share backend with tracing?
+				destName := fmt.Sprintf("accesslog_otel_%d_%d", i, j)
+				settingName := irDestinationSettingName(destName, -1)
 				// TODO: how to get authority from the backendRefs?
-				ds, traffic, err := t.processBackendRefs(sink.OpenTelemetry.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
+				ds, traffic, err := t.processBackendRefs(settingName, sink.OpenTelemetry.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
 				if err != nil {
 					return nil, err
 				}
@@ -363,10 +425,11 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					CELMatches: validExprs,
 					Resources:  sink.OpenTelemetry.Resources,
 					Destination: ir.RouteDestination{
-						Name:     fmt.Sprintf("accesslog_otel_%d_%d", i, j), // TODO: rename this, so that we can share backend with tracing?
+						Name:     destName,
 						Settings: ds,
 					},
 					Traffic: traffic,
+					LogType: accessLogType,
 				}
 
 				if len(ds) == 0 {
@@ -376,7 +439,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					if sink.OpenTelemetry.Host != nil {
 						host, port = *sink.OpenTelemetry.Host, uint32(sink.OpenTelemetry.Port)
 					}
-					al.Destination.Settings = destinationSettingFromHostAndPort(host, port)
+					al.Destination.Settings = destinationSettingFromHostAndPort(settingName, host, port)
 					al.Authority = host
 				}
 
@@ -391,11 +454,12 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 			}
 		}
 	}
-
 	return irAccessLog, nil
 }
 
-func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.EnvoyProxy, mergeGateways bool, resources *resource.Resources) (*ir.Tracing, error) {
+func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.EnvoyProxy,
+	mergeGateways bool, resources *resource.Resources,
+) (*ir.Tracing, error) {
 	if envoyproxy == nil ||
 		envoyproxy.Spec.Telemetry == nil ||
 		envoyproxy.Spec.Telemetry.Tracing == nil {
@@ -403,8 +467,11 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 	}
 	tracing := envoyproxy.Spec.Telemetry.Tracing
 
+	// TODO: rename this, so that we can share backend with accesslog?
+	destName := "tracing"
+	settingName := irDestinationSettingName(destName, -1)
 	// TODO: how to get authority from the backendRefs?
-	ds, traffic, err := t.processBackendRefs(tracing.Provider.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
+	ds, traffic, err := t.processBackendRefs(settingName, tracing.Provider.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
 	if err != nil {
 		return nil, err
 	}
@@ -419,13 +486,8 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 		if tracing.Provider.Host != nil {
 			host, port = *tracing.Provider.Host, uint32(tracing.Provider.Port)
 		}
-		ds = destinationSettingFromHostAndPort(host, port)
+		ds = destinationSettingFromHostAndPort(settingName, host, port)
 		authority = host
-	}
-
-	samplingRate := 100.0
-	if tracing.SamplingRate != nil {
-		samplingRate = float64(*tracing.SamplingRate)
 	}
 
 	serviceName := naming.ServiceName(utils.NamespacedName(gw))
@@ -436,15 +498,34 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 	return &ir.Tracing{
 		Authority:    authority,
 		ServiceName:  serviceName,
-		SamplingRate: samplingRate,
+		SamplingRate: proxySamplingRate(tracing),
 		CustomTags:   tracing.CustomTags,
 		Destination: ir.RouteDestination{
-			Name:     "tracing", // TODO: rename this, so that we can share backend with accesslog?
+			Name:     destName,
 			Settings: ds,
 		},
 		Provider: tracing.Provider,
 		Traffic:  traffic,
 	}, nil
+}
+
+func proxySamplingRate(tracing *egv1a1.ProxyTracing) float64 {
+	rate := 100.0
+	if tracing.SamplingRate != nil {
+		rate = float64(*tracing.SamplingRate)
+	} else if tracing.SamplingFraction != nil {
+		numerator := float64(tracing.SamplingFraction.Numerator)
+		denominator := float64(100)
+		if tracing.SamplingFraction.Denominator != nil {
+			denominator = float64(*tracing.SamplingFraction.Denominator)
+		}
+
+		rate = numerator / denominator
+		// Identifies a percentage, in the range [0.0, 100.0]
+		rate = math.Max(0, rate)
+		rate = math.Min(100, rate)
+	}
+	return rate
 }
 
 func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy, resources *resource.Resources) (*ir.Metrics, error) {
@@ -459,20 +540,22 @@ func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy, resources *re
 			continue
 		}
 
-		_, _, err := t.processBackendRefs(sink.OpenTelemetry.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
+		_, _, err := t.processBackendRefs("", sink.OpenTelemetry.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	return &ir.Metrics{
-		EnableVirtualHostStats:          envoyproxy.Spec.Telemetry.Metrics.EnableVirtualHostStats != nil && *envoyproxy.Spec.Telemetry.Metrics.EnableVirtualHostStats,
-		EnablePerEndpointStats:          envoyproxy.Spec.Telemetry.Metrics.EnablePerEndpointStats != nil && *envoyproxy.Spec.Telemetry.Metrics.EnablePerEndpointStats,
-		EnableRequestResponseSizesStats: envoyproxy.Spec.Telemetry.Metrics.EnableRequestResponseSizesStats != nil && *envoyproxy.Spec.Telemetry.Metrics.EnableRequestResponseSizesStats,
+		EnableVirtualHostStats:          ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableVirtualHostStats, false),
+		EnablePerEndpointStats:          ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnablePerEndpointStats, false),
+		EnableRequestResponseSizesStats: ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableRequestResponseSizesStats, false),
 	}, nil
 }
 
-func (t *Translator) processBackendRefs(backendCluster egv1a1.BackendCluster, namespace string, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) ([]*ir.DestinationSetting, *ir.TrafficFeatures, error) {
+func (t *Translator) processBackendRefs(name string, backendCluster egv1a1.BackendCluster, namespace string,
+	resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy,
+) ([]*ir.DestinationSetting, *ir.TrafficFeatures, error) {
 	traffic, err := translateTrafficFeatures(backendCluster.BackendSettings)
 	if err != nil {
 		return nil, nil, err
@@ -488,7 +571,7 @@ func (t *Translator) processBackendRefs(backendCluster egv1a1.BackendCluster, na
 			return nil, nil, err
 		}
 
-		ds := t.processServiceDestinationSetting(ref.BackendObjectReference, ns, ir.TCP, resources, envoyProxy)
+		ds := t.processServiceDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP, resources, envoyProxy)
 		result = append(result, ds)
 	}
 	if len(result) == 0 {
@@ -497,12 +580,13 @@ func (t *Translator) processBackendRefs(backendCluster egv1a1.BackendCluster, na
 	return result, traffic, nil
 }
 
-func destinationSettingFromHostAndPort(host string, port uint32) []*ir.DestinationSetting {
+func destinationSettingFromHostAndPort(name, host string, port uint32) []*ir.DestinationSetting {
 	return []*ir.DestinationSetting{
 		{
+			Name:      name,
 			Weight:    ptr.To[uint32](1),
 			Protocol:  ir.GRPC,
-			Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(host, port)},
+			Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(host, port, false, nil)},
 		},
 	}
 }
@@ -512,4 +596,28 @@ var celEnv, _ = cel.NewEnv()
 func validCELExpression(expr string) bool {
 	_, issue := celEnv.Parse(expr)
 	return issue.Err() == nil
+}
+
+// servicePortToContainerPort translates a service port into an ephemeral
+// container port.
+func (t *Translator) servicePortToContainerPort(servicePort int32, envoyProxy *egv1a1.EnvoyProxy) int32 {
+	if t.ListenerPortShiftDisabled {
+		return servicePort
+	}
+
+	if envoyProxy != nil {
+		if !envoyProxy.NeedToSwitchPorts() {
+			return servicePort
+		}
+	}
+
+	// If the service port is a privileged port (1-1023)
+	// add a constant to the value converting it into an ephemeral port.
+	// This allows the container to bind to the port without needing a
+	// CAP_NET_BIND_SERVICE capability.
+	if servicePort < minEphemeralPort {
+		return servicePort + wellKnownPortShift
+	}
+
+	return servicePort
 }

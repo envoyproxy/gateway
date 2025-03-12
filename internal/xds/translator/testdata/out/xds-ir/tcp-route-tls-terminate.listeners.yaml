@@ -1,6 +1,6 @@
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       portValue: 10080
   filterChains:
   - filters:
@@ -15,14 +15,13 @@
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
         commonTlsContext:
-          alpnProtocols:
-          - h2
-          - http/1.1
           tlsCertificateSdsSecretConfigs:
           - name: envoy-gateway-tls-secret-1
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
+        disableStatefulSessionResumption: true
+        disableStatelessSessionResumption: true
   - filterChainMatch:
       serverNames:
       - '*.envoyproxy.io'
@@ -39,14 +38,13 @@
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
         commonTlsContext:
-          alpnProtocols:
-          - h2
-          - http/1.1
           tlsCertificateSdsSecretConfigs:
           - name: envoy-gateway-tls-secret-1
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
+        disableStatefulSessionResumption: true
+        disableStatelessSessionResumption: true
   listenerFilters:
   - name: envoy.filters.listener.tls_inspector
     typedConfig:

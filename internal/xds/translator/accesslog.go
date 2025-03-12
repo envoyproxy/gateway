@@ -22,34 +22,15 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	otlpcommonv1 "go.opentelemetry.io/proto/otlp/common/v1"
 	"golang.org/x/exp/maps"
-	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/protocov"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 const (
-	// EnvoyTextLogFormat is the default log format for Envoy.
-	// See https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#default-format-string
-	EnvoyTextLogFormat = "{\"start_time\":\"%START_TIME%\",\"method\":\"%REQ(:METHOD)%\"," +
-		"\"x-envoy-origin-path\":\"%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%\",\"protocol\":\"%PROTOCOL%\"," +
-		"\"response_code\":\"%RESPONSE_CODE%\",\"response_flags\":\"%RESPONSE_FLAGS%\"," +
-		"\"response_code_details\":\"%RESPONSE_CODE_DETAILS%\"," +
-		"\"connection_termination_details\":\"%CONNECTION_TERMINATION_DETAILS%\"," +
-		"\"upstream_transport_failure_reason\":\"%UPSTREAM_TRANSPORT_FAILURE_REASON%\"," +
-		"\"bytes_received\":\"%BYTES_RECEIVED%\",\"bytes_sent\":\"%BYTES_SENT%\"," +
-		"\"duration\":\"%DURATION%\",\"x-envoy-upstream-service-time\":\"%RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)%\"," +
-		"\"x-forwarded-for\":\"%REQ(X-FORWARDED-FOR)%\",\"user-agent\":\"%REQ(USER-AGENT)%\"," +
-		"\"x-request-id\":\"%REQ(X-REQUEST-ID)%\",\":authority\":\"%REQ(:AUTHORITY)%\"," +
-		"\"upstream_host\":\"%UPSTREAM_HOST%\",\"upstream_cluster\":\"%UPSTREAM_CLUSTER%\"," +
-		"\"upstream_local_address\":\"%UPSTREAM_LOCAL_ADDRESS%\"," +
-		"\"downstream_local_address\":\"%DOWNSTREAM_LOCAL_ADDRESS%\"," +
-		"\"downstream_remote_address\":\"%DOWNSTREAM_REMOTE_ADDRESS%\"," +
-		"\"requested_server_name\":\"%REQUESTED_SERVER_NAME%\",\"route_name\":\"%ROUTE_NAME%\"}\n"
-
 	otelLogName   = "otel_envoy_accesslog"
 	otelAccessLog = "envoy.access_loggers.open_telemetry"
 
@@ -61,6 +42,33 @@ const (
 	celFilter        = "envoy.access_loggers.extension_filters.cel"
 )
 
+var EnvoyJSONLogFields = map[string]string{
+	"start_time":                        "%START_TIME%",
+	"method":                            "%REQ(:METHOD)%",
+	"x-envoy-origin-path":               "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%",
+	"protocol":                          "%PROTOCOL%",
+	"response_code":                     "%RESPONSE_CODE%",
+	"response_flags":                    "%RESPONSE_FLAGS%",
+	"response_code_details":             "%RESPONSE_CODE_DETAILS%",
+	"connection_termination_details":    "%CONNECTION_TERMINATION_DETAILS%",
+	"upstream_transport_failure_reason": "%UPSTREAM_TRANSPORT_FAILURE_REASON%",
+	"bytes_received":                    "%BYTES_RECEIVED%",
+	"bytes_sent":                        "%BYTES_SENT%",
+	"duration":                          "%DURATION%",
+	"x-envoy-upstream-service-time":     "%RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)%",
+	"x-forwarded-for":                   "%REQ(X-FORWARDED-FOR)%",
+	"user-agent":                        "%REQ(USER-AGENT)%",
+	"x-request-id":                      "%REQ(X-REQUEST-ID)%",
+	":authority":                        "%REQ(:AUTHORITY)%",
+	"upstream_host":                     "%UPSTREAM_HOST%",
+	"upstream_cluster":                  "%UPSTREAM_CLUSTER%",
+	"upstream_local_address":            "%UPSTREAM_LOCAL_ADDRESS%",
+	"downstream_local_address":          "%DOWNSTREAM_LOCAL_ADDRESS%",
+	"downstream_remote_address":         "%DOWNSTREAM_REMOTE_ADDRESS%",
+	"requested_server_name":             "%REQUESTED_SERVER_NAME%",
+	"route_name":                        "%ROUTE_NAME%",
+}
+
 // for the case when a route does not exist to upstream, hcm logs will not be present
 var listenerAccessLogFilter = &accesslog.AccessLogFilter{
 	FilterSpecifier: &accesslog.AccessLogFilter_ResponseFlagFilter{
@@ -70,42 +78,73 @@ var listenerAccessLogFilter = &accesslog.AccessLogFilter{
 
 var (
 	// reqWithoutQueryFormatter configures additional formatters needed for some of the format strings like "REQ_WITHOUT_QUERY"
-	reqWithoutQueryFormatter = &cfgcore.TypedExtensionConfig{
-		Name:        "envoy.formatter.req_without_query",
-		TypedConfig: protocov.ToAny(&reqwithoutqueryformatter.ReqWithoutQuery{}),
-	}
+	reqWithoutQueryFormatter *cfgcore.TypedExtensionConfig
 
 	// metadataFormatter configures additional formatters needed for some of the format strings like "METADATA"
 	// for more information, see https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/formatter/metadata/v3/metadata.proto
-	metadataFormatter = &cfgcore.TypedExtensionConfig{
-		Name:        "envoy.formatter.metadata",
-		TypedConfig: protocov.ToAny(&metadataformatter.Metadata{}),
-	}
+	metadataFormatter *cfgcore.TypedExtensionConfig
 
 	// celFormatter configures additional formatters needed for some of the format strings like "CEL"
 	// for more information, see https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/formatter/cel/v3/cel.proto
-	celFormatter = &cfgcore.TypedExtensionConfig{
-		Name:        "envoy.formatter.cel",
-		TypedConfig: protocov.ToAny(&celformatter.Cel{}),
-	}
+	celFormatter *cfgcore.TypedExtensionConfig
 )
 
-func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLog {
+func init() {
+	any, err := proto.ToAnyWithValidation(&reqwithoutqueryformatter.ReqWithoutQuery{})
+	if err != nil {
+		panic(err)
+	}
+	reqWithoutQueryFormatter = &cfgcore.TypedExtensionConfig{
+		Name:        "envoy.formatter.req_without_query",
+		TypedConfig: any,
+	}
+
+	any, err = proto.ToAnyWithValidation(&metadataformatter.Metadata{})
+	if err != nil {
+		panic(err)
+	}
+	metadataFormatter = &cfgcore.TypedExtensionConfig{
+		Name:        "envoy.formatter.metadata",
+		TypedConfig: any,
+	}
+
+	any, err = proto.ToAnyWithValidation(&celformatter.Cel{})
+	if err != nil {
+		panic(err)
+	}
+	celFormatter = &cfgcore.TypedExtensionConfig{
+		Name:        "envoy.formatter.cel",
+		TypedConfig: any,
+	}
+}
+
+func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([]*accesslog.AccessLog, error) {
 	if al == nil {
-		return nil
+		return nil, nil
 	}
 
 	totalLen := len(al.Text) + len(al.JSON) + len(al.OpenTelemetry)
 	accessLogs := make([]*accesslog.AccessLog, 0, totalLen)
+
 	// handle text file access logs
 	for _, text := range al.Text {
+		// Filter out logs that are not Global or match the desired access log type
+		if !(text.LogType == nil || *text.LogType == accessLogType) {
+			continue
+		}
+
+		// NR is only added to listener logs originating from a global log configuration
+		defaultLogTypeForListener := accessLogType == ir.ProxyAccessLogTypeListener && text.LogType == nil
+
 		filelog := &fileaccesslog.FileAccessLog{
 			Path: text.Path,
 		}
-		format := EnvoyTextLogFormat
-		if text.Format != nil {
-			format = *text.Format
+
+		if text.Format == nil {
+			return nil, errors.New("text.Format is nil")
 		}
+
+		format := *text.Format
 
 		filelog.AccessLogFormat = &fileaccesslog.FileAccessLog_LogFormat{
 			LogFormat: &cfgcore.SubstitutionFormatString{
@@ -124,30 +163,46 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 			filelog.GetLogFormat().Formatters = formatters
 		}
 
-		// TODO: find a better way to handle this
-		accesslogAny, _ := anypb.New(filelog)
+		accesslogAny, err := proto.ToAnyWithValidation(filelog)
+		if err != nil {
+			return nil, err
+		}
+		filter, err := buildAccessLogFilter(text.CELMatches, defaultLogTypeForListener)
+		if err != nil {
+			return nil, err
+		}
 		accessLogs = append(accessLogs, &accesslog.AccessLog{
 			Name: wellknown.FileAccessLog,
 			ConfigType: &accesslog.AccessLog_TypedConfig{
 				TypedConfig: accesslogAny,
 			},
-			Filter: buildAccessLogFilter(text.CELMatches, forListener),
+			Filter: filter,
 		})
 	}
 	// handle json file access logs
 	for _, json := range al.JSON {
-		jsonFormat := &structpb.Struct{
-			Fields: make(map[string]*structpb.Value, len(json.JSON)),
+		// Filter out logs that are not Global or match the desired access log type
+		if !(json.LogType == nil || *json.LogType == accessLogType) {
+			continue
 		}
 
-		// sort keys to ensure consistent ordering
-		keys := maps.Keys(json.JSON)
-		sort.Strings(keys)
+		// NR is only added to listener logs originating from a global log configuration
+		defaultLogTypeForListener := accessLogType == ir.ProxyAccessLogTypeListener && json.LogType == nil
+
+		jsonLogFields := EnvoyJSONLogFields
+		if json.JSON != nil {
+			jsonLogFields = json.JSON
+		}
+
+		keys := maps.Keys(jsonLogFields)
+		jsonFormat := &structpb.Struct{
+			Fields: make(map[string]*structpb.Value, len(keys)),
+		}
 
 		for _, key := range keys {
 			jsonFormat.Fields[key] = &structpb.Value{
 				Kind: &structpb.Value_StringValue{
-					StringValue: json.JSON[key],
+					StringValue: jsonLogFields[key],
 				},
 			}
 		}
@@ -163,22 +218,37 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 			},
 		}
 
-		formatters := accessLogJSONFormatters(json.JSON)
+		formatters := accessLogJSONFormatters(jsonLogFields)
 		if len(formatters) != 0 {
 			filelog.GetLogFormat().Formatters = formatters
 		}
 
-		accesslogAny, _ := anypb.New(filelog)
+		accesslogAny, err := proto.ToAnyWithValidation(filelog)
+		if err != nil {
+			return nil, err
+		}
+		filter, err := buildAccessLogFilter(json.CELMatches, defaultLogTypeForListener)
+		if err != nil {
+			return nil, err
+		}
 		accessLogs = append(accessLogs, &accesslog.AccessLog{
 			Name: wellknown.FileAccessLog,
 			ConfigType: &accesslog.AccessLog_TypedConfig{
 				TypedConfig: accesslogAny,
 			},
-			Filter: buildAccessLogFilter(json.CELMatches, forListener),
+			Filter: filter,
 		})
 	}
 	// handle ALS access logs
 	for _, als := range al.ALS {
+		// Filter out logs that are not Global or match the desired access log type
+		if !(als.LogType == nil || *als.LogType == accessLogType) {
+			continue
+		}
+
+		// NR is only added to listener logs originating from a global log configuration
+		defaultLogTypeForListener := accessLogType == ir.ProxyAccessLogTypeListener && als.LogType == nil
+
 		cc := &grpcaccesslog.CommonGrpcAccessLogConfig{
 			LogName: als.LogName,
 			GrpcService: &cfgcore.GrpcService{
@@ -203,31 +273,53 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 				alCfg.AdditionalResponseTrailersToLog = als.HTTP.ResponseTrailers
 			}
 
-			accesslogAny, _ := anypb.New(alCfg)
+			accesslogAny, err := proto.ToAnyWithValidation(alCfg)
+			if err != nil {
+				return nil, err
+			}
+			filter, err := buildAccessLogFilter(als.CELMatches, defaultLogTypeForListener)
+			if err != nil {
+				return nil, err
+			}
 			accessLogs = append(accessLogs, &accesslog.AccessLog{
 				Name: wellknown.HTTPGRPCAccessLog,
 				ConfigType: &accesslog.AccessLog_TypedConfig{
 					TypedConfig: accesslogAny,
 				},
-				Filter: buildAccessLogFilter(als.CELMatches, forListener),
+				Filter: filter,
 			})
 		case egv1a1.ALSEnvoyProxyAccessLogTypeTCP:
 			alCfg := &grpcaccesslog.TcpGrpcAccessLogConfig{
 				CommonConfig: cc,
 			}
 
-			accesslogAny, _ := anypb.New(alCfg)
+			accesslogAny, err := proto.ToAnyWithValidation(alCfg)
+			if err != nil {
+				return nil, err
+			}
+			filter, err := buildAccessLogFilter(als.CELMatches, defaultLogTypeForListener)
+			if err != nil {
+				return nil, err
+			}
 			accessLogs = append(accessLogs, &accesslog.AccessLog{
 				Name: tcpGRPCAccessLog,
 				ConfigType: &accesslog.AccessLog_TypedConfig{
 					TypedConfig: accesslogAny,
 				},
-				Filter: buildAccessLogFilter(als.CELMatches, forListener),
+				Filter: filter,
 			})
 		}
 	}
 	// handle open telemetry access logs
 	for _, otel := range al.OpenTelemetry {
+		// Filter out logs that are not Global or match the desired access log type
+		if !(otel.LogType == nil || *otel.LogType == accessLogType) {
+			continue
+		}
+
+		// NR is only added to listener logs originating from a global log configuration
+		defaultLogTypeForListener := accessLogType == ir.ProxyAccessLogTypeListener && otel.LogType == nil
+
 		al := &otelaccesslog.OpenTelemetryAccessLogConfig{
 			CommonConfig: &grpcaccesslog.CommonGrpcAccessLogConfig{
 				LogName: otelLogName,
@@ -244,10 +336,10 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 			ResourceAttributes: convertToKeyValueList(otel.Resources, false),
 		}
 
-		format := EnvoyTextLogFormat
-		if otel.Text != nil {
-			format = *otel.Text
+		if otel.Text == nil {
+			return nil, errors.New("otel.Text is nil")
 		}
+		format := *otel.Text
 
 		if format != "" {
 			al.Body = &otlpcommonv1.AnyValue{
@@ -264,50 +356,65 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 			al.Formatters = formatters
 		}
 
-		accesslogAny, _ := anypb.New(al)
+		accesslogAny, err := proto.ToAnyWithValidation(al)
+		if err != nil {
+			return nil, err
+		}
+		filter, err := buildAccessLogFilter(otel.CELMatches, defaultLogTypeForListener)
+		if err != nil {
+			return nil, err
+		}
 		accessLogs = append(accessLogs, &accesslog.AccessLog{
 			Name: otelAccessLog,
 			ConfigType: &accesslog.AccessLog_TypedConfig{
 				TypedConfig: accesslogAny,
 			},
-			Filter: buildAccessLogFilter(otel.CELMatches, forListener),
+			Filter: filter,
 		})
 	}
 
-	return accessLogs
+	return accessLogs, nil
 }
 
-func celAccessLogFilter(expr string) *accesslog.AccessLogFilter {
+func celAccessLogFilter(expr string) (*accesslog.AccessLogFilter, error) {
 	fl := &cel.ExpressionFilter{
 		Expression: expr,
+	}
+	any, err := proto.ToAnyWithValidation(fl)
+	if err != nil {
+		return nil, err
 	}
 
 	return &accesslog.AccessLogFilter{
 		FilterSpecifier: &accesslog.AccessLogFilter_ExtensionFilter{
 			ExtensionFilter: &accesslog.ExtensionFilter{
 				Name:       celFilter,
-				ConfigType: &accesslog.ExtensionFilter_TypedConfig{TypedConfig: protocov.ToAny(fl)},
+				ConfigType: &accesslog.ExtensionFilter_TypedConfig{TypedConfig: any},
 			},
 		},
-	}
+	}, nil
 }
 
-func buildAccessLogFilter(exprs []string, forListener bool) *accesslog.AccessLogFilter {
+func buildAccessLogFilter(exprs []string, withNoRouteMatchFilter bool) (*accesslog.AccessLogFilter, error) {
 	// add filter for access logs
 	var filters []*accesslog.AccessLogFilter
 	for _, expr := range exprs {
-		filters = append(filters, celAccessLogFilter(expr))
+		fl, err := celAccessLogFilter(expr)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, fl)
 	}
-	if forListener {
+	if withNoRouteMatchFilter {
 		filters = append(filters, listenerAccessLogFilter)
 	}
 
 	if len(filters) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	if len(filters) == 1 {
-		return filters[0]
+		return filters[0], nil
 	}
 
 	return &accesslog.AccessLogFilter{
@@ -316,7 +423,7 @@ func buildAccessLogFilter(exprs []string, forListener bool) *accesslog.AccessLog
 				Filters: filters,
 			},
 		},
-	}
+	}, nil
 }
 
 func accessLogTextFormatters(text string) []*cfgcore.TypedExtensionConfig {
@@ -499,7 +606,7 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 			backendConnection: traffic.BackendConnection,
 			dns:               traffic.DNS,
 			http2Settings:     traffic.HTTP2,
-		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+		}); err != nil {
 			return err
 		}
 	}
@@ -527,7 +634,7 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 			backendConnection: traffic.BackendConnection,
 			dns:               traffic.DNS,
 			http2Settings:     traffic.HTTP2,
-		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+		}); err != nil {
 			return err
 		}
 	}

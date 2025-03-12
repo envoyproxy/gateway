@@ -1,0 +1,54 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    retry:
+      numRetries: 3
+      perRetry:
+        backOff:
+          baseInterval: 200ms
+      retryOn:
+        httpStatusCodes:
+        - 500
+    traffic:
+      retry:
+        numRetries: 5
+        retryOn:
+          httpStatusCodes:
+          - 429
+          - 503
+          triggers:
+          - reset
+          - connect-failure
+          - retriable-status-codes
+        perRetry:
+          timeout: 250ms
+          backoff:
+            baseInterval: 100ms
+            maxInterval: 10s
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"
+  - name: "second-route-defaults"
+    hostname: "foo"
+    traffic:
+      retry: {}
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"

@@ -6,7 +6,6 @@
 package main
 
 import (
-	"fmt"
 	"log/slog"
 	"net"
 	"os"
@@ -56,7 +55,6 @@ func main() {
 		},
 	}
 	app.Run(os.Args)
-
 }
 
 var grpcServer *grpc.Server
@@ -65,7 +63,7 @@ func handleSignals(cCtx *cli.Context) error {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGQUIT)
 	go func() {
-		for _ = range c {
+		for range c {
 			if grpcServer != nil {
 				grpcServer.Stop()
 				os.Exit(0)
@@ -83,7 +81,7 @@ func startExtensionServer(cCtx *cli.Context) error {
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
 		Level: level,
 	}))
-	address := fmt.Sprintf("%s:%d", cCtx.String("host"), cCtx.Int("port"))
+	address := net.JoinHostPort(cCtx.String("host"), cCtx.String("port"))
 	logger.Info("Starting the extension server", slog.String("host", address))
 	lis, err := net.Listen("tcp", address)
 	if err != nil {

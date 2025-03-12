@@ -80,9 +80,6 @@ func buildHCMWasmFilter(wasm ir.Wasm) (*hcmv3.HttpFilter, error) {
 	if wasmProto, err = wasmConfig(wasm); err != nil {
 		return nil, err
 	}
-	if err = wasmProto.ValidateAll(); err != nil {
-		return nil, err
-	}
 	if wasmAny, err = anypb.New(wasmProto); err != nil {
 		return nil, err
 	}
@@ -118,30 +115,38 @@ func wasmConfig(wasm ir.Wasm) (*wasmfilterv3.Wasm, error) {
 		return nil, err
 	}
 
+	vmConfig := &wasmv3.VmConfig{
+		VmId:    wasm.Name, // Do not share VMs across different filters
+		Runtime: vmRuntimeV8,
+		Code: &corev3.AsyncDataSource{
+			Specifier: &corev3.AsyncDataSource_Remote{
+				Remote: &corev3.RemoteDataSource{
+					HttpUri: &corev3.HttpUri{
+						Uri: wasm.Code.ServingURL,
+						HttpUpstreamType: &corev3.HttpUri_Cluster{
+							Cluster: wasmHTTPServerCluster,
+						},
+						Timeout: &durationpb.Duration{
+							Seconds: defaultExtServiceRequestTimeout,
+						},
+					},
+					Sha256: wasm.Code.SHA256,
+				},
+			},
+		},
+	}
+
+	if wasm.HostKeys != nil {
+		vmConfig.EnvironmentVariables = &wasmv3.EnvironmentVariables{
+			HostEnvKeys: wasm.HostKeys,
+		}
+	}
+
 	filterConfig = &wasmfilterv3.Wasm{
 		Config: &wasmv3.PluginConfig{
 			Name: wasm.WasmName,
 			Vm: &wasmv3.PluginConfig_VmConfig{
-				VmConfig: &wasmv3.VmConfig{
-					VmId:    wasm.Name, // Do not share VMs across different filters
-					Runtime: vmRuntimeV8,
-					Code: &corev3.AsyncDataSource{
-						Specifier: &corev3.AsyncDataSource_Remote{
-							Remote: &corev3.RemoteDataSource{
-								HttpUri: &corev3.HttpUri{
-									Uri: wasm.Code.ServingURL,
-									HttpUpstreamType: &corev3.HttpUri_Cluster{
-										Cluster: wasmHTTPServerCluster,
-									},
-									Timeout: &durationpb.Duration{
-										Seconds: defaultExtServiceRequestTimeout,
-									},
-								},
-								Sha256: wasm.Code.SHA256,
-							},
-						},
-					},
-				},
+				VmConfig: vmConfig,
 			},
 			Configuration: configAny,
 			FailOpen:      wasm.FailOpen,

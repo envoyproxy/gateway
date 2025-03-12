@@ -48,7 +48,7 @@ helm-generate:
   	done
 
 .PHONY: helm-generate.%
-helm-generate.%: $(tools/jsonnet) $(tools/jb)
+helm-generate.%:
 	$(eval COMMAND := $(word 1,$(subst ., ,$*)))
 	$(eval CHART_NAME := $(COMMAND))
 	@if test -f "charts/${CHART_NAME}/values.tmpl.yaml"; then \
@@ -62,10 +62,10 @@ helm-generate.%: $(tools/jsonnet) $(tools/jb)
 	@if [ ${CHART_NAME} == "gateway-addons-helm" ]; then \
   		$(call log, "Run jsonnet generate for dashboards in chart: ${CHART_NAME}!"); \
   		workDir="charts/${CHART_NAME}/dashboards"; \
-  		cd $$workDir && ../../../$(tools/jb) install && cd ../../..; \
+  		cd $$workDir && ../../../go tool jb install && cd ../../..; \
   		for file in $$(find $${workDir} -maxdepth 1 -name '*.libsonnet'); do \
   		    name=$$(basename $$file .libsonnet); \
-  		    $(tools/jsonnet) -J $${workDir}/vendor $${workDir}/$${name}.libsonnet > $${workDir}/$${name}.gen.json; \
+  		    go tool jsonnet -J $${workDir}/vendor $${workDir}/$${name}.libsonnet > $${workDir}/$${name}.gen.json; \
   		done \
   	fi
 

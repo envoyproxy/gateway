@@ -4,6 +4,7 @@ metadata:
   annotations:
     key1: value1
   labels:
+    key1: value1
     app.kubernetes.io/name: envoy
     app.kubernetes.io/component: proxy
     app.kubernetes.io/managed-by: envoy-gateway

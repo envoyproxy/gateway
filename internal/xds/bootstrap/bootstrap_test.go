@@ -20,6 +20,11 @@ import (
 )
 
 func TestGetRenderedBootstrapConfig(t *testing.T) {
+	sds := SdsConfigPath{
+		Certificate: "/sds/xds-certificate.json",
+		TrustedCA:   "/sds/xds-trusted-ca.json",
+	}
+
 	cases := []struct {
 		name string
 		opts *RenderBootstrapConfigOptions
@@ -32,6 +37,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 						Disable: true,
 					},
 				},
+				SdsConfig: sds,
 			},
 		},
 		{
@@ -40,6 +46,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 				ProxyMetrics: &egv1a1.ProxyMetrics{
 					Prometheus: &egv1a1.ProxyPrometheusProvider{},
 				},
+				SdsConfig: sds,
 			},
 		},
 		{
@@ -48,10 +55,24 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 				ProxyMetrics: &egv1a1.ProxyMetrics{
 					Prometheus: &egv1a1.ProxyPrometheusProvider{
 						Compression: &egv1a1.Compression{
-							Type: "gzip",
+							Type: egv1a1.GzipCompressorType,
 						},
 					},
 				},
+				SdsConfig: sds,
+			},
+		},
+		{
+			name: "enable-prometheus-brotli-compression",
+			opts: &RenderBootstrapConfigOptions{
+				ProxyMetrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Compression: &egv1a1.Compression{
+							Type: egv1a1.BrotliCompressorType,
+						},
+					},
+				},
+				SdsConfig: sds,
 			},
 		},
 		{
@@ -71,6 +92,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 						},
 					},
 				},
+				SdsConfig: sds,
 			},
 		},
 		{
@@ -101,6 +123,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 						},
 					},
 				},
+				SdsConfig: sds,
 			},
 		},
 		{
@@ -130,12 +153,31 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 						},
 					},
 				},
+				SdsConfig: sds,
+			},
+		},
+		{
+			name: "custom-server-port",
+			opts: &RenderBootstrapConfigOptions{
+				XdsServerHost:   ptr.To("foo.bar"),
+				XdsServerPort:   ptr.To(int32(12345)),
+				WasmServerPort:  ptr.To(int32(1111)),
+				AdminServerPort: ptr.To(int32(2222)),
+				StatsServerPort: ptr.To(int32(3333)),
+				SdsConfig:       sds,
 			},
 		},
 		{
 			name: "with-max-heap-size-bytes",
 			opts: &RenderBootstrapConfigOptions{
 				MaxHeapSizeBytes: 1073741824,
+				SdsConfig:        sds,
+			},
+		},
+		{
+			name: "ipv6",
+			opts: &RenderBootstrapConfigOptions{
+				IPFamily: ptr.To(egv1a1.IPv6),
 			},
 		},
 	}

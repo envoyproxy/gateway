@@ -1,6 +1,6 @@
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       portValue: 10080
   filterChains:
   - filters:
@@ -52,12 +52,14 @@
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
+        disableStatefulSessionResumption: true
+        disableStatelessSessionResumption: true
         requireClientCertificate: false
   name: first-listener
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       portValue: 10081
   filterChains:
   - filters:
@@ -72,9 +74,6 @@
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
         commonTlsContext:
-          alpnProtocols:
-          - h2
-          - http/1.1
           tlsCertificateSdsSecretConfigs:
           - name: secret-3
             sdsConfig:
@@ -85,6 +84,8 @@
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
+        disableStatefulSessionResumption: true
+        disableStatelessSessionResumption: true
         requireClientCertificate: false
   name: second-listener
   perConnectionBufferLimitBytes: 32768

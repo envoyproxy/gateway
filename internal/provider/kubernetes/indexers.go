@@ -40,26 +40,33 @@ const (
 	backendSecurityPolicyIndex       = "backendSecurityPolicyIndex"
 	configMapCtpIndex                = "configMapCtpIndex"
 	secretCtpIndex                   = "secretCtpIndex"
+	secretBtlsIndex                  = "secretBtlsIndex"
 	configMapBtlsIndex               = "configMapBtlsIndex"
 	backendEnvoyExtensionPolicyIndex = "backendEnvoyExtensionPolicyIndex"
 	backendEnvoyProxyTelemetryIndex  = "backendEnvoyProxyTelemetryIndex"
 	secretEnvoyProxyIndex            = "secretEnvoyProxyIndex"
 	secretEnvoyExtensionPolicyIndex  = "secretEnvoyExtensionPolicyIndex"
 	httpRouteFilterHTTPRouteIndex    = "httpRouteFilterHTTPRouteIndex"
+	configMapBtpIndex                = "configMapBtpIndex"
+	configMapHTTPRouteFilterIndex    = "configMapHTTPRouteFilterIndex"
 )
 
 func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1b1.ReferenceGrant{}, targetRefGrantRouteIndex, func(rawObj client.Object) []string {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1b1.ReferenceGrant{}, targetRefGrantRouteIndex, getReferenceGrantIndexerFunc()); err != nil {
+		return err
+	}
+	return nil
+}
+
+func getReferenceGrantIndexerFunc() func(rawObj client.Object) []string {
+	return func(rawObj client.Object) []string {
 		refGrant := rawObj.(*gwapiv1b1.ReferenceGrant)
 		var referredServices []string
 		for _, target := range refGrant.Spec.To {
 			referredServices = append(referredServices, string(target.Kind))
 		}
 		return referredServices
-	}); err != nil {
-		return err
 	}
-	return nil
 }
 
 // addHTTPRouteIndexers adds indexing on HTTPRoute.
@@ -531,12 +538,15 @@ func secretSecurityPolicyIndexFunc(rawObj client.Object) []string {
 	securityPolicy := rawObj.(*egv1a1.SecurityPolicy)
 
 	var (
-		secretReferences []gwapiv1b1.SecretObjectReference
+		secretReferences []gwapiv1.SecretObjectReference
 		values           []string
 	)
 
 	if securityPolicy.Spec.OIDC != nil {
 		secretReferences = append(secretReferences, securityPolicy.Spec.OIDC.ClientSecret)
+	}
+	if securityPolicy.Spec.APIKeyAuth != nil {
+		secretReferences = append(secretReferences, securityPolicy.Spec.APIKeyAuth.CredentialRefs...)
 	}
 	if securityPolicy.Spec.BasicAuth != nil {
 		secretReferences = append(secretReferences, securityPolicy.Spec.BasicAuth.Users)
@@ -641,7 +651,66 @@ func secretCtpIndexFunc(rawObj client.Object) []string {
 	return secretReferences
 }
 
-// addBtlsIndexers adds indexing on BackendTLSPolicy, for ConfigMap objects that are
+// addBtpIndexers adds indexing on BackendTrafficPolicy, for ConfigMap objects that are
+// referenced in BackendTrafficPolicy objects. This helps in querying for BackendTrafficPolies that are
+// affected by a particular ConfigMap CRUD.
+func addBtpIndexers(ctx context.Context, mgr manager.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.BackendTrafficPolicy{}, configMapBtpIndex, configMapBtpIndexFunc); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func configMapBtpIndexFunc(rawObj client.Object) []string {
+	btp := rawObj.(*egv1a1.BackendTrafficPolicy)
+	var configMapReferences []string
+
+	for _, ro := range btp.Spec.ResponseOverride {
+		if ro.Response.Body != nil && ro.Response.Body.ValueRef != nil {
+			if string(ro.Response.Body.ValueRef.Kind) == resource.KindConfigMap {
+				configMapReferences = append(configMapReferences,
+					types.NamespacedName{
+						Namespace: btp.Namespace,
+						Name:      string(ro.Response.Body.ValueRef.Name),
+					}.String(),
+				)
+			}
+		}
+	}
+	return configMapReferences
+}
+
+// addRouteFilterIndexers adds indexing on HTTPRouteFilter, for ConfigMap objects that are
+// referenced in HTTPRouteFilter objects. This helps in querying for HTTPRouteFilters that are
+// affected by a particular ConfigMap CRUD.
+func addRouteFilterIndexers(ctx context.Context, mgr manager.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.HTTPRouteFilter{},
+		configMapHTTPRouteFilterIndex, configMapRouteFilterIndexFunc); err != nil {
+		return err
+	}
+	return nil
+}
+
+func configMapRouteFilterIndexFunc(rawObj client.Object) []string {
+	filter := rawObj.(*egv1a1.HTTPRouteFilter)
+	var configMapReferences []string
+	if filter.Spec.DirectResponse != nil &&
+		filter.Spec.DirectResponse.Body != nil &&
+		filter.Spec.DirectResponse.Body.ValueRef != nil {
+		if string(filter.Spec.DirectResponse.Body.ValueRef.Kind) == resource.KindConfigMap {
+			configMapReferences = append(configMapReferences,
+				types.NamespacedName{
+					Namespace: filter.Namespace,
+					Name:      string(filter.Spec.DirectResponse.Body.ValueRef.Name),
+				}.String(),
+			)
+		}
+	}
+	return configMapReferences
+}
+
+// addBtlsIndexers adds indexing on BackendTLSPolicy, for ConfigMap and Secret objects that are
 // referenced in BackendTLSPolicy objects. This helps in querying for BackendTLSPolicies that are
 // affected by a particular ConfigMap CRUD.
 func addBtlsIndexers(ctx context.Context, mgr manager.Manager) error {
@@ -649,6 +718,9 @@ func addBtlsIndexers(ctx context.Context, mgr manager.Manager) error {
 		return err
 	}
 
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a3.BackendTLSPolicy{}, secretBtlsIndex, secretBtlsIndexFunc); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -668,6 +740,24 @@ func configMapBtlsIndexFunc(rawObj client.Object) []string {
 		}
 	}
 	return configMapReferences
+}
+
+func secretBtlsIndexFunc(rawObj client.Object) []string {
+	btls := rawObj.(*gwapiv1a3.BackendTLSPolicy)
+	var secretReferences []string
+	if btls.Spec.Validation.CACertificateRefs != nil {
+		for _, caCertRef := range btls.Spec.Validation.CACertificateRefs {
+			if string(caCertRef.Kind) == resource.KindSecret {
+				secretReferences = append(secretReferences,
+					types.NamespacedName{
+						Namespace: btls.Namespace,
+						Name:      string(caCertRef.Name),
+					}.String(),
+				)
+			}
+		}
+	}
+	return secretReferences
 }
 
 // addEnvoyExtensionPolicyIndexers adds indexing on EnvoyExtensionPolicy.

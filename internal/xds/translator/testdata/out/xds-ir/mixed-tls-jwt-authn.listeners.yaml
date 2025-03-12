@@ -1,6 +1,6 @@
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       portValue: 10080
   filterChains:
   - filters:
@@ -43,5 +43,7 @@
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
+        disableStatefulSessionResumption: true
+        disableStatelessSessionResumption: true
   name: first-listener
   perConnectionBufferLimitBytes: 32768

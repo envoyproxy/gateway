@@ -1,0 +1,83 @@
+- address:
+    socketAddress:
+      address: '::'
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - disabled: true
+          name: envoy.filters.http.oauth2/securitypolicy/envoy-gateway/policy-for-gateway
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.oauth2.v3.OAuth2
+            config:
+              authScopes:
+              - openid
+              authType: BASIC_AUTH
+              authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
+              credentials:
+                clientId: client1.apps.googleusercontent.com
+                cookieNames:
+                  bearerToken: AccessToken-b0a1b740
+                  idToken: IdToken-b0a1b740
+                  oauthExpires: OauthExpires-b0a1b740
+                  oauthHmac: OauthHMAC-b0a1b740
+                  oauthNonce: OauthNonce-b0a1b740
+                  refreshToken: RefreshToken-b0a1b740
+                hmacSecret:
+                  name: oauth2/hmac_secret/securitypolicy/envoy-gateway/policy-for-gateway
+                  sdsConfig:
+                    ads: {}
+                    resourceApiVersion: V3
+                tokenSecret:
+                  name: oauth2/client_secret/securitypolicy/envoy-gateway/policy-for-gateway
+                  sdsConfig:
+                    ads: {}
+                    resourceApiVersion: V3
+              defaultExpiresIn: 1800s
+              defaultRefreshTokenExpiresIn: 86400s
+              forwardBearerToken: true
+              redirectPathMatcher:
+                path:
+                  exact: /bar/oauth2/callback
+              redirectUri: https://www.example.com/bar/oauth2/callback
+              retryPolicy:
+                numRetries: 3
+                retryBackOff:
+                  baseInterval: 1s
+                  maxInterval: 5s
+                retryOn: 5xx,gateway-error,reset
+              signoutPath:
+                path:
+                  exact: /bar/logout
+              tokenEndpoint:
+                cluster: securitypolicy/envoy-gateway/policy-for-gateway/0
+                timeout: 10s
+                uri: https://oauth.foo.com/token
+              useRefreshToken: true
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: first-listener
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10080
+        useRemoteAddress: true
+    name: first-listener
+  name: first-listener
+  perConnectionBufferLimitBytes: 32768

@@ -16,17 +16,18 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"google.golang.org/protobuf/types/known/anypb"
-	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/ratelimit"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 const (
 	localRateLimitFilterStatPrefix = "http_local_rate_limiter"
 	descriptorMaskedRemoteAddress  = "masked_remote_address"
+	descriptorRemoteAddress        = "remote_address"
 )
 
 func init() {
@@ -59,6 +60,11 @@ func (*localRateLimit) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir
 
 	localRl := &localrlv3.LocalRateLimit{
 		StatPrefix: localRateLimitFilterStatPrefix,
+		MaxDynamicDescriptors: &wrapperspb.UInt32Value{
+			Value: 10000,
+			// Default to 10k, assuming a listener has 10k unique active users to be rate limited.
+			// We can make this configurable in the API if needed.
+		},
 	}
 
 	localRlAny, err := anypb.New(localRl)
@@ -129,10 +135,7 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) e
 
 	local := irRoute.Traffic.RateLimit.Local
 
-	rateLimits, descriptors, err := buildRouteLocalRateLimits(local)
-	if err != nil {
-		return err
-	}
+	rateLimits, descriptors := buildRouteLocalRateLimits(local)
 	routeAction.RateLimits = rateLimits
 
 	filterCfg := route.GetTypedPerFilterConfig()
@@ -151,7 +154,7 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) e
 			TokensPerFill: &wrapperspb.UInt32Value{
 				Value: uint32(local.Default.Requests),
 			},
-			FillInterval: ratelimitUnitToDuration(local.Default.Unit),
+			FillInterval: ratelimit.UnitToDuration(local.Default.Unit),
 		},
 		FilterEnabled: &configv3.RuntimeFractionalPercent{
 			DefaultValue: &typev3.FractionalPercent{
@@ -189,7 +192,7 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) e
 }
 
 func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
-	[]*routev3.RateLimit, []*rlv3.LocalRateLimitDescriptor, error,
+	[]*routev3.RateLimit, []*rlv3.LocalRateLimitDescriptor,
 ) {
 	var rateLimits []*routev3.RateLimit
 	var descriptors []*rlv3.LocalRateLimitDescriptor
@@ -201,38 +204,57 @@ func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
 
 		// HeaderMatches
 		for mIdx, match := range rule.HeaderMatches {
-			if match.Distinct {
-				// This is a sanity check. This should never happen because Gateway
-				// API translator should have already validated this.
-				if rule.CIDRMatch.Distinct {
-					return nil, nil, errors.New("local rateLimit does not support distinct HeaderMatch")
-				}
-			}
+			var action *routev3.RateLimit_Action
+			var entry *rlv3.RateLimitDescriptor_Entry
 
-			// Setup HeaderValueMatch actions
-			descriptorKey := getRouteRuleDescriptor(rIdx, mIdx)
-			descriptorVal := getRouteRuleDescriptor(rIdx, mIdx)
-			headerMatcher := &routev3.HeaderMatcher{
-				Name: match.Name,
-				HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
-					StringMatch: buildXdsStringMatcher(match),
-				},
-			}
-			action := &routev3.RateLimit_Action{
-				ActionSpecifier: &routev3.RateLimit_Action_HeaderValueMatch_{
-					HeaderValueMatch: &routev3.RateLimit_Action_HeaderValueMatch{
-						DescriptorKey:   descriptorKey,
-						DescriptorValue: descriptorVal,
-						ExpectMatch: &wrapperspb.BoolValue{
-							Value: true,
+			if match.Distinct {
+				// For distinct matches, we only check if the header exists using the RequestHeaders action.
+				descriptorKey := getRouteRuleDescriptor(rIdx, mIdx)
+				action = &routev3.RateLimit_Action{
+					ActionSpecifier: &routev3.RateLimit_Action_RequestHeaders_{
+						RequestHeaders: &routev3.RateLimit_Action_RequestHeaders{
+							HeaderName:    match.Name,
+							DescriptorKey: descriptorKey,
 						},
-						Headers: []*routev3.HeaderMatcher{headerMatcher},
 					},
-				},
-			}
-			entry := &rlv3.RateLimitDescriptor_Entry{
-				Key:   descriptorKey,
-				Value: descriptorVal,
+				}
+				// The descriptor entry value is not set for distinct matches, which means that each distinct
+				// value of the matched header will be counted separately.
+				entry = &rlv3.RateLimitDescriptor_Entry{
+					Key: descriptorKey,
+				}
+			} else {
+				// For exact matches, we check if there is an existing header with the matching value using the
+				// HeaderValueMatch action.
+				descriptorKey := getRouteRuleDescriptor(rIdx, mIdx)
+				descriptorVal := getRouteRuleDescriptor(rIdx, mIdx)
+				headerMatcher := &routev3.HeaderMatcher{
+					Name: match.Name,
+					HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
+						StringMatch: buildXdsStringMatcher(match),
+					},
+				}
+				expectMatch := true
+				if match.Invert != nil && *match.Invert {
+					expectMatch = false
+				}
+				action = &routev3.RateLimit_Action{
+					ActionSpecifier: &routev3.RateLimit_Action_HeaderValueMatch_{
+						HeaderValueMatch: &routev3.RateLimit_Action_HeaderValueMatch{
+							DescriptorKey:   descriptorKey,
+							DescriptorValue: descriptorVal,
+							ExpectMatch: &wrapperspb.BoolValue{
+								Value: expectMatch,
+							},
+							Headers: []*routev3.HeaderMatcher{headerMatcher},
+						},
+					},
+				}
+				// For exact matches, the descriptor entry value is set to the generated descriptor value.
+				entry = &rlv3.RateLimitDescriptor_Entry{
+					Key:   descriptorKey,
+					Value: descriptorVal,
+				}
 			}
 			rlActions = append(rlActions, action)
 			descriptorEntries = append(descriptorEntries, entry)
@@ -240,13 +262,8 @@ func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
 
 		// Source IP CIDRMatch
 		if rule.CIDRMatch != nil {
-			// This is a sanity check. This should never happen because Gateway
-			// API translator should have already validated this.
-			if rule.CIDRMatch.Distinct {
-				return nil, nil, errors.New("local rateLimit does not support distinct CIDRMatch")
-			}
-
-			// Setup MaskedRemoteAddress action
+			// For CIDR matches, we first need to check if the source IP matches the CIDR range using
+			// the MaskedRemoteAddress action.
 			mra := &routev3.RateLimit_Action_MaskedRemoteAddress{}
 			maskLen := &wrapperspb.UInt32Value{Value: rule.CIDRMatch.MaskLen}
 			if rule.CIDRMatch.IsIPv6 {
@@ -265,6 +282,23 @@ func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
 			}
 			descriptorEntries = append(descriptorEntries, entry)
 			rlActions = append(rlActions, action)
+
+			if rule.CIDRMatch.Distinct {
+				// If the CIDRMatch is distinct, we also need to use the RemoteAddress action to get the client IP.
+				action = &routev3.RateLimit_Action{
+					ActionSpecifier: &routev3.RateLimit_Action_RemoteAddress_{
+						RemoteAddress: &routev3.RateLimit_Action_RemoteAddress{},
+					},
+				}
+
+				// If the CIDRMatch is distinct, we use the built-in remote address descriptor key without a value.
+				// This means that each distinct client IP will be counted separately.
+				entry = &rlv3.RateLimitDescriptor_Entry{
+					Key: descriptorRemoteAddress,
+				}
+				descriptorEntries = append(descriptorEntries, entry)
+				rlActions = append(rlActions, action)
+			}
 		}
 
 		rateLimit := &routev3.RateLimit{Actions: rlActions}
@@ -277,29 +311,11 @@ func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
 				TokensPerFill: &wrapperspb.UInt32Value{
 					Value: uint32(rule.Limit.Requests),
 				},
-				FillInterval: ratelimitUnitToDuration(rule.Limit.Unit),
+				FillInterval: ratelimit.UnitToDuration(rule.Limit.Unit),
 			},
 		}
 		descriptors = append(descriptors, descriptor)
 	}
 
-	return rateLimits, descriptors, nil
-}
-
-func ratelimitUnitToDuration(unit ir.RateLimitUnit) *durationpb.Duration {
-	var seconds int64
-
-	switch egv1a1.RateLimitUnit(unit) {
-	case egv1a1.RateLimitUnitSecond:
-		seconds = 1
-	case egv1a1.RateLimitUnitMinute:
-		seconds = 60
-	case egv1a1.RateLimitUnitHour:
-		seconds = 60 * 60
-	case egv1a1.RateLimitUnitDay:
-		seconds = 60 * 60 * 24
-	}
-	return &durationpb.Duration{
-		Seconds: seconds,
-	}
+	return rateLimits, descriptors
 }

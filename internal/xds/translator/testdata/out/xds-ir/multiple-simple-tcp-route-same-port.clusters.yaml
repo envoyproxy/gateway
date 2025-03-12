@@ -4,15 +4,15 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
       resourceApiVersion: V3
     serviceName: tcp-route-simple-dest
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: tcp-route-simple-dest
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -21,15 +21,15 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
       resourceApiVersion: V3
     serviceName: tcp-route-simple-1-dest
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: tcp-route-simple-1-dest
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -38,15 +38,15 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
       resourceApiVersion: V3
     serviceName: tcp-route-simple-2-dest
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: tcp-route-simple-2-dest
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -55,15 +55,15 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
       resourceApiVersion: V3
     serviceName: tcp-route-simple-3-dest
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: tcp-route-simple-3-dest
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -72,14 +72,14 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
       resourceApiVersion: V3
     serviceName: tcp-route-simple-4-dest
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: tcp-route-simple-4-dest
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS

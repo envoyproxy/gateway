@@ -21,6 +21,7 @@ http:
           port: 8080
         protocol: HTTP
         weight: 1
+        name: httproute/default/httproute-1/rule/0/backend/0
     hostname: gateway.envoyproxy.io
     isHTTP2: false
     name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io

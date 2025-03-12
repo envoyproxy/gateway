@@ -30,7 +30,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       {{- with .Values.deployment.pod.nodeSelector }}
-      nodeSelector: 
+      nodeSelector:
         {{ toYaml . | nindent 8 }}
       {{- end }}
       {{- with .Values.deployment.pod.topologySpreadConstraints }}
@@ -73,19 +73,10 @@ spec:
             port: 8081
           initialDelaySeconds: 5
           periodSeconds: 10
-        resources: {{- toYaml .Values.deployment.envoyGateway.resources | nindent 10
-          }}
+        resources:
+          {{- toYaml .Values.deployment.envoyGateway.resources | nindent 10 }}
         securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
-          privileged: false
-          runAsNonRoot: true
-          runAsGroup: 65532
-          runAsUser: 65532
-          seccompProfile:
-            type: RuntimeDefault
+          {{- toYaml .Values.deployment.envoyGateway.securityContext | nindent 10 }}
         volumeMounts:
         - mountPath: /config
           name: envoy-gateway-config

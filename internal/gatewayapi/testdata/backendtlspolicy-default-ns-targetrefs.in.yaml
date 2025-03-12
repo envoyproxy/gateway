@@ -167,7 +167,7 @@ backendTLSPolicies:
         - group: ""
           kind: Service
           name: http-backend
-          sectionName: "8080"
+          sectionName: http
         - group: gateway.envoyproxy.io
           kind: Backend
           name: backend-ip-tls

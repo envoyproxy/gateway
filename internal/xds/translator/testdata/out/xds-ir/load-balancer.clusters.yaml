@@ -4,14 +4,14 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
       resourceApiVersion: V3
     serviceName: first-route-dest
+  ignoreHealthOnHostRemoval: true
   name: first-route-dest
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -20,15 +20,15 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
       resourceApiVersion: V3
     serviceName: second-route-dest
+  ignoreHealthOnHostRemoval: true
   lbPolicy: RANDOM
   name: second-route-dest
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -37,15 +37,15 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
       resourceApiVersion: V3
     serviceName: third-route-dest
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   name: third-route-dest
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -54,15 +54,15 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
       resourceApiVersion: V3
     serviceName: fourth-route-dest
+  ignoreHealthOnHostRemoval: true
   lbPolicy: MAGLEV
   name: fourth-route-dest
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -71,18 +71,18 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
       resourceApiVersion: V3
     serviceName: fifth-route-dest
+  ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   leastRequestLbConfig:
     slowStartConfig:
       slowStartWindow: 60s
   name: fifth-route-dest
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -91,14 +91,14 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
       resourceApiVersion: V3
     serviceName: sixth-route-dest
+  ignoreHealthOnHostRemoval: true
   name: sixth-route-dest
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   roundRobinLbConfig:
     slowStartConfig:
@@ -110,15 +110,15 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
       resourceApiVersion: V3
     serviceName: seventh-route-dest
+  ignoreHealthOnHostRemoval: true
   lbPolicy: MAGLEV
   name: seventh-route-dest
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -127,17 +127,17 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
       resourceApiVersion: V3
     serviceName: eighth-route-dest
+  ignoreHealthOnHostRemoval: true
   lbPolicy: MAGLEV
   maglevLbConfig:
     tableSize: "524287"
   name: eighth-route-dest
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -146,15 +146,15 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
       resourceApiVersion: V3
     serviceName: ninth-route-dest
+  ignoreHealthOnHostRemoval: true
   lbPolicy: MAGLEV
   name: ninth-route-dest
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -163,14 +163,14 @@
   commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
+  dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
       ads: {}
       resourceApiVersion: V3
     serviceName: tenth-route-dest
+  ignoreHealthOnHostRemoval: true
   lbPolicy: MAGLEV
   name: tenth-route-dest
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS

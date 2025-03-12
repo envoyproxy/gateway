@@ -26,10 +26,18 @@ const (
 )
 
 // ExtendedFeatures is a list of supported Gateway-API features that are considered Extended.
-var ExtendedFeatures = sets.New[features.SupportedFeature]().
-	Insert(features.GatewayExtendedFeatures.UnsortedList()...).
-	Insert(features.HTTPRouteExtendedFeatures.UnsortedList()...).
-	Insert(features.MeshExtendedFeatures.UnsortedList()...)
+var ExtendedFeatures = sets.New[features.FeatureName]()
+
+func init() {
+	featureLists := sets.New[features.Feature]().
+		Insert(features.GatewayExtendedFeatures.UnsortedList()...).
+		Insert(features.HTTPRouteExtendedFeatures.UnsortedList()...).
+		Insert(features.MeshExtendedFeatures.UnsortedList()...)
+
+	for _, feature := range featureLists.UnsortedList() {
+		ExtendedFeatures.Insert(feature.Name)
+	}
+}
 
 // GetTestSupportLevel returns the SupportLevel for a conformance test.
 // The support level is determined by the highest support level of the features.
@@ -44,7 +52,7 @@ func GetTestSupportLevel(test suite.ConformanceTest) SupportLevel {
 }
 
 // GetFeatureSupportLevel returns the SupportLevel for a feature.
-func GetFeatureSupportLevel(feature features.SupportedFeature) SupportLevel {
+func GetFeatureSupportLevel(feature features.FeatureName) SupportLevel {
 	supportLevel := Core
 
 	if ExtendedFeatures.Has(feature) {

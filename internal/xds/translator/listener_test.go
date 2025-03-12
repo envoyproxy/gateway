@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"testing"
 
+	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/stretchr/testify/assert"
@@ -25,12 +26,24 @@ func Test_toNetworkFilter(t *testing.T) {
 		wantErr error
 	}{
 		{
-			name:    "valid filter",
-			proto:   &hcmv3.HttpConnectionManager{},
+			name: "valid filter",
+			proto: &hcmv3.HttpConnectionManager{
+				StatPrefix: "stats",
+				RouteSpecifier: &hcmv3.HttpConnectionManager_RouteConfig{
+					RouteConfig: &routev3.RouteConfiguration{
+						Name: "route",
+					},
+				},
+			},
 			wantErr: nil,
 		},
 		{
 			name:    "invalid proto msg",
+			proto:   &hcmv3.HttpConnectionManager{},
+			wantErr: errors.New("invalid HttpConnectionManager.StatPrefix: value length must be at least 1 runes; invalid HttpConnectionManager.RouteSpecifier: value is required"),
+		},
+		{
+			name:    "nil proto msg",
 			proto:   nil,
 			wantErr: errors.New("empty message received"),
 		},
@@ -39,7 +52,7 @@ func Test_toNetworkFilter(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := toNetworkFilter("name", tt.proto)
 			if tt.wantErr != nil {
-				assert.Equalf(t, tt.wantErr, err, "toNetworkFilter(%v)", tt.proto)
+				assert.Containsf(t, err.Error(), tt.wantErr.Error(), "toNetworkFilter(%v)", tt.proto)
 			} else {
 				assert.NoErrorf(t, err, "toNetworkFilter(%v)", tt.proto)
 			}

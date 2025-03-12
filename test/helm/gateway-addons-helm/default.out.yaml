@@ -941,7 +941,7 @@ data:
                   "uid": "$datasource"
                 },
                 "editorMode": "builder",
-                "expr": "SUM(envoy_server_memory_allocated{})",
+                "expr": "sum(envoy_server_memory_allocated{})",
                 "format": "time_series",
                 "intervalFactor": 1,
                 "legendFormat": "",
@@ -1021,7 +1021,7 @@ data:
                   "uid": "$datasource"
                 },
                 "editorMode": "code",
-                "expr": "SUM(envoy_server_memory_heap_size)",
+                "expr": "sum(envoy_server_memory_heap_size)",
                 "format": "time_series",
                 "intervalFactor": 1,
                 "legendFormat": "",
@@ -2766,6 +2766,81 @@ data:
             "panels": [],
             "title": "Status Updater",
             "type": "row"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "$datasource"
+            },
+            "description": "Total number of panics recovered in the system.",
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 80
+                    }
+                  ]
+                },
+                "unit": "none"
+              },
+              "overrides": []
+            },
+            "gridPos": {
+              "h": 7,
+              "w": 7,
+              "x": 0,
+              "y": 8
+            },
+            "id": 25,
+            "options": {
+              "colorMode": "value",
+              "graphMode": "none",
+              "justifyMode": "auto",
+              "orientation": "auto",
+              "reduceOptions": {
+                "calcs": [
+                  "lastNotNull"
+                ],
+                "fields": "",
+                "values": false
+              },
+              "showPercentChange": false,
+              "textMode": "value_and_name",
+              "wideLayout": false
+            },
+            "pluginVersion": "11.0.0",
+            "repeatDirection": "v",
+            "targets": [
+              {
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "$datasource"
+                },
+                "disableTextWrap": false,
+                "editorMode": "builder",
+                "expr": "sum(watchable_panics_recovered_total{namespace=\"$Namespace\"})",
+                "fullMetaSearch": false,
+                "includeNullMetadata": true,
+                "instant": false,
+                "legendFormat": "Recovered Panics",
+                "range": true,
+                "refId": "A",
+                "useBackend": false
+              }
+            ],
+            "title": "Recovered Panics",
+            "type": "stat"
           },
           {
             "datasource": {
@@ -7247,7 +7322,7 @@ data:
                   "uid": "${datasource}"
                 },
                 "editorMode": "builder",
-                "expr": "sum by(namespace) (rate(envoy_cluster_upstream_cx_rx_bytes_total{namespace=~\"$Namespace\"}[5m]))",
+                "expr": "sum by(namespace) (rate(envoy_cluster_upstream_cx_tx_bytes_total{namespace=~\"$Namespace\"}[5m]))",
                 "instant": false,
                 "legendFormat": "{{namespace}}",
                 "range": true,
@@ -10153,75 +10228,3 @@ spec:
   updateStrategy:
     type:
       RollingUpdate
----
-# Source: gateway-addons-helm/charts/grafana/templates/tests/test-serviceaccount.yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  labels:
-    helm.sh/chart: grafana-8.0.0
-    app.kubernetes.io/name: grafana
-    app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "11.0.0"
-    app.kubernetes.io/managed-by: Helm
-  name: grafana-test
-  namespace: monitoring
-  annotations:
-    "helm.sh/hook": test-success
-    "helm.sh/hook-delete-policy": "before-hook-creation,hook-succeeded"
----
-# Source: gateway-addons-helm/charts/grafana/templates/tests/test-configmap.yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: grafana-test
-  namespace: monitoring
-  annotations:
-    "helm.sh/hook": test-success
-    "helm.sh/hook-delete-policy": "before-hook-creation,hook-succeeded"
-  labels:
-    helm.sh/chart: grafana-8.0.0
-    app.kubernetes.io/name: grafana
-    app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "11.0.0"
-    app.kubernetes.io/managed-by: Helm
-data:
-  run.sh: |-
-    @test "Test Health" {
-      url="http://grafana/api/health"
-
-      code=$(wget --server-response --spider --timeout 90 --tries 10 ${url} 2>&1 | awk '/^  HTTP/{print $2}')
-      [ "$code" == "200" ]
-    }
----
-# Source: gateway-addons-helm/charts/grafana/templates/tests/test.yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: grafana-test
-  labels:
-    helm.sh/chart: grafana-8.0.0
-    app.kubernetes.io/name: grafana
-    app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "11.0.0"
-    app.kubernetes.io/managed-by: Helm
-  annotations:
-    "helm.sh/hook": test-success
-    "helm.sh/hook-delete-policy": "before-hook-creation,hook-succeeded"
-  namespace: monitoring
-spec:
-  serviceAccountName: grafana-test
-  containers:
-    - name: gateway-addons-helm-test
-      image: "docker.io/bats/bats:v1.4.1"
-      imagePullPolicy: "IfNotPresent"
-      command: ["/opt/bats/bin/bats", "-t", "/tests/run.sh"]
-      volumeMounts:
-        - mountPath: /tests
-          name: tests
-          readOnly: true
-  volumes:
-    - name: tests
-      configMap:
-        name: grafana-test
-  restartPolicy: Never

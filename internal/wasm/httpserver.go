@@ -10,6 +10,7 @@ import (
 	"crypto/sha256"
 	"crypto/tls"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -126,10 +127,16 @@ func (s *HTTPServer) Start(ctx context.Context) {
 		} else {
 			err = s.server.ListenAndServe()
 		}
-		if err != nil {
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			s.logger.Error(err, "Failed to start Wasm HTTP server")
 			return
 		}
+	}()
+
+	go func() {
+		// waiting for shutdown
+		<-ctx.Done()
+		_ = s.server.Shutdown(context.Background())
 	}()
 	s.cache.Start(ctx)
 	go s.resetFailedAttempts(ctx)

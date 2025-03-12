@@ -19,7 +19,7 @@ TEMPO_IP=$(kubectl get svc tempo -n monitoring -o jsonpath='{.status.loadBalance
 
 By default, Envoy Gateway doesn't send traces to any sink.
 You can enable traces by setting the `telemetry.tracing` in the [EnvoyProxy][envoy-proxy-crd] CRD.
-Currently, Envoy Gateway support OpenTelemetry and [Zipkin](../../api/extension_types#zipkintracingprovider) tracer.
+Currently, Envoy Gateway support OpenTelemetry, [Zipkin](../../api/extension_types#zipkintracingprovider) and Datadog tracer.
 
 ### Tracing Provider
 
@@ -156,6 +156,66 @@ curl -s "http://$TEMPO_IP:3100/api/search?tags=component%3Dproxy+provider%3Dzipk
 ```
 
 {{% /tab %}}
+{{% tab header="Datadog" %}}
+
+```shell
+kubectl apply -f - <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: datadog
+    namespace: envoy-gateway-system
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: datadog
+  namespace: envoy-gateway-system
+spec:
+  telemetry:
+    tracing:
+      # sample 100% of requests
+      samplingRate: 100
+      provider:
+        backendRefs:
+        - name: datadog-agent
+          namespace: monitoring
+          port: 8126
+        type: Datadog
+      customTags:
+        # This is an example of using a literal as a tag value
+        provider:
+          type: Literal
+          literal:
+            value: "datadog"
+        "k8s.pod.name":
+          type: Environment
+          environment:
+            name: ENVOY_POD_NAME
+            defaultValue: "-"
+        "k8s.namespace.name":
+          type: Environment
+          environment:
+            name: ENVOY_GATEWAY_NAMESPACE
+            defaultValue: "envoy-gateway-system"
+        # This is an example of using a header value as a tag value
+        header1:
+          type: RequestHeader
+          requestHeader:
+            name: X-Header-1
+            defaultValue: "-"
+EOF
+```
+
+Verify Datadog traces in [Datadog APM](https://docs.datadoghq.com/tracing/)
+
+{{% /tab %}}
 {{< /tabpane >}}
 
 Query trace by trace id:
@@ -228,6 +288,64 @@ spec:
 EOF
 ```
 
+If you want the sample rate to less than 1%, you can use the `telemetry.tracing.samplingFraction` field in the [EnvoyProxy][envoy-proxy-crd] CRD.
+
+```shell
+kubectl apply -f - <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: otel
+    namespace: envoy-gateway-system
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: otel
+  namespace: envoy-gateway-system
+spec:
+  telemetry:
+    tracing:
+      # sample 0.1% of requests
+      samplingFraction:
+        numerator: 1
+        denominator: 1000
+      provider:
+        backendRefs:
+        - name: otel-collector
+          namespace: monitoring
+          port: 4317
+        type: OpenTelemetry
+      customTags:
+        # This is an example of using a literal as a tag value
+        provider:
+          type: Literal
+          literal:
+            value: "otel"
+        "k8s.pod.name":
+          type: Environment
+          environment:
+            name: ENVOY_POD_NAME
+            defaultValue: "-"
+        "k8s.namespace.name":
+          type: Environment
+          environment:
+            name: ENVOY_GATEWAY_NAMESPACE
+            defaultValue: "envoy-gateway-system"
+        # This is an example of using a header value as a tag value
+        header1:
+          type: RequestHeader
+          requestHeader:
+            name: X-Header-1
+            defaultValue: "-"
+EOF
+```
 
 
 [envoy-proxy-crd]: ../../api/extension_types#envoyproxy

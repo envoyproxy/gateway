@@ -40,6 +40,11 @@ type HTTPTimeout struct {
 	//
 	// +optional
 	MaxConnectionDuration *gwapiv1.Duration `json:"maxConnectionDuration,omitempty"`
+
+	// RequestTimeout is the time until which entire response is received from the upstream.
+	//
+	// +optional
+	RequestTimeout *gwapiv1.Duration `json:"requestTimeout,omitempty" yaml:"requestTimeout,omitempty"`
 }
 
 type ClientTimeout struct {

@@ -68,7 +68,7 @@ infraIR:
 xdsIR:
   envoy-gateway-class:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     envoyPatchPolicies:
     - name: edit-conn-buffer-bytes
@@ -103,3 +103,8 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

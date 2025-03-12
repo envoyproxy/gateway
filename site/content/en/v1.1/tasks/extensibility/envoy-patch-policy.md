@@ -269,8 +269,8 @@ kubectl patch httproute backend --type=json --patch '
 
 * Test it out by specifying a path apart from `/get`
 
-```
-$ curl --header "Host: www.example.com" http://localhost:8888/find
+```shell
+$ curl --header "Host: www.example.com" http://$GATEWAY_HOST/find
 Handling connection for 8888
 could not find what you are looking for
 ```
@@ -340,7 +340,7 @@ status:
 
 ## Caveats
 
-This API will always be an unstable API and the same outcome cannot be garunteed
+This API will always be an unstable API and the same outcome cannot be guaranteed
 across versions for these reasons
 * The Envoy Proxy API might deprecate and remove API fields
 * Envoy Gateway might alter the xDS translation creating a different xDS output

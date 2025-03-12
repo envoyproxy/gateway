@@ -1,6 +1,6 @@
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       portValue: 10080
   defaultFilterChain:
     filters:
@@ -46,7 +46,6 @@
                 cookie:
                   name: session-header
                   path: /v2/
-                  ttl: 3600s
         - disabled: true
           name: envoy.filters.http.stateful_session/cookie-based-session-persistence-route-exact
           typedConfig:

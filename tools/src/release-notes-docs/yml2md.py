@@ -15,7 +15,7 @@ def format_date(date_str):
             return datetime.strptime(date_str, date_format).date()
         except ValueError:
             pass  # If the format doesn't match, move to the next one
-    
+
     raise ValueError(f"Date string '{date_str}' does not match any supported format.")
 
 def capitalize(name):
@@ -46,19 +46,49 @@ def convert_yaml_to_markdown(input_yaml_file, output_markdown_path):
 
         file.write("Date: {}\n\n".format(data['date']))
 
-        for area in data['changes']:
-            file.write("## {}\n".format(capitalize(area['area'])))
-            if 'change' in area:
-                file.write(change_to_markdown(area['change']) + '\n\n')
+        # old release notes format
+        if 'changes' in data:
+          for area in data['changes']:
+              file.write("## {}\n".format(capitalize(area['area'])))
+              if 'change' in area:
+                  file.write(change_to_markdown(area['change']) + '\n\n')
 
-            if 'breaking-change' in area:
-                file.write("### Breaking Changes\n")
-                file.write(change_to_markdown(area['breaking-change']) + '\n\n')
+              if 'breaking-change' in area:
+                  file.write("### Breaking Changes\n")
+                  file.write(change_to_markdown(area['breaking-change']) + '\n\n')
 
-            if 'deprecation' in area:
-                file.write("### Deprecations\n")
-                file.write(change_to_markdown(area['deprecation']) + '\n\n')
+              if 'deprecation' in area:
+                  file.write("### Deprecations\n")
+                  file.write(change_to_markdown(area['deprecation']) + '\n\n')
+        # new release notes format
+        else:
+          if 'breaking changes' in data:
+            file.write("## {}\n".format(capitalize('breaking changes')))
+            file.write(change_to_markdown(data['breaking changes']) + '\n\n')
 
+          if 'security updates' in data:
+            file.write("## {}\n".format(capitalize('security updates')))
+            file.write(change_to_markdown(data['security updates']) + '\n\n')
+
+          if 'new features' in data:
+            file.write("## {}\n".format(capitalize('new features')))
+            file.write(change_to_markdown(data['new features']) + '\n\n')
+
+          if 'bug fixes' in data:
+            file.write("## {}\n".format(capitalize('bug fixes')))
+            file.write(change_to_markdown(data['bug fixes']) + '\n\n')
+
+          if 'performance improvements' in data:
+            file.write("## {}\n".format(capitalize('performance improvements')))
+            file.write(change_to_markdown(data['performance improvements']) + '\n\n')
+
+          if 'deprecations' in data:
+            file.write("## {}\n".format(capitalize('deprecations')))
+            file.write(change_to_markdown(data['deprecations']) + '\n\n')
+
+          if 'Other changes' in data:
+            file.write("## {}\n".format(capitalize('Other changes')))
+            file.write(change_to_markdown(data['Other changes']) + '\n\n')
     print("Markdown file '{}' has been generated.".format(output_markdown_file))
 
 if __name__ == "__main__":

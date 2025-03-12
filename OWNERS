@@ -9,7 +9,6 @@ admins:
 
 maintainers:
 
-- AliceProxy
 - arkodg
 - Xunzhuo
 - zirain
@@ -25,12 +24,18 @@ emeritus-maintainers:
 - skriss
 - youngnick
 - qicz
+- Alice-Lilith
 
 reviewers:
 
-- chauhanshubham
 - kflynn
-- tmsnan
 - tanujd11
 - cnvergence
 - liorokman
+- rudrakhp
+- sanposhiho
+
+emeritus-reviewers:
+
+- chauhanshubham
+- tmsnan

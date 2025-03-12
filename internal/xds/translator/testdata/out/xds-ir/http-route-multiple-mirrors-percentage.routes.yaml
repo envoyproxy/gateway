@@ -1,0 +1,25 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: mirror-route
+      route:
+        cluster: route-dest
+        requestMirrorPolicies:
+        - cluster: mirror-route-dest
+          runtimeFraction:
+            defaultValue:
+              denominator: MILLION
+              numerator: 250000
+        - cluster: mirror-route-dest1
+          runtimeFraction:
+            defaultValue:
+              denominator: MILLION
+              numerator: 440000
+        upgradeConfigs:
+        - upgradeType: websocket

@@ -250,7 +250,7 @@ infraIR:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -275,6 +275,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: grpcroute/default/grpcroute-1/rule/0/backend/0
             protocol: GRPC
             weight: 1
         hostname: '*'
@@ -291,9 +292,14 @@ xdsIR:
             maxParallelRetries: 1024
             maxPendingRequests: 1
             maxRequestsPerConnection: 1
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
   envoy-gateway/gateway-2:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -318,6 +324,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
@@ -338,3 +345,8 @@ xdsIR:
             maxParallelRetries: 24
             maxPendingRequests: 42
             maxRequestsPerConnection: 42
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

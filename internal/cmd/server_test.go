@@ -30,7 +30,7 @@ gateway: {}
 )
 
 func TestGetServerCommand(t *testing.T) {
-	got := getServerCommand()
+	got := GetServerCommand()
 	assert.Equal(t, "server", got.Use)
 }
 

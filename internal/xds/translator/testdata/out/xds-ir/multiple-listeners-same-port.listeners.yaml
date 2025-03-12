@@ -1,6 +1,6 @@
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       portValue: 10080
   defaultFilterChain:
     filters:
@@ -74,6 +74,8 @@
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
+        disableStatefulSessionResumption: true
+        disableStatelessSessionResumption: true
   - filterChainMatch:
       serverNames:
       - foo.net
@@ -117,6 +119,8 @@
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
+        disableStatefulSessionResumption: true
+        disableStatelessSessionResumption: true
   - filterChainMatch:
       serverNames:
       - bar.com

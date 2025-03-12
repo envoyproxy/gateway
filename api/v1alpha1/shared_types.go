@@ -11,6 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
@@ -22,15 +23,15 @@ const (
 	// DefaultDeploymentMemoryResourceRequests for deployment memory resource
 	DefaultDeploymentMemoryResourceRequests = "512Mi"
 	// DefaultEnvoyProxyImage is the default image used by envoyproxy
-	DefaultEnvoyProxyImage = "envoyproxy/envoy:distroless-dev"
+	DefaultEnvoyProxyImage = "docker.io/envoyproxy/envoy:distroless-dev"
 	// DefaultShutdownManagerCPUResourceRequests for shutdown manager cpu resource
 	DefaultShutdownManagerCPUResourceRequests = "10m"
 	// DefaultShutdownManagerMemoryResourceRequests for shutdown manager memory resource
 	DefaultShutdownManagerMemoryResourceRequests = "32Mi"
 	// DefaultShutdownManagerImage is the default image used for the shutdown manager.
-	DefaultShutdownManagerImage = "envoyproxy/gateway-dev:latest"
+	DefaultShutdownManagerImage = "docker.io/envoyproxy/gateway-dev:latest"
 	// DefaultRateLimitImage is the default image used by ratelimit.
-	DefaultRateLimitImage = "envoyproxy/ratelimit:master"
+	DefaultRateLimitImage = "docker.io/envoyproxy/ratelimit:master"
 	// HTTPProtocol is the common-used http protocol.
 	HTTPProtocol = "http"
 	// GRPCProtocol is the common-used grpc protocol.
@@ -98,7 +99,7 @@ type KubernetesDeploymentSpec struct {
 	// TODO: Expose config as use cases are better understood, e.g. labels.
 }
 
-// KubernetesDaemonsetSpec defines the desired state of the Kubernetes daemonset resource.
+// KubernetesDaemonSetSpec defines the desired state of the Kubernetes daemonset resource.
 type KubernetesDaemonSetSpec struct {
 	// Patch defines how to perform the patch operation to daemonset
 	//
@@ -262,6 +263,12 @@ type KubernetesServiceSpec struct {
 	// +optional
 	Annotations map[string]string `json:"annotations,omitempty"`
 
+	// Labels that should be appended to the service.
+	// By default, no labels are appended.
+	//
+	// +optional
+	Labels map[string]string `json:"labels,omitempty"`
+
 	// Type determines how the Service is exposed. Defaults to LoadBalancer.
 	// Valid options are ClusterIP, LoadBalancer and NodePort.
 	// "LoadBalancer" means a service will be exposed via an external load balancer (if the cloud provider supports it).
@@ -394,12 +401,25 @@ const (
 )
 
 // KubernetesPodDisruptionBudgetSpec defines Kubernetes PodDisruptionBudget settings of Envoy Proxy Deployment.
+//
+// +kubebuilder:validation:XValidation:rule="(has(self.minAvailable) && !has(self.maxUnavailable)) || (!has(self.minAvailable) && has(self.maxUnavailable))",message="only one of minAvailable or maxUnavailable can be specified"
 type KubernetesPodDisruptionBudgetSpec struct {
-	// MinAvailable specifies the minimum number of pods that must be available at all times during voluntary disruptions,
+	// MinAvailable specifies the minimum amount of pods (can be expressed as integers or as a percentage) that must be available at all times during voluntary disruptions,
 	// such as node drains or updates. This setting ensures that your envoy proxy maintains a certain level of availability
-	// and resilience during maintenance operations.
+	// and resilience during maintenance operations. Cannot be combined with maxUnavailable.
 	// +optional
-	MinAvailable *int32 `json:"minAvailable,omitempty"`
+	MinAvailable *intstr.IntOrString `json:"minAvailable,omitempty"`
+
+	// MaxUnavailable specifies the maximum amount of pods (can be expressed as integers or as a percentage) that can be unavailable at all times during voluntary disruptions,
+	// such as node drains or updates. This setting ensures that your envoy proxy maintains a certain level of availability
+	// and resilience during maintenance operations. Cannot be combined with minAvailable.
+	// +optional
+	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
+
+	// Patch defines how to perform the patch operation to the PodDisruptionBudget
+	//
+	// +optional
+	Patch *KubernetesPatchSpec `json:"patch,omitempty"`
 }
 
 // KubernetesHorizontalPodAutoscalerSpec defines Kubernetes Horizontal Pod Autoscaler settings of Envoy Proxy Deployment.
@@ -437,6 +457,11 @@ type KubernetesHorizontalPodAutoscalerSpec struct {
 	//
 	// +optional
 	Behavior *autoscalingv2.HorizontalPodAutoscalerBehavior `json:"behavior,omitempty"`
+
+	// Patch defines how to perform the patch operation to the HorizontalPodAutoscaler
+	//
+	// +optional
+	Patch *KubernetesPatchSpec `json:"patch,omitempty"`
 }
 
 // HTTPStatus defines the http status code.
@@ -621,33 +646,48 @@ type ResponseOverride struct {
 // CustomResponseMatch defines the configuration for matching a user response to return a custom one.
 type CustomResponseMatch struct {
 	// Status code to match on. The match evaluates to true if any of the matches are successful.
-	StatusCode []StatusCodeMatch `json:"statusCode"`
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=50
+	StatusCodes []StatusCodeMatch `json:"statusCodes"`
 }
 
 // StatusCodeValueType defines the types of values for the status code match supported by Envoy Gateway.
 // +kubebuilder:validation:Enum=Value;Range
 type StatusCodeValueType string
 
+const (
+	// StatusCodeValueTypeValue defines the "Value" status code match type.
+	StatusCodeValueTypeValue StatusCodeValueType = "Value"
+
+	// StatusCodeValueTypeRange defines the "Range" status code match type.
+	StatusCodeValueTypeRange StatusCodeValueType = "Range"
+)
+
+// StatusCodeMatch defines the configuration for matching a status code.
+// +kubebuilder:validation:XValidation:message="value must be set for type Value",rule="(!has(self.type) || self.type == 'Value')? has(self.value) : true"
+// +kubebuilder:validation:XValidation:message="range must be set for type Range",rule="(has(self.type) && self.type == 'Range')? has(self.range) : true"
 type StatusCodeMatch struct {
 	// Type is the type of value.
+	// Valid values are Value and Range, default is Value.
 	//
 	// +kubebuilder:default=Value
+	// +kubebuilder:validation:Enum=Value;Range
 	// +unionDiscriminator
 	Type *StatusCodeValueType `json:"type"`
 
 	// Value contains the value of the status code.
 	//
 	// +optional
-	Value *string `json:"value,omitempty"`
-	// ValueRef contains the contents of the body
-	// specified as a local object reference.
-	// Only a reference to ConfigMap is supported.
+	Value *int `json:"value,omitempty"`
+
+	// Range contains the range of status codes.
 	//
 	// +optional
 	Range *StatusCodeRange `json:"range,omitempty"`
 }
 
 // StatusCodeRange defines the configuration for define a range of status codes.
+// +kubebuilder:validation:XValidation: message="end must be greater than start",rule="self.end > self.start"
 type StatusCodeRange struct {
 	// Start of the range, including the start value.
 	Start int `json:"start"`
@@ -663,17 +703,39 @@ type CustomResponse struct {
 	ContentType *string `json:"contentType,omitempty"`
 
 	// Body of the Custom Response
-	Body CustomResponseBody `json:"body"`
+	//
+	// +optional
+	Body *CustomResponseBody `json:"body,omitempty"`
+
+	// Status Code of the Custom Response
+	// If unset, does not override the status of response.
+	//
+	// +optional
+	StatusCode *int `json:"statusCode,omitempty"`
 }
 
 // ResponseValueType defines the types of values for the response body supported by Envoy Gateway.
 // +kubebuilder:validation:Enum=Inline;ValueRef
 type ResponseValueType string
 
+const (
+	// ResponseValueTypeInline defines the "Inline" response body type.
+	ResponseValueTypeInline ResponseValueType = "Inline"
+
+	// ResponseValueTypeValueRef defines the "ValueRef" response body type.
+	ResponseValueTypeValueRef ResponseValueType = "ValueRef"
+)
+
 // CustomResponseBody
+// +kubebuilder:validation:XValidation:message="inline must be set for type Inline",rule="(!has(self.type) || self.type == 'Inline')? has(self.inline) : true"
+// +kubebuilder:validation:XValidation:message="valueRef must be set for type ValueRef",rule="(has(self.type) && self.type == 'ValueRef')? has(self.valueRef) : true"
+// +kubebuilder:validation:XValidation:message="only ConfigMap is supported for ValueRef",rule="has(self.valueRef) ? self.valueRef.kind == 'ConfigMap' : true"
 type CustomResponseBody struct {
 	// Type is the type of method to use to read the body value.
+	// Valid values are Inline and ValueRef, default is Inline.
 	//
+	// +kubebuilder:default=Inline
+	// +kubebuilder:validation:Enum=Inline;ValueRef
 	// +unionDiscriminator
 	Type *ResponseValueType `json:"type"`
 
@@ -681,9 +743,13 @@ type CustomResponseBody struct {
 	//
 	// +optional
 	Inline *string `json:"inline,omitempty"`
+
 	// ValueRef contains the contents of the body
 	// specified as a local object reference.
 	// Only a reference to ConfigMap is supported.
+	//
+	// The value of key `response.body` in the ConfigMap will be used as the response body.
+	// If the key is not found, the first value in the ConfigMap will be used.
 	//
 	// +optional
 	ValueRef *gwapiv1.LocalObjectReference `json:"valueRef,omitempty"`

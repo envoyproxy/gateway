@@ -13,7 +13,7 @@ installation, it is recommended that you use helm.
 
 Envoy Gateway is designed to run in Kubernetes for production. The most essential requirements are:
 
-* Kubernetes 1.27 or later
+* Kubernetes 1.28 or later
 * The `kubectl` command-line tool
 
 {{% alert title="Compatibility Matrix" color="warning" %}}
@@ -38,15 +38,12 @@ Refer to the [Developer Guide](../../contributions/develop) to learn more.
 
    Envoy Gateway should now be successfully installed and running, but in order to experience more abilities of Envoy Gateway, you can refer to [Tasks](/latest/tasks).
 
-## Upgrading from v1.0
+## Upgrading from v1.1
 
-Due to breaking changes in Gateway API v1.1, some manual migration steps are required to upgrade Envoy Gateway to v1.1.
+Some manual migration steps are required to upgrade Envoy Gateway to v1.2.
 
-1. Delete `BackendTLSPolicy` CRD (and resources):
-
-```shell
-kubectl delete crd backendtlspolicies.gateway.networking.k8s.io
-```
+1. Update your `GRPCRoute` and `ReferenceGrant` resources if the storage version being used is `v1alpha2`.
+Follow the steps in Gateway-API [v1.2 Upgrade Notes](https://gateway-api.sigs.k8s.io/guides/#v12-upgrade-notes)
 
 2. Update Gateway-API and Envoy Gateway CRDs:
 
@@ -56,11 +53,7 @@ kubectl apply --force-conflicts --server-side -f ./gateway-helm/crds/gatewayapi-
 kubectl apply --force-conflicts --server-side -f ./gateway-helm/crds/generated
 ```
 
-3. Update your `BackendTLSPolicy` and `GRPCRoute` resources according to Gateway-API [v1.1 Upgrade Notes](https://gateway-api.sigs.k8s.io/guides/#v11-upgrade-notes)
-
-4. Update your Envoy Gateway xPolicy resources: remove the namespace section from targetRef.
-
-5. Install Envoy Gateway {{< yaml-version >}}:
+3. Install Envoy Gateway {{< yaml-version >}}:
 
 ```shell
 helm upgrade eg oci://docker.io/envoyproxy/gateway-helm --version {{< yaml-version >}} -n envoy-gateway-system

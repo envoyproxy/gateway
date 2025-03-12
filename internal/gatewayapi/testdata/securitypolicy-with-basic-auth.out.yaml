@@ -209,7 +209,7 @@ securityPolicies:
 xdsIR:
   default/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -234,6 +234,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: www.foo.com
@@ -250,7 +251,7 @@ xdsIR:
         security:
           basicAuth:
             name: securitypolicy/default/policy-for-http-route-1
-            users: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
+            users: '[redacted]'
       - destination:
           name: httproute/default/httproute-1/rule/1
           settings:
@@ -258,6 +259,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: httproute/default/httproute-1/rule/1/backend/0
             protocol: HTTP
             weight: 1
         hostname: www.foo.com
@@ -274,7 +276,7 @@ xdsIR:
         security:
           basicAuth:
             name: securitypolicy/default/policy-for-http-route-1
-            users: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
+            users: '[redacted]'
       - destination:
           name: httproute/default/httproute-2/rule/0
           settings:
@@ -282,6 +284,7 @@ xdsIR:
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: www.bar.com
@@ -298,4 +301,9 @@ xdsIR:
         security:
           basicAuth:
             name: securitypolicy/default/policy-for-gateway-1
-            users: Zm9vOntTSEF9WXMyM0FnLzVJT1dxWkN3OVFHYVZEZEh3SDAwPQpmb28xOntTSEF9ZGpaMTFxSFkwS09pamV5bUs3YUt2WXV2aHZNPQo=
+            users: '[redacted]'
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

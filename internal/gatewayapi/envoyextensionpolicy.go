@@ -20,9 +20,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/luavalidator"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -293,11 +295,17 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 ) error {
 	var (
 		wasms     []ir.Wasm
+		luas      []ir.Lua
 		err, errs error
 	)
 
 	if wasms, err = t.buildWasms(policy, resources); err != nil {
 		err = perr.WithMessage(err, "Wasm")
+		errs = errors.Join(errs, err)
+	}
+
+	if luas, err = t.buildLuas(policy, resources); err != nil {
+		err = perr.WithMessage(err, "Lua")
 		errs = errors.Join(errs, err)
 	}
 
@@ -324,14 +332,15 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 					if strings.HasPrefix(r.Name, prefix) {
 						// return 500 and do not configure EnvoyExtensions in this case
 						if errs != nil {
-							r.DirectResponse = &ir.DirectResponse{
-								StatusCode: 500,
+							r.DirectResponse = &ir.CustomResponse{
+								StatusCode: ptr.To(uint32(500)),
 							}
 							continue
 						}
 						r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
 							ExtProcs: extProcs,
 							Wasms:    wasms,
+							Luas:     luas,
 						}
 					}
 				}
@@ -352,6 +361,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 	var (
 		extProcs  []ir.ExtProc
 		wasms     []ir.Wasm
+		luas      []ir.Lua
 		err, errs error
 	)
 
@@ -361,6 +371,10 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 	}
 	if wasms, err = t.buildWasms(policy, resources); err != nil {
 		err = perr.WithMessage(err, "Wasm")
+		errs = errors.Join(errs, err)
+	}
+	if luas, err = t.buildLuas(policy, resources); err != nil {
+		err = perr.WithMessage(err, "Lua")
 		errs = errors.Join(errs, err)
 	}
 
@@ -386,8 +400,8 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 
 			// return 500 and do not configure EnvoyExtensions in this case
 			if errs != nil {
-				r.DirectResponse = &ir.DirectResponse{
-					StatusCode: 500,
+				r.DirectResponse = &ir.CustomResponse{
+					StatusCode: ptr.To(uint32(500)),
 				}
 				continue
 			}
@@ -395,11 +409,78 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 			r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
 				ExtProcs: extProcs,
 				Wasms:    wasms,
+				Luas:     luas,
 			}
 		}
 	}
 
 	return errs
+}
+
+func (t *Translator) buildLuas(policy *egv1a1.EnvoyExtensionPolicy, resources *resource.Resources) ([]ir.Lua, error) {
+	var luaIRList []ir.Lua
+
+	if policy == nil {
+		return nil, nil
+	}
+
+	for idx, ep := range policy.Spec.Lua {
+		name := irConfigNameForLua(policy, idx)
+		luaIR, err := t.buildLua(name, policy, ep, resources)
+		if err != nil {
+			return nil, err
+		}
+		luaIRList = append(luaIRList, *luaIR)
+	}
+	return luaIRList, nil
+}
+
+func (t *Translator) buildLua(
+	name string,
+	policy *egv1a1.EnvoyExtensionPolicy,
+	lua egv1a1.Lua,
+	resources *resource.Resources,
+) (*ir.Lua, error) {
+	var luaCode *string
+	var err error
+	if lua.Type == egv1a1.LuaValueTypeValueRef {
+		luaCode, err = getLuaBodyFromLocalObjectReference(lua.ValueRef, resources, policy.Namespace)
+	} else {
+		luaCode = lua.Inline
+	}
+	if err != nil {
+		return nil, err
+	}
+	if err = luavalidator.NewLuaValidator(*luaCode).Validate(); err != nil {
+		return nil, fmt.Errorf("validation failed for lua body in policy with name %v: %w", name, err)
+	}
+	return &ir.Lua{
+		Name: name,
+		Code: luaCode,
+	}, nil
+}
+
+// getLuaBodyFromLocalObjectReference assumes the local object reference points to a Kubernetes ConfigMap
+func getLuaBodyFromLocalObjectReference(valueRef *gwapiv1.LocalObjectReference, resources *resource.Resources, policyNs string) (*string, error) {
+	cm := resources.GetConfigMap(policyNs, string(valueRef.Name))
+	if cm != nil {
+		b, dataOk := cm.Data["lua"]
+		switch {
+		case dataOk:
+			return &b, nil
+		case len(cm.Data) > 0: // Fallback to the first key if lua is not found
+			for _, value := range cm.Data {
+				b = value
+				break
+			}
+			return &b, nil
+		default:
+			return nil, fmt.Errorf("can't find the key lua in the referenced configmap %s", valueRef.Name)
+		}
+
+	} else {
+		return nil, fmt.Errorf("can't find the referenced configmap %s in namespace %s", valueRef.Name, policyNs)
+	}
 }
 
 func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) ([]ir.ExtProc, error) {
@@ -411,7 +492,7 @@ func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resource
 
 	for idx, ep := range policy.Spec.ExtProc {
 		name := irConfigNameForExtProc(policy, idx)
-		extProcIR, err := t.buildExtProc(name, utils.NamespacedName(policy), ep, idx, resources, envoyProxy)
+		extProcIR, err := t.buildExtProc(name, policy, ep, idx, resources, envoyProxy)
 		if err != nil {
 			return nil, err
 		}
@@ -422,59 +503,33 @@ func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resource
 
 func (t *Translator) buildExtProc(
 	name string,
-	policyNamespacedName types.NamespacedName,
+	policy *egv1a1.EnvoyExtensionPolicy,
 	extProc egv1a1.ExtProc,
 	extProcIdx int,
 	resources *resource.Resources,
 	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.ExtProc, error) {
 	var (
-		ds        *ir.DestinationSetting
+		rd        *ir.RouteDestination
 		authority string
 		err       error
 	)
 
-	var dsl []*ir.DestinationSetting
-	for i := range extProc.BackendRefs {
-		if err = t.validateExtServiceBackendReference(
-			&extProc.BackendRefs[i].BackendObjectReference,
-			policyNamespacedName.Namespace,
-			egv1a1.KindEnvoyExtensionPolicy,
-			resources); err != nil {
-			return nil, err
-		}
-
-		ds, err = t.processExtServiceDestination(
-			&extProc.BackendRefs[i],
-			policyNamespacedName,
-			egv1a1.KindEnvoyExtensionPolicy,
-			ir.GRPC,
-			resources,
-			envoyProxy,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		dsl = append(dsl, ds)
-	}
-
-	rd := ir.RouteDestination{
-		Name:     irIndexedExtServiceDestinationName(policyNamespacedName, egv1a1.KindEnvoyExtensionPolicy, extProcIdx),
-		Settings: dsl,
+	if rd, err = t.translateExtServiceBackendRefs(policy, extProc.BackendRefs, ir.GRPC, resources, envoyProxy, "extproc", extProcIdx); err != nil {
+		return nil, err
 	}
 
 	if extProc.BackendRefs[0].Port != nil {
 		authority = fmt.Sprintf(
 			"%s.%s:%d",
 			extProc.BackendRefs[0].Name,
-			NamespaceDerefOr(extProc.BackendRefs[0].Namespace, policyNamespacedName.Namespace),
+			NamespaceDerefOr(extProc.BackendRefs[0].Namespace, policy.Namespace),
 			*extProc.BackendRefs[0].Port)
 	} else {
 		authority = fmt.Sprintf(
 			"%s.%s",
 			extProc.BackendRefs[0].Name,
-			NamespaceDerefOr(extProc.BackendRefs[0].Namespace, policyNamespacedName.Namespace))
+			NamespaceDerefOr(extProc.BackendRefs[0].Namespace, policy.Namespace))
 	}
 
 	traffic, err := translateTrafficFeatures(extProc.BackendCluster.BackendSettings)
@@ -484,7 +539,7 @@ func (t *Translator) buildExtProc(
 
 	extProcIR := &ir.ExtProc{
 		Name:        name,
-		Destination: rd,
+		Destination: *rd,
 		Traffic:     traffic,
 		Authority:   authority,
 	}
@@ -507,6 +562,10 @@ func (t *Translator) buildExtProc(
 			if extProc.ProcessingMode.Request.Body != nil {
 				extProcIR.RequestBodyProcessingMode = ptr.To(ir.ExtProcBodyProcessingMode(*extProc.ProcessingMode.Request.Body))
 			}
+
+			if extProc.ProcessingMode.Request.Attributes != nil {
+				extProcIR.RequestAttributes = append(extProcIR.RequestAttributes, extProc.ProcessingMode.Request.Attributes...)
+			}
 		}
 
 		if extProc.ProcessingMode.Response != nil {
@@ -514,6 +573,23 @@ func (t *Translator) buildExtProc(
 			if extProc.ProcessingMode.Response.Body != nil {
 				extProcIR.ResponseBodyProcessingMode = ptr.To(ir.ExtProcBodyProcessingMode(*extProc.ProcessingMode.Response.Body))
 			}
+
+			if extProc.ProcessingMode.Response.Attributes != nil {
+				extProcIR.ResponseAttributes = append(extProcIR.ResponseAttributes, extProc.ProcessingMode.Response.Attributes...)
+			}
+		}
+		extProcIR.AllowModeOverride = extProc.ProcessingMode.AllowModeOverride
+	}
+
+	if extProc.Metadata != nil {
+		if extProc.Metadata.AccessibleNamespaces != nil {
+			extProcIR.ForwardingMetadataNamespaces = append(extProcIR.ForwardingMetadataNamespaces,
+				extProc.Metadata.AccessibleNamespaces...)
+		}
+
+		if extProc.Metadata.WritableNamespaces != nil {
+			extProcIR.ReceivingMetadataNamespaces = append(extProcIR.ReceivingMetadataNamespaces,
+				extProc.Metadata.WritableNamespaces...)
 		}
 	}
 
@@ -523,6 +599,13 @@ func (t *Translator) buildExtProc(
 func irConfigNameForExtProc(policy *egv1a1.EnvoyExtensionPolicy, index int) string {
 	return fmt.Sprintf(
 		"%s/extproc/%s",
+		irConfigName(policy),
+		strconv.Itoa(index))
+}
+
+func irConfigNameForLua(policy *egv1a1.EnvoyExtensionPolicy, index int) string {
+	return fmt.Sprintf(
+		"%s/lua/%s",
 		irConfigName(policy),
 		strconv.Itoa(index))
 }
@@ -587,6 +670,8 @@ func (t *Translator) buildWasm(
 
 	switch config.Code.Type {
 	case egv1a1.HTTPWasmCodeSourceType:
+		var checksum string
+
 		// This is a sanity check, the validation should have caught this
 		if config.Code.HTTP == nil {
 			return nil, fmt.Errorf("missing HTTP field in Wasm code source")
@@ -598,7 +683,7 @@ func (t *Translator) buildWasm(
 
 		http := config.Code.HTTP
 
-		if servingURL, _, err = t.WasmCache.Get(http.URL, wasm.GetOptions{
+		if servingURL, checksum, err = t.WasmCache.Get(http.URL, wasm.GetOptions{
 			Checksum:        originalChecksum,
 			PullPolicy:      pullPolicy,
 			ResourceName:    irConfigNameForWasm(policy, idx),
@@ -610,7 +695,7 @@ func (t *Translator) buildWasm(
 		code = &ir.HTTPWasmCode{
 			ServingURL:  servingURL,
 			OriginalURL: http.URL,
-			SHA256:      originalChecksum,
+			SHA256:      checksum,
 		}
 
 	case egv1a1.ImageWasmCodeSourceType:
@@ -697,6 +782,10 @@ func (t *Translator) buildWasm(
 		Config:   config.Config,
 		FailOpen: failOpen,
 		Code:     code,
+	}
+
+	if config.Env != nil && len(config.Env.HostKeys) > 0 {
+		wasmIR.HostKeys = config.Env.HostKeys
 	}
 
 	return wasmIR, nil

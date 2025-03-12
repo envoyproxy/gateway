@@ -101,6 +101,8 @@ type ClientTrafficPolicySpec struct {
 }
 
 // HeaderSettings provides configuration options for headers on the listener.
+//
+// +kubebuilder:validation:XValidation:rule="!(has(self.preserveXRequestID) && has(self.requestID))",message="preserveXRequestID and requestID cannot both be set."
 type HeaderSettings struct {
 	// EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests
 	// and responses.
@@ -131,10 +133,18 @@ type HeaderSettings struct {
 
 	// PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge
 	// (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
-	// It defaults to false.
+	// Defaults to false and cannot be combined with RequestID.
+	// Deprecated: use RequestID=Preserve instead
 	//
 	// +optional
 	PreserveXRequestID *bool `json:"preserveXRequestID,omitempty"`
+
+	// RequestID configures Envoy's behavior for handling the `X-Request-ID` header.
+	// Defaults to `Generate` and builds the `X-Request-ID` for every request and ignores pre-existing values from the edge.
+	// (An "edge request" refers to a request from an external client to the Envoy entrypoint.)
+	//
+	// +optional
+	RequestID *RequestIDAction `json:"requestID,omitempty"`
 
 	// EarlyRequestHeaders defines settings for early request header modification, before envoy performs
 	// routing, tracing and built-in header manipulation.
@@ -158,6 +168,23 @@ const (
 	// is dropped before the filter chain is invoked and as such filters will not see
 	// dropped headers.
 	WithUnderscoresActionDropHeader WithUnderscoresAction = "DropHeader"
+)
+
+// RequestIDAction configures Envoy's behavior for handling the `X-Request-ID` header.
+//
+// +kubebuilder:validation:Enum=PreserveOrGenerate;Preserve;Generate;Disable
+type RequestIDAction string
+
+const (
+	// Preserve `X-Request-ID` if already present or generate if empty
+	RequestIDActionPreserveOrGenerate RequestIDAction = "PreserveOrGenerate"
+	// Preserve `X-Request-ID` if already present, do not generate when empty
+	RequestIDActionPreserve RequestIDAction = "Preserve"
+	// Always generate `X-Request-ID` header, do not preserve `X-Request-ID`
+	// header if it exists. This is the default behavior.
+	RequestIDActionGenerate RequestIDAction = "Generate"
+	// Do not preserve or generate `X-Request-ID` header
+	RequestIDActionDisable RequestIDAction = "Disable"
 )
 
 // XForwardedClientCert configures how Envoy Proxy handle the x-forwarded-client-cert (XFCC) HTTP header.
@@ -237,14 +264,28 @@ type ClientIPDetectionSettings struct {
 }
 
 // XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address.
+// Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
+// for more details.
+// +kubebuilder:validation:XValidation:rule="(has(self.numTrustedHops) && !has(self.trustedCIDRs)) || (!has(self.numTrustedHops) && has(self.trustedCIDRs))", message="only one of numTrustedHops or trustedCIDRs must be set"
 type XForwardedForSettings struct {
 	// NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP
 	// headers to trust when determining the origin client's IP address.
-	// Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
-	// for more details.
+	// Only one of NumTrustedHops and TrustedCIDRs must be set.
 	//
 	// +optional
 	NumTrustedHops *uint32 `json:"numTrustedHops,omitempty"`
+
+	// TrustedCIDRs is a list of CIDR ranges to trust when evaluating
+	// the remote IP address to determine the original client’s IP address.
+	// When the remote IP address matches a trusted CIDR and the x-forwarded-for header was sent,
+	// each entry in the x-forwarded-for header is evaluated from right to left
+	// and the first public non-trusted address is used as the original client address.
+	// If all addresses in x-forwarded-for are within the trusted list, the first (leftmost) entry is used.
+	// Only one of NumTrustedHops and TrustedCIDRs must be set.
+	//
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	TrustedCIDRs []CIDR `json:"trustedCIDRs,omitempty"`
 }
 
 // CustomHeaderExtensionSettings provides configuration for determining the client IP address for a request based on

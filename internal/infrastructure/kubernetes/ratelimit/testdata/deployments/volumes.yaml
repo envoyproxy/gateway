@@ -27,6 +27,8 @@ spec:
   template:
     metadata:
       annotations:
+        prometheus.io/path: /metrics
+        prometheus.io/port: "19001"
         prometheus.io/scrape: "true"
       creationTimestamp: null
       labels:

@@ -82,12 +82,19 @@ func getSupportedFeatures(gatewaySuite suite.ConformanceOptions, skippedTests []
 
 	ret := sets.New[gwapiv1.SupportedFeature]()
 	for _, feature := range supportedFeatures.UnsortedList() {
-		ret.Insert(gwapiv1.SupportedFeature(feature))
+		ret.Insert(gwapiv1.SupportedFeature{
+			Name: gwapiv1.FeatureName(feature),
+		})
 	}
-	return sets.List(ret)
+
+	var featureList []gwapiv1.SupportedFeature
+	for feature := range ret {
+		featureList = append(featureList, feature)
+	}
+	return featureList
 }
 
-func getUnsupportedFeatures(gatewaySuite suite.ConformanceOptions, skippedTests []suite.ConformanceTest) []features.SupportedFeature {
+func getUnsupportedFeatures(gatewaySuite suite.ConformanceOptions, skippedTests []suite.ConformanceTest) []features.FeatureName {
 	unsupportedFeatures := gatewaySuite.ExemptFeatures.UnsortedList()
 
 	for _, skippedTest := range skippedTests {

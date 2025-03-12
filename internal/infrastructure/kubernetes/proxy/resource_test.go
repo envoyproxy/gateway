@@ -9,6 +9,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/ptr"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 )
 
 func TestEnvoyPodSelector(t *testing.T) {
@@ -32,6 +37,52 @@ func TestEnvoyPodSelector(t *testing.T) {
 	for _, tc := range cases {
 		t.Run("", func(t *testing.T) {
 			got := envoyLabels(tc.in)
+			require.Equal(t, tc.expected, got)
+		})
+	}
+}
+
+func TestExpectedShutdownManagerSecurityContext(t *testing.T) {
+	defaultSecurityContext := func() *corev1.SecurityContext {
+		sc := resource.DefaultSecurityContext()
+
+		// run as non-root user
+		sc.RunAsGroup = ptr.To(int64(65532))
+		sc.RunAsUser = ptr.To(int64(65532))
+
+		// ShutdownManger creates a file to indicate the connection drain process is completed,
+		// so it needs file write permission.
+		sc.ReadOnlyRootFilesystem = nil
+		return sc
+	}
+
+	customSc := &corev1.SecurityContext{
+		Privileged: ptr.To(true),
+		RunAsUser:  ptr.To(int64(21)),
+		RunAsGroup: ptr.To(int64(2100)),
+	}
+
+	tests := []struct {
+		name     string
+		in       *egv1a1.KubernetesContainerSpec
+		expected *corev1.SecurityContext
+	}{
+		{
+			name:     "default",
+			in:       nil,
+			expected: defaultSecurityContext(),
+		},
+		{
+			name: "default",
+			in: &egv1a1.KubernetesContainerSpec{
+				SecurityContext: customSc,
+			},
+			expected: customSc,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := expectedShutdownManagerSecurityContext(tc.in)
 			require.Equal(t, tc.expected, got)
 		})
 	}

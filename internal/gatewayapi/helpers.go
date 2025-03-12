@@ -82,9 +82,11 @@ var (
 	PathMatchTypeDerefOr       = ptr.Deref[gwapiv1.PathMatchType]
 	GRPCMethodMatchTypeDerefOr = ptr.Deref[gwapiv1.GRPCMethodMatchType]
 	HeaderMatchTypeDerefOr     = ptr.Deref[gwapiv1.HeaderMatchType]
+	GRPCHeaderMatchTypeDerefOr = ptr.Deref[gwapiv1.GRPCHeaderMatchType]
 	QueryParamMatchTypeDerefOr = ptr.Deref[gwapiv1.QueryParamMatchType]
 )
 
+// Deprecated: use k8s.io/utils/ptr ptr.Deref instead
 func NamespaceDerefOr(namespace *gwapiv1.Namespace, defaultNamespace string) string {
 	if namespace != nil && *namespace != "" {
 		return string(*namespace)
@@ -247,25 +249,6 @@ func OwnerLabels(gateway *gwapiv1.Gateway, mergeGateways bool) map[string]string
 	return GatewayOwnerLabels(gateway.Namespace, gateway.Name)
 }
 
-// servicePortToContainerPort translates a service port into an ephemeral
-// container port.
-func servicePortToContainerPort(servicePort int32, envoyProxy *egv1a1.EnvoyProxy) int32 {
-	if envoyProxy != nil {
-		if !envoyProxy.NeedToSwitchPorts() {
-			return servicePort
-		}
-	}
-
-	// If the service port is a privileged port (1-1023)
-	// add a constant to the value converting it into an ephemeral port.
-	// This allows the container to bind to the port without needing a
-	// CAP_NET_BIND_SERVICE capability.
-	if servicePort < minEphemeralPort {
-		return servicePort + wellKnownPortShift
-	}
-	return servicePort
-}
-
 // computeHosts returns a list of intersecting listener hostnames and route hostnames
 // that don't intersect with other listener hostnames.
 func computeHosts(routeHostnames []string, listenerContext *ListenerContext) []string {
@@ -420,6 +403,11 @@ func irRouteDestinationName(route RouteContext, ruleIdx int) string {
 	return fmt.Sprintf("%srule/%d", irRoutePrefix(route), ruleIdx)
 }
 
+func irDestinationSettingName(destName string, backendIdx int) string {
+	return fmt.Sprintf("%s/backend/%d", destName, backendIdx)
+}
+
+// irTLSConfigs produces a defaulted IR TLSConfig
 func irTLSConfigs(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
 	if len(tlsSecrets) == 0 {
 		return nil
@@ -435,6 +423,21 @@ func irTLSConfigs(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
 			PrivateKey:  tlsSecret.Data[corev1.TLSPrivateKeyKey],
 		}
 	}
+
+	return tlsListenerConfigs
+}
+
+// irTLSConfigsForTCPListener creates an IR TLSConfig with defaults appropriate
+// for TCP/TLS routes, e.g. disabling ALPN
+func irTLSConfigsForTCPListener(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
+	tlsListenerConfigs := irTLSConfigs(tlsSecrets...)
+
+	// Envoy Gateway disables ALPN by default for non-HTTPS listeners
+	// by setting an empty slice instead of a nil slice
+	if tlsListenerConfigs != nil {
+		tlsListenerConfigs.ALPNProtocols = []string{}
+	}
+
 	return tlsListenerConfigs
 }
 
@@ -534,10 +537,22 @@ type targetRefWithTimestamp struct {
 	CreationTimestamp metav1.Time
 }
 
+func selectorFromTargetSelector(selector egv1a1.TargetSelector) labels.Selector {
+	l, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+		MatchLabels:      selector.MatchLabels,
+		MatchExpressions: selector.MatchExpressions,
+	})
+	if err != nil {
+		// TODO - how do we we bubble this up
+		return labels.Nothing()
+	}
+	return l
+}
+
 func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, potentialTargets []T) []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {
 	dedup := sets.New[targetRefWithTimestamp]()
 	for _, currSelector := range policy.TargetSelectors {
-		labelSelector := labels.SelectorFromSet(currSelector.MatchLabels)
+		labelSelector := selectorFromTargetSelector(currSelector)
 		for _, obj := range potentialTargets {
 			gvk := obj.GetObjectKind().GroupVersionKind()
 			if gvk.Kind != string(currSelector.Kind) ||
@@ -590,4 +605,66 @@ func setIfNil[T any](target **T, value *T) {
 	if *target == nil {
 		*target = value
 	}
+}
+
+// getServiceIPFamily returns the IP family configuration from a Kubernetes Service
+// following the dual-stack service configuration scenarios:
+// https://kubernetes.io/docs/concepts/services-networking/dual-stack/#dual-stack-service-configuration-scenarios
+//
+// The IP family is determined in the following order:
+// 1. Service.Spec.IPFamilyPolicy == RequireDualStack -> DualStack
+// 2. Service.Spec.IPFamilies length > 1 -> DualStack
+// 3. Service.Spec.IPFamilies[0] -> IPv4 or IPv6
+// 4. nil if not specified
+func getServiceIPFamily(service *corev1.Service) *egv1a1.IPFamily {
+	if service == nil {
+		return nil
+	}
+
+	// If ipFamilyPolicy is RequireDualStack, return DualStack
+	if service.Spec.IPFamilyPolicy != nil &&
+		*service.Spec.IPFamilyPolicy == corev1.IPFamilyPolicyRequireDualStack {
+		return ptr.To(egv1a1.DualStack)
+	}
+
+	// Check ipFamilies array
+	if len(service.Spec.IPFamilies) > 0 {
+		if len(service.Spec.IPFamilies) > 1 {
+			return ptr.To(egv1a1.DualStack)
+		}
+		switch service.Spec.IPFamilies[0] {
+		case corev1.IPv4Protocol:
+			return ptr.To(egv1a1.IPv4)
+		case corev1.IPv6Protocol:
+			return ptr.To(egv1a1.IPv6)
+		}
+	}
+
+	return nil
+}
+
+// getEnvoyIPFamily returns the IPFamily configuration from EnvoyProxy
+func getEnvoyIPFamily(envoyProxy *egv1a1.EnvoyProxy) *egv1a1.IPFamily {
+	if envoyProxy == nil || envoyProxy.Spec.IPFamily == nil {
+		return nil
+	}
+
+	switch *envoyProxy.Spec.IPFamily {
+	case egv1a1.IPv4:
+		return ptr.To(egv1a1.IPv4)
+	case egv1a1.IPv6:
+		return ptr.To(egv1a1.IPv6)
+	case egv1a1.DualStack:
+		return ptr.To(egv1a1.DualStack)
+	default:
+		return nil
+	}
+}
+
+// getPreserveRouteOrder returns true if route order should be preserved according to EnvoyProxy spec
+func getPreserveRouteOrder(envoyProxy *egv1a1.EnvoyProxy) bool {
+	if envoyProxy != nil && envoyProxy.Spec.PreserveRouteOrder != nil && *envoyProxy.Spec.PreserveRouteOrder {
+		return true
+	}
+	return false
 }

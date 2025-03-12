@@ -28,7 +28,9 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/utils/ptr"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 )
 
 const (
@@ -55,6 +57,7 @@ type xdsClusterArgs struct {
 	backendConnection *ir.BackendConnection
 	dns               *ir.DNS
 	useClientProtocol bool
+	ipFamily          *egv1a1.IPFamily
 }
 
 type EndpointType int
@@ -81,16 +84,53 @@ func buildEndpointType(settings []*ir.DestinationSetting) EndpointType {
 }
 
 func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
+	dnsLookupFamily := clusterv3.Cluster_V4_PREFERRED
+	customDNSPolicy := args.dns != nil && args.dns.LookupFamily != nil
+	// apply DNS lookup family if custom DNS traffic policy is set
+	if customDNSPolicy {
+		switch *args.dns.LookupFamily {
+		case egv1a1.IPv4DNSLookupFamily:
+			dnsLookupFamily = clusterv3.Cluster_V4_ONLY
+		case egv1a1.IPv6DNSLookupFamily:
+			dnsLookupFamily = clusterv3.Cluster_V6_ONLY
+		case egv1a1.IPv6PreferredDNSLookupFamily:
+			dnsLookupFamily = clusterv3.Cluster_AUTO
+		case egv1a1.IPv4AndIPv6DNSLookupFamily:
+			dnsLookupFamily = clusterv3.Cluster_ALL
+		}
+	}
+
+	// Ensure to override if a specific IP family is set.
+	if args.ipFamily != nil {
+		switch *args.ipFamily {
+		case egv1a1.IPv4:
+			dnsLookupFamily = clusterv3.Cluster_V4_ONLY
+		case egv1a1.IPv6:
+			dnsLookupFamily = clusterv3.Cluster_V6_ONLY
+		case egv1a1.DualStack:
+			// if a custom DNS policy is set, prefer the custom policy as its more specific.
+			if !customDNSPolicy {
+				dnsLookupFamily = clusterv3.Cluster_ALL
+			}
+		}
+	}
+
 	cluster := &clusterv3.Cluster{
 		Name:            args.name,
-		DnsLookupFamily: clusterv3.Cluster_V4_ONLY,
+		DnsLookupFamily: dnsLookupFamily,
 		CommonLbConfig: &clusterv3.Cluster_CommonLbConfig{
 			LocalityConfigSpecifier: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig_{
 				LocalityWeightedLbConfig: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig{},
 			},
 		},
-		OutlierDetection:              &clusterv3.OutlierDetection{},
 		PerConnectionBufferLimitBytes: buildBackandConnectionBufferLimitBytes(args.backendConnection),
+	}
+
+	// 50% is the Envoy default value for panic threshold. No need to explicitly set it in this case.
+	if args.healthCheck != nil && args.healthCheck.PanicThreshold != nil && *args.healthCheck.PanicThreshold != 50 {
+		cluster.CommonLbConfig.HealthyPanicThreshold = &xdstype.Percent{
+			Value: float64(*args.healthCheck.PanicThreshold),
+		}
 	}
 
 	cluster.ConnectTimeout = buildConnectTimeout(args.timeout)
@@ -118,6 +158,12 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 	}
 
 	for i, ds := range args.settings {
+
+		// If zone aware routing is enabled we update the cluster lb config
+		if ds.ZoneAwareRoutingEnabled {
+			cluster.CommonLbConfig.LocalityConfigSpecifier = &clusterv3.Cluster_CommonLbConfig_ZoneAwareLbConfig_{ZoneAwareLbConfig: &clusterv3.Cluster_CommonLbConfig_ZoneAwareLbConfig{}}
+		}
+
 		if ds.TLS != nil {
 			socket, err := buildXdsUpstreamTLSSocketWthCert(ds.TLS)
 			if err != nil {
@@ -151,6 +197,9 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 				},
 			},
 		}
+		// Dont wait for a health check to determine health and remove these endpoints
+		// if the endpoint has been removed via EDS by the control plane
+		cluster.IgnoreHealthOnHostRemoval = true
 	} else {
 		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STRICT_DNS}
 		cluster.DnsRefreshRate = durationpb.New(30 * time.Second)
@@ -403,8 +452,6 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 	localities := make([]*endpointv3.LocalityLbEndpoints, 0, len(destSettings))
 	for i, ds := range destSettings {
 
-		endpoints := make([]*endpointv3.LbEndpoint, 0, len(ds.Endpoints))
-
 		var metadata *corev3.Metadata
 		if ds.TLS != nil {
 			metadata = &corev3.Metadata{
@@ -418,43 +465,101 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 			}
 		}
 
-		for _, irEp := range ds.Endpoints {
-			lbEndpoint := &endpointv3.LbEndpoint{
-				Metadata: metadata,
-				HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
-					Endpoint: &endpointv3.Endpoint{
-						Address: buildAddress(irEp),
-					},
-				},
-			}
-			// Set default weight of 1 for all endpoints.
-			lbEndpoint.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: 1}
-			endpoints = append(endpoints, lbEndpoint)
-		}
-
-		// Envoy requires a distinct region to be set for each LocalityLbEndpoints.
-		// If we don't do this, Envoy will merge all LocalityLbEndpoints into one.
-		// We use the name of the backendRef as a pseudo region name.
-		locality := &endpointv3.LocalityLbEndpoints{
-			Locality: &corev3.Locality{
-				Region: fmt.Sprintf("%s/backend/%d", clusterName, i),
-			},
-			LbEndpoints: endpoints,
-			Priority:    0,
-		}
-
-		// Set locality weight
-		var weight uint32
-		if ds.Weight != nil {
-			weight = *ds.Weight
+		// If zone aware routing is enabled for a backendRefs we include endpoint zone info in localities.
+		// Note: The locality.LoadBalancingWeight field applies only when using locality-weighted LB config
+		// so in order to support traffic splitting we rely on weighted clusters defined at the route level
+		// if multiple backendRefs exist. This pushes part of the routing logic higher up the stack which can
+		// limit host selection controls during retries and session affinity.
+		// For more details see https://github.com/envoyproxy/gateway/issues/5307#issuecomment-2688767482
+		if ds.ZoneAwareRoutingEnabled {
+			localities = append(localities, buildZonalLocalities(metadata, ds)...)
 		} else {
-			weight = 1
+			localities = append(localities, buildWeightedLocalities(metadata, ds))
 		}
-		locality.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: weight}
-		locality.Priority = ptr.Deref(ds.Priority, 0)
-		localities = append(localities, locality)
 	}
 	return &endpointv3.ClusterLoadAssignment{ClusterName: clusterName, Endpoints: localities}
+}
+
+func buildZonalLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting) []*endpointv3.LocalityLbEndpoints {
+	var localities []*endpointv3.LocalityLbEndpoints
+	zonalEndpoints := make(map[string][]*endpointv3.LbEndpoint)
+	for _, irEp := range ds.Endpoints {
+		healthStatus := corev3.HealthStatus_UNKNOWN
+		if irEp.Draining {
+			healthStatus = corev3.HealthStatus_DRAINING
+		}
+		lbEndpoint := &endpointv3.LbEndpoint{
+			Metadata: metadata,
+			HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
+				Endpoint: &endpointv3.Endpoint{
+					Address: buildAddress(irEp),
+				},
+			},
+			LoadBalancingWeight: wrapperspb.UInt32(1),
+			HealthStatus:        healthStatus,
+		}
+
+		zone := ptr.Deref(irEp.Zone, "")
+		zonalEndpoints[zone] = append(zonalEndpoints[zone], lbEndpoint)
+	}
+
+	for zone, endPts := range zonalEndpoints {
+		locality := &endpointv3.LocalityLbEndpoints{
+			Locality: &corev3.Locality{
+				Zone: zone,
+			},
+			LbEndpoints: endPts,
+			Priority:    ptr.Deref(ds.Priority, 0),
+		}
+		localities = append(localities, locality)
+	}
+	// Sort localities by zone, so that the order is deterministic.
+	sort.Slice(localities, func(i, j int) bool {
+		return localities[i].Locality.Zone < localities[j].Locality.Zone
+	})
+
+	return localities
+}
+
+func buildWeightedLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting) *endpointv3.LocalityLbEndpoints {
+	endpoints := make([]*endpointv3.LbEndpoint, 0, len(ds.Endpoints))
+
+	for _, irEp := range ds.Endpoints {
+		healthStatus := corev3.HealthStatus_UNKNOWN
+		if irEp.Draining {
+			healthStatus = corev3.HealthStatus_DRAINING
+		}
+		lbEndpoint := &endpointv3.LbEndpoint{
+			Metadata: metadata,
+			HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
+				Endpoint: &endpointv3.Endpoint{
+					Address: buildAddress(irEp),
+				},
+			},
+			HealthStatus: healthStatus,
+		}
+		// Set default weight of 1 for all endpoints.
+		lbEndpoint.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: 1}
+		endpoints = append(endpoints, lbEndpoint)
+	}
+	locality := &endpointv3.LocalityLbEndpoints{
+		Locality: &corev3.Locality{
+			Region: ds.Name,
+		},
+		LbEndpoints: endpoints,
+		Priority:    0,
+	}
+
+	// Set locality weight
+	var weight uint32
+	if ds.Weight != nil {
+		weight = *ds.Weight
+	} else {
+		weight = 1
+	}
+	locality.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: weight}
+	locality.Priority = ptr.Deref(ds.Priority, 0)
+	return locality
 }
 
 func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) map[string]*anypb.Any {
@@ -503,7 +608,7 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) map[string]*anypb.
 	if args.http1Settings != nil {
 		http1opts.EnableTrailers = args.http1Settings.EnableTrailers
 		if args.http1Settings.PreserveHeaderCase {
-			preservecaseAny, _ := anypb.New(&preservecasev3.PreserveCaseFormatterConfig{})
+			preservecaseAny, _ := proto.ToAnyWithValidation(&preservecasev3.PreserveCaseFormatterConfig{})
 			http1opts.HeaderKeyFormat = &corev3.Http1ProtocolOptions_HeaderKeyFormat{
 				HeaderFormat: &corev3.Http1ProtocolOptions_HeaderKeyFormat_StatefulFormatter{
 					StatefulFormatter: &corev3.TypedExtensionConfig{
@@ -556,7 +661,7 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) map[string]*anypb.
 		}
 	}
 
-	anyProtocolOptions, _ := anypb.New(&protocolOptions)
+	anyProtocolOptions, _ := proto.ToAnyWithValidation(&protocolOptions)
 
 	extensionOptions := map[string]*anypb.Any{
 		extensionOptionsKey: anyProtocolOptions,
@@ -587,7 +692,7 @@ func buildProxyProtocolSocket(proxyProtocol *ir.ProxyProtocol, tSocket *corev3.T
 	// If existing transport socket does not exist wrap around raw buffer
 	if tSocket == nil {
 		rawCtx := &rawbufferv3.RawBuffer{}
-		rawCtxAny, err := anypb.New(rawCtx)
+		rawCtxAny, err := proto.ToAnyWithValidation(rawCtx)
 		if err != nil {
 			return nil
 		}
@@ -602,7 +707,7 @@ func buildProxyProtocolSocket(proxyProtocol *ir.ProxyProtocol, tSocket *corev3.T
 		ppCtx.TransportSocket = tSocket
 	}
 
-	ppCtxAny, err := anypb.New(ppCtx)
+	ppCtxAny, err := proto.ToAnyWithValidation(ppCtx)
 	if err != nil {
 		return nil
 	}
@@ -681,24 +786,29 @@ type ExtraArgs struct {
 	metrics       *ir.Metrics
 	http1Settings *ir.HTTP1Settings
 	http2Settings *ir.HTTP2Settings
+	ipFamily      *egv1a1.IPFamily
 }
 
 type clusterArgs interface {
-	asClusterArgs(extras *ExtraArgs) *xdsClusterArgs
+	asClusterArgs(name string, settings []*ir.DestinationSetting, extras *ExtraArgs) *xdsClusterArgs
 }
 
 type UDPRouteTranslator struct {
 	*ir.UDPRoute
 }
 
-func (route *UDPRouteTranslator) asClusterArgs(extra *ExtraArgs) *xdsClusterArgs {
+func (route *UDPRouteTranslator) asClusterArgs(name string,
+	settings []*ir.DestinationSetting,
+	extra *ExtraArgs,
+) *xdsClusterArgs {
 	return &xdsClusterArgs{
-		name:         route.Destination.Name,
-		settings:     route.Destination.Settings,
+		name:         name,
+		settings:     settings,
 		loadBalancer: route.LoadBalancer,
 		endpointType: buildEndpointType(route.Destination.Settings),
 		metrics:      extra.metrics,
 		dns:          route.DNS,
+		ipFamily:     extra.ipFamily,
 	}
 }
 
@@ -706,10 +816,13 @@ type TCPRouteTranslator struct {
 	*ir.TCPRoute
 }
 
-func (route *TCPRouteTranslator) asClusterArgs(extra *ExtraArgs) *xdsClusterArgs {
+func (route *TCPRouteTranslator) asClusterArgs(name string,
+	settings []*ir.DestinationSetting,
+	extra *ExtraArgs,
+) *xdsClusterArgs {
 	return &xdsClusterArgs{
-		name:              route.Destination.Name,
-		settings:          route.Destination.Settings,
+		name:              name,
+		settings:          settings,
 		loadBalancer:      route.LoadBalancer,
 		proxyProtocol:     route.ProxyProtocol,
 		circuitBreaker:    route.CircuitBreaker,
@@ -720,6 +833,7 @@ func (route *TCPRouteTranslator) asClusterArgs(extra *ExtraArgs) *xdsClusterArgs
 		metrics:           extra.metrics,
 		backendConnection: route.BackendConnection,
 		dns:               route.DNS,
+		ipFamily:          extra.ipFamily,
 	}
 }
 
@@ -727,16 +841,20 @@ type HTTPRouteTranslator struct {
 	*ir.HTTPRoute
 }
 
-func (httpRoute *HTTPRouteTranslator) asClusterArgs(extra *ExtraArgs) *xdsClusterArgs {
+func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
+	settings []*ir.DestinationSetting,
+	extra *ExtraArgs,
+) *xdsClusterArgs {
 	clusterArgs := &xdsClusterArgs{
-		name:              httpRoute.Destination.Name,
-		settings:          httpRoute.Destination.Settings,
+		name:              name,
+		settings:          settings,
 		tSocket:           nil,
 		endpointType:      buildEndpointType(httpRoute.Destination.Settings),
 		metrics:           extra.metrics,
 		http1Settings:     extra.http1Settings,
 		http2Settings:     extra.http2Settings,
 		useClientProtocol: ptr.Deref(httpRoute.UseClientProtocol, false),
+		ipFamily:          extra.ipFamily,
 	}
 
 	// Populate traffic features.

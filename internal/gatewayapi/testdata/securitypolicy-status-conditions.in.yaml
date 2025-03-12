@@ -29,6 +29,10 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
+    cors:
+      allowOrigins:
+      - "http://*.example.com"
+      maxAge: 1000s
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
@@ -45,6 +49,10 @@ securityPolicies:
     namespace: envoy-gateway
     name: target-grpcroute-in-gateway-2
   spec:
+    cors:
+      allowOrigins:
+      - "http://*.example.com"
+      maxAge: 1000s
     targetRef:
       group: gateway.networking.k8s.io
       kind: GRPCRoute

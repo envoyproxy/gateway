@@ -21,6 +21,7 @@ http:
         - host: 7.7.7.7
           port: 8080
         weight: 1
+        name: httproute/default/httproute-1/rule/0/backend/0
     hostname: '*'
     name: httproute/default/httproute-1/rule/0/match/0/*
     pathMatch:

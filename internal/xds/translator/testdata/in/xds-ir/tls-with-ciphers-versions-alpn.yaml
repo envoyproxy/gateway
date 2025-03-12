@@ -1,6 +1,6 @@
 http:
 - name: "first-listener"
-  address: "0.0.0.0"
+  address: "::"
   path:
     escapedSlashesAction: UnescapeAndRedirect
     mergeSlashes: true
@@ -30,6 +30,7 @@ http:
     minVersion: "1.0"
     alpnProtocols:
     - some-other-protocol
+    statefulSessionResumption: true
     certificates:
     - name: secret-1
       # byte slice representation of "key-data"
@@ -48,9 +49,10 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "first-route-dest/backend/0"
 tcp:
 - name: "second-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 10081
   tls:
     ciphers:
@@ -107,6 +109,7 @@ tcp:
         minVersion: "1.0"
         alpnProtocols:
         - some-other-protocol
+        statelessSessionResumption: true
         certificates:
         - name: secret-3
           # byte slice representation of "key-data"
@@ -121,3 +124,4 @@ tcp:
           port: 50000
         - host: "5.6.7.8"
           port: 50001
+        name: "tls-terminate-dest/backend/0"

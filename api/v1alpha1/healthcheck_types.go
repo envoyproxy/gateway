@@ -17,6 +17,15 @@ type HealthCheck struct {
 	// Passive passive check configuration
 	// +optional
 	Passive *PassiveHealthCheck `json:"passive,omitempty"`
+
+	// When number of unhealthy endpoints for a backend reaches this threshold
+	// Envoy will disregard health status and balance across all endpoints.
+	// It's designed to prevent a situation in which host failures cascade throughout the cluster
+	// as load increases. If not set, the default value is 50%. To disable panic mode, set value to `0`.
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=100
+	// +optional
+	PanicThreshold *uint32 `json:"panicThreshold,omitempty"`
 }
 
 // PassiveHealthCheck defines the configuration for passive health checks in the context of Envoy's Outlier Detection,

@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -34,6 +35,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/field"
 	"github.com/envoyproxy/gateway/internal/utils/file"
 	"github.com/envoyproxy/gateway/internal/wasm"
@@ -318,9 +320,11 @@ func TestTranslate(t *testing.T) {
 
 			opts := []cmp.Option{
 				cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
+				cmpopts.IgnoreFields(resource.Resources{}, "serviceMap"),
+				cmp.Transformer("ClearXdsEqual", xdsWithoutEqual),
+				cmpopts.IgnoreTypes(ir.PrivateBytes{}),
 				cmpopts.EquateEmpty(),
 			}
-
 			require.Empty(t, cmp.Diff(want, got, opts...))
 		})
 	}
@@ -515,8 +519,11 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 			want := &TranslateResult{}
 			mustUnmarshal(t, output, want)
 
-			opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
-			require.Empty(t, cmp.Diff(want, got, opts))
+			opts := []cmp.Option{
+				cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
+				cmpopts.IgnoreFields(resource.Resources{}, "serviceMap"),
+			}
+			require.Empty(t, cmp.Diff(want, got, opts...))
 		})
 	}
 }
@@ -756,9 +763,10 @@ func TestIsValidCrossNamespaceRef(t *testing.T) {
 
 func TestServicePortToContainerPort(t *testing.T) {
 	testCases := []struct {
-		servicePort   int32
-		containerPort int32
-		envoyProxy    *egv1a1.EnvoyProxy
+		servicePort               int32
+		containerPort             int32
+		envoyProxy                *egv1a1.EnvoyProxy
+		listenerPortShiftDisabled bool
 	}{
 		{
 			servicePort:   99,
@@ -819,10 +827,15 @@ func TestServicePortToContainerPort(t *testing.T) {
 				},
 			},
 		},
+		{
+			servicePort:               99,
+			containerPort:             99,
+			listenerPortShiftDisabled: true,
+		},
 	}
-
 	for _, tc := range testCases {
-		got := servicePortToContainerPort(tc.servicePort, tc.envoyProxy)
+		translator := &Translator{ListenerPortShiftDisabled: tc.listenerPortShiftDisabled}
+		got := translator.servicePortToContainerPort(tc.servicePort, tc.envoyProxy)
 		assert.Equal(t, tc.containerPort, got)
 	}
 }
@@ -833,7 +846,7 @@ type mockWasmCache struct{}
 
 func (m *mockWasmCache) Start(_ context.Context) {}
 
-func (m *mockWasmCache) Get(downloadURL string, _ wasm.GetOptions) (url string, checksum string, err error) {
+func (m *mockWasmCache) Get(downloadURL string, options wasm.GetOptions) (url string, checksum string, err error) {
 	// This is a mock implementation of the wasm.Cache.Get method.
 	sha := sha256.Sum256([]byte(downloadURL))
 	hashedName := hex.EncodeToString(sha[:])
@@ -841,7 +854,51 @@ func (m *mockWasmCache) Get(downloadURL string, _ wasm.GetOptions) (url string, 
 	salt = append(salt, hashedName...)
 	sha = sha256.Sum256(salt)
 	checksum = hex.EncodeToString(sha[:])
+	if options.Checksum != "" && checksum != options.Checksum {
+		return "", "", fmt.Errorf("module downloaded from %v has checksum %v, which does not match: %v", downloadURL, checksum, options.Checksum)
+	}
 	return fmt.Sprintf("https://envoy-gateway:18002/%s.wasm", hashedName), checksum, nil
 }
 
 func (m *mockWasmCache) Cleanup() {}
+
+// ir.Xds implements a custom Equal method which ensures exact equality, even
+// over redacted fields. This function is used to remove the Equal method from
+// the type, but ensure that the set of fields is the same.
+// This allows us to use cmp.Diff to compare the types with field-level cmpopts.
+func xdsWithoutEqual(a *ir.Xds) any {
+	ret := struct {
+		ReadyListener      *ir.ReadyListener
+		AccessLog          *ir.AccessLog
+		Tracing            *ir.Tracing
+		Metrics            *ir.Metrics
+		HTTP               []*ir.HTTPListener
+		TCP                []*ir.TCPListener
+		UDP                []*ir.UDPListener
+		EnvoyPatchPolicies []*ir.EnvoyPatchPolicy
+		FilterOrder        []egv1a1.FilterPosition
+	}{
+		ReadyListener:      a.ReadyListener,
+		AccessLog:          a.AccessLog,
+		Tracing:            a.Tracing,
+		Metrics:            a.Metrics,
+		HTTP:               a.HTTP,
+		TCP:                a.TCP,
+		UDP:                a.UDP,
+		EnvoyPatchPolicies: a.EnvoyPatchPolicies,
+		FilterOrder:        a.FilterOrder,
+	}
+
+	// Ensure we didn't drop an exported field.
+	ta, tr := reflect.TypeOf(*a), reflect.TypeOf(ret)
+	for i := 0; i < ta.NumField(); i++ {
+		aField := ta.Field(i)
+		if rField, ok := tr.FieldByName(aField.Name); !ok || aField.Type != rField.Type {
+			// We panic here because this is test code, and it would be hard to
+			// plumb the error out.
+			panic(fmt.Sprintf("field %q is missing or has wrong type in the ir.Xds mirror", aField.Name))
+		}
+	}
+
+	return ret
+}

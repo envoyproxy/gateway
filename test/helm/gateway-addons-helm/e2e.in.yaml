@@ -1,4 +1,8 @@
+alloy:
+  enabled: true
 grafana:
   enabled: false
 opentelemetry-collector:
   enabled: true
+fluent-bit:
+  enabled: false

@@ -1849,7 +1849,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "builder",
-          "expr": "sum by(namespace) (rate(envoy_cluster_upstream_cx_rx_bytes_total{namespace=~\"$Namespace\"}[5m]))",
+          "expr": "sum by(namespace) (rate(envoy_cluster_upstream_cx_tx_bytes_total{namespace=~\"$Namespace\"}[5m]))",
           "instant": false,
           "legendFormat": "{{namespace}}",
           "range": true,

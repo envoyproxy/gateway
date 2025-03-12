@@ -178,6 +178,70 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 				return
 			}(),
 		},
+		{
+			name: "LoadBalancer svc with IPv6 ingress ip",
+			args: args{
+				gw: &gwapiv1.Gateway{},
+				svc: &corev1.Service{
+					Spec: corev1.ServiceSpec{
+						Type: corev1.ServiceTypeLoadBalancer,
+					},
+					Status: corev1.ServiceStatus{
+						LoadBalancer: corev1.LoadBalancerStatus{
+							Ingress: []corev1.LoadBalancerIngress{
+								{IP: "2001:db8::1"},
+							},
+						},
+					},
+				},
+			},
+			wantAddresses: []gwapiv1.GatewayStatusAddress{
+				{
+					Type:  ptr.To(gwapiv1.IPAddressType),
+					Value: "2001:db8::1",
+				},
+			},
+		},
+		{
+			name: "ClusterIP svc with IPv6",
+			args: args{
+				gw: &gwapiv1.Gateway{},
+				svc: &corev1.Service{
+					Spec: corev1.ServiceSpec{
+						ClusterIPs: []string{"2001:db8::2"},
+						Type:       corev1.ServiceTypeClusterIP,
+					},
+				},
+			},
+			wantAddresses: []gwapiv1.GatewayStatusAddress{
+				{
+					Type:  ptr.To(gwapiv1.IPAddressType),
+					Value: "2001:db8::2",
+				},
+			},
+		},
+		{
+			name: "Nodeport svc with IPv6 node addresses",
+			args: args{
+				gw:            &gwapiv1.Gateway{},
+				nodeAddresses: []string{"2001:db8::3", "2001:db8::4"},
+				svc: &corev1.Service{
+					Spec: corev1.ServiceSpec{
+						Type: corev1.ServiceTypeNodePort,
+					},
+				},
+			},
+			wantAddresses: []gwapiv1.GatewayStatusAddress{
+				{
+					Type:  ptr.To(gwapiv1.IPAddressType),
+					Value: "2001:db8::3",
+				},
+				{
+					Type:  ptr.To(gwapiv1.IPAddressType),
+					Value: "2001:db8::4",
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -268,44 +332,5 @@ func TestUpdateGatewayProgrammedCondition(t *testing.T) {
 				t.Errorf("unexpected condition diff: %s", d)
 			}
 		})
-	}
-}
-
-func TestComputeGatewayScheduledCondition(t *testing.T) {
-	testCases := []struct {
-		name   string
-		sched  bool
-		expect metav1.Condition
-	}{
-		{
-			name:  "scheduled gateway",
-			sched: true,
-			expect: metav1.Condition{
-				Type:   string(gwapiv1.GatewayReasonAccepted),
-				Status: metav1.ConditionTrue,
-			},
-		},
-		{
-			name:  "not scheduled gateway",
-			sched: false,
-			expect: metav1.Condition{
-				Type:   string(gwapiv1.GatewayReasonAccepted),
-				Status: metav1.ConditionFalse,
-			},
-		},
-	}
-
-	for _, tc := range testCases {
-		gw := &gwapiv1.Gateway{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "test",
-				Name:      "test",
-			},
-		}
-
-		got := computeGatewayAcceptedCondition(gw, tc.sched)
-
-		assert.Equal(t, tc.expect.Type, got.Type)
-		assert.Equal(t, tc.expect.Status, got.Status)
 	}
 }

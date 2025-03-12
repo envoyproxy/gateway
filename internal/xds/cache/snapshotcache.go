@@ -231,6 +231,10 @@ func (s *snapshotCache) OnStreamRequest(streamID int64, req *discoveryv3.Discove
 		nodeID, nodeVersion, req.ResourceNames, req.GetTypeUrl(),
 		errorCode, errorMessage)
 
+	if errorCode != 0 {
+		s.log.Errorf("Envoy rejected the last update with code %d and message %s", errorCode, errorMessage)
+	}
+
 	return nil
 }
 
@@ -335,6 +339,10 @@ func (s *snapshotCache) OnStreamDeltaRequest(streamID int64, req *discoveryv3.De
 		req.ResourceNamesSubscribe, req.ResourceNamesUnsubscribe,
 		req.GetTypeUrl(),
 		errorCode, errorMessage)
+
+	if errorCode != 0 {
+		s.log.Errorf("Envoy rejected the last update with code %d and message %s", errorCode, errorMessage)
+	}
 
 	return nil
 }

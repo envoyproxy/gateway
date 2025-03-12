@@ -67,11 +67,16 @@ type localFileCache struct {
 	// option sets for configuring the cache.
 	CacheOptions
 
+	// permissionCheckCache is the cache for permission check for private OCI images.
+	// The permission check is run periodically by a background goroutine and the result is cached.
+	permissionCheckCache *permissionCache
+
 	// logger
 	logger logging.Logger
 }
 
 func (c *localFileCache) Start(ctx context.Context) {
+	c.permissionCheckCache.Start(ctx)
 	go c.purge(ctx)
 }
 
@@ -131,9 +136,12 @@ type cacheEntry struct {
 func newLocalFileCache(options CacheOptions, logger logging.Logger) *localFileCache {
 	options = options.sanitize()
 	cache := &localFileCache{
-		httpFetcher:  NewHTTPFetcher(options.HTTPRequestTimeout, options.HTTPRequestMaxRetries, logger),
-		modules:      make(map[moduleKey]*cacheEntry),
-		checksums:    make(map[string]*checksumEntry),
+		httpFetcher: NewHTTPFetcher(options.HTTPRequestTimeout, options.HTTPRequestMaxRetries, logger),
+		modules:     make(map[moduleKey]*cacheEntry),
+		checksums:   make(map[string]*checksumEntry),
+		permissionCheckCache: newPermissionCache(
+			permissionCacheOptions{},
+			logger),
 		CacheOptions: options,
 		logger:       logger,
 	}
@@ -220,7 +228,7 @@ func (c *localFileCache) getOrFetch(key cacheKey, opts GetOptions) (*cacheEntry,
 	if ce != nil {
 		// We still need to check if the pull secret is correct if it is a private OCI image.
 		if u.Scheme == "oci" && ce.isPrivate {
-			if err = c.checkPermission(ctx, u, insecure, opts); err != nil {
+			if _, err := c.permissionCheckCache.IsAllowed(ctx, u, opts.PullSecret, insecure); err != nil {
 				return nil, err
 			}
 		}
@@ -250,7 +258,24 @@ func (c *localFileCache) getOrFetch(key cacheKey, opts GetOptions) (*cacheEntry,
 		if len(opts.PullSecret) > 0 {
 			isPrivate = true
 		}
-		if imageBinaryFetcher, dChecksum, err = c.prepareFetch(ctx, u, insecure, opts); err != nil {
+
+		imageBinaryFetcher, dChecksum, err = c.prepareFetch(ctx, u, insecure, opts.PullSecret)
+
+		if isPrivate {
+			e := &permissionCacheEntry{
+				image: u,
+				fetcherOption: &ImageFetcherOption{
+					Insecure:   insecure,
+					PullSecret: opts.PullSecret,
+				},
+				lastCheck:  time.Now(),
+				lastAccess: time.Now(),
+				checkError: err,
+			}
+			c.permissionCheckCache.Put(e)
+		}
+
+		if err != nil {
 			wasmRemoteFetchTotal.WithFailure(reasonManifestError).Increment()
 			return nil, fmt.Errorf("could not fetch Wasm OCI image: %w", err)
 		}
@@ -287,24 +312,16 @@ func (c *localFileCache) getOrFetch(key cacheKey, opts GetOptions) (*cacheEntry,
 	return c.addEntry(key, b, isPrivate)
 }
 
-func (c *localFileCache) checkPermission(ctx context.Context, u *url.URL, insecure bool, opts GetOptions) error {
-	// Try to get the image metadata to check if the pull secret is correct.
-	if _, _, err := c.prepareFetch(ctx, u, insecure, opts); err != nil {
-		return fmt.Errorf("failed to login to private registry: %w", err)
-	}
-	return nil
-}
-
 // prepareFetch won't fetch the binary, but it will prepare the binaryFetcher and actualDigest.
 func (c *localFileCache) prepareFetch(
-	ctx context.Context, url *url.URL, insecure bool, opts GetOptions) (
+	ctx context.Context, url *url.URL, insecure bool, pullSecret []byte) (
 	binaryFetcher func() ([]byte, error), actualDigest string, err error,
 ) {
 	imgFetcherOps := ImageFetcherOption{
 		Insecure: insecure,
 	}
-	if len(opts.PullSecret) > 0 {
-		imgFetcherOps.PullSecret = opts.PullSecret
+	if len(pullSecret) > 0 {
+		imgFetcherOps.PullSecret = pullSecret
 	}
 	fetcher := NewImageFetcher(ctx, imgFetcherOps, c.logger)
 	if binaryFetcher, actualDigest, err = fetcher.PrepareFetch(url.Host + url.Path); err != nil {

@@ -12,7 +12,7 @@ spec:
     providers:
     - name: example
       remoteJWKS:
-        uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
+        uri: http://static-file-server.gateway-conformance-infra/jwt/jwks.json
       claimToHeaders:
       - claim: name
         header: x-claim-name

@@ -13,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
@@ -64,6 +65,8 @@ type Resources struct {
 	ExtensionServerPolicies []unstructured.Unstructured    `json:"extensionServerPolicies,omitempty" yaml:"extensionServerPolicies,omitempty"`
 	Backends                []*egv1a1.Backend              `json:"backends,omitempty" yaml:"backends,omitempty"`
 	HTTPRouteFilters        []*egv1a1.HTTPRouteFilter      `json:"httpFilters,omitempty" yaml:"httpFilters,omitempty"`
+
+	serviceMap map[types.NamespacedName]*corev1.Service
 }
 
 func NewResources() *Resources {
@@ -111,14 +114,20 @@ func (r *Resources) GetEnvoyProxy(namespace, name string) *egv1a1.EnvoyProxy {
 	return nil
 }
 
+// GetService returns the Service with the given namespace and name.
+// This function creates a HashMap of Services for faster lookup when it's called for the first time.
+// Subsequent calls will use the HashMap for lookup.
+// Note:
+// - This function is not thread-safe.
+// - This function should be called after all the Services are added to the Resources.
 func (r *Resources) GetService(namespace, name string) *corev1.Service {
-	for _, svc := range r.Services {
-		if svc.Namespace == namespace && svc.Name == name {
-			return svc
+	if r.serviceMap == nil {
+		r.serviceMap = make(map[types.NamespacedName]*corev1.Service)
+		for _, svc := range r.Services {
+			r.serviceMap[types.NamespacedName{Namespace: svc.Namespace, Name: svc.Name}] = svc
 		}
 	}
-
-	return nil
+	return r.serviceMap[types.NamespacedName{Namespace: namespace, Name: name}]
 }
 
 func (r *Resources) GetServiceImport(namespace, name string) *mcsapiv1a1.ServiceImport {

@@ -17,11 +17,11 @@ gateways:
   status:
     conditions:
     - lastTransitionTime: null
-      message: 'Invalid tracing backendRefs: Service monitoring/service-not-found
-        not found'
-      reason: Invalid
+      message: 'Invalid tracing backendRefs in the referenced EnvoyProxy: Service
+        monitoring/service-not-found not found'
+      reason: InvalidParameters
       status: "False"
-      type: ListenersNotValid
+      type: Accepted
     listeners:
     - attachedRoutes: 0
       conditions:
@@ -132,7 +132,7 @@ infraIR:
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
@@ -149,3 +149,8 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

@@ -4,7 +4,6 @@
 // the root of the repo.
 
 //go:build e2e
-// +build e2e
 
 package tests
 
@@ -52,6 +51,9 @@ var EnvoyShutdownTest = suite.ConformanceTest{
 				t.Errorf("Failed to get proxy deployment")
 			}
 
+			// Wait for the grpc ext auth service pod to be ready
+			WaitForPods(t, suite.Client, "envoy-gateway-system", map[string]string{"gateway.envoyproxy.io/owning-gateway-name": name}, corev1.PodRunning, PodReady)
+
 			// wait for route to be programmed on envoy
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
@@ -80,7 +82,7 @@ var EnvoyShutdownTest = suite.ConformanceTest{
 			aborter.Abort(false) // abort the load either way
 
 			if err != nil {
-				t.Errorf("Failed to rollout proxy deployment")
+				t.Errorf("Failed to rollout proxy deployment: %v", err)
 			}
 
 			// Wait for the goroutine to finish
@@ -142,7 +144,8 @@ func restartProxyAndWaitForRollout(t *testing.T, timeoutConfig config.TimeoutCon
 		return err
 	}
 
-	return wait.PollUntilContextTimeout(ctx, 1*time.Second, timeoutConfig.CreateTimeout, true, func(ctx context.Context) (bool, error) {
+	// increase timeout for IPv6 first cluster
+	return wait.PollUntilContextTimeout(ctx, 2*time.Second, 2*timeoutConfig.CreateTimeout, true, func(ctx context.Context) (bool, error) {
 		// wait for replicaset with the same annotation to reach ready status
 		podList := &corev1.PodList{}
 		listOpts := []client.ListOption{

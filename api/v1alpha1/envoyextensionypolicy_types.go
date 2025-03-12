@@ -32,16 +32,15 @@ type EnvoyExtensionPolicy struct {
 	Status gwapiv1a2.PolicyStatus `json:"status,omitempty"`
 }
 
-// +kubebuilder:validation:XValidation:rule="(has(self.targetRef) && !has(self.targetRefs)) || (!has(self.targetRef) && has(self.targetRefs)) || (has(self.targetSelectors) && self.targetSelectors.size() > 0) ", message="either targetRef or targetRefs must be used"
+// EnvoyExtensionPolicySpec defines the desired state of EnvoyExtensionPolicy.
 //
+// +kubebuilder:validation:XValidation:rule="(has(self.targetRef) && !has(self.targetRefs)) || (!has(self.targetRef) && has(self.targetRefs)) || (has(self.targetSelectors) && self.targetSelectors.size() > 0) ", message="either targetRef or targetRefs must be used"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? self.targetRef.group == 'gateway.networking.k8s.io' : true", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? self.targetRef.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute', 'UDPRoute', 'TCPRoute', 'TLSRoute'] : true", message="this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? !has(self.targetRef.sectionName) : true",message="this policy does not yet support the sectionName field"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, ref.group == 'gateway.networking.k8s.io') : true ", message="this policy can only have a targetRefs[*].group of gateway.networking.k8s.io"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute', 'UDPRoute', 'TCPRoute', 'TLSRoute']) : true ", message="this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, !has(ref.sectionName)) : true",message="this policy does not yet support the sectionName field"
-//
-// EnvoyExtensionPolicySpec defines the desired state of EnvoyExtensionPolicy.
 type EnvoyExtensionPolicySpec struct {
 	PolicyTargetReferences `json:",inline"`
 
@@ -54,11 +53,18 @@ type EnvoyExtensionPolicySpec struct {
 	Wasm []Wasm `json:"wasm,omitempty"`
 
 	// ExtProc is an ordered list of external processing filters
-	// that should added to the envoy filter chain
+	// that should be added to the envoy filter chain
 	//
 	// +kubebuilder:validation:MaxItems=16
 	// +optional
 	ExtProc []ExtProc `json:"extProc,omitempty"`
+
+	// Lua is an ordered list of Lua filters
+	// that should be added to the envoy filter chain
+	//
+	// +kubebuilder:validation:MaxItems=16
+	// +optional
+	Lua []Lua `json:"lua,omitempty"`
 }
 
 //+kubebuilder:object:root=true

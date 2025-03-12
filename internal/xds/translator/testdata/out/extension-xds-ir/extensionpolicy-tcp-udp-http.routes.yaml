@@ -1,2 +1,14 @@
 - ignorePortInHostMatching: true
   name: envoy-gateway/gateway-1/http1
+  virtualHosts:
+  - domains:
+    - '*'
+    name: envoy-gateway/gateway-1/http1/*
+    routes:
+    - match:
+        prefix: /
+      name: http-route
+      route:
+        cluster: http-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

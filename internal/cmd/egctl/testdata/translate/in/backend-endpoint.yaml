@@ -1,0 +1,77 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: eg
+spec:
+  gatewayClassName: eg
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: backend
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - "www.example.com"
+  rules:
+    - backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend
+spec:
+  endpoints:
+    - ip:
+        address: 0.0.0.0
+        port: 3000
+---
+apiVersion: gateway.networking.k8s.io/v1alpha3
+kind: BackendTLSPolicy
+metadata:
+  name: example-com-tls-policy
+spec:
+  targetRefs:
+    - group: 'gateway.envoyproxy.io'
+      kind: Backend
+      name: backend
+  validation:
+    wellKnownCACertificates: "System"
+    hostname: www.example.com
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: ext-proc-example
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
+  extProc:
+    - backendRefs:
+        - name: grpc-ext-proc
+          port: 9002
+      processingMode:
+        request: {}
+        response:
+          body: Streamed

@@ -4,7 +4,6 @@
 // the root of the repo.
 
 //go:build celvalidation
-// +build celvalidation
 
 package celvalidation
 
@@ -16,6 +15,7 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -84,6 +84,60 @@ func TestHTTPRouteFilter(t *testing.T) {
 			wantErrors: []string{
 				"spec.urlRewrite.path.replaceRegexMatch.pattern: Invalid value: \"\": spec.urlRewrite.path.replaceRegexMatch.pattern in body should be at least 1 chars long",
 			},
+		},
+		{
+			desc: "Valid Header",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					URLRewrite: &egv1a1.HTTPURLRewriteFilter{
+						Hostname: &egv1a1.HTTPHostnameModifier{
+							Type:   egv1a1.HeaderHTTPHostnameModifier,
+							Header: ptr.To("foo"),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "Valid SetFromBackend",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					URLRewrite: &egv1a1.HTTPURLRewriteFilter{
+						Hostname: &egv1a1.HTTPHostnameModifier{
+							Type: egv1a1.BackendHTTPHostnameModifier,
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid Header missing settings",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					URLRewrite: &egv1a1.HTTPURLRewriteFilter{
+						Hostname: &egv1a1.HTTPHostnameModifier{
+							Type: egv1a1.HeaderHTTPHostnameModifier,
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.urlRewrite.hostname: Invalid value: \"object\": header must be specified for Header type"},
+		},
+		{
+			desc: "invalid SetFromBackend type",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					URLRewrite: &egv1a1.HTTPURLRewriteFilter{
+						Hostname: &egv1a1.HTTPHostnameModifier{
+							Type:   egv1a1.BackendHTTPHostnameModifier,
+							Header: ptr.To("foo"),
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.urlRewrite.hostname: Invalid value: \"object\": header must be nil if the type is not Header"},
 		},
 	}
 

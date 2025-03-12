@@ -20,6 +20,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/infrastructure/common"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
@@ -53,8 +54,8 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 					},
 				},
 				Data: map[string]string{
-					proxy.SdsCAFilename:   proxy.SdsCAConfigMapData,
-					proxy.SdsCertFilename: proxy.SdsCertConfigMapData,
+					common.SdsCAFilename:   common.GetSdsCAConfigMapData(proxy.XdsTLSCaFilepath),
+					common.SdsCertFilename: common.GetSdsCertConfigMapData(proxy.XdsTLSCertFilepath, proxy.XdsTLSKeyFilepath),
 				},
 			},
 		},
@@ -87,8 +88,8 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 					},
 				},
 				Data: map[string]string{
-					proxy.SdsCAFilename:   proxy.SdsCAConfigMapData,
-					proxy.SdsCertFilename: proxy.SdsCertConfigMapData,
+					common.SdsCAFilename:   common.GetSdsCAConfigMapData(proxy.XdsTLSCaFilepath),
+					common.SdsCertFilename: common.GetSdsCertConfigMapData(proxy.XdsTLSCertFilepath, proxy.XdsTLSKeyFilepath),
 				},
 			},
 		},
@@ -110,7 +111,7 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 					Build()
 			}
 			kube := NewInfra(cli, cfg)
-			r := proxy.NewResourceRender(kube.Namespace, infra.GetProxyInfra(), kube.EnvoyGateway)
+			r := proxy.NewResourceRender(kube.Namespace, kube.DNSDomain, infra.GetProxyInfra(), kube.EnvoyGateway)
 			err := kube.createOrUpdateConfigMap(context.Background(), r)
 			require.NoError(t, err)
 			actual := &corev1.ConfigMap{
@@ -168,7 +169,7 @@ func TestDeleteConfigProxyMap(t *testing.T) {
 			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
 
-			r := proxy.NewResourceRender(kube.Namespace, infra.GetProxyInfra(), kube.EnvoyGateway)
+			r := proxy.NewResourceRender(kube.Namespace, kube.DNSDomain, infra.GetProxyInfra(), kube.EnvoyGateway)
 			cm := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: kube.Namespace,

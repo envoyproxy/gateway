@@ -18,6 +18,7 @@ metadata:
   name: upgrade-config
   namespace: envoy-gateway-system
 spec:
+  ipFamily: IPv4
   provider:
     type: Kubernetes
     kubernetes:

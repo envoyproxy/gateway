@@ -11,6 +11,7 @@ import (
 	"math"
 	"math/big"
 	"net/http"
+	"reflect"
 	"strings"
 	"time"
 
@@ -29,7 +30,7 @@ func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatur
 	}
 	ret := &ir.TrafficFeatures{}
 
-	if timeout, err := buildClusterSettingsTimeout(*policy, nil); err != nil {
+	if timeout, err := buildClusterSettingsTimeout(*policy); err != nil {
 		return nil, err
 	} else {
 		ret.Timeout = timeout
@@ -71,24 +72,26 @@ func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatur
 		ret.HTTP2 = h2
 	}
 
+	var err error
+	if ret.Retry, err = buildRetry(policy.Retry); err != nil {
+		return nil, err
+	}
+
 	// If nothing was set in any of the above calls, return nil instead of an empty
 	// container
 	var empty ir.TrafficFeatures
-	if empty == *ret {
+	if reflect.DeepEqual(empty, *ret) {
 		ret = nil
 	}
 
 	return ret, nil
 }
 
-func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings, traffic *ir.TrafficFeatures) (*ir.Timeout, error) {
+func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings) (*ir.Timeout, error) {
 	if policy.Timeout == nil {
-		if traffic != nil {
-			// Don't lose any existing timeout definitions.
-			return mergeTimeoutSettings(nil, traffic.Timeout), nil
-		}
 		return nil, nil
 	}
+
 	var (
 		errs error
 		to   = &ir.Timeout{}
@@ -109,6 +112,7 @@ func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings, traffic *ir.Traf
 	if pto.HTTP != nil {
 		var cit *metav1.Duration
 		var mcd *metav1.Duration
+		var rt *metav1.Duration
 
 		if pto.HTTP.ConnectionIdleTimeout != nil {
 			d, err := time.ParseDuration(string(*pto.HTTP.ConnectionIdleTimeout))
@@ -128,45 +132,22 @@ func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings, traffic *ir.Traf
 			}
 		}
 
+		if pto.HTTP.RequestTimeout != nil {
+			d, err := time.ParseDuration(string(*pto.HTTP.RequestTimeout))
+			if err != nil {
+				errs = errors.Join(errs, fmt.Errorf("invalid RequestTimeout value %s", *pto.HTTP.RequestTimeout))
+			} else {
+				rt = ptr.To(metav1.Duration{Duration: d})
+			}
+		}
+
 		to.HTTP = &ir.HTTPTimeout{
 			ConnectionIdleTimeout: cit,
 			MaxConnectionDuration: mcd,
+			RequestTimeout:        rt,
 		}
-	}
-
-	// http request timeout is translated during the gateway-api route resource translation
-	// merge route timeout setting with backendtrafficpolicy timeout settings.
-	// Merging is done after the clustersettings definitions are translated so that
-	// clustersettings will override previous settings.
-	if traffic != nil {
-		to = mergeTimeoutSettings(to, traffic.Timeout)
 	}
 	return to, errs
-}
-
-// merge secondary into main if both are not nil, otherwise return the
-// one that is not nil. If both are nil, returns nil
-func mergeTimeoutSettings(main, secondary *ir.Timeout) *ir.Timeout {
-	switch {
-	case main == nil && secondary == nil:
-		return nil
-	case main == nil:
-		return secondary.DeepCopy()
-	case secondary == nil:
-		return main
-	default: // Neither main nor secondary are nil here
-		if secondary.HTTP != nil {
-			setIfNil(&main.HTTP, &ir.HTTPTimeout{})
-			setIfNil(&main.HTTP.RequestTimeout, secondary.HTTP.RequestTimeout)
-			setIfNil(&main.HTTP.ConnectionIdleTimeout, secondary.HTTP.ConnectionIdleTimeout)
-			setIfNil(&main.HTTP.MaxConnectionDuration, secondary.HTTP.MaxConnectionDuration)
-		}
-		if secondary.TCP != nil {
-			setIfNil(&main.TCP, &ir.TCPTimeout{})
-			setIfNil(&main.TCP.ConnectTimeout, secondary.TCP.ConnectTimeout)
-		}
-		return main
-	}
 }
 
 func buildBackendConnection(policy egv1a1.ClusterSettings) (*ir.BackendConnection, error) {
@@ -379,7 +360,7 @@ func buildHealthCheck(policy egv1a1.ClusterSettings) *ir.HealthCheck {
 	irhc := &ir.HealthCheck{}
 	irhc.Passive = buildPassiveHealthCheck(*policy.HealthCheck)
 	irhc.Active = buildActiveHealthCheck(*policy.HealthCheck)
-
+	irhc.PanicThreshold = policy.HealthCheck.PanicThreshold
 	return irhc
 }
 
@@ -494,7 +475,78 @@ func translateDNS(policy egv1a1.ClusterSettings) *ir.DNS {
 		return nil
 	}
 	return &ir.DNS{
+		LookupFamily:   policy.DNS.LookupFamily,
 		RespectDNSTTL:  policy.DNS.RespectDNSTTL,
 		DNSRefreshRate: policy.DNS.DNSRefreshRate,
 	}
+}
+
+func buildRetry(r *egv1a1.Retry) (*ir.Retry, error) {
+	if r == nil {
+		return nil, nil
+	}
+
+	rt := &ir.Retry{}
+
+	if r.NumRetries != nil {
+		rt.NumRetries = ptr.To(uint32(*r.NumRetries))
+	}
+
+	if r.RetryOn != nil {
+		ro := &ir.RetryOn{}
+		bro := false
+		if r.RetryOn.HTTPStatusCodes != nil {
+			ro.HTTPStatusCodes = makeIrStatusSet(r.RetryOn.HTTPStatusCodes)
+			bro = true
+		}
+
+		if r.RetryOn.Triggers != nil {
+			ro.Triggers = makeIrTriggerSet(r.RetryOn.Triggers)
+			bro = true
+		}
+
+		if bro {
+			rt.RetryOn = ro
+		}
+	}
+
+	if r.PerRetry != nil {
+		pr := &ir.PerRetryPolicy{}
+		bpr := false
+
+		if r.PerRetry.Timeout != nil {
+			pr.Timeout = r.PerRetry.Timeout
+			bpr = true
+		}
+
+		if r.PerRetry.BackOff != nil {
+			if r.PerRetry.BackOff.MaxInterval != nil || r.PerRetry.BackOff.BaseInterval != nil {
+				bop := &ir.BackOffPolicy{}
+				if r.PerRetry.BackOff.BaseInterval != nil {
+					bop.BaseInterval = r.PerRetry.BackOff.BaseInterval
+					if bop.BaseInterval.Duration == 0 {
+						return nil, fmt.Errorf("baseInterval cannot be set to 0s")
+					}
+				}
+				if r.PerRetry.BackOff.MaxInterval != nil {
+					bop.MaxInterval = r.PerRetry.BackOff.MaxInterval
+					if bop.MaxInterval.Duration == 0 {
+						return nil, fmt.Errorf("maxInterval cannot be set to 0s")
+					}
+					if bop.BaseInterval != nil && bop.BaseInterval.Duration > bop.MaxInterval.Duration {
+						return nil, fmt.Errorf("maxInterval cannot be less than baseInterval")
+					}
+				}
+
+				pr.BackOff = bop
+				bpr = true
+			}
+		}
+
+		if bpr {
+			rt.PerRetry = pr
+		}
+	}
+
+	return rt, nil
 }

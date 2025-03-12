@@ -3,14 +3,12 @@ on:
   push:
     branches:
     - "main"
-    - "release/v*"
     paths:
     - 'site/**'
     - 'tools/make/docs.mk'
   pull_request:
     branches:
     - "main"
-    - "release/v*"
     paths:
     - 'site/**'
     - 'tools/make/docs.mk'
@@ -23,14 +21,14 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
     - name: Check out code
-      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       with:
         ref: ${{ github.event.pull_request.head.sha }}
 
     - uses: ./tools/github-actions/setup-deps
 
     - name: Run markdown linter
-      uses: nosborn/github-action-markdown-cli@9b5e871c11cc0649c5ac2526af22e23525fa344d  # v3.3.0
+      uses: nosborn/github-action-markdown-cli@58bcfd1af530d87a13d51b76e6713b52602e3613  # v3.4.0
       with:
         files: site/content/*
         config_file: ".github/markdown_lint_config.json"
@@ -48,7 +46,7 @@ jobs:
       contents: write
     steps:
     - name: Git checkout
-      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       with:
         submodules: true
         ref: ${{ github.event.pull_request.head.sha }}
@@ -62,7 +60,7 @@ jobs:
         extended: true
 
     - name: Setup Node
-      uses: actions/setup-node@0a44ba7841725637a19e28fa30b79a866c81b0a6  # v4.1.0
+      uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a  # v4.2.0
       with:
         node-version: '18'
 

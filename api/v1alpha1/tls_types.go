@@ -15,6 +15,10 @@ type ClientTLSSettings struct {
 	// +optional
 	ClientValidation *ClientValidationContext `json:"clientValidation,omitempty"`
 	TLSSettings      `json:",inline"`
+
+	// Session defines settings related to TLS session management.
+	// +optional
+	Session *Session `json:"session,omitempty"`
 }
 
 // +kubebuilder:validation:XValidation:rule="has(self.minVersion) && self.minVersion == '1.3' ? !has(self.ciphers) : true", message="setting ciphers has no effect if the minimum possible TLS version is 1.3"
@@ -65,7 +69,12 @@ type TLSSettings struct {
 	SignatureAlgorithms []string `json:"signatureAlgorithms,omitempty"`
 
 	// ALPNProtocols supplies the list of ALPN protocols that should be
-	// exposed by the listener. By default h2 and http/1.1 are enabled.
+	// exposed by the listener or used by the proxy to connect to the backend.
+	// Defaults:
+	// 1. HTTPS Routes: h2 and http/1.1 are enabled in listener context.
+	// 2. Other Routes: ALPN is disabled.
+	// 3. Backends: proxy uses the appropriate ALPN options for the backend protocol.
+	// When an empty list is provided, the ALPN TLS extension is disabled.
 	// Supported values are:
 	// - http/1.0
 	// - http/1.1
@@ -133,3 +142,40 @@ type ClientValidationContext struct {
 	// +optional
 	CACertificateRefs []gwapiv1.SecretObjectReference `json:"caCertificateRefs,omitempty"`
 }
+
+// Session defines settings related to TLS session management.
+type Session struct {
+	// Resumption determines the proxy's supported TLS session resumption option.
+	// By default, Envoy Gateway does not enable session resumption. Use sessionResumption to
+	// enable stateful and stateless session resumption. Users should consider security impacts
+	// of different resumption methods. Performance gains from resumption are diminished when
+	// Envoy proxy is deployed with more than one replica.
+	// +optional
+	Resumption *SessionResumption `json:"resumption,omitempty"`
+}
+
+// SessionResumption defines supported tls session resumption methods and their associated configuration.
+type SessionResumption struct {
+	// Stateless defines setting for stateless (session-ticket based) session resumption
+	// +optional
+	Stateless *StatelessTLSSessionResumption `json:"stateless,omitempty"`
+
+	// Stateful defines setting for stateful (session-id based) session resumption
+	// +optional
+	Stateful *StatefulTLSSessionResumption `json:"stateful,omitempty"`
+}
+
+// StatefulTLSSessionResumption defines the stateful (session-id based) type of TLS session resumption.
+// Note: When Envoy Proxy is deployed with more than one replica, session caches are not synchronized
+// between instances, possibly leading to resumption failures.
+// Envoy does not re-validate client certificates upon session resumption.
+// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-routematch-tlscontextmatchoptions
+type StatefulTLSSessionResumption struct{}
+
+// StatelessTLSSessionResumption defines the stateless (session-ticket based) type of TLS session resumption.
+// Note: When Envoy Proxy is deployed with more than one replica, session ticket encryption keys are not
+// synchronized between instances, possibly leading to resumption failures.
+// In-memory session ticket encryption keys are rotated every 48 hours.
+// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlssessionticketkeys
+// https://commondatastorage.googleapis.com/chromium-boringssl-docs/ssl.h.html#Session-tickets
+type StatelessTLSSessionResumption struct{}

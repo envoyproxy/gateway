@@ -12,18 +12,11 @@ This instantiated resource can be linked to a [Gateway][Gateway] and [HTTPRoute]
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
-
-Verify the Gateway status:
-
-```shell
-kubectl get gateway/eg -o yaml
-```
+{{< boilerplate prerequisites >}}
 
 ## Configuration
 
-Envoy Gateway supports two types of Wasm extensions: 
+Envoy Gateway supports two types of Wasm extensions:
 * HTTP Wasm Extension: The Wasm extension is fetched from a remote URL.
 * Image Wasm Extension: The Wasm extension is packaged as an OCI image and fetched from an image registry.
 
@@ -45,16 +38,16 @@ metadata:
   name: wasm-test
 spec:
   targetRefs:
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: backend
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: backend
   wasm:
   - name: wasm-filter
     rootID: my_root_id
     code:
       type: HTTP
       http:
-        url: https://raw.githubusercontent.com/envoyproxy/envoy/main/examples/wasm-cc/lib/envoy_filter_http_wasm_example.wasm
+        url: https://raw.githubusercontent.com/envoyproxy/examples/main/wasm-cc/lib/envoy_filter_http_wasm_example.wasm
         sha256: 79c9f85128bb0177b6511afa85d587224efded376ac0ef76df56595f1e6315c0
 EOF
 ```
@@ -71,17 +64,17 @@ metadata:
   name: wasm-test
 spec:
   targetRefs:
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: backend
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: backend
   wasm:
-    - name: wasm-filter
-      rootID: my_root_id
-      code:
-        type: HTTP
-        http:
-          url: https://raw.githubusercontent.com/envoyproxy/envoy/main/examples/wasm-cc/lib/envoy_filter_http_wasm_example.wasm
-          sha256: 79c9f85128bb0177b6511afa85d587224efded376ac0ef76df56595f1e6315c0
+  - name: wasm-filter
+    rootID: my_root_id
+    code:
+      type: HTTP
+      http:
+        url: https://raw.githubusercontent.com/envoyproxy/examples/main/wasm-cc/lib/envoy_filter_http_wasm_example.wasm
+        sha256: 79c9f85128bb0177b6511afa85d587224efded376ac0ef76df56595f1e6315c0
 ```
 
 {{% /tab %}}

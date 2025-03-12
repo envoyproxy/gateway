@@ -1,5 +1,6 @@
 ---
 title: "Envoy Gateway Extension Server"
+linkTitle: "Extension Server"
 ---
 
 This task explains how to extend Envoy Gateway using an Extension Server. Envoy Gateway
@@ -116,7 +117,7 @@ image name and tag.
         - HTTPListener
     service:
       # The service that is hosting the extension server
-      fqdn: 
+      fqdn:
         hostname: extension-server.envoy-gateway-system.svc.cluster.local
         port: 5005
   ```

@@ -33,9 +33,10 @@ accesslog:
         - host: "otel-collector.default.svc.cluster.local"
           port: 4317
         protocol: "GRPC"
+        name: "accesslog-0/backend/0"
 http:
 - name: "first-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 10080
   hostnames:
   - "*"
@@ -51,6 +52,4 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
-    directResponse:
-      body: "Unknown custom filter type: UnsupportedType"
-      statusCode: 500
+        name: "direct-route-dest/backend/0"

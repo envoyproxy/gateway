@@ -6,21 +6,27 @@
 package gatewayapi
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
+	"net/mail"
 	"net/netip"
 	"net/url"
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	perr "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -146,6 +152,17 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 					continue
 				}
 
+				if err := validateSecurityPolicy(policy); err != nil {
+					status.SetTranslationErrorForPolicyAncestors(&policy.Status,
+						parentGateways,
+						t.GatewayControllerName,
+						policy.Generation,
+						status.Error2ConditionMsg(fmt.Errorf("invalid SecurityPolicy: %w", err)),
+					)
+
+					continue
+				}
+
 				if err := t.translateSecurityPolicyForRoute(policy, targetedRoute, resources, xdsIR); err != nil {
 					status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 						parentGateways,
@@ -244,6 +261,30 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 	return res
 }
 
+// validateSecurityPolicy validates the SecurityPolicy.
+// It checks some constraints that are not covered by the CRD schema validation.
+func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
+	apiKeyAuth := p.Spec.APIKeyAuth
+	if apiKeyAuth != nil {
+		if err := validateAPIKeyAuth(apiKeyAuth); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateAPIKeyAuth(apiKeyAuth *egv1a1.APIKeyAuth) error {
+	for _, keySource := range apiKeyAuth.ExtractFrom {
+		// only one of headers, params or cookies is supposed to be specified.
+		if len(keySource.Headers) > 0 && len(keySource.Params) > 0 ||
+			len(keySource.Headers) > 0 && len(keySource.Cookies) > 0 ||
+			len(keySource.Params) > 0 && len(keySource.Cookies) > 0 {
+			return errors.New("only one of headers, params or cookies must be specified")
+		}
+	}
+	return nil
+}
+
 func resolveSecurityPolicyGatewayTargetRef(
 	policy *egv1a1.SecurityPolicy,
 	target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
@@ -328,8 +369,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	// Build IR
 	var (
 		cors          *ir.CORS
-		jwt           *ir.JWT
-		oidc          *ir.OIDC
+		apiKeyAuth    *ir.APIKeyAuth
 		basicAuth     *ir.BasicAuth
 		authorization *ir.Authorization
 		err, errs     error
@@ -339,24 +379,20 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		cors = t.buildCORS(policy.Spec.CORS)
 	}
 
-	if policy.Spec.JWT != nil {
-		jwt = t.buildJWT(policy.Spec.JWT)
-	}
-
-	if policy.Spec.OIDC != nil {
-		if oidc, err = t.buildOIDC(
-			policy,
-			resources); err != nil {
-			err = perr.WithMessage(err, "OIDC")
-			errs = errors.Join(errs, err)
-		}
-	}
-
 	if policy.Spec.BasicAuth != nil {
 		if basicAuth, err = t.buildBasicAuth(
 			policy,
 			resources); err != nil {
 			err = perr.WithMessage(err, "BasicAuth")
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	if policy.Spec.APIKeyAuth != nil {
+		if apiKeyAuth, err = t.buildAPIKeyAuth(
+			policy,
+			resources); err != nil {
+			err = perr.WithMessage(err, "APIKeyAuth")
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -382,12 +418,34 @@ func (t *Translator) translateSecurityPolicyForRoute(
 			if extAuth, err = t.buildExtAuth(
 				policy,
 				resources,
-				gtwCtx.envoyProxy,
-			); err != nil {
+				gtwCtx.envoyProxy); err != nil {
 				err = perr.WithMessage(err, "ExtAuth")
 				errs = errors.Join(errs, err)
 			}
 		}
+
+		var oidc *ir.OIDC
+		if policy.Spec.OIDC != nil {
+			if oidc, err = t.buildOIDC(
+				policy,
+				resources,
+				gtwCtx.envoyProxy); err != nil {
+				err = perr.WithMessage(err, "OIDC")
+				errs = errors.Join(errs, err)
+			}
+		}
+
+		var jwt *ir.JWT
+		if policy.Spec.JWT != nil {
+			if jwt, err = t.buildJWT(
+				policy,
+				resources,
+				gtwCtx.envoyProxy); err != nil {
+				err = perr.WithMessage(err, "JWT")
+				errs = errors.Join(errs, err)
+			}
+		}
+
 		irKey := t.getIRKey(gtwCtx.Gateway)
 		for _, listener := range parentRefCtx.listeners {
 			irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
@@ -398,14 +456,15 @@ func (t *Translator) translateSecurityPolicyForRoute(
 							CORS:          cors,
 							JWT:           jwt,
 							OIDC:          oidc,
+							APIKeyAuth:    apiKeyAuth,
 							BasicAuth:     basicAuth,
 							ExtAuth:       extAuth,
 							Authorization: authorization,
 						}
 						if errs != nil {
 							// Return a 500 direct response to avoid unauthorized access
-							r.DirectResponse = &ir.DirectResponse{
-								StatusCode: 500,
+							r.DirectResponse = &ir.CustomResponse{
+								StatusCode: ptr.To(uint32(500)),
 							}
 						}
 					}
@@ -428,6 +487,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		cors          *ir.CORS
 		jwt           *ir.JWT
 		oidc          *ir.OIDC
+		apiKeyAuth    *ir.APIKeyAuth
 		basicAuth     *ir.BasicAuth
 		extAuth       *ir.ExtAuth
 		authorization *ir.Authorization
@@ -439,13 +499,20 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	}
 
 	if policy.Spec.JWT != nil {
-		jwt = t.buildJWT(policy.Spec.JWT)
+		if jwt, err = t.buildJWT(
+			policy,
+			resources,
+			gateway.envoyProxy); err != nil {
+			err = perr.WithMessage(err, "JWT")
+			errs = errors.Join(errs, err)
+		}
 	}
 
 	if policy.Spec.OIDC != nil {
 		if oidc, err = t.buildOIDC(
 			policy,
-			resources); err != nil {
+			resources,
+			gateway.envoyProxy); err != nil {
 			err = perr.WithMessage(err, "OIDC")
 			errs = errors.Join(errs, err)
 		}
@@ -460,12 +527,20 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		}
 	}
 
+	if policy.Spec.APIKeyAuth != nil {
+		if apiKeyAuth, err = t.buildAPIKeyAuth(
+			policy,
+			resources); err != nil {
+			err = perr.WithMessage(err, "APIKeyAuth")
+			errs = errors.Join(errs, err)
+		}
+	}
+
 	if policy.Spec.ExtAuth != nil {
 		if extAuth, err = t.buildExtAuth(
 			policy,
 			resources,
-			gateway.envoyProxy,
-		); err != nil {
+			gateway.envoyProxy); err != nil {
 			err = perr.WithMessage(err, "ExtAuth")
 			errs = errors.Join(errs, err)
 		}
@@ -505,14 +580,15 @@ func (t *Translator) translateSecurityPolicyForGateway(
 				CORS:          cors,
 				JWT:           jwt,
 				OIDC:          oidc,
+				APIKeyAuth:    apiKeyAuth,
 				BasicAuth:     basicAuth,
 				ExtAuth:       extAuth,
 				Authorization: authorization,
 			}
 			if errs != nil {
 				// Return a 500 direct response to avoid unauthorized access
-				r.DirectResponse = &ir.DirectResponse{
-					StatusCode: 500,
+				r.DirectResponse = &ir.CustomResponse{
+					StatusCode: ptr.To(uint32(500)),
 				}
 			}
 		}
@@ -556,29 +632,176 @@ func wildcard2regex(wildcard string) string {
 	return regexStr
 }
 
-func (t *Translator) buildJWT(jwt *egv1a1.JWT) *ir.JWT {
-	return &ir.JWT{
-		AllowMissing: ptr.Deref(jwt.Optional, false),
-		Providers:    jwt.Providers,
+func (t *Translator) buildJWT(
+	policy *egv1a1.SecurityPolicy,
+	resources *resource.Resources,
+	envoyProxy *egv1a1.EnvoyProxy,
+) (*ir.JWT, error) {
+	if err := validateJWTProvider(policy.Spec.JWT.Providers); err != nil {
+		return nil, err
 	}
+
+	var providers []ir.JWTProvider
+	for i, p := range policy.Spec.JWT.Providers {
+		provider := ir.JWTProvider{
+			Name:           p.Name,
+			Issuer:         p.Issuer,
+			Audiences:      p.Audiences,
+			ClaimToHeaders: p.ClaimToHeaders,
+			RecomputeRoute: p.RecomputeRoute,
+			ExtractFrom:    p.ExtractFrom,
+		}
+
+		remoteJWKS, err := t.buildRemoteJWKS(policy, &p.RemoteJWKS, i, resources, envoyProxy)
+		if err != nil {
+			return nil, err
+		}
+		provider.RemoteJWKS = *remoteJWKS
+		providers = append(providers, provider)
+	}
+
+	return &ir.JWT{
+		AllowMissing: ptr.Deref(policy.Spec.JWT.Optional, false),
+		Providers:    providers,
+	}, nil
+}
+
+func validateJWTProvider(providers []egv1a1.JWTProvider) error {
+	var errs []error
+
+	var names []string
+	for _, provider := range providers {
+		switch {
+		case len(provider.Name) == 0:
+			errs = append(errs, errors.New("jwt provider cannot be an empty string"))
+		case len(provider.Issuer) != 0:
+			switch {
+			// Issuer follows StringOrURI format based on https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.1.
+			// Hence, when it contains ':', it MUST be a valid URI.
+			case strings.Contains(provider.Issuer, ":"):
+				if _, err := url.ParseRequestURI(provider.Issuer); err != nil {
+					errs = append(errs, fmt.Errorf("invalid issuer; when issuer contains ':' character, it MUST be a valid URI"))
+				}
+			// Adding reserved character for '@', to represent an email address.
+			// Hence, when it contains '@', it MUST be a valid Email Address.
+			case strings.Contains(provider.Issuer, "@"):
+				if _, err := mail.ParseAddress(provider.Issuer); err != nil {
+					errs = append(errs, fmt.Errorf("invalid issuer; when issuer contains '@' character, it MUST be a valid Email Address format: %w", err))
+				}
+			}
+
+		case len(provider.RemoteJWKS.URI) == 0:
+			errs = append(errs, fmt.Errorf("uri must be set for remote JWKS provider: %s", provider.Name))
+		}
+		if _, err := url.ParseRequestURI(provider.RemoteJWKS.URI); err != nil {
+			errs = append(errs, fmt.Errorf("invalid remote JWKS URI: %w", err))
+		}
+
+		if len(errs) == 0 {
+			if strErrs := validation.IsQualifiedName(provider.Name); len(strErrs) != 0 {
+				for _, strErr := range strErrs {
+					errs = append(errs, errors.New(strErr))
+				}
+			}
+			// Ensure uniqueness among provider names.
+			if names == nil {
+				names = append(names, provider.Name)
+			} else {
+				for _, name := range names {
+					if name == provider.Name {
+						errs = append(errs, fmt.Errorf("provider name %s must be unique", provider.Name))
+					} else {
+						names = append(names, provider.Name)
+					}
+				}
+			}
+		}
+
+		for _, claimToHeader := range provider.ClaimToHeaders {
+			switch {
+			case len(claimToHeader.Header) == 0:
+				errs = append(errs, fmt.Errorf("header must be set for claimToHeader provider: %s", claimToHeader.Header))
+			case len(claimToHeader.Claim) == 0:
+				errs = append(errs, fmt.Errorf("claim must be set for claimToHeader provider: %s", claimToHeader.Claim))
+			}
+		}
+	}
+
+	return errors.Join(errs...)
+}
+
+func (t *Translator) buildRemoteJWKS(
+	policy *egv1a1.SecurityPolicy,
+	remoteJWKS *egv1a1.RemoteJWKS,
+	index int,
+	resources *resource.Resources,
+	envoyProxy *egv1a1.EnvoyProxy,
+) (*ir.RemoteJWKS, error) {
+	var (
+		protocol ir.AppProtocol
+		rd       *ir.RouteDestination
+		traffic  *ir.TrafficFeatures
+		err      error
+	)
+
+	u, err := url.Parse(remoteJWKS.URI)
+	if err != nil {
+		return nil, err
+	}
+
+	if u.Scheme == "https" {
+		protocol = ir.HTTPS
+	} else {
+		protocol = ir.HTTP
+	}
+
+	if len(remoteJWKS.BackendRefs) > 0 {
+		if rd, err = t.translateExtServiceBackendRefs(
+			policy, remoteJWKS.BackendRefs, protocol, resources, envoyProxy, "jwt", index); err != nil {
+			return nil, err
+		}
+	}
+
+	if remoteJWKS.BackendSettings != nil {
+		if traffic, err = translateTrafficFeatures(remoteJWKS.BackendSettings); err != nil {
+			return nil, err
+		}
+	}
+
+	return &ir.RemoteJWKS{
+		Destination: rd,
+		Traffic:     traffic,
+		URI:         remoteJWKS.URI,
+	}, nil
 }
 
 func (t *Translator) buildOIDC(
 	policy *egv1a1.SecurityPolicy,
 	resources *resource.Resources,
+	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.OIDC, error) {
 	var (
-		oidc         = policy.Spec.OIDC
-		clientSecret *corev1.Secret
-		provider     *ir.OIDCProvider
-		err          error
+		oidc               = policy.Spec.OIDC
+		provider           *ir.OIDCProvider
+		clientSecret       *corev1.Secret
+		redirectURL        = defaultRedirectURL
+		redirectPath       = defaultRedirectPath
+		logoutPath         = defaultLogoutPath
+		forwardAccessToken = defaultForwardAccessToken
+		refreshToken       = defaultRefreshToken
+		err                error
 	)
+
+	if provider, err = t.buildOIDCProvider(policy, resources, envoyProxy); err != nil {
+		return nil, err
+	}
 
 	from := crossNamespaceFrom{
 		group:     egv1a1.GroupName,
 		kind:      resource.KindSecurityPolicy,
 		namespace: policy.Namespace,
 	}
+
 	if clientSecret, err = t.validateSecretRef(
 		false, from, oidc.ClientSecret, resources); err != nil {
 		return nil, err
@@ -591,24 +814,7 @@ func (t *Translator) buildOIDC(
 			clientSecret.Namespace, clientSecret.Name)
 	}
 
-	// Discover the token and authorization endpoints from the issuer's
-	// well-known url if not explicitly specified
-	if provider, err = discoverEndpointsFromIssuer(&oidc.Provider); err != nil {
-		return nil, err
-	}
-
-	if err = validateTokenEndpoint(provider.TokenEndpoint); err != nil {
-		return nil, err
-	}
 	scopes := appendOpenidScopeIfNotExist(oidc.Scopes)
-
-	var (
-		redirectURL        = defaultRedirectURL
-		redirectPath       = defaultRedirectPath
-		logoutPath         = defaultLogoutPath
-		forwardAccessToken = defaultForwardAccessToken
-		refreshToken       = defaultRefreshToken
-	)
 
 	if oidc.RedirectURL != nil {
 		path, err := extractRedirectPath(*oidc.RedirectURL)
@@ -668,6 +874,79 @@ func (t *Translator) buildOIDC(
 	}, nil
 }
 
+func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) (*ir.OIDCProvider, error) {
+	var (
+		provider              = policy.Spec.OIDC.Provider
+		tokenEndpoint         string
+		authorizationEndpoint string
+		protocol              ir.AppProtocol
+		rd                    *ir.RouteDestination
+		traffic               *ir.TrafficFeatures
+		providerTLS           *ir.TLSUpstreamConfig
+		err                   error
+	)
+
+	var u *url.URL
+	if provider.TokenEndpoint != nil {
+		u, err = url.Parse(*provider.TokenEndpoint)
+	} else {
+		u, err = url.Parse(provider.Issuer)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	if u.Scheme == "https" {
+		protocol = ir.HTTPS
+	} else {
+		protocol = ir.HTTP
+	}
+
+	if len(provider.BackendRefs) > 0 {
+		if rd, err = t.translateExtServiceBackendRefs(policy, provider.BackendRefs, protocol, resources, envoyProxy, "oidc", 0); err != nil {
+			return nil, err
+		}
+	}
+
+	if rd != nil {
+		for _, st := range rd.Settings {
+			if st.TLS != nil {
+				providerTLS = st.TLS
+				break
+			}
+		}
+	}
+
+	// Discover the token and authorization endpoints from the issuer's well-known url if not explicitly specified.
+	// EG assumes that the issuer url uses the same protocol and CA as the token endpoint.
+	// If we need to support different protocols or CAs, we need to add more fields to the OIDCProvider CRD.
+	if provider.TokenEndpoint == nil || provider.AuthorizationEndpoint == nil {
+		tokenEndpoint, authorizationEndpoint, err = fetchEndpointsFromIssuer(provider.Issuer, providerTLS)
+		if err != nil {
+			return nil, fmt.Errorf("error fetching endpoints from issuer: %w", err)
+		}
+	} else {
+		tokenEndpoint = *provider.TokenEndpoint
+		authorizationEndpoint = *provider.AuthorizationEndpoint
+	}
+
+	if err = validateTokenEndpoint(tokenEndpoint); err != nil {
+		return nil, err
+	}
+
+	if traffic, err = translateTrafficFeatures(provider.BackendSettings); err != nil {
+		return nil, err
+	}
+
+	return &ir.OIDCProvider{
+		Destination:           rd,
+		Traffic:               traffic,
+		AuthorizationEndpoint: authorizationEndpoint,
+		TokenEndpoint:         tokenEndpoint,
+	}, nil
+}
+
 func extractRedirectPath(redirectURL string) (string, error) {
 	schemeDelimiter := strings.Index(redirectURL, "://")
 	if schemeDelimiter <= 0 {
@@ -712,38 +991,38 @@ type OpenIDConfig struct {
 	AuthorizationEndpoint string `json:"authorization_endpoint"`
 }
 
-// discoverEndpointsFromIssuer discovers the token and authorization endpoints from the issuer's well-known url
-// return error if failed to fetch the well-known configuration
-func discoverEndpointsFromIssuer(provider *egv1a1.OIDCProvider) (*ir.OIDCProvider, error) {
-	if provider.TokenEndpoint == nil || provider.AuthorizationEndpoint == nil {
-		tokenEndpoint, authorizationEndpoint, err := fetchEndpointsFromIssuer(provider.Issuer)
-		if err != nil {
-			return nil, fmt.Errorf("error fetching endpoints from issuer: %w", err)
+func fetchEndpointsFromIssuer(issuerURL string, providerTLS *ir.TLSUpstreamConfig) (string, string, error) {
+	var (
+		tlsConfig *tls.Config
+		err       error
+	)
+
+	if providerTLS != nil {
+		if tlsConfig, err = providerTLS.ToTLSConfig(); err != nil {
+			return "", "", err
 		}
-		return &ir.OIDCProvider{
-			TokenEndpoint:         tokenEndpoint,
-			AuthorizationEndpoint: authorizationEndpoint,
-		}, nil
 	}
 
-	return &ir.OIDCProvider{
-		TokenEndpoint:         *provider.TokenEndpoint,
-		AuthorizationEndpoint: *provider.AuthorizationEndpoint,
-	}, nil
-}
-
-func fetchEndpointsFromIssuer(issuerURL string) (string, string, error) {
-	// Fetch the OpenID configuration from the issuer URL
-	resp, err := http.Get(fmt.Sprintf("%s/.well-known/openid-configuration", issuerURL))
-	if err != nil {
-		return "", "", err
+	client := &http.Client{}
+	if tlsConfig != nil {
+		client.Transport = &http.Transport{
+			TLSClientConfig: tlsConfig,
+		}
 	}
-	defer resp.Body.Close()
 
 	// Parse the OpenID configuration response
 	var config OpenIDConfig
-	err = json.NewDecoder(resp.Body).Decode(&config)
-	if err != nil {
+	if err = backoff.Retry(func() error {
+		resp, err := client.Get(fmt.Sprintf("%s/.well-known/openid-configuration", issuerURL))
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+		if err = json.NewDecoder(resp.Body).Decode(&config); err != nil {
+			return err
+		}
+		return nil
+	}, backoff.NewExponentialBackOff(backoff.WithMaxElapsedTime(5*time.Second))); err != nil {
 		return "", "", err
 	}
 
@@ -770,6 +1049,46 @@ func validateTokenEndpoint(tokenEndpoint string) error {
 		}
 	}
 	return nil
+}
+
+func (t *Translator) buildAPIKeyAuth(
+	policy *egv1a1.SecurityPolicy,
+	resources *resource.Resources,
+) (*ir.APIKeyAuth, error) {
+	from := crossNamespaceFrom{
+		group:     egv1a1.GroupName,
+		kind:      resource.KindSecurityPolicy,
+		namespace: policy.Namespace,
+	}
+
+	credentials := make(map[string]ir.PrivateBytes)
+	for _, ref := range policy.Spec.APIKeyAuth.CredentialRefs {
+		credentialsSecret, err := t.validateSecretRef(
+			false, from, ref, resources)
+		if err != nil {
+			return nil, err
+		}
+		for clientid, key := range credentialsSecret.Data {
+			if _, ok := credentials[clientid]; ok {
+				continue
+			}
+			credentials[clientid] = key
+		}
+	}
+
+	extractFrom := make([]*ir.ExtractFrom, 0, len(policy.Spec.APIKeyAuth.ExtractFrom))
+	for _, e := range policy.Spec.APIKeyAuth.ExtractFrom {
+		extractFrom = append(extractFrom, &ir.ExtractFrom{
+			Headers: e.Headers,
+			Cookies: e.Cookies,
+			Params:  e.Params,
+		})
+	}
+
+	return &ir.APIKeyAuth{
+		Credentials: credentials,
+		ExtractFrom: extractFrom,
+	}, nil
 }
 
 func (t *Translator) buildBasicAuth(
@@ -800,21 +1119,27 @@ func (t *Translator) buildBasicAuth(
 	}
 
 	return &ir.BasicAuth{
-		Name:  irConfigName(policy),
-		Users: usersSecretBytes,
+		Name:                  irConfigName(policy),
+		Users:                 usersSecretBytes,
+		ForwardUsernameHeader: basicAuth.ForwardUsernameHeader,
 	}, nil
 }
 
-func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) (*ir.ExtAuth, error) {
+func (t *Translator) buildExtAuth(
+	policy *egv1a1.SecurityPolicy,
+	resources *resource.Resources,
+	envoyProxy *egv1a1.EnvoyProxy,
+) (*ir.ExtAuth, error) {
 	var (
-		http      = policy.Spec.ExtAuth.HTTP
-		grpc      = policy.Spec.ExtAuth.GRPC
-		backends  *egv1a1.BackendCluster
-		protocol  ir.AppProtocol
-		ds        []*ir.DestinationSetting
-		authority string
-		err       error
-		traffic   *ir.TrafficFeatures
+		http            = policy.Spec.ExtAuth.HTTP
+		grpc            = policy.Spec.ExtAuth.GRPC
+		backendRefs     []egv1a1.BackendRef
+		backendSettings *egv1a1.ClusterSettings
+		protocol        ir.AppProtocol
+		rd              *ir.RouteDestination
+		authority       string
+		err             error
+		traffic         *ir.TrafficFeatures
 	)
 
 	// These are sanity checks, they should never happen because the API server
@@ -827,18 +1152,44 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *reso
 
 	switch {
 	case http != nil:
-		backends = &http.BackendCluster
 		protocol = ir.HTTP
-	case grpc != nil:
-		backends = &grpc.BackendCluster
-		protocol = ir.GRPC
-	}
-	pnn := utils.NamespacedName(policy)
-	for _, backendRef := range backends.BackendRefs {
-		if err = t.validateExtServiceBackendReference(&backendRef.BackendObjectReference, policy.Namespace, policy.Kind, resources); err != nil {
-			return nil, err
+		backendSettings = http.BackendSettings
+		switch {
+		case len(http.BackendRefs) > 0:
+			backendRefs = http.BackendCluster.BackendRefs
+		case http.BackendRef != nil:
+			backendRefs = []egv1a1.BackendRef{
+				{
+					BackendObjectReference: *http.BackendRef,
+				},
+			}
+		default:
+			// This is a sanity check, it should never happen because the API server should have caught it
+			return nil, errors.New("http backend refs must be specified")
 		}
+	case grpc != nil:
+		protocol = ir.GRPC
+		backendSettings = grpc.BackendSettings
+		switch {
+		case len(grpc.BackendCluster.BackendRefs) > 0:
+			backendRefs = grpc.BackendRefs
+		case grpc.BackendRef != nil:
+			backendRefs = []egv1a1.BackendRef{
+				{
+					BackendObjectReference: *grpc.BackendRef,
+				},
+			}
+		default:
+			// This is a sanity check, it should never happen because the API server should have caught it
+			return nil, errors.New("grpc backend refs must be specified")
+		}
+	}
 
+	if rd, err = t.translateExtServiceBackendRefs(policy, backendRefs, protocol, resources, envoyProxy, "extauth", 0); err != nil {
+		return nil, err
+	}
+
+	for _, backendRef := range backendRefs {
 		// Authority is the calculated hostname that will be used as the Authority header.
 		// If there are multiple backend referenced, simply use the first one - there are no good answers here.
 		// When translated to XDS, the authority is used on the filter level not on the cluster level.
@@ -846,26 +1197,9 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *reso
 		if authority == "" {
 			authority = backendRefAuthority(resources, &backendRef.BackendObjectReference, policy)
 		}
-
-		extServiceDest, err := t.processExtServiceDestination(
-			&backendRef,
-			pnn,
-			resource.KindSecurityPolicy,
-			protocol,
-			resources,
-			envoyProxy,
-		)
-		if err != nil {
-			return nil, err
-		}
-		ds = append(ds, extServiceDest)
-	}
-	rd := ir.RouteDestination{
-		Name:     irIndexedExtServiceDestinationName(pnn, resource.KindSecurityPolicy, 0),
-		Settings: ds,
 	}
 
-	if traffic, err = translateTrafficFeatures(backends.BackendSettings); err != nil {
+	if traffic, err = translateTrafficFeatures(backendSettings); err != nil {
 		return nil, err
 	}
 	extAuth := &ir.ExtAuth{
@@ -878,17 +1212,24 @@ func (t *Translator) buildExtAuth(policy *egv1a1.SecurityPolicy, resources *reso
 
 	if http != nil {
 		extAuth.HTTP = &ir.HTTPExtAuthService{
-			Destination:      rd,
+			Destination:      *rd,
 			Authority:        authority,
 			Path:             ptr.Deref(http.Path, ""),
 			HeadersToBackend: http.HeadersToBackend,
 		}
 	} else {
 		extAuth.GRPC = &ir.GRPCExtAuthService{
-			Destination: rd,
+			Destination: *rd,
 			Authority:   authority,
 		}
 	}
+
+	if policy.Spec.ExtAuth.BodyToExtAuth != nil {
+		extAuth.BodyToExtAuth = &ir.BodyToExtAuth{
+			MaxRequestBytes: policy.Spec.ExtAuth.BodyToExtAuth.MaxRequestBytes,
+		}
+	}
+
 	return extAuth, nil
 }
 
@@ -905,16 +1246,22 @@ func backendRefAuthority(resources *resource.Resources, backendRef *gwapiv1.Back
 			// TODO: exists multi FQDN endpoints?
 			for _, ep := range backend.Spec.Endpoints {
 				if ep.FQDN != nil {
-					return fmt.Sprintf("%s:%d", ep.FQDN.Hostname, ep.FQDN.Port)
+					return net.JoinHostPort(ep.FQDN.Hostname, strconv.Itoa(int(ep.FQDN.Port)))
 				}
 			}
 		}
 	}
 
-	return fmt.Sprintf("%s.%s:%d",
-		backendRef.Name,
-		backendNamespace,
-		*backendRef.Port)
+	// Port is mandatory for Kubernetes services
+	if backendKind == resource.KindService {
+		return net.JoinHostPort(
+			fmt.Sprintf("%s.%s", backendRef.Name, backendNamespace),
+			strconv.Itoa(int(*backendRef.Port)),
+		)
+	}
+
+	// Fallback to the backendRef name, normally it's a unix domain socket in this case
+	return fmt.Sprintf("%s.%s", backendRef.Name, backendNamespace)
 }
 
 func (t *Translator) buildAuthorization(policy *egv1a1.SecurityPolicy) (*ir.Authorization, error) {
@@ -931,7 +1278,7 @@ func (t *Translator) buildAuthorization(policy *egv1a1.SecurityPolicy) (*ir.Auth
 	irAuth.DefaultAction = defaultAction
 
 	for i, rule := range authorization.Rules {
-		principal := ir.Principal{}
+		irPrincipal := ir.Principal{}
 
 		for _, cidr := range rule.Principal.ClientCIDRs {
 			cidrMatch, err := parseCIDR(string(cidr))
@@ -939,10 +1286,11 @@ func (t *Translator) buildAuthorization(policy *egv1a1.SecurityPolicy) (*ir.Auth
 				return nil, fmt.Errorf("unable to translate authorization rule: %w", err)
 			}
 
-			principal.ClientCIDRs = append(principal.ClientCIDRs, cidrMatch)
+			irPrincipal.ClientCIDRs = append(irPrincipal.ClientCIDRs, cidrMatch)
 		}
 
-		principal.JWT = rule.Principal.JWT
+		irPrincipal.JWT = rule.Principal.JWT
+		irPrincipal.Headers = rule.Principal.Headers
 
 		var name string
 		if rule.Name != nil && *rule.Name != "" {
@@ -953,7 +1301,8 @@ func (t *Translator) buildAuthorization(policy *egv1a1.SecurityPolicy) (*ir.Auth
 		irAuth.Rules = append(irAuth.Rules, &ir.AuthorizationRule{
 			Name:      name,
 			Action:    rule.Action,
-			Principal: principal,
+			Operation: rule.Operation,
+			Principal: irPrincipal,
 		})
 	}
 

@@ -1,0 +1,192 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: remote-jwks-server-secret
+  namespace: gateway-conformance-infra
+type: kubernetes.io/tls
+data:
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURuVENDQW9XZ0F3SUJBZ0lCQURBTkJna3Foa2lHOXcwQkFRc0ZBREF0TVJVd0V3WURWUVFLREF4bGVHRnQKY0d4bElFbHVZeTR4RkRBU0JnTlZCQU1NQzJWNFlXMXdiR1V1WTI5dE1CNFhEVEkxTURFd056RXpNVEF5TTFvWApEVE0xTURFd05URXpNVEF5TTFvd1ZqRTFNRE1HQTFVRUF3d3NjbVZ0YjNSbExXcDNhM010YzJWeWRtVnlMbWRoCmRHVjNZWGt0WTI5dVptOXliV0Z1WTJVdGFXNW1jbUV4SFRBYkJnTlZCQW9NRkdWNFlXMXdiR1VnYjNKbllXNXAKZW1GMGFXOXVNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQTJFRGFxMXpWaVE1dwpJMGNTVjNJS1lMelRCQVQrb3RHcVVISmhMc1pNU0xxc0pydlVDSjB2a3h0TWh4a09QNGlhdVJBRmhlaEE5a3p4Cm9zOXFUMjM2Si9DZGVxWUYwUGJsOVBZeXVDb2Z3RWdGMHhlZHNUbUVoMWljeEpWTjFLa2ZKTU1jZFhHYzJKdU0KbGdKUmVmbzkvaFRmdWFaek5xZnZ3ckFuT3ZWV3BlK29lUGwzOWhnbEc0V1MvYVhiTmdkTEhsUitRZUVLS3NIdgpNemNrMHQ0SE8ybVBPTHZ3R0l6YU1icll5dmh6Y25ETmFmVnczRHBEdW8yeFRaMVZuenh6bmFsTDgwWmsyRGYwCmlMNTgwcCtkTlBjbHB5L3Vtc2ttR00wdGF6eFd3Q0ovK1cxb0xKSFJQdmoxdUk1YnVKMDZGODZBb0ZDRUpURGIKdFJRNk5sOTZNUUlEQVFBQm80R2VNSUdiTUFzR0ExVWREd1FFQXdJRm9EQVRCZ05WSFNVRUREQUtCZ2dyQmdFRgpCUWNEQVRBM0JnTlZIUkVFTURBdWdpeHlaVzF2ZEdVdGFuZHJjeTF6WlhKMlpYSXVaMkYwWlhkaGVTMWpiMjVtCmIzSnRZVzVqWlMxcGJtWnlZVEFkQmdOVkhRNEVGZ1FVQVA1eWdpQk9LUWI2cVV0MmpiWlZ4ZGp4ZWhJd0h3WUQKVlIwakJCZ3dGb0FVTTlmSW9ydkQ5NEdNRHNMTGtSdUdNZzFVTHNjd0RRWUpLb1pJaHZjTkFRRUxCUUFEZ2dFQgpBRGlXSDVIZUhiRWZScjY2bHFqaUwwR0RFeWN3YmJBUmc5TTEvdlV6SVVlMk15U1ZjOW9lN3RKMVBKWER5REFpCnBDc1lOQ25MN0EzT0Jha2Q3dWFhRTlGOURRWVd1aHcwNW1PREVxWjVJSU90c2RWc2VjRHdycDdjdENCVW5ja1IKN0tiQUYyU0hhYkNBaEEweVhFTTFaWUJUbG1PVlBMaWxjSytKOTdmY3FGSVM4OUV3ZUw2RGdQNDNyU0lqdUxGcgpHSGJMaS80ZUJSSlFqdExYVC82RVcvamZRMWM0K0ZkNWVZRXZqK2FzU3JnbTJyRmZBWk5sWEtGYnhtUjJMQ1RiCmluclhJUzhQeWxvM3U5L2JvVDlxOUpkK2tQZ0tqWGx5eFNkRjJDakZiNWcwT2hqWE5qWGZ6NnVMUUUwNnlZV1EKY0lIVWZ0ZWhOWk9na2thY2NYVGVPRUU9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+  tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2Z0lCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktnd2dnU2tBZ0VBQW9JQkFRRFlRTnFyWE5XSkRuQWoKUnhKWGNncGd2Tk1FQlA2aTBhcFFjbUV1eGt4SXVxd211OVFJblMrVEcweUhHUTQvaUpxNUVBV0Y2RUQyVFBHaQp6MnBQYmZvbjhKMTZwZ1hROXVYMDlqSzRLaC9BU0FYVEY1MnhPWVNIV0p6RWxVM1VxUjhrd3h4MWNaelltNHlXCkFsRjUrajMrRk4rNXBuTTJwKy9Dc0NjNjlWYWw3Nmg0K1hmMkdDVWJoWkw5cGRzMkIwc2VWSDVCNFFvcXdlOHoKTnlUUzNnYzdhWTg0dS9BWWpOb3h1dGpLK0hOeWNNMXA5WERjT2tPNmpiRk5uVldmUEhPZHFVdnpSbVRZTi9TSQp2bnpTbjUwMDl5V25MKzZheVNZWXpTMXJQRmJBSW4vNWJXZ3NrZEUrK1BXNGpsdTRuVG9Yem9DZ1VJUWxNTnUxCkZEbzJYM294QWdNQkFBRUNnZ0VBS0NRWnN2ZGZkN3BqWEZrRDhaRnNsYnBYSFFia1VVckQ1M3pqeHkvdDF3NDMKaUZVVExhb251NUcwcWRzZnh2RlBid3luU2N6cnlneE1TaUZnSlhCUG4veE03d2hFU2g2YVh0Y1lZUkVJcGNONAp1VTlINlM2NUIvcU4xdnV6Mzhhb3prVWRVanVObHJPQTdCTndGa2s2R3FDN1NwVzRDeXd2R0I5a21OQVRqbWRQCnJTRW9YbldPNVhDemNFVWlhaDl0R1ZIVlgwYzFMWFJxZzB6TG9NUER0TjJNTWdsQ294MDRvZkxJeWxLZVhYODkKcC83VDNMMTlBWDg0RktsSEU2MFFUTllWMU9QaEh1Q3NyTFloVTRib0JtT0huSmJ4NkFCQkRjRG9XN0VpaU56VQp0RmtzbTlUOEdCblRrUTFEbVJid0dJVXBhbUtPTkVGM2hRYzBXQjUydFFLQmdRRHU4cGVvR0pVTEkwVGVTOW9ICmVSSTRIV3hUK0ZXMkV1bEdPRlZleGV4YUdEVS8rcVE3RTBTZXNoTkx5VklOQ1FLYlorNno0d2ZZMW8zam8yZEMKZFRGK2JBZnVzRTZRTERnb29DaGNLYXdBTEFVYTh5aEc5NzRWdStZTC81UGRVQlhkL1ZEYmRXOFFESUN0ZEZjOQpyY1dSakZLbVExdzRsbEFSc2hDWmk0L1lKd0tCZ1FEbnI2Y2V6eTdGVDFIMjVrU1FJN0tIVEVSTlhZQzJkYllGCnVnOWJQWmJuV2xyeDY5ZlljMmlFNnVMR0tONE1BU1VRZFhhaHl5LzdWamloaWNaaEFjTDg1ZWZ1aDFpWE9vTnEKUEQySUdTeWNKUmMwbVdzcFQ1OGJibzgvb0lmL3JXS0Z1QTdQRVNEY3ZlNFNpek5BckYxZUw5VDBYS2tIakVhSwpuZXk1VXU5NTV3S0JnUUNpeG9ZRGtBTndXKzFkVmVUSU5IVHgzekZkbm8yZEJCTC9yLzZRR2xxaElWNmRIL3hpCjlnUkg2MTF6d2todjh0UmcwNU5yM2R3Sm5sZDRYR2RLZ1pWZTN1OGtiZHlISUdoOVhHVkNLMjB0ak05SmhaM0oKZ3BsdUt0dFREeDlHbzNqU0NlL2NJSXF4THlNMWhreXNDc1hOR2Y5dm5mR2o1dG5TeEMvRXVhc2Evd0tCZ1FEVQpzUWgyM0RSUHBwWFVWMmd4K3ROMkthbTZiRkF4TUxhOVl5V2QyVmlqWXV1Q2s4US9UUk55a2o5Rk0xZEZKZmZrCnVERUVMd2dKY0FubElob2dEQUg1TVFaT2o2bmdpek1CWC9RTThTOW0yUllJajU4MCtZZFRJNWdXRFVWTWp0dVgKYm5VSjJ1dVVPamhJaGNtellZa0ZZbHZaU1FkVGlvOW55YnI4RndzSm1RS0JnR3U3dkdUWnZicVJjR1o0Lzh2UgpZRHRtVVVUZnpXaVB5c2dOQXl4dEpCb1k3RitNbTlJd2FBbGhsdEloRy9kVEFpclpjV3ZXR1cwY291SnBocFpCCkdOZ05PQzdPajJoMFNEdW5TMXZRVm1IZ0hrNTVUVlF6bWxTd2twUjBCbnVvYU5lelNhYTlGdzZSTEZ5ZjBLdUMKcEE0VzJWOVh6RjU1T3QvOG1sQXE3YUJBCi0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: remote-jwks-server-ca
+  namespace: gateway-conformance-infra
+data:
+  ca.crt: |
+    -----BEGIN CERTIFICATE-----
+    MIIDOzCCAiOgAwIBAgIUYozfdHNlpdxcE7TCuF+wDOrxi9kwDQYJKoZIhvcNAQEL
+    BQAwLTEVMBMGA1UECgwMZXhhbXBsZSBJbmMuMRQwEgYDVQQDDAtleGFtcGxlLmNv
+    bTAeFw0yNTAxMDcxMzEwMjJaFw0zNTAxMDUxMzEwMjJaMC0xFTATBgNVBAoMDGV4
+    YW1wbGUgSW5jLjEUMBIGA1UEAwwLZXhhbXBsZS5jb20wggEiMA0GCSqGSIb3DQEB
+    AQUAA4IBDwAwggEKAoIBAQDm+2qqe20PGAVzGU4cuOp5K74tdtRiEVj8Jps9tVZx
+    I9UIYbVHvJgDnX2yNyHgPs8s0hQ2q8Q2HAbqeUCRhmcuWhHkag+3rpKWjdGZWLHy
+    9lAYv2RSybeTwQAGVDwSz8SrKog6aE6XvvJvUEpfStsJep2blACX2MOpERXiHs6w
+    avIu1FTF6a31GyICqNYG07o533X5gfJDRYV3N6ari08Nd+iAaP8HVepc8wziBgFj
+    3pdvCvkB1FPHKIbClQdIFgViDwLQYiagaR7esFYcPg6gdwvDJOoAh3GV66HNo7ev
+    slY6KHQlRdlorjwxPt5dkGrkN7hiXRbItKqhQCy5GlmLAgMBAAGjUzBRMB0GA1Ud
+    DgQWBBQz18iiu8P3gYwOwsuRG4YyDVQuxzAfBgNVHSMEGDAWgBQz18iiu8P3gYwO
+    wsuRG4YyDVQuxzAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQAg
+    C4yDPACAHUjE09m3jmuJUtSSEr+FdXRZ9fkpTezYed6ebefz+4qbTb8HohsEC0K8
+    52hg81Knh6n26FN/5S73/6k4LGcX4sN3WslKnRGdVuoXR3o1UGB4Rb0wtdNwOjZF
+    5eI7Yxfg8nbsNS+6L+t/xgUj09wR34+fdv43XxxNjFPkWIagOItfG4jyyy+2ap/j
+    kyzLypQx9SXeh6ELL4+I5AbNYwaLdoXUyPJHZfyqAABOZ+PVTUabBPiEJsCNmcbo
+    toXi8O3UIo+oldyE771XJCGwMLLq75SJ79UZgy0yj3AGLVpirpgqEJT3Nd3VSWGF
+    vjYDV/+uv3wEkMby25WT
+    -----END CERTIFICATE-----
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: remote-jwks-server
+  namespace: gateway-conformance-infra
+spec:
+  selector:
+    app: remote-jwks-server
+  ports:
+    - protocol: TCP
+      port: 443
+      targetPort: 8443
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: remote-jwks-server
+  namespace: gateway-conformance-infra
+  labels:
+    app: remote-jwks-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: remote-jwks-server
+  template:
+    metadata:
+      labels:
+        app: remote-jwks-server
+    spec:
+      containers:
+        - name: remote-jwks-server
+          image: envoyproxy/gateway-static-file-server
+          imagePullPolicy: IfNotPresent
+          args:
+            - --port=8443
+            - --certPath=/etc/certs
+          volumeMounts:
+            - name: remote-jwks-server-secret
+              mountPath: /etc/certs
+      volumes:
+        - name: remote-jwks-server-secret
+          secret:
+            secretName: remote-jwks-server-secret
+            items:
+              - key: tls.crt
+                path: tls.crt
+              - key: tls.key
+                path: tls.key
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: remote-jwks
+  namespace: gateway-conformance-infra
+spec:
+  endpoints:
+    - fqdn:
+        hostname: 'remote-jwks-server.gateway-conformance-infra'
+        port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1alpha3
+kind: BackendTLSPolicy
+metadata:
+  name: remote-jwks-btls
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: remote-jwks
+  validation:
+    caCertificateRefs:
+      - name: remote-jwks-server-ca
+        group: ''
+        kind: ConfigMap
+    hostname: remote-jwks-server.gateway-conformance-infra
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: jwt-with-backend-remot-jwks
+  namespace: gateway-conformance-infra
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: jwt-claim-routing
+  jwt:
+    providers:
+      - name: example
+        recomputeRoute: true
+        claimToHeaders:
+          - claim: sub
+            header: x-sub
+          - claim: admin
+            header: x-admin
+          - claim: name
+            header: x-name
+        remoteJWKS:
+          backendRefs:
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: remote-jwks
+              port: 443
+          backendSettings:
+            retry:
+              numRetries: 3
+              perRetry:
+                backOff:
+                  baseInterval: 1s
+                  maxInterval: 5s
+              retryOn:
+                triggers: ["5xx", "gateway-error", "reset"]
+          uri: https://remote-jwks-server.gateway-conformance-infra/jwt/jwks.json
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: jwt-claim-routing
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - backendRefs:
+        - kind: Service
+          name: infra-backend-v1
+          port: 8080
+          weight: 1
+      matches:
+        - headers:
+            - name: x-name
+              value: John Doe
+    - backendRefs:
+        - kind: Service
+          name: infra-backend-v2
+          port: 8080
+          weight: 1
+      matches:
+        - headers:
+            - name: x-name
+              value: Tom
+    # catch all
+    - backendRefs:
+        - kind: Service
+          name: infra-backend-invalid
+          port: 8080
+          weight: 1
+      matches:
+        - path:
+            type: PathPrefix
+            value: /

@@ -1,0 +1,55 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      name: gateway-a
+      namespace: default
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: default
+          port: 80
+          protocol: HTTP
+          hostname: '*.a.example.com'
+          allowedRoutes:
+            namespaces:
+              from: All
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      name: gateway-b
+      namespace: envoy-gateway
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: default
+          port: 80
+          protocol: HTTP
+          hostname: '*.b.example.com'
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      name: targeted-route
+      namespace: envoy-gateway
+    spec:
+      hostnames:
+        - targeted.a.example.com
+        - targeted.b.example.com
+      parentRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: gateway-a
+          namespace: default
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: gateway-b
+      rules:
+        - matches:
+            - method: GET
+              path:
+                type: PathPrefix
+                value: /toy

@@ -18,6 +18,7 @@ http:
           port: 8080
         protocol: HTTP
         weight: 1
+        name: httproute/default/httproute-1/rule/0/backend/0
     hostname: www.example.com
     isHTTP2: false
     name: httproute/default/httproute-1/rule/0/match/0/www_example_com
@@ -49,6 +50,7 @@ http:
           port: 8080
         protocol: HTTP
         weight: 1
+        name: httproute/default/httproute-2/rule/0/backend/0
     hostname: www.example.com
     isHTTP2: false
     name: httproute/default/httproute-2/rule/0/match/0/www_example_com
@@ -89,3 +91,6 @@ http:
           sha256: 2a19e4f337e5223d7287e7fccd933fb01905deaff804292e5257f8c681b82bee
         name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/2
         wasmName: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/2
+        hostKeys:
+        - SOME_KEY
+        - ANOTHER_KEY

@@ -6,7 +6,6 @@
 package translator
 
 import (
-	"errors"
 	"fmt"
 	"sort"
 
@@ -21,7 +20,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/protocov"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -50,7 +49,7 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 				ServiceName:      tracing.ServiceName,
 				CollectorCluster: tracing.Destination.Name,
 			}
-			return protocov.ToAnyWithError(config)
+			return proto.ToAnyWithValidation(config)
 		}
 	case egv1a1.TracingProviderTypeOpenTelemetry:
 		providerName = envoyOpenTelemetry
@@ -68,7 +67,7 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 				ServiceName: tracing.ServiceName,
 			}
 
-			return protocov.ToAnyWithError(config)
+			return proto.ToAnyWithValidation(config)
 		}
 	case egv1a1.TracingProviderTypeZipkin:
 		providerName = envoyZipkin
@@ -82,7 +81,7 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 				CollectorEndpointVersion: tracecfg.ZipkinConfig_HTTP_JSON,
 			}
 
-			return protocov.ToAnyWithError(config)
+			return proto.ToAnyWithValidation(config)
 		}
 	default:
 		return nil, fmt.Errorf("unknown tracing provider type: %s", tracing.Provider.Type)
@@ -176,7 +175,7 @@ func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Trac
 	if traffic == nil {
 		traffic = &ir.TrafficFeatures{}
 	}
-	if err := addXdsCluster(tCtx, &xdsClusterArgs{
+	return addXdsCluster(tCtx, &xdsClusterArgs{
 		name:              tracing.Destination.Name,
 		settings:          tracing.Destination.Settings,
 		tSocket:           nil,
@@ -191,8 +190,5 @@ func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Trac
 		backendConnection: traffic.BackendConnection,
 		dns:               traffic.DNS,
 		http2Settings:     traffic.HTTP2,
-	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
-		return err
-	}
-	return nil
+	})
 }

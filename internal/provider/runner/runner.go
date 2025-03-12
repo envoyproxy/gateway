@@ -43,7 +43,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	var p provider.Provider
 	switch r.EnvoyGateway.Provider.Type {
 	case egv1a1.ProviderTypeKubernetes:
-		p, err = r.createKubernetesProvider()
+		p, err = r.createKubernetesProvider(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to create kubernetes provider: %w", err)
 		}
@@ -69,13 +69,13 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	return nil
 }
 
-func (r *Runner) createKubernetesProvider() (*kubernetes.Provider, error) {
+func (r *Runner) createKubernetesProvider(ctx context.Context) (*kubernetes.Provider, error) {
 	cfg, err := ctrl.GetConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get kubeconfig: %w", err)
 	}
 
-	p, err := kubernetes.New(cfg, &r.Config.Server, r.ProviderResources)
+	p, err := kubernetes.New(ctx, cfg, &r.Config.Server, r.ProviderResources)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create provider %s: %w", egv1a1.ProviderTypeKubernetes, err)
 	}

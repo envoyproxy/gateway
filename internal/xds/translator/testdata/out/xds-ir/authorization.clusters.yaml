@@ -12,7 +12,6 @@
     serviceName: httproute/default/httproute-3/rule/0
   lbPolicy: LEAST_REQUEST
   name: httproute/default/httproute-3/rule/0
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -29,7 +28,6 @@
     serviceName: httproute/default/httproute-1/rule/0
   lbPolicy: LEAST_REQUEST
   name: httproute/default/httproute-1/rule/0
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -46,6 +44,5 @@
     serviceName: httproute/default/httproute-2/rule/0
   lbPolicy: LEAST_REQUEST
   name: httproute/default/httproute-2/rule/0
-  outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
