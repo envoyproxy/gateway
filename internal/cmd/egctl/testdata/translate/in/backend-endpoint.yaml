@@ -57,3 +57,21 @@ spec:
   validation:
     wellKnownCACertificates: "System"
     hostname: www.example.com
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: ext-proc-example
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
+  extProc:
+    - backendRefs:
+        - name: grpc-ext-proc
+          port: 9002
+      processingMode:
+        request: {}
+        response:
+          body: Streamed
