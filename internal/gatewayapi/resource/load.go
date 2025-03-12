@@ -45,10 +45,7 @@ func LoadResourcesFromYAMLBytes(yamlBytes []byte, addMissingResources bool) (*Re
 
 // loadKubernetesYAMLToResources converts a Kubernetes YAML string into GatewayAPI Resources.
 // TODO: add support for kind:
-//   - EnvoyExtensionPolicy (gateway.envoyproxy.io/v1alpha1)
-//   - HTTPRouteFilter (gateway.envoyproxy.io/v1alpha1)
 //   - BackendLPPolicy (gateway.networking.k8s.io/v1alpha2)
-//   - BackendTLSPolicy (gateway.networking.k8s.io/v1alpha3)
 //   - ReferenceGrant (gateway.networking.k8s.io/v1alpha2)
 //   - TLSRoute (gateway.networking.k8s.io/v1alpha2)
 func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Resources, error) {
@@ -351,6 +348,19 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 				Spec: typedSpec.(gwapiv1a3.BackendTLSPolicySpec),
 			}
 			resources.BackendTLSPolicies = append(resources.BackendTLSPolicies, backendTLSPolicy)
+		case KindEnvoyExtensionPolicy:
+			typedSpec := spec.Interface()
+			envoyExtensionPolicy := &egv1a1.EnvoyExtensionPolicy{
+				TypeMeta: metav1.TypeMeta{
+					Kind: KindEnvoyExtensionPolicy,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+				Spec: typedSpec.(egv1a1.EnvoyExtensionPolicySpec),
+			}
+			resources.EnvoyExtensionPolicies = append(resources.EnvoyExtensionPolicies, envoyExtensionPolicy)
 		}
 
 		return nil
